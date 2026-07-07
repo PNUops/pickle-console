@@ -297,6 +297,8 @@ export interface paths {
          * @description 이메일로 기존 가입자를 그룹에 추가합니다. OWNER만 멤버를 추가할 수 있습니다.
          *     PERSONAL 그룹에는 멤버를 추가할 수 없습니다.
          *     `ACTIVE` 상태의 사용자만 추가할 수 있습니다 (미인증·비활성·탈퇴 계정 불가).
+         *     추가 시 `OWNER` 역할은 지정할 수 없습니다(422) — 소유권은 멤버 역할 변경의
+         *     소유권 이전으로만 부여됩니다.
          */
         post: operations["addGroupMember"];
         delete?: never;
@@ -332,6 +334,8 @@ export interface paths {
          * 그룹 멤버 역할 변경
          * @description OWNER만 역할을 변경할 수 있습니다. OWNER 역할을 다른 멤버에게 부여하면
          *     소유권 이전으로 처리됩니다(기존 OWNER는 MANAGER로 강등).
+         *     유일한 OWNER 본인의 역할을 하향하는 요청은 409(`GROUP_SOLE_OWNER_REMOVAL`)로
+         *     거부됩니다 — 먼저 소유권을 이전해야 합니다.
          */
         patch: operations["updateGroupMember"];
         trace?: never;
@@ -2154,6 +2158,25 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description 유일한 OWNER의 역할 하향 불가 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "유일한 소유자의 역할은 변경할 수 없습니다",
+                     *       "status": 409,
+                     *       "detail": "소유권을 다른 멤버에게 이전한 뒤 다시 시도해 주세요.",
+                     *       "instance": "/api/v1/groups/12/members/42",
+                     *       "code": "GROUP_SOLE_OWNER_REMOVAL"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
