@@ -20,7 +20,8 @@ export function RequireRole({ roles, children }: { roles: UserRole[]; children: 
     )
   }
   if (status === 'unauthenticated' || !user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    const from = location.pathname + location.search + location.hash
+    return <Navigate to="/login" replace state={{ from }} />
   }
   if (!roles.includes(user.role)) {
     return <Navigate to={homePathFor(user.role)} replace />
