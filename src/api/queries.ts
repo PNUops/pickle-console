@@ -17,6 +17,10 @@ export type VmRequestStatus = Schemas['VmRequestStatus']
 export type VmSummary = Schemas['VmSummary']
 export type VmDetail = Schemas['VmDetail']
 export type VmPage = Schemas['VmPage']
+export type ApprovalContext = Schemas['ApprovalContext']
+export type ApproveVmRequest = Schemas['ApproveVmRequest']
+export type OrgDetail = Schemas['OrgDetail']
+export type UserSummary = Schemas['UserSummary']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -84,5 +88,36 @@ export async function fetchVms(params: { page?: number; size?: number }): Promis
 export async function fetchVm(vmId: number): Promise<VmDetail> {
   const { data, error } = await api.GET('/vms/{vmId}', { params: { path: { vmId } } })
   if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
+  return data
+}
+
+/* ─── admin (WP-F3) ─── */
+
+export async function fetchAdminVmRequests(params: {
+  status?: VmRequestStatus
+  orgId?: number
+  page?: number
+  size?: number
+}): Promise<VmRequestPage> {
+  const { data, error } = await api.GET('/admin/vm-requests', {
+    params: { query: params },
+  })
+  if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
+  return data
+}
+
+export async function fetchAdminVmRequest(requestId: number): Promise<VmRequestDetail> {
+  const { data, error } = await api.GET('/admin/vm-requests/{requestId}', {
+    params: { path: { requestId } },
+  })
+  if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
+  return data
+}
+
+export async function fetchApprovalContext(requestId: number): Promise<ApprovalContext> {
+  const { data, error } = await api.GET('/admin/vm-requests/{requestId}/context', {
+    params: { path: { requestId } },
+  })
+  if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했습니다.')
   return data
 }
