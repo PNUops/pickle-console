@@ -5,15 +5,23 @@ type Schemas = components['schemas']
 
 /* ─── fixtures ─── */
 
-export const orgs: Schemas['OrgSummary'][] = [
-  {
-    id: 1,
-    name: '정보컴퓨터공학부 실습지원센터',
-    slug: 'cse-lab',
-    description: '학부 수업·캡스톤용 서버 자원 제공',
-  },
-  { id: 2, name: 'SW교육센터', slug: 'sw-edu', description: null },
-]
+function initialOrgs(): Schemas['OrgSummary'][] {
+  return [
+    {
+      id: 1,
+      name: '정보컴퓨터공학부 실습지원센터',
+      slug: 'cse-lab',
+      description: '학부 수업·캡스톤용 서버 자원 제공',
+    },
+    { id: 2, name: 'SW교육센터', slug: 'sw-edu', description: null },
+  ]
+}
+
+export let orgs: Schemas['OrgSummary'][] = initialOrgs()
+
+export function resetReferenceFixtures() {
+  orgs = initialOrgs()
+}
 
 export const basicTemplate: Schemas['VmTemplate'] = {
   id: 1,

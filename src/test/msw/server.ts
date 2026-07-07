@@ -1,8 +1,9 @@
 import { setupServer } from 'msw/node'
 import type { RequestHandler } from 'msw'
+import { adminHandlers, resetAdminFixtures } from './handlers/admin'
 import { authHandlers } from './handlers/auth'
 import { groupHandlers, resetGroupFixtures } from './handlers/groups'
-import { referenceHandlers } from './handlers/reference'
+import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
 import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
 
@@ -13,13 +14,16 @@ export const handlers: RequestHandler[] = [
   ...groupHandlers,
   ...vmRequestHandlers,
   ...vmHandlers,
+  ...adminHandlers,
 ]
 
 export const server = setupServer(...handlers)
 
 /** Restore all stateful mock fixtures to their initial data (run between tests). */
 export function resetFixtures() {
+  resetReferenceFixtures()
   resetGroupFixtures()
   resetVmRequestFixtures()
   resetVmFixtures()
+  resetAdminFixtures()
 }

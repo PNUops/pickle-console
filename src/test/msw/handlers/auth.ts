@@ -29,6 +29,13 @@ export const orgAdminUser: Schemas['UserSummary'] = {
   role: 'ORG_ADMIN',
 }
 
+export const sysAdminUser: Schemas['UserSummary'] = {
+  id: 5,
+  email: 'sysadmin.lee@pusan.ac.kr',
+  name: '이시스템',
+  role: 'SYS_ADMIN',
+}
+
 export const studentProfile: Schemas['UserProfile'] = {
   ...studentUser,
   orgId: null,
@@ -47,10 +54,20 @@ export const orgAdminProfile: Schemas['UserProfile'] = {
   ],
 }
 
+export const sysAdminProfile: Schemas['UserProfile'] = {
+  ...sysAdminUser,
+  orgId: null,
+  status: 'ACTIVE',
+  memberships: [
+    { groupId: 5, groupName: '이시스템', groupKind: 'PERSONAL', role: 'OWNER' },
+  ],
+}
+
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfile']> = {
   'access-student': studentProfile,
   'access-org-admin': orgAdminProfile,
+  'access-sys-admin': sysAdminProfile,
 }
 
 export const unauthorizedProblem: Schemas['Problem'] = {
