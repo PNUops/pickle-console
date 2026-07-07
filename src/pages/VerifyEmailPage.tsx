@@ -5,7 +5,7 @@ import { isProblem } from '../api/problem'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Card, CardContent, Spinner } from '../components/ui'
 
-type VerifyState = 'missing' | 'verifying' | 'success' | 'expired' | 'invalid'
+type VerifyState = 'missing' | 'verifying' | 'success' | 'expired' | 'rate-limited' | 'invalid'
 
 export function VerifyEmailPage() {
   const [searchParams] = useSearchParams()
@@ -26,6 +26,11 @@ export function VerifyEmailPage() {
       }
       if (isProblem(error) && error.code === 'AUTH_VERIFICATION_TOKEN_EXPIRED') {
         setState('expired')
+        setMessage(error.detail ?? error.title)
+        return
+      }
+      if (isProblem(error) && error.code === 'RATE_LIMITED') {
+        setState('rate-limited')
         setMessage(error.detail ?? error.title)
         return
       }
@@ -69,6 +74,12 @@ export function VerifyEmailPage() {
               </Alert>
               <ResendVerification />
             </>
+          )}
+
+          {state === 'rate-limited' && (
+            <Alert variant="warning" title="요청이 너무 많습니다">
+              {message ?? '잠시 후 다시 시도해 주세요.'}
+            </Alert>
           )}
 
           {(state === 'invalid' || state === 'missing') && (
