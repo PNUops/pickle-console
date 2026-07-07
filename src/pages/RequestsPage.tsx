@@ -1,0 +1,131 @@
+import { useState } from 'react'
+import { Link } from 'react-router'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { fetchVmRequests, type VmRequestStatus } from '../api/queries'
+import {
+  Alert,
+  Card,
+  Pagination,
+  RequestStatusBadge,
+  Spinner,
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+} from '../components/ui'
+import { cn } from '../lib/cn'
+import { formatDateTime, formatSpec } from '../lib/format'
+
+const STATUS_TABS: { label: string; status: VmRequestStatus | undefined }[] = [
+  { label: '전체', status: undefined },
+  { label: '검토 중', status: 'SUBMITTED' },
+  { label: '승인', status: 'APPROVED' },
+  { label: '반려', status: 'REJECTED' },
+  { label: '취소', status: 'CANCELED' },
+]
+
+export function RequestsPage() {
+  const [status, setStatus] = useState<VmRequestStatus | undefined>(undefined)
+  const [page, setPage] = useState(0)
+
+  const requests = useQuery({
+    queryKey: ['vm-requests', { status: status ?? null, page }],
+    queryFn: () => fetchVmRequests({ status, page }),
+    placeholderData: keepPreviousData,
+  })
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-neutral-900">내 신청</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          내가 볼 수 있는 VM 신청 목록입니다. 모든 신청은 관리자 검토 후 처리됩니다.
+        </p>
+      </div>
+
+      <div role="tablist" aria-label="신청 상태 필터" className="flex flex-wrap gap-1">
+        {STATUS_TABS.map((tab) => {
+          const selected = tab.status === status
+          return (
+            <button
+              key={tab.label}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => {
+                setStatus(tab.status)
+                setPage(0)
+              }}
+              className={cn(
+                'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
+                selected
+                  ? 'bg-primary-600 text-white'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
+              )}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {requests.isPending && (
+        <div className="flex justify-center py-12">
+          <Spinner label="신청 목록 불러오는 중" />
+        </div>
+      )}
+      {requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
+      {requests.isSuccess && requests.data.content.length === 0 && (
+        <Card className="p-8 text-center text-sm text-neutral-500">
+          표시할 신청이 없습니다.
+        </Card>
+      )}
+      {requests.isSuccess && requests.data.content.length > 0 && (
+        <>
+          <Card>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>용도</TH>
+                  <TH>그룹</TH>
+                  <TH>요청 사양</TH>
+                  <TH>상태</TH>
+                  <TH>신청일</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {requests.data.content.map((request) => (
+                  <TR key={request.id}>
+                    <TD className="max-w-sm">
+                      <Link
+                        to={`/console/requests/${request.id}`}
+                        className="block truncate font-medium text-primary-700 hover:underline"
+                      >
+                        {request.purpose}
+                      </Link>
+                    </TD>
+                    <TD>{request.groupName}</TD>
+                    <TD className="whitespace-nowrap">
+                      {formatSpec(request.reqVcpu, request.reqMemoryMb, request.reqDiskGb)}
+                    </TD>
+                    <TD>
+                      <RequestStatusBadge status={request.status} />
+                    </TD>
+                    <TD className="whitespace-nowrap">{formatDateTime(request.createdAt)}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </Card>
+          <Pagination
+            page={requests.data.page}
+            totalPages={requests.data.totalPages}
+            onPageChange={setPage}
+          />
+        </>
+      )}
+    </div>
+  )
+}

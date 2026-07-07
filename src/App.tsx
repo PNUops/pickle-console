@@ -10,6 +10,8 @@ import { GroupsPage } from './pages/GroupsPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { RequestDetailPage } from './pages/RequestDetailPage'
+import { RequestsPage } from './pages/RequestsPage'
 import { SignupPage } from './pages/SignupPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 
@@ -34,6 +36,8 @@ function App() {
         <Route index element={<ConsoleDashboardPage />} />
         <Route path="groups" element={<GroupsPage />} />
         <Route path="groups/:groupId" element={<GroupDetailPage />} />
+        <Route path="requests" element={<RequestsPage />} />
+        <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route
