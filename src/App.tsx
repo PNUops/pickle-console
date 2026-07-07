@@ -15,6 +15,8 @@ import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
 import { SignupPage } from './pages/SignupPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
+import { VmDetailPage } from './pages/VmDetailPage'
+import { VmsPage } from './pages/VmsPage'
 
 function App() {
   return (
@@ -40,6 +42,8 @@ function App() {
         <Route path="requests" element={<RequestsPage />} />
         <Route path="requests/new" element={<NewRequestPage />} />
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
+        <Route path="vms" element={<VmsPage />} />
+        <Route path="vms/:vmId" element={<VmDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route

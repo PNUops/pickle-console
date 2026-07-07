@@ -5,6 +5,7 @@ const items: NavItem[] = [
   { to: '/console/groups', label: '내 그룹' },
   { to: '/console/requests/new', label: 'VM 신청' },
   { to: '/console/requests', label: '내 신청', end: true },
+  { to: '/console/vms', label: '내 VM' },
 ]
 
 export function ConsoleLayout() {
