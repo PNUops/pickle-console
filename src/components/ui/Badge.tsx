@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import {
+  GROUP_KIND_LABELS,
+  GROUP_ROLE_LABELS,
+  type GroupKind,
+  type GroupMemberRole,
+} from '../../lib/labels'
+import {
   REQUEST_STATUS_LABELS,
   VM_STATUS_LABELS,
   type VmRequestStatus,
@@ -67,7 +73,51 @@ const VM_STATUS_VARIANTS: Record<VmStatus, BadgeVariant> = {
 export function VmStatusBadge({ status, className }: { status: VmStatus; className?: string }) {
   return (
     <Badge variant={VM_STATUS_VARIANTS[status]} className={className}>
+      {status === 'CREATING' && (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          className="size-3 animate-spin text-current"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"
+          />
+        </svg>
+      )}
       {VM_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const GROUP_KIND_VARIANTS: Record<GroupKind, BadgeVariant> = {
+  PERSONAL: 'neutral',
+  TEAM: 'info',
+  PROJECT: 'primary',
+}
+
+export function GroupKindBadge({ kind, className }: { kind: GroupKind; className?: string }) {
+  return (
+    <Badge variant={GROUP_KIND_VARIANTS[kind]} className={className}>
+      {GROUP_KIND_LABELS[kind]}
+    </Badge>
+  )
+}
+
+const GROUP_ROLE_VARIANTS: Record<GroupMemberRole, BadgeVariant> = {
+  OWNER: 'primary',
+  MANAGER: 'info',
+  MEMBER: 'neutral',
+  VIEWER: 'neutral',
+}
+
+export function GroupRoleBadge({ role, className }: { role: GroupMemberRole; className?: string }) {
+  return (
+    <Badge variant={GROUP_ROLE_VARIANTS[role]} className={className}>
+      {GROUP_ROLE_LABELS[role]}
     </Badge>
   )
 }
