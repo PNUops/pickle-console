@@ -9,6 +9,7 @@ import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
+import { NewRequestPage } from './pages/NewRequestPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
@@ -37,6 +38,7 @@ function App() {
         <Route path="groups" element={<GroupsPage />} />
         <Route path="groups/:groupId" element={<GroupDetailPage />} />
         <Route path="requests" element={<RequestsPage />} />
+        <Route path="requests/new" element={<NewRequestPage />} />
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
