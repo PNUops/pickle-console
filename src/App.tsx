@@ -5,6 +5,8 @@ import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
+import { GroupDetailPage } from './pages/GroupDetailPage'
+import { GroupsPage } from './pages/GroupsPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -30,6 +32,8 @@ function App() {
         }
       >
         <Route index element={<ConsoleDashboardPage />} />
+        <Route path="groups" element={<GroupsPage />} />
+        <Route path="groups/:groupId" element={<GroupDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route
