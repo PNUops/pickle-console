@@ -4,6 +4,7 @@ import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
@@ -55,6 +56,7 @@ function App() {
         }
       >
         <Route index element={<AdminDashboardPage />} />
+        <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

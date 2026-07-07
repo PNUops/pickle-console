@@ -1,0 +1,188 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import {
+  fetchAdminVmRequests,
+  fetchOrgs,
+  fetchTemplates,
+  type VmRequestStatus,
+} from '../api/queries'
+import { useAuth } from '../auth/auth-context'
+import {
+  Alert,
+  Card,
+  Pagination,
+  RequestStatusBadge,
+  Select,
+  Spinner,
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+} from '../components/ui'
+import { cn } from '../lib/cn'
+import { formatDateTime, formatSpec } from '../lib/format'
+
+const PAGE_SIZE = 10
+
+// 기본 탭은 검토 대기(SUBMITTED). '전체'는 status 미지정으로 보낸다 —
+// 현행 계약(v0.2.2)은 status 미지정 시 SUBMITTED만 반환하므로 계약 보완이 필요하다.
+const STATUS_TABS: { label: string; status: VmRequestStatus | undefined }[] = [
+  { label: '검토 대기', status: 'SUBMITTED' },
+  { label: '승인됨', status: 'APPROVED' },
+  { label: '반려됨', status: 'REJECTED' },
+  { label: '전체', status: undefined },
+]
+
+export function AdminRequestsPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const [status, setStatus] = useState<VmRequestStatus | undefined>('SUBMITTED')
+  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [page, setPage] = useState(0)
+
+  const requests = useQuery({
+    queryKey: [
+      'admin',
+      'vm-requests',
+      { status: status ?? null, orgId: orgId ?? null, page, size: PAGE_SIZE },
+    ],
+    queryFn: () => fetchAdminVmRequests({ status, orgId, page, size: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  })
+  const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+
+  const templateName = (templateId: number) =>
+    templates.data?.find((t) => t.id === templateId)?.displayName ?? `템플릿 #${templateId}`
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          제출된 VM 신청을 검토하고 승인 또는 반려합니다.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="tablist" aria-label="신청 상태 필터" className="flex flex-wrap gap-1">
+          {STATUS_TABS.map((tab) => {
+            const selected = tab.status === status
+            return (
+              <button
+                key={tab.label}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => {
+                  setStatus(tab.status)
+                  setPage(0)
+                }}
+                className={cn(
+                  'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
+                  selected
+                    ? 'bg-primary-600 text-white'
+                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
+                )}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        {isSysAdmin && (
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            기관
+            <Select
+              aria-label="기관 필터"
+              className="w-56"
+              value={orgId ?? ''}
+              onChange={(event) => {
+                setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                setPage(0)
+              }}
+            >
+              <option value="">전체 기관</option>
+              {orgs.data?.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+        )}
+      </div>
+
+      {requests.isPending && (
+        <div className="flex justify-center py-12">
+          <Spinner label="신청 목록 불러오는 중" />
+        </div>
+      )}
+      {requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
+      {requests.isSuccess && requests.data.content.length === 0 && (
+        <Card className="p-8 text-center text-sm text-neutral-500">
+          표시할 신청이 없습니다.
+        </Card>
+      )}
+      {requests.isSuccess && requests.data.content.length > 0 && (
+        <>
+          <Card>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>신청자</TH>
+                  <TH>그룹</TH>
+                  <TH>템플릿 / 요청 사양</TH>
+                  <TH>신청일</TH>
+                  <TH>상태</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {requests.data.content.map((request) => (
+                  <TR
+                    key={request.id}
+                    className="cursor-pointer hover:bg-neutral-50"
+                    onClick={() => navigate(`/admin/requests/${request.id}`)}
+                  >
+                    <TD>
+                      <Link
+                        to={`/admin/requests/${request.id}`}
+                        className="font-medium text-primary-700 hover:underline"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {request.requesterName}
+                      </Link>
+                      <span className="mt-0.5 block max-w-xs truncate text-xs text-neutral-400">
+                        {request.purpose}
+                      </span>
+                    </TD>
+                    <TD>{request.groupName}</TD>
+                    <TD className="whitespace-nowrap">
+                      <span className="block">{templateName(request.templateId)}</span>
+                      <span className="block text-xs text-neutral-500">
+                        {formatSpec(request.reqVcpu, request.reqMemoryMb, request.reqDiskGb)}
+                      </span>
+                    </TD>
+                    <TD className="whitespace-nowrap">{formatDateTime(request.createdAt)}</TD>
+                    <TD>
+                      <RequestStatusBadge status={request.status} />
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </Card>
+          <Pagination
+            page={requests.data.page}
+            totalPages={requests.data.totalPages}
+            onPageChange={setPage}
+          />
+        </>
+      )}
+    </div>
+  )
+}
