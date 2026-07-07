@@ -2480,7 +2480,7 @@ export interface operations {
     listAdminVmRequests: {
         parameters: {
             query?: {
-                /** @description 신청 상태 필터 (기본값: SUBMITTED) */
+                /** @description 신청 상태 필터 (미지정 시 모든 상태 반환) */
                 status?: components["schemas"]["VmRequestStatus"];
                 /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
                 orgId?: number;
