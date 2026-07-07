@@ -465,7 +465,8 @@ export interface paths {
         /**
          * [관리자] VM 신청 큐 조회
          * @description ORG_ADMIN은 자기 기관의 신청만, SYS_ADMIN은 전체 신청을 조회합니다.
-         *     `status` 미지정 시 승인 대기(`SUBMITTED`)만 반환합니다.
+         *     `status` 미지정 시 모든 상태의 신청을 반환합니다(승인 대기 큐 화면은
+         *     `status=SUBMITTED`를 명시적으로 전달).
          *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다
          *     (ORG_ADMIN은 항상 자기 기관으로 고정).
          */
