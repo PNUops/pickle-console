@@ -71,7 +71,13 @@ async function fetchWithAuth(input: Request): Promise<Response> {
     notifySessionExpired()
     return response
   }
-  return fetch(withAuthHeader(retryCopy))
+  const retryResponse = await fetch(withAuthHeader(retryCopy))
+  if (retryResponse.status === 401) {
+    // The server rejects even a freshly refreshed token — treat as expired.
+    clearAccessToken()
+    notifySessionExpired()
+  }
+  return retryResponse
 }
 
 export const api = createClient<paths>({ baseUrl: API_BASE, fetch: fetchWithAuth })

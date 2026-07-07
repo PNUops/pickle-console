@@ -59,6 +59,23 @@ describe('api client auth behavior', () => {
     }
   })
 
+  test('a 401 after a successful refresh also expires the session', async () => {
+    const expired = vi.fn()
+    const unsubscribe = onSessionExpired(expired)
+    try {
+      // Refresh "succeeds" but issues a token /me still rejects.
+      server.use(refreshSuccessHandler('still-rejected-token'))
+      setAccessToken('stale-token')
+      const { error } = await api.GET('/me')
+
+      expect(error).toBeDefined()
+      expect(expired).toHaveBeenCalledTimes(1)
+      expect(getAccessToken()).toBeNull()
+    } finally {
+      unsubscribe()
+    }
+  })
+
   test('a 401 from login does not trigger a refresh attempt', async () => {
     const refreshCalls = vi.fn()
     server.use(refreshSuccessHandler('access-student', undefined, refreshCalls))
