@@ -19,6 +19,10 @@ export interface paths {
          *     (정규식 `^[A-Za-z0-9._%+-]+@pusan\.ac\.kr$`).
          *     가입 직후 계정은 `PENDING_VERIFICATION` 상태이며, 24시간 유효한 1회용
          *     인증 링크가 메일로 발송됩니다. 인증 완료 전에는 로그인할 수 없습니다.
+         *
+         *     중복 이메일에는 409를 반환합니다. 이에 따른 계정 존재 여부 노출
+         *     (account enumeration) 트레이드오프는 이 엔드포인트에 속도 제한이
+         *     적용되어 있으므로 수용합니다.
          */
         post: operations["signup"];
         delete?: never;
@@ -199,6 +203,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/meta/request-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * VM 신청 선택지 조회
+         * @description VM 신청 폼에서 사용하는 선택지·검증 목록입니다. 값은 `settings`에서
+         *     관리되며 운영자가 변경할 수 있습니다.
+         *
+         *     - `allowedRootDomains`: `rootDomain`으로 선택 가능한 루트 도메인 허용 목록
+         *     - `reservedSubdomains`: `desiredSubdomain`으로 사용할 수 없는 예약어 목록
+         */
+        get: operations["getRequestOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups": {
         parameters: {
             query?: never;
@@ -268,6 +296,7 @@ export interface paths {
          * 그룹 멤버 추가
          * @description 이메일로 기존 가입자를 그룹에 추가합니다. OWNER만 멤버를 추가할 수 있습니다.
          *     PERSONAL 그룹에는 멤버를 추가할 수 없습니다.
+         *     `ACTIVE` 상태의 사용자만 추가할 수 있습니다 (미인증·비활성·탈퇴 계정 불가).
          */
         post: operations["addGroupMember"];
         delete?: never;
@@ -316,7 +345,9 @@ export interface paths {
         };
         /**
          * 내 VM 신청 목록 조회
-         * @description 내가 볼 수 있는(내가 제출했거나 내 그룹의) 신청 목록입니다. 최신순 정렬.
+         * @description 내가 볼 수 있는 신청 목록입니다. 최신순 정렬.
+         *     그룹 멤버(VIEWER 이상)는 그 그룹의 신청을 볼 수 있습니다.
+         *     멤버가 아닌 그룹의 `groupId` 필터는 403(`ACCESS_DENIED`)입니다.
          */
         get: operations["listVmRequests"];
         put?: never;
@@ -369,8 +400,8 @@ export interface paths {
         /**
          * VM 신청 취소
          * @description `SUBMITTED` 상태의 신청만 취소할 수 있습니다. 이미 승인/반려된 신청은
-         *     409 (`REQUEST_ALREADY_DECIDED`)를 반환합니다. 신청자 본인 또는 그룹 OWNER만
-         *     취소할 수 있습니다.
+         *     409 (`REQUEST_ALREADY_DECIDED`)를 반환합니다. 신청자 본인 또는
+         *     그룹 OWNER/MANAGER만 취소할 수 있습니다.
          */
         post: operations["cancelVmRequest"];
         delete?: never;
@@ -431,6 +462,8 @@ export interface paths {
          * [관리자] VM 신청 큐 조회
          * @description ORG_ADMIN은 자기 기관의 신청만, SYS_ADMIN은 전체 신청을 조회합니다.
          *     `status` 미지정 시 승인 대기(`SUBMITTED`)만 반환합니다.
+         *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다
+         *     (ORG_ADMIN은 항상 자기 기관으로 고정).
          */
         get: operations["listAdminVmRequests"];
         put?: never;
@@ -451,6 +484,7 @@ export interface paths {
         /**
          * [관리자] VM 신청 상세 조회
          * @description ORG_ADMIN은 자기 기관 신청만 조회할 수 있습니다.
+         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
          */
         get: operations["getAdminVmRequest"];
         put?: never;
@@ -473,6 +507,7 @@ export interface paths {
          * @description 신청 상세 화면 옆에 표시되는 승인 판단 참고 정보입니다:
          *     신청자 이력, 신청자·그룹의 현재 보유 자원, 과거 신청/결정 이력,
          *     기관 자원 여유(오버커밋 비율·경고), 그리고 한국어 안내문(`guidance`).
+         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
          */
         get: operations["getApprovalContext"];
         put?: never;
@@ -502,6 +537,8 @@ export interface paths {
          *     3. mock 프로비저닝 잡이 큐에 등록됩니다 (M2 — 실제 Proxmox 연동은 M3).
          *
          *     `nodeId`를 생략하거나 null이면 자동 배치입니다.
+         *     서브도메인/도메인 발급은 M4 퍼블리싱에서 처리합니다 (승인 시 사양만 확정).
+         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
          */
         post: operations["approveVmRequest"];
         delete?: never;
@@ -522,6 +559,7 @@ export interface paths {
         /**
          * [관리자] VM 신청 반려
          * @description 반려 사유(`comment`)는 필수이며 신청자에게 메일로 전달됩니다.
+         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
          */
         post: operations["rejectVmRequest"];
         delete?: never;
@@ -568,6 +606,30 @@ export interface paths {
          * @description SYS_ADMIN 전용입니다. `slug`는 변경할 수 없습니다.
          */
         patch: operations["updateOrg"];
+        trace?: never;
+    };
+    "/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * [SYS_ADMIN] 사용자 역할/기관 변경
+         * @description SYS_ADMIN 전용입니다. 사용자의 전역 역할과 관리 기관을 변경합니다.
+         *
+         *     - `role`을 `ORG_ADMIN`으로 지정할 때는 `orgId`가 필수입니다 (검증 실패 시 422).
+         *     - `role`을 `STUDENT` 또는 `SYS_ADMIN`으로 지정하면 `orgId`는 null이어야 합니다.
+         *     - 역할 변경 시 `token_version`이 올라가 해당 사용자의 기존 토큰이 무효화됩니다.
+         */
+        patch: operations["updateUserRole"];
         trace?: never;
     };
 }
@@ -831,9 +893,9 @@ export interface components {
             needHttp: boolean;
             /** @description 외부(캠퍼스 밖) 공개 필요 여부 */
             needPublic: boolean;
-            /** @description 희망 서브도메인 (예약어·중복은 서버 검증) */
+            /** @description 희망 서브도메인 (3~40자, 소문자·숫자·하이픈). 예약어 목록은 `GET /meta/request-options`의 `reservedSubdomains` 참조; 예약어·중복은 서버에서 검증됩니다. */
             desiredSubdomain?: string | null;
-            /** @description 허용 목록에서 선택한 루트 도메인 (예 `pickle.pnuops.com`) */
+            /** @description 루트 도메인 (예 `pickle.pnuops.com`). 허용 목록은 `GET /meta/request-options`의 `allowedRootDomains`에서 조회합니다. */
             rootDomain?: string | null;
             /**
              * Format: hostname
@@ -970,7 +1032,7 @@ export interface components {
              */
             endDate?: string | null;
             /** Format: date-time */
-            updatedAt?: string;
+            updatedAt: string;
         };
         VmPage: {
             content: components["schemas"]["VmSummary"][];
@@ -1052,7 +1114,7 @@ export interface components {
                 comment?: string | null;
                 reviewerName?: string | null;
             }[];
-            /** @description 기관 자원 여유 (할당 합계 vs. 노드 용량) */
+            /** @description 기관 자원 여유 (할당 합계 vs. 노드 용량). M2에서는 노드별 디스크 용량을 추적하지 않으므로 (02 데이터 모델의 nodes에는 cpu_threads· memory_mb만 있음) 디스크는 `allocated.diskGb`(할당 합계)만 제공됩니다. */
             orgHeadroom: {
                 allocated: components["schemas"]["ResourceTotals"];
                 /** @description 노드 물리 용량 합계 */
@@ -1677,6 +1739,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
         };
     };
+    getRequestOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 신청 선택지 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "allowedRootDomains": [
+                     *         "pickle.pnuops.com"
+                     *       ],
+                     *       "reservedSubdomains": [
+                     *         "www",
+                     *         "api",
+                     *         "admin",
+                     *         "ssh",
+                     *         "mail"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 선택 가능한 루트 도메인 목록 (settings에서 관리) */
+                        allowedRootDomains: string[];
+                        /** @description 사용 불가 예약 서브도메인 목록 (settings에서 관리) */
+                        reservedSubdomains: string[];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     listGroups: {
         parameters: {
             query?: never;
@@ -1928,7 +2030,25 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            404: components["responses"]["NotFound"];
+            /** @description 그룹 없음 또는 해당 이메일의 가입자 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "사용자를 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "해당 이메일로 가입된 사용자가 없습니다. 가입 후 다시 시도해 주세요.",
+                     *       "instance": "/api/v1/groups/12/members",
+                     *       "code": "GROUP_MEMBER_USER_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description 이미 그룹 멤버임 */
             409: {
                 headers: {
@@ -2064,6 +2184,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -2336,6 +2457,8 @@ export interface operations {
             query?: {
                 /** @description 신청 상태 필터 (기본값: SUBMITTED) */
                 status?: components["schemas"]["VmRequestStatus"];
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
                 /** @description 페이지 번호 (0부터 시작) */
                 page?: components["parameters"]["Page"];
                 /** @description 페이지 크기 */
@@ -2709,6 +2832,100 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    updateUserRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 대상 사용자 ID */
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "role": "ORG_ADMIN",
+                 *       "orgId": 1
+                 *     }
+                 */
+                "application/json": {
+                    role?: components["schemas"]["UserRole"];
+                    /**
+                     * Format: int64
+                     * @description 관리 기관 ID (role=ORG_ADMIN일 때 필수, 그 외 null)
+                     */
+                    orgId?: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description 변경된 사용자 요약 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 57,
+                     *       "email": "cheolsu.kim@pusan.ac.kr",
+                     *       "name": "김철수",
+                     *       "role": "ORG_ADMIN"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description 알 수 없는 사용자 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "사용자를 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "해당 ID의 사용자가 존재하지 않습니다.",
+                     *       "instance": "/api/v1/admin/users/9999",
+                     *       "code": "RESOURCE_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 검증 실패 (예 role=ORG_ADMIN인데 orgId 누락) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "입력값이 올바르지 않습니다",
+                     *       "status": 422,
+                     *       "detail": "요청 값을 확인해 주세요.",
+                     *       "instance": "/api/v1/admin/users/57",
+                     *       "code": "VALIDATION_FAILED",
+                     *       "errors": [
+                     *         {
+                     *           "field": "orgId",
+                     *           "message": "ORG_ADMIN 역할에는 관리 기관(orgId)을 지정해야 합니다."
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
 }
