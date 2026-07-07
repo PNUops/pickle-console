@@ -9,6 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "gen:api": "openapi-typescript ../docs/api/openapi.yaml -o src/api/schema.d.ts"
   },
   "overrides": {
