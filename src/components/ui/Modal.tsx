@@ -20,6 +20,13 @@ export function Modal({ open, onClose, title, className, children, footer }: Mod
   const panelRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<Element | null>(null)
 
+  // Keep the latest onClose without retriggering the focus-init effect below —
+  // an inline onClose prop must not re-yank focus on every parent re-render.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   useEffect(() => {
     if (!open) return
     previouslyFocused.current = document.activeElement
@@ -33,18 +40,25 @@ export function Modal({ open, onClose, title, className, children, footer }: Mod
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (event.key !== 'Tab' || !panel) return
       const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
       if (focusables.length === 0) {
         event.preventDefault()
+        panel.focus()
         return
       }
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
       const active = document.activeElement
+      if (!(active instanceof Node) || !panel.contains(active)) {
+        // Focus escaped the dialog — pull it back in.
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+        return
+      }
       if (event.shiftKey && (active === first || active === panel)) {
         event.preventDefault()
         last.focus()
@@ -61,7 +75,7 @@ export function Modal({ open, onClose, title, className, children, footer }: Mod
         previouslyFocused.current.focus()
       }
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
