@@ -412,6 +412,39 @@ export const vmHandlers: RequestHandler[] = [
     )
   }),
 
+  http.post('*/api/v1/vms/:vmId/initial-password', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    if (!['RUNNING', 'STOPPED', 'REBOOTING'].includes(vm.status)) {
+      return invalidVmStateProblem(
+        `/api/v1/vms/${vm.id}/initial-password`,
+        'VM 생성이 완료된 뒤에 초기 비밀번호를 열람할 수 있습니다.',
+      )
+    }
+    if (!vm.initialPasswordAvailable) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '초기 비밀번호를 열람할 수 없습니다',
+        status: 410,
+        detail:
+          '초기 비밀번호가 이미 열람되었거나 존재하지 않습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.',
+        instance: `/api/v1/vms/${vm.id}/initial-password`,
+        code: 'VM_PASSWORD_ALREADY_VIEWED',
+      })
+    }
+    vm.initialPasswordAvailable = false
+    const body: Schemas['InitialPasswordResponse'] = {
+      password: 'x7GmQ4vRk2LpWn9sCtYb8Zed',
+      sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      sshPort: 22,
+    }
+    return HttpResponse.json(body, {
+      status: 200,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }),
+
   http.get('*/api/v1/vms/:vmId/events', ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()

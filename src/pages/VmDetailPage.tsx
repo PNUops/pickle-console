@@ -12,6 +12,7 @@ import {
   fetchVmEvents,
   forceStopVm,
   rebootVm,
+  revealInitialPassword,
   shutdownVm,
   startVm,
   type MessageResponse,
@@ -127,6 +128,8 @@ export function VmDetailPage() {
       {data.deletion && data.status !== 'DELETED' && (
         <DeletionBanner deletion={data.deletion} />
       )}
+
+      <InitialPasswordSection vm={data} />
 
       {data.provisioning && <ProvisioningPanel task={data.provisioning} />}
 
@@ -312,6 +315,157 @@ function PowerControls({ vm }: { vm: VmDetail }) {
         </Modal>
       )}
     </div>
+  )
+}
+
+/* ─── 초기 비밀번호 1회 열람 ─── */
+
+/** 계약상 열람이 허용되는 상태 (그 외는 409). */
+const PASSWORD_VIEWABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING']
+
+function InitialPasswordSection({ vm }: { vm: VmDetail }) {
+  const queryClient = useQueryClient()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 평문 비밀번호는 뮤테이션 상태(메모리)에만 존재한다.
+  // localStorage/sessionStorage 등 어디에도 저장하지 않는다.
+  const reveal = useMutation({
+    mutationFn: () => revealInitialPassword(vm.id),
+    onError: async (err) => {
+      setModalOpen(false)
+      setError(toApiError(err, '초기 비밀번호를 열람하지 못했습니다.').message)
+      // 410(이미 열람) 등은 상세를 다시 불러와 배너 상태를 맞춘다.
+      await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+    },
+  })
+
+  const close = async () => {
+    const wasRevealed = reveal.isSuccess
+    setModalOpen(false)
+    reveal.reset() // 평문을 메모리에서 즉시 폐기한다.
+    if (wasRevealed) {
+      await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+    }
+  }
+
+  if (!PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
+  if (!vm.initialPasswordAvailable && !error) return null
+
+  return (
+    <>
+      {error ? (
+        <Alert variant="warning">{error}</Alert>
+      ) : (
+        <Alert variant="info" title="초기 비밀번호를 확인하세요 (1회만 표시)">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p>
+              프로비저닝 때 생성된 초기 비밀번호가 아직 열람되지 않았습니다. 보안을
+              위해 정확히 한 번만 표시됩니다.
+            </p>
+            <Button size="sm" onClick={() => setModalOpen(true)}>
+              비밀번호 확인
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      <Modal
+        open={modalOpen}
+        onClose={close}
+        title="초기 비밀번호 확인"
+        footer={
+          reveal.isSuccess ? (
+            <Button variant="secondary" onClick={close}>
+              닫기
+            </Button>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={close}>
+                돌아가기
+              </Button>
+              <Button loading={reveal.isPending} onClick={() => reveal.mutate()}>
+                지금 확인
+              </Button>
+            </>
+          )
+        }
+      >
+        {reveal.isSuccess ? (
+          <div className="space-y-4">
+            <Alert variant="warning">
+              이 비밀번호는 다시 표시되지 않습니다. 지금 안전한 곳에 보관하세요.
+            </Alert>
+            <dl className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <dt className="text-xs font-medium text-neutral-500">SSH 계정</dt>
+                  <dd className="mt-0.5 font-mono text-sm text-neutral-900">
+                    {reveal.data.sshUsername}
+                  </dd>
+                </div>
+                <CopyButton value={reveal.data.sshUsername} label="계정 복사" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <dt className="text-xs font-medium text-neutral-500">초기 비밀번호</dt>
+                  <dd className="mt-0.5 font-mono text-sm break-all text-neutral-900">
+                    {reveal.data.password}
+                  </dd>
+                </div>
+                <CopyButton value={reveal.data.password} label="비밀번호 복사" />
+              </div>
+              {reveal.data.sshHost && (
+                <div>
+                  <dt className="text-xs font-medium text-neutral-500">SSH 접속</dt>
+                  <dd className="mt-0.5 font-mono text-sm text-neutral-900">
+                    ssh {reveal.data.sshUsername}@{reveal.data.sshHost}
+                    {reveal.data.sshPort != null && reveal.data.sshPort !== 22
+                      ? ` -p ${reveal.data.sshPort}`
+                      : ''}
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <p className="text-xs text-neutral-500">
+              창을 닫으면 다시 조회할 수 없습니다. 비밀번호를 잊으면 비밀번호
+              재설정(추후 제공)을 이용해야 합니다.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-600">
+              초기 비밀번호는 지금 <strong>한 번만</strong> 표시되며, 확인 후에는 다시
+              볼 수 없습니다. 지금 안전한 곳에 보관할 준비가 되었을 때만 진행하세요.
+            </p>
+            <Alert variant="warning">
+              확인 즉시 서버에서 비밀번호 평문이 파기되어 재열람이 불가능합니다.
+            </Alert>
+          </div>
+        )}
+      </Modal>
+    </>
+  )
+}
+
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        } catch {
+          // 클립보드 권한이 없으면 조용히 무시한다 (값은 화면에 그대로 보인다).
+        }
+      }}
+    >
+      {copied ? '복사됨' : label}
+    </Button>
   )
 }
 
