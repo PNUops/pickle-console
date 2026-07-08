@@ -33,6 +33,9 @@ describe('기관 관리 — 접근 제어', () => {
     expect(screen.getByRole('link', { name: '기관 관리' })).toBeInTheDocument()
     expect(await screen.findByText('cse-lab')).toBeInTheDocument()
     expect(screen.getAllByText('SW교육센터').length).toBeGreaterThan(0)
+    // 계약 v0.3.x: OrgSummary.status를 상태 배지로 표시한다.
+    const row = screen.getByText('cse-lab').closest('tr')!
+    expect(within(row).getByText('활성')).toBeInTheDocument()
   })
 })
 

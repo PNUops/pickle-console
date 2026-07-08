@@ -90,7 +90,11 @@ function toSummary(record: GroupRecord): Schemas['GroupSummary'] {
 }
 
 function toDetail(record: GroupRecord): Schemas['GroupDetail'] {
-  return { ...record.detail, members: record.members }
+  // myRole은 서버처럼 현재 멤버 상태에서 계산한다 (역할 변경/OWNER 이전 반영).
+  const myRole =
+    record.members.find((m) => m.userId === studentUser.id)?.role ??
+    record.detail.myRole
+  return { ...record.detail, myRole, members: record.members }
 }
 
 function findGroup(groupId: string | readonly string[]): GroupRecord | undefined {

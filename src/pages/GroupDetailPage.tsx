@@ -35,7 +35,6 @@ const ASSIGNABLE_ROLES: GroupMemberRole[] = ['OWNER', 'MANAGER', 'MEMBER', 'VIEW
 export function GroupDetailPage() {
   const params = useParams()
   const groupId = Number(params.groupId)
-  const { user } = useAuth()
   const group = useQuery({
     queryKey: ['groups', groupId],
     queryFn: () => fetchGroup(groupId),
@@ -53,7 +52,8 @@ export function GroupDetailPage() {
   }
 
   const data = group.data
-  const myRole = data.members.find((m) => m.userId === user?.id)?.role ?? null
+  // 계약 v0.3.x부터 서버가 내 역할을 직접 내려준다 (멤버 목록 스캔 불필요).
+  const myRole = data.myRole
 
   return (
     <div className="space-y-6">

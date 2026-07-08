@@ -5,6 +5,7 @@ import { toApiError } from '../api/problem'
 import { fetchOrgs, type OrgSummary, type UserSummary } from '../api/queries'
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -24,7 +25,7 @@ import {
   Textarea,
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { USER_ROLE_LABELS, type UserRole } from '../lib/labels'
+import { ORG_STATUS_LABELS, USER_ROLE_LABELS, type UserRole } from '../lib/labels'
 import { ORG_SLUG_RE } from '../lib/validation'
 
 export function AdminOrgsPage() {
@@ -57,6 +58,7 @@ export function AdminOrgsPage() {
               <TR>
                 <TH>이름</TH>
                 <TH>slug</TH>
+                <TH>상태</TH>
                 <TH>설명</TH>
                 <TH className="w-20" />
               </TR>
@@ -66,6 +68,11 @@ export function AdminOrgsPage() {
                 <TR key={org.id}>
                   <TD className="font-medium text-neutral-900">{org.name}</TD>
                   <TD className="font-mono text-xs text-neutral-500">{org.slug}</TD>
+                  <TD>
+                    <Badge variant={org.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                      {ORG_STATUS_LABELS[org.status]}
+                    </Badge>
+                  </TD>
                   <TD className="max-w-sm truncate">{org.description ?? '—'}</TD>
                   <TD>
                     <Button

@@ -211,10 +211,16 @@ describe('VM 신청 위저드 — 제출', () => {
     await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    // ⑤ 확인·제출: 요약 확인 후 제출
+    // ⑤ 확인·제출: 요약·백업 책임 고지 확인 후 제출
     expect(screen.getByText('신청 내용 확인')).toBeInTheDocument()
     expect(screen.getByText('capstone-api.pickle.pnuops.com')).toBeInTheDocument()
     expect(screen.getByText('2 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
+    expect(screen.getByText('백업 책임 안내')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /플랫폼은 VM 데이터를 백업하지 않습니다\. 데이터 보호와 백업은 이용자 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다\./,
+      ),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
 
     expect(

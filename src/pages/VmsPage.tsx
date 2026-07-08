@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchGroups, fetchVms } from '../api/queries'
+import { fetchVms } from '../api/queries'
 import {
   Alert,
   Card,
@@ -27,11 +27,6 @@ export function VmsPage() {
     refetchInterval: (query) =>
       query.state.data?.content.some((vm) => vm.status === 'CREATING') ? 3000 : false,
   })
-  const groups = useQuery({ queryKey: ['groups'], queryFn: fetchGroups })
-
-  const groupName = (groupId: number) =>
-    groups.data?.find((g) => g.id === groupId)?.name ?? `그룹 #${groupId}`
-
   return (
     <div className="space-y-6">
       <div>
@@ -83,7 +78,7 @@ export function VmsPage() {
                     <TD className="whitespace-nowrap">
                       {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
                     </TD>
-                    <TD>{groupName(vm.groupId)}</TD>
+                    <TD>{vm.groupName}</TD>
                     <TD className="whitespace-nowrap">{formatDateTime(vm.createdAt)}</TD>
                   </TR>
                 ))}

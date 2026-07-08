@@ -618,6 +618,10 @@ export function NewRequestPage() {
                 orgName={orgs.data?.find((o) => o.id === state.orgId)?.name ?? String(state.orgId)}
                 templateName={selectedTemplate?.displayName ?? String(state.templateId)}
               />
+              <Alert variant="warning" title="백업 책임 안내">
+                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 이용자
+                책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
+              </Alert>
             </>
           )}
 
