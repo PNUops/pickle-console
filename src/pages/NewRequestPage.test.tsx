@@ -111,6 +111,39 @@ describe('VM 신청 위저드 — 단계 검증', () => {
       screen.getByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
     ).toBeInTheDocument()
   })
+
+  test('커스텀 도메인은 형식을 검사하고 소문자로 정규화해 전송한다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await screen.findByRole('heading', { name: 'VM 신청' })
+    await passStep1(user)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.type(screen.getByLabelText('사용 목적'), '웹 서비스 배포')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
+    await user.click(screen.getByRole('checkbox', { name: /HTTP 서비스 게시/ }))
+    await user.type(screen.getByLabelText('희망 서브도메인'), 'myapp')
+    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
+
+    // 형식 위반 → 오류
+    const custom = screen.getByLabelText('커스텀 도메인')
+    await user.type(custom, '-bad-.example.com')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText(/커스텀 도메인 형식이 올바르지 않습니다/)).toBeInTheDocument()
+
+    // 대문자·공백 입력은 정규화되어 요약과 페이로드에 소문자로 반영된다
+    await user.clear(custom)
+    await user.type(custom, 'MyApp.Example.COM')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(await screen.findByText('신청 내용 확인')).toBeInTheDocument()
+    expect(screen.getByText('myapp.example.com')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    expect(createdVmRequestBodies).toHaveLength(1)
+    expect(createdVmRequestBodies[0].customDomain).toBe('myapp.example.com')
+  })
 })
 
 describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
