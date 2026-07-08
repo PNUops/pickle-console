@@ -113,6 +113,40 @@ describe('VM 신청 위저드 — 단계 검증', () => {
   })
 })
 
+describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
+  test('새로고침(재마운트) 후에도 URL step과 입력값이 유지된다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-student'))
+    const first = renderApp('/console/requests/new')
+    await screen.findByRole('heading', { name: 'VM 신청' })
+
+    // 1~2단계 진행: 그룹·기관 선택 후 템플릿 선택.
+    await passStep1(user)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await screen.findByLabelText('사용 목적') // 3단계 도착 (?step=3)
+
+    // 브라우저 새로고침/뒤로가기를 재현: 앱을 다시 열어 ?step=2로 진입.
+    first.unmount()
+    renderApp('/console/requests/new?step=2')
+
+    // 2단계가 열리고 템플릿·사양 입력이 초안에서 복원된다.
+    expect(await screen.findByLabelText('vCPU')).toHaveValue(2)
+    expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
+    expect(
+      screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }),
+    ).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('완료되지 않은 단계로 직접 진입하면 첫 미완료 단계로 돌려보낸다', async () => {
+    server.use(refreshSuccessHandler('access-student'))
+    renderApp('/console/requests/new?step=4')
+
+    // 아무것도 입력하지 않았으므로 1단계(그룹·기관)로 되돌아간다.
+    expect(await screen.findByLabelText('신청 그룹')).toBeInTheDocument()
+  })
+})
+
 describe('VM 신청 위저드 — 제출', () => {
   test('전체 단계를 통과하면 계약에 맞는 페이로드로 제출하고 완료 화면을 보여준다', async () => {
     const user = userEvent.setup()

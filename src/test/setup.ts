@@ -10,5 +10,6 @@ afterEach(() => {
   server.resetHandlers()
   resetFixtures()
   setAccessToken(null)
+  sessionStorage.clear() // 위저드 초안 등 세션 저장소가 테스트 간 새지 않게 한다
 })
 afterAll(() => server.close())

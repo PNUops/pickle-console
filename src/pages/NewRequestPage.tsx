@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import {
@@ -104,6 +104,25 @@ const INITIAL_STATE: WizardState = {
 
 type FieldErrors = Partial<Record<string, string>>
 
+/** 새로고침/뒤로가기에도 작성 중인 신청서를 유지하기 위한 세션 저장 키. */
+const DRAFT_KEY = 'pickle.vm-request-draft'
+
+function loadDraft(): WizardState {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY)
+    if (!raw) return INITIAL_STATE
+    return { ...INITIAL_STATE, ...(JSON.parse(raw) as Partial<WizardState>) }
+  } catch {
+    return INITIAL_STATE
+  }
+}
+
+/** `?step=n`(1부터) → 내부 단계 인덱스(0부터). 잘못된 값은 첫 단계로. */
+function parseStepParam(value: string | null): number {
+  const n = Number(value ?? '1')
+  return Number.isInteger(n) && n >= 1 && n <= STEPS.length ? n - 1 : 0
+}
+
 /** 템플릿 기본값을 초과하는 사양인지 (초과 시 specReason 필수 — 서버와 동일 규칙). */
 function exceedsTemplateDefaults(state: WizardState, template: VmTemplate | undefined): boolean {
   if (!template) return false
@@ -120,8 +139,9 @@ export function NewRequestPage() {
   const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
   const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
 
-  const [step, setStep] = useState(0)
-  const [state, setState] = useState<WizardState>(INITIAL_STATE)
+  const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [state, setState] = useState<WizardState>(loadDraft)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
@@ -132,35 +152,7 @@ export function NewRequestPage() {
   const isLoading =
     groups.isPending || orgs.isPending || templates.isPending || options.isPending
   const loadError = groups.error ?? orgs.error ?? templates.error ?? options.error
-
-  const submit = useMutation({
-    mutationFn: async (body: CreateVmRequest) => {
-      const { data, error } = await api.POST('/vm-requests', { body })
-      if (!data) throw toApiError(error, '신청을 제출하지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      return data
-    },
-    onSuccess: (data) => setSubmitted(data),
-    onError: (err) => {
-      const apiError = toApiError(err, '신청을 제출하지 못했습니다.')
-      setServerFieldErrors(fieldErrorsOf(apiError.problem))
-      setSubmitError(apiError.message)
-    },
-  })
-
-  if (submitted) {
-    return <SubmitSuccess request={submitted} />
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Spinner label="신청 정보 불러오는 중" />
-      </div>
-    )
-  }
-  if (loadError) {
-    return <Alert variant="danger">{loadError.message}</Alert>
-  }
+  const ready = !isLoading && !loadError
 
   const eligibleGroups = (groups.data ?? []).filter(
     (g) => g.myRole === 'OWNER' || g.myRole === 'MANAGER',
@@ -208,16 +200,76 @@ export function NewRequestPage() {
     return next
   }
 
+  /** 현재 입력값으로 도달할 수 있는 최대 단계 (자기 검증이 실패하는 첫 단계). */
+  const firstBlockedStep = (): number => {
+    for (let i = 0; i < STEPS.length - 1; i++) {
+      if (Object.keys(validateStep(i)).length > 0) return i
+    }
+    return STEPS.length - 1
+  }
+
+  const requestedStep = parseStepParam(searchParams.get('step'))
+  const step = ready ? Math.min(requestedStep, firstBlockedStep()) : requestedStep
+
+  const goToStep = (index: number, options?: { replace?: boolean }) => {
+    setSearchParams({ step: String(index + 1) }, options)
+  }
+
+  // 직접 진입/뒤로가기로 아직 완료되지 않은 단계에 들어오면 첫 미완료 단계로 되돌린다.
+  useEffect(() => {
+    if (!ready || submitted) return
+    if (requestedStep !== step) goToStep(step, { replace: true })
+  })
+
+  // 작성 중인 신청서를 세션에 보관해 새로고침/뒤로가기에도 입력을 유지한다.
+  useEffect(() => {
+    if (submitted) return
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state))
+  }, [state, submitted])
+
+  const submit = useMutation({
+    mutationFn: async (body: CreateVmRequest) => {
+      const { data, error } = await api.POST('/vm-requests', { body })
+      if (!data) throw toApiError(error, '신청을 제출하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      return data
+    },
+    onSuccess: (data) => {
+      sessionStorage.removeItem(DRAFT_KEY)
+      void queryClient.invalidateQueries({ queryKey: ['vm-requests'] })
+      setSubmitted(data)
+    },
+    onError: (err) => {
+      const apiError = toApiError(err, '신청을 제출하지 못했습니다.')
+      setServerFieldErrors(fieldErrorsOf(apiError.problem))
+      setSubmitError(apiError.message)
+    },
+  })
+
+  if (submitted) {
+    return <SubmitSuccess request={submitted} />
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner label="신청 정보 불러오는 중" />
+      </div>
+    )
+  }
+  if (loadError) {
+    return <Alert variant="danger">{loadError.message}</Alert>
+  }
+
   const goNext = () => {
     const stepErrors = validateStep(step)
     setErrors(stepErrors)
     if (Object.keys(stepErrors).length > 0) return
-    setStep((s) => Math.min(s + 1, STEPS.length - 1))
+    goToStep(Math.min(step + 1, STEPS.length - 1))
   }
 
   const goPrev = () => {
     setErrors({})
-    setStep((s) => Math.max(s - 1, 0))
+    goToStep(Math.max(step - 1, 0))
   }
 
   const buildPayload = (): CreateVmRequest => ({
@@ -246,7 +298,7 @@ export function NewRequestPage() {
     for (let i = 0; i < STEPS.length - 1; i++) {
       const stepErrors = validateStep(i)
       if (Object.keys(stepErrors).length > 0) {
-        setStep(i)
+        goToStep(i)
         setErrors(stepErrors)
         return
       }
