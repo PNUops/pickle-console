@@ -100,18 +100,17 @@ function GroupInfoSection({
           </Button>
         )}
       </div>
-      <EditGroupModal group={group} open={editOpen} onClose={() => setEditOpen(false)} />
+      {/* 열 때마다 마운트해 지난 편집의 임시 입력이 남지 않게 한다. */}
+      {editOpen && <EditGroupModal group={group} onClose={() => setEditOpen(false)} />}
     </div>
   )
 }
 
 function EditGroupModal({
   group,
-  open,
   onClose,
 }: {
   group: GroupDetail
-  open: boolean
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -146,7 +145,7 @@ function EditGroupModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="그룹 정보 수정">
+    <Modal open onClose={onClose} title="그룹 정보 수정">
       <form onSubmit={submit} className="space-y-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
         <FormField label="그룹 이름" required>
