@@ -5,10 +5,15 @@ export interface StepperProps {
   steps: string[]
   /** Zero-based index of the current step. Steps before it render as complete. */
   current: number
+  /**
+   * Visually hide the step labels (kept for screen readers). Use for dense
+   * numeric pipelines where a caption below the stepper names the current step.
+   */
+  hideLabels?: boolean
   className?: string
 }
 
-export function Stepper({ steps, current, className }: StepperProps) {
+export function Stepper({ steps, current, hideLabels = false, className }: StepperProps) {
   return (
     <ol className={cn('flex items-center gap-2', className)}>
       {steps.map((step, index) => {
@@ -42,7 +47,7 @@ export function Stepper({ steps, current, className }: StepperProps) {
             </span>
             <span
               className={cn(
-                'text-sm whitespace-nowrap',
+                hideLabels ? 'sr-only' : 'text-sm whitespace-nowrap',
                 state === 'current' ? 'font-semibold text-primary-800' : 'text-neutral-500',
               )}
             >

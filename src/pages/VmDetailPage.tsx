@@ -1,20 +1,59 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
-import { fetchGroups, fetchVm } from '../api/queries'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
+import {
+  fetchVm,
+  fetchVmEvents,
+  forceStopVm,
+  rebootVm,
+  shutdownVm,
+  startVm,
+  type MessageResponse,
+  type ProvisioningTaskView,
+  type VmDetail,
+  type VmStatus,
+} from '../api/queries'
+import { toApiError } from '../api/problem'
 import {
   Alert,
+  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  Modal,
+  Pagination,
   Spinner,
+  Stepper,
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
   VmStatusBadge,
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { PROVISIONING_KIND_LABELS, VM_EVENT_LABELS } from '../lib/status'
 
-/** CREATING 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
-const CREATING_POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000
+/** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
+const POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000
+
+/** VM 상태 기준으로 폴링이 필요한 상태 (비동기 전이 중). */
+const POLLING_VM_STATUSES: VmStatus[] = ['CREATING', 'DELETING', 'REBOOTING']
+/** provisioning 태스크 기준으로 폴링이 필요한 상태. */
+const ACTIVE_TASK_STATUSES: ProvisioningTaskView['status'][] = [
+  'PENDING',
+  'RUNNING',
+  'RETRYING',
+]
+
+const EVENTS_PAGE_SIZE = 10
 
 export function VmDetailPage() {
   const params = useParams()
@@ -22,11 +61,16 @@ export function VmDetailPage() {
   const vm = useQuery({
     queryKey: ['vms', vmId],
     queryFn: () => fetchVm(vmId),
-    // 생성 중인 동안에는 mock 프로비저닝 완료를 자동으로 반영한다.
-    refetchInterval: (query) =>
-      query.state.data?.status === 'CREATING' ? CREATING_POLL_MS : false,
+    // 생성/삭제/재부팅 등 비동기 전이 중에는 서버 상태를 주기적으로 반영한다.
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      const activeTask =
+        data.provisioning != null &&
+        ACTIVE_TASK_STATUSES.includes(data.provisioning.status)
+      return POLLING_VM_STATUSES.includes(data.status) || activeTask ? POLL_MS : false
+    },
   })
-  const groups = useQuery({ queryKey: ['groups'], queryFn: fetchGroups })
 
   if (vm.isPending) {
     return (
@@ -40,7 +84,6 @@ export function VmDetailPage() {
   }
 
   const data = vm.data
-  const groupName = groups.data?.find((g) => g.id === data.groupId)?.name ?? `그룹 #${data.groupId}`
 
   return (
     <div className="space-y-6">
@@ -50,14 +93,17 @@ export function VmDetailPage() {
         </Link>
       </nav>
 
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-neutral-900">{data.name}</h1>
-          <VmStatusBadge status={data.status} />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-neutral-900">{data.name}</h1>
+            <VmStatusBadge status={data.status} />
+          </div>
+          <p className="mt-1 text-sm text-neutral-500">
+            {data.hostname} · {data.groupName}
+          </p>
         </div>
-        <p className="mt-1 text-sm text-neutral-500">
-          {data.hostname} · {groupName}
-        </p>
+        <PowerControls vm={data} />
       </div>
 
       {data.status === 'CREATING' && (
@@ -65,7 +111,15 @@ export function VmDetailPage() {
           VM을 생성하고 있습니다. 생성이 끝나면 상태가 자동으로 갱신됩니다.
         </Alert>
       )}
+      {data.status === 'NEEDS_ADMIN' && (
+        <Alert variant="warning" title="관리자 확인 중입니다">
+          작업 처리 중 문제가 발생해 관리자가 원인을 확인하고 있습니다. 복구될 때까지
+          전원 제어·삭제 등 모든 조작이 제한됩니다.
+        </Alert>
+      )}
       {data.statusDetail && <Alert variant="warning">{data.statusDetail}</Alert>}
+
+      {data.provisioning && <ProvisioningPanel task={data.provisioning} />}
 
       <Card>
         <CardHeader>
@@ -74,7 +128,7 @@ export function VmDetailPage() {
         <CardContent>
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             <Field label="사양">{formatSpec(data.vcpu, data.memoryMb, data.diskGb)}</Field>
-            <Field label="그룹">{groupName}</Field>
+            <Field label="그룹">{data.groupName}</Field>
             <Field label="내부 IP">{data.ipAddress ?? '할당 전'}</Field>
             <Field label="SSH 계정">{data.sshUsername}</Field>
             <Field label="사용 기간">
@@ -93,6 +147,8 @@ export function VmDetailPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <VmEventsSection vmId={vmId} />
     </div>
   )
 }
@@ -103,5 +159,247 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <dt className="text-xs font-medium text-neutral-500">{label}</dt>
       <dd className="mt-0.5 text-sm text-neutral-800">{children}</dd>
     </div>
+  )
+}
+
+/* ─── 전원 제어 ─── */
+
+type PowerAction = 'start' | 'shutdown' | 'reboot' | 'forceStop'
+
+interface PowerActionConfig {
+  label: string
+  /** 계약의 409 조건과 정합: 이 상태에서만 버튼을 노출한다. */
+  allowed: (status: VmStatus) => boolean
+  run: (vmId: number) => Promise<MessageResponse>
+  confirmTitle: string
+  confirmBody: string
+  /** 확인 모달에 danger Alert로 표시할 경고 (강제 종료 등). */
+  warning?: string
+  danger?: boolean
+}
+
+const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
+  start: {
+    label: '시작',
+    allowed: (status) => status === 'STOPPED',
+    run: startVm,
+    confirmTitle: 'VM 시작',
+    confirmBody: 'VM을 시작하시겠습니까? 잠시 후 실행 중 상태로 바뀝니다.',
+  },
+  shutdown: {
+    label: '종료',
+    allowed: (status) => status === 'RUNNING',
+    run: shutdownVm,
+    confirmTitle: 'VM 정상 종료',
+    confirmBody:
+      'VM에 정상 종료(ACPI) 신호를 보냅니다. 게스트 OS가 응답하지 않으면 종료가 실패할 수 있으며, 그 경우 강제 종료를 이용해야 합니다.',
+  },
+  reboot: {
+    label: '재부팅',
+    allowed: (status) => status === 'RUNNING',
+    run: rebootVm,
+    confirmTitle: 'VM 재부팅',
+    confirmBody: 'VM을 재부팅하시겠습니까? 재부팅하는 동안 접속이 잠시 끊깁니다.',
+  },
+  forceStop: {
+    label: '강제 종료',
+    allowed: (status) => status === 'RUNNING' || status === 'REBOOTING',
+    run: forceStopVm,
+    confirmTitle: 'VM 강제 종료',
+    confirmBody:
+      '전원 차단에 해당하는 강제 종료를 수행합니다. 정상 종료가 응답하지 않을 때만 사용하세요.',
+    warning:
+      '디스크 쓰기 중 강제 종료하면 파일 시스템과 데이터가 손상될 수 있습니다.',
+    danger: true,
+  },
+}
+
+function PowerControls({ vm }: { vm: VmDetail }) {
+  const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState<PowerAction | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const power = useMutation({
+    mutationFn: (action: PowerAction) => POWER_ACTIONS[action].run(vm.id),
+    onSuccess: async (data) => {
+      setConfirming(null)
+      setError(null)
+      setMessage(data.message)
+      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+    },
+    onError: async (err) => {
+      setConfirming(null)
+      setMessage(null)
+      setError(toApiError(err, 'VM 전원 제어 요청에 실패했습니다.').message)
+      // 409(상태 불일치) 등은 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
+      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+    },
+  })
+
+  const visibleActions = (Object.keys(POWER_ACTIONS) as PowerAction[]).filter((action) =>
+    POWER_ACTIONS[action].allowed(vm.status),
+  )
+  const active = confirming ? POWER_ACTIONS[confirming] : null
+
+  if (visibleActions.length === 0 && !message && !error) return null
+
+  return (
+    <div className="flex flex-col items-end gap-2">
+      {visibleActions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {visibleActions.map((action) => {
+            const config = POWER_ACTIONS[action]
+            return (
+              <Button
+                key={action}
+                variant={config.danger ? 'danger' : 'secondary'}
+                size="sm"
+                onClick={() => setConfirming(action)}
+              >
+                {config.label}
+              </Button>
+            )
+          })}
+        </div>
+      )}
+      {message && (
+        <Alert variant="info" className="w-full sm:w-auto">
+          {message}
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="danger" className="w-full sm:w-auto">
+          {error}
+        </Alert>
+      )}
+
+      {active && confirming && (
+        <Modal
+          open
+          onClose={() => setConfirming(null)}
+          title={active.confirmTitle}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirming(null)}>
+                돌아가기
+              </Button>
+              <Button
+                variant={active.danger ? 'danger' : 'primary'}
+                loading={power.isPending}
+                onClick={() => power.mutate(confirming)}
+              >
+                {active.label}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-600">{active.confirmBody}</p>
+            {active.warning && <Alert variant="danger">{active.warning}</Alert>}
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+/* ─── 프로비저닝/삭제 태스크 진행 패널 ─── */
+
+function ProvisioningPanel({ task }: { task: ProvisioningTaskView }) {
+  const steps = Array.from({ length: task.totalSteps }, (_, index) => `${index + 1}단계`)
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{PROVISIONING_KIND_LABELS[task.kind]} 진행 상황</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Stepper steps={steps} current={task.currentStep} hideLabels />
+        <p className="text-sm text-neutral-700">
+          단계 {task.currentStep + 1}/{task.totalSteps} · {task.stepLabel}
+          {task.attempts > 1 && ` (시도 ${task.attempts}회)`}
+        </p>
+        {task.status === 'RETRYING' && (
+          <Alert variant="warning" title="일시적인 오류로 재시도 중입니다">
+            잠시 후 자동으로 다시 시도합니다.
+            {task.lastError && ` 마지막 오류: ${task.lastError}`}
+          </Alert>
+        )}
+        {task.status === 'NEEDS_ADMIN' && (
+          <Alert variant="warning" title="관리자 개입이 필요합니다">
+            재시도가 모두 실패해 관리자가 원인을 확인하고 있습니다. 복구되면 상태가
+            자동으로 갱신됩니다.
+            {task.lastError && ` 마지막 오류: ${task.lastError}`}
+          </Alert>
+        )}
+        {task.status === 'FAILED' && (
+          <Alert variant="danger" title="작업이 실패했습니다">
+            {task.lastError ?? '자세한 내용은 관리자에게 문의해 주세요.'}
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ─── 이벤트 이력 ─── */
+
+function VmEventsSection({ vmId }: { vmId: number }) {
+  const [page, setPage] = useState(0)
+  const events = useQuery({
+    // ['vms'] 무효화(전원/삭제 뮤테이션 후)에 함께 걸리도록 vms 하위 키를 쓴다.
+    queryKey: ['vms', vmId, 'events', { page }],
+    queryFn: () => fetchVmEvents(vmId, { page, size: EVENTS_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>이벤트 이력</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {events.isPending && (
+          <div className="flex justify-center py-6">
+            <Spinner label="이벤트 이력 불러오는 중" />
+          </div>
+        )}
+        {events.isError && <Alert variant="danger">{events.error.message}</Alert>}
+        {events.isSuccess && events.data.content.length === 0 && (
+          <p className="py-2 text-sm text-neutral-500">기록된 이벤트가 없습니다.</p>
+        )}
+        {events.isSuccess && events.data.content.length > 0 && (
+          <>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>시각</TH>
+                  <TH>이벤트</TH>
+                  <TH>수행자</TH>
+                  <TH>내용</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {events.data.content.map((event) => (
+                  <TR key={event.id}>
+                    <TD className="whitespace-nowrap">{formatDateTime(event.createdAt)}</TD>
+                    <TD className="whitespace-nowrap">{VM_EVENT_LABELS[event.type]}</TD>
+                    <TD className="whitespace-nowrap">
+                      {event.actorId == null ? '시스템' : `사용자 #${event.actorId}`}
+                    </TD>
+                    <TD>{event.detail ?? '—'}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+            <Pagination
+              page={events.data.page}
+              totalPages={events.data.totalPages}
+              onPageChange={setPage}
+            />
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
