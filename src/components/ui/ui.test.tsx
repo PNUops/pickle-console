@@ -120,5 +120,8 @@ describe('ConfirmNameModal', () => {
     expect(confirm).toBeEnabled()
     await user.click(confirm)
     expect(onConfirm).toHaveBeenCalledOnce()
+    // 서버 이중 확인(confirmName 정확 일치)이 살아 있으려면 호출부가
+    // expectedName이 아니라 "타이핑한 값"을 받아 전송해야 한다.
+    expect(onConfirm).toHaveBeenCalledWith('capstone-team3-api')
   })
 })

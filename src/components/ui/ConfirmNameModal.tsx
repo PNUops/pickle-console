@@ -14,7 +14,12 @@ export interface ConfirmNameModalProps {
   confirmLabel: string
   /** 확인 버튼의 로딩 상태. */
   loading?: boolean
-  onConfirm: () => void
+  /**
+   * 확인 시 사용자가 실제로 타이핑한 이름을 전달한다. 호출부는 이 값을
+   * 그대로 서버 confirmName으로 전송해야 한다 — 이미 아는 expectedName을
+   * 전송하면 서버의 이중 확인(이름 정확 일치 검사)이 무력화된다.
+   */
+  onConfirm: (typedName: string) => void
   /** 경고·안내 본문 (이름 입력 필드 위에 렌더링). */
   children?: ReactNode
 }
@@ -56,7 +61,7 @@ export function ConfirmNameModal({
             variant="danger"
             disabled={!matches}
             loading={loading}
-            onClick={onConfirm}
+            onClick={() => onConfirm(name)}
           >
             {confirmLabel}
           </Button>

@@ -330,7 +330,10 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
 
   // 평문 비밀번호는 뮤테이션 상태(메모리)에만 존재한다.
   // localStorage/sessionStorage 등 어디에도 저장하지 않는다.
+  // gcTime: 0 — reset()은 observer만 분리하므로, 모달을 닫으면 MutationCache의
+  // Mutation 객체(평문 보유)가 기본 5분을 기다리지 않고 즉시 GC 되게 한다.
   const reveal = useMutation({
+    gcTime: 0,
     mutationFn: () => revealInitialPassword(vm.id),
     onError: async (err) => {
       setModalOpen(false)

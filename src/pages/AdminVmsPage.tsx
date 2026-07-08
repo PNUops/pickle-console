@@ -450,7 +450,9 @@ function EmergencyDeleteAction({
         expectedName={vm.name}
         confirmLabel="즉시 파기"
         loading={destroy.isPending}
-        onConfirm={() => destroy.mutate(vm.name)}
+        // 사용자가 타이핑한 값을 그대로 confirmName으로 전송한다 — 서버가
+        // 이름 정확 일치를 최종 검증한다(vm.name을 보내면 이중 확인 무력화).
+        onConfirm={(typedName) => destroy.mutate(typedName)}
       >
         <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
           유예 없이 즉시 강제 종료 후 파기되며, 데이터는 복구할 수 없습니다. 기관
