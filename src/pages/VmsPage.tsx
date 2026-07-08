@@ -23,6 +23,9 @@ export function VmsPage() {
     queryKey: ['vms', { page }],
     queryFn: () => fetchVms({ page }),
     placeholderData: keepPreviousData,
+    // 생성 중인 VM이 있으면 3초마다 새로 고쳐 "생성이 끝나면 실행 중" 안내와 일치시킨다.
+    refetchInterval: (query) =>
+      query.state.data?.content.some((vm) => vm.status === 'CREATING') ? 3000 : false,
   })
   const groups = useQuery({ queryKey: ['groups'], queryFn: fetchGroups })
 
