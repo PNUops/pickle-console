@@ -20,6 +20,17 @@ function isAuthEndpoint(url: string): boolean {
 let refreshInFlight: Promise<boolean> | null = null
 
 /**
+ * CSRF 이중 제출 토큰: 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
+ * (비-HttpOnly, SameSite=Lax, Path=/) 값. `/auth/refresh`·`/auth/logout`
+ * 호출 시 `X-Pickle-Csrf` 헤더로 되돌려 보낸다 (계약 v0.3.0).
+ */
+export function getCsrfToken(): string {
+  if (typeof document === 'undefined') return ''
+  const match = /(?:^|;\s*)pickle_csrf=([^;]*)/.exec(document.cookie)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+/**
  * POST /auth/refresh with the HttpOnly cookie. Stores the new access token on
  * success. Concurrent callers share a single request (single-flight).
  */
@@ -29,6 +40,7 @@ export function refreshSession(): Promise<boolean> {
       const response = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'X-Pickle-Csrf': getCsrfToken() },
       })
       if (!response.ok) return false
       const body = (await response.json()) as components['schemas']['AuthTokenResponse']

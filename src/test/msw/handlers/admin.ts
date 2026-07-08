@@ -409,6 +409,7 @@ export const adminHandlers: RequestHandler[] = [
       name: created.name,
       slug: created.slug,
       description: created.description,
+      status: created.status,
     })
     return HttpResponse.json(created, { status: 201 })
   }),

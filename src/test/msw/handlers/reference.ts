@@ -12,8 +12,9 @@ function initialOrgs(): Schemas['OrgSummary'][] {
       name: '정보컴퓨터공학부 실습지원센터',
       slug: 'cse-lab',
       description: '학부 수업·캡스톤용 서버 자원 제공',
+      status: 'ACTIVE',
     },
-    { id: 2, name: 'SW교육센터', slug: 'sw-edu', description: null },
+    { id: 2, name: 'SW교육센터', slug: 'sw-edu', description: null, status: 'ACTIVE' },
   ]
 }
 

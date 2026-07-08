@@ -34,6 +34,7 @@ function initialGroups(): GroupRecord[] {
         name: '홍길동',
         slug: 'gildong-hong',
         description: null,
+        myRole: 'OWNER',
         createdAt: '2026-06-01T09:00:00+09:00',
       },
       members: [me()],
@@ -45,6 +46,7 @@ function initialGroups(): GroupRecord[] {
         name: '캡스톤 3조',
         slug: 'capstone-team3',
         description: '2026-1 캡스톤디자인 3조',
+        myRole: 'OWNER',
         createdAt: '2026-07-01T10:12:00+09:00',
       },
       members: [
@@ -61,6 +63,7 @@ function initialGroups(): GroupRecord[] {
         name: '알고리즘 스터디',
         slug: 'algo-study',
         description: '주 1회 문제 풀이 모임',
+        myRole: 'MEMBER',
         createdAt: '2026-06-15T20:00:00+09:00',
       },
       members: [
@@ -128,6 +131,7 @@ export const groupHandlers: RequestHandler[] = [
         name: body.name,
         slug: body.slug,
         description: body.description ?? null,
+        myRole: 'OWNER',
         createdAt: '2026-07-08T12:00:00+09:00',
       },
       members: [me()],

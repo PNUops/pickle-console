@@ -87,6 +87,11 @@ export interface paths {
          * @description 이메일·비밀번호를 검증하고 액세스 토큰(JWT, 15분)과 사용자 요약을 반환합니다.
          *     리프레시 토큰(불투명 문자열, 14일)은 `Set-Cookie`로만 전달됩니다.
          *
+         *     성공 시 리프레시 쿠키와 함께 CSRF 이중 제출용 `pickle_csrf` 쿠키
+         *     (비-HttpOnly, `SameSite=Lax`, `Path=/`)가 발급됩니다. 클라이언트는
+         *     `/auth/refresh`·`/auth/logout` 호출 시 이 쿠키 값을 `X-Pickle-Csrf`
+         *     헤더로 함께 보내야 합니다.
+         *
          *     속도 제한: IP+계정 단위 슬라이딩 윈도 (약 10회/분, 연속 5회 실패 시 백오프 잠금).
          */
         post: operations["login"];
@@ -111,6 +116,10 @@ export interface paths {
          *     리프레시 토큰이 **회전**되어 새 쿠키가 내려갑니다(이전 토큰은 즉시 폐기).
          *     이미 회전된 토큰의 재사용은 탈취 신호로 간주되어 해당 토큰 체인 전체가
          *     폐기되며 재로그인이 필요합니다.
+         *
+         *     M3부터 CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키
+         *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 `X-Pickle-Csrf` 헤더로
+         *     함께 보내야 하며, 갱신 성공 시 `pickle_csrf` 쿠키도 새 값으로 재발급됩니다.
          */
         post: operations["refresh"];
         delete?: never;
@@ -133,6 +142,9 @@ export interface paths {
          * @description 제시된 리프레시 토큰을 서버 측에서 폐기하고 `pickle_refresh` 쿠키를 삭제합니다
          *     (`Max-Age=0` Set-Cookie). 클라이언트는 보유한 액세스 토큰을 함께 폐기해야 합니다.
          *     쿠키가 없거나 이미 폐기된 경우에도 204를 반환합니다(멱등).
+         *
+         *     M3부터 CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키 값을
+         *     `X-Pickle-Csrf` 헤더로 함께 보내야 합니다.
          */
         post: operations["logout"];
         delete?: never;
@@ -449,6 +461,189 @@ export interface paths {
         get: operations["getVm"];
         put?: never;
         post?: never;
+        /**
+         * VM 삭제 (유예 후 파기)
+         * @description VM 삭제를 접수합니다. 소유 그룹의 **OWNER 또는 관리자**만 호출할 수 있습니다.
+         *
+         *     - 접수 즉시 정상 종료(ACPI)가 시도되고 상태가 `DELETING`으로 전이됩니다.
+         *     - 물리 파기는 `settings.vm_delete_grace_hours`(기본 **168시간 = 7일**) 유예
+         *       후 스위퍼 잡이 수행합니다. 유예 중에는
+         *       `POST /vms/{vmId}/cancel-deletion`으로 취소할 수 있습니다.
+         *     - **백업 책임 고지**: 플랫폼은 VM 데이터를 백업하지 않으며, 물리 파기 후에는
+         *       어떤 방법으로도 복구할 수 없습니다. 필요한 데이터는 삭제 전에 직접
+         *       백업해야 합니다.
+         *     - 삭제 접수와 최종 파기는 기관 관리자에게 통지되며 VM 이벤트(`DELETE`)로
+         *       기록됩니다.
+         */
+        delete: operations["deleteVm"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM 시작
+         * @description `STOPPED` 상태의 VM을 시작합니다. 그룹 **MEMBER 이상**만 호출할 수 있으며,
+         *     접수 즉시 202를 반환하고 잡 큐에서 비동기로 처리됩니다.
+         *     완료 여부는 VM 상세의 `status`(→ `RUNNING`)로 확인하고,
+         *     VM 이벤트(`START`)로 기록됩니다.
+         */
+        post: operations["startVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/shutdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM 정상 종료 (ACPI)
+         * @description `RUNNING` 상태의 VM에 정상 종료(ACPI shutdown) 신호를 보냅니다.
+         *     그룹 **MEMBER 이상**만 호출할 수 있으며, 접수 즉시 202를 반환하고
+         *     잡 큐에서 비동기로 처리됩니다. VM 이벤트(`STOP`)로 기록됩니다.
+         *
+         *     게스트 OS가 응답하지 않으면 시간 초과로 실패할 수 있으며, 이때 강제
+         *     종료로 **자동 폴백하지 않습니다** — 필요하면
+         *     `POST /vms/{vmId}/force-stop`을 명시적으로 호출해야 합니다.
+         */
+        post: operations["shutdownVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/reboot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM 재부팅
+         * @description `RUNNING` 상태의 VM을 재부팅합니다. 그룹 **MEMBER 이상**만 호출할 수
+         *     있으며, 접수 즉시 202를 반환하고 잡 큐에서 비동기로 처리됩니다.
+         *     VM 이벤트(`REBOOT`)로 기록됩니다.
+         */
+        post: operations["rebootVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/force-stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM 강제 종료 (전원 차단)
+         * @description `RUNNING` 또는 `REBOOTING` 상태의 VM을 강제 종료합니다(전원 차단에 해당).
+         *     그룹 **MEMBER 이상**만 호출할 수 있으며, 접수 즉시 202를 반환하고
+         *     잡 큐에서 비동기로 처리됩니다. VM 이벤트(`FORCE_STOP`)로 기록됩니다.
+         *
+         *     **경고**: 디스크 쓰기 중 강제 종료하면 파일 시스템·데이터가 손상될 수
+         *     있습니다. 정상 종료(`shutdown`)가 응답하지 않을 때만 사용하세요.
+         */
+        post: operations["forceStopVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/cancel-deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM 삭제 취소 (유예 중)
+         * @description 유예 중인 삭제(셀프 삭제 또는 관리자 예약 삭제)를 취소합니다.
+         *     소유 그룹의 **OWNER 또는 관리자**만 호출할 수 있습니다.
+         *     취소하면 VM은 `STOPPED` 상태로 돌아가며 다시 시작할 수 있습니다.
+         */
+        post: operations["cancelVmDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/initial-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 초기 비밀번호 1회 열람
+         * @description 프로비저닝 시 생성된 초기 비밀번호를 **정확히 한 번** 열람합니다.
+         *     그룹 **MEMBER 이상**만 호출할 수 있습니다. 열람 즉시 서버는 평문을
+         *     파기하고(지원 검증용 BCrypt 해시만 보존) 이후 호출에는 410
+         *     (`VM_PASSWORD_ALREADY_VIEWED`)을 반환합니다.
+         *
+         *     열람이 1회성 상태를 소모하는 부수효과이므로, 안전(safe) 메서드인 GET이
+         *     아니라 POST를 사용합니다.
+         *
+         *     열람 가능 여부는 VM 상세의 `initialPasswordAvailable`로 미리 알 수
+         *     있습니다. 이미 열람했거나 비밀번호를 잊은 경우에는 비밀번호 재설정
+         *     (후속 기능)을 이용해야 합니다.
+         */
+        post: operations["revealInitialPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * VM 이벤트 이력 조회
+         * @description 이 VM의 수명주기 이벤트(생성·전원·삭제 등) 이력입니다. 최신순 정렬.
+         *     소유 그룹의 멤버(VIEWER 이상)만 조회할 수 있습니다.
+         */
+        get: operations["listVmEvents"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -637,6 +832,127 @@ export interface paths {
         patch: operations["updateUserRole"];
         trace?: never;
     };
+    "/admin/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] 노드 현황 조회
+         * @description SYS_ADMIN 전용입니다. Proxmox 노드별 용량·할당 합계·경고 임계값과
+         *     IP 풀 여유를 반환합니다. 용량·가동 수치는 상태 폴러(30초 주기)가
+         *     갱신한 값입니다. 참조성 소규모 목록이므로 배열로 반환합니다.
+         */
+        get: operations["listAdminNodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] VM 목록 조회
+         * @description ORG_ADMIN은 자기 기관의 VM만, SYS_ADMIN은 전체 VM을 조회합니다.
+         *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다
+         *     (ORG_ADMIN은 항상 자기 기관으로 고정).
+         */
+        get: operations["listAdminVms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms/{vmId}/schedule-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [관리자] VM 삭제 예약
+         * @description 관리자 주도의 통상 삭제를 예약합니다. ORG_ADMIN은 자기 기관의 VM만
+         *     예약할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
+         *
+         *     - `scheduledFor`는 현재 시각 기준 최소 통보 기간
+         *       `settings.vm_admin_delete_min_notice_days`(기본 **7일**) 이후여야
+         *       합니다. 과거이거나 통보 기간 미만이면 422(`errors[]`)로 거부됩니다.
+         *     - 예약 즉시 이용자(그룹 멤버)에게 사유(`reason`)가 포함된 통보 메일이
+         *       발송됩니다.
+         *     - 예정 시각 도래 시 정상 종료 후 파기됩니다. 예약은
+         *       `POST /admin/vms/{vmId}/cancel-scheduled-delete` 또는 그룹 OWNER의
+         *       `POST /vms/{vmId}/cancel-deletion`으로 취소할 수 있습니다.
+         */
+        post: operations["scheduleVmDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms/{vmId}/cancel-scheduled-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [관리자] VM 삭제 예약 취소
+         * @description 관리자가 예약한 삭제를 취소합니다. ORG_ADMIN은 자기 기관의 VM만
+         *     취소할 수 있습니다. 취소 시 이용자에게 안내 메일이 발송됩니다.
+         */
+        post: operations["cancelScheduledVmDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms/{vmId}/emergency-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] VM 긴급 삭제 (즉시 파기)
+         * @description SYS_ADMIN 전용입니다. 보안 사고 등 긴급 상황에서 유예 없이 **즉시 강제
+         *     종료하고 파기**합니다. 취소할 수 없습니다.
+         *
+         *     - 오조작 방지를 위해 본문의 `confirmName`이 VM의 `name`과 정확히
+         *       일치해야 합니다. 불일치 시 409 (`VM_CONFIRM_NAME_MISMATCH`).
+         *     - `EMERGENCY_DELETE` VM 이벤트와 별도 감사 기록이 남으며, 기관
+         *       관리자와 이용자에게 통지됩니다.
+         */
+        post: operations["emergencyDeleteVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -661,7 +977,22 @@ export interface components {
              */
             instance?: string;
             /**
-             * @description 안정적인 기계 판독용 오류 코드 (예: AUTH_INVALID_CREDENTIALS, REQUEST_ALREADY_DECIDED). 클라이언트 분기는 status가 아니라 이 값 기준.
+             * @description 안정적인 기계 판독용 오류 코드. 클라이언트 분기는 status가 아니라
+             *     이 값 기준. 등록된 코드 목록 (오류 코드 등록부):
+             *
+             *     - 공통: `VALIDATION_FAILED`, `ACCESS_DENIED`, `RESOURCE_NOT_FOUND`,
+             *       `RATE_LIMITED`
+             *     - 인증: `AUTH_EMAIL_ALREADY_REGISTERED`,
+             *       `AUTH_VERIFICATION_TOKEN_EXPIRED`, `AUTH_INVALID_CREDENTIALS`,
+             *       `AUTH_EMAIL_NOT_VERIFIED`, `AUTH_TOKEN_INVALID`,
+             *       `AUTH_REFRESH_TOKEN_INVALID`, `AUTH_CSRF_INVALID`
+             *     - 그룹: `GROUP_SLUG_DUPLICATE`, `GROUP_MEMBER_MANAGE_FORBIDDEN`,
+             *       `GROUP_MEMBER_USER_NOT_FOUND`, `GROUP_MEMBER_ALREADY_EXISTS`,
+             *       `GROUP_SOLE_OWNER_REMOVAL`, `GROUP_ROLE_INSUFFICIENT`
+             *     - 신청: `REQUEST_ALREADY_DECIDED`
+             *     - 기관: `ORG_SLUG_DUPLICATE`
+             *     - VM (M3): `VM_INVALID_STATE`, `VM_CONFIRM_NAME_MISMATCH`,
+             *       `VM_PASSWORD_ALREADY_VIEWED`
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -703,7 +1034,7 @@ export interface components {
          */
         VmRequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
         /**
-         * @description VM 상태 (M2에서는 mock 프로비저닝으로 CREATING → RUNNING 전이)
+         * @description VM 상태 (M3부터 실제 Proxmox 프로비저닝: CREATING → RUNNING, 삭제 흐름은 DELETING → 유예 후 DELETED)
          * @enum {string}
          */
         VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";
@@ -783,6 +1114,7 @@ export interface components {
             name: string;
             slug: string;
             description?: string | null;
+            status: components["schemas"]["OrgStatus"];
         };
         OrgDetail: {
             /** Format: int64 */
@@ -840,6 +1172,7 @@ export interface components {
             name: string;
             slug: string;
             description?: string | null;
+            myRole: components["schemas"]["GroupMemberRole"];
             members: components["schemas"]["GroupMember"][];
             /** Format: date-time */
             createdAt: string;
@@ -1010,6 +1343,8 @@ export interface components {
             diskGb: number;
             /** Format: int64 */
             groupId: number;
+            /** @description 소유 그룹 이름 (목록 화면 표시용) */
+            groupName: string;
             /**
              * Format: int64
              * @description 이 VM을 만든 신청 ID (출처 추적)
@@ -1025,7 +1360,7 @@ export interface components {
             orgId: number;
             /** Format: int64 */
             templateId: number;
-            /** @description 내부 IP (M2 mock 단계에서는 null일 수 있음) */
+            /** @description 내부 IP (M3부터 실제 할당 IP — 프로비저닝의 IP 할당 단계 이전에는 null) */
             ipAddress?: string | null;
             /** @description SSH 접속 계정 (고정 `student`) */
             sshUsername: string;
@@ -1036,6 +1371,12 @@ export interface components {
              * @description 사용 종료(만료) 예정일
              */
             endDate?: string | null;
+            /** @description 진행 중이거나 마지막으로 실패한 비동기 작업(프로비저닝/삭제/재설치)의 진행 상황. 진행·실패 중인 작업이 없으면 null. */
+            provisioning?: components["schemas"]["ProvisioningTaskView"] | null;
+            /** @description 예약된(또는 접수된) 삭제 정보. 삭제 예약이 없으면 null. */
+            deletion?: components["schemas"]["VmDeletion"] | null;
+            /** @description 초기 비밀번호가 준비되어 아직 열람되지 않았는지 여부 (true면 `POST /vms/{vmId}/initial-password`로 1회 열람 가능) */
+            initialPasswordAvailable: boolean;
             /** Format: date-time */
             updatedAt: string;
         };
@@ -1046,6 +1387,100 @@ export interface components {
             /** Format: int64 */
             totalElements: number;
             totalPages: number;
+        };
+        /**
+         * @description VM에 대해 진행 중이거나 마지막으로 실패한 비동기 작업의 진행 상황.
+         *     비동기 실패(IP 풀 고갈, Proxmox 오류 등)는 HTTP 오류가 아니라 이 객체의
+         *     `NEEDS_ADMIN` 상태와 `lastError`로 노출됩니다.
+         */
+        ProvisioningTaskView: {
+            /**
+             * @description 작업 종류
+             * @enum {string}
+             */
+            kind: "PROVISION" | "DELETE" | "REINSTALL";
+            /**
+             * @description 작업 상태. `RETRYING`은 단계 실패 후 백오프 재시도 대기, `NEEDS_ADMIN`은 재시도 소진으로 관리자 개입 필요.
+             * @enum {string}
+             */
+            status: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "RETRYING" | "NEEDS_ADMIN";
+            /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~9단계) */
+            currentStep: number;
+            /** @description 전체 단계 수 */
+            totalSteps: number;
+            /** @description 현재 단계 표시명 (한국어, 예 "템플릿 복제 중") */
+            stepLabel: string;
+            /** @description 현재 단계 시도 횟수 (단계당 최대 3회) */
+            attempts: number;
+            /** @description 마지막 오류 요약 (한국어, 오류가 없으면 null) */
+            lastError?: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description 예약된(또는 접수된) VM 삭제 정보 */
+        VmDeletion: {
+            /**
+             * @description 삭제 종류 (SELF = 이용자 셀프 삭제, ADMIN = 관리자 예약 삭제, EMERGENCY = 긴급 삭제)
+             * @enum {string}
+             */
+            kind: "SELF" | "ADMIN" | "EMERGENCY";
+            /**
+             * Format: date-time
+             * @description 물리 파기 예정 시각
+             */
+            scheduledFor: string;
+            /**
+             * Format: date-time
+             * @description 삭제 요청(접수) 시각
+             */
+            requestedAt: string;
+            /**
+             * Format: int64
+             * @description 삭제를 요청한 사용자 ID
+             */
+            requestedById: number;
+            /** @description 삭제 사유 (관리자 예약 삭제는 필수 기재, 셀프 삭제는 null) */
+            reason?: string | null;
+            /** @description 지금 취소할 수 있는지 여부 (유예 경과·긴급 삭제는 false) */
+            cancelable: boolean;
+        };
+        /** @description VM 수명주기 이벤트 (VM 파기 후에도 영구 보존) */
+        VmEvent: {
+            /** Format: int64 */
+            id: number;
+            /**
+             * @description 이벤트 종류
+             * @enum {string}
+             */
+            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "EMERGENCY_DELETE" | "REINSTALL";
+            /**
+             * Format: int64
+             * @description 수행한 사용자 ID (null = 시스템/자동 작업)
+             */
+            actorId?: number | null;
+            /** @description 부가 정보 (한국어) */
+            detail?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        VmEventPage: {
+            content: components["schemas"]["VmEvent"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 초기 비밀번호 1회 열람 응답. 이 응답 이후 서버는 평문을 파기하므로 다시 조회할 수 없습니다. */
+        InitialPasswordResponse: {
+            /** @description 초기 비밀번호 평문 (24자, 생성 시 CSPRNG) — 이번 응답이 마지막 열람 기회 */
+            password: string;
+            /** @description SSH 접속 계정 (고정 `student`) */
+            sshUsername: string;
+            /** @description SSH 접속 호스트 (SSH 게이트웨이 주소, 안내용 — 미확정 시 null) */
+            sshHost?: string | null;
+            /** @description SSH 접속 포트 (안내용 — 미확정 시 null) */
+            sshPort?: number | null;
         };
         /** @description 자원 합계 (활성 VM 기준) */
         ResourceTotals: {
@@ -1164,6 +1599,52 @@ export interface components {
             nodeId?: number | null;
             /** @description 승인 의견 (신청자에게 전달) */
             comment?: string | null;
+        };
+        /** @description 노드에 연결된 IP 풀 요약 */
+        IpPoolSummary: {
+            /** Format: int64 */
+            id: number;
+            /** @description 풀 CIDR (예 `172.29.0.0/16`) */
+            cidr: string;
+            /** @description 할당된 IP 수 */
+            allocatedCount: number;
+            /** @description 할당 가능한 잔여 IP 수 (예약 대역 제외) */
+            freeCount: number;
+        };
+        /** @description 노드 현황 (물리 용량·할당 합계·경고 임계값·IP 풀 여유). 용량·가동 수치는 상태 폴러(30초 주기)가 갱신합니다. */
+        NodeSummary: {
+            /** Format: int64 */
+            id: number;
+            /** @description 노드 이름 (예 `pve1`) */
+            name: string;
+            /**
+             * @description 노드 상태 (신규 VM 배치 대상은 ACTIVE만)
+             * @enum {string}
+             */
+            status: "ACTIVE" | "MAINTENANCE" | "OFFLINE";
+            /** @description 물리 CPU 스레드 수 */
+            cpuThreads: number;
+            /** @description 물리 메모리 (MiB) */
+            memoryMb: number;
+            /** @description VM 연결 브리지 (예 `vmbr2`) */
+            vmBridge: string;
+            /** @description VM 디스크 스토리지 (예 `local-lvm`) */
+            storage: string;
+            /** @description 실행 중 VM 수 */
+            runningVms: number;
+            /** @description 할당 vCPU 합계 (활성 VM 기준) */
+            allocatedVcpu: number;
+            /** @description 할당 메모리 합계 (MiB, 활성 VM 기준) */
+            allocatedMemoryMb: number;
+            /** @description 할당 vCPU ÷ 물리 스레드 */
+            cpuOvercommitRatio: number;
+            /** @description 할당 메모리 ÷ 물리 메모리 */
+            memoryAllocRatio: number;
+            /** @description CPU 오버커밋 경고 임계값 (settings에서 관리, 기본 3.0) */
+            cpuWarnThreshold: number;
+            /** @description 메모리 할당 경고 임계값 (settings에서 관리, 기본 0.8) */
+            memoryWarnThreshold: number;
+            ipPool: components["schemas"]["IpPoolSummary"];
         };
     };
     responses: {
@@ -1284,6 +1765,14 @@ export interface components {
         GroupId: number;
         /** @description VM 신청 ID */
         RequestId: number;
+        /** @description VM ID */
+        VmId: number;
+        /**
+         * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
+         *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
+         *     누락되거나 쿠키 값과 다르면 403 (`AUTH_CSRF_INVALID`)입니다.
+         */
+        CsrfHeader: string;
         /**
          * @description 리프레시 토큰 쿠키 (불투명 랜덤 문자열, 14일). 로그인/갱신 시
          *     `Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax` 속성으로 발급되므로
@@ -1541,7 +2030,14 @@ export interface operations {
     refresh: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /**
+                 * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
+                 *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
+                 *     누락되거나 쿠키 값과 다르면 403 (`AUTH_CSRF_INVALID`)입니다.
+                 */
+                "X-Pickle-Csrf": components["parameters"]["CsrfHeader"];
+            };
             path?: never;
             cookie?: {
                 /**
@@ -1599,12 +2095,38 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description CSRF 토큰 없음 또는 쿠키 값과 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "CSRF 검증에 실패했습니다",
+                     *       "status": 403,
+                     *       "detail": "요청의 CSRF 토큰이 없거나 올바르지 않습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요.",
+                     *       "instance": "/api/v1/auth/refresh",
+                     *       "code": "AUTH_CSRF_INVALID"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     logout: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /**
+                 * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
+                 *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
+                 *     누락되거나 쿠키 값과 다르면 403 (`AUTH_CSRF_INVALID`)입니다.
+                 */
+                "X-Pickle-Csrf": components["parameters"]["CsrfHeader"];
+            };
             path?: never;
             cookie?: {
                 /**
@@ -1629,6 +2151,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description CSRF 토큰 없음 또는 쿠키 값과 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "CSRF 검증에 실패했습니다",
+                     *       "status": 403,
+                     *       "detail": "요청의 CSRF 토큰이 없거나 올바르지 않습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요.",
+                     *       "instance": "/api/v1/auth/logout",
+                     *       "code": "AUTH_CSRF_INVALID"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
             };
         };
     };
@@ -1698,7 +2239,8 @@ export interface operations {
                      *         "id": 1,
                      *         "name": "정보컴퓨터공학부 실습지원센터",
                      *         "slug": "cse-lab",
-                     *         "description": "학부 수업·캡스톤용 서버 자원 제공"
+                     *         "description": "학부 수업·캡스톤용 서버 자원 제공",
+                     *         "status": "ACTIVE"
                      *       }
                      *     ]
                      */
@@ -1906,6 +2448,7 @@ export interface operations {
                      *       "name": "캡스톤 3조",
                      *       "slug": "capstone-team3",
                      *       "description": "2026-1 캡스톤디자인 3조",
+                     *       "myRole": "OWNER",
                      *       "members": [
                      *         {
                      *           "userId": 42,
@@ -2433,6 +2976,7 @@ export interface operations {
                      *           "memoryMb": 2048,
                      *           "diskGb": 20,
                      *           "groupId": 12,
+                     *           "groupName": "캡스톤 3조",
                      *           "requestId": 101,
                      *           "statusDetail": null,
                      *           "createdAt": "2026-07-08T14:03:05+09:00"
@@ -2475,6 +3019,565 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    deleteVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 삭제 접수 (DELETING 전이, 유예 후 물리 파기) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "kind": "SELF",
+                     *       "scheduledFor": "2026-07-15T14:10:00+09:00",
+                     *       "requestedAt": "2026-07-08T14:10:00+09:00",
+                     *       "requestedById": 42,
+                     *       "reason": null,
+                     *       "cancelable": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VmDeletion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 권한 부족 (그룹 OWNER 아님) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "VM을 삭제할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 OWNER 또는 관리자만 VM을 삭제할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 삭제할 수 없는 상태 (이미 DELETING/DELETED이거나 CREATING) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "이미 삭제가 진행 중이거나 완료된 VM입니다.",
+                     *       "instance": "/api/v1/vms/55",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    startVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 시작 요청 접수 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "VM 시작 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "VM을 제어할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/start",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 시작할 수 없는 상태 (STOPPED 상태가 아님) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "STOPPED 상태의 VM만 시작할 수 있습니다. (현재 상태 RUNNING)",
+                     *       "instance": "/api/v1/vms/55/start",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    shutdownVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 정상 종료 요청 접수 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "VM 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "VM을 제어할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/shutdown",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 종료할 수 없는 상태 (RUNNING 상태가 아님) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "RUNNING 상태의 VM만 종료할 수 있습니다. (현재 상태 STOPPED)",
+                     *       "instance": "/api/v1/vms/55/shutdown",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rebootVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 재부팅 요청 접수 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "VM 재부팅 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "VM을 제어할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/reboot",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 재부팅할 수 없는 상태 (RUNNING 상태가 아님) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "RUNNING 상태의 VM만 재부팅할 수 있습니다. (현재 상태 STOPPED)",
+                     *       "instance": "/api/v1/vms/55/reboot",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    forceStopVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 강제 종료 요청 접수 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "VM 강제 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "VM을 제어할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/force-stop",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 강제 종료할 수 없는 상태 (RUNNING/REBOOTING 상태가 아님) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "RUNNING 또는 REBOOTING 상태의 VM만 강제 종료할 수 있습니다. (현재 상태 STOPPED)",
+                     *       "instance": "/api/v1/vms/55/force-stop",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelVmDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 삭제 취소 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "삭제가 취소되었습니다. VM을 다시 시작할 수 있습니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 권한 부족 (그룹 OWNER 아님) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "삭제를 취소할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 OWNER 또는 관리자만 삭제를 취소할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/cancel-deletion",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 취소할 수 없음 (예약된 삭제가 없거나 유예가 지나 이미 파기됨) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "취소할 수 있는 삭제 예약이 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.",
+                     *       "instance": "/api/v1/vms/55/cancel-deletion",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revealInitialPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 초기 비밀번호 (이번 응답이 마지막 열람 기회) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "password": "x7GmQ4vRk2LpWn9sCtYb8Zed",
+                     *       "sshUsername": "student",
+                     *       "sshHost": "ssh.pickle.pnuops.com",
+                     *       "sshPort": 22
+                     *     }
+                     */
+                    "application/json": components["schemas"]["InitialPasswordResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "초기 비밀번호를 열람할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 MEMBER 이상만 초기 비밀번호를 열람할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/initial-password",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 아직 준비되지 않음 (CREATING 등 프로비저닝 미완료) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "VM 생성이 완료된 뒤에 초기 비밀번호를 열람할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/initial-password",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 이미 열람됨 (평문 파기됨 — 재열람 불가) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "초기 비밀번호가 이미 열람되었습니다",
+                     *       "status": 410,
+                     *       "detail": "초기 비밀번호는 한 번만 열람할 수 있습니다. 비밀번호를 잊었다면 비밀번호 재설정을 이용해 주세요.",
+                     *       "instance": "/api/v1/vms/55/initial-password",
+                     *       "code": "VM_PASSWORD_ALREADY_VIEWED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVmEvents: {
+        parameters: {
+            query?: {
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 이벤트 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "content": [
+                     *         {
+                     *           "id": 902,
+                     *           "type": "START",
+                     *           "actorId": 42,
+                     *           "detail": null,
+                     *           "createdAt": "2026-07-09T09:12:00+09:00"
+                     *         },
+                     *         {
+                     *           "id": 901,
+                     *           "type": "CREATE",
+                     *           "actorId": null,
+                     *           "detail": "승인 신청 101에 따라 자동 생성",
+                     *           "createdAt": "2026-07-08T14:05:00+09:00"
+                     *         }
+                     *       ],
+                     *       "page": 0,
+                     *       "size": 20,
+                     *       "totalElements": 2,
+                     *       "totalPages": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VmEventPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listAdminVmRequests: {
@@ -2951,6 +4054,300 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listAdminNodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 노드 현황 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 1,
+                     *         "name": "pve1",
+                     *         "status": "ACTIVE",
+                     *         "cpuThreads": 40,
+                     *         "memoryMb": 79872,
+                     *         "vmBridge": "vmbr2",
+                     *         "storage": "local-lvm",
+                     *         "runningVms": 6,
+                     *         "allocatedVcpu": 14,
+                     *         "allocatedMemoryMb": 20480,
+                     *         "cpuOvercommitRatio": 0.35,
+                     *         "memoryAllocRatio": 0.26,
+                     *         "cpuWarnThreshold": 3,
+                     *         "memoryWarnThreshold": 0.8,
+                     *         "ipPool": {
+                     *           "id": 1,
+                     *           "cidr": "172.29.0.0/16",
+                     *           "allocatedCount": 6,
+                     *           "freeCount": 65200
+                     *         }
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["NodeSummary"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAdminVms: {
+        parameters: {
+            query?: {
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+                /** @description 그룹 필터 */
+                groupId?: number;
+                /** @description VM 상태 필터 */
+                status?: components["schemas"]["VmStatus"];
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description VM 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VmPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    scheduleVmDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "scheduledFor": "2026-07-20T00:00:00+09:00",
+                 *       "reason": "사용 종료일(2026-07-10)이 지난 VM 정리 안내드립니다."
+                 *     }
+                 */
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description 물리 파기 예정 시각 (최소 통보 기간 이후, 기본 7일)
+                     */
+                    scheduledFor: string;
+                    /** @description 삭제 사유 (필수 — 이용자 통보 메일에 포함) */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 삭제 예약 접수 (이용자 통보 메일 발송) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "kind": "ADMIN",
+                     *       "scheduledFor": "2026-07-20T00:00:00+09:00",
+                     *       "requestedAt": "2026-07-08T15:00:00+09:00",
+                     *       "requestedById": 3,
+                     *       "reason": "사용 종료일(2026-07-10)이 지난 VM 정리 안내드립니다.",
+                     *       "cancelable": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VmDeletion"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 예약할 수 없는 상태 (이미 삭제 예약됨 / DELETING / DELETED) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "이미 삭제가 예약되었거나 진행 중인 VM입니다.",
+                     *       "instance": "/api/v1/admin/vms/55/schedule-delete",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 검증 실패 (scheduledFor가 과거이거나 최소 통보 기간 미만) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "입력값이 올바르지 않습니다",
+                     *       "status": 422,
+                     *       "detail": "요청 값을 확인해 주세요.",
+                     *       "instance": "/api/v1/admin/vms/55/schedule-delete",
+                     *       "code": "VALIDATION_FAILED",
+                     *       "errors": [
+                     *         {
+                     *           "field": "scheduledFor",
+                     *           "message": "삭제 예정일은 최소 통보 기간(7일) 이후여야 합니다."
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    cancelScheduledVmDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 예약 취소 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "삭제 예약이 취소되었습니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 취소할 수 없음 (취소 가능한 삭제 예약이 없음) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "취소할 수 있는 삭제 예약이 없습니다.",
+                     *       "instance": "/api/v1/admin/vms/55/cancel-scheduled-delete",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    emergencyDeleteVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "confirmName": "capstone-team3-api"
+                 *     }
+                 */
+                "application/json": {
+                    /** @description 파기 확인용 VM 이름 (VM의 `name`과 정확히 일치해야 함) */
+                    confirmName: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 긴급 삭제 접수 (즉시 강제 종료 후 파기) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "긴급 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 확인용 이름 불일치 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "확인용 이름이 일치하지 않습니다",
+                     *       "status": 409,
+                     *       "detail": "입력한 이름이 VM 이름과 일치하지 않습니다. VM 이름을 정확히 입력해 주세요.",
+                     *       "instance": "/api/v1/admin/vms/55/emergency-delete",
+                     *       "code": "VM_CONFIRM_NAME_MISMATCH"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
 }

@@ -16,6 +16,7 @@ function initialVms(): VmDetail[] {
       memoryMb: 2048,
       diskGb: 20,
       groupId: 12,
+      groupName: '캡스톤 3조',
       requestId: 102,
       statusDetail: null,
       orgId: 1,
@@ -24,6 +25,7 @@ function initialVms(): VmDetail[] {
       sshUsername: 'student',
       startDate: '2026-07-15',
       endDate: '2026-12-20',
+      initialPasswordAvailable: false,
       createdAt: '2026-07-08T14:03:05+09:00',
       updatedAt: '2026-07-08T14:03:05+09:00',
     },
@@ -36,6 +38,7 @@ function initialVms(): VmDetail[] {
       memoryMb: 1024,
       diskGb: 10,
       groupId: 15,
+      groupName: '알고리즘 스터디',
       requestId: 90,
       statusDetail: null,
       orgId: 1,
@@ -44,6 +47,7 @@ function initialVms(): VmDetail[] {
       sshUsername: 'student',
       startDate: '2026-06-20',
       endDate: '2026-12-20',
+      initialPasswordAvailable: true,
       createdAt: '2026-06-20T10:00:00+09:00',
       updatedAt: '2026-06-20T10:05:00+09:00',
     },
@@ -66,12 +70,12 @@ export function resetVmFixtures() {
 
 function toSummary(vm: VmDetail): Schemas['VmSummary'] {
   const {
-    id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, requestId,
-    statusDetail, createdAt,
+    id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
+    requestId, statusDetail, createdAt,
   } = vm
   return {
-    id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, requestId,
-    statusDetail, createdAt,
+    id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
+    requestId, statusDetail, createdAt,
   }
 }
 
@@ -110,6 +114,7 @@ export const vmHandlers: RequestHandler[] = [
       if (count >= VM_RUNNING_AFTER_FETCHES) {
         vm.status = 'RUNNING'
         vm.ipAddress = '10.10.0.55'
+        vm.initialPasswordAvailable = true
         vm.updatedAt = '2026-07-08T14:10:00+09:00'
       }
     }

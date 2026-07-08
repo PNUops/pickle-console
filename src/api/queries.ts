@@ -21,6 +21,15 @@ export type ApprovalContext = Schemas['ApprovalContext']
 export type ApproveVmRequest = Schemas['ApproveVmRequest']
 export type OrgDetail = Schemas['OrgDetail']
 export type UserSummary = Schemas['UserSummary']
+export type VmStatus = Schemas['VmStatus']
+export type VmDeletion = Schemas['VmDeletion']
+export type VmEvent = Schemas['VmEvent']
+export type VmEventPage = Schemas['VmEventPage']
+export type ProvisioningTaskView = Schemas['ProvisioningTaskView']
+export type InitialPasswordResponse = Schemas['InitialPasswordResponse']
+export type NodeSummary = Schemas['NodeSummary']
+export type IpPoolSummary = Schemas['IpPoolSummary']
+export type MessageResponse = Schemas['MessageResponse']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -159,6 +168,153 @@ export function fetchApprovalContext(requestId: number): Promise<ApprovalContext
       params: { path: { requestId } },
     })
     if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── vm lifecycle (M3) ─── */
+
+export function startVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/start', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM을 시작하지 못했습니다.')
+    return data
+  })
+}
+
+export function shutdownVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/shutdown', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM을 종료하지 못했습니다.')
+    return data
+  })
+}
+
+export function rebootVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/reboot', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM을 재부팅하지 못했습니다.')
+    return data
+  })
+}
+
+export function forceStopVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/force-stop', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM을 강제 종료하지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteVm(vmId: number): Promise<VmDeletion> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.DELETE('/vms/{vmId}', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 삭제를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function cancelVmDeletion(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/cancel-deletion', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '삭제를 취소하지 못했습니다.')
+    return data
+  })
+}
+
+export function revealInitialPassword(vmId: number): Promise<InitialPasswordResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/initial-password', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '초기 비밀번호를 열람하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchVmEvents(
+  vmId: number,
+  params: { page?: number; size?: number } = {},
+): Promise<VmEventPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/events', {
+      params: { path: { vmId }, query: params },
+    })
+    if (!data) throw toApiError(error, 'VM 이벤트 이력을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── admin (M3) ─── */
+
+export function fetchAdminNodes(): Promise<NodeSummary[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/nodes')
+    if (!data) throw toApiError(error, '노드 현황을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminVms(params: {
+  orgId?: number
+  groupId?: number
+  status?: VmStatus
+  page?: number
+  size?: number
+}): Promise<VmPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vms', { params: { query: params } })
+    if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function scheduleVmDeletion(
+  vmId: number,
+  body: { scheduledFor: string; reason: string },
+): Promise<VmDeletion> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/schedule-delete', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '삭제 예약을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function cancelScheduledVmDeletion(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/cancel-scheduled-delete', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '삭제 예약을 취소하지 못했습니다.')
+    return data
+  })
+}
+
+export function emergencyDeleteVm(
+  vmId: number,
+  confirmName: string,
+): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/emergency-delete', {
+      params: { path: { vmId } },
+      body: { confirmName },
+    })
+    if (!data) throw toApiError(error, '긴급 삭제를 접수하지 못했습니다.')
     return data
   })
 }

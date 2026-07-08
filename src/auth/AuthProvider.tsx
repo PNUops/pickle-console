@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { api, refreshSession } from '../api/client'
+import { api, getCsrfToken, refreshSession } from '../api/client'
 import { toApiError } from '../api/problem'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { AuthContext, type AuthStatus, type UserProfile } from './auth-context'
@@ -69,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Revoke the refresh cookie server-side; the endpoint is idempotent, and a
     // network failure must not keep the user "logged in" client-side.
     try {
-      await api.POST('/auth/logout')
+      await api.POST('/auth/logout', {
+        params: { header: { 'X-Pickle-Csrf': getCsrfToken() } },
+      })
     } finally {
       clearAccessToken()
       queryClient.clear()
