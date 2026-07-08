@@ -457,6 +457,8 @@ export interface paths {
         /**
          * VM 상세 조회
          * @description 해당 VM 소유 그룹의 멤버(VIEWER 이상)만 조회할 수 있습니다.
+         *     비멤버에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다
+         *     (삭제·전원 제어 경로와 동일한 마스킹 정책).
          */
         get: operations["getVm"];
         put?: never;
@@ -632,6 +634,7 @@ export interface paths {
          * VM 이벤트 이력 조회
          * @description 이 VM의 수명주기 이벤트(생성·전원·삭제 등) 이력입니다. 최신순 정렬.
          *     소유 그룹의 멤버(VIEWER 이상)만 조회할 수 있습니다.
+         *     비멤버에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다.
          */
         get: operations["listVmEvents"];
         put?: never;
@@ -1432,7 +1435,7 @@ export interface components {
             totalSteps: number;
             /** @description 현재 단계 표시명 (한국어, 예 "템플릿 복제 중") */
             stepLabel: string;
-            /** @description 현재 단계 시도 횟수 (단계당 최대 3회) */
+            /** @description 현재 단계 시도 횟수. 최초 실행 1회 + 백오프 재시도 3회로 단계당 최대 4회까지 노출됩니다. */
             attempts: number;
             /** @description 마지막 오류 요약 (한국어, 오류가 없으면 null) */
             lastError?: string | null;
@@ -3039,8 +3042,25 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비멤버에게는 존재가 마스킹됩니다 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "리소스를 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "해당 VM이 존재하지 않습니다.",
+                     *       "instance": "/api/v1/vms/55",
+                     *       "code": "RESOURCE_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteVm: {
@@ -3531,8 +3551,25 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비멤버에게는 존재가 마스킹됩니다 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "리소스를 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "해당 VM이 존재하지 않습니다.",
+                     *       "instance": "/api/v1/vms/55/events",
+                     *       "code": "RESOURCE_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
