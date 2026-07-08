@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import {
+  deleteVm,
   fetchVm,
   fetchVmEvents,
   forceStopVm,
@@ -15,6 +16,7 @@ import {
   startVm,
   type MessageResponse,
   type ProvisioningTaskView,
+  type VmDeletion,
   type VmDetail,
   type VmStatus,
 } from '../api/queries'
@@ -26,6 +28,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ConfirmNameModal,
   Modal,
   Pagination,
   Spinner,
@@ -38,7 +41,7 @@ import {
   TR,
   VmStatusBadge,
 } from '../components/ui'
-import { formatDateTime, formatSpec } from '../lib/format'
+import { formatDateTime, formatRelative, formatSpec } from '../lib/format'
 import { PROVISIONING_KIND_LABELS, VM_EVENT_LABELS } from '../lib/status'
 
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
@@ -117,7 +120,13 @@ export function VmDetailPage() {
           전원 제어·삭제 등 모든 조작이 제한됩니다.
         </Alert>
       )}
+      {data.status === 'DELETED' && (
+        <Alert variant="info">이 VM은 삭제되었습니다. 기록 조회만 가능합니다.</Alert>
+      )}
       {data.statusDetail && <Alert variant="warning">{data.statusDetail}</Alert>}
+      {data.deletion && data.status !== 'DELETED' && (
+        <DeletionBanner deletion={data.deletion} />
+      )}
 
       {data.provisioning && <ProvisioningPanel task={data.provisioning} />}
 
@@ -147,6 +156,8 @@ export function VmDetailPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <DeleteSection vm={data} />
 
       <VmEventsSection vmId={vmId} />
     </div>
@@ -301,6 +312,106 @@ function PowerControls({ vm }: { vm: VmDetail }) {
         </Modal>
       )}
     </div>
+  )
+}
+
+/* ─── 삭제 예정 배너 (학생 화면 — 취소 버튼 없음, 관리자 문의 안내) ─── */
+
+const DELETION_BANNER_TITLES: Record<VmDeletion['kind'], string> = {
+  SELF: '삭제가 접수된 VM입니다',
+  ADMIN: '관리자가 삭제를 예약한 VM입니다',
+  EMERGENCY: '긴급 삭제가 접수된 VM입니다',
+}
+
+function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
+  const scheduled = `${formatDateTime(deletion.scheduledFor)} (${formatRelative(deletion.scheduledFor)})`
+  return (
+    <Alert variant="danger" title={DELETION_BANNER_TITLES[deletion.kind]}>
+      <div className="space-y-1">
+        {deletion.kind === 'EMERGENCY' ? (
+          <p>보안상의 사유로 즉시 파기됩니다. 이 삭제는 취소할 수 없습니다.</p>
+        ) : (
+          <p>{scheduled}에 영구 파기될 예정입니다.</p>
+        )}
+        {deletion.reason && <p>사유: {deletion.reason}</p>}
+        <p>
+          삭제된 VM의 데이터는 파기 후 복구할 수 없습니다. 복원이 필요하면 관리자에게
+          문의하세요.
+        </p>
+      </div>
+    </Alert>
+  )
+}
+
+/* ─── 삭제 (유예 후 파기 — 학생 취소 불가) ─── */
+
+/** 계약상 DELETE가 허용되는 상태 (409 조건과 정합). */
+const DELETABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING', 'ERROR']
+
+function DeleteSection({ vm }: { vm: VmDetail }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const remove = useMutation({
+    mutationFn: () => deleteVm(vm.id),
+    onSuccess: async () => {
+      setOpen(false)
+      setError(null)
+      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+    },
+    onError: async (err) => {
+      setOpen(false)
+      setError(toApiError(err, 'VM 삭제를 접수하지 못했습니다.').message)
+      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+    },
+  })
+
+  const deletable = vm.deletion == null && DELETABLE_STATUSES.includes(vm.status)
+  if (!deletable && !error) return null
+
+  const isErrorVm = vm.status === 'ERROR'
+
+  return (
+    <Card className="border-danger-200">
+      <CardHeader>
+        <CardTitle className="text-danger-700">VM 삭제</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {error && <Alert variant="danger">{error}</Alert>}
+        {deletable && (
+          <>
+            <p className="text-sm text-neutral-600">
+              {isErrorVm
+                ? '생성에 실패한 VM입니다. 파기할 실체가 없으므로 삭제만 가능하며, 접수 즉시 삭제됩니다.'
+                : '삭제를 접수하면 VM이 종료되고 유예 기간이 지난 뒤 영구 파기됩니다. 삭제 접수 후에는 직접 취소할 수 없으며, 복원이 필요하면 관리자에게 문의해야 합니다.'}
+            </p>
+            <Button variant="danger" onClick={() => setOpen(true)}>
+              VM 삭제
+            </Button>
+            <ConfirmNameModal
+              open={open}
+              onClose={() => setOpen(false)}
+              title="VM 삭제"
+              expectedName={vm.name}
+              confirmLabel={isErrorVm ? '즉시 삭제' : '삭제 접수'}
+              loading={remove.isPending}
+              onConfirm={() => remove.mutate()}
+            >
+              <Alert variant="danger" title="백업 책임 안내">
+                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 이용자
+                책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
+              </Alert>
+              <p className="text-sm text-neutral-600">
+                {isErrorVm
+                  ? '생성 실패 상태이므로 접수 즉시 삭제됩니다.'
+                  : '삭제 접수 후에는 취소할 수 없습니다. 유예 기간 중 복원이 필요하면 관리자에게 문의하세요.'}
+              </p>
+            </ConfirmNameModal>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

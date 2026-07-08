@@ -289,6 +289,39 @@ export const vmHandlers: RequestHandler[] = [
     return HttpResponse.json(vm, { status: 200 })
   }),
 
+  http.delete('*/api/v1/vms/:vmId', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    if (
+      vm.deletion != null ||
+      ['CREATING', 'NEEDS_ADMIN', 'DELETING', 'DELETED'].includes(vm.status)
+    ) {
+      return invalidVmStateProblem(
+        `/api/v1/vms/${vm.id}`,
+        '이미 삭제가 예약되었거나 진행 중이거나, 삭제할 수 없는 상태의 VM입니다.',
+      )
+    }
+    // ERROR 상태는 파기할 실체가 없으므로 유예 없이 즉시 DELETED로 전이 (계약 예외).
+    const immediate = vm.status === 'ERROR'
+    const deletion: NonNullable<VmDetail['deletion']> = {
+      kind: 'SELF',
+      scheduledFor: immediate ? '2026-07-08T15:00:00+09:00' : '2026-07-15T15:00:00+09:00',
+      requestedAt: '2026-07-08T15:00:00+09:00',
+      requestedById: 42,
+      reason: null,
+      cancelable: !immediate,
+    }
+    vm.status = immediate ? 'DELETED' : 'DELETING'
+    vm.deletion = deletion
+    recordVmEvent(vm.id, {
+      type: 'DELETE',
+      actorId: 42,
+      detail: immediate ? '생성 실패 VM 즉시 삭제' : null,
+      createdAt: '2026-07-08T15:00:00+09:00',
+    })
+    return HttpResponse.json(deletion, { status: 202 })
+  }),
+
   /* ─── power ops (M3): 계약의 409 상태 조건을 그대로 강제한다 ─── */
 
   http.post('*/api/v1/vms/:vmId/start', ({ params }) => {

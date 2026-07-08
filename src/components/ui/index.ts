@@ -10,6 +10,7 @@ export {
 export { Button, type ButtonProps } from './Button'
 export { Card, CardContent, CardFooter, CardHeader, CardTitle } from './Card'
 export { Checkbox } from './Checkbox'
+export { ConfirmNameModal } from './ConfirmNameModal'
 export { FormField } from './FormField'
 export { Input } from './Input'
 export { Modal } from './Modal'

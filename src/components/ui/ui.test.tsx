@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, test, vi } from 'vitest'
 import { Button } from './Button'
+import { ConfirmNameModal } from './ConfirmNameModal'
 import { FormField } from './FormField'
 import { Input } from './Input'
 import { Modal } from './Modal'
@@ -86,5 +87,38 @@ describe('status badges', () => {
     )
     expect(screen.getByText('승인 대기')).toBeInTheDocument()
     expect(screen.getByText('관리자 확인 필요')).toBeInTheDocument()
+  })
+})
+
+describe('ConfirmNameModal', () => {
+  test('대상 이름을 정확히 입력해야만 확인 버튼이 활성화된다', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+    render(
+      <ConfirmNameModal
+        open
+        onClose={() => {}}
+        title="삭제 확인"
+        expectedName="capstone-team3-api"
+        confirmLabel="삭제 접수"
+        onConfirm={onConfirm}
+      >
+        <p>되돌릴 수 없는 작업입니다.</p>
+      </ConfirmNameModal>,
+    )
+    const confirm = screen.getByRole('button', { name: '삭제 접수' })
+    expect(confirm).toBeDisabled()
+
+    const input = screen.getByLabelText(/capstone-team3-api/)
+    await user.type(input, 'capstone-team3-ap')
+    expect(confirm).toBeDisabled()
+    // 불일치 상태에서 눌러도 아무 일도 일어나지 않는다.
+    await user.click(confirm)
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    await user.type(input, 'i')
+    expect(confirm).toBeEnabled()
+    await user.click(confirm)
+    expect(onConfirm).toHaveBeenCalledOnce()
   })
 })

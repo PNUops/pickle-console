@@ -116,3 +116,73 @@ describe('VM 상세 — 이벤트 이력', () => {
     expect(await within(history).findByText('재부팅')).toBeInTheDocument()
   })
 })
+
+describe('VM 상세 — 삭제 흐름', () => {
+  test('삭제 모달은 백업 고지를 보여주고 이름이 일치해야 접수할 수 있다', async () => {
+    const user = userEvent.setup()
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('button', { name: 'VM 삭제' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'VM 삭제' })
+    expect(
+      within(dialog).getByText(
+        /플랫폼은 VM 데이터를 백업하지 않습니다\. 데이터 보호와 백업은 이용자 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다\./,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/복원이 필요하면 관리자에게 문의하세요/),
+    ).toBeInTheDocument()
+
+    const confirm = within(dialog).getByRole('button', { name: '삭제 접수' })
+    expect(confirm).toBeDisabled()
+    const input = within(dialog).getByRole('textbox')
+    await user.type(input, 'algo-judg')
+    expect(confirm).toBeDisabled()
+    await user.type(input, 'e')
+    expect(confirm).toBeEnabled()
+    await user.click(confirm)
+
+    // 접수 후: 삭제 예정 배너 + 삭제 중 상태, 학생에게 취소 버튼은 없다.
+    expect(await screen.findByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
+    expect(screen.getByText('삭제 중')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()
+  })
+
+  test('삭제 예정 VM은 배너에 취소 버튼 없이 관리자 문의 안내만 보여준다', async () => {
+    renderVm(60)
+
+    await screen.findByRole('heading', { name: 'retiring-vm' })
+    expect(screen.getByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
+    expect(screen.getByText(/영구 파기될 예정입니다/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/복원이 필요하면 관리자에게 문의하세요/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()
+  })
+
+  test('ERROR VM은 삭제만 가능하며 접수 즉시 삭제된다', async () => {
+    const user = userEvent.setup()
+    renderVm(59)
+
+    await screen.findByRole('heading', { name: 'broken-vm' })
+    expect(screen.getByText(/생성에 실패한 VM입니다/)).toBeInTheDocument()
+    expect(screen.getByText(/접수 즉시 삭제됩니다/)).toBeInTheDocument()
+    // 전원 제어는 어떤 버튼도 노출되지 않는다.
+    expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'VM 삭제' }))
+    const dialog = await screen.findByRole('dialog', { name: 'VM 삭제' })
+    await user.type(within(dialog).getByRole('textbox'), 'broken-vm')
+    await user.click(within(dialog).getByRole('button', { name: '즉시 삭제' }))
+
+    expect(
+      await screen.findByText('이 VM은 삭제되었습니다. 기록 조회만 가능합니다.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('삭제됨')).toBeInTheDocument()
+  })
+})
