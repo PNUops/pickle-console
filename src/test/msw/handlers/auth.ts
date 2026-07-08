@@ -36,6 +36,14 @@ export const sysAdminUser: Schemas['UserSummary'] = {
   role: 'SYS_ADMIN',
 }
 
+/** 두 번째 학생 계정 — 계정 전환(캐시 격리) 테스트용. */
+export const studentBUser: Schemas['UserSummary'] = {
+  id: 58,
+  email: 'younghee.park@pusan.ac.kr',
+  name: '박영희',
+  role: 'STUDENT',
+}
+
 export const studentProfile: Schemas['UserProfile'] = {
   ...studentUser,
   orgId: null,
@@ -63,11 +71,21 @@ export const sysAdminProfile: Schemas['UserProfile'] = {
   ],
 }
 
+export const studentBProfile: Schemas['UserProfile'] = {
+  ...studentBUser,
+  orgId: null,
+  status: 'ACTIVE',
+  memberships: [
+    { groupId: 8, groupName: '박영희', groupKind: 'PERSONAL', role: 'OWNER' },
+  ],
+}
+
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfile']> = {
   'access-student': studentProfile,
   'access-org-admin': orgAdminProfile,
   'access-sys-admin': sysAdminProfile,
+  'access-student-b': studentBProfile,
 }
 
 export const unauthorizedProblem: Schemas['Problem'] = {
@@ -125,7 +143,9 @@ export const authHandlers: RequestHandler[] = [
           ? { user: studentUser, token: 'access-student' }
           : body.email === orgAdminUser.email
             ? { user: orgAdminUser, token: 'access-org-admin' }
-            : null
+            : body.email === studentBUser.email
+              ? { user: studentBUser, token: 'access-student-b' }
+              : null
     if (!account) {
       return problemResponse({
         type: 'about:blank',
