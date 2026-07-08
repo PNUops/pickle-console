@@ -186,7 +186,6 @@ export function AdminVmsPage() {
                 {vms.data.content.map((vm) => (
                   <TR
                     key={vm.id}
-                    aria-selected={vm.id === selectedId}
                     className={cn(
                       'cursor-pointer',
                       vm.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
@@ -194,7 +193,17 @@ export function AdminVmsPage() {
                     onClick={() => setSelectedId(vm.id)}
                   >
                     <TD>
-                      <span className="font-medium text-primary-700">{vm.name}</span>
+                      {/* 키보드 사용자도 관리 작업 패널을 열 수 있게 이름은 버튼으로 */}
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setSelectedId(vm.id)
+                        }}
+                        className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+                      >
+                        {vm.name}
+                      </button>
                       {vm.statusDetail && (
                         <span className="mt-0.5 block max-w-xs truncate text-xs text-neutral-400">
                           {vm.statusDetail}
@@ -252,11 +261,15 @@ function VmActionPanel({ vm, isSysAdmin }: { vm: VmSummary; isSysAdmin: boolean 
   )
 }
 
-/** 오늘 + 최소 통보일(기본 7일) 이후 날짜의 yyyy-mm-dd 문자열. */
+/**
+ * 예약 가능한 가장 이른 날짜(yyyy-mm-dd, 로컬 기준).
+ * 계약의 최소 통보 기간은 "현재 시각 + 7일"이고 폼은 로컬 자정으로 제출하므로,
+ * 자정이 항상 통보 기간을 넘는 "오늘 + 8일"을 최소값으로 제시한다.
+ */
 function minScheduleDate(): string {
-  const date = new Date()
-  date.setDate(date.getDate() + 7)
-  return date.toISOString().slice(0, 10)
+  const date = new Date(Date.now() + 8 * 86_400_000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function ScheduleDeleteForm({

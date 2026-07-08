@@ -23,9 +23,13 @@ export function VmsPage() {
     queryKey: ['vms', { page }],
     queryFn: () => fetchVms({ page }),
     placeholderData: keepPreviousData,
-    // 생성 중인 VM이 있으면 3초마다 새로 고쳐 "생성이 끝나면 실행 중" 안내와 일치시킨다.
+    // 비동기 전이 중(생성·삭제·재부팅) VM이 있으면 3초마다 새로 고친다 (상세와 동일 기준).
     refetchInterval: (query) =>
-      query.state.data?.content.some((vm) => vm.status === 'CREATING') ? 3000 : false,
+      query.state.data?.content.some((vm) =>
+        ['CREATING', 'DELETING', 'REBOOTING'].includes(vm.status),
+      )
+        ? 3000
+        : false,
   })
   return (
     <div className="space-y-6">

@@ -349,8 +349,13 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
     }
   }
 
-  if (!PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
-  if (!vm.initialPasswordAvailable && !error) return null
+  // 모달이 열려 있는 동안에는 계속 렌더한다 — 폴링 refetch가
+  // initialPasswordAvailable=false를 내려도(열람 직후) 표시 중인 평문이
+  // 사라지면 안 된다 (서버는 이미 평문을 파기해 재열람 불가).
+  if (!modalOpen) {
+    if (!PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
+    if (!vm.initialPasswordAvailable && !error) return null
+  }
 
   return (
     <>
