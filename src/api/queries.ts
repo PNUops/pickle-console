@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toApiError } from './problem'
+import { ApiError, toApiError } from './problem'
 import type { components } from './schema'
 
 type Schemas = components['schemas']
@@ -27,97 +27,138 @@ export interface RequestOptions {
   reservedSubdomains: string[]
 }
 
+/**
+ * fetch 단계 예외(네트워크 단절 등)를 한국어 ApiError로 변환한다.
+ * openapi-fetch는 HTTP 오류는 `error`로 돌려주지만, 요청 자체가 실패하면
+ * 영문 TypeError("Failed to fetch")를 그대로 던지므로 여기서 감싼다.
+ */
+async function guardNetwork<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    throw new ApiError(
+      null,
+      '서버에 연결할 수 없습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+    )
+  }
+}
+
 /* ─── query functions (throw ApiError so useQuery surfaces Korean messages) ─── */
 
-export async function fetchGroups(): Promise<GroupSummary[]> {
-  const { data, error } = await api.GET('/groups')
-  if (!data) throw toApiError(error, '그룹 목록을 불러오지 못했습니다.')
-  return data
-}
-
-export async function fetchGroup(groupId: number): Promise<GroupDetail> {
-  const { data, error } = await api.GET('/groups/{groupId}', {
-    params: { path: { groupId } },
+export function fetchGroups(): Promise<GroupSummary[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/groups')
+    if (!data) throw toApiError(error, '그룹 목록을 불러오지 못했습니다.')
+    return data
   })
-  if (!data) throw toApiError(error, '그룹 정보를 불러오지 못했습니다.')
-  return data
 }
 
-export async function fetchOrgs(): Promise<OrgSummary[]> {
-  const { data, error } = await api.GET('/orgs')
-  if (!data) throw toApiError(error, '기관 목록을 불러오지 못했습니다.')
-  return data
+export function fetchGroup(groupId: number): Promise<GroupDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/groups/{groupId}', {
+      params: { path: { groupId } },
+    })
+    if (!data) throw toApiError(error, '그룹 정보를 불러오지 못했습니다.')
+    return data
+  })
 }
 
-export async function fetchTemplates(): Promise<VmTemplate[]> {
-  const { data, error } = await api.GET('/templates')
-  if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
-  return data
+export function fetchOrgs(): Promise<OrgSummary[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/orgs')
+    if (!data) throw toApiError(error, '기관 목록을 불러오지 못했습니다.')
+    return data
+  })
 }
 
-export async function fetchRequestOptions(): Promise<RequestOptions> {
-  const { data, error } = await api.GET('/meta/request-options')
-  if (!data) throw toApiError(error, '신청 선택지를 불러오지 못했습니다.')
-  return data
+export function fetchTemplates(): Promise<VmTemplate[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/templates')
+    if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
+    return data
+  })
 }
 
-export async function fetchVmRequests(params: {
+export function fetchRequestOptions(): Promise<RequestOptions> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/meta/request-options')
+    if (!data) throw toApiError(error, '신청 선택지를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchVmRequests(params: {
   status?: VmRequestStatus
   page?: number
   size?: number
 }): Promise<VmRequestPage> {
-  const { data, error } = await api.GET('/vm-requests', { params: { query: params } })
-  if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
-  return data
-}
-
-export async function fetchVmRequest(requestId: number): Promise<VmRequestDetail> {
-  const { data, error } = await api.GET('/vm-requests/{requestId}', {
-    params: { path: { requestId } },
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vm-requests', { params: { query: params } })
+    if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
+    return data
   })
-  if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
-  return data
 }
 
-export async function fetchVms(params: { page?: number; size?: number }): Promise<VmPage> {
-  const { data, error } = await api.GET('/vms', { params: { query: params } })
-  if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
-  return data
+export function fetchVmRequest(requestId: number): Promise<VmRequestDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vm-requests/{requestId}', {
+      params: { path: { requestId } },
+    })
+    if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
+    return data
+  })
 }
 
-export async function fetchVm(vmId: number): Promise<VmDetail> {
-  const { data, error } = await api.GET('/vms/{vmId}', { params: { path: { vmId } } })
-  if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
-  return data
+export function fetchVms(params: { page?: number; size?: number }): Promise<VmPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms', { params: { query: params } })
+    if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchVm(vmId: number): Promise<VmDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}', { params: { path: { vmId } } })
+    if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
+    return data
+  })
 }
 
 /* ─── admin (WP-F3) ─── */
 
-export async function fetchAdminVmRequests(params: {
+export function fetchAdminVmRequests(params: {
   status?: VmRequestStatus
   orgId?: number
   page?: number
   size?: number
 }): Promise<VmRequestPage> {
-  const { data, error } = await api.GET('/admin/vm-requests', {
-    params: { query: params },
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vm-requests', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
+    return data
   })
-  if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
-  return data
 }
 
-export async function fetchAdminVmRequest(requestId: number): Promise<VmRequestDetail> {
-  const { data, error } = await api.GET('/admin/vm-requests/{requestId}', {
-    params: { path: { requestId } },
+export function fetchAdminVmRequest(requestId: number): Promise<VmRequestDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vm-requests/{requestId}', {
+      params: { path: { requestId } },
+    })
+    if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
+    return data
   })
-  if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
-  return data
 }
 
-export async function fetchApprovalContext(requestId: number): Promise<ApprovalContext> {
-  const { data, error } = await api.GET('/admin/vm-requests/{requestId}/context', {
-    params: { path: { requestId } },
+export function fetchApprovalContext(requestId: number): Promise<ApprovalContext> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vm-requests/{requestId}/context', {
+      params: { path: { requestId } },
+    })
+    if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했습니다.')
+    return data
   })
-  if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했습니다.')
-  return data
 }

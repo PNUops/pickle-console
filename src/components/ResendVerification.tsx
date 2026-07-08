@@ -51,7 +51,10 @@ export function ResendVerification({ email: fixedEmail }: { email?: string }) {
         </FormField>
       )}
       {mutation.isError && (
-        <Alert variant="danger">{mutation.error.message}</Alert>
+        <Alert variant="danger">
+          {/* 네트워크 예외 등 비 ApiError도 한국어 메시지로 감싼다. */}
+          {toApiError(mutation.error, '재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.').message}
+        </Alert>
       )}
       <Button type="submit" variant="secondary" loading={mutation.isPending}>
         인증 메일 다시 받기
