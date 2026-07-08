@@ -4,9 +4,11 @@ import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
+import { AdminVmsPage } from './pages/AdminVmsPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
@@ -60,6 +62,15 @@ function App() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
+        <Route path="vms" element={<AdminVmsPage />} />
+        <Route
+          path="nodes"
+          element={
+            <RequireRole roles={['SYS_ADMIN']}>
+              <AdminNodesPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="orgs"
           element={

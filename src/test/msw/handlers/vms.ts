@@ -177,6 +177,30 @@ function initialVms(): VmDetail[] {
       createdAt: '2026-05-01T10:00:00+09:00',
       updatedAt: '2026-07-08T14:10:00+09:00',
     },
+    {
+      id: 61,
+      name: 'ai-train',
+      hostname: 'ai-train',
+      status: 'RUNNING',
+      vcpu: 4,
+      memoryMb: 4096,
+      diskGb: 40,
+      groupId: 21,
+      groupName: 'AI 동아리',
+      requestId: 105,
+      statusDetail: null,
+      orgId: 2,
+      templateId: 2,
+      ipAddress: '10.10.0.61',
+      sshUsername: 'student',
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+      initialPasswordAvailable: false,
+      provisioning: null,
+      deletion: null,
+      createdAt: '2026-07-01T10:00:00+09:00',
+      updatedAt: '2026-07-01T10:05:00+09:00',
+    },
   ]
 }
 
@@ -235,7 +259,7 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
     code: 'VM_INVALID_STATE',
   })
 
-function toSummary(vm: VmDetail): Schemas['VmSummary'] {
+export function toVmSummary(vm: VmDetail): Schemas['VmSummary'] {
   const {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
     requestId, statusDetail, createdAt,
@@ -256,7 +280,7 @@ export const vmHandlers: RequestHandler[] = [
       .filter((vm) => !groupId || vm.groupId === Number(groupId))
       .sort((a, b) => b.id - a.id)
     const body: Schemas['VmPage'] = {
-      content: filtered.slice(page * size, (page + 1) * size).map(toSummary),
+      content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
       page,
       size,
       totalElements: filtered.length,

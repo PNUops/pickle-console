@@ -2,6 +2,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, studentUser } from './auth'
 import { orgs } from './reference'
+import { invalidVmStateProblem, recordVmEvent, toVmSummary, vmStore } from './vms'
 
 type Schemas = components['schemas']
 type VmRequestDetail = Schemas['VmRequestDetail']
@@ -275,6 +276,47 @@ const knownUsers: Record<number, Schemas['UserSummary']> = {
   57: { id: 57, email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'STUDENT' },
 }
 
+
+/* ─── fixtures: 노드 현황 (SYS_ADMIN 노드/용량 화면) ─── */
+
+const adminNodes: Schemas['NodeSummary'][] = [
+  {
+    id: 1,
+    name: 'pve1',
+    status: 'ACTIVE',
+    cpuThreads: 40,
+    memoryMb: 79872,
+    vmBridge: 'vmbr2',
+    storage: 'local-lvm',
+    runningVms: 6,
+    allocatedVcpu: 14,
+    allocatedMemoryMb: 20480,
+    cpuOvercommitRatio: 0.35,
+    memoryAllocRatio: 0.26,
+    cpuWarnThreshold: 3.0,
+    memoryWarnThreshold: 0.8,
+    ipPool: { id: 1, cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
+  },
+  {
+    // 임계 초과 경고 배지 확인용 (CPU·메모리 모두 임계값 초과)
+    id: 2,
+    name: 'pve2',
+    status: 'MAINTENANCE',
+    cpuThreads: 16,
+    memoryMb: 32768,
+    vmBridge: 'vmbr2',
+    storage: 'local-lvm',
+    runningVms: 12,
+    allocatedVcpu: 52,
+    allocatedMemoryMb: 28672,
+    cpuOvercommitRatio: 3.25,
+    memoryAllocRatio: 0.88,
+    cpuWarnThreshold: 3.0,
+    memoryWarnThreshold: 0.8,
+    ipPool: { id: 2, cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
+  },
+]
+
 export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/vm-requests', ({ request }) => {
     const url = new URL(request.url)
@@ -459,5 +501,142 @@ export const adminHandlers: RequestHandler[] = [
     userPatchBodies.push({ userId: Number(params.userId), body })
     const updated: Schemas['UserSummary'] = { ...user, role: body.role ?? user.role }
     return HttpResponse.json(updated, { status: 200 })
+  }),
+
+  /* ─── admin VM ops (M3) ─── */
+
+  http.get('*/api/v1/admin/nodes', () => HttpResponse.json(adminNodes, { status: 200 })),
+
+  http.get('*/api/v1/admin/vms', ({ request }) => {
+    const url = new URL(request.url)
+    const orgId = url.searchParams.get('orgId')
+    const groupId = url.searchParams.get('groupId')
+    const status = url.searchParams.get('status')
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '20')
+    const filtered = vmStore
+      .filter((vm) => !orgId || vm.orgId === Number(orgId))
+      .filter((vm) => !groupId || vm.groupId === Number(groupId))
+      .filter((vm) => !status || vm.status === status)
+      .sort((a, b) => b.id - a.id)
+    const body: Schemas['VmPage'] = {
+      content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    }
+    return HttpResponse.json(body, { status: 200 })
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/schedule-delete', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    if (vm.deletion != null || vm.status === 'DELETING' || vm.status === 'DELETED') {
+      return invalidVmStateProblem(
+        `/api/v1/admin/vms/${vm.id}/schedule-delete`,
+        '이미 삭제가 예약되었거나 진행 중인 VM입니다.',
+      )
+    }
+    const body = (await request.json()) as { scheduledFor: string; reason: string }
+    const errors: { field: string; message: string }[] = []
+    const minNotice = Date.now() + 7 * 86_400_000
+    if (!body.scheduledFor || new Date(body.scheduledFor).getTime() < minNotice) {
+      errors.push({
+        field: 'scheduledFor',
+        message: '삭제 예정일은 최소 통보 기간(7일) 이후여야 합니다.',
+      })
+    }
+    if (!body.reason?.trim()) {
+      errors.push({ field: 'reason', message: '삭제 사유를 입력해 주세요.' })
+    }
+    if (errors.length > 0) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        instance: `/api/v1/admin/vms/${vm.id}/schedule-delete`,
+        code: 'VALIDATION_FAILED',
+        errors,
+      })
+    }
+    const deletion: NonNullable<Schemas['VmDetail']['deletion']> = {
+      kind: 'ADMIN',
+      scheduledFor: body.scheduledFor,
+      requestedAt: '2026-07-08T16:00:00+09:00',
+      requestedById: orgAdminUser.id,
+      reason: body.reason,
+      cancelable: true,
+    }
+    vm.deletion = deletion
+    recordVmEvent(vm.id, {
+      type: 'SCHEDULE_DELETE',
+      actorId: orgAdminUser.id,
+      detail: body.reason,
+      createdAt: '2026-07-08T16:00:00+09:00',
+    })
+    return HttpResponse.json(deletion, { status: 202 })
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/cancel-scheduled-delete', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    if (vm.deletion == null || vm.deletion.kind === 'EMERGENCY' || vm.status === 'DELETED') {
+      return invalidVmStateProblem(
+        `/api/v1/admin/vms/${vm.id}/cancel-scheduled-delete`,
+        '취소할 수 있는 삭제가 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.',
+      )
+    }
+    const kind = vm.deletion.kind
+    vm.deletion = null
+    if (kind === 'SELF') vm.status = 'STOPPED'
+    recordVmEvent(vm.id, {
+      type: 'CANCEL_SCHEDULED_DELETE',
+      actorId: orgAdminUser.id,
+      detail: null,
+      createdAt: '2026-07-08T16:30:00+09:00',
+    })
+    const message =
+      kind === 'SELF'
+        ? '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 전원 켜기는 이용자가 직접 수행합니다.'
+        : '삭제 예약이 취소되었습니다. VM의 현재 전원 상태는 그대로 유지됩니다.'
+    return HttpResponse.json({ message }, { status: 200 })
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/emergency-delete', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    const body = (await request.json()) as { confirmName: string }
+    if (body.confirmName !== vm.name) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '확인용 이름이 일치하지 않습니다',
+        status: 409,
+        detail:
+          '입력한 이름이 VM 이름과 일치하지 않습니다. VM 이름을 정확히 입력해 주세요.',
+        instance: `/api/v1/admin/vms/${vm.id}/emergency-delete`,
+        code: 'VM_CONFIRM_NAME_MISMATCH',
+      })
+    }
+    vm.status = 'DELETED'
+    vm.deletion = {
+      kind: 'EMERGENCY',
+      scheduledFor: '2026-07-08T17:00:00+09:00',
+      requestedAt: '2026-07-08T17:00:00+09:00',
+      requestedById: 5,
+      reason: null,
+      cancelable: false,
+    }
+    recordVmEvent(vm.id, {
+      type: 'EMERGENCY_DELETE',
+      actorId: 5,
+      detail: null,
+      createdAt: '2026-07-08T17:00:00+09:00',
+    })
+    return HttpResponse.json(
+      { message: '긴급 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.' },
+      { status: 202 },
+    )
   }),
 ]

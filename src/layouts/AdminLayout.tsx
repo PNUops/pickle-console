@@ -7,8 +7,14 @@ export function AdminLayout() {
   const items: NavItem[] = [
     { to: '/admin', label: '대시보드', end: true },
     { to: '/admin/requests', label: '승인 대기' },
-    // 기관 관리는 SYS_ADMIN 전용 (라우트에서도 한 번 더 가드)
-    ...(user?.role === 'SYS_ADMIN' ? [{ to: '/admin/orgs', label: '기관 관리' }] : []),
+    { to: '/admin/vms', label: 'VM 관리' },
+    // 노드/용량·기관 관리는 SYS_ADMIN 전용 (라우트에서도 한 번 더 가드)
+    ...(user?.role === 'SYS_ADMIN'
+      ? [
+          { to: '/admin/nodes', label: '노드/용량' },
+          { to: '/admin/orgs', label: '기관 관리' },
+        ]
+      : []),
   ]
 
   return <AppShell home="/admin" navLabel="관리자 메뉴" items={items} />
