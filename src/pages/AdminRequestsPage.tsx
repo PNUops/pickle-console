@@ -24,15 +24,16 @@ import {
 } from '../components/ui'
 import { cn } from '../lib/cn'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { REQUEST_STATUS_LABELS } from '../lib/status'
 
 const PAGE_SIZE = 10
 
-// 기본 탭은 검토 대기(SUBMITTED). '전체'는 status 미지정으로 보낸다 —
-// 현행 계약(v0.2.2)은 status 미지정 시 SUBMITTED만 반환하므로 계약 보완이 필요하다.
+// 탭 라벨은 상태 배지와 같은 표준 라벨(status.ts)을 쓴다. 기본 탭은 승인 대기(SUBMITTED),
+// '전체'는 status 미지정 (계약 v0.2.3부터 전체 상태를 반환).
 const STATUS_TABS: { label: string; status: VmRequestStatus | undefined }[] = [
-  { label: '검토 대기', status: 'SUBMITTED' },
-  { label: '승인됨', status: 'APPROVED' },
-  { label: '반려됨', status: 'REJECTED' },
+  { label: REQUEST_STATUS_LABELS.SUBMITTED, status: 'SUBMITTED' },
+  { label: REQUEST_STATUS_LABELS.APPROVED, status: 'APPROVED' },
+  { label: REQUEST_STATUS_LABELS.REJECTED, status: 'REJECTED' },
   { label: '전체', status: undefined },
 ]
 

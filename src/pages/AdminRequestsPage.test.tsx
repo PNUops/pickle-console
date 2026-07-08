@@ -37,11 +37,11 @@ describe('관리자 대시보드 요약', () => {
 })
 
 describe('승인 대기 큐', () => {
-  test('기본 탭은 검토 대기이고 SUBMITTED 신청만 보여준다', async () => {
+  test('기본 탭은 승인 대기이고 SUBMITTED 신청만 보여준다', async () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findByRole('heading', { name: '승인 대기' })
-    expect(screen.getByRole('tab', { name: '검토 대기' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '승인 대기' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
@@ -64,6 +64,19 @@ describe('승인 대기 큐', () => {
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: '박영희' })).not.toBeInTheDocument(),
     )
+  })
+
+  test('전체 탭은 모든 상태의 신청을 보여준다 (status 미지정)', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin('/admin/requests')
+
+    await screen.findByRole('link', { name: '홍길동' })
+    await user.click(screen.getByRole('tab', { name: '전체' }))
+
+    // 승인 대기(201·204) + 승인됨(202) + 반려됨(203)이 모두 나온다.
+    expect(await screen.findByRole('link', { name: '김철수' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '박영희' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '홍길동' }).length).toBeGreaterThan(1)
   })
 
   test('ORG_ADMIN에게는 기관 필터가 보이지 않는다', async () => {

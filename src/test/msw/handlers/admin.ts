@@ -278,13 +278,13 @@ const knownUsers: Record<number, Schemas['UserSummary']> = {
 export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/vm-requests', ({ request }) => {
     const url = new URL(request.url)
-    // 계약: status 미지정 시 SUBMITTED만 반환한다.
-    const status = url.searchParams.get('status') ?? 'SUBMITTED'
+    // 계약(v0.2.3): status 미지정 시 모든 상태를 반환한다.
+    const status = url.searchParams.get('status')
     const orgId = url.searchParams.get('orgId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = adminVmRequestStore
-      .filter((r) => r.status === status)
+      .filter((r) => !status || r.status === status)
       .filter((r) => !orgId || r.orgId === Number(orgId))
       .sort((a, b) => b.id - a.id)
     const body: Schemas['VmRequestPage'] = {

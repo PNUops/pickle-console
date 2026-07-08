@@ -16,16 +16,17 @@ describe('내 신청 목록', () => {
     const user = userEvent.setup()
     renderRequests()
 
-    // 전체 탭: 3건 모두 보인다.
+    // 전체 탭: 3건 모두 보인다. (탭에도 같은 라벨이 있으므로 표 안에서 확인)
     expect(
       await screen.findByRole('link', { name: '캡스톤 프로젝트 백엔드 서버 운영' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('승인 대기')).toBeInTheDocument()
-    expect(screen.getByText('승인됨')).toBeInTheDocument()
-    expect(screen.getByText('반려됨')).toBeInTheDocument()
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('승인 대기')).toBeInTheDocument()
+    expect(within(table).getByText('승인됨')).toBeInTheDocument()
+    expect(within(table).getByText('반려됨')).toBeInTheDocument()
 
-    // 반려 탭: 반려 건만 남는다.
-    await user.click(screen.getByRole('tab', { name: '반려' }))
+    // 반려됨 탭: 반려 건만 남는다.
+    await user.click(screen.getByRole('tab', { name: '반려됨' }))
     expect(await screen.findByRole('link', { name: '개인 실험용 서버' })).toBeInTheDocument()
     await waitFor(() =>
       expect(
