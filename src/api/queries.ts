@@ -224,16 +224,6 @@ export function deleteVm(vmId: number): Promise<VmDeletion> {
   })
 }
 
-export function cancelVmDeletion(vmId: number): Promise<MessageResponse> {
-  return guardNetwork(async () => {
-    const { data, error } = await api.POST('/vms/{vmId}/cancel-deletion', {
-      params: { path: { vmId } },
-    })
-    if (!data) throw toApiError(error, '삭제를 취소하지 못했습니다.')
-    return data
-  })
-}
-
 export function revealInitialPassword(vmId: number): Promise<InitialPasswordResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/initial-password', {

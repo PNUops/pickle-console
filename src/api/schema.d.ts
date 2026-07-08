@@ -462,16 +462,27 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * VM 삭제 (유예 후 파기)
-         * @description VM 삭제를 접수합니다. 소유 그룹의 **OWNER 또는 관리자**만 호출할 수 있습니다.
+         * VM 삭제 (유예 후 파기 — 학생 취소 불가)
+         * @description VM 삭제를 접수합니다. 소유 그룹의 **OWNER 또는 관리자**(ORG_ADMIN은
+         *     자기 기관의 VM만 — 타 기관 VM은 404, SYS_ADMIN은 전체)만 호출할 수
+         *     있습니다.
          *
          *     - 접수 즉시 정상 종료(ACPI)가 시도되고 상태가 `DELETING`으로 전이됩니다.
+         *       정상 종료가 시간 초과되면 **강제 종료로 폴백**한 뒤 삭제를 진행합니다
+         *       (사용자 `shutdown` op의 "폴백 없음"과 달리, 삭제 흐름은 종료가
+         *       목적이 아니라 파기 전 단계이므로 폴백합니다).
          *     - 물리 파기는 `settings.vm_delete_grace_hours`(기본 **168시간 = 7일**) 유예
-         *       후 스위퍼 잡이 수행합니다. 유예 중에는
-         *       `POST /vms/{vmId}/cancel-deletion`으로 취소할 수 있습니다.
+         *       후 스위퍼 잡이 수행합니다.
+         *     - **삭제 취소 정책**: 삭제 요청 후 **학생은 취소할 수 없습니다**.
+         *       유예 기간은 오류·실수에 대비한 관리자 복구용 보관 기간이며, 유예 중
+         *       복원이 필요하면 관리자에게 문의해야 합니다 (관리자가
+         *       `POST /admin/vms/{vmId}/cancel-scheduled-delete`로 취소).
+         *       삭제 확인 UI와 통보 메일에도 이 사실이 안내됩니다.
          *     - **백업 책임 고지**: 플랫폼은 VM 데이터를 백업하지 않으며, 물리 파기 후에는
          *       어떤 방법으로도 복구할 수 없습니다. 필요한 데이터는 삭제 전에 직접
          *       백업해야 합니다.
+         *     - **`ERROR` 상태 예외**: 생성 실패 보상이 끝난 `ERROR` 상태 VM은 파기할
+         *       하부 실체가 없으므로 유예 없이 **즉시 `DELETED`로 전이**됩니다.
          *     - 삭제 접수와 최종 파기는 기관 관리자에게 통지되며 VM 이벤트(`DELETE`)로
          *       기록됩니다.
          */
@@ -577,28 +588,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/vms/{vmId}/cancel-deletion": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 삭제 취소 (유예 중)
-         * @description 유예 중인 삭제(셀프 삭제 또는 관리자 예약 삭제)를 취소합니다.
-         *     소유 그룹의 **OWNER 또는 관리자**만 호출할 수 있습니다.
-         *     취소하면 VM은 `STOPPED` 상태로 돌아가며 다시 시작할 수 있습니다.
-         */
-        post: operations["cancelVmDeletion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/vms/{vmId}/initial-password": {
         parameters: {
             query?: never;
@@ -614,6 +603,9 @@ export interface paths {
          *     그룹 **MEMBER 이상**만 호출할 수 있습니다. 열람 즉시 서버는 평문을
          *     파기하고(지원 검증용 BCrypt 해시만 보존) 이후 호출에는 410
          *     (`VM_PASSWORD_ALREADY_VIEWED`)을 반환합니다.
+         *
+         *     평문은 이 응답에서 **1회만** 반환됩니다. 서버는 평문을 로그에 남기지
+         *     않으며, 클라이언트도 저장하지 말고 화면 표시 후 즉시 폐기해야 합니다.
          *
          *     열람이 1회성 상태를 소모하는 부수효과이므로, 안전(safe) 메서드인 GET이
          *     아니라 POST를 사용합니다.
@@ -895,9 +887,13 @@ export interface paths {
          *       합니다. 과거이거나 통보 기간 미만이면 422(`errors[]`)로 거부됩니다.
          *     - 예약 즉시 이용자(그룹 멤버)에게 사유(`reason`)가 포함된 통보 메일이
          *       발송됩니다.
-         *     - 예정 시각 도래 시 정상 종료 후 파기됩니다. 예약은
-         *       `POST /admin/vms/{vmId}/cancel-scheduled-delete` 또는 그룹 OWNER의
-         *       `POST /vms/{vmId}/cancel-deletion`으로 취소할 수 있습니다.
+         *     - 예정 시각 도래 시 정상 종료 후 파기됩니다(정상 종료 시간 초과 시
+         *       강제 종료 폴백). 예약 취소는 관리자만
+         *       `POST /admin/vms/{vmId}/cancel-scheduled-delete`로 할 수 있습니다
+         *       (학생 취소 불가 — 계약 상단의 삭제 취소 정책 참조).
+         *     - 셀프 삭제 유예 중(`DELETING`)인 VM에는 예약할 수 없습니다(409).
+         *       관리자는 기존 삭제를 먼저 취소한 뒤 재예약하거나, 즉시 파기가
+         *       필요하면 `emergency-delete`를 사용합니다.
          */
         post: operations["scheduleVmDeletion"];
         delete?: never;
@@ -916,9 +912,23 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * [관리자] VM 삭제 예약 취소
-         * @description 관리자가 예약한 삭제를 취소합니다. ORG_ADMIN은 자기 기관의 VM만
-         *     취소할 수 있습니다. 취소 시 이용자에게 안내 메일이 발송됩니다.
+         * [관리자] 대기 중인 VM 삭제 취소
+         * @description 대기 중인(아직 파기되지 않은) 삭제를 **kind와 무관하게** 취소합니다.
+         *     학생에게는 삭제 취소 권한이 없으므로 이 오퍼레이션이 유일한 취소
+         *     수단입니다 (유예 = 관리자 복구용 안전망). ORG_ADMIN은 자기 기관의 VM만
+         *     취소할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
+         *
+         *     kind별 취소 의미:
+         *
+         *     - **SELF** (셀프 삭제 유예 중): 삭제 접수 시 VM이 이미 종료되었으므로
+         *       취소 후 `STOPPED` 상태로 남습니다. 전원 켜기는 학생이 직접
+         *       `POST /vms/{vmId}/start`로 수행합니다.
+         *     - **ADMIN** (관리자 예약): 예약만 해제되고 VM의 현재 전원 상태는 그대로
+         *       유지됩니다 (`RUNNING`이었다면 `RUNNING` 유지).
+         *     - **EMERGENCY**: 즉시 파기되므로 취소 대상이 될 수 없습니다(항상 409).
+         *
+         *     취소 시 이용자에게 안내 메일이 발송됩니다. VM 이벤트
+         *     (`CANCEL_SCHEDULED_DELETE`)로 기록됩니다.
          */
         post: operations["cancelScheduledVmDeletion"];
         delete?: never;
@@ -945,6 +955,9 @@ export interface paths {
          *       일치해야 합니다. 불일치 시 409 (`VM_CONFIRM_NAME_MISMATCH`).
          *     - `EMERGENCY_DELETE` VM 이벤트와 별도 감사 기록이 남으며, 기관
          *       관리자와 이용자에게 통지됩니다.
+         *     - 202 응답이 `VmDeletion`이 아니라 `MessageResponse`인 이유: 즉시
+         *       파기·취소 불가라 "예약된 삭제"(scheduledFor/cancelable)라는 표현이
+         *       성립하지 않기 때문입니다.
          */
         post: operations["emergencyDeleteVm"];
         delete?: never;
@@ -1034,7 +1047,16 @@ export interface components {
          */
         VmRequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
         /**
-         * @description VM 상태 (M3부터 실제 Proxmox 프로비저닝: CREATING → RUNNING, 삭제 흐름은 DELETING → 유예 후 DELETED)
+         * @description VM 상태 (M3부터 실제 Proxmox 프로비저닝: CREATING → RUNNING,
+         *     삭제 흐름은 DELETING → 유예 후 DELETED).
+         *
+         *     - **NEEDS_ADMIN**: 프로비저닝/삭제 파이프라인이 재시도를 소진하고
+         *       파킹된 상태. 사용자 전원·삭제 op는 전부 409이며, 관리자가
+         *       대시보드에서 원인 확인·재실행으로 복구하면 원래 상태로 복귀합니다.
+         *     - **ERROR**: 생성 실패 후 보상(부분 자원 정리)이 완료되어 하부 VM이
+         *       존재하지 않는 **터미널 상태**. 유일하게 허용되는 op는
+         *       `DELETE /vms/{vmId}`이며, 파기할 실체가 없으므로 유예 없이 즉시
+         *       `DELETED`로 전이됩니다.
          * @enum {string}
          */
         VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";
@@ -1441,7 +1463,7 @@ export interface components {
             requestedById: number;
             /** @description 삭제 사유 (관리자 예약 삭제는 필수 기재, 셀프 삭제는 null) */
             reason?: string | null;
-            /** @description 지금 취소할 수 있는지 여부 (유예 경과·긴급 삭제는 false) */
+            /** @description **관리자가** 지금 취소할 수 있는지 여부 (유예 경과·긴급 삭제만 false). 학생에게는 kind와 무관하게 취소 권한이 없습니다 — 유예는 관리자 복구용 안전망이며, 취소는 `POST /admin/vms/{vmId}/cancel-scheduled-delete`로만 가능합니다. */
             cancelable: boolean;
         };
         /** @description VM 수명주기 이벤트 (VM 파기 후에도 영구 보존) */
@@ -1449,10 +1471,10 @@ export interface components {
             /** Format: int64 */
             id: number;
             /**
-             * @description 이벤트 종류
+             * @description 이벤트 종류 (SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 삭제 예약·취소의 감사 추적용)
              * @enum {string}
              */
-            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "EMERGENCY_DELETE" | "REINSTALL";
+            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "EMERGENCY_DELETE" | "REINSTALL";
             /**
              * Format: int64
              * @description 수행한 사용자 ID (null = 시스템/자동 작업)
@@ -3073,7 +3095,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 삭제할 수 없는 상태 (이미 DELETING/DELETED이거나 CREATING) */
+            /** @description 삭제할 수 없는 상태 — 이미 DELETING/DELETED이거나 CREATING/NEEDS_ADMIN, 또는 이미 삭제가 예약됨(`deletion != null`, 관리자 예약 포함) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3084,7 +3106,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
                      *       "status": 409,
-                     *       "detail": "이미 삭제가 진행 중이거나 완료된 VM입니다.",
+                     *       "detail": "이미 삭제가 예약되었거나 진행 중인 VM입니다.",
                      *       "instance": "/api/v1/vms/55",
                      *       "code": "VM_INVALID_STATE"
                      *     }
@@ -3141,7 +3163,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 시작할 수 없는 상태 (STOPPED 상태가 아님) */
+            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3209,7 +3231,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 종료할 수 없는 상태 (RUNNING 상태가 아님) */
+            /** @description 종료할 수 없는 상태 — 허용 상태는 `RUNNING`뿐. STOPPED/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3277,7 +3299,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 재부팅할 수 없는 상태 (RUNNING 상태가 아님) */
+            /** @description 재부팅할 수 없는 상태 — 허용 상태는 `RUNNING`뿐. STOPPED/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3345,7 +3367,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 강제 종료할 수 없는 상태 (RUNNING/REBOOTING 상태가 아님) */
+            /** @description 강제 종료할 수 없는 상태 — 허용 상태는 `RUNNING`/`REBOOTING`뿐. STOPPED를 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3358,74 +3380,6 @@ export interface operations {
                      *       "status": 409,
                      *       "detail": "RUNNING 또는 REBOOTING 상태의 VM만 강제 종료할 수 있습니다. (현재 상태 STOPPED)",
                      *       "instance": "/api/v1/vms/55/force-stop",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    cancelVmDeletion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 삭제 취소 완료 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "삭제가 취소되었습니다. VM을 다시 시작할 수 있습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 권한 부족 (그룹 OWNER 아님) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "삭제를 취소할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 OWNER 또는 관리자만 삭제를 취소할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/cancel-deletion",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 취소할 수 없음 (예약된 삭제가 없거나 유예가 지나 이미 파기됨) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "취소할 수 있는 삭제 예약이 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.",
-                     *       "instance": "/api/v1/vms/55/cancel-deletion",
                      *       "code": "VM_INVALID_STATE"
                      *     }
                      */
@@ -3449,6 +3403,8 @@ export interface operations {
             /** @description 초기 비밀번호 (이번 응답이 마지막 열람 기회) */
             200: {
                 headers: {
+                    /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
+                    "Cache-Control"?: "no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -3484,7 +3440,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 아직 준비되지 않음 (CREATING 등 프로비저닝 미완료) */
+            /** @description 열람할 수 없는 상태 — CREATING(프로비저닝 미완료)뿐 아니라 DELETING/DELETED/ERROR/NEEDS_ADMIN도 409 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3503,7 +3459,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description 이미 열람됨 (평문 파기됨 — 재열람 불가) */
+            /** @description 이미 열람되었거나 평문이 존재하지 않음 (M2 mock 프로비저닝으로 생성돼 초기 비밀번호가 없는 VM 포함) — 재열람 불가 */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -3512,9 +3468,9 @@ export interface operations {
                     /**
                      * @example {
                      *       "type": "about:blank",
-                     *       "title": "초기 비밀번호가 이미 열람되었습니다",
+                     *       "title": "초기 비밀번호를 열람할 수 없습니다",
                      *       "status": 410,
-                     *       "detail": "초기 비밀번호는 한 번만 열람할 수 있습니다. 비밀번호를 잊었다면 비밀번호 재설정을 이용해 주세요.",
+                     *       "detail": "초기 비밀번호가 이미 열람되었거나 존재하지 않습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.",
                      *       "instance": "/api/v1/vms/55/initial-password",
                      *       "code": "VM_PASSWORD_ALREADY_VIEWED"
                      *     }
@@ -4190,7 +4146,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description 예약할 수 없는 상태 (이미 삭제 예약됨 / DELETING / DELETED) */
+            /** @description 예약할 수 없는 상태 — 이미 삭제 예약됨, 셀프 삭제 유예 중(DELETING), 또는 DELETED */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4234,7 +4190,6 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            429: components["responses"]["TooManyRequests"];
         };
     };
     cancelScheduledVmDeletion: {
@@ -4266,7 +4221,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description 취소할 수 없음 (취소 가능한 삭제 예약이 없음) */
+            /** @description 취소할 수 없음 — 대기 중인 삭제가 없거나, 유예/예정 시각이 지나 이미 파기되었거나, 긴급 삭제(취소 불가)임 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4277,7 +4232,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
                      *       "status": 409,
-                     *       "detail": "취소할 수 있는 삭제 예약이 없습니다.",
+                     *       "detail": "취소할 수 있는 삭제가 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.",
                      *       "instance": "/api/v1/admin/vms/55/cancel-scheduled-delete",
                      *       "code": "VM_INVALID_STATE"
                      *     }
