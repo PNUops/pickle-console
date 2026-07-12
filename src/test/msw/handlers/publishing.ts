@@ -17,14 +17,22 @@ const REFERENCE_NOW = new Date('2026-07-12T00:00:00+09:00').getTime()
 let nextDomainId = 900
 
 /**
- * 공개 해제 후 남는 커스텀 도메인 행 (계약 unpublishVm: 검증 상태 보존을 위해
- * 도메인 행은 남고 라우트만 제거). DELETE /domains/{id}로만 정리된다.
+ * 공개 해제 후 남는 커스텀 도메인 행 (서버 unpublish: 검증 상태 보존을 위해
+ * 도메인 행은 남고 라우트만 제거, 인증서도 폐기하지 않는다). 같은 FQDN을 다시
+ * 공개하면 이 행이 되살아나고(revive), 다른 대상을 공개하면 정리(retire)되며,
+ * DELETE /domains/{id}로 직접 삭제할 수도 있다.
  */
-let standaloneDomains: DomainDetail[] = []
+interface DomainTombstone {
+  domain: DomainDetail
+  /** 해제 시 폐기되지 않은 인증서 — revive 때 그대로 재사용된다. */
+  certificate: Schemas['CertificateView'] | null
+}
+
+let tombstones: DomainTombstone[] = []
 
 export function resetPublishingFixtures() {
   nextDomainId = 900
-  standaloneDomains = []
+  tombstones = []
 }
 
 /* ─── org 이름 조회 (관리자 목록의 기관 맥락) ─── */
@@ -50,7 +58,7 @@ function findByDomainId(domainId: number): { vm: VmDetail; pub: PublicationView 
 function findDomain(domainId: number): DomainDetail | null {
   return (
     findByDomainId(domainId)?.pub.domain ??
-    standaloneDomains.find((d) => d.id === domainId) ??
+    tombstones.find((t) => t.domain.id === domainId)?.domain ??
     null
   )
 }
@@ -114,16 +122,47 @@ function customDomainError(customDomain: string): string | null {
 }
 
 /**
- * 커스텀 도메인 FQDN이 이미 사용 중인지 검사. 다른 VM의 공개뿐 아니라
- * 해제 후 남은 도메인 행(tombstone)도 점유로 취급한다 — 같은 도메인을 다시
- * 연결하려면 먼저 DELETE /domains/{id}로 삭제해야 한다.
+ * 커스텀 도메인 FQDN이 이미 사용 중인지 검사 (서버 requireFqdnFree: REMOVED가
+ * 아닌 모든 도메인 행). 다른 VM의 공개와 다른 VM의 남은 행(tombstone)은 점유지만,
+ * 같은 VM의 남은 행은 점유가 아니다 — 같은 FQDN이면 revive, 다른 대상이면
+ * 공개 시점에 retire되기 때문.
  */
 function isFqdnTaken(fqdn: string, exceptVmId: number): boolean {
   return (
     publishedVms().some(
       (vm) => vm.id !== exceptVmId && vm.publication!.domain.fqdn === fqdn,
-    ) || standaloneDomains.some((d) => d.fqdn === fqdn)
+    ) || tombstones.some((t) => t.domain.vmId !== exceptVmId && t.domain.fqdn === fqdn)
   )
+}
+
+/** 같은 VM·같은 FQDN의 남은 행을 꺼내 되살린다 (revive 대상이면 목록에서 제거). */
+function takeTombstone(vmId: number, fqdn: string): DomainTombstone | null {
+  const idx = tombstones.findIndex(
+    (t) => t.domain.vmId === vmId && t.domain.kind === 'CUSTOM' && t.domain.fqdn === fqdn,
+  )
+  return idx >= 0 ? tombstones.splice(idx, 1)[0] : null
+}
+
+/**
+ * 다른 대상을 공개할 때 이 VM의 남은 행을 정리한다 (서버 retire: 행 REMOVED +
+ * 인증서 회수 — mock에서는 목록에서 제거).
+ */
+function retireTombstones(vmId: number) {
+  tombstones = tombstones.filter((t) => t.domain.vmId !== vmId)
+}
+
+/**
+ * 해제 후 남은 커스텀 도메인 행에 같은 FQDN을 다시 공개 — 서버 revive:
+ * 검증 상태·인증서를 보존한 채 새 라우트(PENDING)만 만든다. ACTIVE면 즉시
+ * 라우트 적용 대기, 아니면 보존된 검증 상태에서 재검증이 이어진다.
+ */
+function revivePublication(tomb: DomainTombstone, port: number): PublicationView {
+  return {
+    fqdn: tomb.domain.fqdn,
+    domain: tomb.domain,
+    route: { targetPort: port, protocol: 'HTTP', status: 'PENDING', appliedAt: null, lastError: null },
+    certificate: tomb.certificate,
+  }
 }
 
 /** 커스텀 도메인 publication을 구성한다 (검증 대기 PENDING). */
@@ -187,8 +226,10 @@ function buildPlatformPublication(vm: VmDetail, port: number): PublicationView {
   }
 }
 
+/** 라이브 라우트가 있는 공개만 관리자 라우트 목록에 나온다 (호출 측에서 필터). */
 function toAdminRoute(vm: VmDetail): Schemas['AdminRouteView'] {
   const pub = vm.publication!
+  const route = pub.route!
   return {
     id: pub.domain.id,
     fqdn: pub.fqdn,
@@ -199,12 +240,12 @@ function toAdminRoute(vm: VmDetail): Schemas['AdminRouteView'] {
     groupName: vm.groupName,
     orgId: vm.orgId,
     orgName: orgName(vm.orgId),
-    targetPort: pub.route.targetPort,
+    targetPort: route.targetPort,
     protocol: 'HTTP',
-    status: pub.route.status,
-    appliedGeneration: pub.route.status === 'APPLIED' ? 7 : null,
-    appliedAt: pub.route.appliedAt,
-    lastError: pub.route.lastError,
+    status: route.status,
+    appliedGeneration: route.status === 'APPLIED' ? 7 : null,
+    appliedAt: route.appliedAt,
+    lastError: route.lastError,
     updatedAt: vm.updatedAt,
   }
 }
@@ -225,7 +266,7 @@ function toAdminDomain(vm: VmDetail): Schemas['AdminDomainView'] {
     groupName: vm.groupName,
     orgId: vm.orgId,
     orgName: orgName(vm.orgId),
-    routeStatus: pub.route.status,
+    routeStatus: pub.route?.status ?? null,
     certificateStatus: pub.certificate?.status ?? null,
     updatedAt: vm.updatedAt,
   }
@@ -325,9 +366,19 @@ export const publishingHandlers: RequestHandler[] = [
     if (body.customDomain != null) {
       const err = customDomainError(body.customDomain)
       if (err) return validationFailed(instance, 'customDomain', err)
-      if (isFqdnTaken(body.customDomain, vm.id)) return fqdnTaken(instance)
-      vm.publication = buildCustomPublication(vm, body.customDomain, port)
+      // 같은 VM에 같은 FQDN의 남은 행이 있으면 되살린다 (서버 revive —
+      // 보존된 검증 상태·인증서 재사용, 409 아님).
+      const tomb = takeTombstone(vm.id, body.customDomain)
+      if (tomb) {
+        vm.publication = revivePublication(tomb, port)
+      } else {
+        if (isFqdnTaken(body.customDomain, vm.id)) return fqdnTaken(instance)
+        retireTombstones(vm.id)
+        vm.publication = buildCustomPublication(vm, body.customDomain, port)
+      }
     } else {
+      // 다른 대상으로 공개하면 이 VM의 남은 행은 정리된다 (서버 retire).
+      retireTombstones(vm.id)
       vm.publication = buildPlatformPublication(vm, port)
     }
     recordVmEvent(vm.id, {
@@ -341,10 +392,11 @@ export const publishingHandlers: RequestHandler[] = [
 
   http.patch('*/api/v1/vms/:vmId/publication', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
-    if (!vm || vm.publication == null) return notFound()
+    // 라이브 라우트가 없으면(해제 전이 등) 공개가 아니다 — 서버와 동일하게 404.
+    if (!vm || vm.publication?.route == null) return notFound()
     const instance = `/api/v1/vms/${vm.id}/publication`
     const body = (await request.json().catch(() => ({}))) as Schemas['UpdatePublicationRequest']
-    const pub = vm.publication
+    const route = vm.publication.route
     if (body.port !== undefined) {
       if (body.port === 22) {
         return validationFailed(instance, 'port', 'VM의 SSH 포트(22)는 공개할 수 없습니다.')
@@ -352,27 +404,22 @@ export const publishingHandlers: RequestHandler[] = [
       if (body.port < 1 || body.port > 65535) {
         return validationFailed(instance, 'port', '포트는 1–65535 범위여야 합니다.')
       }
-      pub.route.targetPort = body.port
-      pub.route.status = 'PENDING'
-      pub.route.appliedAt = null
-      pub.route.lastError = null
+      route.targetPort = body.port
+      route.status = 'PENDING'
+      route.appliedAt = null
+      route.lastError = null
     }
     if (body.customDomain !== undefined) {
+      // 공개 대상 교체 — 서버 teardown(archiveCustomCert=true): 기존 도메인
+      // 행은 커스텀이라도 REMOVED 되고 인증서가 회수된다. 남은 행(tombstone)은
+      // 만들지 않는다 — 검증 상태가 보존되는 것은 unpublish(DELETE) 경로뿐.
       if (body.customDomain === null) {
-        // 커스텀 해제 → 플랫폼 서브도메인 공개로 복귀. 커스텀 도메인 행은
-        // 검증 상태 보존을 위해 남는다 (unpublish와 동일).
-        if (pub.domain.kind === 'CUSTOM') {
-          standaloneDomains.push({ ...pub.domain })
-        }
-        vm.publication = buildPlatformPublication(vm, pub.route.targetPort)
+        vm.publication = buildPlatformPublication(vm, route.targetPort)
       } else {
         const err = customDomainError(body.customDomain)
         if (err) return validationFailed(instance, 'customDomain', err)
         if (isFqdnTaken(body.customDomain, vm.id)) return fqdnTaken(instance)
-        if (pub.domain.kind === 'CUSTOM' && pub.domain.fqdn !== body.customDomain) {
-          standaloneDomains.push({ ...pub.domain })
-        }
-        vm.publication = buildCustomPublication(vm, body.customDomain, pub.route.targetPort)
+        vm.publication = buildCustomPublication(vm, body.customDomain, route.targetPort)
       }
     }
     vm.updatedAt = '2026-07-12T09:10:00+09:00'
@@ -388,9 +435,13 @@ export const publishingHandlers: RequestHandler[] = [
       detail: vm.publication.fqdn,
       createdAt: '2026-07-12T09:20:00+09:00',
     })
-    // 계약: AUTO/REQUESTED 도메인 행은 함께 정리, 커스텀은 검증 상태 보존을 위해 남는다.
+    // 계약: AUTO/REQUESTED 도메인 행은 함께 정리, 커스텀은 검증 상태 보존을 위해
+    // 남는다 (인증서도 폐기하지 않는다 — 같은 FQDN 재공개 시 revive로 재사용).
     if (vm.publication.domain.kind === 'CUSTOM') {
-      standaloneDomains.push({ ...vm.publication.domain })
+      tombstones.push({
+        domain: { ...vm.publication.domain },
+        certificate: vm.publication.certificate ?? null,
+      })
     }
     vm.publication = null
     vm.updatedAt = '2026-07-12T09:20:00+09:00'
@@ -410,7 +461,7 @@ export const publishingHandlers: RequestHandler[] = [
     const published = publishedVms().map(
       (vm): Schemas['DomainSummary'] => toDomainSummary(vm.publication!.domain),
     )
-    const items = [...published, ...standaloneDomains.map(toDomainSummary)]
+    const items = [...published, ...tombstones.map((t) => toDomainSummary(t.domain))]
       .filter((d) => !vmId || d.vmId === Number(vmId))
       .filter((d) => !status || d.status === status)
       .sort((a, b) => b.id - a.id)
@@ -425,10 +476,10 @@ export const publishingHandlers: RequestHandler[] = [
 
   http.delete('*/api/v1/domains/:domainId', ({ params }) => {
     const domainId = Number(params.domainId)
-    // 해제 후 남은 도메인 행(tombstone) 삭제 — 행만 제거한다.
-    const standaloneIdx = standaloneDomains.findIndex((d) => d.id === domainId)
-    if (standaloneIdx >= 0) {
-      standaloneDomains.splice(standaloneIdx, 1)
+    // 해제 후 남은 도메인 행(tombstone) 삭제 — 행과 보존 인증서를 함께 정리한다.
+    const tombIdx = tombstones.findIndex((t) => t.domain.id === domainId)
+    if (tombIdx >= 0) {
+      tombstones.splice(tombIdx, 1)
       return HttpResponse.json({ message: '도메인 삭제를 접수했습니다.' }, { status: 202 })
     }
     // 공개 중인 도메인 삭제 — 계약: 연결된 라우트도 함께 제거(공개 해제).
@@ -441,7 +492,8 @@ export const publishingHandlers: RequestHandler[] = [
 
   http.post('*/api/v1/domains/:domainId/verify', ({ params }) => {
     const found = findByDomainId(Number(params.domainId))
-    const domain = found?.pub.domain ?? standaloneDomains.find((d) => d.id === Number(params.domainId))
+    const domain =
+      found?.pub.domain ?? tombstones.find((t) => t.domain.id === Number(params.domainId))?.domain
     if (!domain) return notFound()
     if (domain.kind !== 'CUSTOM') {
       return problemResponse({
@@ -480,6 +532,7 @@ export const publishingHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const items = publishedVms()
+      .filter((vm) => vm.publication!.route != null)
       .filter((vm) => !orgId || vm.orgId === Number(orgId))
       .map(toAdminRoute)
       .filter((r) => !status || r.status === status)

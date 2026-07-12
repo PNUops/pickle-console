@@ -163,12 +163,12 @@ describe('VM 공개 — 커스텀 도메인 검증', () => {
 
 describe('VM 공개 — 부분 상태 방어적 렌더링', () => {
   test('route·certificate·verification이 모두 없는 publication도 크래시 없이 준비 중으로 보여준다', async () => {
-    // 접수 직후 과도기: 서버가 publication은 돌려주지만 중첩 블록이 아직 없다.
-    const vm = vmStore.find((v) => v.id === 62)!
-    const pub = vm.publication as unknown as Record<string, unknown>
+    // 접수 직후 과도기: 서버가 publication은 돌려주지만 중첩 블록이 아직 없다
+    // (계약 정정: PublicationView.route는 nullable — 캐스트 없이 표현 가능).
+    const pub = vmStore.find((v) => v.id === 62)!.publication!
     pub.route = null
     pub.certificate = null
-    ;(pub.domain as Record<string, unknown>).verification = null
+    pub.domain.verification = null
 
     renderVm(62)
 
@@ -184,21 +184,20 @@ describe('VM 공개 — 부분 상태 방어적 렌더링', () => {
     // 검증 블록·인증서 블록은 없으면 렌더링하지 않는다 (크래시 금지).
     expect(within(card).queryByText('도메인 소유권·연결 확인')).not.toBeInTheDocument()
     expect(within(card).queryByText('인증서')).not.toBeInTheDocument()
-    // 변경·해제 액션은 그대로 동작한다 (포트 초기값은 기본 80으로 방어).
+    // 라우트가 없는 동안에는 실제 포트를 알 수 없으므로 포트 변경 폼은 비활성화된다.
+    expect(within(card).getByRole('button', { name: '포트 변경' })).toBeDisabled()
+    // 해제 액션은 그대로 노출된다.
     expect(within(card).getByRole('button', { name: 'HTTP 공개 해제' })).toBeInTheDocument()
   })
 })
 
-describe('VM 공개 — 남은 도메인(tombstone) 삭제', () => {
-  test('커스텀 도메인 해제 후 남은 도메인을 삭제해야 다시 연결할 수 있다', async () => {
-    const user = userEvent.setup()
-    renderVm(63) // shop-app: CUSTOM 공개됨, OWNER
-
+describe('VM 공개 — 커스텀 도메인 해제 후 재공개(revive)·삭제', () => {
+  /** shop-app(63)을 해제해 남은 도메인(tombstone) 상태를 만든다. */
+  async function unpublishShopApp(user: ReturnType<typeof userEvent.setup>) {
     await screen.findByRole('heading', { name: 'shop-app' })
     let card = await publishCard()
     await within(card).findByRole('link', { name: 'shop.example.com' })
 
-    // 1) 공개 해제 — 커스텀 도메인 행은 남는다 (계약 unpublishVm).
     await user.click(within(card).getByRole('button', { name: 'HTTP 공개 해제' }))
     const dialog = await screen.findByRole('dialog', { name: 'HTTP 공개 해제' })
     expect(within(dialog).getByText(/남은 도메인/)).toBeInTheDocument()
@@ -211,23 +210,71 @@ describe('VM 공개 — 남은 도메인(tombstone) 삭제', () => {
     ).toBeInTheDocument()
     expect(await within(card).findByText('남은 도메인')).toBeInTheDocument()
     expect(within(card).getByText('shop.example.com')).toBeInTheDocument()
+    return card
+  }
 
-    // 2) 남은 행이 있는 동안 같은 도메인 재연결은 409로 거부된다.
+  test('같은 커스텀 도메인으로 다시 공개하면 보존된 검증 상태로 되살아난다(revive)', async () => {
+    const user = userEvent.setup()
+    renderVm(63) // shop-app: CUSTOM ACTIVE 공개됨, OWNER
+
+    const card = await unpublishShopApp(user)
+
+    // 같은 도메인 재공개 — 409가 아니라 남은 행이 되살아난다 (서버 revive):
+    // 보존된 검증 상태(ACTIVE)·인증서를 재사용하므로 재검증 없이 라우트만 적용된다.
     await user.type(within(card).getByLabelText(/커스텀 도메인/), 'shop.example.com')
     await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
-    expect(
-      await within(card).findByText(/이미 다른 곳에 연결되어 있습니다/),
-    ).toBeInTheDocument()
 
-    // 3) 남은 도메인을 삭제하면 목록이 사라지고 재연결이 가능해진다.
+    expect(
+      await within(card).findByRole('link', { name: 'shop.example.com' }),
+    ).toBeInTheDocument()
+    expect(await within(card).findByText('연결됨')).toBeInTheDocument()
+    expect(within(card).getByText("Let's Encrypt")).toBeInTheDocument()
+    // 되살아난 행은 현재 공개에 연결되므로 남은 도메인 목록에서 사라진다.
+    await waitFor(() =>
+      expect(within(card).queryByText('남은 도메인')).not.toBeInTheDocument(),
+    )
+    // ACTIVE 커스텀 도메인은 검증 없이 폴링으로 라우트가 다시 적용된다.
+    expect(await within(card).findByText('적용됨')).toBeInTheDocument()
+  })
+
+  test('남은 도메인을 삭제하면 검증 상태가 정리되어 재공개 시 검증을 처음부터 한다', async () => {
+    const user = userEvent.setup()
+    renderVm(63)
+
+    const card = await unpublishShopApp(user)
+
+    // 도메인 삭제 — 더 이상 쓰지 않을 때의 정리 경로 (검증 상태도 함께 폐기).
     await user.click(within(card).getByRole('button', { name: '도메인 삭제' }))
     await waitFor(() =>
       expect(within(card).queryByText('남은 도메인')).not.toBeInTheDocument(),
     )
+
+    // 같은 도메인을 다시 공개하면 새 행이 만들어져 소유권 검증부터 시작한다.
+    await user.type(within(card).getByLabelText(/커스텀 도메인/), 'shop.example.com')
     await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
     expect(
       await within(card).findByRole('link', { name: 'shop.example.com' }),
     ).toBeInTheDocument()
+    expect(await within(card).findByText('레코드 대기')).toBeInTheDocument()
+    expect(await within(card).findByText('도메인 소유권·연결 확인')).toBeInTheDocument()
+  })
+
+  test('커스텀 도메인 연결 해제(플랫폼 복귀)는 남은 도메인 행을 만들지 않는다', async () => {
+    const user = userEvent.setup()
+    renderVm(63)
+
+    await screen.findByRole('heading', { name: 'shop-app' })
+    const card = await publishCard()
+    await within(card).findByRole('link', { name: 'shop.example.com' })
+
+    // PATCH 해제 — 서버는 커스텀 도메인 행을 REMOVED 하고 인증서를 회수한다
+    // (검증 상태가 보존되는 것은 공개 해제(unpublish) 경로뿐).
+    await user.click(within(card).getByRole('button', { name: '커스텀 도메인 연결 해제' }))
+    expect(
+      await within(card).findByRole('link', { name: 'shop-app-a1b2.pickle.pnuops.com' }),
+    ).toBeInTheDocument()
+    expect(within(card).queryByText('남은 도메인')).not.toBeInTheDocument()
+    expect(within(card).queryByText('shop.example.com')).not.toBeInTheDocument()
   })
 })
 

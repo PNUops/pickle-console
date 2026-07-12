@@ -48,6 +48,11 @@ import { VmPublishSection } from '../components/VmPublishSection'
 
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
 const POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000
+/**
+ * 사용자 조치(DNS 레코드 추가·수정)를 기다리는 상태의 완만한 폴링 주기.
+ * 시스템이 수렴시키는 전이가 아니므로 서버 재검증 주기에 맞춰 느리게 돈다.
+ */
+const SLOW_POLL_MS = import.meta.env.MODE === 'test' ? 250 : 30_000
 
 /** VM 상태 기준으로 폴링이 필요한 상태 (비동기 전이 중). */
 const POLLING_VM_STATUSES: VmStatus[] = ['CREATING', 'DELETING', 'REBOOTING']
@@ -74,19 +79,30 @@ export function VmDetailPage() {
         data.provisioning != null &&
         ACTIVE_TASK_STATUSES.includes(data.provisioning.status)
       // 공개 라우트 적용·도메인 검증·인증서 발급도 비동기이므로 진행 중이면 폴링한다.
-      // 접수 직후 과도기에는 중첩 블록(route 등)이 없을 수 있어 방어적으로 접근하고,
-      // 라우트가 아직 없으면 적용 대기로 보고 폴링한다.
+      // 시스템이 곧 수렴시키는 전이(라우트 적용 대기, 인증서 갱신)는 빠르게,
+      // 사용자 DNS 조치를 기다리는 상태(커스텀 도메인 검증 대기·실패)는 완만하게.
       const pub = data.publication
-      const publishing =
+      const route = pub?.route ?? null
+      // 검증이 끝난(또는 검증이 필요 없는) 공개의 라우트가 아직 없거나 PENDING이면
+      // proxy 적용이 진행 중이다 — 접수 직후 과도기(route 미생성)도 포함.
+      const applying =
         pub != null &&
-        (pub.route == null ||
-          pub.route.status === 'PENDING' ||
-          pub.domain?.status === 'PENDING' ||
-          pub.domain?.status === 'VERIFYING' ||
-          pub.certificate?.status === 'RENEWING')
-      return POLLING_VM_STATUSES.includes(data.status) || activeTask || publishing
-        ? POLL_MS
-        : false
+        (route == null || route.status === 'PENDING') &&
+        (pub.domain.kind !== 'CUSTOM' || pub.domain.status === 'ACTIVE')
+      const systemProgress =
+        pub != null && (applying || pub.certificate?.status === 'RENEWING')
+      // 커스텀 도메인이 검증을 통과하지 못한 상태 — DNS 레코드 추가·전파라는
+      // 사용자 조치를 기다리므로 무한 3초 폴링 대신 느린 주기로 갱신한다.
+      const awaitingUserDns =
+        pub != null &&
+        pub.domain.kind === 'CUSTOM' &&
+        (pub.domain.status === 'PENDING' ||
+          pub.domain.status === 'VERIFYING' ||
+          pub.domain.status === 'FAILED')
+      if (POLLING_VM_STATUSES.includes(data.status) || activeTask || systemProgress) {
+        return POLL_MS
+      }
+      return awaitingUserDns ? SLOW_POLL_MS : false
     },
   })
 
