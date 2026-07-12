@@ -3,9 +3,12 @@ import { RequireRole } from './auth/RequireRole'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
+import { AdminCertificatesPage } from './pages/AdminCertificatesPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminDomainsPage } from './pages/AdminDomainsPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
+import { AdminRoutesPage } from './pages/AdminRoutesPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
@@ -63,6 +66,9 @@ function App() {
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
+        <Route path="domains" element={<AdminDomainsPage />} />
+        <Route path="routes" element={<AdminRoutesPage />} />
+        <Route path="certificates" element={<AdminCertificatesPage />} />
         <Route
           path="nodes"
           element={

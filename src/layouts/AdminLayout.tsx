@@ -8,6 +8,9 @@ export function AdminLayout() {
     { to: '/admin', label: '대시보드', end: true },
     { to: '/admin/requests', label: '승인 대기' },
     { to: '/admin/vms', label: 'VM 관리' },
+    { to: '/admin/domains', label: '도메인' },
+    { to: '/admin/routes', label: '라우팅' },
+    { to: '/admin/certificates', label: '인증서' },
     // 노드/용량·기관 관리는 SYS_ADMIN 전용 (라우트에서도 한 번 더 가드)
     ...(user?.role === 'SYS_ADMIN'
       ? [

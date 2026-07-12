@@ -202,7 +202,7 @@ function daysUntil(notAfter: string | null): number | null {
 }
 
 /** 관리자 인증서 목록: 공용 와일드카드 1개 + 커스텀 도메인별 LE 인증서. */
-function adminCertificates(): Schemas['AdminCertificateView'][] {
+function adminCertificates(orgId?: number): Schemas['AdminCertificateView'][] {
   const wildcard: Schemas['AdminCertificateView'] = {
     id: 1,
     kind: 'ORIGIN_CA_WILDCARD',
@@ -214,6 +214,7 @@ function adminCertificates(): Schemas['AdminCertificateView'][] {
     lastError: null,
   }
   const custom = publishedVms()
+    .filter((vm) => !orgId || vm.orgId === orgId)
     .filter((vm) => vm.publication!.certificate?.kind === 'LETS_ENCRYPT')
     .map((vm) => {
       const pub = vm.publication!
@@ -462,9 +463,10 @@ export const publishingHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
     const expiringInDays = url.searchParams.get('expiringInDays')
+    const orgId = url.searchParams.get('orgId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const items = adminCertificates()
+    const items = adminCertificates(orgId ? Number(orgId) : undefined)
       .filter((c) => !status || c.status === status)
       .filter(
         (c) =>
