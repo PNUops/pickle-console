@@ -26,7 +26,7 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
-import { FilterBar } from './AdminRoutesPage'
+import { FilterBar } from '../components/FilterBar'
 
 const PAGE_SIZE = 20
 

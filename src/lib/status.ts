@@ -92,3 +92,69 @@ export const PROVISIONING_KIND_LABELS: Record<
   DELETE: 'VM 삭제',
   REINSTALL: 'VM 재설치',
 }
+
+/* ─── 운영 콘솔 (M5) ─── */
+
+export type DriftFindingKind = components['schemas']['DriftFindingKind']
+export type DriftFindingStatus = components['schemas']['DriftFindingStatus']
+export type NotificationDeliveryStatus =
+  components['schemas']['NotificationDeliveryStatus']
+export type IpAllocationStatus = components['schemas']['IpAllocationStatus']
+export type AnnouncementScope = components['schemas']['AnnouncementScope']
+
+export const TASK_STATUS_LABELS: Record<ProvisioningTaskStatus, string> = {
+  PENDING: '대기',
+  RUNNING: '진행 중',
+  DONE: '완료',
+  FAILED: '실패',
+  RETRYING: '재시도 대기',
+  NEEDS_ADMIN: '관리자 확인 필요',
+}
+
+export const DRIFT_KIND_LABELS: Record<DriftFindingKind, string> = {
+  MISSING_IN_PROXMOX: 'Proxmox에 없음',
+  UNMANAGED_GUEST: '미등록 VM',
+  SPEC_MISMATCH: '사양 불일치',
+}
+
+export const DRIFT_STATUS_LABELS: Record<DriftFindingStatus, string> = {
+  OPEN: '미해결',
+  RESOLVED: '해결됨',
+}
+
+export const DELIVERY_STATUS_LABELS: Record<NotificationDeliveryStatus, string> = {
+  PENDING: '발송 대기',
+  SENT: '발송됨',
+  FAILED: '발송 실패',
+  SKIPPED: '미발송',
+}
+
+export const IP_ALLOCATION_STATUS_LABELS: Record<IpAllocationStatus, string> = {
+  ALLOCATED: '할당됨',
+  RELEASED: '해제됨',
+}
+
+export const ANNOUNCEMENT_SCOPE_LABELS: Record<AnnouncementScope, string> = {
+  ALL: '전체',
+  ORG: '기관',
+  GROUP: '그룹',
+}
+
+/** 알려진 감사 로그 동작 코드의 한국어 라벨 (미등록 코드는 원문 노출). */
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'auth.login': '로그인',
+  'auth.login_failed': '로그인 실패',
+  'auth.logout': '로그아웃',
+  'vm.delete': 'VM 삭제',
+  'settings.update': '설정 변경',
+  'announcement.create': '공지 발송',
+  'task.retry': '작업 재시도',
+  'drift.resolve': '드리프트 해결',
+  'vm.period_update': '기간 변경',
+  'notification.resend': '알림 재발송',
+}
+
+/** 감사 동작 코드 → 라벨 (카탈로그에 없으면 코드 원문). */
+export function labelForAuditAction(code: string): string {
+  return AUDIT_ACTION_LABELS[code] ?? code
+}

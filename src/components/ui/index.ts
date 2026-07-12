@@ -1,13 +1,20 @@
 export { Alert } from './Alert'
 export {
+  AnnouncementScopeBadge,
   Badge,
   CertificateStatusBadge,
+  DdayBadge,
+  DeliveryStatusBadge,
   DomainKindBadge,
   DomainStatusBadge,
+  DriftKindBadge,
+  DriftStatusBadge,
   GroupKindBadge,
   GroupRoleBadge,
+  IpAllocationStatusBadge,
   RequestStatusBadge,
   RouteStatusBadge,
+  TaskStatusBadge,
   VmStatusBadge,
   type BadgeVariant,
 } from './Badge'
@@ -21,6 +28,7 @@ export { Modal } from './Modal'
 export { Pagination } from './Pagination'
 export { Select } from './Select'
 export { Spinner } from './Spinner'
+export { StatTile, type StatTileProps } from './StatTile'
 export { Stepper } from './Stepper'
 export { Table, TBody, TD, TH, THead, TR } from './Table'
 export { Textarea } from './Textarea'

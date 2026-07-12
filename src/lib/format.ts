@@ -20,6 +20,29 @@ export function formatRelative(iso: string, base: Date = new Date()): string {
   return diffMs >= 0 ? `${amount} 후` : `${amount} 전`
 }
 
+export interface Dday {
+  /** 'D-3' / 'D-Day' / 'D+2' */
+  label: string
+  /** 배지 톤 — 만료 임박(D-3 이내)·경과는 danger, D-7 이내는 warning */
+  tone: 'neutral' | 'warning' | 'danger'
+  /** 남은 일수 (0 = 오늘 만료, 음수 = 이미 경과) */
+  daysLeft: number
+}
+
+/**
+ * 사용 종료일('YYYY-MM-DD', inclusive) → D-day 라벨과 톤.
+ * 날짜 전용 값이라 로컬 자정 기준으로 계산한다.
+ */
+export function formatDday(endDate: string, base: Date = new Date()): Dday {
+  const [y, m, d] = endDate.split('-').map(Number)
+  const end = new Date(y, m - 1, d)
+  const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
+  const daysLeft = Math.round((end.getTime() - today.getTime()) / 86_400_000)
+  const label = daysLeft > 0 ? `D-${daysLeft}` : daysLeft === 0 ? 'D-Day' : `D+${-daysLeft}`
+  const tone = daysLeft <= 3 ? 'danger' : daysLeft <= 7 ? 'warning' : 'neutral'
+  return { label, tone, daysLeft }
+}
+
 /** MiB → human-readable GiB/MiB label (e.g. 2048 → '2 GiB'). */
 export function formatMemory(memoryMb: number): string {
   if (memoryMb % 1024 === 0) return `${memoryMb / 1024} GiB`

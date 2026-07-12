@@ -23,7 +23,7 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { CERTIFICATE_KIND_LABELS, CERTIFICATE_STATUS_LABELS } from '../lib/status'
-import { FilterBar } from './AdminRoutesPage'
+import { FilterBar } from '../components/FilterBar'
 
 const PAGE_SIZE = 20
 

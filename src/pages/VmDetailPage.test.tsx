@@ -1,8 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -254,5 +255,65 @@ describe('VM 상세 — 초기 비밀번호 1회 열람', () => {
       await screen.findByText(/이미 열람되었거나 존재하지 않습니다/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
+/* ─── 만료 표면화 (M5) ─── */
+
+/** 오늘 기준 offset일 뒤의 로컬 날짜 문자열 (YYYY-MM-DD). */
+function localDate(offsetDays: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+describe('VM 상세 — 사용 기간 만료 표면화', () => {
+  test('종료일이 7일 이내면 사용 기간 옆에 D-day 배지를 보여준다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, endDate: localDate(3) }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.getByText('D-3')).toBeInTheDocument()
+    expect(screen.queryByText(/사용 기간이 만료되어 중지되었습니다/)).not.toBeInTheDocument()
+  })
+
+  test('만료로 자동 중지된 VM은 경고 안내와 D+n 배지를 보여준다', async () => {
+    const base = vmStore.find((v) => v.id === 57)!
+    server.use(
+      http.get('*/api/v1/vms/57', () =>
+        HttpResponse.json({
+          ...base,
+          status: 'STOPPED',
+          endDate: localDate(-2),
+          expiryStoppedAt: new Date().toISOString(),
+        }),
+      ),
+    )
+    renderVm(57)
+
+    await screen.findByRole('heading', { name: 'web-lab' })
+    expect(
+      await screen.findByText(/사용 기간이 만료되어 중지되었습니다/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('D+2')).toBeInTheDocument()
+  })
+
+  test('종료일이 충분히 남으면 D-day 배지를 노출하지 않는다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, endDate: localDate(60) }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.queryByText(/^D[-+]/)).not.toBeInTheDocument()
   })
 })

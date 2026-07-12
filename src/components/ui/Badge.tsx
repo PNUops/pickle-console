@@ -6,16 +6,29 @@ import {
   type GroupKind,
   type GroupMemberRole,
 } from '../../lib/labels'
+import { formatDday } from '../../lib/format'
 import {
+  ANNOUNCEMENT_SCOPE_LABELS,
   CERTIFICATE_STATUS_LABELS,
+  DELIVERY_STATUS_LABELS,
   DOMAIN_KIND_LABELS,
   DOMAIN_STATUS_LABELS,
+  DRIFT_KIND_LABELS,
+  DRIFT_STATUS_LABELS,
+  IP_ALLOCATION_STATUS_LABELS,
   REQUEST_STATUS_LABELS,
   ROUTE_STATUS_LABELS,
+  TASK_STATUS_LABELS,
   VM_STATUS_LABELS,
+  type AnnouncementScope,
   type CertificateStatus,
   type DomainKind,
   type DomainStatus,
+  type DriftFindingKind,
+  type DriftFindingStatus,
+  type IpAllocationStatus,
+  type NotificationDeliveryStatus,
+  type ProvisioningTaskStatus,
   type RouteStatus,
   type VmRequestStatus,
   type VmStatus,
@@ -171,6 +184,142 @@ export function GroupKindBadge({ kind, className }: { kind: GroupKind; className
   return (
     <Badge variant={GROUP_KIND_VARIANTS[kind]} className={className}>
       {GROUP_KIND_LABELS[kind]}
+    </Badge>
+  )
+}
+
+/* ─── 운영 콘솔 (M5) ─── */
+
+/** 사용 종료일 D-day 배지 — 임박(D-3 이내)·경과는 danger, D-7 이내는 warning. */
+export function DdayBadge({ endDate, className }: { endDate: string; className?: string }) {
+  const dday = formatDday(endDate)
+  const variant: BadgeVariant =
+    dday.tone === 'danger' ? 'danger' : dday.tone === 'warning' ? 'warning' : 'neutral'
+  return (
+    <Badge variant={variant} className={className}>
+      {dday.label}
+    </Badge>
+  )
+}
+
+const TASK_STATUS_VARIANTS: Record<ProvisioningTaskStatus, BadgeVariant> = {
+  PENDING: 'neutral',
+  RUNNING: 'info',
+  DONE: 'success',
+  FAILED: 'danger',
+  RETRYING: 'warning',
+  NEEDS_ADMIN: 'warning',
+}
+
+export function TaskStatusBadge({
+  status,
+  className,
+}: {
+  status: ProvisioningTaskStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={TASK_STATUS_VARIANTS[status]} className={className}>
+      {TASK_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const DRIFT_KIND_VARIANTS: Record<DriftFindingKind, BadgeVariant> = {
+  MISSING_IN_PROXMOX: 'danger',
+  UNMANAGED_GUEST: 'warning',
+  SPEC_MISMATCH: 'info',
+}
+
+export function DriftKindBadge({
+  kind,
+  className,
+}: {
+  kind: DriftFindingKind
+  className?: string
+}) {
+  return (
+    <Badge variant={DRIFT_KIND_VARIANTS[kind]} className={className}>
+      {DRIFT_KIND_LABELS[kind]}
+    </Badge>
+  )
+}
+
+const DRIFT_STATUS_VARIANTS: Record<DriftFindingStatus, BadgeVariant> = {
+  OPEN: 'warning',
+  RESOLVED: 'success',
+}
+
+export function DriftStatusBadge({
+  status,
+  className,
+}: {
+  status: DriftFindingStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={DRIFT_STATUS_VARIANTS[status]} className={className}>
+      {DRIFT_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const DELIVERY_STATUS_VARIANTS: Record<NotificationDeliveryStatus, BadgeVariant> = {
+  PENDING: 'info',
+  SENT: 'success',
+  FAILED: 'danger',
+  SKIPPED: 'neutral',
+}
+
+export function DeliveryStatusBadge({
+  status,
+  className,
+}: {
+  status: NotificationDeliveryStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={DELIVERY_STATUS_VARIANTS[status]} className={className}>
+      {DELIVERY_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const IP_ALLOCATION_STATUS_VARIANTS: Record<IpAllocationStatus, BadgeVariant> = {
+  ALLOCATED: 'success',
+  RELEASED: 'neutral',
+}
+
+export function IpAllocationStatusBadge({
+  status,
+  className,
+}: {
+  status: IpAllocationStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={IP_ALLOCATION_STATUS_VARIANTS[status]} className={className}>
+      {IP_ALLOCATION_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const ANNOUNCEMENT_SCOPE_VARIANTS: Record<AnnouncementScope, BadgeVariant> = {
+  ALL: 'primary',
+  ORG: 'info',
+  GROUP: 'neutral',
+}
+
+export function AnnouncementScopeBadge({
+  scope,
+  className,
+}: {
+  scope: AnnouncementScope
+  className?: string
+}) {
+  return (
+    <Badge variant={ANNOUNCEMENT_SCOPE_VARIANTS[scope]} className={className}>
+      {ANNOUNCEMENT_SCOPE_LABELS[scope]}
     </Badge>
   )
 }

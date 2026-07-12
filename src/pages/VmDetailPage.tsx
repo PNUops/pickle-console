@@ -30,6 +30,7 @@ import {
   CardHeader,
   CardTitle,
   ConfirmNameModal,
+  DdayBadge,
   Modal,
   Pagination,
   Spinner,
@@ -42,7 +43,7 @@ import {
   TR,
   VmStatusBadge,
 } from '../components/ui'
-import { formatDateTime, formatRelative, formatSpec } from '../lib/format'
+import { formatDateTime, formatDday, formatRelative, formatSpec } from '../lib/format'
 import { PROVISIONING_KIND_LABELS, VM_EVENT_LABELS } from '../lib/status'
 import { VmPublishSection } from '../components/VmPublishSection'
 
@@ -118,6 +119,11 @@ export function VmDetailPage() {
   }
 
   const data = vm.data
+  const dday = data.endDate ? formatDday(data.endDate) : null
+  // 만료 자동 정지 안내: 스위퍼가 정지했거나(endDate 경과 + STOPPED) 만료 마커가 남아 있는 경우.
+  const expiredStopped =
+    data.expiryStoppedAt != null ||
+    (dday != null && dday.daysLeft < 0 && data.status === 'STOPPED')
 
   return (
     <div className="space-y-6">
@@ -155,6 +161,11 @@ export function VmDetailPage() {
         <Alert variant="info">이 VM은 삭제되었습니다. 기록 조회만 가능합니다.</Alert>
       )}
       {data.statusDetail && <Alert variant="warning">{data.statusDetail}</Alert>}
+      {expiredStopped && (
+        <Alert variant="warning" title="사용 기간 만료">
+          사용 기간이 만료되어 중지되었습니다. 연장이 필요하면 관리자에게 문의해 주세요.
+        </Alert>
+      )}
       {data.deletion && data.status !== 'DELETED' && (
         <DeletionBanner deletion={data.deletion} />
       )}
@@ -175,6 +186,9 @@ export function VmDetailPage() {
             <Field label="SSH 계정">{data.sshUsername}</Field>
             <Field label="사용 기간">
               {data.startDate ?? '미지정'} ~ {data.endDate ?? '미지정'}
+              {data.endDate && dday && dday.daysLeft <= 7 && (
+                <DdayBadge endDate={data.endDate} className="ml-2" />
+              )}
             </Field>
             <Field label="생성 신청">
               <Link
