@@ -6,6 +6,7 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { AdminCertificatesPage } from './pages/AdminCertificatesPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminDomainsPage } from './pages/AdminDomainsPage'
+import { AdminExpiryPage } from './pages/AdminExpiryPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
 import { AdminRoutesPage } from './pages/AdminRoutesPage'
@@ -68,6 +69,7 @@ function App() {
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
+        <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route path="routes" element={<AdminRoutesPage />} />

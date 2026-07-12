@@ -6,6 +6,14 @@ type Schemas = components['schemas']
 type VmDetail = Schemas['VmDetail']
 type VmEvent = Schemas['VmEvent']
 
+/** 오늘(로컬) 기준 offset일 뒤의 날짜 문자열 (YYYY-MM-DD) — 만료 픽스처용. */
+export function localDateStr(offsetDays = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 function initialVms(): VmDetail[] {
   return [
     {
@@ -443,6 +451,91 @@ function initialVms(): VmDetail[] {
       createdAt: '2026-07-02T12:00:00+09:00',
       updatedAt: '2026-07-03T09:05:00+09:00',
     },
+    /* ─── 만료 큐 픽스처 (M5) — 날짜는 테스트 실행일 기준으로 동적 생성 ─── */
+    {
+      // 7일 이내 만료 임박 (D-3)
+      id: 45,
+      name: 'expiring-api',
+      hostname: 'expiring-api',
+      status: 'RUNNING',
+      vcpu: 2,
+      memoryMb: 2048,
+      diskGb: 20,
+      groupId: 12,
+      groupName: '캡스톤 3조',
+      requestId: 109,
+      statusDetail: null,
+      orgId: 1,
+      templateId: 1,
+      ipAddress: '10.10.0.45',
+      sshUsername: 'student',
+      startDate: localDateStr(-90),
+      endDate: localDateStr(3),
+      expiryStoppedAt: null,
+      initialPasswordAvailable: false,
+      httpPublishGranted: false,
+      publication: null,
+      provisioning: null,
+      deletion: null,
+      createdAt: '2026-04-14T10:00:00+09:00',
+      updatedAt: '2026-04-14T10:00:00+09:00',
+    },
+    {
+      // 이미 만료되어 스위퍼가 자동 중지 (D+2)
+      id: 46,
+      name: 'expired-lab',
+      hostname: 'expired-lab',
+      status: 'STOPPED',
+      vcpu: 1,
+      memoryMb: 1024,
+      diskGb: 10,
+      groupId: 15,
+      groupName: '알고리즘 스터디',
+      requestId: 110,
+      statusDetail: null,
+      orgId: 1,
+      templateId: 1,
+      ipAddress: '10.10.0.46',
+      sshUsername: 'student',
+      startDate: localDateStr(-120),
+      endDate: localDateStr(-2),
+      expiryStoppedAt: new Date().toISOString(),
+      initialPasswordAvailable: false,
+      httpPublishGranted: false,
+      publication: null,
+      provisioning: null,
+      deletion: null,
+      createdAt: '2026-03-15T10:00:00+09:00',
+      updatedAt: '2026-03-15T10:00:00+09:00',
+    },
+    {
+      // 30일 이내 만료 예정 (D-20) — 7일 탭에는 나오지 않는다 (org 2)
+      id: 47,
+      name: 'semester-web',
+      hostname: 'semester-web',
+      status: 'RUNNING',
+      vcpu: 1,
+      memoryMb: 1024,
+      diskGb: 10,
+      groupId: 21,
+      groupName: 'AI 동아리',
+      requestId: 111,
+      statusDetail: null,
+      orgId: 2,
+      templateId: 1,
+      ipAddress: '10.10.0.47',
+      sshUsername: 'student',
+      startDate: localDateStr(-60),
+      endDate: localDateStr(20),
+      expiryStoppedAt: null,
+      initialPasswordAvailable: false,
+      httpPublishGranted: false,
+      publication: null,
+      provisioning: null,
+      deletion: null,
+      createdAt: '2026-05-14T10:00:00+09:00',
+      updatedAt: '2026-05-14T10:00:00+09:00',
+    },
   ]
 }
 
@@ -509,11 +602,11 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
 export function toVmSummary(vm: VmDetail): Schemas['VmSummary'] {
   const {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
-    requestId, statusDetail, createdAt,
+    requestId, statusDetail, endDate, expiryStoppedAt, createdAt,
   } = vm
   return {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
-    requestId, statusDetail, createdAt,
+    requestId, statusDetail, endDate, expiryStoppedAt, createdAt,
   }
 }
 

@@ -56,6 +56,7 @@ export type AdminCertificatePage = Schemas['AdminCertificatePage']
 export type NotificationView = Schemas['NotificationView']
 export type NotificationPage = Schemas['NotificationPage']
 export type UnreadCountResponse = Schemas['UnreadCountResponse']
+export type VmPeriodUpdateRequest = Schemas['VmPeriodUpdateRequest']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -370,12 +371,29 @@ export function fetchAdminVms(params: {
   orgId?: number
   groupId?: number
   status?: VmStatus
+  expiringInDays?: number
+  expired?: boolean
   page?: number
   size?: number
 }): Promise<VmPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vms', { params: { query: params } })
     if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** VM 사용 기간 변경(만료 연장) — 동기 반영이라 갱신된 VM 상세를 돌려받는다. */
+export function updateVmPeriod(
+  vmId: number,
+  body: VmPeriodUpdateRequest,
+): Promise<VmDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/vms/{vmId}/period', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '사용 기간을 변경하지 못했습니다.')
     return data
   })
 }

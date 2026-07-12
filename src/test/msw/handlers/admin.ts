@@ -2,7 +2,13 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, studentUser } from './auth'
 import { orgs } from './reference'
-import { invalidVmStateProblem, recordVmEvent, toVmSummary, vmStore } from './vms'
+import {
+  invalidVmStateProblem,
+  localDateStr,
+  recordVmEvent,
+  toVmSummary,
+  vmStore,
+} from './vms'
 
 type Schemas = components['schemas']
 type VmRequestDetail = Schemas['VmRequestDetail']
@@ -512,12 +518,34 @@ export const adminHandlers: RequestHandler[] = [
     const orgId = url.searchParams.get('orgId')
     const groupId = url.searchParams.get('groupId')
     const status = url.searchParams.get('status')
+    const expiringInDays = url.searchParams.get('expiringInDays')
+    const expired = url.searchParams.get('expired')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
+    const today = localDateStr(0)
     const filtered = vmStore
       .filter((vm) => !orgId || vm.orgId === Number(orgId))
       .filter((vm) => !groupId || vm.groupId === Number(groupId))
       .filter((vm) => !status || vm.status === status)
+      // 계약: expiringInDays = 오늘 ≤ endDate ≤ 오늘+N (만료·삭제 상태 제외)
+      .filter(
+        (vm) =>
+          !expiringInDays ||
+          (vm.endDate != null &&
+            vm.endDate >= today &&
+            vm.endDate <= localDateStr(Number(expiringInDays)) &&
+            vm.status !== 'DELETED' &&
+            vm.status !== 'DELETING'),
+      )
+      // 계약: expired=true = endDate < 오늘 (삭제 상태 제외)
+      .filter(
+        (vm) =>
+          expired !== 'true' ||
+          (vm.endDate != null &&
+            vm.endDate < today &&
+            vm.status !== 'DELETED' &&
+            vm.status !== 'DELETING'),
+      )
       .sort((a, b) => b.id - a.id)
     const body: Schemas['VmPage'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
@@ -602,6 +630,55 @@ export const adminHandlers: RequestHandler[] = [
         ? '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 전원 켜기는 이용자가 직접 수행합니다.'
         : '삭제 예약이 취소되었습니다. VM의 현재 전원 상태는 그대로 유지됩니다.'
     return HttpResponse.json({ message }, { status: 200 })
+  }),
+
+  /* ─── VM 사용 기간 변경 — 만료 연장 (M5) ─── */
+
+  http.patch('*/api/v1/admin/vms/:vmId/period', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    if (vm.status === 'DELETED' || vm.status === 'DELETING' || vm.deletion != null) {
+      return invalidVmStateProblem(
+        `/api/v1/admin/vms/${vm.id}/period`,
+        '삭제가 예약되었거나 진행 중인 VM은 기간을 변경할 수 없습니다.',
+      )
+    }
+    const body = (await request.json()) as Schemas['VmPeriodUpdateRequest']
+    const startDate = body.startDate ?? vm.startDate
+    if (!body.endDate || body.endDate < localDateStr(0)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        instance: `/api/v1/admin/vms/${vm.id}/period`,
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'endDate', message: '종료일은 오늘(KST) 이후여야 합니다.' }],
+      })
+    }
+    if (startDate && body.endDate < startDate) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        instance: `/api/v1/admin/vms/${vm.id}/period`,
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'endDate', message: '종료일은 시작일 이후여야 합니다.' }],
+      })
+    }
+    vm.endDate = body.endDate
+    if (body.startDate) vm.startDate = body.startDate
+    // 계약: 만료 마커 초기화 → 만료 자동 정지된 VM도 다시 시작 가능해진다.
+    vm.expiryStoppedAt = null
+    vm.updatedAt = new Date().toISOString()
+    recordVmEvent(vm.id, {
+      type: 'PERIOD_UPDATE',
+      actorId: orgAdminUser.id,
+      detail: `사용 종료일 변경 → ${body.endDate}`,
+      createdAt: new Date().toISOString(),
+    })
+    return HttpResponse.json(vm, { status: 200 })
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/emergency-delete', async ({ params, request }) => {
