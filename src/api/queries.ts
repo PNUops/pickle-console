@@ -52,6 +52,11 @@ export type AdminDomainPage = Schemas['AdminDomainPage']
 export type AdminCertificateView = Schemas['AdminCertificateView']
 export type AdminCertificatePage = Schemas['AdminCertificatePage']
 
+/* ─── 알림·운영 콘솔 (M5) ─── */
+export type NotificationView = Schemas['NotificationView']
+export type NotificationPage = Schemas['NotificationPage']
+export type UnreadCountResponse = Schemas['UnreadCountResponse']
+
 export interface RequestOptions {
   allowedRootDomains: string[]
   reservedSubdomains: string[]
@@ -462,6 +467,46 @@ export function resyncRoutes(): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/routes/resync')
     if (!data) throw toApiError(error, '라우트 재동기화를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 알림 (M5) ─── */
+
+export function fetchNotifications(params: {
+  unreadOnly?: boolean
+  page?: number
+  size?: number
+} = {}): Promise<NotificationPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/notifications', { params: { query: params } })
+    if (!data) throw toApiError(error, '알림 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchUnreadCount(): Promise<UnreadCountResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/notifications/unread-count')
+    if (!data) throw toApiError(error, '읽지 않은 알림 수를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function markNotificationRead(notificationId: number): Promise<NotificationView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/notifications/{notificationId}/read', {
+      params: { path: { notificationId } },
+    })
+    if (!data) throw toApiError(error, '알림을 읽음 처리하지 못했습니다.')
+    return data
+  })
+}
+
+export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/notifications/read-all')
+    if (!data) throw toApiError(error, '알림을 모두 읽음 처리하지 못했습니다.')
     return data
   })
 }

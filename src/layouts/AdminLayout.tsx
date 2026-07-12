@@ -11,6 +11,7 @@ export function AdminLayout() {
     { to: '/admin/domains', label: '도메인' },
     { to: '/admin/routes', label: '라우팅' },
     { to: '/admin/certificates', label: '인증서' },
+    { to: '/admin/notifications', label: '알림함' },
     // 노드/용량·기관 관리는 SYS_ADMIN 전용 (라우트에서도 한 번 더 가드)
     ...(user?.role === 'SYS_ADMIN'
       ? [
@@ -20,5 +21,12 @@ export function AdminLayout() {
       : []),
   ]
 
-  return <AppShell home="/admin" navLabel="관리자 메뉴" items={items} />
+  return (
+    <AppShell
+      home="/admin"
+      navLabel="관리자 메뉴"
+      items={items}
+      notificationsTo="/admin/notifications"
+    />
+  )
 }

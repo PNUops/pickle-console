@@ -6,8 +6,16 @@ const items: NavItem[] = [
   { to: '/console/requests/new', label: 'VM 신청' },
   { to: '/console/requests', label: '내 신청', end: true },
   { to: '/console/vms', label: '내 VM' },
+  { to: '/console/notifications', label: '알림함' },
 ]
 
 export function ConsoleLayout() {
-  return <AppShell home="/console" navLabel="콘솔 메뉴" items={items} />
+  return (
+    <AppShell
+      home="/console"
+      navLabel="콘솔 메뉴"
+      items={items}
+      notificationsTo="/console/notifications"
+    />
+  )
 }

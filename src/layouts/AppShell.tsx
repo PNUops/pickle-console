@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { Logo } from '../components/Logo'
+import { NotificationBell } from '../components/NotificationBell'
 import { cn } from '../lib/cn'
 import { UserMenu } from './UserMenu'
 
@@ -16,11 +17,14 @@ export function AppShell({
   navLabel,
   items,
   banner,
+  notificationsTo,
 }: {
   home: string
   navLabel: string
   items: NavItem[]
   banner?: ReactNode
+  /** 알림함 경로 — 지정하면 상단 바에 알림 종을 노출한다. */
+  notificationsTo?: string
 }) {
   return (
     <div className="flex min-h-screen">
@@ -54,7 +58,10 @@ export function AppShell({
             <Logo to={home} />
           </div>
           <div className="hidden md:block" />
-          <UserMenu />
+          <div className="flex items-center gap-2">
+            {notificationsTo && <NotificationBell to={notificationsTo} />}
+            <UserMenu />
+          </div>
         </header>
         {banner}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">

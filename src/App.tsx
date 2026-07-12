@@ -19,6 +19,7 @@ import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NewRequestPage } from './pages/NewRequestPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { NotificationsPage } from './pages/NotificationsPage'
 import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
 import { SignupPage } from './pages/SignupPage'
@@ -52,6 +53,7 @@ function App() {
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route
@@ -66,6 +68,7 @@ function App() {
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route path="routes" element={<AdminRoutesPage />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />
