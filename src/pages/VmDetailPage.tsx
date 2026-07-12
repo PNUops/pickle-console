@@ -44,6 +44,7 @@ import {
 } from '../components/ui'
 import { formatDateTime, formatRelative, formatSpec } from '../lib/format'
 import { PROVISIONING_KIND_LABELS, VM_EVENT_LABELS } from '../lib/status'
+import { VmPublishSection } from '../components/VmPublishSection'
 
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
 const POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000
@@ -72,7 +73,17 @@ export function VmDetailPage() {
       const activeTask =
         data.provisioning != null &&
         ACTIVE_TASK_STATUSES.includes(data.provisioning.status)
-      return POLLING_VM_STATUSES.includes(data.status) || activeTask ? POLL_MS : false
+      // 공개 라우트 적용·도메인 검증·인증서 발급도 비동기이므로 진행 중이면 폴링한다.
+      const pub = data.publication
+      const publishing =
+        pub != null &&
+        (pub.route.status === 'PENDING' ||
+          pub.domain.status === 'PENDING' ||
+          pub.domain.status === 'VERIFYING' ||
+          pub.certificate?.status === 'RENEWING')
+      return POLLING_VM_STATUSES.includes(data.status) || activeTask || publishing
+        ? POLL_MS
+        : false
     },
   })
 
@@ -159,6 +170,8 @@ export function VmDetailPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <VmPublishSection vm={data} />
 
       <DeleteSection vm={data} />
 
