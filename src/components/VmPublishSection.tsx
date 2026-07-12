@@ -44,6 +44,18 @@ import { CERTIFICATE_KIND_LABELS } from '../lib/status'
 const PUBLISHABLE_STATUSES: VmDetail['status'][] = ['RUNNING', 'STOPPED']
 
 /**
+ * 클라이언트 측 포트 사전 검증 (서버 422 규칙과 동일: 1–65535, SSH 22 금지).
+ * 통과하면 null, 아니면 필드 오류 메시지를 돌려준다.
+ */
+function portFieldError(raw: string): string | null {
+  if (!/^\d+$/.test(raw.trim())) return '포트 번호를 입력해 주세요.'
+  const port = Number(raw.trim())
+  if (port < 1 || port > 65535) return '포트는 1–65535 범위여야 합니다.'
+  if (port === 22) return 'VM의 SSH 포트(22)는 공개할 수 없습니다.'
+  return null
+}
+
+/**
  * VM HTTP 공개 섹션. 소유 그룹의 OWNER/MANAGER만 공개·변경·해제할 수 있고
  * (그룹 myRole로 판정), VIEWER 이상은 현재 상태를 읽기 전용으로 본다.
  */
@@ -139,8 +151,9 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
     event.preventDefault()
     setError(null)
     setFieldErrors({})
-    if (!/^\d+$/.test(port.trim())) {
-      setFieldErrors({ port: '포트 번호를 입력해 주세요.' })
+    const portError = portFieldError(port)
+    if (portError) {
+      setFieldErrors({ port: portError })
       return
     }
     publish.mutate()
@@ -460,8 +473,9 @@ function PublicationActions({
     setError(null)
     setFieldErrors({})
     setMessage(null)
-    if (!/^\d+$/.test(port.trim())) {
-      setFieldErrors({ port: '포트 번호를 입력해 주세요.' })
+    const portError = portFieldError(port)
+    if (portError) {
+      setFieldErrors({ port: portError })
       return
     }
     change.mutate({ port: Number(port) })

@@ -70,7 +70,7 @@ describe('VM 공개 — 처음 공개(플랫폼 서브도메인)', () => {
     expect(within(card).getByText('8080')).toBeInTheDocument()
   })
 
-  test('SSH 포트(22) 공개는 422로 거부되고 필드 오류를 보여준다', async () => {
+  test('SSH 포트(22) 공개는 거부되고 필드 오류를 보여준다 (클라이언트 사전 검증)', async () => {
     const user = userEvent.setup()
     renderVm(55)
 
