@@ -3,6 +3,7 @@ import type { RequestHandler } from 'msw'
 import { adminHandlers, resetAdminFixtures } from './handlers/admin'
 import { authHandlers } from './handlers/auth'
 import { groupHandlers, resetGroupFixtures } from './handlers/groups'
+import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
 import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
@@ -14,6 +15,7 @@ export const handlers: RequestHandler[] = [
   ...groupHandlers,
   ...vmRequestHandlers,
   ...vmHandlers,
+  ...publishingHandlers,
   ...adminHandlers,
 ]
 
@@ -25,5 +27,6 @@ export function resetFixtures() {
   resetGroupFixtures()
   resetVmRequestFixtures()
   resetVmFixtures()
+  resetPublishingFixtures()
   resetAdminFixtures()
 }

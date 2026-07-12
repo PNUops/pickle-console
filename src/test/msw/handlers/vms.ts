@@ -478,11 +478,16 @@ let nextEventId = 950
 export const VM_RUNNING_AFTER_FETCHES = 2
 let detailFetchCounts: Record<number, number> = {}
 
+/** 플랫폼 서브도메인 라우트가 PENDING→APPLIED로 전이하기까지의 GET 횟수 (폴링 테스트). */
+export const ROUTE_APPLIED_AFTER_FETCHES = 2
+let routeFetchCounts: Record<number, number> = {}
+
 export function resetVmFixtures() {
   vmStore = initialVms()
   vmEventStore = initialVmEvents()
   nextEventId = 950
   detailFetchCounts = {}
+  routeFetchCounts = {}
 }
 
 /** Prepend a lifecycle event for assertions on event history refreshes. */
@@ -550,6 +555,16 @@ export const vmHandlers: RequestHandler[] = [
         vm.initialPasswordAvailable = true
         vm.provisioning = null
         vm.updatedAt = '2026-07-08T14:10:00+09:00'
+      }
+    }
+    // 플랫폼 서브도메인(와일드카드) 공개는 비동기 적용을 흉내내 PENDING→APPLIED로 수렴.
+    // 커스텀 도메인은 소유권 검증 전이므로 여기서 전이시키지 않는다.
+    const route = vm.publication?.route
+    if (route?.status === 'PENDING' && vm.publication!.domain.kind !== 'CUSTOM') {
+      const count = (routeFetchCounts[vm.id] = (routeFetchCounts[vm.id] ?? 0) + 1)
+      if (count >= ROUTE_APPLIED_AFTER_FETCHES) {
+        route.status = 'APPLIED'
+        route.appliedAt = '2026-07-12T09:05:00+09:00'
       }
     }
     return HttpResponse.json(vm, { status: 200 })

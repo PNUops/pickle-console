@@ -31,6 +31,27 @@ export type NodeSummary = Schemas['NodeSummary']
 export type IpPoolSummary = Schemas['IpPoolSummary']
 export type MessageResponse = Schemas['MessageResponse']
 
+/* ─── HTTP 공개·도메인·인증서 (M4A) ─── */
+export type PublicationView = Schemas['PublicationView']
+export type PublishRequest = Schemas['PublishRequest']
+export type UpdatePublicationRequest = Schemas['UpdatePublicationRequest']
+export type RouteView = Schemas['RouteView']
+export type CertificateView = Schemas['CertificateView']
+export type DomainSummary = Schemas['DomainSummary']
+export type DomainDetail = Schemas['DomainDetail']
+export type DomainVerification = Schemas['DomainVerification']
+export type DomainPage = Schemas['DomainPage']
+export type DomainStatus = Schemas['DomainStatus']
+export type DomainKind = Schemas['DomainKind']
+export type RouteStatus = Schemas['RouteStatus']
+export type CertificateStatus = Schemas['CertificateStatus']
+export type AdminRouteView = Schemas['AdminRouteView']
+export type AdminRoutePage = Schemas['AdminRoutePage']
+export type AdminDomainView = Schemas['AdminDomainView']
+export type AdminDomainPage = Schemas['AdminDomainPage']
+export type AdminCertificateView = Schemas['AdminCertificateView']
+export type AdminCertificatePage = Schemas['AdminCertificatePage']
+
 export interface RequestOptions {
   allowedRootDomains: string[]
   reservedSubdomains: string[]
@@ -247,6 +268,89 @@ export function fetchVmEvents(
   })
 }
 
+/* ─── HTTP 공개·도메인 (M4A, 학생) ─── */
+
+export function publishVm(
+  vmId: number,
+  body: PublishRequest,
+): Promise<PublicationView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/publish', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, 'HTTP 서비스 공개를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function updatePublication(
+  vmId: number,
+  body: UpdatePublicationRequest,
+): Promise<PublicationView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/vms/{vmId}/publication', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '공개 설정 변경을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function unpublishVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.DELETE('/vms/{vmId}/publication', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '공개 해제를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchDomains(params: {
+  vmId?: number
+  status?: DomainStatus
+  page?: number
+  size?: number
+} = {}): Promise<DomainPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/domains', { params: { query: params } })
+    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchDomain(domainId: number): Promise<DomainDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/domains/{domainId}', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteDomain(domainId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.DELETE('/domains/{domainId}', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인 삭제를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function verifyDomain(domainId: number): Promise<DomainDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/domains/{domainId}/verify', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인 검증 재시도를 접수하지 못했습니다.')
+    return data
+  })
+}
+
 /* ─── admin (M3) ─── */
 
 export function fetchAdminNodes(): Promise<NodeSummary[]> {
@@ -305,6 +409,59 @@ export function emergencyDeleteVm(
       body: { confirmName },
     })
     if (!data) throw toApiError(error, '긴급 삭제를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── admin: 도메인·라우트·인증서 (M4A) ─── */
+
+export function fetchAdminRoutes(params: {
+  orgId?: number
+  status?: RouteStatus
+  page?: number
+  size?: number
+} = {}): Promise<AdminRoutePage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/routes', { params: { query: params } })
+    if (!data) throw toApiError(error, '라우트 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminDomains(params: {
+  orgId?: number
+  kind?: DomainKind
+  status?: DomainStatus
+  page?: number
+  size?: number
+} = {}): Promise<AdminDomainPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/domains', { params: { query: params } })
+    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminCertificates(params: {
+  orgId?: number
+  status?: CertificateStatus
+  expiringInDays?: number
+  page?: number
+  size?: number
+} = {}): Promise<AdminCertificatePage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/certificates', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '인증서 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function resyncRoutes(): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/routes/resync')
+    if (!data) throw toApiError(error, '라우트 재동기화를 접수하지 못했습니다.')
     return data
   })
 }
