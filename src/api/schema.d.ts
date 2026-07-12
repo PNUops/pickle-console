@@ -645,6 +645,188 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM HTTP 서비스 공개 (라우트 활성화)
+         * @description VM의 내부 HTTP 서비스를 외부에 공개합니다. 소유 그룹의 **OWNER 또는
+         *     MANAGER**만 호출할 수 있습니다(권한 매트릭스 §2.4 "VM 신청, 설정(도메인·
+         *     포트) 변경"). 비멤버에게는 VM 존재가 마스킹되어 404입니다.
+         *
+         *     **공개 대상 포트**는 VM 내부에서 서비스가 열려 있는 포트입니다(기본 80,
+         *     1–65535). VM의 SSH 포트 22는 공개할 수 없습니다(422). 라우팅 대상 IP는
+         *     **클라이언트가 지정할 수 없으며** 서버가 VM에 할당된 내부 IP로 강제합니다
+         *     (SSRF 방지 — plan/06·제품기획 §12). 요청 본문에 IP 필드는 존재하지 않습니다.
+         *
+         *     **도메인**: 공개는 도메인 이름을 **선택하지 않고 활성화만** 합니다.
+         *     플랫폼 서브도메인 이름은 신청 승인 시 관리자가 확정한 값입니다
+         *     (제품기획 §12 "승인 시 관리자 최종 부여"). 공개 요청은 노출 포트와
+         *     (선택적) 커스텀 도메인만 받습니다:
+         *     - **`customDomain` 생략**: 승인 시 확정된 플랫폼 서브도메인으로 공개합니다.
+         *       관리자가 서브도메인을 부여했으면 그 이름(kind REQUESTED), 부여하지
+         *       않았으면 `<그룹슬러그>-<4자리>.<루트도메인>` 시스템 자동 서브도메인
+         *       (kind AUTO)이 첫 공개 시 발급됩니다. 공용 Cloudflare Origin CA
+         *       와일드카드 인증서를 쓰므로 접수 즉시 라우트 적용이 진행됩니다.
+         *     - **`customDomain` 지정**: 사용자 소유 커스텀 도메인(kind CUSTOM)을
+         *       연결합니다. 소유권은 DNS TXT로 증명되는 자기서비스입니다. 접수 시
+         *       도메인·라우트는 `PENDING`으로 생성되고, 소유권(TXT)·전파(A) 검증과
+         *       인증서(Let's Encrypt) 발급이 끝나면 자동 적용됩니다. 설정할 DNS 레코드는
+         *       응답의 `domain.verification`과 `GET /domains/{domainId}`에서 안내합니다.
+         *
+         *     라우트 적용은 비동기(잡 큐 → proxy-agent desired-state 적용)이며 진행/결과는
+         *     `VmDetail.publication`(route.status PENDING→APPLIED/FAILED)으로 확인합니다.
+         *     공개는 VM 이벤트(`PUBLISH`)로 기록됩니다.
+         *
+         *     **v1 제약**: VM당 HTTP 서비스는 1개입니다. 이미 공개된 VM에 다시 호출하면
+         *     409(`PUBLICATION_ALREADY_EXISTS`) — 포트·커스텀 도메인 변경은
+         *     `PATCH /vms/{vmId}/publication`을 사용합니다. 승인 시 HTTP 공개가 허용되지
+         *     않은 VM(grantHttp=false)은 403(`VM_HTTP_NOT_GRANTED`)입니다.
+         */
+        post: operations["publishVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * VM HTTP 서비스 공개 해제 (라우트 제거)
+         * @description VM의 HTTP 공개를 해제합니다. 소유 그룹의 **OWNER 또는 MANAGER**만 호출할
+         *     수 있습니다. 접수 즉시 라우트가 `desiredState: ABSENT`로 비동기 적용되어
+         *     vhost가 제거됩니다. 자동·희망 서브도메인(AUTO/REQUESTED) 도메인 행은 함께
+         *     정리되고, 커스텀 도메인은 검증 상태 보존을 위해 도메인 행은 남고 라우트만
+         *     제거됩니다(도메인 완전 삭제는 `DELETE /domains/{domainId}`). 공개 해제는
+         *     VM 이벤트(`UNPUBLISH`)로 기록됩니다. 공개되지 않은(이미 해제된) VM에
+         *     호출하면 404입니다. 적용이 진행 중일 때의 재호출은 멱등적입니다 — 라우트
+         *     generation이 증가해 이전 적용을 대체(supersede)하므로 중복 해제가 안전하게
+         *     수렴합니다.
+         */
+        delete: operations["unpublishVm"];
+        options?: never;
+        head?: never;
+        /**
+         * VM 공개 설정 변경 (포트·커스텀 도메인)
+         * @description 공개 중인 VM의 노출 포트 또는 커스텀 도메인 연결을 변경합니다. 소유 그룹의
+         *     **OWNER 또는 MANAGER**만 호출할 수 있습니다. 최소 1개 필드가 필요합니다.
+         *     **플랫폼 서브도메인 이름은 변경 대상이 아닙니다**(승인 시 확정 — 다른
+         *     서브도메인이 필요하면 재신청).
+         *
+         *     - `port`를 바꾸면 동일 도메인으로 대상 포트만 갱신되어 라우트가 재적용됩니다.
+         *     - `customDomain`을 지정하면 커스텀 도메인을 연결(재검증·인증서 발급)하고,
+         *       `null`로 주면 커스텀 도메인 연결을 해제하고 플랫폼 서브도메인 공개로
+         *       되돌립니다(이전 커스텀 vhost 제거·인증서 아카이브). SSRF 강제(대상 IP
+         *       서버 결정)는 `POST /vms/{vmId}/publish`와 동일합니다.
+         *
+         *     공개되지 않은 VM에는 404입니다. 변경은 비동기로 적용되며 결과는
+         *     `VmDetail.publication`으로 확인합니다.
+         */
+        patch: operations["updatePublication"];
+        trace?: never;
+    };
+    "/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내 도메인 목록 조회
+         * @description 내가 속한 그룹의 VM에 연결된 도메인(자동·희망 서브도메인·커스텀) 목록입니다.
+         *     최신순 정렬. 커스텀 도메인의 검증 상태(TXT/A 폴링)는 도메인 상세
+         *     (`GET /domains/{domainId}`)에서 확인합니다.
+         */
+        get: operations["listDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 도메인 ID */
+                domainId: components["parameters"]["DomainId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * 도메인 상세 조회 (검증 안내 포함)
+         * @description 도메인 상세입니다. 커스텀 도메인은 설정할 DNS 레코드(A + TXT)와 현재 폴링
+         *     상태를 `verification`으로 안내합니다. 소유 그룹 멤버(VIEWER 이상)만 조회할
+         *     수 있으며, 비멤버에게는 404로 마스킹됩니다.
+         */
+        get: operations["getDomain"];
+        put?: never;
+        post?: never;
+        /**
+         * 도메인 삭제
+         * @description 도메인을 삭제합니다. 소유 그룹의 **OWNER 또는 MANAGER**만 호출할 수
+         *     있습니다. 도메인에 연결된 라우트가 있으면 함께 제거(공개 해제)되고,
+         *     커스텀 도메인의 인증서는 아카이브됩니다. vhost 제거는 비동기입니다.
+         */
+        delete: operations["deleteDomain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/domains/{domainId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 도메인 ID */
+                domainId: components["parameters"]["DomainId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 커스텀 도메인 검증 재시도
+         * @description 커스텀 도메인의 DNS 검증(TXT 소유권 + A 전파)을 즉시 다시 시도합니다.
+         *     **멱등적**입니다 — 이미 검증(ACTIVE)된 도메인에 호출해도 안전하며 현재
+         *     상태를 반환합니다. 소유 그룹의 **OWNER 또는 MANAGER**만 호출할 수 있습니다.
+         *     플랫폼 서브도메인(AUTO/REQUESTED)은 소유권 검증이 없어 409
+         *     (`DOMAIN_NOT_CUSTOM`)입니다.
+         *
+         *     도메인이 이미 `ACTIVE`이지만 **인증서가 `FAILED`**인 경우, 이 호출은
+         *     Let's Encrypt 발급을 다시 트리거합니다 — 발급이 막힌(FAILED) 인증서를
+         *     별도 오퍼레이션 없이 이 엔드포인트로 복구할 수 있습니다.
+         */
+        post: operations["verifyDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/vm-requests": {
         parameters: {
             query?: never;
@@ -732,7 +914,11 @@ export interface paths {
          *     3. mock 프로비저닝 잡이 큐에 등록됩니다 (M2 — 실제 Proxmox 연동은 M3).
          *
          *     `nodeId`를 생략하거나 null이면 자동 배치입니다.
-         *     서브도메인/도메인 발급은 M4 퍼블리싱에서 처리합니다 (승인 시 사양만 확정).
+         *     **플랫폼 서브도메인 이름은 이 승인 단계에서 관리자가 최종 부여**합니다
+         *     (`grantedSubdomain`/`grantedRootDomain` — 신청자의 `desiredSubdomain`/
+         *     `rootDomain`이 힌트로 프리필되며 수락·변경 가능; null이면 공개 시 시스템
+         *     자동 서브도메인). 실제 DNS·라우트 발급은 M4 퍼블리싱(`POST /vms/{vmId}/publish`)
+         *     에서 수행합니다 (제품기획 §12 "승인 시 관리자 최종 부여, 실제 발급은 M4").
          *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
          */
         post: operations["approveVmRequest"];
@@ -969,6 +1155,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 라우트(공개 서비스) 목록 조회
+         * @description 공개된 HTTP 라우트 목록입니다. ORG_ADMIN은 자기 기관 VM의 라우트만,
+         *     SYS_ADMIN은 전체를 조회합니다. `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용
+         *     입니다(ORG_ADMIN은 자기 기관으로 고정). 각 항목은 대상 VM·그룹·기관 맥락,
+         *     노출 포트, 적용 상태(PENDING/APPLIED/FAILED), proxy-agent 동기화 상태
+         *     (적용 generation·마지막 오류)를 포함합니다.
+         */
+        get: operations["listAdminRoutes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 도메인 목록 조회
+         * @description 연결된 도메인(자동·희망 서브도메인·커스텀) 목록입니다. ORG_ADMIN은 자기
+         *     기관 VM의 도메인만, SYS_ADMIN은 전체를 조회합니다. `orgId` 필터는 SYS_ADMIN의
+         *     기관 간 탐색용입니다(ORG_ADMIN은 자기 기관으로 고정). 각 항목은 대상 VM·그룹·
+         *     기관 맥락과 도메인 상태, 라우트·인증서 상태를 포함합니다. 커스텀 도메인의
+         *     검증 상태(TXT/A)는 `verifiedAt`으로, 상세 레코드는 학생용
+         *     `GET /domains/{domainId}`에서 확인합니다.
+         */
+        get: operations["listAdminDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/certificates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 인증서 목록 조회 (만료·상태)
+         * @description TLS 인증서 목록입니다(플랫폼 공용 와일드카드 + 커스텀 도메인 Let's
+         *     Encrypt). ORG_ADMIN은 자기 기관 커스텀 도메인 인증서와 공용 와일드카드를,
+         *     SYS_ADMIN은 전체를 조회합니다. 만료일(`notAfter`)·상태·갱신 실패를
+         *     포함하며, `expiringInDays`로 만료 임박분만 조회할 수 있습니다.
+         */
+        get: operations["listAdminCertificates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/routes/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 라우트 전체 재동기화(sync-all) 트리거
+         * @description DB의 전체 라우트 매니페스트를 proxy-agent에 재적용(sync-all)하도록
+         *     재동기화 잡을 접수합니다. 리버스 프록시 재구축·에이전트 상태 소실·드리프트
+         *     의심 시 운영자가 콘솔(도메인·라우팅 상세, 드리프트 리포트)에서 실행하는
+         *     수동 복구 액션입니다.
+         *
+         *     **SYS_ADMIN 전용**입니다: 매니페스트가 권위적(authoritative)이라 매니페스트에
+         *     없는 vhost는 정리되는 **플랫폼 전역** 작업이므로, 기관 범위인 ORG_ADMIN에는
+         *     허용하지 않습니다. 접수 즉시 202를 반환하고 실제 적용은 비동기이며 결과는
+         *     도메인·라우팅 상세 화면에서 확인합니다. 이 오퍼레이션은 pickle-api가
+         *     proxy-agent의 내부 `/sync-all`을 호출하도록 **트리거만** 하며, 내부 계약
+         *     (api/internal.md)의 형상은 콘솔에 노출하지 않습니다.
+         */
+        post: operations["resyncRoutes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1009,6 +1297,14 @@ export interface components {
              *     - 기관: `ORG_SLUG_DUPLICATE`
              *     - VM (M3): `VM_INVALID_STATE`, `VM_CONFIRM_NAME_MISMATCH`,
              *       `VM_PASSWORD_ALREADY_VIEWED`
+             *     - 공개/도메인 (M4A): `PUBLICATION_ALREADY_EXISTS`,
+             *       `VM_HTTP_NOT_GRANTED`, `DOMAIN_FQDN_TAKEN`, `DOMAIN_NOT_CUSTOM`
+             *       (그 외 공개/도메인 오류는 공통 코드 재사용 — 상태 충돌
+             *       `VM_INVALID_STATE`, 권한 `GROUP_ROLE_INSUFFICIENT`/`ACCESS_DENIED`,
+             *       마스킹·미공개 `RESOURCE_NOT_FOUND`, 필드 검증(포트 범위·22 거부·예약어·
+             *       비속어·FQDN 형식, 그리고 **커스텀 도메인이 단일 라벨이거나
+             *       `allowedRootDomains`·플랫폼 관리 존 하위인 경우**의 스쿼팅 방지 거부)
+             *       `VALIDATION_FAILED`)
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -1292,6 +1588,10 @@ export interface components {
             grantSsh?: boolean | null;
             grantHttp?: boolean | null;
             grantPublic?: boolean | null;
+            /** @description 관리자가 최종 부여한 플랫폼 서브도메인 라벨 (승인 시). null이면 공개 시 시스템이 자동 서브도메인(AUTO)을 생성합니다. */
+            grantedSubdomain?: string | null;
+            /** @description 부여 서브도메인의 루트 도메인 (grantedSubdomain 지정 시) */
+            grantedRootDomain?: string | null;
             /**
              * Format: int64
              * @description 배치 노드 (null = 자동 배치)
@@ -1400,6 +1700,10 @@ export interface components {
             provisioning?: components["schemas"]["ProvisioningTaskView"] | null;
             /** @description 예약된(또는 접수된) 삭제 정보. 삭제 예약이 없으면 null. */
             deletion?: components["schemas"]["VmDeletion"] | null;
+            /** @description 승인 시 HTTP 공개(grantHttp)가 허용되었는지 여부. false면 공개 오퍼레이션은 403(`VM_HTTP_NOT_GRANTED`) — 콘솔의 공개 버튼 노출 판단에 사용합니다. */
+            httpPublishGranted: boolean;
+            /** @description 현재 HTTP 공개 상태(도메인+라우트+인증서). 미공개면 null. 라우트· 검증·인증서 진행 상황을 폴링하는 지점입니다(비동기 적용 결과 노출). */
+            publication?: components["schemas"]["PublicationView"] | null;
             /** @description 초기 비밀번호가 준비되어 아직 열람되지 않았는지 여부 (true면 `POST /vms/{vmId}/initial-password`로 1회 열람 가능) */
             initialPasswordAvailable: boolean;
             /** Format: date-time */
@@ -1474,10 +1778,10 @@ export interface components {
             /** Format: int64 */
             id: number;
             /**
-             * @description 이벤트 종류 (SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 삭제 예약·취소의 감사 추적용)
+             * @description 이벤트 종류 (SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 삭제 예약·취소의 감사 추적용; PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상)
              * @enum {string}
              */
-            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "EMERGENCY_DELETE" | "REINSTALL";
+            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "EMERGENCY_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH";
             /**
              * Format: int64
              * @description 수행한 사용자 ID (null = 시스템/자동 작업)
@@ -1617,6 +1921,10 @@ export interface components {
             grantSsh: boolean;
             grantHttp: boolean;
             grantPublic: boolean;
+            /** @description 관리자가 최종 부여하는 플랫폼 서브도메인 라벨 (RFC 1123, 소문자·숫자· 하이픈 3~40자). 신청자의 `desiredSubdomain`이 힌트로 프리필되며 관리자가 수락/변경할 수 있습니다. 예약어(www·api·admin·console·ssh·mail·smtp·ns· ns1·ns2·mx·dev·staging·test·status·docs·cdn·static 등 — 실제 목록은 settings `reserved_subdomains`, `GET /meta/request-options` 참조)·비속어· 중복은 서버에서 검증합니다(위반 시 422). **null이면 공개 시 시스템이 자동 서브도메인(AUTO)을 생성**합니다. `grantHttp=false`이면 무시됩니다. */
+            grantedSubdomain?: string | null;
+            /** @description 부여 서브도메인의 루트 도메인. `grantedSubdomain` 지정 시 필수이며 `GET /meta/request-options`의 `allowedRootDomains` 중 하나여야 합니다 (그 외 422). `grantedSubdomain`이 null(AUTO)일 때는 이 값이 있으면 그 루트를, 없으면 기본 루트(`allowedRootDomains`의 첫 항목)를 사용하므로 **AUTO 도메인도 항상 루트가 정해집니다**. */
+            grantedRootDomain?: string | null;
             /**
              * Format: int64
              * @description 배치할 노드 (생략 또는 null = 자동 배치)
@@ -1670,6 +1978,259 @@ export interface components {
             /** @description 메모리 할당 경고 임계값 (settings에서 관리, 기본 0.8) */
             memoryWarnThreshold: number;
             ipPool: components["schemas"]["IpPoolSummary"];
+        };
+        /**
+         * @description 도메인 종류 (AUTO=자동 발급 서브도메인, REQUESTED=희망 서브도메인, CUSTOM=사용자 소유 도메인)
+         * @enum {string}
+         */
+        DomainKind: "AUTO" | "REQUESTED" | "CUSTOM";
+        /**
+         * @description 도메인 상태. 플랫폼 서브도메인(AUTO/REQUESTED)은 생성 즉시 ACTIVE.
+         *     커스텀 도메인은 PENDING(레코드 대기)→VERIFYING(폴링 중)→ACTIVE(검증 완료)
+         *     흐름이며, 실패 시 FAILED, 삭제 시 REMOVED.
+         * @enum {string}
+         */
+        DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
+        /**
+         * @description 라우트(공개) 적용 상태. PENDING(접수, 적용 대기)→APPLIED(proxy-agent 적용
+         *     완료)/FAILED(적용 실패, `lastError` 참조), 공개 해제 시 REMOVED.
+         * @enum {string}
+         */
+        RouteStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
+        /**
+         * @description 인증서 종류 (ORIGIN_CA_WILDCARD=플랫폼 공용 와일드카드, LETS_ENCRYPT=커스텀 도메인)
+         * @enum {string}
+         */
+        CertificateKind: "ORIGIN_CA_WILDCARD" | "LETS_ENCRYPT";
+        /**
+         * @description 인증서 상태
+         * @enum {string}
+         */
+        CertificateStatus: "ACTIVE" | "RENEWING" | "FAILED" | "REVOKED";
+        /** @description 커스텀 도메인 소유권·전파 검증 안내와 폴링 상태. 플랫폼 서브도메인에는 존재하지 않습니다(null). */
+        DomainVerification: {
+            /** @description 소유권 검증 토큰 (TXT 레코드 값) */
+            token: string;
+            /** @description 사용자가 DNS에 설정해야 하는 레코드 목록 (A + TXT) */
+            requiredRecords: {
+                /** @enum {string} */
+                type: "A" | "TXT";
+                /** @description 레코드 이름(FQDN) */
+                name: string;
+                /** @description 레코드 값 (A=프록시 IP, TXT=검증 토큰) */
+                value: string;
+            }[];
+            /** @description A 레코드가 프록시 IP를 가리키는 것으로 확인됨 */
+            aVerified: boolean;
+            /** @description TXT 소유권 레코드가 확인됨 */
+            txtVerified: boolean;
+            /**
+             * Format: date-time
+             * @description 마지막 폴링 시각
+             */
+            lastCheckedAt?: string | null;
+            /** @description 마지막 검증 실패 요약 (한국어) */
+            lastError?: string | null;
+        };
+        DomainSummary: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            vmId: number;
+            kind: components["schemas"]["DomainKind"];
+            fqdn: string;
+            /** @description 루트 도메인 (플랫폼 서브도메인만; 커스텀은 null) */
+            rootDomain?: string | null;
+            status: components["schemas"]["DomainStatus"];
+            /**
+             * Format: date-time
+             * @description 검증 완료 시각 (미검증/플랫폼 서브도메인은 null)
+             */
+            verifiedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DomainDetail: components["schemas"]["DomainSummary"] & {
+            /** @description 커스텀 도메인 검증 안내·상태 (플랫폼 서브도메인은 null) */
+            verification?: components["schemas"]["DomainVerification"] | null;
+        };
+        DomainPage: {
+            content: components["schemas"]["DomainSummary"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description VM 공개 라우트 상태 */
+        RouteView: {
+            /** @description 공개 대상 VM 내부 포트 */
+            targetPort: number;
+            /**
+             * @description 프록시 업스트림 프로토콜 (v1은 HTTP 고정)
+             * @enum {string}
+             */
+            protocol: "HTTP";
+            status: components["schemas"]["RouteStatus"];
+            /**
+             * Format: date-time
+             * @description proxy-agent 적용 완료 시각 (미적용 시 null)
+             */
+            appliedAt?: string | null;
+            /** @description 마지막 적용 실패 요약 (nginx stderr 등의 한국어 요약) */
+            lastError?: string | null;
+        };
+        /** @description 도메인 인증서 상태 */
+        CertificateView: {
+            kind: components["schemas"]["CertificateKind"];
+            status: components["schemas"]["CertificateStatus"];
+            /**
+             * Format: date-time
+             * @description 만료 시각
+             */
+            notAfter?: string | null;
+            /** @description 마지막 발급·갱신 실패 요약 (한국어) */
+            lastError?: string | null;
+        };
+        /** @description VM의 HTTP 공개 상태(도메인+라우트+인증서). v1은 VM당 1개. 미공개 시 VmDetail.publication은 null. */
+        PublicationView: {
+            /** @description 공개 FQDN */
+            fqdn: string;
+            domain: components["schemas"]["DomainDetail"];
+            route: components["schemas"]["RouteView"];
+            /** @description 인증서 상태 (발급 전이면 null) */
+            certificate?: components["schemas"]["CertificateView"] | null;
+        };
+        /**
+         * @description HTTP 공개 요청. **플랫폼 서브도메인 이름은 이 요청에서 선택할 수 없습니다**
+         *     — 공개는 신청 승인 시 관리자가 확정한 서브도메인(`grantedSubdomain`,
+         *     미부여 시 시스템 자동 생성 AUTO)으로 활성화만 하며, 이 요청은 노출 포트와
+         *     (선택적) 커스텀 도메인만 지정합니다.
+         *     - `customDomain` 생략 → 승인 시 확정된 플랫폼 서브도메인(REQUESTED 또는
+         *       AUTO)으로 공개.
+         *     - `customDomain` 지정 → 사용자 소유 커스텀 도메인(CUSTOM) 연결. 소유권은
+         *       관리자 큐레이션이 아니라 DNS TXT로 **증명**되므로 자기서비스입니다.
+         *
+         *     **SSRF 방지**: 라우팅 대상 IP는 서버가 VM 할당 IP로 강제하며 이 요청에
+         *     IP 필드는 존재하지 않습니다(plan/06·제품기획 §12).
+         */
+        PublishRequest: {
+            /**
+             * @description 공개할 VM 내부 포트(생략 시 기본 80). VM의 SSH 포트 22는 공개할 수 없으며 서버에서 거부합니다(422).
+             * @default 80
+             */
+            port: number;
+            /**
+             * Format: hostname
+             * @description 사용자 소유 커스텀 도메인 FQDN (소유권·전파 검증 후 서비스). 생략 시 승인 시 확정된 플랫폼 서브도메인으로 공개합니다. **반드시 완전한 외부 FQDN**(다중 라벨)이어야 하며 단일 라벨은 거부됩니다. 또한 `allowedRootDomains`·플랫폼 관리 존(예 `*.pickle.pnuops.com`) **하위일 수 없습니다** — 플랫폼 서브도메인 라벨을 PENDING 커스텀 도메인으로 선점 (스쿼팅)하는 것을 막기 위함이며, 위반 시 422 `VALIDATION_FAILED`.
+             */
+            customDomain?: string | null;
+        };
+        /** @description 공개 설정 변경(부분 갱신). 최소 1개 필드 필요. **플랫폼 서브도메인 이름은 변경 대상이 아닙니다**(승인 시 확정 — 변경하려면 재신청). 노출 포트와 커스텀 도메인 연결/해제만 변경할 수 있으며, SSRF 규칙은 PublishRequest와 동일합니다. */
+        UpdatePublicationRequest: {
+            /** @description 변경할 공개 포트 (22 불가) */
+            port?: number;
+            /**
+             * Format: hostname
+             * @description 연결할 커스텀 도메인(재검증·인증서 재발급). null로 주면 커스텀 도메인 연결을 해제하고 플랫폼 서브도메인 공개로 되돌립니다. **반드시 완전한 외부 FQDN**(다중 라벨)이어야 하며 단일 라벨, 그리고 `allowedRootDomains`·플랫폼 관리 존(예 `*.pickle.pnuops.com`) 하위 값은 거부됩니다(스쿼팅 방지 — 위반 시 422 `VALIDATION_FAILED`).
+             */
+            customDomain?: string | null;
+        };
+        /** @description 관리자 라우트 목록 항목 (VM·그룹·기관 맥락 + 적용/동기화 상태) */
+        AdminRouteView: {
+            /**
+             * Format: int64
+             * @description 라우트 ID
+             */
+            id: number;
+            fqdn: string;
+            domainKind: components["schemas"]["DomainKind"];
+            /** Format: int64 */
+            vmId: number;
+            vmName: string;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            targetPort: number;
+            /** @enum {string} */
+            protocol: "HTTP";
+            status: components["schemas"]["RouteStatus"];
+            /**
+             * Format: int64
+             * @description proxy-agent가 마지막으로 적용한 generation (동기화 확인용)
+             */
+            appliedGeneration?: number | null;
+            /** Format: date-time */
+            appliedAt?: string | null;
+            /** @description 마지막 적용 실패 요약 */
+            lastError?: string | null;
+            /** Format: date-time */
+            updatedAt?: string | null;
+        };
+        AdminRoutePage: {
+            content: components["schemas"]["AdminRouteView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 관리자 인증서 목록 항목 */
+        AdminCertificateView: {
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["CertificateKind"];
+            status: components["schemas"]["CertificateStatus"];
+            /** @description 인증서 적용 대상 (와일드카드는 루트 도메인, 커스텀은 FQDN) */
+            scope: string;
+            /**
+             * Format: int64
+             * @description 연결된 도메인 ID (공용 와일드카드는 null)
+             */
+            domainId?: number | null;
+            /**
+             * Format: date-time
+             * @description 만료 시각
+             */
+            notAfter?: string | null;
+            /** @description 만료까지 남은 일수 (만료 임박 정렬·경고용) */
+            daysUntilExpiry?: number | null;
+            /** @description 마지막 발급·갱신 실패 요약 */
+            lastError?: string | null;
+        };
+        AdminCertificatePage: {
+            content: components["schemas"]["AdminCertificateView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        AdminDomainView: components["schemas"]["DomainSummary"] & {
+            vmName: string;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            /** @description 이 도메인의 라우트 적용 상태 (미공개면 null) */
+            routeStatus?: components["schemas"]["RouteStatus"] | null;
+            /** @description 연결된 인증서 상태 (미발급이면 null) */
+            certificateStatus?: components["schemas"]["CertificateStatus"] | null;
+            /** Format: date-time */
+            updatedAt?: string | null;
+        };
+        AdminDomainPage: {
+            content: components["schemas"]["AdminDomainView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
         };
     };
     responses: {
@@ -1792,6 +2353,8 @@ export interface components {
         RequestId: number;
         /** @description VM ID */
         VmId: number;
+        /** @description 도메인 ID */
+        DomainId: number;
         /**
          * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
          *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
@@ -2907,6 +3470,8 @@ export interface operations {
                      *         "grantSsh": true,
                      *         "grantHttp": true,
                      *         "grantPublic": true,
+                     *         "grantedSubdomain": "capstone-team3",
+                     *         "grantedRootDomain": "pickle.pnuops.com",
                      *         "nodeId": null,
                      *         "decidedAt": "2026-07-08T14:03:00+09:00"
                      *       },
@@ -3573,6 +4138,376 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    publishVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "port": 8080,
+                 *       "customDomain": null
+                 *     }
+                 */
+                "application/json": components["schemas"]["PublishRequest"];
+            };
+        };
+        responses: {
+            /** @description 공개 접수 (라우트 PENDING — 비동기 적용) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "fqdn": "capstone-team3.pickle.pnuops.com",
+                     *       "domain": {
+                     *         "id": 21,
+                     *         "vmId": 55,
+                     *         "kind": "REQUESTED",
+                     *         "fqdn": "capstone-team3.pickle.pnuops.com",
+                     *         "rootDomain": "pickle.pnuops.com",
+                     *         "status": "ACTIVE",
+                     *         "verifiedAt": null,
+                     *         "createdAt": "2026-07-12T09:00:00+09:00",
+                     *         "verification": null
+                     *       },
+                     *       "route": {
+                     *         "targetPort": 8080,
+                     *         "protocol": "HTTP",
+                     *         "status": "PENDING",
+                     *         "appliedAt": null,
+                     *         "lastError": null
+                     *       },
+                     *       "certificate": {
+                     *         "kind": "ORIGIN_CA_WILDCARD",
+                     *         "status": "ACTIVE",
+                     *         "notAfter": "2040-01-01T00:00:00+09:00",
+                     *         "lastError": null
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["PublicationView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 권한 부족(그룹 OWNER/MANAGER 아님 — `GROUP_ROLE_INSUFFICIENT`) 또는 HTTP 공개 미허가 VM(grantHttp=false — `VM_HTTP_NOT_GRANTED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "HTTP 서비스를 공개할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 OWNER 또는 MANAGER만 도메인·포트를 설정할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/publish",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 공개할 수 없음 — 이미 공개됨(`PUBLICATION_ALREADY_EXISTS`), VM 상태가 공개 불가(RUNNING/STOPPED가 아닌 CREATING/DELETING/DELETED/ERROR/ NEEDS_ADMIN — `VM_INVALID_STATE`), 또는 FQDN 중복(`DOMAIN_FQDN_TAKEN`). FQDN 중복은 커스텀 도메인뿐 아니라 **부여 서브도메인에도** 발생할 수 있습니다 — 도메인 행은 첫 공개 시 생성되므로, 승인 시 부여된 서브도메인(REQUESTED/AUTO)이 그 사이 다른 VM에 선점되면 첫 공개에서 충돌합니다(승인 단계 중복 검증은 최선노력이며 유일성의 최종 강제는 도메인 행 생성 시점). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "이미 공개된 VM입니다",
+                     *       "status": 409,
+                     *       "detail": "이 VM은 이미 HTTP 서비스가 공개되어 있습니다. 포트·도메인을 바꾸려면 공개 설정을 수정해 주세요.",
+                     *       "instance": "/api/v1/vms/55/publish",
+                     *       "code": "PUBLICATION_ALREADY_EXISTS"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    unpublishVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 공개 해제 접수 (vhost 제거 — 비동기) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "HTTP 서비스 공개 해제를 접수했습니다. 잠시 후 외부 접근이 차단됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updatePublication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "port": 3000
+                 *     }
+                 */
+                "application/json": components["schemas"]["UpdatePublicationRequest"];
+            };
+        };
+        responses: {
+            /** @description 변경 접수 (라우트 재적용 — 비동기) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description VM 또는 공개(publication) 없음 — 비멤버에게는 VM 존재가 마스킹됨 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "공개 설정을 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "이 VM은 공개되어 있지 않습니다. 먼저 HTTP 서비스를 공개해 주세요.",
+                     *       "instance": "/api/v1/vms/55/publication",
+                     *       "code": "RESOURCE_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 커스텀 도메인 FQDN 중복(`DOMAIN_FQDN_TAKEN`) 또는 공개 불가 상태 (`VM_INVALID_STATE`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "이미 사용 중인 도메인입니다",
+                     *       "status": 409,
+                     *       "detail": "요청한 커스텀 도메인이 이미 다른 곳에 연결되어 있습니다. 다른 도메인을 사용해 주세요.",
+                     *       "instance": "/api/v1/vms/55/publication",
+                     *       "code": "DOMAIN_FQDN_TAKEN"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listDomains: {
+        parameters: {
+            query?: {
+                /** @description VM 필터 */
+                vmId?: number;
+                /** @description 도메인 상태 필터 */
+                status?: components["schemas"]["DomainStatus"];
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 도메인 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 도메인 ID */
+                domainId: components["parameters"]["DomainId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 도메인 상세 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 34,
+                     *       "vmId": 55,
+                     *       "kind": "CUSTOM",
+                     *       "fqdn": "capstone.example.com",
+                     *       "rootDomain": null,
+                     *       "status": "VERIFYING",
+                     *       "verifiedAt": null,
+                     *       "createdAt": "2026-07-10T09:00:00+09:00",
+                     *       "verification": {
+                     *         "token": "pv-3f6c1b2ae94d",
+                     *         "requiredRecords": [
+                     *           {
+                     *             "type": "A",
+                     *             "name": "capstone.example.com",
+                     *             "value": "164.125.249.87"
+                     *           },
+                     *           {
+                     *             "type": "TXT",
+                     *             "name": "_pickle-verify.capstone.example.com",
+                     *             "value": "pv-3f6c1b2ae94d"
+                     *           }
+                     *         ],
+                     *         "aVerified": true,
+                     *         "txtVerified": false,
+                     *         "lastCheckedAt": "2026-07-10T09:05:00+09:00",
+                     *         "lastError": "TXT 레코드를 아직 찾을 수 없습니다."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["DomainDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 도메인 ID */
+                domainId: components["parameters"]["DomainId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 삭제 접수 (라우트·vhost 제거, 인증서 아카이브 — 비동기) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "도메인 삭제를 접수했습니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    verifyDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 도메인 ID */
+                domainId: components["parameters"]["DomainId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 검증 재시도 접수 (진행 상태는 도메인 상세로 확인) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 검증 대상이 아님 (플랫폼 서브도메인) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "검증할 수 없는 도메인입니다",
+                     *       "status": 409,
+                     *       "detail": "플랫폼 서브도메인은 소유권 검증이 필요하지 않습니다.",
+                     *       "instance": "/api/v1/domains/21/verify",
+                     *       "code": "DOMAIN_NOT_CUSTOM"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminVmRequests: {
         parameters: {
             query?: {
@@ -3758,8 +4693,10 @@ export interface operations {
                  *       "grantSsh": true,
                  *       "grantHttp": true,
                  *       "grantPublic": true,
+                 *       "grantedSubdomain": "capstone-team3",
+                 *       "grantedRootDomain": "pickle.pnuops.com",
                  *       "nodeId": null,
-                 *       "comment": "요청 스펙 그대로 승인합니다."
+                 *       "comment": "요청 스펙 그대로 승인합니다. 서브도메인도 요청하신 이름으로 부여합니다."
                  *     }
                  */
                 "application/json": components["schemas"]["ApproveVmRequest"];
@@ -4340,6 +5277,219 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listAdminRoutes: {
+        parameters: {
+            query?: {
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+                /** @description 라우트 상태 필터 */
+                status?: components["schemas"]["RouteStatus"];
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 라우트 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "content": [
+                     *         {
+                     *           "id": 12,
+                     *           "fqdn": "capstone-team3.pickle.pnuops.com",
+                     *           "domainKind": "REQUESTED",
+                     *           "vmId": 55,
+                     *           "vmName": "capstone-team3-api",
+                     *           "groupId": 12,
+                     *           "groupName": "캡스톤 3조",
+                     *           "orgId": 1,
+                     *           "orgName": "정보컴퓨터공학부 실습지원센터",
+                     *           "targetPort": 8080,
+                     *           "protocol": "HTTP",
+                     *           "status": "APPLIED",
+                     *           "appliedGeneration": 7,
+                     *           "appliedAt": "2026-07-12T09:01:00+09:00",
+                     *           "lastError": null,
+                     *           "updatedAt": "2026-07-12T09:01:00+09:00"
+                     *         }
+                     *       ],
+                     *       "page": 0,
+                     *       "size": 20,
+                     *       "totalElements": 1,
+                     *       "totalPages": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdminRoutePage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAdminDomains: {
+        parameters: {
+            query?: {
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+                /** @description 도메인 종류 필터 */
+                kind?: components["schemas"]["DomainKind"];
+                /** @description 도메인 상태 필터 */
+                status?: components["schemas"]["DomainStatus"];
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 도메인 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "content": [
+                     *         {
+                     *           "id": 34,
+                     *           "vmId": 55,
+                     *           "vmName": "capstone-team3-api",
+                     *           "groupId": 12,
+                     *           "groupName": "캡스톤 3조",
+                     *           "orgId": 1,
+                     *           "orgName": "정보컴퓨터공학부 실습지원센터",
+                     *           "kind": "CUSTOM",
+                     *           "fqdn": "capstone.example.com",
+                     *           "rootDomain": null,
+                     *           "status": "VERIFYING",
+                     *           "routeStatus": "PENDING",
+                     *           "certificateStatus": null,
+                     *           "verifiedAt": null,
+                     *           "createdAt": "2026-07-10T09:00:00+09:00",
+                     *           "updatedAt": "2026-07-10T09:05:00+09:00"
+                     *         }
+                     *       ],
+                     *       "page": 0,
+                     *       "size": 20,
+                     *       "totalElements": 1,
+                     *       "totalPages": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdminDomainPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAdminCertificates: {
+        parameters: {
+            query?: {
+                /** @description 기관 필터 (SYS_ADMIN 전용) */
+                orgId?: number;
+                /** @description 인증서 상태 필터 */
+                status?: components["schemas"]["CertificateStatus"];
+                /** @description 지정 일수 이내 만료 예정 인증서만 조회 */
+                expiringInDays?: number;
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 인증서 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "content": [
+                     *         {
+                     *           "id": 1,
+                     *           "kind": "ORIGIN_CA_WILDCARD",
+                     *           "status": "ACTIVE",
+                     *           "scope": "*.pickle.pnuops.com",
+                     *           "domainId": null,
+                     *           "notAfter": "2040-01-01T00:00:00+09:00",
+                     *           "daysUntilExpiry": 5286,
+                     *           "lastError": null
+                     *         },
+                     *         {
+                     *           "id": 8,
+                     *           "kind": "LETS_ENCRYPT",
+                     *           "status": "ACTIVE",
+                     *           "scope": "capstone.example.com",
+                     *           "domainId": 34,
+                     *           "notAfter": "2026-10-10T00:00:00+09:00",
+                     *           "daysUntilExpiry": 90,
+                     *           "lastError": null
+                     *         }
+                     *       ],
+                     *       "page": 0,
+                     *       "size": 20,
+                     *       "totalElements": 2,
+                     *       "totalPages": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdminCertificatePage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resyncRoutes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 재동기화 접수 (비동기 sync-all) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "라우트 전체 재동기화를 접수했습니다. 잠시 후 적용 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

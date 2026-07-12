@@ -1,9 +1,13 @@
 export { Alert } from './Alert'
 export {
   Badge,
+  CertificateStatusBadge,
+  DomainKindBadge,
+  DomainStatusBadge,
   GroupKindBadge,
   GroupRoleBadge,
   RequestStatusBadge,
+  RouteStatusBadge,
   VmStatusBadge,
   type BadgeVariant,
 } from './Badge'

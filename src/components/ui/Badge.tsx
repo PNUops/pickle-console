@@ -7,8 +7,16 @@ import {
   type GroupMemberRole,
 } from '../../lib/labels'
 import {
+  CERTIFICATE_STATUS_LABELS,
+  DOMAIN_KIND_LABELS,
+  DOMAIN_STATUS_LABELS,
   REQUEST_STATUS_LABELS,
+  ROUTE_STATUS_LABELS,
   VM_STATUS_LABELS,
+  type CertificateStatus,
+  type DomainKind,
+  type DomainStatus,
+  type RouteStatus,
   type VmRequestStatus,
   type VmStatus,
 } from '../../lib/status'
@@ -89,6 +97,66 @@ export function VmStatusBadge({ status, className }: { status: VmStatus; classNa
         </svg>
       )}
       {VM_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const DOMAIN_STATUS_VARIANTS: Record<DomainStatus, BadgeVariant> = {
+  PENDING: 'neutral',
+  VERIFYING: 'info',
+  ACTIVE: 'success',
+  FAILED: 'danger',
+  REMOVED: 'neutral',
+}
+
+export function DomainStatusBadge({ status, className }: { status: DomainStatus; className?: string }) {
+  return (
+    <Badge variant={DOMAIN_STATUS_VARIANTS[status]} className={className}>
+      {DOMAIN_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const ROUTE_STATUS_VARIANTS: Record<RouteStatus, BadgeVariant> = {
+  PENDING: 'info',
+  APPLIED: 'success',
+  FAILED: 'danger',
+  REMOVED: 'neutral',
+}
+
+export function RouteStatusBadge({ status, className }: { status: RouteStatus; className?: string }) {
+  return (
+    <Badge variant={ROUTE_STATUS_VARIANTS[status]} className={className}>
+      {ROUTE_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const CERTIFICATE_STATUS_VARIANTS: Record<CertificateStatus, BadgeVariant> = {
+  ACTIVE: 'success',
+  RENEWING: 'info',
+  FAILED: 'danger',
+  REVOKED: 'neutral',
+}
+
+export function CertificateStatusBadge({
+  status,
+  className,
+}: {
+  status: CertificateStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={CERTIFICATE_STATUS_VARIANTS[status]} className={className}>
+      {CERTIFICATE_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+export function DomainKindBadge({ kind, className }: { kind: DomainKind; className?: string }) {
+  return (
+    <Badge variant="neutral" className={className}>
+      {DOMAIN_KIND_LABELS[kind]}
     </Badge>
   )
 }
