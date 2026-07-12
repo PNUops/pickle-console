@@ -173,6 +173,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내 활동 이력 조회
+         * @description 내 계정의 활동 이력입니다(로그인 이력 포함). 최신순 정렬.
+         *     **철저히 본인(actor=self) 행만** 반환하며 다른 사용자의 활동은 어떤
+         *     필터로도 조회할 수 없습니다. `detail`은 화이트리스트된 필드만
+         *     노출됩니다(비밀값·내부 식별자 미포함).
+         */
+        get: operations["listMyActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs": {
         parameters: {
             query?: never;
@@ -827,6 +850,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내 알림 목록 조회
+         * @description 내 인앱 알림 목록입니다. 최신순(`createdAt` desc) 정렬.
+         *     인증된 사용자라면 누구나 호출할 수 있으며 **본인 행만** 반환합니다.
+         *     `unreadOnly=true`면 읽지 않은 알림만 조회합니다.
+         */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 읽지 않은 알림 수 조회
+         * @description 읽지 않은 내 알림 수입니다. 콘솔 종(bell) 아이콘이 주기적으로 폴링하는 경량 엔드포인트입니다.
+         */
+        get: operations["getUnreadNotificationCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 알림 읽음 처리
+         * @description 알림 1건을 읽음 처리합니다. **멱등적**입니다 — 이미 읽은 알림에
+         *     호출해도 200이며 `readAt`은 최초 읽음 시각이 유지됩니다.
+         *     다른 사용자의 알림은 존재가 마스킹되어 404로 응답합니다.
+         */
+        post: operations["markNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 알림 전체 읽음 처리
+         * @description 읽지 않은 내 알림 전체를 읽음 처리하고 처리 건수를 반환합니다.
+         */
+        post: operations["markAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/vm-requests": {
         parameters: {
             query?: never;
@@ -1257,6 +1364,372 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 공지 목록 조회
+         * @description 발송된 공지 목록입니다. 최신순 정렬. 가시성은 **발송자 기관 기준**입니다:
+         *     ORG_ADMIN은 자기 기관 소속 관리자가 발송한 공지와 ALL 범위 공지를,
+         *     SYS_ADMIN은 전체를 조회합니다. (SYS_ADMIN이 특정 그룹에 발송한 공지는
+         *     해당 그룹 멤버 기관의 ORG_ADMIN에게는 이 목록에 나타나지 않습니다 —
+         *     수신자 개개인의 알림함에는 존재.)
+         */
+        get: operations["listAnnouncements"];
+        put?: never;
+        /**
+         * [관리자] 공지 발송
+         * @description 공지를 발송합니다. 수신자는 범위(`scope`) 내 `ACTIVE` 사용자입니다.
+         *     인앱 알림 행은 **동기**로 생성되고(201 응답 시점에 존재), 이메일 발송은
+         *     비동기로 처리됩니다. `recipientCount`는 실제 생성된 수신자 수입니다.
+         *
+         *     범위 규칙:
+         *     - `ALL`(전체 공지)은 **SYS_ADMIN 전용**입니다 — ORG_ADMIN이 요청하면 403.
+         *     - ORG_ADMIN의 `ORG` 범위는 자기 기관으로 고정됩니다 — 본문 `orgId`는
+         *       생략하거나 자기 기관과 일치해야 하며, 다르면 422.
+         *     - `GROUP` 범위에서 ORG_ADMIN은 자기 기관 소속 멤버가 1명 이상인 그룹만
+         *       대상으로 할 수 있습니다 — 아니면 404 (존재 여부 비공개). **수신자도
+         *       그룹 멤버 중 자기 기관 소속 `ACTIVE` 사용자로 한정됩니다** (관리자
+         *       권한이 기관 경계를 넘지 않는다는 전역 원칙 — 타 기관 멤버는 제외).
+         *       SYS_ADMIN의 `GROUP` 발송은 기관과 무관하게 그룹 멤버 전원이
+         *       수신자입니다.
+         *     - scope와 대상 필드가 맞지 않으면(예 `ORG`인데 `groupId` 지정,
+         *       `GROUP`인데 `groupId` 누락) 422.
+         */
+        post: operations["createAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 그룹 선택지 목록 조회
+         * @description 공지 작성 화면의 그룹 선택기에 사용하는 그룹 참조 목록입니다.
+         *     ORG_ADMIN은 자기 기관 소속 멤버가 있는 그룹만, SYS_ADMIN은 전체를
+         *     조회합니다. `orgId` 필터는 SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의
+         *     `orgId`를 지정하면 404로 응답합니다 (존재 여부 비공개).
+         *     참조성 소규모 목록이므로 배열로 반환합니다 (orgs/templates 규약과 동일).
+         */
+        get: operations["listAdminGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] 알림 발송 로그 조회
+         * @description SYS_ADMIN 전용입니다. 알림 발송(이메일 채널) 로그 목록입니다. 최신순
+         *     정렬. 수신자·이벤트·상태로 필터링해 발송 실패를 추적하고, `FAILED`
+         *     건은 `POST /admin/notifications/{notificationId}/resend`로 재발송합니다.
+         */
+        get: operations["listAdminNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications/{notificationId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 알림 이메일 재발송
+         * @description SYS_ADMIN 전용입니다. 발송 실패(`FAILED`) 상태의 알림 이메일만 재발송할
+         *     수 있습니다 — 그 외 상태는 409 (`NOTIFICATION_NOT_RESENDABLE`).
+         *     접수 즉시 202를 반환하고 발송은 비동기로 처리되며, 결과는 발송 로그의
+         *     `status`/`attempts`/`lastError`로 확인합니다.
+         */
+        post: operations["resendAdminNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 감사 로그 조회
+         * @description 감사 로그 목록입니다. 최신순 정렬. ORG_ADMIN은 **행위자(actor)가 자기
+         *     기관 소속인 행만** 조회할 수 있고, SYS_ADMIN은 전체를 조회합니다.
+         *     `orgId` 필터는 SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를
+         *     지정하면 404로 응답합니다 (존재 여부 비공개). `detail`은 화이트리스트된
+         *     필드만 포함합니다.
+         */
+        get: operations["listAuditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] 운영 설정 목록 조회
+         * @description SYS_ADMIN 전용입니다. `settings`의 운영 설정 전체 목록입니다.
+         *     `editable=false`인 키는 조회 전용입니다(수정 시도 시 404).
+         *     참조성 소규모 목록이므로 배열로 반환합니다.
+         */
+        get: operations["listSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * [SYS_ADMIN] 운영 설정 수정
+         * @description SYS_ADMIN 전용입니다. 설정 값을 수정합니다. 알 수 없는 키 또는 수정
+         *     불가(`editable=false`) 키는 404, 값 타입·범위 검증 실패는 422입니다.
+         *     모든 변경은 감사 로그에 기록됩니다. SSH 게이트웨이 킬 스위치
+         *     (`ssh_gateway_enabled`)도 이 엔드포인트로 제어합니다.
+         */
+        put: operations["updateSetting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] 작업(태스크) 큐 조회
+         * @description SYS_ADMIN 전용입니다. VM 비동기 작업(프로비저닝/삭제/재설치) 큐
+         *     목록입니다. 최신순 정렬. `NEEDS_ADMIN` 작업의 원인 확인과 재시도
+         *     (`POST /admin/tasks/{taskId}/retry`) 화면에서 사용합니다.
+         */
+        get: operations["listAdminTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/tasks/{taskId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 작업 재시도
+         * @description SYS_ADMIN 전용입니다. 재시도 소진으로 파킹된 `NEEDS_ADMIN` 상태의
+         *     작업만 재시도할 수 있습니다 — 그 외 상태는 409 (`TASK_NOT_RETRYABLE`).
+         *     접수 즉시 202를 반환하고 잡 큐에서 비동기로 처리되며, 진행/결과는
+         *     작업 목록과 `VmDetail.provisioning`으로 확인합니다.
+         */
+        post: operations["retryAdminTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/drift-findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] 드리프트 리포트 조회
+         * @description SYS_ADMIN 전용입니다. 조정자(reconciler)가 감지한 DB↔Proxmox 드리프트
+         *     발견 목록입니다. 최신순 정렬. 발견이 더 이상 관측되지 않으면 조정자가
+         *     자동 해결 처리합니다(`resolvedBy*` = null).
+         */
+        get: operations["listDriftFindings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/drift-findings/{findingId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 드리프트 발견 해결 처리
+         * @description SYS_ADMIN 전용입니다. `OPEN` 상태의 발견을 수동으로 해결 처리합니다
+         *     (해결 메모 선택). 이미 해결된 발견은 409
+         *     (`DRIFT_FINDING_ALREADY_RESOLVED`).
+         */
+        post: operations["resolveDriftFinding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 기관 대시보드 요약 조회
+         * @description 관리자 대시보드의 기관 요약입니다. ORG_ADMIN은 자기 기관으로 고정되고,
+         *     `orgId` 파라미터는 SYS_ADMIN의 기관 드릴인 전용입니다 — ORG_ADMIN이
+         *     다른 기관의 `orgId`를 지정하면 404로 응답합니다 (존재 여부 비공개).
+         */
+        get: operations["getAdminSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/system-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] 시스템 대시보드 요약 조회
+         * @description SYS_ADMIN 전용입니다. 노드·작업 큐·알림 발송 실패·인증서 만료 임박·
+         *     드리프트·IP 풀 여유 등 플랫폼 전반의 시스템 요약입니다.
+         */
+        get: operations["getSystemSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ip-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [SYS_ADMIN] IP 할당 현황 조회
+         * @description SYS_ADMIN 전용입니다. IP 풀별 할당/해제 현황 목록입니다. 최신순 정렬.
+         *     해제(RELEASED)된 행도 이력으로 남습니다.
+         */
+        get: operations["listIpAllocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms/{vmId}/period": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * [관리자] VM 사용 기간 변경 (만료 연장)
+         * @description VM의 사용 기간을 변경합니다. **동기 DB 반영**이므로 202가 아니라 200과
+         *     갱신된 VM 상세를 반환합니다. ORG_ADMIN은 자기 기관의 VM만 변경할 수
+         *     있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
+         *
+         *     - `endDate`는 **포함(inclusive)** 종료일입니다 — VM은 `endDate` 당일까지
+         *       사용 가능하며, 만료 자동 정지는 다음 날 00:00 KST 이후 수행됩니다.
+         *     - 변경 시 만료 마커(`expiryStoppedAt`, 만료 안내 단계)가 초기화되어
+         *       만료로 자동 정지된 VM도 다시 시작할 수 있게 됩니다
+         *       (`POST /vms/{vmId}/start`의 `VM_EXPIRED` 거부 해제).
+         *     - `endDate`가 과거(KST 기준)이거나 `startDate`보다 이르면 422.
+         *     - `DELETED`/`DELETING` 상태이거나 삭제가 예약·접수된 VM은 기간을
+         *       변경할 수 없습니다 — 409 (`VM_INVALID_STATE`).
+         *     - VM 이벤트(`PERIOD_UPDATE`)와 감사 로그에 기록됩니다.
+         */
+        patch: operations["updateVmPeriod"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1305,6 +1778,12 @@ export interface components {
              *       비속어·FQDN 형식, 그리고 **커스텀 도메인이 단일 라벨이거나
              *       `allowedRootDomains`·플랫폼 관리 존 하위인 경우**의 스쿼팅 방지 거부)
              *       `VALIDATION_FAILED`)
+             *     - 운영 (M5): `VM_EXPIRED`(만료 자동 정지 VM의 시작 거부 —
+             *       관리자 기간 연장 필요), `TASK_NOT_RETRYABLE`,
+             *       `DRIFT_FINDING_ALREADY_RESOLVED`, `NOTIFICATION_NOT_RESENDABLE`
+             *       (그 외 M5 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
+             *       타 기관 리소스·타인 알림 마스킹 `RESOURCE_NOT_FOUND`,
+             *       권한 `ACCESS_DENIED`, 값 검증 `VALIDATION_FAILED`)
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -1677,6 +2156,16 @@ export interface components {
             requestId: number;
             /** @description 마지막 오류 또는 드리프트 메모 (한국어) */
             statusDetail?: string | null;
+            /**
+             * Format: date
+             * @description 사용 종료(만료) 예정일 (미지정 시 null)
+             */
+            endDate?: string | null;
+            /**
+             * Format: date-time
+             * @description 만료 자동 정지 시각 (M5 만료 스위퍼가 정지한 경우에만 값 존재 — 관리자가 기간을 연장하면 null로 초기화되어 다시 시작 가능)
+             */
+            expiryStoppedAt?: string | null;
             /** Format: date-time */
             createdAt: string;
         };
@@ -1691,11 +2180,6 @@ export interface components {
             sshUsername: string;
             /** Format: date */
             startDate?: string | null;
-            /**
-             * Format: date
-             * @description 사용 종료(만료) 예정일
-             */
-            endDate?: string | null;
             /** @description 진행 중이거나 마지막으로 실패한 비동기 작업(프로비저닝/삭제/재설치)의 진행 상황. 진행·실패 중인 작업이 없으면 null. */
             provisioning?: components["schemas"]["ProvisioningTaskView"] | null;
             /** @description 예약된(또는 접수된) 삭제 정보. 삭제 예약이 없으면 null. */
@@ -1718,21 +2202,23 @@ export interface components {
             totalPages: number;
         };
         /**
+         * @description 비동기 작업 종류
+         * @enum {string}
+         */
+        ProvisioningTaskKind: "PROVISION" | "DELETE" | "REINSTALL";
+        /**
+         * @description 비동기 작업 상태. `RETRYING`은 단계 실패 후 백오프 재시도 대기, `NEEDS_ADMIN`은 재시도 소진으로 관리자 개입 필요.
+         * @enum {string}
+         */
+        ProvisioningTaskStatus: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "RETRYING" | "NEEDS_ADMIN";
+        /**
          * @description VM에 대해 진행 중이거나 마지막으로 실패한 비동기 작업의 진행 상황.
          *     비동기 실패(IP 풀 고갈, Proxmox 오류 등)는 HTTP 오류가 아니라 이 객체의
          *     `NEEDS_ADMIN` 상태와 `lastError`로 노출됩니다.
          */
         ProvisioningTaskView: {
-            /**
-             * @description 작업 종류
-             * @enum {string}
-             */
-            kind: "PROVISION" | "DELETE" | "REINSTALL";
-            /**
-             * @description 작업 상태. `RETRYING`은 단계 실패 후 백오프 재시도 대기, `NEEDS_ADMIN`은 재시도 소진으로 관리자 개입 필요.
-             * @enum {string}
-             */
-            status: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "RETRYING" | "NEEDS_ADMIN";
+            kind: components["schemas"]["ProvisioningTaskKind"];
+            status: components["schemas"]["ProvisioningTaskStatus"];
             /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~9단계) */
             currentStep: number;
             /** @description 전체 단계 수 */
@@ -1778,10 +2264,10 @@ export interface components {
             /** Format: int64 */
             id: number;
             /**
-             * @description 이벤트 종류 (SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 삭제 예약·취소의 감사 추적용; PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상)
+             * @description 이벤트 종류 (SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 삭제 예약·취소의 감사 추적용; PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 정지(actorId null = 시스템) — 둘 다 M5)
              * @enum {string}
              */
-            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "EMERGENCY_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH";
+            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "EMERGENCY_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH" | "PERIOD_UPDATE" | "EXPIRE_STOP";
             /**
              * Format: int64
              * @description 수행한 사용자 ID (null = 시스템/자동 작업)
@@ -2233,6 +2719,468 @@ export interface components {
             totalElements: number;
             totalPages: number;
         };
+        /** @description 인앱 알림 1건 (본인 행만 조회 가능) */
+        NotificationView: {
+            /** Format: int64 */
+            id: number;
+            /** @description 알림 이벤트 카탈로그 ID (점 네임스페이스, 예 `vm.create.done`, `vm.expiry.d7`, `announcement`) */
+            event: string;
+            /** @description 알림 제목 (한국어) */
+            title: string;
+            /** @description 알림 본문 (한국어) */
+            body: string;
+            /** @description 클릭 시 이동할 콘솔 상대 경로 (예 `/console/vms/42`) — 연결 화면이 없으면 null */
+            linkPath?: string | null;
+            /**
+             * @description 중요도 (HIGH는 콘솔에서 강조 표시)
+             * @enum {string}
+             */
+            importance: "NORMAL" | "HIGH";
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 읽음 시각 (읽지 않았으면 null)
+             */
+            readAt?: string | null;
+        };
+        NotificationPage: {
+            content: components["schemas"]["NotificationView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        UnreadCountResponse: {
+            /** @description 읽지 않은 알림 수 */
+            unreadCount: number;
+        };
+        /**
+         * @description 공지 범위 (ALL=전체 공지 — SYS_ADMIN 전용, ORG=기관 소속 사용자, GROUP=그룹 멤버)
+         * @enum {string}
+         */
+        AnnouncementScope: "ALL" | "ORG" | "GROUP";
+        AnnouncementCreateRequest: {
+            /** @description 공지 제목 */
+            title: string;
+            /** @description 공지 본문 */
+            body: string;
+            scope: components["schemas"]["AnnouncementScope"];
+            /**
+             * Format: int64
+             * @description 대상 기관 (scope=ORG). ORG_ADMIN은 자기 기관으로 고정 — 생략 가능 하며 지정 시 자기 기관과 일치해야 합니다(불일치 422). 그 외 scope는 null.
+             */
+            orgId?: number | null;
+            /**
+             * Format: int64
+             * @description 대상 그룹 (scope=GROUP일 때 필수, 그 외 null)
+             */
+            groupId?: number | null;
+        };
+        /** @description 발송된 공지 (수신자 수는 발송 시점 스냅숏) */
+        AnnouncementView: {
+            /** Format: int64 */
+            id: number;
+            title: string;
+            scope: components["schemas"]["AnnouncementScope"];
+            /**
+             * Format: int64
+             * @description 대상 기관 (ORG 범위만, 그 외 null)
+             */
+            orgId?: number | null;
+            /**
+             * Format: int64
+             * @description 대상 그룹 (GROUP 범위만, 그 외 null)
+             */
+            groupId?: number | null;
+            /** @description 발송 시점 수신자(범위 내 ACTIVE 사용자) 수 */
+            recipientCount: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AnnouncementPage: {
+            content: components["schemas"]["AnnouncementView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 공지 작성 화면 그룹 선택기용 그룹 참조 항목 */
+        AdminGroupOption: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            slug: string;
+            /** @description 그룹 멤버 수 */
+            memberCount: number;
+        };
+        /**
+         * @description 알림 이메일 발송 상태 (PENDING=발송 대기, SENT=발송 완료, FAILED=발송 실패 — 재발송 가능, SKIPPED=발송 생략 — 이메일 채널 비대상 이벤트 등)
+         * @enum {string}
+         */
+        NotificationDeliveryStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+        AdminNotificationView: components["schemas"]["NotificationView"] & {
+            /**
+             * Format: int64
+             * @description 수신자 사용자 ID
+             */
+            userId: number;
+            /**
+             * Format: email
+             * @description 수신자 이메일
+             */
+            userEmail: string;
+            /**
+             * @description 발송 채널 (v1은 EMAIL 고정)
+             * @enum {string}
+             */
+            channel: "EMAIL";
+            status: components["schemas"]["NotificationDeliveryStatus"];
+            /** @description 발송 시도 횟수 (재발송 포함) */
+            attempts: number;
+            /** @description 마지막 발송 실패 요약 (한국어, 실패가 없으면 null) */
+            lastError?: string | null;
+            /**
+             * Format: date-time
+             * @description 발송 완료 시각 (미발송/실패 시 null)
+             */
+            sentAt?: string | null;
+        };
+        AdminNotificationPage: {
+            content: components["schemas"]["AdminNotificationView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 내 활동 이력 항목 (감사 로그의 본인 행 뷰 — 로그인 이력 포함) */
+        ActivityEntry: {
+            /** Format: int64 */
+            id: number;
+            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.delete`) */
+            action: string;
+            /** @description 대상 리소스 종류 (예 `vm`, `group` — 없으면 null) */
+            targetType?: string | null;
+            /** @description 대상 리소스 식별자 (없으면 null) */
+            targetId?: string | null;
+            /** @description 부가 정보 (화이트리스트된 필드만 노출 — 비밀값·내부 식별자 미포함, 없으면 null) */
+            detail?: Record<string, never> | null;
+            /** @description 요청 IP (없으면 null) */
+            ip?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ActivityPage: {
+            content: components["schemas"]["ActivityEntry"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 감사 로그 항목 (행위자 맥락 포함) */
+        AuditLogView: {
+            /** Format: int64 */
+            id: number;
+            /**
+             * Format: int64
+             * @description 행위자 사용자 ID (null = 시스템/자동 작업)
+             */
+            actorId?: number | null;
+            /** @description 행위자 이메일 (시스템 작업은 null) */
+            actorEmail?: string | null;
+            /** @description 행위자 이름 (시스템 작업은 null) */
+            actorName?: string | null;
+            /** @description 행위 시점의 전역 역할 (시스템 작업은 null) */
+            actorRole?: components["schemas"]["UserRole"] | null;
+            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `vm.delete`, `setting.update`) */
+            action: string;
+            /** @description 대상 리소스 종류 (없으면 null) */
+            targetType?: string | null;
+            /** @description 대상 리소스 식별자 (없으면 null) */
+            targetId?: string | null;
+            /** @description 부가 정보 (화이트리스트된 필드만 — 없으면 null) */
+            detail?: Record<string, never> | null;
+            /** @description 요청 IP (시스템 작업은 null) */
+            ip?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AuditLogPage: {
+            content: components["schemas"]["AuditLogView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 운영 설정 항목 */
+        SettingView: {
+            /** @description 설정 키 (예 `vm_delete_grace_hours`, `ssh_gateway_enabled`) */
+            key: string;
+            /** @description 설정 값 (임의 JSON — 실제 타입은 `valueType` 참조) */
+            value: unknown;
+            /**
+             * @description 값 타입 (수정 시 서버 검증 기준)
+             * @enum {string}
+             */
+            valueType: "BOOLEAN" | "INTEGER" | "NUMBER" | "STRING" | "JSON";
+            /** @description 설정 설명 (한국어) */
+            description: string;
+            /** @description 콘솔에서 수정 가능한지 여부 (false면 조회 전용 — 수정 시 404) */
+            editable: boolean;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SettingUpdateRequest: {
+            /** @description 새 설정 값 (임의 JSON — `valueType`에 따라 서버가 타입·범위를 검증하며 실패 시 422) */
+            value: unknown;
+        };
+        AdminTaskView: components["schemas"]["ProvisioningTaskView"] & {
+            /**
+             * Format: int64
+             * @description 작업 ID (`POST /admin/tasks/{taskId}/retry`의 경로 파라미터)
+             */
+            taskId: number;
+            /**
+             * Format: int64
+             * @description 대상 VM ID
+             */
+            vmId: number;
+            /** @description 대상 VM 이름. VM 행은 삭제 후에도 영구 보존되므로 통상 항상 채워집니다 — 데이터 이상 대비 방어적 nullable. */
+            vmName?: string | null;
+            /** @description 대상 VM 호스트명. VM 행 영구 보존으로 통상 항상 채워집니다 — 방어적 nullable. */
+            hostname?: string | null;
+            /**
+             * Format: int64
+             * @description 대상 VM의 기관 ID. VM은 항상 기관에 속하므로 통상 항상 채워집니다 — 방어적 nullable.
+             */
+            orgId?: number | null;
+            /** @description 대상 VM의 기관 이름 (orgId와 동일 기준의 방어적 nullable) */
+            orgName?: string | null;
+            /** @description JobRunr 잡 UUID (큐 등록 전이면 null) */
+            jobrunrJobId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminTaskPage: {
+            content: components["schemas"]["AdminTaskView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /**
+         * @description 드리프트 발견 상태
+         * @enum {string}
+         */
+        DriftFindingStatus: "OPEN" | "RESOLVED";
+        /**
+         * @description 드리프트 종류 (MISSING_IN_PROXMOX=DB에는 있으나 Proxmox에 없음, UNMANAGED_GUEST=Proxmox에는 있으나 DB가 모르는 게스트, SPEC_MISMATCH=DB 스펙과 실제 게스트 스펙 불일치)
+         * @enum {string}
+         */
+        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH";
+        /** @description 조정자(reconciler)가 감지한 DB↔Proxmox 드리프트 발견. `RESOLVED`인데 `resolvedBy*`가 null이면 조정자가 소멸을 확인하고 자동 해결한 것입니다. */
+        DriftFindingView: {
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["DriftFindingKind"];
+            /**
+             * Format: int64
+             * @description 관련 VM ID (UNMANAGED_GUEST 등 DB에 없는 대상은 null)
+             */
+            vmId?: number | null;
+            /** @description Proxmox VMID (Proxmox에 없는 대상은 null) */
+            proxmoxVmid?: number | null;
+            /** @description 관측된 노드 이름 (특정 불가 시 null) */
+            nodeName?: string | null;
+            /** @description 발견 한 줄 요약 (한국어) */
+            summary: string;
+            /** @description 발견 상세 (예 스펙 불일치 필드별 기대/실제 값 — 없으면 null) */
+            detail?: Record<string, never> | null;
+            status: components["schemas"]["DriftFindingStatus"];
+            /**
+             * Format: date-time
+             * @description 최초 관측 시각
+             */
+            firstSeenAt: string;
+            /**
+             * Format: date-time
+             * @description 마지막 관측 시각
+             */
+            lastSeenAt: string;
+            /**
+             * Format: date-time
+             * @description 해결 시각 (OPEN이면 null)
+             */
+            resolvedAt?: string | null;
+            /**
+             * Format: int64
+             * @description 해결 처리한 관리자 ID (자동 해결·OPEN이면 null)
+             */
+            resolvedById?: number | null;
+            /** @description 해결 처리한 관리자 이메일 (자동 해결·OPEN이면 null) */
+            resolvedByEmail?: string | null;
+            /** @description 해결 메모 (없으면 null) */
+            resolutionNote?: string | null;
+        };
+        DriftFindingPage: {
+            content: components["schemas"]["DriftFindingView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /** @description 기관 관리자 대시보드 요약 (ORG_ADMIN 홈 / SYS_ADMIN 기관 드릴인) */
+        OrgDashboardSummary: {
+            /** @description 승인 대기(SUBMITTED) 신청 수 */
+            pendingRequestCount: number;
+            /** @description 최근 14일 결정 수 */
+            recentDecisions14d: {
+                approvedCount: number;
+                rejectedCount: number;
+            };
+            /** @description VM 상태별 개수 (키 = `VmStatus` 값) */
+            vmCountsByStatus: {
+                [key: string]: number;
+            };
+            /** @description 자원 할당 현황과 한국어 안내 */
+            resource: {
+                /** @description 할당 vCPU 합계 (활성 VM 기준) */
+                allocatedVcpu: number;
+                /** @description 할당 메모리 합계 (MiB) */
+                allocatedMemoryMb: number;
+                /** @description 할당 디스크 합계 (GiB) */
+                allocatedDiskGb: number;
+                /** @description 물리 vCPU(스레드) 용량 (기관 단위 산정 불가 시 null) */
+                capacityVcpu?: number | null;
+                /** @description 물리 메모리 용량 (MiB, 기관 단위 산정 불가 시 null) */
+                capacityMemoryMb?: number | null;
+                /** @description 임계값 기반 한국어 안내문 (승인 판단 참고와 동일한 톤) */
+                guidance: string;
+            };
+            /** @description VM 보유 수 상위 그룹 (최대 10개) */
+            topGroupsByVmCount: {
+                /** Format: int64 */
+                groupId: number;
+                name: string;
+                vmCount: number;
+            }[];
+            /** @description 공개 중인 HTTP 서비스(라우트) 수 */
+            publishedServiceCount: number;
+            /** @description 30일 이내 만료 예정 VM 수 */
+            expiringVmCount30d: number;
+            /** @description 주의가 필요한 항목 수 (대시보드 경고 배지) */
+            attention: {
+                /** @description 실패(FAILED) 작업 수 */
+                failedTaskCount: number;
+                /** @description NEEDS_ADMIN 상태 VM 수 */
+                needsAdminVmCount: number;
+                /** @description 이미 만료된 VM 수 */
+                expiredVmCount: number;
+            };
+        };
+        /** @description 시스템 대시보드 요약 (SYS_ADMIN 전용) */
+        SystemDashboardSummary: {
+            /** @description 노드별 할당 비율 요약 */
+            nodes: {
+                /** Format: int64 */
+                id: number;
+                name: string;
+                /** @enum {string} */
+                status: "ACTIVE" | "MAINTENANCE" | "OFFLINE";
+                /** @description 할당 vCPU ÷ 물리 스레드 */
+                cpuOvercommitRatio: number;
+                /** @description 할당 메모리 ÷ 물리 메모리 */
+                memoryAllocRatio: number;
+                /** @description 경고 임계값 초과 여부 */
+                warn: boolean;
+            }[];
+            /** @description VM 상태별 개수 (키 = `VmStatus` 값) */
+            vmCountsByStatus: {
+                [key: string]: number;
+            };
+            /** @description 작업 큐 요약 */
+            tasks: {
+                runningCount: number;
+                retryingCount: number;
+                needsAdminCount: number;
+                /** @description 최근 24시간 실패 작업 수 */
+                failed24hCount: number;
+            };
+            /** @description 발송 실패(FAILED) 알림 수 */
+            notificationFailureCount: number;
+            /** @description 30일 이내 만료 예정 인증서 수 */
+            certExpiring30dCount: number;
+            /** @description 미해결(OPEN) 드리프트 발견 수 */
+            openDriftFindingCount: number;
+            /** @description IP 풀별 할당/여유 현황 */
+            ipPools: {
+                /** Format: int64 */
+                id: number;
+                name: string;
+                cidr: string;
+                allocatedCount: number;
+                freeCount: number;
+            }[];
+        };
+        /**
+         * @description IP 할당 상태 (RELEASED 행은 이력으로 보존)
+         * @enum {string}
+         */
+        IpAllocationStatus: "ALLOCATED" | "RELEASED";
+        /** @description IP 할당 항목 */
+        IpAllocationView: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            poolId: number;
+            poolName: string;
+            /** @description 할당된 IP 주소 */
+            ip: string;
+            /**
+             * Format: int64
+             * @description 할당 대상 VM ID. VM 행은 영구 보존되므로 RELEASED 이력에서도 통상 채워집니다 — 데이터 이상 대비 방어적 nullable.
+             */
+            vmId?: number | null;
+            /** @description 할당 대상 VM 이름 (vmId와 동일 기준의 방어적 nullable) */
+            vmName?: string | null;
+            /** @description 할당 대상 VM 호스트명 (vmId와 동일 기준의 방어적 nullable) */
+            hostname?: string | null;
+            status: components["schemas"]["IpAllocationStatus"];
+            /** Format: date-time */
+            allocatedAt: string;
+            /**
+             * Format: date-time
+             * @description 해제 시각 (ALLOCATED면 null)
+             */
+            releasedAt?: string | null;
+        };
+        IpAllocationPage: {
+            content: components["schemas"]["IpAllocationView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        VmPeriodUpdateRequest: {
+            /**
+             * Format: date
+             * @description 새 사용 종료일 (**포함** — 당일까지 사용 가능, 만료 자동 정지는 다음 날 00:00 KST 이후). 과거(KST)이거나 `startDate`보다 이르면 422.
+             */
+            endDate: string;
+            /**
+             * Format: date
+             * @description 새 사용 시작일 (생략 시 기존 값 유지)
+             */
+            startDate?: string;
+        };
     };
     responses: {
         /** @description 인증 실패 (액세스 토큰 없음/만료/무효) */
@@ -2356,6 +3304,12 @@ export interface components {
         VmId: number;
         /** @description 도메인 ID */
         DomainId: number;
+        /** @description 알림 ID */
+        NotificationId: number;
+        /** @description 작업(태스크) ID */
+        TaskId: number;
+        /** @description 드리프트 발견 ID */
+        FindingId: number;
         /**
          * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
          *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
@@ -2805,6 +3759,69 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listMyActivity: {
+        parameters: {
+            query?: {
+                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.delete`) */
+                action?: string;
+                /** @description 조회 시작일 (KST, 해당 일 00:00부터) */
+                from?: string;
+                /** @description 조회 종료일 (KST, 해당 일 24:00까지) */
+                to?: string;
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 활동 이력 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "content": [
+                     *         {
+                     *           "id": 501,
+                     *           "action": "auth.login",
+                     *           "targetType": null,
+                     *           "targetId": null,
+                     *           "detail": null,
+                     *           "ip": "127.0.0.1",
+                     *           "createdAt": "2026-07-13T09:00:00+09:00"
+                     *         },
+                     *         {
+                     *           "id": 500,
+                     *           "action": "vm.delete",
+                     *           "targetType": "vm",
+                     *           "targetId": "55",
+                     *           "detail": {
+                     *             "vmName": "capstone-team3-api"
+                     *           },
+                     *           "ip": "127.0.0.1",
+                     *           "createdAt": "2026-07-12T18:20:00+09:00"
+                     *         }
+                     *       ],
+                     *       "page": 0,
+                     *       "size": 20,
+                     *       "totalElements": 2,
+                     *       "totalPages": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ActivityPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listOrgs: {
@@ -3749,7 +4766,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능) */
+            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능). 또한 사용 기간이 만료된 VM(M5 만료 자동 정지)은 `STOPPED`여도 `VM_EXPIRED` 코드로 거부됩니다 — 관리자가 기간을 연장 (`PATCH /admin/vms/{vmId}/period`)해야 다시 시작할 수 있습니다 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4509,6 +5526,135 @@ export interface operations {
             };
         };
     };
+    listNotifications: {
+        parameters: {
+            query?: {
+                /** @description true면 읽지 않은 알림만 조회 */
+                unreadOnly?: boolean;
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 알림 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "content": [
+                     *         {
+                     *           "id": 301,
+                     *           "event": "vm.create.done",
+                     *           "title": "VM 생성 완료",
+                     *           "body": "capstone-team3-api VM 생성이 완료되었습니다.",
+                     *           "linkPath": "/console/vms/55",
+                     *           "importance": "NORMAL",
+                     *           "createdAt": "2026-07-13T10:00:00+09:00",
+                     *           "readAt": null
+                     *         }
+                     *       ],
+                     *       "page": 0,
+                     *       "size": 20,
+                     *       "totalElements": 1,
+                     *       "totalPages": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getUnreadNotificationCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 읽지 않은 알림 수 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "unreadCount": 3
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UnreadCountResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 알림 ID */
+                notificationId: components["parameters"]["NotificationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 읽음 처리된 알림 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markAllNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 전체 읽음 처리 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "updatedCount": 3
+                     *     }
+                     */
+                    "application/json": {
+                        /** @description 이번 호출로 읽음 처리된 알림 수 */
+                        updatedCount: number;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     listAdminVmRequests: {
         parameters: {
             query?: {
@@ -5044,6 +6190,10 @@ export interface operations {
                 groupId?: number;
                 /** @description VM 상태 필터 */
                 status?: components["schemas"]["VmStatus"];
+                /** @description 지정 일수 이내 만료 예정 VM만 조회 (오늘 ≤ `endDate` ≤ 오늘+N — 이미 만료된 VM은 제외하며 `expired=true`로 조회, DELETED/DELETING 제외). `expired`와 함께 지정하면 AND로 적용되어 빈 결과가 됩니다. */
+                expiringInDays?: number;
+                /** @description true면 이미 만료된 VM만 조회 (`endDate` < 오늘) */
+                expired?: boolean;
                 /** @description 페이지 번호 (0부터 시작) */
                 page?: components["parameters"]["Page"];
                 /** @description 페이지 크기 */
@@ -5491,6 +6641,692 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listAnnouncements: {
+        parameters: {
+            query?: {
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 공지 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncementPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "title": "7월 정기 점검 안내",
+                 *       "body": "7월 20일(월) 02:00~04:00 KST에 호스트 정기 점검이 진행됩니다.",
+                 *       "scope": "ORG",
+                 *       "orgId": 1,
+                 *       "groupId": null
+                 *     }
+                 */
+                "application/json": components["schemas"]["AnnouncementCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description 공지 발송 완료 (인앱 알림 생성, 이메일은 비동기) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 11,
+                     *       "title": "7월 정기 점검 안내",
+                     *       "scope": "ORG",
+                     *       "orgId": 1,
+                     *       "groupId": null,
+                     *       "recipientCount": 132,
+                     *       "createdAt": "2026-07-13T11:00:00+09:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AnnouncementView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 권한 없음 (전체(ALL) 공지는 SYS_ADMIN 전용) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "접근 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "전체 공지는 시스템 관리자만 발송할 수 있습니다.",
+                     *       "instance": "/api/v1/admin/announcements",
+                     *       "code": "ACCESS_DENIED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAdminGroups: {
+        parameters: {
+            query?: {
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 그룹 선택지 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 12,
+                     *         "name": "캡스톤 3조",
+                     *         "slug": "capstone-team3",
+                     *         "memberCount": 4
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["AdminGroupOption"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listAdminNotifications: {
+        parameters: {
+            query?: {
+                /** @description 발송 상태 필터 */
+                status?: components["schemas"]["NotificationDeliveryStatus"];
+                /** @description 알림 이벤트 카탈로그 ID 필터 (예 `vm.create.done`) */
+                event?: string;
+                /** @description 수신자 이메일 필터 */
+                email?: string;
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 알림 발송 로그 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNotificationPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resendAdminNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 알림 ID */
+                notificationId: components["parameters"]["NotificationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 재발송 접수 (비동기 발송) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "알림 재발송을 접수했습니다. 잠시 후 발송 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 재발송할 수 없는 상태 (FAILED만 재발송 가능) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "재발송할 수 없는 알림입니다",
+                     *       "status": 409,
+                     *       "detail": "발송에 실패한(FAILED) 알림만 재발송할 수 있습니다.",
+                     *       "instance": "/api/v1/admin/notifications/301/resend",
+                     *       "code": "NOTIFICATION_NOT_RESENDABLE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAuditLogs: {
+        parameters: {
+            query?: {
+                /** @description 행위자 이메일 필터 */
+                actorEmail?: string;
+                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `vm.delete`, `setting.update`) */
+                action?: string;
+                /** @description 대상 리소스 종류 필터 (예 `vm`, `group`, `setting`) */
+                targetType?: string;
+                /** @description 대상 리소스 식별자 필터 */
+                targetId?: string;
+                /** @description 조회 시작일 (KST, 해당 일 00:00부터) */
+                from?: string;
+                /** @description 조회 종료일 (KST, 해당 일 24:00까지) */
+                to?: string;
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 감사 로그 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 운영 설정 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "key": "vm_delete_grace_hours",
+                     *         "value": 168,
+                     *         "valueType": "INTEGER",
+                     *         "description": "셀프 삭제 후 물리 파기까지의 유예 시간",
+                     *         "editable": true,
+                     *         "updatedAt": "2026-07-01T09:00:00+09:00"
+                     *       },
+                     *       {
+                     *         "key": "ssh_gateway_enabled",
+                     *         "value": true,
+                     *         "valueType": "BOOLEAN",
+                     *         "description": "SSH 게이트웨이 전체 활성화 (킬 스위치)",
+                     *         "editable": true,
+                     *         "updatedAt": "2026-07-01T09:00:00+09:00"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["SettingView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 설정 키 (예 `ssh_gateway_enabled`) */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "value": false
+                 *     }
+                 */
+                "application/json": components["schemas"]["SettingUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description 수정된 설정 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description 알 수 없는 키 또는 수정 불가(editable=false) 키 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "리소스를 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "해당 설정 키가 존재하지 않거나 수정할 수 없습니다.",
+                     *       "instance": "/api/v1/admin/settings/unknown_key",
+                     *       "code": "RESOURCE_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listAdminTasks: {
+        parameters: {
+            query?: {
+                /** @description 작업 상태 필터 */
+                status?: components["schemas"]["ProvisioningTaskStatus"];
+                /** @description 작업 종류 필터 */
+                kind?: components["schemas"]["ProvisioningTaskKind"];
+                /** @description VM 필터 */
+                vmId?: number;
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 작업 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTaskPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retryAdminTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 작업(태스크) ID */
+                taskId: components["parameters"]["TaskId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 재시도 접수 (비동기 처리) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "작업 재시도를 접수했습니다. 잠시 후 작업 상태가 갱신됩니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 재시도할 수 없는 상태 (NEEDS_ADMIN만 재시도 가능) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "재시도할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "관리자 개입 대기(NEEDS_ADMIN) 상태의 작업만 재시도할 수 있습니다.",
+                     *       "instance": "/api/v1/admin/tasks/77/retry",
+                     *       "code": "TASK_NOT_RETRYABLE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listDriftFindings: {
+        parameters: {
+            query?: {
+                /** @description 발견 상태 필터 (생략 시 OPEN으로 동작) */
+                status?: components["schemas"]["DriftFindingStatus"];
+                /** @description 드리프트 종류 필터 */
+                kind?: components["schemas"]["DriftFindingKind"];
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 드리프트 발견 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriftFindingPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resolveDriftFinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 드리프트 발견 ID */
+                findingId: components["parameters"]["FindingId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "note": "잔여 게스트를 수동 정리했습니다."
+                 *     }
+                 */
+                "application/json": {
+                    /** @description 해결 메모 (선택) */
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 해결 처리된 발견 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriftFindingView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 이미 해결된 발견 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "이미 해결된 발견입니다",
+                     *       "status": 409,
+                     *       "detail": "이 드리프트 발견은 이미 해결 처리되었습니다.",
+                     *       "instance": "/api/v1/admin/drift-findings/9/resolve",
+                     *       "code": "DRIFT_FINDING_ALREADY_RESOLVED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAdminSummary: {
+        parameters: {
+            query?: {
+                /** @description 기관 선택 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 기관 대시보드 요약 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgDashboardSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getSystemSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 시스템 대시보드 요약 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemDashboardSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listIpAllocations: {
+        parameters: {
+            query?: {
+                /** @description IP 풀 필터 */
+                poolId?: number;
+                /** @description 할당 상태 필터 */
+                status?: components["schemas"]["IpAllocationStatus"];
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description IP 할당 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IpAllocationPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateVmPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "endDate": "2027-02-28"
+                 *     }
+                 */
+                "application/json": components["schemas"]["VmPeriodUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description 변경된 VM 상세 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VmDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 기간을 변경할 수 없는 상태 — DELETED/DELETING이거나 삭제가 예약·접수된 VM */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "삭제가 예약되었거나 진행 중인 VM은 기간을 변경할 수 없습니다.",
+                     *       "instance": "/api/v1/admin/vms/55/period",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 검증 실패 (endDate가 과거이거나 startDate보다 이름) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "입력값이 올바르지 않습니다",
+                     *       "status": 422,
+                     *       "detail": "요청 값을 확인해 주세요.",
+                     *       "instance": "/api/v1/admin/vms/55/period",
+                     *       "code": "VALIDATION_FAILED",
+                     *       "errors": [
+                     *         {
+                     *           "field": "endDate",
+                     *           "message": "종료일은 오늘(KST) 이후여야 합니다."
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
 }

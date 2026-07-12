@@ -36,6 +36,8 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   REINSTALL: '재설치',
   PUBLISH: 'HTTP 공개',
   UNPUBLISH: 'HTTP 공개 해제',
+  PERIOD_UPDATE: '사용 기간 변경',
+  EXPIRE_STOP: '만료 자동 종료',
 }
 
 /* ─── HTTP 공개·도메인·인증서 (M4A) ─── */
