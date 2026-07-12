@@ -1,13 +1,17 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  deleteDomain,
+  fetchDomains,
   fetchGroup,
   publishVm,
   unpublishVm,
   updatePublication,
   verifyDomain,
   type DomainDetail,
+  type DomainVerification,
   type PublicationView,
+  type RouteView,
   type VmDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
@@ -59,11 +63,12 @@ export function VmPublishSection({ vm }: { vm: VmDetail }) {
           <CardHeader>
             <CardTitle>HTTP 서비스 공개</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Alert variant="info" title="HTTP 공개가 허가되지 않았습니다">
               이 VM은 신청 승인 시 HTTP 공개가 허용되지 않았습니다. 외부 공개가
               필요하면 관리자에게 문의해 주세요.
             </Alert>
+            <LeftoverDomainList vm={vm} activeDomainId={null} canMutate={canMutate} />
           </CardContent>
         </Card>
       )
@@ -81,6 +86,11 @@ export function VmPublishSection({ vm }: { vm: VmDetail }) {
         ) : (
           <PublicationDetail vm={vm} publication={vm.publication} canMutate={canMutate} />
         )}
+        <LeftoverDomainList
+          vm={vm}
+          activeDomainId={vm.publication?.domain?.id ?? null}
+          canMutate={canMutate}
+        />
       </CardContent>
     </Card>
   )
@@ -107,6 +117,7 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
       setError(null)
       setFieldErrors({})
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+      await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) => {
       const apiError = toApiError(err, 'HTTP 서비스 공개를 접수하지 못했습니다.')
@@ -199,8 +210,12 @@ function PublicationDetail({
   publication: PublicationView
   canMutate: boolean
 }) {
-  const { domain, route, certificate } = publication
-  const isCustom = domain.kind === 'CUSTOM'
+  // 접수 직후·해제 진행 중 등 과도기에는 중첩 블록(route/certificate/verification)이
+  // 아직 없을 수 있다 — 어떤 조합이 와도 크래시 없이 "준비 중"으로 렌더링한다.
+  const domain: DomainDetail | null = publication.domain ?? null
+  const route: RouteView | null = publication.route ?? null
+  const certificate = publication.certificate ?? null
+  const isCustom = domain?.kind === 'CUSTOM'
 
   return (
     <div className="space-y-5">
@@ -215,24 +230,34 @@ function PublicationDetail({
           >
             {publication.fqdn}
           </a>
-          <DomainKindBadge kind={domain.kind} />
-          <DomainStatusBadge status={domain.status} />
+          {domain && (
+            <>
+              <DomainKindBadge kind={domain.kind} />
+              <DomainStatusBadge status={domain.status} />
+            </>
+          )}
         </div>
         <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
-          <SummaryField label="공개 포트">{route.targetPort}</SummaryField>
+          <SummaryField label="공개 포트">
+            {route ? route.targetPort : '적용 대기 중'}
+          </SummaryField>
           <SummaryField label="라우트 상태">
-            <RouteStatusBadge status={route.status} />
+            {route ? (
+              <RouteStatusBadge status={route.status} />
+            ) : (
+              <span className="text-neutral-500">공개 준비 중</span>
+            )}
           </SummaryField>
         </dl>
       </div>
 
-      {/* 라우트 적용 상태 안내 */}
-      {route.status === 'PENDING' && (
+      {/* 라우트 적용 상태 안내 (라우트가 아직 만들어지지 않은 과도기도 적용 중으로 안내) */}
+      {(route == null || route.status === 'PENDING') && (
         <Alert variant="info">
           공개 설정을 적용하고 있습니다. 잠시 후 상태가 자동으로 갱신됩니다.
         </Alert>
       )}
-      {route.status === 'FAILED' && (
+      {route?.status === 'FAILED' && (
         <Alert variant="danger" title="라우트 적용에 실패했습니다">
           {route.lastError ?? '프록시 적용 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.'}
         </Alert>
@@ -260,8 +285,13 @@ function PublicationDetail({
       )}
 
       {/* 커스텀 도메인 검증 안내 */}
-      {isCustom && domain.verification && (
-        <CustomDomainVerification vm={vm} domain={domain} canMutate={canMutate} />
+      {isCustom && domain?.verification && (
+        <CustomDomainVerification
+          vm={vm}
+          domain={domain}
+          verification={domain.verification}
+          canMutate={canMutate}
+        />
       )}
 
       {/* 변경·해제 액션 (OWNER/MANAGER) */}
@@ -290,15 +320,16 @@ function SummaryField({ label, children }: { label: string; children: ReactNode 
 function CustomDomainVerification({
   vm,
   domain,
+  verification,
   canMutate,
 }: {
   vm: VmDetail
   domain: DomainDetail
+  verification: DomainVerification
   canMutate: boolean
 }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
-  const verification = domain.verification!
 
   const reverify = useMutation({
     mutationFn: () => verifyDomain(domain.id),
@@ -379,16 +410,17 @@ function PublicationActions({
   publication: PublicationView
 }) {
   const queryClient = useQueryClient()
-  const [port, setPort] = useState(String(publication.route.targetPort))
+  // 과도기(라우트 미생성)에도 크래시하지 않도록 방어적으로 초기화한다.
+  const [port, setPort] = useState(String(publication.route?.targetPort ?? 80))
   const [customDomain, setCustomDomain] = useState(
-    publication.domain.kind === 'CUSTOM' ? publication.fqdn : '',
+    publication.domain?.kind === 'CUSTOM' ? publication.fqdn : '',
   )
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
   const [unpublishOpen, setUnpublishOpen] = useState(false)
 
-  const isCustom = publication.domain.kind === 'CUSTOM'
+  const isCustom = publication.domain?.kind === 'CUSTOM'
 
   const change = useMutation({
     mutationFn: (body: Parameters<typeof updatePublication>[1]) =>
@@ -398,6 +430,7 @@ function PublicationActions({
       setFieldErrors({})
       setMessage('공개 설정 변경을 접수했습니다. 잠시 후 적용 상태가 갱신됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+      await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) => {
       const apiError = toApiError(err, '공개 설정 변경을 접수하지 못했습니다.')
@@ -414,6 +447,7 @@ function PublicationActions({
       setError(null)
       setMessage(data.message)
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+      await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) => {
       setUnpublishOpen(false)
@@ -524,12 +558,81 @@ function PublicationActions({
         >
           <Alert variant="warning" title="외부 접근이 차단됩니다">
             공개를 해제하면 {publication.fqdn} 주소로 더 이상 접근할 수 없습니다.
-            {publication.domain.kind === 'CUSTOM'
-              ? ' 커스텀 도메인의 검증 상태는 보존되며, 도메인 자체를 삭제하려면 도메인 삭제를 이용하세요.'
+            {isCustom
+              ? ' 커스텀 도메인의 검증 상태는 보존되며, 해제 후 이 카드의 "남은 도메인" 목록에서 도메인 자체를 삭제할 수 있습니다.'
               : ' 플랫폼 서브도메인은 함께 정리됩니다.'}
           </Alert>
         </ConfirmNameModal>
       </div>
+    </section>
+  )
+}
+
+/* ─── 공개 해제 후 남은 도메인 (tombstone) 목록·삭제 ─── */
+
+/**
+ * 이 VM에 남아 있는, 현재 공개에 연결되지 않은 도메인 목록. 커스텀 도메인은
+ * 공개 해제 후에도 검증 상태 보존을 위해 행이 남는데(계약 unpublishVm),
+ * 같은 도메인을 다시 연결하려면 먼저 여기서 삭제해야 한다 (DELETE /domains/{id}).
+ */
+function LeftoverDomainList({
+  vm,
+  activeDomainId,
+  canMutate,
+}: {
+  vm: VmDetail
+  activeDomainId: number | null
+  canMutate: boolean
+}) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+
+  const domains = useQuery({
+    queryKey: ['domains', { vmId: vm.id }],
+    queryFn: () => fetchDomains({ vmId: vm.id }),
+  })
+
+  const remove = useMutation({
+    mutationFn: (domainId: number) => deleteDomain(domainId),
+    onSuccess: async () => {
+      setError(null)
+      await queryClient.invalidateQueries({ queryKey: ['domains'] })
+      await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+    },
+    onError: (err) => setError(toApiError(err, '도메인 삭제를 접수하지 못했습니다.').message),
+  })
+
+  // 현재 공개에 연결된 도메인은 공개 카드 본문이 담당한다 — 남은 행만 노출.
+  const leftovers = (domains.data?.content ?? []).filter((d) => d.id !== activeDomainId)
+  if (leftovers.length === 0) return null
+
+  return (
+    <section className="space-y-2 border-t border-neutral-100 pt-4">
+      <h3 className="text-sm font-semibold text-neutral-800">남은 도메인</h3>
+      <p className="text-sm text-neutral-600">
+        공개 해제 후 남아 있는 도메인입니다. 같은 도메인을 다시 연결하려면 먼저
+        삭제해야 하며, 삭제하면 소유권 검증 상태도 함께 정리됩니다.
+      </p>
+      {error && <Alert variant="danger">{error}</Alert>}
+      <ul className="space-y-2">
+        {leftovers.map((d) => (
+          <li key={d.id} className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm text-neutral-800">{d.fqdn}</span>
+            <DomainKindBadge kind={d.kind} />
+            <DomainStatusBadge status={d.status} />
+            {canMutate && (
+              <Button
+                variant="danger"
+                size="sm"
+                loading={remove.isPending && remove.variables === d.id}
+                onClick={() => remove.mutate(d.id)}
+              >
+                도메인 삭제
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

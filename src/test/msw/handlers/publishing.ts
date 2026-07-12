@@ -16,8 +16,15 @@ const REFERENCE_NOW = new Date('2026-07-12T00:00:00+09:00').getTime()
 
 let nextDomainId = 900
 
+/**
+ * 공개 해제 후 남는 커스텀 도메인 행 (계약 unpublishVm: 검증 상태 보존을 위해
+ * 도메인 행은 남고 라우트만 제거). DELETE /domains/{id}로만 정리된다.
+ */
+let standaloneDomains: DomainDetail[] = []
+
 export function resetPublishingFixtures() {
   nextDomainId = 900
+  standaloneDomains = []
 }
 
 /* ─── org 이름 조회 (관리자 목록의 기관 맥락) ─── */
@@ -37,6 +44,28 @@ function findByDomainId(domainId: number): { vm: VmDetail; pub: PublicationView 
     }
   }
   return null
+}
+
+/** 공개 중인 도메인과 해제 후 남은 도메인(tombstone)을 모두 뒤진다. */
+function findDomain(domainId: number): DomainDetail | null {
+  return (
+    findByDomainId(domainId)?.pub.domain ??
+    standaloneDomains.find((d) => d.id === domainId) ??
+    null
+  )
+}
+
+function toDomainSummary(d: DomainDetail): Schemas['DomainSummary'] {
+  return {
+    id: d.id,
+    vmId: d.vmId,
+    kind: d.kind,
+    fqdn: d.fqdn,
+    rootDomain: d.rootDomain,
+    status: d.status,
+    verifiedAt: d.verifiedAt,
+    createdAt: d.createdAt,
+  }
 }
 
 const notFound = () =>
@@ -84,10 +113,16 @@ function customDomainError(customDomain: string): string | null {
   return null
 }
 
-/** 커스텀 도메인 FQDN이 이미 다른 VM에 연결되어 있는지 검사. */
+/**
+ * 커스텀 도메인 FQDN이 이미 사용 중인지 검사. 다른 VM의 공개뿐 아니라
+ * 해제 후 남은 도메인 행(tombstone)도 점유로 취급한다 — 같은 도메인을 다시
+ * 연결하려면 먼저 DELETE /domains/{id}로 삭제해야 한다.
+ */
 function isFqdnTaken(fqdn: string, exceptVmId: number): boolean {
-  return publishedVms().some(
-    (vm) => vm.id !== exceptVmId && vm.publication!.domain.fqdn === fqdn,
+  return (
+    publishedVms().some(
+      (vm) => vm.id !== exceptVmId && vm.publication!.domain.fqdn === fqdn,
+    ) || standaloneDomains.some((d) => d.fqdn === fqdn)
   )
 }
 
@@ -324,12 +359,19 @@ export const publishingHandlers: RequestHandler[] = [
     }
     if (body.customDomain !== undefined) {
       if (body.customDomain === null) {
-        // 커스텀 해제 → 플랫폼 서브도메인 공개로 복귀.
+        // 커스텀 해제 → 플랫폼 서브도메인 공개로 복귀. 커스텀 도메인 행은
+        // 검증 상태 보존을 위해 남는다 (unpublish와 동일).
+        if (pub.domain.kind === 'CUSTOM') {
+          standaloneDomains.push({ ...pub.domain })
+        }
         vm.publication = buildPlatformPublication(vm, pub.route.targetPort)
       } else {
         const err = customDomainError(body.customDomain)
         if (err) return validationFailed(instance, 'customDomain', err)
         if (isFqdnTaken(body.customDomain, vm.id)) return fqdnTaken(instance)
+        if (pub.domain.kind === 'CUSTOM' && pub.domain.fqdn !== body.customDomain) {
+          standaloneDomains.push({ ...pub.domain })
+        }
         vm.publication = buildCustomPublication(vm, body.customDomain, pub.route.targetPort)
       }
     }
@@ -346,6 +388,10 @@ export const publishingHandlers: RequestHandler[] = [
       detail: vm.publication.fqdn,
       createdAt: '2026-07-12T09:20:00+09:00',
     })
+    // 계약: AUTO/REQUESTED 도메인 행은 함께 정리, 커스텀은 검증 상태 보존을 위해 남는다.
+    if (vm.publication.domain.kind === 'CUSTOM') {
+      standaloneDomains.push({ ...vm.publication.domain })
+    }
     vm.publication = null
     vm.updatedAt = '2026-07-12T09:20:00+09:00'
     return HttpResponse.json(
@@ -361,34 +407,32 @@ export const publishingHandlers: RequestHandler[] = [
     const status = url.searchParams.get('status')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const items = publishedVms()
-      .filter((vm) => !vmId || vm.id === Number(vmId))
-      .map((vm): Schemas['DomainSummary'] => {
-        const d = vm.publication!.domain
-        return {
-          id: d.id,
-          vmId: vm.id,
-          kind: d.kind,
-          fqdn: d.fqdn,
-          rootDomain: d.rootDomain,
-          status: d.status,
-          verifiedAt: d.verifiedAt,
-          createdAt: d.createdAt,
-        }
-      })
+    const published = publishedVms().map(
+      (vm): Schemas['DomainSummary'] => toDomainSummary(vm.publication!.domain),
+    )
+    const items = [...published, ...standaloneDomains.map(toDomainSummary)]
+      .filter((d) => !vmId || d.vmId === Number(vmId))
       .filter((d) => !status || d.status === status)
       .sort((a, b) => b.id - a.id)
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
 
   http.get('*/api/v1/domains/:domainId', ({ params }) => {
-    const found = findByDomainId(Number(params.domainId))
-    if (!found) return notFound()
-    return HttpResponse.json(found.pub.domain satisfies DomainDetail, { status: 200 })
+    const domain = findDomain(Number(params.domainId))
+    if (!domain) return notFound()
+    return HttpResponse.json(domain satisfies DomainDetail, { status: 200 })
   }),
 
   http.delete('*/api/v1/domains/:domainId', ({ params }) => {
-    const found = findByDomainId(Number(params.domainId))
+    const domainId = Number(params.domainId)
+    // 해제 후 남은 도메인 행(tombstone) 삭제 — 행만 제거한다.
+    const standaloneIdx = standaloneDomains.findIndex((d) => d.id === domainId)
+    if (standaloneIdx >= 0) {
+      standaloneDomains.splice(standaloneIdx, 1)
+      return HttpResponse.json({ message: '도메인 삭제를 접수했습니다.' }, { status: 202 })
+    }
+    // 공개 중인 도메인 삭제 — 계약: 연결된 라우트도 함께 제거(공개 해제).
+    const found = findByDomainId(domainId)
     if (!found) return notFound()
     found.vm.publication = null
     found.vm.updatedAt = '2026-07-12T09:30:00+09:00'
@@ -397,8 +441,8 @@ export const publishingHandlers: RequestHandler[] = [
 
   http.post('*/api/v1/domains/:domainId/verify', ({ params }) => {
     const found = findByDomainId(Number(params.domainId))
-    if (!found) return notFound()
-    const domain = found.pub.domain
+    const domain = found?.pub.domain ?? standaloneDomains.find((d) => d.id === Number(params.domainId))
+    if (!domain) return notFound()
     if (domain.kind !== 'CUSTOM') {
       return problemResponse({
         type: 'about:blank',
@@ -422,7 +466,7 @@ export const publishingHandlers: RequestHandler[] = [
     domain.status = 'ACTIVE'
     domain.verifiedAt = '2026-07-12T09:40:00+09:00'
     // ACTIVE인데 인증서가 FAILED였다면 발급 재트리거 → RENEWING.
-    if (found.pub.certificate?.status === 'FAILED') {
+    if (found && found.pub.certificate?.status === 'FAILED') {
       found.pub.certificate = { ...found.pub.certificate, status: 'RENEWING', lastError: null }
     }
     return HttpResponse.json(domain satisfies DomainDetail, { status: 202 })

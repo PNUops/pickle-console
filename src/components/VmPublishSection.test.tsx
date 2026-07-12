@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -157,6 +158,76 @@ describe('VM 공개 — 커스텀 도메인 검증', () => {
 
     await user.click(within(card).getByRole('button', { name: '지금 다시 확인' }))
     expect(await within(card).findByText('연결됨')).toBeInTheDocument()
+  })
+})
+
+describe('VM 공개 — 부분 상태 방어적 렌더링', () => {
+  test('route·certificate·verification이 모두 없는 publication도 크래시 없이 준비 중으로 보여준다', async () => {
+    // 접수 직후 과도기: 서버가 publication은 돌려주지만 중첩 블록이 아직 없다.
+    const vm = vmStore.find((v) => v.id === 62)!
+    const pub = vm.publication as unknown as Record<string, unknown>
+    pub.route = null
+    pub.certificate = null
+    ;(pub.domain as Record<string, unknown>).verification = null
+
+    renderVm(62)
+
+    await screen.findByRole('heading', { name: 'demo-web' })
+    const card = await publishCard()
+    expect(await within(card).findByRole('link', { name: 'demo.example.com' })).toBeInTheDocument()
+    // 라우트가 없으면 포트·상태는 준비 중으로 대체된다.
+    expect(within(card).getByText('적용 대기 중')).toBeInTheDocument()
+    expect(within(card).getByText('공개 준비 중')).toBeInTheDocument()
+    expect(
+      within(card).getByText(/공개 설정을 적용하고 있습니다/),
+    ).toBeInTheDocument()
+    // 검증 블록·인증서 블록은 없으면 렌더링하지 않는다 (크래시 금지).
+    expect(within(card).queryByText('도메인 소유권·연결 확인')).not.toBeInTheDocument()
+    expect(within(card).queryByText('인증서')).not.toBeInTheDocument()
+    // 변경·해제 액션은 그대로 동작한다 (포트 초기값은 기본 80으로 방어).
+    expect(within(card).getByRole('button', { name: 'HTTP 공개 해제' })).toBeInTheDocument()
+  })
+})
+
+describe('VM 공개 — 남은 도메인(tombstone) 삭제', () => {
+  test('커스텀 도메인 해제 후 남은 도메인을 삭제해야 다시 연결할 수 있다', async () => {
+    const user = userEvent.setup()
+    renderVm(63) // shop-app: CUSTOM 공개됨, OWNER
+
+    await screen.findByRole('heading', { name: 'shop-app' })
+    let card = await publishCard()
+    await within(card).findByRole('link', { name: 'shop.example.com' })
+
+    // 1) 공개 해제 — 커스텀 도메인 행은 남는다 (계약 unpublishVm).
+    await user.click(within(card).getByRole('button', { name: 'HTTP 공개 해제' }))
+    const dialog = await screen.findByRole('dialog', { name: 'HTTP 공개 해제' })
+    expect(within(dialog).getByText(/남은 도메인/)).toBeInTheDocument()
+    await user.type(within(dialog).getByRole('textbox'), 'shop-app')
+    await user.click(within(dialog).getByRole('button', { name: '공개 해제' }))
+
+    card = await publishCard()
+    expect(
+      await within(card).findByRole('button', { name: 'HTTP 서비스 공개' }),
+    ).toBeInTheDocument()
+    expect(await within(card).findByText('남은 도메인')).toBeInTheDocument()
+    expect(within(card).getByText('shop.example.com')).toBeInTheDocument()
+
+    // 2) 남은 행이 있는 동안 같은 도메인 재연결은 409로 거부된다.
+    await user.type(within(card).getByLabelText(/커스텀 도메인/), 'shop.example.com')
+    await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
+    expect(
+      await within(card).findByText(/이미 다른 곳에 연결되어 있습니다/),
+    ).toBeInTheDocument()
+
+    // 3) 남은 도메인을 삭제하면 목록이 사라지고 재연결이 가능해진다.
+    await user.click(within(card).getByRole('button', { name: '도메인 삭제' }))
+    await waitFor(() =>
+      expect(within(card).queryByText('남은 도메인')).not.toBeInTheDocument(),
+    )
+    await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
+    expect(
+      await within(card).findByRole('link', { name: 'shop.example.com' }),
+    ).toBeInTheDocument()
   })
 })
 

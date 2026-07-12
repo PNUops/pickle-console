@@ -74,12 +74,15 @@ export function VmDetailPage() {
         data.provisioning != null &&
         ACTIVE_TASK_STATUSES.includes(data.provisioning.status)
       // 공개 라우트 적용·도메인 검증·인증서 발급도 비동기이므로 진행 중이면 폴링한다.
+      // 접수 직후 과도기에는 중첩 블록(route 등)이 없을 수 있어 방어적으로 접근하고,
+      // 라우트가 아직 없으면 적용 대기로 보고 폴링한다.
       const pub = data.publication
       const publishing =
         pub != null &&
-        (pub.route.status === 'PENDING' ||
-          pub.domain.status === 'PENDING' ||
-          pub.domain.status === 'VERIFYING' ||
+        (pub.route == null ||
+          pub.route.status === 'PENDING' ||
+          pub.domain?.status === 'PENDING' ||
+          pub.domain?.status === 'VERIFYING' ||
           pub.certificate?.status === 'RENEWING')
       return POLLING_VM_STATUSES.includes(data.status) || activeTask || publishing
         ? POLL_MS
