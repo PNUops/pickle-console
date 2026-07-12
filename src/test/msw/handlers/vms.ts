@@ -557,10 +557,12 @@ export const vmHandlers: RequestHandler[] = [
         vm.updatedAt = '2026-07-08T14:10:00+09:00'
       }
     }
-    // 플랫폼 서브도메인(와일드카드) 공개는 비동기 적용을 흉내내 PENDING→APPLIED로 수렴.
-    // 커스텀 도메인은 소유권 검증 전이므로 여기서 전이시키지 않는다.
+    // 라우트 적용이 진행 중인 공개는 비동기 적용을 흉내내 PENDING→APPLIED로 수렴.
+    // 검증 전(비ACTIVE) 커스텀 도메인은 소유권 검증이 끝나야 라우트가 적용되므로
+    // 여기서 전이시키지 않는다 (revive된 ACTIVE 커스텀은 즉시 적용 대기 — 수렴 대상).
     const route = vm.publication?.route
-    if (route?.status === 'PENDING' && vm.publication!.domain.kind !== 'CUSTOM') {
+    const domain = vm.publication?.domain
+    if (route?.status === 'PENDING' && (domain?.kind !== 'CUSTOM' || domain.status === 'ACTIVE')) {
       const count = (routeFetchCounts[vm.id] = (routeFetchCounts[vm.id] ?? 0) + 1)
       if (count >= ROUTE_APPLIED_AFTER_FETCHES) {
         route.status = 'APPLIED'

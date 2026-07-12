@@ -2097,7 +2097,8 @@ export interface components {
             /** @description 공개 FQDN */
             fqdn: string;
             domain: components["schemas"]["DomainDetail"];
-            route: components["schemas"]["RouteView"];
+            /** @description 라이브 라우트. 적용 대기/동시 해제 전이 중에는 null일 수 있으므로 소비 측은 반드시 null 가드할 것(2026-07-13 계약 정정 — 이전 required는 오류). */
+            route?: components["schemas"]["RouteView"] | null;
             /** @description 인증서 상태 (발급 전이면 null) */
             certificate?: components["schemas"]["CertificateView"] | null;
         };

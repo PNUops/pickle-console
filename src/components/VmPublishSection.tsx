@@ -307,9 +307,14 @@ function PublicationDetail({
         />
       )}
 
-      {/* 변경·해제 액션 (OWNER/MANAGER) */}
+      {/* 변경·해제 액션 (OWNER/MANAGER). 라우트가 생기는 시점에 다시 마운트해
+          포트 초기값이 임시 기본값(80)이 아닌 실제 적용 포트로 채워지게 한다. */}
       {canMutate ? (
-        <PublicationActions vm={vm} publication={publication} />
+        <PublicationActions
+          key={route == null ? 'route-pending' : 'route-live'}
+          vm={vm}
+          publication={publication}
+        />
       ) : (
         <p className="text-sm text-neutral-500">
           공개 설정 변경·해제는 그룹의 소유자·관리자만 할 수 있습니다.
@@ -423,7 +428,9 @@ function PublicationActions({
   publication: PublicationView
 }) {
   const queryClient = useQueryClient()
-  // 과도기(라우트 미생성)에도 크래시하지 않도록 방어적으로 초기화한다.
+  // 과도기(라우트 미생성)에는 실제 포트를 알 수 없다 — 폼을 비활성화하고,
+  // 라우트가 생기면 부모가 key로 다시 마운트해 실제 값으로 초기화한다.
+  const routeReady = publication.route != null
   const [port, setPort] = useState(String(publication.route?.targetPort ?? 80))
   const [customDomain, setCustomDomain] = useState(
     publication.domain?.kind === 'CUSTOM' ? publication.fqdn : '',
@@ -508,16 +515,25 @@ function PublicationActions({
           label="공개 포트"
           required
           error={fieldErrors.port}
-          description="22는 공개할 수 없습니다."
+          description={
+            routeReady ? '22는 공개할 수 없습니다.' : '공개 설정 적용 중에는 변경할 수 없습니다.'
+          }
           className="w-40"
         >
           <Input
             inputMode="numeric"
             value={port}
+            disabled={!routeReady}
             onChange={(event) => setPort(event.target.value)}
           />
         </FormField>
-        <Button type="submit" variant="secondary" loading={change.isPending} className="mt-6">
+        <Button
+          type="submit"
+          variant="secondary"
+          loading={change.isPending}
+          disabled={!routeReady}
+          className="mt-6"
+        >
           포트 변경
         </Button>
       </form>
@@ -525,7 +541,9 @@ function PublicationActions({
       {isCustom ? (
         <div className="space-y-2">
           <p className="text-sm text-neutral-600">
-            커스텀 도메인 연결을 해제하면 플랫폼 서브도메인 공개로 되돌아갑니다.
+            커스텀 도메인 연결을 해제하면 플랫폼 서브도메인 공개로 되돌아갑니다. 이때
+            커스텀 도메인과 인증서는 정리되므로, 나중에 다시 연결하면 소유권 검증을
+            처음부터 진행합니다.
           </p>
           <Button variant="secondary" size="sm" loading={change.isPending} onClick={detachCustom}>
             커스텀 도메인 연결 해제
@@ -573,7 +591,7 @@ function PublicationActions({
           <Alert variant="warning" title="외부 접근이 차단됩니다">
             공개를 해제하면 {publication.fqdn} 주소로 더 이상 접근할 수 없습니다.
             {isCustom
-              ? ' 커스텀 도메인의 검증 상태는 보존되며, 해제 후 이 카드의 "남은 도메인" 목록에서 도메인 자체를 삭제할 수 있습니다.'
+              ? ' 커스텀 도메인의 검증 상태는 보존되어 같은 도메인으로 다시 공개하면 재검증 없이 재사용됩니다. 더 이상 쓰지 않으면 해제 후 이 카드의 "남은 도메인" 목록에서 삭제할 수 있습니다.'
               : ' 플랫폼 서브도메인은 함께 정리됩니다.'}
           </Alert>
         </ConfirmNameModal>
@@ -586,8 +604,9 @@ function PublicationActions({
 
 /**
  * 이 VM에 남아 있는, 현재 공개에 연결되지 않은 도메인 목록. 커스텀 도메인은
- * 공개 해제 후에도 검증 상태 보존을 위해 행이 남는데(계약 unpublishVm),
- * 같은 도메인을 다시 연결하려면 먼저 여기서 삭제해야 한다 (DELETE /domains/{id}).
+ * 공개 해제 후에도 검증 상태 보존을 위해 행이 남고(계약 unpublishVm), 같은
+ * 도메인으로 다시 공개하면 서버가 이 행을 되살려(revive) 보존된 검증 상태를
+ * 재사용한다. 삭제(DELETE /domains/{id})는 도메인을 더 이상 쓰지 않을 때만.
  */
 function LeftoverDomainList({
   vm,
@@ -613,7 +632,14 @@ function LeftoverDomainList({
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
-    onError: (err) => setError(toApiError(err, '도메인 삭제를 접수하지 못했습니다.').message),
+    onError: async (err) => {
+      const apiError = toApiError(err, '도메인 삭제를 접수하지 못했습니다.')
+      setError(apiError.message)
+      // 이미 서버에서 사라진 도메인(404)이면 목록을 다시 불러와 낡은 행을 정리한다.
+      if (apiError.problem?.status === 404) {
+        await queryClient.invalidateQueries({ queryKey: ['domains'] })
+      }
+    },
   })
 
   // 현재 공개에 연결된 도메인은 공개 카드 본문이 담당한다 — 남은 행만 노출.
@@ -624,8 +650,9 @@ function LeftoverDomainList({
     <section className="space-y-2 border-t border-neutral-100 pt-4">
       <h3 className="text-sm font-semibold text-neutral-800">남은 도메인</h3>
       <p className="text-sm text-neutral-600">
-        공개 해제 후 남아 있는 도메인입니다. 같은 도메인을 다시 연결하려면 먼저
-        삭제해야 하며, 삭제하면 소유권 검증 상태도 함께 정리됩니다.
+        공개 해제 후 남아 있는 도메인입니다. 같은 도메인으로 다시 공개하면 보존된
+        소유권 검증 상태를 그대로 재사용하므로 재검증이 필요 없습니다. 도메인을 더
+        이상 사용하지 않을 때만 삭제하세요 — 삭제하면 검증 상태도 함께 정리됩니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <ul className="space-y-2">
