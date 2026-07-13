@@ -1,8 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  problemResponse,
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
@@ -58,6 +60,36 @@ describe('공지 보내기', () => {
     // 자기 기관(org 1) 그룹만 로드된다.
     expect(await screen.findByRole('option', { name: '캡스톤 3조 (4명)' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'AI 동아리 (5명)' })).not.toBeInTheDocument()
+  })
+
+  test('발송 한도 초과(429)면 문제 상세를 인라인 경고로 보여준다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    // 계약 v0.5.x: 작성자당 시간당 10건 초과 시 429 (Retry-After)
+    server.use(
+      http.post('*/api/v1/admin/announcements', () =>
+        problemResponse({
+          type: 'about:blank',
+          title: '요청이 너무 많습니다',
+          status: 429,
+          detail: '시간당 공지 발송 한도(10건)를 초과했습니다. 잠시 후 다시 시도해 주세요.',
+          instance: '/api/v1/admin/announcements',
+          code: 'RATE_LIMITED',
+        }),
+      ),
+    )
+    renderApp('/admin/announcements')
+
+    await screen.findByRole('heading', { name: '공지 보내기' })
+    await user.type(screen.getByLabelText(/제목/), '한도 초과 테스트')
+    await user.type(screen.getByLabelText(/내용/), '본문')
+    await user.click(screen.getByRole('button', { name: '공지 발송' }))
+    const dialog = await screen.findByRole('dialog', { name: '공지 발송 확인' })
+    await user.click(within(dialog).getByRole('button', { name: '발송' }))
+
+    expect(
+      await screen.findByText(/시간당 공지 발송 한도\(10건\)를 초과했습니다/),
+    ).toBeInTheDocument()
   })
 
   test('SYS_ADMIN 전체 공지는 확인 모달을 거쳐 발송되고 최근 목록에 나타난다', async () => {

@@ -26,6 +26,17 @@ describe('감사 로그', () => {
     expect(screen.getByLabelText('기관 필터')).toBeInTheDocument()
   })
 
+  test('UserRole 밖의 열린 actorRole(sshgw 등)은 원문 그대로 배지로 보여준다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/audit')
+
+    await screen.findByRole('heading', { name: '감사 로그' })
+    const row = (await screen.findByText('ssh-gateway')).closest('tr')!
+    expect(within(row).getByText('SSHGW')).toBeInTheDocument()
+    // 미등록 동작 코드도 원문 노출 (labelForAuditAction 폴백)
+    expect(within(row).getByText('sshgw.session.start')).toBeInTheDocument()
+  })
+
   test('동작 필터를 고르면 해당 동작만 남는다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))

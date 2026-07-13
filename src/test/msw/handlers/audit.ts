@@ -15,6 +15,21 @@ interface StoredAuditRow extends AuditLogView {
 function initialAuditRows(): StoredAuditRow[] {
   return [
     {
+      // sshgw 감사 행 — actorRole은 UserRole 밖의 열린 값 (계약 v0.5.x 정합 수정)
+      id: 505,
+      actorOrgId: null,
+      actorId: 90,
+      actorEmail: null,
+      actorName: 'ssh-gateway',
+      actorRole: 'SSHGW',
+      action: 'sshgw.session.start',
+      targetType: 'vm',
+      targetId: '56',
+      detail: null,
+      ip: '203.0.113.40',
+      createdAt: '2026-07-13T11:00:00+09:00',
+    },
+    {
       id: 504,
       actorOrgId: 2,
       actorId: 58,

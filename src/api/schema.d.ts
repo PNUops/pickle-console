@@ -1387,18 +1387,27 @@ export interface paths {
          *     인앱 알림 행은 **동기**로 생성되고(201 응답 시점에 존재), 이메일 발송은
          *     비동기로 처리됩니다. `recipientCount`는 실제 생성된 수신자 수입니다.
          *
+         *     **기관 소속(파생 멤버십) 정의** — 학생 계정은 `users.org_id`를 갖지
+         *     않으므로(기관은 신청/VM 단위 경계), 사용자 U가 기관 O에 "소속"이란:
+         *     U가 기관 O의 VM 신청 또는 삭제되지 않은 VM을 1개 이상 가진 그룹의
+         *     `ACTIVE` 멤버이거나, U가 O의 ORG_ADMIN인 경우를 뜻합니다. 이 정의는
+         *     기관 스코프가 걸리는 모든 M5 조회·발송(`/admin/audit` 포함)에 공통
+         *     적용됩니다.
+         *
          *     범위 규칙:
          *     - `ALL`(전체 공지)은 **SYS_ADMIN 전용**입니다 — ORG_ADMIN이 요청하면 403.
          *     - ORG_ADMIN의 `ORG` 범위는 자기 기관으로 고정됩니다 — 본문 `orgId`는
-         *       생략하거나 자기 기관과 일치해야 하며, 다르면 422.
-         *     - `GROUP` 범위에서 ORG_ADMIN은 자기 기관 소속 멤버가 1명 이상인 그룹만
-         *       대상으로 할 수 있습니다 — 아니면 404 (존재 여부 비공개). **수신자도
-         *       그룹 멤버 중 자기 기관 소속 `ACTIVE` 사용자로 한정됩니다** (관리자
-         *       권한이 기관 경계를 넘지 않는다는 전역 원칙 — 타 기관 멤버는 제외).
-         *       SYS_ADMIN의 `GROUP` 발송은 기관과 무관하게 그룹 멤버 전원이
-         *       수신자입니다.
+         *       생략하거나 자기 기관과 일치해야 하며, 다르면 422. 수신자는 위 정의의
+         *       기관 소속 `ACTIVE` 사용자 전원입니다.
+         *     - `GROUP` 범위에서 ORG_ADMIN은 **자기 기관의 신청/VM을 가진 그룹**만
+         *       대상으로 할 수 있습니다 — 아니면 404 (존재 여부 비공개). 게이트를
+         *       통과한 그룹의 `ACTIVE` 멤버 전원이 수신자입니다(그룹은 그 기관의
+         *       업무 단위 — 멤버 개인별 추가 필터 없음). SYS_ADMIN의 `GROUP` 발송은
+         *       기관과 무관하게 그룹 멤버 전원이 수신자입니다.
          *     - scope와 대상 필드가 맞지 않으면(예 `ORG`인데 `groupId` 지정,
          *       `GROUP`인데 `groupId` 누락) 422.
+         *     - 남용 방지: 작성자당 **시간당 10건** 발송 제한 — 초과 시 429
+         *       (`Retry-After` 헤더 포함).
          */
         post: operations["createAnnouncement"];
         delete?: never;
@@ -1417,9 +1426,11 @@ export interface paths {
         /**
          * [관리자] 그룹 선택지 목록 조회
          * @description 공지 작성 화면의 그룹 선택기에 사용하는 그룹 참조 목록입니다.
-         *     ORG_ADMIN은 자기 기관 소속 멤버가 있는 그룹만, SYS_ADMIN은 전체를
-         *     조회합니다. `orgId` 필터는 SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의
-         *     `orgId`를 지정하면 404로 응답합니다 (존재 여부 비공개).
+         *     ORG_ADMIN은 **자기 기관의 신청/VM을 가진 그룹**만(파생 멤버십 정의 —
+         *     `POST /admin/announcements` 참조), SYS_ADMIN은 전체를 조회합니다.
+         *     `memberCount`는 그룹 `ACTIVE` 멤버 전체 수입니다. `orgId` 필터는
+         *     SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를 지정하면 404로
+         *     응답합니다 (존재 여부 비공개).
          *     참조성 소규모 목록이므로 배열로 반환합니다 (orgs/templates 규약과 동일).
          */
         get: operations["listAdminGroups"];
@@ -1467,7 +1478,9 @@ export interface paths {
          * @description SYS_ADMIN 전용입니다. 발송 실패(`FAILED`) 상태의 알림 이메일만 재발송할
          *     수 있습니다 — 그 외 상태는 409 (`NOTIFICATION_NOT_RESENDABLE`).
          *     접수 즉시 202를 반환하고 발송은 비동기로 처리되며, 결과는 발송 로그의
-         *     `status`/`attempts`/`lastError`로 확인합니다.
+         *     `status`/`attempts`/`lastError`로 확인합니다. 재발송은 **단발 재시도**
+         *     입니다 — 시도 횟수(`attempts`)를 초기화하지 않으므로 1회 시도 후
+         *     실패하면 즉시 다시 `FAILED`가 됩니다(자동 백오프 재시도 없음).
          */
         post: operations["resendAdminNotification"];
         delete?: never;
@@ -1486,7 +1499,10 @@ export interface paths {
         /**
          * [관리자] 감사 로그 조회
          * @description 감사 로그 목록입니다. 최신순 정렬. ORG_ADMIN은 **행위자(actor)가 자기
-         *     기관 소속인 행만** 조회할 수 있고, SYS_ADMIN은 전체를 조회합니다.
+         *     기관 소속인 행만** 조회할 수 있고(기관 소속 = 파생 멤버십 정의:
+         *     기관의 신청/삭제되지 않은 VM을 가진 그룹의 `ACTIVE` 멤버 또는 그
+         *     기관의 ORG_ADMIN — `POST /admin/announcements` 참조), SYS_ADMIN은
+         *     전체를 조회합니다.
          *     `orgId` 필터는 SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를
          *     지정하면 404로 응답합니다 (존재 여부 비공개). `detail`은 화이트리스트된
          *     필드만 포함합니다.
@@ -1646,6 +1662,9 @@ export interface paths {
          * @description 관리자 대시보드의 기관 요약입니다. ORG_ADMIN은 자기 기관으로 고정되고,
          *     `orgId` 파라미터는 SYS_ADMIN의 기관 드릴인 전용입니다 — ORG_ADMIN이
          *     다른 기관의 `orgId`를 지정하면 404로 응답합니다 (존재 여부 비공개).
+         *     **SYS_ADMIN이 `orgId`를 지정하지 않으면 전체(모든 기관) 집계**를
+         *     반환합니다 — 같은 응답 형태로 플랫폼 전역 카운트·자원 합산을 담습니다
+         *     (2026-07-13 정합 결정: 콘솔 대시보드가 역할 무관 동일 호출을 사용).
          */
         get: operations["getAdminSummary"];
         put?: never;
@@ -2894,8 +2913,8 @@ export interface components {
             actorEmail?: string | null;
             /** @description 행위자 이름 (시스템 작업은 null) */
             actorName?: string | null;
-            /** @description 행위 시점의 전역 역할 (시스템 작업은 null) */
-            actorRole?: components["schemas"]["UserRole"] | null;
+            /** @description 행위 시점의 전역 역할 문자열 (시스템 작업은 null). 통상 STUDENT/ORG_ADMIN/SYS_ADMIN이지만 인프라 데몬 감사 행은 `SSHGW` 등 UserRole 밖의 값이 올 수 있어 열린 문자열로 정의합니다 — 콘솔은 미지 값을 원문 표기. */
+            actorRole?: string | null;
             /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `vm.delete`, `setting.update`) */
             action: string;
             /** @description 대상 리소스 종류 (없으면 null) */
@@ -6735,6 +6754,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listAdminGroups: {

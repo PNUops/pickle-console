@@ -31,6 +31,14 @@ const ROLE_VARIANTS: Record<UserRole, BadgeVariant> = {
   SYS_ADMIN: 'primary',
 }
 
+/**
+ * 계약(v0.5.x): actorRole은 열린 문자열 — sshgw 등 UserRole 밖 값(예 'SSHGW')이
+ * 올 수 있어, 아는 역할만 한국어 라벨·색을 쓰고 나머지는 원문 그대로 보여준다.
+ */
+function isKnownRole(role: string): role is UserRole {
+  return role in ROLE_VARIANTS
+}
+
 /** 감사 로그 — 관리자가 행위자·동작·기간으로 활동 기록을 추적한다. */
 export function AdminAuditPage() {
   const { user } = useAuth()
@@ -185,8 +193,17 @@ export function AdminAuditPage() {
                             {log.actorName}
                           </span>
                           {log.actorRole && (
-                            <Badge variant={ROLE_VARIANTS[log.actorRole]} className="ml-1.5">
-                              {USER_ROLE_LABELS[log.actorRole]}
+                            <Badge
+                              variant={
+                                isKnownRole(log.actorRole)
+                                  ? ROLE_VARIANTS[log.actorRole]
+                                  : 'neutral'
+                              }
+                              className="ml-1.5"
+                            >
+                              {isKnownRole(log.actorRole)
+                                ? USER_ROLE_LABELS[log.actorRole]
+                                : log.actorRole}
                             </Badge>
                           )}
                           <span className="block text-xs text-neutral-500">
