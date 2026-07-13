@@ -3,6 +3,7 @@ import { RequireRole } from './auth/RequireRole'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
+import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminAuditPage } from './pages/AdminAuditPage'
 import { AdminCertificatesPage } from './pages/AdminCertificatesPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
@@ -11,6 +12,7 @@ import { AdminDriftPage } from './pages/AdminDriftPage'
 import { AdminExpiryPage } from './pages/AdminExpiryPage'
 import { AdminIpsPage } from './pages/AdminIpsPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
+import { AdminNotificationLogPage } from './pages/AdminNotificationLogPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
 import { AdminRoutesPage } from './pages/AdminRoutesPage'
 import { AdminSettingsPage } from './pages/AdminSettingsPage'
@@ -79,9 +81,18 @@ function App() {
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="audit" element={<AdminAuditPage />} />
+        <Route path="announcements" element={<AdminAnnouncementsPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route path="routes" element={<AdminRoutesPage />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />
+        <Route
+          path="notification-log"
+          element={
+            <RequireRole roles={['SYS_ADMIN']}>
+              <AdminNotificationLogPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="drift"
           element={

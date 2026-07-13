@@ -72,6 +72,14 @@ export type DriftFindingStatus = Schemas['DriftFindingStatus']
 export type IpAllocationView = Schemas['IpAllocationView']
 export type IpAllocationPage = Schemas['IpAllocationPage']
 export type IpAllocationStatus = Schemas['IpAllocationStatus']
+export type AdminNotificationView = Schemas['AdminNotificationView']
+export type AdminNotificationPage = Schemas['AdminNotificationPage']
+export type NotificationDeliveryStatus = Schemas['NotificationDeliveryStatus']
+export type AdminGroupOption = Schemas['AdminGroupOption']
+export type AnnouncementScope = Schemas['AnnouncementScope']
+export type AnnouncementCreateRequest = Schemas['AnnouncementCreateRequest']
+export type AnnouncementView = Schemas['AnnouncementView']
+export type AnnouncementPage = Schemas['AnnouncementPage']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -547,6 +555,65 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
       body: { value },
     })
     if (!data) throw toApiError(error, '설정을 수정하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 알림 발송 로그·공지 (M5) ─── */
+
+export function fetchAdminNotifications(params: {
+  status?: NotificationDeliveryStatus
+  event?: string
+  email?: string
+  page?: number
+  size?: number
+} = {}): Promise<AdminNotificationPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/notifications', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '알림 발송 로그를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function resendAdminNotification(notificationId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/notifications/{notificationId}/resend', {
+      params: { path: { notificationId } },
+    })
+    if (!data) throw toApiError(error, '알림 재발송을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminGroups(params: { orgId?: number } = {}): Promise<AdminGroupOption[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/groups', { params: { query: params } })
+    if (!data) throw toApiError(error, '그룹 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAnnouncements(params: {
+  page?: number
+  size?: number
+} = {}): Promise<AnnouncementPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/announcements', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '공지 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createAnnouncement(
+  body: AnnouncementCreateRequest,
+): Promise<AnnouncementView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/announcements', { body })
+    if (!data) throw toApiError(error, '공지를 발송하지 못했습니다.')
     return data
   })
 }
