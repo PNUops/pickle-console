@@ -161,6 +161,18 @@ export const auditHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
 
+    // 계약: orgId 필터는 SYS_ADMIN 전용 — ORG_ADMIN이 다른 기관을 지정하면 404 (존재 비공개)
+    if (orgId && profile.role !== 'SYS_ADMIN' && Number(orgId) !== profile.orgId) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '요청한 리소스가 존재하지 않습니다.',
+        instance: '/api/v1/admin/audit',
+        code: 'RESOURCE_NOT_FOUND',
+      })
+    }
+
     const filtered = auditStore
       // ORG_ADMIN은 행위자가 자기 기관 소속인 행만 (계약)
       .filter((row) => profile.role === 'SYS_ADMIN' || row.actorOrgId === profile.orgId)

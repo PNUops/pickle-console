@@ -317,3 +317,25 @@ describe('VM 상세 — 사용 기간 만료 표면화', () => {
     expect(screen.queryByText(/^D[-+]/)).not.toBeInTheDocument()
   })
 })
+
+describe('VM 상세 — 만료 VM 시작 거부 (409 VM_EXPIRED)', () => {
+  test('만료 자동 중지 VM은 시작 시도 시 409 상세 메시지를 보여준다', async () => {
+    const user = userEvent.setup()
+    // 픽스처 46(expired-lab): STOPPED + expiryStoppedAt 설정 — 시작 버튼은 보이지만
+    // 계약상 기간 연장 전까지 409 VM_EXPIRED로 거부된다.
+    renderVm(46)
+
+    await screen.findByRole('heading', { name: 'expired-lab' })
+    await user.click(screen.getByRole('button', { name: '시작' }))
+    const dialog = await screen.findByRole('dialog', { name: 'VM 시작' })
+    await user.click(within(dialog).getByRole('button', { name: '시작' }))
+
+    expect(
+      await screen.findByText(
+        '사용 기간이 만료되어 시작할 수 없습니다. 연장이 필요하면 관리자에게 문의해 주세요.',
+      ),
+    ).toBeInTheDocument()
+    // 시작되지 않고 중지 상태 그대로다.
+    expect(screen.getByRole('button', { name: '시작' })).toBeInTheDocument()
+  })
+})

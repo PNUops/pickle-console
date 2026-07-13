@@ -71,6 +71,17 @@ export const announcementHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
     if (profile.role === 'ORG_ADMIN') {
+      // 계약: orgId 필터는 SYS_ADMIN 전용 — 다른 기관 지정 시 404 (존재 비공개)
+      if (orgId && Number(orgId) !== profile.orgId) {
+        return problemResponse({
+          type: 'about:blank',
+          title: '리소스를 찾을 수 없습니다',
+          status: 404,
+          detail: '요청한 리소스가 존재하지 않습니다.',
+          instance: '/api/v1/admin/groups',
+          code: 'RESOURCE_NOT_FOUND',
+        })
+      }
       return HttpResponse.json(groupOptionsByOrg[profile.orgId ?? 0] ?? [], { status: 200 })
     }
     const options = orgId
@@ -117,6 +128,23 @@ export const announcementHandlers: RequestHandler[] = [
         detail: '전체 공지는 시스템 관리자만 발송할 수 있습니다.',
         instance: '/api/v1/admin/announcements',
         code: 'ACCESS_DENIED',
+      })
+    }
+    // 계약: ORG 범위에서 ORG_ADMIN의 orgId는 생략 가능하나, 지정 시 자기 기관과 일치해야 한다 (불일치 422)
+    if (
+      body.scope === 'ORG' &&
+      profile.role === 'ORG_ADMIN' &&
+      body.orgId != null &&
+      body.orgId !== profile.orgId
+    ) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        instance: '/api/v1/admin/announcements',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'orgId', message: '자기 기관으로만 발송할 수 있습니다.' }],
       })
     }
     if (body.scope === 'GROUP' && body.groupId == null) {

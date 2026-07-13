@@ -709,6 +709,21 @@ export const vmHandlers: RequestHandler[] = [
         `STOPPED 상태의 VM만 시작할 수 있습니다. (현재 상태 ${vm.status})`,
       )
     }
+    // 계약(M5): 만료로 자동 정지되었거나 endDate가 지난 VM은 기간 연장 전까지 시작 거부.
+    if (
+      vm.expiryStoppedAt != null ||
+      (vm.endDate != null && vm.endDate < localDateStr(0))
+    ) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '사용 기간이 만료된 VM입니다',
+        status: 409,
+        detail:
+          '사용 기간이 만료되어 시작할 수 없습니다. 연장이 필요하면 관리자에게 문의해 주세요.',
+        instance: `/api/v1/vms/${vm.id}/start`,
+        code: 'VM_EXPIRED',
+      })
+    }
     vm.status = 'RUNNING'
     recordVmEvent(vm.id, {
       type: 'START',

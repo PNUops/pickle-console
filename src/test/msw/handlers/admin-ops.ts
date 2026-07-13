@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse } from './auth'
+import { ACCESS_TOKENS, problemResponse } from './auth'
 
 type Schemas = components['schemas']
 type AdminTaskView = Schemas['AdminTaskView']
@@ -378,9 +378,22 @@ export const adminOpsHandlers: RequestHandler[] = [
 
   /* ─── 대시보드 요약 ─── */
 
-  http.get('*/api/v1/admin/summary', () =>
-    HttpResponse.json(orgSummaryFixture, { status: 200 }),
-  ),
+  http.get('*/api/v1/admin/summary', ({ request }) => {
+    const url = new URL(request.url)
+    const orgId = url.searchParams.get('orgId')
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+    const profile = ACCESS_TOKENS[token]
+    // 계약: orgId는 SYS_ADMIN 드릴인 전용 — ORG_ADMIN이 다른 기관을 지정하면 404 (존재 비공개)
+    if (
+      orgId &&
+      profile &&
+      profile.role !== 'SYS_ADMIN' &&
+      Number(orgId) !== profile.orgId
+    ) {
+      return notFound()
+    }
+    return HttpResponse.json(orgSummaryFixture, { status: 200 })
+  }),
 
   http.get('*/api/v1/admin/system-summary', () =>
     HttpResponse.json(systemSummaryFixture, { status: 200 }),
