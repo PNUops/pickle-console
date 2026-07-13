@@ -8,6 +8,7 @@ import { groupHandlers, resetGroupFixtures } from './handlers/groups'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
+import { resetSettingFixtures, settingHandlers } from './handlers/settings'
 import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
 
@@ -22,6 +23,7 @@ export const handlers: RequestHandler[] = [
   ...adminHandlers,
   ...adminOpsHandlers,
   ...auditHandlers,
+  ...settingHandlers,
   ...notificationHandlers,
 ]
 
@@ -37,5 +39,6 @@ export function resetFixtures() {
   resetAdminFixtures()
   resetAdminOpsFixtures()
   resetAuditFixtures()
+  resetSettingFixtures()
   resetNotificationFixtures()
 }

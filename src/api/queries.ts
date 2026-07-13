@@ -65,6 +65,7 @@ export type AuditLogView = Schemas['AuditLogView']
 export type AuditLogPage = Schemas['AuditLogPage']
 export type ActivityEntry = Schemas['ActivityEntry']
 export type ActivityPage = Schemas['ActivityPage']
+export type SettingView = Schemas['SettingView']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -519,6 +520,27 @@ export function retryAdminTask(taskId: number): Promise<MessageResponse> {
       params: { path: { taskId } },
     })
     if (!data) throw toApiError(error, '작업 재시도를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 운영 설정 (M5, SYS_ADMIN) ─── */
+
+export function fetchSettings(): Promise<SettingView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/settings')
+    if (!data) throw toApiError(error, '운영 설정을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateSetting(key: string, value: unknown): Promise<SettingView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/settings/{key}', {
+      params: { path: { key } },
+      body: { value },
+    })
+    if (!data) throw toApiError(error, '설정을 수정하지 못했습니다.')
     return data
   })
 }

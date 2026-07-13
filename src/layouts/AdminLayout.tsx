@@ -20,6 +20,7 @@ export function AdminLayout() {
           { to: '/admin/nodes', label: '노드/용량' },
           { to: '/admin/orgs', label: '기관 관리' },
           { to: '/admin/tasks', label: '작업' },
+          { to: '/admin/settings', label: '플랫폼 설정' },
         ]
       : []),
   ]

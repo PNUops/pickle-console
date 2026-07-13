@@ -11,6 +11,7 @@ import { AdminExpiryPage } from './pages/AdminExpiryPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
 import { AdminRoutesPage } from './pages/AdminRoutesPage'
+import { AdminSettingsPage } from './pages/AdminSettingsPage'
 import { AdminTasksPage } from './pages/AdminTasksPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
@@ -79,6 +80,14 @@ function App() {
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route path="routes" element={<AdminRoutesPage />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />
+        <Route
+          path="settings"
+          element={
+            <RequireRole roles={['SYS_ADMIN']}>
+              <AdminSettingsPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="tasks"
           element={
