@@ -146,7 +146,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'auth.login_failed': '로그인 실패',
   'auth.logout': '로그아웃',
   'vm.delete': 'VM 삭제',
-  'settings.update': '설정 변경',
+  'setting.update': '설정 변경',
   'announcement.create': '공지 발송',
   'task.retry': '작업 재시도',
   'drift.resolve': '드리프트 해결',

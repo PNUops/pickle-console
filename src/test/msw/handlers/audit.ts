@@ -50,7 +50,7 @@ function initialAuditRows(): StoredAuditRow[] {
       actorEmail: 'sysadmin.lee@pusan.ac.kr',
       actorName: '이시스템',
       actorRole: 'SYS_ADMIN',
-      action: 'settings.update',
+      action: 'setting.update',
       targetType: 'setting',
       targetId: 'ssh_gateway_enabled',
       detail: null,
