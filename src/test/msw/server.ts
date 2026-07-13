@@ -1,6 +1,7 @@
 import { setupServer } from 'msw/node'
 import type { RequestHandler } from 'msw'
 import { adminHandlers, resetAdminFixtures } from './handlers/admin'
+import { adminOpsHandlers, resetAdminOpsFixtures } from './handlers/admin-ops'
 import { authHandlers } from './handlers/auth'
 import { groupHandlers, resetGroupFixtures } from './handlers/groups'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
@@ -18,6 +19,7 @@ export const handlers: RequestHandler[] = [
   ...vmHandlers,
   ...publishingHandlers,
   ...adminHandlers,
+  ...adminOpsHandlers,
   ...notificationHandlers,
 ]
 
@@ -31,5 +33,6 @@ export function resetFixtures() {
   resetVmFixtures()
   resetPublishingFixtures()
   resetAdminFixtures()
+  resetAdminOpsFixtures()
   resetNotificationFixtures()
 }

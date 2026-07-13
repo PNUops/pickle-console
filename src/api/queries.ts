@@ -57,6 +57,10 @@ export type NotificationView = Schemas['NotificationView']
 export type NotificationPage = Schemas['NotificationPage']
 export type UnreadCountResponse = Schemas['UnreadCountResponse']
 export type VmPeriodUpdateRequest = Schemas['VmPeriodUpdateRequest']
+export type AdminTaskView = Schemas['AdminTaskView']
+export type AdminTaskPage = Schemas['AdminTaskPage']
+export type ProvisioningTaskKind = Schemas['ProvisioningTaskKind']
+export type ProvisioningTaskStatus = Schemas['ProvisioningTaskStatus']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -485,6 +489,32 @@ export function resyncRoutes(): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/routes/resync')
     if (!data) throw toApiError(error, '라우트 재동기화를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 작업 큐 (M5, SYS_ADMIN) ─── */
+
+export function fetchAdminTasks(params: {
+  status?: ProvisioningTaskStatus
+  kind?: ProvisioningTaskKind
+  vmId?: number
+  page?: number
+  size?: number
+} = {}): Promise<AdminTaskPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/tasks', { params: { query: params } })
+    if (!data) throw toApiError(error, '작업 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function retryAdminTask(taskId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/tasks/{taskId}/retry', {
+      params: { path: { taskId } },
+    })
+    if (!data) throw toApiError(error, '작업 재시도를 접수하지 못했습니다.')
     return data
   })
 }
