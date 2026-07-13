@@ -203,14 +203,75 @@ function initialIpAllocations(): IpAllocationView[] {
   ]
 }
 
+/* ─── fixtures: 대시보드 요약 ─── */
+
+function initialOrgSummary(): Schemas['OrgDashboardSummary'] {
+  return {
+    pendingRequestCount: 2,
+    recentDecisions14d: { approvedCount: 5, rejectedCount: 1 },
+    vmCountsByStatus: { RUNNING: 6, STOPPED: 3, CREATING: 1, ERROR: 1, NEEDS_ADMIN: 1 },
+    resource: {
+      allocatedVcpu: 34,
+      allocatedMemoryMb: 51200,
+      allocatedDiskGb: 460,
+      capacityVcpu: 40,
+      capacityMemoryMb: 79872,
+      guidance: '여유가 충분합니다. 요청 스펙 그대로 승인해도 무리가 없습니다.',
+    },
+    topGroupsByVmCount: [
+      { groupId: 12, name: '캡스톤 3조', vmCount: 3 },
+      { groupId: 15, name: '알고리즘 스터디', vmCount: 2 },
+    ],
+    publishedServiceCount: 4,
+    expiringVmCount30d: 3,
+    attention: { failedTaskCount: 1, needsAdminVmCount: 1, expiredVmCount: 1 },
+  }
+}
+
+function initialSystemSummary(): Schemas['SystemDashboardSummary'] {
+  return {
+    nodes: [
+      {
+        id: 1,
+        name: 'pve1',
+        status: 'ACTIVE',
+        cpuOvercommitRatio: 0.35,
+        memoryAllocRatio: 0.26,
+        warn: false,
+      },
+      {
+        id: 2,
+        name: 'pve2',
+        status: 'MAINTENANCE',
+        cpuOvercommitRatio: 3.25,
+        memoryAllocRatio: 0.88,
+        warn: true,
+      },
+    ],
+    vmCountsByStatus: { RUNNING: 18, STOPPED: 7, CREATING: 1, ERROR: 1, NEEDS_ADMIN: 1 },
+    tasks: { runningCount: 1, retryingCount: 0, needsAdminCount: 1, failed24hCount: 1 },
+    notificationFailureCount: 1,
+    certExpiring30dCount: 1,
+    openDriftFindingCount: 2,
+    ipPools: [
+      { id: 1, name: 'pve1-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
+      { id: 2, name: 'pve2-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
+    ],
+  }
+}
+
 export let adminTaskStore: AdminTaskView[] = initialTasks()
 export let driftStore: DriftFindingView[] = initialDriftFindings()
 export let ipAllocationStore: IpAllocationView[] = initialIpAllocations()
+export let orgSummaryFixture: Schemas['OrgDashboardSummary'] = initialOrgSummary()
+export let systemSummaryFixture: Schemas['SystemDashboardSummary'] = initialSystemSummary()
 
 export function resetAdminOpsFixtures() {
   adminTaskStore = initialTasks()
   driftStore = initialDriftFindings()
   ipAllocationStore = initialIpAllocations()
+  orgSummaryFixture = initialOrgSummary()
+  systemSummaryFixture = initialSystemSummary()
 }
 
 const notFound = () =>
@@ -313,6 +374,16 @@ export const adminOpsHandlers: RequestHandler[] = [
       finding.resolutionNote = body.note ?? null
       return HttpResponse.json(finding, { status: 200 })
     },
+  ),
+
+  /* ─── 대시보드 요약 ─── */
+
+  http.get('*/api/v1/admin/summary', () =>
+    HttpResponse.json(orgSummaryFixture, { status: 200 }),
+  ),
+
+  http.get('*/api/v1/admin/system-summary', () =>
+    HttpResponse.json(systemSummaryFixture, { status: 200 }),
   ),
 
   /* ─── IP 할당 현황 ─── */

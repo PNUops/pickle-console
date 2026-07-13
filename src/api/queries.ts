@@ -80,6 +80,8 @@ export type AnnouncementScope = Schemas['AnnouncementScope']
 export type AnnouncementCreateRequest = Schemas['AnnouncementCreateRequest']
 export type AnnouncementView = Schemas['AnnouncementView']
 export type AnnouncementPage = Schemas['AnnouncementPage']
+export type OrgDashboardSummary = Schemas['OrgDashboardSummary']
+export type SystemDashboardSummary = Schemas['SystemDashboardSummary']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -555,6 +557,24 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
       body: { value },
     })
     if (!data) throw toApiError(error, '설정을 수정하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 대시보드 요약 (M5) ─── */
+
+export function fetchAdminSummary(params: { orgId?: number } = {}): Promise<OrgDashboardSummary> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/summary', { params: { query: params } })
+    if (!data) throw toApiError(error, '대시보드 요약을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchSystemSummary(): Promise<SystemDashboardSummary> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/system-summary')
+    if (!data) throw toApiError(error, '시스템 요약을 불러오지 못했습니다.')
     return data
   })
 }
