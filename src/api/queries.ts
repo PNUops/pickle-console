@@ -66,6 +66,12 @@ export type AuditLogPage = Schemas['AuditLogPage']
 export type ActivityEntry = Schemas['ActivityEntry']
 export type ActivityPage = Schemas['ActivityPage']
 export type SettingView = Schemas['SettingView']
+export type DriftFindingView = Schemas['DriftFindingView']
+export type DriftFindingPage = Schemas['DriftFindingPage']
+export type DriftFindingStatus = Schemas['DriftFindingStatus']
+export type IpAllocationView = Schemas['IpAllocationView']
+export type IpAllocationPage = Schemas['IpAllocationPage']
+export type IpAllocationStatus = Schemas['IpAllocationStatus']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -541,6 +547,52 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
       body: { value },
     })
     if (!data) throw toApiError(error, '설정을 수정하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 드리프트·IP 할당 (M5, SYS_ADMIN) ─── */
+
+export function fetchDriftFindings(params: {
+  status?: DriftFindingStatus
+  kind?: Schemas['DriftFindingKind']
+  page?: number
+  size?: number
+} = {}): Promise<DriftFindingPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/drift-findings', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '드리프트 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function resolveDriftFinding(
+  findingId: number,
+  note?: string,
+): Promise<DriftFindingView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/drift-findings/{findingId}/resolve', {
+      params: { path: { findingId } },
+      body: note ? { note } : {},
+    })
+    if (!data) throw toApiError(error, '드리프트를 해결 처리하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchIpAllocations(params: {
+  poolId?: number
+  status?: IpAllocationStatus
+  page?: number
+  size?: number
+} = {}): Promise<IpAllocationPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/ip-allocations', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, 'IP 할당 현황을 불러오지 못했습니다.')
     return data
   })
 }

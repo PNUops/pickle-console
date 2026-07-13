@@ -84,10 +84,133 @@ function initialTasks(): AdminTaskView[] {
   ]
 }
 
+/* ─── fixtures: 드리프트 발견 ─── */
+
+type DriftFindingView = Schemas['DriftFindingView']
+
+function initialDriftFindings(): DriftFindingView[] {
+  return [
+    {
+      id: 9,
+      kind: 'MISSING_IN_PROXMOX',
+      vmId: 59,
+      proxmoxVmid: 5059,
+      nodeName: 'pve1',
+      summary: 'DB에 등록된 VM(broken-vm, vmid 5059)을 Proxmox에서 찾을 수 없습니다.',
+      detail: null,
+      status: 'OPEN',
+      firstSeenAt: '2026-07-12T03:00:00+09:00',
+      lastSeenAt: '2026-07-13T03:00:00+09:00',
+      resolvedAt: null,
+      resolvedById: null,
+      resolvedByEmail: null,
+      resolutionNote: null,
+    },
+    {
+      id: 8,
+      kind: 'UNMANAGED_GUEST',
+      vmId: null,
+      proxmoxVmid: 9001,
+      nodeName: 'pve1',
+      summary: 'Proxmox에 플랫폼이 모르는 게스트(vmid 9001)가 있습니다.',
+      detail: null,
+      status: 'OPEN',
+      firstSeenAt: '2026-07-11T03:00:00+09:00',
+      lastSeenAt: '2026-07-13T03:00:00+09:00',
+      resolvedAt: null,
+      resolvedById: null,
+      resolvedByEmail: null,
+      resolutionNote: null,
+    },
+    {
+      id: 7,
+      kind: 'SPEC_MISMATCH',
+      vmId: 56,
+      proxmoxVmid: 5056,
+      nodeName: 'pve1',
+      summary: 'algo-judge의 메모리 설정이 DB(1024MiB)와 실제(2048MiB) 사이에 다릅니다.',
+      detail: null,
+      status: 'RESOLVED',
+      firstSeenAt: '2026-07-08T03:00:00+09:00',
+      lastSeenAt: '2026-07-09T03:00:00+09:00',
+      resolvedAt: '2026-07-09T10:00:00+09:00',
+      resolvedById: 5,
+      resolvedByEmail: 'sysadmin.lee@pusan.ac.kr',
+      resolutionNote: '실제 스펙을 DB 기준으로 되돌렸습니다.',
+    },
+    {
+      id: 6,
+      kind: 'UNMANAGED_GUEST',
+      vmId: null,
+      proxmoxVmid: 9000,
+      nodeName: 'pve1',
+      summary: 'Proxmox에 플랫폼이 모르는 게스트(vmid 9000)가 있습니다.',
+      detail: null,
+      status: 'RESOLVED',
+      firstSeenAt: '2026-07-05T03:00:00+09:00',
+      lastSeenAt: '2026-07-06T03:00:00+09:00',
+      // 조정자가 소멸을 확인해 자동 해결 (resolvedBy* = null)
+      resolvedAt: '2026-07-07T03:00:00+09:00',
+      resolvedById: null,
+      resolvedByEmail: null,
+      resolutionNote: null,
+    },
+  ]
+}
+
+/* ─── fixtures: IP 할당 현황 ─── */
+
+type IpAllocationView = Schemas['IpAllocationView']
+
+function initialIpAllocations(): IpAllocationView[] {
+  return [
+    {
+      id: 205,
+      poolId: 1,
+      poolName: 'pve1-pool',
+      ip: '172.29.0.11',
+      vmId: 56,
+      vmName: 'algo-judge',
+      hostname: 'algo-judge',
+      status: 'ALLOCATED',
+      allocatedAt: '2026-06-20T10:01:00+09:00',
+      releasedAt: null,
+    },
+    {
+      id: 204,
+      poolId: 1,
+      poolName: 'pve1-pool',
+      ip: '172.29.0.10',
+      vmId: 55,
+      vmName: 'capstone-team3-api',
+      hostname: 'capstone-team3-api',
+      status: 'ALLOCATED',
+      allocatedAt: '2026-07-08T14:03:20+09:00',
+      releasedAt: null,
+    },
+    {
+      id: 201,
+      poolId: 1,
+      poolName: 'pve1-pool',
+      ip: '172.29.0.5',
+      vmId: 60,
+      vmName: 'retiring-vm',
+      hostname: 'retiring-vm',
+      status: 'RELEASED',
+      allocatedAt: '2026-05-01T10:00:00+09:00',
+      releasedAt: '2026-07-08T14:20:00+09:00',
+    },
+  ]
+}
+
 export let adminTaskStore: AdminTaskView[] = initialTasks()
+export let driftStore: DriftFindingView[] = initialDriftFindings()
+export let ipAllocationStore: IpAllocationView[] = initialIpAllocations()
 
 export function resetAdminOpsFixtures() {
   adminTaskStore = initialTasks()
+  driftStore = initialDriftFindings()
+  ipAllocationStore = initialIpAllocations()
 }
 
 const notFound = () =>
@@ -142,5 +265,75 @@ export const adminOpsHandlers: RequestHandler[] = [
       { message: '작업 재시도를 접수했습니다. 잠시 후 작업 상태가 갱신됩니다.' },
       { status: 202 },
     )
+  }),
+
+  /* ─── 드리프트 리포트 ─── */
+
+  http.get('*/api/v1/admin/drift-findings', ({ request }) => {
+    const url = new URL(request.url)
+    // 계약: status 생략 시 OPEN으로 동작
+    const status = url.searchParams.get('status') ?? 'OPEN'
+    const kind = url.searchParams.get('kind')
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '20')
+    const filtered = driftStore
+      .filter((f) => f.status === status)
+      .filter((f) => !kind || f.kind === kind)
+      .sort((a, b) => b.id - a.id)
+    const body: Schemas['DriftFindingPage'] = {
+      content: filtered.slice(page * size, (page + 1) * size),
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    }
+    return HttpResponse.json(body, { status: 200 })
+  }),
+
+  http.post(
+    '*/api/v1/admin/drift-findings/:findingId/resolve',
+    async ({ params, request }) => {
+      const finding = driftStore.find((f) => f.id === Number(params.findingId))
+      if (!finding) return notFound()
+      if (finding.status !== 'OPEN') {
+        return problemResponse({
+          type: 'about:blank',
+          title: '이미 해결된 발견입니다',
+          status: 409,
+          detail: '이 드리프트 발견은 이미 해결 처리되었습니다.',
+          instance: `/api/v1/admin/drift-findings/${finding.id}/resolve`,
+          code: 'DRIFT_FINDING_ALREADY_RESOLVED',
+        })
+      }
+      const body = (await request.json().catch(() => ({}))) as { note?: string }
+      finding.status = 'RESOLVED'
+      finding.resolvedAt = new Date().toISOString()
+      finding.resolvedById = 5
+      finding.resolvedByEmail = 'sysadmin.lee@pusan.ac.kr'
+      finding.resolutionNote = body.note ?? null
+      return HttpResponse.json(finding, { status: 200 })
+    },
+  ),
+
+  /* ─── IP 할당 현황 ─── */
+
+  http.get('*/api/v1/admin/ip-allocations', ({ request }) => {
+    const url = new URL(request.url)
+    const poolId = url.searchParams.get('poolId')
+    const status = url.searchParams.get('status')
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '20')
+    const filtered = ipAllocationStore
+      .filter((a) => !poolId || a.poolId === Number(poolId))
+      .filter((a) => !status || a.status === status)
+      .sort((a, b) => b.id - a.id)
+    const body: Schemas['IpAllocationPage'] = {
+      content: filtered.slice(page * size, (page + 1) * size),
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    }
+    return HttpResponse.json(body, { status: 200 })
   }),
 ]
