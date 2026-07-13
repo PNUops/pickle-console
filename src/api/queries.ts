@@ -61,6 +61,10 @@ export type AdminTaskView = Schemas['AdminTaskView']
 export type AdminTaskPage = Schemas['AdminTaskPage']
 export type ProvisioningTaskKind = Schemas['ProvisioningTaskKind']
 export type ProvisioningTaskStatus = Schemas['ProvisioningTaskStatus']
+export type AuditLogView = Schemas['AuditLogView']
+export type AuditLogPage = Schemas['AuditLogPage']
+export type ActivityEntry = Schemas['ActivityEntry']
+export type ActivityPage = Schemas['ActivityPage']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -515,6 +519,40 @@ export function retryAdminTask(taskId: number): Promise<MessageResponse> {
       params: { path: { taskId } },
     })
     if (!data) throw toApiError(error, '작업 재시도를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 감사 로그·내 활동 (M5) ─── */
+
+export function fetchAuditLogs(params: {
+  actorEmail?: string
+  action?: string
+  targetType?: string
+  targetId?: string
+  from?: string
+  to?: string
+  orgId?: number
+  page?: number
+  size?: number
+} = {}): Promise<AuditLogPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/audit', { params: { query: params } })
+    if (!data) throw toApiError(error, '감사 로그를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchMyActivity(params: {
+  action?: string
+  from?: string
+  to?: string
+  page?: number
+  size?: number
+} = {}): Promise<ActivityPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/me/activity', { params: { query: params } })
+    if (!data) throw toApiError(error, '활동 이력을 불러오지 못했습니다.')
     return data
   })
 }

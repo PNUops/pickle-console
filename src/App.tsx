@@ -3,6 +3,7 @@ import { RequireRole } from './auth/RequireRole'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
+import { AdminAuditPage } from './pages/AdminAuditPage'
 import { AdminCertificatesPage } from './pages/AdminCertificatesPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminDomainsPage } from './pages/AdminDomainsPage'
@@ -19,6 +20,7 @@ import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
+import { MyActivityPage } from './pages/MyActivityPage'
 import { NewRequestPage } from './pages/NewRequestPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -56,6 +58,7 @@ function App() {
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="activity" element={<MyActivityPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route
@@ -72,6 +75,7 @@ function App() {
         <Route path="vms" element={<AdminVmsPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="audit" element={<AdminAuditPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route path="routes" element={<AdminRoutesPage />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />

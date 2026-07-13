@@ -7,6 +7,7 @@ const items: NavItem[] = [
   { to: '/console/requests', label: '내 신청', end: true },
   { to: '/console/vms', label: '내 VM' },
   { to: '/console/notifications', label: '알림함' },
+  { to: '/console/activity', label: '내 활동' },
 ]
 
 export function ConsoleLayout() {
