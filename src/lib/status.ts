@@ -29,7 +29,7 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   STOP: '종료',
   REBOOT: '재부팅',
   FORCE_STOP: '강제 종료',
-  DELETE: '삭제',
+  DELETE: '파기 완료',
   SELF_DELETE: '삭제 접수',
   SCHEDULE_DELETE: '일반 삭제 접수',
   CANCEL_SCHEDULED_DELETE: '삭제 취소',

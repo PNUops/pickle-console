@@ -2285,7 +2285,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             /**
-             * @description 이벤트 종류 (삭제 접수는 종류별로 구분 — SELF_DELETE는 본인 삭제 접수, SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 일반 삭제 접수·취소, FORCE_DELETE는 강제 삭제 접수; **파기 완료는 공통 DELETE** — 2026-07-16 이전의 DELETE 행은 접수·완료 의미 혼재(백필 없음). PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 종료(actorId null = 시스템) — 둘 다 M5)
+             * @description 이벤트 종류 (삭제 접수는 종류별로 구분 — SELF_DELETE는 본인 삭제 접수, SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 일반 삭제 접수·취소, FORCE_DELETE는 강제 삭제 접수; **파기 완료는 공통 DELETE**. PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 종료(actorId null = 시스템) — 둘 다 M5)
              * @enum {string}
              */
             type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "FORCE_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH" | "PERIOD_UPDATE" | "EXPIRE_STOP";
@@ -2881,7 +2881,7 @@ export interface components {
         ActivityEntry: {
             /** Format: int64 */
             id: number;
-            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.delete`) */
+            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.self_delete`) */
             action: string;
             /** @description 대상 리소스 종류 (예 `vm`, `group` — 없으면 null) */
             targetType?: string | null;
@@ -2917,7 +2917,7 @@ export interface components {
             actorName?: string | null;
             /** @description 행위 시점의 전역 역할 문자열 (시스템 작업은 null). 통상 USER/ORG_ADMIN/SYS_ADMIN이지만 인프라 데몬 감사 행은 `SSHGW` 등 UserRole 밖의 값이 올 수 있어 열린 문자열로 정의합니다 — 콘솔은 미지 값을 원문 표기. */
             actorRole?: string | null;
-            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `vm.delete`, `setting.update`) */
+            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `vm.self_delete`, `setting.update`) */
             action: string;
             /** @description 대상 리소스 종류 (없으면 null) */
             targetType?: string | null;
@@ -3785,7 +3785,7 @@ export interface operations {
     listMyActivity: {
         parameters: {
             query?: {
-                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.delete`) */
+                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.self_delete`) */
                 action?: string;
                 /** @description 조회 시작일 (KST, 해당 일 00:00부터) */
                 from?: string;
@@ -3822,7 +3822,7 @@ export interface operations {
                      *         },
                      *         {
                      *           "id": 500,
-                     *           "action": "vm.delete",
+                     *           "action": "vm.self_delete",
                      *           "targetType": "vm",
                      *           "targetId": "55",
                      *           "detail": {
@@ -6884,7 +6884,7 @@ export interface operations {
             query?: {
                 /** @description 행위자 이메일 필터 */
                 actorEmail?: string;
-                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `vm.delete`, `setting.update`) */
+                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `vm.self_delete`, `setting.update`) */
                 action?: string;
                 /** @description 대상 리소스 종류 필터 (예 `vm`, `group`, `setting`) */
                 targetType?: string;
