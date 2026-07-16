@@ -352,16 +352,6 @@ export function fetchDomains(params: {
   })
 }
 
-export function fetchDomain(domainId: number): Promise<DomainDetail> {
-  return guardNetwork(async () => {
-    const { data, error } = await api.GET('/domains/{domainId}', {
-      params: { path: { domainId } },
-    })
-    if (!data) throw toApiError(error, '도메인 정보를 불러오지 못했습니다.')
-    return data
-  })
-}
-
 export function deleteDomain(domainId: number): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/domains/{domainId}', {

@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
 import { USER_ROLE_LABELS } from '../lib/labels'
 
-const ROLE_LABELS: Record<string, string> = USER_ROLE_LABELS
-
 export function UserMenu() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -51,7 +49,7 @@ export function UserMenu() {
         <span className="hidden text-left sm:block">
           <span className="block leading-tight font-medium text-neutral-900">{user.name}</span>
           <span className="block text-xs leading-tight text-neutral-500">
-            {ROLE_LABELS[user.role] ?? user.role}
+            {USER_ROLE_LABELS[user.role]}
           </span>
         </span>
       </button>
