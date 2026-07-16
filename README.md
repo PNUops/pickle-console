@@ -1,7 +1,7 @@
 # pickle-console
 
 Frontend of Pickle (부산대학교 클라우드 플랫폼): public landing page and the
-student / org-admin / sys-admin console. React 19 + Vite + TypeScript.
+user / org-admin / sys-admin console. React 19 + Vite + TypeScript.
 All user-facing text is Korean.
 
 Design documents live in the `pickle-docs` repository (`docs/plan/`).
