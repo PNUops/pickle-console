@@ -42,7 +42,7 @@ export function PublicLayout() {
       </main>
       <footer className="border-t border-neutral-200 bg-white">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 text-sm text-neutral-500 sm:px-6">
-          피클 — 부산대학교 학생 클라우드 플랫폼
+          피클 — 부산대학교 클라우드 플랫폼
         </div>
       </footer>
     </div>

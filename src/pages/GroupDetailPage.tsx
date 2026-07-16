@@ -52,7 +52,7 @@ export function GroupDetailPage() {
   }
 
   const data = group.data
-  // 계약 v0.3.x부터 서버가 내 역할을 직접 내려준다 (멤버 목록 스캔 불필요).
+  // 계약 v0.3.x부터 서버가 내 역할을 직접 내려준다 (구성원 목록 스캔 불필요).
   const myRole = data.myRole
 
   return (
@@ -217,7 +217,7 @@ function MembersSection({
       const { error, response } = await api.DELETE('/groups/{groupId}/members/{userId}', {
         params: { path: { groupId: group.id, userId: member.userId } },
       })
-      if (!response.ok) throw toApiError(error, '멤버를 제거하지 못했습니다.')
+      if (!response.ok) throw toApiError(error, '구성원을 제거하지 못했습니다.')
       return member
     },
     onSuccess: async (member) => {
@@ -233,7 +233,7 @@ function MembersSection({
     onError: (err) => {
       setRemoveTarget(null)
       setLeaveOpen(false)
-      setActionError(toApiError(err, '멤버를 제거하지 못했습니다.').message)
+      setActionError(toApiError(err, '구성원을 제거하지 못했습니다.').message)
     },
   })
 
@@ -250,7 +250,7 @@ function MembersSection({
   return (
     <Card>
       <CardHeader className="flex items-center justify-between">
-        <CardTitle>멤버 ({group.members.length}명)</CardTitle>
+        <CardTitle>구성원 ({group.members.length}명)</CardTitle>
         {!isPersonal && myRole && (
           <Button variant="secondary" size="sm" onClick={() => setLeaveOpen(true)}>
             그룹 나가기
@@ -260,7 +260,7 @@ function MembersSection({
       <CardContent className="space-y-4">
         {isPersonal && (
           <Alert variant="info">
-            개인 그룹은 회원 가입 시 자동으로 생성되는 그룹으로, 멤버를 추가하거나 역할을
+            개인 그룹은 회원 가입 시 자동으로 생성되는 그룹으로, 구성원을 추가하거나 역할을
             변경할 수 없습니다.
           </Alert>
         )}
@@ -340,7 +340,7 @@ function MembersSection({
       <Modal
         open={removeTarget !== null}
         onClose={() => setRemoveTarget(null)}
-        title="멤버 제거"
+        title="구성원 제거"
         footer={
           <>
             <Button variant="secondary" onClick={() => setRemoveTarget(null)}>
@@ -404,7 +404,7 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
         params: { path: { groupId } },
         body: { email, role },
       })
-      if (!data) throw toApiError(error, '멤버를 추가하지 못했습니다.')
+      if (!data) throw toApiError(error, '구성원을 추가하지 못했습니다.')
       return data
     },
     onSuccess: () => {
@@ -412,7 +412,7 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
       setRole('MEMBER')
       onAdded()
     },
-    onError: (err) => setError(toApiError(err, '멤버를 추가하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '구성원을 추가하지 못했습니다.').message),
   })
 
   const submit = (event: FormEvent) => {
@@ -427,7 +427,7 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-lg bg-neutral-50 p-4" noValidate>
-      <h3 className="text-sm font-semibold text-neutral-800">멤버 추가</h3>
+      <h3 className="text-sm font-semibold text-neutral-800">구성원 추가</h3>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <FormField label="이메일" required className="flex-1">
@@ -443,9 +443,9 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
             value={role}
             onChange={(event) => setRole(event.target.value as GroupMemberRole)}
           >
-            <option value="MANAGER">관리자</option>
-            <option value="MEMBER">멤버</option>
-            <option value="VIEWER">뷰어</option>
+            <option value="MANAGER">{GROUP_ROLE_LABELS.MANAGER}</option>
+            <option value="MEMBER">{GROUP_ROLE_LABELS.MEMBER}</option>
+            <option value="VIEWER">{GROUP_ROLE_LABELS.VIEWER}</option>
           </Select>
         </FormField>
         <Button type="submit" loading={add.isPending}>
@@ -505,7 +505,7 @@ function OwnershipTransferModal({
       <div className="space-y-4">
         <p className="text-sm text-neutral-600">
           정말 소유권을 이전하시겠습니까? {target?.name} 님이 새 소유자(OWNER)가 되고,
-          회원님은 관리자(MANAGER)로 변경됩니다. 이 작업은 새 소유자만 되돌릴 수 있습니다.
+          회원님은 편집자(MANAGER)로 변경됩니다. 이 작업은 새 소유자만 되돌릴 수 있습니다.
         </p>
         <FormField
           label="확인 이메일"

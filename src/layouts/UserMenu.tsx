@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
+import { USER_ROLE_LABELS } from '../lib/labels'
 
-const ROLE_LABELS: Record<string, string> = {
-  STUDENT: '학생',
-  ORG_ADMIN: '기관 관리자',
-  SYS_ADMIN: '시스템 관리자',
-}
+const ROLE_LABELS: Record<string, string> = USER_ROLE_LABELS
 
 export function UserMenu() {
   const { user, logout } = useAuth()

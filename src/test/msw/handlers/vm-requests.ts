@@ -54,7 +54,7 @@ function initialRequests(): VmRequestDetail[] {
         reviewerId: 3,
         reviewerName: '관리자김',
         decision: 'APPROVE',
-        comment: '요청 스펙 그대로 승인합니다.',
+        comment: '요청 사양 그대로 승인합니다.',
         grantedVcpu: 2,
         grantedMemoryMb: 2048,
         grantedDiskGb: 20,

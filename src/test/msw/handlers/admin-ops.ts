@@ -136,7 +136,7 @@ function initialDriftFindings(): DriftFindingView[] {
       resolvedAt: '2026-07-09T10:00:00+09:00',
       resolvedById: 5,
       resolvedByEmail: 'sysadmin.lee@pusan.ac.kr',
-      resolutionNote: '실제 스펙을 DB 기준으로 되돌렸습니다.',
+      resolutionNote: '실제 사양을 DB 기준으로 되돌렸습니다.',
     },
     {
       id: 6,
@@ -216,7 +216,7 @@ function initialOrgSummary(): Schemas['OrgDashboardSummary'] {
       allocatedDiskGb: 460,
       capacityVcpu: 40,
       capacityMemoryMb: 79872,
-      guidance: '여유가 충분합니다. 요청 스펙 그대로 승인해도 무리가 없습니다.',
+      guidance: '여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다.',
     },
     topGroupsByVmCount: [
       { groupId: 12, name: '캡스톤 3조', vmCount: 3 },

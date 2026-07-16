@@ -33,7 +33,7 @@ describe('VM 공개 — 허가·권한 게이트', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     const card = await publishCard()
     expect(
-      await within(card).findByText(/공개는 그룹의 소유자·관리자만/),
+      await within(card).findByText(/공개는 그룹의 소유자·편집자만/),
     ).toBeInTheDocument()
     expect(within(card).queryByRole('button', { name: 'HTTP 서비스 공개' })).not.toBeInTheDocument()
     // 플랫폼 서브도메인 자유 입력 필드는 존재하지 않는다.

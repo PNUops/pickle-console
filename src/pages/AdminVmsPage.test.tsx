@@ -55,13 +55,13 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByRole('button', { name: '삭제 예약' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '삭제 취소' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '긴급 삭제' })).not.toBeInTheDocument()
   })
 })
 
-describe('관리자 VM 삭제 예약', () => {
+describe('관리자 VM 일반 삭제 접수', () => {
   test('최소 통보 기간 미만 날짜는 422 필드 에러로 표시되고, 유효하면 접수된다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
@@ -73,17 +73,17 @@ describe('관리자 VM 삭제 예약', () => {
     // 통보 기간(7일) 미만의 날짜 → 서버 422 → scheduledFor 필드 에러
     fireEvent.change(dateInput, { target: { value: '2020-01-01' } })
     await user.type(reasonInput, '사용 종료일이 지난 VM 정리')
-    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
+    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
     expect(
       await screen.findByText('삭제 예정일은 최소 통보 기간(7일) 이후여야 합니다.'),
     ).toBeInTheDocument()
 
     // 유효한 날짜로 다시 제출 → 접수 안내
     fireEvent.change(dateInput, { target: { value: '2099-01-01' } })
-    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
+    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
     expect(
       await screen.findByText(
-        '삭제 예약을 접수했습니다. 이용자에게 사유가 포함된 통보 메일이 발송됩니다.',
+        '일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
       ),
     ).toBeInTheDocument()
   })
@@ -96,13 +96,13 @@ describe('관리자 VM 삭제 예약', () => {
     fireEvent.change(screen.getByLabelText(/파기 예정일/), {
       target: { value: '2099-01-01' },
     })
-    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
+    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
     expect(await screen.findByText('삭제 사유를 입력해 주세요.')).toBeInTheDocument()
   })
 })
 
 describe('관리자 삭제 취소', () => {
-  test('셀프 삭제 유예 중 VM을 취소하면 중지됨으로 남는다는 안내를 보여준다', async () => {
+  test('본인 삭제 유예 중 VM을 취소하면 중지됨으로 남는다는 안내를 보여준다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 

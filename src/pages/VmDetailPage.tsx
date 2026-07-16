@@ -44,7 +44,11 @@ import {
   VmStatusBadge,
 } from '../components/ui'
 import { formatDateTime, formatDday, formatRelative, formatSpec } from '../lib/format'
-import { PROVISIONING_KIND_LABELS, VM_EVENT_LABELS } from '../lib/status'
+import {
+  DELETION_BANNER_TITLES,
+  PROVISIONING_KIND_LABELS,
+  VM_EVENT_LABELS,
+} from '../lib/status'
 import { VmPublishSection } from '../components/VmPublishSection'
 
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
@@ -250,9 +254,9 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     label: '종료',
     allowed: (status) => status === 'RUNNING',
     run: shutdownVm,
-    confirmTitle: 'VM 정상 종료',
+    confirmTitle: 'VM 종료',
     confirmBody:
-      'VM에 정상 종료(ACPI) 신호를 보냅니다. 게스트 OS가 응답하지 않으면 종료가 실패할 수 있으며, 그 경우 강제 종료를 이용해야 합니다.',
+      'VM에 종료(ACPI) 신호를 보냅니다. 게스트 OS가 응답하지 않으면 종료가 실패할 수 있으며, 그 경우 강제 종료를 이용해야 합니다.',
   },
   reboot: {
     label: '재부팅',
@@ -267,7 +271,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     run: forceStopVm,
     confirmTitle: 'VM 강제 종료',
     confirmBody:
-      '전원 차단에 해당하는 강제 종료를 수행합니다. 정상 종료가 응답하지 않을 때만 사용하세요.',
+      '전원 차단에 해당하는 강제 종료를 수행합니다. 종료가 응답하지 않을 때만 사용하세요.',
     warning:
       '디스크 쓰기 중 강제 종료하면 파일 시스템과 데이터가 손상될 수 있습니다.',
     danger: true,
@@ -523,13 +527,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   )
 }
 
-/* ─── 삭제 예정 배너 (학생 화면 — 취소 버튼 없음, 관리자 문의 안내) ─── */
-
-const DELETION_BANNER_TITLES: Record<VmDeletion['kind'], string> = {
-  SELF: '삭제가 접수된 VM입니다',
-  ADMIN: '관리자가 삭제를 예약한 VM입니다',
-  EMERGENCY: '긴급 삭제가 접수된 VM입니다',
-}
+/* ─── 삭제 예정 배너 (사용자 화면 — 취소 버튼 없음, 관리자 문의 안내) ─── */
 
 function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
   const scheduled = `${formatDateTime(deletion.scheduledFor)} (${formatRelative(deletion.scheduledFor)})`
@@ -543,7 +541,7 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
         )}
         {deletion.reason && <p>사유: {deletion.reason}</p>}
         <p>
-          삭제된 VM의 데이터는 파기 후 복구할 수 없습니다. 복원이 필요하면 관리자에게
+          삭제된 VM의 데이터는 파기 후 되돌릴 수 없습니다. 복구가 필요하면 관리자에게
           문의하세요.
         </p>
       </div>
@@ -551,7 +549,7 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
   )
 }
 
-/* ─── 삭제 (유예 후 파기 — 학생 취소 불가) ─── */
+/* ─── 삭제 (유예 후 파기 — 사용자 취소 불가) ─── */
 
 /** 계약상 DELETE가 허용되는 상태 (409 조건과 정합). */
 const DELETABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING', 'ERROR']
@@ -592,7 +590,7 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
             <p className="text-sm text-neutral-600">
               {isErrorVm
                 ? '생성에 실패한 VM입니다. 파기할 실체가 없으므로 삭제만 가능하며, 접수 즉시 삭제됩니다.'
-                : '삭제를 접수하면 VM이 종료되고 유예 기간이 지난 뒤 영구 파기됩니다. 삭제 접수 후에는 직접 취소할 수 없으며, 복원이 필요하면 관리자에게 문의해야 합니다.'}
+                : '삭제를 접수하면 VM이 종료되고 유예 기간이 지난 뒤 영구 파기됩니다. 삭제 접수 후에는 직접 취소할 수 없으며, 복구가 필요하면 관리자에게 문의해야 합니다.'}
             </p>
             <Button variant="danger" onClick={() => setOpen(true)}>
               VM 삭제
@@ -607,13 +605,13 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
               onConfirm={() => remove.mutate()}
             >
               <Alert variant="danger" title="백업 책임 안내">
-                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 이용자
+                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
                 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
               </Alert>
               <p className="text-sm text-neutral-600">
                 {isErrorVm
                   ? '생성 실패 상태이므로 접수 즉시 삭제됩니다.'
-                  : '삭제 접수 후에는 취소할 수 없습니다. 유예 기간 중 복원이 필요하면 관리자에게 문의하세요.'}
+                  : '삭제 접수 후에는 취소할 수 없습니다. 유예 기간 중 복구가 필요하면 관리자에게 문의하세요.'}
               </p>
             </ConfirmNameModal>
           </>

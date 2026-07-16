@@ -336,7 +336,7 @@ export function NewRequestPage() {
             <>
               {eligibleGroups.length === 0 && (
                 <Alert variant="warning">
-                  VM을 신청할 수 있는 그룹이 없습니다. 그룹의 소유자 또는 관리자만 신청할 수
+                  VM을 신청할 수 있는 그룹이 없습니다. 그룹의 소유자 또는 편집자만 신청할 수
                   있습니다.{' '}
                   <Link to="/console/groups" className="font-medium underline">
                     내 그룹에서 그룹을 만들어 주세요.
@@ -347,7 +347,7 @@ export function NewRequestPage() {
                 label="신청 그룹"
                 required
                 error={errors.groupId}
-                description="VM은 그룹 명의로 만들어집니다. 소유자·관리자인 그룹만 선택할 수 있습니다."
+                description="VM은 그룹 명의로 만들어집니다. 소유자·편집자인 그룹만 선택할 수 있습니다."
               >
                 <Select
                   value={state.groupId ?? ''}
@@ -619,7 +619,7 @@ export function NewRequestPage() {
                 templateName={selectedTemplate?.displayName ?? String(state.templateId)}
               />
               <Alert variant="warning" title="백업 책임 안내">
-                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 이용자
+                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
                 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
               </Alert>
             </>

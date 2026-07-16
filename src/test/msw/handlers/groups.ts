@@ -90,7 +90,7 @@ function toSummary(record: GroupRecord): Schemas['GroupSummary'] {
 }
 
 function toDetail(record: GroupRecord): Schemas['GroupDetail'] {
-  // myRole은 서버처럼 현재 멤버 상태에서 계산한다 (역할 변경/OWNER 이전 반영).
+  // myRole은 서버처럼 현재 구성원 상태에서 계산한다 (역할 변경/OWNER 이전 반영).
   const myRole =
     record.members.find((m) => m.userId === studentUser.id)?.role ??
     record.detail.myRole
@@ -176,9 +176,9 @@ export const groupHandlers: RequestHandler[] = [
     if (record.members.some((m) => m.userId === user.userId)) {
       return problemResponse({
         type: 'about:blank',
-        title: '이미 그룹 멤버입니다',
+        title: '이미 그룹 구성원입니다',
         status: 409,
-        detail: '해당 사용자는 이미 이 그룹의 멤버입니다.',
+        detail: '해당 사용자는 이미 이 그룹의 구성원입니다.',
         code: 'GROUP_MEMBER_ALREADY_EXISTS',
       })
     }
@@ -212,7 +212,7 @@ export const groupHandlers: RequestHandler[] = [
         type: 'about:blank',
         title: '유일한 소유자는 나갈 수 없습니다',
         status: 409,
-        detail: '소유권을 다른 멤버에게 이전한 뒤 다시 시도해 주세요.',
+        detail: '소유권을 다른 구성원에게 이전한 뒤 다시 시도해 주세요.',
         code: 'GROUP_SOLE_OWNER_REMOVAL',
       })
     }

@@ -56,7 +56,7 @@ export function GroupsPage() {
                 <TH>이름</TH>
                 <TH>종류</TH>
                 <TH>내 역할</TH>
-                <TH>멤버</TH>
+                <TH>구성원</TH>
                 <TH>설명</TH>
               </TR>
             </THead>

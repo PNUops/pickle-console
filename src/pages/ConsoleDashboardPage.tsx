@@ -11,7 +11,7 @@ const SHORTCUTS = [
   {
     to: '/console/groups',
     title: '내 그룹',
-    description: '팀·프로젝트 그룹을 만들고 멤버를 관리합니다.',
+    description: '팀·프로젝트 그룹을 만들고 구성원을 관리합니다.',
   },
   {
     to: '/console/requests',

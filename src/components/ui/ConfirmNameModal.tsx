@@ -25,7 +25,7 @@ export interface ConfirmNameModalProps {
 }
 
 /**
- * 파괴적 작업(삭제 등) 확인 모달. 대상 이름을 정확히 입력해야만
+ * 위험 작업(삭제 등) 확인 모달. 대상 이름을 정확히 입력해야만
  * 확인 버튼이 활성화된다 (오조작 방지 — 계약의 confirmName 패턴과 동일).
  */
 export function ConfirmNameModal({

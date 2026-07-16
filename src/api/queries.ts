@@ -299,7 +299,7 @@ export function fetchVmEvents(
   })
 }
 
-/* ─── HTTP 공개·도메인 (M4A, 학생) ─── */
+/* ─── HTTP 공개·도메인 (M4A, 사용자) ─── */
 
 export function publishVm(
   vmId: number,
@@ -432,7 +432,7 @@ export function scheduleVmDeletion(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '삭제 예약을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '일반 삭제를 접수하지 못했습니다.')
     return data
   })
 }
@@ -442,7 +442,7 @@ export function cancelScheduledVmDeletion(vmId: number): Promise<MessageResponse
     const { data, error } = await api.POST('/admin/vms/{vmId}/cancel-scheduled-delete', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '삭제 예약을 취소하지 못했습니다.')
+    if (!data) throw toApiError(error, '접수된 삭제를 취소하지 못했습니다.')
     return data
   })
 }

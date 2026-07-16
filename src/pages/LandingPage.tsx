@@ -41,7 +41,7 @@ export function LandingPage() {
         <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold tracking-wide text-primary-700">
-              부산대학교 학생 클라우드 플랫폼
+              부산대학교 클라우드 플랫폼
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl">
               수업과 프로젝트를 위한

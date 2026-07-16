@@ -481,7 +481,7 @@ function DecisionSection({
                 value={approveComment}
                 onChange={(event) => setApproveComment(event.target.value)}
                 maxLength={2000}
-                placeholder="요청 스펙 그대로 승인합니다."
+                placeholder="요청 사양 그대로 승인합니다."
               />
             </FormField>
             <div className="flex justify-end">

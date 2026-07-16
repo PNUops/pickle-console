@@ -75,7 +75,7 @@ function initialAdminRequests(): VmRequestDetail[] {
         reviewerId: orgAdminUser.id,
         reviewerName: orgAdminUser.name,
         decision: 'APPROVE',
-        comment: '요청 스펙 그대로 승인합니다.',
+        comment: '요청 사양 그대로 승인합니다.',
         grantedVcpu: 2,
         grantedMemoryMb: 2048,
         grantedDiskGb: 20,
@@ -188,7 +188,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         memoryUsageRatio: 0.64,
         warnings: [],
       },
-      guidance: '여유가 충분합니다. 요청 스펙 그대로 승인해도 무리가 없습니다.',
+      guidance: '여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다.',
     },
     204: {
       applicant: {

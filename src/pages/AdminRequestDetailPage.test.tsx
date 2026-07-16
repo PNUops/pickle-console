@@ -29,7 +29,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     })
     // guidance 안내문
     expect(
-      within(panel).getByText('여유가 충분합니다. 요청 스펙 그대로 승인해도 무리가 없습니다.'),
+      within(panel).getByText('여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다.'),
     ).toBeInTheDocument()
     // 1) 신청자
     expect(within(panel).getByText('gildong.hong@pusan.ac.kr')).toBeInTheDocument()

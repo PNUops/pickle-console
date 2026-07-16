@@ -173,7 +173,7 @@ function EditSettingModal({
       setFieldError(parsed.message)
       return
     }
-    // SSH 킬 스위치를 끄는 방향은 학생 전원 차단이라 별도 위험 확인을 거친다.
+    // SSH 킬 스위치를 끄는 방향은 사용자 전원 차단이라 별도 위험 확인을 거친다.
     if (setting.key === 'ssh_gateway_enabled' && parsed.value === false) {
       setConfirmKillSwitch(true)
       return
@@ -225,7 +225,7 @@ function EditSettingModal({
         }
       >
         <p className="text-sm text-neutral-700">
-          모든 학생 SSH 접속이 차단됩니다. 계속할까요?
+          모든 사용자 SSH 접속이 차단됩니다. 계속할까요?
         </p>
       </Modal>
     </>

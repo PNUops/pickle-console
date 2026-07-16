@@ -141,7 +141,7 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
   if (!canMutate) {
     return (
       <p className="text-sm text-neutral-500">
-        이 VM은 아직 HTTP 서비스가 공개되어 있지 않습니다. 공개는 그룹의 소유자·관리자만
+        이 VM은 아직 HTTP 서비스가 공개되어 있지 않습니다. 공개는 그룹의 소유자·편집자만
         설정할 수 있습니다.
       </p>
     )
@@ -317,7 +317,7 @@ function PublicationDetail({
         />
       ) : (
         <p className="text-sm text-neutral-500">
-          공개 설정 변경·해제는 그룹의 소유자·관리자만 할 수 있습니다.
+          공개 설정 변경·해제는 그룹의 소유자·편집자만 할 수 있습니다.
         </p>
       )}
     </div>

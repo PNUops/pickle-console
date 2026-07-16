@@ -19,7 +19,7 @@ function initialSettings(): SettingView[] {
       key: 'vm_delete_grace_hours',
       value: 168,
       valueType: 'INTEGER',
-      description: '셀프 삭제 후 물리 파기까지의 유예 시간(시간)',
+      description: '본인 삭제 접수 후 파기까지의 유예 시간(시간)',
       editable: true,
       updatedAt: '2026-07-01T09:00:00+09:00',
     },

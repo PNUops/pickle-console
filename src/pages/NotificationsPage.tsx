@@ -20,7 +20,7 @@ const TABS: { label: string; status: true | undefined }[] = [
   { label: '안읽음', status: true },
 ]
 
-/** 알림함 — 학생 콘솔·관리자 콘솔이 같은 화면을 공유한다 (본인 알림만 조회). */
+/** 알림함 — 사용자 콘솔·관리자 콘솔이 같은 화면을 공유한다 (본인 알림만 조회). */
 export function NotificationsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()

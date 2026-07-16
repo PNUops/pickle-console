@@ -88,7 +88,7 @@ export function AdminVmsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 삭제 예약·취소 등 관리
+          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 일반 삭제 접수·취소 등 관리
           작업을 수행합니다.
         </p>
       </div>
@@ -262,7 +262,7 @@ function VmActionPanel({ vm, isSysAdmin }: { vm: VmSummary; isSysAdmin: boolean 
 }
 
 /**
- * 예약 가능한 가장 이른 날짜(yyyy-mm-dd, 로컬 기준).
+ * 접수 가능한 가장 이른 파기 예정일(yyyy-mm-dd, 로컬 기준).
  * 계약의 최소 통보 기간은 "현재 시각 + 7일"이고 폼은 로컬 자정으로 제출하므로,
  * 자정이 항상 통보 기간을 넘는 "오늘 + 8일"을 최소값으로 제시한다.
  */
@@ -297,12 +297,12 @@ function ScheduleDeleteForm({
       setFieldErrors({})
       setDate('')
       setReason('')
-      onDone('삭제 예약을 접수했습니다. 이용자에게 사유가 포함된 통보 메일이 발송됩니다.')
+      onDone('일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await queryClient.invalidateQueries({ queryKey: ['vms'] })
     },
     onError: (err) => {
-      const apiError = toApiError(err, '삭제 예약을 접수하지 못했습니다.')
+      const apiError = toApiError(err, '일반 삭제를 접수하지 못했습니다.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -325,10 +325,10 @@ function ScheduleDeleteForm({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-neutral-800">삭제 예약</h3>
+      <h3 className="text-sm font-semibold text-neutral-800">일반 삭제 접수</h3>
       <p className="text-sm text-neutral-500">
-        최소 통보 기간(기본 7일) 이후 시각으로만 예약할 수 있으며, 예약 즉시
-        이용자에게 사유가 포함된 통보 메일이 발송됩니다.
+        최소 통보 기간(기본 7일) 이후 시각으로만 접수할 수 있으며, 접수 즉시
+        사용자에게 사유가 포함된 통보 메일이 발송됩니다.
       </p>
       {error && Object.keys(fieldErrors).length === 0 && (
         <Alert variant="danger">{error}</Alert>
@@ -353,7 +353,7 @@ function ScheduleDeleteForm({
             rows={2}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="이용자 통보 메일에 그대로 포함됩니다."
+            placeholder="사용자 통보 메일에 그대로 포함됩니다."
           />
         </FormField>
         <Button
@@ -362,7 +362,7 @@ function ScheduleDeleteForm({
           loading={schedule.isPending}
           className="mt-6"
         >
-          삭제 예약
+          일반 삭제 접수
         </Button>
       </form>
     </section>
@@ -387,15 +387,15 @@ function CancelDeleteAction({
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await queryClient.invalidateQueries({ queryKey: ['vms'] })
     },
-    onError: (err) => setError(toApiError(err, '삭제 예약을 취소하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '접수된 삭제를 취소하지 못했습니다.').message),
   })
 
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-semibold text-neutral-800">대기 중인 삭제 취소</h3>
       <p className="text-sm text-neutral-500">
-        셀프 삭제 유예 중이거나 예약된 삭제를 취소합니다. 셀프 삭제를 취소하면 VM은
-        중지됨 상태로 남고(전원 켜기는 이용자가 수행), 예약 삭제를 취소하면 현재 전원
+        본인 삭제 유예 중이거나 접수된 관리자 삭제를 취소합니다. 본인 삭제를 취소하면 VM은
+        중지됨 상태로 남고(시작은 사용자가 수행), 관리자 삭제를 취소하면 현재 전원
         상태가 유지됩니다. 긴급 삭제는 취소할 수 없습니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}

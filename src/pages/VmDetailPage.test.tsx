@@ -130,11 +130,11 @@ describe('VM 상세 — 삭제 흐름', () => {
     const dialog = await screen.findByRole('dialog', { name: 'VM 삭제' })
     expect(
       within(dialog).getByText(
-        /플랫폼은 VM 데이터를 백업하지 않습니다\. 데이터 보호와 백업은 이용자 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다\./,
+        /플랫폼은 VM 데이터를 백업하지 않습니다\. 데이터 보호와 백업은 사용자 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다\./,
       ),
     ).toBeInTheDocument()
     expect(
-      within(dialog).getByText(/복원이 필요하면 관리자에게 문의하세요/),
+      within(dialog).getByText(/복구가 필요하면 관리자에게 문의하세요/),
     ).toBeInTheDocument()
 
     const confirm = within(dialog).getByRole('button', { name: '삭제 접수' })
@@ -146,7 +146,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     expect(confirm).toBeEnabled()
     await user.click(confirm)
 
-    // 접수 후: 삭제 예정 배너 + 삭제 중 상태, 학생에게 취소 버튼은 없다.
+    // 접수 후: 삭제 예정 배너 + 삭제 중 상태, 사용자에게 취소 버튼은 없다.
     expect(await screen.findByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
     expect(screen.getByText('삭제 중')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
@@ -160,7 +160,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     expect(screen.getByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
     expect(screen.getByText(/영구 파기될 예정입니다/)).toBeInTheDocument()
     expect(
-      screen.getByText(/복원이 필요하면 관리자에게 문의하세요/),
+      screen.getByText(/복구가 필요하면 관리자에게 문의하세요/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()

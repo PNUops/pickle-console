@@ -99,7 +99,7 @@ export function AdminAnnouncementsPage() {
       return `기관 '${org?.name ?? ''}' 소속 사용자`
     }
     const group = (groups.data ?? []).find((g) => g.id === groupId)
-    return `그룹 '${group?.name ?? ''}' 멤버`
+    return `그룹 '${group?.name ?? ''}' 구성원`
   }
 
   const submit = (event: FormEvent) => {

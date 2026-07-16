@@ -26,12 +26,12 @@ export type VmEventType = components['schemas']['VmEvent']['type']
 export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   CREATE: '생성',
   START: '시작',
-  STOP: '정상 종료',
+  STOP: '종료',
   REBOOT: '재부팅',
   FORCE_STOP: '강제 종료',
   DELETE: '삭제 접수',
-  SCHEDULE_DELETE: '삭제 예약',
-  CANCEL_SCHEDULED_DELETE: '삭제 예약 취소',
+  SCHEDULE_DELETE: '일반 삭제 접수',
+  CANCEL_SCHEDULED_DELETE: '삭제 취소',
   EMERGENCY_DELETE: '긴급 삭제',
   REINSTALL: '재설치',
   PUBLISH: 'HTTP 공개',
@@ -79,6 +79,16 @@ export const CERTIFICATE_STATUS_LABELS: Record<CertificateStatus, string> = {
   RENEWING: '갱신 중',
   FAILED: '발급 실패',
   REVOKED: '폐기됨',
+}
+
+/** 삭제 예정 배너 제목 — 삭제 종류(kind)별 안내 문구. */
+export const DELETION_BANNER_TITLES: Record<
+  components['schemas']['VmDeletion']['kind'],
+  string
+> = {
+  SELF: '삭제가 접수된 VM입니다',
+  ADMIN: '관리자 삭제가 접수된 VM입니다',
+  EMERGENCY: '긴급 삭제가 접수된 VM입니다',
 }
 
 export type ProvisioningTaskStatus =

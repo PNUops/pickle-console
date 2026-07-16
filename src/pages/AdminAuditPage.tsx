@@ -82,7 +82,7 @@ export function AdminAuditPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">감사 로그</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} 관리자·이용자의 활동 기록입니다. 로그인·설정
+          {isSysAdmin ? '전체' : '우리 기관'} 관리자·사용자의 활동 기록입니다. 로그인·설정
           변경·VM 작업 등 주요 동작이 남습니다.
         </p>
       </div>
