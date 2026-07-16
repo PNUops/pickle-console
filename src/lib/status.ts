@@ -33,7 +33,7 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   SELF_DELETE: '삭제 접수',
   SCHEDULE_DELETE: '일반 삭제 접수',
   CANCEL_SCHEDULED_DELETE: '삭제 취소',
-  FORCE_DELETE: '강제 삭제',
+  FORCE_DELETE: '강제 삭제 접수',
   REINSTALL: '재설치',
   PUBLISH: 'HTTP 공개',
   UNPUBLISH: 'HTTP 공개 해제',
@@ -152,22 +152,47 @@ export const ANNOUNCEMENT_SCOPE_LABELS: Record<AnnouncementScope, string> = {
   GROUP: '그룹',
 }
 
-/** 알려진 감사 로그 동작 코드의 한국어 라벨 (미등록 코드는 원문 노출). */
+/**
+ * 알려진 감사 로그 동작 코드의 한국어 라벨 (미등록 코드는 원문 노출).
+ * 전체 카탈로그(36키)는 api AuditService의 상수 목록과 1:1 대응.
+ */
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'auth.signup': '회원가입',
+  'auth.verify': '이메일 인증',
   'auth.login': '로그인',
   'auth.login_failed': '로그인 실패',
+  'auth.refresh_reuse_detected': '리프레시 토큰 재사용 감지',
   'auth.logout': '로그아웃',
+  'group.create': '그룹 생성',
+  'group.member_add': '구성원 추가',
+  'group.member_update': '구성원 역할 변경',
+  'group.member_remove': '구성원 제거',
+  'request.create': '신청 제출',
+  'request.cancel': '신청 취소',
+  'request.approve': '신청 승인',
+  'request.reject': '신청 반려',
+  'org.create': '기관 생성',
+  'org.update': '기관 정보 수정',
+  'user.role_update': '역할 변경',
   'vm.self_delete': '본인 삭제',
   'vm.schedule_delete': '일반 삭제 접수',
   'vm.cancel_scheduled_delete': '삭제 취소',
   'vm.force_delete': '강제 삭제',
   'vm.password_reveal': '초기 비밀번호 열람',
+  'vm.publish': 'HTTP 공개',
+  'vm.publication_update': '공개 설정 변경',
+  'vm.unpublish': 'HTTP 공개 해제',
+  'domain.delete': '도메인 해제',
+  'domain.verify': '도메인 검증',
+  'route.resync': '라우트 재동기화',
+  'drift.resolve': '드리프트 해결',
+  'task.retry': '작업 재시도',
+  'notification.resend': '알림 재발송',
+  'vm.period_update': '사용 기간 변경',
+  'sshgw.route': 'SSH 접속 라우팅',
+  'sshgw.route_denied': 'SSH 접속 거부',
   'setting.update': '설정 변경',
   'announcement.create': '공지 발송',
-  'task.retry': '작업 재시도',
-  'drift.resolve': '드리프트 해결',
-  'vm.period_update': '기간 변경',
-  'notification.resend': '알림 재발송',
 }
 
 /** 감사 동작 코드 → 라벨 (카탈로그에 없으면 코드 원문). */

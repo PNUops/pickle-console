@@ -33,8 +33,8 @@ describe('감사 로그', () => {
     await screen.findByRole('heading', { name: '감사 로그' })
     const row = (await screen.findByText('ssh-gateway')).closest('tr')!
     expect(within(row).getByText('SSHGW')).toBeInTheDocument()
-    // 미등록 동작 코드도 원문 노출 (labelForAuditAction 폴백)
-    expect(within(row).getByText('sshgw.route')).toBeInTheDocument()
+    // 게이트웨이 감사 동작도 카탈로그 라벨로 노출된다
+    expect(within(row).getByText('SSH 접속 라우팅')).toBeInTheDocument()
   })
 
   test('동작 필터를 고르면 해당 동작만 남는다', async () => {
