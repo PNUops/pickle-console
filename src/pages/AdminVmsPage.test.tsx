@@ -47,7 +47,7 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터와 긴급 삭제가 노출되지 않는다', async () => {
+  test('ORG_ADMIN에게는 기관 필터와 강제 삭제가 노출되지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
@@ -57,7 +57,7 @@ describe('관리자 VM 목록', () => {
     await selectVm(user, 'algo-judge')
     expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '삭제 취소' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '긴급 삭제' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 })
 
@@ -111,7 +111,7 @@ describe('관리자 삭제 취소', () => {
 
     expect(
       await screen.findByText(
-        '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 전원 켜기는 이용자가 직접 수행합니다.',
+        '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 시작은 사용자가 직접 수행합니다.',
       ),
     ).toBeInTheDocument()
     // 목록 무효화로 상태 배지도 중지됨으로 갱신된다.
@@ -133,15 +133,15 @@ describe('관리자 삭제 취소', () => {
   })
 })
 
-describe('긴급 삭제 (SYS_ADMIN)', () => {
+describe('강제 삭제 (SYS_ADMIN)', () => {
   test('이름 확인 모달을 거쳐 즉시 파기를 접수한다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
     await selectVm(user, 'algo-judge')
-    await user.click(screen.getByRole('button', { name: '긴급 삭제' }))
+    await user.click(screen.getByRole('button', { name: '강제 삭제' }))
 
-    const dialog = await screen.findByRole('dialog', { name: 'VM 긴급 삭제' })
+    const dialog = await screen.findByRole('dialog', { name: 'VM 강제 삭제' })
     const confirm = within(dialog).getByRole('button', { name: '즉시 파기' })
     expect(confirm).toBeDisabled()
     await user.type(within(dialog).getByRole('textbox'), 'algo-judge')
@@ -150,7 +150,7 @@ describe('긴급 삭제 (SYS_ADMIN)', () => {
 
     expect(
       await screen.findByText(
-        '긴급 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.',
+        '강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.',
       ),
     ).toBeInTheDocument()
     // 목록 무효화로 상태가 삭제됨으로 갱신된다.

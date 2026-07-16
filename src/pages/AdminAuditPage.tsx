@@ -26,7 +26,7 @@ import { AUDIT_ACTION_LABELS, labelForAuditAction } from '../lib/status'
 const PAGE_SIZE = 20
 
 const ROLE_VARIANTS: Record<UserRole, BadgeVariant> = {
-  STUDENT: 'neutral',
+  USER: 'neutral',
   ORG_ADMIN: 'info',
   SYS_ADMIN: 'primary',
 }

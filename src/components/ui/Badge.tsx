@@ -326,7 +326,7 @@ export function AnnouncementScopeBadge({
 
 const GROUP_ROLE_VARIANTS: Record<GroupMemberRole, BadgeVariant> = {
   OWNER: 'primary',
-  MANAGER: 'info',
+  EDITOR: 'info',
   MEMBER: 'neutral',
   VIEWER: 'neutral',
 }

@@ -13,13 +13,13 @@ export const GROUP_KIND_LABELS: Record<GroupKind, string> = {
 
 export const GROUP_ROLE_LABELS: Record<GroupMemberRole, string> = {
   OWNER: '소유자',
-  MANAGER: '편집자',
+  EDITOR: '편집자',
   MEMBER: '참여자',
   VIEWER: '열람자',
 }
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  STUDENT: '사용자',
+  USER: '사용자',
   ORG_ADMIN: '기관 관리자',
   SYS_ADMIN: '시스템 관리자',
 }

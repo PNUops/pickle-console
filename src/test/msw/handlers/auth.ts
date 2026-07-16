@@ -13,13 +13,13 @@ export function problemResponse(problem: Schemas['Problem']) {
 
 /* ─── fixture accounts ─── */
 
-export const STUDENT_PASSWORD = 'correct-horse-battery!'
+export const USER_PASSWORD = 'correct-horse-battery!'
 
 export const studentUser: Schemas['UserSummary'] = {
   id: 42,
   email: 'gildong.hong@pusan.ac.kr',
   name: '홍길동',
-  role: 'STUDENT',
+  role: 'USER',
 }
 
 export const orgAdminUser: Schemas['UserSummary'] = {
@@ -36,12 +36,12 @@ export const sysAdminUser: Schemas['UserSummary'] = {
   role: 'SYS_ADMIN',
 }
 
-/** 두 번째 학생 계정 — 계정 전환(캐시 격리) 테스트용. */
+/** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
 export const studentBUser: Schemas['UserSummary'] = {
   id: 58,
   email: 'younghee.park@pusan.ac.kr',
   name: '박영희',
-  role: 'STUDENT',
+  role: 'USER',
 }
 
 export const studentProfile: Schemas['UserProfile'] = {
@@ -137,7 +137,7 @@ export const authHandlers: RequestHandler[] = [
       })
     }
     const account =
-      body.password !== STUDENT_PASSWORD
+      body.password !== USER_PASSWORD
         ? null
         : body.email === studentUser.email
           ? { user: studentUser, token: 'access-student' }

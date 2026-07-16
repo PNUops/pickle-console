@@ -23,7 +23,7 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
 
-    // OWNER/MANAGER 그룹만 선택지에 나온다 (알고리즘 스터디는 MEMBER라 제외).
+    // OWNER/EDITOR 그룹만 선택지에 나온다 (알고리즘 스터디는 MEMBER라 제외).
     const groupSelect = screen.getByLabelText('신청 그룹')
     expect(groupSelect).toContainHTML('캡스톤 3조')
     expect(groupSelect).toContainHTML('홍길동')

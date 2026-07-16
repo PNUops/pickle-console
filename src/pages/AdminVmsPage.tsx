@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelScheduledVmDeletion,
-  emergencyDeleteVm,
+  forceDeleteVm,
   fetchAdminVms,
   fetchOrgs,
   scheduleVmDeletion,
@@ -255,7 +255,7 @@ function VmActionPanel({ vm, isSysAdmin }: { vm: VmSummary; isSysAdmin: boolean 
         {message && <Alert variant="success">{message}</Alert>}
         <ScheduleDeleteForm vm={vm} onDone={setMessage} />
         <CancelDeleteAction vm={vm} onDone={setMessage} />
-        {isSysAdmin && <EmergencyDeleteAction vm={vm} onDone={setMessage} />}
+        {isSysAdmin && <ForceDeleteAction vm={vm} onDone={setMessage} />}
       </CardContent>
     </Card>
   )
@@ -396,7 +396,7 @@ function CancelDeleteAction({
       <p className="text-sm text-neutral-500">
         본인 삭제 유예 중이거나 접수된 관리자 삭제를 취소합니다. 본인 삭제를 취소하면 VM은
         중지됨 상태로 남고(시작은 사용자가 수행), 관리자 삭제를 취소하면 현재 전원
-        상태가 유지됩니다. 긴급 삭제는 취소할 수 없습니다.
+        상태가 유지됩니다. 강제 삭제는 취소할 수 없습니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <Button variant="secondary" loading={cancel.isPending} onClick={() => cancel.mutate()}>
@@ -406,7 +406,7 @@ function CancelDeleteAction({
   )
 }
 
-function EmergencyDeleteAction({
+function ForceDeleteAction({
   vm,
   onDone,
 }: {
@@ -418,7 +418,7 @@ function EmergencyDeleteAction({
   const [error, setError] = useState<string | null>(null)
 
   const destroy = useMutation({
-    mutationFn: (confirmName: string) => emergencyDeleteVm(vm.id, confirmName),
+    mutationFn: (confirmName: string) => forceDeleteVm(vm.id, confirmName),
     onSuccess: async (data) => {
       setOpen(false)
       setError(null)
@@ -428,25 +428,25 @@ function EmergencyDeleteAction({
     },
     onError: (err) => {
       setOpen(false)
-      setError(toApiError(err, '긴급 삭제를 접수하지 못했습니다.').message)
+      setError(toApiError(err, '강제 삭제를 접수하지 못했습니다.').message)
     },
   })
 
   return (
     <section className="space-y-3 rounded-lg border border-danger-200 p-4">
-      <h3 className="text-sm font-semibold text-danger-700">긴급 삭제 (SYS_ADMIN)</h3>
+      <h3 className="text-sm font-semibold text-danger-700">강제 삭제 (SYS_ADMIN)</h3>
       <p className="text-sm text-neutral-500">
-        보안 사고 등 긴급 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
+        보안 사고 등 비상 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
         없습니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <Button variant="danger" onClick={() => setOpen(true)}>
-        긴급 삭제
+        강제 삭제
       </Button>
       <ConfirmNameModal
         open={open}
         onClose={() => setOpen(false)}
-        title="VM 긴급 삭제"
+        title="VM 강제 삭제"
         expectedName={vm.name}
         confirmLabel="즉시 파기"
         loading={destroy.isPending}
@@ -456,7 +456,7 @@ function EmergencyDeleteAction({
       >
         <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
           유예 없이 즉시 강제 종료 후 파기되며, 데이터는 복구할 수 없습니다. 기관
-          관리자와 이용자에게 통지되고 감사 기록이 남습니다.
+          관리자와 사용자에게 통지되고 감사 기록이 남습니다.
         </Alert>
       </ConfirmNameModal>
     </section>

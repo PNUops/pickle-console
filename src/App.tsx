@@ -49,7 +49,7 @@ function App() {
       <Route
         path="console"
         element={
-          <RequireRole roles={['STUDENT']}>
+          <RequireRole roles={['USER']}>
             <ConsoleLayout />
           </RequireRole>
         }

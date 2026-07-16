@@ -56,16 +56,16 @@ function portFieldError(raw: string): string | null {
 }
 
 /**
- * VM HTTP 공개 섹션. 소유 그룹의 OWNER/MANAGER만 공개·변경·해제할 수 있고
+ * VM HTTP 공개 섹션. 소유 그룹의 OWNER/EDITOR만 공개·변경·해제할 수 있고
  * (그룹 myRole로 판정), VIEWER 이상은 현재 상태를 읽기 전용으로 본다.
  */
 export function VmPublishSection({ vm }: { vm: VmDetail }) {
-  // 그룹 myRole로 변경 권한을 판정한다 (계약 §2.4: 도메인·포트 설정은 OWNER/MANAGER).
+  // 그룹 myRole로 변경 권한을 판정한다 (계약 §2.4: 도메인·포트 설정은 OWNER/EDITOR).
   const group = useQuery({
     queryKey: ['groups', vm.groupId],
     queryFn: () => fetchGroup(vm.groupId),
   })
-  const canMutate = group.data?.myRole === 'OWNER' || group.data?.myRole === 'MANAGER'
+  const canMutate = group.data?.myRole === 'OWNER' || group.data?.myRole === 'EDITOR'
 
   if (!vm.httpPublishGranted) {
     // 공개가 미공개인 경우에만 안내를 노출한다 (허가된 뒤 공개된 VM은 아래 카드로).
@@ -307,7 +307,7 @@ function PublicationDetail({
         />
       )}
 
-      {/* 변경·해제 액션 (OWNER/MANAGER). 라우트가 생기는 시점에 다시 마운트해
+      {/* 변경·해제 액션 (OWNER/EDITOR). 라우트가 생기는 시점에 다시 마운트해
           포트 초기값이 임시 기본값(80)이 아닌 실제 적용 포트로 채워지게 한다. */}
       {canMutate ? (
         <PublicationActions

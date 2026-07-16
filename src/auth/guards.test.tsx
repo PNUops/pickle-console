@@ -6,7 +6,7 @@ import {
   refreshSuccessHandler,
   orgAdminUser,
   studentBUser,
-  STUDENT_PASSWORD,
+  USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { vmRequestStore } from '../test/msw/handlers/vm-requests'
 import { renderApp } from '../test/render'
@@ -63,7 +63,7 @@ describe('계정 전환 시 캐시 격리', () => {
 
     // B(박영희)로 로그인.
     await user.type(screen.getByLabelText('이메일'), studentBUser.email)
-    await user.type(screen.getByLabelText('비밀번호'), STUDENT_PASSWORD)
+    await user.type(screen.getByLabelText('비밀번호'), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '로그인' }))
     await screen.findByRole('heading', { name: '대시보드' })
 

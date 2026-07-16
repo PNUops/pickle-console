@@ -24,5 +24,5 @@ export function useAuth(): AuthContextValue {
 
 /** Landing area for a role after login. */
 export function homePathFor(role: UserRole): string {
-  return role === 'STUDENT' ? '/console' : '/admin'
+  return role === 'USER' ? '/console' : '/admin'
 }

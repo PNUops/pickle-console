@@ -29,10 +29,11 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   STOP: '종료',
   REBOOT: '재부팅',
   FORCE_STOP: '강제 종료',
-  DELETE: '삭제 접수',
+  DELETE: '삭제',
+  SELF_DELETE: '삭제 접수',
   SCHEDULE_DELETE: '일반 삭제 접수',
   CANCEL_SCHEDULED_DELETE: '삭제 취소',
-  EMERGENCY_DELETE: '긴급 삭제',
+  FORCE_DELETE: '강제 삭제',
   REINSTALL: '재설치',
   PUBLISH: 'HTTP 공개',
   UNPUBLISH: 'HTTP 공개 해제',
@@ -88,7 +89,8 @@ export const DELETION_BANNER_TITLES: Record<
 > = {
   SELF: '삭제가 접수된 VM입니다',
   ADMIN: '관리자 삭제가 접수된 VM입니다',
-  EMERGENCY: '긴급 삭제가 접수된 VM입니다',
+  // 사용자 콘솔에는 강제 여부를 노출하지 않는다 — ADMIN과 동일 문구가 의도된 동작.
+  FORCE: '관리자 삭제가 접수된 VM입니다',
 }
 
 export type ProvisioningTaskStatus =
@@ -155,7 +157,11 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'auth.login': '로그인',
   'auth.login_failed': '로그인 실패',
   'auth.logout': '로그아웃',
-  'vm.delete': 'VM 삭제',
+  'vm.self_delete': '본인 삭제',
+  'vm.schedule_delete': '일반 삭제 접수',
+  'vm.cancel_scheduled_delete': '삭제 취소',
+  'vm.force_delete': '강제 삭제',
+  'vm.password_reveal': '초기 비밀번호 열람',
   'setting.update': '설정 변경',
   'announcement.create': '공지 발송',
   'task.retry': '작업 재시도',

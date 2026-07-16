@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import { STUDENT_PASSWORD, orgAdminUser, studentUser } from '../test/msw/handlers/auth'
+import { USER_PASSWORD, orgAdminUser, studentUser } from '../test/msw/handlers/auth'
 import { renderApp } from '../test/render'
 
 async function submitLogin(email: string, password: string) {
@@ -17,7 +17,7 @@ describe('로그인', () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    await submitLogin(studentUser.email, STUDENT_PASSWORD)
+    await submitLogin(studentUser.email, USER_PASSWORD)
 
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
     expect(screen.getByText(/홍길동님, 환영합니다/)).toBeInTheDocument()
@@ -27,7 +27,7 @@ describe('로그인', () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    await submitLogin(orgAdminUser.email, STUDENT_PASSWORD)
+    await submitLogin(orgAdminUser.email, USER_PASSWORD)
 
     expect(
       await screen.findByRole('heading', { name: '관리자 대시보드' }),
@@ -49,7 +49,7 @@ describe('로그인', () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    await submitLogin('unverified@pusan.ac.kr', STUDENT_PASSWORD)
+    await submitLogin('unverified@pusan.ac.kr', USER_PASSWORD)
 
     expect(
       await screen.findByText('가입 시 발송된 인증 메일을 확인한 뒤 다시 로그인해 주세요.'),
@@ -61,7 +61,7 @@ describe('로그인', () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    await submitLogin('ratelimited@pusan.ac.kr', STUDENT_PASSWORD)
+    await submitLogin('ratelimited@pusan.ac.kr', USER_PASSWORD)
 
     expect(await screen.findByText('잠시 후 다시 시도해 주세요.')).toBeInTheDocument()
   })

@@ -6,7 +6,7 @@ import { vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-/** 학생 세션으로 VM 상세를 연다 (그룹 12=OWNER, 그룹 15=MEMBER). */
+/** 사용자 세션으로 VM 상세를 연다 (그룹 12=OWNER, 그룹 15=MEMBER). */
 function renderVm(vmId: number) {
   server.use(refreshSuccessHandler('access-student'))
   renderApp(`/console/vms/${vmId}`)

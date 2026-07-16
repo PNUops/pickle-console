@@ -279,7 +279,7 @@ const alreadyDecided = (instance: string) =>
 /** Known users for PATCH /admin/users/{userId}. */
 const knownUsers: Record<number, Schemas['UserSummary']> = {
   42: studentUser,
-  57: { id: 57, email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'STUDENT' },
+  57: { id: 57, email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'USER' },
 }
 
 
@@ -610,7 +610,7 @@ export const adminHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/vms/:vmId/cancel-scheduled-delete', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFound()
-    if (vm.deletion == null || vm.deletion.kind === 'EMERGENCY' || vm.status === 'DELETED') {
+    if (vm.deletion == null || vm.deletion.kind === 'FORCE' || vm.status === 'DELETED') {
       return invalidVmStateProblem(
         `/api/v1/admin/vms/${vm.id}/cancel-scheduled-delete`,
         '취소할 수 있는 삭제가 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.',
@@ -627,8 +627,8 @@ export const adminHandlers: RequestHandler[] = [
     })
     const message =
       kind === 'SELF'
-        ? '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 전원 켜기는 이용자가 직접 수행합니다.'
-        : '삭제 예약이 취소되었습니다. VM의 현재 전원 상태는 그대로 유지됩니다.'
+        ? '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 시작은 사용자가 직접 수행합니다.'
+        : '삭제가 취소되었습니다. VM의 현재 전원 상태는 그대로 유지됩니다.'
     return HttpResponse.json({ message }, { status: 200 })
   }),
 
@@ -681,7 +681,7 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json(vm, { status: 200 })
   }),
 
-  http.post('*/api/v1/admin/vms/:vmId/emergency-delete', async ({ params, request }) => {
+  http.post('*/api/v1/admin/vms/:vmId/force-delete', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFound()
     const body = (await request.json()) as { confirmName: string }
@@ -692,13 +692,13 @@ export const adminHandlers: RequestHandler[] = [
         status: 409,
         detail:
           '입력한 이름이 VM 이름과 일치하지 않습니다. VM 이름을 정확히 입력해 주세요.',
-        instance: `/api/v1/admin/vms/${vm.id}/emergency-delete`,
+        instance: `/api/v1/admin/vms/${vm.id}/force-delete`,
         code: 'VM_CONFIRM_NAME_MISMATCH',
       })
     }
     vm.status = 'DELETED'
     vm.deletion = {
-      kind: 'EMERGENCY',
+      kind: 'FORCE',
       scheduledFor: '2026-07-08T17:00:00+09:00',
       requestedAt: '2026-07-08T17:00:00+09:00',
       requestedById: 5,
@@ -706,13 +706,13 @@ export const adminHandlers: RequestHandler[] = [
       cancelable: false,
     }
     recordVmEvent(vm.id, {
-      type: 'EMERGENCY_DELETE',
+      type: 'FORCE_DELETE',
       actorId: 5,
       detail: null,
       createdAt: '2026-07-08T17:00:00+09:00',
     })
     return HttpResponse.json(
-      { message: '긴급 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.' },
+      { message: '강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.' },
       { status: 202 },
     )
   }),

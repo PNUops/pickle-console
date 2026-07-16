@@ -160,7 +160,7 @@ export function NewRequestPage() {
   const ready = !isLoading && !loadError
 
   const eligibleGroups = (groups.data ?? []).filter(
-    (g) => g.myRole === 'OWNER' || g.myRole === 'MANAGER',
+    (g) => g.myRole === 'OWNER' || g.myRole === 'EDITOR',
   )
   const selectedTemplate = templates.data?.find((t) => t.id === state.templateId)
 

@@ -12,7 +12,7 @@ interface StoredNotification extends NotificationView {
 
 function initialNotifications(): StoredNotification[] {
   return [
-    /* ─── 학생 홍길동(42) ─── */
+    /* ─── 사용자 홍길동(42) ─── */
     {
       userId: 42,
       id: 301,

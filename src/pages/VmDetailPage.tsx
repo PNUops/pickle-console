@@ -534,7 +534,7 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
   return (
     <Alert variant="danger" title={DELETION_BANNER_TITLES[deletion.kind]}>
       <div className="space-y-1">
-        {deletion.kind === 'EMERGENCY' ? (
+        {deletion.kind === 'FORCE' ? (
           <p>보안상의 사유로 즉시 파기됩니다. 이 삭제는 취소할 수 없습니다.</p>
         ) : (
           <p>{scheduled}에 영구 파기될 예정입니다.</p>

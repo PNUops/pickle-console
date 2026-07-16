@@ -447,16 +447,16 @@ export function cancelScheduledVmDeletion(vmId: number): Promise<MessageResponse
   })
 }
 
-export function emergencyDeleteVm(
+export function forceDeleteVm(
   vmId: number,
   confirmName: string,
 ): Promise<MessageResponse> {
   return guardNetwork(async () => {
-    const { data, error } = await api.POST('/admin/vms/{vmId}/emergency-delete', {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/force-delete', {
       params: { path: { vmId } },
       body: { confirmName },
     })
-    if (!data) throw toApiError(error, '긴급 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '강제 삭제를 접수하지 못했습니다.')
     return data
   })
 }

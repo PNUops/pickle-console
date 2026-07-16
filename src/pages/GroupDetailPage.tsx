@@ -30,7 +30,7 @@ import {
 import { GROUP_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 
-const ASSIGNABLE_ROLES: GroupMemberRole[] = ['OWNER', 'MANAGER', 'MEMBER', 'VIEWER']
+const ASSIGNABLE_ROLES: GroupMemberRole[] = ['OWNER', 'EDITOR', 'MEMBER', 'VIEWER']
 
 export function GroupDetailPage() {
   const params = useParams()
@@ -260,7 +260,7 @@ function MembersSection({
       <CardContent className="space-y-4">
         {isPersonal && (
           <Alert variant="info">
-            개인 그룹은 회원 가입 시 자동으로 생성되는 그룹으로, 구성원을 추가하거나 역할을
+            개인 그룹은 회원가입 시 자동으로 생성되는 그룹으로, 구성원을 추가하거나 역할을
             변경할 수 없습니다.
           </Alert>
         )}
@@ -443,7 +443,7 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
             value={role}
             onChange={(event) => setRole(event.target.value as GroupMemberRole)}
           >
-            <option value="MANAGER">{GROUP_ROLE_LABELS.MANAGER}</option>
+            <option value="EDITOR">{GROUP_ROLE_LABELS.EDITOR}</option>
             <option value="MEMBER">{GROUP_ROLE_LABELS.MEMBER}</option>
             <option value="VIEWER">{GROUP_ROLE_LABELS.VIEWER}</option>
           </Select>
@@ -505,7 +505,7 @@ function OwnershipTransferModal({
       <div className="space-y-4">
         <p className="text-sm text-neutral-600">
           정말 소유권을 이전하시겠습니까? {target?.name} 님이 새 소유자(OWNER)가 되고,
-          회원님은 편집자(MANAGER)로 변경됩니다. 이 작업은 새 소유자만 되돌릴 수 있습니다.
+          회원님은 편집자(EDITOR)로 변경됩니다. 이 작업은 새 소유자만 되돌릴 수 있습니다.
         </p>
         <FormField
           label="확인 이메일"

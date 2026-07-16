@@ -38,7 +38,7 @@ describe('그룹 상세 — 역할별 UI', () => {
     await screen.findByRole('heading', { name: '홍길동' })
 
     expect(
-      screen.getByText(/개인 그룹은 회원 가입 시 자동으로 생성되는 그룹/),
+      screen.getByText(/개인 그룹은 회원가입 시 자동으로 생성되는 그룹/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '그룹 나가기' })).not.toBeInTheDocument()

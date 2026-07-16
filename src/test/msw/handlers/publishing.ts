@@ -197,7 +197,7 @@ function buildCustomPublication(vm: VmDetail, fqdn: string, port: number): Publi
 }
 
 /**
- * 플랫폼 서브도메인 publication을 구성한다. 학생은 서브도메인 이름을 고르지 못하며
+ * 플랫폼 서브도메인 publication을 구성한다. 사용자는 서브도메인 이름을 고르지 못하며
  * (계약·운영자 결정), mock은 승인 부여값을 추적하지 않으므로 자동(AUTO)
  * `<hostname>-a1b2.<root>`를 발급한다. 공용 와일드카드 인증서라 즉시 라우트 적용 대기.
  */
@@ -320,7 +320,7 @@ function paginate<T>(items: T[], page: number, size: number): Schemas['DomainPag
 }
 
 export const publishingHandlers: RequestHandler[] = [
-  /* ─── 공개 (학생) ─── */
+  /* ─── 공개 (사용자) ─── */
   http.post('*/api/v1/vms/:vmId/publish', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFound()
@@ -451,7 +451,7 @@ export const publishingHandlers: RequestHandler[] = [
     )
   }),
 
-  /* ─── 도메인 (학생) ─── */
+  /* ─── 도메인 (사용자) ─── */
   http.get('*/api/v1/domains', ({ request }) => {
     const url = new URL(request.url)
     const vmId = url.searchParams.get('vmId')

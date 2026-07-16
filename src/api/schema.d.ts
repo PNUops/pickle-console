@@ -21,7 +21,7 @@ export interface paths {
          *     인증 링크가 메일로 발송됩니다. 인증 완료 전에는 로그인할 수 없습니다.
          *
          *     중복 이메일에는 409를 반환합니다. 이에 따른 계정 존재 여부 노출
-         *     (account enumeration) 트레이드오프는 이 엔드포인트에 속도 제한이
+         *     (account enumeration) 트레이드오프는 이 엔드포인트에 요청 빈도 제한이
          *     적용되어 있으므로 수용합니다.
          */
         post: operations["signup"];
@@ -92,7 +92,7 @@ export interface paths {
          *     `/auth/refresh`·`/auth/logout` 호출 시 이 쿠키 값을 `X-Pickle-Csrf`
          *     헤더로 함께 보내야 합니다.
          *
-         *     속도 제한: IP+계정 단위 슬라이딩 윈도 (약 10회/분, 연속 5회 실패 시 백오프 잠금).
+         *     요청 빈도 제한: IP+계정 단위 슬라이딩 윈도 (약 10회/분, 연속 5회 실패 시 백오프 잠금).
          */
         post: operations["login"];
         delete?: never;
@@ -271,7 +271,7 @@ export interface paths {
         };
         /**
          * 내 그룹 목록 조회
-         * @description 내가 멤버로 속한 그룹(PERSONAL 포함) 목록을 반환합니다.
+         * @description 내가 구성원으로 속한 그룹(PERSONAL 포함) 목록을 반환합니다.
          */
         get: operations["listGroups"];
         put?: never;
@@ -299,8 +299,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 그룹 상세 조회 (멤버 포함)
-         * @description 그룹 멤버만 조회할 수 있습니다.
+         * 그룹 상세 조회 (구성원 포함)
+         * @description 그룹 구성원만 조회할 수 있습니다.
          */
         get: operations["getGroup"];
         put?: never;
@@ -328,11 +328,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 그룹 멤버 추가
-         * @description 이메일로 기존 가입자를 그룹에 추가합니다. OWNER만 멤버를 추가할 수 있습니다.
-         *     PERSONAL 그룹에는 멤버를 추가할 수 없습니다.
+         * 그룹 구성원 추가
+         * @description 이메일로 기존 가입자를 그룹에 추가합니다. OWNER만 구성원을 추가할 수 있습니다.
+         *     PERSONAL 그룹에는 구성원을 추가할 수 없습니다.
          *     `ACTIVE` 상태의 사용자만 추가할 수 있습니다 (미인증·비활성·탈퇴 계정 불가).
-         *     추가 시 `OWNER` 역할은 지정할 수 없습니다(422) — 소유권은 멤버 역할 변경의
+         *     추가 시 `OWNER` 역할은 지정할 수 없습니다(422) — 소유권은 구성원 역할 변경의
          *     소유권 이전으로만 부여됩니다.
          */
         post: operations["addGroupMember"];
@@ -349,7 +349,7 @@ export interface paths {
             path: {
                 /** @description 그룹 ID */
                 groupId: components["parameters"]["GroupId"];
-                /** @description 대상 멤버의 사용자 ID */
+                /** @description 대상 구성원의 사용자 ID */
                 userId: number;
             };
             cookie?: never;
@@ -358,17 +358,17 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * 그룹 멤버 제거
-         * @description OWNER는 누구든 제거할 수 있고, 멤버 본인은 스스로 나갈 수 있습니다.
+         * 그룹 구성원 제거
+         * @description OWNER는 누구든 제거할 수 있고, 구성원 본인은 스스로 나갈 수 있습니다.
          *     유일한 OWNER는 소유권을 이전하기 전에는 나갈 수 없습니다.
          */
         delete: operations["removeGroupMember"];
         options?: never;
         head?: never;
         /**
-         * 그룹 멤버 역할 변경
-         * @description OWNER만 역할을 변경할 수 있습니다. OWNER 역할을 다른 멤버에게 부여하면
-         *     소유권 이전으로 처리됩니다(기존 OWNER는 MANAGER로 강등).
+         * 그룹 구성원 역할 변경
+         * @description OWNER만 역할을 변경할 수 있습니다. OWNER 역할을 다른 구성원에게 부여하면
+         *     소유권 이전으로 처리됩니다(기존 OWNER는 EDITOR로 강등).
          *     유일한 OWNER 본인의 역할을 하향하는 요청은 409(`GROUP_SOLE_OWNER_REMOVAL`)로
          *     거부됩니다 — 먼저 소유권을 이전해야 합니다.
          */
@@ -385,16 +385,16 @@ export interface paths {
         /**
          * 내 VM 신청 목록 조회
          * @description 내가 볼 수 있는 신청 목록입니다. 최신순 정렬.
-         *     그룹 멤버(VIEWER 이상)는 그 그룹의 신청을 볼 수 있습니다.
-         *     멤버가 아닌 그룹의 `groupId` 필터는 403(`ACCESS_DENIED`)입니다.
+         *     그룹 구성원(VIEWER 이상)은 그 그룹의 신청을 볼 수 있습니다.
+         *     구성원이 아닌 그룹의 `groupId` 필터는 403(`ACCESS_DENIED`)입니다.
          */
         get: operations["listVmRequests"];
         put?: never;
         /**
          * VM 신청 제출
          * @description 지정한 그룹 명의로, 지정한 기관의 자원에 대해 VM을 신청합니다.
-         *     그룹의 OWNER 또는 MANAGER만 신청할 수 있습니다.
-         *     요청 스펙은 템플릿 기본값에서 미리 채워지며 수정 가능합니다.
+         *     그룹의 OWNER 또는 EDITOR만 신청할 수 있습니다.
+         *     요청 사양은 템플릿 기본값에서 미리 채워지며 수정 가능합니다.
          *     모든 신청은 관리자 승인이 필요합니다(자동 승인 없음).
          */
         post: operations["createVmRequest"];
@@ -416,7 +416,7 @@ export interface paths {
         };
         /**
          * VM 신청 상세 조회
-         * @description 결정(승인/반려)이 내려진 경우 `review`에 결정 내용과 부여 스펙이 포함됩니다.
+         * @description 결정(승인/반려)이 내려진 경우 `review`에 결정 내용과 부여 사양이 포함됩니다.
          */
         get: operations["getVmRequest"];
         put?: never;
@@ -440,7 +440,7 @@ export interface paths {
          * VM 신청 취소
          * @description `SUBMITTED` 상태의 신청만 취소할 수 있습니다. 이미 승인/반려된 신청은
          *     409 (`REQUEST_ALREADY_DECIDED`)를 반환합니다. 신청자 본인 또는
-         *     그룹 OWNER/MANAGER만 취소할 수 있습니다.
+         *     그룹 OWNER/EDITOR만 취소할 수 있습니다.
          */
         post: operations["cancelVmRequest"];
         delete?: never;
@@ -479,31 +479,31 @@ export interface paths {
         };
         /**
          * VM 상세 조회
-         * @description 해당 VM 소유 그룹의 멤버(VIEWER 이상)만 조회할 수 있습니다.
-         *     비멤버에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다
+         * @description 해당 VM 소유 그룹의 구성원(VIEWER 이상)만 조회할 수 있습니다.
+         *     비구성원에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다
          *     (삭제·전원 제어 경로와 동일한 마스킹 정책).
          */
         get: operations["getVm"];
         put?: never;
         post?: never;
         /**
-         * VM 삭제 (유예 후 파기 — 학생 취소 불가)
+         * VM 삭제 (유예 후 파기 — 사용자 취소 불가)
          * @description VM 삭제를 접수합니다. 소유 그룹의 **OWNER 또는 관리자**(ORG_ADMIN은
          *     자기 기관의 VM만 — 타 기관 VM은 404, SYS_ADMIN은 전체)만 호출할 수
          *     있습니다.
          *
-         *     - 접수 즉시 정상 종료(ACPI)가 시도되고 상태가 `DELETING`으로 전이됩니다.
-         *       정상 종료가 시간 초과되면 **강제 종료로 폴백**한 뒤 삭제를 진행합니다
+         *     - 접수 즉시 종료(ACPI)가 시도되고 상태가 `DELETING`으로 전이됩니다.
+         *       종료가 시간 초과되면 **강제 종료로 폴백**한 뒤 삭제를 진행합니다
          *       (사용자 `shutdown` op의 "폴백 없음"과 달리, 삭제 흐름은 종료가
          *       목적이 아니라 파기 전 단계이므로 폴백합니다).
-         *     - 물리 파기는 `settings.vm_delete_grace_hours`(기본 **168시간 = 7일**) 유예
+         *     - 파기는 `settings.vm_delete_grace_hours`(기본 **168시간 = 7일**) 유예
          *       후 스위퍼 잡이 수행합니다.
-         *     - **삭제 취소 정책**: 삭제 요청 후 **학생은 취소할 수 없습니다**.
+         *     - **삭제 취소 정책**: 삭제 요청 후 **사용자는 취소할 수 없습니다**.
          *       유예 기간은 오류·실수에 대비한 관리자 복구용 보관 기간이며, 유예 중
-         *       복원이 필요하면 관리자에게 문의해야 합니다 (관리자가
+         *       복구가 필요하면 관리자에게 문의해야 합니다 (관리자가
          *       `POST /admin/vms/{vmId}/cancel-scheduled-delete`로 취소).
          *       삭제 확인 UI와 통보 메일에도 이 사실이 안내됩니다.
-         *     - **백업 책임 고지**: 플랫폼은 VM 데이터를 백업하지 않으며, 물리 파기 후에는
+         *     - **백업 책임 고지**: 플랫폼은 VM 데이터를 백업하지 않으며, 파기 후에는
          *       어떤 방법으로도 복구할 수 없습니다. 필요한 데이터는 삭제 전에 직접
          *       백업해야 합니다.
          *     - **`ERROR` 상태 예외**: 생성 실패 보상이 끝난 `ERROR` 상태 VM은 파기할
@@ -529,7 +529,7 @@ export interface paths {
         /**
          * VM 시작
          * @description `STOPPED` 상태의 VM을 시작합니다. 그룹 **MEMBER 이상**만 호출할 수 있으며,
-         *     접수 즉시 202를 반환하고 잡 큐에서 비동기로 처리됩니다.
+         *     접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리됩니다.
          *     완료 여부는 VM 상세의 `status`(→ `RUNNING`)로 확인하고,
          *     VM 이벤트(`START`)로 기록됩니다.
          */
@@ -550,10 +550,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * VM 정상 종료 (ACPI)
-         * @description `RUNNING` 상태의 VM에 정상 종료(ACPI shutdown) 신호를 보냅니다.
+         * VM 종료 (ACPI)
+         * @description `RUNNING` 상태의 VM에 종료(ACPI shutdown) 신호를 보냅니다.
          *     그룹 **MEMBER 이상**만 호출할 수 있으며, 접수 즉시 202를 반환하고
-         *     잡 큐에서 비동기로 처리됩니다. VM 이벤트(`STOP`)로 기록됩니다.
+         *     작업 큐에서 비동기로 처리됩니다. VM 이벤트(`STOP`)로 기록됩니다.
          *
          *     게스트 OS가 응답하지 않으면 시간 초과로 실패할 수 있으며, 이때 강제
          *     종료로 **자동 폴백하지 않습니다** — 필요하면
@@ -578,7 +578,7 @@ export interface paths {
         /**
          * VM 재부팅
          * @description `RUNNING` 상태의 VM을 재부팅합니다. 그룹 **MEMBER 이상**만 호출할 수
-         *     있으며, 접수 즉시 202를 반환하고 잡 큐에서 비동기로 처리됩니다.
+         *     있으며, 접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리됩니다.
          *     VM 이벤트(`REBOOT`)로 기록됩니다.
          */
         post: operations["rebootVm"];
@@ -601,10 +601,10 @@ export interface paths {
          * VM 강제 종료 (전원 차단)
          * @description `RUNNING` 또는 `REBOOTING` 상태의 VM을 강제 종료합니다(전원 차단에 해당).
          *     그룹 **MEMBER 이상**만 호출할 수 있으며, 접수 즉시 202를 반환하고
-         *     잡 큐에서 비동기로 처리됩니다. VM 이벤트(`FORCE_STOP`)로 기록됩니다.
+         *     작업 큐에서 비동기로 처리됩니다. VM 이벤트(`FORCE_STOP`)로 기록됩니다.
          *
          *     **경고**: 디스크 쓰기 중 강제 종료하면 파일 시스템·데이터가 손상될 수
-         *     있습니다. 정상 종료(`shutdown`)가 응답하지 않을 때만 사용하세요.
+         *     있습니다. 종료(`shutdown`)가 응답하지 않을 때만 사용하세요.
          */
         post: operations["forceStopVm"];
         delete?: never;
@@ -656,8 +656,8 @@ export interface paths {
         /**
          * VM 이벤트 이력 조회
          * @description 이 VM의 수명주기 이벤트(생성·전원·삭제 등) 이력입니다. 최신순 정렬.
-         *     소유 그룹의 멤버(VIEWER 이상)만 조회할 수 있습니다.
-         *     비멤버에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다.
+         *     소유 그룹의 구성원(VIEWER 이상)만 조회할 수 있습니다.
+         *     비구성원에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다.
          */
         get: operations["listVmEvents"];
         put?: never;
@@ -680,8 +680,8 @@ export interface paths {
         /**
          * VM HTTP 서비스 공개 (라우트 활성화)
          * @description VM의 내부 HTTP 서비스를 외부에 공개합니다. 소유 그룹의 **OWNER 또는
-         *     MANAGER**만 호출할 수 있습니다(권한 매트릭스 §2.4 "VM 신청, 설정(도메인·
-         *     포트) 변경"). 비멤버에게는 VM 존재가 마스킹되어 404입니다.
+         *     EDITOR**만 호출할 수 있습니다(권한 매트릭스 §2.4 "VM 신청, 설정(도메인·
+         *     포트) 변경"). 비구성원에게는 VM 존재가 마스킹되어 404입니다.
          *
          *     **공개 대상 포트**는 VM 내부에서 서비스가 열려 있는 포트입니다(기본 80,
          *     1–65535). VM의 SSH 포트 22는 공개할 수 없습니다(422). 라우팅 대상 IP는
@@ -703,7 +703,7 @@ export interface paths {
          *       인증서(Let's Encrypt) 발급이 끝나면 자동 적용됩니다. 설정할 DNS 레코드는
          *       응답의 `domain.verification`과 `GET /domains/{domainId}`에서 안내합니다.
          *
-         *     라우트 적용은 비동기(잡 큐 → proxy-agent desired-state 적용)이며 진행/결과는
+         *     라우트 적용은 비동기(작업 큐 → proxy-agent desired-state 적용)이며 진행/결과는
          *     `VmDetail.publication`(route.status PENDING→APPLIED/FAILED)으로 확인합니다.
          *     공개는 VM 이벤트(`PUBLISH`)로 기록됩니다.
          *
@@ -734,7 +734,7 @@ export interface paths {
         post?: never;
         /**
          * VM HTTP 서비스 공개 해제 (라우트 제거)
-         * @description VM의 HTTP 공개를 해제합니다. 소유 그룹의 **OWNER 또는 MANAGER**만 호출할
+         * @description VM의 HTTP 공개를 해제합니다. 소유 그룹의 **OWNER 또는 EDITOR**만 호출할
          *     수 있습니다. 접수 즉시 라우트가 `desiredState: ABSENT`로 비동기 적용되어
          *     vhost가 제거됩니다. 자동·희망 서브도메인(AUTO/REQUESTED) 도메인 행은 함께
          *     정리되고, 커스텀 도메인은 검증 상태 보존을 위해 도메인 행은 남고 라우트만
@@ -750,7 +750,7 @@ export interface paths {
         /**
          * VM 공개 설정 변경 (포트·커스텀 도메인)
          * @description 공개 중인 VM의 노출 포트 또는 커스텀 도메인 연결을 변경합니다. 소유 그룹의
-         *     **OWNER 또는 MANAGER**만 호출할 수 있습니다. 최소 1개 필드가 필요합니다.
+         *     **OWNER 또는 EDITOR**만 호출할 수 있습니다. 최소 1개 필드가 필요합니다.
          *     **플랫폼 서브도메인 이름은 변경 대상이 아닙니다**(승인 시 확정 — 다른
          *     서브도메인이 필요하면 재신청).
          *
@@ -801,15 +801,15 @@ export interface paths {
         /**
          * 도메인 상세 조회 (검증 안내 포함)
          * @description 도메인 상세입니다. 커스텀 도메인은 설정할 DNS 레코드(A + TXT)와 현재 폴링
-         *     상태를 `verification`으로 안내합니다. 소유 그룹 멤버(VIEWER 이상)만 조회할
-         *     수 있으며, 비멤버에게는 404로 마스킹됩니다.
+         *     상태를 `verification`으로 안내합니다. 소유 그룹 구성원(VIEWER 이상)만 조회할
+         *     수 있으며, 비구성원에게는 404로 마스킹됩니다.
          */
         get: operations["getDomain"];
         put?: never;
         post?: never;
         /**
          * 도메인 삭제
-         * @description 도메인을 삭제합니다. 소유 그룹의 **OWNER 또는 MANAGER**만 호출할 수
+         * @description 도메인을 삭제합니다. 소유 그룹의 **OWNER 또는 EDITOR**만 호출할 수
          *     있습니다. 도메인에 연결된 라우트가 있으면 함께 제거(공개 해제)되고,
          *     커스텀 도메인의 인증서는 아카이브됩니다. vhost 제거는 비동기입니다.
          */
@@ -835,7 +835,7 @@ export interface paths {
          * 커스텀 도메인 검증 재시도
          * @description 커스텀 도메인의 DNS 검증(TXT 소유권 + A 전파)을 즉시 다시 시도합니다.
          *     **멱등적**입니다 — 이미 검증(ACTIVE)된 도메인에 호출해도 안전하며 현재
-         *     상태를 반환합니다. 소유 그룹의 **OWNER 또는 MANAGER**만 호출할 수 있습니다.
+         *     상태를 반환합니다. 소유 그룹의 **OWNER 또는 EDITOR**만 호출할 수 있습니다.
          *     플랫폼 서브도메인(AUTO/REQUESTED)은 소유권 검증이 없어 409
          *     (`DOMAIN_NOT_CUSTOM`)입니다.
          *
@@ -1013,7 +1013,7 @@ export interface paths {
         put?: never;
         /**
          * [관리자] VM 신청 승인
-         * @description 신청을 승인하고 부여 스펙을 확정합니다. 승인 폼은 요청 스펙으로 미리 채워지며
+         * @description 신청을 승인하고 부여 사양을 확정합니다. 승인 폼은 요청 사양으로 미리 채워지며
          *     관리자가 조정할 수 있습니다. 승인 시:
          *
          *     1. `vm_request_reviews` 결정 행이 생성되고,
@@ -1114,7 +1114,7 @@ export interface paths {
          * @description SYS_ADMIN 전용입니다. 사용자의 전역 역할과 관리 기관을 변경합니다.
          *
          *     - `role`을 `ORG_ADMIN`으로 지정할 때는 `orgId`가 필수입니다 (검증 실패 시 422).
-         *     - `role`을 `STUDENT` 또는 `SYS_ADMIN`으로 지정하면 `orgId`는 null이어야 합니다.
+         *     - `role`을 `USER` 또는 `SYS_ADMIN`으로 지정하면 `orgId`는 null이어야 합니다.
          *     - 역할 변경 시 `token_version`이 올라가 해당 사용자의 기존 토큰이 무효화됩니다.
          */
         patch: operations["updateUserRole"];
@@ -1174,22 +1174,22 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * [관리자] VM 삭제 예약
-         * @description 관리자 주도의 통상 삭제를 예약합니다. ORG_ADMIN은 자기 기관의 VM만
-         *     예약할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
+         * [관리자] VM 일반 삭제 접수
+         * @description 관리자 주도의 일반 삭제(유예 후 파기)를 접수합니다. ORG_ADMIN은 자기 기관의 VM만
+         *     접수할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
          *
          *     - `scheduledFor`는 현재 시각 기준 최소 통보 기간
          *       `settings.vm_admin_delete_min_notice_days`(기본 **7일**) 이후여야
          *       합니다. 과거이거나 통보 기간 미만이면 422(`errors[]`)로 거부됩니다.
-         *     - 예약 즉시 이용자(그룹 멤버)에게 사유(`reason`)가 포함된 통보 메일이
+         *     - 접수 즉시 사용자(그룹 구성원)에게 사유(`reason`)가 포함된 통보 메일이
          *       발송됩니다.
-         *     - 예정 시각 도래 시 정상 종료 후 파기됩니다(정상 종료 시간 초과 시
-         *       강제 종료 폴백). 예약 취소는 관리자만
+         *     - 예정 시각 도래 시 종료 후 파기됩니다(종료 시간 초과 시
+         *       강제 종료 폴백). 접수된 삭제의 취소는 관리자만
          *       `POST /admin/vms/{vmId}/cancel-scheduled-delete`로 할 수 있습니다
-         *       (학생 취소 불가 — 계약 상단의 삭제 취소 정책 참조).
-         *     - 셀프 삭제 유예 중(`DELETING`)인 VM에는 예약할 수 없습니다(409).
-         *       관리자는 기존 삭제를 먼저 취소한 뒤 재예약하거나, 즉시 파기가
-         *       필요하면 `emergency-delete`를 사용합니다.
+         *       (사용자 취소 불가 — 계약 상단의 삭제 취소 정책 참조).
+         *     - 본인 삭제 유예 중(`DELETING`)인 VM에는 접수할 수 없습니다(409).
+         *       관리자는 기존 삭제를 먼저 취소한 뒤 다시 접수하거나, 즉시 파기가
+         *       필요하면 `force-delete`를 사용합니다.
          */
         post: operations["scheduleVmDeletion"];
         delete?: never;
@@ -1210,20 +1210,20 @@ export interface paths {
         /**
          * [관리자] 대기 중인 VM 삭제 취소
          * @description 대기 중인(아직 파기되지 않은) 삭제를 **kind와 무관하게** 취소합니다.
-         *     학생에게는 삭제 취소 권한이 없으므로 이 오퍼레이션이 유일한 취소
+         *     사용자에게는 삭제 취소 권한이 없으므로 이 오퍼레이션이 유일한 취소
          *     수단입니다 (유예 = 관리자 복구용 안전망). ORG_ADMIN은 자기 기관의 VM만
          *     취소할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
          *
          *     kind별 취소 의미:
          *
-         *     - **SELF** (셀프 삭제 유예 중): 삭제 접수 시 VM이 이미 종료되었으므로
-         *       취소 후 `STOPPED` 상태로 남습니다. 전원 켜기는 학생이 직접
+         *     - **SELF** (본인 삭제 유예 중): 삭제 접수 시 VM이 이미 종료되었으므로
+         *       취소 후 `STOPPED` 상태로 남습니다. 시작은 사용자가 직접
          *       `POST /vms/{vmId}/start`로 수행합니다.
-         *     - **ADMIN** (관리자 예약): 예약만 해제되고 VM의 현재 전원 상태는 그대로
+         *     - **ADMIN** (관리자 일반 삭제): 접수만 해제되고 VM의 현재 전원 상태는 그대로
          *       유지됩니다 (`RUNNING`이었다면 `RUNNING` 유지).
-         *     - **EMERGENCY**: 즉시 파기되므로 취소 대상이 될 수 없습니다(항상 409).
+         *     - **FORCE**: 즉시 파기되므로 취소 대상이 될 수 없습니다(항상 409).
          *
-         *     취소 시 이용자에게 안내 메일이 발송됩니다. VM 이벤트
+         *     취소 시 사용자에게 안내 메일이 발송됩니다. VM 이벤트
          *     (`CANCEL_SCHEDULED_DELETE`)로 기록됩니다.
          */
         post: operations["cancelScheduledVmDeletion"];
@@ -1233,7 +1233,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/vms/{vmId}/emergency-delete": {
+    "/admin/vms/{vmId}/force-delete": {
         parameters: {
             query?: never;
             header?: never;
@@ -1243,19 +1243,19 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * [SYS_ADMIN] VM 긴급 삭제 (즉시 파기)
-         * @description SYS_ADMIN 전용입니다. 보안 사고 등 긴급 상황에서 유예 없이 **즉시 강제
+         * [SYS_ADMIN] VM 강제 삭제 (즉시 파기)
+         * @description SYS_ADMIN 전용입니다. 보안 사고 등 급박한 상황에서 유예 없이 **즉시 강제
          *     종료하고 파기**합니다. 취소할 수 없습니다.
          *
          *     - 오조작 방지를 위해 본문의 `confirmName`이 VM의 `name`과 정확히
          *       일치해야 합니다. 불일치 시 409 (`VM_CONFIRM_NAME_MISMATCH`).
-         *     - `EMERGENCY_DELETE` VM 이벤트와 별도 감사 기록이 남으며, 기관
-         *       관리자와 이용자에게 통지됩니다.
+         *     - `FORCE_DELETE` VM 이벤트와 별도 감사 기록이 남으며, 기관
+         *       관리자와 사용자에게 통지됩니다.
          *     - 202 응답이 `VmDeletion`이 아니라 `MessageResponse`인 이유: 즉시
-         *       파기·취소 불가라 "예약된 삭제"(scheduledFor/cancelable)라는 표현이
+         *       파기·취소 불가라 "접수된 삭제"(scheduledFor/cancelable)라는 표현이
          *       성립하지 않기 때문입니다.
          */
-        post: operations["emergencyDeleteVm"];
+        post: operations["forceDeleteVm"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1299,7 +1299,7 @@ export interface paths {
          *     기관 VM의 도메인만, SYS_ADMIN은 전체를 조회합니다. `orgId` 필터는 SYS_ADMIN의
          *     기관 간 탐색용입니다(ORG_ADMIN은 자기 기관으로 고정). 각 항목은 대상 VM·그룹·
          *     기관 맥락과 도메인 상태, 라우트·인증서 상태를 포함합니다. 커스텀 도메인의
-         *     검증 상태(TXT/A)는 `verifiedAt`으로, 상세 레코드는 학생용
+         *     검증 상태(TXT/A)는 `verifiedAt`으로, 상세 레코드는 사용자용
          *     `GET /domains/{domainId}`에서 확인합니다.
          */
         get: operations["listAdminDomains"];
@@ -1376,7 +1376,7 @@ export interface paths {
          * @description 발송된 공지 목록입니다. 최신순 정렬. 가시성은 **발송자 기관 기준**입니다:
          *     ORG_ADMIN은 자기 기관 소속 관리자가 발송한 공지와 ALL 범위 공지를,
          *     SYS_ADMIN은 전체를 조회합니다. (SYS_ADMIN이 특정 그룹에 발송한 공지는
-         *     해당 그룹 멤버 기관의 ORG_ADMIN에게는 이 목록에 나타나지 않습니다 —
+         *     해당 그룹 구성원 기관의 ORG_ADMIN에게는 이 목록에 나타나지 않습니다 —
          *     수신자 개개인의 알림함에는 존재.)
          */
         get: operations["listAnnouncements"];
@@ -1387,10 +1387,10 @@ export interface paths {
          *     인앱 알림 행은 **동기**로 생성되고(201 응답 시점에 존재), 이메일 발송은
          *     비동기로 처리됩니다. `recipientCount`는 실제 생성된 수신자 수입니다.
          *
-         *     **기관 소속(파생 멤버십) 정의** — 학생 계정은 `users.org_id`를 갖지
+         *     **기관 소속(파생 멤버십) 정의** — 사용자 계정은 `users.org_id`를 갖지
          *     않으므로(기관은 신청/VM 단위 경계), 사용자 U가 기관 O에 "소속"이란:
          *     U가 기관 O의 VM 신청 또는 삭제되지 않은 VM을 1개 이상 가진 그룹의
-         *     `ACTIVE` 멤버이거나, U가 O의 ORG_ADMIN인 경우를 뜻합니다. 이 정의는
+         *     `ACTIVE` 구성원이거나, U가 O의 ORG_ADMIN인 경우를 뜻합니다. 이 정의는
          *     기관 스코프가 걸리는 모든 M5 조회·발송(`/admin/audit` 포함)에 공통
          *     적용됩니다.
          *
@@ -1401,9 +1401,9 @@ export interface paths {
          *       기관 소속 `ACTIVE` 사용자 전원입니다.
          *     - `GROUP` 범위에서 ORG_ADMIN은 **자기 기관의 신청/VM을 가진 그룹**만
          *       대상으로 할 수 있습니다 — 아니면 404 (존재 여부 비공개). 게이트를
-         *       통과한 그룹의 `ACTIVE` 멤버 전원이 수신자입니다(그룹은 그 기관의
-         *       업무 단위 — 멤버 개인별 추가 필터 없음). SYS_ADMIN의 `GROUP` 발송은
-         *       기관과 무관하게 그룹 멤버 전원이 수신자입니다.
+         *       통과한 그룹의 `ACTIVE` 구성원 전원이 수신자입니다(그룹은 그 기관의
+         *       업무 단위 — 구성원 개인별 추가 필터 없음). SYS_ADMIN의 `GROUP` 발송은
+         *       기관과 무관하게 그룹 구성원 전원이 수신자입니다.
          *     - scope와 대상 필드가 맞지 않으면(예 `ORG`인데 `groupId` 지정,
          *       `GROUP`인데 `groupId` 누락) 422.
          *     - 남용 방지: 작성자당 **시간당 10건** 발송 제한 — 초과 시 429
@@ -1428,7 +1428,7 @@ export interface paths {
          * @description 공지 작성 화면의 그룹 선택기에 사용하는 그룹 참조 목록입니다.
          *     ORG_ADMIN은 **자기 기관의 신청/VM을 가진 그룹**만(파생 멤버십 정의 —
          *     `POST /admin/announcements` 참조), SYS_ADMIN은 전체를 조회합니다.
-         *     `memberCount`는 그룹 `ACTIVE` 멤버 전체 수입니다. `orgId` 필터는
+         *     `memberCount`는 그룹 `ACTIVE` 구성원 전체 수입니다. `orgId` 필터는
          *     SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를 지정하면 404로
          *     응답합니다 (존재 여부 비공개).
          *     참조성 소규모 목록이므로 배열로 반환합니다 (orgs/templates 규약과 동일).
@@ -1500,7 +1500,7 @@ export interface paths {
          * [관리자] 감사 로그 조회
          * @description 감사 로그 목록입니다. 최신순 정렬. ORG_ADMIN은 **행위자(actor)가 자기
          *     기관 소속인 행만** 조회할 수 있고(기관 소속 = 파생 멤버십 정의:
-         *     기관의 신청/삭제되지 않은 VM을 가진 그룹의 `ACTIVE` 멤버 또는 그
+         *     기관의 신청/삭제되지 않은 VM을 가진 그룹의 `ACTIVE` 구성원 또는 그
          *     기관의 ORG_ADMIN — `POST /admin/announcements` 참조), SYS_ADMIN은
          *     전체를 조회합니다.
          *     `orgId` 필터는 SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를
@@ -1571,8 +1571,10 @@ export interface paths {
         /**
          * [SYS_ADMIN] 작업(태스크) 큐 조회
          * @description SYS_ADMIN 전용입니다. VM 비동기 작업(프로비저닝/삭제/재설치) 큐
-         *     목록입니다. 최신순 정렬. `NEEDS_ADMIN` 작업의 원인 확인과 재시도
-         *     (`POST /admin/tasks/{taskId}/retry`) 화면에서 사용합니다.
+         *     목록입니다. `updatedAt` 내림차순(동률 시 `id` 내림차순) 정렬 —
+         *     NEEDS_ADMIN 분류 화면에 맞춘 최근 갱신 우선. `NEEDS_ADMIN` 작업의
+         *     원인 확인과 재시도(`POST /admin/tasks/{taskId}/retry`) 화면에서
+         *     사용합니다.
          */
         get: operations["listAdminTasks"];
         put?: never;
@@ -1596,7 +1598,7 @@ export interface paths {
          * [SYS_ADMIN] 작업 재시도
          * @description SYS_ADMIN 전용입니다. 재시도 소진으로 파킹된 `NEEDS_ADMIN` 상태의
          *     작업만 재시도할 수 있습니다 — 그 외 상태는 409 (`TASK_NOT_RETRYABLE`).
-         *     접수 즉시 202를 반환하고 잡 큐에서 비동기로 처리되며, 진행/결과는
+         *     접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리되며, 진행/결과는
          *     작업 목록과 `VmDetail.provisioning`으로 확인합니다.
          */
         post: operations["retryAdminTask"];
@@ -1737,12 +1739,12 @@ export interface paths {
          *     있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
          *
          *     - `endDate`는 **포함(inclusive)** 종료일입니다 — VM은 `endDate` 당일까지
-         *       사용 가능하며, 만료 자동 정지는 다음 날 00:00 KST 이후 수행됩니다.
+         *       사용 가능하며, 만료 자동 종료는 다음 날 00:00 KST 이후 수행됩니다.
          *     - 변경 시 만료 마커(`expiryStoppedAt`, 만료 안내 단계)가 초기화되어
-         *       만료로 자동 정지된 VM도 다시 시작할 수 있게 됩니다
+         *       만료로 자동 종료된 VM도 다시 시작할 수 있게 됩니다
          *       (`POST /vms/{vmId}/start`의 `VM_EXPIRED` 거부 해제).
          *     - `endDate`가 과거(KST 기준)이거나 `startDate`보다 이르면 422.
-         *     - `DELETED`/`DELETING` 상태이거나 삭제가 예약·접수된 VM은 기간을
+         *     - `DELETED`/`DELETING` 상태이거나 삭제가 접수된 VM은 기간을
          *       변경할 수 없습니다 — 409 (`VM_INVALID_STATE`).
          *     - VM 이벤트(`PERIOD_UPDATE`)와 감사 로그에 기록됩니다.
          */
@@ -1797,7 +1799,7 @@ export interface components {
              *       비속어·FQDN 형식, 그리고 **커스텀 도메인이 단일 라벨이거나
              *       `allowedRootDomains`·플랫폼 관리 존 하위인 경우**의 스쿼팅 방지 거부)
              *       `VALIDATION_FAILED`)
-             *     - 운영 (M5): `VM_EXPIRED`(만료 자동 정지 VM의 시작 거부 —
+             *     - 운영 (M5): `VM_EXPIRED`(만료 자동 종료 VM의 시작 거부 —
              *       관리자 기간 연장 필요), `TASK_NOT_RETRYABLE`,
              *       `DRIFT_FINDING_ALREADY_RESOLVED`, `NOTIFICATION_NOT_RESENDABLE`
              *       (그 외 M5 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
@@ -1822,7 +1824,7 @@ export interface components {
          * @description 전역 사용자 역할
          * @enum {string}
          */
-        UserRole: "STUDENT" | "ORG_ADMIN" | "SYS_ADMIN";
+        UserRole: "USER" | "ORG_ADMIN" | "SYS_ADMIN";
         /**
          * @description 계정 상태
          * @enum {string}
@@ -1837,7 +1839,7 @@ export interface components {
          * @description 그룹 내 역할
          * @enum {string}
          */
-        GroupMemberRole: "OWNER" | "MANAGER" | "MEMBER" | "VIEWER";
+        GroupMemberRole: "OWNER" | "EDITOR" | "MEMBER" | "VIEWER";
         /**
          * @description VM 신청 상태
          * @enum {string}
@@ -1960,7 +1962,7 @@ export interface components {
             /** @description 이 템플릿으로 만들 수 있는 최소 디스크 크기 */
             minDiskGb: number;
             status: components["schemas"]["TemplateStatus"];
-            /** @description 신청 화면에 보여줄 안내 (한국어) */
+            /** @description 신청서에 보여줄 안내 (한국어) */
             notes?: string | null;
         };
         CreateGroupRequest: {
@@ -2007,7 +2009,7 @@ export interface components {
         CreateVmRequest: {
             /**
              * Format: int64
-             * @description 신청 주체 그룹 (OWNER/MANAGER 권한 필요)
+             * @description 신청 주체 그룹 (OWNER/EDITOR 권한 필요)
              */
             groupId: number;
             /**
@@ -2024,7 +2026,7 @@ export interface components {
             purpose: string;
             /** @description 관련 수업 또는 프로젝트명 */
             courseOrProject?: string | null;
-            /** @description 기본값보다 높은 스펙 요청 시 사유 (대형 스펙은 사유 필수 — 서버 검증) */
+            /** @description 기본값보다 높은 사양 요청 시 사유 (대형 사양은 사유 필수 — 서버 검증) */
             specReason?: string | null;
             /** @description 관리자에게 전달할 기타 참고 사항 */
             extraNote?: string | null;
@@ -2182,7 +2184,7 @@ export interface components {
             endDate?: string | null;
             /**
              * Format: date-time
-             * @description 만료 자동 정지 시각 (M5 만료 스위퍼가 정지한 경우에만 값 존재 — 관리자가 기간을 연장하면 null로 초기화되어 다시 시작 가능)
+             * @description 만료 자동 종료 시각 (M5 만료 스위퍼가 종료한 경우에만 값 존재 — 관리자가 기간을 연장하면 null로 초기화되어 다시 시작 가능)
              */
             expiryStoppedAt?: string | null;
             /** Format: date-time */
@@ -2201,7 +2203,7 @@ export interface components {
             startDate?: string | null;
             /** @description 진행 중이거나 마지막으로 실패한 비동기 작업(프로비저닝/삭제/재설치)의 진행 상황. 진행·실패 중인 작업이 없으면 null. */
             provisioning?: components["schemas"]["ProvisioningTaskView"] | null;
-            /** @description 예약된(또는 접수된) 삭제 정보. 삭제 예약이 없으면 null. */
+            /** @description 접수된 삭제 정보. 접수된 삭제가 없으면 null. */
             deletion?: components["schemas"]["VmDeletion"] | null;
             /** @description 승인 시 HTTP 공개(grantHttp)가 허용되었는지 여부. false면 공개 오퍼레이션은 403(`VM_HTTP_NOT_GRANTED`) — 콘솔의 공개 버튼 노출 판단에 사용합니다. */
             httpPublishGranted: boolean;
@@ -2251,16 +2253,16 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        /** @description 예약된(또는 접수된) VM 삭제 정보 */
+        /** @description 접수된 VM 삭제 정보 */
         VmDeletion: {
             /**
-             * @description 삭제 종류 (SELF = 이용자 셀프 삭제, ADMIN = 관리자 예약 삭제, EMERGENCY = 긴급 삭제)
+             * @description 삭제 종류 (SELF = 본인 삭제, ADMIN = 관리자 일반 삭제, FORCE = 강제 삭제)
              * @enum {string}
              */
-            kind: "SELF" | "ADMIN" | "EMERGENCY";
+            kind: "SELF" | "ADMIN" | "FORCE";
             /**
              * Format: date-time
-             * @description 물리 파기 예정 시각
+             * @description 파기 예정 시각
              */
             scheduledFor: string;
             /**
@@ -2273,9 +2275,9 @@ export interface components {
              * @description 삭제를 요청한 사용자 ID
              */
             requestedById: number;
-            /** @description 삭제 사유 (관리자 예약 삭제는 필수 기재, 셀프 삭제는 null) */
+            /** @description 삭제 사유 (관리자 일반 삭제는 필수 기재, 본인 삭제는 null) */
             reason?: string | null;
-            /** @description **관리자가** 지금 취소할 수 있는지 여부 (유예 경과·긴급 삭제만 false). 학생에게는 kind와 무관하게 취소 권한이 없습니다 — 유예는 관리자 복구용 안전망이며, 취소는 `POST /admin/vms/{vmId}/cancel-scheduled-delete`로만 가능합니다. */
+            /** @description **관리자가** 지금 취소할 수 있는지 여부 (유예 경과·강제 삭제만 false). 사용자에게는 kind와 무관하게 취소 권한이 없습니다 — 유예는 관리자 복구용 안전망이며, 취소는 `POST /admin/vms/{vmId}/cancel-scheduled-delete`로만 가능합니다. */
             cancelable: boolean;
         };
         /** @description VM 수명주기 이벤트 (VM 파기 후에도 영구 보존) */
@@ -2283,10 +2285,10 @@ export interface components {
             /** Format: int64 */
             id: number;
             /**
-             * @description 이벤트 종류 (SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 삭제 예약·취소의 감사 추적용; PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 정지(actorId null = 시스템) — 둘 다 M5)
+             * @description 이벤트 종류 (삭제 접수는 종류별로 구분 — SELF_DELETE는 본인 삭제 접수, SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 일반 삭제 접수·취소, FORCE_DELETE는 강제 삭제 접수; **파기 완료는 공통 DELETE** — 2026-07-16 이전의 DELETE 행은 접수·완료 의미 혼재(백필 없음). PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 종료(actorId null = 시스템) — 둘 다 M5)
              * @enum {string}
              */
-            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "EMERGENCY_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH" | "PERIOD_UPDATE" | "EXPIRE_STOP";
+            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "FORCE_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH" | "PERIOD_UPDATE" | "EXPIRE_STOP";
             /**
              * Format: int64
              * @description 수행한 사용자 ID (null = 시스템/자동 작업)
@@ -2361,7 +2363,7 @@ export interface components {
                 activeVms: components["schemas"]["VmBrief"][];
                 totals: components["schemas"]["ResourceTotals"];
             };
-            /** @description 신청 그룹 요약 (멤버·보유 자원) */
+            /** @description 신청 그룹 요약 (구성원·보유 자원) */
             group: {
                 /** Format: int64 */
                 id: number;
@@ -2406,7 +2408,7 @@ export interface components {
             /** @description 임계값 기반으로 계산된 한국어 안내문 (예 "여유가 충분합니다" / "메모리 여유가 부족해 신중한 승인이 필요합니다"). */
             guidance: string;
         };
-        /** @description 승인 폼 (요청 스펙으로 미리 채워지며 관리자가 조정 가능) */
+        /** @description 승인 폼 (요청 사양으로 미리 채워지며 관리자가 조정 가능) */
         ApproveVmRequest: {
             /** @description 부여 vCPU */
             grantedVcpu: number;
@@ -2776,7 +2778,7 @@ export interface components {
             unreadCount: number;
         };
         /**
-         * @description 공지 범위 (ALL=전체 공지 — SYS_ADMIN 전용, ORG=기관 소속 사용자, GROUP=그룹 멤버)
+         * @description 공지 범위 (ALL=전체 공지 — SYS_ADMIN 전용, ORG=기관 소속 사용자, GROUP=그룹 구성원)
          * @enum {string}
          */
         AnnouncementScope: "ALL" | "ORG" | "GROUP";
@@ -2832,7 +2834,7 @@ export interface components {
             id: number;
             name: string;
             slug: string;
-            /** @description 그룹 멤버 수 */
+            /** @description 그룹의 `ACTIVE` 구성원 수 — 공지 발송 수신 대상 산정과 동일 기준 (비활성/탈퇴 구성원 제외) */
             memberCount: number;
         };
         /**
@@ -2913,7 +2915,7 @@ export interface components {
             actorEmail?: string | null;
             /** @description 행위자 이름 (시스템 작업은 null) */
             actorName?: string | null;
-            /** @description 행위 시점의 전역 역할 문자열 (시스템 작업은 null). 통상 STUDENT/ORG_ADMIN/SYS_ADMIN이지만 인프라 데몬 감사 행은 `SSHGW` 등 UserRole 밖의 값이 올 수 있어 열린 문자열로 정의합니다 — 콘솔은 미지 값을 원문 표기. */
+            /** @description 행위 시점의 전역 역할 문자열 (시스템 작업은 null). 통상 USER/ORG_ADMIN/SYS_ADMIN이지만 인프라 데몬 감사 행은 `SSHGW` 등 UserRole 밖의 값이 올 수 있어 열린 문자열로 정의합니다 — 콘솔은 미지 값을 원문 표기. */
             actorRole?: string | null;
             /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `vm.delete`, `setting.update`) */
             action: string;
@@ -2999,7 +3001,7 @@ export interface components {
          */
         DriftFindingStatus: "OPEN" | "RESOLVED";
         /**
-         * @description 드리프트 종류 (MISSING_IN_PROXMOX=DB에는 있으나 Proxmox에 없음, UNMANAGED_GUEST=Proxmox에는 있으나 DB가 모르는 게스트, SPEC_MISMATCH=DB 스펙과 실제 게스트 스펙 불일치)
+         * @description 드리프트 종류 (MISSING_IN_PROXMOX=DB에는 있으나 Proxmox에 없음, UNMANAGED_GUEST=Proxmox에는 있으나 DB가 모르는 게스트, SPEC_MISMATCH=DB 사양과 실제 게스트 사양 불일치)
          * @enum {string}
          */
         DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH";
@@ -3019,7 +3021,7 @@ export interface components {
             nodeName?: string | null;
             /** @description 발견 한 줄 요약 (한국어) */
             summary: string;
-            /** @description 발견 상세 (예 스펙 불일치 필드별 기대/실제 값 — 없으면 null) */
+            /** @description 발견 상세 (예 사양 불일치 필드별 기대/실제 값 — 없으면 null) */
             detail?: Record<string, never> | null;
             status: components["schemas"]["DriftFindingStatus"];
             /**
@@ -3191,7 +3193,7 @@ export interface components {
         VmPeriodUpdateRequest: {
             /**
              * Format: date
-             * @description 새 사용 종료일 (**포함** — 당일까지 사용 가능, 만료 자동 정지는 다음 날 00:00 KST 이후). 과거(KST)이거나 `startDate`보다 이르면 422.
+             * @description 새 사용 종료일 (**포함** — 당일까지 사용 가능, 만료 자동 종료는 다음 날 00:00 KST 이후). 과거(KST)이거나 `startDate`보다 이르면 422.
              */
             endDate: string;
             /**
@@ -3540,7 +3542,7 @@ export interface operations {
                      *         "id": 42,
                      *         "email": "gildong.hong@pusan.ac.kr",
                      *         "name": "홍길동",
-                     *         "role": "STUDENT"
+                     *         "role": "USER"
                      *       }
                      *     }
                      */
@@ -3631,7 +3633,7 @@ export interface operations {
                      *         "id": 42,
                      *         "email": "gildong.hong@pusan.ac.kr",
                      *         "name": "홍길동",
-                     *         "role": "STUDENT"
+                     *         "role": "USER"
                      *       }
                      *     }
                      */
@@ -3755,7 +3757,7 @@ export interface operations {
                      *       "id": 42,
                      *       "email": "gildong.hong@pusan.ac.kr",
                      *       "name": "홍길동",
-                     *       "role": "STUDENT",
+                     *       "role": "USER",
                      *       "orgId": null,
                      *       "status": "ACTIVE",
                      *       "memberships": [
@@ -3769,7 +3771,7 @@ export interface operations {
                      *           "groupId": 12,
                      *           "groupName": "캡스톤 3조",
                      *           "groupKind": "PROJECT",
-                     *           "role": "MANAGER"
+                     *           "role": "EDITOR"
                      *         }
                      *       ]
                      *     }
@@ -3984,7 +3986,7 @@ export interface operations {
                      *         "name": "캡스톤 3조",
                      *         "slug": "capstone-team3",
                      *         "description": "2026-1 캡스톤디자인 3조",
-                     *         "myRole": "MANAGER",
+                     *         "myRole": "EDITOR",
                      *         "memberCount": 4
                      *       }
                      *     ]
@@ -4167,7 +4169,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 멤버 추가 완료 */
+            /** @description 구성원 추가 완료 */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4194,9 +4196,9 @@ export interface operations {
                     /**
                      * @example {
                      *       "type": "about:blank",
-                     *       "title": "멤버를 추가할 권한이 없습니다",
+                     *       "title": "구성원을 추가할 권한이 없습니다",
                      *       "status": 403,
-                     *       "detail": "그룹 OWNER만 멤버를 추가할 수 있습니다.",
+                     *       "detail": "그룹 소유자(OWNER)만 구성원을 추가할 수 있습니다.",
                      *       "instance": "/api/v1/groups/12/members",
                      *       "code": "GROUP_MEMBER_MANAGE_FORBIDDEN"
                      *     }
@@ -4223,7 +4225,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description 이미 그룹 멤버임 */
+            /** @description 이미 그룹 구성원임 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4232,9 +4234,9 @@ export interface operations {
                     /**
                      * @example {
                      *       "type": "about:blank",
-                     *       "title": "이미 그룹 멤버입니다",
+                     *       "title": "이미 그룹 구성원입니다",
                      *       "status": 409,
-                     *       "detail": "해당 사용자는 이미 이 그룹의 멤버입니다.",
+                     *       "detail": "해당 사용자는 이미 이 그룹의 구성원입니다.",
                      *       "instance": "/api/v1/groups/12/members",
                      *       "code": "GROUP_MEMBER_ALREADY_EXISTS"
                      *     }
@@ -4252,14 +4254,14 @@ export interface operations {
             path: {
                 /** @description 그룹 ID */
                 groupId: components["parameters"]["GroupId"];
-                /** @description 대상 멤버의 사용자 ID */
+                /** @description 대상 구성원의 사용자 ID */
                 userId: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 멤버 제거 완료 */
+            /** @description 구성원 제거 완료 */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -4280,7 +4282,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "유일한 소유자는 나갈 수 없습니다",
                      *       "status": 409,
-                     *       "detail": "소유권을 다른 멤버에게 이전한 뒤 다시 시도해 주세요.",
+                     *       "detail": "소유권을 다른 구성원에게 이전한 뒤 다시 시도해 주세요.",
                      *       "instance": "/api/v1/groups/12/members/42",
                      *       "code": "GROUP_SOLE_OWNER_REMOVAL"
                      *     }
@@ -4297,7 +4299,7 @@ export interface operations {
             path: {
                 /** @description 그룹 ID */
                 groupId: components["parameters"]["GroupId"];
-                /** @description 대상 멤버의 사용자 ID */
+                /** @description 대상 구성원의 사용자 ID */
                 userId: number;
             };
             cookie?: never;
@@ -4306,7 +4308,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "role": "MANAGER"
+                 *       "role": "EDITOR"
                  *     }
                  */
                 "application/json": {
@@ -4315,7 +4317,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 변경된 멤버 정보 */
+            /** @description 변경된 구성원 정보 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4338,7 +4340,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "유일한 소유자의 역할은 변경할 수 없습니다",
                      *       "status": 409,
-                     *       "detail": "소유권을 다른 멤버에게 이전한 뒤 다시 시도해 주세요.",
+                     *       "detail": "소유권을 다른 구성원에게 이전한 뒤 다시 시도해 주세요.",
                      *       "instance": "/api/v1/groups/12/members/42",
                      *       "code": "GROUP_SOLE_OWNER_REMOVAL"
                      *     }
@@ -4437,7 +4439,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "VM을 신청할 권한이 없습니다",
                      *       "status": 403,
-                     *       "detail": "그룹의 OWNER 또는 MANAGER만 VM을 신청할 수 있습니다.",
+                     *       "detail": "그룹의 OWNER 또는 EDITOR만 VM을 신청할 수 있습니다.",
                      *       "instance": "/api/v1/vm-requests",
                      *       "code": "GROUP_ROLE_INSUFFICIENT"
                      *     }
@@ -4497,7 +4499,7 @@ export interface operations {
                      *         "reviewerId": 3,
                      *         "reviewerName": "관리자김",
                      *         "decision": "APPROVE",
-                     *         "comment": "요청 스펙 그대로 승인합니다. 발표 기간 이후 반납 부탁드립니다.",
+                     *         "comment": "요청 사양 그대로 승인합니다. 발표 기간 이후 삭제 부탁드립니다.",
                      *         "grantedVcpu": 2,
                      *         "grantedMemoryMb": 2048,
                      *         "grantedDiskGb": 20,
@@ -4644,7 +4646,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비멤버에게는 존재가 마스킹됩니다 */
+            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비구성원에게는 존재가 마스킹됩니다 */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4677,7 +4679,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 삭제 접수 (DELETING 전이, 유예 후 물리 파기) */
+            /** @description 삭제 접수 (DELETING 전이, 유예 후 파기) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -4717,7 +4719,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 삭제할 수 없는 상태 — 이미 DELETING/DELETED이거나 CREATING/NEEDS_ADMIN, 또는 이미 삭제가 예약됨(`deletion != null`, 관리자 예약 포함) */
+            /** @description 삭제할 수 없는 상태 — 이미 DELETING/DELETED이거나 CREATING/NEEDS_ADMIN, 또는 이미 삭제가 접수됨(`deletion != null`, 관리자 삭제 포함) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4728,7 +4730,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
                      *       "status": 409,
-                     *       "detail": "이미 삭제가 예약되었거나 진행 중인 VM입니다.",
+                     *       "detail": "이미 삭제가 접수되었거나 진행 중인 VM입니다.",
                      *       "instance": "/api/v1/vms/55",
                      *       "code": "VM_INVALID_STATE"
                      *     }
@@ -4785,7 +4787,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능). 또한 사용 기간이 만료된 VM(M5 만료 자동 정지)은 `STOPPED`여도 `VM_EXPIRED` 코드로 거부됩니다 — 관리자가 기간을 연장 (`PATCH /admin/vms/{vmId}/period`)해야 다시 시작할 수 있습니다 */
+            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능). 또한 사용 기간이 만료된 VM(M5 만료 자동 종료)은 `STOPPED`여도 `VM_EXPIRED` 코드로 거부됩니다 — 관리자가 기간을 연장 (`PATCH /admin/vms/{vmId}/period`)해야 다시 시작할 수 있습니다 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4818,7 +4820,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 정상 종료 요청 접수 */
+            /** @description 종료 요청 접수 */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -5153,7 +5155,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비멤버에게는 존재가 마스킹됩니다 */
+            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비구성원에게는 존재가 마스킹됩니다 */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5236,7 +5238,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description 권한 부족(그룹 OWNER/MANAGER 아님 — `GROUP_ROLE_INSUFFICIENT`) 또는 HTTP 공개 미허가 VM(grantHttp=false — `VM_HTTP_NOT_GRANTED`) */
+            /** @description 권한 부족(그룹 OWNER/EDITOR 아님 — `GROUP_ROLE_INSUFFICIENT`) 또는 HTTP 공개 미허가 VM(grantHttp=false — `VM_HTTP_NOT_GRANTED`) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5247,7 +5249,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "HTTP 서비스를 공개할 권한이 없습니다",
                      *       "status": 403,
-                     *       "detail": "그룹의 OWNER 또는 MANAGER만 도메인·포트를 설정할 수 있습니다.",
+                     *       "detail": "그룹의 OWNER 또는 EDITOR만 도메인·포트를 설정할 수 있습니다.",
                      *       "instance": "/api/v1/vms/55/publish",
                      *       "code": "GROUP_ROLE_INSUFFICIENT"
                      *     }
@@ -5341,7 +5343,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description VM 또는 공개(publication) 없음 — 비멤버에게는 VM 존재가 마스킹됨 */
+            /** @description VM 또는 공개(publication) 없음 — 비구성원에게는 VM 존재가 마스킹됨 */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5825,7 +5827,7 @@ export interface operations {
                      *         "memoryUsageRatio": 0.64,
                      *         "warnings": []
                      *       },
-                     *       "guidance": "여유가 충분합니다. 요청 스펙 그대로 승인해도 무리가 없습니다."
+                     *       "guidance": "여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다."
                      *     }
                      */
                     "application/json": components["schemas"]["ApprovalContext"];
@@ -5862,7 +5864,7 @@ export interface operations {
                  *       "grantedSubdomain": "capstone-team3",
                  *       "grantedRootDomain": "pickle.pnuops.com",
                  *       "nodeId": null,
-                 *       "comment": "요청 스펙 그대로 승인합니다. 서브도메인도 요청하신 이름으로 부여합니다."
+                 *       "comment": "요청 사양 그대로 승인합니다. 서브도메인도 요청하신 이름으로 부여합니다."
                  *     }
                  */
                 "application/json": components["schemas"]["ApproveVmRequest"];
@@ -6211,7 +6213,7 @@ export interface operations {
                 status?: components["schemas"]["VmStatus"];
                 /** @description 지정 일수 이내 만료 예정 VM만 조회 (오늘 ≤ `endDate` ≤ 오늘+N — 이미 만료된 VM은 제외하며 `expired=true`로 조회, DELETED/DELETING 제외). `expired`와 함께 지정하면 AND로 적용되어 빈 결과가 됩니다. */
                 expiringInDays?: number;
-                /** @description true면 이미 만료된 VM만 조회 (`endDate` < 오늘) */
+                /** @description true면 이미 만료된 VM만 조회 (`endDate` < 오늘, DELETED/DELETING 제외 — `expiringInDays`와 동일 기준) */
                 expired?: boolean;
                 /** @description 페이지 번호 (0부터 시작) */
                 page?: components["parameters"]["Page"];
@@ -6259,16 +6261,16 @@ export interface operations {
                 "application/json": {
                     /**
                      * Format: date-time
-                     * @description 물리 파기 예정 시각 (최소 통보 기간 이후, 기본 7일)
+                     * @description 파기 예정 시각 (최소 통보 기간 이후, 기본 7일)
                      */
                     scheduledFor: string;
-                    /** @description 삭제 사유 (필수 — 이용자 통보 메일에 포함) */
+                    /** @description 삭제 사유 (필수 — 사용자 통보 메일에 포함) */
                     reason: string;
                 };
             };
         };
         responses: {
-            /** @description 삭제 예약 접수 (이용자 통보 메일 발송) */
+            /** @description 일반 삭제 접수 (사용자 통보 메일 발송) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -6290,7 +6292,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description 예약할 수 없는 상태 — 이미 삭제 예약됨, 셀프 삭제 유예 중(DELETING), 또는 DELETED */
+            /** @description 접수할 수 없는 상태 — 이미 삭제 접수됨, 본인 삭제 유예 중(DELETING), 또는 DELETED */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6301,7 +6303,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
                      *       "status": 409,
-                     *       "detail": "이미 삭제가 예약되었거나 진행 중인 VM입니다.",
+                     *       "detail": "이미 삭제가 접수되었거나 진행 중인 VM입니다.",
                      *       "instance": "/api/v1/admin/vms/55/schedule-delete",
                      *       "code": "VM_INVALID_STATE"
                      *     }
@@ -6348,7 +6350,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 예약 취소 완료 */
+            /** @description 삭제 취소 완료 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6356,7 +6358,7 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "message": "삭제 예약이 취소되었습니다."
+                     *       "message": "삭제가 취소되었습니다."
                      *     }
                      */
                     "application/json": components["schemas"]["MessageResponse"];
@@ -6365,7 +6367,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description 취소할 수 없음 — 대기 중인 삭제가 없거나, 유예/예정 시각이 지나 이미 파기되었거나, 긴급 삭제(취소 불가)임 */
+            /** @description 취소할 수 없음 — 대기 중인 삭제가 없거나, 유예/예정 시각이 지나 이미 파기되었거나, 강제 삭제(취소 불가)임 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6386,7 +6388,7 @@ export interface operations {
             };
         };
     };
-    emergencyDeleteVm: {
+    forceDeleteVm: {
         parameters: {
             query?: never;
             header?: never;
@@ -6410,7 +6412,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 긴급 삭제 접수 (즉시 강제 종료 후 파기) */
+            /** @description 강제 삭제 접수 (즉시 강제 종료 후 파기) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -6418,7 +6420,7 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "message": "긴급 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다."
+                     *       "message": "강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다."
                      *     }
                      */
                     "application/json": components["schemas"]["MessageResponse"];
@@ -6439,7 +6441,7 @@ export interface operations {
                      *       "title": "확인용 이름이 일치하지 않습니다",
                      *       "status": 409,
                      *       "detail": "입력한 이름이 VM 이름과 일치하지 않습니다. VM 이름을 정확히 입력해 주세요.",
-                     *       "instance": "/api/v1/admin/vms/55/emergency-delete",
+                     *       "instance": "/api/v1/admin/vms/55/force-delete",
                      *       "code": "VM_CONFIRM_NAME_MISMATCH"
                      *     }
                      */
@@ -6941,7 +6943,7 @@ export interface operations {
                      *         "key": "vm_delete_grace_hours",
                      *         "value": 168,
                      *         "valueType": "INTEGER",
-                     *         "description": "셀프 삭제 후 물리 파기까지의 유예 시간",
+                     *         "description": "본인 삭제 후 파기까지의 유예 시간",
                      *         "editable": true,
                      *         "updatedAt": "2026-07-01T09:00:00+09:00"
                      *       },
@@ -7303,7 +7305,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description 기간을 변경할 수 없는 상태 — DELETED/DELETING이거나 삭제가 예약·접수된 VM */
+            /** @description 기간을 변경할 수 없는 상태 — DELETED/DELETING이거나 삭제가 접수된 VM */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7314,7 +7316,7 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
                      *       "status": 409,
-                     *       "detail": "삭제가 예약되었거나 진행 중인 VM은 기간을 변경할 수 없습니다.",
+                     *       "detail": "삭제가 접수되었거나 진행 중인 VM은 기간을 변경할 수 없습니다.",
                      *       "instance": "/api/v1/admin/vms/55/period",
                      *       "code": "VM_INVALID_STATE"
                      *     }

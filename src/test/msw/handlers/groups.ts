@@ -51,7 +51,7 @@ function initialGroups(): GroupRecord[] {
       },
       members: [
         me(),
-        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MANAGER' },
+        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'EDITOR' },
         { userId: 58, name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
         { userId: 59, name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'VIEWER' },
       ],
@@ -193,9 +193,9 @@ export const groupHandlers: RequestHandler[] = [
     if (!record || !member) return notFound()
     const body = (await request.json()) as { role: Schemas['GroupMemberRole'] }
     if (body.role === 'OWNER') {
-      // Ownership transfer: the previous OWNER is demoted to MANAGER.
+      // Ownership transfer: the previous OWNER is demoted to EDITOR.
       for (const m of record.members) {
-        if (m.role === 'OWNER') m.role = 'MANAGER'
+        if (m.role === 'OWNER') m.role = 'EDITOR'
       }
     }
     member.role = body.role
