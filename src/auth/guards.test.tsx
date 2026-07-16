@@ -18,14 +18,14 @@ describe('라우트 가드', () => {
     expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument()
   })
 
-  test('세션이 복원된 학생은 /console 대시보드를 본다', async () => {
+  test('세션이 복원된 사용자는 /console 대시보드를 본다', async () => {
     server.use(refreshSuccessHandler('access-student'))
     renderApp('/console')
 
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 
-  test('학생이 /admin에 접근하면 /console로 돌려보낸다', async () => {
+  test('사용자가 /admin에 접근하면 /console로 돌려보낸다', async () => {
     server.use(refreshSuccessHandler('access-student'))
     renderApp('/admin')
 

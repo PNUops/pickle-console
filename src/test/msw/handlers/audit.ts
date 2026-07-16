@@ -88,7 +88,7 @@ function initialAuditRows(): StoredAuditRow[] {
   ]
 }
 
-/** 학생 홍길동(42)의 내 활동 이력. */
+/** 사용자 홍길동(42)의 내 활동 이력. */
 function initialActivityRows(): ActivityEntry[] {
   return [
     {
@@ -193,7 +193,7 @@ export const auditHandlers: RequestHandler[] = [
     const action = url.searchParams.get('action')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    // 픽스처는 학생(42) 기준 — 다른 계정은 빈 목록.
+    // 픽스처는 사용자(42) 기준 — 다른 계정은 빈 목록.
     const rows = (profile.id === 42 ? activityStore : [])
       .filter((row) => !action || row.action === action)
       .sort((a, b) => b.id - a.id)

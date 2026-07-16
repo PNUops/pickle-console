@@ -6,7 +6,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 describe('알림 종(bell)', () => {
-  test('학생 상단 바에 읽지 않은 알림 수를 배지로 보여준다', async () => {
+  test('사용자 상단 바에 읽지 않은 알림 수를 배지로 보여준다', async () => {
     server.use(refreshSuccessHandler('access-student'))
     renderApp('/console')
 

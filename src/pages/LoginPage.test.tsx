@@ -13,7 +13,7 @@ async function submitLogin(email: string, password: string) {
 }
 
 describe('로그인', () => {
-  test('학생은 로그인 후 /console 대시보드로 이동한다', async () => {
+  test('사용자는 로그인 후 /console 대시보드로 이동한다', async () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
