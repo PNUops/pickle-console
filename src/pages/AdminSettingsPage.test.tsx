@@ -36,11 +36,11 @@ describe('플랫폼 설정', () => {
     const graceRow = screen.getByText('vm_delete_grace_hours').closest('tr')!
     expect(within(graceRow).getByText('168')).toBeInTheDocument()
 
-    const jsonRow = screen.getByText('expiry_notice_days').closest('tr')!
-    expect(within(jsonRow).getByText('[7,3,1,0]')).toBeInTheDocument()
+    const jsonRow = screen.getByText('vm_expiry_notice_days').closest('tr')!
+    expect(within(jsonRow).getByText('[14,7,1]')).toBeInTheDocument()
 
     // 조회 전용(editable=false)
-    const roRow = screen.getByText('platform_root_domain').closest('tr')!
+    const roRow = screen.getByText('deploy_profile').closest('tr')!
     expect(within(roRow).queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
   })
 
