@@ -225,8 +225,8 @@ export interface paths {
         };
         /**
          * VM 템플릿 목록 조회
-         * @description 신청 마법사에서 선택 가능한 활성 템플릿 목록입니다.
-         *     각 템플릿의 `defaultVcpu/defaultMemoryMb/defaultDiskGb`가 신청 폼의 기본값으로
+         * @description 신청서에서 선택 가능한 활성 템플릿 목록입니다.
+         *     각 템플릿의 `defaultVcpu/defaultMemoryMb/defaultDiskGb`가 신청서의 기본값으로
          *     미리 채워집니다 (예: Ubuntu 24.04 기본형 = 2 vCPU / 2 GiB / 20 GiB).
          */
         get: operations["listTemplates"];
@@ -247,7 +247,7 @@ export interface paths {
         };
         /**
          * VM 신청 선택지 조회
-         * @description VM 신청 폼에서 사용하는 선택지·검증 목록입니다. 값은 `settings`에서
+         * @description VM 신청서에서 사용하는 선택지·검증 목록입니다. 값은 `settings`에서
          *     관리되며 운영자가 변경할 수 있습니다.
          *
          *     - `allowedRootDomains`: `rootDomain`으로 선택 가능한 루트 도메인 허용 목록

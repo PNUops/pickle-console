@@ -67,7 +67,7 @@ describe('계정 전환 시 캐시 격리', () => {
     await user.click(screen.getByRole('button', { name: '로그인' }))
     await screen.findByRole('heading', { name: '대시보드' })
 
-    // 내 신청 화면 진입 직후에도 A의 캐시가 렌더링되지 않아야 한다.
+    // 내 신청 목록 진입 직후에도 A의 캐시가 렌더링되지 않아야 한다.
     await user.click(screen.getByRole('link', { name: '내 신청' }))
     await screen.findByRole('heading', { name: '내 신청' })
     expect(
