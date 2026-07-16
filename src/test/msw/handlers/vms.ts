@@ -689,12 +689,21 @@ export const vmHandlers: RequestHandler[] = [
     }
     vm.status = immediate ? 'DELETED' : 'DELETING'
     vm.deletion = deletion
+    // 실서버: 접수 시 SELF_DELETE 이벤트, ERROR 즉시 삭제는 종결 DELETE 이벤트를 추가로 기록.
     recordVmEvent(vm.id, {
-      type: 'DELETE',
+      type: 'SELF_DELETE',
       actorId: 42,
       detail: immediate ? '생성 실패 VM 즉시 삭제' : null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
+    if (immediate) {
+      recordVmEvent(vm.id, {
+        type: 'DELETE',
+        actorId: 42,
+        detail: null,
+        createdAt: '2026-07-08T15:00:00+09:00',
+      })
+    }
     return HttpResponse.json(deletion, { status: 202 })
   }),
 

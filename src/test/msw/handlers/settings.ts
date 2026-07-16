@@ -24,6 +24,14 @@ function initialSettings(): SettingView[] {
       updatedAt: '2026-07-01T09:00:00+09:00',
     },
     {
+      key: 'vm_admin_delete_min_notice_days',
+      value: 7,
+      valueType: 'INTEGER',
+      description: '관리자 일반 삭제가 보장해야 하는 최소 사전 통보 기간(일).',
+      editable: true,
+      updatedAt: '2026-07-01T09:00:00+09:00',
+    },
+    {
       key: 'vcpu_overcommit_warn_ratio',
       value: 1.5,
       valueType: 'NUMBER',

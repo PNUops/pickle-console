@@ -27,6 +27,8 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     const groupSelect = screen.getByLabelText('신청 그룹')
     expect(groupSelect).toContainHTML('캡스톤 3조')
     expect(groupSelect).toContainHTML('홍길동')
+    // EDITOR 그룹도 신청 가능 (EDITOR 게이트).
+    expect(groupSelect).toContainHTML('데이터베이스 실습')
     expect(groupSelect).not.toContainHTML('알고리즘 스터디')
 
     await user.click(screen.getByRole('button', { name: '다음' }))

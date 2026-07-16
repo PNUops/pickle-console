@@ -57,6 +57,22 @@ function initialGroups(): GroupRecord[] {
       ],
     },
     {
+      // EDITOR 게이트 검증용 — 로그인 사용자(42)가 EDITOR인 그룹.
+      detail: {
+        id: 14,
+        kind: 'PROJECT',
+        name: '데이터베이스 실습',
+        slug: 'db-lab',
+        description: '2026-1 데이터베이스 실습 조교팀',
+        myRole: 'EDITOR',
+        createdAt: '2026-06-20T14:00:00+09:00',
+      },
+      members: [
+        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'OWNER' },
+        { ...me(), role: 'EDITOR' },
+      ],
+    },
+    {
       detail: {
         id: 15,
         kind: 'TEAM',

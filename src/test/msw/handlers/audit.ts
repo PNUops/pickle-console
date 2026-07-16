@@ -22,7 +22,7 @@ function initialAuditRows(): StoredAuditRow[] {
       actorEmail: null,
       actorName: 'ssh-gateway',
       actorRole: 'SSHGW',
-      action: 'sshgw.session.start',
+      action: 'sshgw.route',
       targetType: 'vm',
       targetId: '56',
       detail: null,
@@ -102,7 +102,7 @@ function initialActivityRows(): ActivityEntry[] {
     },
     {
       id: 600,
-      action: 'vm.delete',
+      action: 'vm.self_delete',
       targetType: 'vm',
       targetId: '60',
       detail: null,

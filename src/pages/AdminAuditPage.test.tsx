@@ -34,7 +34,7 @@ describe('감사 로그', () => {
     const row = (await screen.findByText('ssh-gateway')).closest('tr')!
     expect(within(row).getByText('SSHGW')).toBeInTheDocument()
     // 미등록 동작 코드도 원문 노출 (labelForAuditAction 폴백)
-    expect(within(row).getByText('sshgw.session.start')).toBeInTheDocument()
+    expect(within(row).getByText('sshgw.route')).toBeInTheDocument()
   })
 
   test('동작 필터를 고르면 해당 동작만 남는다', async () => {
