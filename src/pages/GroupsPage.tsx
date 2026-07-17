@@ -48,7 +48,12 @@ export function GroupsPage() {
         </div>
       )}
       {groups.isError && <Alert variant="danger">{groups.error.message}</Alert>}
-      {groups.isSuccess && (
+      {groups.isSuccess && groups.data.length === 0 && (
+        <Card className="p-8 text-center text-sm text-neutral-500">
+          속한 그룹이 없습니다. 새 그룹을 만들어 시작해 보세요.
+        </Card>
+      )}
+      {groups.isSuccess && groups.data.length > 0 && (
         <Card>
           <Table>
             <THead>

@@ -34,6 +34,7 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatMemory, formatSpec } from '../lib/format'
+import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import {
   CUSTOM_DOMAIN_FORMAT_MESSAGE,
   HOSTNAME_RE,
@@ -110,7 +111,7 @@ const INITIAL_STATE: WizardState = {
 type FieldErrors = Partial<Record<string, string>>
 
 /** 새로고침/뒤로가기에도 작성 중인 신청서를 유지하기 위한 세션 저장 키. */
-const DRAFT_KEY = 'pickle.vm-request-draft'
+const DRAFT_KEY = VM_REQUEST_DRAFT_KEY
 
 function loadDraft(): WizardState {
   try {

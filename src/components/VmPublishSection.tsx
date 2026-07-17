@@ -92,6 +92,11 @@ export function VmPublishSection({ vm }: { vm: VmDetail }) {
     }
   }
 
+  // 권한 조회 실패는 "권한 없음"과 다르다 — 읽기 전용 안내 대신 오류·재시도를 보여준다.
+  const roleFallback = group.isError ? (
+    <RoleLoadError retrying={group.isFetching} onRetry={() => void group.refetch()} />
+  ) : null
+
   return (
     <Card>
       <CardHeader>
@@ -99,9 +104,14 @@ export function VmPublishSection({ vm }: { vm: VmDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {vm.publication == null ? (
-          <PublishForm vm={vm} canMutate={canMutate} />
+          (roleFallback ?? <PublishForm vm={vm} canMutate={canMutate} />)
         ) : (
-          <PublicationDetail vm={vm} publication={vm.publication} canMutate={canMutate} />
+          <PublicationDetail
+            vm={vm}
+            publication={vm.publication}
+            canMutate={canMutate}
+            mutateFallback={roleFallback}
+          />
         )}
         <LeftoverDomainList
           vm={vm}
@@ -110,6 +120,20 @@ export function VmPublishSection({ vm }: { vm: VmDetail }) {
         />
       </CardContent>
     </Card>
+  )
+}
+
+/** GET /groups/{id} 실패 시의 안내 — 역할이 낮은 것이 아니라 조회가 실패한 것. */
+function RoleLoadError({ retrying, onRetry }: { retrying: boolean; onRetry: () => void }) {
+  return (
+    <Alert variant="warning" title="권한 정보를 불러오지 못했습니다">
+      <div className="space-y-2">
+        <p>공개 설정 권한을 확인하지 못해 변경 기능을 잠시 숨겼습니다.</p>
+        <Button size="sm" variant="secondary" loading={retrying} onClick={onRetry}>
+          다시 시도
+        </Button>
+      </div>
+    </Alert>
   )
 }
 
@@ -232,10 +256,13 @@ function PublicationDetail({
   vm,
   publication,
   canMutate,
+  mutateFallback = null,
 }: {
   vm: VmDetail
   publication: PublicationView
   canMutate: boolean
+  /** 권한을 알 수 없을 때(조회 실패) 읽기 전용 안내 대신 표시할 내용. */
+  mutateFallback?: ReactNode
 }) {
   // 접수 직후·해제 진행 중 등 과도기에는 중첩 블록(route/certificate/verification)이
   // 아직 없을 수 있다 — 어떤 조합이 와도 크래시 없이 "준비 중"으로 렌더링한다.
@@ -330,9 +357,11 @@ function PublicationDetail({
           publication={publication}
         />
       ) : (
-        <p className="text-sm text-neutral-500">
-          공개 설정 변경·해제는 그룹의 소유자·편집자만 할 수 있습니다.
-        </p>
+        (mutateFallback ?? (
+          <p className="text-sm text-neutral-500">
+            공개 설정 변경·해제는 그룹의 소유자·편집자만 할 수 있습니다.
+          </p>
+        ))
       )}
     </div>
   )

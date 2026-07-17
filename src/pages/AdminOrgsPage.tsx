@@ -51,7 +51,12 @@ export function AdminOrgsPage() {
         </div>
       )}
       {orgs.isError && <Alert variant="danger">{orgs.error.message}</Alert>}
-      {orgs.isSuccess && (
+      {orgs.isSuccess && orgs.data.length === 0 && (
+        <Card className="p-8 text-center text-sm text-neutral-500">
+          등록된 기관이 없습니다. 기관을 만들어 자원 제공을 시작하세요.
+        </Card>
+      )}
+      {orgs.isSuccess && orgs.data.length > 0 && (
         <Card>
           <Table>
             <THead>

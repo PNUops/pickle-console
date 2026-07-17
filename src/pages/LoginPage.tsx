@@ -26,7 +26,9 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       const profile = await login(email, password)
-      const target = from && from.startsWith('/') ? from : homePathFor(profile.role)
+      // 내부 경로만 허용한다 — '//host' 형태는 스킴 상대 URL로 외부 이동이 가능하다.
+      const safeFrom = from && from.startsWith('/') && !from.startsWith('//') ? from : null
+      const target = safeFrom ?? homePathFor(profile.role)
       navigate(target, { replace: true })
     } catch (err) {
       setError(

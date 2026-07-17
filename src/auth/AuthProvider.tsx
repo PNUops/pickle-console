@@ -4,6 +4,7 @@ import { api, getCsrfToken, refreshSession } from '../api/client'
 import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
+import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { AuthContext, type AuthStatus, type UserProfile } from './auth-context'
 
 interface AuthState {
@@ -88,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       clearAccessToken()
       queryClient.clear()
+      // 같은 탭에서 다음 사용자가 이전 사용자의 신청서 초안을 물려받지 않게 지운다.
+      sessionStorage.removeItem(VM_REQUEST_DRAFT_KEY)
       setState({ status: 'unauthenticated', user: null })
     }
   }, [queryClient])
