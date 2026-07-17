@@ -49,6 +49,13 @@ export function AdminTasksPage() {
     queryKey: ['admin', 'tasks', { status: status ?? null, page }],
     queryFn: () => fetchAdminTasks({ status, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
+    // 진행 계열 작업이 보이는 동안만 폴링 (VM 목록의 전이 중 폴링과 같은 패턴).
+    refetchInterval: (query) =>
+      query.state.data?.content.some((task) =>
+        ['PENDING', 'RUNNING', 'RETRYING'].includes(task.status),
+      )
+        ? 5000
+        : false,
   })
 
   return (

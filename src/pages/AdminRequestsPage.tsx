@@ -53,6 +53,8 @@ export function AdminRequestsPage() {
     ],
     queryFn: () => fetchAdminVmRequests({ status, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
+    // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
+    refetchInterval: 30_000,
   })
   const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
