@@ -1,8 +1,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  problemResponse,
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
@@ -158,5 +160,67 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
       const row = screen.getByText('algo-judge').closest('tr')!
       expect(within(row).getByText('삭제됨')).toBeInTheDocument()
     })
+  })
+
+  test('강제 삭제가 409로 실패하면 모달이 유지되고 입력을 다시 치지 않아도 재시도할 수 있다', async () => {
+    const user = userEvent.setup()
+    // 첫 요청만 이름 불일치 409 — 이후에는 기본 핸들러(성공)로 떨어진다.
+    server.use(
+      http.post(
+        '*/api/v1/admin/vms/:vmId/force-delete',
+        () =>
+          problemResponse({
+            type: 'about:blank',
+            title: '확인용 이름이 일치하지 않습니다',
+            status: 409,
+            detail:
+              '입력한 이름이 VM 이름과 일치하지 않습니다. VM 이름을 정확히 입력해 주세요.',
+            code: 'VM_CONFIRM_NAME_MISMATCH',
+          }),
+        { once: true },
+      ),
+    )
+    renderAsSysAdmin()
+
+    await selectVm(user, 'algo-judge')
+    await user.click(screen.getByRole('button', { name: '강제 삭제' }))
+    const dialog = await screen.findByRole('dialog', { name: 'VM 강제 삭제' })
+    await user.type(within(dialog).getByRole('textbox'), 'algo-judge')
+    await user.click(within(dialog).getByRole('button', { name: '즉시 파기' }))
+
+    // 모달이 닫히지 않고 오류가 모달 안에 인라인으로 표시되며 입력이 보존된다.
+    expect(
+      await within(dialog).findByText(/입력한 이름이 VM 이름과 일치하지 않습니다/),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByRole('textbox')).toHaveValue('algo-judge')
+
+    // 다시 치지 않고 재시도만으로 접수된다.
+    await user.click(within(dialog).getByRole('button', { name: '즉시 파기' }))
+    expect(
+      await screen.findByText(
+        '강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test('필터된 목록에서 VM이 사라져 패널이 언마운트돼도 접수 확인 메시지는 남는다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    // 실행 중 탭에서 강제 삭제 → DELETED가 되며 목록에서 빠져 패널이 사라진다.
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    await user.click(screen.getByRole('tab', { name: '실행 중' }))
+    await selectVm(user, 'algo-judge')
+    await user.click(screen.getByRole('button', { name: '강제 삭제' }))
+    const dialog = await screen.findByRole('dialog', { name: 'VM 강제 삭제' })
+    await user.type(within(dialog).getByRole('textbox'), 'algo-judge')
+    await user.click(within(dialog).getByRole('button', { name: '즉시 파기' }))
+
+    await waitFor(() =>
+      expect(screen.queryByText('관리 작업 — algo-judge')).not.toBeInTheDocument(),
+    )
+    expect(
+      screen.getByText('강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.'),
+    ).toBeInTheDocument()
   })
 })

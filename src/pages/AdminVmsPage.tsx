@@ -59,6 +59,14 @@ export function AdminVmsPage() {
   const [groupIdInput, setGroupIdInput] = useState('')
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  // 작업 결과 메시지는 페이지 수준에서 관리한다 — 강제 삭제 등으로 VM이 필터된
+  // 목록에서 사라져 패널이 언마운트돼도 접수 확인이 함께 사라지지 않게.
+  const [message, setMessage] = useState<string | null>(null)
+
+  const selectVm = (id: number) => {
+    if (id !== selectedId) setMessage(null) // 다른 VM의 결과가 남아 오독되지 않게
+    setSelectedId(id)
+  }
 
   const groupId = /^\d+$/.test(groupIdInput.trim())
     ? Number(groupIdInput.trim())
@@ -190,7 +198,7 @@ export function AdminVmsPage() {
                       'cursor-pointer',
                       vm.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
                     )}
-                    onClick={() => setSelectedId(vm.id)}
+                    onClick={() => selectVm(vm.id)}
                   >
                     <TD>
                       {/* 키보드 사용자도 관리 작업 패널을 열 수 있게 이름은 버튼으로 */}
@@ -198,7 +206,7 @@ export function AdminVmsPage() {
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation()
-                          setSelectedId(vm.id)
+                          selectVm(vm.id)
                         }}
                         className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                       >
@@ -231,8 +239,15 @@ export function AdminVmsPage() {
         </>
       )}
 
+      {message && <Alert variant="success">{message}</Alert>}
+
       {selected && (
-        <VmActionPanel key={selected.id} vm={selected} isSysAdmin={isSysAdmin} />
+        <VmActionPanel
+          key={selected.id}
+          vm={selected}
+          isSysAdmin={isSysAdmin}
+          onDone={setMessage}
+        />
       )}
     </div>
   )
@@ -240,9 +255,15 @@ export function AdminVmsPage() {
 
 /* ─── 관리 액션 패널 (행 선택 시) ─── */
 
-function VmActionPanel({ vm, isSysAdmin }: { vm: VmSummary; isSysAdmin: boolean }) {
-  const [message, setMessage] = useState<string | null>(null)
-
+function VmActionPanel({
+  vm,
+  isSysAdmin,
+  onDone,
+}: {
+  vm: VmSummary
+  isSysAdmin: boolean
+  onDone: (message: string) => void
+}) {
   return (
     <Card>
       <CardHeader className="flex items-center justify-between">
@@ -252,10 +273,9 @@ function VmActionPanel({ vm, isSysAdmin }: { vm: VmSummary; isSysAdmin: boolean 
         <VmStatusBadge status={vm.status} />
       </CardHeader>
       <CardContent className="space-y-6">
-        {message && <Alert variant="success">{message}</Alert>}
-        <ScheduleDeleteForm vm={vm} onDone={setMessage} />
-        <CancelDeleteAction vm={vm} onDone={setMessage} />
-        {isSysAdmin && <ForceDeleteAction vm={vm} onDone={setMessage} />}
+        <ScheduleDeleteForm vm={vm} onDone={onDone} />
+        <CancelDeleteAction vm={vm} onDone={onDone} />
+        {isSysAdmin && <ForceDeleteAction vm={vm} onDone={onDone} />}
       </CardContent>
     </Card>
   )
@@ -426,9 +446,12 @@ function ForceDeleteAction({
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await queryClient.invalidateQueries({ queryKey: ['vms'] })
     },
-    onError: (err) => {
-      setOpen(false)
+    onError: async (err) => {
+      // 모달을 유지해 입력한 이름을 보존하고 오류를 모달 안에 인라인으로 보여준다.
       setError(toApiError(err, '강제 삭제를 접수하지 못했습니다.').message)
+      // 이름 불일치·상태 불일치(409) 등은 화면이 뒤처진 것일 수 있으니
+      // 목록을 다시 불러와 낡은 상태를 치유한다 (전원 제어와 같은 패턴).
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
     },
   })
 
@@ -439,8 +462,14 @@ function ForceDeleteAction({
         보안 사고 등 비상 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
         없습니다.
       </p>
-      {error && <Alert variant="danger">{error}</Alert>}
-      <Button variant="danger" onClick={() => setOpen(true)}>
+      {error && !open && <Alert variant="danger">{error}</Alert>}
+      <Button
+        variant="danger"
+        onClick={() => {
+          setError(null)
+          setOpen(true)
+        }}
+      >
         강제 삭제
       </Button>
       <ConfirmNameModal
@@ -458,6 +487,7 @@ function ForceDeleteAction({
           유예 없이 즉시 강제 종료 후 파기되며, 데이터는 복구할 수 없습니다. 기관
           관리자와 사용자에게 통지되고 감사 기록이 남습니다.
         </Alert>
+        {error && <Alert variant="danger">{error}</Alert>}
       </ConfirmNameModal>
     </section>
   )
