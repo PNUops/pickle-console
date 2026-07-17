@@ -179,7 +179,6 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'vm.cancel_scheduled_delete': '삭제 취소',
   'vm.force_delete': '강제 삭제',
   'vm.password_reveal': '초기 비밀번호 열람',
-  'vm.password_reset': 'VM 비밀번호 재설정',
   'vm.publish': 'HTTP 공개',
   'vm.publication_update': '공개 설정 변경',
   'vm.unpublish': 'HTTP 공개 해제',

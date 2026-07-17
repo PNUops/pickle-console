@@ -290,16 +290,6 @@ export function revealInitialPassword(vmId: number): Promise<InitialPasswordResp
   })
 }
 
-/** 게스트 에이전트로 즉시 반영되는 새 비밀번호 발급 (재부팅 불필요). */
-export function resetVmPassword(vmId: number): Promise<InitialPasswordResponse> {
-  return guardNetwork(async () => {
-    const { data, error } = await api.POST('/vms/{vmId}/password-reset', {
-      params: { path: { vmId } },
-    })
-    if (!data) throw toApiError(error, '비밀번호를 재설정하지 못했습니다.')
-    return data
-  })
-}
 
 export function fetchVmEvents(
   vmId: number,

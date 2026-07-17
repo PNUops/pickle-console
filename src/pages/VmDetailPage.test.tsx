@@ -222,7 +222,7 @@ describe('VM 상세 — 비밀번호 열람·재설정 (v0.7.0 상시 재열람)
     ).toBeInTheDocument()
   })
 
-  test('저장된 비밀번호가 없으면(410) 재설정 안내를 보여준다', async () => {
+  test('저장된 비밀번호가 없으면(410) 관리자 문의 안내를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/v1/vms/:vmId/initial-password', () =>
@@ -230,8 +230,7 @@ describe('VM 상세 — 비밀번호 열람·재설정 (v0.7.0 상시 재열람)
           type: 'about:blank',
           title: '초기 비밀번호를 열람할 수 없습니다',
           status: 410,
-          detail:
-            '저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.',
+          detail: '저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 관리자에게 문의해 주세요.',
           code: 'VM_PASSWORD_ALREADY_VIEWED',
         }),
       ),
@@ -245,53 +244,6 @@ describe('VM 상세 — 비밀번호 열람·재설정 (v0.7.0 상시 재열람)
       await screen.findByText(/저장된 초기 비밀번호가 없습니다/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  test('실행 중 VM은 재설정으로 새 비밀번호를 발급받는다', async () => {
-    const user = userEvent.setup()
-    renderVm(56)
-
-    await screen.findByRole('heading', { name: 'algo-judge' })
-    await user.click(screen.getByRole('button', { name: '비밀번호 재설정' }))
-    const dialog = await screen.findByRole('dialog', { name: 'VM 비밀번호 재설정' })
-    expect(
-      within(dialog).getByText(/기존 비밀번호는 바로 사용할 수 없게 됩니다/),
-    ).toBeInTheDocument()
-
-    await user.click(within(dialog).getByRole('button', { name: '재설정' }))
-    expect(
-      await within(dialog).findByText('q2Xw8RtN5kLm3ZvB7cJd4Hyf'),
-    ).toBeInTheDocument()
-    expect(
-      within(dialog).getByText(/새 비밀번호가 VM에 즉시 적용되었습니다/),
-    ).toBeInTheDocument()
-  })
-
-  test('재설정 실패(에이전트 미응답 409)는 모달 안에서 안내하고 재시도할 수 있다', async () => {
-    const user = userEvent.setup()
-    server.use(
-      http.post('*/api/v1/vms/:vmId/password-reset', () =>
-        problemResponse({
-          type: 'about:blank',
-          title: '현재 상태에서는 수행할 수 없는 작업입니다',
-          status: 409,
-          detail: 'VM이 실행 중이고 게스트 에이전트가 응답할 때만 비밀번호를 재설정할 수 있습니다.',
-          code: 'VM_INVALID_STATE',
-        }),
-      ),
-    )
-    renderVm(56)
-
-    await screen.findByRole('heading', { name: 'algo-judge' })
-    await user.click(screen.getByRole('button', { name: '비밀번호 재설정' }))
-    const dialog = await screen.findByRole('dialog', { name: 'VM 비밀번호 재설정' })
-    await user.click(within(dialog).getByRole('button', { name: '재설정' }))
-
-    expect(
-      await within(dialog).findByText(/게스트 에이전트가 응답할 때만 비밀번호를 재설정/),
-    ).toBeInTheDocument()
-    // 모달은 유지되어 재시도 버튼이 남는다
-    expect(within(dialog).getByRole('button', { name: '재설정' })).toBeInTheDocument()
   })
 })
 
