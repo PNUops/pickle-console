@@ -73,7 +73,7 @@ export function AdminDashboardPage() {
       {isSysAdmin && system.isSuccess && (
         <section aria-label="시스템 요약" className="space-y-2">
           <h2 className="text-sm font-semibold text-neutral-700">시스템</h2>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <StatTile
               label="노드"
               value={`${system.data.nodes.length}대`}
@@ -107,6 +107,13 @@ export function AdminDashboardPage() {
               hint={`관리자 확인 ${system.data.tasks.needsAdminCount}건`}
               to="/admin/tasks"
               tone={system.data.tasks.needsAdminCount > 0 ? 'danger' : 'normal'}
+            />
+            <StatTile
+              label="비밀번호 SSH 허용"
+              value={`${system.data.sshPasswordEnabledVmCount}대`}
+              hint="VM별 설정으로 허용된 VM"
+              to="/admin/vms"
+              tone={system.data.sshPasswordEnabledVmCount > 0 ? 'danger' : 'normal'}
             />
           </div>
         </section>

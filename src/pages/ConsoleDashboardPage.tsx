@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui'
+import { useQuery } from '@tanstack/react-query'
+import { Alert, Card, CardContent, CardHeader, CardTitle } from '../components/ui'
 import { useAuth } from '../auth/auth-context'
+import { fetchMySshKeys, fetchVms } from '../api/queries'
 
 const SHORTCUTS = [
   {
@@ -36,6 +39,7 @@ export function ConsoleDashboardPage() {
           {user?.name}님, 환영합니다. 피클에서 VM을 신청하고 관리할 수 있습니다.
         </p>
       </div>
+      <SshKeyReminder />
       <Card>
         <CardHeader>
           <CardTitle>시작하기</CardTitle>
@@ -56,5 +60,42 @@ export function ConsoleDashboardPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+/** VM이 있는데 SSH 키가 하나도 없으면 접속 불가 — 등록을 유도하는 닫기 가능 배너. */
+function SshKeyReminder() {
+  const [dismissed, setDismissed] = useState(false)
+  const vms = useQuery({ queryKey: ['vms', { page: 0, size: 1 }], queryFn: () => fetchVms({ size: 1 }) })
+  const keys = useQuery({ queryKey: ['me', 'ssh-keys'], queryFn: fetchMySshKeys })
+
+  const hasVm = vms.isSuccess && vms.data.totalElements > 0
+  const noKeys = keys.isSuccess && keys.data.length === 0
+  if (dismissed || !hasVm || !noKeys) return null
+
+  return (
+    <Alert variant="info" title="SSH 키를 등록해 주세요">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p>
+          VM에 SSH로 접속하려면 SSH 키가 필요합니다. 아직 등록된 키가 없어 접속할 수
+          없습니다.
+        </p>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/console/ssh-keys"
+            className="font-medium text-primary-700 hover:underline"
+          >
+            SSH 키 등록하기 →
+          </Link>
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            className="cursor-pointer text-sm text-neutral-500 hover:text-neutral-700"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </Alert>
   )
 }
