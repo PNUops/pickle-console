@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelScheduledVmDeletion,
+  fetchAdminGroups,
   forceDeleteVm,
   fetchAdminVms,
   fetchOrgs,
@@ -36,7 +37,6 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime, formatSpec, minScheduleDate } from '../lib/format'
-import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
 
 const PAGE_SIZE = 10
@@ -57,7 +57,7 @@ export function AdminVmsPage() {
   const isSysAdmin = user?.role === 'SYS_ADMIN'
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const [groupIdInput, setGroupIdInput] = useState('')
+  const [groupId, setGroupId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   // 작업 결과 메시지는 페이지 수준에서 관리한다 — 강제 삭제 등으로 VM이 필터된
@@ -68,13 +68,6 @@ export function AdminVmsPage() {
     if (id !== selectedId) setMessage(null) // 다른 VM의 결과가 남아 오독되지 않게
     setSelectedId(id)
   }
-
-  // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
-  // 요청이 나가지 않게 한다.
-  const debouncedGroupIdInput = useDebouncedValue(groupIdInput)
-  const groupId = /^\d+$/.test(debouncedGroupIdInput.trim())
-    ? Number(debouncedGroupIdInput.trim())
-    : undefined
 
   const vms = useQuery({
     queryKey: [
@@ -92,6 +85,11 @@ export function AdminVmsPage() {
     placeholderData: keepPreviousData,
   })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  // ORG_ADMIN은 자기 기관 그룹으로 고정, SYS_ADMIN은 선택한 기관으로 좁혀진다.
+  const groups = useQuery({
+    queryKey: ['admin', 'groups', { orgId: orgId ?? null }],
+    queryFn: () => fetchAdminGroups(orgId !== undefined ? { orgId } : {}),
+  })
 
   const selected = vms.data?.content.find((vm) => vm.id === selectedId) ?? null
 
@@ -141,6 +139,7 @@ export function AdminVmsPage() {
                 value={orgId ?? ''}
                 onChange={(event) => {
                   setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                  setGroupId(undefined) // 기관이 바뀌면 이전 기관의 그룹 선택은 무효
                   setPage(0)
                 }}
               >
@@ -154,18 +153,23 @@ export function AdminVmsPage() {
             </label>
           )}
           <label className="flex items-center gap-2 text-sm text-neutral-600">
-            그룹 ID
-            <Input
-              aria-label="그룹 ID 필터"
-              className="w-28"
-              inputMode="numeric"
-              placeholder="전체"
-              value={groupIdInput}
+            그룹
+            <Select
+              aria-label="그룹 필터"
+              className="w-56"
+              value={groupId ?? ''}
               onChange={(event) => {
-                setGroupIdInput(event.target.value)
+                setGroupId(event.target.value ? Number(event.target.value) : undefined)
                 setPage(0)
               }}
-            />
+            >
+              <option value="">전체 그룹</option>
+              {groups.data?.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name} ({group.slug})
+                </option>
+              ))}
+            </Select>
           </label>
         </div>
       </div>

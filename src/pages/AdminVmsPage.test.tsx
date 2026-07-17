@@ -49,6 +49,24 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
   })
 
+  test('그룹 필터 드롭다운으로 그룹을 좁힐 수 있고, 기관 변경 시 선택이 초기화된다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await screen.findByText('capstone-team3-api')
+    const groupSelect = screen.getByLabelText('그룹 필터')
+    expect(within(groupSelect).getByRole('option', { name: /캡스톤 3조/ })).toBeInTheDocument()
+
+    await user.selectOptions(groupSelect, '12')
+    expect(await screen.findByText('capstone-team3-api')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
+
+    // 기관을 바꾸면 이전 기관의 그룹 선택은 무효 → 전체 그룹으로 초기화
+    await user.selectOptions(screen.getByLabelText('기관 필터'), '2')
+    expect(screen.getByLabelText('그룹 필터')).toHaveValue('')
+    expect(await screen.findByText('ai-train')).toBeInTheDocument()
+  })
+
   test('ORG_ADMIN에게는 기관 필터와 강제 삭제가 노출되지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
