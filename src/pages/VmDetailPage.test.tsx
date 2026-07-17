@@ -189,7 +189,7 @@ describe('VM 상세 — 삭제 흐름', () => {
   })
 })
 
-describe('VM 상세 — 비밀번호 열람·재설정 (v0.7.0 상시 재열람)', () => {
+describe('VM 상세 — 비밀번호 상시 재열람 (v0.7.1)', () => {
   test('비밀번호를 열람하고, 닫았다가 다시 열람할 수 있다', async () => {
     const user = userEvent.setup()
     renderVm(56)
