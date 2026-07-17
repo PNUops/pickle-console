@@ -32,9 +32,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: null,
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-07-15',
       endDate: '2026-12-20',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: true,
       publication: null,
       provisioning: {
@@ -68,9 +71,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.56',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-06-20',
       endDate: '2026-12-20',
-      initialPasswordAvailable: true,
+      passwordAvailable: true,
       httpPublishGranted: true,
       publication: null,
       provisioning: null,
@@ -95,9 +101,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.57',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-06-20',
       endDate: '2026-12-20',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: null,
@@ -121,9 +130,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: null,
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: null,
       endDate: null,
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: {
@@ -156,9 +168,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: null,
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: null,
       endDate: null,
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: null,
@@ -182,9 +197,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.60',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-05-01',
       endDate: '2026-07-01',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: null,
@@ -217,9 +235,12 @@ function initialVms(): VmDetail[] {
       templateId: 2,
       ipAddress: '10.10.0.61',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-31',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
         fqdn: 'ai-team.pickle.pnuops.com',
@@ -270,9 +291,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.62',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-07-10',
       endDate: '2026-12-20',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
         fqdn: 'demo.example.com',
@@ -333,9 +357,12 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.63',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-20',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
         fqdn: 'shop.example.com',
@@ -401,9 +428,12 @@ function initialVms(): VmDetail[] {
       templateId: 2,
       ipAddress: '10.10.0.64',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-31',
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
         fqdn: 'api.example.org',
@@ -469,10 +499,13 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.45',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: localDateStr(-90),
       endDate: localDateStr(3),
       expiryStoppedAt: null,
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: null,
@@ -497,10 +530,13 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.46',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: localDateStr(-120),
       endDate: localDateStr(-2),
       expiryStoppedAt: new Date().toISOString(),
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: null,
@@ -525,10 +561,13 @@ function initialVms(): VmDetail[] {
       templateId: 1,
       ipAddress: '10.10.0.47',
       sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      myGroupRole: 'OWNER',
+      passwordRevealAllowed: true,
       startDate: localDateStr(-60),
       endDate: localDateStr(20),
       expiryStoppedAt: null,
-      initialPasswordAvailable: false,
+      passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
       provisioning: null,
@@ -564,6 +603,72 @@ export let vmStore: VmDetail[] = initialVms()
 export let vmEventStore: Record<number, VmEvent[]> = initialVmEvents()
 let nextEventId = 950
 
+/* ─── VM별 설정 레지스트리 (M5.5) — 계약 v0.8.0 카탈로그 ─── */
+type VmSettingView = Schemas['VmSettingView']
+type GroupMemberRole = Schemas['GroupMemberRole']
+
+interface VmSettingCatalogEntry {
+  valueType: VmSettingView['valueType']
+  allowedValues: string[] | null
+  defaultValue: unknown
+  label: string
+  description: string
+  requiredRole: GroupMemberRole
+}
+
+export const VM_SETTING_CATALOG: Record<string, VmSettingCatalogEntry> = {
+  ssh_password_enabled: {
+    valueType: 'BOOLEAN',
+    allowedValues: null,
+    defaultValue: false,
+    label: '비밀번호 SSH 허용',
+    description:
+      'SSH 게이트웨이에서 비밀번호 접속을 허용합니다. 켜면 접속자 개인을 식별할 수 없습니다.',
+    requiredRole: 'EDITOR',
+  },
+  password_reveal_min_role: {
+    valueType: 'ENUM',
+    allowedValues: ['MEMBER', 'EDITOR', 'OWNER'],
+    defaultValue: 'MEMBER',
+    label: '비밀번호 열람 최소 역할',
+    description: 'VM 비밀번호(= sudo 자격)를 열람할 수 있는 최소 그룹 역할입니다.',
+    requiredRole: 'OWNER',
+  },
+}
+
+const ROLE_RANK: Record<GroupMemberRole, number> = {
+  VIEWER: 0,
+  MEMBER: 1,
+  EDITOR: 2,
+  OWNER: 3,
+}
+
+/** VM별 설정 저장 오버라이드 ({vmId: {key: value}}) — 미저장 키는 기본값. */
+export let vmSettingStore: Record<number, Record<string, unknown>> = {}
+
+/** 레지스트리 + 저장 오버라이드를 병합해 VmSettingView[]를 만든다 (요청자 기준 editable 계산). */
+export function vmSettingsOf(vm: VmDetail): VmSettingView[] {
+  const overrides = vmSettingStore[vm.id] ?? {}
+  const stateEditable = vm.status !== 'DELETING' && vm.status !== 'DELETED'
+  return Object.entries(VM_SETTING_CATALOG).map(([key, meta]) => {
+    const stored = key in overrides
+    return {
+      key,
+      value: stored ? overrides[key] : meta.defaultValue,
+      valueType: meta.valueType,
+      allowedValues: meta.allowedValues,
+      defaultValue: meta.defaultValue,
+      label: meta.label,
+      description: meta.description,
+      requiredRole: meta.requiredRole,
+      editable:
+        stateEditable && ROLE_RANK[vm.myGroupRole] >= ROLE_RANK[meta.requiredRole],
+      updatedByName: stored ? '홍길동' : null,
+      updatedAt: stored ? '2026-07-18T14:00:00+09:00' : null,
+    }
+  })
+}
+
 /**
  * Mock provisioning: after this many GET /vms/{id} calls for a CREATING VM,
  * subsequent responses report it RUNNING (drives the polling test).
@@ -578,6 +683,7 @@ let routeFetchCounts: Record<number, number> = {}
 export function resetVmFixtures() {
   vmStore = initialVms()
   vmEventStore = initialVmEvents()
+  vmSettingStore = {}
   nextEventId = 950
   detailFetchCounts = {}
   routeFetchCounts = {}
@@ -645,7 +751,7 @@ export const vmHandlers: RequestHandler[] = [
       if (count >= VM_RUNNING_AFTER_FETCHES) {
         vm.status = 'RUNNING'
         vm.ipAddress = '10.10.0.55'
-        vm.initialPasswordAvailable = true
+        vm.passwordAvailable = true
         vm.provisioning = null
         vm.updatedAt = '2026-07-08T14:10:00+09:00'
       }
@@ -812,27 +918,38 @@ export const vmHandlers: RequestHandler[] = [
     )
   }),
 
-  // 계약 v0.7.0: 상시 재열람 가능 (GET, 부수효과 없음)
-  http.get('*/api/v1/vms/:vmId/initial-password', ({ params }) => {
+  // 계약 v0.8.0: 상시 재열람 (GET, 부수효과 없음). rename: initial-password → password.
+  http.get('*/api/v1/vms/:vmId/password', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()
     if (!['RUNNING', 'STOPPED', 'REBOOTING'].includes(vm.status)) {
       return invalidVmStateProblem(
-        `/api/v1/vms/${vm.id}/initial-password`,
-        'VM 생성이 완료된 뒤에 초기 비밀번호를 열람할 수 있습니다.',
+        `/api/v1/vms/${vm.id}/password`,
+        'VM 생성이 완료된 뒤에 비밀번호를 열람할 수 있습니다.',
       )
     }
-    if (!vm.initialPasswordAvailable) {
+    // password_reveal_min_role 게이트: 서버가 계산한 passwordRevealAllowed를 그대로 강제.
+    if (!vm.passwordRevealAllowed) {
       return problemResponse({
         type: 'about:blank',
-        title: '초기 비밀번호를 열람할 수 없습니다',
+        title: '비밀번호를 열람할 권한이 없습니다',
+        status: 403,
+        detail: '이 VM은 그룹의 MEMBER 이상만 비밀번호를 열람할 수 있습니다.',
+        instance: `/api/v1/vms/${vm.id}/password`,
+        code: 'GROUP_ROLE_INSUFFICIENT',
+      })
+    }
+    if (!vm.passwordAvailable) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '비밀번호를 열람할 수 없습니다',
         status: 410,
-        detail: '저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 관리자에게 문의해 주세요.',
-        instance: `/api/v1/vms/${vm.id}/initial-password`,
+        detail: '저장된 비밀번호가 없습니다. 비밀번호 재생성으로 새 비밀번호를 만들 수 있습니다.',
+        instance: `/api/v1/vms/${vm.id}/password`,
         code: 'VM_PASSWORD_ALREADY_VIEWED',
       })
     }
-    const body: Schemas['InitialPasswordResponse'] = {
+    const body: Schemas['VmPasswordResponse'] = {
       password: 'x7GmQ4vRk2LpWn9sCtYb8Zed',
       sshUsername: 'student',
       sshHost: 'ssh.pickle.pnuops.com',
@@ -842,6 +959,110 @@ export const vmHandlers: RequestHandler[] = [
       status: 200,
       headers: { 'Cache-Control': 'no-store' },
     })
+  }),
+
+  // 비밀번호 재생성 (EDITOR 이상, RUNNING) — 새 비밀번호를 즉시 적용하고 반환.
+  http.post('*/api/v1/vms/:vmId/password/regenerate', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    if (vm.myGroupRole !== 'EDITOR' && vm.myGroupRole !== 'OWNER') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '비밀번호를 재생성할 권한이 없습니다',
+        status: 403,
+        detail: '그룹의 EDITOR 이상만 비밀번호를 재생성할 수 있습니다.',
+        instance: `/api/v1/vms/${vm.id}/password/regenerate`,
+        code: 'GROUP_ROLE_INSUFFICIENT',
+      })
+    }
+    if (vm.status !== 'RUNNING') {
+      return invalidVmStateProblem(
+        `/api/v1/vms/${vm.id}/password/regenerate`,
+        'VM이 실행 중이고 게스트 에이전트가 응답할 때만 비밀번호를 재생성할 수 있습니다.',
+      )
+    }
+    vm.passwordAvailable = true
+    const body: Schemas['VmPasswordResponse'] = {
+      password: 'nB4tWq8xKm2ZrPv6JcYh3Sdf',
+      sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      sshPort: 22,
+    }
+    return HttpResponse.json(body, {
+      status: 200,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }),
+
+  // VM별 설정 조회 (EDITOR 이상) — 레지스트리 기반 카탈로그.
+  http.get('*/api/v1/vms/:vmId/settings', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    if (vm.myGroupRole !== 'EDITOR' && vm.myGroupRole !== 'OWNER') {
+      return problemResponse({
+        type: 'about:blank',
+        title: 'VM 설정에 접근할 권한이 없습니다',
+        status: 403,
+        detail: '그룹의 EDITOR 이상만 VM 설정을 볼 수 있습니다.',
+        instance: `/api/v1/vms/${vm.id}/settings`,
+        code: 'GROUP_ROLE_INSUFFICIENT',
+      })
+    }
+    return HttpResponse.json(vmSettingsOf(vm), { status: 200 })
+  }),
+
+  // VM별 설정 변경 (부분 맵, 원자적) — 갱신된 전체 목록 반환.
+  http.patch('*/api/v1/vms/:vmId/settings', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    if (vm.myGroupRole !== 'EDITOR' && vm.myGroupRole !== 'OWNER') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '설정에 접근할 권한이 없습니다',
+        status: 403,
+        detail: '그룹의 EDITOR 이상만 VM 설정을 변경할 수 있습니다.',
+        instance: `/api/v1/vms/${vm.id}/settings`,
+        code: 'GROUP_ROLE_INSUFFICIENT',
+      })
+    }
+    const body = (await request.json()) as Schemas['VmSettingsUpdateRequest']
+    const entries = Object.entries(body.settings ?? {})
+    if (entries.length === 0) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '변경할 설정을 하나 이상 지정해 주세요.',
+        instance: `/api/v1/vms/${vm.id}/settings`,
+        code: 'VALIDATION_FAILED',
+      })
+    }
+    for (const [key, value] of entries) {
+      if (!(key in VM_SETTING_CATALOG)) {
+        return problemResponse({
+          type: 'about:blank',
+          title: '입력값이 올바르지 않습니다',
+          status: 422,
+          detail: '알 수 없는 설정 키입니다.',
+          instance: `/api/v1/vms/${vm.id}/settings`,
+          code: 'VALIDATION_FAILED',
+          errors: [{ field: `settings.${key}`, message: '알 수 없는 설정 키입니다.' }],
+        })
+      }
+      // password_reveal_min_role은 OWNER 전용 — EDITOR가 바꾸려 하면 403.
+      if (key === 'password_reveal_min_role' && vm.myGroupRole !== 'OWNER') {
+        return problemResponse({
+          type: 'about:blank',
+          title: '설정을 변경할 권한이 없습니다',
+          status: 403,
+          detail: '`password_reveal_min_role` 설정은 그룹의 OWNER만 변경할 수 있습니다.',
+          instance: `/api/v1/vms/${vm.id}/settings`,
+          code: 'GROUP_ROLE_INSUFFICIENT',
+        })
+      }
+      vmSettingStore[vm.id] = { ...(vmSettingStore[vm.id] ?? {}), [key]: value }
+    }
+    return HttpResponse.json(vmSettingsOf(vm), { status: 200 })
   }),
 
   http.get('*/api/v1/vms/:vmId/events', ({ params, request }) => {

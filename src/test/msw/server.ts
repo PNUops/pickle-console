@@ -10,6 +10,7 @@ import { notificationHandlers, resetNotificationFixtures } from './handlers/noti
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
 import { resetSettingFixtures, settingHandlers } from './handlers/settings'
+import { resetSshKeyFixtures, sshKeyHandlers } from './handlers/ssh-keys'
 import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
 
@@ -20,6 +21,7 @@ export const handlers: RequestHandler[] = [
   ...groupHandlers,
   ...vmRequestHandlers,
   ...vmHandlers,
+  ...sshKeyHandlers,
   ...publishingHandlers,
   ...adminHandlers,
   ...adminOpsHandlers,
@@ -37,6 +39,7 @@ export function resetFixtures() {
   resetGroupFixtures()
   resetVmRequestFixtures()
   resetVmFixtures()
+  resetSshKeyFixtures()
   resetPublishingFixtures()
   resetAdminFixtures()
   resetAdminOpsFixtures()

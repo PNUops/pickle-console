@@ -12,7 +12,7 @@ import {
   fetchVmEvents,
   forceStopVm,
   rebootVm,
-  revealInitialPassword,
+  revealVmPassword,
   shutdownVm,
   startVm,
   type MessageResponse,
@@ -380,7 +380,7 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
   // Mutation 객체(평문 보유)가 기본 5분을 기다리지 않고 즉시 GC 되게 한다.
   const reveal = useMutation({
     gcTime: 0,
-    mutationFn: () => revealInitialPassword(vm.id),
+    mutationFn: () => revealVmPassword(vm.id),
     onError: async (err) => {
       setModalOpen(false)
       setError(toApiError(err, '초기 비밀번호를 열람하지 못했습니다.').message)
@@ -401,12 +401,12 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
   }
 
   if (!modalOpen && !PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
-  if (!modalOpen && !vm.initialPasswordAvailable && !error) return null
+  if (!modalOpen && !vm.passwordAvailable && !error) return null
 
   return (
     <>
       {error && <Alert variant="warning">{error}</Alert>}
-      {vm.initialPasswordAvailable && (
+      {vm.passwordAvailable && (
         <Alert variant="info" title="VM 비밀번호">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p>

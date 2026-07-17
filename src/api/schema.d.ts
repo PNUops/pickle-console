@@ -196,6 +196,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/ssh-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내 SSH 키 목록 조회
+         * @description 내 계정에 등록된 SSH 공개키 목록입니다 (M5.5). 등록된 키가 SSH
+         *     게이트웨이 접속(`ssh <VM호스트명>@ssh...`)의 기본 인증 수단이며,
+         *     키가 하나도 없으면 기본 상태의 VM에는 SSH 접속이 불가합니다
+         *     (비밀번호 접속은 VM별 `ssh_password_enabled` opt-in에서만 허용).
+         *
+         *     `privateKeyStored=true`인 키(콘솔 "키 만들기"로 서버가 생성한 키)만
+         *     개인키 재다운로드가 가능합니다. 붙여넣기로 등록한 키의 개인키는
+         *     서버가 알지 못합니다.
+         */
+        get: operations["listMySshKeys"];
+        put?: never;
+        /**
+         * SSH 공개키 등록 (붙여넣기)
+         * @description 보유한 SSH **공개키**를 붙여넣어 등록합니다. 서버가 파싱·정규화하고
+         *     SHA-256 지문을 계산합니다 (`ssh-keygen -lf`와 동일한
+         *     `SHA256:<base64>` 표기).
+         *
+         *     - **수용 알고리즘**: `ssh-ed25519`, `ssh-rsa`(**2048비트 이상**).
+         *       ecdsa·sk-*(FIDO) 키는 422로 거부합니다 — 알고리즘 확장은 마이너
+         *       개정으로 이루어집니다.
+         *     - **지문은 플랫폼 전역에서 유일**해야 합니다: 이미 등록된 지문(내
+         *       키든 타인의 키든 — 소유자는 노출하지 않음)은 409
+         *       `SSH_KEY_DUPLICATE`. 지문→사용자 매핑이 유일해야 SSH 접속 감사의
+         *       사용자 귀속이 성립합니다.
+         *     - 사용자당 최대 **10개** — 초과 시 409 `SSH_KEY_LIMIT_EXCEEDED`.
+         *     - 등록 즉시 모든 소속 그룹 VM에 대한 게이트웨이 인증에 사용됩니다.
+         *       등록은 감사 기록(`user.ssh_key_add`)됩니다.
+         */
+        post: operations["registerMySshKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * SSH 키 만들기 (서버 생성)
+         * @description 서버가 **ed25519 키쌍을 생성**해 공개키를 즉시 등록하고, 개인키는
+         *     **AES-256-GCM 암호문으로 보관**합니다(초기 VM 비밀번호와 동일한
+         *     보관·감사 프레임 — 2026-07-17 운영자 확정). 생성 직후
+         *     `GET /me/ssh-keys/{keyId}/private-key`로 개인키를 내려받으며,
+         *     분실 시 언제든 재다운로드할 수 있습니다(생성은 `user.ssh_key_generate`,
+         *     매 다운로드는 `user.ssh_key_download`로 감사 기록).
+         *
+         *     키를 만들 줄 아는 사용자는 붙여넣기 등록(`POST /me/ssh-keys`)을
+         *     사용해도 됩니다 — 그 경우 개인키는 서버에 없습니다.
+         */
+        post: operations["generateMySshKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * SSH 키 삭제
+         * @description 내 SSH 키를 삭제합니다. **삭제 즉시** 이 키로는 어떤 VM에도 게이트웨이
+         *     접속이 불가합니다(다음 접속 시도부터 라우트 인가 실패 — 진행 중인
+         *     세션은 끊지 않음). 서버가 보관 중인 개인키(생성 키)도 함께
+         *     파기됩니다. 삭제는 감사 기록(`user.ssh_key_delete`)됩니다.
+         *
+         *     타인의 키에는 404로 응답합니다(존재 마스킹).
+         */
+        delete: operations["deleteMySshKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys/{keyId}/private-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 개인키 다운로드 (서버 생성 키만)
+         * @description 서버가 생성·보관 중인 개인키를 OpenSSH 형식(`openssh-key-v1` PEM,
+         *     비암호화)으로 반환합니다. **매 다운로드가 감사 기록(`user.ssh_key_download`)됩니다.**
+         *
+         *     - `privateKeyStored=false`인 키(붙여넣기 등록)는 404 — 서버에 개인키가
+         *       없습니다.
+         *     - 클라이언트는 파일(`id_ed25519_pickle`)로 저장한 뒤 권한을 제한해야
+         *       합니다 (macOS/Linux `chmod 600`, Windows는 `%USERPROFILE%\.ssh`로
+         *       이동). 응답은 캐시 금지입니다.
+         */
+        get: operations["downloadMySshKeyPrivateKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs": {
         parameters: {
             query?: never;
@@ -613,7 +737,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/vms/{vmId}/initial-password": {
+    "/vms/{vmId}/password": {
         parameters: {
             query?: never;
             header?: never;
@@ -621,31 +745,123 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 초기 비밀번호 열람
-         * @description 프로비저닝 시 생성된 초기 비밀번호를 열람합니다.
-         *     그룹 **MEMBER 이상**만 호출할 수 있습니다.
+         * VM 비밀번호 열람
+         * @description VM의 `student` 계정 비밀번호를 열람합니다 (v0.8.0에서
+         *     `/vms/{vmId}/initial-password`를 rename — 재생성 도입으로 "초기"
+         *     의미가 사라짐).
          *
-         *     v0.7.0(2026-07-17)부터 "정확히 1회" 제한이 폐지되었습니다 — 서버는
-         *     평문 대신 **암호문(AES-256-GCM, env 키)** 을 보관하므로 언제든 재열람할
-         *     수 있고, 열람해도 상태가 소모되지 않아 안전(safe) 메서드인 GET을
-         *     사용합니다. **매 열람은 감사 기록(`vm.password_reveal`)됩니다.**
+         *     **열람 최소 역할은 VM별 설정 `password_reveal_min_role`이 정합니다**
+         *     (기본 `MEMBER`, 소유자가 EDITOR/OWNER로 상향 가능 — §설정 참조).
+         *     키 로그인 세계에서 비밀번호는 로그인 수단이 아니라 **VM 내부
+         *     sudo 자격**이므로, 이 설정이 sudo 권한의 실질 게이트입니다.
+         *
+         *     서버는 평문 대신 **암호문(AES-256-GCM, env 키)** 을 보관하므로 언제든
+         *     재열람할 수 있고, 열람해도 상태가 소모되지 않습니다.
+         *     **매 열람은 감사 기록(`vm.password_reveal`)됩니다.**
          *
          *     서버는 평문을 로그에 남기지 않으며, 클라이언트도 저장하지 말고 화면
-         *     표시 후 즉시 폐기해야 합니다. 사용자가 최초 접속에서 비밀번호를
-         *     변경했다면(강제) 저장된 초기 비밀번호는 **더 이상 유효하지 않습니다** —
-         *     변경한 비밀번호를 분실한 경우에는 관리자에게 문의해야 합니다
-         *     (셀프서비스 재설정은 후속 마일스톤).
+         *     표시 후 즉시 폐기해야 합니다. 사용자가 게스트 안에서 `passwd`로
+         *     직접 변경한 경우 저장된 값은 실제와 달라질 수 있습니다 — 분실 시
+         *     `POST /vms/{vmId}/password/regenerate`로 복구합니다.
          *
-         *     열람 가능 여부는 VM 상세의 `initialPasswordAvailable`로 미리 알 수
-         *     있습니다.
+         *     열람 가능 여부는 VM 상세의 `passwordAvailable`(저장 여부)과
+         *     `passwordRevealAllowed`(내 권한)로 미리 알 수 있습니다.
          */
-        get: operations["revealInitialPassword"];
+        get: operations["revealVmPassword"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/password/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * VM 비밀번호 재생성 (시스템 생성)
+         * @description VM의 `student` 계정 비밀번호를 **플랫폼이 새로 생성한 24자 CSPRNG
+         *     값**으로 교체합니다 (M5.5). 그룹 **EDITOR 이상**만 호출할 수 있습니다.
+         *
+         *     - **임의 문자열은 누구도(관리자 포함) 지정할 수 없습니다** — 비밀번호
+         *       생성은 항상 시스템 몫입니다(2026-07-17 운영자 확정: 관리자가 값을
+         *       정할 수 있으면 "관리자가 내 VM에 임의 접속 가능"이라는 오해를
+         *       낳음).
+         *     - 적용은 QEMU guest agent(`set-user-password`)로 즉시(무재부팅)
+         *       이루어지며, **기존 비밀번호는 그 순간 무효**가 됩니다 — 구성원 제거
+         *       후 비밀번호를 아는 사람의 접근을 회수하는 수단입니다.
+         *     - 성공 시 새 비밀번호를 응답으로 반환하고 암호문 보관본을 갱신합니다.
+         *       재생성은 감사 기록(`vm.password_regenerate`)됩니다.
+         *     - VM이 RUNNING이고 guest agent가 응답해야 합니다 — 아니면 409.
+         */
+        post: operations["regenerateVmPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * VM별 설정 조회
+         * @description VM별 설정 목록입니다 (M5.5, product-spec §9). 그룹 **EDITOR 이상**만
+         *     접근할 수 있으며(설정 영역 자체가 편집자 이상), 비구성원에게는 404로
+         *     마스킹됩니다.
+         *
+         *     응답은 코드측 레지스트리 기반 — 저장된 행이 없는 키는 기본값
+         *     (`defaultValue`)으로 반환됩니다. 콘솔은 `valueType`/`allowedValues`/
+         *     `label`/`description`만으로 편집 UI를 렌더할 수 있어, 키가 추가돼도
+         *     콘솔 변경 없이 표시됩니다.
+         *
+         *     **v0.8.0 키 카탈로그** (키 추가는 마이너 개정, 계약 표면은 이
+         *     GET/PATCH 한 쌍으로 고정):
+         *
+         *     | key | valueType | 기본값 | 변경 필요 역할 |
+         *     |---|---|---|---|
+         *     | `ssh_password_enabled` | BOOLEAN | `false` | EDITOR |
+         *     | `password_reveal_min_role` | ENUM (`MEMBER`/`EDITOR`/`OWNER`) | `MEMBER` | OWNER |
+         *
+         *     - `ssh_password_enabled` — SSH 게이트웨이의 비밀번호 접속 허용
+         *       (기본 차단 = 런치 게이트 G6). 우선순위: 전역 킬 스위치 > 관리자
+         *       VM 차단 > 이 설정.
+         *     - `password_reveal_min_role` — 비밀번호 열람 최소 역할 (= VM 내부
+         *       sudo 자격의 실질 게이트). 다른 구성원의 권한을 조정하는 키이므로
+         *       **소유자 전용**.
+         */
+        get: operations["getVmSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * VM별 설정 변경 (부분 맵)
+         * @description 설정 키의 부분 집합을 한 번에 변경합니다. **원자적(all-or-nothing)** —
+         *     하나라도 실패하면 아무것도 적용되지 않습니다. 응답은 갱신된 전체
+         *     설정 목록입니다(콘솔이 캐시를 통째로 교체).
+         *
+         *     - 키별 **변경 필요 역할**은 레지스트리가 정합니다(GET의 카탈로그 표):
+         *       어느 한 키라도 내 역할이 미달이면 403(`GROUP_ROLE_INSUFFICIENT`,
+         *       detail에 키·필요 역할 명시).
+         *     - 알 수 없는 키·타입 불일치·허용값 밖·빈 맵은 422.
+         *     - 모든 변경은 감사 기록(`vm.setting_update`, 이전값→새값)됩니다.
+         *       `ssh_password_enabled`를 켜는 변경은 콘솔이 경고를 표시합니다
+         *       (접속자 개인 식별 불가·구성원 제거 후에도 접속 가능).
+         */
+        patch: operations["updateVmSettings"];
         trace?: never;
     };
     "/vms/{vmId}/events": {
@@ -1807,6 +2023,12 @@ export interface components {
              *       (그 외 M5 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
              *       타 기관 리소스·타인 알림 마스킹 `RESOURCE_NOT_FOUND`,
              *       권한 `ACCESS_DENIED`, 값 검증 `VALIDATION_FAILED`)
+             *     - SSH 키/VM 설정 (M5.5): `SSH_KEY_DUPLICATE`(지문 전역 중복 —
+             *       소유자 비노출), `SSH_KEY_LIMIT_EXCEEDED`(사용자당 10개 초과)
+             *       (그 외 M5.5 오류는 공통 코드 재사용 — 키 파싱·미지원 타입·설정
+             *       값 검증 `VALIDATION_FAILED`, 설정 변경·비밀번호 열람/재생성 권한
+             *       `GROUP_ROLE_INSUFFICIENT`, 타인 키·개인키 없음·비구성원 마스킹
+             *       `RESOURCE_NOT_FOUND`, 상태 충돌 `VM_INVALID_STATE`)
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -2201,6 +2423,10 @@ export interface components {
             ipAddress?: string | null;
             /** @description SSH 접속 계정 (고정 `student`) */
             sshUsername: string;
+            /** @description SSH 게이트웨이 호스트 (예 `ssh.pickle.pnuops.com`) — 콘솔이 `ssh <hostname>@<sshHost>` 안내를 하드코딩 없이 렌더하기 위한 서버 설정값 (M5.5) */
+            sshHost: string;
+            /** @description 요청자의 소유 그룹 내 역할 (M5.5) — 콘솔의 설정 섹션 노출· 버튼 활성 판단용 */
+            myGroupRole: components["schemas"]["GroupMemberRole"];
             /** Format: date */
             startDate?: string | null;
             /** @description 진행 중이거나 마지막으로 실패한 비동기 작업(프로비저닝/삭제/재설치)의 진행 상황. 진행·실패 중인 작업이 없으면 null. */
@@ -2211,8 +2437,10 @@ export interface components {
             httpPublishGranted: boolean;
             /** @description 현재 HTTP 공개 상태(도메인+라우트+인증서). 미공개면 null. 라우트· 검증·인증서 진행 상황을 폴링하는 지점입니다(비동기 적용 결과 노출). */
             publication?: components["schemas"]["PublicationView"] | null;
-            /** @description 초기 비밀번호가 서버에 (암호문으로) 저장되어 있어 열람 가능한지 여부 — true면 `GET /vms/{vmId}/initial-password`로 언제든 재열람할 수 있으며, 열람해도 false로 바뀌지 않습니다 (v0.7.0) */
-            initialPasswordAvailable: boolean;
+            /** @description VM 비밀번호가 서버에 (암호문으로) 저장되어 있는지 여부 (v0.8.0에서 `initialPasswordAvailable`을 rename) — true면 `GET /vms/{vmId}/password`로 언제든 재열람할 수 있으며, 열람해도 false로 바뀌지 않습니다 */
+            passwordAvailable: boolean;
+            /** @description **요청자가** 이 VM의 비밀번호를 열람할 수 있는지 여부 (M5.5) — 내 그룹 역할 ≥ `password_reveal_min_role` 설정을 서버가 계산. false면 콘솔은 열람 버튼 대신 제한 안내를 표시합니다. `passwordAvailable`(저장 여부)과 직교합니다. */
+            passwordRevealAllowed: boolean;
             /** Format: date-time */
             updatedAt: string;
         };
@@ -2309,16 +2537,97 @@ export interface components {
             totalElements: number;
             totalPages: number;
         };
-        /** @description VM 초기 비밀번호 열람 응답. 서버는 암호문으로 보관하므로 언제든 재열람할 수 있으나, 사용자가 최초 접속에서 비밀번호를 변경했다면 저장된 값은 더 이상 유효하지 않습니다. 클라이언트는 평문을 저장하지 말고 표시 후 즉시 폐기해야 합니다. */
-        InitialPasswordResponse: {
+        /** @description VM 비밀번호 열람/재생성 응답 (v0.8.0에서 `InitialPasswordResponse`를 rename). 서버는 암호문으로 보관하므로 언제든 재열람할 수 있습니다. 사용자가 게스트에서 `passwd`로 직접 변경한 경우 저장된 값은 실제와 달라질 수 있으며, 재생성으로 복구합니다. 클라이언트는 평문을 저장하지 말고 표시 후 즉시 폐기해야 합니다. */
+        VmPasswordResponse: {
             /** @description 비밀번호 평문 (24자, 생성 시 CSPRNG) */
             password: string;
             /** @description SSH 접속 계정 (고정 `student`) */
             sshUsername: string;
-            /** @description SSH 접속 호스트 (SSH 게이트웨이 주소, 안내용 — 미확정 시 null) */
-            sshHost?: string | null;
-            /** @description SSH 접속 포트 (안내용 — 미확정 시 null) */
-            sshPort?: number | null;
+            /** @description SSH 접속 호스트 (SSH 게이트웨이 주소 — 서버 설정값, 항상 존재. `VmDetail.sshHost`와 동일 출처) */
+            sshHost: string;
+            /** @description SSH 접속 포트 (서버 설정값, 항상 존재) */
+            sshPort: number;
+        };
+        /**
+         * @description SSH 키 알고리즘 (수용 목록 — 확장은 마이너 개정)
+         * @enum {string}
+         */
+        SshKeyAlgorithm: "ED25519" | "RSA";
+        /** @description 등록된 SSH 공개키 */
+        SshKeyView: {
+            /** Format: int64 */
+            id: number;
+            /** @description 표시용 이름 (1~100자, 유일성 없음) */
+            name: string;
+            algorithm: components["schemas"]["SshKeyAlgorithm"];
+            /** @description 정규화된 OpenSSH 공개키 한 줄 (`<type> <base64>` — 등록 시 comment 제거). 공개 정보이므로 재표시·복사에 사용 가능. */
+            publicKey: string;
+            /** @description SHA-256 지문 — `SHA256:<base64, 패딩 없음>` (OpenSSH `ssh-keygen -lf` 표기와 동일). 플랫폼 전역 유일. */
+            fingerprint: string;
+            /** @description 서버가 개인키를 (암호문으로) 보관 중인지 여부 — 콘솔 "키 만들기"로 생성한 키만 true이며, true인 키만 `GET /me/ssh-keys/{keyId}/private-key` 다운로드가 가능합니다. */
+            privateKeyStored: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 이 키로 SSH 게이트웨이 인증에 성공한 마지막 시각 (best-effort 갱신, 없으면 null) — 미사용 키 정리 판단용.
+             */
+            lastUsedAt?: string | null;
+        };
+        SshKeyCreateRequest: {
+            /** @description 표시용 이름 */
+            name: string;
+            /** @description OpenSSH 공개키 한 줄 (`ssh-ed25519 AAAA… [comment]` / `ssh-rsa AAAA… [comment]`). 서버가 파싱·정규화·지문 계산. */
+            publicKey: string;
+        };
+        SshKeyGenerateRequest: {
+            /** @description 표시용 이름 */
+            name: string;
+        };
+        /** @description 서버 생성 키의 개인키 (OpenSSH `openssh-key-v1` PEM, 비암호화). 매 다운로드는 감사 기록됩니다. 클라이언트는 파일 저장 후 권한을 제한하도록 안내해야 합니다 (chmod 600). */
+        SshKeyPrivateKeyResponse: {
+            /** @description OpenSSH PEM 전문 (`-----BEGIN OPENSSH PEM-----` … ) */
+            privateKey: string;
+            /** @description 권장 저장 파일명 (예 `id_ed25519_pickle`) */
+            fileName: string;
+        };
+        /**
+         * @description VM 설정 값 타입 (콘솔 렌더 기준 — BOOLEAN은 토글, ENUM은 `allowedValues` select). 플랫폼 운영 설정의 `SettingView.valueType`과는 별개 카탈로그입니다.
+         * @enum {string}
+         */
+        VmSettingValueType: "BOOLEAN" | "ENUM" | "INTEGER" | "STRING";
+        /** @description VM별 설정 항목 (코드측 레지스트리 기반 — 저장 행이 없으면 `value`=`defaultValue`). 콘솔은 이 메타데이터만으로 편집 UI를 렌더합니다(키 카탈로그 확장에 콘솔 변경 불필요). */
+        VmSettingView: {
+            /** @description 설정 키 (예 `ssh_password_enabled`) */
+            key: string;
+            /** @description 현재 유효값 (임의 JSON — 타입은 `valueType` 참조) */
+            value: unknown;
+            valueType: components["schemas"]["VmSettingValueType"];
+            /** @description ENUM일 때 선택 가능한 값 목록 (그 외 null) */
+            allowedValues?: string[] | null;
+            /** @description 기본값 (저장 행이 없을 때의 유효값) */
+            defaultValue: unknown;
+            /** @description 짧은 표시명 (한국어) */
+            label: string;
+            /** @description 설정 설명 (한국어 — 경고 함의 포함) */
+            description: string;
+            /** @description 변경에 필요한 최소 그룹 역할 */
+            requiredRole: components["schemas"]["GroupMemberRole"];
+            /** @description **요청자 기준** 지금 변경 가능한지 여부 (내 그룹 역할·VM 상태를 서버가 계산 — 콘솔이 역할 비교를 중복 구현하지 않도록) */
+            editable: boolean;
+            /** @description 마지막 변경자 이름 (변경 이력 없으면 null) */
+            updatedByName?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 변경 시각 (변경 이력 없으면 null)
+             */
+            updatedAt?: string | null;
+        };
+        VmSettingsUpdateRequest: {
+            /** @description 변경할 키의 부분 맵 `{키: 새 값}` (최소 1개). 값 타입은 키별 `valueType` 기준으로 서버가 검증합니다. */
+            settings: {
+                [key: string]: unknown;
+            };
         };
         /** @description 자원 합계 (활성 VM 기준) */
         ResourceTotals: {
@@ -3142,6 +3451,8 @@ export interface components {
             certExpiring30dCount: number;
             /** @description 미해결(OPEN) 드리프트 발견 수 */
             openDriftFindingCount: number;
+            /** @description `ssh_password_enabled=true`로 비밀번호 SSH가 허용된 활성(비삭제) VM 수 (M5.5) — 개인 식별 예외이므로 대시보드에 상시 노출 (G6 관리자 가시성 요건) */
+            sshPasswordEnabledVmCount: number;
             /** @description IP 풀별 할당/여유 현황 */
             ipPools: {
                 /** Format: int64 */
@@ -3325,6 +3636,8 @@ export interface components {
         RequestId: number;
         /** @description VM ID */
         VmId: number;
+        /** @description SSH 키 ID */
+        SshKeyId: number;
         /** @description 도메인 ID */
         DomainId: number;
         /** @description 알림 ID */
@@ -3845,6 +4158,250 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listMySshKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 내 SSH 키 목록 (등록 순) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 3,
+                     *         "name": "연구실 노트북",
+                     *         "algorithm": "ED25519",
+                     *         "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0Qf…",
+                     *         "fingerprint": "SHA256:mVqyNQZoT0PC4z1uQXLzS9YFvZ1qGmO1sN8cQXAUXeQ",
+                     *         "privateKeyStored": false,
+                     *         "createdAt": "2026-07-18T10:00:00+09:00",
+                     *         "lastUsedAt": "2026-07-18T21:14:00+09:00"
+                     *       },
+                     *       {
+                     *         "id": 4,
+                     *         "name": "피클에서 만든 키",
+                     *         "algorithm": "ED25519",
+                     *         "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFo2…",
+                     *         "fingerprint": "SHA256:8dq1kQwXbFhVYcQ1sJ2m0aH7pT5uNzR3eK6yLgAvBcD",
+                     *         "privateKeyStored": true,
+                     *         "createdAt": "2026-07-18T10:05:00+09:00",
+                     *         "lastUsedAt": null
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["SshKeyView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    registerMySshKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "연구실 노트북",
+                 *       "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0Qf… user@laptop"
+                 *     }
+                 */
+                "application/json": components["schemas"]["SshKeyCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description 등록된 키 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SshKeyView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 지문 중복 또는 키 개수 상한 초과 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "이미 등록된 키입니다",
+                     *       "status": 409,
+                     *       "detail": "이미 등록된 키입니다. 다른 키를 사용해 주세요.",
+                     *       "instance": "/api/v1/me/ssh-keys",
+                     *       "code": "SSH_KEY_DUPLICATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 공개키 파싱 불가, 지원하지 않는 키 타입(ed25519 키를 권장), RSA 2048비트 미만, 또는 이름 형식 오류(1~100자) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "입력값이 올바르지 않습니다",
+                     *       "status": 422,
+                     *       "detail": "요청 필드를 확인해 주세요.",
+                     *       "instance": "/api/v1/me/ssh-keys",
+                     *       "code": "VALIDATION_FAILED",
+                     *       "errors": [
+                     *         {
+                     *           "field": "publicKey",
+                     *           "message": "지원하지 않는 키 형식입니다. ed25519 키를 권장합니다 (ssh-keygen -t ed25519)."
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    generateMySshKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "name": "피클에서 만든 키"
+                 *     }
+                 */
+                "application/json": components["schemas"]["SshKeyGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description 생성·등록된 키 (`privateKeyStored=true`) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SshKeyView"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 키 개수 상한(10개) 초과 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "키를 더 등록할 수 없습니다",
+                     *       "status": 409,
+                     *       "detail": "SSH 키는 사용자당 최대 10개까지 등록할 수 있습니다. 사용하지 않는 키를 삭제해 주세요.",
+                     *       "instance": "/api/v1/me/ssh-keys/generate",
+                     *       "code": "SSH_KEY_LIMIT_EXCEEDED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteMySshKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SSH 키 ID */
+                keyId: components["parameters"]["SshKeyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 삭제 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadMySshKeyPrivateKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SSH 키 ID */
+                keyId: components["parameters"]["SshKeyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 개인키 (OpenSSH PEM) */
+            200: {
+                headers: {
+                    /** @description 개인키 응답은 어디에도 캐시되지 않아야 합니다. */
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "privateKey": "-----BEGIN OPENSSH PEM-----\nb3BlbnNzaC1rZXktdjEAAAAA…\n-----END OPENSSH PEM-----\n",
+                     *       "fileName": "id_ed25519_pickle"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SshKeyPrivateKeyResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 키가 존재하지 않거나 타인의 키(존재 마스킹), 또는 붙여넣기로 등록되어 서버에 개인키가 없는 키 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "리소스를 찾을 수 없습니다",
+                     *       "status": 404,
+                     *       "detail": "다운로드할 개인키가 없습니다. 직접 등록한 키의 개인키는 서버에 보관되지 않습니다.",
+                     *       "instance": "/api/v1/me/ssh-keys/3/private-key",
+                     *       "code": "RESOURCE_NOT_FOUND"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     listOrgs: {
@@ -5014,7 +5571,7 @@ export interface operations {
             };
         };
     };
-    revealInitialPassword: {
+    revealVmPassword: {
         parameters: {
             query?: never;
             header?: never;
@@ -5026,7 +5583,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 초기 비밀번호 */
+            /** @description VM 비밀번호 */
             200: {
                 headers: {
                     /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
@@ -5042,11 +5599,11 @@ export interface operations {
                      *       "sshPort": 22
                      *     }
                      */
-                    "application/json": components["schemas"]["InitialPasswordResponse"];
+                    "application/json": components["schemas"]["VmPasswordResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            /** @description 그룹 내 권한 부족 — 이 VM의 `password_reveal_min_role`(기본 MEMBER) 미만 */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5055,10 +5612,10 @@ export interface operations {
                     /**
                      * @example {
                      *       "type": "about:blank",
-                     *       "title": "초기 비밀번호를 열람할 권한이 없습니다",
+                     *       "title": "비밀번호를 열람할 권한이 없습니다",
                      *       "status": 403,
-                     *       "detail": "그룹의 MEMBER 이상만 초기 비밀번호를 열람할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/initial-password",
+                     *       "detail": "이 VM은 그룹의 MEMBER 이상만 비밀번호를 열람할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password",
                      *       "code": "GROUP_ROLE_INSUFFICIENT"
                      *     }
                      */
@@ -5077,15 +5634,15 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
                      *       "status": 409,
-                     *       "detail": "VM 생성이 완료된 뒤에 초기 비밀번호를 열람할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/initial-password",
+                     *       "detail": "VM 생성이 완료된 뒤에 비밀번호를 열람할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password",
                      *       "code": "VM_INVALID_STATE"
                      *     }
                      */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description 저장된 비밀번호가 없음 — M2 mock 프로비저닝으로 생성돼 초기 비밀번호가 없는 VM, 또는 정책 변경(v0.7.0) 전 1회 열람으로 평문이 파기된 VM. 코드값은 하위호환을 위해 `VM_PASSWORD_ALREADY_VIEWED`를 유지합니다. */
+            /** @description 저장된 비밀번호가 없음 — M2 mock 프로비저닝으로 생성돼 비밀번호가 없는 VM, 또는 정책 변경(v0.7.0) 전 1회 열람으로 평문이 파기된 VM. 코드값은 하위호환을 위해 `VM_PASSWORD_ALREADY_VIEWED`를 유지합니다. 재생성(`POST /vms/{vmId}/password/regenerate`)으로 복구할 수 있습니다. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -5094,11 +5651,261 @@ export interface operations {
                     /**
                      * @example {
                      *       "type": "about:blank",
-                     *       "title": "초기 비밀번호를 열람할 수 없습니다",
+                     *       "title": "비밀번호를 열람할 수 없습니다",
                      *       "status": 410,
-                     *       "detail": "저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 관리자에게 문의해 주세요.",
-                     *       "instance": "/api/v1/vms/55/initial-password",
+                     *       "detail": "저장된 비밀번호가 없습니다. 비밀번호 재생성으로 새 비밀번호를 만들 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password",
                      *       "code": "VM_PASSWORD_ALREADY_VIEWED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    regenerateVmPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 재생성된 비밀번호 (즉시 적용됨) */
+            200: {
+                headers: {
+                    /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "password": "nB4tWq8xKm2ZrPv6JcYh3Sdf",
+                     *       "sshUsername": "student",
+                     *       "sshHost": "ssh.pickle.pnuops.com",
+                     *       "sshPort": 22
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VmPasswordResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (EDITOR 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "비밀번호를 재생성할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 EDITOR 이상만 비밀번호를 재생성할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password/regenerate",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 재생성할 수 없는 상태 — RUNNING이 아니거나 guest agent가 응답하지 않음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "VM이 실행 중이고 게스트 에이전트가 응답할 때만 비밀번호를 재생성할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password/regenerate",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVmSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description VM 설정 목록 (레지스트리 순) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "key": "ssh_password_enabled",
+                     *         "value": false,
+                     *         "valueType": "BOOLEAN",
+                     *         "allowedValues": null,
+                     *         "defaultValue": false,
+                     *         "label": "비밀번호 SSH 허용",
+                     *         "description": "SSH 게이트웨이에서 비밀번호 접속을 허용합니다. 켜면 접속자 개인을 식별할 수 없습니다.",
+                     *         "requiredRole": "EDITOR",
+                     *         "editable": true,
+                     *         "updatedByName": null,
+                     *         "updatedAt": null
+                     *       },
+                     *       {
+                     *         "key": "password_reveal_min_role",
+                     *         "value": "MEMBER",
+                     *         "valueType": "ENUM",
+                     *         "allowedValues": [
+                     *           "MEMBER",
+                     *           "EDITOR",
+                     *           "OWNER"
+                     *         ],
+                     *         "defaultValue": "MEMBER",
+                     *         "label": "비밀번호 열람 최소 역할",
+                     *         "description": "VM 비밀번호(= sudo 자격)를 열람할 수 있는 최소 그룹 역할입니다.",
+                     *         "requiredRole": "OWNER",
+                     *         "editable": false,
+                     *         "updatedByName": "홍길동",
+                     *         "updatedAt": "2026-07-18T14:00:00+09:00"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["VmSettingView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (EDITOR 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "VM 설정에 접근할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 EDITOR 이상만 VM 설정을 볼 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/settings",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateVmSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "settings": {
+                 *         "ssh_password_enabled": true
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["VmSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description 갱신된 전체 설정 목록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VmSettingView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 요청한 키 중 하나 이상이 내 그룹 역할로 변경 불가 (키별 필요 역할은 GET 카탈로그 참조) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "설정을 변경할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "`password_reveal_min_role` 설정은 그룹의 OWNER만 변경할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/settings",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 변경할 수 없는 상태 (DELETING/DELETED) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "삭제 중이거나 삭제된 VM의 설정은 변경할 수 없습니다.",
+                     *       "instance": "/api/v1/vms/55/settings",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 알 수 없는 설정 키, 타입 불일치, 허용값 밖, 또는 빈 맵 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "입력값이 올바르지 않습니다",
+                     *       "status": 422,
+                     *       "detail": "요청 필드를 확인해 주세요.",
+                     *       "instance": "/api/v1/vms/55/settings",
+                     *       "code": "VALIDATION_FAILED",
+                     *       "errors": [
+                     *         {
+                     *           "field": "settings.password_reveal_min_role",
+                     *           "message": "MEMBER, EDITOR, OWNER 중 하나여야 합니다."
+                     *         }
+                     *       ]
                      *     }
                      */
                     "application/problem+json": components["schemas"]["Problem"];

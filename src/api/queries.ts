@@ -30,8 +30,18 @@ export type VmDeletion = Schemas['VmDeletion']
 export type VmEvent = Schemas['VmEvent']
 export type VmEventPage = Schemas['VmEventPage']
 export type ProvisioningTaskView = Schemas['ProvisioningTaskView']
-export type InitialPasswordResponse = Schemas['InitialPasswordResponse']
+export type VmPasswordResponse = Schemas['VmPasswordResponse']
 export type NodeSummary = Schemas['NodeSummary']
+
+/* ─── SSH 키·VM 설정 (M5.5) ─── */
+export type SshKeyView = Schemas['SshKeyView']
+export type SshKeyAlgorithm = Schemas['SshKeyAlgorithm']
+export type SshKeyCreateRequest = Schemas['SshKeyCreateRequest']
+export type SshKeyGenerateRequest = Schemas['SshKeyGenerateRequest']
+export type SshKeyPrivateKeyResponse = Schemas['SshKeyPrivateKeyResponse']
+export type VmSettingView = Schemas['VmSettingView']
+export type VmSettingValueType = Schemas['VmSettingValueType']
+export type VmSettingsUpdateRequest = Schemas['VmSettingsUpdateRequest']
 export type IpPoolSummary = Schemas['IpPoolSummary']
 export type MessageResponse = Schemas['MessageResponse']
 
@@ -280,13 +290,101 @@ export function deleteVm(vmId: number): Promise<VmDeletion> {
   })
 }
 
-export function revealInitialPassword(vmId: number): Promise<InitialPasswordResponse> {
+export function revealVmPassword(vmId: number): Promise<VmPasswordResponse> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/vms/{vmId}/initial-password', {
+    const { data, error } = await api.GET('/vms/{vmId}/password', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '초기 비밀번호를 열람하지 못했습니다.')
+    if (!data) throw toApiError(error, '비밀번호를 열람하지 못했습니다.')
     return data
+  })
+}
+
+/** VM 비밀번호 재생성 (시스템 생성, EDITOR 이상) — 즉시 적용된 새 비밀번호를 돌려받는다. */
+export function regenerateVmPassword(vmId: number): Promise<VmPasswordResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/password/regenerate', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '비밀번호를 재생성하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── VM별 설정 (M5.5, EDITOR 이상) ─── */
+
+export function fetchVmSettings(vmId: number): Promise<VmSettingView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/settings', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 설정을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 설정 키의 부분 맵을 원자적으로 변경한다 — 갱신된 전체 설정 목록을 돌려받는다. */
+export function updateVmSettings(
+  vmId: number,
+  settings: Record<string, unknown>,
+): Promise<VmSettingView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/vms/{vmId}/settings', {
+      params: { path: { vmId } },
+      body: { settings },
+    })
+    if (!data) throw toApiError(error, 'VM 설정을 변경하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 내 SSH 키 (M5.5) ─── */
+
+export function fetchMySshKeys(): Promise<SshKeyView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/me/ssh-keys')
+    if (!data) throw toApiError(error, 'SSH 키 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 공개키 붙여넣기 등록 — 409(SSH_KEY_DUPLICATE/LIMIT)·422는 호출부가 problem으로 분기한다. */
+export function registerMySshKey(body: SshKeyCreateRequest): Promise<SshKeyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/ssh-keys', { body })
+    if (!data) throw toApiError(error, 'SSH 키를 등록하지 못했습니다.')
+    return data
+  })
+}
+
+/** 서버 생성 키 만들기 — 생성된 키(privateKeyStored=true)를 돌려받는다. */
+export function generateMySshKey(body: SshKeyGenerateRequest): Promise<SshKeyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/ssh-keys/generate', { body })
+    if (!data) throw toApiError(error, 'SSH 키를 만들지 못했습니다.')
+    return data
+  })
+}
+
+/** 서버 생성 키의 개인키 재다운로드 (매 다운로드 감사) — 붙여넣기 키는 404. */
+export function downloadMySshKeyPrivateKey(
+  keyId: number,
+): Promise<SshKeyPrivateKeyResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/me/ssh-keys/{keyId}/private-key', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, '개인키를 다운로드하지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteMySshKey(keyId: number): Promise<void> {
+  return guardNetwork(async () => {
+    const { error, response } = await api.DELETE('/me/ssh-keys/{keyId}', {
+      params: { path: { keyId } },
+    })
+    if (!response.ok) throw toApiError(error, 'SSH 키를 삭제하지 못했습니다.')
   })
 }
 

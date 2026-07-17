@@ -253,6 +253,7 @@ function initialSystemSummary(): Schemas['SystemDashboardSummary'] {
     notificationFailureCount: 1,
     certExpiring30dCount: 1,
     openDriftFindingCount: 2,
+    sshPasswordEnabledVmCount: 2,
     ipPools: [
       { id: 1, name: 'pve1-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
       { id: 2, name: 'pve2-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },

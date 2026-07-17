@@ -225,12 +225,12 @@ describe('VM 상세 — 비밀번호 상시 재열람 (v0.7.1)', () => {
   test('저장된 비밀번호가 없으면(410) 관리자 문의 안내를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
-      http.get('*/api/v1/vms/:vmId/initial-password', () =>
+      http.get('*/api/v1/vms/:vmId/password', () =>
         problemResponse({
           type: 'about:blank',
-          title: '초기 비밀번호를 열람할 수 없습니다',
+          title: '비밀번호를 열람할 수 없습니다',
           status: 410,
-          detail: '저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 관리자에게 문의해 주세요.',
+          detail: '저장된 비밀번호가 없습니다. 비밀번호 재생성으로 새 비밀번호를 만들 수 있습니다.',
           code: 'VM_PASSWORD_ALREADY_VIEWED',
         }),
       ),
@@ -241,7 +241,7 @@ describe('VM 상세 — 비밀번호 상시 재열람 (v0.7.1)', () => {
     await user.click(screen.getByRole('button', { name: '비밀번호 보기' }))
 
     expect(
-      await screen.findByText(/저장된 초기 비밀번호가 없습니다/),
+      await screen.findByText(/저장된 비밀번호가 없습니다/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
