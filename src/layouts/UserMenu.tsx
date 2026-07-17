@@ -61,6 +61,19 @@ export function UserMenu() {
           <p className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
             {user.email}
           </p>
+          {user.role === 'USER' && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                navigate('/console/ssh-keys')
+              }}
+              className="block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+            >
+              SSH 키
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

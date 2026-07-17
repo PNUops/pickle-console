@@ -6,6 +6,7 @@ const items: NavItem[] = [
   { to: '/console/requests/new', label: 'VM 신청' },
   { to: '/console/requests', label: '내 신청', end: true },
   { to: '/console/vms', label: '내 VM' },
+  { to: '/console/ssh-keys', label: 'SSH 키' },
   { to: '/console/notifications', label: '알림함' },
   { to: '/console/activity', label: '내 활동' },
 ]

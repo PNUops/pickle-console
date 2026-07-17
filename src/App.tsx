@@ -32,6 +32,7 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
 import { SignupPage } from './pages/SignupPage'
+import { SshKeysPage } from './pages/SshKeysPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
@@ -62,6 +63,7 @@ function App() {
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
+        <Route path="ssh-keys" element={<SshKeysPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
         <Route path="*" element={<NotFoundPage />} />
