@@ -163,7 +163,9 @@ export function AdminVmsPage() {
                 setPage(0)
               }}
             >
-              <option value="">전체 그룹</option>
+              <option value="">
+                {groups.isError ? '전체 그룹 (목록 조회 실패)' : '전체 그룹'}
+              </option>
               {groups.data?.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name} ({group.slug})

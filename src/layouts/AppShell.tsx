@@ -92,6 +92,17 @@ export function AppShell({
     setDrawerOpen(false)
   }, [pathname])
 
+  // md 이상으로 커지면 드로어는 CSS로만 숨겨지므로(md:hidden) 상태도 함께 닫는다 —
+  // 안 닫으면 보이지 않는 드로어에 스크롤 락과 Tab 포커스 트랩이 남는다.
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 768px)')
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setDrawerOpen(false)
+    }
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
@@ -145,7 +156,8 @@ export function AppShell({
               onClick={() => setDrawerOpen(true)}
               aria-label="메뉴 열기"
               aria-expanded={drawerOpen}
-              aria-controls={drawerId}
+              /* 드로어는 열려 있을 때만 마운트 — 닫힌 상태에서 없는 id를 참조하지 않는다 */
+              aria-controls={drawerOpen ? drawerId : undefined}
               className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="size-5" aria-hidden="true">

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../../lib/cn'
 import { ToastContext, type ToastApi } from './toast-context'
@@ -22,6 +22,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextId = useRef(0)
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
+
+  // 언마운트 후 타이머가 발화해 setState하지 않게 정리한다.
+  useEffect(() => {
+    const pending = timers.current
+    return () => pending.forEach(clearTimeout)
+  }, [])
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id)
@@ -55,18 +61,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      {toasts.length > 0 &&
-        createPortal(
-          <div
-            aria-live="polite"
-            className="fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4"
-          >
-            {toasts.map((toast) => (
+      {/* 라이브 리전은 상시 마운트 — 삽입과 동시에 생기면 첫 토스트가 낭독되지 않을 수 있다. */}
+      {createPortal(
+        <div
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4"
+        >
+          {toasts.map((toast) => (
               <div
                 key={toast.id}
                 role="status"
                 className={cn(
-                  'flex w-full max-w-md items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm shadow-overlay',
+                  'pointer-events-auto flex w-full max-w-md items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm shadow-overlay',
                   variants[toast.variant],
                 )}
               >
