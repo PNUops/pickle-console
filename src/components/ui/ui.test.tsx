@@ -7,6 +7,7 @@ import { ConfirmNameModal } from './ConfirmNameModal'
 import { FormField } from './FormField'
 import { Input } from './Input'
 import { Modal } from './Modal'
+import { Pagination } from './Pagination'
 import { RequestStatusBadge, VmStatusBadge } from './Badge'
 
 describe('Button', () => {
@@ -123,5 +124,36 @@ describe('ConfirmNameModal', () => {
     // 서버 이중 확인(confirmName 정확 일치)이 살아 있으려면 호출부가
     // expectedName이 아니라 "타이핑한 값"을 받아 전송해야 한다.
     expect(onConfirm).toHaveBeenCalledWith('capstone-team3-api')
+  })
+})
+
+describe('Pagination', () => {
+  test('현재 페이지 주변과 양끝만 번호로 보여주고 간극은 생략한다', () => {
+    const onPageChange = vi.fn()
+    render(<Pagination page={5} totalPages={12} onPageChange={onPageChange} />)
+
+    // 1 … 5 6 7 … 12 (표시는 1-기반)
+    for (const label of ['1 페이지', '5 페이지', '6 페이지', '7 페이지', '12 페이지']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('button', { name: '3 페이지' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '6 페이지' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  test('번호 클릭은 0-기반 페이지로 콜백하고, 단일 페이지면 렌더하지 않는다', async () => {
+    const user = userEvent.setup()
+    const onPageChange = vi.fn()
+    const { rerender } = render(
+      <Pagination page={0} totalPages={3} onPageChange={onPageChange} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '3 페이지' }))
+    expect(onPageChange).toHaveBeenCalledWith(2)
+
+    rerender(<Pagination page={0} totalPages={1} onPageChange={onPageChange} />)
+    expect(screen.queryByRole('navigation', { name: '페이지 이동' })).not.toBeInTheDocument()
   })
 })

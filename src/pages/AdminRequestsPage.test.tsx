@@ -108,13 +108,19 @@ describe('승인 대기 큐', () => {
     const user = userEvent.setup()
     renderAsOrgAdmin('/admin/requests')
 
-    expect(await screen.findByText('1 / 2 페이지')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '1 페이지' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
     // 1페이지: 최신 순 → 시딩분 + 204. 201은 2페이지로 밀린다.
     expect(screen.getByText('추가 실습 서버 308')).toBeInTheDocument()
     expect(screen.queryByText('캡스톤 프로젝트 백엔드 서버 운영')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(await screen.findByText('캡스톤 프로젝트 백엔드 서버 운영')).toBeInTheDocument()
-    expect(screen.getByText('2 / 2 페이지')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 페이지' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   })
 })
