@@ -87,6 +87,39 @@ describe('VM 공개 — 처음 공개(플랫폼 서브도메인)', () => {
       await within(card).findByText('VM의 SSH 포트(22)는 공개할 수 없습니다.'),
     ).toBeInTheDocument()
   })
+
+  test('커스텀 도메인은 정규화(trim+소문자)해 전송한다 — 신청서와 같은 규칙', async () => {
+    const user = userEvent.setup()
+    renderVm(55)
+
+    await screen.findByRole('heading', { name: 'capstone-team3-api' })
+    await screen.findByText('실행 중')
+    const card = await publishCard()
+
+    await user.type(within(card).getByLabelText(/커스텀 도메인/), '  MyApp.Example.COM  ')
+    await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
+
+    // 정규화된 소문자 FQDN으로 공개가 접수된다 (미정규화 시 서버 422).
+    expect(
+      await within(card).findByRole('link', { name: 'myapp.example.com' }),
+    ).toBeInTheDocument()
+  })
+
+  test('형식이 틀린 커스텀 도메인은 서버 왕복 없이 같은 필드 오류를 보여준다', async () => {
+    const user = userEvent.setup()
+    renderVm(55)
+
+    await screen.findByRole('heading', { name: 'capstone-team3-api' })
+    await screen.findByText('실행 중')
+    const card = await publishCard()
+
+    await user.type(within(card).getByLabelText(/커스텀 도메인/), 'bad_domain!')
+    await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
+
+    expect(
+      await within(card).findByText(/커스텀 도메인 형식이 올바르지 않습니다/),
+    ).toBeInTheDocument()
+  })
 })
 
 describe('VM 공개 — 변경·해제', () => {

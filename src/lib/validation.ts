@@ -18,3 +18,12 @@ export const SUBDOMAIN_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/
  */
 export const HOSTNAME_RE =
   /^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/
+
+/** 커스텀 도메인 입력 정규화: 앞뒤 공백 제거 + 소문자화 (전송·검증 공통). */
+export function normalizeCustomDomain(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+/** HOSTNAME_RE 불일치 시 신청서·공개 폼이 공통으로 쓰는 필드 오류 문구. */
+export const CUSTOM_DOMAIN_FORMAT_MESSAGE =
+  '커스텀 도메인 형식이 올바르지 않습니다. (예: myapp.example.com)'

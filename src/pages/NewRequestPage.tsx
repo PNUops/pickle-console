@@ -34,12 +34,12 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatMemory, formatSpec } from '../lib/format'
-import { HOSTNAME_RE, SUBDOMAIN_RE } from '../lib/validation'
-
-/** 커스텀 도메인 입력 정규화: 앞뒤 공백 제거 + 소문자화 (전송·검증 공통). */
-function normalizeCustomDomain(value: string): string {
-  return value.trim().toLowerCase()
-}
+import {
+  CUSTOM_DOMAIN_FORMAT_MESSAGE,
+  HOSTNAME_RE,
+  normalizeCustomDomain,
+  SUBDOMAIN_RE,
+} from '../lib/validation'
 
 const STEPS = ['그룹·기관', '템플릿·사양', '용도·기간', '네트워크·도메인', '확인·제출']
 
@@ -203,7 +203,7 @@ export function NewRequestPage() {
       if (!state.rootDomain) next.rootDomain = '루트 도메인을 선택해 주세요.'
       const customDomain = normalizeCustomDomain(state.customDomain)
       if (customDomain && !HOSTNAME_RE.test(customDomain))
-        next.customDomain = '커스텀 도메인 형식이 올바르지 않습니다. (예: myapp.example.com)'
+        next.customDomain = CUSTOM_DOMAIN_FORMAT_MESSAGE
     }
     return next
   }

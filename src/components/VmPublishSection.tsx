@@ -39,6 +39,11 @@ import {
   TR,
 } from './ui'
 import { CERTIFICATE_KIND_LABELS } from '../lib/status'
+import {
+  CUSTOM_DOMAIN_FORMAT_MESSAGE,
+  HOSTNAME_RE,
+  normalizeCustomDomain,
+} from '../lib/validation'
 
 /** 이 상태에서만 공개(publish) 접수가 가능하다 (계약: 그 외 409 VM_INVALID_STATE). */
 const PUBLISHABLE_STATUSES: VmDetail['status'][] = ['RUNNING', 'STOPPED']
@@ -120,11 +125,14 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
   const publishable = PUBLISHABLE_STATUSES.includes(vm.status)
 
   const publish = useMutation({
-    mutationFn: () =>
-      publishVm(vm.id, {
+    mutationFn: () => {
+      // 신청서와 같은 규칙: trim+lowercase 정규화한 값을 전송한다.
+      const domain = normalizeCustomDomain(customDomain)
+      return publishVm(vm.id, {
         port: Number(port),
-        customDomain: customDomain.trim() === '' ? null : customDomain.trim(),
-      }),
+        customDomain: domain === '' ? null : domain,
+      })
+    },
     onSuccess: async () => {
       setError(null)
       setFieldErrors({})
@@ -154,6 +162,12 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
     const portError = portFieldError(port)
     if (portError) {
       setFieldErrors({ port: portError })
+      return
+    }
+    // 커스텀 도메인 사전 검증 (서버 422와 동일 규칙) — 왕복 없이 즉시 안내한다.
+    const domain = normalizeCustomDomain(customDomain)
+    if (domain !== '' && !HOSTNAME_RE.test(domain)) {
+      setFieldErrors({ customDomain: CUSTOM_DOMAIN_FORMAT_MESSAGE })
       return
     }
     publish.mutate()
@@ -499,7 +513,13 @@ function PublicationActions({
     setError(null)
     setFieldErrors({})
     setMessage(null)
-    change.mutate({ customDomain: customDomain.trim() })
+    // 신청서·공개 폼과 같은 규칙으로 정규화·사전 검증한 값을 전송한다.
+    const domain = normalizeCustomDomain(customDomain)
+    if (!HOSTNAME_RE.test(domain)) {
+      setFieldErrors({ customDomain: CUSTOM_DOMAIN_FORMAT_MESSAGE })
+      return
+    }
+    change.mutate({ customDomain: domain })
   }
 
   return (
