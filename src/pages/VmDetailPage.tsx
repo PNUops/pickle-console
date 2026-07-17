@@ -12,6 +12,7 @@ import {
   fetchVmEvents,
   forceStopVm,
   rebootVm,
+  resetVmPassword,
   revealInitialPassword,
   shutdownVm,
   startVm,
@@ -371,7 +372,7 @@ const PASSWORD_VIEWABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING
 
 function InitialPasswordSection({ vm }: { vm: VmDetail }) {
   const queryClient = useQueryClient()
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modal, setModal] = useState<'reveal' | 'reset' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // 평문 비밀번호는 뮤테이션 상태(메모리)에만 존재한다.
@@ -382,119 +383,166 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
     gcTime: 0,
     mutationFn: () => revealInitialPassword(vm.id),
     onError: async (err) => {
-      setModalOpen(false)
+      setModal(null)
       setError(toApiError(err, '초기 비밀번호를 열람하지 못했습니다.').message)
-      // 410(이미 열람) 등은 상세를 다시 불러와 배너 상태를 맞춘다.
+      // 410(저장된 평문 없음) 등은 상세를 다시 불러와 상태를 맞춘다.
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
   })
 
+  // 재설정 실패(에이전트 미응답 409 등)는 모달 안에서 안내하고 재시도 가능하게 둔다.
+  const [resetError, setResetError] = useState<string | null>(null)
+  const resetPw = useMutation({
+    gcTime: 0,
+    mutationFn: () => resetVmPassword(vm.id),
+    onSuccess: () => setResetError(null),
+    onError: (err) =>
+      setResetError(toApiError(err, '비밀번호를 재설정하지 못했습니다.').message),
+  })
+
   const close = async () => {
-    const wasRevealed = reveal.isSuccess
-    setModalOpen(false)
+    setModal(null)
+    setResetError(null)
     reveal.reset() // 평문을 메모리에서 즉시 폐기한다.
-    if (wasRevealed) {
-      await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
-    }
+    resetPw.reset()
+    await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
   }
 
-  // 모달이 열려 있는 동안에는 계속 렌더한다 — 폴링 refetch가
-  // initialPasswordAvailable=false를 내려도(열람 직후) 표시 중인 평문이
-  // 사라지면 안 된다 (서버는 이미 평문을 파기해 재열람 불가).
-  if (!modalOpen) {
-    if (!PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
-    if (!vm.initialPasswordAvailable && !error) return null
+  const openReveal = () => {
+    setError(null)
+    setModal('reveal')
+    reveal.mutate()
   }
+
+  if (modal === null && !PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
+
+  const canReveal = vm.initialPasswordAvailable
+  const canReset = vm.status === 'RUNNING'
+  if (modal === null && !canReveal && !canReset && !error) return null
+
+  const credentials = modal === 'reset' ? resetPw.data : reveal.data
 
   return (
     <>
-      {error ? (
-        <Alert variant="warning">{error}</Alert>
-      ) : (
-        <Alert variant="info" title="초기 비밀번호를 확인하세요 (1회만 표시)">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>
-              프로비저닝 때 생성된 초기 비밀번호가 아직 열람되지 않았습니다. 보안을
-              위해 정확히 한 번만 표시됩니다.
-            </p>
-            <Button size="sm" onClick={() => setModalOpen(true)}>
-              비밀번호 확인
-            </Button>
+      {error && <Alert variant="warning">{error}</Alert>}
+      <Alert variant="info" title="VM 비밀번호">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p>
+            {canReveal
+              ? '초기 비밀번호는 언제든 다시 확인할 수 있습니다. 최초 접속에서 비밀번호를 변경했다면 저장된 값은 더 이상 유효하지 않으니 재설정을 이용하세요.'
+              : '저장된 초기 비밀번호가 없습니다. 재설정으로 새 비밀번호를 발급받을 수 있습니다.'}
+          </p>
+          <div className="flex gap-2">
+            {canReveal && (
+              <Button size="sm" onClick={openReveal}>
+                비밀번호 보기
+              </Button>
+            )}
+            {canReset && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setError(null)
+                  setModal('reset')
+                }}
+              >
+                비밀번호 재설정
+              </Button>
+            )}
           </div>
-        </Alert>
-      )}
+        </div>
+      </Alert>
 
       <Modal
-        open={modalOpen}
+        open={modal !== null}
         onClose={close}
-        title="초기 비밀번호 확인"
+        title={modal === 'reset' ? 'VM 비밀번호 재설정' : 'VM 비밀번호 확인'}
         footer={
-          reveal.isSuccess ? (
+          credentials ? (
             <Button variant="secondary" onClick={close}>
               닫기
             </Button>
-          ) : (
+          ) : modal === 'reset' ? (
             <>
               <Button variant="secondary" onClick={close}>
                 돌아가기
               </Button>
-              <Button loading={reveal.isPending} onClick={() => reveal.mutate()}>
-                지금 확인
+              <Button
+                variant="danger"
+                loading={resetPw.isPending}
+                onClick={() => resetPw.mutate()}
+              >
+                재설정
               </Button>
             </>
+          ) : (
+            <Button variant="secondary" onClick={close}>
+              닫기
+            </Button>
           )
         }
       >
-        {reveal.isSuccess ? (
+        {credentials ? (
           <div className="space-y-4">
-            <Alert variant="warning">
-              이 비밀번호는 다시 표시되지 않습니다. 지금 안전한 곳에 보관하세요.
-            </Alert>
+            {modal === 'reset' && (
+              <Alert variant="success">
+                새 비밀번호가 VM에 즉시 적용되었습니다. 기존 비밀번호는 더 이상
+                사용할 수 없습니다.
+              </Alert>
+            )}
             <dl className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <dt className="text-xs font-medium text-neutral-500">SSH 계정</dt>
                   <dd className="mt-0.5 font-mono text-sm text-neutral-900">
-                    {reveal.data.sshUsername}
+                    {credentials.sshUsername}
                   </dd>
                 </div>
-                <CopyButton value={reveal.data.sshUsername} label="계정 복사" />
+                <CopyButton value={credentials.sshUsername} label="계정 복사" />
               </div>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <dt className="text-xs font-medium text-neutral-500">초기 비밀번호</dt>
+                  <dt className="text-xs font-medium text-neutral-500">비밀번호</dt>
                   <dd className="mt-0.5 font-mono text-sm break-all text-neutral-900">
-                    {reveal.data.password}
+                    {credentials.password}
                   </dd>
                 </div>
-                <CopyButton value={reveal.data.password} label="비밀번호 복사" />
+                <CopyButton value={credentials.password} label="비밀번호 복사" />
               </div>
-              {reveal.data.sshHost && (
+              {credentials.sshHost && (
                 <div>
                   <dt className="text-xs font-medium text-neutral-500">SSH 접속</dt>
                   <dd className="mt-0.5 font-mono text-sm text-neutral-900">
-                    ssh {reveal.data.sshUsername}@{reveal.data.sshHost}
-                    {reveal.data.sshPort != null && reveal.data.sshPort !== 22
-                      ? ` -p ${reveal.data.sshPort}`
+                    ssh {credentials.sshUsername}@{credentials.sshHost}
+                    {credentials.sshPort != null && credentials.sshPort !== 22
+                      ? ` -p ${credentials.sshPort}`
                       : ''}
                   </dd>
                 </div>
               )}
             </dl>
             <p className="text-xs text-neutral-500">
-              창을 닫으면 다시 조회할 수 없습니다. 비밀번호를 잊으면 비밀번호
-              재설정(추후 제공)을 이용해야 합니다.
+              비밀번호는 언제든 이 화면에서 다시 확인할 수 있습니다. 단, 최초
+              접속에서 비밀번호를 변경한 뒤에는 저장된 값이 더 이상 유효하지
+              않습니다.
             </p>
           </div>
-        ) : (
+        ) : modal === 'reset' ? (
           <div className="space-y-3">
             <p className="text-sm text-neutral-600">
-              초기 비밀번호는 지금 <strong>한 번만</strong> 표시되며, 확인 후에는 다시
-              볼 수 없습니다. 지금 안전한 곳에 보관할 준비가 되었을 때만 진행하세요.
+              서버가 새 비밀번호를 생성해 VM의 <strong>{vm.sshUsername}</strong>{' '}
+              계정에 즉시 적용합니다 (재부팅 불필요). 기존 비밀번호는 바로 사용할
+              수 없게 됩니다.
             </p>
-            <Alert variant="warning">
-              확인 즉시 서버에서 비밀번호 평문이 파기되어 재열람이 불가능합니다.
-            </Alert>
+            <p className="text-sm text-neutral-600">
+              VM이 실행 중이고 게스트 에이전트가 응답할 때만 가능합니다.
+            </p>
+            {resetError && <Alert variant="danger">{resetError}</Alert>}
+          </div>
+        ) : (
+          <div className="flex justify-center py-6">
+            <Spinner label="비밀번호 불러오는 중" />
           </div>
         )}
       </Modal>

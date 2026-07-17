@@ -620,26 +620,56 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * 초기 비밀번호 열람
+         * @description 프로비저닝(또는 비밀번호 재설정) 시 생성된 초기 비밀번호를 열람합니다.
+         *     그룹 **MEMBER 이상**만 호출할 수 있습니다.
+         *
+         *     v0.7.0(2026-07-17)부터 "정확히 1회" 제한이 폐지되었습니다 — 서버는
+         *     평문 대신 **암호문(AES-256-GCM, env 키)** 을 보관하므로 언제든 재열람할
+         *     수 있고, 열람해도 상태가 소모되지 않아 안전(safe) 메서드인 GET을
+         *     사용합니다. **매 열람은 감사 기록(`vm.password_reveal`)됩니다.**
+         *
+         *     서버는 평문을 로그에 남기지 않으며, 클라이언트도 저장하지 말고 화면
+         *     표시 후 즉시 폐기해야 합니다. 사용자가 최초 접속에서 비밀번호를
+         *     변경했다면(강제) 저장된 초기 비밀번호는 **더 이상 유효하지 않습니다** —
+         *     이 경우 비밀번호 재설정(`POST /vms/{vmId}/password-reset`)을 사용합니다.
+         *
+         *     열람 가능 여부는 VM 상세의 `initialPasswordAvailable`로 미리 알 수
+         *     있습니다.
+         */
+        get: operations["revealInitialPassword"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         get?: never;
         put?: never;
         /**
-         * 초기 비밀번호 1회 열람
-         * @description 프로비저닝 시 생성된 초기 비밀번호를 **정확히 한 번** 열람합니다.
-         *     그룹 **MEMBER 이상**만 호출할 수 있습니다. 열람 즉시 서버는 평문을
-         *     파기하고(지원 검증용 BCrypt 해시만 보존) 이후 호출에는 410
-         *     (`VM_PASSWORD_ALREADY_VIEWED`)을 반환합니다.
+         * VM 비밀번호 재설정
+         * @description VM 내부 `student` 계정의 비밀번호를 서버가 새로 생성(24자 CSPRNG)해
+         *     **QEMU guest agent**(`set-user-password`)로 즉시 반영합니다. 재부팅이
+         *     필요 없으며, 성공 시 새 비밀번호가 암호문으로 저장되어 이후
+         *     `GET /vms/{vmId}/initial-password`로 재열람할 수 있습니다.
          *
-         *     평문은 이 응답에서 **1회만** 반환됩니다. 서버는 평문을 로그에 남기지
-         *     않으며, 클라이언트도 저장하지 말고 화면 표시 후 즉시 폐기해야 합니다.
-         *
-         *     열람이 1회성 상태를 소모하는 부수효과이므로, 안전(safe) 메서드인 GET이
-         *     아니라 POST를 사용합니다.
-         *
-         *     열람 가능 여부는 VM 상세의 `initialPasswordAvailable`로 미리 알 수
-         *     있습니다. 이미 열람했거나 비밀번호를 잊은 경우에는 비밀번호 재설정
-         *     (후속 기능)을 이용해야 합니다.
+         *     그룹 **MEMBER 이상**만 호출할 수 있습니다(초기 비밀번호 열람과 동일
+         *     스코프). VM이 **RUNNING**이고 guest agent가 응답해야 하며, 아니면
+         *     409(`VM_INVALID_STATE`)입니다. 매 재설정은 감사
+         *     기록(`vm.password_reset`)되며, 새 비밀번호는 응답으로만 반환되고
+         *     로그에는 남지 않습니다.
          */
-        post: operations["revealInitialPassword"];
+        post: operations["resetVmPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1805,6 +1835,8 @@ export interface components {
              *       (그 외 M5 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
              *       타 기관 리소스·타인 알림 마스킹 `RESOURCE_NOT_FOUND`,
              *       권한 `ACCESS_DENIED`, 값 검증 `VALIDATION_FAILED`)
+             *     - 비밀번호 재설정 (v0.7.0): `PROXMOX_UPSTREAM_ERROR`(동기 Proxmox
+             *       호출 실패 — 502; 게스트 에이전트 미응답은 `VM_INVALID_STATE` 409)
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -2209,7 +2241,7 @@ export interface components {
             httpPublishGranted: boolean;
             /** @description 현재 HTTP 공개 상태(도메인+라우트+인증서). 미공개면 null. 라우트· 검증·인증서 진행 상황을 폴링하는 지점입니다(비동기 적용 결과 노출). */
             publication?: components["schemas"]["PublicationView"] | null;
-            /** @description 초기 비밀번호가 준비되어 아직 열람되지 않았는지 여부 (true면 `POST /vms/{vmId}/initial-password`로 1회 열람 가능) */
+            /** @description 초기 비밀번호가 서버에 (암호문으로) 저장되어 있어 열람 가능한지 여부 — true면 `GET /vms/{vmId}/initial-password`로 언제든 재열람할 수 있으며, 열람해도 false로 바뀌지 않습니다 (v0.7.0) */
             initialPasswordAvailable: boolean;
             /** Format: date-time */
             updatedAt: string;
@@ -2307,9 +2339,9 @@ export interface components {
             totalElements: number;
             totalPages: number;
         };
-        /** @description 초기 비밀번호 1회 열람 응답. 이 응답 이후 서버는 평문을 파기하므로 다시 조회할 수 없습니다. */
+        /** @description VM 비밀번호 열람/재설정 응답. 서버는 암호문으로 보관하므로 언제든 재열람할 수 있으나, 사용자가 최초 접속에서 비밀번호를 변경했다면 저장된 값은 더 이상 유효하지 않습니다(재설정으로 새로 발급). 클라이언트는 평문을 저장하지 말고 표시 후 즉시 폐기해야 합니다. */
         InitialPasswordResponse: {
-            /** @description 초기 비밀번호 평문 (24자, 생성 시 CSPRNG) — 이번 응답이 마지막 열람 기회 */
+            /** @description 비밀번호 평문 (24자, 생성 시 CSPRNG) */
             password: string;
             /** @description SSH 접속 계정 (고정 `student`) */
             sshUsername: string;
@@ -5024,7 +5056,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 초기 비밀번호 (이번 응답이 마지막 열람 기회) */
+            /** @description 초기 비밀번호 */
             200: {
                 headers: {
                     /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
@@ -5083,7 +5115,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description 이미 열람되었거나 평문이 존재하지 않음 (M2 mock 프로비저닝으로 생성돼 초기 비밀번호가 없는 VM 포함) — 재열람 불가 */
+            /** @description 저장된 비밀번호가 없음 — M2 mock 프로비저닝으로 생성돼 초기 비밀번호가 없는 VM, 또는 정책 변경(v0.7.0) 전 1회 열람으로 평문이 파기된 VM. 코드값은 하위호환을 위해 `VM_PASSWORD_ALREADY_VIEWED`를 유지합니다. 비밀번호 재설정으로 새 비밀번호를 발급받을 수 있습니다. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -5094,9 +5126,101 @@ export interface operations {
                      *       "type": "about:blank",
                      *       "title": "초기 비밀번호를 열람할 수 없습니다",
                      *       "status": 410,
-                     *       "detail": "초기 비밀번호가 이미 열람되었거나 존재하지 않습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.",
+                     *       "detail": "저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.",
                      *       "instance": "/api/v1/vms/55/initial-password",
                      *       "code": "VM_PASSWORD_ALREADY_VIEWED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resetVmPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 재설정 완료 — 새 비밀번호 (즉시 유효) */
+            200: {
+                headers: {
+                    /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "password": "q2Xw8RtN5kLm3ZvB7cJd4Hyf",
+                     *       "sshUsername": "student",
+                     *       "sshHost": "ssh.pickle.pnuops.com",
+                     *       "sshPort": 22
+                     *     }
+                     */
+                    "application/json": components["schemas"]["InitialPasswordResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "비밀번호를 재설정할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 MEMBER 이상만 비밀번호를 재설정할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password-reset",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 재설정할 수 없는 상태 — RUNNING이 아니거나 guest agent가 응답하지 않는 경우 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
+                     *       "status": 409,
+                     *       "detail": "VM이 실행 중이고 게스트 에이전트가 응답할 때만 비밀번호를 재설정할 수 있습니다.",
+                     *       "instance": "/api/v1/vms/55/password-reset",
+                     *       "code": "VM_INVALID_STATE"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Proxmox 호출 실패 (게스트 에이전트 외 오류) */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "하이퍼바이저 요청에 실패했습니다",
+                     *       "status": 502,
+                     *       "detail": "잠시 후 다시 시도해 주세요. 문제가 계속되면 관리자에게 문의하세요.",
+                     *       "instance": "/api/v1/vms/55/password-reset",
+                     *       "code": "PROXMOX_UPSTREAM_ERROR"
                      *     }
                      */
                     "application/problem+json": components["schemas"]["Problem"];

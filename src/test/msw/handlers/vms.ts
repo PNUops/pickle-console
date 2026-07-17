@@ -812,7 +812,8 @@ export const vmHandlers: RequestHandler[] = [
     )
   }),
 
-  http.post('*/api/v1/vms/:vmId/initial-password', ({ params }) => {
+  // 계약 v0.7.0: 상시 재열람 가능 (GET, 부수효과 없음)
+  http.get('*/api/v1/vms/:vmId/initial-password', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()
     if (!['RUNNING', 'STOPPED', 'REBOOTING'].includes(vm.status)) {
@@ -827,14 +828,36 @@ export const vmHandlers: RequestHandler[] = [
         title: '초기 비밀번호를 열람할 수 없습니다',
         status: 410,
         detail:
-          '초기 비밀번호가 이미 열람되었거나 존재하지 않습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.',
+          '저장된 초기 비밀번호가 없습니다. 비밀번호가 필요하면 비밀번호 재설정을 이용해 주세요.',
         instance: `/api/v1/vms/${vm.id}/initial-password`,
         code: 'VM_PASSWORD_ALREADY_VIEWED',
       })
     }
-    vm.initialPasswordAvailable = false
     const body: Schemas['InitialPasswordResponse'] = {
       password: 'x7GmQ4vRk2LpWn9sCtYb8Zed',
+      sshUsername: 'student',
+      sshHost: 'ssh.pickle.pnuops.com',
+      sshPort: 22,
+    }
+    return HttpResponse.json(body, {
+      status: 200,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }),
+
+  // 계약 v0.7.0: guest agent 비밀번호 재설정 (RUNNING + 에이전트 응답 필수)
+  http.post('*/api/v1/vms/:vmId/password-reset', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    if (vm.status !== 'RUNNING') {
+      return invalidVmStateProblem(
+        `/api/v1/vms/${vm.id}/password-reset`,
+        'VM이 실행 중이고 게스트 에이전트가 응답할 때만 비밀번호를 재설정할 수 있습니다.',
+      )
+    }
+    vm.initialPasswordAvailable = true
+    const body: Schemas['InitialPasswordResponse'] = {
+      password: 'q2Xw8RtN5kLm3ZvB7cJd4Hyf',
       sshUsername: 'student',
       sshHost: 'ssh.pickle.pnuops.com',
       sshPort: 22,
