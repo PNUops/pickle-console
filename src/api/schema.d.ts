@@ -2838,7 +2838,7 @@ export interface components {
             memberCount: number;
         };
         /**
-         * @description 알림 이메일 발송 상태 (PENDING=발송 대기, SENT=발송 완료, FAILED=발송 실패 — 재발송 가능, SKIPPED=발송 생략 — 이메일 채널 비대상 이벤트 등)
+         * @description 알림 이메일 발송 상태 (PENDING=발송 대기, SENT=발송 완료, FAILED=발송 실패 — 재발송 가능, SKIPPED=발송 생략 — 발송 시점에 수신자가 비활성/탈퇴 상태인 경우)
          * @enum {string}
          */
         NotificationDeliveryStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
