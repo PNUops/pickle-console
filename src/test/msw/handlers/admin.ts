@@ -323,6 +323,32 @@ const adminNodes: Schemas['NodeSummary'][] = [
   },
 ]
 
+/**
+ * 계약 v0.6.1의 `sort` 재현 — 화이트리스트 키(name/endDate/createdAt, `-` 접두사
+ * 내림차순), endDate 미지정은 방향과 무관하게 마지막, 동률·미지정은 id 내림차순.
+ */
+function adminVmComparator(sort: string | null) {
+  type Row = (typeof vmStore)[number]
+  const byIdDesc = (a: Row, b: Row) => b.id - a.id
+  if (!sort) return byIdDesc
+  const desc = sort.startsWith('-')
+  const key = desc ? sort.slice(1) : sort
+  return (a: Row, b: Row) => {
+    let cmp = 0
+    if (key === 'name') cmp = a.name.localeCompare(b.name)
+    else if (key === 'createdAt') cmp = a.createdAt.localeCompare(b.createdAt)
+    else if (key === 'endDate') {
+      if (a.endDate == null || b.endDate == null) {
+        if (a.endDate == null && b.endDate == null) return byIdDesc(a, b)
+        return a.endDate == null ? 1 : -1
+      }
+      cmp = a.endDate.localeCompare(b.endDate)
+    }
+    if (desc) cmp = -cmp
+    return cmp !== 0 ? cmp : byIdDesc(a, b)
+  }
+}
+
 export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/vm-requests', ({ request }) => {
     const url = new URL(request.url)
@@ -520,6 +546,7 @@ export const adminHandlers: RequestHandler[] = [
     const status = url.searchParams.get('status')
     const expiringInDays = url.searchParams.get('expiringInDays')
     const expired = url.searchParams.get('expired')
+    const q = url.searchParams.get('q')?.toLowerCase()
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const today = localDateStr(0)
@@ -527,6 +554,13 @@ export const adminHandlers: RequestHandler[] = [
       .filter((vm) => !orgId || vm.orgId === Number(orgId))
       .filter((vm) => !groupId || vm.groupId === Number(groupId))
       .filter((vm) => !status || vm.status === status)
+      // 계약 v0.6.1: q = 이름/호스트네임 부분일치 (대소문자 무시)
+      .filter(
+        (vm) =>
+          !q ||
+          vm.name.toLowerCase().includes(q) ||
+          vm.hostname.toLowerCase().includes(q),
+      )
       // 계약: expiringInDays = 오늘 ≤ endDate ≤ 오늘+N (만료·삭제 상태 제외)
       .filter(
         (vm) =>
@@ -546,7 +580,7 @@ export const adminHandlers: RequestHandler[] = [
             vm.status !== 'DELETED' &&
             vm.status !== 'DELETING'),
       )
-      .sort((a, b) => b.id - a.id)
+      .sort(adminVmComparator(url.searchParams.get('sort')))
     const body: Schemas['VmPage'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
       page,

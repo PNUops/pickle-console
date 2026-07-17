@@ -6215,6 +6215,10 @@ export interface operations {
                 expiringInDays?: number;
                 /** @description true면 이미 만료된 VM만 조회 (`endDate` < 오늘, DELETED/DELETING 제외 — `expiringInDays`와 동일 기준) */
                 expired?: boolean;
+                /** @description 이름/호스트네임 부분일치 검색 (대소문자 무시). 다른 필터와 AND로 적용됩니다. */
+                q?: string;
+                /** @description 정렬 기준 (접두사 `-`는 내림차순). 미지정 시 최신 생성 순(`-id`). 동률은 항상 `id` 내림차순으로 안정 정렬되며, `endDate` 정렬에서 기간 미지정 VM은 마지막에 옵니다. */
+                sort?: "name" | "-name" | "endDate" | "-endDate" | "createdAt" | "-createdAt";
                 /** @description 페이지 번호 (0부터 시작) */
                 page?: components["parameters"]["Page"];
                 /** @description 페이지 크기 */

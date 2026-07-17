@@ -49,6 +49,45 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
   })
 
+  test('이름 검색과 정렬 헤더가 서버 파라미터로 동작한다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+    await screen.findByText('capstone-team3-api')
+
+    // 검색(디바운스): 'algo' → algo-judge만 남는다
+    await user.type(screen.getByLabelText('VM 검색'), 'algo')
+    await waitFor(() =>
+      expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText('algo-judge')).toBeInTheDocument()
+    await user.clear(screen.getByLabelText('VM 검색'))
+    await screen.findByText('capstone-team3-api')
+
+    // 이름 헤더 클릭 → 오름차순 (ai-train이 첫 행)
+    await user.click(screen.getByRole('button', { name: '이름' }))
+    expect(screen.getByRole('columnheader', { name: '이름' })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    )
+    await waitFor(() => {
+      const firstRow = screen.getAllByRole('row')[1]
+      expect(within(firstRow).getByText('ai-train')).toBeInTheDocument()
+    })
+
+    // 다시 클릭 → 내림차순, 세 번째 클릭 → 해제(기본 최신순)
+    await user.click(screen.getByRole('button', { name: '이름' }))
+    expect(screen.getByRole('columnheader', { name: '이름' })).toHaveAttribute(
+      'aria-sort',
+      'descending',
+    )
+    await waitFor(() => {
+      const firstRow = screen.getAllByRole('row')[1]
+      expect(within(firstRow).getByText('web-lab')).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: '이름' }))
+    expect(screen.getByRole('columnheader', { name: '이름' })).not.toHaveAttribute('aria-sort')
+  })
+
   test('그룹 필터 드롭다운으로 그룹을 좁힐 수 있고, 기관 변경 시 선택이 초기화된다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()

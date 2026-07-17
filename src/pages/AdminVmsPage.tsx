@@ -7,6 +7,7 @@ import {
   fetchAdminVms,
   fetchOrgs,
   scheduleVmDeletion,
+  type AdminVmSort,
   type VmStatus,
   type VmSummary,
 } from '../api/queries'
@@ -24,6 +25,7 @@ import {
   Input,
   Pagination,
   Select,
+  SortableTH,
   Spinner,
   Table,
   TBody,
@@ -37,7 +39,11 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime, formatSpec, minScheduleDate } from '../lib/format'
+import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
+
+/** 정렬 가능한 컬럼 키 (계약 sort 화이트리스트의 축). */
+type SortKey = 'name' | 'endDate' | 'createdAt'
 
 const PAGE_SIZE = 10
 
@@ -58,6 +64,8 @@ export function AdminVmsPage() {
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
+  const [qInput, setQInput] = useState('')
+  const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   // 작업 결과 메시지는 페이지 수준에서 관리한다 — 강제 삭제 등으로 VM이 필터된
@@ -69,6 +77,11 @@ export function AdminVmsPage() {
     setSelectedId(id)
   }
 
+  // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
+  // 요청이 나가지 않게 한다.
+  const debouncedQ = useDebouncedValue(qInput).trim()
+  const q = debouncedQ.length > 0 ? debouncedQ : undefined
+
   const vms = useQuery({
     queryKey: [
       'admin',
@@ -77,13 +90,22 @@ export function AdminVmsPage() {
         status: status ?? null,
         orgId: orgId ?? null,
         groupId: groupId ?? null,
+        q: q ?? null,
+        sort: sort ?? null,
         page,
         size: PAGE_SIZE,
       },
     ],
-    queryFn: () => fetchAdminVms({ status, orgId, groupId, page, size: PAGE_SIZE }),
+    queryFn: () => fetchAdminVms({ status, orgId, groupId, q, sort, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
+
+  const sortDirection = (key: SortKey) =>
+    sort === key ? ('asc' as const) : sort === `-${key}` ? ('desc' as const) : null
+  const onSort = (key: SortKey) => (next: 'asc' | 'desc' | null) => {
+    setSort(next === null ? undefined : next === 'asc' ? key : (`-${key}` as AdminVmSort))
+    setPage(0)
+  }
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
   // ORG_ADMIN은 자기 기관 그룹으로 고정, SYS_ADMIN은 선택한 기관으로 좁혀진다.
   const groups = useQuery({
@@ -130,6 +152,17 @@ export function AdminVmsPage() {
           })}
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Input
+            type="search"
+            aria-label="VM 검색"
+            placeholder="이름/호스트네임 검색"
+            className="w-52"
+            value={qInput}
+            onChange={(event) => {
+              setQInput(event.target.value)
+              setPage(0)
+            }}
+          />
           {isSysAdmin && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               기관
@@ -193,11 +226,21 @@ export function AdminVmsPage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>이름</TH>
+                  <SortableTH direction={sortDirection('name')} onSort={onSort('name')}>
+                    이름
+                  </SortableTH>
                   <TH>상태</TH>
                   <TH>그룹</TH>
                   <TH>사양</TH>
-                  <TH>생성일</TH>
+                  <SortableTH direction={sortDirection('endDate')} onSort={onSort('endDate')}>
+                    종료일
+                  </SortableTH>
+                  <SortableTH
+                    direction={sortDirection('createdAt')}
+                    onSort={onSort('createdAt')}
+                  >
+                    생성일
+                  </SortableTH>
                 </TR>
               </THead>
               <TBody>
@@ -235,6 +278,7 @@ export function AdminVmsPage() {
                     <TD className="whitespace-nowrap">
                       {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
                     </TD>
+                    <TD className="whitespace-nowrap">{vm.endDate ?? '—'}</TD>
                     <TD className="whitespace-nowrap">{formatDateTime(vm.createdAt)}</TD>
                   </TR>
                 ))}

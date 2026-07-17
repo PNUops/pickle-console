@@ -1,6 +1,6 @@
 import { api } from './client'
 import { ApiError, toApiError } from './problem'
-import type { components } from './schema'
+import type { components, operations } from './schema'
 
 type Schemas = components['schemas']
 
@@ -17,6 +17,10 @@ export type VmRequestStatus = Schemas['VmRequestStatus']
 export type VmSummary = Schemas['VmSummary']
 export type VmDetail = Schemas['VmDetail']
 export type VmPage = Schemas['VmPage']
+/** GET /admin/vms sort 화이트리스트 (계약 v0.6.1) */
+export type AdminVmSort = NonNullable<
+  operations['listAdminVms']['parameters']['query']
+>['sort']
 export type ApprovalContext = Schemas['ApprovalContext']
 export type ApproveVmRequest = Schemas['ApproveVmRequest']
 export type OrgDetail = Schemas['OrgDetail']
@@ -388,6 +392,8 @@ export function fetchAdminVms(params: {
   status?: VmStatus
   expiringInDays?: number
   expired?: boolean
+  q?: string
+  sort?: AdminVmSort
   page?: number
   size?: number
 }): Promise<VmPage> {
