@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   keepPreviousData,
@@ -284,6 +284,14 @@ function PowerControls({ vm }: { vm: VmDetail }) {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // 접수 안내가 영구히 남아 낡은 안내로 오독되지 않게 잠시 뒤 자동으로 지운다
+  // (전이 반영은 상태 배지가 담당하므로 안내는 일시 피드백이면 충분하다).
+  useEffect(() => {
+    if (message == null) return
+    const timer = setTimeout(() => setMessage(null), 6000)
+    return () => clearTimeout(timer)
+  }, [message])
+
   const power = useMutation({
     mutationFn: (action: PowerAction) => POWER_ACTIONS[action].run(vm.id),
     onSuccess: async (data) => {
@@ -508,6 +516,16 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 언마운트 후 setState가 호출되지 않게 대기 중인 타이머를 정리한다.
+  useEffect(
+    () => () => {
+      if (timerRef.current != null) clearTimeout(timerRef.current)
+    },
+    [],
+  )
+
   return (
     <Button
       variant="secondary"
@@ -516,7 +534,8 @@ function CopyButton({ value, label }: { value: string; label: string }) {
         try {
           await navigator.clipboard.writeText(value)
           setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
+          if (timerRef.current != null) clearTimeout(timerRef.current)
+          timerRef.current = setTimeout(() => setCopied(false), 2000)
         } catch {
           // 클립보드 권한이 없으면 조용히 무시한다 (값은 화면에 그대로 보인다).
         }
