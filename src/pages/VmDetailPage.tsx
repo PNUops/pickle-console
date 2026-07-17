@@ -41,6 +41,7 @@ import {
   TH,
   THead,
   TR,
+  useToast,
   VmStatusBadge,
 } from '../components/ui'
 import { formatDateTime, formatDday, formatRelative, formatSpec } from '../lib/format'
@@ -280,29 +281,21 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
 
 function PowerControls({ vm }: { vm: VmDetail }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [confirming, setConfirming] = useState<PowerAction | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  // 접수 안내가 영구히 남아 낡은 안내로 오독되지 않게 잠시 뒤 자동으로 지운다
-  // (전이 반영은 상태 배지가 담당하므로 안내는 일시 피드백이면 충분하다).
-  useEffect(() => {
-    if (message == null) return
-    const timer = setTimeout(() => setMessage(null), 6000)
-    return () => clearTimeout(timer)
-  }, [message])
 
   const power = useMutation({
     mutationFn: (action: PowerAction) => POWER_ACTIONS[action].run(vm.id),
     onSuccess: async (data) => {
       setConfirming(null)
       setError(null)
-      setMessage(data.message)
+      // 전이 반영은 상태 배지가 담당하므로 접수 안내는 일시 토스트면 충분하다.
+      toast.success(data.message)
       await queryClient.invalidateQueries({ queryKey: ['vms'] })
     },
     onError: async (err) => {
       setConfirming(null)
-      setMessage(null)
       setError(toApiError(err, 'VM 전원 제어 요청에 실패했습니다.').message)
       // 409(상태 불일치) 등은 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
       await queryClient.invalidateQueries({ queryKey: ['vms'] })
@@ -314,7 +307,7 @@ function PowerControls({ vm }: { vm: VmDetail }) {
   )
   const active = confirming ? POWER_ACTIONS[confirming] : null
 
-  if (visibleActions.length === 0 && !message && !error) return null
+  if (visibleActions.length === 0 && !error) return null
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -334,11 +327,6 @@ function PowerControls({ vm }: { vm: VmDetail }) {
             )
           })}
         </div>
-      )}
-      {message && (
-        <Alert variant="info" className="w-full sm:w-auto">
-          {message}
-        </Alert>
       )}
       {error && (
         <Alert variant="danger" className="w-full sm:w-auto">

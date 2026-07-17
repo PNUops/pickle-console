@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, test, vi } from 'vitest'
@@ -9,6 +9,8 @@ import { Input } from './Input'
 import { Modal } from './Modal'
 import { Pagination } from './Pagination'
 import { RequestStatusBadge, VmStatusBadge } from './Badge'
+import { ToastProvider } from './Toast'
+import { useToast } from './toast-context'
 
 describe('Button', () => {
   test('loading state disables the button and marks it busy', () => {
@@ -155,5 +157,54 @@ describe('Pagination', () => {
 
     rerender(<Pagination page={0} totalPages={1} onPageChange={onPageChange} />)
     expect(screen.queryByRole('navigation', { name: '페이지 이동' })).not.toBeInTheDocument()
+  })
+})
+
+describe('Toast', () => {
+  function Demo() {
+    const toast = useToast()
+    return (
+      <>
+        <Button onClick={() => toast.success('저장되었습니다')}>성공</Button>
+        <Button onClick={() => toast.error('실패했습니다')}>실패</Button>
+      </>
+    )
+  }
+
+  test('성공·실패 토스트를 쌓아 보여주고 닫기 버튼으로 개별 해제한다', async () => {
+    const user = userEvent.setup()
+    render(
+      <ToastProvider>
+        <Demo />
+      </ToastProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '성공' }))
+    await user.click(screen.getByRole('button', { name: '실패' }))
+    expect(screen.getByText('저장되었습니다')).toBeInTheDocument()
+    expect(screen.getByText('실패했습니다')).toBeInTheDocument()
+    expect(screen.getAllByRole('status')).toHaveLength(2)
+
+    await user.click(screen.getAllByRole('button', { name: '알림 닫기' })[0])
+    expect(screen.queryByText('저장되었습니다')).not.toBeInTheDocument()
+    expect(screen.getByText('실패했습니다')).toBeInTheDocument()
+  })
+
+  test('5초 뒤 자동으로 사라진다', () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <ToastProvider>
+          <Demo />
+        </ToastProvider>,
+      )
+      fireEvent.click(screen.getByRole('button', { name: '성공' }))
+      expect(screen.getByText('저장되었습니다')).toBeInTheDocument()
+
+      act(() => vi.advanceTimersByTime(5000))
+      expect(screen.queryByText('저장되었습니다')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

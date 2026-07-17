@@ -91,6 +91,8 @@ describe('그룹 상세 — 구성원 관리', () => {
     await user.type(screen.getByLabelText('이메일'), 'sujin.choi@pusan.ac.kr')
     await user.click(screen.getByRole('button', { name: '추가' }))
     expect(await screen.findByText('최수진')).toBeInTheDocument()
+    // 성공 확인은 토스트로 노출된다
+    expect(screen.getByText('최수진 님을 구성원으로 추가했습니다.')).toBeInTheDocument()
   })
 
   test('유일한 OWNER가 나가려 하면 409 안내를 보여준다', async () => {

@@ -26,6 +26,7 @@ import {
   THead,
   TR,
   Textarea,
+  useToast,
 } from '../components/ui'
 import { GROUP_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
@@ -183,6 +184,7 @@ function MembersSection({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const toast = useToast()
   const [actionError, setActionError] = useState<string | null>(null)
   const [transferTarget, setTransferTarget] = useState<GroupMember | null>(null)
   const [removeTarget, setRemoveTarget] = useState<GroupMember | null>(null)
@@ -202,8 +204,13 @@ function MembersSection({
       if (!data) throw toApiError(error, '역할을 변경하지 못했습니다.')
       return data
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, { member, role }) => {
       setTransferTarget(null)
+      toast.success(
+        role === 'OWNER'
+          ? `${member.name} 님에게 소유권을 이전했습니다.`
+          : `${member.name} 님의 역할을 변경했습니다.`,
+      )
       await refresh()
     },
     onError: (err) => {
@@ -224,10 +231,12 @@ function MembersSection({
       setRemoveTarget(null)
       setLeaveOpen(false)
       if (member.userId === user?.id) {
+        toast.success('그룹에서 나갔습니다.')
         navigate('/console/groups')
         await queryClient.invalidateQueries({ queryKey: ['groups'] })
         return
       }
+      toast.success(`${member.name} 님을 그룹에서 제거했습니다.`)
       await refresh()
     },
     onError: (err) => {
@@ -394,6 +403,7 @@ function MembersSection({
 /* ─── add member (contract: OWNER only) ─── */
 
 function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => void }) {
+  const toast = useToast()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<GroupMemberRole>('MEMBER')
   const [error, setError] = useState<string | null>(null)
@@ -407,9 +417,10 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
       if (!data) throw toApiError(err, '구성원을 추가하지 못했습니다.')
       return data
     },
-    onSuccess: () => {
+    onSuccess: (member) => {
       setEmail('')
       setRole('MEMBER')
+      toast.success(`${member.name} 님을 구성원으로 추가했습니다.`)
       onAdded()
     },
     onError: (err) => setError(toApiError(err, '구성원을 추가하지 못했습니다.').message),
