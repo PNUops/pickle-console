@@ -364,7 +364,7 @@ function PowerControls({ vm }: { vm: VmDetail }) {
   )
 }
 
-/* ─── 초기 비밀번호 1회 열람 ─── */
+/* ─── VM 비밀번호 (상시 재열람) ─── */
 
 /** 계약상 열람이 허용되는 상태 (그 외는 409). */
 const PASSWORD_VIEWABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING']
