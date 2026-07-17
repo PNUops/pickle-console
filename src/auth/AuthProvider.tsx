@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useQueryClient } from '@tanstack/react-query'
 import { api, getCsrfToken, refreshSession } from '../api/client'
 import { toApiError } from '../api/problem'
+import { guardNetwork } from '../api/queries'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { AuthContext, type AuthStatus, type UserProfile } from './auth-context'
 
@@ -18,18 +19,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const restored = await refreshSession()
-      if (!restored) {
-        if (!cancelled) setState({ status: 'unauthenticated', user: null })
-        return
-      }
-      const { data } = await api.GET('/me')
-      if (cancelled) return
-      if (data) {
-        setState({ status: 'authenticated', user: data })
-      } else {
+      try {
+        const restored = await refreshSession()
+        if (!restored) {
+          if (!cancelled) setState({ status: 'unauthenticated', user: null })
+          return
+        }
+        const { data } = await api.GET('/me')
+        if (cancelled) return
+        if (data) {
+          setState({ status: 'authenticated', user: data })
+        } else {
+          clearAccessToken()
+          setState({ status: 'unauthenticated', user: null })
+        }
+      } catch {
+        // /me의 fetch 단계 예외(네트워크 단절 등) — 거부가 밖으로 새면 상태가
+        // 'loading'에 영원히 머문다. 토큰을 정리하고 비로그인으로 마감한다.
         clearAccessToken()
-        setState({ status: 'unauthenticated', user: null })
+        if (!cancelled) setState({ status: 'unauthenticated', user: null })
       }
     })()
     return () => {
@@ -54,7 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw toApiError(error, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
     }
     setAccessToken(data.accessToken)
-    const me = await api.GET('/me')
+    // fetch 단계 예외(네트워크 단절 등)에서도 방금 저장한 토큰이 남지 않게 정리하고
+    // 던진다 — LoginPage가 한국어 폴백 메시지로 렌더링한다.
+    const me = await guardNetwork(() => api.GET('/me')).catch((err: unknown) => {
+      clearAccessToken()
+      throw err
+    })
     if (!me.data) {
       clearAccessToken()
       throw toApiError(me.error, '사용자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')

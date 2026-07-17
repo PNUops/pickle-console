@@ -93,7 +93,7 @@ export interface RequestOptions {
  * openapi-fetch는 HTTP 오류는 `error`로 돌려주지만, 요청 자체가 실패하면
  * 영문 TypeError("Failed to fetch")를 그대로 던지므로 여기서 감싼다.
  */
-async function guardNetwork<T>(run: () => Promise<T>): Promise<T> {
+export async function guardNetwork<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run()
   } catch (error) {

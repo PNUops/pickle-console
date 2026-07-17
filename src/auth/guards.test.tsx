@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { server } from '../test/msw/server'
 import {
@@ -39,6 +40,16 @@ describe('라우트 가드', () => {
     expect(
       await screen.findByRole('heading', { name: '관리자 대시보드' }),
     ).toBeInTheDocument()
+  })
+
+  test('세션 복원 중 /me 네트워크 예외가 나도 로딩에 갇히지 않고 로그인 화면으로 보낸다', async () => {
+    server.use(
+      refreshSuccessHandler('access-student'),
+      http.get('*/api/v1/me', () => HttpResponse.error()),
+    )
+    renderApp('/console')
+
+    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument()
   })
 })
 
