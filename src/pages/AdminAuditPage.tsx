@@ -21,6 +21,7 @@ import {
 } from '../components/ui'
 import { USER_ROLE_LABELS, type UserRole } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
+import { useDebouncedValue } from '../lib/use-debounced-value'
 import { AUDIT_ACTION_LABELS, labelForAuditAction } from '../lib/status'
 
 const PAGE_SIZE = 20
@@ -50,13 +51,17 @@ export function AdminAuditPage() {
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
 
+  // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
+  // 요청이 나가지 않게 한다.
+  const debouncedActorEmail = useDebouncedValue(actorEmail)
+
   const logs = useQuery({
     queryKey: [
       'admin',
       'audit',
       {
         action: action ?? null,
-        actorEmail: actorEmail || null,
+        actorEmail: debouncedActorEmail || null,
         from: from || null,
         to: to || null,
         orgId: orgId ?? null,
@@ -66,7 +71,7 @@ export function AdminAuditPage() {
     queryFn: () =>
       fetchAuditLogs({
         action,
-        actorEmail: actorEmail || undefined,
+        actorEmail: debouncedActorEmail || undefined,
         from: from || undefined,
         to: to || undefined,
         orgId,

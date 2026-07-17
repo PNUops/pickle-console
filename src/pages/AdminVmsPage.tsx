@@ -36,6 +36,7 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
 
 const PAGE_SIZE = 10
@@ -68,8 +69,11 @@ export function AdminVmsPage() {
     setSelectedId(id)
   }
 
-  const groupId = /^\d+$/.test(groupIdInput.trim())
-    ? Number(groupIdInput.trim())
+  // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
+  // 요청이 나가지 않게 한다.
+  const debouncedGroupIdInput = useDebouncedValue(groupIdInput)
+  const groupId = /^\d+$/.test(debouncedGroupIdInput.trim())
+    ? Number(debouncedGroupIdInput.trim())
     : undefined
 
   const vms = useQuery({
