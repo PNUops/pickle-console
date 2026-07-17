@@ -1,9 +1,7 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../../lib/cn'
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+import { useFocusTrap } from '../../lib/use-focus-trap'
 
 export interface ModalProps {
   open: boolean
@@ -18,64 +16,7 @@ export interface ModalProps {
 export function Modal({ open, onClose, title, className, children, footer }: ModalProps) {
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
-  const previouslyFocused = useRef<Element | null>(null)
-
-  // Keep the latest onClose without retriggering the focus-init effect below —
-  // an inline onClose prop must not re-yank focus on every parent re-render.
-  const onCloseRef = useRef(onClose)
-  useEffect(() => {
-    onCloseRef.current = onClose
-  })
-
-  useEffect(() => {
-    if (!open) return
-    previouslyFocused.current = document.activeElement
-    const panel = panelRef.current
-    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE)
-    ;(firstFocusable ?? panel)?.focus()
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        onCloseRef.current()
-        return
-      }
-      if (event.key !== 'Tab' || !panel) return
-      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
-      if (focusables.length === 0) {
-        event.preventDefault()
-        panel.focus()
-        return
-      }
-      const first = focusables[0]
-      const last = focusables[focusables.length - 1]
-      const active = document.activeElement
-      if (!(active instanceof Node) || !panel.contains(active)) {
-        // Focus escaped the dialog — pull it back in.
-        event.preventDefault()
-        ;(event.shiftKey ? last : first).focus()
-        return
-      }
-      if (event.shiftKey && (active === first || active === panel)) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
-      if (previouslyFocused.current instanceof HTMLElement) {
-        previouslyFocused.current.focus()
-      }
-    }
-  }, [open])
+  useFocusTrap(panelRef, { active: open, onEscape: onClose })
 
   if (!open) return null
 
