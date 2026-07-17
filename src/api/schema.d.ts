@@ -2586,7 +2586,7 @@ export interface components {
         };
         /** @description 서버 생성 키의 개인키 (OpenSSH `openssh-key-v1` PEM, 비암호화). 매 다운로드는 감사 기록됩니다. 클라이언트는 파일 저장 후 권한을 제한하도록 안내해야 합니다 (chmod 600). */
         SshKeyPrivateKeyResponse: {
-            /** @description OpenSSH PEM 전문 (`-----BEGIN OPENSSH PEM-----` … ) */
+            /** @description OpenSSH PEM 형식 개인키 전문 (openssh-key-v1, BEGIN/END 마커 포함 여러 줄 — 예시는 시크릿 스캐너 오탐 방지를 위해 자리표시자로 대체) */
             privateKey: string;
             /** @description 권장 저장 파일명 (예 `id_ed25519_pickle`) */
             fileName: string;
@@ -4375,7 +4375,7 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "privateKey": "-----BEGIN OPENSSH PEM-----\nb3BlbnNzaC1rZXktdjEAAAAA…\n-----END OPENSSH PEM-----\n",
+                     *       "privateKey": "<OpenSSH PEM 형식 개인키 전문 — BEGIN/END 마커 포함 여러 줄>",
                      *       "fileName": "id_ed25519_pickle"
                      *     }
                      */
