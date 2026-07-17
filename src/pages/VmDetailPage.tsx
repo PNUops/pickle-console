@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   keepPreviousData,
@@ -8,22 +8,28 @@ import {
 } from '@tanstack/react-query'
 import {
   deleteVm,
+  fetchMySshKeys,
   fetchVm,
   fetchVmEvents,
+  fetchVmSettings,
   forceStopVm,
   rebootVm,
+  regenerateVmPassword,
   revealVmPassword,
   shutdownVm,
   startVm,
+  updateVmSettings,
   type MessageResponse,
   type ProvisioningTaskView,
   type VmDeletion,
   type VmDetail,
+  type VmSettingView,
   type VmStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -31,8 +37,10 @@ import {
   CardTitle,
   ConfirmNameModal,
   DdayBadge,
+  GroupRoleBadge,
   Modal,
   Pagination,
+  Select,
   Spinner,
   Stepper,
   Table,
@@ -50,7 +58,10 @@ import {
   PROVISIONING_KIND_LABELS,
   VM_EVENT_LABELS,
 } from '../lib/status'
+import { GROUP_ROLE_LABELS, type GroupMemberRole } from '../lib/labels'
+import { SshUsageGuide } from '../components/SshUsageGuide'
 import { VmPublishSection } from '../components/VmPublishSection'
+import { CopyButton } from '../components/CopyButton'
 
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
 const POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000
@@ -175,7 +186,9 @@ export function VmDetailPage() {
         <DeletionBanner deletion={data.deletion} />
       )}
 
-      <InitialPasswordSection vm={data} />
+      <SshAccessSection vm={data} />
+
+      <VmPasswordSection vm={data} />
 
       {data.provisioning && <ProvisioningPanel task={data.provisioning} />}
 
@@ -208,6 +221,8 @@ export function VmDetailPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <VmSettingsSection vm={data} />
 
       <VmPublishSection vm={data} />
 
@@ -364,109 +379,213 @@ function PowerControls({ vm }: { vm: VmDetail }) {
   )
 }
 
-/* ─── VM 비밀번호 (상시 재열람) ─── */
+/* ─── SSH 접속 안내 ─── */
+
+/** SSH 접속 명령·사용법 안내. 키가 하나도 없으면 접속 불가 경고 + 등록 유도. */
+function SshAccessSection({ vm }: { vm: VmDetail }) {
+  const keys = useQuery({ queryKey: ['me', 'ssh-keys'], queryFn: fetchMySshKeys })
+  const command = `ssh ${vm.hostname}@${vm.sshHost}`
+  const noKeys = keys.isSuccess && keys.data.length === 0
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>SSH 접속</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {noKeys && (
+          <Alert variant="warning" title="SSH 키가 등록되어 있지 않습니다">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p>SSH 키가 등록되어 있지 않아 접속할 수 없습니다.</p>
+              <Link
+                to="/console/ssh-keys"
+                className="font-medium text-primary-700 hover:underline"
+              >
+                SSH 키 등록하기 →
+              </Link>
+            </div>
+          </Alert>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
+            {command}
+          </code>
+          <CopyButton value={command} label="복사" />
+        </div>
+        <details className="group">
+          <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
+            접속 방법 보기
+          </summary>
+          <div className="mt-3">
+            <SshUsageGuide hostname={vm.hostname} sshHost={vm.sshHost} />
+          </div>
+        </details>
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ─── VM 비밀번호 (상시 재열람 + 재생성) ─── */
 
 /** 계약상 열람이 허용되는 상태 (그 외는 409). */
 const PASSWORD_VIEWABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING']
 
-function InitialPasswordSection({ vm }: { vm: VmDetail }) {
+/** 재생성은 EDITOR 이상 권한이 필요하다 (계약). */
+function canEditVm(role: GroupMemberRole): boolean {
+  return role === 'EDITOR' || role === 'OWNER'
+}
+
+function VmPasswordSection({ vm }: { vm: VmDetail }) {
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
+  const [confirmRegen, setConfirmRegen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 평문 비밀번호는 뮤테이션 상태(메모리)에만 존재한다.
-  // localStorage/sessionStorage 등 어디에도 저장하지 않는다.
-  // gcTime: 0 — reset()은 observer만 분리하므로, 모달을 닫으면 MutationCache의
-  // Mutation 객체(평문 보유)가 기본 5분을 기다리지 않고 즉시 GC 되게 한다.
+  // 평문 비밀번호는 뮤테이션 상태(메모리)에만 존재한다 — 웹 스토리지에 저장하지 않는다.
+  // gcTime: 0 — 모달을 닫으면 평문을 보유한 Mutation 객체가 즉시 GC 되게 한다.
   const reveal = useMutation({
     gcTime: 0,
     mutationFn: () => revealVmPassword(vm.id),
     onError: async (err) => {
       setModalOpen(false)
-      setError(toApiError(err, '초기 비밀번호를 열람하지 못했습니다.').message)
-      // 410(저장된 평문 없음) 등은 상세를 다시 불러와 상태를 맞춘다.
+      setError(toApiError(err, '비밀번호를 열람하지 못했습니다.').message)
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
   })
 
+  const regenerate = useMutation({
+    gcTime: 0,
+    mutationFn: () => regenerateVmPassword(vm.id),
+    onSuccess: async () => {
+      setConfirmRegen(false)
+      setError(null)
+      setModalOpen(true)
+      // 재생성으로 passwordAvailable이 true가 되므로 상세를 갱신한다.
+      await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+    },
+    onError: async (err) => {
+      setConfirmRegen(false)
+      setError(toApiError(err, '비밀번호를 재생성하지 못했습니다.').message)
+      await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+    },
+  })
+
+  // 열람 성공이면 reveal, 재생성 성공이면 regenerate의 결과를 표시한다.
+  const result = regenerate.data ?? reveal.data ?? null
+
   const close = () => {
     setModalOpen(false)
-    reveal.reset() // 평문을 메모리에서 즉시 폐기한다.
+    reveal.reset()
+    regenerate.reset() // 평문을 메모리에서 즉시 폐기한다.
   }
 
   const openReveal = () => {
     setError(null)
+    regenerate.reset()
     setModalOpen(true)
     reveal.mutate()
   }
 
-  if (!modalOpen && !PASSWORD_VIEWABLE_STATUSES.includes(vm.status)) return null
-  if (!modalOpen && !vm.passwordAvailable && !error) return null
+  const editable = canEditVm(vm.myGroupRole)
+  const canRegenerate = editable && vm.status === 'RUNNING'
+  const viewable = PASSWORD_VIEWABLE_STATUSES.includes(vm.status)
+
+  // 표시할 내용이 없으면 (열람 불가 상태 + 저장 없음 + 재생성 불가) 섹션을 숨긴다.
+  if (!modalOpen && !error && !viewable && !canRegenerate) return null
+  if (!modalOpen && !error && !vm.passwordAvailable && !canRegenerate) return null
 
   return (
-    <>
-      {error && <Alert variant="warning">{error}</Alert>}
-      {vm.passwordAvailable && (
-        <Alert variant="info" title="VM 비밀번호">
+    <Card>
+      <CardHeader>
+        <CardTitle>VM 비밀번호</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {error && <Alert variant="warning">{error}</Alert>}
+
+        {vm.passwordAvailable && vm.passwordRevealAllowed && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p>
-              초기 비밀번호는 언제든 다시 확인할 수 있습니다. 최초 접속에서
-              비밀번호를 변경했다면 저장된 값은 더 이상 유효하지 않습니다.
+            <p className="text-sm text-neutral-600">
+              비밀번호는 VM 내부 sudo 자격입니다. 언제든 다시 확인할 수 있습니다.
             </p>
-            <Button size="sm" onClick={openReveal}>
+            <Button size="sm" onClick={openReveal} disabled={!viewable}>
               비밀번호 보기
             </Button>
           </div>
-        </Alert>
-      )}
+        )}
 
+        {vm.passwordAvailable && !vm.passwordRevealAllowed && (
+          <Alert variant="info">
+            이 VM은 비밀번호 열람이 제한되어 있습니다. 열람하려면 더 높은 그룹
+            역할이 필요합니다.
+          </Alert>
+        )}
+
+        {!vm.passwordAvailable && (
+          <Alert variant="info">
+            저장된 비밀번호가 없습니다.
+            {canRegenerate
+              ? ' 아래 재생성으로 새 비밀번호를 만들 수 있습니다.'
+              : ' 비밀번호 재생성은 그룹의 편집자 이상만 할 수 있습니다.'}
+          </Alert>
+        )}
+
+        {editable && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3">
+            <p className="text-sm text-neutral-600">
+              분실했거나 회수가 필요하면 비밀번호를 재생성할 수 있습니다.
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setError(null)
+                setConfirmRegen(true)
+              }}
+              disabled={vm.status !== 'RUNNING'}
+            >
+              비밀번호 재생성
+            </Button>
+          </div>
+        )}
+      </CardContent>
+
+      {/* 열람/재생성 결과 공용 모달 */}
       <Modal
         open={modalOpen}
         onClose={close}
-        title="VM 비밀번호 확인"
+        title="VM 비밀번호"
         footer={
           <Button variant="secondary" onClick={close}>
             닫기
           </Button>
         }
       >
-        {reveal.isSuccess ? (
+        {result ? (
           <div className="space-y-4">
             <dl className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <dt className="text-xs font-medium text-neutral-500">SSH 계정</dt>
                   <dd className="mt-0.5 font-mono text-sm text-neutral-900">
-                    {reveal.data.sshUsername}
+                    {result.sshUsername}
                   </dd>
                 </div>
-                <CopyButton value={reveal.data.sshUsername} label="계정 복사" />
+                <CopyButton value={result.sshUsername} label="계정 복사" />
               </div>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <dt className="text-xs font-medium text-neutral-500">비밀번호</dt>
                   <dd className="mt-0.5 font-mono text-sm break-all text-neutral-900">
-                    {reveal.data.password}
+                    {result.password}
                   </dd>
                 </div>
-                <CopyButton value={reveal.data.password} label="비밀번호 복사" />
+                <CopyButton value={result.password} label="비밀번호 복사" />
               </div>
-              {reveal.data.sshHost && (
-                <div>
-                  <dt className="text-xs font-medium text-neutral-500">SSH 접속</dt>
-                  <dd className="mt-0.5 font-mono text-sm text-neutral-900">
-                    ssh {reveal.data.sshUsername}@{reveal.data.sshHost}
-                    {reveal.data.sshPort != null && reveal.data.sshPort !== 22
-                      ? ` -p ${reveal.data.sshPort}`
-                      : ''}
-                  </dd>
-                </div>
-              )}
             </dl>
             <p className="text-xs text-neutral-500">
-              비밀번호는 언제든 이 화면에서 다시 확인할 수 있습니다. 단, 최초
-              접속에서 비밀번호를 변경한 뒤에는 저장된 값이 더 이상 유효하지
-              않으며, 변경한 비밀번호를 분실한 경우 관리자에게 문의해 주세요.
+              비밀번호는 언제든 이 화면에서 다시 확인할 수 있습니다. 게스트 안에서
+              직접 변경했다면 저장된 값은 실제와 달라질 수 있으며, 그 경우
+              재생성으로 복구합니다.
             </p>
           </div>
         ) : (
@@ -475,39 +594,229 @@ function InitialPasswordSection({ vm }: { vm: VmDetail }) {
           </div>
         )}
       </Modal>
-    </>
+
+      {/* 재생성 확인 모달 */}
+      <Modal
+        open={confirmRegen}
+        onClose={() => setConfirmRegen(false)}
+        title="비밀번호 재생성"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmRegen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="danger"
+              loading={regenerate.isPending}
+              onClick={() => regenerate.mutate()}
+            >
+              재생성
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Alert variant="danger">기존 비밀번호가 즉시 무효화됩니다.</Alert>
+          <p className="text-sm text-neutral-600">
+            새 비밀번호는 시스템이 생성합니다. 실행 중인 VM에 즉시 적용되며,
+            구성원 제거 후 이전 비밀번호를 아는 사람의 접근을 회수하는 수단입니다.
+          </p>
+        </div>
+      </Modal>
+    </Card>
   )
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+/* ─── VM별 설정 (M5.5, 편집자 이상) ─── */
 
-  // 언마운트 후 setState가 호출되지 않게 대기 중인 타이머를 정리한다.
-  useEffect(
-    () => () => {
-      if (timerRef.current != null) clearTimeout(timerRef.current)
-    },
-    [],
-  )
+function VmSettingsSection({ vm }: { vm: VmDetail }) {
+  // 편집 권한이 없거나 삭제 중/삭제된 VM에는 설정 영역을 노출하지 않는다.
+  if (!canEditVm(vm.myGroupRole)) return null
+  if (vm.status === 'DELETING' || vm.status === 'DELETED') return null
+  return <VmSettingsCard vm={vm} />
+}
+
+function VmSettingsCard({ vm }: { vm: VmDetail }) {
+  const settings = useQuery({
+    queryKey: ['vms', vm.id, 'settings'],
+    queryFn: () => fetchVmSettings(vm.id),
+  })
 
   return (
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value)
-          setCopied(true)
-          if (timerRef.current != null) clearTimeout(timerRef.current)
-          timerRef.current = setTimeout(() => setCopied(false), 2000)
-        } catch {
-          // 클립보드 권한이 없으면 조용히 무시한다 (값은 화면에 그대로 보인다).
+    <Card>
+      <CardHeader>
+        <CardTitle>VM 설정</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {settings.isPending && (
+          <div className="flex justify-center py-6">
+            <Spinner label="설정 불러오는 중" />
+          </div>
+        )}
+        {settings.isError && <Alert variant="danger">{settings.error.message}</Alert>}
+        {settings.isSuccess && (
+          <>
+            <ul className="divide-y divide-neutral-100">
+              {settings.data.map((setting) => (
+                <li key={setting.key} className="py-4 first:pt-0 last:pb-0">
+                  <VmSettingRow vmId={vm.id} setting={setting} />
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-neutral-500">
+              설정 변경은 모두 감사 로그에 기록됩니다.
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function VmSettingRow({ vmId, setting }: { vmId: number; setting: VmSettingView }) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [error, setError] = useState<string | null>(null)
+  // ssh_password_enabled를 켜는 방향은 2차 경고 후에만 적용한다.
+  const [confirmEnable, setConfirmEnable] = useState(false)
+
+  const save = useMutation({
+    mutationFn: (value: unknown) => updateVmSettings(vmId, { [setting.key]: value }),
+    onSuccess: async (updated) => {
+      setConfirmEnable(false)
+      setError(null)
+      queryClient.setQueryData(['vms', vmId, 'settings'], updated)
+      toast.success(`'${setting.label}' 설정을 변경했습니다.`)
+      // password_reveal_min_role 변경은 passwordRevealAllowed에 영향 → 상세도 갱신.
+      await queryClient.invalidateQueries({ queryKey: ['vms', vmId] })
+    },
+    onError: (err) => {
+      setConfirmEnable(false)
+      setError(toApiError(err, '설정을 변경하지 못했습니다.').message)
+    },
+  })
+
+  const requiredLabel = GROUP_ROLE_LABELS[setting.requiredRole]
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-neutral-900">{setting.label}</p>
+          <p className="mt-0.5 text-xs text-neutral-500">{setting.description}</p>
+        </div>
+        <div className="shrink-0">
+          <VmSettingControl
+            setting={setting}
+            pending={save.isPending}
+            onChange={(value) => {
+              setError(null)
+              // ssh_password_enabled OFF→ON은 경고 모달로 게이트.
+              if (setting.key === 'ssh_password_enabled' && value === true) {
+                setConfirmEnable(true)
+                return
+              }
+              save.mutate(value)
+            }}
+          />
+        </div>
+      </div>
+      {!setting.editable && (
+        <p className="text-xs text-neutral-500">
+          『{requiredLabel}』만 변경할 수 있습니다.
+        </p>
+      )}
+      {(setting.updatedByName || setting.updatedAt) && (
+        <p className="text-xs text-neutral-400">
+          마지막 변경: {setting.updatedByName ?? '—'}
+          {setting.updatedAt && ` · ${formatDateTime(setting.updatedAt)}`}
+        </p>
+      )}
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      <Modal
+        open={confirmEnable}
+        onClose={() => setConfirmEnable(false)}
+        title="비밀번호 SSH 허용"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmEnable(false)}>
+              취소
+            </Button>
+            <Button variant="danger" loading={save.isPending} onClick={() => save.mutate(true)}>
+              허용
+            </Button>
+          </>
         }
-      }}
-    >
-      {copied ? '복사됨' : label}
-    </Button>
+      >
+        <div className="space-y-2 text-sm text-neutral-700">
+          <p>비밀번호 접속을 허용하면:</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>누가 접속했는지 개인을 식별할 수 없습니다.</li>
+            <li>그룹에서 제거된 구성원도 비밀번호를 아는 한 계속 접속할 수 있습니다.</li>
+            <li>이 변경은 감사 기록되며 관리자에게 표시됩니다.</li>
+          </ul>
+        </div>
+      </Modal>
+    </div>
+  )
+}
+
+/** 설정 값 편집 컨트롤 — BOOLEAN은 체크박스, ENUM은 select (역할 키는 한국어 라벨). */
+function VmSettingControl({
+  setting,
+  pending,
+  onChange,
+}: {
+  setting: VmSettingView
+  pending: boolean
+  onChange: (value: unknown) => void
+}) {
+  const disabled = !setting.editable || pending
+
+  if (setting.valueType === 'BOOLEAN') {
+    const checked = setting.value === true
+    return (
+      <div className="flex items-center gap-2">
+        {checked ? (
+          <Badge variant="success">허용</Badge>
+        ) : (
+          <Badge variant="neutral">차단</Badge>
+        )}
+        <label className="inline-flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            className="size-4 cursor-pointer accent-primary-600 disabled:cursor-not-allowed"
+            checked={checked}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.checked)}
+            aria-label={setting.label}
+          />
+        </label>
+      </div>
+    )
+  }
+
+  // ENUM
+  const isRoleEnum = setting.key === 'password_reveal_min_role'
+  const current = String(setting.value)
+  return (
+    <div className="flex items-center gap-2">
+      {isRoleEnum && <GroupRoleBadge role={current as GroupMemberRole} />}
+      <Select
+        className="w-40"
+        value={current}
+        disabled={disabled}
+        aria-label={setting.label}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {(setting.allowedValues ?? []).map((option) => (
+          <option key={option} value={option}>
+            {isRoleEnum ? GROUP_ROLE_LABELS[option as GroupMemberRole] : option}
+          </option>
+        ))}
+      </Select>
+    </div>
   )
 }
 

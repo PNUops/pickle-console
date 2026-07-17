@@ -189,16 +189,16 @@ describe('VM 상세 — 삭제 흐름', () => {
   })
 })
 
-describe('VM 상세 — 비밀번호 상시 재열람 (v0.7.1)', () => {
+describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
   test('비밀번호를 열람하고, 닫았다가 다시 열람할 수 있다', async () => {
     const user = userEvent.setup()
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    expect(screen.getByText('VM 비밀번호')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '비밀번호 보기' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '비밀번호 보기' }))
-    const dialog = await screen.findByRole('dialog', { name: 'VM 비밀번호 확인' })
+    const dialog = await screen.findByRole('dialog', { name: 'VM 비밀번호' })
     expect(
       await within(dialog).findByText('x7GmQ4vRk2LpWn9sCtYb8Zed'),
     ).toBeInTheDocument()
@@ -217,12 +217,48 @@ describe('VM 상세 — 비밀번호 상시 재열람 (v0.7.1)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: '비밀번호 보기' }))
     expect(
-      await within(await screen.findByRole('dialog', { name: 'VM 비밀번호 확인' }))
+      await within(await screen.findByRole('dialog', { name: 'VM 비밀번호' }))
         .findByText('x7GmQ4vRk2LpWn9sCtYb8Zed'),
     ).toBeInTheDocument()
   })
 
-  test('저장된 비밀번호가 없으면(410) 관리자 문의 안내를 보여준다', async () => {
+  test('열람 권한이 없으면(passwordRevealAllowed=false) 버튼 대신 제한 안내를 보여준다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, myGroupRole: 'MEMBER', passwordRevealAllowed: false }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      await screen.findByText(/비밀번호 열람이 제한되어 있습니다/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '비밀번호 보기' })).not.toBeInTheDocument()
+    // MEMBER는 재생성 버튼도 없다 (EDITOR 이상).
+    expect(screen.queryByRole('button', { name: '비밀번호 재생성' })).not.toBeInTheDocument()
+  })
+
+  test('편집자 이상은 비밀번호를 재생성하고 새 비밀번호를 확인할 수 있다', async () => {
+    const user = userEvent.setup()
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('button', { name: '비밀번호 재생성' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '비밀번호 재생성' })
+    expect(within(dialog).getByText('기존 비밀번호가 즉시 무효화됩니다.')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '재생성' }))
+
+    // 재생성 성공 → 결과 모달에 새 비밀번호가 표시된다.
+    const result = await screen.findByRole('dialog', { name: 'VM 비밀번호' })
+    expect(
+      await within(result).findByText('nB4tWq8xKm2ZrPv6JcYh3Sdf'),
+    ).toBeInTheDocument()
+  })
+
+  test('저장된 비밀번호가 없으면(410) 재생성 복구 안내를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/v1/vms/:vmId/password', () =>
@@ -240,10 +276,10 @@ describe('VM 상세 — 비밀번호 상시 재열람 (v0.7.1)', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: '비밀번호 보기' }))
 
-    expect(
-      await screen.findByText(/저장된 비밀번호가 없습니다/),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByText(/저장된 비밀번호가 없습니다/)).toBeInTheDocument()
+    // 열람 모달은 닫히고, 재생성 버튼은 남아 복구 경로를 제공한다.
+    expect(screen.queryByRole('dialog', { name: 'VM 비밀번호' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '비밀번호 재생성' })).toBeInTheDocument()
   })
 })
 
@@ -326,5 +362,99 @@ describe('VM 상세 — 만료 VM 시작 거부 (409 VM_EXPIRED)', () => {
     ).toBeInTheDocument()
     // 시작되지 않고 중지 상태 그대로다.
     expect(screen.getByRole('button', { name: '시작' })).toBeInTheDocument()
+  })
+})
+
+/* ─── SSH 접속 안내 (M5.5) ─── */
+
+describe('VM 상세 — SSH 접속', () => {
+  test('게이트웨이 접속 명령을 호스트명 기준으로 보여준다', async () => {
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.getByText('ssh algo-judge@ssh.pickle.pnuops.com')).toBeInTheDocument()
+    expect(screen.getByText('접속 방법 보기')).toBeInTheDocument()
+  })
+
+  test('SSH 키가 하나도 없으면 접속 불가 경고와 등록 링크를 보여준다', async () => {
+    server.use(http.get('*/api/v1/me/ssh-keys', () => HttpResponse.json([])))
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      await screen.findByText(/SSH 키가 등록되어 있지 않아 접속할 수 없습니다/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /SSH 키 등록하기/ })).toBeInTheDocument()
+  })
+})
+
+/* ─── VM별 설정 (M5.5) ─── */
+
+describe('VM 상세 — VM 설정', () => {
+  test('편집자 이상은 설정을 보고, 비밀번호 SSH를 켜면 2차 경고 후 적용된다', async () => {
+    const user = userEvent.setup()
+    renderVm(56) // OWNER, RUNNING
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(await screen.findByText('VM 설정')).toBeInTheDocument()
+    expect(
+      screen.getByText('설정 변경은 모두 감사 로그에 기록됩니다.'),
+    ).toBeInTheDocument()
+
+    // OFF→ON 토글 → 2차 경고 모달.
+    await user.click(screen.getByRole('checkbox', { name: '비밀번호 SSH 허용' }))
+    const dialog = await screen.findByRole('dialog', { name: '비밀번호 SSH 허용' })
+    expect(
+      within(dialog).getByText(/누가 접속했는지 개인을 식별할 수 없습니다/),
+    ).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/그룹에서 제거된 구성원도 비밀번호를 아는 한 계속 접속할 수 있습니다/),
+    ).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: '허용' }))
+    // 적용 후 배지가 '허용'으로 바뀐다.
+    expect(await screen.findByText('허용')).toBeInTheDocument()
+  })
+
+  test('요청자 역할이 부족한 설정은 비활성 + 필요 역할 안내를 보여준다', async () => {
+    server.use(
+      http.get('*/api/v1/vms/56/settings', () =>
+        HttpResponse.json([
+          {
+            key: 'password_reveal_min_role',
+            value: 'MEMBER',
+            valueType: 'ENUM',
+            allowedValues: ['MEMBER', 'EDITOR', 'OWNER'],
+            defaultValue: 'MEMBER',
+            label: '비밀번호 열람 최소 역할',
+            description: 'VM 비밀번호를 열람할 수 있는 최소 그룹 역할입니다.',
+            requiredRole: 'OWNER',
+            editable: false,
+            updatedByName: null,
+            updatedAt: null,
+          },
+        ]),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      await screen.findByText('『소유자』만 변경할 수 있습니다.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '비밀번호 열람 최소 역할' })).toBeDisabled()
+  })
+
+  test('참여자(MEMBER)에게는 VM 설정 섹션이 노출되지 않는다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, myGroupRole: 'MEMBER', passwordRevealAllowed: true }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.queryByText('VM 설정')).not.toBeInTheDocument()
   })
 })
