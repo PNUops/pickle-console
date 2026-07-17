@@ -140,13 +140,34 @@ export function AdminRequestDetailPage() {
             </CardContent>
           </Card>
 
-          {data.status === 'SUBMITTED' && templates.data && (
-            <DecisionSection
-              request={data}
-              templates={templates.data}
-              onNotice={setNotice}
-            />
-          )}
+          {/* 템플릿 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
+              명시하고 재시도 경로를 제공한다 (무음 실종 방지). */}
+          {data.status === 'SUBMITTED' &&
+            (templates.isError ? (
+              <Alert variant="danger" title="템플릿 목록을 불러오지 못했습니다">
+                <div className="space-y-2">
+                  <p>승인·반려를 결정하려면 템플릿 목록이 필요합니다.</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={templates.isFetching}
+                    onClick={() => void templates.refetch()}
+                  >
+                    다시 시도
+                  </Button>
+                </div>
+              </Alert>
+            ) : templates.data ? (
+              <DecisionSection
+                request={data}
+                templates={templates.data}
+                onNotice={setNotice}
+              />
+            ) : (
+              <div className="flex justify-center py-6">
+                <Spinner label="템플릿 목록 불러오는 중" />
+              </div>
+            ))}
         </div>
 
         <ApprovalContextPanel requestId={requestId} />

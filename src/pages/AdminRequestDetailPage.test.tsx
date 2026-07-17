@@ -153,6 +153,27 @@ describe('승인 폼', () => {
   })
 })
 
+describe('결정 폼 — 템플릿 조회 실패', () => {
+  test('템플릿 조회가 실패하면 결정 폼이 조용히 사라지지 않고 오류·재시도를 보여준다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('*/api/v1/templates', () => HttpResponse.json(null, { status: 500 }), {
+        once: true,
+      }),
+    )
+    renderDetail(201)
+
+    await screen.findByRole('heading', { name: '신청 #201' })
+    expect(
+      await screen.findByText('템플릿 목록을 불러오지 못했습니다'),
+    ).toBeInTheDocument()
+
+    // 재시도하면 기본 핸들러(정상 응답)로 복구되어 결정 폼이 나타난다.
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByRole('button', { name: '승인하기' })).toBeInTheDocument()
+  })
+})
+
 describe('반려 폼', () => {
   test('반려 사유 없이 제출하면 검증 오류를 보여주고 전송하지 않는다', async () => {
     const user = userEvent.setup()
