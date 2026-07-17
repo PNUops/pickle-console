@@ -1,8 +1,55 @@
-/** '2026-07-08T14:03:00+09:00' → '2026-07-08 14:03' (local time). */
+/**
+ * 계약의 시각·일자 의미는 KST 고정이다 (감사 from/to = KST 해당 일 00:00,
+ * 만료 종료일 = KST 달력일). 브라우저 로컬 TZ가 아니라 항상 KST로 표시·산정한다.
+ */
+const KST_TIME_ZONE = 'Asia/Seoul'
+
+/** KST 달력 날짜(YYYY-MM-DD) 포매터 — en-CA 로케일이 ISO 순서를 보장한다. */
+const kstDateFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: KST_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+const kstDateTimeFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: KST_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+/** '2026-07-08T05:03:00Z' → '2026-07-08 14:03' (KST 고정). */
 export function formatDateTime(iso: string): string {
-  const date = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return kstDateTimeFormat.format(new Date(iso)).replace(',', '')
+}
+
+/** 주어진 시각의 KST 달력 날짜(YYYY-MM-DD). */
+export function kstDateString(at: Date = new Date()): string {
+  return kstDateFormat.format(at)
+}
+
+/** 오늘의 KST 달력 날짜(YYYY-MM-DD) — date 입력의 min 값 등에 쓴다. */
+export function todayKstDate(): string {
+  return kstDateString()
+}
+
+/**
+ * 접수 가능한 가장 이른 파기 예정일(YYYY-MM-DD, KST 기준).
+ * 계약의 최소 통보 기간은 "현재 시각 + 7일"이고 폼은 KST 자정으로 제출하므로,
+ * 자정이 항상 통보 기간을 넘는 "오늘 + 8일"을 최소값으로 제시한다.
+ */
+export function minScheduleDate(): string {
+  return kstDateString(new Date(Date.now() + 8 * 86_400_000))
+}
+
+/** 'YYYY-MM-DD' → 1970-01-01부터의 달력 일수 (TZ 무관, 정수). */
+function calendarDayNumber(ymd: string): number {
+  const [y, m, d] = ymd.split('-').map(Number)
+  return Date.UTC(y, m - 1, d) / 86_400_000
 }
 
 /**
@@ -31,13 +78,10 @@ export interface Dday {
 
 /**
  * 사용 종료일('YYYY-MM-DD', inclusive) → D-day 라벨과 톤.
- * 날짜 전용 값이라 로컬 자정 기준으로 계산한다.
+ * 계약상 종료일은 KST 달력일이므로 브라우저 TZ와 무관하게 KST 기준으로 센다.
  */
 export function formatDday(endDate: string, base: Date = new Date()): Dday {
-  const [y, m, d] = endDate.split('-').map(Number)
-  const end = new Date(y, m - 1, d)
-  const today = new Date(base.getFullYear(), base.getMonth(), base.getDate())
-  const daysLeft = Math.round((end.getTime() - today.getTime()) / 86_400_000)
+  const daysLeft = calendarDayNumber(endDate) - calendarDayNumber(kstDateString(base))
   const label = daysLeft > 0 ? `D-${daysLeft}` : daysLeft === 0 ? 'D-Day' : `D+${-daysLeft}`
   const tone = daysLeft <= 3 ? 'danger' : daysLeft <= 7 ? 'warning' : 'neutral'
   return { label, tone, daysLeft }

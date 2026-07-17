@@ -24,6 +24,7 @@ import {
   VmStatusBadge,
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
+import { todayKstDate } from '../lib/format'
 
 const PAGE_SIZE = 20
 
@@ -176,13 +177,6 @@ export function AdminExpiryPage() {
   )
 }
 
-/** 오늘(로컬) 날짜 문자열 — date 입력의 min 값. */
-function todayStr(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
 function ExtendPeriodModal({
   vm,
   onClose,
@@ -235,7 +229,7 @@ function ExtendPeriodModal({
         <FormField label="새 종료일" required error={fieldErrors.endDate}>
           <Input
             type="date"
-            min={todayStr()}
+            min={todayKstDate()}
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
             className="w-44"

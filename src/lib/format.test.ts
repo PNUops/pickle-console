@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { formatDday } from './format'
 
-const BASE = new Date(2026, 6, 13) // 2026-07-13 (local)
+// KST 달력일이 2026-07-13인 시점 — 러너 TZ와 무관하게 같은 결과가 나와야 한다.
+const BASE = new Date('2026-07-13T12:00:00+09:00')
 
 describe('formatDday', () => {
   test('남은 일수에 따라 D-n 라벨을 만든다', () => {

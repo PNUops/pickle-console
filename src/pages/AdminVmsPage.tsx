@@ -35,7 +35,7 @@ import {
 } from '../components/ui'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { formatDateTime, formatSpec } from '../lib/format'
+import { formatDateTime, formatSpec, minScheduleDate } from '../lib/format'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
 
@@ -285,17 +285,6 @@ function VmActionPanel({
   )
 }
 
-/**
- * 접수 가능한 가장 이른 파기 예정일(yyyy-mm-dd, 로컬 기준).
- * 계약의 최소 통보 기간은 "현재 시각 + 7일"이고 폼은 로컬 자정으로 제출하므로,
- * 자정이 항상 통보 기간을 넘는 "오늘 + 8일"을 최소값으로 제시한다.
- */
-function minScheduleDate(): string {
-  const date = new Date(Date.now() + 8 * 86_400_000)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
 function ScheduleDeleteForm({
   vm,
   onDone,
@@ -312,8 +301,8 @@ function ScheduleDeleteForm({
   const schedule = useMutation({
     mutationFn: () =>
       scheduleVmDeletion(vm.id, {
-        // 로컬 자정 기준 instant로 변환해 date-time 계약을 지킨다.
-        scheduledFor: new Date(`${date}T00:00:00`).toISOString(),
+        // 계약의 일자 의미(KST 달력일)에 맞춰 KST 자정 instant로 변환한다.
+        scheduledFor: new Date(`${date}T00:00:00+09:00`).toISOString(),
         reason,
       }),
     onSuccess: async () => {
