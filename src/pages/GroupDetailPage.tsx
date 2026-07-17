@@ -120,11 +120,11 @@ function EditGroupModal({
 
   const update = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.PATCH('/groups/{groupId}', {
+      const { data, error: err } = await api.PATCH('/groups/{groupId}', {
         params: { path: { groupId: group.id } },
         body: { name, description: description || null },
       })
-      if (!data) throw toApiError(error, '그룹 정보를 수정하지 못했습니다.')
+      if (!data) throw toApiError(err, '그룹 정보를 수정하지 못했습니다.')
       return data
     },
     onSuccess: async () => {
@@ -400,11 +400,11 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
 
   const add = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST('/groups/{groupId}/members', {
+      const { data, error: err } = await api.POST('/groups/{groupId}/members', {
         params: { path: { groupId } },
         body: { email, role },
       })
-      if (!data) throw toApiError(error, '구성원을 추가하지 못했습니다.')
+      if (!data) throw toApiError(err, '구성원을 추가하지 못했습니다.')
       return data
     },
     onSuccess: () => {

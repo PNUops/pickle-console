@@ -219,8 +219,8 @@ export function NewRequestPage() {
   const requestedStep = parseStepParam(searchParams.get('step'))
   const step = ready ? Math.min(requestedStep, firstBlockedStep()) : requestedStep
 
-  const goToStep = (index: number, options?: { replace?: boolean }) => {
-    setSearchParams({ step: String(index + 1) }, options)
+  const goToStep = (index: number, opts?: { replace?: boolean }) => {
+    setSearchParams({ step: String(index + 1) }, opts)
   }
 
   // 직접 진입/뒤로가기로 아직 완료되지 않은 단계에 들어오면 첫 미완료 단계로 되돌린다.

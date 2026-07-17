@@ -3,11 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchSettings, updateSetting, type SettingView } from '../api/queries'
 import { toApiError } from '../api/problem'
 import {
-  draftOf,
-  parseSettingValue,
   SettingValueEditor,
-  type SettingDraft,
 } from '../components/SettingValueEditor'
+import { draftOf, parseSettingValue, type SettingDraft } from '../lib/settings-value'
 import {
   Alert,
   Badge,
