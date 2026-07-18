@@ -62,6 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!data) {
       throw toApiError(error, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
     }
+    if ('mfaRequired' in data) {
+      // 2FA 스텝업 UI는 W2-A에서 구현된다 — 서버도 그 전에는 이 분기를
+      // 반환하지 않으므로(2FA 미구현) 여기 도달하면 준비 중 안내만 던진다.
+      throw new Error('2단계 인증이 설정된 계정입니다. 콘솔 지원 준비 중입니다.')
+    }
     setAccessToken(data.accessToken)
     // fetch 단계 예외(네트워크 단절 등)에서도 방금 저장한 토큰이 남지 않게 정리하고
     // 던진다 — LoginPage가 한국어 폴백 메시지로 렌더링한다.

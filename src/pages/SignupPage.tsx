@@ -54,8 +54,10 @@ export function SignupPage() {
 
     setSubmitting(true)
     try {
+      // consents는 W2-A(약관·동의 UI)에서 실제 문서 버전으로 채워진다 — 그 전까지
+      // 서버(Lane 미구현)는 이 필드를 요구하지 않으므로 빈 배열로 계약 타입만 충족.
       const { data, error } = await api.POST('/auth/signup', {
-        body: { name: name.trim(), email, password },
+        body: { name: name.trim(), email, password, consents: [] },
       })
       if (data) {
         setCompleted(true)

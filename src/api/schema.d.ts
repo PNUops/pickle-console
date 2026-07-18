@@ -93,6 +93,11 @@ export interface paths {
          *     헤더로 함께 보내야 합니다.
          *
          *     요청 빈도 제한: IP+계정 단위 슬라이딩 윈도 (약 10회/분, 연속 5회 실패 시 백오프 잠금).
+         *
+         *     **2FA 계정 (M6)**: 2FA가 등록된 계정은 비밀번호 검증 성공 시 토큰 대신
+         *     `MfaChallengeResponse`(`mfaRequired=true` + 5분 유효 `mfaToken`)를
+         *     반환합니다 — 쿠키는 이 단계에서 발급되지 않으며,
+         *     `POST /auth/mfa`로 코드를 제출해야 로그인이 완료됩니다.
          */
         post: operations["login"];
         delete?: never;
@@ -147,6 +152,87 @@ export interface paths {
          *     `X-Pickle-Csrf` 헤더로 함께 보내야 합니다.
          */
         post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 비밀번호 재설정 요청 (메일 발송)
+         * @description 비밀번호 재설정 링크를 메일로 발송합니다 (M6). 계정 존재 여부 노출을
+         *     막기 위해 **존재하지 않거나 활성(ACTIVE)이 아닌 이메일에도 동일하게
+         *     202를 반환**하며, 그 경우 메일은 발송되지 않습니다.
+         *
+         *     - 토큰은 1회용, **30분 유효** — 새 요청이 접수되면 같은 계정의 미사용
+         *       재설정 토큰은 모두 무효화됩니다(항상 마지막 링크만 유효).
+         *     - 요청 빈도 제한: 로그인과 동일한 IP+이메일 슬라이딩 윈도.
+         */
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 비밀번호 재설정 확정 (새 비밀번호 설정)
+         * @description 재설정 메일의 1회용 토큰을 검증하고 새 비밀번호를 설정합니다 (M6).
+         *
+         *     - 성공 시 해당 계정의 `token_version`이 올라가 **기존의 모든 세션
+         *       (액세스·리프레시 토큰)이 무효화**되고, 로그인 실패 잠금 카운터가
+         *       초기화되며, HIGH 알림(비밀번호 변경 안내)이 발송됩니다.
+         *     - 새 비밀번호 정책은 회원가입과 동일합니다 (최소 10자 + 강도 검사).
+         */
+        post: operations["confirmPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 2단계 인증 완료 (TOTP/복구 코드 → 토큰 발급)
+         * @description 2FA가 등록된 계정의 로그인 2단계입니다 (M6, 런치 게이트 G5).
+         *     `POST /auth/login`이 `MfaChallengeResponse`(`mfaToken`)를 반환한 경우,
+         *     이 op로 TOTP 코드 또는 복구 코드를 제출해 로그인을 완료합니다.
+         *
+         *     - `mfaToken`은 **5분 유효, 성공 시 소비되는 1회용**입니다 — 코드
+         *       불일치(401)로는 소비되지 않아 재시도할 수 있고, 만료되었거나 이미
+         *       성공에 사용된 토큰은 410 — 처음부터 다시 로그인해야 합니다.
+         *     - `code`(TOTP 6자리)와 `recoveryCode` 중 **정확히 하나**를 보냅니다.
+         *       복구 코드는 1회용이며 사용 즉시 폐기됩니다.
+         *     - 코드 검증 실패는 로그인과 동일한 실패 잠금 카운터에 합산됩니다.
+         *     - 성공 응답은 로그인과 동일합니다 (리프레시·CSRF 쿠키 발급 포함).
+         */
+        post: operations["completeMfaLogin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -320,6 +406,196 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 내 비밀번호 변경
+         * @description 현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다 (M6).
+         *
+         *     - 성공 시 `token_version`이 올라가 기존의 다른 세션이 모두
+         *       무효화되고, **이 응답이 새 토큰쌍을 반환**하므로 현재 세션은
+         *       로그아웃되지 않습니다 (`Set-Cookie`로 새 리프레시 토큰 발급).
+         *     - HIGH 알림(비밀번호 변경 안내)이 발송됩니다.
+         *     - 새 비밀번호 정책은 회원가입과 동일합니다 (최소 10자 + 강도 검사).
+         */
+        put: operations["changeMyPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 회원 탈퇴 (영구 보존 — 재가입 불가)
+         * @description 본인 계정을 탈퇴 처리합니다 (M6). 비밀번호 재인증이 필요하며,
+         *     2FA 등록 계정은 TOTP 코드(또는 복구 코드)도 함께 제출해야 합니다.
+         *
+         *     **차단 조건** (모두 해소해야 탈퇴 가능, 409):
+         *     - 삭제되지 않은 VM을 보유한 그룹의 **유일한 OWNER**인 경우
+         *       (`ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP`) — 소유권을 이전하거나
+         *       VM을 먼저 삭제해야 합니다.
+         *     - 내 PERSONAL 그룹에 삭제되지 않은 VM이 있는 경우
+         *       (`ACCOUNT_HAS_ACTIVE_VMS`).
+         *
+         *     **탈퇴 처리** (단일 트랜잭션):
+         *     - 상태 `WITHDRAWN` 전환 — 로그인·게이트웨이 SSH 접근이 즉시
+         *       차단되고 모든 세션·리프레시 토큰이 폐기됩니다.
+         *     - 그룹 멤버십 제거, PERSONAL 그룹 정리, 등록된 SSH 키 비활성화.
+         *     - 계정 행은 **영구 보존하며 익명화하지 않습니다** (2026-07-08 확정 —
+         *       보유 근거는 개인정보처리방침 명시). 따라서 **같은 이메일로
+         *       재가입할 수 없습니다** (409 `AUTH_EMAIL_ALREADY_REGISTERED`).
+         */
+        post: operations["withdrawMyAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 2FA(TOTP) 등록 시작 (시크릿 발급)
+         * @description TOTP 등록을 시작합니다 (M6). 비밀번호 재인증 후 시크릿과
+         *     `otpauth://` URI(QR 렌더용)를 반환합니다. 이 시점에는 아직
+         *     등록이 **활성화되지 않으며**, `POST /me/mfa/totp/activate`로 첫
+         *     코드를 검증해야 완료됩니다 (미완료 시크릿은 재호출 시 교체).
+         *
+         *     시크릿은 서버에 암호화(AES-256-GCM) 보관되며 응답 외에는 다시
+         *     노출되지 않습니다.
+         */
+        post: operations["beginMfaTotpSetup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/totp/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 2FA(TOTP) 등록 완료 (첫 코드 검증 → 복구 코드 발급)
+         * @description 발급된 시크릿으로 생성한 첫 TOTP 코드를 검증해 2FA를 활성화합니다.
+         *     성공 시 **복구 코드 10개가 이 응답에서 단 한 번** 반환됩니다 —
+         *     분실 대비 안전한 곳에 보관해야 하며, 이후 다시 조회할 수 없습니다
+         *     (`POST /me/mfa/recovery-codes`로 전체 재발급만 가능).
+         *     활성화 시 HIGH 알림이 발송됩니다.
+         */
+        post: operations["activateMfaTotp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 2FA 해제
+         * @description 본인 계정의 2FA를 해제합니다. 비밀번호와 현재 TOTP 코드(또는 복구
+         *     코드)를 함께 검증합니다. 해제 시 HIGH 알림이 발송됩니다.
+         *
+         *     프로덕션 프로필의 관리자 계층(ORG_ADMIN·SYS_ADMIN·운영자 역할)은
+         *     2FA가 의무이므로, 해제하면 다음 요청부터 재등록을 요구받습니다
+         *     (403 `MFA_ENROLLMENT_REQUIRED` — 등록·인증 op만 허용).
+         */
+        post: operations["disableMyMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 2FA 복구 코드 재발급 (기존 전부 무효화)
+         * @description 복구 코드 10개를 새로 발급합니다. **기존 복구 코드는 사용 여부와
+         *     무관하게 전부 무효화**됩니다. 비밀번호와 현재 TOTP 코드를 검증하며,
+         *     새 코드는 이 응답에서 단 한 번 노출됩니다.
+         */
+        post: operations["regenerateMfaRecoveryCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내 약관 동의 이력 조회
+         * @description 내가 동의한 약관·개인정보처리방침 버전 이력입니다 (M6).
+         *     현재 유효 버전에 대한 미동의 여부는 `UserProfile.pendingConsents`로
+         *     확인합니다.
+         */
+        get: operations["listMyConsents"];
+        put?: never;
+        /**
+         * 약관 개정판 동의 (재동의)
+         * @description 약관·개인정보처리방침 **개정판**에 동의합니다 (M6). 문서 버전이
+         *     개정되면 `UserProfile.pendingConsents`에 미동의 문서가 나타나고
+         *     콘솔이 동의 화면을 표시합니다 — 이 op로 동의를 기록하면 사라집니다.
+         *
+         *     제출한 `version`이 현재 유효 버전과 다르면 409 — 콘솔은 최신 문서를
+         *     다시 로드해 표시해야 합니다.
+         */
+        post: operations["acceptConsents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs": {
         parameters: {
             query?: never;
@@ -386,6 +662,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/meta/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 시스템 상태 조회 (점검 모드·배너·문의처 — 공개)
+         * @description 점검 모드 여부, 공지 배너, 문의 이메일을 반환합니다 (M6). 인증 불필요 —
+         *     로그인 화면과 콘솔 셸이 주기적으로(약 60초) 폴링합니다.
+         *
+         *     **점검 모드 시맨틱**: `maintenance=true`면 관리자 계층이 아닌 모든
+         *     인증 요청이 503(`MAINTENANCE_MODE`)으로 거부됩니다. 단
+         *     `/auth/login`·`/auth/refresh`·`/meta/**`는 항상 허용됩니다
+         *     (관리자가 점검 중에도 로그인할 수 있어야 하므로). 값은 운영 설정
+         *     (`maintenance_mode` 등 — `PUT /admin/settings/{key}`)으로 제어하며
+         *     변경은 15초 이내에 반영됩니다.
+         */
+        get: operations["getSystemStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 약관·개인정보처리방침 현행 버전 목록 (공개)
+         * @description 문서 종류별 **현행(유효) 버전** 메타데이터 목록입니다 (M6).
+         *     회원가입 화면이 동의 대상 버전을 표시할 때 사용합니다.
+         *     본문은 `GET /meta/terms/{docType}`로 조회합니다.
+         */
+        get: operations["listTermsVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/terms/{docType}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 약관·개인정보처리방침 현행 본문 조회 (공개)
+         * @description 지정한 문서 종류의 현행 버전 전문(마크다운)입니다 (M6).
+         */
+        get: operations["getTermsDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups": {
         parameters: {
             query?: never;
@@ -429,7 +775,22 @@ export interface paths {
         get: operations["getGroup"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * 그룹 삭제 (OWNER 전용)
+         * @description 그룹을 삭제합니다 (M6). **OWNER만** 호출할 수 있으며, 비구성원에게는
+         *     404로 마스킹됩니다.
+         *
+         *     - **차단 조건** (409): 그룹에 삭제되지 않은 VM(DELETED 외 전 상태 —
+         *       DELETING 포함)이 있으면 삭제할 수 없습니다. VM을 먼저 삭제하고
+         *       파기까지 완료되어야 합니다.
+         *     - **PERSONAL 그룹은 삭제할 수 없습니다** (409) — 계정과 함께
+         *       탈퇴 시에만 정리됩니다.
+         *     - 삭제는 소프트 삭제(행 보존)입니다 — VM 이력·감사 로그의 그룹
+         *       참조는 유지되고, 그룹은 모든 목록·조회에서 사라집니다. 같은
+         *       이름·슬러그의 새 그룹을 다시 만들 수 있습니다.
+         *     - 구성원 전원에게 알림이 발송되고 감사 기록(`group.delete`)이 남습니다.
+         */
+        delete: operations["deleteGroup"];
         options?: never;
         head?: never;
         /**
@@ -632,6 +993,10 @@ export interface paths {
          *       백업해야 합니다.
          *     - **`ERROR` 상태 예외**: 생성 실패 보상이 끝난 `ERROR` 상태 VM은 파기할
          *       하부 실체가 없으므로 유예 없이 **즉시 `DELETED`로 전이**됩니다.
+         *     - **삭제 보호 (M6)**: VM 설정 `deletion_protection`이 켜져 있으면
+         *       삭제 접수가 409(`VM_DELETION_PROTECTED`)로 거부됩니다 — 소유자가
+         *       설정에서 해제한 뒤 다시 시도해야 합니다 (관리자 일반·강제 삭제도
+         *       동일하게 거부).
          *     - 삭제 접수와 최종 파기는 기관 관리자에게 통지되며 VM 이벤트(`DELETE`)로
          *       기록됩니다.
          */
@@ -682,6 +1047,9 @@ export interface paths {
          *     게스트 OS가 응답하지 않으면 시간 초과로 실패할 수 있으며, 이때 강제
          *     종료로 **자동 폴백하지 않습니다** — 필요하면
          *     `POST /vms/{vmId}/force-stop`을 명시적으로 호출해야 합니다.
+         *
+         *     **중지 보호 (M6)**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
+         *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 종료할 수 있습니다.
          */
         post: operations["shutdownVm"];
         delete?: never;
@@ -704,6 +1072,9 @@ export interface paths {
          * @description `RUNNING` 상태의 VM을 재부팅합니다. 그룹 **MEMBER 이상**만 호출할 수
          *     있으며, 접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리됩니다.
          *     VM 이벤트(`REBOOT`)로 기록됩니다.
+         *
+         *     **중지 보호 (M6)**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
+         *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 재부팅할 수 있습니다.
          */
         post: operations["rebootVm"];
         delete?: never;
@@ -729,6 +1100,9 @@ export interface paths {
          *
          *     **경고**: 디스크 쓰기 중 강제 종료하면 파일 시스템·데이터가 손상될 수
          *     있습니다. 종료(`shutdown`)가 응답하지 않을 때만 사용하세요.
+         *
+         *     **중지 보호 (M6)**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
+         *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 강제 종료할 수 있습니다.
          */
         post: operations["forceStopVm"];
         delete?: never;
@@ -826,13 +1200,16 @@ export interface paths {
          *     `label`/`description`만으로 편집 UI를 렌더할 수 있어, 키가 추가돼도
          *     콘솔 변경 없이 표시됩니다.
          *
-         *     **v0.8.0 키 카탈로그** (키 추가는 마이너 개정, 계약 표면은 이
+         *     **v0.9.0 키 카탈로그** (키 추가는 마이너 개정, 계약 표면은 이
          *     GET/PATCH 한 쌍으로 고정):
          *
          *     | key | valueType | 기본값 | 변경 필요 역할 |
          *     |---|---|---|---|
          *     | `ssh_password_enabled` | BOOLEAN | `false` | EDITOR |
          *     | `password_reveal_min_role` | ENUM (`MEMBER`/`EDITOR`/`OWNER`) | `MEMBER` | OWNER |
+         *     | `deletion_protection` | BOOLEAN | `false` | OWNER |
+         *     | `stop_protection` | BOOLEAN | `false` | OWNER |
+         *     | `display_name` | STRING (최대 100자, 빈 문자열 = 해제) | `null` | EDITOR |
          *
          *     - `ssh_password_enabled` — SSH 게이트웨이의 비밀번호 접속 허용
          *       (기본 차단 = 런치 게이트 G6). 우선순위: 전역 킬 스위치 > 관리자
@@ -840,6 +1217,20 @@ export interface paths {
          *     - `password_reveal_min_role` — 비밀번호 열람 최소 역할 (= VM 내부
          *       sudo 자격의 실질 게이트). 다른 구성원의 권한을 조정하는 키이므로
          *       **소유자 전용**.
+         *     - `deletion_protection` (M6) — 켜져 있으면 **모든 삭제 접수**(본인·
+         *       관리자 일반·강제 삭제)가 409(`VM_DELETION_PROTECTED`)로 거부됩니다.
+         *       Proxmox 네이티브 `protection` 플래그로 하이퍼바이저 수준에서도
+         *       백킹됩니다(이중 안전망 — 설정 변경 시 동기 반영, 실패하면 변경
+         *       자체가 실패). 삭제하려면 먼저 소유자가 해제해야 합니다. 예외:
+         *       소유자 부재·보안 사고 등 해제 주체가 없는 경우 SYS_ADMIN이 강제
+         *       삭제에 `overrideProtection: true`를 명시해 회수할 수 있습니다
+         *       (감사 기록 — force-delete op 참조).
+         *     - `stop_protection` (M6) — 켜져 있으면 콘솔의 종료/재부팅/강제 종료를
+         *       **EDITOR 이상만** 수행할 수 있습니다 (MEMBER는 409
+         *       `VM_STOP_PROTECTED`; 시작은 제한 없음). 한계: sudo 가능한 구성원은
+         *       게스트 안에서 여전히 종료할 수 있습니다 (콘솔 UI에 고지).
+         *     - `display_name` (M6) — 콘솔 표시명 (`VmSummary.displayName`).
+         *       호스트네임/슬러그/Proxmox 이름은 바뀌지 않습니다.
          */
         get: operations["getVmSettings"];
         put?: never;
@@ -1314,6 +1705,30 @@ export interface paths {
         patch: operations["updateOrg"];
         trace?: never;
     };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 사용자 목록 조회
+         * @description 사용자 목록·검색입니다 (M6). SYS_ADMIN은 전체 사용자를,
+         *     ORG_ADMIN은 **자기 기관에 파생 소속된 사용자만** 조회합니다
+         *     (파생 멤버십 — 기관의 신청/삭제되지 않은 VM을 가진 그룹의 구성원,
+         *     product-spec §14와 동일 기준. 감사 뷰와 같은 가시성 트레이드오프).
+         *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다.
+         */
+        get: operations["listAdminUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users/{userId}": {
         parameters: {
             query?: never;
@@ -1321,7 +1736,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * [관리자] 사용자 상세 조회
+         * @description 사용자 상세입니다 (M6) — 프로필, 그룹 멤버십, 삭제되지 않은 VM 수,
+         *     상태 변경 이력(비활성화·해제·탈퇴)을 포함합니다. ORG_ADMIN은 자기
+         *     기관에 파생 소속된 사용자만 조회할 수 있습니다 (그 외 404 마스킹).
+         */
+        get: operations["getAdminUser"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1336,6 +1757,87 @@ export interface paths {
          *     - 역할 변경 시 `token_version`이 올라가 해당 사용자의 기존 토큰이 무효화됩니다.
          */
         patch: operations["updateUserRole"];
+        trace?: never;
+    };
+    "/admin/users/{userId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 사용자 비활성화
+         * @description SYS_ADMIN 전용입니다 (M6). 계정을 `DISABLED`로 전환합니다 — 즉시
+         *     모든 세션이 무효화되고(`token_version` 증가), 로그인과 SSH
+         *     게이트웨이 접근이 차단됩니다. 그룹 멤버십·VM은 그대로 유지됩니다
+         *     (해제 시 원상 복귀).
+         *
+         *     - `ACTIVE`와 `PENDING_VERIFICATION` 계정을 비활성화할 수 있습니다
+         *       (미인증 의심 계정 잠금 포함). 해제(enable) 시 **비활성화 직전
+         *       상태로 복원**되므로 이메일 인증을 우회하지 않습니다 (계약 리뷰
+         *       게이트 2026-07-18 반영).
+         *     - 사유(`reason`)는 필수이며 상태 변경 이력·감사 로그에 남습니다.
+         *     - 대상 사용자와 시스템 관리자에게 HIGH 알림(보안 조치)이 발송됩니다.
+         *     - **자기 자신은 비활성화할 수 없습니다** (409).
+         */
+        post: operations["disableUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 사용자 비활성화 해제
+         * @description SYS_ADMIN 전용입니다 (M6). `DISABLED` 계정을 **비활성화 직전
+         *     상태로 복원**합니다 (`ACTIVE`, 또는 미인증 상태에서 비활성화된
+         *     경우 `PENDING_VERIFICATION` — 이메일 인증을 우회하지 않음).
+         *     멤버십·VM 접근이 원상 복귀되며, 상태 변경 이력·감사 로그에 남고
+         *     대상 사용자에게 알림이 발송됩니다. `WITHDRAWN` 계정은 되돌릴 수
+         *     없습니다 (409 — 탈퇴는 영구적).
+         */
+        post: operations["enableUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/mfa-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 사용자 2FA 초기화 (잠금 구조)
+         * @description SYS_ADMIN 전용입니다 (M6). 인증 앱·복구 코드를 모두 분실한 사용자의
+         *     2FA 등록을 삭제합니다 — 이후 해당 사용자는 비밀번호만으로 로그인할
+         *     수 있으며, 관리자 계층이라면 다음 로그인에서 재등록을 요구받습니다.
+         *
+         *     오프라인 본인 확인(신분 확인) 후에만 수행해야 하는 민감 작업입니다 —
+         *     감사 기록과 대상 사용자 HIGH 알림(보안 조치)이 남습니다.
+         */
+        post: operations["resetUserMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/nodes": {
@@ -1408,6 +1910,8 @@ export interface paths {
          *     - 본인 삭제 유예 중(`DELETING`)인 VM에는 접수할 수 없습니다(409).
          *       관리자는 기존 삭제를 먼저 취소한 뒤 다시 접수하거나, 즉시 파기가
          *       필요하면 `force-delete`를 사용합니다.
+         *     - **삭제 보호 (M6)**: VM 설정 `deletion_protection`이 켜져 있으면
+         *       409(`VM_DELETION_PROTECTED`) — 소유자가 해제해야 접수할 수 있습니다.
          */
         post: operations["scheduleVmDeletion"];
         delete?: never;
@@ -1472,6 +1976,16 @@ export interface paths {
          *     - 202 응답이 `VmDeletion`이 아니라 `MessageResponse`인 이유: 즉시
          *       파기·취소 불가라 "접수된 삭제"(scheduledFor/cancelable)라는 표현이
          *       성립하지 않기 때문입니다.
+         *     - **삭제 보호 (M6)**: VM 설정 `deletion_protection`이 켜져 있으면
+         *       강제 삭제도 기본적으로 409(`VM_DELETION_PROTECTED`)로 거부됩니다 —
+         *       보호 해제 권한은 소유 그룹 OWNER에게 있습니다 (Proxmox `protection`
+         *       플래그 백킹으로 하이퍼바이저 수준에서도 파기가 거부됨). 단
+         *       **SYS_ADMIN 에스컬레이션 경로**로 `overrideProtection: true`를
+         *       명시하면 보호를 무시하고 진행할 수 있습니다 (보안 사고·소유자
+         *       비활성화 등으로 해제 주체가 없는 경우의 자원 회수 수단 — 계약
+         *       리뷰 게이트 2026-07-18 반영). 오버라이드 사용은 감사 로그에 별도
+         *       기록되며, 파이프라인이 파기 전에 Proxmox `protection` 플래그를
+         *       해제합니다.
          */
         post: operations["forceDeleteVm"];
         delete?: never;
@@ -2029,6 +2543,30 @@ export interface components {
              *       값 검증 `VALIDATION_FAILED`, 설정 변경·비밀번호 열람/재생성 권한
              *       `GROUP_ROLE_INSUFFICIENT`, 타인 키·개인키 없음·비구성원 마스킹
              *       `RESOURCE_NOT_FOUND`, 상태 충돌 `VM_INVALID_STATE`)
+             *     - 계정 (M6): `AUTH_PASSWORD_MISMATCH`(재인증 실패 —
+             *       비밀번호 변경·탈퇴·2FA 등록의 본인 확인),
+             *       `AUTH_RESET_TOKEN_EXPIRED`(재설정 링크 만료·사용·무효화),
+             *       `ACCOUNT_HAS_ACTIVE_VMS`·`ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP`
+             *       (탈퇴 차단), `ACCOUNT_SELF_DISABLE_FORBIDDEN`(본인 비활성화
+             *       거부), `ACCOUNT_NOT_DISABLED`(활성화 전환 불가 — WITHDRAWN
+             *       포함)
+             *     - 2FA (M6): `AUTH_MFA_CODE_INVALID`(TOTP/복구 코드 불일치),
+             *       `AUTH_MFA_TOKEN_EXPIRED`(스텝업 토큰 만료·재사용),
+             *       `MFA_ALREADY_ENROLLED`, `MFA_NOT_ENROLLED`,
+             *       `MFA_SETUP_NOT_IN_PROGRESS`,
+             *       `MFA_ENROLLMENT_REQUIRED`(프로덕션 관리자 계층 미등록 —
+             *       등록·인증 op 외 전부 403, 콘솔은 등록 마법사로 유도)
+             *     - 약관/점검 (M6): `CONSENT_VERSION_MISMATCH`(개정판 재동의
+             *       필요 — 최신 문서 재표시), `MAINTENANCE_MODE`(점검 중 —
+             *       비관리자 503)
+             *     - 그룹/VM 설정 (M6): `GROUP_HAS_ACTIVE_VMS`·
+             *       `GROUP_PERSONAL_UNDELETABLE`(그룹 삭제 차단),
+             *       `VM_DELETION_PROTECTED`(삭제 보호 설정 켜짐 — 본인·관리자
+             *       일반·강제 삭제 전부 거부, 해제 후 재시도. 단 SYS_ADMIN
+             *       강제 삭제는 `overrideProtection: true`로 명시 오버라이드 가능
+             *       — 감사 기록),
+             *       `VM_STOP_PROTECTED`(중지 보호 — MEMBER의 종료/재부팅/강제
+             *       종료 거부, EDITOR 이상만 가능)
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -2045,10 +2583,14 @@ export interface components {
             message: string;
         };
         /**
-         * @description 전역 사용자 역할
+         * @description 전역 사용자 역할. M6에서 축소 권한 부관리자 계층이 추가되었습니다 —
+         *     `ORG_MANAGER`(기관 운영자, ORG_ADMIN 하위)·`SYS_MANAGER`(시스템
+         *     운영자, SYS_ADMIN 하위): 조회·일상 운영 중심이며 위험 작업(강제
+         *     삭제·킬 스위치·역할 변경·비활성화 등)은 상위 관리자 전용입니다.
+         *     역할별 상세 허용 표는 docs/security/permission-matrix.md 참조.
          * @enum {string}
          */
-        UserRole: "USER" | "ORG_ADMIN" | "SYS_ADMIN";
+        UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
         /**
          * @description 계정 상태
          * @enum {string}
@@ -2111,6 +2653,8 @@ export interface components {
             password: string;
             /** @description 표시 이름 */
             name: string;
+            /** @description 약관 동의 목록 (M6) — **현행 문서 전체**(현재 이용약관· 개인정보처리방침 2종)의 현행 버전에 동의해야 가입할 수 있습니다. 완전성 검증은 서버가 수행합니다 (`GET /meta/terms`의 목록과 대조 — 누락·버전 불일치는 422; minItems는 문서 수를 하드코딩하지 않습니다). 동의 시각은 서버가 기록합니다. */
+            consents: components["schemas"]["ConsentInput"][];
         };
         LoginRequest: {
             /** Format: email */
@@ -2152,6 +2696,150 @@ export interface components {
                 groupKind: components["schemas"]["GroupKind"];
                 role: components["schemas"]["GroupMemberRole"];
             }[];
+            /** @description 2FA(TOTP) 활성화 여부 (M6) */
+            mfaEnabled: boolean;
+            /** @description 재동의가 필요한 약관 개정판 목록 (M6) — 비어 있지 않으면 콘솔이 동의 화면을 표시하고 `POST /me/consents`로 동의를 기록합니다. 가입 이후 문서가 개정된 경우에만 나타납니다. */
+            pendingConsents: components["schemas"]["TermsVersionView"][];
+        };
+        /** @description 2FA 계정의 로그인 1단계 응답 (M6) — 토큰·쿠키는 발급되지 않으며, `POST /auth/mfa`에 `mfaToken`과 TOTP/복구 코드를 제출해야 로그인이 완료됩니다. `AuthTokenResponse`와는 `mfaRequired` 필드 유무로 구분합니다. */
+        MfaChallengeResponse: {
+            /** @constant */
+            mfaRequired: true;
+            /** @description 5분 유효·1회용 스텝업 토큰 */
+            mfaToken: string;
+        };
+        /** @description TOTP 등록 시작 응답 (M6) — 이 응답 외에는 시크릿이 다시 노출되지 않습니다. */
+        MfaSetupResponse: {
+            /** @description TOTP 시크릿 (Base32) — 인증 앱 수동 입력용 */
+            secret: string;
+            /** @description `otpauth://totp/...` URI — 콘솔이 QR 코드로 렌더 */
+            otpauthUri: string;
+        };
+        /** @description 복구 코드 발급 응답 (M6) — **이 응답에서 단 한 번만** 노출됩니다. 각 코드는 1회용이며, 재발급 시 기존 코드는 전부 무효화됩니다. */
+        MfaRecoveryCodesResponse: {
+            recoveryCodes: string[];
+        };
+        /** @description 관리자 사용자 목록 항목 (M6) */
+        UserAdminView: {
+            /** Format: int64 */
+            id: number;
+            /** Format: email */
+            email: string;
+            name: string;
+            role: components["schemas"]["UserRole"];
+            /**
+             * Format: int64
+             * @description 관리 기관 ID (ORG_ADMIN/ORG_MANAGER 외 null)
+             */
+            orgId?: number | null;
+            status: components["schemas"]["UserStatus"];
+            /** @description 2FA(TOTP) 활성화 여부 */
+            mfaEnabled: boolean;
+            /**
+             * Format: date-time
+             * @description 가입(계정 생성) 시각
+             */
+            createdAt: string;
+        };
+        /** @description 계정 상태 변경 이력 항목 (M6 — 비활성화/해제/탈퇴) */
+        UserStatusChange: {
+            fromStatus: components["schemas"]["UserStatus"];
+            toStatus: components["schemas"]["UserStatus"];
+            /**
+             * Format: int64
+             * @description 수행 관리자 ID (본인 탈퇴는 본인 ID)
+             */
+            actorId?: number | null;
+            /** @description 수행자 이메일 */
+            actorEmail?: string | null;
+            /** @description 사유 (비활성화 시 필수 입력값 — 그 외 null 가능) */
+            reason?: string | null;
+            /** Format: date-time */
+            changedAt: string;
+        };
+        UserAdminDetail: components["schemas"]["UserAdminView"] & {
+            /**
+             * Format: date-time
+             * @description 탈퇴 시각 (WITHDRAWN 외 null)
+             */
+            withdrawnAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 비활성화 시각 (DISABLED 외 null)
+             */
+            disabledAt?: string | null;
+            /** @description 비활성화 사유 (DISABLED 외 null) */
+            disabledReason?: string | null;
+            /** @description 그룹 멤버십 목록 (UserProfile과 동일 형식) */
+            memberships: {
+                /** Format: int64 */
+                groupId: number;
+                groupName: string;
+                groupKind: components["schemas"]["GroupKind"];
+                role: components["schemas"]["GroupMemberRole"];
+            }[];
+            /** @description 구성원인 그룹들이 보유한 삭제되지 않은 VM 수 */
+            activeVmCount: number;
+            /** @description 상태 변경 이력 (최신순) */
+            statusChanges: components["schemas"]["UserStatusChange"][];
+        };
+        UserAdminPage: {
+            content: components["schemas"]["UserAdminView"][];
+            page: number;
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            totalPages: number;
+        };
+        /**
+         * @description 약관 문서 종류 (M6)
+         * @enum {string}
+         */
+        TermsDocType: "TERMS_OF_SERVICE" | "PRIVACY_POLICY";
+        /** @description 약관 문서 버전 메타데이터 (M6) */
+        TermsVersionView: {
+            docType: components["schemas"]["TermsDocType"];
+            /** @description 버전 번호 (개정마다 1씩 증가) */
+            version: number;
+            /** @description 문서 제목 (한국어) */
+            title: string;
+            /**
+             * Format: date-time
+             * @description 시행일
+             */
+            effectiveAt: string;
+        };
+        TermsDocumentView: components["schemas"]["TermsVersionView"] & {
+            /** @description 문서 전문 (마크다운, 한국어) */
+            body: string;
+        };
+        /** @description 약관 동의 이력 항목 (M6) */
+        ConsentView: {
+            docType: components["schemas"]["TermsDocType"];
+            version: number;
+            /** Format: date-time */
+            consentedAt: string;
+        };
+        /** @description 동의 제출 항목 (가입·재동의 공용, M6) */
+        ConsentInput: {
+            docType: components["schemas"]["TermsDocType"];
+            /** @description 동의하는 문서 버전 (현행 버전이어야 함) */
+            version: number;
+        };
+        ConsentUpdateRequest: {
+            /** @description 동의할 문서·버전 목록 (버전은 현행 버전이어야 함) */
+            consents: components["schemas"]["ConsentInput"][];
+        };
+        /** @description 공개 시스템 상태 (M6 — 점검 모드·배너·문의처) */
+        SystemStatusResponse: {
+            /** @description 점검 모드 여부 (true면 비관리자 요청 503) */
+            maintenance: boolean;
+            /** @description 점검 안내 문구 (점검 모드 아니거나 미설정 시 null) */
+            maintenanceMessage: string | null;
+            /** @description 전역 공지 배너 문구 (점검 모드와 독립 — 콘솔 상단 배너로 표시, 미설정 시 null) */
+            bannerMessage: string | null;
+            /** @description 운영 문의 이메일 (콘솔 푸터·오류 화면에 표시, 미설정 시 null) */
+            contactEmail: string | null;
         };
         OrgSummary: {
             /** Format: int64 */
@@ -2394,6 +3082,10 @@ export interface components {
             groupId: number;
             /** @description 소유 그룹 이름 (목록 화면 표시용) */
             groupName: string;
+            /** @description 소속 기관 이름 (v0.9.0, M5 impl-gate 이연 — 관리자 목록의 기관 표시용. VM은 항상 기관에 속하므로 통상 항상 채워집니다 — 방어적 nullable) */
+            orgName?: string | null;
+            /** @description 사용자 지정 표시명 (v0.9.0 — VM 설정 `display_name`, EDITOR 이상 변경). 미설정 시 null이며 콘솔은 `name`을 표시합니다. 호스트네임/슬러그는 불변입니다. */
+            displayName?: string | null;
             /**
              * Format: int64
              * @description 이 VM을 만든 신청 ID (출처 추적)
@@ -2425,8 +3117,8 @@ export interface components {
             sshUsername: string;
             /** @description SSH 게이트웨이 호스트 (예 `ssh.pickle.pnuops.com`) — 콘솔이 `ssh <hostname>@<sshHost>` 안내를 하드코딩 없이 렌더하기 위한 서버 설정값 (M5.5) */
             sshHost: string;
-            /** @description 요청자의 소유 그룹 내 역할 (M5.5) — 콘솔의 설정 섹션 노출· 버튼 활성 판단용 */
-            myGroupRole: components["schemas"]["GroupMemberRole"];
+            /** @description 요청자의 소유 그룹 내 역할 (M5.5) — 콘솔의 설정 섹션 노출· 버튼 활성 판단용. 사용자 경로 `GET /vms/{vmId}`(구성원 전용)에서는 항상 존재하나, VM 상세를 반환하는 관리자 경로(비구성원 관리자)에서는 그룹 역할이 없어 **null**이 될 수 있어 nullable로 둔다. */
+            myGroupRole?: components["schemas"]["GroupMemberRole"] | null;
             /** Format: date */
             startDate?: string | null;
             /** @description 진행 중이거나 마지막으로 실패한 비동기 작업(프로비저닝/삭제/재설치)의 진행 상황. 진행·실패 중인 작업이 없으면 null. */
@@ -2470,7 +3162,7 @@ export interface components {
         ProvisioningTaskView: {
             kind: components["schemas"]["ProvisioningTaskKind"];
             status: components["schemas"]["ProvisioningTaskStatus"];
-            /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~9단계) */
+            /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~10단계 — M5.5에서 HOSTKEY(호스트 키 수집) 단계 추가로 11단계) */
             currentStep: number;
             /** @description 전체 단계 수 */
             totalSteps: number;
@@ -3238,6 +3930,8 @@ export interface components {
             detail?: Record<string, never> | null;
             /** @description 요청 IP (시스템 작업은 null) */
             ip?: string | null;
+            /** @description 행위자의 파생 소속 기관 이름 (v0.9.0, M5 impl-gate 이연 — SYS_ADMIN 감사 화면의 기관 맥락 표시용. 파생 소속이 없거나 시스템 작업이면 null, 복수 기관이면 대표 1개) */
+            orgName?: string | null;
             /** Format: date-time */
             createdAt: string;
         };
@@ -3293,6 +3987,8 @@ export interface components {
             orgId?: number | null;
             /** @description 대상 VM의 기관 이름 (orgId와 동일 기준의 방어적 nullable) */
             orgName?: string | null;
+            /** @description 대상 VM의 소유 그룹 이름 (v0.9.0, M5 impl-gate 이연 — vmName과 동일 기준의 방어적 nullable) */
+            groupName?: string | null;
             /** @description JobRunr 잡 UUID (큐 등록 전이면 null) */
             jobrunrJobId?: string | null;
             /** Format: date-time */
@@ -3326,6 +4022,8 @@ export interface components {
              * @description 관련 VM ID (UNMANAGED_GUEST 등 DB에 없는 대상은 null)
              */
             vmId?: number | null;
+            /** @description 관련 VM 이름 (v0.9.0, M5 impl-gate 이연 — vmId와 동일 기준: DB에 없는 대상은 null) */
+            vmName?: string | null;
             /** @description Proxmox VMID (Proxmox에 없는 대상은 null) */
             proxmoxVmid?: number | null;
             /** @description 관측된 노드 이름 (특정 불가 시 null) */
@@ -3679,7 +4377,17 @@ export interface operations {
                  * @example {
                  *       "email": "gildong.hong@pusan.ac.kr",
                  *       "password": "correct-horse-battery!",
-                 *       "name": "홍길동"
+                 *       "name": "홍길동",
+                 *       "consents": [
+                 *         {
+                 *           "docType": "TERMS_OF_SERVICE",
+                 *           "version": 1
+                 *         },
+                 *         {
+                 *           "docType": "PRIVACY_POLICY",
+                 *           "version": 1
+                 *         }
+                 *       ]
                  *     }
                  */
                 "application/json": components["schemas"]["SignupRequest"];
@@ -3839,29 +4547,18 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 로그인 성공 */
+            /** @description 로그인 성공 (토큰 발급) 또는 2FA 계정의 1단계 통과 (`MfaChallengeResponse` — 쿠키 미발급, `POST /auth/mfa`로 계속) */
             200: {
                 headers: {
                     /**
-                     * @description 리프레시 토큰 쿠키. `pickle_refresh=<opaque>; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax`
+                     * @description 리프레시 토큰 쿠키 (2FA 챌린지 응답에서는 발급되지 않음). `pickle_refresh=<opaque>; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax`
                      * @example pickle_refresh=0aX9...redacted; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax
                      */
                     "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.sig",
-                     *       "user": {
-                     *         "id": 42,
-                     *         "email": "gildong.hong@pusan.ac.kr",
-                     *         "name": "홍길동",
-                     *         "role": "USER"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AuthTokenResponse"];
+                    "application/json": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"];
                 };
             };
             /** @description 이메일 또는 비밀번호 불일치 */
@@ -4052,6 +4749,185 @@ export interface operations {
             };
         };
     };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "email": "gildong.hong@pusan.ac.kr"
+                 *     }
+                 */
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 재설정 메일 발송 접수 (계정 존재 여부와 무관하게 동일 응답) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "해당 주소가 등록되어 있다면 비밀번호 재설정 메일을 발송했습니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    confirmPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "token": "9d2c4e1ab74f4f0e8a3b5c6d7e8f9012",
+                 *       "newPassword": "new-horse-battery-staple!"
+                 *     }
+                 */
+                "application/json": {
+                    /** @description 재설정 메일에 포함된 1회용 토큰 (30분 유효) */
+                    token: string;
+                    /** Format: password */
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 비밀번호 변경 완료 (모든 기존 세션 무효화) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 토큰 만료·이미 사용·무효화됨 */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "재설정 링크가 만료되었습니다",
+                     *       "status": 410,
+                     *       "detail": "재설정 링크가 만료되었거나 이미 사용되었습니다. 재설정을 다시 요청해 주세요.",
+                     *       "instance": "/api/v1/auth/password-reset/confirm",
+                     *       "code": "AUTH_RESET_TOKEN_EXPIRED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    completeMfaLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "mfaToken": "5b1e...redacted",
+                 *       "code": "492817"
+                 *     }
+                 */
+                "application/json": {
+                    /** @description 로그인 1단계가 발급한 5분 유효 1회용 토큰 */
+                    mfaToken: string;
+                    /** @description TOTP 6자리 코드 (`recoveryCode`와 택일) */
+                    code?: string;
+                    /** @description 1회용 복구 코드 (`code`와 택일) */
+                    recoveryCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 로그인 완료 (로그인과 동일 — 토큰쌍 + 쿠키 발급) */
+            200: {
+                headers: {
+                    /** @description 리프레시 토큰 쿠키. `pickle_refresh=<opaque>; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax` */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            /** @description 코드 불일치 (mfaToken은 유지 — 재시도 가능, 잠금 카운터 합산) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "인증 코드가 올바르지 않습니다",
+                     *       "status": 401,
+                     *       "detail": "입력한 코드가 올바르지 않습니다. 인증 앱의 최신 코드를 확인해 주세요.",
+                     *       "instance": "/api/v1/auth/mfa",
+                     *       "code": "AUTH_MFA_CODE_INVALID"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description mfaToken 만료·이미 사용됨 (로그인 처음부터 다시) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "인증 세션이 만료되었습니다",
+                     *       "status": 410,
+                     *       "detail": "2단계 인증 시간이 지났습니다. 처음부터 다시 로그인해 주세요.",
+                     *       "instance": "/api/v1/auth/mfa",
+                     *       "code": "AUTH_MFA_TOKEN_EXPIRED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -4088,7 +4964,9 @@ export interface operations {
                      *           "groupKind": "PROJECT",
                      *           "role": "EDITOR"
                      *         }
-                     *       ]
+                     *       ],
+                     *       "mfaEnabled": false,
+                     *       "pendingConsents": []
                      *     }
                      */
                     "application/json": components["schemas"]["UserProfile"];
@@ -4404,6 +5282,566 @@ export interface operations {
             };
         };
     };
+    changeMyPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "currentPassword": "correct-horse-battery!",
+                 *       "newPassword": "new-horse-battery-staple!"
+                 *     }
+                 */
+                "application/json": {
+                    /** Format: password */
+                    currentPassword: string;
+                    /** Format: password */
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 변경 완료 — 새 토큰쌍 (다른 세션은 무효화) */
+            200: {
+                headers: {
+                    /** @description 새 리프레시 토큰 쿠키 */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 현재 비밀번호 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "현재 비밀번호가 올바르지 않습니다",
+                     *       "status": 403,
+                     *       "detail": "현재 비밀번호를 다시 확인해 주세요.",
+                     *       "instance": "/api/v1/me/password",
+                     *       "code": "AUTH_PASSWORD_MISMATCH"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    withdrawMyAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "password": "correct-horse-battery!"
+                 *     }
+                 */
+                "application/json": {
+                    /**
+                     * Format: password
+                     * @description 본인 확인용 현재 비밀번호
+                     */
+                    password: string;
+                    /** @description 2FA 등록 계정만 필수 — TOTP 6자리 (`recoveryCode`와 택일) */
+                    totpCode?: string;
+                    /** @description 2FA 등록 계정의 대체 수단 — 1회용 복구 코드 (`totpCode`와 택일; 인증 앱 분실 시) */
+                    recoveryCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 탈퇴 완료 (세션 종료 — 쿠키 삭제) */
+            200: {
+                headers: {
+                    /** @description 리프레시 쿠키 삭제 지시 (`Max-Age=0`) */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 비밀번호 또는 TOTP 코드 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "본인 확인에 실패했습니다",
+                     *       "status": 403,
+                     *       "detail": "비밀번호를 다시 확인해 주세요.",
+                     *       "instance": "/api/v1/me/withdraw",
+                     *       "code": "AUTH_PASSWORD_MISMATCH"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 탈퇴 차단 조건 미해소 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "탈퇴할 수 없습니다",
+                     *       "status": 409,
+                     *       "detail": "삭제되지 않은 VM을 보유한 그룹의 유일한 소유자입니다. 소유권을 이전하거나 VM을 먼저 삭제해 주세요.",
+                     *       "instance": "/api/v1/me/withdraw",
+                     *       "code": "ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    beginMfaTotpSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "password": "correct-horse-battery!"
+                 *     }
+                 */
+                "application/json": {
+                    /** Format: password */
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 시크릿 발급 (활성화 전) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "secret": "JBSWY3DPEHPK3PXP",
+                     *       "otpauthUri": "otpauth://totp/Pickle:gildong.hong@pusan.ac.kr?secret=JBSWY3DPEHPK3PXP&issuer=Pickle"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MfaSetupResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 비밀번호 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "본인 확인에 실패했습니다",
+                     *       "status": 403,
+                     *       "detail": "비밀번호를 다시 확인해 주세요.",
+                     *       "instance": "/api/v1/me/mfa/totp",
+                     *       "code": "AUTH_PASSWORD_MISMATCH"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 이미 2FA가 활성화된 계정 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "이미 2단계 인증이 설정되어 있습니다",
+                     *       "status": 409,
+                     *       "detail": "기존 설정을 해제한 뒤 다시 등록할 수 있습니다.",
+                     *       "instance": "/api/v1/me/mfa/totp",
+                     *       "code": "MFA_ALREADY_ENROLLED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    activateMfaTotp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "code": "492817"
+                 *     }
+                 */
+                "application/json": {
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 활성화 완료 — 복구 코드 (1회 노출) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "recoveryCodes": [
+                     *         "f3k9-2mqx-81vz",
+                     *         "7hw4-p0ds-cn65",
+                     *         "q8rt-5jkl-m2np",
+                     *         "a1bc-9def-gh34",
+                     *         "x7yz-0uvw-st56",
+                     *         "k4mn-8pqr-bc78",
+                     *         "d2ef-6ghi-jk90",
+                     *         "v5wx-3yza-de12",
+                     *         "r9st-7uvw-fg34",
+                     *         "h6ij-4klm-no56"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MfaRecoveryCodesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 코드 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "인증 코드가 올바르지 않습니다",
+                     *       "status": 403,
+                     *       "detail": "인증 앱의 최신 코드를 확인해 주세요.",
+                     *       "instance": "/api/v1/me/mfa/totp/activate",
+                     *       "code": "AUTH_MFA_CODE_INVALID"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 진행 중인 등록이 없거나 이미 활성화됨 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "진행 중인 2단계 인증 등록이 없습니다",
+                     *       "status": 409,
+                     *       "detail": "등록을 처음부터 다시 시작해 주세요.",
+                     *       "instance": "/api/v1/me/mfa/totp/activate",
+                     *       "code": "MFA_SETUP_NOT_IN_PROGRESS"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    disableMyMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "password": "correct-horse-battery!",
+                 *       "code": "492817"
+                 *     }
+                 */
+                "application/json": {
+                    /** Format: password */
+                    password: string;
+                    /** @description TOTP 6자리 (`recoveryCode`와 택일) */
+                    code?: string;
+                    /** @description 1회용 복구 코드 (`code`와 택일) */
+                    recoveryCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 해제 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "2단계 인증이 해제되었습니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 비밀번호 또는 코드 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "본인 확인에 실패했습니다",
+                     *       "status": 403,
+                     *       "detail": "비밀번호와 인증 코드를 다시 확인해 주세요.",
+                     *       "instance": "/api/v1/me/mfa/disable",
+                     *       "code": "AUTH_MFA_CODE_INVALID"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 2FA가 등록되어 있지 않음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "2단계 인증이 설정되어 있지 않습니다",
+                     *       "status": 409,
+                     *       "detail": "해제할 2단계 인증이 없습니다.",
+                     *       "instance": "/api/v1/me/mfa/disable",
+                     *       "code": "MFA_NOT_ENROLLED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    regenerateMfaRecoveryCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "password": "correct-horse-battery!",
+                 *       "code": "492817"
+                 *     }
+                 */
+                "application/json": {
+                    /** Format: password */
+                    password: string;
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 새 복구 코드 (1회 노출 — 기존 코드 전부 무효화) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaRecoveryCodesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 비밀번호 또는 코드 불일치 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "본인 확인에 실패했습니다",
+                     *       "status": 403,
+                     *       "detail": "비밀번호와 인증 코드를 다시 확인해 주세요.",
+                     *       "instance": "/api/v1/me/mfa/recovery-codes",
+                     *       "code": "AUTH_MFA_CODE_INVALID"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 2FA가 등록되어 있지 않음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "2단계 인증이 설정되어 있지 않습니다",
+                     *       "status": 409,
+                     *       "detail": "복구 코드를 발급하려면 먼저 2단계 인증을 등록해 주세요.",
+                     *       "instance": "/api/v1/me/mfa/recovery-codes",
+                     *       "code": "MFA_NOT_ENROLLED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listMyConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 동의 이력 (문서·버전별, 최신순) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "docType": "TERMS_OF_SERVICE",
+                     *         "version": 1,
+                     *         "consentedAt": "2026-07-20T10:00:00+09:00"
+                     *       },
+                     *       {
+                     *         "docType": "PRIVACY_POLICY",
+                     *         "version": 1,
+                     *         "consentedAt": "2026-07-20T10:00:00+09:00"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ConsentView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    acceptConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "consents": [
+                 *         {
+                 *           "docType": "TERMS_OF_SERVICE",
+                 *           "version": 2
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": components["schemas"]["ConsentUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description 동의 기록 완료 — 갱신된 동의 이력 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 제출 버전이 현재 유효 버전이 아님 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "약관 버전이 갱신되었습니다",
+                     *       "status": 409,
+                     *       "detail": "약관이 개정되었습니다. 최신 내용을 확인한 뒤 다시 동의해 주세요.",
+                     *       "instance": "/api/v1/me/consents",
+                     *       "code": "CONSENT_VERSION_MISMATCH"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listOrgs: {
         parameters: {
             query?: never;
@@ -4511,6 +5949,103 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    getSystemStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 시스템 상태 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "maintenance": false,
+                     *       "maintenanceMessage": null,
+                     *       "bannerMessage": null,
+                     *       "contactEmail": "user@example.com"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SystemStatusResponse"];
+                };
+            };
+        };
+    };
+    listTermsVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 현행 버전 목록 (문서 종류별 1건) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "docType": "TERMS_OF_SERVICE",
+                     *         "version": 1,
+                     *         "title": "피클 서비스 이용약관",
+                     *         "effectiveAt": "2026-07-20T00:00:00+09:00"
+                     *       },
+                     *       {
+                     *         "docType": "PRIVACY_POLICY",
+                     *         "version": 1,
+                     *         "title": "개인정보처리방침",
+                     *         "effectiveAt": "2026-07-20T00:00:00+09:00"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["TermsVersionView"][];
+                };
+            };
+        };
+    };
+    getTermsDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 문서 종류 */
+                docType: components["schemas"]["TermsDocType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 현행 본문 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "docType": "TERMS_OF_SERVICE",
+                     *       "version": 1,
+                     *       "title": "피클 서비스 이용약관",
+                     *       "body": "# 피클 서비스 이용약관\\n\\n제1조(목적) ...",
+                     *       "effectiveAt": "2026-07-20T00:00:00+09:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["TermsDocumentView"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     listGroups: {
@@ -4658,6 +6193,57 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    deleteGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 그룹 ID */
+                groupId: components["parameters"]["GroupId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 삭제 완료 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 권한 부족 (OWNER 아님) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "그룹을 삭제할 권한이 없습니다",
+                     *       "status": 403,
+                     *       "detail": "그룹의 OWNER만 그룹을 삭제할 수 있습니다.",
+                     *       "instance": "/api/v1/groups/12",
+                     *       "code": "GROUP_ROLE_INSUFFICIENT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 삭제 차단 (활성 VM 보유 또는 PERSONAL 그룹) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     updateGroup: {
@@ -6869,6 +8455,70 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listAdminUsers: {
+        parameters: {
+            query?: {
+                /** @description 이메일/이름 부분일치 검색 (대소문자 무시) */
+                q?: string;
+                /** @description 계정 상태 필터 */
+                status?: components["schemas"]["UserStatus"];
+                /** @description 전역 역할 필터 */
+                role?: components["schemas"]["UserRole"];
+                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
+                orgId?: number;
+                /** @description 정렬 기준 (접두사 `-`는 내림차순). 미지정 시 최신 가입 순(`-id`). 동률은 항상 `id` 내림차순으로 안정 정렬됩니다. */
+                sort?: "name" | "-name" | "email" | "-email" | "createdAt" | "-createdAt";
+                /** @description 페이지 번호 (0부터 시작) */
+                page?: components["parameters"]["Page"];
+                /** @description 페이지 크기 */
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 사용자 목록 (페이지) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdminPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 대상 사용자 ID */
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 사용자 상세 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdminDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     updateUserRole: {
         parameters: {
             query?: never;
@@ -6956,6 +8606,160 @@ export interface operations {
                      *           "message": "ORG_ADMIN 역할에는 관리 기관(orgId)을 지정해야 합니다."
                      *         }
                      *       ]
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disableUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 대상 사용자 ID */
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "reason": "반복적인 자원 남용 신고 확인 (운영정책 위반)"
+                 *     }
+                 */
+                "application/json": {
+                    /** @description 비활성화 사유 (이력·감사에 기록) */
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 비활성화된 사용자 상세 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdminDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 전환 불가 (본인 계정, 이미 DISABLED, 또는 WITHDRAWN 계정) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "비활성화할 수 없는 계정입니다",
+                     *       "status": 409,
+                     *       "detail": "본인 계정은 비활성화할 수 없습니다.",
+                     *       "instance": "/api/v1/admin/users/1/disable",
+                     *       "code": "ACCOUNT_SELF_DISABLE_FORBIDDEN"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    enableUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 대상 사용자 ID */
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 활성화된 사용자 상세 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdminDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 전환 불가 (DISABLED 상태가 아님 — WITHDRAWN 포함) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "활성화할 수 없는 계정입니다",
+                     *       "status": 409,
+                     *       "detail": "비활성화 상태의 계정만 활성화할 수 있습니다. 탈퇴한 계정은 되돌릴 수 없습니다.",
+                     *       "instance": "/api/v1/admin/users/57/enable",
+                     *       "code": "ACCOUNT_NOT_DISABLED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    resetUserMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 대상 사용자 ID */
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 초기화 완료 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "2단계 인증을 초기화했습니다. 사용자는 비밀번호로 로그인한 뒤 다시 등록해야 합니다."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description 2FA가 등록되어 있지 않은 사용자 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "2단계 인증이 설정되어 있지 않습니다",
+                     *       "status": 409,
+                     *       "detail": "해당 사용자는 2단계 인증을 사용하고 있지 않습니다.",
+                     *       "instance": "/api/v1/admin/users/57/mfa-reset",
+                     *       "code": "MFA_NOT_ENROLLED"
                      *     }
                      */
                     "application/problem+json": components["schemas"]["Problem"];
@@ -7221,6 +9025,11 @@ export interface operations {
                 "application/json": {
                     /** @description 파기 확인용 VM 이름 (VM의 `name`과 정확히 일치해야 함) */
                     confirmName: string;
+                    /**
+                     * @description true면 삭제 보호(`deletion_protection`)를 무시하고 진행 (M6 — 감사에 오버라이드 사실 기록. 미지정/false면 보호 켜진 VM은 409)
+                     * @default false
+                     */
+                    overrideProtection?: boolean;
                 };
             };
         };
@@ -7834,8 +9643,8 @@ export interface operations {
     listAdminTasks: {
         parameters: {
             query?: {
-                /** @description 작업 상태 필터 */
-                status?: components["schemas"]["ProvisioningTaskStatus"];
+                /** @description 작업 상태 필터 — **다중값 지원** (v0.9.0: 반복 지정 시 OR로 결합, 예 `?status=FAILED&status=NEEDS_ADMIN` — "문제 작업" 화면용) */
+                status?: components["schemas"]["ProvisioningTaskStatus"][];
                 /** @description 작업 종류 필터 */
                 kind?: components["schemas"]["ProvisioningTaskKind"];
                 /** @description VM 필터 */

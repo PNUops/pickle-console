@@ -619,7 +619,12 @@ export function fetchAdminTasks(params: {
   size?: number
 } = {}): Promise<AdminTaskPage> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/admin/tasks', { params: { query: params } })
+    // 계약 v0.9.0에서 status가 다중값(배열)이 됐다 — 화면은 아직 단일 선택이라
+    // 여기서 배열로 감싼다 (다중 선택 UI가 생기면 시그니처를 배열로 올린다).
+    const { status, ...rest } = params
+    const { data, error } = await api.GET('/admin/tasks', {
+      params: { query: { ...rest, status: status ? [status] : undefined } },
+    })
     if (!data) throw toApiError(error, '작업 목록을 불러오지 못했습니다.')
     return data
   })

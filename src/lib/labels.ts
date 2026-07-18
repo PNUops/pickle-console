@@ -20,7 +20,9 @@ export const GROUP_ROLE_LABELS: Record<GroupMemberRole, string> = {
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   USER: '사용자',
+  ORG_MANAGER: '기관 운영자',
   ORG_ADMIN: '기관 관리자',
+  SYS_MANAGER: '시스템 운영자',
   SYS_ADMIN: '시스템 관리자',
 }
 

@@ -430,8 +430,11 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
 /** 계약상 열람이 허용되는 상태 (그 외는 409). */
 const PASSWORD_VIEWABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING']
 
-/** 재생성은 EDITOR 이상 권한이 필요하다 (계약). */
-function canEditVm(role: GroupMemberRole): boolean {
+/**
+ * 재생성은 EDITOR 이상 권한이 필요하다 (계약). 관리자 경로의 VM 상세는
+ * 그룹 역할이 없어(myGroupRole null) 편집 불가로 취급한다.
+ */
+function canEditVm(role: GroupMemberRole | null | undefined): boolean {
   return role === 'EDITOR' || role === 'OWNER'
 }
 

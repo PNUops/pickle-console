@@ -662,7 +662,8 @@ export function vmSettingsOf(vm: VmDetail): VmSettingView[] {
       description: meta.description,
       requiredRole: meta.requiredRole,
       editable:
-        stateEditable && ROLE_RANK[vm.myGroupRole] >= ROLE_RANK[meta.requiredRole],
+        stateEditable && vm.myGroupRole != null
+        && ROLE_RANK[vm.myGroupRole] >= ROLE_RANK[meta.requiredRole],
       updatedByName: stored ? '홍길동' : null,
       updatedAt: stored ? '2026-07-18T14:00:00+09:00' : null,
     }

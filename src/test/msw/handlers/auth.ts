@@ -51,6 +51,8 @@ export const studentProfile: Schemas['UserProfile'] = {
   memberships: [
     { groupId: 7, groupName: '홍길동', groupKind: 'PERSONAL', role: 'OWNER' },
   ],
+  mfaEnabled: false,
+  pendingConsents: [],
 }
 
 export const orgAdminProfile: Schemas['UserProfile'] = {
@@ -60,6 +62,8 @@ export const orgAdminProfile: Schemas['UserProfile'] = {
   memberships: [
     { groupId: 9, groupName: '김관리', groupKind: 'PERSONAL', role: 'OWNER' },
   ],
+  mfaEnabled: false,
+  pendingConsents: [],
 }
 
 export const sysAdminProfile: Schemas['UserProfile'] = {
@@ -69,6 +73,8 @@ export const sysAdminProfile: Schemas['UserProfile'] = {
   memberships: [
     { groupId: 5, groupName: '이시스템', groupKind: 'PERSONAL', role: 'OWNER' },
   ],
+  mfaEnabled: false,
+  pendingConsents: [],
 }
 
 export const studentBProfile: Schemas['UserProfile'] = {
@@ -78,6 +84,8 @@ export const studentBProfile: Schemas['UserProfile'] = {
   memberships: [
     { groupId: 8, groupName: '박영희', groupKind: 'PERSONAL', role: 'OWNER' },
   ],
+  mfaEnabled: false,
+  pendingConsents: [],
 }
 
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
