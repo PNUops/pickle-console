@@ -6,6 +6,8 @@ import { adminOpsHandlers, resetAdminOpsFixtures } from './handlers/admin-ops'
 import { announcementHandlers, resetAnnouncementFixtures } from './handlers/announcements'
 import { auditHandlers, resetAuditFixtures } from './handlers/audit'
 import { authHandlers } from './handlers/auth'
+import { consentHandlers } from './handlers/consent'
+import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
 import { groupHandlers, resetGroupFixtures } from './handlers/groups'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
@@ -20,6 +22,8 @@ import { resetVmFixtures, vmHandlers } from './handlers/vms'
 export const handlers: RequestHandler[] = [
   ...authHandlers,
   ...accountHandlers,
+  ...mfaHandlers,
+  ...consentHandlers,
   ...userHandlers,
   ...referenceHandlers,
   ...groupHandlers,

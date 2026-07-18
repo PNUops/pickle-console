@@ -100,6 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [finishLogin],
   )
 
+  const refreshProfile = useCallback(async () => {
+    const { data } = await api.GET('/me')
+    if (data) setState((prev) => ({ ...prev, status: 'authenticated', user: data }))
+  }, [])
+
   const logout = useCallback(async () => {
     // Revoke the refresh cookie server-side; the endpoint is idempotent, and a
     // network failure must not keep the user "logged in" client-side.
@@ -117,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient])
 
   const value = useMemo(
-    () => ({ status: state.status, user: state.user, login, completeMfa, logout }),
-    [state, login, completeMfa, logout],
+    () => ({ status: state.status, user: state.user, login, completeMfa, refreshProfile, logout }),
+    [state, login, completeMfa, refreshProfile, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

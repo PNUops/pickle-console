@@ -57,6 +57,15 @@ export type VmSettingsUpdateRequest = Schemas['VmSettingsUpdateRequest']
 export type IpPoolSummary = Schemas['IpPoolSummary']
 export type MessageResponse = Schemas['MessageResponse']
 
+/* ─── 2FA·약관 동의 (M6) ─── */
+export type MfaSetupResponse = Schemas['MfaSetupResponse']
+export type MfaRecoveryCodesResponse = Schemas['MfaRecoveryCodesResponse']
+export type TermsDocType = Schemas['TermsDocType']
+export type TermsVersionView = Schemas['TermsVersionView']
+export type TermsDocumentView = Schemas['TermsDocumentView']
+export type ConsentView = Schemas['ConsentView']
+export type ConsentInput = Schemas['ConsentInput']
+
 /* ─── HTTP 공개·도메인·인증서 (M4A) ─── */
 export type PublicationView = Schemas['PublicationView']
 export type PublishRequest = Schemas['PublishRequest']
@@ -891,6 +900,93 @@ export function withdrawMyAccount(body: {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/withdraw', { body })
     if (!data) throw toApiError(error, '회원 탈퇴를 처리하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 2FA (M6) ─── */
+
+export function beginMfaSetup(password: string): Promise<MfaSetupResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/mfa/totp', { body: { password } })
+    if (!data) throw toApiError(error, '2단계 인증 등록을 시작하지 못했습니다.')
+    return data
+  })
+}
+
+export function activateMfa(code: string): Promise<MfaRecoveryCodesResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/mfa/totp/activate', { body: { code } })
+    if (!data) throw toApiError(error, '2단계 인증을 활성화하지 못했습니다.')
+    return data
+  })
+}
+
+export function disableMfa(body: {
+  password: string
+  code?: string
+  recoveryCode?: string
+}): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/mfa/disable', { body })
+    if (!data) throw toApiError(error, '2단계 인증을 해제하지 못했습니다.')
+    return data
+  })
+}
+
+export function regenerateRecoveryCodes(body: {
+  password: string
+  code: string
+}): Promise<MfaRecoveryCodesResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/mfa/recovery-codes', { body })
+    if (!data) throw toApiError(error, '복구 코드를 재발급하지 못했습니다.')
+    return data
+  })
+}
+
+export function resetUserMfa(userId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/users/{userId}/mfa-reset', {
+      params: { path: { userId } },
+    })
+    if (!data) throw toApiError(error, '2단계 인증을 초기화하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 약관·동의 (M6) ─── */
+
+export function fetchCurrentTerms(): Promise<TermsVersionView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/meta/terms')
+    if (!data) throw toApiError(error, '약관 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchTermsDocument(docType: TermsDocType): Promise<TermsDocumentView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/meta/terms/{docType}', {
+      params: { path: { docType } },
+    })
+    if (!data) throw toApiError(error, '약관 본문을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchMyConsents(): Promise<ConsentView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/me/consents')
+    if (!data) throw toApiError(error, '동의 이력을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function acceptConsents(consents: ConsentInput[]): Promise<ConsentView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/consents', { body: { consents } })
+    if (!data) throw toApiError(error, '약관 동의를 기록하지 못했습니다.')
     return data
   })
 }
