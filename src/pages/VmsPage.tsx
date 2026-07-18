@@ -73,8 +73,11 @@ export function VmsPage() {
                         to={`/console/vms/${vm.id}`}
                         className="font-medium text-primary-700 hover:underline"
                       >
-                        {vm.name}
+                        {vm.displayName || vm.name}
                       </Link>
+                      {vm.displayName && (
+                        <span className="ml-1 text-xs text-neutral-400">{vm.name}</span>
+                      )}
                     </TD>
                     <TD>
                       <VmStatusBadge status={vm.status} />

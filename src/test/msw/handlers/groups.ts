@@ -175,6 +175,23 @@ export const groupHandlers: RequestHandler[] = [
     return HttpResponse.json(toDetail(record), { status: 200 })
   }),
 
+  http.delete('*/api/v1/groups/:groupId', ({ params }) => {
+    const record = findGroup(params.groupId!)
+    if (!record) return notFound()
+    if (record.detail.kind === 'PERSONAL') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '그룹을 삭제할 수 없습니다',
+        status: 409,
+        detail: '개인 그룹은 삭제할 수 없습니다. 계정 탈퇴 시에만 함께 정리됩니다.',
+        code: 'GROUP_PERSONAL_UNDELETABLE',
+      })
+    }
+    const index = groupStore.findIndex((g) => g.detail.id === record.detail.id)
+    if (index >= 0) groupStore.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.post('*/api/v1/groups/:groupId/members', async ({ params, request }) => {
     const record = findGroup(params.groupId!)
     if (!record) return notFound()

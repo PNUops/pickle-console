@@ -100,6 +100,7 @@ export function AdminTasksPage() {
                 <TR>
                   <TH>작업</TH>
                   <TH>VM</TH>
+                  <TH>그룹</TH>
                   <TH>기관</TH>
                   <TH>상태</TH>
                   <TH>시도</TH>
@@ -129,6 +130,7 @@ export function AdminTasksPage() {
                         </span>
                       )}
                     </TD>
+                    <TD>{task.groupName ?? '—'}</TD>
                     <TD>{task.orgName ?? '—'}</TD>
                     <TD>
                       <TaskStatusBadge status={task.status} />
