@@ -38,6 +38,7 @@ import {
   ConfirmNameModal,
   DdayBadge,
   GroupRoleBadge,
+  Input,
   Modal,
   Pagination,
   Select,
@@ -152,10 +153,13 @@ export function VmDetailPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-neutral-900">{data.name}</h1>
+            <h1 className="text-2xl font-bold text-neutral-900">
+              {data.displayName || data.name}
+            </h1>
             <VmStatusBadge status={data.status} />
           </div>
           <p className="mt-1 text-sm text-neutral-500">
+            {data.displayName && <span>{data.name} · </span>}
             {data.hostname} · {data.groupName}
           </p>
         </div>
@@ -800,6 +804,10 @@ function VmSettingControl({
     )
   }
 
+  if (setting.valueType === 'STRING') {
+    return <StringSettingControl setting={setting} pending={pending} onChange={onChange} />
+  }
+
   // ENUM
   const isRoleEnum = setting.key === 'password_reveal_min_role'
   const current = String(setting.value)
@@ -819,6 +827,45 @@ function VmSettingControl({
           </option>
         ))}
       </Select>
+    </div>
+  )
+}
+
+/** STRING 설정 편집 (예: display_name) — 텍스트 입력 + 저장. 빈 문자열은 해제. */
+function StringSettingControl({
+  setting,
+  pending,
+  onChange,
+}: {
+  setting: VmSettingView
+  pending: boolean
+  onChange: (value: unknown) => void
+}) {
+  const initial = typeof setting.value === 'string' ? setting.value : ''
+  const [text, setText] = useState(initial)
+  const disabled = !setting.editable || pending
+  const dirty = text !== initial
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        className="w-48"
+        value={text}
+        disabled={disabled}
+        maxLength={100}
+        placeholder="미설정 (이름 표시)"
+        aria-label={setting.label}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={disabled || !dirty}
+        loading={pending}
+        onClick={() => onChange(text.trim())}
+      >
+        저장
+      </Button>
     </div>
   )
 }
