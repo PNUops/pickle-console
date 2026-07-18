@@ -1,3 +1,4 @@
+import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
@@ -119,7 +120,7 @@ function actorOf(request: Request) {
 }
 
 function inScope(actor: NonNullable<ReturnType<typeof actorOf>>, row: AdminUserRecord): boolean {
-  if (actor.role === 'SYS_ADMIN') return true
+  if (isSysTier(actor.role)) return true // SYS_ADMIN·SYS_MANAGER: 전 기관
   return row.orgId === actor.orgId || row.visibleToOrg === actor.orgId
 }
 
@@ -155,7 +156,7 @@ const forbidden = () =>
 export const userHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/users', ({ request }) => {
     const actor = actorOf(request)
-    if (!actor || (actor.role !== 'ORG_ADMIN' && actor.role !== 'SYS_ADMIN')) return forbidden()
+    if (!actor || actor.role === 'USER') return forbidden()
     const url = new URL(request.url)
     const q = url.searchParams.get('q')?.toLowerCase()
     const status = url.searchParams.get('status')
@@ -184,7 +185,7 @@ export const userHandlers: RequestHandler[] = [
 
   http.get('*/api/v1/admin/users/:userId', ({ request, params }) => {
     const actor = actorOf(request)
-    if (!actor || (actor.role !== 'ORG_ADMIN' && actor.role !== 'SYS_ADMIN')) return forbidden()
+    if (!actor || actor.role === 'USER') return forbidden()
     const row = adminUserStore.find((u) => u.id === Number(params.userId))
     if (!row || !inScope(actor, row)) return notFound(String(params.userId))
     return HttpResponse.json(toDetail(row), { status: 200 })

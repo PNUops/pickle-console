@@ -1,3 +1,4 @@
+import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
@@ -388,7 +389,7 @@ export const adminOpsHandlers: RequestHandler[] = [
     if (
       orgId &&
       profile &&
-      profile.role !== 'SYS_ADMIN' &&
+      !isSysTier(profile.role) &&
       Number(orgId) !== profile.orgId
     ) {
       return notFound()

@@ -36,6 +36,22 @@ export const sysAdminUser: Schemas['UserSummary'] = {
   role: 'SYS_ADMIN',
 }
 
+/** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프 (M6). */
+export const orgManagerUser: Schemas['UserSummary'] = {
+  id: 8,
+  email: 'manager.choi@pusan.ac.kr',
+  name: '최운영',
+  role: 'ORG_MANAGER',
+}
+
+/** 시스템 운영자 — SYS_ADMIN 하위, 전 기관 조회 (M6). */
+export const sysManagerUser: Schemas['UserSummary'] = {
+  id: 6,
+  email: 'sysmanager.jung@pusan.ac.kr',
+  name: '정시스템운영',
+  role: 'SYS_MANAGER',
+}
+
 /** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
 export const studentBUser: Schemas['UserSummary'] = {
   id: 58,
@@ -77,6 +93,28 @@ export const sysAdminProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
+export const orgManagerProfile: Schemas['UserProfile'] = {
+  ...orgManagerUser,
+  orgId: 1,
+  status: 'ACTIVE',
+  memberships: [
+    { groupId: 12, groupName: '최운영', groupKind: 'PERSONAL', role: 'OWNER' },
+  ],
+  mfaEnabled: false,
+  pendingConsents: [],
+}
+
+export const sysManagerProfile: Schemas['UserProfile'] = {
+  ...sysManagerUser,
+  orgId: null,
+  status: 'ACTIVE',
+  memberships: [
+    { groupId: 13, groupName: '정시스템운영', groupKind: 'PERSONAL', role: 'OWNER' },
+  ],
+  mfaEnabled: false,
+  pendingConsents: [],
+}
+
 export const studentBProfile: Schemas['UserProfile'] = {
   ...studentBUser,
   orgId: null,
@@ -113,7 +151,9 @@ export const MFA_VALID_RECOVERY_CODE = 'abcd-efgh-ijkl'
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfile']> = {
   'access-student': studentProfile,
   'access-org-admin': orgAdminProfile,
+  'access-org-manager': orgManagerProfile,
   'access-sys-admin': sysAdminProfile,
+  'access-sys-manager': sysManagerProfile,
   'access-student-b': studentBProfile,
   'access-mfa': mfaProfile,
 }

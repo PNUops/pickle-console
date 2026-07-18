@@ -1,3 +1,4 @@
+import { isOrgTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, studentUser } from './auth'
@@ -520,7 +521,7 @@ export const adminHandlers: RequestHandler[] = [
       role?: Schemas['UserRole']
       orgId?: number | null
     }
-    if (body.role === 'ORG_ADMIN' && body.orgId == null) {
+    if (body.role && isOrgTier(body.role) && body.orgId == null) {
       return problemResponse({
         type: 'about:blank',
         title: '입력값이 올바르지 않습니다',

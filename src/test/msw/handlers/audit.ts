@@ -1,3 +1,4 @@
+import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
@@ -162,7 +163,7 @@ export const auditHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
 
     // 계약: orgId 필터는 SYS_ADMIN 전용 — ORG_ADMIN이 다른 기관을 지정하면 404 (존재 비공개)
-    if (orgId && profile.role !== 'SYS_ADMIN' && Number(orgId) !== profile.orgId) {
+    if (orgId && !isSysTier(profile.role) && Number(orgId) !== profile.orgId) {
       return problemResponse({
         type: 'about:blank',
         title: '리소스를 찾을 수 없습니다',
@@ -175,7 +176,7 @@ export const auditHandlers: RequestHandler[] = [
 
     const filtered = auditStore
       // ORG_ADMIN은 행위자가 자기 기관 소속인 행만 (계약)
-      .filter((row) => profile.role === 'SYS_ADMIN' || row.actorOrgId === profile.orgId)
+      .filter((row) => isSysTier(profile.role) || row.actorOrgId === profile.orgId)
       .filter((row) => !orgId || row.actorOrgId === Number(orgId))
       .filter((row) => !action || row.action === action)
       .filter((row) => !actorEmail || (row.actorEmail ?? '').includes(actorEmail))

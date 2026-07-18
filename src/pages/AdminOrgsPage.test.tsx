@@ -85,7 +85,7 @@ describe('사용자 역할 관리', () => {
     await user.click(screen.getByRole('button', { name: '역할 변경' }))
 
     expect(
-      screen.getByText('기관 관리자는 관리할 기관을 선택해야 합니다.'),
+      screen.getByText('기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.'),
     ).toBeInTheDocument()
     expect(userPatchBodies).toHaveLength(0)
   })

@@ -1,3 +1,4 @@
+import { isOrgTier, isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
@@ -70,7 +71,7 @@ export const announcementHandlers: RequestHandler[] = [
     if (!profile) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
-    if (profile.role === 'ORG_ADMIN') {
+    if (isOrgTier(profile.role)) {
       // 계약: orgId 필터는 SYS_ADMIN 전용 — 다른 기관 지정 시 404 (존재 비공개)
       if (orgId && Number(orgId) !== profile.orgId) {
         return problemResponse({
@@ -100,7 +101,7 @@ export const announcementHandlers: RequestHandler[] = [
     const visible = announcementStore
       .filter(
         (a) =>
-          profile.role === 'SYS_ADMIN' ||
+          isSysTier(profile.role) ||
           a.scope === 'ALL' ||
           a.senderOrgId === profile.orgId,
       )
@@ -133,7 +134,7 @@ export const announcementHandlers: RequestHandler[] = [
     // 계약: ORG 범위에서 ORG_ADMIN의 orgId는 생략 가능하나, 지정 시 자기 기관과 일치해야 한다 (불일치 422)
     if (
       body.scope === 'ORG' &&
-      profile.role === 'ORG_ADMIN' &&
+      isOrgTier(profile.role) &&
       body.orgId != null &&
       body.orgId !== profile.orgId
     ) {
@@ -169,7 +170,7 @@ export const announcementHandlers: RequestHandler[] = [
               .find((g) => g.id === body.groupId)?.memberCount ?? 0)
     const created: StoredAnnouncement = {
       id: nextAnnouncementId++,
-      senderOrgId: profile.role === 'SYS_ADMIN' ? null : (profile.orgId ?? null),
+      senderOrgId: isSysTier(profile.role) ? null : (profile.orgId ?? null),
       title: body.title,
       scope: body.scope,
       orgId: body.scope === 'ORG' ? (body.orgId ?? profile.orgId ?? null) : null,
