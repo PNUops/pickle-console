@@ -80,7 +80,7 @@ function App() {
       <Route
         path="admin"
         element={
-          <RequireRole roles={['ORG_ADMIN', 'SYS_ADMIN']}>
+          <RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}>
             <AdminLayout />
           </RequireRole>
         }
@@ -100,7 +100,7 @@ function App() {
         <Route
           path="notification-log"
           element={
-            <RequireRole roles={['SYS_ADMIN']}>
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNotificationLogPage />
             </RequireRole>
           }
@@ -108,7 +108,7 @@ function App() {
         <Route
           path="drift"
           element={
-            <RequireRole roles={['SYS_ADMIN']}>
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminDriftPage />
             </RequireRole>
           }
@@ -116,7 +116,7 @@ function App() {
         <Route
           path="ips"
           element={
-            <RequireRole roles={['SYS_ADMIN']}>
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminIpsPage />
             </RequireRole>
           }
@@ -124,7 +124,7 @@ function App() {
         <Route
           path="settings"
           element={
-            <RequireRole roles={['SYS_ADMIN']}>
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminSettingsPage />
             </RequireRole>
           }
@@ -132,7 +132,7 @@ function App() {
         <Route
           path="tasks"
           element={
-            <RequireRole roles={['SYS_ADMIN']}>
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminTasksPage />
             </RequireRole>
           }
@@ -140,7 +140,7 @@ function App() {
         <Route
           path="nodes"
           element={
-            <RequireRole roles={['SYS_ADMIN']}>
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNodesPage />
             </RequireRole>
           }

@@ -1,8 +1,11 @@
 import { useAuth } from '../auth/auth-context'
+import { isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { AppShell, type NavSection } from './AppShell'
 
 export function AdminLayout() {
   const { user } = useAuth()
+  const sysTier = !!user && isSysTier(user.role)
+  const sysAdmin = !!user && isSysAdminOnly(user.role)
 
   const sections: NavSection[] = [
     {
@@ -31,15 +34,16 @@ export function AdminLayout() {
         { to: '/admin/notifications', label: '알림함' },
       ],
     },
-    // 시스템 섹션은 SYS_ADMIN 전용 (각 라우트에서도 한 번 더 가드)
-    ...(user?.role === 'SYS_ADMIN'
+    // 시스템 섹션은 시스템 계층(SYS_MANAGER·SYS_ADMIN) 전용 — 각 라우트에서도
+    // 한 번 더 가드한다. 기관 관리(org 생성/수정)만 SYS_ADMIN 전용(§4).
+    ...(sysTier
       ? [
           {
             heading: '시스템',
             items: [
               { to: '/admin/nodes', label: '노드/용량' },
               { to: '/admin/ips', label: 'IP 할당' },
-              { to: '/admin/orgs', label: '기관 관리' },
+              ...(sysAdmin ? [{ to: '/admin/orgs', label: '기관 관리' }] : []),
               { to: '/admin/tasks', label: '작업' },
               { to: '/admin/settings', label: '플랫폼 설정' },
               { to: '/admin/drift', label: '드리프트' },
