@@ -69,6 +69,19 @@ describe('관리자 사용자 목록', () => {
     expect(await screen.findByRole('button', { name: '계정 비활성화' })).toBeInTheDocument()
   })
 
+  test('SYS_ADMIN은 상세에서 2단계 인증을 초기화할 수 있다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(await screen.findByRole('button', { name: '2단계 인증 초기화' }))
+
+    const dialog = within(screen.getByRole('dialog'))
+    await user.click(dialog.getByRole('button', { name: '초기화' }))
+
+    expect(await screen.findByText(/2단계 인증을 초기화했습니다/)).toBeInTheDocument()
+  })
+
   test('ORG_ADMIN에게는 비활성화 조작이 노출되지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()

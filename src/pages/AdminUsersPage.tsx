@@ -6,6 +6,7 @@ import {
   fetchAdminUser,
   fetchAdminUsers,
   fetchOrgs,
+  resetUserMfa,
   type AdminUserSort,
   type UserAdminView,
   type UserRole,
@@ -34,6 +35,7 @@ import {
   THead,
   TR,
   SortableTH,
+  useToast,
   type BadgeVariant,
 } from '../components/ui'
 import { cn } from '../lib/cn'
@@ -310,6 +312,7 @@ function UserDetailPanel({ userId, canManage }: { userId: number; canManage: boo
           <Field label="역할" value={USER_ROLE_LABELS[user.role]} />
           <Field label="가입일" value={formatDateTime(user.createdAt)} />
           <Field label="활성 VM 수" value={String(user.activeVmCount)} />
+          <Field label="2단계 인증" value={user.mfaEnabled ? '사용' : '미사용'} />
           {user.disabledReason && <Field label="비활성화 사유" value={user.disabledReason} />}
         </dl>
 
@@ -349,7 +352,9 @@ function UserDetailPanel({ userId, canManage }: { userId: number; canManage: boo
           )}
         </section>
 
-        {canManage && <UserStatusActions userId={userId} status={user.status} />}
+        {canManage && (
+          <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} />
+        )}
       </CardContent>
     </Card>
   )
@@ -366,16 +371,40 @@ function Field({ label, value }: { label: string; value: string }) {
 
 /* ─── 비활성화/해제 (SYS_ADMIN 전용) ─── */
 
-function UserStatusActions({ userId, status }: { userId: number; status: UserStatus }) {
+function UserStatusActions({
+  userId,
+  status,
+  mfaEnabled,
+}: {
+  userId: number
+  status: UserStatus
+  mfaEnabled: boolean
+}) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [mfaResetOpen, setMfaResetOpen] = useState(false)
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
   }
+
+  const mfaReset = useMutation({
+    mutationFn: () => resetUserMfa(userId),
+    onSuccess: async (data) => {
+      setMfaResetOpen(false)
+      setError(null)
+      toast.success(data.message)
+      await invalidate()
+    },
+    onError: (err) => {
+      setMfaResetOpen(false)
+      setError(toApiError(err, '2단계 인증을 초기화하지 못했습니다.').message)
+    },
+  })
 
   const disable = useMutation({
     mutationFn: () => disableUser(userId, reason.trim()),
@@ -471,6 +500,39 @@ function UserStatusActions({ userId, status }: { userId: number; status: UserSta
             )}
           </label>
         </div>
+      </Modal>
+
+      {mfaEnabled && (
+        <div className="space-y-2 border-t border-neutral-200 pt-3">
+          <p className="text-sm text-neutral-500">
+            인증 앱·복구 코드를 모두 분실한 사용자의 2단계 인증을 초기화합니다. 오프라인 본인 확인
+            후에만 수행해야 하는 민감 작업입니다.
+          </p>
+          <Button variant="secondary" onClick={() => setMfaResetOpen(true)}>
+            2단계 인증 초기화
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        open={mfaResetOpen}
+        onClose={() => setMfaResetOpen(false)}
+        title="2단계 인증 초기화"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setMfaResetOpen(false)}>
+              돌아가기
+            </Button>
+            <Button variant="danger" loading={mfaReset.isPending} onClick={() => mfaReset.mutate()}>
+              초기화
+            </Button>
+          </>
+        }
+      >
+        <Alert variant="warning">
+          초기화하면 대상 사용자의 2단계 인증 등록과 복구 코드가 삭제됩니다. 이후 비밀번호만으로
+          로그인할 수 있으며, 감사 기록과 사용자 통지가 남습니다.
+        </Alert>
       </Modal>
     </section>
   )

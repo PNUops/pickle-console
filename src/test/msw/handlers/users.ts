@@ -57,7 +57,7 @@ function initialUsers(): AdminUserRecord[] {
       role: 'USER',
       orgId: null,
       status: 'ACTIVE',
-      mfaEnabled: false,
+      mfaEnabled: true,
       createdAt: '2026-02-10T09:00:00+09:00',
       withdrawnAt: null,
       disabledAt: null,
