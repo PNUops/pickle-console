@@ -62,17 +62,30 @@ export function UserMenu() {
             {user.email}
           </p>
           {user.role === 'USER' && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false)
-                navigate('/console/ssh-keys')
-              }}
-              className="block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-            >
-              SSH 키
-            </button>
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false)
+                  navigate('/console/ssh-keys')
+                }}
+                className="block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+              >
+                SSH 키
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false)
+                  navigate('/console/account')
+                }}
+                className="block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+              >
+                계정 설정
+              </button>
+            </>
           )}
           <button
             type="button"

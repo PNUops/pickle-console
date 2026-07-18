@@ -19,8 +19,11 @@ import { AdminSettingsPage } from './pages/AdminSettingsPage'
 import { AdminTasksPage } from './pages/AdminTasksPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
+import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
+import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { LandingPage } from './pages/LandingPage'
@@ -31,6 +34,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SignupPage } from './pages/SignupPage'
 import { SshKeysPage } from './pages/SshKeysPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
@@ -45,6 +49,8 @@ function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="signup" element={<SignupPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route
@@ -64,6 +70,7 @@ function App() {
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
         <Route path="ssh-keys" element={<SshKeysPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -80,6 +87,7 @@ function App() {
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="audit" element={<AdminAuditPage />} />

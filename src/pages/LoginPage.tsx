@@ -80,6 +80,11 @@ export function LoginPage() {
             <Button type="submit" className="w-full" loading={submitting}>
               로그인
             </Button>
+            <p className="text-center text-sm">
+              <Link to="/forgot-password" className="font-medium text-primary-700 hover:underline">
+                비밀번호를 잊으셨나요?
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
