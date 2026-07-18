@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { Spinner } from '../components/ui'
 import { homePathFor, useAuth, type UserRole } from './auth-context'
+import { ConsentGate } from './ConsentGate'
 
 /**
  * Route guard: requires an authenticated user whose role is in `roles`.
@@ -25,6 +26,10 @@ export function RequireRole({ roles, children }: { roles: UserRole[]; children: 
   }
   if (!roles.includes(user.role)) {
     return <Navigate to={homePathFor(user.role)} replace />
+  }
+  // Lazy consent enforcement: a post-signup revision surfaces here (API not blocked).
+  if (user.pendingConsents.length > 0) {
+    return <ConsentGate pending={user.pendingConsents} />
   }
   return <>{children}</>
 }

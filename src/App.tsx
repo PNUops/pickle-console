@@ -37,6 +37,7 @@ import { RequestsPage } from './pages/RequestsPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SignupPage } from './pages/SignupPage'
 import { SshKeysPage } from './pages/SshKeysPage'
+import { TermsPage } from './pages/TermsPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
@@ -51,6 +52,7 @@ function App() {
         <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+        <Route path="terms/:docType" element={<TermsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route

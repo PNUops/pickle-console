@@ -8,6 +8,7 @@ async function fillSignupForm(values: {
   email?: string
   password?: string
   passwordConfirm?: string
+  agree?: boolean
 }) {
   const user = userEvent.setup()
   if (values.name) await user.type(screen.getByLabelText('이름'), values.name)
@@ -15,6 +16,11 @@ async function fillSignupForm(values: {
   if (values.password) await user.type(screen.getByLabelText('비밀번호'), values.password)
   if (values.passwordConfirm) {
     await user.type(screen.getByLabelText('비밀번호 확인'), values.passwordConfirm)
+  }
+  if (values.agree !== false) {
+    // consent checkboxes appear once /meta/terms loads
+    const boxes = await screen.findAllByRole('checkbox')
+    for (const box of boxes) await user.click(box)
   }
   await user.click(screen.getByRole('button', { name: '회원가입' }))
   return user
@@ -84,6 +90,23 @@ describe('회원가입 폼 검증', () => {
     expect(
       await screen.findByText('해당 주소가 등록되어 있다면 인증 메일을 다시 발송했습니다.'),
     ).toBeInTheDocument()
+  })
+
+  test('약관에 동의하지 않으면 가입 버튼이 비활성화된다', async () => {
+    renderApp('/signup')
+    await screen.findByRole('heading', { name: '회원가입' })
+    // 약관 체크박스가 로드될 때까지 대기
+    await screen.findAllByRole('checkbox')
+
+    await fillSignupForm({
+      name: '홍길동',
+      email: 'gildong.hong@pusan.ac.kr',
+      password: 'long-enough-pw',
+      passwordConfirm: 'long-enough-pw',
+      agree: false,
+    })
+
+    expect(screen.getByRole('button', { name: '회원가입' })).toBeDisabled()
   })
 
   test('이미 가입된 이메일이면 서버 메시지를 보여준다', async () => {

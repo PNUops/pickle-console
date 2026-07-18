@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
+import { fetchCurrentTerms } from '../api/queries'
 import { ResendVerification } from '../components/ResendVerification'
-import { Alert, Button, Card, CardContent, FormField, Input } from '../components/ui'
+import { Alert, Button, Card, CardContent, Checkbox, FormField, Input } from '../components/ui'
 import { PASSWORD_MIN_LENGTH, PUSAN_EMAIL_RE } from '../lib/validation'
 
 interface FieldErrors {
@@ -40,24 +42,38 @@ export function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [agreed, setAgreed] = useState<Record<string, boolean>>({})
+  const [consentError, setConsentError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [completed, setCompleted] = useState(false)
 
+  const terms = useQuery({ queryKey: ['terms'], queryFn: fetchCurrentTerms })
+  const currentTerms = terms.data ?? []
+  const allAgreed = currentTerms.length > 0 && currentTerms.every((doc) => agreed[doc.docType])
+
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     setFormError(null)
+    setConsentError(null)
     const errors = validate({ name, email, password, passwordConfirm })
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
+    if (!allAgreed) {
+      setConsentError('이용약관과 개인정보처리방침에 모두 동의해야 가입할 수 있습니다.')
+      return
+    }
 
     setSubmitting(true)
     try {
-      // consents는 W2-A(약관·동의 UI)에서 실제 문서 버전으로 채워진다 — 그 전까지
-      // 서버(Lane 미구현)는 이 필드를 요구하지 않으므로 빈 배열로 계약 타입만 충족.
       const { data, error } = await api.POST('/auth/signup', {
-        body: { name: name.trim(), email, password, consents: [] },
+        body: {
+          name: name.trim(),
+          email,
+          password,
+          consents: currentTerms.map((doc) => ({ docType: doc.docType, version: doc.version })),
+        },
       })
       if (data) {
         setCompleted(true)
@@ -173,7 +189,34 @@ export function SignupPage() {
                 required
               />
             </FormField>
-            <Button type="submit" className="w-full" loading={submitting}>
+
+            <div className="space-y-2">
+              {consentError && <Alert variant="danger">{consentError}</Alert>}
+              {currentTerms.map((doc) => (
+                <Checkbox
+                  key={doc.docType}
+                  checked={agreed[doc.docType] ?? false}
+                  onChange={(event) =>
+                    setAgreed((prev) => ({ ...prev, [doc.docType]: event.target.checked }))
+                  }
+                  label={
+                    <span>
+                      <Link
+                        to={`/terms/${doc.docType}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-primary-700 hover:underline"
+                      >
+                        {doc.title}
+                      </Link>
+                      <span className="text-neutral-500">에 동의합니다.</span>
+                    </span>
+                  }
+                />
+              ))}
+            </div>
+
+            <Button type="submit" className="w-full" loading={submitting} disabled={!allAgreed}>
               회원가입
             </Button>
           </form>
