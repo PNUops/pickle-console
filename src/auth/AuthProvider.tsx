@@ -90,7 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeMfa = useCallback(
     async (input: { mfaToken: string; code?: string; recoveryCode?: string }) => {
-      const { data, error } = await api.POST('/auth/mfa', { body: input })
+      // guardNetwork so a dropped connection surfaces the Korean network message
+      // rather than a raw fetch rejection (consistent with /me in finishLogin).
+      const { data, error } = await guardNetwork(() => api.POST('/auth/mfa', { body: input }))
       if (!data) {
         throw toApiError(error, '2단계 인증에 실패했습니다. 다시 시도해 주세요.')
       }
