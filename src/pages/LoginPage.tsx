@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
+import { fetchSystemStatus } from '../api/queries'
 import { ApiError } from '../api/problem'
 import { homePathFor, useAuth } from '../auth/auth-context'
+import { ContactEmail } from '../components/ContactEmail'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, Card, CardContent, FormField, Input } from '../components/ui'
 
@@ -13,6 +16,11 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
+  // 공개 상태(공지 배너·문의처) — 셸과 같은 캐시 키를 공유한다.
+  const { data: systemStatus } = useQuery({
+    queryKey: ['system-status'],
+    queryFn: fetchSystemStatus,
+  })
 
   if (status === 'authenticated' && user) {
     return <Navigate to={homePathFor(user.role)} replace />
@@ -47,6 +55,11 @@ export function LoginPage() {
       <p className="mt-2 text-center text-sm text-neutral-500">
         부산대학교 이메일로 로그인해 주세요.
       </p>
+      {systemStatus?.bannerMessage && (
+        <Alert variant="info" className="mt-6 whitespace-pre-line">
+          {systemStatus.bannerMessage}
+        </Alert>
+      )}
       <Card className="mt-8">
         <CardContent className="py-6">
           <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
@@ -94,6 +107,11 @@ export function LoginPage() {
           회원가입
         </Link>
       </p>
+      {systemStatus?.contactEmail && (
+        <p className="mt-8 text-center text-xs text-neutral-400">
+          문의: <ContactEmail email={systemStatus.contactEmail} className="text-neutral-500" />
+        </p>
+      )}
     </div>
   )
 }
