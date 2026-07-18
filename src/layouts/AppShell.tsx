@@ -1,10 +1,19 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { onMaintenanceDetected } from '../api/maintenance'
+import { fetchSystemStatus } from '../api/queries'
+import { useAuth } from '../auth/auth-context'
+import { ContactEmail } from '../components/ContactEmail'
 import { Logo } from '../components/Logo'
+import { MaintenanceScreen } from '../components/MaintenanceScreen'
 import { NotificationBell } from '../components/NotificationBell'
 import { cn } from '../lib/cn'
 import { useFocusTrap } from '../lib/use-focus-trap'
 import { UserMenu } from './UserMenu'
+
+/** 공지 배너를 세션 동안 닫아둔 상태로 기억하는 sessionStorage 키. */
+const BANNER_DISMISS_KEY = 'pickle_banner_dismissed'
 
 export interface NavItem {
   to: string
@@ -67,7 +76,6 @@ export function AppShell({
   navLabel,
   items,
   sections,
-  banner,
   notificationsTo,
 }: {
   home: string
@@ -76,7 +84,6 @@ export function AppShell({
   items?: NavItem[]
   /** 섹션 내비게이션 — 지정하면 items보다 우선한다. */
   sections?: NavSection[]
-  banner?: ReactNode
   /** 알림함 경로 — 지정하면 상단 바에 알림 종을 노출한다. */
   notificationsTo?: string
 }) {
@@ -85,6 +92,42 @@ export function AppShell({
   const drawerId = useId()
   const drawerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(drawerRef, { active: drawerOpen, onEscape: () => setDrawerOpen(false) })
+
+  // 점검 모드·공지 배너·문의처: 공개 상태를 ~60초 폴링한다. 관리자 계층(USER
+  // 외 전 역할 — W3의 매니저 역할 포함)은 점검 중에도 콘솔을 계속 쓸 수 있고,
+  // 비관리자는 전체 화면 점검 안내로 차단한다. 상태 조회 실패 시엔 셸을 막지
+  // 않는다(fail-open) — 상태 API 장애가 로그인 사용자를 잠그면 안 된다.
+  const { user } = useAuth()
+  const isAdminTier = !!user && user.role !== 'USER'
+  const queryClient = useQueryClient()
+  const statusQuery = useQuery({
+    queryKey: ['system-status'],
+    queryFn: fetchSystemStatus,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+  const status = statusQuery.data
+  const maintenance = status?.maintenance ?? false
+  const bannerMessage = status?.bannerMessage ?? null
+  const contactEmail = status?.contactEmail ?? null
+
+  // 요청 중 마주친 503 MAINTENANCE_MODE를 폴링과 별개로 즉시 반영한다.
+  useEffect(
+    () =>
+      onMaintenanceDetected(() => {
+        void queryClient.invalidateQueries({ queryKey: ['system-status'] })
+      }),
+    [queryClient],
+  )
+
+  const [dismissedBanner, setDismissedBanner] = useState<string | null>(() =>
+    typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BANNER_DISMISS_KEY) : null,
+  )
+  const showBanner = !maintenance && !!bannerMessage && dismissedBanner !== bannerMessage
+  const dismissBanner = () => {
+    setDismissedBanner(bannerMessage)
+    if (bannerMessage) sessionStorage.setItem(BANNER_DISMISS_KEY, bannerMessage)
+  }
 
   // NavLink onClick이 기본 닫힘 경로지만, UserMenu 등 다른 경로 이동도 덮는 안전망.
   const { pathname } = useLocation()
@@ -102,6 +145,40 @@ export function AppShell({
     query.addEventListener('change', onChange)
     return () => query.removeEventListener('change', onChange)
   }, [])
+
+  // 비관리자는 점검 중 콘솔 전체를 차단한다(점검 해제 시 폴링이 자동 복구).
+  if (maintenance && !isAdminTier) {
+    return (
+      <MaintenanceScreen message={status?.maintenanceMessage} contactEmail={contactEmail} />
+    )
+  }
+
+  const bannerEl =
+    maintenance && isAdminTier ? (
+      <div
+        role="status"
+        className="border-b border-warning-200 bg-warning-50 px-4 py-2 text-center text-sm font-medium text-warning-800 sm:px-6"
+      >
+        점검 모드가 켜져 있습니다. 비관리자 사용자는 콘솔을 이용할 수 없습니다.
+      </div>
+    ) : showBanner ? (
+      <div
+        role="status"
+        className="flex items-start gap-3 border-b border-info-200 bg-info-50 px-4 py-2 text-sm text-info-800 sm:px-6"
+      >
+        <span className="min-w-0 flex-1 whitespace-pre-line">{bannerMessage}</span>
+        <button
+          type="button"
+          onClick={dismissBanner}
+          aria-label="공지 닫기"
+          className="shrink-0 cursor-pointer rounded p-0.5 text-info-600 hover:text-info-800 focus-visible:outline-2 focus-visible:outline-primary-600"
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden="true">
+            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />
+          </svg>
+        </button>
+      </div>
+    ) : null
 
   return (
     <div className="flex min-h-screen">
@@ -176,10 +253,15 @@ export function AppShell({
             <UserMenu />
           </div>
         </header>
-        {banner}
+        {bannerEl}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
           <Outlet />
         </main>
+        {contactEmail && (
+          <footer className="border-t border-neutral-100 px-4 py-3 text-center text-xs text-neutral-400 sm:px-6">
+            문의: <ContactEmail email={contactEmail} className="text-neutral-500" />
+          </footer>
+        )}
       </div>
     </div>
   )
