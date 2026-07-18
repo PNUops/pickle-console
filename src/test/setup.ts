@@ -1,8 +1,15 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
 import { setAccessToken } from '../api/token'
 import { resetFixtures, server } from './msw/server'
+
+// 화면 다수는 세션 복원(refresh → /me) 뒤 다시 자식 기능 쿼리가 정착해야 원하는
+// 요소가 나타나는 다단계 비동기 체인이다. 전체 스위트를 여러 포크로 병렬 실행하면
+// (특히 CPU가 붐빌 때) 이 체인이 RTL 기본 1초를 넘겨, 결국 성공할 단언이 시간 초과로
+// 실패하는 순서·부하 의존 플레이크가 난다. 대기 예산만 넉넉히 주고(단언 자체는 그대로)
+// 이를 막는다.
+configure({ asyncUtilTimeout: 5000 })
 
 // jsdom은 matchMedia를 구현하지 않는다 — 반응형 리스너(모바일 드로어 등)용 스텁.
 // 테스트 뷰포트는 항상 "모바일 미만 아님(matches=false)"으로 취급한다.

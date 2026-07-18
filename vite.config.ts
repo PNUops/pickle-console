@@ -13,5 +13,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // asyncUtilTimeout(5s, setup.ts)보다 넉넉히 커야, findBy가 정말 실패할 때
+    // 무의미한 "test timed out" 대신 RTL의 정확한 "unable to find" 오류가 뜨고
+    // 부하 상황에서 다단계 대기가 이어져도 여유가 남는다.
+    testTimeout: 20_000,
   },
 })
