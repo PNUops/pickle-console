@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
+import { isOrgTier } from '../auth/permissions'
 import { fetchOrgs, type OrgSummary, type UserSummary } from '../api/queries'
 import {
   Alert,
@@ -300,7 +301,7 @@ function UserRoleCard({ orgs }: { orgs: OrgSummary[] }) {
     mutationFn: async () => {
       const { data, error } = await api.PATCH('/admin/users/{userId}', {
         params: { path: { userId: Number(userId) } },
-        body: { role, orgId: role === 'ORG_ADMIN' ? Number(orgId) : null },
+        body: { role, orgId: isOrgTier(role) ? Number(orgId) : null },
       })
       if (!data) throw toApiError(error, '사용자 역할을 변경하지 못했습니다.')
       return data
@@ -329,8 +330,8 @@ function UserRoleCard({ orgs }: { orgs: OrgSummary[] }) {
     const errors: Record<string, string> = {}
     if (!userId || !Number.isInteger(Number(userId)) || Number(userId) < 1)
       errors.userId = '사용자 ID를 숫자로 입력해 주세요.'
-    if (role === 'ORG_ADMIN' && !orgId)
-      errors.orgId = '기관 관리자는 관리할 기관을 선택해야 합니다.'
+    if (isOrgTier(role) && !orgId)
+      errors.orgId = '기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     update.mutate()
@@ -378,14 +379,14 @@ function UserRoleCard({ orgs }: { orgs: OrgSummary[] }) {
             </FormField>
             <FormField
               label="관리 기관"
-              required={role === 'ORG_ADMIN'}
+              required={isOrgTier(role)}
               error={fieldErrors.orgId}
-              description="기관 관리자 역할일 때만 지정합니다."
+              description="기관 관리자·기관 운영자 역할일 때만 지정합니다."
             >
               <Select
                 value={orgId}
                 onChange={(event) => setOrgId(event.target.value)}
-                disabled={role !== 'ORG_ADMIN'}
+                disabled={!isOrgTier(role)}
               >
                 <option value="">선택 안 함</option>
                 {orgs.map((org) => (

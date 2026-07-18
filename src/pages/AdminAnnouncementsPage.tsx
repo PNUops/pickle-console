@@ -9,6 +9,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
+import { canBroadcast } from '../auth/permissions'
 import {
   Alert,
   AnnouncementScopeBadge,
@@ -34,6 +35,8 @@ type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'GROUP'
 export function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const isSysAdmin = user?.role === 'SYS_ADMIN'
+  // 공지 발송은 기관 관리자·시스템 관리자만 — 운영자는 최근 공지 조회만(§3.13).
+  const canSend = !!user && canBroadcast(user.role)
   const queryClient = useQueryClient()
 
   const [title, setTitle] = useState('')
@@ -141,7 +144,14 @@ export function AdminAnnouncementsPage() {
         <Alert variant="danger">{error}</Alert>
       )}
 
-      <Card>
+      {!canSend && (
+        <Alert variant="info">
+          공지 발송은 기관 관리자·시스템 관리자만 할 수 있습니다. 최근 공지는 아래에서
+          확인할 수 있습니다.
+        </Alert>
+      )}
+      {canSend && (
+        <Card>
         <CardContent>
           <form onSubmit={submit} className="space-y-4" noValidate>
             <FormField label="제목" required error={fieldErrors.title}>
@@ -249,7 +259,8 @@ export function AdminAnnouncementsPage() {
             </div>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

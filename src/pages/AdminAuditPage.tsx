@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchAuditLogs, fetchOrgs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -45,7 +46,7 @@ function isKnownRole(role: string): role is UserRole {
 /** 감사 로그 — 관리자가 행위자·동작·기간으로 활동 기록을 추적한다. */
 export function AdminAuditPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [action, setAction] = useState<string | undefined>(undefined)
   const [actorEmail, setActorEmail] = useState('')
   const [from, setFrom] = useState('')

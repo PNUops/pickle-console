@@ -7,6 +7,7 @@ import {
   type DomainStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Card,
@@ -42,7 +43,7 @@ const KINDS: DomainKind[] = ['AUTO', 'REQUESTED', 'CUSTOM']
 
 export function AdminDomainsPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)

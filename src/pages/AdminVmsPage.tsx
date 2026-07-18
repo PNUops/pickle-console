@@ -13,6 +13,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
+import { canManageVmDeletion, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
   Alert,
   Button,
@@ -60,7 +61,12 @@ const STATUS_TABS: { label: string; status: VmStatus | undefined }[] = [
 
 export function AdminVmsPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const role = user?.role
+  // 전체/우리 기관 조회 범위는 시스템 계층. 삭제 라이프사이클(예약·취소)은
+  // ORG_ADMIN·SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
+  const isSysAdmin = !!role && isSysTier(role)
+  const canDelete = !!role && canManageVmDeletion(role)
+  const canForceDelete = !!role && isSysAdminOnly(role)
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [groupId, setGroupId] = useState<number | undefined>(undefined)
@@ -300,11 +306,11 @@ export function AdminVmsPage() {
 
       {message && <Alert variant="success">{message}</Alert>}
 
-      {selected && (
+      {selected && canDelete && (
         <VmActionPanel
           key={selected.id}
           vm={selected}
-          isSysAdmin={isSysAdmin}
+          canForceDelete={canForceDelete}
           onDone={setMessage}
         />
       )}
@@ -316,11 +322,11 @@ export function AdminVmsPage() {
 
 function VmActionPanel({
   vm,
-  isSysAdmin,
+  canForceDelete,
   onDone,
 }: {
   vm: VmSummary
-  isSysAdmin: boolean
+  canForceDelete: boolean
   onDone: (message: string) => void
 }) {
   return (
@@ -334,7 +340,7 @@ function VmActionPanel({
       <CardContent className="space-y-6">
         <ScheduleDeleteForm vm={vm} onDone={onDone} />
         <CancelDeleteAction vm={vm} onDone={onDone} />
-        {isSysAdmin && <ForceDeleteAction vm={vm} onDone={onDone} />}
+        {canForceDelete && <ForceDeleteAction vm={vm} onDone={onDone} />}
       </CardContent>
     </Card>
   )

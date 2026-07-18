@@ -6,6 +6,7 @@ import {
   type CertificateStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -39,7 +40,7 @@ const STATUS_TABS: { label: string; status: CertificateStatus | undefined }[] = 
 
 export function AdminCertificatesPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [expiringSoon, setExpiringSoon] = useState(false)

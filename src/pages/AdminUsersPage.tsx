@@ -14,6 +14,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
+import { isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -71,7 +72,11 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 
 export function AdminUsersPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const viewerRole = user?.role
+  // 전체/우리 기관 조회 범위는 시스템 계층. 계정 비활성화·해제·MFA 초기화는
+  // SYS_ADMIN 전용(§4).
+  const isSysAdmin = !!viewerRole && isSysTier(viewerRole)
+  const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)
   const [role, setRole] = useState<UserRole | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
@@ -274,7 +279,7 @@ export function AdminUsersPage() {
       )}
 
       {selectedId !== null && (
-        <UserDetailPanel key={selectedId} userId={selectedId} canManage={isSysAdmin} />
+        <UserDetailPanel key={selectedId} userId={selectedId} canManage={canManageAccounts} />
       )}
     </div>
   )

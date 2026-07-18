@@ -8,6 +8,7 @@ import {
   type VmRequestStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Card,
@@ -40,7 +41,7 @@ const STATUS_TABS: { label: string; status: VmRequestStatus | undefined }[] = [
 export function AdminRequestsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<VmRequestStatus | undefined>('SUBMITTED')
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)

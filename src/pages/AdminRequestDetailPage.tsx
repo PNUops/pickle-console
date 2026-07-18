@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
+import { useAuth } from '../auth/auth-context'
+import { canDecideRequest } from '../auth/permissions'
 import {
   fetchAdminVmRequest,
   fetchApprovalContext,
@@ -45,6 +47,9 @@ export function AdminRequestDetailPage() {
   const params = useParams()
   const requestId = Number(params.requestId)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const { user } = useAuth()
+  // 승인·반려는 org 계층 + SYS_ADMIN만 — SYS_MANAGER는 조회만(§3.9 †15).
+  const canDecide = !!user && canDecideRequest(user.role)
 
   const request = useQuery({
     queryKey: ['admin', 'vm-requests', requestId],
@@ -143,6 +148,7 @@ export function AdminRequestDetailPage() {
           {/* 템플릿 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
               명시하고 재시도 경로를 제공한다 (무음 실종 방지). */}
           {data.status === 'SUBMITTED' &&
+            canDecide &&
             (templates.isError ? (
               <Alert variant="danger" title="템플릿 목록을 불러오지 못했습니다">
                 <div className="space-y-2">

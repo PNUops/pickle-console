@@ -7,6 +7,7 @@ import {
   type OrgDashboardSummary,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Card,
@@ -28,7 +29,7 @@ function countOf(counts: Record<string, number>, key: string): number {
  */
 export function AdminDashboardPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
 
   const summary = useQuery({
     queryKey: ['admin', 'summary'],

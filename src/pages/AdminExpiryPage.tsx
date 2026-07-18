@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { fetchAdminVms, fetchOrgs, updateVmPeriod, type VmSummary } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -44,7 +45,7 @@ function queryParamsOf(tab: ExpiryTab) {
 /** 만료 관리 — 만료 임박·만료된 VM을 모아 보고 사용 기간을 연장한다. */
 export function AdminExpiryPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [tab, setTab] = useState<ExpiryTab>('D7')
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)

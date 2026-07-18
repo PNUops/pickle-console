@@ -8,6 +8,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -38,7 +39,7 @@ const STATUS_TABS: { label: string; status: RouteStatus | undefined }[] = [
 
 export function AdminRoutesPage() {
   const { user } = useAuth()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<RouteStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
