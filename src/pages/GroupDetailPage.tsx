@@ -12,6 +12,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ConfirmNameModal,
   FormField,
   GroupKindBadge,
   GroupRoleBadge,
@@ -65,7 +66,78 @@ export function GroupDetailPage() {
       </nav>
       <GroupInfoSection group={data} myRole={myRole} />
       <MembersSection group={data} myRole={myRole} />
+      {myRole === 'OWNER' && data.kind !== 'PERSONAL' && <DangerZoneSection group={data} />}
     </div>
+  )
+}
+
+/* ─── danger zone: group delete (contract: OWNER only, name-confirmed) ─── */
+
+function DangerZoneSection({ group }: { group: GroupDetail }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error: err, response } = await api.DELETE('/groups/{groupId}', {
+        params: { path: { groupId: group.id } },
+      })
+      if (!response.ok) throw toApiError(err, '그룹을 삭제하지 못했습니다.')
+    },
+    onSuccess: async () => {
+      setOpen(false)
+      toast.success('그룹을 삭제했습니다.')
+      await queryClient.invalidateQueries({ queryKey: ['groups'] })
+      navigate('/console/groups')
+    },
+    onError: (err) => {
+      setOpen(false)
+      // 활성 VM 보유·PERSONAL 등 서버의 problem detail을 그대로 노출한다.
+      setError(toApiError(err, '그룹을 삭제하지 못했습니다.').message)
+    },
+  })
+
+  return (
+    <Card className="border-danger-200">
+      <CardHeader>
+        <CardTitle className="text-danger-700">위험 구역</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-neutral-600">
+            그룹을 삭제하면 모든 목록에서 사라집니다. 삭제되지 않은 VM이 있으면 먼저
+            VM을 삭제(파기 완료)해야 합니다. 구성원 전원에게 알림이 발송됩니다.
+          </p>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setError(null)
+              setOpen(true)
+            }}
+          >
+            그룹 삭제
+          </Button>
+        </div>
+      </CardContent>
+      <ConfirmNameModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="그룹 삭제"
+        expectedName={group.name}
+        confirmLabel="그룹 삭제"
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      >
+        <Alert variant="danger">
+          이 작업은 되돌릴 수 없습니다. 같은 이름·슬러그로 새 그룹을 다시 만들 수는 있지만,
+          기존 그룹의 구성원 구성은 복구되지 않습니다.
+        </Alert>
+      </ConfirmNameModal>
+    </Card>
   )
 }
 

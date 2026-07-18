@@ -122,3 +122,40 @@ describe('그룹 상세 — 구성원 관리', () => {
     expect(screen.queryByText('알고리즘 스터디')).not.toBeInTheDocument()
   })
 })
+
+describe('그룹 상세 — 그룹 삭제(위험 구역)', () => {
+  test('OWNER는 위험 구역(그룹 삭제)을 본다', async () => {
+    renderGroup(12)
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+    expect(screen.getByRole('heading', { name: '위험 구역' })).toBeInTheDocument()
+  })
+
+  test('PERSONAL 그룹에는 위험 구역이 없다', async () => {
+    renderGroup(7)
+    await screen.findByRole('heading', { name: '홍길동' })
+    expect(screen.queryByRole('heading', { name: '위험 구역' })).not.toBeInTheDocument()
+  })
+
+  test('MEMBER에게는 위험 구역이 없다', async () => {
+    renderGroup(15)
+    await screen.findByRole('heading', { name: '알고리즘 스터디' })
+    expect(screen.queryByRole('heading', { name: '위험 구역' })).not.toBeInTheDocument()
+  })
+
+  test('이름을 정확히 입력해야 삭제되고, 이후 그룹 목록으로 이동한다', async () => {
+    const user = userEvent.setup()
+    renderGroup(12)
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(screen.getByRole('button', { name: '그룹 삭제' }))
+    const dialog = await screen.findByRole('dialog', { name: '그룹 삭제' })
+    const confirm = within(dialog).getByRole('button', { name: '그룹 삭제' })
+    expect(confirm).toBeDisabled()
+
+    await user.type(within(dialog).getByRole('textbox'), '캡스톤 3조')
+    expect(confirm).toBeEnabled()
+    await user.click(confirm)
+
+    expect(await screen.findByRole('heading', { name: '내 그룹' })).toBeInTheDocument()
+  })
+})
