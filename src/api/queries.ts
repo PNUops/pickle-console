@@ -114,6 +114,9 @@ export interface RequestOptions {
   reservedSubdomains: string[]
 }
 
+/* ─── 점검 모드·배너·문의처 (M6, GET /meta/status) ─── */
+export type SystemStatus = Schemas['SystemStatusResponse']
+
 /**
  * fetch 단계 예외(네트워크 단절 등)를 한국어 ApiError로 변환한다.
  * openapi-fetch는 HTTP 오류는 `error`로 돌려주지만, 요청 자체가 실패하면
@@ -171,6 +174,15 @@ export function fetchRequestOptions(): Promise<RequestOptions> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/meta/request-options')
     if (!data) throw toApiError(error, '신청 선택지를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 공개 시스템 상태(점검 모드·배너·문의처). 로그인 화면·인증 셸이 주기 폴링한다. */
+export function fetchSystemStatus(): Promise<SystemStatus> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/meta/status')
+    if (!data) throw toApiError(error, '시스템 상태를 불러오지 못했습니다.')
     return data
   })
 }

@@ -20,8 +20,20 @@ function initialOrgs(): Schemas['OrgSummary'][] {
 
 export let orgs: Schemas['OrgSummary'][] = initialOrgs()
 
+function initialSystemStatus(): Schemas['SystemStatusResponse'] {
+  return { maintenance: false, maintenanceMessage: null, bannerMessage: null, contactEmail: null }
+}
+
+export let systemStatus: Schemas['SystemStatusResponse'] = initialSystemStatus()
+
+/** 테스트에서 점검 모드·배너·문의처를 조정할 때 사용. */
+export function setSystemStatus(next: Partial<Schemas['SystemStatusResponse']>) {
+  systemStatus = { ...systemStatus, ...next }
+}
+
 export function resetReferenceFixtures() {
   orgs = initialOrgs()
+  systemStatus = initialSystemStatus()
 }
 
 export const basicTemplate: Schemas['VmTemplate'] = {
@@ -65,4 +77,5 @@ export const referenceHandlers: RequestHandler[] = [
   http.get('*/api/v1/meta/request-options', () =>
     HttpResponse.json(requestOptions, { status: 200 }),
   ),
+  http.get('*/api/v1/meta/status', () => HttpResponse.json(systemStatus, { status: 200 })),
 ]
