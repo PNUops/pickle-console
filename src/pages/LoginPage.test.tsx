@@ -1,7 +1,14 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import { USER_PASSWORD, orgAdminUser, studentUser } from '../test/msw/handlers/auth'
+import {
+  MFA_VALID_CODE,
+  MFA_VALID_RECOVERY_CODE,
+  USER_PASSWORD,
+  mfaUser,
+  orgAdminUser,
+  studentUser,
+} from '../test/msw/handlers/auth'
 import { renderApp } from '../test/render'
 
 async function submitLogin(email: string, password: string) {
@@ -64,5 +71,41 @@ describe('로그인', () => {
     await submitLogin('ratelimited@pusan.ac.kr', USER_PASSWORD)
 
     expect(await screen.findByText('잠시 후 다시 시도해 주세요.')).toBeInTheDocument()
+  })
+
+  test('2FA 계정은 코드 입력 단계를 거쳐 로그인한다', async () => {
+    renderApp('/login')
+    await screen.findByRole('heading', { name: '로그인' })
+    const user = await submitLogin(mfaUser.email, USER_PASSWORD)
+
+    // 코드 입력 단계로 전환
+    await screen.findByRole('heading', { name: '2단계 인증' })
+
+    // 잘못된 코드 → 오류, 단계 유지
+    await user.type(screen.getByLabelText('인증 코드'), '000000')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    expect(
+      await screen.findByText('입력한 코드가 올바르지 않습니다. 인증 앱의 최신 코드를 확인해 주세요.'),
+    ).toBeInTheDocument()
+
+    // 올바른 코드 → 대시보드
+    const codeField = screen.getByLabelText('인증 코드')
+    await user.clear(codeField)
+    await user.type(codeField, MFA_VALID_CODE)
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+  })
+
+  test('2FA 복구 코드로도 로그인할 수 있다', async () => {
+    renderApp('/login')
+    await screen.findByRole('heading', { name: '로그인' })
+    const user = await submitLogin(mfaUser.email, USER_PASSWORD)
+    await screen.findByRole('heading', { name: '2단계 인증' })
+
+    await user.click(screen.getByRole('button', { name: '복구 코드로 입력' }))
+    await user.type(screen.getByLabelText('복구 코드'), MFA_VALID_RECOVERY_CODE)
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+
+    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 })

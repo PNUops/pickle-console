@@ -788,6 +788,10 @@ export interface paths {
          *     - 삭제는 소프트 삭제(행 보존)입니다 — VM 이력·감사 로그의 그룹
          *       참조는 유지되고, 그룹은 모든 목록·조회에서 사라집니다. 같은
          *       이름·슬러그의 새 그룹을 다시 만들 수 있습니다.
+         *     - 그룹의 **대기 중(SUBMITTED) VM 신청은 함께 취소**됩니다 (계약
+         *       게이트 후속 2026-07-18 — 삭제된 그룹에 승인으로 VM이 생기는 경로
+         *       차단; 이미 취소된 신청의 승인 시도는 기존대로 409
+         *       `REQUEST_ALREADY_DECIDED`).
          *     - 구성원 전원에게 알림이 발송되고 감사 기록(`group.delete`)이 남습니다.
          */
         delete: operations["deleteGroup"];
@@ -2549,7 +2553,8 @@ export interface components {
              *       `ACCOUNT_HAS_ACTIVE_VMS`·`ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP`
              *       (탈퇴 차단), `ACCOUNT_SELF_DISABLE_FORBIDDEN`(본인 비활성화
              *       거부), `ACCOUNT_NOT_DISABLED`(활성화 전환 불가 — WITHDRAWN
-             *       포함)
+             *       포함), `ACCOUNT_INVALID_STATE`(비활성화 대상이 이미
+             *       DISABLED/WITHDRAWN)
              *     - 2FA (M6): `AUTH_MFA_CODE_INVALID`(TOTP/복구 코드 불일치),
              *       `AUTH_MFA_TOKEN_EXPIRED`(스텝업 토큰 만료·재사용),
              *       `MFA_ALREADY_ENROLLED`, `MFA_NOT_ENROLLED`,
@@ -8649,7 +8654,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description 전환 불가 (본인 계정, 이미 DISABLED, 또는 WITHDRAWN 계정) */
+            /** @description 전환 불가 — 본인 계정(`ACCOUNT_SELF_DISABLE_FORBIDDEN`) 또는 이미 DISABLED/WITHDRAWN(`ACCOUNT_INVALID_STATE`) */
             409: {
                 headers: {
                     [name: string]: unknown;

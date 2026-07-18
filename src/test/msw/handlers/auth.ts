@@ -88,12 +88,34 @@ export const studentBProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
+/** A 2FA-enrolled account: login returns a challenge, /auth/mfa completes it. */
+export const mfaUser: Schemas['UserSummary'] = {
+  id: 61,
+  email: 'twofactor@pusan.ac.kr',
+  name: '이중인증',
+  role: 'USER',
+}
+
+export const mfaProfile: Schemas['UserProfile'] = {
+  ...mfaUser,
+  orgId: null,
+  status: 'ACTIVE',
+  memberships: [{ groupId: 11, groupName: '이중인증', groupKind: 'PERSONAL', role: 'OWNER' }],
+  mfaEnabled: true,
+  pendingConsents: [],
+}
+
+export const MFA_CHALLENGE_TOKEN = 'mfa-token-1'
+export const MFA_VALID_CODE = '123456'
+export const MFA_VALID_RECOVERY_CODE = 'abcd-efgh-ijkl'
+
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfile']> = {
   'access-student': studentProfile,
   'access-org-admin': orgAdminProfile,
   'access-sys-admin': sysAdminProfile,
   'access-student-b': studentBProfile,
+  'access-mfa': mfaProfile,
 }
 
 export const unauthorizedProblem: Schemas['Problem'] = {
@@ -144,6 +166,14 @@ export const authHandlers: RequestHandler[] = [
         code: 'RATE_LIMITED',
       })
     }
+    // 2FA-enrolled account: stage-1 returns a challenge, not tokens.
+    if (body.email === mfaUser.email && body.password === USER_PASSWORD) {
+      const challenge: Schemas['MfaChallengeResponse'] = {
+        mfaRequired: true,
+        mfaToken: MFA_CHALLENGE_TOKEN,
+      }
+      return HttpResponse.json(challenge, { status: 200 })
+    }
     const account =
       body.password !== USER_PASSWORD
         ? null
@@ -168,6 +198,34 @@ export const authHandlers: RequestHandler[] = [
       user: account.user,
     }
     return HttpResponse.json(response, { status: 200 })
+  }),
+
+  http.post('*/api/v1/auth/mfa', async ({ request }) => {
+    const body = (await request.json()) as {
+      mfaToken: string
+      code?: string
+      recoveryCode?: string
+    }
+    if (body.mfaToken !== MFA_CHALLENGE_TOKEN) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '인증 세션이 만료되었습니다',
+        status: 410,
+        detail: '2단계 인증 시간이 지났습니다. 처음부터 다시 로그인해 주세요.',
+        code: 'AUTH_MFA_TOKEN_EXPIRED',
+      })
+    }
+    if (body.code === MFA_VALID_CODE || body.recoveryCode === MFA_VALID_RECOVERY_CODE) {
+      const response: Schemas['AuthTokenResponse'] = { accessToken: 'access-mfa', user: mfaUser }
+      return HttpResponse.json(response, { status: 200 })
+    }
+    return problemResponse({
+      type: 'about:blank',
+      title: '인증 코드가 올바르지 않습니다',
+      status: 401,
+      detail: '입력한 코드가 올바르지 않습니다. 인증 앱의 최신 코드를 확인해 주세요.',
+      code: 'AUTH_MFA_CODE_INVALID',
+    })
   }),
 
   // Default: no refresh cookie / expired session.

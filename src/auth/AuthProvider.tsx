@@ -5,7 +5,7 @@ import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
-import { AuthContext, type AuthStatus, type UserProfile } from './auth-context'
+import { AuthContext, type AuthStatus, type LoginResult, type UserProfile } from './auth-context'
 
 interface AuthState {
   status: AuthStatus
@@ -57,19 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   )
 
-  const login = useCallback(async (email: string, password: string) => {
-    const { data, error } = await api.POST('/auth/login', { body: { email, password } })
-    if (!data) {
-      throw toApiError(error, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
-    }
-    if ('mfaRequired' in data) {
-      // 2FA 스텝업 UI는 W2-A에서 구현된다 — 서버도 그 전에는 이 분기를
-      // 반환하지 않으므로(2FA 미구현) 여기 도달하면 준비 중 안내만 던진다.
-      throw new Error('2단계 인증이 설정된 계정입니다. 콘솔 지원 준비 중입니다.')
-    }
-    setAccessToken(data.accessToken)
-    // fetch 단계 예외(네트워크 단절 등)에서도 방금 저장한 토큰이 남지 않게 정리하고
-    // 던진다 — LoginPage가 한국어 폴백 메시지로 렌더링한다.
+  // Shared tail for both stage-1 (no 2FA) and stage-2 (/auth/mfa) success: the
+  // access token is already set, so fetch /me and flip to authenticated.
+  const finishLogin = useCallback(async (): Promise<UserProfile> => {
     const me = await guardNetwork(() => api.GET('/me')).catch((err: unknown) => {
       clearAccessToken()
       throw err
@@ -83,6 +73,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'authenticated', user: me.data })
     return me.data
   }, [queryClient])
+
+  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    const { data, error } = await api.POST('/auth/login', { body: { email, password } })
+    if (!data) {
+      throw toApiError(error, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+    }
+    if ('mfaRequired' in data) {
+      // 2FA 계정: 토큰 대신 스텝업 챌린지를 반환한다 — LoginPage가 코드 입력
+      // 단계로 전환하고 completeMfa로 이어간다.
+      return { kind: 'mfaRequired', mfaToken: data.mfaToken }
+    }
+    setAccessToken(data.accessToken)
+    return { kind: 'authenticated', user: await finishLogin() }
+  }, [finishLogin])
+
+  const completeMfa = useCallback(
+    async (input: { mfaToken: string; code?: string; recoveryCode?: string }) => {
+      const { data, error } = await api.POST('/auth/mfa', { body: input })
+      if (!data) {
+        throw toApiError(error, '2단계 인증에 실패했습니다. 다시 시도해 주세요.')
+      }
+      setAccessToken(data.accessToken)
+      return finishLogin()
+    },
+    [finishLogin],
+  )
 
   const logout = useCallback(async () => {
     // Revoke the refresh cookie server-side; the endpoint is idempotent, and a
@@ -101,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient])
 
   const value = useMemo(
-    () => ({ status: state.status, user: state.user, login, logout }),
-    [state, login, logout],
+    () => ({ status: state.status, user: state.user, login, completeMfa, logout }),
+    [state, login, completeMfa, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
