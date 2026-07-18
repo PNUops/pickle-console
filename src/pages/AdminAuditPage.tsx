@@ -180,6 +180,7 @@ export function AdminAuditPage() {
                 <TR>
                   <TH>시각</TH>
                   <TH>행위자</TH>
+                  <TH>기관</TH>
                   <TH>동작</TH>
                   <TH>대상</TH>
                   <TH>IP</TH>
@@ -219,6 +220,7 @@ export function AdminAuditPage() {
                         </>
                       )}
                     </TD>
+                    <TD className="text-sm text-neutral-600">{log.orgName ?? '—'}</TD>
                     <TD>{labelForAuditAction(log.action)}</TD>
                     <TD className="font-mono text-xs">
                       {log.targetType ? `${log.targetType}:${log.targetId ?? '—'}` : '—'}

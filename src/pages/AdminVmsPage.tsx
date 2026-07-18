@@ -231,6 +231,7 @@ export function AdminVmsPage() {
                   </SortableTH>
                   <TH>상태</TH>
                   <TH>그룹</TH>
+                  <TH>기관</TH>
                   <TH>사양</TH>
                   <SortableTH direction={sortDirection('endDate')} onSort={onSort('endDate')}>
                     종료일
@@ -263,8 +264,11 @@ export function AdminVmsPage() {
                         }}
                         className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                       >
-                        {vm.name}
+                        {vm.displayName || vm.name}
                       </button>
+                      {vm.displayName && (
+                        <span className="ml-1 text-xs text-neutral-400">{vm.name}</span>
+                      )}
                       {vm.statusDetail && (
                         <span className="mt-0.5 block max-w-xs truncate text-xs text-neutral-400">
                           {vm.statusDetail}
@@ -275,6 +279,7 @@ export function AdminVmsPage() {
                       <VmStatusBadge status={vm.status} />
                     </TD>
                     <TD>{vm.groupName}</TD>
+                    <TD>{vm.orgName ?? '—'}</TD>
                     <TD className="whitespace-nowrap">
                       {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
                     </TD>

@@ -38,7 +38,8 @@ const TABS: { label: string; status: DriftFindingStatus | undefined }[] = [
 /** 드리프트 대상 표기 — vm id·Proxmox vmid·노드 조합. */
 function targetOf(finding: DriftFindingView): string {
   const parts = [
-    finding.vmId != null ? `VM #${finding.vmId}` : null,
+    // v0.9.0: prefer the VM name when known, falling back to its id.
+    finding.vmName ?? (finding.vmId != null ? `VM #${finding.vmId}` : null),
     finding.proxmoxVmid != null ? `vmid ${finding.proxmoxVmid}` : null,
     finding.nodeName ?? null,
   ].filter(Boolean)
