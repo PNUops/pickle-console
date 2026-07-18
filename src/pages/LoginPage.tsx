@@ -3,12 +3,8 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSystemStatus } from '../api/queries'
 import { ApiError } from '../api/problem'
-<<<<<<< HEAD
 import { homePathFor, useAuth, type UserProfile } from '../auth/auth-context'
-=======
-import { homePathFor, useAuth } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
->>>>>>> m6-w2b
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, Card, CardContent, FormField, Input } from '../components/ui'
 
