@@ -1,10 +1,12 @@
 import { setupServer } from 'msw/node'
 import type { RequestHandler } from 'msw'
+import { accountHandlers } from './handlers/account'
 import { adminHandlers, resetAdminFixtures } from './handlers/admin'
 import { adminOpsHandlers, resetAdminOpsFixtures } from './handlers/admin-ops'
 import { announcementHandlers, resetAnnouncementFixtures } from './handlers/announcements'
 import { auditHandlers, resetAuditFixtures } from './handlers/audit'
 import { authHandlers } from './handlers/auth'
+import { resetUserFixtures, userHandlers } from './handlers/users'
 import { groupHandlers, resetGroupFixtures } from './handlers/groups'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
@@ -17,6 +19,8 @@ import { resetVmFixtures, vmHandlers } from './handlers/vms'
 /** Add per-WP API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
   ...authHandlers,
+  ...accountHandlers,
+  ...userHandlers,
   ...referenceHandlers,
   ...groupHandlers,
   ...vmRequestHandlers,
@@ -35,6 +39,7 @@ export const server = setupServer(...handlers)
 
 /** Restore all stateful mock fixtures to their initial data (run between tests). */
 export function resetFixtures() {
+  resetUserFixtures()
   resetReferenceFixtures()
   resetGroupFixtures()
   resetVmRequestFixtures()

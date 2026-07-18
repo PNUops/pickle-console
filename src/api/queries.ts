@@ -25,6 +25,18 @@ export type ApprovalContext = Schemas['ApprovalContext']
 export type ApproveVmRequest = Schemas['ApproveVmRequest']
 export type OrgDetail = Schemas['OrgDetail']
 export type UserSummary = Schemas['UserSummary']
+export type UserRole = Schemas['UserRole']
+export type UserStatus = Schemas['UserStatus']
+export type AuthTokenResponse = Schemas['AuthTokenResponse']
+/* ─── 계정 수명주기 (M6) ─── */
+export type UserAdminView = Schemas['UserAdminView']
+export type UserAdminDetail = Schemas['UserAdminDetail']
+export type UserAdminPage = Schemas['UserAdminPage']
+export type UserStatusChange = Schemas['UserStatusChange']
+/** GET /admin/users sort 화이트리스트 (계약 v0.9.0) */
+export type AdminUserSort = NonNullable<
+  operations['listAdminUsers']['parameters']['query']
+>['sort']
 export type VmStatus = Schemas['VmStatus']
 export type VmDeletion = Schemas['VmDeletion']
 export type VmEvent = Schemas['VmEvent']
@@ -854,6 +866,97 @@ export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/notifications/read-all')
     if (!data) throw toApiError(error, '알림을 모두 읽음 처리하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 계정 수명주기 (M6) ─── */
+
+export function changeMyPassword(body: {
+  currentPassword: string
+  newPassword: string
+}): Promise<AuthTokenResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/me/password', { body })
+    if (!data) throw toApiError(error, '비밀번호를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function withdrawMyAccount(body: {
+  password: string
+  totpCode?: string
+  recoveryCode?: string
+}): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/withdraw', { body })
+    if (!data) throw toApiError(error, '회원 탈퇴를 처리하지 못했습니다.')
+    return data
+  })
+}
+
+export function requestPasswordReset(email: string): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/auth/password-reset', { body: { email } })
+    if (!data) throw toApiError(error, '비밀번호 재설정 요청을 처리하지 못했습니다.')
+    return data
+  })
+}
+
+export function confirmPasswordReset(body: {
+  token: string
+  newPassword: string
+}): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/auth/password-reset/confirm', { body })
+    if (!data) throw toApiError(error, '비밀번호를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminUsers(params: {
+  q?: string
+  status?: UserStatus
+  role?: UserRole
+  orgId?: number
+  sort?: AdminUserSort
+  page?: number
+  size?: number
+}): Promise<UserAdminPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/users', { params: { query: params } })
+    if (!data) throw toApiError(error, '사용자 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/users/{userId}', {
+      params: { path: { userId } },
+    })
+    if (!data) throw toApiError(error, '사용자 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function disableUser(userId: number, reason: string): Promise<UserAdminDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/users/{userId}/disable', {
+      params: { path: { userId } },
+      body: { reason },
+    })
+    if (!data) throw toApiError(error, '사용자를 비활성화하지 못했습니다.')
+    return data
+  })
+}
+
+export function enableUser(userId: number): Promise<UserAdminDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/users/{userId}/enable', {
+      params: { path: { userId } },
+    })
+    if (!data) throw toApiError(error, '사용자를 활성화하지 못했습니다.')
     return data
   })
 }

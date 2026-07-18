@@ -3,6 +3,7 @@ import {
   createAnnouncement,
   fetchAdminGroups,
   fetchAdminSummary,
+  fetchAdminUser,
   fetchAuditLogs,
 } from '../../api/queries'
 import { setAccessToken } from '../../api/token'
@@ -30,6 +31,13 @@ describe('MSW 네거티브 스코핑 (ORG_ADMIN, 타 기관 orgId)', () => {
 
   test('그룹 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
     await expect(fetchAdminGroups({ orgId: 2 })).rejects.toMatchObject({
+      problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
+    })
+  })
+
+  test('사용자 상세: 스코프 밖(타 기관) 사용자는 404로 마스킹된다', async () => {
+    // id 99(정외부)는 org2 파생 소속 — org1 관리자에게는 존재하지 않는 것으로 보인다.
+    await expect(fetchAdminUser(99)).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
