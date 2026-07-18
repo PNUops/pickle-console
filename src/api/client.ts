@@ -1,4 +1,6 @@
 import createClient from 'openapi-fetch'
+import { notifyMaintenanceDetected } from './maintenance'
+import { isProblem } from './problem'
 import type { components, paths } from './schema'
 import {
   clearAccessToken,
@@ -74,6 +76,7 @@ async function fetchWithAuth(input: Request): Promise<Response> {
   const response = await fetch(withAuthHeader(input))
 
   if (response.status !== 401 || isAuthEndpoint(input.url)) {
+    signalMaintenance(response)
     return response
   }
 
@@ -89,7 +92,24 @@ async function fetchWithAuth(input: Request): Promise<Response> {
     clearAccessToken()
     notifySessionExpired()
   }
+  signalMaintenance(retryResponse)
   return retryResponse
+}
+
+/**
+ * A 503 MAINTENANCE_MODE (the maintenance gate) notifies the shell so a
+ * non-admin is routed to the maintenance screen at once. Read off a clone so
+ * the caller's body stays intact; fire-and-forget so it never blocks the call.
+ */
+function signalMaintenance(response: Response): void {
+  if (response.status !== 503) return
+  void response
+    .clone()
+    .json()
+    .then((body: unknown) => {
+      if (isProblem(body) && body.code === 'MAINTENANCE_MODE') notifyMaintenanceDetected()
+    })
+    .catch(() => {})
 }
 
 export const api = createClient<paths>({ baseUrl: API_BASE, fetch: fetchWithAuth })
