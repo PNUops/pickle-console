@@ -26,7 +26,20 @@ export function ConsentGate({ pending }: { pending: TermsVersionView[] }) {
       setError(null)
       await refreshProfile()
     },
-    onError: (err) => setError(toApiError(err, '약관 동의를 기록하지 못했습니다.').message),
+    onError: async (err) => {
+      const apiError = toApiError(err, '약관 동의를 기록하지 못했습니다.')
+      if (apiError.code === 'CONSENT_VERSION_MISMATCH') {
+        // The documents were revised again between load and submit. Reload the
+        // profile so the gate re-renders with the new pendingConsents versions
+        // — otherwise it would loop, resubmitting the stale versions the 409
+        // rejects. Require a fresh agreement to the updated documents.
+        setAgreed({})
+        setError('약관이 갱신되었습니다. 새 내용을 확인한 뒤 다시 동의해 주세요.')
+        await refreshProfile()
+        return
+      }
+      setError(apiError.message)
+    },
   })
 
   return (
