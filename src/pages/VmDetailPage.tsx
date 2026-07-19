@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import {
   keepPreviousData,
   useMutation,
@@ -385,16 +385,37 @@ function PowerControls({ vm }: { vm: VmDetail }) {
 
 /* ─── SSH 접속 안내 ─── */
 
+/**
+ * 웹 터미널(M6.5)을 열 수 있는 조건: RUNNING VM + 그룹 MEMBER 이상.
+ * 관리자 경로 상세는 그룹 역할이 없어(myGroupRole null) 노출되지 않는다.
+ */
+function canUseTerminal(vm: VmDetail): boolean {
+  const role = vm.myGroupRole
+  return (
+    vm.status === 'RUNNING' &&
+    (role === 'MEMBER' || role === 'EDITOR' || role === 'OWNER')
+  )
+}
+
 /** SSH 접속 명령·사용법 안내. 키가 하나도 없으면 접속 불가 경고 + 등록 유도. */
 function SshAccessSection({ vm }: { vm: VmDetail }) {
+  const navigate = useNavigate()
   const keys = useQuery({ queryKey: ['me', 'ssh-keys'], queryFn: fetchMySshKeys })
   const command = `ssh ${vm.hostname}@${vm.sshHost}`
   const noKeys = keys.isSuccess && keys.data.length === 0
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex items-center justify-between">
         <CardTitle>SSH 접속</CardTitle>
+        {canUseTerminal(vm) && (
+          <Button
+            size="sm"
+            onClick={() => navigate(`/console/vms/${vm.id}/terminal`)}
+          >
+            웹 터미널 열기
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {noKeys && (
