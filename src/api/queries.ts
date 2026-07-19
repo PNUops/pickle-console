@@ -57,6 +57,10 @@ export type VmSettingsUpdateRequest = Schemas['VmSettingsUpdateRequest']
 export type IpPoolSummary = Schemas['IpPoolSummary']
 export type MessageResponse = Schemas['MessageResponse']
 
+/* ─── 웹 터미널 (M6.5) ─── */
+export type TerminalSessionTicket = Schemas['TerminalSessionTicketResponse']
+export type TerminalSessionView = Schemas['TerminalSessionView']
+
 /* ─── 2FA·약관 동의 (M6) ─── */
 export type MfaSetupResponse = Schemas['MfaSetupResponse']
 export type MfaRecoveryCodesResponse = Schemas['MfaRecoveryCodesResponse']
@@ -432,6 +436,42 @@ export function fetchVmEvents(
     })
     if (!data) throw toApiError(error, 'VM 이벤트 이력을 불러오지 못했습니다.')
     return data
+  })
+}
+
+/* ─── 웹 터미널 (M6.5) ─── */
+
+/**
+ * 웹 터미널 1회용 접속 티켓 발급 (POST /vms/{vmId}/terminal-sessions).
+ * 실패는 ApiError로 던져 호출부(훅)가 Problem code로 한국어 메시지를 분기한다.
+ */
+export function createTerminalSession(vmId: number): Promise<TerminalSessionTicket> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/terminal-sessions', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '터미널 접속 티켓을 발급하지 못했습니다.')
+    return data
+  })
+}
+
+/** 라이브 웹 터미널 세션 목록 (관리자). 배열 반환 — 페이지 없음. */
+export function fetchAdminTerminalSessions(): Promise<TerminalSessionView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/terminal-sessions')
+    if (!data) throw toApiError(error, '터미널 세션 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 웹 터미널 세션 강제 종료 (SYS_ADMIN, 멱등 204). */
+export function terminateTerminalSession(sessionId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error, response } = await api.POST(
+      '/admin/terminal-sessions/{sessionId}/terminate',
+      { params: { path: { sessionId } } },
+    )
+    if (!response.ok) throw toApiError(error, '터미널 세션을 종료하지 못했습니다.')
   })
 }
 
