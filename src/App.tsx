@@ -1,5 +1,7 @@
+import { Suspense, lazy } from 'react'
 import { Route, Routes } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
+import { Spinner } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { PublicLayout } from './layouts/PublicLayout'
@@ -38,11 +40,16 @@ import { RequestsPage } from './pages/RequestsPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SignupPage } from './pages/SignupPage'
 import { SshKeysPage } from './pages/SshKeysPage'
-import { TerminalPage } from './pages/TerminalPage'
 import { TermsPage } from './pages/TermsPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
+
+// 웹 터미널은 xterm.js(~250kB)를 끌어오므로, 터미널을 여는 사용자에게만
+// 로드되도록 코드 분할한다(메인 번들 경량 유지, M6.5).
+const TerminalPage = lazy(() =>
+  import('./pages/TerminalPage').then((m) => ({ default: m.TerminalPage })),
+)
 
 function App() {
   return (
@@ -73,7 +80,20 @@ function App() {
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
-        <Route path="vms/:vmId/terminal" element={<TerminalPage />} />
+        <Route
+          path="vms/:vmId/terminal"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-12">
+                  <Spinner label="터미널 불러오는 중" />
+                </div>
+              }
+            >
+              <TerminalPage />
+            </Suspense>
+          }
+        />
         <Route path="ssh-keys" element={<SshKeysPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
