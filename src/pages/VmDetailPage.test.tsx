@@ -388,6 +388,47 @@ describe('VM 상세 — SSH 접속', () => {
   })
 })
 
+/* ─── 웹 터미널 열기 버튼 (M6.5) ─── */
+
+describe('VM 상세 — 웹 터미널 열기', () => {
+  test('RUNNING + MEMBER 이상이면 웹 터미널 열기 버튼을 보여준다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, status: 'RUNNING', myGroupRole: 'MEMBER' }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(await screen.findByRole('button', { name: '웹 터미널 열기' })).toBeInTheDocument()
+  })
+
+  test('STOPPED VM에는 웹 터미널 열기 버튼이 없다', async () => {
+    renderVm(57) // web-lab, STOPPED, OWNER
+
+    await screen.findByRole('heading', { name: 'web-lab' })
+    expect(
+      screen.queryByRole('button', { name: '웹 터미널 열기' }),
+    ).not.toBeInTheDocument()
+  })
+
+  test('VIEWER 역할에는 웹 터미널 열기 버튼이 없다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, status: 'RUNNING', myGroupRole: 'VIEWER' }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      screen.queryByRole('button', { name: '웹 터미널 열기' }),
+    ).not.toBeInTheDocument()
+  })
+})
+
 /* ─── VM별 설정 (M5.5) ─── */
 
 describe('VM 상세 — VM 설정', () => {

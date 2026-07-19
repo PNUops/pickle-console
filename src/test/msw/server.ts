@@ -17,6 +17,7 @@ import { resetSettingFixtures, settingHandlers } from './handlers/settings'
 import { resetSshKeyFixtures, sshKeyHandlers } from './handlers/ssh-keys'
 import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
+import { resetTerminalFixtures, terminalHandlers } from './handlers/terminal'
 
 /** Add per-WP API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
@@ -29,6 +30,7 @@ export const handlers: RequestHandler[] = [
   ...groupHandlers,
   ...vmRequestHandlers,
   ...vmHandlers,
+  ...terminalHandlers,
   ...sshKeyHandlers,
   ...publishingHandlers,
   ...adminHandlers,
@@ -48,6 +50,7 @@ export function resetFixtures() {
   resetGroupFixtures()
   resetVmRequestFixtures()
   resetVmFixtures()
+  resetTerminalFixtures()
   resetSshKeyFixtures()
   resetPublishingFixtures()
   resetAdminFixtures()

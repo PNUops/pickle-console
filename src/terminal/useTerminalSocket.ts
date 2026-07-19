@@ -170,9 +170,8 @@ export function useTerminalSocket(
           }
           return
         }
-        if (event.data instanceof ArrayBuffer) {
-          onDataRef.current(new Uint8Array(event.data))
-        }
+        // binaryType='arraybuffer'이므로 나머지는 ArrayBuffer(=raw 터미널 바이트).
+        onDataRef.current(new Uint8Array(event.data as ArrayBuffer))
       }
 
       ws.onclose = (event: CloseEvent) => {
