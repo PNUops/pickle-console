@@ -1259,6 +1259,48 @@ export interface paths {
         patch: operations["updateVmSettings"];
         trace?: never;
     };
+    "/vms/{vmId}/terminal-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 웹 터미널 접속 티켓 발급 (1회용)
+         * @description 브라우저 웹 터미널(M6.5)용 **1회용 접속 티켓**을 발급합니다. 그룹
+         *     **MEMBER 이상**만 호출할 수 있으며, 비구성원·미존재 VM은 404로
+         *     마스킹됩니다.
+         *
+         *     발급된 티켓으로 같은 오리진의 WebSocket 엔드포인트
+         *     `wss://<host>/terminal/ws`에 접속합니다. 이 WS 엔드포인트는 **REST
+         *     계약 밖**입니다 — sshgw 터미널 브리지(LXC 102)가 종단하며, 프로토콜
+         *     상세는 docs/api/internal.md Link 3을 참조하세요.
+         *
+         *     - 티켓은 `Sec-WebSocket-Protocol: pickle.terminal.v1, ticket.<ticket>`
+         *       2요소 서브프로토콜로 운반합니다 (쿼리스트링·Authorization 헤더
+         *       미사용 — 티켓이 URL·로그에 남지 않도록).
+         *     - 티켓은 **`expiresAt`까지(약 60초)·단일 사용**이며 발급 계정과 대상
+         *       VM에 바인딩됩니다. 브리지가 교환(redeem)하는 순간 소진되고, 그
+         *       시점에 인가(계정 ACTIVE·멤버십·VM 상태·킬 스위치)가 재확인됩니다.
+         *     - 세션은 15분 유휴 타임아웃(사용자 입력 기준), 60초 주기 인가 재검증,
+         *       관리자 강제 종료의 대상입니다. **프레임(키 입력·화면) 내용은
+         *       어디에도 기록되지 않으며**, 감사에는 세션 수명주기만 남습니다
+         *       (`terminal.session_start` / `terminal.session_end` /
+         *       `terminal.force_terminate`).
+         *     - SSH 인증은 플랫폼 터미널 키로 이루어지므로 사용자 자격증명을
+         *       저장·전송하지 않습니다. VM 안에서의 `sudo`는 여전히 VM 비밀번호가
+         *       필요합니다 (비밀번호 열람 권한 정책 그대로).
+         */
+        post: operations["createTerminalSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/events": {
         parameters: {
             query?: never;
@@ -1756,8 +1798,10 @@ export interface paths {
          * [SYS_ADMIN] 사용자 역할/기관 변경
          * @description SYS_ADMIN 전용입니다. 사용자의 전역 역할과 관리 기관을 변경합니다.
          *
-         *     - `role`을 `ORG_ADMIN`으로 지정할 때는 `orgId`가 필수입니다 (검증 실패 시 422).
-         *     - `role`을 `USER` 또는 `SYS_ADMIN`으로 지정하면 `orgId`는 null이어야 합니다.
+         *     - `role`을 `ORG_ADMIN`·`ORG_MANAGER`로 지정할 때는 `orgId`가 필수입니다
+         *       (검증 실패 시 422).
+         *     - `role`을 `USER`·`SYS_ADMIN`·`SYS_MANAGER`로 지정하면 `orgId`는
+         *       null이어야 합니다.
          *     - 역할 변경 시 `token_version`이 올라가 해당 사용자의 기존 토큰이 무효화됩니다.
          */
         patch: operations["updateUserRole"];
@@ -1852,8 +1896,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * [SYS_ADMIN] 노드 현황 조회
-         * @description SYS_ADMIN 전용입니다. Proxmox 노드별 용량·할당 합계·경고 임계값과
+         * [SYS_ADMIN·SYS_MANAGER] 노드 현황 조회
+         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. Proxmox 노드별 용량·할당 합계·경고 임계값과
          *     IP 풀 여유를 반환합니다. 용량·가동 수치는 상태 폴러(30초 주기)가
          *     갱신한 값입니다. 참조성 소규모 목록이므로 배열로 반환합니다.
          */
@@ -2260,8 +2304,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * [SYS_ADMIN] 운영 설정 목록 조회
-         * @description SYS_ADMIN 전용입니다. `settings`의 운영 설정 전체 목록입니다.
+         * [SYS_ADMIN·SYS_MANAGER] 운영 설정 목록 조회
+         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. `settings`의 운영 설정 전체 목록입니다.
          *     `editable=false`인 키는 조회 전용입니다(수정 시도 시 404).
          *     참조성 소규모 목록이므로 배열로 반환합니다.
          */
@@ -2305,8 +2349,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * [SYS_ADMIN] 작업(태스크) 큐 조회
-         * @description SYS_ADMIN 전용입니다. VM 비동기 작업(프로비저닝/삭제/재설치) 큐
+         * [SYS_ADMIN·SYS_MANAGER] 작업(태스크) 큐 조회
+         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. VM 비동기 작업(프로비저닝/삭제/재설치) 큐
          *     목록입니다. `updatedAt` 내림차순(동률 시 `id` 내림차순) 정렬 —
          *     NEEDS_ADMIN 분류 화면에 맞춘 최근 갱신 우선. `NEEDS_ADMIN` 작업의
          *     원인 확인과 재시도(`POST /admin/tasks/{taskId}/retry`) 화면에서
@@ -2352,8 +2396,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * [SYS_ADMIN] 드리프트 리포트 조회
-         * @description SYS_ADMIN 전용입니다. 조정자(reconciler)가 감지한 DB↔Proxmox 드리프트
+         * [SYS_ADMIN·SYS_MANAGER] 드리프트 리포트 조회
+         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. 조정자(reconciler)가 감지한 DB↔Proxmox 드리프트
          *     발견 목록입니다. 최신순 정렬. 발견이 더 이상 관측되지 않으면 조정자가
          *     자동 해결 처리합니다(`resolvedBy*` = null).
          */
@@ -2442,8 +2486,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * [SYS_ADMIN] IP 할당 현황 조회
-         * @description SYS_ADMIN 전용입니다. IP 풀별 할당/해제 현황 목록입니다. 최신순 정렬.
+         * [SYS_ADMIN·SYS_MANAGER] IP 할당 현황 조회
+         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. IP 풀별 할당/해제 현황 목록입니다. 최신순 정렬.
          *     해제(RELEASED)된 행도 이력으로 남습니다.
          */
         get: operations["listIpAllocations"];
@@ -2485,6 +2529,61 @@ export interface paths {
          *     - VM 이벤트(`PERIOD_UPDATE`)와 감사 로그에 기록됩니다.
          */
         patch: operations["updateVmPeriod"];
+        trace?: never;
+    };
+    "/admin/terminal-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * [관리자] 라이브 웹 터미널 세션 목록
+         * @description 현재 진행 중인 웹 터미널 세션 목록입니다 (M6.5). SYS_ADMIN·
+         *     SYS_MANAGER는 전체를, ORG_ADMIN·ORG_MANAGER는 **자기 기관 VM의
+         *     세션만** 조회합니다.
+         *
+         *     - 세션은 브리지(LXC 102)가 `session-start`/`session-end`로 역보고한
+         *       **인메모리 미러** 기준입니다 — 티켓만 발급되고 아직 접속하지 않은
+         *       건은 나타나지 않습니다. api 재시작 시 미러는 다음 세션 수명주기
+         *       보고로 다시 채워집니다.
+         *     - 라이브 세션 수는 항상 소규모(사용자당 3·VM당 5 상한)이므로 페이지
+         *       없이 배열로 반환합니다.
+         */
+        get: operations["listAdminTerminalSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/terminal-sessions/{sessionId}/terminate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [SYS_ADMIN] 웹 터미널 세션 강제 종료
+         * @description SYS_ADMIN 전용입니다. 라이브 세션이면 터미널 브리지에 종료를 지시해
+         *     사용자 브라우저 연결이 즉시 닫히고(종료 코드 4002) 감사
+         *     `terminal.force_terminate`가 남습니다.
+         *
+         *     **멱등**: 이미 종료되었거나 알 수 없는 세션 ID도 204를 반환합니다
+         *     (세션은 인메모리라 종료 후 ID가 곧 사라지므로, 재시도가 항상
+         *     안전하도록 no-op 처리합니다 — 이 경우 감사는 남지 않습니다).
+         */
+        post: operations["terminateTerminalSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -2572,6 +2671,13 @@ export interface components {
              *       — 감사 기록),
              *       `VM_STOP_PROTECTED`(중지 보호 — MEMBER의 종료/재부팅/강제
              *       종료 거부, EDITOR 이상만 가능)
+             *     - 웹 터미널 (M6.5): `TERMINAL_DISABLED`(전역 킬 스위치
+             *       `web_terminal_enabled` 꺼짐 — 503),
+             *       `TERMINAL_SESSION_LIMIT`(동시 세션 상한 초과 — 사용자당 3·
+             *       VM당 5·기관당 상한, 409)
+             *       (그 외 M6.5 오류는 공통 코드 재사용 — 비구성원·미존재 VM 마스킹
+             *       `RESOURCE_NOT_FOUND`, RUNNING 아님 `VM_INVALID_STATE`,
+             *       관리자 접근 차단 `ACCESS_DENIED`, 발급 빈도 `RATE_LIMITED`)
              * @example AUTH_INVALID_CREDENTIALS
              */
             code: string;
@@ -2586,6 +2692,62 @@ export interface components {
         MessageResponse: {
             /** @description 사용자에게 표시할 안내 메시지 (한국어) */
             message: string;
+        };
+        /** @description 웹 터미널 1회용 접속 티켓 (M6.5). 티켓은 발급 계정·대상 VM에 바인딩되며 `expiresAt`까지 단 한 번만 교환할 수 있습니다. */
+        TerminalSessionTicketResponse: {
+            /**
+             * Format: uuid
+             * @description 세션 ID — 감사·관리자 목록·강제 종료에서 쓰이는 식별자
+             */
+            sessionId: string;
+            /** @description 불투명 1회용 티켓 (256-bit 난수, base64url). WebSocket 핸드셰이크의 `Sec-WebSocket-Protocol` 2번째 요소에 `ticket.<값>` 형태로만 전달합니다. 저장·로그 금지. */
+            ticket: string;
+            /**
+             * @description 같은 오리진 WebSocket 경로. 콘솔은 `wss://<현재 호스트><wsPath>`로 접속합니다.
+             * @constant
+             */
+            wsPath: "/terminal/ws";
+            /**
+             * @description 핸드셰이크 1번째 요소이자 서버가 에코하는 고정 서브프로토콜명
+             * @constant
+             */
+            subprotocol: "pickle.terminal.v1";
+            /**
+             * Format: date-time
+             * @description 티켓 만료 시각 (발급 후 약 60초)
+             */
+            expiresAt: string;
+        };
+        /** @description 라이브 웹 터미널 세션 (관리자 뷰, M6.5). 브리지가 역보고한 인메모리 미러 기준이며 터미널 내용은 포함하지 않습니다. */
+        TerminalSessionView: {
+            /** Format: uuid */
+            sessionId: string;
+            /** Format: int64 */
+            vmId: number;
+            /** @description VM 이름 (사용자 지정 표시명이 있으면 콘솔에서 병기) */
+            vmName: string;
+            /**
+             * Format: int64
+             * @description VM 소유 기관 ID (ORG 계층 범위 제한 기준)
+             */
+            orgId: number;
+            orgName: string;
+            /** @description VM 소유 그룹 이름 */
+            groupName: string;
+            /**
+             * Format: int64
+             * @description 세션 사용자 ID
+             */
+            userId: number;
+            userEmail: string;
+            userName: string;
+            /** @description 접속 클라이언트 IP (브리지가 보고, 감사와 동일 값) */
+            clientIp: string;
+            /**
+             * Format: date-time
+             * @description WebSocket 세션 시작 시각
+             */
+            startedAt: string;
         };
         /**
          * @description 전역 사용자 역할. M6에서 축소 권한 부관리자 계층이 추가되었습니다 —
@@ -4349,6 +4511,8 @@ export interface components {
         TaskId: number;
         /** @description 드리프트 발견 ID */
         FindingId: number;
+        /** @description 웹 터미널 세션 ID (UUID) */
+        TerminalSessionId: string;
         /**
          * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
          *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
@@ -7504,6 +7668,118 @@ export interface operations {
             };
         };
     };
+    createTerminalSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description VM ID */
+                vmId: components["parameters"]["VmId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 발급된 접속 티켓 */
+            201: {
+                headers: {
+                    /** @description 티켓 응답은 어디에도 캐시되지 않아야 합니다. */
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "sessionId": "3f1c9a2e-8d4b-4f6a-9c27-5e8b1a0d4c33",
+                     *       "ticket": "Zk9xTHcyVnBSbUx0aEc4ZUtqM3NkUWJZ",
+                     *       "wsPath": "/terminal/ws",
+                     *       "subprotocol": "pickle.terminal.v1",
+                     *       "expiresAt": "2026-07-20T03:15:30Z"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["TerminalSessionTicketResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description 관리자에 의해 이 VM의 SSH/터미널 접근이 차단됨 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "접근이 차단된 VM입니다",
+                     *       "status": 403,
+                     *       "detail": "관리자가 이 VM의 원격 접속을 차단했습니다. 관리자에게 문의하세요.",
+                     *       "instance": "/api/v1/vms/55/terminal-sessions",
+                     *       "code": "ACCESS_DENIED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description 발급할 수 없는 상태 — VM이 RUNNING이 아니거나 (`VM_INVALID_STATE`), 동시 세션 상한 초과 (`TERMINAL_SESSION_LIMIT`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "동시 터미널 세션 상한을 초과했습니다",
+                     *       "status": 409,
+                     *       "detail": "사용 중인 터미널 세션을 닫은 뒤 다시 시도해 주세요.",
+                     *       "instance": "/api/v1/vms/55/terminal-sessions",
+                     *       "code": "TERMINAL_SESSION_LIMIT"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 티켓 발급 빈도 제한 초과 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "요청이 너무 잦습니다",
+                     *       "status": 429,
+                     *       "detail": "잠시 후 다시 시도해 주세요.",
+                     *       "instance": "/api/v1/vms/55/terminal-sessions",
+                     *       "code": "RATE_LIMITED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 웹 터미널 기능 비활성 (전역 킬 스위치 꺼짐) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "about:blank",
+                     *       "title": "웹 터미널을 사용할 수 없습니다",
+                     *       "status": 503,
+                     *       "detail": "웹 터미널 기능이 현재 비활성화되어 있습니다.",
+                     *       "instance": "/api/v1/vms/55/terminal-sessions",
+                     *       "code": "TERMINAL_DISABLED"
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listVmEvents: {
         parameters: {
             query?: {
@@ -8546,7 +8822,7 @@ export interface operations {
                     role?: components["schemas"]["UserRole"];
                     /**
                      * Format: int64
-                     * @description 관리 기관 ID (role=ORG_ADMIN일 때 필수, 그 외 null)
+                     * @description 관리 기관 ID (role=ORG_ADMIN·ORG_MANAGER일 때 필수, 그 외 null)
                      */
                     orgId?: number | null;
                 };
@@ -9976,6 +10252,51 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listAdminTerminalSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 라이브 세션 목록 (시작 시각 내림차순) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TerminalSessionView"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    terminateTerminalSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 웹 터미널 세션 ID (UUID) */
+                sessionId: components["parameters"]["TerminalSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 종료 지시 완료 (또는 이미 종료된 세션 — no-op) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }
