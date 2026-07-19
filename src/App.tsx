@@ -37,6 +37,7 @@ import { RequestsPage } from './pages/RequestsPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SignupPage } from './pages/SignupPage'
 import { SshKeysPage } from './pages/SshKeysPage'
+import { TerminalPage } from './pages/TerminalPage'
 import { TermsPage } from './pages/TermsPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmDetailPage } from './pages/VmDetailPage'
@@ -71,6 +72,7 @@ function App() {
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
+        <Route path="vms/:vmId/terminal" element={<TerminalPage />} />
         <Route path="ssh-keys" element={<SshKeysPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
