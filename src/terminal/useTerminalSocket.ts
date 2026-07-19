@@ -43,6 +43,7 @@ const MINT_ERROR_MESSAGES: Record<string, string> = {
   RATE_LIMITED: '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.',
   VM_INVALID_STATE: 'VM이 실행 중이 아닙니다.',
   ACCESS_DENIED: '관리자가 이 VM의 원격 접속을 차단했습니다. 관리자에게 문의하세요.',
+  GROUP_ROLE_INSUFFICIENT: '웹 터미널은 그룹 참여자(MEMBER) 이상만 사용할 수 있습니다.',
 }
 
 const MINT_FALLBACK_MESSAGE = '터미널 접속 티켓을 발급하지 못했습니다.'
