@@ -14,6 +14,7 @@ export function AdminLayout() {
         { to: '/admin', label: '대시보드', end: true },
         { to: '/admin/requests', label: '승인 대기' },
         { to: '/admin/vms', label: 'VM 관리' },
+        { to: '/admin/terminal-sessions', label: '웹 터미널 세션' },
         { to: '/admin/users', label: '사용자 관리' },
         { to: '/admin/expiry', label: '만료 관리' },
       ],
