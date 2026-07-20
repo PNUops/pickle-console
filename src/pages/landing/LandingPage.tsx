@@ -6,7 +6,6 @@ import { Hero } from './Hero'
 import { HowItWorks } from './HowItWorks'
 import { LandingFooter } from './LandingFooter'
 import { LandingHeader } from './LandingHeader'
-import { Roadmap } from './Roadmap'
 import { TrustStrip } from './TrustStrip'
 
 /**
@@ -32,7 +31,6 @@ export function LandingPage() {
         <HowItWorks />
         <AccessSection />
         <FeatureGrid />
-        <Roadmap />
         <FinalCta />
       </main>
       <LandingFooter />

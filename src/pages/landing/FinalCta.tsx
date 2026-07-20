@@ -38,7 +38,7 @@ export function FinalCta() {
                 첫 서버를 신청해 보세요
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-neutral-400">
-                부산대학교 구성원이라면 지금 바로. 가입부터 접속까지, 오래 걸리지 않습니다.
+                부산대학교 구성원이라면 지금 바로 시작할 수 있습니다.
               </p>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
                 {status === 'loading' ? (

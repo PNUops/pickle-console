@@ -9,8 +9,7 @@ export function LandingFooter() {
           <div className="max-w-sm">
             <Logo tone="inverse" />
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
-              부산대학교 구성원을 위한 클라우드 플랫폼. 신청부터 접속까지, 서버가 필요한
-              순간을 콘솔 하나로 해결합니다.
+              부산대학교 구성원을 위한 클라우드 플랫폼입니다.
             </p>
           </div>
           <nav aria-label="바로가기" className="flex gap-12 text-sm">
@@ -28,8 +27,8 @@ export function LandingFooter() {
               <a href="#features" className="text-neutral-400 transition-colors hover:text-white">
                 주요 기능
               </a>
-              <a href="#roadmap" className="text-neutral-400 transition-colors hover:text-white">
-                로드맵
+              <a href="#access" className="text-neutral-400 transition-colors hover:text-white">
+                접속 방식
               </a>
             </div>
           </nav>

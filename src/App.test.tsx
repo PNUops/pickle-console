@@ -22,16 +22,12 @@ test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async 
     screen.getByRole('heading', { name: '터미널이 있어도, 없어도' }),
   ).toBeInTheDocument()
   expect(
-    screen.getByRole('heading', { name: '필요한 건 콘솔에 다 있습니다' }),
-  ).toBeInTheDocument()
-  expect(
-    screen.getByRole('heading', { name: '피클은 지금도 자라는 중입니다' }),
+    screen.getByRole('heading', { name: '서버만 주고 끝나지 않습니다' }),
   ).toBeInTheDocument()
 
-  // 이용 절차 4단계와 로드맵 "예정" 뱃지
+  // 이용 절차 4단계
   expect(screen.getByRole('heading', { name: '신청' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: '접속' })).toBeInTheDocument()
-  expect(screen.getAllByText('예정').length).toBeGreaterThanOrEqual(8)
 
   // 헤더 내비게이션과 푸터, 최종 CTA에 회원가입 링크가 있다
   expect(screen.getAllByRole('link', { name: /회원가입/ })).toHaveLength(3)

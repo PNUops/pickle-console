@@ -11,7 +11,13 @@ export function HowItWorks() {
           eyebrow="이용 절차"
           title="네 단계면 서버가 준비됩니다"
           titleId="how-it-works-title"
-          description="복잡한 인프라 지식은 필요 없습니다. 신청서 하나로 시작해서, 승인되는 순간 나머지는 플랫폼이 알아서 합니다."
+          description={
+            <>
+              신청서 하나로 시작합니다.{' '}
+              <br className="hidden sm:block" />
+              승인되는 순간 나머지는 플랫폼이 알아서 합니다.
+            </>
+          }
         />
         <ol className="mt-14 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (

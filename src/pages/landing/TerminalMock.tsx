@@ -59,10 +59,6 @@ export function TerminalMock() {
         </p>
         <div className={cn('transition-opacity duration-500', done ? 'opacity-100' : 'opacity-0')}>
           <p className="text-neutral-400">Welcome to Ubuntu 24.04 LTS (GNU/Linux x86_64)</p>
-          <p className="text-neutral-400">
-            내부 IP <span className="text-neutral-300">172.29.x.x</span> · 세션은 내 이름으로
-            기록됩니다
-          </p>
           <p>
             <span className="text-success-400">student@my-vm</span>
             <span className="text-neutral-400">:~$</span>

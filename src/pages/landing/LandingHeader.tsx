@@ -8,7 +8,6 @@ const navItems = [
   { href: '#how-it-works', label: '이용 절차' },
   { href: '#access', label: '접속 방식' },
   { href: '#features', label: '주요 기능' },
-  { href: '#roadmap', label: '로드맵' },
 ]
 
 /**
