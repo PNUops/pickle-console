@@ -34,7 +34,7 @@ export function LandingFooter() {
             </div>
           </nav>
         </div>
-        <p className="mt-10 border-t border-white/10 pt-6 text-xs text-neutral-500">
+        <p className="mt-10 border-t border-white/10 pt-6 text-xs text-neutral-400">
           피클 — 부산대학교 클라우드 플랫폼
         </p>
       </div>

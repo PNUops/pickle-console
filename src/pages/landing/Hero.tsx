@@ -1,12 +1,24 @@
+import { useSyncExternalStore } from 'react'
 import { Link } from 'react-router'
 import { homePathFor, useAuth } from '../../auth/auth-context'
 import { HeroFallback } from './HeroFallback'
 import { HeroVisual } from './HeroVisual'
 import { Reveal } from './Reveal'
 
-/** 다크 히어로 — 좌측 에디토리얼 타이포 + 우측 비주얼(3D 씬은 C3에서 연결). */
+// Tailwind lg(64rem) 기준. CSS 숨김이 아니라 조건부 렌더로 분기해야
+// 모바일이 3D 청크(~160KB gzip)와 WebGL 컨텍스트를 아예 만들지 않는다.
+const DESKTOP_QUERY = '(min-width: 64rem)'
+const subscribeDesktop = (onChange: () => void) => {
+  const mql = window.matchMedia(DESKTOP_QUERY)
+  mql.addEventListener('change', onChange)
+  return () => mql.removeEventListener('change', onChange)
+}
+const isDesktopNow = () => window.matchMedia(DESKTOP_QUERY).matches
+
+/** 다크 히어로 — 좌측 에디토리얼 타이포 + 우측 3D 비주얼(데스크톱 한정). */
 export function Hero() {
   const { status, user } = useAuth()
+  const isDesktop = useSyncExternalStore(subscribeDesktop, isDesktopNow)
 
   return (
     <section className="relative overflow-hidden bg-neutral-950">
@@ -60,7 +72,10 @@ export function Hero() {
             </Reveal>
             <Reveal delay={0.24}>
               <div className="mt-9 flex flex-wrap items-center gap-3">
-                {status === 'authenticated' && user ? (
+                {status === 'loading' ? (
+                  // 세션 복원 중 — 잘못된 CTA가 잠깐 보였다 바뀌는 깜빡임 방지
+                  <div aria-hidden="true" className="h-12" />
+                ) : status === 'authenticated' && user ? (
                   <Link
                     to={homePathFor(user.role)}
                     className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-6 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
@@ -88,7 +103,7 @@ export function Hero() {
               </div>
             </Reveal>
             <Reveal delay={0.32}>
-              <p className="mt-9 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-neutral-500">
+              <p className="mt-9 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-neutral-400">
                 <span className="text-primary-400">@pusan.ac.kr</span> 전용
                 <span aria-hidden="true">·</span>
                 승인 기반 생성
@@ -98,13 +113,17 @@ export function Hero() {
             </Reveal>
           </div>
 
-          {/* 우측: 3D 비주얼(lazy) — lg 미만에서는 WebGL 대신 가벼운 정적 폴백만 */}
-          <Reveal delay={0.2} className="hidden lg:block">
-            <HeroVisual />
-          </Reveal>
-          <Reveal delay={0.2} className="mx-auto w-full max-w-xs lg:hidden">
-            <HeroFallback />
-          </Reveal>
+          {/* 우측: 데스크톱은 3D(lazy), 미만은 경량 정적 폴백 — 조건부 렌더라
+              모바일에서는 3D 청크 다운로드 자체가 일어나지 않는다 */}
+          {isDesktop ? (
+            <Reveal delay={0.2}>
+              <HeroVisual />
+            </Reveal>
+          ) : (
+            <Reveal delay={0.2} className="mx-auto w-full max-w-xs">
+              <HeroFallback />
+            </Reveal>
+          )}
         </div>
 
         {/* 스크롤 힌트 */}

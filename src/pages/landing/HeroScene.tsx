@@ -162,10 +162,11 @@ function OrbitalScene({ animate }: { animate: boolean }) {
 function detectWebgl(): boolean {
   try {
     const canvas = document.createElement('canvas')
-    return Boolean(
-      window.WebGLRenderingContext &&
-        (canvas.getContext('webgl2') ?? canvas.getContext('webgl')),
-    )
+    const context = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+    if (!context) return false
+    // 감지용 컨텍스트는 즉시 반납한다(브라우저 동시 컨텍스트 상한 잠식 방지).
+    context.getExtension('WEBGL_lose_context')?.loseContext()
+    return true
   } catch {
     return false
   }

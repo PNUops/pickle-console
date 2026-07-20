@@ -49,7 +49,10 @@ export function LandingHeader() {
           ))}
         </nav>
         <nav aria-label="주 메뉴" className="flex items-center gap-2">
-          {status === 'authenticated' && user ? (
+          {status === 'loading' ? (
+            // 세션 복원 중 — 로그인/회원가입이 잠깐 보였다 바뀌는 깜빡임 방지
+            <div aria-hidden="true" className="h-9" />
+          ) : status === 'authenticated' && user ? (
             <Link
               to={homePathFor(user.role)}
               className="inline-flex h-9 items-center rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"

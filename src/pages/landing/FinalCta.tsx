@@ -41,7 +41,9 @@ export function FinalCta() {
                 부산대학교 구성원이라면 지금 바로. 가입부터 접속까지, 오래 걸리지 않습니다.
               </p>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-                {status === 'authenticated' && user ? (
+                {status === 'loading' ? (
+                  <div aria-hidden="true" className="h-12" />
+                ) : status === 'authenticated' && user ? (
                   <Link
                     to={homePathFor(user.role)}
                     className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-7 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"

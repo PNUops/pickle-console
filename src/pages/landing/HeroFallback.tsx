@@ -16,17 +16,17 @@ export function HeroFallback() {
       <div className="absolute top-1/2 left-1/2 size-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/8" />
       <div className="absolute top-1/2 left-1/2 size-[96%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5" />
       {/* 궤도 위 VM 노드 */}
-      <div className="absolute top-[24%] left-[18%] size-4 animate-float rounded-md border border-primary-300/50 bg-primary-500/40" />
+      <div className="absolute top-[24%] left-[18%] size-4 animate-float rounded-md motion-reduce:animate-none border border-primary-300/50 bg-primary-500/40" />
       <div
-        className="absolute top-[12%] right-[30%] size-3 animate-float rounded-md border border-primary-300/40 bg-primary-500/30"
+        className="absolute top-[12%] right-[30%] size-3 animate-float rounded-md motion-reduce:animate-none border border-primary-300/40 bg-primary-500/30"
         style={{ animationDelay: '-2.2s' }}
       />
       <div
-        className="absolute right-[12%] bottom-[30%] size-5 animate-float rounded-md border border-primary-300/50 bg-primary-500/40"
+        className="absolute right-[12%] bottom-[30%] size-5 animate-float rounded-md motion-reduce:animate-none border border-primary-300/50 bg-primary-500/40"
         style={{ animationDelay: '-4.1s' }}
       />
       <div
-        className="absolute bottom-[16%] left-[32%] size-3 animate-float rounded-md border border-primary-300/40 bg-primary-500/30"
+        className="absolute bottom-[16%] left-[32%] size-3 animate-float rounded-md motion-reduce:animate-none border border-primary-300/40 bg-primary-500/30"
         style={{ animationDelay: '-5.6s' }}
       />
     </div>
