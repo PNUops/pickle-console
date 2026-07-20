@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
@@ -34,7 +34,8 @@ describe('알림 종(bell)', () => {
     renderApp('/console')
 
     await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 2개' }))
-    await user.click(await screen.findByText('VM 생성 완료'))
+    const panel = await screen.findByRole('dialog', { name: '알림' })
+    await user.click(await within(panel).findByText('VM 생성 완료'))
 
     // /console/vms/55 → VM 상세, 읽음 처리로 배지 감소, 팝오버는 라우트 이동으로 닫힘
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
