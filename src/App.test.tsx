@@ -2,14 +2,13 @@ import { screen } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import { renderApp } from './test/render'
 
-test('랜딩 페이지가 서비스 소개와 CTA를 보여준다', async () => {
+test('랜딩 페이지가 히어로와 CTA를 보여준다', async () => {
   renderApp('/')
 
   expect(
     await screen.findByRole('heading', { name: /나만의 서버, 피클/ }),
   ).toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: '신청 절차' })).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '지금 시작하기' })).toBeInTheDocument()
-  // 헤더 내비게이션과 하단 CTA 두 곳에 회원가입 링크가 있다
+  expect(screen.getByRole('link', { name: /지금 시작하기/ })).toBeInTheDocument()
+  // 헤더 내비게이션과 푸터 두 곳에 회원가입 링크가 있다
   expect(screen.getAllByRole('link', { name: '회원가입' })).toHaveLength(2)
 })

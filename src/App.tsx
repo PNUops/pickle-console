@@ -29,7 +29,7 @@ import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
-import { LandingPage } from './pages/LandingPage'
+import { LandingPage } from './pages/landing/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyActivityPage } from './pages/MyActivityPage'
 import { NewRequestPage } from './pages/NewRequestPage'
@@ -54,8 +54,9 @@ const TerminalPage = lazy(() =>
 function App() {
   return (
     <Routes>
+      {/* 랜딩은 자체 다크 헤더/푸터를 가진 full-bleed 페이지 — PublicLayout 밖에서 렌더. */}
+      <Route index element={<LandingPage />} />
       <Route element={<PublicLayout />}>
-        <Route index element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="signup" element={<SignupPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
