@@ -1,5 +1,5 @@
 import { Line, RoundedBox } from '@react-three/drei'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useReducedMotion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -53,20 +53,29 @@ function particlePositions(count: number): Float32Array {
   }
   const positions = new Float32Array(count * 3)
   for (let i = 0; i < count; i++) {
-    // 반지름 4.2~6.5 구 껍질에 흩뿌린다(씬 바깥 배경 별처럼).
-    const r = 4.2 + next() * 2.3
-    const theta = next() * Math.PI * 2
-    const phi = Math.acos(next() * 2 - 1)
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-    positions[i * 3 + 1] = r * Math.cos(phi) * 0.7
-    positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
+    // 히어로(다크 영역) 전체에 별처럼 깔리도록 넓은 박스에 흩뿌린다.
+    // 뷰포트보다 넉넉히 잡고, 화면 밖 파티클은 자연스럽게 컬링된다.
+    positions[i * 3] = (next() * 2 - 1) * 9.5
+    positions[i * 3 + 1] = (next() * 2 - 1) * 4.5
+    positions[i * 3 + 2] = (next() * 2 - 1) * 2.5 - 0.5
   }
   return positions
 }
 
-function OrbitalScene({ animate }: { animate: boolean }) {
+function OrbitalScene({
+  animate,
+  pointer,
+}: {
+  animate: boolean
+  pointer: React.RefObject<{ x: number; y: number }>
+}) {
   const group = useRef<THREE.Group>(null)
   const core = useRef<THREE.Mesh>(null)
+  // 캔버스가 히어로 전체를 덮으므로, 궤도 씬은 우측으로 밀고 뷰포트 폭에 맞춰
+  // 스케일해 좌우가 잘리지 않게 한다(별 파티클은 전체 화면에 그대로 깔림).
+  const { viewport } = useThree()
+  const sceneScale = Math.min(1.05, viewport.width / 13)
+  const sceneX = viewport.width * 0.2
 
   const rings = useMemo(
     () =>
@@ -77,7 +86,7 @@ function OrbitalScene({ animate }: { animate: boolean }) {
       })),
     [],
   )
-  const particles = useMemo(() => particlePositions(140), [])
+  const particles = useMemo(() => particlePositions(260), [])
 
   useFrame((state, delta) => {
     if (!animate) return
@@ -85,10 +94,11 @@ function OrbitalScene({ animate }: { animate: boolean }) {
     if (!g) return
     const t = state.clock.elapsedTime
     // 느린 자전 + 부유, 마우스 패럴랙스는 부드럽게 lerp.
+    // (캔버스 위에 텍스트 레이어가 있어 R3F pointer 대신 window 좌표를 쓴다)
     g.rotation.y += delta * 0.12
     g.position.y = Math.sin(t * 0.4) * 0.1
-    g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, state.pointer.y * -0.14, 0.04)
-    g.rotation.z = THREE.MathUtils.lerp(g.rotation.z, state.pointer.x * 0.07, 0.04)
+    g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, pointer.current.y * -0.14, 0.04)
+    g.rotation.z = THREE.MathUtils.lerp(g.rotation.z, pointer.current.x * 0.07, 0.04)
     if (core.current) {
       core.current.rotation.x = t * 0.25
       core.current.rotation.y = t * 0.32
@@ -96,7 +106,8 @@ function OrbitalScene({ animate }: { animate: boolean }) {
   })
 
   return (
-    <group ref={group}>
+    <>
+    <group ref={group} position={[sceneX, 0, 0]} scale={sceneScale}>
       {/* 중앙 코어: 와이어프레임 외피 + 발광 코어 */}
       <mesh>
         <icosahedronGeometry args={[0.98, 1]} />
@@ -141,21 +152,23 @@ function OrbitalScene({ animate }: { animate: boolean }) {
         </group>
       ))}
 
-      {/* 배경 파티클 */}
-      <points>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[particles, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          color="#81c7d3"
-          size={0.035}
-          transparent
-          opacity={0.45}
-          sizeAttenuation
-          depthWrite={false}
-        />
-      </points>
     </group>
+
+    {/* 배경 파티클 — 궤도 그룹 밖에 두어 히어로 전체(다크 영역)에 깔린다 */}
+    <points>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[particles, 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        color="#81c7d3"
+        size={0.035}
+        transparent
+        opacity={0.4}
+        sizeAttenuation
+        depthWrite={false}
+      />
+    </points>
+    </>
   )
 }
 
@@ -177,6 +190,7 @@ export default function HeroScene() {
   const [webglSupported] = useState(detectWebgl)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [inView, setInView] = useState(true)
+  const pointer = useRef({ x: 0, y: 0 })
 
   // 히어로가 화면 밖으로 나가면 렌더 루프를 멈춰 GPU를 아낀다.
   useEffect(() => {
@@ -190,24 +204,41 @@ export default function HeroScene() {
     return () => observer.disconnect()
   }, [])
 
+  // 캔버스 위에 텍스트 레이어(z-10)가 있어 R3F 자체 포인터 이벤트가 막히므로
+  // window 좌표를 R3F pointer와 같은 정규화(-1~1, y는 위가 +)로 직접 추적한다.
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      pointer.current.x = (event.clientX / window.innerWidth) * 2 - 1
+      pointer.current.y = -((event.clientY / window.innerHeight) * 2 - 1)
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
+
   if (!webglSupported) {
-    return <HeroFallback />
+    return (
+      <div className="flex h-full w-full items-center justify-end lg:pr-[4%]">
+        <div className="w-full max-w-[540px]">
+          <HeroFallback />
+        </div>
+      </div>
+    )
   }
 
   const animate = inView && !reduced
   return (
-    <div ref={wrapRef} aria-hidden="true" className="relative mx-auto aspect-square w-full max-w-[540px]">
+    <div ref={wrapRef} className="h-full w-full">
       <Canvas
         frameloop={animate ? 'always' : 'demand'}
         dpr={[1, 2]}
-        camera={{ position: [0, 1.1, 7], fov: 42 }}
+        camera={{ position: [0, 0.8, 7], fov: 42 }}
         gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
       >
         <fog attach="fog" args={['#020617', 7.5, 13]} />
         <ambientLight intensity={0.35} />
         <pointLight position={[0, 0, 0]} intensity={26} color="#2e8b9e" />
         <directionalLight position={[4, 6, 3]} intensity={0.7} color="#81c7d3" />
-        <OrbitalScene animate={animate} />
+        <OrbitalScene animate={animate} pointer={pointer} />
       </Canvas>
     </div>
   )

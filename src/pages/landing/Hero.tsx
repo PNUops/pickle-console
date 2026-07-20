@@ -42,7 +42,11 @@ export function Hero() {
         }}
       />
 
-      <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col justify-center px-4 pt-16 sm:px-6">
+      {/* 3D 레이어 — 히어로(다크 영역) 전체를 덮는다. 별 파티클이 화면 전역에 깔리고
+          궤도 씬은 씬 내부에서 우측으로 배치된다. */}
+      {isDesktop && <HeroVisual />}
+
+      <div className="relative z-10 mx-auto flex min-h-svh w-full max-w-7xl flex-col justify-center px-4 pt-16 sm:px-6">
         <div className="grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:py-8">
           {/* 좌측: 카피 */}
           <div>
@@ -52,7 +56,7 @@ export function Hero() {
                   <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary-400 opacity-60 motion-reduce:hidden" />
                   <span className="relative inline-flex size-2 rounded-full bg-primary-400" />
                 </span>
-                부산대학교 클라우드 플랫폼 · 개발 진행 중
+                부산대학교 클라우드 플랫폼
               </p>
             </Reveal>
             <Reveal delay={0.08}>
@@ -66,8 +70,9 @@ export function Hero() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-400">
-                학교 이메일로 가입하고 신청서를 제출하세요. 관리자 승인이 끝나면 서버가
-                자동으로 만들어지고, SSH와 웹 터미널로 어디서든 접속할 수 있습니다.
+                신청서를 제출하고 승인되면 서버가 자동으로 만들어집니다.{' '}
+                <br className="hidden sm:block" />
+                SSH와 웹 터미널로 바로 접속할 수 있습니다.
               </p>
             </Reveal>
             <Reveal delay={0.24}>
@@ -102,24 +107,10 @@ export function Hero() {
                 )}
               </div>
             </Reveal>
-            <Reveal delay={0.32}>
-              <p className="mt-9 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-neutral-400">
-                <span className="text-primary-400">@pusan.ac.kr</span> 전용
-                <span aria-hidden="true">·</span>
-                승인 기반 생성
-                <span aria-hidden="true">·</span>
-                무료
-              </p>
-            </Reveal>
           </div>
 
-          {/* 우측: 데스크톱은 3D(lazy), 미만은 경량 정적 폴백 — 조건부 렌더라
-              모바일에서는 3D 청크 다운로드 자체가 일어나지 않는다 */}
-          {isDesktop ? (
-            <Reveal delay={0.2}>
-              <HeroVisual />
-            </Reveal>
-          ) : (
+          {/* 모바일(<lg): 3D 청크를 아예 받지 않고 경량 정적 폴백만 렌더 */}
+          {!isDesktop && (
             <Reveal delay={0.2} className="mx-auto w-full max-w-xs">
               <HeroFallback />
             </Reveal>
