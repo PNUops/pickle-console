@@ -6,10 +6,10 @@ import { vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-/** 사용자 세션으로 VM 상세를 연다 (그룹 12=OWNER, 그룹 15=MEMBER). */
+/** 사용자 세션으로 VM 상세의 도메인·공개 탭을 연다 (그룹 12=OWNER, 그룹 15=MEMBER). */
 function renderVm(vmId: number) {
   server.use(refreshSuccessHandler('access-student'))
-  renderApp(`/console/vms/${vmId}`)
+  renderApp(`/console/vms/${vmId}?tab=publish`)
 }
 
 /** 'HTTP 서비스 공개' 카드 요소를 반환한다. */

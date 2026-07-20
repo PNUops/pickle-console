@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   keepPreviousData,
   useMutation,
@@ -44,6 +44,9 @@ import {
   Select,
   Spinner,
   Stepper,
+  TabPanel,
+  Tabs,
+  type TabItem,
   Table,
   TBody,
   TD,
@@ -83,9 +86,21 @@ const ACTIVE_TASK_STATUSES: ProvisioningTaskView['status'][] = [
 
 const EVENTS_PAGE_SIZE = 10
 
+/**
+ * VM 상세 탭 구성. 배열 순서가 렌더 순서 — 추후 '모니터링'(사용량 차트, 로드맵)
+ * 탭은 여기 한 항목을 추가하는 것으로 확장한다.
+ */
+const VM_TABS: TabItem[] = [
+  { id: 'overview', label: '개요' },
+  { id: 'publish', label: '도메인·공개' },
+  { id: 'settings', label: '설정' },
+  { id: 'activity', label: '활동' },
+]
+
 export function VmDetailPage() {
   const params = useParams()
   const vmId = Number(params.vmId)
+  const [searchParams, setSearchParams] = useSearchParams()
   const vm = useQuery({
     queryKey: ['vms', vmId],
     queryFn: () => fetchVm(vmId),
@@ -142,6 +157,19 @@ export function VmDetailPage() {
     data.expiryStoppedAt != null ||
     (dday != null && dday.daysLeft < 0 && data.status === 'STOPPED')
 
+  // 설정 탭은 편집 권한자에게만 노출(내부 섹션 가드와 일관). 잘못된/숨김 tab 값은
+  // 개요로 폴백한다(URL은 그대로 두어도 무해).
+  const settingsVisible =
+    canEditVm(data.myGroupRole) &&
+    data.status !== 'DELETING' &&
+    data.status !== 'DELETED'
+  const tabs = VM_TABS.filter((tab) => tab.id !== 'settings' || settingsVisible)
+  const rawTab = searchParams.get('tab')
+  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
+  const selectTab = (id: string) => {
+    setSearchParams(id === 'overview' ? {} : { tab: id })
+  }
+
   return (
     <div className="space-y-6">
       <nav className="text-sm">
@@ -180,7 +208,10 @@ export function VmDetailPage() {
       {data.status === 'DELETED' && (
         <Alert variant="info">이 VM은 삭제되었습니다. 기록 조회만 가능합니다.</Alert>
       )}
-      {data.statusDetail && <Alert variant="warning">{data.statusDetail}</Alert>}
+      {/* 정상 실행 중에는 지난 작업 메시지(예: "프로비저닝 완료")를 경고로 띄우지 않는다. */}
+      {data.statusDetail && data.status !== 'RUNNING' && (
+        <Alert variant="warning">{data.statusDetail}</Alert>
+      )}
       {expiredStopped && (
         <Alert variant="warning" title="사용 기간 만료">
           사용 기간이 만료되어 중지되었습니다. 연장이 필요하면 관리자에게 문의해 주세요.
@@ -190,49 +221,56 @@ export function VmDetailPage() {
         <DeletionBanner deletion={data.deletion} />
       )}
 
-      <SshAccessSection vm={data} />
-
-      <VmPasswordSection vm={data} />
-
       {data.provisioning && <ProvisioningPanel task={data.provisioning} />}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>VM 정보</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-            <Field label="사양">{formatSpec(data.vcpu, data.memoryMb, data.diskGb)}</Field>
-            <Field label="그룹">{data.groupName}</Field>
-            <Field label="내부 IP">{data.ipAddress ?? '할당 전'}</Field>
-            <Field label="SSH 계정">{data.sshUsername}</Field>
-            <Field label="사용 기간">
-              {data.startDate ?? '미지정'} ~ {data.endDate ?? '미지정'}
-              {data.endDate && dday && dday.daysLeft <= 7 && (
-                <DdayBadge endDate={data.endDate} className="ml-2" />
-              )}
-            </Field>
-            <Field label="생성 신청">
-              <Link
-                to={`/console/requests/${data.requestId}`}
-                className="text-primary-700 hover:underline"
-              >
-                신청 #{data.requestId}
-              </Link>
-            </Field>
-            <Field label="생성일">{formatDateTime(data.createdAt)}</Field>
-            <Field label="마지막 갱신">{formatDateTime(data.updatedAt)}</Field>
-          </dl>
-        </CardContent>
-      </Card>
+      <Tabs tabs={tabs} value={activeTab} onChange={selectTab} aria-label="VM 상세 영역" />
 
-      <VmSettingsSection vm={data} />
+      <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
+        <SshAccessSection vm={data} />
+        <VmPasswordSection vm={data} />
+        <Card>
+          <CardHeader>
+            <CardTitle>VM 정보</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+              <Field label="사양">{formatSpec(data.vcpu, data.memoryMb, data.diskGb)}</Field>
+              <Field label="그룹">{data.groupName}</Field>
+              <Field label="내부 IP">{data.ipAddress ?? '할당 전'}</Field>
+              <Field label="SSH 계정">{data.sshUsername}</Field>
+              <Field label="사용 기간">
+                {data.startDate ?? '미지정'} ~ {data.endDate ?? '미지정'}
+                {data.endDate && dday && dday.daysLeft <= 7 && (
+                  <DdayBadge endDate={data.endDate} className="ml-2" />
+                )}
+              </Field>
+              <Field label="생성 신청">
+                <Link
+                  to={`/console/requests/${data.requestId}`}
+                  className="text-primary-700 hover:underline"
+                >
+                  신청 #{data.requestId}
+                </Link>
+              </Field>
+              <Field label="생성일">{formatDateTime(data.createdAt)}</Field>
+              <Field label="마지막 갱신">{formatDateTime(data.updatedAt)}</Field>
+            </dl>
+          </CardContent>
+        </Card>
+      </TabPanel>
 
-      <VmPublishSection vm={data} />
+      <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">
+        <VmPublishSection vm={data} />
+      </TabPanel>
 
-      <DeleteSection vm={data} />
+      <TabPanel id="settings" active={activeTab === 'settings'} className="space-y-6">
+        <VmSettingsSection vm={data} />
+        <DeleteSection vm={data} />
+      </TabPanel>
 
-      <VmEventsSection vmId={vmId} />
+      <TabPanel id="activity" active={activeTab === 'activity'} className="space-y-6">
+        <VmEventsSection vmId={vmId} />
+      </TabPanel>
     </div>
   )
 }
@@ -664,6 +702,20 @@ function VmSettingsSection({ vm }: { vm: VmDetail }) {
   return <VmSettingsCard vm={vm} />
 }
 
+/** 사용자 관점 설정 순서 — 표시명(가장 자주 쓰는 항목)을 맨 앞에. 목록에 없는 키는 서버 순서대로 뒤에 붙는다. */
+const SETTING_ORDER = [
+  'display_name',
+  'ssh_password_enabled',
+  'password_reveal_min_role',
+  'stop_protection',
+  'deletion_protection',
+]
+
+function settingOrderIndex(key: string): number {
+  const index = SETTING_ORDER.indexOf(key)
+  return index === -1 ? SETTING_ORDER.length : index
+}
+
 function VmSettingsCard({ vm }: { vm: VmDetail }) {
   const settings = useQuery({
     queryKey: ['vms', vm.id, 'settings'],
@@ -685,11 +737,13 @@ function VmSettingsCard({ vm }: { vm: VmDetail }) {
         {settings.isSuccess && (
           <>
             <ul className="divide-y divide-neutral-100">
-              {settings.data.map((setting) => (
-                <li key={setting.key} className="py-4 first:pt-0 last:pb-0">
-                  <VmSettingRow vmId={vm.id} setting={setting} />
-                </li>
-              ))}
+              {[...settings.data]
+                .sort((a, b) => settingOrderIndex(a.key) - settingOrderIndex(b.key))
+                .map((setting) => (
+                  <li key={setting.key} className="py-4 first:pt-0 last:pb-0">
+                    <VmSettingRow vmId={vm.id} setting={setting} />
+                  </li>
+                ))}
             </ul>
             <p className="text-xs text-neutral-500">
               설정 변경은 모두 감사 로그에 기록됩니다.
@@ -881,6 +935,7 @@ function StringSettingControl({
       <Button
         size="sm"
         variant="secondary"
+        className="shrink-0 whitespace-nowrap"
         disabled={disabled || !dirty}
         loading={pending}
         onClick={() => onChange(text.trim())}

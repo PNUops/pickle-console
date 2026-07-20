@@ -7,9 +7,10 @@ import { vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-function renderVm(vmId: number) {
+/** VM 상세를 연다. tab을 주면 해당 탭 딥링크(?tab=)로 진입한다. */
+function renderVm(vmId: number, tab?: 'publish' | 'settings' | 'activity') {
   server.use(refreshSuccessHandler('access-student'))
-  renderApp(`/console/vms/${vmId}`)
+  renderApp(`/console/vms/${vmId}${tab ? `?tab=${tab}` : ''}`)
 }
 
 describe('VM 상세 — 전원 제어', () => {
@@ -101,7 +102,7 @@ describe('VM 상세 — 진행 패널', () => {
 describe('VM 상세 — 이벤트 이력', () => {
   test('이벤트를 한국어 라벨·수행자와 함께 나열하고, 전원 조작 후 갱신된다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(56, 'activity')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const history = (await screen.findByText('이벤트 이력')).closest('div')!
@@ -122,7 +123,7 @@ describe('VM 상세 — 이벤트 이력', () => {
 describe('VM 상세 — 삭제 흐름', () => {
   test('삭제 모달은 백업 고지를 보여주고 이름이 일치해야 접수할 수 있다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(56, 'settings')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: 'VM 삭제' }))
@@ -168,7 +169,7 @@ describe('VM 상세 — 삭제 흐름', () => {
 
   test('ERROR VM은 삭제만 가능하며 접수 즉시 삭제된다', async () => {
     const user = userEvent.setup()
-    renderVm(59)
+    renderVm(59, 'settings')
 
     await screen.findByRole('heading', { name: 'broken-vm' })
     expect(screen.getByText(/생성에 실패한 VM입니다/)).toBeInTheDocument()
@@ -434,7 +435,7 @@ describe('VM 상세 — 웹 터미널 열기', () => {
 describe('VM 상세 — VM 설정', () => {
   test('편집자 이상은 설정을 보고, 비밀번호 SSH를 켜면 2차 경고 후 적용된다', async () => {
     const user = userEvent.setup()
-    renderVm(56) // OWNER, RUNNING
+    renderVm(56, 'settings') // OWNER, RUNNING
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(await screen.findByText('VM 설정')).toBeInTheDocument()
@@ -477,7 +478,7 @@ describe('VM 상세 — VM 설정', () => {
         ]),
       ),
     )
-    renderVm(56)
+    renderVm(56, 'settings')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
@@ -497,5 +498,37 @@ describe('VM 상세 — VM 설정', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.queryByText('VM 설정')).not.toBeInTheDocument()
+  })
+})
+
+/* ─── 탭 내비게이션 (콘솔 UX 개편) ─── */
+
+describe('VM 상세 — 탭', () => {
+  test('기본은 개요 탭이고, 탭 클릭으로 영역이 전환된다', async () => {
+    const user = userEvent.setup()
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.getByRole('tab', { name: '개요' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('SSH 접속')).toBeInTheDocument()
+    expect(screen.queryByText('이벤트 이력')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '활동' }))
+    expect(await screen.findByText('이벤트 이력')).toBeInTheDocument()
+    expect(screen.queryByText('SSH 접속')).not.toBeInTheDocument()
+  })
+
+  test('참여자(MEMBER)에게는 설정 탭 자체가 노출되지 않는다', async () => {
+    const base = vmStore.find((v) => v.id === 56)!
+    server.use(
+      http.get('*/api/v1/vms/56', () =>
+        HttpResponse.json({ ...base, myGroupRole: 'MEMBER', passwordRevealAllowed: true }),
+      ),
+    )
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.getByRole('tab', { name: '개요' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
   })
 })
