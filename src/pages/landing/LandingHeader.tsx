@@ -1,5 +1,6 @@
+import { TransitionLink } from '../../components/TransitionLink'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+
 import { homePathFor, useAuth } from '../../auth/auth-context'
 import { Logo } from '../../components/Logo'
 import { cn } from '../../lib/cn'
@@ -52,26 +53,26 @@ export function LandingHeader() {
             // 세션 복원 중 — 로그인/회원가입이 잠깐 보였다 바뀌는 깜빡임 방지
             <div aria-hidden="true" className="h-9" />
           ) : status === 'authenticated' && user ? (
-            <Link
+            <TransitionLink
               to={homePathFor(user.role)}
               className="inline-flex h-9 items-center rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
             >
               콘솔로 이동
-            </Link>
+            </TransitionLink>
           ) : (
             <>
-              <Link
+              <TransitionLink
                 to="/login"
                 className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-neutral-300 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
               >
                 로그인
-              </Link>
-              <Link
+              </TransitionLink>
+              <TransitionLink
                 to="/signup"
                 className="inline-flex h-9 items-center rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
               >
                 회원가입
-              </Link>
+              </TransitionLink>
             </>
           )}
         </nav>

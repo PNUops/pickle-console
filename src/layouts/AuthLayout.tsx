@@ -1,5 +1,6 @@
+import { TransitionLink } from '../components/TransitionLink'
 import type { ReactNode } from 'react'
-import { Link, Outlet } from 'react-router'
+import {Outlet} from 'react-router'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { Logo } from '../components/Logo'
 import { cn } from '../lib/cn'
@@ -40,26 +41,26 @@ export function AuthLayout() {
           <Logo tone="inverse" />
           <nav aria-label="주 메뉴" className="flex items-center gap-2">
             {status === 'authenticated' && user ? (
-              <Link
+              <TransitionLink
                 to={homePathFor(user.role)}
                 className="inline-flex h-9 items-center rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
               >
                 콘솔로 이동
-              </Link>
+              </TransitionLink>
             ) : (
               <>
-                <Link
+                <TransitionLink
                   to="/login"
                   className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-neutral-300 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                 >
                   로그인
-                </Link>
-                <Link
+                </TransitionLink>
+                <TransitionLink
                   to="/signup"
                   className="inline-flex h-9 items-center rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                 >
                   회원가입
-                </Link>
+                </TransitionLink>
               </>
             )}
           </nav>

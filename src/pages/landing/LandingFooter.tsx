@@ -1,4 +1,5 @@
-import { Link } from 'react-router'
+
+import { TransitionLink } from '../../components/TransitionLink'
 import { Logo } from '../../components/Logo'
 
 export function LandingFooter() {
@@ -15,12 +16,12 @@ export function LandingFooter() {
           <nav aria-label="바로가기" className="flex gap-12 text-sm">
             <div className="flex flex-col gap-2">
               <span className="font-semibold text-neutral-200">시작하기</span>
-              <Link to="/signup" className="text-neutral-400 transition-colors hover:text-white">
+              <TransitionLink to="/signup" className="text-neutral-400 transition-colors hover:text-white">
                 회원가입
-              </Link>
-              <Link to="/login" className="text-neutral-400 transition-colors hover:text-white">
+              </TransitionLink>
+              <TransitionLink to="/login" className="text-neutral-400 transition-colors hover:text-white">
                 로그인
-              </Link>
+              </TransitionLink>
             </div>
             <div className="flex flex-col gap-2">
               <span className="font-semibold text-neutral-200">둘러보기</span>

@@ -8,6 +8,7 @@ import { ContactEmail } from '../components/ContactEmail'
 import { Logo } from '../components/Logo'
 import { MaintenanceScreen } from '../components/MaintenanceScreen'
 import { NotificationBell } from '../components/NotificationBell'
+import { PostLoginOverlay } from '../components/PostLoginOverlay'
 import { cn } from '../lib/cn'
 import { useFocusTrap } from '../lib/use-focus-trap'
 import { UserMenu } from './UserMenu'
@@ -185,6 +186,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen">
+      <PostLoginOverlay />
       <aside className="hidden w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
         <div className="flex h-16 items-center border-b border-neutral-100 px-5">
           <Logo to={home} />

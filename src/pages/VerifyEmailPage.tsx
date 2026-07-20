@@ -1,5 +1,6 @@
+import { TransitionLink } from '../components/TransitionLink'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import {useSearchParams} from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
 import { ResendVerification } from '../components/ResendVerification'
@@ -58,12 +59,12 @@ export function VerifyEmailPage() {
                 {message ?? '이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.'}
               </Alert>
               <div className="flex justify-center">
-                <Link
+                <TransitionLink
                   to="/login"
                   className="inline-flex h-10 items-center rounded-lg bg-primary-600 px-5 text-sm font-medium text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                 >
                   로그인하러 가기
-                </Link>
+                </TransitionLink>
               </div>
             </>
           )}
@@ -92,9 +93,9 @@ export function VerifyEmailPage() {
               <ResendVerification />
               <p className="text-center text-sm text-neutral-400">
                 아직 계정이 없으신가요?{' '}
-                <Link to="/signup" className="font-medium text-primary-300 hover:underline">
+                <TransitionLink to="/signup" className="font-medium text-primary-300 hover:underline">
                   회원가입
-                </Link>
+                </TransitionLink>
               </p>
             </>
           )}

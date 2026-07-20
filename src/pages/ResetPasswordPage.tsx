@@ -1,5 +1,6 @@
+import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import {useNavigate, useSearchParams} from 'react-router'
 import { confirmPasswordReset } from '../api/queries'
 import { ApiError, toApiError } from '../api/problem'
 import { Alert, Button, FormField, Input, useToast } from '../components/ui'
@@ -51,9 +52,9 @@ export function ResetPasswordPage() {
               재설정 토큰이 없습니다. 메일의 링크를 다시 확인해 주세요.
             </Alert>
             <p className="mt-4 text-center text-sm text-neutral-400">
-              <Link to="/forgot-password" className="font-medium text-primary-300 hover:underline">
+              <TransitionLink to="/forgot-password" className="font-medium text-primary-300 hover:underline">
                 재설정을 다시 요청하기
-              </Link>
+              </TransitionLink>
             </p>
           </AuthCardContent>
         </AuthCard>
@@ -106,9 +107,9 @@ export function ResetPasswordPage() {
           )}
           {expired && (
             <p className="mt-4 text-center text-sm text-neutral-400">
-              <Link to="/forgot-password" className="font-medium text-primary-300 hover:underline">
+              <TransitionLink to="/forgot-password" className="font-medium text-primary-300 hover:underline">
                 재설정을 다시 요청하기
-              </Link>
+              </TransitionLink>
             </p>
           )}
         </AuthCardContent>

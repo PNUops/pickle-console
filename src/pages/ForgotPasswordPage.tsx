@@ -1,5 +1,6 @@
+import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import {} from 'react-router'
 import { requestPasswordReset } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { Alert, Button, FormField, Input } from '../components/ui'
@@ -61,9 +62,9 @@ export function ForgotPasswordPage() {
         </AuthCardContent>
       </AuthCard>
       <p className="mt-6 text-center text-sm text-neutral-400">
-        <Link to="/login" className="font-medium text-primary-300 hover:underline">
+        <TransitionLink to="/login" className="font-medium text-primary-300 hover:underline">
           로그인으로 돌아가기
-        </Link>
+        </TransitionLink>
       </p>
     </div>
   )

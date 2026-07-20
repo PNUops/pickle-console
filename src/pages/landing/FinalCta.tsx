@@ -1,4 +1,5 @@
-import { Link } from 'react-router'
+
+import { TransitionLink } from '../../components/TransitionLink'
 import { homePathFor, useAuth } from '../../auth/auth-context'
 import { Reveal } from './Reveal'
 
@@ -44,28 +45,28 @@ export function FinalCta() {
                 {status === 'loading' ? (
                   <div aria-hidden="true" className="h-12" />
                 ) : status === 'authenticated' && user ? (
-                  <Link
+                  <TransitionLink
                     to={homePathFor(user.role)}
                     className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-7 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                   >
                     콘솔로 이동
                     <span aria-hidden="true">→</span>
-                  </Link>
+                  </TransitionLink>
                 ) : (
                   <>
-                    <Link
+                    <TransitionLink
                       to="/signup"
                       className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-7 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                     >
                       회원가입
                       <span aria-hidden="true">→</span>
-                    </Link>
-                    <Link
+                    </TransitionLink>
+                    <TransitionLink
                       to="/login"
                       className="inline-flex h-12 items-center rounded-xl border border-white/15 bg-white/5 px-7 text-base font-medium text-neutral-200 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                     >
                       로그인
-                    </Link>
+                    </TransitionLink>
                   </>
                 )}
               </div>

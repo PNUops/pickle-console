@@ -1,5 +1,6 @@
+import { TransitionLink } from '../../components/TransitionLink'
 import { useSyncExternalStore } from 'react'
-import { Link } from 'react-router'
+
 import { homePathFor, useAuth } from '../../auth/auth-context'
 import { HeroFallback } from './HeroFallback'
 import { HeroVisual } from './HeroVisual'
@@ -81,28 +82,28 @@ export function Hero() {
                   // 세션 복원 중 — 잘못된 CTA가 잠깐 보였다 바뀌는 깜빡임 방지
                   <div aria-hidden="true" className="h-12" />
                 ) : status === 'authenticated' && user ? (
-                  <Link
+                  <TransitionLink
                     to={homePathFor(user.role)}
                     className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-6 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                   >
                     콘솔로 이동
                     <span aria-hidden="true">→</span>
-                  </Link>
+                  </TransitionLink>
                 ) : (
                   <>
-                    <Link
+                    <TransitionLink
                       to="/signup"
                       className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-6 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                     >
                       지금 시작하기
                       <span aria-hidden="true">→</span>
-                    </Link>
-                    <Link
+                    </TransitionLink>
+                    <TransitionLink
                       to="/login"
                       className="inline-flex h-12 items-center rounded-xl border border-white/15 bg-white/5 px-6 text-base font-medium text-neutral-200 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                     >
                       로그인
-                    </Link>
+                    </TransitionLink>
                   </>
                 )}
               </div>

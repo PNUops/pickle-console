@@ -1,6 +1,7 @@
+import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import {} from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
 import { fetchCurrentTerms } from '../api/queries'
@@ -127,9 +128,9 @@ export function SignupPage() {
             </div>
             <p className="text-sm text-neutral-500">
               인증을 마치셨나요?{' '}
-              <Link to="/login" className="font-medium text-primary-300 hover:underline">
+              <TransitionLink to="/login" className="font-medium text-primary-300 hover:underline">
                 로그인
-              </Link>
+              </TransitionLink>
             </p>
           </AuthCardContent>
         </AuthCard>
@@ -202,14 +203,14 @@ export function SignupPage() {
                   }
                   label={
                     <span>
-                      <Link
+                      <TransitionLink
                         to={`/terms/${doc.docType}`}
                         target="_blank"
                         rel="noreferrer"
                         className="font-medium text-primary-300 hover:underline"
                       >
                         {doc.title}
-                      </Link>
+                      </TransitionLink>
                       <span className="text-neutral-500">에 동의합니다.</span>
                     </span>
                   }
@@ -225,9 +226,9 @@ export function SignupPage() {
       </AuthCard>
       <p className="mt-6 text-center text-sm text-neutral-400">
         이미 계정이 있으신가요?{' '}
-        <Link to="/login" className="font-medium text-primary-300 hover:underline">
+        <TransitionLink to="/login" className="font-medium text-primary-300 hover:underline">
           로그인
-        </Link>
+        </TransitionLink>
       </p>
     </div>
   )

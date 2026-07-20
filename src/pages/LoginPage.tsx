@@ -1,10 +1,12 @@
+import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import {Navigate, useLocation, useNavigate} from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchSystemStatus } from '../api/queries'
 import { ApiError } from '../api/problem'
 import { homePathFor, useAuth, type UserProfile } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
+import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, FormField, Input } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
@@ -35,6 +37,8 @@ export function LoginPage() {
   const from = (location.state as { from?: string } | null)?.from
 
   const goHome = (profile: UserProfile) => {
+    // 다크 인증 → 라이트 콘솔 톤 전환을 잇는 1회 환영 오버레이(AppShell) 예약.
+    sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
     // 내부 경로만 허용한다 — '//host' 형태는 스킴 상대 URL로 외부 이동이 가능하다.
     const safeFrom = from && from.startsWith('/') && !from.startsWith('//') ? from : null
     navigate(safeFrom ?? homePathFor(profile.role), { replace: true })
@@ -190,18 +194,18 @@ export function LoginPage() {
               로그인
             </Button>
             <p className="text-center text-sm">
-              <Link to="/forgot-password" className="font-medium text-primary-300 hover:underline">
+              <TransitionLink to="/forgot-password" className="font-medium text-primary-300 hover:underline">
                 비밀번호를 잊으셨나요?
-              </Link>
+              </TransitionLink>
             </p>
           </form>
         </AuthCardContent>
       </AuthCard>
       <p className="mt-6 text-center text-sm text-neutral-400">
         아직 계정이 없으신가요?{' '}
-        <Link to="/signup" className="font-medium text-primary-300 hover:underline">
+        <TransitionLink to="/signup" className="font-medium text-primary-300 hover:underline">
           회원가입
-        </Link>
+        </TransitionLink>
       </p>
       {systemStatus?.contactEmail && (
         <p className="mt-8 text-center text-xs text-neutral-400">
