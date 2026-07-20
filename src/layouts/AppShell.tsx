@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { onMaintenanceDetected } from '../api/maintenance'
@@ -19,6 +19,8 @@ export interface NavItem {
   to: string
   label: string
   end?: boolean
+  /** 항목 앞 스트로크 아이콘(선택) — src/components/nav-icons.tsx 참조. */
+  icon?: ReactNode
 }
 
 /** 사이드바 내비게이션 섹션 — 소제목(선택) 아래 항목 묶음. */
@@ -54,13 +56,14 @@ function ShellNav({
               onClick={onNavigate}
               className={({ isActive }) =>
                 cn(
-                  'block rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
+                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
                   isActive
                     ? 'bg-primary-50 text-primary-800'
                     : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
                 )
               }
             >
+              {item.icon}
               {item.label}
             </NavLink>
           ))}

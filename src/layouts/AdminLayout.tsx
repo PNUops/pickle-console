@@ -32,7 +32,7 @@ export function AdminLayout() {
       items: [
         { to: '/admin/announcements', label: '공지 보내기' },
         { to: '/admin/audit', label: '감사 로그' },
-        { to: '/admin/notifications', label: '알림함' },
+        // 알림함은 상단 바 알림 팝오버("전체 보기")로 진입 — 사이드바에서 제외.
       ],
     },
     // 시스템 섹션은 시스템 계층(SYS_MANAGER·SYS_ADMIN) 전용 — 각 라우트에서도
