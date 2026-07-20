@@ -2546,8 +2546,9 @@ export interface paths {
          *
          *     - 세션은 브리지(LXC 102)가 `session-start`/`session-end`로 역보고한
          *       **인메모리 미러** 기준입니다 — 티켓만 발급되고 아직 접속하지 않은
-         *       건은 나타나지 않습니다. api 재시작 시 미러는 다음 세션 수명주기
-         *       보고로 다시 채워집니다.
+         *       건은 나타나지 않습니다. api 재시작 시 미러는 비워지며, 진행 중이던
+         *       세션은 다음 재검증 폴(60초)에서 fail-closed로 종료됩니다(브라우저
+         *       종료 코드 1001 — 재연결 안내).
          *     - 라이브 세션 수는 항상 소규모(사용자당 3·VM당 5 상한)이므로 페이지
          *       없이 배열로 반환합니다.
          */
@@ -2676,7 +2677,8 @@ export interface components {
              *       `TERMINAL_SESSION_LIMIT`(동시 세션 상한 초과 — 사용자당 3·
              *       VM당 5·기관당 상한, 409)
              *       (그 외 M6.5 오류는 공통 코드 재사용 — 비구성원·미존재 VM 마스킹
-             *       `RESOURCE_NOT_FOUND`, RUNNING 아님 `VM_INVALID_STATE`,
+             *       `RESOURCE_NOT_FOUND`, 열람자(VIEWER) 권한 부족
+             *       `GROUP_ROLE_INSUFFICIENT`, RUNNING 아님 `VM_INVALID_STATE`,
              *       관리자 접근 차단 `ACCESS_DENIED`, 발급 빈도 `RATE_LIMITED`)
              * @example AUTH_INVALID_CREDENTIALS
              */
@@ -7701,7 +7703,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description 관리자에 의해 이 VM의 SSH/터미널 접근이 차단됨 */
+            /** @description 그룹 내 권한 부족 (VIEWER — `GROUP_ROLE_INSUFFICIENT`; VM 존재를 이미 아는 열람자에게는 마스킹하지 않음, 전원 제어와 동일 규칙) 또는 관리자에 의해 이 VM의 SSH/터미널 접근이 차단됨 (`ACCESS_DENIED`) */
             403: {
                 headers: {
                     [name: string]: unknown;
