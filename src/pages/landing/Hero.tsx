@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { homePathFor, useAuth } from '../../auth/auth-context'
+import { HeroFallback } from './HeroFallback'
 import { HeroVisual } from './HeroVisual'
 import { Reveal } from './Reveal'
 
@@ -44,8 +45,7 @@ export function Hero() {
             </Reveal>
             <Reveal delay={0.08}>
               <h1 className="mt-6 text-[2.6rem]/[1.12] font-extrabold tracking-tight text-white sm:text-6xl/[1.08] xl:text-[4.25rem]/[1.06]">
-                수업과 프로젝트를 위한
-                <br />
+                수업과 프로젝트를 위한 <br className="hidden sm:block" />
                 나만의 서버,{' '}
                 <span className="bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
                   피클
@@ -98,9 +98,12 @@ export function Hero() {
             </Reveal>
           </div>
 
-          {/* 우측: 3D 비주얼(lazy) — lg 미만에서는 숨겨 모바일 부하를 줄인다 */}
+          {/* 우측: 3D 비주얼(lazy) — lg 미만에서는 WebGL 대신 가벼운 정적 폴백만 */}
           <Reveal delay={0.2} className="hidden lg:block">
             <HeroVisual />
+          </Reveal>
+          <Reveal delay={0.2} className="mx-auto w-full max-w-xs lg:hidden">
+            <HeroFallback />
           </Reveal>
         </div>
 
