@@ -1,6 +1,9 @@
 import { screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { renderApp } from './test/render'
+
+// jsdom에는 WebGL이 없고 three 청크 로드는 무의미하게 느리다 — 정적 목업으로 대체.
+vi.mock('./pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
 
 test('랜딩 페이지가 히어로와 CTA를 보여준다', async () => {
   renderApp('/')

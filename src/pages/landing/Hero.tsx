@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { homePathFor, useAuth } from '../../auth/auth-context'
-import { HeroFallback } from './HeroFallback'
+import { HeroVisual } from './HeroVisual'
 import { Reveal } from './Reveal'
 
 /** 다크 히어로 — 좌측 에디토리얼 타이포 + 우측 비주얼(3D 씬은 C3에서 연결). */
@@ -98,9 +98,9 @@ export function Hero() {
             </Reveal>
           </div>
 
-          {/* 우측: 비주얼 (C3에서 3D 씬으로 교체, 현재는 정적 폴백) */}
+          {/* 우측: 3D 비주얼(lazy) — lg 미만에서는 숨겨 모바일 부하를 줄인다 */}
           <Reveal delay={0.2} className="hidden lg:block">
-            <HeroFallback />
+            <HeroVisual />
           </Reveal>
         </div>
 

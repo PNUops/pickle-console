@@ -29,7 +29,6 @@ import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
-import { LandingPage } from './pages/landing/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyActivityPage } from './pages/MyActivityPage'
 import { NewRequestPage } from './pages/NewRequestPage'
@@ -51,11 +50,24 @@ const TerminalPage = lazy(() =>
   import('./pages/TerminalPage').then((m) => ({ default: m.TerminalPage })),
 )
 
+// 랜딩은 motion(+lazy 3D)을 끌어오므로 통째로 코드 분할한다 — 콘솔만 쓰는
+// 사용자의 진입 번들을 키우지 않는다. 폴백은 히어로와 같은 다크 배경(플래시 방지).
+const LandingPage = lazy(() =>
+  import('./pages/landing/LandingPage').then((m) => ({ default: m.LandingPage })),
+)
+
 function App() {
   return (
     <Routes>
       {/* 랜딩은 자체 다크 헤더/푸터를 가진 full-bleed 페이지 — PublicLayout 밖에서 렌더. */}
-      <Route index element={<LandingPage />} />
+      <Route
+        index
+        element={
+          <Suspense fallback={<div className="min-h-svh bg-neutral-950" />}>
+            <LandingPage />
+          </Suspense>
+        }
+      />
       <Route element={<PublicLayout />}>
         <Route path="login" element={<LoginPage />} />
         <Route path="signup" element={<SignupPage />} />
