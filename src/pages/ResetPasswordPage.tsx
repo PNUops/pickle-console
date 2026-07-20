@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { confirmPasswordReset } from '../api/queries'
 import { ApiError, toApiError } from '../api/problem'
-import { Alert, Button, Card, CardContent, FormField, Input, useToast } from '../components/ui'
+import { Alert, Button, FormField, Input, useToast } from '../components/ui'
+import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { fieldErrorsOf } from '../lib/field-errors'
 
 export function ResetPasswordPage() {
@@ -43,29 +44,29 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="mx-auto w-full max-w-md px-4 py-16">
-        <Card>
-          <CardContent className="py-6">
+      <div className="w-full">
+        <AuthCard>
+          <AuthCardContent>
             <Alert variant="danger" title="잘못된 링크입니다">
               재설정 토큰이 없습니다. 메일의 링크를 다시 확인해 주세요.
             </Alert>
-            <p className="mt-4 text-center text-sm text-neutral-500">
-              <Link to="/forgot-password" className="font-medium text-primary-700 hover:underline">
+            <p className="mt-4 text-center text-sm text-neutral-400">
+              <Link to="/forgot-password" className="font-medium text-primary-300 hover:underline">
                 재설정을 다시 요청하기
               </Link>
             </p>
-          </CardContent>
-        </Card>
+          </AuthCardContent>
+        </AuthCard>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-16">
-      <h1 className="text-center text-2xl font-bold text-neutral-900">새 비밀번호 설정</h1>
-      <p className="mt-2 text-center text-sm text-neutral-500">사용할 새 비밀번호를 입력해 주세요.</p>
-      <Card className="mt-8">
-        <CardContent className="py-6">
+    <div className="w-full">
+      <h1 className="text-center text-2xl font-bold text-white">새 비밀번호 설정</h1>
+      <p className="mt-2 text-center text-sm text-neutral-400">사용할 새 비밀번호를 입력해 주세요.</p>
+      <AuthCard className="mt-8">
+        <AuthCardContent>
           {expired ? (
             <Alert variant="danger" title="재설정 링크가 만료되었습니다">
               링크가 만료되었거나 이미 사용되었습니다. 재설정을 다시 요청해 주세요.
@@ -104,14 +105,14 @@ export function ResetPasswordPage() {
             </form>
           )}
           {expired && (
-            <p className="mt-4 text-center text-sm text-neutral-500">
-              <Link to="/forgot-password" className="font-medium text-primary-700 hover:underline">
+            <p className="mt-4 text-center text-sm text-neutral-400">
+              <Link to="/forgot-password" className="font-medium text-primary-300 hover:underline">
                 재설정을 다시 요청하기
               </Link>
             </p>
           )}
-        </CardContent>
-      </Card>
+        </AuthCardContent>
+      </AuthCard>
     </div>
   )
 }

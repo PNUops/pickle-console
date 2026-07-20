@@ -6,7 +6,8 @@ import { ApiError } from '../api/problem'
 import { homePathFor, useAuth, type UserProfile } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
 import { ResendVerification } from '../components/ResendVerification'
-import { Alert, Button, Card, CardContent, FormField, Input } from '../components/ui'
+import { Alert, Button, FormField, Input } from '../components/ui'
+import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
 export function LoginPage() {
   const { status, user, login, completeMfa } = useAuth()
@@ -88,15 +89,15 @@ export function LoginPage() {
 
   if (mfaToken) {
     return (
-      <div className="mx-auto w-full max-w-md px-4 py-16">
-        <h1 className="text-center text-2xl font-bold text-neutral-900">2단계 인증</h1>
-        <p className="mt-2 text-center text-sm text-neutral-500">
+      <div className="w-full">
+        <h1 className="text-center text-2xl font-bold text-white">2단계 인증</h1>
+        <p className="mt-2 text-center text-sm text-neutral-400">
           {useRecovery
             ? '복구 코드를 입력해 주세요.'
             : '인증 앱에 표시된 6자리 코드를 입력해 주세요.'}
         </p>
-        <Card className="mt-8">
-          <CardContent className="py-6">
+        <AuthCard className="mt-8">
+          <AuthCardContent>
             <form onSubmit={(event) => void submitMfa(event)} className="space-y-4" noValidate>
               {error && <Alert variant="danger">{error.message}</Alert>}
               <FormField label={useRecovery ? '복구 코드' : '인증 코드'} required>
@@ -116,7 +117,7 @@ export function LoginPage() {
               <div className="flex justify-between text-sm">
                 <button
                   type="button"
-                  className="font-medium text-primary-700 hover:underline"
+                  className="font-medium text-primary-300 hover:underline"
                   onClick={() => {
                     setUseRecovery((prev) => !prev)
                     setCode('')
@@ -127,7 +128,7 @@ export function LoginPage() {
                 </button>
                 <button
                   type="button"
-                  className="font-medium text-neutral-500 hover:underline"
+                  className="font-medium text-neutral-400 hover:underline"
                   onClick={() => {
                     setMfaToken(null)
                     setCode('')
@@ -138,16 +139,16 @@ export function LoginPage() {
                 </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </AuthCardContent>
+        </AuthCard>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-16">
-      <h1 className="text-center text-2xl font-bold text-neutral-900">로그인</h1>
-      <p className="mt-2 text-center text-sm text-neutral-500">
+    <div className="w-full">
+      <h1 className="text-center text-2xl font-bold text-white">로그인</h1>
+      <p className="mt-2 text-center text-sm text-neutral-400">
         부산대학교 이메일로 로그인해 주세요.
       </p>
       {systemStatus?.bannerMessage && (
@@ -155,8 +156,8 @@ export function LoginPage() {
           {systemStatus.bannerMessage}
         </Alert>
       )}
-      <Card className="mt-8">
-        <CardContent className="py-6">
+      <AuthCard className="mt-8">
+        <AuthCardContent>
           <form onSubmit={(event) => void submitPassword(event)} className="space-y-4" noValidate>
             {error && (
               <div className="space-y-3">
@@ -189,22 +190,22 @@ export function LoginPage() {
               로그인
             </Button>
             <p className="text-center text-sm">
-              <Link to="/forgot-password" className="font-medium text-primary-700 hover:underline">
+              <Link to="/forgot-password" className="font-medium text-primary-300 hover:underline">
                 비밀번호를 잊으셨나요?
               </Link>
             </p>
           </form>
-        </CardContent>
-      </Card>
-      <p className="mt-6 text-center text-sm text-neutral-500">
+        </AuthCardContent>
+      </AuthCard>
+      <p className="mt-6 text-center text-sm text-neutral-400">
         아직 계정이 없으신가요?{' '}
-        <Link to="/signup" className="font-medium text-primary-700 hover:underline">
+        <Link to="/signup" className="font-medium text-primary-300 hover:underline">
           회원가입
         </Link>
       </p>
       {systemStatus?.contactEmail && (
         <p className="mt-8 text-center text-xs text-neutral-400">
-          문의: <ContactEmail email={systemStatus.contactEmail} className="text-neutral-500" />
+          문의: <ContactEmail email={systemStatus.contactEmail} className="text-neutral-400" />
         </p>
       )}
     </div>

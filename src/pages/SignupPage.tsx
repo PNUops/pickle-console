@@ -5,7 +5,8 @@ import { api } from '../api/client'
 import { isProblem } from '../api/problem'
 import { fetchCurrentTerms } from '../api/queries'
 import { ResendVerification } from '../components/ResendVerification'
-import { Alert, Button, Card, CardContent, Checkbox, FormField, Input } from '../components/ui'
+import { Alert, Button, Checkbox, FormField, Input } from '../components/ui'
+import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { PASSWORD_MIN_LENGTH, PUSAN_EMAIL_RE } from '../lib/validation'
 
 interface FieldErrors {
@@ -103,9 +104,9 @@ export function SignupPage() {
 
   if (completed) {
     return (
-      <div className="mx-auto w-full max-w-md px-4 py-16">
-        <Card>
-          <CardContent className="space-y-4 py-8 text-center">
+      <div className="w-full">
+        <AuthCard>
+          <AuthCardContent className="space-y-4 py-8 text-center">
             <span
               aria-hidden="true"
               className="mx-auto flex size-12 items-center justify-center rounded-full bg-success-100 text-success-700"
@@ -115,8 +116,8 @@ export function SignupPage() {
                 <path d="M22.5 6.908V6.75a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3v.158l9.714 5.978a1.5 1.5 0 0 0 1.572 0L22.5 6.908z" />
               </svg>
             </span>
-            <h1 className="text-xl font-bold text-neutral-900">인증 메일을 확인해 주세요</h1>
-            <p className="text-sm leading-relaxed text-neutral-600">
+            <h1 className="text-xl font-bold text-white">인증 메일을 확인해 주세요</h1>
+            <p className="text-sm leading-relaxed text-neutral-300">
               <strong>{email}</strong> 주소로 인증 메일을 보냈습니다.
               <br />
               메일의 링크를 열면 가입이 완료됩니다. 링크는 24시간 동안 유효합니다.
@@ -126,24 +127,24 @@ export function SignupPage() {
             </div>
             <p className="text-sm text-neutral-500">
               인증을 마치셨나요?{' '}
-              <Link to="/login" className="font-medium text-primary-700 hover:underline">
+              <Link to="/login" className="font-medium text-primary-300 hover:underline">
                 로그인
               </Link>
             </p>
-          </CardContent>
-        </Card>
+          </AuthCardContent>
+        </AuthCard>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-16">
-      <h1 className="text-center text-2xl font-bold text-neutral-900">회원가입</h1>
-      <p className="mt-2 text-center text-sm text-neutral-500">
+    <div className="w-full">
+      <h1 className="text-center text-2xl font-bold text-white">회원가입</h1>
+      <p className="mt-2 text-center text-sm text-neutral-400">
         부산대학교 이메일(@pusan.ac.kr)로만 가입할 수 있습니다.
       </p>
-      <Card className="mt-8">
-        <CardContent className="py-6">
+      <AuthCard className="mt-8">
+        <AuthCardContent>
           <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
             {formError && <Alert variant="danger">{formError}</Alert>}
             <FormField label="이름" required error={fieldErrors.name}>
@@ -205,7 +206,7 @@ export function SignupPage() {
                         to={`/terms/${doc.docType}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-medium text-primary-700 hover:underline"
+                        className="font-medium text-primary-300 hover:underline"
                       >
                         {doc.title}
                       </Link>
@@ -220,11 +221,11 @@ export function SignupPage() {
               회원가입
             </Button>
           </form>
-        </CardContent>
-      </Card>
-      <p className="mt-6 text-center text-sm text-neutral-500">
+        </AuthCardContent>
+      </AuthCard>
+      <p className="mt-6 text-center text-sm text-neutral-400">
         이미 계정이 있으신가요?{' '}
-        <Link to="/login" className="font-medium text-primary-700 hover:underline">
+        <Link to="/login" className="font-medium text-primary-300 hover:underline">
           로그인
         </Link>
       </p>

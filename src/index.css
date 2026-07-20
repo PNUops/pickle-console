@@ -150,3 +150,25 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* ── 인증(다크) 스코프 — AuthLayout 루트 전용, 전역 다크 모드 아님. ──
+   공용 Input/Select 등은 라이트 고정 클래스를 쓰므로(cn은 단순 join이라 클래스
+   덮어쓰기 불가) 레이어 밖 author CSS로 인증 화면에서만 컨트롤을 다크화한다. */
+.auth-dark input:not([type='checkbox']),
+.auth-dark select,
+.auth-dark textarea {
+  background-color: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.18);
+  color: #fff;
+}
+.auth-dark input::placeholder,
+.auth-dark textarea::placeholder {
+  color: var(--color-neutral-500);
+}
+.auth-dark label {
+  color: var(--color-neutral-200);
+}
+.auth-dark input[type='checkbox'] {
+  border-color: rgb(255 255 255 / 0.3);
+  background-color: rgb(255 255 255 / 0.06);
+}

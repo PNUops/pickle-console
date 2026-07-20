@@ -4,6 +4,7 @@ import { RequireRole } from './auth/RequireRole'
 import { Spinner } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
+import { AuthLayout } from './layouts/AuthLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminAuditPage } from './pages/AdminAuditPage'
@@ -81,12 +82,15 @@ function App() {
           </Suspense>
         }
       />
-      <Route element={<PublicLayout />}>
+      {/* 인증 화면은 랜딩과 톤을 잇는 다크 레이아웃 — 약관/404는 라이트 유지. */}
+      <Route element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />
         <Route path="signup" element={<SignupPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+      </Route>
+      <Route element={<PublicLayout />}>
         <Route path="terms/:docType" element={<TermsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

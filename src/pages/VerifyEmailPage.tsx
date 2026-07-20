@@ -3,7 +3,8 @@ import { Link, useSearchParams } from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
 import { ResendVerification } from '../components/ResendVerification'
-import { Alert, Card, CardContent, Spinner } from '../components/ui'
+import { Alert, Spinner } from '../components/ui'
+import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
 type VerifyState = 'missing' | 'verifying' | 'success' | 'expired' | 'rate-limited' | 'invalid'
 
@@ -40,14 +41,14 @@ export function VerifyEmailPage() {
   }, [token])
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-16">
-      <h1 className="text-center text-2xl font-bold text-neutral-900">이메일 인증</h1>
-      <Card className="mt-8">
-        <CardContent className="space-y-4 py-8">
+    <div className="w-full">
+      <h1 className="text-center text-2xl font-bold text-white">이메일 인증</h1>
+      <AuthCard className="mt-8">
+        <AuthCardContent className="space-y-4 py-8">
           {state === 'verifying' && (
             <div className="flex flex-col items-center gap-3 py-4 text-primary-600">
               <Spinner size="lg" label="이메일 인증 처리 중" />
-              <p className="text-sm text-neutral-600">인증을 확인하고 있습니다. 잠시만 기다려 주세요.</p>
+              <p className="text-sm text-neutral-300">인증을 확인하고 있습니다. 잠시만 기다려 주세요.</p>
             </div>
           )}
 
@@ -89,16 +90,16 @@ export function VerifyEmailPage() {
                   '인증 링크가 올바르지 않습니다. 메일의 링크를 다시 확인하거나 인증 메일을 다시 요청해 주세요.'}
               </Alert>
               <ResendVerification />
-              <p className="text-center text-sm text-neutral-500">
+              <p className="text-center text-sm text-neutral-400">
                 아직 계정이 없으신가요?{' '}
-                <Link to="/signup" className="font-medium text-primary-700 hover:underline">
+                <Link to="/signup" className="font-medium text-primary-300 hover:underline">
                   회원가입
                 </Link>
               </p>
             </>
           )}
-        </CardContent>
-      </Card>
+        </AuthCardContent>
+      </AuthCard>
     </div>
   )
 }

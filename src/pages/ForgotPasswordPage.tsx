@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { requestPasswordReset } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { Alert, Button, Card, CardContent, FormField, Input } from '../components/ui'
+import { Alert, Button, FormField, Input } from '../components/ui'
+import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -27,13 +28,13 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-16">
-      <h1 className="text-center text-2xl font-bold text-neutral-900">비밀번호 재설정</h1>
-      <p className="mt-2 text-center text-sm text-neutral-500">
+    <div className="w-full">
+      <h1 className="text-center text-2xl font-bold text-white">비밀번호 재설정</h1>
+      <p className="mt-2 text-center text-sm text-neutral-400">
         가입한 부산대학교 이메일로 재설정 링크를 보내 드립니다.
       </p>
-      <Card className="mt-8">
-        <CardContent className="py-6">
+      <AuthCard className="mt-8">
+        <AuthCardContent>
           {sent ? (
             <Alert variant="success" title="메일을 확인해 주세요">
               해당 주소가 등록되어 있다면 비밀번호 재설정 메일을 발송했습니다. 링크는 30분 동안만
@@ -57,10 +58,10 @@ export function ForgotPasswordPage() {
               </Button>
             </form>
           )}
-        </CardContent>
-      </Card>
-      <p className="mt-6 text-center text-sm text-neutral-500">
-        <Link to="/login" className="font-medium text-primary-700 hover:underline">
+        </AuthCardContent>
+      </AuthCard>
+      <p className="mt-6 text-center text-sm text-neutral-400">
+        <Link to="/login" className="font-medium text-primary-300 hover:underline">
           로그인으로 돌아가기
         </Link>
       </p>
