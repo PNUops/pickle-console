@@ -1221,11 +1221,13 @@ export interface paths {
          *     - `password_reveal_min_role` — 비밀번호 열람 최소 역할 (= VM 내부
          *       sudo 자격의 실질 게이트). 다른 구성원의 권한을 조정하는 키이므로
          *       **소유자 전용**.
-         *     - `deletion_protection` (M6) — 켜져 있으면 **모든 삭제 접수**(본인·
-         *       관리자 일반·강제 삭제)가 409(`VM_DELETION_PROTECTED`)로 거부됩니다.
-         *       Proxmox 네이티브 `protection` 플래그로 하이퍼바이저 수준에서도
-         *       백킹됩니다(이중 안전망 — 설정 변경 시 동기 반영, 실패하면 변경
-         *       자체가 실패). 삭제하려면 먼저 소유자가 해제해야 합니다. 예외:
+         *     - `deletion_protection` (M6, 0.11.0 개정) — 켜져 있으면 **모든 삭제
+         *       접수**(본인·관리자 일반·강제 삭제)가 409(`VM_DELETION_PROTECTED`)로
+         *       거부되고, 파기 시점에도 재확인됩니다(켜져 있으면 파기가 중단되고
+         *       관리자 확인 대기). 순수 논리 게이트로, 토글은 하이퍼바이저와
+         *       동기화되지 않습니다 — 이와 별개로 모든 관리 VM은 Proxmox 네이티브
+         *       `protection` 플래그가 상시 ON(플랫폼 안전망, 실제 파기 직전에만
+         *       해제)입니다. 삭제하려면 먼저 소유자가 해제해야 합니다. 예외:
          *       소유자 부재·보안 사고 등 해제 주체가 없는 경우 SYS_ADMIN이 강제
          *       삭제에 `overrideProtection: true`를 명시해 회수할 수 있습니다
          *       (감사 기록 — force-delete op 참조).
@@ -2024,16 +2026,16 @@ export interface paths {
          *     - 202 응답이 `VmDeletion`이 아니라 `MessageResponse`인 이유: 즉시
          *       파기·취소 불가라 "접수된 삭제"(scheduledFor/cancelable)라는 표현이
          *       성립하지 않기 때문입니다.
-         *     - **삭제 보호 (M6)**: VM 설정 `deletion_protection`이 켜져 있으면
-         *       강제 삭제도 기본적으로 409(`VM_DELETION_PROTECTED`)로 거부됩니다 —
-         *       보호 해제 권한은 소유 그룹 OWNER에게 있습니다 (Proxmox `protection`
-         *       플래그 백킹으로 하이퍼바이저 수준에서도 파기가 거부됨). 단
+         *     - **삭제 보호 (M6, 0.11.0 개정)**: VM 설정 `deletion_protection`이
+         *       켜져 있으면 강제 삭제도 기본적으로 409(`VM_DELETION_PROTECTED`)로
+         *       거부됩니다 — 보호 해제 권한은 소유 그룹 OWNER에게 있습니다. 단
          *       **SYS_ADMIN 에스컬레이션 경로**로 `overrideProtection: true`를
          *       명시하면 보호를 무시하고 진행할 수 있습니다 (보안 사고·소유자
          *       비활성화 등으로 해제 주체가 없는 경우의 자원 회수 수단 — 계약
-         *       리뷰 게이트 2026-07-18 반영). 오버라이드 사용은 감사 로그에 별도
-         *       기록되며, 파이프라인이 파기 전에 Proxmox `protection` 플래그를
-         *       해제합니다.
+         *       리뷰 게이트 2026-07-18 반영). 오버라이드는 감사 로그에 별도
+         *       기록되며 설정 `deletion_protection=false`를 같은 트랜잭션에
+         *       영속화합니다. Proxmox `protection` 플래그(모든 VM 상시 ON)는
+         *       파기 파이프라인이 파기 직전에 해제합니다.
          */
         post: operations["forceDeleteVm"];
         delete?: never;
@@ -2546,8 +2548,9 @@ export interface paths {
          *
          *     - 세션은 브리지(LXC 102)가 `session-start`/`session-end`로 역보고한
          *       **인메모리 미러** 기준입니다 — 티켓만 발급되고 아직 접속하지 않은
-         *       건은 나타나지 않습니다. api 재시작 시 미러는 다음 세션 수명주기
-         *       보고로 다시 채워집니다.
+         *       건은 나타나지 않습니다. api 재시작 시 미러는 비워지며, 진행 중이던
+         *       세션은 다음 재검증 폴(60초)에서 fail-closed로 종료됩니다(브라우저
+         *       종료 코드 1001 — 재연결 안내).
          *     - 라이브 세션 수는 항상 소규모(사용자당 3·VM당 5 상한)이므로 페이지
          *       없이 배열로 반환합니다.
          */
@@ -2676,7 +2679,8 @@ export interface components {
              *       `TERMINAL_SESSION_LIMIT`(동시 세션 상한 초과 — 사용자당 3·
              *       VM당 5·기관당 상한, 409)
              *       (그 외 M6.5 오류는 공통 코드 재사용 — 비구성원·미존재 VM 마스킹
-             *       `RESOURCE_NOT_FOUND`, RUNNING 아님 `VM_INVALID_STATE`,
+             *       `RESOURCE_NOT_FOUND`, 열람자(VIEWER) 권한 부족
+             *       `GROUP_ROLE_INSUFFICIENT`, RUNNING 아님 `VM_INVALID_STATE`,
              *       관리자 접근 차단 `ACCESS_DENIED`, 발급 빈도 `RATE_LIMITED`)
              * @example AUTH_INVALID_CREDENTIALS
              */
@@ -7701,7 +7705,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description 관리자에 의해 이 VM의 SSH/터미널 접근이 차단됨 */
+            /** @description 그룹 내 권한 부족 (VIEWER — `GROUP_ROLE_INSUFFICIENT`; VM 존재를 이미 아는 열람자에게는 마스킹하지 않음, 전원 제어와 동일 규칙) 또는 관리자에 의해 이 VM의 SSH/터미널 접근이 차단됨 (`ACCESS_DENIED`) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9307,7 +9311,7 @@ export interface operations {
                     /** @description 파기 확인용 VM 이름 (VM의 `name`과 정확히 일치해야 함) */
                     confirmName: string;
                     /**
-                     * @description true면 삭제 보호(`deletion_protection`)를 무시하고 진행 (M6 — 감사에 오버라이드 사실 기록. 미지정/false면 보호 켜진 VM은 409)
+                     * @description true면 삭제 보호(`deletion_protection`)를 무시하고 진행 — 설정을 false로 영속화한 뒤 파기 (M6 — 감사에 오버라이드 사실 기록. 미지정/false면 보호 켜진 VM은 409)
                      * @default false
                      */
                     overrideProtection?: boolean;
