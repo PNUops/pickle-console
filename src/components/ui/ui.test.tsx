@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, test, vi } from 'vitest'
+import { PopoverPanel } from './Popover'
+import { usePopover } from './use-popover'
+import { TabPanel, Tabs } from './Tabs'
 import { Button } from './Button'
 import { ConfirmNameModal } from './ConfirmNameModal'
 import { FormField } from './FormField'
@@ -206,5 +210,102 @@ describe('Toast', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('Tabs', () => {
+  function TabsHarness() {
+    const [tab, setTab] = useState('a')
+    return (
+      <>
+        <Tabs
+          aria-label="예시 탭"
+          tabs={[
+            { id: 'a', label: '첫째' },
+            { id: 'b', label: '둘째' },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+        <TabPanel id="a" active={tab === 'a'}>
+          A 내용
+        </TabPanel>
+        <TabPanel id="b" active={tab === 'b'}>
+          B 내용
+        </TabPanel>
+      </>
+    )
+  }
+
+  test('클릭으로 탭을 전환하고 비활성 패널은 렌더하지 않는다', async () => {
+    const user = userEvent.setup()
+    render(<TabsHarness />)
+    expect(screen.getByRole('tab', { name: '첫째' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('A 내용')).toBeInTheDocument()
+    expect(screen.queryByText('B 내용')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '둘째' }))
+    expect(screen.getByRole('tab', { name: '둘째' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('B 내용')).toBeInTheDocument()
+    expect(screen.queryByText('A 내용')).not.toBeInTheDocument()
+  })
+
+  test('화살표 키 이동이 즉시 활성화되고 roving tabIndex를 유지한다', async () => {
+    const user = userEvent.setup()
+    render(<TabsHarness />)
+    const first = screen.getByRole('tab', { name: '첫째' })
+    first.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: '둘째' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: '첫째' })).toHaveAttribute('tabindex', '-1')
+    await user.keyboard('{ArrowRight}') // 끝에서 순환
+    expect(screen.getByRole('tab', { name: '첫째' })).toHaveAttribute('aria-selected', 'true')
+  })
+})
+
+describe('Popover', () => {
+  // usePopover가 useLocation을 쓰므로 하네스는 Router 안에서 렌더해야 한다.
+  function PopoverContent() {
+    const { open, toggle, rootRef, triggerRef } = usePopover()
+    return (
+      <>
+        <div ref={rootRef} className="relative">
+          <button ref={triggerRef} type="button" onClick={toggle} aria-expanded={open}>
+            열기
+          </button>
+          <PopoverPanel open={open} aria-label="패널">
+            패널 내용
+          </PopoverPanel>
+        </div>
+        <button type="button">바깥 버튼</button>
+      </>
+    )
+  }
+  function PopoverHarness() {
+    return (
+      <MemoryRouter>
+        <PopoverContent />
+      </MemoryRouter>
+    )
+  }
+
+  test('토글로 열리고 바깥 클릭으로 닫힌다', async () => {
+    const user = userEvent.setup()
+    render(<PopoverHarness />)
+    await user.click(screen.getByRole('button', { name: '열기' }))
+    expect(screen.getByRole('dialog', { name: '패널' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '바깥 버튼' }))
+    expect(screen.queryByRole('dialog', { name: '패널' })).not.toBeInTheDocument()
+  })
+
+  test('Escape로 닫히면 트리거로 포커스가 복귀한다', async () => {
+    const user = userEvent.setup()
+    render(<PopoverHarness />)
+    const trigger = screen.getByRole('button', { name: '열기' })
+    await user.click(trigger)
+    expect(screen.getByRole('dialog', { name: '패널' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '패널' })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 })

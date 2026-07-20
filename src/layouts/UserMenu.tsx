@@ -1,31 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
+import { PopoverPanel, usePopover } from '../components/ui'
 import { USER_ROLE_LABELS } from '../lib/labels'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (event: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+  const { open, toggle, close, rootRef, triggerRef } = usePopover()
 
   if (!user) return null
 
@@ -34,11 +15,20 @@ export function UserMenu() {
     navigate('/login', { replace: true })
   }
 
+  const go = (path: string) => {
+    close()
+    navigate(path)
+  }
+
+  const itemClass =
+    'block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50'
+
   return (
     <div ref={rootRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-haspopup="menu"
         aria-expanded={open}
         className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary-600"
@@ -53,50 +43,47 @@ export function UserMenu() {
           </span>
         </span>
       </button>
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-neutral-200 bg-white py-1 shadow-card"
+      <PopoverPanel open={open} role="menu" aria-label="내 계정" className="w-48 py-1">
+        <p className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
+          {user.email}
+        </p>
+        {user.role === 'USER' && (
+          <>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => go('/console/account')}
+              className={itemClass}
+            >
+              계정 설정
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => go('/console/ssh-keys')}
+              className={itemClass}
+            >
+              SSH 키
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => go('/console/activity')}
+              className={itemClass}
+            >
+              내 활동
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => void handleLogout()}
+          className="block w-full cursor-pointer px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
         >
-          <p className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
-            {user.email}
-          </p>
-          {user.role === 'USER' && (
-            <>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false)
-                  navigate('/console/ssh-keys')
-                }}
-                className="block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-              >
-                SSH 키
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false)
-                  navigate('/console/account')
-                }}
-                className="block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-              >
-                계정 설정
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void handleLogout()}
-            className="block w-full cursor-pointer px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-          >
-            로그아웃
-          </button>
-        </div>
-      )}
+          로그아웃
+        </button>
+      </PopoverPanel>
     </div>
   )
 }
