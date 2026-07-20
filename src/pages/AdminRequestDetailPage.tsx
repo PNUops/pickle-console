@@ -36,6 +36,7 @@ import {
 } from '../components/ui'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
+import { SUBDOMAIN_RE } from '../lib/validation'
 import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
 
 interface Notice {
@@ -135,6 +136,7 @@ export function AdminRequestDetailPage() {
                     .filter(Boolean)
                     .join(' · ') || '없음'}
                 </Field>
+                <Field label="희망 호스트명(슬러그)">{data.desiredSlug ?? '자동 생성'}</Field>
                 <Field label="도메인">
                   {data.desiredSubdomain && data.rootDomain
                     ? `${data.desiredSubdomain}.${data.rootDomain}`
@@ -256,6 +258,8 @@ function DecisionSection({
   const [templateId, setTemplateId] = useState(String(request.templateId))
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
+  const [grantedSlug, setGrantedSlug] = useState(request.desiredSlug ?? '')
+  const [grantedSubdomain, setGrantedSubdomain] = useState(request.desiredSubdomain ?? '')
   const [grantSsh, setGrantSsh] = useState(request.needSsh)
   const [grantHttp, setGrantHttp] = useState(request.needHttp)
   const [grantPublic, setGrantPublic] = useState(request.needPublic)
@@ -341,6 +345,8 @@ function DecisionSection({
     grantSsh,
     grantHttp,
     grantPublic,
+    grantedSlug: grantedSlug.trim() || null,
+    grantedSubdomain: grantHttp ? grantedSubdomain.trim() || null : null,
     nodeId: nodeId ? Number(nodeId) : null,
     comment: approveComment.trim() ? approveComment.trim() : null,
   })
@@ -360,6 +366,12 @@ function DecisionSection({
       errors.grantedDiskGb = `디스크는 이 템플릿의 최소 크기(${template.minDiskGb} GiB) 이상이어야 합니다.`
     if (nodeId && (!Number.isInteger(Number(nodeId)) || Number(nodeId) < 1))
       errors.nodeId = '노드 ID는 1 이상의 정수로 입력하거나 비워 두세요.'
+    if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
+      errors.grantedSlug =
+        '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
+    if (grantHttp && grantedSubdomain.trim() && !SUBDOMAIN_RE.test(grantedSubdomain.trim()))
+      errors.grantedSubdomain =
+        '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     setConfirm('approve')
@@ -473,6 +485,32 @@ function DecisionSection({
                 />
               </FormField>
             </div>
+            <FormField
+              label="호스트명(슬러그) 확정"
+              error={fieldErrors.grantedSlug}
+              description="SSH 접속명·VM 이름으로 쓰입니다. 신청자의 희망값이 채워져 있으며, 비우면 자동 생성됩니다."
+            >
+              <Input
+                value={grantedSlug}
+                onChange={(event) => setGrantedSlug(event.target.value)}
+                placeholder="비우면 자동 생성"
+                maxLength={40}
+              />
+            </FormField>
+            {grantHttp && (
+              <FormField
+                label="서브도메인 확정"
+                error={fieldErrors.grantedSubdomain}
+                description="신청자의 희망 서브도메인이 채워져 있으며, 비우면 자동 생성됩니다."
+              >
+                <Input
+                  value={grantedSubdomain}
+                  onChange={(event) => setGrantedSubdomain(event.target.value)}
+                  placeholder="비우면 자동 생성"
+                  maxLength={40}
+                />
+              </FormField>
+            )}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Checkbox
                 label="SSH 접속"

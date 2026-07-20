@@ -182,6 +182,39 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
   })
 })
 
+describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
+  test('형식·예약어를 검사하고, 비워 두면 자동 생성으로 제출된다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await screen.findByRole('heading', { name: 'VM 신청' })
+    await passStep1(user)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
+    const slugInput = screen.getByLabelText('희망 호스트명(슬러그)')
+    // 형식 위반
+    await user.type(slugInput, 'My-Server')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(
+      await screen.findByText(/호스트명\(슬러그\)은 소문자·숫자·하이픈만/),
+    ).toBeInTheDocument()
+    // 예약어
+    await user.clear(slugInput)
+    await user.type(slugInput, 'admin')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(await screen.findByText(/예약된 이름이라 사용할 수 없습니다/)).toBeInTheDocument()
+    // 비워 두면 통과 + 요약에 자동 생성 표시, 페이로드 null
+    await user.clear(slugInput)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('자동 생성')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    expect(createdVmRequestBodies.at(-1)).toMatchObject({ desiredSlug: null })
+  })
+})
+
 describe('VM 신청 위저드 — 제출', () => {
   test('전체 단계를 통과하면 계약에 맞는 페이로드로 제출하고 완료 화면을 보여준다', async () => {
     const user = userEvent.setup()
@@ -207,6 +240,7 @@ describe('VM 신청 위저드 — 제출', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     // ④ 네트워크·도메인
+    await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
     await user.click(screen.getByRole('checkbox', { name: /HTTP 서비스 게시/ }))
     await user.click(screen.getByRole('checkbox', { name: /외부\(캠퍼스 밖\) 공개/ }))
     await user.type(screen.getByLabelText('희망 서브도메인'), 'capstone-api')
@@ -216,6 +250,7 @@ describe('VM 신청 위저드 — 제출', () => {
     // ⑤ 확인·제출: 요약·백업 책임 고지 확인 후 제출
     expect(screen.getByText('신청 내용 확인')).toBeInTheDocument()
     expect(screen.getByText('capstone-api.pickle.pnuops.com')).toBeInTheDocument()
+    expect(screen.getByText('capstone-api-server')).toBeInTheDocument()
     expect(screen.getByText('2 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
     expect(screen.getByText('백업 책임 안내')).toBeInTheDocument()
     expect(
@@ -245,6 +280,7 @@ describe('VM 신청 위저드 — 제출', () => {
       reqDiskGb: 20,
       reqStartDate: '2026-07-15',
       reqEndDate: '2026-12-20',
+      desiredSlug: 'capstone-api-server',
       needSsh: true,
       needHttp: true,
       needPublic: true,

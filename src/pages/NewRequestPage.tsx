@@ -58,6 +58,7 @@ const FIELD_LABELS: Record<string, string> = {
   reqDiskGb: '디스크',
   reqStartDate: '시작일',
   reqEndDate: '종료일',
+  desiredSlug: '호스트명(슬러그)',
   needSsh: 'SSH',
   needHttp: 'HTTP',
   needPublic: '외부 공개',
@@ -79,6 +80,7 @@ interface WizardState {
   extraNote: string
   reqStartDate: string
   reqEndDate: string
+  desiredSlug: string
   needSsh: boolean
   needHttp: boolean
   needPublic: boolean
@@ -100,6 +102,7 @@ const INITIAL_STATE: WizardState = {
   extraNote: '',
   reqStartDate: '',
   reqEndDate: '',
+  desiredSlug: '',
   needSsh: true,
   needHttp: false,
   needPublic: false,
@@ -191,6 +194,14 @@ export function NewRequestPage() {
         next.courseOrProject = '수업/프로젝트명은 200자 이하로 입력해 주세요.'
       if (state.reqStartDate && state.reqEndDate && state.reqEndDate < state.reqStartDate)
         next.reqEndDate = '종료일은 시작일 이후여야 합니다.'
+    }
+    if (index === 3 && state.desiredSlug) {
+      if (!SUBDOMAIN_RE.test(state.desiredSlug)) {
+        next.desiredSlug =
+          '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
+      } else if (options.data?.reservedSubdomains.includes(state.desiredSlug)) {
+        next.desiredSlug = `'${state.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
+      }
     }
     if (index === 3 && state.needHttp) {
       if (!state.desiredSubdomain) {
@@ -294,6 +305,7 @@ export function NewRequestPage() {
     reqDiskGb: state.reqDiskGb,
     reqStartDate: state.reqStartDate || null,
     reqEndDate: state.reqEndDate || null,
+    desiredSlug: state.desiredSlug || null,
     needSsh: state.needSsh,
     needHttp: state.needHttp,
     needPublic: state.needPublic,
@@ -530,6 +542,20 @@ export function NewRequestPage() {
 
           {step === 3 && (
             <>
+              <FormField
+                label="희망 호스트명(슬러그)"
+                error={errors.desiredSlug}
+                description={`SSH 접속명으로 쓰입니다 — ssh ${state.desiredSlug || '<슬러그>'}@${
+                  options.data?.sshHost ?? 'ssh.pickle.pnuops.com'
+                } · 미입력 시 자동 생성됩니다.`}
+              >
+                <Input
+                  value={state.desiredSlug}
+                  onChange={(event) => update({ desiredSlug: event.target.value })}
+                  placeholder="미입력 시 자동 생성"
+                  maxLength={40}
+                />
+              </FormField>
               <div className="space-y-3">
                 <Checkbox
                   label="SSH 접속"
@@ -664,6 +690,7 @@ function SummaryTable({
     ['사용 목적', state.purpose.trim()],
     ['수업/프로젝트명', state.courseOrProject.trim() || '—'],
     ['기타 참고', state.extraNote.trim() || '—'],
+    ['호스트명(SSH 접속명)', state.desiredSlug || '자동 생성'],
     [
       '사용 기간',
       state.reqStartDate || state.reqEndDate

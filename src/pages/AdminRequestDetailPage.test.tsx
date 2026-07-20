@@ -106,6 +106,10 @@ describe('승인 폼', () => {
     expect(screen.getByLabelText('HTTP 게시')).toBeChecked()
     expect(screen.getByLabelText('외부 공개')).not.toBeChecked()
     expect(screen.getByLabelText('배치 노드 ID')).toHaveValue(null)
+    // 프리필 락(R1): 희망 호스트명·서브도메인이 그대로 채워져 있어야
+    // 승인 시 자동 생성으로 조용히 무시되지 않는다.
+    expect(screen.getByLabelText('호스트명(슬러그) 확정')).toHaveValue('capstone-api')
+    expect(screen.getByLabelText('서브도메인 확정')).toHaveValue('capstone-team3')
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
@@ -129,6 +133,8 @@ describe('승인 폼', () => {
       grantSsh: true,
       grantHttp: true,
       grantPublic: false,
+      grantedSlug: 'capstone-api',
+      grantedSubdomain: 'capstone-team3',
       nodeId: null,
       comment: null,
     })

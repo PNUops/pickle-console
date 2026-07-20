@@ -125,6 +125,8 @@ export type SystemDashboardSummary = Schemas['SystemDashboardSummary']
 export interface RequestOptions {
   allowedRootDomains: string[]
   reservedSubdomains: string[]
+  /** SSH 게이트웨이 접속 호스트 — 신청서의 `ssh <슬러그>@<host>` 미리보기용 (0.12.0). */
+  sshHost: string
 }
 
 /* ─── 점검 모드·배너·문의처 (M6, GET /meta/status) ─── */

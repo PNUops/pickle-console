@@ -67,6 +67,7 @@ export const templates: Schemas['VmTemplate'][] = [basicTemplate, largeTemplate]
 export const requestOptions = {
   allowedRootDomains: ['pickle.pnuops.com', 'lab.pnuops.com'],
   reservedSubdomains: ['www', 'api', 'admin', 'ssh', 'mail'],
+  sshHost: 'ssh.pickle.pnuops.com',
 }
 
 /* ─── handlers ─── */

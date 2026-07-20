@@ -651,7 +651,10 @@ export interface paths {
          *     관리되며 운영자가 변경할 수 있습니다.
          *
          *     - `allowedRootDomains`: `rootDomain`으로 선택 가능한 루트 도메인 허용 목록
-         *     - `reservedSubdomains`: `desiredSubdomain`으로 사용할 수 없는 예약어 목록
+         *     - `reservedSubdomains`: `desiredSubdomain`·`desiredSlug`로 사용할 수 없는
+         *       예약어 목록 (서브도메인·슬러그 공용)
+         *     - `sshHost`: SSH 게이트웨이 접속 호스트 (신청서의
+         *       `ssh <user>@<slug>.<sshHost>` 미리보기용)
          */
         get: operations["getRequestOptions"];
         put?: never;
@@ -1683,6 +1686,10 @@ export interface paths {
          *     `rootDomain`이 힌트로 프리필되며 수락·변경 가능; null이면 공개 시 시스템
          *     자동 서브도메인). 실제 DNS·라우트 발급은 M4 퍼블리싱(`POST /vms/{vmId}/publish`)
          *     에서 수행합니다 (제품기획 §12 "승인 시 관리자 최종 부여, 실제 발급은 M4").
+         *     **호스트명(슬러그)도 이 승인 단계에서 확정**됩니다 (v0.12.0,
+         *     `grantedSlug` — 신청자의 `desiredSlug`가 프리필되며 수락·변경 가능;
+         *     null/공백이면 기존처럼 자동 생성). 확정된 호스트명은 불변이며 파기
+         *     후에도 재사용되지 않습니다.
          *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
          */
         post: operations["approveVmRequest"];
@@ -3144,6 +3151,8 @@ export interface components {
              * @description 사용자 소유 커스텀 도메인 (연결은 M4, 신청 시 기록만)
              */
             customDomain?: string | null;
+            /** @description SSH 접속명·호스트명 희망값 (3~40자, 소문자·숫자·하이픈, 하이픈으로 시작/끝 불가). 미입력(null) 시 기존처럼 자동 생성됩니다 (그룹 슬러그 + 랜덤 4자). 예약어 목록은 서브도메인 예약어 (`GET /meta/request-options`의 `reservedSubdomains`)와 공용이며, **파기된 VM의 슬러그를 포함해 재사용할 수 없습니다** — 예약어·중복은 서버에서 검증됩니다(위반 시 422). */
+            desiredSlug?: string | null;
         };
         /** @description 승인/반려 결정 내용 (결정된 신청에만 존재) */
         VmRequestReview: {
@@ -3214,6 +3223,8 @@ export interface components {
             desiredSubdomain?: string | null;
             rootDomain?: string | null;
             customDomain?: string | null;
+            /** @description 신청자의 SSH 접속명·호스트명 희망값 (v0.12.0, 미입력 시 null) */
+            desiredSlug?: string | null;
             status: components["schemas"]["VmRequestStatus"];
             /** @description 결정(승인/반려) 내용. 미결정(SUBMITTED/CANCELED) 시 null. */
             review?: components["schemas"]["VmRequestReview"] | null;
@@ -3243,7 +3254,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             name: string;
-            /** @description slug 규칙으로 생성된 유일 호스트명 */
+            /** @description slug 규칙으로 자동 생성되거나 신청자가 지정한 유일 호스트명 (불변, 파기 후에도 재사용되지 않음) */
             hostname: string;
             status: components["schemas"]["VmStatus"];
             vcpu: number;
@@ -3606,6 +3617,8 @@ export interface components {
             grantedSubdomain?: string | null;
             /** @description 부여 서브도메인의 루트 도메인. `grantedSubdomain` 지정 시 필수이며 `GET /meta/request-options`의 `allowedRootDomains` 중 하나여야 합니다 (그 외 422). `grantedSubdomain`이 null(AUTO)일 때는 이 값이 있으면 그 루트를, 없으면 기본 루트(`allowedRootDomains`의 첫 항목)를 사용하므로 **AUTO 도메인도 항상 루트가 정해집니다**. */
             grantedRootDomain?: string | null;
+            /** @description 관리자가 최종 확정하는 호스트명(SSH 접속명·슬러그, v0.12.0). 신청자의 `desiredSlug`가 프리필되며 관리자가 수락·변경할 수 있습니다. **null/공백이면 기존처럼 자동 생성**(그룹 슬러그 + 랜덤 4자)합니다. 지정 시 그대로 `vms.hostname`이 되며 이후 불변입니다. 예약어(서브도메인 예약어와 공용)·비속어·중복 (파기된 VM의 슬러그 포함)은 서버에서 검증합니다 — 위반 시 422 `validation_failed`(`grantedSlug` 필드 오류). */
+            grantedSlug?: string | null;
             /**
              * Format: int64
              * @description 배치할 노드 (생략 또는 null = 자동 배치)
@@ -6110,14 +6123,17 @@ export interface operations {
                      *         "admin",
                      *         "ssh",
                      *         "mail"
-                     *       ]
+                     *       ],
+                     *       "sshHost": "ssh.pickle.pnuops.com"
                      *     }
                      */
                     "application/json": {
                         /** @description 선택 가능한 루트 도메인 목록 (settings에서 관리) */
                         allowedRootDomains: string[];
-                        /** @description 사용 불가 예약 서브도메인 목록 (settings에서 관리) */
+                        /** @description 사용 불가 예약어 목록 (settings에서 관리 — 서브도메인·슬러그 공용) */
                         reservedSubdomains: string[];
+                        /** @description SSH 게이트웨이 접속 호스트 (v0.12.0 — 신청서 미리보기용) */
+                        sshHost: string;
                     };
                 };
             };
@@ -6729,7 +6745,8 @@ export interface operations {
                  *       "needPublic": true,
                  *       "desiredSubdomain": "capstone-team3",
                  *       "rootDomain": "pickle.pnuops.com",
-                 *       "customDomain": null
+                 *       "customDomain": null,
+                 *       "desiredSlug": "capstone-team3"
                  *     }
                  */
                 "application/json": components["schemas"]["CreateVmRequest"];
@@ -6812,6 +6829,7 @@ export interface operations {
                      *       "desiredSubdomain": "capstone-team3",
                      *       "rootDomain": "pickle.pnuops.com",
                      *       "customDomain": null,
+                     *       "desiredSlug": "capstone-team3",
                      *       "status": "APPROVED",
                      *       "review": {
                      *         "reviewerId": 3,
@@ -8543,6 +8561,7 @@ export interface operations {
                  *       "grantPublic": true,
                  *       "grantedSubdomain": "capstone-team3",
                  *       "grantedRootDomain": "pickle.pnuops.com",
+                 *       "grantedSlug": "capstone-team3",
                  *       "nodeId": null,
                  *       "comment": "요청 사양 그대로 승인합니다. 서브도메인도 요청하신 이름으로 부여합니다."
                  *     }

@@ -99,6 +99,7 @@ export function RequestDetailPage() {
             <Field label="사용 기간">
               {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
             </Field>
+            <Field label="호스트명(SSH 접속명)">{data.desiredSlug ?? '자동 생성'}</Field>
             <Field label="네트워크">
               {[
                 data.needSsh && 'SSH',
