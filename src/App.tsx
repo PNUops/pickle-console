@@ -1,5 +1,5 @@
-import { Suspense, lazy } from 'react'
-import { Route, Routes } from 'react-router'
+import { Suspense, lazy, useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
 import { Spinner } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
@@ -29,7 +29,6 @@ import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
-import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyActivityPage } from './pages/MyActivityPage'
 import { NewRequestPage } from './pages/NewRequestPage'
@@ -51,11 +50,38 @@ const TerminalPage = lazy(() =>
   import('./pages/TerminalPage').then((m) => ({ default: m.TerminalPage })),
 )
 
+// 랜딩은 motion(+lazy 3D)을 끌어오므로 통째로 코드 분할한다 — 콘솔만 쓰는
+// 사용자의 진입 번들을 키우지 않는다. 폴백은 히어로와 같은 다크 배경(플래시 방지).
+const LandingPage = lazy(() =>
+  import('./pages/landing/LandingPage').then((m) => ({ default: m.LandingPage })),
+)
+
+// SPA 내비게이션은 스크롤을 리셋하지 않는다 — 긴 랜딩 하단에서 회원가입/로그인으로
+// 이동하면 이전 오프셋이 남으므로 경로 변경 시 최상단으로 복귀시킨다.
+// (랜딩이 html에 scroll-smooth를 붙이므로 instant를 명시해 스르륵 효과를 배제.)
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname])
+  return null
+}
+
 function App() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+      {/* 랜딩은 자체 다크 헤더/푸터를 가진 full-bleed 페이지 — PublicLayout 밖에서 렌더. */}
+      <Route
+        index
+        element={
+          <Suspense fallback={<div className="min-h-svh bg-neutral-950" />}>
+            <LandingPage />
+          </Suspense>
+        }
+      />
       <Route element={<PublicLayout />}>
-        <Route index element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="signup" element={<SignupPage />} />
         <Route path="verify-email" element={<VerifyEmailPage />} />
@@ -180,6 +206,7 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
+    </>
   )
 }
 

@@ -33,6 +33,23 @@ if (typeof globalThis.ResizeObserver !== 'function') {
   } as unknown as typeof ResizeObserver
 }
 
+// jsdom은 IntersectionObserver를 구현하지 않는다 — 랜딩의 스크롤 리빌(motion
+// whileInView)용 no-op 스텁. 콜백을 호출하지 않으므로 테스트에서는 초기 상태
+// (opacity 0)로 렌더되지만, 요소 존재/텍스트 단언에는 영향이 없다.
+if (typeof globalThis.IntersectionObserver !== 'function') {
+  globalThis.IntersectionObserver = class {
+    root = null
+    rootMargin = ''
+    thresholds = []
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return []
+    }
+  } as unknown as typeof IntersectionObserver
+}
+
 // jsdom은 matchMedia를 구현하지 않는다 — 반응형 리스너(모바일 드로어 등)용 스텁.
 // 테스트 뷰포트는 항상 "모바일 미만 아님(matches=false)"으로 취급한다.
 if (typeof window.matchMedia !== 'function') {
