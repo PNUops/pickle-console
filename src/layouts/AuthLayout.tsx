@@ -37,7 +37,7 @@ export function AuthLayout() {
       />
 
       <header className="relative z-10">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
           <Logo tone="inverse" />
           <nav aria-label="주 메뉴" className="flex items-center gap-2">
             {status === 'authenticated' && user ? (
@@ -71,7 +71,7 @@ export function AuthLayout() {
         <Outlet />
       </main>
 
-      <footer className="relative z-10 mx-auto w-full max-w-6xl px-4 py-6 text-sm text-neutral-400 sm:px-6">
+      <footer className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6 text-sm text-neutral-400 sm:px-6">
         피클 — 부산대학교 클라우드 플랫폼
       </footer>
     </div>
