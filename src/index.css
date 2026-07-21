@@ -210,3 +210,18 @@
   -webkit-box-shadow: 0 0 0 1000px #0b1120 inset;
   -webkit-text-fill-color: #fff;
 }
+/* 체크박스(공용 컴포넌트는 bg-white 고정) — 인증 화면에서는 글래스 톤으로 */
+.auth-dark label:has(input[type='checkbox']) {
+  background-color: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.18);
+}
+.auth-dark label:has(input[type='checkbox']:checked) {
+  background-color: rgb(46 139 158 / 0.18);
+  border-color: rgb(46 139 158 / 0.55);
+}
+.auth-dark label .text-neutral-800 {
+  color: var(--color-neutral-100);
+}
+.auth-dark label .text-neutral-500 {
+  color: var(--color-neutral-400);
+}
