@@ -20,7 +20,7 @@ type NotificationView = components['schemas']['NotificationView']
 export function NotificationBell({ to }: { to: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { open, toggle, rootRef, triggerRef } = usePopover()
+  const { open, toggle, close, rootRef, triggerRef } = usePopover()
 
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -48,7 +48,9 @@ export function NotificationBell({ to }: { to: string }) {
 
   function onItemClick(notification: NotificationView) {
     if (!notification.readAt) markRead.mutate(notification.id)
-    // linkPath 이동 시 라우트 변경으로 팝오버가 닫힌다(usePopover 안전망).
+    // 같은 pathname으로의 이동(이미 그 화면)에서는 라우트 변경 안전망이 발동하지
+    // 않으므로 명시적으로 닫는다.
+    close()
     if (notification.linkPath) navigate(notification.linkPath)
   }
 

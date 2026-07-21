@@ -135,6 +135,7 @@ describe('승인 폼', () => {
       grantPublic: false,
       grantedSlug: 'capstone-api',
       grantedSubdomain: 'capstone-team3',
+      grantedRootDomain: 'pickle.pnuops.com',
       nodeId: null,
       comment: null,
     })

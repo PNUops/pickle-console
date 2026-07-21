@@ -167,7 +167,8 @@ export function VmDetailPage() {
   const rawTab = searchParams.get('tab')
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
-    setSearchParams(id === 'overview' ? {} : { tab: id })
+    // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
+    setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
   }
 
   return (

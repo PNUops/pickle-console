@@ -167,6 +167,9 @@ export function AdminRequestDetailPage() {
               </Alert>
             ) : templates.data ? (
               <DecisionSection
+                // 같은 라우트 패턴 간 이동(A→B) 시 재마운트를 강제해 이전 신청의
+                // 프리필(슬러그·사양)이 남지 않게 한다.
+                key={data.id}
                 request={data}
                 templates={templates.data}
                 onNotice={setNotice}
@@ -290,6 +293,9 @@ function DecisionSection({
     const mapped = fieldErrorsOf(apiError.problem)
     if (Object.keys(mapped).length > 0) {
       setFieldErrors(mapped)
+      // 폼에 표시 자리가 없는 필드 오류(예: 계약이 새로 추가한 키)가 조용히
+      // 사라지지 않도록 요약 notice도 함께 띄운다.
+      onNotice({ variant: 'danger', message: apiError.message })
       return
     }
     onNotice({ variant: 'danger', message: apiError.message })
@@ -346,7 +352,14 @@ function DecisionSection({
     grantHttp,
     grantPublic,
     grantedSlug: grantedSlug.trim() || null,
-    grantedSubdomain: grantHttp ? grantedSubdomain.trim() || null : null,
+    // 서브도메인 확정은 신청서에 루트 도메인이 있을 때만 의미가 있다 — 루트 없이
+    // 서브도메인만 보내면 서버가 grantedRootDomain 422를 반환한다(계약).
+    grantedSubdomain:
+      grantHttp && request.rootDomain ? grantedSubdomain.trim() || null : null,
+    grantedRootDomain:
+      grantHttp && request.rootDomain && grantedSubdomain.trim()
+        ? request.rootDomain
+        : null,
     nodeId: nodeId ? Number(nodeId) : null,
     comment: approveComment.trim() ? approveComment.trim() : null,
   })
@@ -497,11 +510,11 @@ function DecisionSection({
                 maxLength={40}
               />
             </FormField>
-            {grantHttp && (
+            {grantHttp && request.rootDomain && (
               <FormField
                 label="서브도메인 확정"
                 error={fieldErrors.grantedSubdomain}
-                description="신청자의 희망 서브도메인이 채워져 있으며, 비우면 자동 생성됩니다."
+                description={`신청자의 희망 서브도메인이 채워져 있으며, 비우면 자동 생성됩니다. (루트: ${request.rootDomain})`}
               >
                 <Input
                   value={grantedSubdomain}

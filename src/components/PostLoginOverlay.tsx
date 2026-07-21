@@ -10,11 +10,17 @@ import { Logo } from './Logo'
  */
 export function PostLoginOverlay() {
   const { user } = useAuth()
+  // 초기화 함수는 순수하게 판정만 한다 — StrictMode는 초기화를 2회 호출하므로
+  // 여기서 removeItem(부수효과)을 하면 dev에서 오버레이가 절대 뜨지 않는다.
   const [visible, setVisible] = useState(() => {
     if (sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY) == null) return false
-    sessionStorage.removeItem(POST_LOGIN_OVERLAY_KEY)
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   })
+
+  // 플래그 소거는 mount 이후(부수효과 자리)에서 수행한다.
+  useEffect(() => {
+    sessionStorage.removeItem(POST_LOGIN_OVERLAY_KEY)
+  }, [])
 
   // animationend가 오지 않는 환경(jsdom 등) 대비 타이머 폴백.
   useEffect(() => {

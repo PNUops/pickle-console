@@ -198,3 +198,15 @@
 .post-login-overlay {
   animation: post-login-fade 900ms ease-out forwards;
 }
+/* 오류/자동완성 상태는 다크 스코프가 덮지 않도록 명시 복원 */
+.auth-dark input[aria-invalid='true'],
+.auth-dark textarea[aria-invalid='true'] {
+  border-color: var(--color-danger-400);
+}
+.auth-dark p[role='alert'] {
+  color: var(--color-danger-400);
+}
+.auth-dark input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #0b1120 inset;
+  -webkit-text-fill-color: #fff;
+}

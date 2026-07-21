@@ -29,7 +29,7 @@ export function UserMenu() {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
         className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary-600"
       >
@@ -43,7 +43,7 @@ export function UserMenu() {
           </span>
         </span>
       </button>
-      <PopoverPanel open={open} role="menu" aria-label="내 계정" className="w-48 py-1">
+      <PopoverPanel open={open} aria-label="내 계정" className="w-48 py-1">
         <p className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
           {user.email}
         </p>
@@ -51,7 +51,6 @@ export function UserMenu() {
           <>
             <button
               type="button"
-              role="menuitem"
               onClick={() => go('/console/account')}
               className={itemClass}
             >
@@ -59,7 +58,6 @@ export function UserMenu() {
             </button>
             <button
               type="button"
-              role="menuitem"
               onClick={() => go('/console/ssh-keys')}
               className={itemClass}
             >
@@ -67,7 +65,6 @@ export function UserMenu() {
             </button>
             <button
               type="button"
-              role="menuitem"
               onClick={() => go('/console/activity')}
               className={itemClass}
             >
