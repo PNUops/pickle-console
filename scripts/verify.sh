@@ -8,7 +8,7 @@ npm run --silent typecheck
 npm run --silent test >/dev/null
 npm run --silent build >/dev/null
 
-# 07-security M3 gate: runtime (production) dependencies must be free of
+# Security gate: runtime (production) dependencies must be free of
 # high-or-worse advisories — a hit fails the verify run.
 echo "--- npm audit gate (runtime deps, high+) ---"
 npm audit --omit=dev --audit-level=high

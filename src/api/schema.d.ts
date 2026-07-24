@@ -94,7 +94,7 @@ export interface paths {
          *
          *     요청 빈도 제한: IP+계정 단위 슬라이딩 윈도 (약 10회/분, 연속 5회 실패 시 백오프 잠금).
          *
-         *     **2FA 계정 (M6)**: 2FA가 등록된 계정은 비밀번호 검증 성공 시 토큰 대신
+         *     **2FA 계정**: 2FA가 등록된 계정은 비밀번호 검증 성공 시 토큰 대신
          *     `MfaChallengeResponse`(`mfaRequired=true` + 5분 유효 `mfaToken`)를
          *     반환합니다 — 쿠키는 이 단계에서 발급되지 않으며,
          *     `POST /auth/mfa`로 코드를 제출해야 로그인이 완료됩니다.
@@ -122,7 +122,7 @@ export interface paths {
          *     이미 회전된 토큰의 재사용은 탈취 신호로 간주되어 해당 토큰 체인 전체가
          *     폐기되며 재로그인이 필요합니다.
          *
-         *     M3부터 CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키
+         *     CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키
          *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 `X-Pickle-Csrf` 헤더로
          *     함께 보내야 하며, 갱신 성공 시 `pickle_csrf` 쿠키도 새 값으로 재발급됩니다.
          */
@@ -148,7 +148,7 @@ export interface paths {
          *     (`Max-Age=0` Set-Cookie). 클라이언트는 보유한 액세스 토큰을 함께 폐기해야 합니다.
          *     쿠키가 없거나 이미 폐기된 경우에도 204를 반환합니다(멱등).
          *
-         *     M3부터 CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키 값을
+         *     CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키 값을
          *     `X-Pickle-Csrf` 헤더로 함께 보내야 합니다.
          */
         post: operations["logout"];
@@ -169,7 +169,7 @@ export interface paths {
         put?: never;
         /**
          * 비밀번호 재설정 요청 (메일 발송)
-         * @description 비밀번호 재설정 링크를 메일로 발송합니다 (M6). 계정 존재 여부 노출을
+         * @description 비밀번호 재설정 링크를 메일로 발송합니다. 계정 존재 여부 노출을
          *     막기 위해 **존재하지 않거나 활성(ACTIVE)이 아닌 이메일에도 동일하게
          *     202를 반환**하며, 그 경우 메일은 발송되지 않습니다.
          *
@@ -195,7 +195,7 @@ export interface paths {
         put?: never;
         /**
          * 비밀번호 재설정 확정 (새 비밀번호 설정)
-         * @description 재설정 메일의 1회용 토큰을 검증하고 새 비밀번호를 설정합니다 (M6).
+         * @description 재설정 메일의 1회용 토큰을 검증하고 새 비밀번호를 설정합니다.
          *
          *     - 성공 시 해당 계정의 `token_version`이 올라가 **기존의 모든 세션
          *       (액세스·리프레시 토큰)이 무효화**되고, 로그인 실패 잠금 카운터가
@@ -220,7 +220,7 @@ export interface paths {
         put?: never;
         /**
          * 2단계 인증 완료 (TOTP/복구 코드 → 토큰 발급)
-         * @description 2FA가 등록된 계정의 로그인 2단계입니다 (M6, 런치 게이트 G5).
+         * @description 2FA가 등록된 계정의 로그인 2단계입니다 .
          *     `POST /auth/login`이 `MfaChallengeResponse`(`mfaToken`)를 반환한 경우,
          *     이 op로 TOTP 코드 또는 복구 코드를 제출해 로그인을 완료합니다.
          *
@@ -291,7 +291,7 @@ export interface paths {
         };
         /**
          * 내 SSH 키 목록 조회
-         * @description 내 계정에 등록된 SSH 공개키 목록입니다 (M5.5). 등록된 키가 SSH
+         * @description 내 계정에 등록된 SSH 공개키 목록입니다. 등록된 키가 SSH
          *     게이트웨이 접속(`ssh <VM호스트명>@ssh...`)의 기본 인증 수단이며,
          *     키가 하나도 없으면 기본 상태의 VM에는 SSH 접속이 불가합니다
          *     (비밀번호 접속은 VM별 `ssh_password_enabled` opt-in에서만 허용).
@@ -416,7 +416,7 @@ export interface paths {
         get?: never;
         /**
          * 내 비밀번호 변경
-         * @description 현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다 (M6).
+         * @description 현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다.
          *
          *     - 성공 시 `token_version`이 올라가 기존의 다른 세션이 모두
          *       무효화되고, **이 응답이 새 토큰쌍을 반환**하므로 현재 세션은
@@ -443,7 +443,7 @@ export interface paths {
         put?: never;
         /**
          * 회원 탈퇴 (영구 보존 — 재가입 불가)
-         * @description 본인 계정을 탈퇴 처리합니다 (M6). 비밀번호 재인증이 필요하며,
+         * @description 본인 계정을 탈퇴 처리합니다. 비밀번호 재인증이 필요하며,
          *     2FA 등록 계정은 TOTP 코드(또는 복구 코드)도 함께 제출해야 합니다.
          *
          *     **차단 조건** (모두 해소해야 탈퇴 가능, 409):
@@ -479,7 +479,7 @@ export interface paths {
         put?: never;
         /**
          * 2FA(TOTP) 등록 시작 (시크릿 발급)
-         * @description TOTP 등록을 시작합니다 (M6). 비밀번호 재인증 후 시크릿과
+         * @description TOTP 등록을 시작합니다. 비밀번호 재인증 후 시크릿과
          *     `otpauth://` URI(QR 렌더용)를 반환합니다. 이 시점에는 아직
          *     등록이 **활성화되지 않으며**, `POST /me/mfa/totp/activate`로 첫
          *     코드를 검증해야 완료됩니다 (미완료 시크릿은 재호출 시 교체).
@@ -574,7 +574,7 @@ export interface paths {
         };
         /**
          * 내 약관 동의 이력 조회
-         * @description 내가 동의한 약관·개인정보처리방침 버전 이력입니다 (M6).
+         * @description 내가 동의한 약관·개인정보처리방침 버전 이력입니다.
          *     현재 유효 버전에 대한 미동의 여부는 `UserProfile.pendingConsents`로
          *     확인합니다.
          */
@@ -582,7 +582,7 @@ export interface paths {
         put?: never;
         /**
          * 약관 개정판 동의 (재동의)
-         * @description 약관·개인정보처리방침 **개정판**에 동의합니다 (M6). 문서 버전이
+         * @description 약관·개인정보처리방침 **개정판**에 동의합니다. 문서 버전이
          *     개정되면 `UserProfile.pendingConsents`에 미동의 문서가 나타나고
          *     콘솔이 동의 화면을 표시합니다 — 이 op로 동의를 기록하면 사라집니다.
          *
@@ -674,7 +674,7 @@ export interface paths {
         };
         /**
          * 시스템 상태 조회 (점검 모드·배너·문의처 — 공개)
-         * @description 점검 모드 여부, 공지 배너, 문의 이메일을 반환합니다 (M6). 인증 불필요 —
+         * @description 점검 모드 여부, 공지 배너, 문의 이메일을 반환합니다. 인증 불필요 —
          *     로그인 화면과 콘솔 셸이 주기적으로(약 60초) 폴링합니다.
          *
          *     **점검 모드 시맨틱**: `maintenance=true`면 관리자 계층이 아닌 모든
@@ -702,7 +702,7 @@ export interface paths {
         };
         /**
          * 약관·개인정보처리방침 현행 버전 목록 (공개)
-         * @description 문서 종류별 **현행(유효) 버전** 메타데이터 목록입니다 (M6).
+         * @description 문서 종류별 **현행(유효) 버전** 메타데이터 목록입니다.
          *     회원가입 화면이 동의 대상 버전을 표시할 때 사용합니다.
          *     본문은 `GET /meta/terms/{docType}`로 조회합니다.
          */
@@ -724,7 +724,7 @@ export interface paths {
         };
         /**
          * 약관·개인정보처리방침 현행 본문 조회 (공개)
-         * @description 지정한 문서 종류의 현행 버전 전문(마크다운)입니다 (M6).
+         * @description 지정한 문서 종류의 현행 버전 전문(마크다운)입니다.
          */
         get: operations["getTermsDocument"];
         put?: never;
@@ -780,7 +780,7 @@ export interface paths {
         post?: never;
         /**
          * 그룹 삭제 (OWNER 전용)
-         * @description 그룹을 삭제합니다 (M6). **OWNER만** 호출할 수 있으며, 비구성원에게는
+         * @description 그룹을 삭제합니다. **OWNER만** 호출할 수 있으며, 비구성원에게는
          *     404로 마스킹됩니다.
          *
          *     - **차단 조건** (409): 그룹에 삭제되지 않은 VM(DELETED 외 전 상태 —
@@ -950,7 +950,7 @@ export interface paths {
         };
         /**
          * VM 목록 조회
-         * @description 내가 속한 그룹의 VM 목록입니다. M2에서는 조회만 지원하며,
+         * @description 내가 속한 그룹의 VM 목록입니다. 현재는 조회만 지원하며,
          *     승인 시 생성된 행은 mock 프로비저닝이 완료될 때까지 `CREATING` 상태로 표시됩니다.
          */
         get: operations["listVms"];
@@ -1000,7 +1000,7 @@ export interface paths {
          *       백업해야 합니다.
          *     - **`ERROR` 상태 예외**: 생성 실패 보상이 끝난 `ERROR` 상태 VM은 파기할
          *       하부 실체가 없으므로 유예 없이 **즉시 `DELETED`로 전이**됩니다.
-         *     - **삭제 보호 (M6)**: VM 설정 `deletion_protection`이 켜져 있으면
+         *     - **삭제 보호**: VM 설정 `deletion_protection`이 켜져 있으면
          *       삭제 접수가 409(`VM_DELETION_PROTECTED`)로 거부됩니다 — 소유자가
          *       설정에서 해제한 뒤 다시 시도해야 합니다 (관리자 일반·강제 삭제도
          *       동일하게 거부).
@@ -1055,7 +1055,7 @@ export interface paths {
          *     종료로 **자동 폴백하지 않습니다** — 필요하면
          *     `POST /vms/{vmId}/force-stop`을 명시적으로 호출해야 합니다.
          *
-         *     **중지 보호 (M6)**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
+         *     **중지 보호**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
          *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 종료할 수 있습니다.
          */
         post: operations["shutdownVm"];
@@ -1080,7 +1080,7 @@ export interface paths {
          *     있으며, 접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리됩니다.
          *     VM 이벤트(`REBOOT`)로 기록됩니다.
          *
-         *     **중지 보호 (M6)**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
+         *     **중지 보호**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
          *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 재부팅할 수 있습니다.
          */
         post: operations["rebootVm"];
@@ -1108,7 +1108,7 @@ export interface paths {
          *     **경고**: 디스크 쓰기 중 강제 종료하면 파일 시스템·데이터가 손상될 수
          *     있습니다. 종료(`shutdown`)가 응답하지 않을 때만 사용하세요.
          *
-         *     **중지 보호 (M6)**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
+         *     **중지 보호**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
          *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 강제 종료할 수 있습니다.
          */
         post: operations["forceStopVm"];
@@ -1169,7 +1169,7 @@ export interface paths {
         /**
          * VM 비밀번호 재생성 (시스템 생성)
          * @description VM의 `student` 계정 비밀번호를 **플랫폼이 새로 생성한 24자 CSPRNG
-         *     값**으로 교체합니다 (M5.5). 그룹 **EDITOR 이상**만 호출할 수 있습니다.
+         *     값**으로 교체합니다. 그룹 **EDITOR 이상**만 호출할 수 있습니다.
          *
          *     - **임의 문자열은 누구도(관리자 포함) 지정할 수 없습니다** — 비밀번호
          *       생성은 항상 시스템 몫입니다(2026-07-17 운영자 확정: 관리자가 값을
@@ -1198,7 +1198,7 @@ export interface paths {
         };
         /**
          * VM별 설정 조회
-         * @description VM별 설정 목록입니다 (M5.5, product-spec §9). 그룹 **EDITOR 이상**만
+         * @description VM별 설정 목록입니다 (제품기획 §9). 그룹 **EDITOR 이상**만
          *     접근할 수 있으며(설정 영역 자체가 편집자 이상), 비구성원에게는 404로
          *     마스킹됩니다.
          *
@@ -1224,7 +1224,7 @@ export interface paths {
          *     - `password_reveal_min_role` — 비밀번호 열람 최소 역할 (= VM 내부
          *       sudo 자격의 실질 게이트). 다른 구성원의 권한을 조정하는 키이므로
          *       **소유자 전용**.
-         *     - `deletion_protection` (M6, 0.11.0 개정) — 켜져 있으면 **모든 삭제
+         *     - `deletion_protection` (0.11.0 개정) — 켜져 있으면 **모든 삭제
          *       접수**(본인·관리자 일반·강제 삭제)가 409(`VM_DELETION_PROTECTED`)로
          *       거부되고, 파기 시점에도 재확인됩니다(켜져 있으면 파기가 중단되고
          *       관리자 확인 대기). 순수 논리 게이트로, 토글은 하이퍼바이저와
@@ -1234,11 +1234,11 @@ export interface paths {
          *       소유자 부재·보안 사고 등 해제 주체가 없는 경우 SYS_ADMIN이 강제
          *       삭제에 `overrideProtection: true`를 명시해 회수할 수 있습니다
          *       (감사 기록 — force-delete op 참조).
-         *     - `stop_protection` (M6) — 켜져 있으면 콘솔의 종료/재부팅/강제 종료를
+         *     - `stop_protection` — 켜져 있으면 콘솔의 종료/재부팅/강제 종료를
          *       **EDITOR 이상만** 수행할 수 있습니다 (MEMBER는 409
          *       `VM_STOP_PROTECTED`; 시작은 제한 없음). 한계: sudo 가능한 구성원은
          *       게스트 안에서 여전히 종료할 수 있습니다 (콘솔 UI에 고지).
-         *     - `display_name` (M6) — 콘솔 표시명 (`VmSummary.displayName`).
+         *     - `display_name` — 콘솔 표시명 (`VmSummary.displayName`).
          *       호스트네임/슬러그/Proxmox 이름은 바뀌지 않습니다.
          */
         get: operations["getVmSettings"];
@@ -1275,14 +1275,14 @@ export interface paths {
         put?: never;
         /**
          * 웹 터미널 접속 티켓 발급 (1회용)
-         * @description 브라우저 웹 터미널(M6.5)용 **1회용 접속 티켓**을 발급합니다. 그룹
+         * @description 브라우저 웹 터미널용 **1회용 접속 티켓**을 발급합니다. 그룹
          *     **MEMBER 이상**만 호출할 수 있으며, 비구성원·미존재 VM은 404로
          *     마스킹됩니다.
          *
          *     발급된 티켓으로 같은 오리진의 WebSocket 엔드포인트
          *     `wss://<host>/terminal/ws`에 접속합니다. 이 WS 엔드포인트는 **REST
          *     계약 밖**입니다 — sshgw 터미널 브리지(LXC 102)가 종단하며, 프로토콜
-         *     상세는 docs/api/internal.md Link 3을 참조하세요.
+         *     상세는 내부 웹 터미널 계약을 따릅니다.
          *
          *     - 티켓은 `Sec-WebSocket-Protocol: pickle.terminal.v1, ticket.<ticket>`
          *       2요소 서브프로토콜로 운반합니다 (쿼리스트링·Authorization 헤더
@@ -1346,7 +1346,7 @@ export interface paths {
          *     **공개 대상 포트**는 VM 내부에서 서비스가 열려 있는 포트입니다(기본 80,
          *     1–65535). VM의 SSH 포트 22는 공개할 수 없습니다(422). 라우팅 대상 IP는
          *     **클라이언트가 지정할 수 없으며** 서버가 VM에 할당된 내부 IP로 강제합니다
-         *     (SSRF 방지 — plan/06·제품기획 §12). 요청 본문에 IP 필드는 존재하지 않습니다.
+         *     (SSRF 방지 정책). 요청 본문에 IP 필드는 존재하지 않습니다.
          *
          *     **도메인**: 공개는 도메인 이름을 **선택하지 않고 활성화만** 합니다.
          *     플랫폼 서브도메인 이름은 신청 승인 시 관리자가 확정한 값입니다
@@ -1678,14 +1678,14 @@ export interface paths {
          *
          *     1. `vm_request_reviews` 결정 행이 생성되고,
          *     2. `CREATING` 상태의 VM 행이 만들어지며,
-         *     3. mock 프로비저닝 잡이 큐에 등록됩니다 (M2 — 실제 Proxmox 연동은 M3).
+         *     3. 프로비저닝 잡이 큐에 등록됩니다.
          *
          *     `nodeId`를 생략하거나 null이면 자동 배치입니다.
          *     **플랫폼 서브도메인 이름은 이 승인 단계에서 관리자가 최종 부여**합니다
          *     (`grantedSubdomain`/`grantedRootDomain` — 신청자의 `desiredSubdomain`/
          *     `rootDomain`이 힌트로 프리필되며 수락·변경 가능; null이면 공개 시 시스템
-         *     자동 서브도메인). 실제 DNS·라우트 발급은 M4 퍼블리싱(`POST /vms/{vmId}/publish`)
-         *     에서 수행합니다 (제품기획 §12 "승인 시 관리자 최종 부여, 실제 발급은 M4").
+         *     자동 서브도메인). 실제 DNS·라우트 발급은 퍼블리싱(`POST /vms/{vmId}/publish`)
+         *     에서 수행합니다 (제품기획 §12 "승인 시 관리자 최종 부여").
          *     **호스트명(슬러그)도 이 승인 단계에서 확정**됩니다 (v0.12.0,
          *     `grantedSlug` — 신청자의 `desiredSlug`가 프리필되며 수락·변경 가능;
          *     null/공백이면 기존처럼 자동 생성). 확정된 호스트명은 불변이며 파기
@@ -1769,7 +1769,7 @@ export interface paths {
         };
         /**
          * [관리자] 사용자 목록 조회
-         * @description 사용자 목록·검색입니다 (M6). SYS_ADMIN은 전체 사용자를,
+         * @description 사용자 목록·검색입니다. SYS_ADMIN은 전체 사용자를,
          *     ORG_ADMIN은 **자기 기관에 파생 소속된 사용자만** 조회합니다
          *     (파생 멤버십 — 기관의 신청/삭제되지 않은 VM을 가진 그룹의 구성원,
          *     product-spec §14와 동일 기준. 감사 뷰와 같은 가시성 트레이드오프).
@@ -1793,7 +1793,7 @@ export interface paths {
         };
         /**
          * [관리자] 사용자 상세 조회
-         * @description 사용자 상세입니다 (M6) — 프로필, 그룹 멤버십, 삭제되지 않은 VM 수,
+         * @description 사용자 상세입니다 — 프로필, 그룹 멤버십, 삭제되지 않은 VM 수,
          *     상태 변경 이력(비활성화·해제·탈퇴)을 포함합니다. ORG_ADMIN은 자기
          *     기관에 파생 소속된 사용자만 조회할 수 있습니다 (그 외 404 마스킹).
          */
@@ -1827,7 +1827,7 @@ export interface paths {
         put?: never;
         /**
          * [SYS_ADMIN] 사용자 비활성화
-         * @description SYS_ADMIN 전용입니다 (M6). 계정을 `DISABLED`로 전환합니다 — 즉시
+         * @description SYS_ADMIN 전용입니다. 계정을 `DISABLED`로 전환합니다 — 즉시
          *     모든 세션이 무효화되고(`token_version` 증가), 로그인과 SSH
          *     게이트웨이 접근이 차단됩니다. 그룹 멤버십·VM은 그대로 유지됩니다
          *     (해제 시 원상 복귀).
@@ -1858,7 +1858,7 @@ export interface paths {
         put?: never;
         /**
          * [SYS_ADMIN] 사용자 비활성화 해제
-         * @description SYS_ADMIN 전용입니다 (M6). `DISABLED` 계정을 **비활성화 직전
+         * @description SYS_ADMIN 전용입니다. `DISABLED` 계정을 **비활성화 직전
          *     상태로 복원**합니다 (`ACTIVE`, 또는 미인증 상태에서 비활성화된
          *     경우 `PENDING_VERIFICATION` — 이메일 인증을 우회하지 않음).
          *     멤버십·VM 접근이 원상 복귀되며, 상태 변경 이력·감사 로그에 남고
@@ -1883,7 +1883,7 @@ export interface paths {
         put?: never;
         /**
          * [SYS_ADMIN] 사용자 2FA 초기화 (잠금 구조)
-         * @description SYS_ADMIN 전용입니다 (M6). 인증 앱·복구 코드를 모두 분실한 사용자의
+         * @description SYS_ADMIN 전용입니다. 인증 앱·복구 코드를 모두 분실한 사용자의
          *     2FA 등록을 삭제합니다 — 이후 해당 사용자는 비밀번호만으로 로그인할
          *     수 있으며, 관리자 계층이라면 다음 로그인에서 재등록을 요구받습니다.
          *
@@ -1967,7 +1967,7 @@ export interface paths {
          *     - 본인 삭제 유예 중(`DELETING`)인 VM에는 접수할 수 없습니다(409).
          *       관리자는 기존 삭제를 먼저 취소한 뒤 다시 접수하거나, 즉시 파기가
          *       필요하면 `force-delete`를 사용합니다.
-         *     - **삭제 보호 (M6)**: VM 설정 `deletion_protection`이 켜져 있으면
+         *     - **삭제 보호**: VM 설정 `deletion_protection`이 켜져 있으면
          *       409(`VM_DELETION_PROTECTED`) — 소유자가 해제해야 접수할 수 있습니다.
          */
         post: operations["scheduleVmDeletion"];
@@ -2033,7 +2033,7 @@ export interface paths {
          *     - 202 응답이 `VmDeletion`이 아니라 `MessageResponse`인 이유: 즉시
          *       파기·취소 불가라 "접수된 삭제"(scheduledFor/cancelable)라는 표현이
          *       성립하지 않기 때문입니다.
-         *     - **삭제 보호 (M6, 0.11.0 개정)**: VM 설정 `deletion_protection`이
+         *     - **삭제 보호 (0.11.0 개정)**: VM 설정 `deletion_protection`이
          *       켜져 있으면 강제 삭제도 기본적으로 409(`VM_DELETION_PROTECTED`)로
          *       거부됩니다 — 보호 해제 권한은 소유 그룹 OWNER에게 있습니다. 단
          *       **SYS_ADMIN 에스컬레이션 경로**로 `overrideProtection: true`를
@@ -2143,8 +2143,8 @@ export interface paths {
          *     없는 vhost는 정리되는 **플랫폼 전역** 작업이므로, 기관 범위인 ORG_ADMIN에는
          *     허용하지 않습니다. 접수 즉시 202를 반환하고 실제 적용은 비동기이며 결과는
          *     도메인·라우팅 상세 화면에서 확인합니다. 이 오퍼레이션은 pickle-api가
-         *     proxy-agent의 내부 `/sync-all`을 호출하도록 **트리거만** 하며, 내부 계약
-         *     (api/internal.md)의 형상은 콘솔에 노출하지 않습니다.
+         *     proxy-agent의 내부 `/sync-all`을 호출하도록 **트리거만** 하며,
+         *     내부 계약의 형상은 콘솔에 노출하지 않습니다.
          */
         post: operations["resyncRoutes"];
         delete?: never;
@@ -2180,7 +2180,7 @@ export interface paths {
          *     않으므로(기관은 신청/VM 단위 경계), 사용자 U가 기관 O에 "소속"이란:
          *     U가 기관 O의 VM 신청 또는 삭제되지 않은 VM을 1개 이상 가진 그룹의
          *     `ACTIVE` 구성원이거나, U가 O의 ORG_ADMIN인 경우를 뜻합니다. 이 정의는
-         *     기관 스코프가 걸리는 모든 M5 조회·발송(`/admin/audit` 포함)에 공통
+         *     기관 스코프가 걸리는 모든 관리자 조회·발송(`/admin/audit` 포함)에 공통
          *     적용됩니다.
          *
          *     범위 규칙:
@@ -2549,7 +2549,7 @@ export interface paths {
         };
         /**
          * [관리자] 라이브 웹 터미널 세션 목록
-         * @description 현재 진행 중인 웹 터미널 세션 목록입니다 (M6.5). SYS_ADMIN·
+         * @description 현재 진행 중인 웹 터미널 세션 목록입니다. SYS_ADMIN·
          *     SYS_MANAGER는 전체를, ORG_ADMIN·ORG_MANAGER는 **자기 기관 VM의
          *     세션만** 조회합니다.
          *
@@ -2634,9 +2634,9 @@ export interface components {
              *       `GROUP_SOLE_OWNER_REMOVAL`, `GROUP_ROLE_INSUFFICIENT`
              *     - 신청: `REQUEST_ALREADY_DECIDED`
              *     - 기관: `ORG_SLUG_DUPLICATE`
-             *     - VM (M3): `VM_INVALID_STATE`, `VM_CONFIRM_NAME_MISMATCH`,
+             *     - VM: `VM_INVALID_STATE`, `VM_CONFIRM_NAME_MISMATCH`,
              *       `VM_PASSWORD_ALREADY_VIEWED`
-             *     - 공개/도메인 (M4A): `PUBLICATION_ALREADY_EXISTS`,
+             *     - 공개/도메인: `PUBLICATION_ALREADY_EXISTS`,
              *       `VM_HTTP_NOT_GRANTED`, `DOMAIN_FQDN_TAKEN`, `DOMAIN_NOT_CUSTOM`
              *       (그 외 공개/도메인 오류는 공통 코드 재사용 — 상태 충돌
              *       `VM_INVALID_STATE`, 권한 `GROUP_ROLE_INSUFFICIENT`/`ACCESS_DENIED`,
@@ -2644,19 +2644,19 @@ export interface components {
              *       비속어·FQDN 형식, 그리고 **커스텀 도메인이 단일 라벨이거나
              *       `allowedRootDomains`·플랫폼 관리 존 하위인 경우**의 스쿼팅 방지 거부)
              *       `VALIDATION_FAILED`)
-             *     - 운영 (M5): `VM_EXPIRED`(만료 자동 종료 VM의 시작 거부 —
+             *     - 운영: `VM_EXPIRED`(만료 자동 종료 VM의 시작 거부 —
              *       관리자 기간 연장 필요), `TASK_NOT_RETRYABLE`,
              *       `DRIFT_FINDING_ALREADY_RESOLVED`, `NOTIFICATION_NOT_RESENDABLE`
-             *       (그 외 M5 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
+             *       (그 외 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
              *       타 기관 리소스·타인 알림 마스킹 `RESOURCE_NOT_FOUND`,
              *       권한 `ACCESS_DENIED`, 값 검증 `VALIDATION_FAILED`)
-             *     - SSH 키/VM 설정 (M5.5): `SSH_KEY_DUPLICATE`(지문 전역 중복 —
+             *     - SSH 키/VM 설정: `SSH_KEY_DUPLICATE`(지문 전역 중복 —
              *       소유자 비노출), `SSH_KEY_LIMIT_EXCEEDED`(사용자당 10개 초과)
-             *       (그 외 M5.5 오류는 공통 코드 재사용 — 키 파싱·미지원 타입·설정
+             *       (그 외 오류는 공통 코드 재사용 — 키 파싱·미지원 타입·설정
              *       값 검증 `VALIDATION_FAILED`, 설정 변경·비밀번호 열람/재생성 권한
              *       `GROUP_ROLE_INSUFFICIENT`, 타인 키·개인키 없음·비구성원 마스킹
              *       `RESOURCE_NOT_FOUND`, 상태 충돌 `VM_INVALID_STATE`)
-             *     - 계정 (M6): `AUTH_PASSWORD_MISMATCH`(재인증 실패 —
+             *     - 계정: `AUTH_PASSWORD_MISMATCH`(재인증 실패 —
              *       비밀번호 변경·탈퇴·2FA 등록의 본인 확인),
              *       `AUTH_RESET_TOKEN_EXPIRED`(재설정 링크 만료·사용·무효화),
              *       `ACCOUNT_HAS_ACTIVE_VMS`·`ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP`
@@ -2664,16 +2664,16 @@ export interface components {
              *       거부), `ACCOUNT_NOT_DISABLED`(활성화 전환 불가 — WITHDRAWN
              *       포함), `ACCOUNT_INVALID_STATE`(비활성화 대상이 이미
              *       DISABLED/WITHDRAWN)
-             *     - 2FA (M6): `AUTH_MFA_CODE_INVALID`(TOTP/복구 코드 불일치),
+             *     - 2FA: `AUTH_MFA_CODE_INVALID`(TOTP/복구 코드 불일치),
              *       `AUTH_MFA_TOKEN_EXPIRED`(스텝업 토큰 만료·재사용),
              *       `MFA_ALREADY_ENROLLED`, `MFA_NOT_ENROLLED`,
              *       `MFA_SETUP_NOT_IN_PROGRESS`,
              *       `MFA_ENROLLMENT_REQUIRED`(프로덕션 관리자 계층 미등록 —
              *       등록·인증 op 외 전부 403, 콘솔은 등록 마법사로 유도)
-             *     - 약관/점검 (M6): `CONSENT_VERSION_MISMATCH`(개정판 재동의
+             *     - 약관/점검: `CONSENT_VERSION_MISMATCH`(개정판 재동의
              *       필요 — 최신 문서 재표시), `MAINTENANCE_MODE`(점검 중 —
              *       비관리자 503)
-             *     - 그룹/VM 설정 (M6): `GROUP_HAS_ACTIVE_VMS`·
+             *     - 그룹/VM 설정: `GROUP_HAS_ACTIVE_VMS`·
              *       `GROUP_PERSONAL_UNDELETABLE`(그룹 삭제 차단),
              *       `VM_DELETION_PROTECTED`(삭제 보호 설정 켜짐 — 본인·관리자
              *       일반·강제 삭제 전부 거부, 해제 후 재시도. 단 SYS_ADMIN
@@ -2681,11 +2681,11 @@ export interface components {
              *       — 감사 기록),
              *       `VM_STOP_PROTECTED`(중지 보호 — MEMBER의 종료/재부팅/강제
              *       종료 거부, EDITOR 이상만 가능)
-             *     - 웹 터미널 (M6.5): `TERMINAL_DISABLED`(전역 킬 스위치
+             *     - 웹 터미널: `TERMINAL_DISABLED`(전역 킬 스위치
              *       `web_terminal_enabled` 꺼짐 — 503),
              *       `TERMINAL_SESSION_LIMIT`(동시 세션 상한 초과 — 사용자당 3·
              *       VM당 5·기관당 상한, 409)
-             *       (그 외 M6.5 오류는 공통 코드 재사용 — 비구성원·미존재 VM 마스킹
+             *       (그 외 오류는 공통 코드 재사용 — 비구성원·미존재 VM 마스킹
              *       `RESOURCE_NOT_FOUND`, 열람자(VIEWER) 권한 부족
              *       `GROUP_ROLE_INSUFFICIENT`, RUNNING 아님 `VM_INVALID_STATE`,
              *       관리자 접근 차단 `ACCESS_DENIED`, 발급 빈도 `RATE_LIMITED`)
@@ -2704,7 +2704,7 @@ export interface components {
             /** @description 사용자에게 표시할 안내 메시지 (한국어) */
             message: string;
         };
-        /** @description 웹 터미널 1회용 접속 티켓 (M6.5). 티켓은 발급 계정·대상 VM에 바인딩되며 `expiresAt`까지 단 한 번만 교환할 수 있습니다. */
+        /** @description 웹 터미널 1회용 접속 티켓. 티켓은 발급 계정·대상 VM에 바인딩되며 `expiresAt`까지 단 한 번만 교환할 수 있습니다. */
         TerminalSessionTicketResponse: {
             /**
              * Format: uuid
@@ -2729,7 +2729,7 @@ export interface components {
              */
             expiresAt: string;
         };
-        /** @description 라이브 웹 터미널 세션 (관리자 뷰, M6.5). 브리지가 역보고한 인메모리 미러 기준이며 터미널 내용은 포함하지 않습니다. */
+        /** @description 라이브 웹 터미널 세션 (관리자 뷰). 브리지가 역보고한 인메모리 미러 기준이며 터미널 내용은 포함하지 않습니다. */
         TerminalSessionView: {
             /** Format: uuid */
             sessionId: string;
@@ -2761,11 +2761,11 @@ export interface components {
             startedAt: string;
         };
         /**
-         * @description 전역 사용자 역할. M6에서 축소 권한 부관리자 계층이 추가되었습니다 —
+         * @description 전역 사용자 역할. 축소 권한 부관리자 계층 포함 —
          *     `ORG_MANAGER`(기관 운영자, ORG_ADMIN 하위)·`SYS_MANAGER`(시스템
          *     운영자, SYS_ADMIN 하위): 조회·일상 운영 중심이며 위험 작업(강제
          *     삭제·킬 스위치·역할 변경·비활성화 등)은 상위 관리자 전용입니다.
-         *     역할별 상세 허용 표는 docs/security/permission-matrix.md 참조.
+         *     역할별 상세 허용 표는 운영자 확정 권한 매트릭스를 따릅니다.
          * @enum {string}
          */
         UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
@@ -2790,7 +2790,7 @@ export interface components {
          */
         VmRequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
         /**
-         * @description VM 상태 (M3부터 실제 Proxmox 프로비저닝: CREATING → RUNNING,
+         * @description VM 상태 (실제 Proxmox 프로비저닝: CREATING → RUNNING,
          *     삭제 흐름은 DELETING → 유예 후 DELETED).
          *
          *     - **NEEDS_ADMIN**: 프로비저닝/삭제 파이프라인이 재시도를 소진하고
@@ -2831,7 +2831,7 @@ export interface components {
             password: string;
             /** @description 표시 이름 */
             name: string;
-            /** @description 약관 동의 목록 (M6) — **현행 문서 전체**(현재 이용약관· 개인정보처리방침 2종)의 현행 버전에 동의해야 가입할 수 있습니다. 완전성 검증은 서버가 수행합니다 (`GET /meta/terms`의 목록과 대조 — 누락·버전 불일치는 422; minItems는 문서 수를 하드코딩하지 않습니다). 동의 시각은 서버가 기록합니다. */
+            /** @description 약관 동의 목록 — **현행 문서 전체**(현재 이용약관· 개인정보처리방침 2종)의 현행 버전에 동의해야 가입할 수 있습니다. 완전성 검증은 서버가 수행합니다 (`GET /meta/terms`의 목록과 대조 — 누락·버전 불일치는 422; minItems는 문서 수를 하드코딩하지 않습니다). 동의 시각은 서버가 기록합니다. */
             consents: components["schemas"]["ConsentInput"][];
         };
         LoginRequest: {
@@ -2874,30 +2874,30 @@ export interface components {
                 groupKind: components["schemas"]["GroupKind"];
                 role: components["schemas"]["GroupMemberRole"];
             }[];
-            /** @description 2FA(TOTP) 활성화 여부 (M6) */
+            /** @description 2FA(TOTP) 활성화 여부 */
             mfaEnabled: boolean;
-            /** @description 재동의가 필요한 약관 개정판 목록 (M6) — 비어 있지 않으면 콘솔이 동의 화면을 표시하고 `POST /me/consents`로 동의를 기록합니다. 가입 이후 문서가 개정된 경우에만 나타납니다. */
+            /** @description 재동의가 필요한 약관 개정판 목록 — 비어 있지 않으면 콘솔이 동의 화면을 표시하고 `POST /me/consents`로 동의를 기록합니다. 가입 이후 문서가 개정된 경우에만 나타납니다. */
             pendingConsents: components["schemas"]["TermsVersionView"][];
         };
-        /** @description 2FA 계정의 로그인 1단계 응답 (M6) — 토큰·쿠키는 발급되지 않으며, `POST /auth/mfa`에 `mfaToken`과 TOTP/복구 코드를 제출해야 로그인이 완료됩니다. `AuthTokenResponse`와는 `mfaRequired` 필드 유무로 구분합니다. */
+        /** @description 2FA 계정의 로그인 1단계 응답 — 토큰·쿠키는 발급되지 않으며, `POST /auth/mfa`에 `mfaToken`과 TOTP/복구 코드를 제출해야 로그인이 완료됩니다. `AuthTokenResponse`와는 `mfaRequired` 필드 유무로 구분합니다. */
         MfaChallengeResponse: {
             /** @constant */
             mfaRequired: true;
             /** @description 5분 유효·1회용 스텝업 토큰 */
             mfaToken: string;
         };
-        /** @description TOTP 등록 시작 응답 (M6) — 이 응답 외에는 시크릿이 다시 노출되지 않습니다. */
+        /** @description TOTP 등록 시작 응답 — 이 응답 외에는 시크릿이 다시 노출되지 않습니다. */
         MfaSetupResponse: {
             /** @description TOTP 시크릿 (Base32) — 인증 앱 수동 입력용 */
             secret: string;
             /** @description `otpauth://totp/...` URI — 콘솔이 QR 코드로 렌더 */
             otpauthUri: string;
         };
-        /** @description 복구 코드 발급 응답 (M6) — **이 응답에서 단 한 번만** 노출됩니다. 각 코드는 1회용이며, 재발급 시 기존 코드는 전부 무효화됩니다. */
+        /** @description 복구 코드 발급 응답 — **이 응답에서 단 한 번만** 노출됩니다. 각 코드는 1회용이며, 재발급 시 기존 코드는 전부 무효화됩니다. */
         MfaRecoveryCodesResponse: {
             recoveryCodes: string[];
         };
-        /** @description 관리자 사용자 목록 항목 (M6) */
+        /** @description 관리자 사용자 목록 항목 */
         UserAdminView: {
             /** Format: int64 */
             id: number;
@@ -2919,7 +2919,7 @@ export interface components {
              */
             createdAt: string;
         };
-        /** @description 계정 상태 변경 이력 항목 (M6 — 비활성화/해제/탈퇴) */
+        /** @description 계정 상태 변경 이력 항목 (비활성화/해제/탈퇴) */
         UserStatusChange: {
             fromStatus: components["schemas"]["UserStatus"];
             toStatus: components["schemas"]["UserStatus"];
@@ -2970,11 +2970,11 @@ export interface components {
             totalPages: number;
         };
         /**
-         * @description 약관 문서 종류 (M6)
+         * @description 약관 문서 종류
          * @enum {string}
          */
         TermsDocType: "TERMS_OF_SERVICE" | "PRIVACY_POLICY";
-        /** @description 약관 문서 버전 메타데이터 (M6) */
+        /** @description 약관 문서 버전 메타데이터 */
         TermsVersionView: {
             docType: components["schemas"]["TermsDocType"];
             /** @description 버전 번호 (개정마다 1씩 증가) */
@@ -2991,14 +2991,14 @@ export interface components {
             /** @description 문서 전문 (마크다운, 한국어) */
             body: string;
         };
-        /** @description 약관 동의 이력 항목 (M6) */
+        /** @description 약관 동의 이력 항목 */
         ConsentView: {
             docType: components["schemas"]["TermsDocType"];
             version: number;
             /** Format: date-time */
             consentedAt: string;
         };
-        /** @description 동의 제출 항목 (가입·재동의 공용, M6) */
+        /** @description 동의 제출 항목 (가입·재동의 공용) */
         ConsentInput: {
             docType: components["schemas"]["TermsDocType"];
             /** @description 동의하는 문서 버전 (현행 버전이어야 함) */
@@ -3008,7 +3008,7 @@ export interface components {
             /** @description 동의할 문서·버전 목록 (버전은 현행 버전이어야 함) */
             consents: components["schemas"]["ConsentInput"][];
         };
-        /** @description 공개 시스템 상태 (M6 — 점검 모드·배너·문의처) */
+        /** @description 공개 시스템 상태 (점검 모드·배너·문의처) */
         SystemStatusResponse: {
             /** @description 점검 모드 여부 (true면 비관리자 요청 503) */
             maintenance: boolean;
@@ -3148,7 +3148,7 @@ export interface components {
             rootDomain?: string | null;
             /**
              * Format: hostname
-             * @description 사용자 소유 커스텀 도메인 (연결은 M4, 신청 시 기록만)
+             * @description 사용자 소유 커스텀 도메인 (신청 시 기록만, 연결은 퍼블리싱에서)
              */
             customDomain?: string | null;
             /** @description SSH 접속명·호스트명 희망값 (3~40자, 소문자·숫자·하이픈, 하이픈으로 시작/끝 불가). 미입력(null) 시 기존처럼 자동 생성됩니다 (그룹 슬러그 + 랜덤 4자). 예약어 목록은 서브도메인 예약어 (`GET /meta/request-options`의 `reservedSubdomains`)와 공용이며, **파기된 VM의 슬러그를 포함해 재사용할 수 없습니다** — 예약어·중복은 서버에서 검증됩니다(위반 시 422). */
@@ -3264,7 +3264,7 @@ export interface components {
             groupId: number;
             /** @description 소유 그룹 이름 (목록 화면 표시용) */
             groupName: string;
-            /** @description 소속 기관 이름 (v0.9.0, M5 impl-gate 이연 — 관리자 목록의 기관 표시용. VM은 항상 기관에 속하므로 통상 항상 채워집니다 — 방어적 nullable) */
+            /** @description 소속 기관 이름 (v0.9.0 — 관리자 목록의 기관 표시용. VM은 항상 기관에 속하므로 통상 항상 채워집니다 — 방어적 nullable) */
             orgName?: string | null;
             /** @description 사용자 지정 표시명 (v0.9.0 — VM 설정 `display_name`, EDITOR 이상 변경). 미설정 시 null이며 콘솔은 `name`을 표시합니다. 호스트네임/슬러그는 불변입니다. */
             displayName?: string | null;
@@ -3282,7 +3282,7 @@ export interface components {
             endDate?: string | null;
             /**
              * Format: date-time
-             * @description 만료 자동 종료 시각 (M5 만료 스위퍼가 종료한 경우에만 값 존재 — 관리자가 기간을 연장하면 null로 초기화되어 다시 시작 가능)
+             * @description 만료 자동 종료 시각 (만료 스위퍼가 종료한 경우에만 값 존재 — 관리자가 기간을 연장하면 null로 초기화되어 다시 시작 가능)
              */
             expiryStoppedAt?: string | null;
             /** Format: date-time */
@@ -3293,13 +3293,13 @@ export interface components {
             orgId: number;
             /** Format: int64 */
             templateId: number;
-            /** @description 내부 IP (M3부터 실제 할당 IP — 프로비저닝의 IP 할당 단계 이전에는 null) */
+            /** @description 내부 IP (실제 할당 IP — 프로비저닝의 IP 할당 단계 이전에는 null) */
             ipAddress?: string | null;
             /** @description SSH 접속 계정 (고정 `student`) */
             sshUsername: string;
-            /** @description SSH 게이트웨이 호스트 (예 `ssh.pickle.pnuops.com`) — 콘솔이 `ssh <hostname>@<sshHost>` 안내를 하드코딩 없이 렌더하기 위한 서버 설정값 (M5.5) */
+            /** @description SSH 게이트웨이 호스트 (예 `ssh.pickle.pnuops.com`) — 콘솔이 `ssh <hostname>@<sshHost>` 안내를 하드코딩 없이 렌더하기 위한 서버 설정값 */
             sshHost: string;
-            /** @description 요청자의 소유 그룹 내 역할 (M5.5) — 콘솔의 설정 섹션 노출· 버튼 활성 판단용. 사용자 경로 `GET /vms/{vmId}`(구성원 전용)에서는 항상 존재하나, VM 상세를 반환하는 관리자 경로(비구성원 관리자)에서는 그룹 역할이 없어 **null**이 될 수 있어 nullable로 둔다. */
+            /** @description 요청자의 소유 그룹 내 역할 — 콘솔의 설정 섹션 노출· 버튼 활성 판단용. 사용자 경로 `GET /vms/{vmId}`(구성원 전용)에서는 항상 존재하나, VM 상세를 반환하는 관리자 경로(비구성원 관리자)에서는 그룹 역할이 없어 **null**이 될 수 있어 nullable로 둔다. */
             myGroupRole?: components["schemas"]["GroupMemberRole"] | null;
             /** Format: date */
             startDate?: string | null;
@@ -3313,7 +3313,7 @@ export interface components {
             publication?: components["schemas"]["PublicationView"] | null;
             /** @description VM 비밀번호가 서버에 (암호문으로) 저장되어 있는지 여부 (v0.8.0에서 `initialPasswordAvailable`을 rename) — true면 `GET /vms/{vmId}/password`로 언제든 재열람할 수 있으며, 열람해도 false로 바뀌지 않습니다 */
             passwordAvailable: boolean;
-            /** @description **요청자가** 이 VM의 비밀번호를 열람할 수 있는지 여부 (M5.5) — 내 그룹 역할 ≥ `password_reveal_min_role` 설정을 서버가 계산. false면 콘솔은 열람 버튼 대신 제한 안내를 표시합니다. `passwordAvailable`(저장 여부)과 직교합니다. */
+            /** @description **요청자가** 이 VM의 비밀번호를 열람할 수 있는지 여부 — 내 그룹 역할 ≥ `password_reveal_min_role` 설정을 서버가 계산. false면 콘솔은 열람 버튼 대신 제한 안내를 표시합니다. `passwordAvailable`(저장 여부)과 직교합니다. */
             passwordRevealAllowed: boolean;
             /** Format: date-time */
             updatedAt: string;
@@ -3344,7 +3344,7 @@ export interface components {
         ProvisioningTaskView: {
             kind: components["schemas"]["ProvisioningTaskKind"];
             status: components["schemas"]["ProvisioningTaskStatus"];
-            /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~10단계 — M5.5에서 HOSTKEY(호스트 키 수집) 단계 추가로 11단계) */
+            /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~10단계 — HOSTKEY(호스트 키 수집) 단계 추가로 11단계) */
             currentStep: number;
             /** @description 전체 단계 수 */
             totalSteps: number;
@@ -3389,7 +3389,7 @@ export interface components {
             /** Format: int64 */
             id: number;
             /**
-             * @description 이벤트 종류 (삭제 접수는 종류별로 구분 — SELF_DELETE는 본인 삭제 접수, SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 일반 삭제 접수·취소, FORCE_DELETE는 강제 삭제 접수; **파기 완료는 공통 DELETE**. PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 종료(actorId null = 시스템) — 둘 다 M5)
+             * @description 이벤트 종류 (삭제 접수는 종류별로 구분 — SELF_DELETE는 본인 삭제 접수, SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 일반 삭제 접수·취소, FORCE_DELETE는 강제 삭제 접수; **파기 완료는 공통 DELETE**. PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 종료(actorId null = 시스템))
              * @enum {string}
              */
             type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "FORCE_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH" | "PERIOD_UPDATE" | "EXPIRE_STOP";
@@ -3575,7 +3575,7 @@ export interface components {
                 comment?: string | null;
                 reviewerName?: string | null;
             }[];
-            /** @description 기관 자원 여유 (할당 합계 vs. 노드 용량). M2에서는 노드별 디스크 용량을 추적하지 않으므로 (02 데이터 모델의 nodes에는 cpu_threads· memory_mb만 있음) 디스크는 `allocated.diskGb`(할당 합계)만 제공됩니다. */
+            /** @description 기관 자원 여유 (할당 합계 vs. 노드 용량). 현재는 노드별 디스크 용량을 추적하지 않으므로 (02 데이터 모델의 nodes에는 cpu_threads· memory_mb만 있음) 디스크는 `allocated.diskGb`(할당 합계)만 제공됩니다. */
             orgHeadroom: {
                 allocated: components["schemas"]["ResourceTotals"];
                 /** @description 노드 물리 용량 합계 */
@@ -3807,7 +3807,7 @@ export interface components {
          *       관리자 큐레이션이 아니라 DNS TXT로 **증명**되므로 자기서비스입니다.
          *
          *     **SSRF 방지**: 라우팅 대상 IP는 서버가 VM 할당 IP로 강제하며 이 요청에
-         *     IP 필드는 존재하지 않습니다(plan/06·제품기획 §12).
+         *     IP 필드는 존재하지 않습니다(SSRF 방지 정책).
          */
         PublishRequest: {
             /**
@@ -4114,7 +4114,7 @@ export interface components {
             detail?: Record<string, never> | null;
             /** @description 요청 IP (시스템 작업은 null) */
             ip?: string | null;
-            /** @description 행위자의 파생 소속 기관 이름 (v0.9.0, M5 impl-gate 이연 — SYS_ADMIN 감사 화면의 기관 맥락 표시용. 파생 소속이 없거나 시스템 작업이면 null, 복수 기관이면 대표 1개) */
+            /** @description 행위자의 파생 소속 기관 이름 (v0.9.0 — SYS_ADMIN 감사 화면의 기관 맥락 표시용. 파생 소속이 없거나 시스템 작업이면 null, 복수 기관이면 대표 1개) */
             orgName?: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -4171,7 +4171,7 @@ export interface components {
             orgId?: number | null;
             /** @description 대상 VM의 기관 이름 (orgId와 동일 기준의 방어적 nullable) */
             orgName?: string | null;
-            /** @description 대상 VM의 소유 그룹 이름 (v0.9.0, M5 impl-gate 이연 — vmName과 동일 기준의 방어적 nullable) */
+            /** @description 대상 VM의 소유 그룹 이름 (v0.9.0 — vmName과 동일 기준의 방어적 nullable) */
             groupName?: string | null;
             /** @description JobRunr 잡 UUID (큐 등록 전이면 null) */
             jobrunrJobId?: string | null;
@@ -4206,7 +4206,7 @@ export interface components {
              * @description 관련 VM ID (UNMANAGED_GUEST 등 DB에 없는 대상은 null)
              */
             vmId?: number | null;
-            /** @description 관련 VM 이름 (v0.9.0, M5 impl-gate 이연 — vmId와 동일 기준: DB에 없는 대상은 null) */
+            /** @description 관련 VM 이름 (v0.9.0 — vmId와 동일 기준: DB에 없는 대상은 null) */
             vmName?: string | null;
             /** @description Proxmox VMID (Proxmox에 없는 대상은 null) */
             proxmoxVmid?: number | null;
@@ -4333,7 +4333,7 @@ export interface components {
             certExpiring30dCount: number;
             /** @description 미해결(OPEN) 드리프트 발견 수 */
             openDriftFindingCount: number;
-            /** @description `ssh_password_enabled=true`로 비밀번호 SSH가 허용된 활성(비삭제) VM 수 (M5.5) — 개인 식별 예외이므로 대시보드에 상시 노출 (G6 관리자 가시성 요건) */
+            /** @description `ssh_password_enabled=true`로 비밀번호 SSH가 허용된 활성(비삭제) VM 수 — 개인 식별 예외이므로 대시보드에 상시 노출 (G6 관리자 가시성 요건) */
             sshPasswordEnabledVmCount: number;
             /** @description IP 풀별 할당/여유 현황 */
             ipPools: {
@@ -4561,7 +4561,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "email": "gildong.hong@pusan.ac.kr",
+                 *       "email": "example@pusan.ac.kr",
                  *       "password": "correct-horse-battery!",
                  *       "name": "홍길동",
                  *       "consents": [
@@ -4686,7 +4686,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "email": "gildong.hong@pusan.ac.kr"
+                 *       "email": "example@pusan.ac.kr"
                  *     }
                  */
                 "application/json": {
@@ -4725,7 +4725,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "email": "gildong.hong@pusan.ac.kr",
+                 *       "email": "example@pusan.ac.kr",
                  *       "password": "correct-horse-battery!"
                  *     }
                  */
@@ -4829,7 +4829,7 @@ export interface operations {
                      *       "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.newsig",
                      *       "user": {
                      *         "id": 42,
-                     *         "email": "gildong.hong@pusan.ac.kr",
+                     *         "email": "example@pusan.ac.kr",
                      *         "name": "홍길동",
                      *         "role": "USER"
                      *       }
@@ -4946,7 +4946,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "email": "gildong.hong@pusan.ac.kr"
+                 *       "email": "example@pusan.ac.kr"
                  *     }
                  */
                 "application/json": {
@@ -5132,7 +5132,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "id": 42,
-                     *       "email": "gildong.hong@pusan.ac.kr",
+                     *       "email": "example@pusan.ac.kr",
                      *       "name": "홍길동",
                      *       "role": "USER",
                      *       "orgId": null,
@@ -5644,7 +5644,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "secret": "JBSWY3DPEHPK3PXP",
-                     *       "otpauthUri": "otpauth://totp/Pickle:gildong.hong@pusan.ac.kr?secret=JBSWY3DPEHPK3PXP&issuer=Pickle"
+                     *       "otpauthUri": "otpauth://totp/Pickle:example@pusan.ac.kr?secret=JBSWY3DPEHPK3PXP&issuer=Pickle"
                      *     }
                      */
                     "application/json": components["schemas"]["MfaSetupResponse"];
@@ -6160,7 +6160,7 @@ export interface operations {
                      *       "maintenance": false,
                      *       "maintenanceMessage": null,
                      *       "bannerMessage": null,
-                     *       "contactEmail": "user@example.com"
+                     *       "contactEmail": "example@pusan.ac.kr"
                      *     }
                      */
                     "application/json": components["schemas"]["SystemStatusResponse"];
@@ -6258,7 +6258,7 @@ export interface operations {
                      *         "id": 7,
                      *         "kind": "PERSONAL",
                      *         "name": "홍길동",
-                     *         "slug": "gildong-hong",
+                     *         "slug": "yejun",
                      *         "description": null,
                      *         "myRole": "OWNER",
                      *         "memberCount": 1
@@ -6363,7 +6363,7 @@ export interface operations {
                      *         {
                      *           "userId": 42,
                      *           "name": "홍길동",
-                     *           "email": "gildong.hong@pusan.ac.kr",
+                     *           "email": "example@pusan.ac.kr",
                      *           "role": "OWNER"
                      *         },
                      *         {
@@ -7123,7 +7123,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능). 또한 사용 기간이 만료된 VM(M5 만료 자동 종료)은 `STOPPED`여도 `VM_EXPIRED` 코드로 거부됩니다 — 관리자가 기간을 연장 (`PATCH /admin/vms/{vmId}/period`)해야 다시 시작할 수 있습니다 */
+            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능). 또한 사용 기간이 만료된 VM(만료 자동 종료)은 `STOPPED`여도 `VM_EXPIRED` 코드로 거부됩니다 — 관리자가 기간을 연장 (`PATCH /admin/vms/{vmId}/period`)해야 다시 시작할 수 있습니다 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7419,7 +7419,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description 저장된 비밀번호가 없음 — M2 mock 프로비저닝으로 생성돼 비밀번호가 없는 VM, 또는 정책 변경(v0.7.0) 전 1회 열람으로 평문이 파기된 VM. 코드값은 하위호환을 위해 `VM_PASSWORD_ALREADY_VIEWED`를 유지합니다. 재생성(`POST /vms/{vmId}/password/regenerate`)으로 복구할 수 있습니다. */
+            /** @description 저장된 비밀번호가 없음 — 초기 mock 프로비저닝으로 생성돼 비밀번호가 없는 VM, 또는 정책 변경(v0.7.0) 전 1회 열람으로 평문이 파기된 VM. 코드값은 하위호환을 위해 `VM_PASSWORD_ALREADY_VIEWED`를 유지합니다. 재생성(`POST /vms/{vmId}/password/regenerate`)으로 복구할 수 있습니다. */
             410: {
                 headers: {
                     [name: string]: unknown;
@@ -7885,7 +7885,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 /**
                  * @example {
@@ -8455,7 +8455,7 @@ export interface operations {
                      *       "applicant": {
                      *         "id": 42,
                      *         "name": "홍길동",
-                     *         "email": "gildong.hong@pusan.ac.kr",
+                     *         "email": "example@pusan.ac.kr",
                      *         "signupAt": "2026-03-02T09:00:00+09:00",
                      *         "approvedCount": 2,
                      *         "rejectedCount": 0
@@ -8464,7 +8464,7 @@ export interface operations {
                      *         "activeVms": [
                      *           {
                      *             "id": 31,
-                     *             "name": "gildong-dev",
+                     *             "name": "yejun-dev",
                      *             "status": "RUNNING",
                      *             "vcpu": 1,
                      *             "memoryMb": 1024,
@@ -9330,7 +9330,7 @@ export interface operations {
                     /** @description 파기 확인용 VM 이름 (VM의 `name`과 정확히 일치해야 함) */
                     confirmName: string;
                     /**
-                     * @description true면 삭제 보호(`deletion_protection`)를 무시하고 진행 — 설정을 false로 영속화한 뒤 파기 (M6 — 감사에 오버라이드 사실 기록. 미지정/false면 보호 켜진 VM은 409)
+                     * @description true면 삭제 보호(`deletion_protection`)를 무시하고 진행 — 설정을 false로 영속화한 뒤 파기 (감사에 오버라이드 사실 기록. 미지정/false면 보호 켜진 VM은 409)
                      * @default false
                      */
                     overrideProtection?: boolean;
