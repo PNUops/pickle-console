@@ -5,7 +5,7 @@ import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
 
 type Schemas = components['schemas']
 type AnnouncementView = Schemas['AnnouncementView']
-type AdminGroupOption = Schemas['AdminGroupOption']
+type AdminGroupOption = Schemas['AdminGroupOptionResponse']
 
 /* ─── fixtures ─── */
 
@@ -106,7 +106,7 @@ export const announcementHandlers: RequestHandler[] = [
           a.senderOrgId === profile.orgId,
       )
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['AnnouncementPage'] = {
+    const body: Schemas['PageResponseAnnouncementView'] = {
       content: visible.slice(page * size, (page + 1) * size).map(toView),
       page,
       size,

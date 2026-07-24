@@ -6,7 +6,7 @@ type Schemas = components['schemas']
 
 /* ─── fixture users addable by email ─── */
 
-export const knownUsers: Schemas['GroupMember'][] = [
+export const knownUsers: Schemas['GroupMemberResponse'][] = [
   { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MEMBER' },
   { userId: 58, name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
   { userId: 59, name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'MEMBER' },
@@ -14,11 +14,11 @@ export const knownUsers: Schemas['GroupMember'][] = [
 ]
 
 interface GroupRecord {
-  detail: Omit<Schemas['GroupDetail'], 'members'>
-  members: Schemas['GroupMember'][]
+  detail: Omit<Schemas['GroupDetailResponse'], 'members'>
+  members: Schemas['GroupMemberResponse'][]
 }
 
-const me = (): Schemas['GroupMember'] => ({
+const me = (): Schemas['GroupMemberResponse'] => ({
   userId: studentUser.id,
   name: studentUser.name,
   email: studentUser.email,
@@ -98,14 +98,14 @@ export function resetGroupFixtures() {
   nextGroupId = 100
 }
 
-function toSummary(record: GroupRecord): Schemas['GroupSummary'] {
+function toSummary(record: GroupRecord): Schemas['GroupSummaryResponse'] {
   const { id, kind, name, slug, description } = record.detail
   const myRole =
     record.members.find((m) => m.userId === studentUser.id)?.role ?? 'VIEWER'
   return { id, kind, name, slug, description, myRole, memberCount: record.members.length }
 }
 
-function toDetail(record: GroupRecord): Schemas['GroupDetail'] {
+function toDetail(record: GroupRecord): Schemas['GroupDetailResponse'] {
   // myRole은 서버처럼 현재 구성원 상태에서 계산한다 (역할 변경/OWNER 이전 반영).
   const myRole =
     record.members.find((m) => m.userId === studentUser.id)?.role ??
@@ -215,7 +215,7 @@ export const groupHandlers: RequestHandler[] = [
         code: 'GROUP_MEMBER_ALREADY_EXISTS',
       })
     }
-    const member: Schemas['GroupMember'] = { ...user, role: body.role }
+    const member: Schemas['GroupMemberResponse'] = { ...user, role: body.role }
     record.members.push(member)
     return HttpResponse.json(member, { status: 201 })
   }),

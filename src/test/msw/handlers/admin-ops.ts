@@ -4,7 +4,7 @@ import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 
 type Schemas = components['schemas']
-type AdminTaskView = Schemas['AdminTaskView']
+type AdminTaskView = Schemas['AdminTaskResponse']
 
 /* ─── fixtures: 작업(태스크) 큐 (SYS_ADMIN 운영 화면) ─── */
 
@@ -87,7 +87,7 @@ function initialTasks(): AdminTaskView[] {
 
 /* ─── fixtures: 드리프트 발견 ─── */
 
-type DriftFindingView = Schemas['DriftFindingView']
+type DriftFindingView = Schemas['DriftFindingResponse']
 
 function initialDriftFindings(): DriftFindingView[] {
   return [
@@ -161,7 +161,7 @@ function initialDriftFindings(): DriftFindingView[] {
 
 /* ─── fixtures: IP 할당 현황 ─── */
 
-type IpAllocationView = Schemas['IpAllocationView']
+type IpAllocationView = Schemas['IpAllocationResponse']
 
 function initialIpAllocations(): IpAllocationView[] {
   return [
@@ -206,7 +206,7 @@ function initialIpAllocations(): IpAllocationView[] {
 
 /* ─── fixtures: 대시보드 요약 ─── */
 
-function initialOrgSummary(): Schemas['OrgDashboardSummary'] {
+function initialOrgSummary(): Schemas['OrgDashboardSummaryResponse'] {
   return {
     pendingRequestCount: 2,
     recentDecisions14d: { approvedCount: 5, rejectedCount: 1 },
@@ -229,7 +229,7 @@ function initialOrgSummary(): Schemas['OrgDashboardSummary'] {
   }
 }
 
-function initialSystemSummary(): Schemas['SystemDashboardSummary'] {
+function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
   return {
     nodes: [
       {
@@ -265,8 +265,8 @@ function initialSystemSummary(): Schemas['SystemDashboardSummary'] {
 export let adminTaskStore: AdminTaskView[] = initialTasks()
 export let driftStore: DriftFindingView[] = initialDriftFindings()
 export let ipAllocationStore: IpAllocationView[] = initialIpAllocations()
-export let orgSummaryFixture: Schemas['OrgDashboardSummary'] = initialOrgSummary()
-export let systemSummaryFixture: Schemas['SystemDashboardSummary'] = initialSystemSummary()
+export let orgSummaryFixture: Schemas['OrgDashboardSummaryResponse'] = initialOrgSummary()
+export let systemSummaryFixture: Schemas['SystemDashboardSummaryResponse'] = initialSystemSummary()
 
 export function resetAdminOpsFixtures() {
   adminTaskStore = initialTasks()
@@ -298,7 +298,7 @@ export const adminOpsHandlers: RequestHandler[] = [
       .filter((t) => !kind || t.kind === kind)
       .filter((t) => !vmId || t.vmId === Number(vmId))
       .sort((a, b) => b.taskId - a.taskId)
-    const body: Schemas['AdminTaskPage'] = {
+    const body: Schemas['PageResponseAdminTaskResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,
@@ -343,7 +343,7 @@ export const adminOpsHandlers: RequestHandler[] = [
       .filter((f) => f.status === status)
       .filter((f) => !kind || f.kind === kind)
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['DriftFindingPage'] = {
+    const body: Schemas['PageResponseDriftFindingResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,
@@ -413,7 +413,7 @@ export const adminOpsHandlers: RequestHandler[] = [
       .filter((a) => !poolId || a.poolId === Number(poolId))
       .filter((a) => !status || a.status === status)
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['IpAllocationPage'] = {
+    const body: Schemas['PageResponseIpAllocationResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,

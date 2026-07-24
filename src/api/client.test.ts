@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { api } from './client'
+import type { Problem } from './problem'
 import { getAccessToken, onSessionExpired, setAccessToken } from './token'
 import { server } from '../test/msw/server'
 import {
@@ -84,7 +85,11 @@ describe('api client auth behavior', () => {
       body: { email: 'example@pusan.ac.kr', password: 'wrong-password' },
     })
 
-    expect(error?.code).toBe('AUTH_INVALID_CREDENTIALS')
+    // Compile-time contract: openapi-fetch derives the error channel from the
+    // operation's `default` response, which the generated spec types as Problem.
+    // This annotation fails to compile if the error shape is not Problem-shaped.
+    const problemError: Problem | undefined = error
+    expect(problemError?.code).toBe('AUTH_INVALID_CREDENTIALS')
     expect(refreshCalls).not.toHaveBeenCalled()
   })
 })

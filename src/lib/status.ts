@@ -21,7 +21,7 @@ export const VM_STATUS_LABELS: Record<VmStatus, string> = {
   NEEDS_ADMIN: '관리자 확인 필요',
 }
 
-export type VmEventType = components['schemas']['VmEvent']['type']
+export type VmEventType = components['schemas']['VmEventResponse']['type']
 
 export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   CREATE: '생성',
@@ -84,7 +84,7 @@ export const CERTIFICATE_STATUS_LABELS: Record<CertificateStatus, string> = {
 
 /** 삭제 예정 배너 제목 — 삭제 종류(kind)별 안내 문구. */
 export const DELETION_BANNER_TITLES: Record<
-  components['schemas']['VmDeletion']['kind'],
+  components['schemas']['VmDeletionResponse']['kind'],
   string
 > = {
   SELF: '삭제가 접수된 VM입니다',
@@ -94,10 +94,10 @@ export const DELETION_BANNER_TITLES: Record<
 }
 
 export type ProvisioningTaskStatus =
-  components['schemas']['ProvisioningTaskView']['status']
+  components['schemas']['ProvisioningTaskResponse']['status']
 
 export const PROVISIONING_KIND_LABELS: Record<
-  components['schemas']['ProvisioningTaskView']['kind'],
+  components['schemas']['ProvisioningTaskResponse']['kind'],
   string
 > = {
   PROVISION: 'VM 생성',
@@ -110,8 +110,8 @@ export const PROVISIONING_KIND_LABELS: Record<
 export type DriftFindingKind = components['schemas']['DriftFindingKind']
 export type DriftFindingStatus = components['schemas']['DriftFindingStatus']
 export type NotificationDeliveryStatus =
-  components['schemas']['NotificationDeliveryStatus']
-export type IpAllocationStatus = components['schemas']['IpAllocationStatus']
+  components['schemas']['NotificationStatus']
+export type IpAllocationStatus = components['schemas']['AllocationStatus']
 export type AnnouncementScope = components['schemas']['AnnouncementScope']
 
 export const TASK_STATUS_LABELS: Record<ProvisioningTaskStatus, string> = {

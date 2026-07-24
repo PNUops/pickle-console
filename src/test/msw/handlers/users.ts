@@ -4,7 +4,7 @@ import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 
 type Schemas = components['schemas']
-type UserAdminDetail = Schemas['UserAdminDetail']
+type UserAdminDetail = Schemas['UserAdminDetailResponse']
 
 /**
  * Admin-user fixture. {@code visibleToOrg} models the derived-membership scope:
@@ -124,7 +124,7 @@ function inScope(actor: NonNullable<ReturnType<typeof actorOf>>, row: AdminUserR
   return row.orgId === actor.orgId || row.visibleToOrg === actor.orgId
 }
 
-function toView(row: AdminUserRecord): Schemas['UserAdminView'] {
+function toView(row: AdminUserRecord): Schemas['UserAdminViewResponse'] {
   const { visibleToOrg: _drop, memberships: _m, activeVmCount: _v, statusChanges: _s, ...view } = row
   return view
 }
@@ -173,7 +173,7 @@ export const userHandlers: RequestHandler[] = [
       )
       .sort((a, b) => b.id - a.id)
 
-    const body: Schemas['UserAdminPage'] = {
+    const body: Schemas['PageResponseUserAdminViewResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toView),
       page,
       size,

@@ -3,8 +3,8 @@ import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
 
 type Schemas = components['schemas']
-type VmDetail = Schemas['VmDetail']
-type VmEvent = Schemas['VmEvent']
+type VmDetail = Schemas['VmDetailResponse']
+type VmEvent = Schemas['VmEventResponse']
 
 /** 오늘(로컬) 기준 offset일 뒤의 날짜 문자열 (YYYY-MM-DD) — 만료 픽스처용. */
 export function localDateStr(offsetDays = 0): string {
@@ -706,7 +706,7 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
     code: 'VM_INVALID_STATE',
   })
 
-export function toVmSummary(vm: VmDetail): Schemas['VmSummary'] {
+export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   const {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
     requestId, statusDetail, endDate, expiryStoppedAt, createdAt,
@@ -726,7 +726,7 @@ export const vmHandlers: RequestHandler[] = [
     const filtered = vmStore
       .filter((vm) => !groupId || vm.groupId === Number(groupId))
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['VmPage'] = {
+    const body: Schemas['PageResponseVmSummaryResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
       page,
       size,
@@ -1073,7 +1073,7 @@ export const vmHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const events = vmEventStore[vm.id] ?? []
-    const body: Schemas['VmEventPage'] = {
+    const body: Schemas['PageResponseVmEventResponse'] = {
       content: events.slice(page * size, (page + 1) * size),
       page,
       size,

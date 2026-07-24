@@ -5,7 +5,7 @@ type Schemas = components['schemas']
 type TerminalSessionView = Schemas['TerminalSessionView']
 
 /** 기본 mint 응답 — 테스트가 WS URL·서브프로토콜을 검증하는 고정 티켓. */
-export const MINT_TICKET: Schemas['TerminalSessionTicketResponse'] = {
+export const MINT_TICKET: Schemas['TerminalTicketResponse'] = {
   sessionId: '3f1c9a2e-8d4b-4f6a-9c27-5e8b1a0d4c33',
   ticket: 'test-ticket-abc',
   wsPath: '/terminal/ws',

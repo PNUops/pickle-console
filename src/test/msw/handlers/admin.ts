@@ -12,8 +12,8 @@ import {
 } from './vms'
 
 type Schemas = components['schemas']
-type VmRequestDetail = Schemas['VmRequestDetail']
-type ApprovalContext = Schemas['ApprovalContext']
+type VmRequestDetail = Schemas['VmRequestDetailResponse']
+type ApprovalContext = Schemas['ApprovalContextResponse']
 
 /* ─── fixtures: 관리자 큐용 신청 (org 1 + org 2) ─── */
 
@@ -244,7 +244,7 @@ let approvalContexts: Record<number, ApprovalContext> = initialContexts()
 let nextOrgId = 100
 
 /** Bodies received by decision endpoints, for payload-correctness assertions. */
-export let approveBodies: { requestId: number; body: Schemas['ApproveVmRequest'] }[] = []
+export let approveBodies: { requestId: number; body: Schemas['ApproveVmRequestRequest'] }[] = []
 export let rejectBodies: { requestId: number; body: { comment: string } }[] = []
 export let userPatchBodies: {
   userId: number
@@ -280,7 +280,7 @@ const alreadyDecided = (instance: string) =>
   })
 
 /** Known users for PATCH /admin/users/{userId}. */
-const knownUsers: Record<number, Schemas['UserSummary']> = {
+const knownUsers: Record<number, Schemas['UserSummaryResponse']> = {
   42: studentUser,
   57: { id: 57, email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'USER' },
 }
@@ -288,7 +288,7 @@ const knownUsers: Record<number, Schemas['UserSummary']> = {
 
 /* ─── fixtures: 노드 현황 (SYS_ADMIN 노드/용량 화면) ─── */
 
-const adminNodes: Schemas['NodeSummary'][] = [
+const adminNodes: Schemas['NodeSummaryResponse'][] = [
   {
     id: 1,
     name: 'pve1',
@@ -364,7 +364,7 @@ export const adminHandlers: RequestHandler[] = [
       .filter((r) => !status || r.status === status)
       .filter((r) => !orgId || r.orgId === Number(orgId))
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['VmRequestPage'] = {
+    const body: Schemas['PageResponseVmRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,
@@ -393,7 +393,7 @@ export const adminHandlers: RequestHandler[] = [
     if (found.status !== 'SUBMITTED') {
       return alreadyDecided(`/api/v1/admin/vm-requests/${requestId}/approve`)
     }
-    const body = (await request.json()) as Schemas['ApproveVmRequest']
+    const body = (await request.json()) as Schemas['ApproveVmRequestRequest']
     approveBodies.push({ requestId, body })
     found.status = 'APPROVED'
     found.review = {
@@ -473,7 +473,7 @@ export const adminHandlers: RequestHandler[] = [
         code: 'ORG_SLUG_DUPLICATE',
       })
     }
-    const created: Schemas['OrgDetail'] = {
+    const created: Schemas['OrgDetailResponse'] = {
       id: nextOrgId++,
       name: body.name,
       slug: body.slug,
@@ -497,7 +497,7 @@ export const adminHandlers: RequestHandler[] = [
     const body = (await request.json()) as { name?: string; description?: string | null }
     if (body.name !== undefined) found.name = body.name
     if (body.description !== undefined) found.description = body.description
-    const detail: Schemas['OrgDetail'] = {
+    const detail: Schemas['OrgDetailResponse'] = {
       id: found.id,
       name: found.name,
       slug: found.slug,
@@ -534,7 +534,7 @@ export const adminHandlers: RequestHandler[] = [
       })
     }
     userPatchBodies.push({ userId: Number(params.userId), body })
-    const updated: Schemas['UserSummary'] = { ...user, role: body.role ?? user.role }
+    const updated: Schemas['UserSummaryResponse'] = { ...user, role: body.role ?? user.role }
     return HttpResponse.json(updated, { status: 200 })
   }),
 
@@ -584,7 +584,7 @@ export const adminHandlers: RequestHandler[] = [
             vm.status !== 'DELETING'),
       )
       .sort(adminVmComparator(url.searchParams.get('sort')))
-    const body: Schemas['VmPage'] = {
+    const body: Schemas['PageResponseVmSummaryResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
       page,
       size,
@@ -626,7 +626,7 @@ export const adminHandlers: RequestHandler[] = [
         errors,
       })
     }
-    const deletion: NonNullable<Schemas['VmDetail']['deletion']> = {
+    const deletion: NonNullable<Schemas['VmDetailResponse']['deletion']> = {
       kind: 'ADMIN',
       scheduledFor: body.scheduledFor,
       requestedAt: '2026-07-08T16:00:00+09:00',

@@ -5,9 +5,9 @@ import { problemResponse } from './auth'
 import { recordVmEvent, vmStore } from './vms'
 
 type Schemas = components['schemas']
-type VmDetail = Schemas['VmDetail']
+type VmDetail = Schemas['VmDetailResponse']
 type PublicationView = Schemas['PublicationView']
-type DomainDetail = Schemas['DomainDetail']
+type DomainDetail = Schemas['DomainDetailView']
 
 /** 커스텀 도메인 검증에서 A 레코드로 안내하는 리버스 프록시 IP. */
 const PROXY_IP = '164.125.249.87'
@@ -63,7 +63,7 @@ function findDomain(domainId: number): DomainDetail | null {
   )
 }
 
-function toDomainSummary(d: DomainDetail): Schemas['DomainSummary'] {
+function toDomainSummary(d: DomainDetail): Schemas['DomainSummaryView'] {
   return {
     id: d.id,
     vmId: d.vmId,
@@ -309,7 +309,7 @@ function adminCertificates(orgId?: number): Schemas['AdminCertificateView'][] {
   return [wildcard, ...custom]
 }
 
-function paginate<T>(items: T[], page: number, size: number): Schemas['DomainPage'] {
+function paginate<T>(items: T[], page: number, size: number): Schemas['PageResponseDomainSummaryView'] {
   return {
     content: items.slice(page * size, (page + 1) * size) as never,
     page,
@@ -459,7 +459,7 @@ export const publishingHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const published = publishedVms().map(
-      (vm): Schemas['DomainSummary'] => toDomainSummary(vm.publication!.domain),
+      (vm): Schemas['DomainSummaryView'] => toDomainSummary(vm.publication!.domain),
     )
     const items = [...published, ...tombstones.map((t) => toDomainSummary(t.domain))]
       .filter((d) => !vmId || d.vmId === Number(vmId))

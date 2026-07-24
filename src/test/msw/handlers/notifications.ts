@@ -63,7 +63,7 @@ function initialNotifications(): StoredNotification[] {
 
 /* ─── 발송 로그 (SYS_ADMIN, /admin/notifications) ─── */
 
-type AdminNotificationView = Schemas['AdminNotificationView']
+type AdminNotificationView = Schemas['AdminNotificationResponse']
 
 function initialDeliveryLog(): AdminNotificationView[] {
   return [
@@ -176,7 +176,7 @@ export const notificationHandlers: RequestHandler[] = [
       .filter((n) => n.userId === userId)
       .filter((n) => !unreadOnly || n.readAt == null)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    const body: Schemas['NotificationPage'] = {
+    const body: Schemas['PageResponseNotificationView'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toView),
       page,
       size,
@@ -235,7 +235,7 @@ export const notificationHandlers: RequestHandler[] = [
       .filter((n) => !event || n.event === event)
       .filter((n) => !email || n.userEmail.includes(email))
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['AdminNotificationPage'] = {
+    const body: Schemas['PageResponseAdminNotificationResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,

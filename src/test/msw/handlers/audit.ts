@@ -4,8 +4,8 @@ import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
 
 type Schemas = components['schemas']
-type AuditLogView = Schemas['AuditLogView']
-type ActivityEntry = Schemas['ActivityEntry']
+type AuditLogView = Schemas['AuditLogViewResponse']
+type ActivityEntry = Schemas['ActivityEntryResponse']
 
 /** 내부 저장용 감사 행 — 가시성 판정을 위해 행위자 기관을 함께 든다. */
 interface StoredAuditRow extends AuditLogView {

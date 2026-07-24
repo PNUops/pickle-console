@@ -3,7 +3,7 @@ import type { components } from '../../../api/schema'
 import { problemResponse, studentUser } from './auth'
 
 type Schemas = components['schemas']
-type VmRequestDetail = Schemas['VmRequestDetail']
+type VmRequestDetail = Schemas['VmRequestDetailResponse']
 
 function baseRequest(): Omit<
   VmRequestDetail,
@@ -103,7 +103,7 @@ export let vmRequestStore: VmRequestDetail[] = initialRequests()
 let nextRequestId = 200
 
 /** Bodies received by POST /vm-requests, for payload-correctness assertions. */
-export let createdVmRequestBodies: Schemas['CreateVmRequest'][] = []
+export let createdVmRequestBodies: Schemas['CreateVmRequestRequest'][] = []
 
 export function resetVmRequestFixtures() {
   vmRequestStore = initialRequests()
@@ -129,7 +129,7 @@ export const vmRequestHandlers: RequestHandler[] = [
     const filtered = vmRequestStore
       .filter((r) => !status || r.status === status)
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['VmRequestPage'] = {
+    const body: Schemas['PageResponseVmRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,
@@ -140,7 +140,7 @@ export const vmRequestHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/vm-requests', async ({ request }) => {
-    const body = (await request.json()) as Schemas['CreateVmRequest']
+    const body = (await request.json()) as Schemas['CreateVmRequestRequest']
     createdVmRequestBodies.push(body)
     const created: VmRequestDetail = {
       ...baseRequest(),

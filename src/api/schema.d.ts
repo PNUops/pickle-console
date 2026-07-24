@@ -4,253 +4,30 @@
  */
 
 export interface paths {
-    "/auth/signup": {
+    "/admin/announcements": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["listAnnouncements"];
         put?: never;
-        /**
-         * 회원가입 (인증 메일 발송)
-         * @description `@pusan.ac.kr` 이메일로만 가입할 수 있습니다
-         *     (정규식 `^[A-Za-z0-9._%+-]+@pusan\.ac\.kr$`).
-         *     가입 직후 계정은 `PENDING_VERIFICATION` 상태이며, 24시간 유효한 1회용
-         *     인증 링크가 메일로 발송됩니다. 인증 완료 전에는 로그인할 수 없습니다.
-         *
-         *     중복 이메일에는 409를 반환합니다. 이에 따른 계정 존재 여부 노출
-         *     (account enumeration) 트레이드오프는 이 엔드포인트에 요청 빈도 제한이
-         *     적용되어 있으므로 수용합니다.
-         */
-        post: operations["signup"];
+        post: operations["createAnnouncement"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/verify-email": {
+    "/admin/audit": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /**
-         * 이메일 인증 (계정 활성화)
-         * @description 메일로 전달된 1회용 토큰을 검증합니다. 성공 시 계정이 `ACTIVE`로 전환되고
-         *     본인 소유의 PERSONAL 그룹이 자동 생성됩니다.
-         */
-        post: operations["verifyEmail"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/resend-verification": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 인증 메일 재발송
-         * @description 미인증(`PENDING_VERIFICATION`) 계정에 인증 메일을 다시 보냅니다.
-         *     계정 존재 여부 노출을 막기 위해 존재하지 않는 이메일에도 202를 반환합니다.
-         */
-        post: operations["resendVerification"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 로그인
-         * @description 이메일·비밀번호를 검증하고 액세스 토큰(JWT, 15분)과 사용자 요약을 반환합니다.
-         *     리프레시 토큰(불투명 문자열, 14일)은 `Set-Cookie`로만 전달됩니다.
-         *
-         *     성공 시 리프레시 쿠키와 함께 CSRF 이중 제출용 `pickle_csrf` 쿠키
-         *     (비-HttpOnly, `SameSite=Lax`, `Path=/`)가 발급됩니다. 클라이언트는
-         *     `/auth/refresh`·`/auth/logout` 호출 시 이 쿠키 값을 `X-Pickle-Csrf`
-         *     헤더로 함께 보내야 합니다.
-         *
-         *     요청 빈도 제한: IP+계정 단위 슬라이딩 윈도 (약 10회/분, 연속 5회 실패 시 백오프 잠금).
-         *
-         *     **2FA 계정**: 2FA가 등록된 계정은 비밀번호 검증 성공 시 토큰 대신
-         *     `MfaChallengeResponse`(`mfaRequired=true` + 5분 유효 `mfaToken`)를
-         *     반환합니다 — 쿠키는 이 단계에서 발급되지 않으며,
-         *     `POST /auth/mfa`로 코드를 제출해야 로그인이 완료됩니다.
-         */
-        post: operations["login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 액세스 토큰 갱신 (리프레시 토큰 회전)
-         * @description 본문 없이 `pickle_refresh` 쿠키만으로 호출합니다. 성공 시 새 액세스 토큰과 함께
-         *     리프레시 토큰이 **회전**되어 새 쿠키가 내려갑니다(이전 토큰은 즉시 폐기).
-         *     이미 회전된 토큰의 재사용은 탈취 신호로 간주되어 해당 토큰 체인 전체가
-         *     폐기되며 재로그인이 필요합니다.
-         *
-         *     CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키
-         *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 `X-Pickle-Csrf` 헤더로
-         *     함께 보내야 하며, 갱신 성공 시 `pickle_csrf` 쿠키도 새 값으로 재발급됩니다.
-         */
-        post: operations["refresh"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 로그아웃
-         * @description 제시된 리프레시 토큰을 서버 측에서 폐기하고 `pickle_refresh` 쿠키를 삭제합니다
-         *     (`Max-Age=0` Set-Cookie). 클라이언트는 보유한 액세스 토큰을 함께 폐기해야 합니다.
-         *     쿠키가 없거나 이미 폐기된 경우에도 204를 반환합니다(멱등).
-         *
-         *     CSRF 이중 제출 검증을 요구합니다: `pickle_csrf` 쿠키 값을
-         *     `X-Pickle-Csrf` 헤더로 함께 보내야 합니다.
-         */
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/password-reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 비밀번호 재설정 요청 (메일 발송)
-         * @description 비밀번호 재설정 링크를 메일로 발송합니다. 계정 존재 여부 노출을
-         *     막기 위해 **존재하지 않거나 활성(ACTIVE)이 아닌 이메일에도 동일하게
-         *     202를 반환**하며, 그 경우 메일은 발송되지 않습니다.
-         *
-         *     - 토큰은 1회용, **30분 유효** — 새 요청이 접수되면 같은 계정의 미사용
-         *       재설정 토큰은 모두 무효화됩니다(항상 마지막 링크만 유효).
-         *     - 요청 빈도 제한: 로그인과 동일한 IP+이메일 슬라이딩 윈도.
-         */
-        post: operations["requestPasswordReset"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/password-reset/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 비밀번호 재설정 확정 (새 비밀번호 설정)
-         * @description 재설정 메일의 1회용 토큰을 검증하고 새 비밀번호를 설정합니다.
-         *
-         *     - 성공 시 해당 계정의 `token_version`이 올라가 **기존의 모든 세션
-         *       (액세스·리프레시 토큰)이 무효화**되고, 로그인 실패 잠금 카운터가
-         *       초기화되며, HIGH 알림(비밀번호 변경 안내)이 발송됩니다.
-         *     - 새 비밀번호 정책은 회원가입과 동일합니다 (최소 10자 + 강도 검사).
-         */
-        post: operations["confirmPasswordReset"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/mfa": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 2단계 인증 완료 (TOTP/복구 코드 → 토큰 발급)
-         * @description 2FA가 등록된 계정의 로그인 2단계입니다 .
-         *     `POST /auth/login`이 `MfaChallengeResponse`(`mfaToken`)를 반환한 경우,
-         *     이 op로 TOTP 코드 또는 복구 코드를 제출해 로그인을 완료합니다.
-         *
-         *     - `mfaToken`은 **5분 유효, 성공 시 소비되는 1회용**입니다 — 코드
-         *       불일치(401)로는 소비되지 않아 재시도할 수 있고, 만료되었거나 이미
-         *       성공에 사용된 토큰은 410 — 처음부터 다시 로그인해야 합니다.
-         *     - `code`(TOTP 6자리)와 `recoveryCode` 중 **정확히 하나**를 보냅니다.
-         *       복구 코드는 1회용이며 사용 즉시 폐기됩니다.
-         *     - 코드 검증 실패는 로그인과 동일한 실패 잠금 카운터에 합산됩니다.
-         *     - 성공 응답은 로그인과 동일합니다 (리프레시·CSRF 쿠키 발급 포함).
-         */
-        post: operations["completeMfaLogin"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 내 프로필 조회
-         * @description 현재 인증된 사용자의 프로필과 그룹 멤버십 목록을 반환합니다.
-         */
-        get: operations["getMe"];
+        get: operations["listAuditLogs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -259,21 +36,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me/activity": {
+    "/admin/certificates": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * 내 활동 이력 조회
-         * @description 내 계정의 활동 이력입니다(로그인 이력 포함). 최신순 정렬.
-         *     **철저히 본인(actor=self) 행만** 반환하며 다른 사용자의 활동은 어떤
-         *     필터로도 조회할 수 없습니다. `detail`은 화이트리스트된 필드만
-         *     노출됩니다(비밀값·내부 식별자 미포함).
-         */
-        get: operations["listMyActivity"];
+        get: operations["listAdminCertificates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -282,51 +52,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me/ssh-keys": {
+    "/admin/domains": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * 내 SSH 키 목록 조회
-         * @description 내 계정에 등록된 SSH 공개키 목록입니다. 등록된 키가 SSH
-         *     게이트웨이 접속(`ssh <VM호스트명>@ssh...`)의 기본 인증 수단이며,
-         *     키가 하나도 없으면 기본 상태의 VM에는 SSH 접속이 불가합니다
-         *     (비밀번호 접속은 VM별 `ssh_password_enabled` opt-in에서만 허용).
-         *
-         *     `privateKeyStored=true`인 키(콘솔 "키 만들기"로 서버가 생성한 키)만
-         *     개인키 재다운로드가 가능합니다. 붙여넣기로 등록한 키의 개인키는
-         *     서버가 알지 못합니다.
-         */
-        get: operations["listMySshKeys"];
+        get: operations["listAdminDomains"];
         put?: never;
-        /**
-         * SSH 공개키 등록 (붙여넣기)
-         * @description 보유한 SSH **공개키**를 붙여넣어 등록합니다. 서버가 파싱·정규화하고
-         *     SHA-256 지문을 계산합니다 (`ssh-keygen -lf`와 동일한
-         *     `SHA256:<base64>` 표기).
-         *
-         *     - **수용 알고리즘**: `ssh-ed25519`, `ssh-rsa`(**2048비트 이상**).
-         *       ecdsa·sk-*(FIDO) 키는 422로 거부합니다 — 알고리즘 확장은 마이너
-         *       개정으로 이루어집니다.
-         *     - **지문은 플랫폼 전역에서 유일**해야 합니다: 이미 등록된 지문(내
-         *       키든 타인의 키든 — 소유자는 노출하지 않음)은 409
-         *       `SSH_KEY_DUPLICATE`. 지문→사용자 매핑이 유일해야 SSH 접속 감사의
-         *       사용자 귀속이 성립합니다.
-         *     - 사용자당 최대 **10개** — 초과 시 409 `SSH_KEY_LIMIT_EXCEEDED`.
-         *     - 등록 즉시 모든 소속 그룹 VM에 대한 게이트웨이 인증에 사용됩니다.
-         *       등록은 감사 기록(`user.ssh_key_add`)됩니다.
-         */
-        post: operations["registerMySshKey"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/me/ssh-keys/generate": {
+    "/admin/drift-findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDriftFindings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/drift-findings/{findingId}/resolve": {
         parameters: {
             query?: never;
             header?: never;
@@ -335,26 +93,78 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * SSH 키 만들기 (서버 생성)
-         * @description 서버가 **ed25519 키쌍을 생성**해 공개키를 즉시 등록하고, 개인키는
-         *     **AES-256-GCM 암호문으로 보관**합니다(초기 VM 비밀번호와 동일한
-         *     보관·감사 프레임 — 2026-07-17 운영자 확정). 생성 직후
-         *     `GET /me/ssh-keys/{keyId}/private-key`로 개인키를 내려받으며,
-         *     분실 시 언제든 재다운로드할 수 있습니다(생성은 `user.ssh_key_generate`,
-         *     매 다운로드는 `user.ssh_key_download`로 감사 기록).
-         *
-         *     키를 만들 줄 아는 사용자는 붙여넣기 등록(`POST /me/ssh-keys`)을
-         *     사용해도 됩니다 — 그 경우 개인키는 서버에 없습니다.
-         */
-        post: operations["generateMySshKey"];
+        post: operations["resolveDriftFinding"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/me/ssh-keys/{keyId}": {
+    "/admin/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/ip-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listIpAllocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminNodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications/{notificationId}/resend": {
         parameters: {
             query?: never;
             header?: never;
@@ -363,1357 +173,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        /**
-         * SSH 키 삭제
-         * @description 내 SSH 키를 삭제합니다. **삭제 즉시** 이 키로는 어떤 VM에도 게이트웨이
-         *     접속이 불가합니다(다음 접속 시도부터 라우트 인가 실패 — 진행 중인
-         *     세션은 끊지 않음). 서버가 보관 중인 개인키(생성 키)도 함께
-         *     파기됩니다. 삭제는 감사 기록(`user.ssh_key_delete`)됩니다.
-         *
-         *     타인의 키에는 404로 응답합니다(존재 마스킹).
-         */
-        delete: operations["deleteMySshKey"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/ssh-keys/{keyId}/private-key": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 개인키 다운로드 (서버 생성 키만)
-         * @description 서버가 생성·보관 중인 개인키를 OpenSSH 형식(`openssh-key-v1` PEM,
-         *     비암호화)으로 반환합니다. **매 다운로드가 감사 기록(`user.ssh_key_download`)됩니다.**
-         *
-         *     - `privateKeyStored=false`인 키(붙여넣기 등록)는 404 — 서버에 개인키가
-         *       없습니다.
-         *     - 클라이언트는 파일(`id_ed25519_pickle`)로 저장한 뒤 권한을 제한해야
-         *       합니다 (macOS/Linux `chmod 600`, Windows는 `%USERPROFILE%\.ssh`로
-         *       이동). 응답은 캐시 금지입니다.
-         */
-        get: operations["downloadMySshKeyPrivateKey"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * 내 비밀번호 변경
-         * @description 현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다.
-         *
-         *     - 성공 시 `token_version`이 올라가 기존의 다른 세션이 모두
-         *       무효화되고, **이 응답이 새 토큰쌍을 반환**하므로 현재 세션은
-         *       로그아웃되지 않습니다 (`Set-Cookie`로 새 리프레시 토큰 발급).
-         *     - HIGH 알림(비밀번호 변경 안내)이 발송됩니다.
-         *     - 새 비밀번호 정책은 회원가입과 동일합니다 (최소 10자 + 강도 검사).
-         */
-        put: operations["changeMyPassword"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/withdraw": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 회원 탈퇴 (영구 보존 — 재가입 불가)
-         * @description 본인 계정을 탈퇴 처리합니다. 비밀번호 재인증이 필요하며,
-         *     2FA 등록 계정은 TOTP 코드(또는 복구 코드)도 함께 제출해야 합니다.
-         *
-         *     **차단 조건** (모두 해소해야 탈퇴 가능, 409):
-         *     - 삭제되지 않은 VM을 보유한 그룹의 **유일한 OWNER**인 경우
-         *       (`ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP`) — 소유권을 이전하거나
-         *       VM을 먼저 삭제해야 합니다.
-         *     - 내 PERSONAL 그룹에 삭제되지 않은 VM이 있는 경우
-         *       (`ACCOUNT_HAS_ACTIVE_VMS`).
-         *
-         *     **탈퇴 처리** (단일 트랜잭션):
-         *     - 상태 `WITHDRAWN` 전환 — 로그인·게이트웨이 SSH 접근이 즉시
-         *       차단되고 모든 세션·리프레시 토큰이 폐기됩니다.
-         *     - 그룹 멤버십 제거, PERSONAL 그룹 정리, 등록된 SSH 키 비활성화.
-         *     - 계정 행은 **영구 보존하며 익명화하지 않습니다** (2026-07-08 확정 —
-         *       보유 근거는 개인정보처리방침 명시). 따라서 **같은 이메일로
-         *       재가입할 수 없습니다** (409 `AUTH_EMAIL_ALREADY_REGISTERED`).
-         */
-        post: operations["withdrawMyAccount"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/mfa/totp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 2FA(TOTP) 등록 시작 (시크릿 발급)
-         * @description TOTP 등록을 시작합니다. 비밀번호 재인증 후 시크릿과
-         *     `otpauth://` URI(QR 렌더용)를 반환합니다. 이 시점에는 아직
-         *     등록이 **활성화되지 않으며**, `POST /me/mfa/totp/activate`로 첫
-         *     코드를 검증해야 완료됩니다 (미완료 시크릿은 재호출 시 교체).
-         *
-         *     시크릿은 서버에 암호화(AES-256-GCM) 보관되며 응답 외에는 다시
-         *     노출되지 않습니다.
-         */
-        post: operations["beginMfaTotpSetup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/mfa/totp/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 2FA(TOTP) 등록 완료 (첫 코드 검증 → 복구 코드 발급)
-         * @description 발급된 시크릿으로 생성한 첫 TOTP 코드를 검증해 2FA를 활성화합니다.
-         *     성공 시 **복구 코드 10개가 이 응답에서 단 한 번** 반환됩니다 —
-         *     분실 대비 안전한 곳에 보관해야 하며, 이후 다시 조회할 수 없습니다
-         *     (`POST /me/mfa/recovery-codes`로 전체 재발급만 가능).
-         *     활성화 시 HIGH 알림이 발송됩니다.
-         */
-        post: operations["activateMfaTotp"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/mfa/disable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 2FA 해제
-         * @description 본인 계정의 2FA를 해제합니다. 비밀번호와 현재 TOTP 코드(또는 복구
-         *     코드)를 함께 검증합니다. 해제 시 HIGH 알림이 발송됩니다.
-         *
-         *     프로덕션 프로필의 관리자 계층(ORG_ADMIN·SYS_ADMIN·운영자 역할)은
-         *     2FA가 의무이므로, 해제하면 다음 요청부터 재등록을 요구받습니다
-         *     (403 `MFA_ENROLLMENT_REQUIRED` — 등록·인증 op만 허용).
-         */
-        post: operations["disableMyMfa"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/mfa/recovery-codes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 2FA 복구 코드 재발급 (기존 전부 무효화)
-         * @description 복구 코드 10개를 새로 발급합니다. **기존 복구 코드는 사용 여부와
-         *     무관하게 전부 무효화**됩니다. 비밀번호와 현재 TOTP 코드를 검증하며,
-         *     새 코드는 이 응답에서 단 한 번 노출됩니다.
-         */
-        post: operations["regenerateMfaRecoveryCodes"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/me/consents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 내 약관 동의 이력 조회
-         * @description 내가 동의한 약관·개인정보처리방침 버전 이력입니다.
-         *     현재 유효 버전에 대한 미동의 여부는 `UserProfile.pendingConsents`로
-         *     확인합니다.
-         */
-        get: operations["listMyConsents"];
-        put?: never;
-        /**
-         * 약관 개정판 동의 (재동의)
-         * @description 약관·개인정보처리방침 **개정판**에 동의합니다. 문서 버전이
-         *     개정되면 `UserProfile.pendingConsents`에 미동의 문서가 나타나고
-         *     콘솔이 동의 화면을 표시합니다 — 이 op로 동의를 기록하면 사라집니다.
-         *
-         *     제출한 `version`이 현재 유효 버전과 다르면 409 — 콘솔은 최신 문서를
-         *     다시 로드해 표시해야 합니다.
-         */
-        post: operations["acceptConsents"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/orgs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 기관 목록 조회
-         * @description VM 신청 대상이 될 수 있는 활성(active) 기관 목록입니다.
-         */
-        get: operations["listOrgs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM 템플릿 목록 조회
-         * @description 신청서에서 선택 가능한 활성 템플릿 목록입니다.
-         *     각 템플릿의 `defaultVcpu/defaultMemoryMb/defaultDiskGb`가 신청서의 기본값으로
-         *     미리 채워집니다 (예: Ubuntu 24.04 기본형 = 2 vCPU / 2 GiB / 20 GiB).
-         */
-        get: operations["listTemplates"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/meta/request-options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM 신청 선택지 조회
-         * @description VM 신청서에서 사용하는 선택지·검증 목록입니다. 값은 `settings`에서
-         *     관리되며 운영자가 변경할 수 있습니다.
-         *
-         *     - `allowedRootDomains`: `rootDomain`으로 선택 가능한 루트 도메인 허용 목록
-         *     - `reservedSubdomains`: `desiredSubdomain`·`desiredSlug`로 사용할 수 없는
-         *       예약어 목록 (서브도메인·슬러그 공용)
-         *     - `sshHost`: SSH 게이트웨이 접속 호스트 (신청서의
-         *       `ssh <user>@<slug>.<sshHost>` 미리보기용)
-         */
-        get: operations["getRequestOptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/meta/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 시스템 상태 조회 (점검 모드·배너·문의처 — 공개)
-         * @description 점검 모드 여부, 공지 배너, 문의 이메일을 반환합니다. 인증 불필요 —
-         *     로그인 화면과 콘솔 셸이 주기적으로(약 60초) 폴링합니다.
-         *
-         *     **점검 모드 시맨틱**: `maintenance=true`면 관리자 계층이 아닌 모든
-         *     인증 요청이 503(`MAINTENANCE_MODE`)으로 거부됩니다. 단
-         *     `/auth/login`·`/auth/refresh`·`/meta/**`는 항상 허용됩니다
-         *     (관리자가 점검 중에도 로그인할 수 있어야 하므로). 값은 운영 설정
-         *     (`maintenance_mode` 등 — `PUT /admin/settings/{key}`)으로 제어하며
-         *     변경은 15초 이내에 반영됩니다.
-         */
-        get: operations["getSystemStatus"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/meta/terms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 약관·개인정보처리방침 현행 버전 목록 (공개)
-         * @description 문서 종류별 **현행(유효) 버전** 메타데이터 목록입니다.
-         *     회원가입 화면이 동의 대상 버전을 표시할 때 사용합니다.
-         *     본문은 `GET /meta/terms/{docType}`로 조회합니다.
-         */
-        get: operations["listTermsVersions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/meta/terms/{docType}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 약관·개인정보처리방침 현행 본문 조회 (공개)
-         * @description 지정한 문서 종류의 현행 버전 전문(마크다운)입니다.
-         */
-        get: operations["getTermsDocument"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 내 그룹 목록 조회
-         * @description 내가 구성원으로 속한 그룹(PERSONAL 포함) 목록을 반환합니다.
-         */
-        get: operations["listGroups"];
-        put?: never;
-        /**
-         * 그룹(팀/프로젝트) 생성
-         * @description TEAM 또는 PROJECT 그룹을 생성합니다. 생성자가 OWNER가 됩니다.
-         *     PERSONAL 그룹은 이메일 인증 시 자동 생성되므로 직접 만들 수 없습니다.
-         *     `slug`는 기본 서브도메인에 사용되므로 전역 유일해야 합니다.
-         */
-        post: operations["createGroup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/groups/{groupId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-            };
-            cookie?: never;
-        };
-        /**
-         * 그룹 상세 조회 (구성원 포함)
-         * @description 그룹 구성원만 조회할 수 있습니다.
-         */
-        get: operations["getGroup"];
-        put?: never;
-        post?: never;
-        /**
-         * 그룹 삭제 (OWNER 전용)
-         * @description 그룹을 삭제합니다. **OWNER만** 호출할 수 있으며, 비구성원에게는
-         *     404로 마스킹됩니다.
-         *
-         *     - **차단 조건** (409): 그룹에 삭제되지 않은 VM(DELETED 외 전 상태 —
-         *       DELETING 포함)이 있으면 삭제할 수 없습니다. VM을 먼저 삭제하고
-         *       파기까지 완료되어야 합니다.
-         *     - **PERSONAL 그룹은 삭제할 수 없습니다** (409) — 계정과 함께
-         *       탈퇴 시에만 정리됩니다.
-         *     - 삭제는 소프트 삭제(행 보존)입니다 — VM 이력·감사 로그의 그룹
-         *       참조는 유지되고, 그룹은 모든 목록·조회에서 사라집니다. 같은
-         *       이름·슬러그의 새 그룹을 다시 만들 수 있습니다.
-         *     - 그룹의 **대기 중(SUBMITTED) VM 신청은 함께 취소**됩니다 (계약
-         *       게이트 후속 2026-07-18 — 삭제된 그룹에 승인으로 VM이 생기는 경로
-         *       차단; 이미 취소된 신청의 승인 시도는 기존대로 409
-         *       `REQUEST_ALREADY_DECIDED`).
-         *     - 구성원 전원에게 알림이 발송되고 감사 기록(`group.delete`)이 남습니다.
-         */
-        delete: operations["deleteGroup"];
-        options?: never;
-        head?: never;
-        /**
-         * 그룹 정보 수정
-         * @description OWNER만 수정할 수 있습니다. `slug`와 `kind`는 변경할 수 없습니다.
-         */
-        patch: operations["updateGroup"];
-        trace?: never;
-    };
-    "/groups/{groupId}/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 그룹 구성원 추가
-         * @description 이메일로 기존 가입자를 그룹에 추가합니다. OWNER만 구성원을 추가할 수 있습니다.
-         *     PERSONAL 그룹에는 구성원을 추가할 수 없습니다.
-         *     `ACTIVE` 상태의 사용자만 추가할 수 있습니다 (미인증·비활성·탈퇴 계정 불가).
-         *     추가 시 `OWNER` 역할은 지정할 수 없습니다(422) — 소유권은 구성원 역할 변경의
-         *     소유권 이전으로만 부여됩니다.
-         */
-        post: operations["addGroupMember"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/groups/{groupId}/members/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-                /** @description 대상 구성원의 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * 그룹 구성원 제거
-         * @description OWNER는 누구든 제거할 수 있고, 구성원 본인은 스스로 나갈 수 있습니다.
-         *     유일한 OWNER는 소유권을 이전하기 전에는 나갈 수 없습니다.
-         */
-        delete: operations["removeGroupMember"];
-        options?: never;
-        head?: never;
-        /**
-         * 그룹 구성원 역할 변경
-         * @description OWNER만 역할을 변경할 수 있습니다. OWNER 역할을 다른 구성원에게 부여하면
-         *     소유권 이전으로 처리됩니다(기존 OWNER는 EDITOR로 강등).
-         *     유일한 OWNER 본인의 역할을 하향하는 요청은 409(`GROUP_SOLE_OWNER_REMOVAL`)로
-         *     거부됩니다 — 먼저 소유권을 이전해야 합니다.
-         */
-        patch: operations["updateGroupMember"];
-        trace?: never;
-    };
-    "/vm-requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 내 VM 신청 목록 조회
-         * @description 내가 볼 수 있는 신청 목록입니다. 최신순 정렬.
-         *     그룹 구성원(VIEWER 이상)은 그 그룹의 신청을 볼 수 있습니다.
-         *     구성원이 아닌 그룹의 `groupId` 필터는 403(`ACCESS_DENIED`)입니다.
-         */
-        get: operations["listVmRequests"];
-        put?: never;
-        /**
-         * VM 신청 제출
-         * @description 지정한 그룹 명의로, 지정한 기관의 자원에 대해 VM을 신청합니다.
-         *     그룹의 OWNER 또는 EDITOR만 신청할 수 있습니다.
-         *     요청 사양은 템플릿 기본값에서 미리 채워지며 수정 가능합니다.
-         *     모든 신청은 관리자 승인이 필요합니다(자동 승인 없음).
-         */
-        post: operations["createVmRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vm-requests/{requestId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        /**
-         * VM 신청 상세 조회
-         * @description 결정(승인/반려)이 내려진 경우 `review`에 결정 내용과 부여 사양이 포함됩니다.
-         */
-        get: operations["getVmRequest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vm-requests/{requestId}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 신청 취소
-         * @description `SUBMITTED` 상태의 신청만 취소할 수 있습니다. 이미 승인/반려된 신청은
-         *     409 (`REQUEST_ALREADY_DECIDED`)를 반환합니다. 신청자 본인 또는
-         *     그룹 OWNER/EDITOR만 취소할 수 있습니다.
-         */
-        post: operations["cancelVmRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM 목록 조회
-         * @description 내가 속한 그룹의 VM 목록입니다. 현재는 조회만 지원하며,
-         *     승인 시 생성된 행은 mock 프로비저닝이 완료될 때까지 `CREATING` 상태로 표시됩니다.
-         */
-        get: operations["listVms"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM 상세 조회
-         * @description 해당 VM 소유 그룹의 구성원(VIEWER 이상)만 조회할 수 있습니다.
-         *     비구성원에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다
-         *     (삭제·전원 제어 경로와 동일한 마스킹 정책).
-         */
-        get: operations["getVm"];
-        put?: never;
-        post?: never;
-        /**
-         * VM 삭제 (유예 후 파기 — 사용자 취소 불가)
-         * @description VM 삭제를 접수합니다. 소유 그룹의 **OWNER 또는 관리자**(ORG_ADMIN은
-         *     자기 기관의 VM만 — 타 기관 VM은 404, SYS_ADMIN은 전체)만 호출할 수
-         *     있습니다.
-         *
-         *     - 접수 즉시 종료(ACPI)가 시도되고 상태가 `DELETING`으로 전이됩니다.
-         *       종료가 시간 초과되면 **강제 종료로 폴백**한 뒤 삭제를 진행합니다
-         *       (사용자 `shutdown` op의 "폴백 없음"과 달리, 삭제 흐름은 종료가
-         *       목적이 아니라 파기 전 단계이므로 폴백합니다).
-         *     - 파기는 `settings.vm_delete_grace_hours`(기본 **168시간 = 7일**) 유예
-         *       후 스위퍼 잡이 수행합니다.
-         *     - **삭제 취소 정책**: 삭제 요청 후 **사용자는 취소할 수 없습니다**.
-         *       유예 기간은 오류·실수에 대비한 관리자 복구용 보관 기간이며, 유예 중
-         *       복구가 필요하면 관리자에게 문의해야 합니다 (관리자가
-         *       `POST /admin/vms/{vmId}/cancel-scheduled-delete`로 취소).
-         *       삭제 확인 UI와 통보 메일에도 이 사실이 안내됩니다.
-         *     - **백업 책임 고지**: 플랫폼은 VM 데이터를 백업하지 않으며, 파기 후에는
-         *       어떤 방법으로도 복구할 수 없습니다. 필요한 데이터는 삭제 전에 직접
-         *       백업해야 합니다.
-         *     - **`ERROR` 상태 예외**: 생성 실패 보상이 끝난 `ERROR` 상태 VM은 파기할
-         *       하부 실체가 없으므로 유예 없이 **즉시 `DELETED`로 전이**됩니다.
-         *     - **삭제 보호**: VM 설정 `deletion_protection`이 켜져 있으면
-         *       삭제 접수가 409(`VM_DELETION_PROTECTED`)로 거부됩니다 — 소유자가
-         *       설정에서 해제한 뒤 다시 시도해야 합니다 (관리자 일반·강제 삭제도
-         *       동일하게 거부).
-         *     - 삭제 접수와 최종 파기는 기관 관리자에게 통지되며 VM 이벤트(`DELETE`)로
-         *       기록됩니다.
-         */
-        delete: operations["deleteVm"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 시작
-         * @description `STOPPED` 상태의 VM을 시작합니다. 그룹 **MEMBER 이상**만 호출할 수 있으며,
-         *     접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리됩니다.
-         *     완료 여부는 VM 상세의 `status`(→ `RUNNING`)로 확인하고,
-         *     VM 이벤트(`START`)로 기록됩니다.
-         */
-        post: operations["startVm"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/shutdown": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 종료 (ACPI)
-         * @description `RUNNING` 상태의 VM에 종료(ACPI shutdown) 신호를 보냅니다.
-         *     그룹 **MEMBER 이상**만 호출할 수 있으며, 접수 즉시 202를 반환하고
-         *     작업 큐에서 비동기로 처리됩니다. VM 이벤트(`STOP`)로 기록됩니다.
-         *
-         *     게스트 OS가 응답하지 않으면 시간 초과로 실패할 수 있으며, 이때 강제
-         *     종료로 **자동 폴백하지 않습니다** — 필요하면
-         *     `POST /vms/{vmId}/force-stop`을 명시적으로 호출해야 합니다.
-         *
-         *     **중지 보호**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
-         *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 종료할 수 있습니다.
-         */
-        post: operations["shutdownVm"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/reboot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 재부팅
-         * @description `RUNNING` 상태의 VM을 재부팅합니다. 그룹 **MEMBER 이상**만 호출할 수
-         *     있으며, 접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리됩니다.
-         *     VM 이벤트(`REBOOT`)로 기록됩니다.
-         *
-         *     **중지 보호**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
-         *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 재부팅할 수 있습니다.
-         */
-        post: operations["rebootVm"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/force-stop": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 강제 종료 (전원 차단)
-         * @description `RUNNING` 또는 `REBOOTING` 상태의 VM을 강제 종료합니다(전원 차단에 해당).
-         *     그룹 **MEMBER 이상**만 호출할 수 있으며, 접수 즉시 202를 반환하고
-         *     작업 큐에서 비동기로 처리됩니다. VM 이벤트(`FORCE_STOP`)로 기록됩니다.
-         *
-         *     **경고**: 디스크 쓰기 중 강제 종료하면 파일 시스템·데이터가 손상될 수
-         *     있습니다. 종료(`shutdown`)가 응답하지 않을 때만 사용하세요.
-         *
-         *     **중지 보호**: VM 설정 `stop_protection`이 켜져 있으면 MEMBER의
-         *     호출은 409(`VM_STOP_PROTECTED`) — EDITOR 이상만 강제 종료할 수 있습니다.
-         */
-        post: operations["forceStopVm"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM 비밀번호 열람
-         * @description VM의 `student` 계정 비밀번호를 열람합니다 (v0.8.0에서
-         *     `/vms/{vmId}/initial-password`를 rename — 재생성 도입으로 "초기"
-         *     의미가 사라짐).
-         *
-         *     **열람 최소 역할은 VM별 설정 `password_reveal_min_role`이 정합니다**
-         *     (기본 `MEMBER`, 소유자가 EDITOR/OWNER로 상향 가능 — §설정 참조).
-         *     키 로그인 세계에서 비밀번호는 로그인 수단이 아니라 **VM 내부
-         *     sudo 자격**이므로, 이 설정이 sudo 권한의 실질 게이트입니다.
-         *
-         *     서버는 평문 대신 **암호문(AES-256-GCM, env 키)** 을 보관하므로 언제든
-         *     재열람할 수 있고, 열람해도 상태가 소모되지 않습니다.
-         *     **매 열람은 감사 기록(`vm.password_reveal`)됩니다.**
-         *
-         *     서버는 평문을 로그에 남기지 않으며, 클라이언트도 저장하지 말고 화면
-         *     표시 후 즉시 폐기해야 합니다. 사용자가 게스트 안에서 `passwd`로
-         *     직접 변경한 경우 저장된 값은 실제와 달라질 수 있습니다 — 분실 시
-         *     `POST /vms/{vmId}/password/regenerate`로 복구합니다.
-         *
-         *     열람 가능 여부는 VM 상세의 `passwordAvailable`(저장 여부)과
-         *     `passwordRevealAllowed`(내 권한)로 미리 알 수 있습니다.
-         */
-        get: operations["revealVmPassword"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/password/regenerate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM 비밀번호 재생성 (시스템 생성)
-         * @description VM의 `student` 계정 비밀번호를 **플랫폼이 새로 생성한 24자 CSPRNG
-         *     값**으로 교체합니다. 그룹 **EDITOR 이상**만 호출할 수 있습니다.
-         *
-         *     - **임의 문자열은 누구도(관리자 포함) 지정할 수 없습니다** — 비밀번호
-         *       생성은 항상 시스템 몫입니다(2026-07-17 운영자 확정: 관리자가 값을
-         *       정할 수 있으면 "관리자가 내 VM에 임의 접속 가능"이라는 오해를
-         *       낳음).
-         *     - 적용은 QEMU guest agent(`set-user-password`)로 즉시(무재부팅)
-         *       이루어지며, **기존 비밀번호는 그 순간 무효**가 됩니다 — 구성원 제거
-         *       후 비밀번호를 아는 사람의 접근을 회수하는 수단입니다.
-         *     - 성공 시 새 비밀번호를 응답으로 반환하고 암호문 보관본을 갱신합니다.
-         *       재생성은 감사 기록(`vm.password_regenerate`)됩니다.
-         *     - VM이 RUNNING이고 guest agent가 응답해야 합니다 — 아니면 409.
-         */
-        post: operations["regenerateVmPassword"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM별 설정 조회
-         * @description VM별 설정 목록입니다 (제품기획 §9). 그룹 **EDITOR 이상**만
-         *     접근할 수 있으며(설정 영역 자체가 편집자 이상), 비구성원에게는 404로
-         *     마스킹됩니다.
-         *
-         *     응답은 코드측 레지스트리 기반 — 저장된 행이 없는 키는 기본값
-         *     (`defaultValue`)으로 반환됩니다. 콘솔은 `valueType`/`allowedValues`/
-         *     `label`/`description`만으로 편집 UI를 렌더할 수 있어, 키가 추가돼도
-         *     콘솔 변경 없이 표시됩니다.
-         *
-         *     **v0.9.0 키 카탈로그** (키 추가는 마이너 개정, 계약 표면은 이
-         *     GET/PATCH 한 쌍으로 고정):
-         *
-         *     | key | valueType | 기본값 | 변경 필요 역할 |
-         *     |---|---|---|---|
-         *     | `ssh_password_enabled` | BOOLEAN | `false` | EDITOR |
-         *     | `password_reveal_min_role` | ENUM (`MEMBER`/`EDITOR`/`OWNER`) | `MEMBER` | OWNER |
-         *     | `deletion_protection` | BOOLEAN | `false` | OWNER |
-         *     | `stop_protection` | BOOLEAN | `false` | OWNER |
-         *     | `display_name` | STRING (최대 100자, 빈 문자열 = 해제) | `null` | EDITOR |
-         *
-         *     - `ssh_password_enabled` — SSH 게이트웨이의 비밀번호 접속 허용
-         *       (기본 차단 = 런치 게이트 G6). 우선순위: 전역 킬 스위치 > 관리자
-         *       VM 차단 > 이 설정.
-         *     - `password_reveal_min_role` — 비밀번호 열람 최소 역할 (= VM 내부
-         *       sudo 자격의 실질 게이트). 다른 구성원의 권한을 조정하는 키이므로
-         *       **소유자 전용**.
-         *     - `deletion_protection` (0.11.0 개정) — 켜져 있으면 **모든 삭제
-         *       접수**(본인·관리자 일반·강제 삭제)가 409(`VM_DELETION_PROTECTED`)로
-         *       거부되고, 파기 시점에도 재확인됩니다(켜져 있으면 파기가 중단되고
-         *       관리자 확인 대기). 순수 논리 게이트로, 토글은 하이퍼바이저와
-         *       동기화되지 않습니다 — 이와 별개로 모든 관리 VM은 Proxmox 네이티브
-         *       `protection` 플래그가 상시 ON(플랫폼 안전망, 실제 파기 직전에만
-         *       해제)입니다. 삭제하려면 먼저 소유자가 해제해야 합니다. 예외:
-         *       소유자 부재·보안 사고 등 해제 주체가 없는 경우 SYS_ADMIN이 강제
-         *       삭제에 `overrideProtection: true`를 명시해 회수할 수 있습니다
-         *       (감사 기록 — force-delete op 참조).
-         *     - `stop_protection` — 켜져 있으면 콘솔의 종료/재부팅/강제 종료를
-         *       **EDITOR 이상만** 수행할 수 있습니다 (MEMBER는 409
-         *       `VM_STOP_PROTECTED`; 시작은 제한 없음). 한계: sudo 가능한 구성원은
-         *       게스트 안에서 여전히 종료할 수 있습니다 (콘솔 UI에 고지).
-         *     - `display_name` — 콘솔 표시명 (`VmSummary.displayName`).
-         *       호스트네임/슬러그/Proxmox 이름은 바뀌지 않습니다.
-         */
-        get: operations["getVmSettings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * VM별 설정 변경 (부분 맵)
-         * @description 설정 키의 부분 집합을 한 번에 변경합니다. **원자적(all-or-nothing)** —
-         *     하나라도 실패하면 아무것도 적용되지 않습니다. 응답은 갱신된 전체
-         *     설정 목록입니다(콘솔이 캐시를 통째로 교체).
-         *
-         *     - 키별 **변경 필요 역할**은 레지스트리가 정합니다(GET의 카탈로그 표):
-         *       어느 한 키라도 내 역할이 미달이면 403(`GROUP_ROLE_INSUFFICIENT`,
-         *       detail에 키·필요 역할 명시).
-         *     - 알 수 없는 키·타입 불일치·허용값 밖·빈 맵은 422.
-         *     - 모든 변경은 감사 기록(`vm.setting_update`, 이전값→새값)됩니다.
-         *       `ssh_password_enabled`를 켜는 변경은 콘솔이 경고를 표시합니다
-         *       (접속자 개인 식별 불가·구성원 제거 후에도 접속 가능).
-         */
-        patch: operations["updateVmSettings"];
-        trace?: never;
-    };
-    "/vms/{vmId}/terminal-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 웹 터미널 접속 티켓 발급 (1회용)
-         * @description 브라우저 웹 터미널용 **1회용 접속 티켓**을 발급합니다. 그룹
-         *     **MEMBER 이상**만 호출할 수 있으며, 비구성원·미존재 VM은 404로
-         *     마스킹됩니다.
-         *
-         *     발급된 티켓으로 같은 오리진의 WebSocket 엔드포인트
-         *     `wss://<host>/terminal/ws`에 접속합니다. 이 WS 엔드포인트는 **REST
-         *     계약 밖**입니다 — sshgw 터미널 브리지(LXC 102)가 종단하며, 프로토콜
-         *     상세는 내부 웹 터미널 계약을 따릅니다.
-         *
-         *     - 티켓은 `Sec-WebSocket-Protocol: pickle.terminal.v1, ticket.<ticket>`
-         *       2요소 서브프로토콜로 운반합니다 (쿼리스트링·Authorization 헤더
-         *       미사용 — 티켓이 URL·로그에 남지 않도록).
-         *     - 티켓은 **`expiresAt`까지(약 60초)·단일 사용**이며 발급 계정과 대상
-         *       VM에 바인딩됩니다. 브리지가 교환(redeem)하는 순간 소진되고, 그
-         *       시점에 인가(계정 ACTIVE·멤버십·VM 상태·킬 스위치)가 재확인됩니다.
-         *     - 세션은 15분 유휴 타임아웃(사용자 입력 기준), 60초 주기 인가 재검증,
-         *       관리자 강제 종료의 대상입니다. **프레임(키 입력·화면) 내용은
-         *       어디에도 기록되지 않으며**, 감사에는 세션 수명주기만 남습니다
-         *       (`terminal.session_start` / `terminal.session_end` /
-         *       `terminal.force_terminate`).
-         *     - SSH 인증은 플랫폼 터미널 키로 이루어지므로 사용자 자격증명을
-         *       저장·전송하지 않습니다. VM 안에서의 `sudo`는 여전히 VM 비밀번호가
-         *       필요합니다 (비밀번호 열람 권한 정책 그대로).
-         */
-        post: operations["createTerminalSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * VM 이벤트 이력 조회
-         * @description 이 VM의 수명주기 이벤트(생성·전원·삭제 등) 이력입니다. 최신순 정렬.
-         *     소유 그룹의 구성원(VIEWER 이상)만 조회할 수 있습니다.
-         *     비구성원에게는 VM의 존재 자체가 마스킹되어 404로 응답합니다.
-         */
-        get: operations["listVmEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * VM HTTP 서비스 공개 (라우트 활성화)
-         * @description VM의 내부 HTTP 서비스를 외부에 공개합니다. 소유 그룹의 **OWNER 또는
-         *     EDITOR**만 호출할 수 있습니다(권한 매트릭스 §2.4 "VM 신청, 설정(도메인·
-         *     포트) 변경"). 비구성원에게는 VM 존재가 마스킹되어 404입니다.
-         *
-         *     **공개 대상 포트**는 VM 내부에서 서비스가 열려 있는 포트입니다(기본 80,
-         *     1–65535). VM의 SSH 포트 22는 공개할 수 없습니다(422). 라우팅 대상 IP는
-         *     **클라이언트가 지정할 수 없으며** 서버가 VM에 할당된 내부 IP로 강제합니다
-         *     (SSRF 방지 정책). 요청 본문에 IP 필드는 존재하지 않습니다.
-         *
-         *     **도메인**: 공개는 도메인 이름을 **선택하지 않고 활성화만** 합니다.
-         *     플랫폼 서브도메인 이름은 신청 승인 시 관리자가 확정한 값입니다
-         *     (제품기획 §12 "승인 시 관리자 최종 부여"). 공개 요청은 노출 포트와
-         *     (선택적) 커스텀 도메인만 받습니다:
-         *     - **`customDomain` 생략**: 승인 시 확정된 플랫폼 서브도메인으로 공개합니다.
-         *       관리자가 서브도메인을 부여했으면 그 이름(kind REQUESTED), 부여하지
-         *       않았으면 `<그룹슬러그>-<4자리>.<루트도메인>` 시스템 자동 서브도메인
-         *       (kind AUTO)이 첫 공개 시 발급됩니다. 공용 Cloudflare Origin CA
-         *       와일드카드 인증서를 쓰므로 접수 즉시 라우트 적용이 진행됩니다.
-         *     - **`customDomain` 지정**: 사용자 소유 커스텀 도메인(kind CUSTOM)을
-         *       연결합니다. 소유권은 DNS TXT로 증명되는 자기서비스입니다. 접수 시
-         *       도메인·라우트는 `PENDING`으로 생성되고, 소유권(TXT)·전파(A) 검증과
-         *       인증서(Let's Encrypt) 발급이 끝나면 자동 적용됩니다. 설정할 DNS 레코드는
-         *       응답의 `domain.verification`과 `GET /domains/{domainId}`에서 안내합니다.
-         *
-         *     라우트 적용은 비동기(작업 큐 → proxy-agent desired-state 적용)이며 진행/결과는
-         *     `VmDetail.publication`(route.status PENDING→APPLIED/FAILED)으로 확인합니다.
-         *     공개는 VM 이벤트(`PUBLISH`)로 기록됩니다.
-         *
-         *     **v1 제약**: VM당 HTTP 서비스는 1개입니다. 이미 공개된 VM에 다시 호출하면
-         *     409(`PUBLICATION_ALREADY_EXISTS`) — 포트·커스텀 도메인 변경은
-         *     `PATCH /vms/{vmId}/publication`을 사용합니다. 승인 시 HTTP 공개가 허용되지
-         *     않은 VM(grantHttp=false)은 403(`VM_HTTP_NOT_GRANTED`)입니다.
-         */
-        post: operations["publishVm"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/publication": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * VM HTTP 서비스 공개 해제 (라우트 제거)
-         * @description VM의 HTTP 공개를 해제합니다. 소유 그룹의 **OWNER 또는 EDITOR**만 호출할
-         *     수 있습니다. 접수 즉시 라우트가 `desiredState: ABSENT`로 비동기 적용되어
-         *     vhost가 제거됩니다. 자동·희망 서브도메인(AUTO/REQUESTED) 도메인 행은 함께
-         *     정리되고, 커스텀 도메인은 검증 상태 보존을 위해 도메인 행은 남고 라우트만
-         *     제거됩니다(도메인 완전 삭제는 `DELETE /domains/{domainId}`). 공개 해제는
-         *     VM 이벤트(`UNPUBLISH`)로 기록됩니다. 공개되지 않은(이미 해제된) VM에
-         *     호출하면 404입니다. 적용이 진행 중일 때의 재호출은 멱등적입니다 — 라우트
-         *     generation이 증가해 이전 적용을 대체(supersede)하므로 중복 해제가 안전하게
-         *     수렴합니다.
-         */
-        delete: operations["unpublishVm"];
-        options?: never;
-        head?: never;
-        /**
-         * VM 공개 설정 변경 (포트·커스텀 도메인)
-         * @description 공개 중인 VM의 노출 포트 또는 커스텀 도메인 연결을 변경합니다. 소유 그룹의
-         *     **OWNER 또는 EDITOR**만 호출할 수 있습니다. 최소 1개 필드가 필요합니다.
-         *     **플랫폼 서브도메인 이름은 변경 대상이 아닙니다**(승인 시 확정 — 다른
-         *     서브도메인이 필요하면 재신청).
-         *
-         *     - `port`를 바꾸면 동일 도메인으로 대상 포트만 갱신되어 라우트가 재적용됩니다.
-         *     - `customDomain`을 지정하면 커스텀 도메인을 연결(재검증·인증서 발급)하고,
-         *       `null`로 주면 커스텀 도메인 연결을 해제하고 플랫폼 서브도메인 공개로
-         *       되돌립니다(이전 커스텀 vhost 제거·인증서 아카이브). SSRF 강제(대상 IP
-         *       서버 결정)는 `POST /vms/{vmId}/publish`와 동일합니다.
-         *
-         *     공개되지 않은 VM에는 404입니다. 변경은 비동기로 적용되며 결과는
-         *     `VmDetail.publication`으로 확인합니다.
-         */
-        patch: operations["updatePublication"];
-        trace?: never;
-    };
-    "/domains": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 내 도메인 목록 조회
-         * @description 내가 속한 그룹의 VM에 연결된 도메인(자동·희망 서브도메인·커스텀) 목록입니다.
-         *     최신순 정렬. 커스텀 도메인의 검증 상태(TXT/A 폴링)는 도메인 상세
-         *     (`GET /domains/{domainId}`)에서 확인합니다.
-         */
-        get: operations["listDomains"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/domains/{domainId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 도메인 ID */
-                domainId: components["parameters"]["DomainId"];
-            };
-            cookie?: never;
-        };
-        /**
-         * 도메인 상세 조회 (검증 안내 포함)
-         * @description 도메인 상세입니다. 커스텀 도메인은 설정할 DNS 레코드(A + TXT)와 현재 폴링
-         *     상태를 `verification`으로 안내합니다. 소유 그룹 구성원(VIEWER 이상)만 조회할
-         *     수 있으며, 비구성원에게는 404로 마스킹됩니다.
-         */
-        get: operations["getDomain"];
-        put?: never;
-        post?: never;
-        /**
-         * 도메인 삭제
-         * @description 도메인을 삭제합니다. 소유 그룹의 **OWNER 또는 EDITOR**만 호출할 수
-         *     있습니다. 도메인에 연결된 라우트가 있으면 함께 제거(공개 해제)되고,
-         *     커스텀 도메인의 인증서는 아카이브됩니다. vhost 제거는 비동기입니다.
-         */
-        delete: operations["deleteDomain"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/domains/{domainId}/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 도메인 ID */
-                domainId: components["parameters"]["DomainId"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 커스텀 도메인 검증 재시도
-         * @description 커스텀 도메인의 DNS 검증(TXT 소유권 + A 전파)을 즉시 다시 시도합니다.
-         *     **멱등적**입니다 — 이미 검증(ACTIVE)된 도메인에 호출해도 안전하며 현재
-         *     상태를 반환합니다. 소유 그룹의 **OWNER 또는 EDITOR**만 호출할 수 있습니다.
-         *     플랫폼 서브도메인(AUTO/REQUESTED)은 소유권 검증이 없어 409
-         *     (`DOMAIN_NOT_CUSTOM`)입니다.
-         *
-         *     도메인이 이미 `ACTIVE`이지만 **인증서가 `FAILED`**인 경우, 이 호출은
-         *     Let's Encrypt 발급을 다시 트리거합니다 — 발급이 막힌(FAILED) 인증서를
-         *     별도 오퍼레이션 없이 이 엔드포인트로 복구할 수 있습니다.
-         */
-        post: operations["verifyDomain"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 내 알림 목록 조회
-         * @description 내 인앱 알림 목록입니다. 최신순(`createdAt` desc) 정렬.
-         *     인증된 사용자라면 누구나 호출할 수 있으며 **본인 행만** 반환합니다.
-         *     `unreadOnly=true`면 읽지 않은 알림만 조회합니다.
-         */
-        get: operations["listNotifications"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications/unread-count": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 읽지 않은 알림 수 조회
-         * @description 읽지 않은 내 알림 수입니다. 콘솔 종(bell) 아이콘이 주기적으로 폴링하는 경량 엔드포인트입니다.
-         */
-        get: operations["getUnreadNotificationCount"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications/{notificationId}/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 알림 읽음 처리
-         * @description 알림 1건을 읽음 처리합니다. **멱등적**입니다 — 이미 읽은 알림에
-         *     호출해도 200이며 `readAt`은 최초 읽음 시각이 유지됩니다.
-         *     다른 사용자의 알림은 존재가 마스킹되어 404로 응답합니다.
-         */
-        post: operations["markNotificationRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/notifications/read-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 알림 전체 읽음 처리
-         * @description 읽지 않은 내 알림 전체를 읽음 처리하고 처리 건수를 반환합니다.
-         */
-        post: operations["markAllNotificationsRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] VM 신청 큐 조회
-         * @description ORG_ADMIN은 자기 기관의 신청만, SYS_ADMIN은 전체 신청을 조회합니다.
-         *     `status` 미지정 시 모든 상태의 신청을 반환합니다(승인 대기 큐 화면은
-         *     `status=SUBMITTED`를 명시적으로 전달).
-         *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다
-         *     (ORG_ADMIN은 항상 자기 기관으로 고정).
-         */
-        get: operations["listAdminVmRequests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] VM 신청 상세 조회
-         * @description ORG_ADMIN은 자기 기관 신청만 조회할 수 있습니다.
-         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
-         */
-        get: operations["getAdminVmRequest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}/context": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 승인 판단 참고 정보 조회
-         * @description 신청 상세 화면 옆에 표시되는 승인 판단 참고 정보입니다:
-         *     신청자 이력, 신청자·그룹의 현재 보유 자원, 과거 신청/결정 이력,
-         *     기관 자원 여유(오버커밋 비율·경고), 그리고 한국어 안내문(`guidance`).
-         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
-         */
-        get: operations["getApprovalContext"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [관리자] VM 신청 승인
-         * @description 신청을 승인하고 부여 사양을 확정합니다. 승인 폼은 요청 사양으로 미리 채워지며
-         *     관리자가 조정할 수 있습니다. 승인 시:
-         *
-         *     1. `vm_request_reviews` 결정 행이 생성되고,
-         *     2. `CREATING` 상태의 VM 행이 만들어지며,
-         *     3. 프로비저닝 잡이 큐에 등록됩니다.
-         *
-         *     `nodeId`를 생략하거나 null이면 자동 배치입니다.
-         *     **플랫폼 서브도메인 이름은 이 승인 단계에서 관리자가 최종 부여**합니다
-         *     (`grantedSubdomain`/`grantedRootDomain` — 신청자의 `desiredSubdomain`/
-         *     `rootDomain`이 힌트로 프리필되며 수락·변경 가능; null이면 공개 시 시스템
-         *     자동 서브도메인). 실제 DNS·라우트 발급은 퍼블리싱(`POST /vms/{vmId}/publish`)
-         *     에서 수행합니다 (제품기획 §12 "승인 시 관리자 최종 부여").
-         *     **호스트명(슬러그)도 이 승인 단계에서 확정**됩니다 (v0.12.0,
-         *     `grantedSlug` — 신청자의 `desiredSlug`가 프리필되며 수락·변경 가능;
-         *     null/공백이면 기존처럼 자동 생성). 확정된 호스트명은 불변이며 파기
-         *     후에도 재사용되지 않습니다.
-         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
-         */
-        post: operations["approveVmRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [관리자] VM 신청 반려
-         * @description 반려 사유(`comment`)는 필수이며 신청자에게 메일로 전달됩니다.
-         *     다른 기관의 신청은 404로 응답합니다 (존재 여부 비공개).
-         */
-        post: operations["rejectVmRequest"];
+        post: operations["resendAdminNotification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1729,10 +189,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * [SYS_ADMIN] 기관 생성
-         * @description SYS_ADMIN 전용입니다.
-         */
         post: operations["createOrg"];
         delete?: never;
         options?: never;
@@ -1753,302 +209,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * [SYS_ADMIN] 기관 수정
-         * @description SYS_ADMIN 전용입니다. `slug`는 변경할 수 없습니다.
-         */
         patch: operations["updateOrg"];
-        trace?: never;
-    };
-    "/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 사용자 목록 조회
-         * @description 사용자 목록·검색입니다. SYS_ADMIN은 전체 사용자를,
-         *     ORG_ADMIN은 **자기 기관에 파생 소속된 사용자만** 조회합니다
-         *     (파생 멤버십 — 기관의 신청/삭제되지 않은 VM을 가진 그룹의 구성원,
-         *     product-spec §14와 동일 기준. 감사 뷰와 같은 가시성 트레이드오프).
-         *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다.
-         */
-        get: operations["listAdminUsers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 사용자 상세 조회
-         * @description 사용자 상세입니다 — 프로필, 그룹 멤버십, 삭제되지 않은 VM 수,
-         *     상태 변경 이력(비활성화·해제·탈퇴)을 포함합니다. ORG_ADMIN은 자기
-         *     기관에 파생 소속된 사용자만 조회할 수 있습니다 (그 외 404 마스킹).
-         */
-        get: operations["getAdminUser"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * [SYS_ADMIN] 사용자 역할/기관 변경
-         * @description SYS_ADMIN 전용입니다. 사용자의 전역 역할과 관리 기관을 변경합니다.
-         *
-         *     - `role`을 `ORG_ADMIN`·`ORG_MANAGER`로 지정할 때는 `orgId`가 필수입니다
-         *       (검증 실패 시 422).
-         *     - `role`을 `USER`·`SYS_ADMIN`·`SYS_MANAGER`로 지정하면 `orgId`는
-         *       null이어야 합니다.
-         *     - 역할 변경 시 `token_version`이 올라가 해당 사용자의 기존 토큰이 무효화됩니다.
-         */
-        patch: operations["updateUserRole"];
-        trace?: never;
-    };
-    "/admin/users/{userId}/disable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [SYS_ADMIN] 사용자 비활성화
-         * @description SYS_ADMIN 전용입니다. 계정을 `DISABLED`로 전환합니다 — 즉시
-         *     모든 세션이 무효화되고(`token_version` 증가), 로그인과 SSH
-         *     게이트웨이 접근이 차단됩니다. 그룹 멤버십·VM은 그대로 유지됩니다
-         *     (해제 시 원상 복귀).
-         *
-         *     - `ACTIVE`와 `PENDING_VERIFICATION` 계정을 비활성화할 수 있습니다
-         *       (미인증 의심 계정 잠금 포함). 해제(enable) 시 **비활성화 직전
-         *       상태로 복원**되므로 이메일 인증을 우회하지 않습니다 (계약 리뷰
-         *       게이트 2026-07-18 반영).
-         *     - 사유(`reason`)는 필수이며 상태 변경 이력·감사 로그에 남습니다.
-         *     - 대상 사용자와 시스템 관리자에게 HIGH 알림(보안 조치)이 발송됩니다.
-         *     - **자기 자신은 비활성화할 수 없습니다** (409).
-         */
-        post: operations["disableUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users/{userId}/enable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [SYS_ADMIN] 사용자 비활성화 해제
-         * @description SYS_ADMIN 전용입니다. `DISABLED` 계정을 **비활성화 직전
-         *     상태로 복원**합니다 (`ACTIVE`, 또는 미인증 상태에서 비활성화된
-         *     경우 `PENDING_VERIFICATION` — 이메일 인증을 우회하지 않음).
-         *     멤버십·VM 접근이 원상 복귀되며, 상태 변경 이력·감사 로그에 남고
-         *     대상 사용자에게 알림이 발송됩니다. `WITHDRAWN` 계정은 되돌릴 수
-         *     없습니다 (409 — 탈퇴는 영구적).
-         */
-        post: operations["enableUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users/{userId}/mfa-reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [SYS_ADMIN] 사용자 2FA 초기화 (잠금 구조)
-         * @description SYS_ADMIN 전용입니다. 인증 앱·복구 코드를 모두 분실한 사용자의
-         *     2FA 등록을 삭제합니다 — 이후 해당 사용자는 비밀번호만으로 로그인할
-         *     수 있으며, 관리자 계층이라면 다음 로그인에서 재등록을 요구받습니다.
-         *
-         *     오프라인 본인 확인(신분 확인) 후에만 수행해야 하는 민감 작업입니다 —
-         *     감사 기록과 대상 사용자 HIGH 알림(보안 조치)이 남습니다.
-         */
-        post: operations["resetUserMfa"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/nodes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [SYS_ADMIN·SYS_MANAGER] 노드 현황 조회
-         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. Proxmox 노드별 용량·할당 합계·경고 임계값과
-         *     IP 풀 여유를 반환합니다. 용량·가동 수치는 상태 폴러(30초 주기)가
-         *     갱신한 값입니다. 참조성 소규모 목록이므로 배열로 반환합니다.
-         */
-        get: operations["listAdminNodes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vms": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] VM 목록 조회
-         * @description ORG_ADMIN은 자기 기관의 VM만, SYS_ADMIN은 전체 VM을 조회합니다.
-         *     `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용입니다
-         *     (ORG_ADMIN은 항상 자기 기관으로 고정).
-         */
-        get: operations["listAdminVms"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vms/{vmId}/schedule-delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [관리자] VM 일반 삭제 접수
-         * @description 관리자 주도의 일반 삭제(유예 후 파기)를 접수합니다. ORG_ADMIN은 자기 기관의 VM만
-         *     접수할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
-         *
-         *     - `scheduledFor`는 현재 시각 기준 최소 통보 기간
-         *       `settings.vm_admin_delete_min_notice_days`(기본 **7일**) 이후여야
-         *       합니다. 과거이거나 통보 기간 미만이면 422(`errors[]`)로 거부됩니다.
-         *     - 접수 즉시 사용자(그룹 구성원)에게 사유(`reason`)가 포함된 통보 메일이
-         *       발송됩니다.
-         *     - 예정 시각 도래 시 종료 후 파기됩니다(종료 시간 초과 시
-         *       강제 종료 폴백). 접수된 삭제의 취소는 관리자만
-         *       `POST /admin/vms/{vmId}/cancel-scheduled-delete`로 할 수 있습니다
-         *       (사용자 취소 불가 — 계약 상단의 삭제 취소 정책 참조).
-         *     - 본인 삭제 유예 중(`DELETING`)인 VM에는 접수할 수 없습니다(409).
-         *       관리자는 기존 삭제를 먼저 취소한 뒤 다시 접수하거나, 즉시 파기가
-         *       필요하면 `force-delete`를 사용합니다.
-         *     - **삭제 보호**: VM 설정 `deletion_protection`이 켜져 있으면
-         *       409(`VM_DELETION_PROTECTED`) — 소유자가 해제해야 접수할 수 있습니다.
-         */
-        post: operations["scheduleVmDeletion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vms/{vmId}/cancel-scheduled-delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [관리자] 대기 중인 VM 삭제 취소
-         * @description 대기 중인(아직 파기되지 않은) 삭제를 **kind와 무관하게** 취소합니다.
-         *     사용자에게는 삭제 취소 권한이 없으므로 이 오퍼레이션이 유일한 취소
-         *     수단입니다 (유예 = 관리자 복구용 안전망). ORG_ADMIN은 자기 기관의 VM만
-         *     취소할 수 있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
-         *
-         *     kind별 취소 의미:
-         *
-         *     - **SELF** (본인 삭제 유예 중): 삭제 접수 시 VM이 이미 종료되었으므로
-         *       취소 후 `STOPPED` 상태로 남습니다. 시작은 사용자가 직접
-         *       `POST /vms/{vmId}/start`로 수행합니다.
-         *     - **ADMIN** (관리자 일반 삭제): 접수만 해제되고 VM의 현재 전원 상태는 그대로
-         *       유지됩니다 (`RUNNING`이었다면 `RUNNING` 유지).
-         *     - **FORCE**: 즉시 파기되므로 취소 대상이 될 수 없습니다(항상 409).
-         *
-         *     취소 시 사용자에게 안내 메일이 발송됩니다. VM 이벤트
-         *     (`CANCEL_SCHEDULED_DELETE`)로 기록됩니다.
-         */
-        post: operations["cancelScheduledVmDeletion"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vms/{vmId}/force-delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [SYS_ADMIN] VM 강제 삭제 (즉시 파기)
-         * @description SYS_ADMIN 전용입니다. 보안 사고 등 급박한 상황에서 유예 없이 **즉시 강제
-         *     종료하고 파기**합니다. 취소할 수 없습니다.
-         *
-         *     - 오조작 방지를 위해 본문의 `confirmName`이 VM의 `name`과 정확히
-         *       일치해야 합니다. 불일치 시 409 (`VM_CONFIRM_NAME_MISMATCH`).
-         *     - `FORCE_DELETE` VM 이벤트와 별도 감사 기록이 남으며, 기관
-         *       관리자와 사용자에게 통지됩니다.
-         *     - 202 응답이 `VmDeletion`이 아니라 `MessageResponse`인 이유: 즉시
-         *       파기·취소 불가라 "접수된 삭제"(scheduledFor/cancelable)라는 표현이
-         *       성립하지 않기 때문입니다.
-         *     - **삭제 보호 (0.11.0 개정)**: VM 설정 `deletion_protection`이
-         *       켜져 있으면 강제 삭제도 기본적으로 409(`VM_DELETION_PROTECTED`)로
-         *       거부됩니다 — 보호 해제 권한은 소유 그룹 OWNER에게 있습니다. 단
-         *       **SYS_ADMIN 에스컬레이션 경로**로 `overrideProtection: true`를
-         *       명시하면 보호를 무시하고 진행할 수 있습니다 (보안 사고·소유자
-         *       비활성화 등으로 해제 주체가 없는 경우의 자원 회수 수단 — 계약
-         *       리뷰 게이트 2026-07-18 반영). 오버라이드는 감사 로그에 별도
-         *       기록되며 설정 `deletion_protection=false`를 같은 트랜잭션에
-         *       영속화합니다. Proxmox `protection` 플래그(모든 VM 상시 ON)는
-         *       파기 파이프라인이 파기 직전에 해제합니다.
-         */
-        post: operations["forceDeleteVm"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/admin/routes": {
@@ -2058,63 +219,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * [관리자] 라우트(공개 서비스) 목록 조회
-         * @description 공개된 HTTP 라우트 목록입니다. ORG_ADMIN은 자기 기관 VM의 라우트만,
-         *     SYS_ADMIN은 전체를 조회합니다. `orgId` 필터는 SYS_ADMIN의 기관 간 탐색용
-         *     입니다(ORG_ADMIN은 자기 기관으로 고정). 각 항목은 대상 VM·그룹·기관 맥락,
-         *     노출 포트, 적용 상태(PENDING/APPLIED/FAILED), proxy-agent 동기화 상태
-         *     (적용 generation·마지막 오류)를 포함합니다.
-         */
         get: operations["listAdminRoutes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/domains": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 도메인 목록 조회
-         * @description 연결된 도메인(자동·희망 서브도메인·커스텀) 목록입니다. ORG_ADMIN은 자기
-         *     기관 VM의 도메인만, SYS_ADMIN은 전체를 조회합니다. `orgId` 필터는 SYS_ADMIN의
-         *     기관 간 탐색용입니다(ORG_ADMIN은 자기 기관으로 고정). 각 항목은 대상 VM·그룹·
-         *     기관 맥락과 도메인 상태, 라우트·인증서 상태를 포함합니다. 커스텀 도메인의
-         *     검증 상태(TXT/A)는 `verifiedAt`으로, 상세 레코드는 사용자용
-         *     `GET /domains/{domainId}`에서 확인합니다.
-         */
-        get: operations["listAdminDomains"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/certificates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 인증서 목록 조회 (만료·상태)
-         * @description TLS 인증서 목록입니다(플랫폼 공용 와일드카드 + 커스텀 도메인 Let's
-         *     Encrypt). ORG_ADMIN은 자기 기관 커스텀 도메인 인증서와 공용 와일드카드를,
-         *     SYS_ADMIN은 전체를 조회합니다. 만료일(`notAfter`)·상태·갱신 실패를
-         *     포함하며, `expiringInDays`로 만료 임박분만 조회할 수 있습니다.
-         */
-        get: operations["listAdminCertificates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2132,173 +237,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * [SYS_ADMIN] 라우트 전체 재동기화(sync-all) 트리거
-         * @description DB의 전체 라우트 매니페스트를 proxy-agent에 재적용(sync-all)하도록
-         *     재동기화 잡을 접수합니다. 리버스 프록시 재구축·에이전트 상태 소실·드리프트
-         *     의심 시 운영자가 콘솔(도메인·라우팅 상세, 드리프트 리포트)에서 실행하는
-         *     수동 복구 액션입니다.
-         *
-         *     **SYS_ADMIN 전용**입니다: 매니페스트가 권위적(authoritative)이라 매니페스트에
-         *     없는 vhost는 정리되는 **플랫폼 전역** 작업이므로, 기관 범위인 ORG_ADMIN에는
-         *     허용하지 않습니다. 접수 즉시 202를 반환하고 실제 적용은 비동기이며 결과는
-         *     도메인·라우팅 상세 화면에서 확인합니다. 이 오퍼레이션은 pickle-api가
-         *     proxy-agent의 내부 `/sync-all`을 호출하도록 **트리거만** 하며,
-         *     내부 계약의 형상은 콘솔에 노출하지 않습니다.
-         */
         post: operations["resyncRoutes"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/announcements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 공지 목록 조회
-         * @description 발송된 공지 목록입니다. 최신순 정렬. 가시성은 **발송자 기관 기준**입니다:
-         *     ORG_ADMIN은 자기 기관 소속 관리자가 발송한 공지와 ALL 범위 공지를,
-         *     SYS_ADMIN은 전체를 조회합니다. (SYS_ADMIN이 특정 그룹에 발송한 공지는
-         *     해당 그룹 구성원 기관의 ORG_ADMIN에게는 이 목록에 나타나지 않습니다 —
-         *     수신자 개개인의 알림함에는 존재.)
-         */
-        get: operations["listAnnouncements"];
-        put?: never;
-        /**
-         * [관리자] 공지 발송
-         * @description 공지를 발송합니다. 수신자는 범위(`scope`) 내 `ACTIVE` 사용자입니다.
-         *     인앱 알림 행은 **동기**로 생성되고(201 응답 시점에 존재), 이메일 발송은
-         *     비동기로 처리됩니다. `recipientCount`는 실제 생성된 수신자 수입니다.
-         *
-         *     **기관 소속(파생 멤버십) 정의** — 사용자 계정은 `users.org_id`를 갖지
-         *     않으므로(기관은 신청/VM 단위 경계), 사용자 U가 기관 O에 "소속"이란:
-         *     U가 기관 O의 VM 신청 또는 삭제되지 않은 VM을 1개 이상 가진 그룹의
-         *     `ACTIVE` 구성원이거나, U가 O의 ORG_ADMIN인 경우를 뜻합니다. 이 정의는
-         *     기관 스코프가 걸리는 모든 관리자 조회·발송(`/admin/audit` 포함)에 공통
-         *     적용됩니다.
-         *
-         *     범위 규칙:
-         *     - `ALL`(전체 공지)은 **SYS_ADMIN 전용**입니다 — ORG_ADMIN이 요청하면 403.
-         *     - ORG_ADMIN의 `ORG` 범위는 자기 기관으로 고정됩니다 — 본문 `orgId`는
-         *       생략하거나 자기 기관과 일치해야 하며, 다르면 422. 수신자는 위 정의의
-         *       기관 소속 `ACTIVE` 사용자 전원입니다.
-         *     - `GROUP` 범위에서 ORG_ADMIN은 **자기 기관의 신청/VM을 가진 그룹**만
-         *       대상으로 할 수 있습니다 — 아니면 404 (존재 여부 비공개). 게이트를
-         *       통과한 그룹의 `ACTIVE` 구성원 전원이 수신자입니다(그룹은 그 기관의
-         *       업무 단위 — 구성원 개인별 추가 필터 없음). SYS_ADMIN의 `GROUP` 발송은
-         *       기관과 무관하게 그룹 구성원 전원이 수신자입니다.
-         *     - scope와 대상 필드가 맞지 않으면(예 `ORG`인데 `groupId` 지정,
-         *       `GROUP`인데 `groupId` 누락) 422.
-         *     - 남용 방지: 작성자당 **시간당 10건** 발송 제한 — 초과 시 429
-         *       (`Retry-After` 헤더 포함).
-         */
-        post: operations["createAnnouncement"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 그룹 선택지 목록 조회
-         * @description 공지 작성 화면의 그룹 선택기에 사용하는 그룹 참조 목록입니다.
-         *     ORG_ADMIN은 **자기 기관의 신청/VM을 가진 그룹**만(파생 멤버십 정의 —
-         *     `POST /admin/announcements` 참조), SYS_ADMIN은 전체를 조회합니다.
-         *     `memberCount`는 그룹 `ACTIVE` 구성원 전체 수입니다. `orgId` 필터는
-         *     SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를 지정하면 404로
-         *     응답합니다 (존재 여부 비공개).
-         *     참조성 소규모 목록이므로 배열로 반환합니다 (orgs/templates 규약과 동일).
-         */
-        get: operations["listAdminGroups"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [SYS_ADMIN] 알림 발송 로그 조회
-         * @description SYS_ADMIN 전용입니다. 알림 발송(이메일 채널) 로그 목록입니다. 최신순
-         *     정렬. 수신자·이벤트·상태로 필터링해 발송 실패를 추적하고, `FAILED`
-         *     건은 `POST /admin/notifications/{notificationId}/resend`로 재발송합니다.
-         */
-        get: operations["listAdminNotifications"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/notifications/{notificationId}/resend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [SYS_ADMIN] 알림 이메일 재발송
-         * @description SYS_ADMIN 전용입니다. 발송 실패(`FAILED`) 상태의 알림 이메일만 재발송할
-         *     수 있습니다 — 그 외 상태는 409 (`NOTIFICATION_NOT_RESENDABLE`).
-         *     접수 즉시 202를 반환하고 발송은 비동기로 처리되며, 결과는 발송 로그의
-         *     `status`/`attempts`/`lastError`로 확인합니다. 재발송은 **단발 재시도**
-         *     입니다 — 시도 횟수(`attempts`)를 초기화하지 않으므로 1회 시도 후
-         *     실패하면 즉시 다시 `FAILED`가 됩니다(자동 백오프 재시도 없음).
-         */
-        post: operations["resendAdminNotification"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 감사 로그 조회
-         * @description 감사 로그 목록입니다. 최신순 정렬. ORG_ADMIN은 **행위자(actor)가 자기
-         *     기관 소속인 행만** 조회할 수 있고(기관 소속 = 파생 멤버십 정의:
-         *     기관의 신청/삭제되지 않은 VM을 가진 그룹의 `ACTIVE` 구성원 또는 그
-         *     기관의 ORG_ADMIN — `POST /admin/announcements` 참조), SYS_ADMIN은
-         *     전체를 조회합니다.
-         *     `orgId` 필터는 SYS_ADMIN 전용이며, ORG_ADMIN이 다른 기관의 `orgId`를
-         *     지정하면 404로 응답합니다 (존재 여부 비공개). `detail`은 화이트리스트된
-         *     필드만 포함합니다.
-         */
-        get: operations["listAuditLogs"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2312,12 +251,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * [SYS_ADMIN·SYS_MANAGER] 운영 설정 목록 조회
-         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. `settings`의 운영 설정 전체 목록입니다.
-         *     `editable=false`인 키는 조회 전용입니다(수정 시도 시 404).
-         *     참조성 소규모 목록이므로 배열로 반환합니다.
-         */
         get: operations["listSettings"];
         put?: never;
         post?: never;
@@ -2335,14 +268,39 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * [SYS_ADMIN] 운영 설정 수정
-         * @description SYS_ADMIN 전용입니다. 설정 값을 수정합니다. 알 수 없는 키 또는 수정
-         *     불가(`editable=false`) 키는 404, 값 타입·범위 검증 실패는 422입니다.
-         *     모든 변경은 감사 로그에 기록됩니다. SSH 게이트웨이 킬 스위치
-         *     (`ssh_gateway_enabled`)도 이 엔드포인트로 제어합니다.
-         */
         put: operations["updateSetting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/system-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSystemSummary"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -2357,14 +315,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * [SYS_ADMIN·SYS_MANAGER] 작업(태스크) 큐 조회
-         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. VM 비동기 작업(프로비저닝/삭제/재설치) 큐
-         *     목록입니다. `updatedAt` 내림차순(동률 시 `id` 내림차순) 정렬 —
-         *     NEEDS_ADMIN 분류 화면에 맞춘 최근 갱신 우선. `NEEDS_ADMIN` 작업의
-         *     원인 확인과 재시도(`POST /admin/tasks/{taskId}/retry`) 화면에서
-         *     사용합니다.
-         */
         get: operations["listAdminTasks"];
         put?: never;
         post?: never;
@@ -2383,13 +333,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * [SYS_ADMIN] 작업 재시도
-         * @description SYS_ADMIN 전용입니다. 재시도 소진으로 파킹된 `NEEDS_ADMIN` 상태의
-         *     작업만 재시도할 수 있습니다 — 그 외 상태는 409 (`TASK_NOT_RETRYABLE`).
-         *     접수 즉시 202를 반환하고 작업 큐에서 비동기로 처리되며, 진행/결과는
-         *     작업 목록과 `VmDetail.provisioning`으로 확인합니다.
-         */
         post: operations["retryAdminTask"];
         delete?: never;
         options?: never;
@@ -2397,20 +340,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/drift-findings": {
+    "/admin/terminal-sessions": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * [SYS_ADMIN·SYS_MANAGER] 드리프트 리포트 조회
-         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. 조정자(reconciler)가 감지한 DB↔Proxmox 드리프트
-         *     발견 목록입니다. 최신순 정렬. 발견이 더 이상 관측되지 않으면 조정자가
-         *     자동 해결 처리합니다(`resolvedBy*` = null).
-         */
-        get: operations["listDriftFindings"];
+        get: operations["listAdminTerminalSessions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2419,7 +356,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/drift-findings/{findingId}/resolve": {
+    "/admin/terminal-sessions/{sessionId}/terminate": {
         parameters: {
             query?: never;
             header?: never;
@@ -2428,36 +365,21 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * [SYS_ADMIN] 드리프트 발견 해결 처리
-         * @description SYS_ADMIN 전용입니다. `OPEN` 상태의 발견을 수동으로 해결 처리합니다
-         *     (해결 메모 선택). 이미 해결된 발견은 409
-         *     (`DRIFT_FINDING_ALREADY_RESOLVED`).
-         */
-        post: operations["resolveDriftFinding"];
+        post: operations["terminateTerminalSession"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/summary": {
+    "/admin/users": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * [관리자] 기관 대시보드 요약 조회
-         * @description 관리자 대시보드의 기관 요약입니다. ORG_ADMIN은 자기 기관으로 고정되고,
-         *     `orgId` 파라미터는 SYS_ADMIN의 기관 드릴인 전용입니다 — ORG_ADMIN이
-         *     다른 기관의 `orgId`를 지정하면 404로 응답합니다 (존재 여부 비공개).
-         *     **SYS_ADMIN이 `orgId`를 지정하지 않으면 전체(모든 기관) 집계**를
-         *     반환합니다 — 같은 응답 형태로 플랫폼 전역 카운트·자원 합산을 담습니다
-         *     (2026-07-13 정합 결정: 콘솔 대시보드가 역할 무관 동일 호출을 사용).
-         */
-        get: operations["getAdminSummary"];
+        get: operations["listUsers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2466,19 +388,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/system-summary": {
+    "/admin/users/{userId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * [SYS_ADMIN] 시스템 대시보드 요약 조회
-         * @description SYS_ADMIN 전용입니다. 노드·작업 큐·알림 발송 실패·인증서 만료 임박·
-         *     드리프트·IP 풀 여유 등 플랫폼 전반의 시스템 요약입니다.
-         */
-        get: operations["getSystemSummary"];
+        get: operations["getUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateUser"];
+        trace?: never;
+    };
+    "/admin/users/{userId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disableUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enableUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/mfa-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resetUserMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vm-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminVmRequests"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2487,21 +468,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/ip-allocations": {
+    "/admin/vm-requests/{requestId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * [SYS_ADMIN·SYS_MANAGER] IP 할당 현황 조회
-         * @description SYS_ADMIN·SYS_MANAGER 조회 전용입니다. IP 풀별 할당/해제 현황 목록입니다. 최신순 정렬.
-         *     해제(RELEASED)된 행도 이력으로 남습니다.
-         */
-        get: operations["listIpAllocations"];
+        get: operations["getAdminVmRequest"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vm-requests/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveVmRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vm-requests/{requestId}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApprovalContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vm-requests/{requestId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectVmRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminVms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms/{vmId}/cancel-scheduled-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelScheduledVmDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vms/{vmId}/force-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["forceDeleteVm"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2521,56 +593,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * [관리자] VM 사용 기간 변경 (만료 연장)
-         * @description VM의 사용 기간을 변경합니다. **동기 DB 반영**이므로 202가 아니라 200과
-         *     갱신된 VM 상세를 반환합니다. ORG_ADMIN은 자기 기관의 VM만 변경할 수
-         *     있으며, 다른 기관의 VM은 404로 응답합니다 (존재 여부 비공개).
-         *
-         *     - `endDate`는 **포함(inclusive)** 종료일입니다 — VM은 `endDate` 당일까지
-         *       사용 가능하며, 만료 자동 종료는 다음 날 00:00 KST 이후 수행됩니다.
-         *     - 변경 시 만료 마커(`expiryStoppedAt`, 만료 안내 단계)가 초기화되어
-         *       만료로 자동 종료된 VM도 다시 시작할 수 있게 됩니다
-         *       (`POST /vms/{vmId}/start`의 `VM_EXPIRED` 거부 해제).
-         *     - `endDate`가 과거(KST 기준)이거나 `startDate`보다 이르면 422.
-         *     - `DELETED`/`DELETING` 상태이거나 삭제가 접수된 VM은 기간을
-         *       변경할 수 없습니다 — 409 (`VM_INVALID_STATE`).
-         *     - VM 이벤트(`PERIOD_UPDATE`)와 감사 로그에 기록됩니다.
-         */
         patch: operations["updateVmPeriod"];
         trace?: never;
     };
-    "/admin/terminal-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * [관리자] 라이브 웹 터미널 세션 목록
-         * @description 현재 진행 중인 웹 터미널 세션 목록입니다. SYS_ADMIN·
-         *     SYS_MANAGER는 전체를, ORG_ADMIN·ORG_MANAGER는 **자기 기관 VM의
-         *     세션만** 조회합니다.
-         *
-         *     - 세션은 브리지(LXC 102)가 `session-start`/`session-end`로 역보고한
-         *       **인메모리 미러** 기준입니다 — 티켓만 발급되고 아직 접속하지 않은
-         *       건은 나타나지 않습니다. api 재시작 시 미러는 비워지며, 진행 중이던
-         *       세션은 다음 재검증 폴(60초)에서 fail-closed로 종료됩니다(브라우저
-         *       종료 코드 1001 — 재연결 안내).
-         *     - 라이브 세션 수는 항상 소규모(사용자당 3·VM당 5 상한)이므로 페이지
-         *       없이 배열로 반환합니다.
-         */
-        get: operations["listAdminTerminalSessions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/terminal-sessions/{sessionId}/terminate": {
+    "/admin/vms/{vmId}/schedule-delete": {
         parameters: {
             query?: never;
             header?: never;
@@ -2579,17 +605,887 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * [SYS_ADMIN] 웹 터미널 세션 강제 종료
-         * @description SYS_ADMIN 전용입니다. 라이브 세션이면 터미널 브리지에 종료를 지시해
-         *     사용자 브라우저 연결이 즉시 닫히고(종료 코드 4002) 감사
-         *     `terminal.force_terminate`가 남습니다.
-         *
-         *     **멱등**: 이미 종료되었거나 알 수 없는 세션 ID도 204를 반환합니다
-         *     (세션은 인메모리라 종료 후 ID가 곧 사라지므로, 재시도가 항상
-         *     안전하도록 no-op 처리합니다 — 이 경우 감사는 남지 않습니다).
-         */
-        post: operations["terminateTerminalSession"];
+        post: operations["scheduleVmDeletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password-reset/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resendVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["signup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDomain"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteDomain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/domains/{domainId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listGroups"];
+        put?: never;
+        post: operations["createGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGroup"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteGroup"];
+        options?: never;
+        head?: never;
+        patch: operations["updateGroup"];
+        trace?: never;
+    };
+    "/groups/{groupId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["addGroupMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeGroupMember"];
+        options?: never;
+        head?: never;
+        patch: operations["updateGroupMember"];
+        trace?: never;
+    };
+    "/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMyConsents"];
+        put?: never;
+        post: operations["acceptConsents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["regenerateRecoveryCodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["begin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/mfa/totp/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["changePassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listKeys"];
+        put?: never;
+        post: operations["registerKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["generateKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/ssh-keys/{keyId}/private-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["downloadPrivateKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["withdraw"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/request-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["requestOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["systemStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listTerms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/terms/{docType}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTerms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getUnreadNotificationCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOrgs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vm-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVmRequests"];
+        put?: never;
+        post: operations["createVmRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vm-requests/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVmRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vm-requests/{requestId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelVmRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVms"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVm"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteVm"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVmEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/force-stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["forceStopVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["revealVmPassword"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/password/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["regenerateVmPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unpublishVm"];
+        options?: never;
+        head?: never;
+        patch: operations["updatePublication"];
+        trace?: never;
+    };
+    "/vms/{vmId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["publishVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/reboot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rebootVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVmSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateVmSettings"];
+        trace?: never;
+    };
+    "/vms/{vmId}/shutdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["shutdownVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/terminal-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTerminalSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2600,2580 +1496,1512 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description RFC 9457 Problem Details + Pickle 확장 필드 (`code`, `errors`) */
-        Problem: {
-            /**
-             * Format: uri-reference
-             * @description 문제 유형 URI (기본값 `about:blank`)
-             * @default about:blank
-             */
-            type: string;
-            /** @description 사람이 읽는 짧은 제목 (한국어) */
-            title: string;
-            /** @description HTTP 상태 코드 */
-            status: number;
-            /** @description 이 발생 건에 대한 설명 (한국어, 최종 사용자에게 표시 가능) */
-            detail?: string;
-            /**
-             * Format: uri-reference
-             * @description 문제가 발생한 요청 경로
-             */
-            instance?: string;
-            /**
-             * @description 안정적인 기계 판독용 오류 코드. 클라이언트 분기는 status가 아니라
-             *     이 값 기준. 등록된 코드 목록 (오류 코드 등록부):
-             *
-             *     - 공통: `VALIDATION_FAILED`, `ACCESS_DENIED`, `RESOURCE_NOT_FOUND`,
-             *       `RATE_LIMITED`
-             *     - 인증: `AUTH_EMAIL_ALREADY_REGISTERED`,
-             *       `AUTH_VERIFICATION_TOKEN_EXPIRED`, `AUTH_INVALID_CREDENTIALS`,
-             *       `AUTH_EMAIL_NOT_VERIFIED`, `AUTH_TOKEN_INVALID`,
-             *       `AUTH_REFRESH_TOKEN_INVALID`, `AUTH_CSRF_INVALID`
-             *     - 그룹: `GROUP_SLUG_DUPLICATE`, `GROUP_MEMBER_MANAGE_FORBIDDEN`,
-             *       `GROUP_MEMBER_USER_NOT_FOUND`, `GROUP_MEMBER_ALREADY_EXISTS`,
-             *       `GROUP_SOLE_OWNER_REMOVAL`, `GROUP_ROLE_INSUFFICIENT`
-             *     - 신청: `REQUEST_ALREADY_DECIDED`
-             *     - 기관: `ORG_SLUG_DUPLICATE`
-             *     - VM: `VM_INVALID_STATE`, `VM_CONFIRM_NAME_MISMATCH`,
-             *       `VM_PASSWORD_ALREADY_VIEWED`
-             *     - 공개/도메인: `PUBLICATION_ALREADY_EXISTS`,
-             *       `VM_HTTP_NOT_GRANTED`, `DOMAIN_FQDN_TAKEN`, `DOMAIN_NOT_CUSTOM`
-             *       (그 외 공개/도메인 오류는 공통 코드 재사용 — 상태 충돌
-             *       `VM_INVALID_STATE`, 권한 `GROUP_ROLE_INSUFFICIENT`/`ACCESS_DENIED`,
-             *       마스킹·미공개 `RESOURCE_NOT_FOUND`, 필드 검증(포트 범위·22 거부·예약어·
-             *       비속어·FQDN 형식, 그리고 **커스텀 도메인이 단일 라벨이거나
-             *       `allowedRootDomains`·플랫폼 관리 존 하위인 경우**의 스쿼팅 방지 거부)
-             *       `VALIDATION_FAILED`)
-             *     - 운영: `VM_EXPIRED`(만료 자동 종료 VM의 시작 거부 —
-             *       관리자 기간 연장 필요), `TASK_NOT_RETRYABLE`,
-             *       `DRIFT_FINDING_ALREADY_RESOLVED`, `NOTIFICATION_NOT_RESENDABLE`
-             *       (그 외 오류는 공통 코드 재사용 — 알 수 없는/수정 불가 설정 키·
-             *       타 기관 리소스·타인 알림 마스킹 `RESOURCE_NOT_FOUND`,
-             *       권한 `ACCESS_DENIED`, 값 검증 `VALIDATION_FAILED`)
-             *     - SSH 키/VM 설정: `SSH_KEY_DUPLICATE`(지문 전역 중복 —
-             *       소유자 비노출), `SSH_KEY_LIMIT_EXCEEDED`(사용자당 10개 초과)
-             *       (그 외 오류는 공통 코드 재사용 — 키 파싱·미지원 타입·설정
-             *       값 검증 `VALIDATION_FAILED`, 설정 변경·비밀번호 열람/재생성 권한
-             *       `GROUP_ROLE_INSUFFICIENT`, 타인 키·개인키 없음·비구성원 마스킹
-             *       `RESOURCE_NOT_FOUND`, 상태 충돌 `VM_INVALID_STATE`)
-             *     - 계정: `AUTH_PASSWORD_MISMATCH`(재인증 실패 —
-             *       비밀번호 변경·탈퇴·2FA 등록의 본인 확인),
-             *       `AUTH_RESET_TOKEN_EXPIRED`(재설정 링크 만료·사용·무효화),
-             *       `ACCOUNT_HAS_ACTIVE_VMS`·`ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP`
-             *       (탈퇴 차단), `ACCOUNT_SELF_DISABLE_FORBIDDEN`(본인 비활성화
-             *       거부), `ACCOUNT_NOT_DISABLED`(활성화 전환 불가 — WITHDRAWN
-             *       포함), `ACCOUNT_INVALID_STATE`(비활성화 대상이 이미
-             *       DISABLED/WITHDRAWN)
-             *     - 2FA: `AUTH_MFA_CODE_INVALID`(TOTP/복구 코드 불일치),
-             *       `AUTH_MFA_TOKEN_EXPIRED`(스텝업 토큰 만료·재사용),
-             *       `MFA_ALREADY_ENROLLED`, `MFA_NOT_ENROLLED`,
-             *       `MFA_SETUP_NOT_IN_PROGRESS`,
-             *       `MFA_ENROLLMENT_REQUIRED`(프로덕션 관리자 계층 미등록 —
-             *       등록·인증 op 외 전부 403, 콘솔은 등록 마법사로 유도)
-             *     - 약관/점검: `CONSENT_VERSION_MISMATCH`(개정판 재동의
-             *       필요 — 최신 문서 재표시), `MAINTENANCE_MODE`(점검 중 —
-             *       비관리자 503)
-             *     - 그룹/VM 설정: `GROUP_HAS_ACTIVE_VMS`·
-             *       `GROUP_PERSONAL_UNDELETABLE`(그룹 삭제 차단),
-             *       `VM_DELETION_PROTECTED`(삭제 보호 설정 켜짐 — 본인·관리자
-             *       일반·강제 삭제 전부 거부, 해제 후 재시도. 단 SYS_ADMIN
-             *       강제 삭제는 `overrideProtection: true`로 명시 오버라이드 가능
-             *       — 감사 기록),
-             *       `VM_STOP_PROTECTED`(중지 보호 — MEMBER의 종료/재부팅/강제
-             *       종료 거부, EDITOR 이상만 가능)
-             *     - 웹 터미널: `TERMINAL_DISABLED`(전역 킬 스위치
-             *       `web_terminal_enabled` 꺼짐 — 503),
-             *       `TERMINAL_SESSION_LIMIT`(동시 세션 상한 초과 — 사용자당 3·
-             *       VM당 5·기관당 상한, 409)
-             *       (그 외 오류는 공통 코드 재사용 — 비구성원·미존재 VM 마스킹
-             *       `RESOURCE_NOT_FOUND`, 열람자(VIEWER) 권한 부족
-             *       `GROUP_ROLE_INSUFFICIENT`, RUNNING 아님 `VM_INVALID_STATE`,
-             *       관리자 접근 차단 `ACCESS_DENIED`, 발급 빈도 `RATE_LIMITED`)
-             * @example AUTH_INVALID_CREDENTIALS
-             */
+        ActivateMfaRequest: {
             code: string;
-            /** @description 필드 단위 검증 오류 목록 (422에서 사용) */
-            errors?: {
-                /** @description 오류가 난 요청 필드 (camelCase, 점 표기 중첩 허용) */
-                field: string;
-                /** @description 필드별 오류 메시지 (한국어) */
-                message: string;
-            }[];
         };
-        MessageResponse: {
-            /** @description 사용자에게 표시할 안내 메시지 (한국어) */
-            message: string;
-        };
-        /** @description 웹 터미널 1회용 접속 티켓. 티켓은 발급 계정·대상 VM에 바인딩되며 `expiresAt`까지 단 한 번만 교환할 수 있습니다. */
-        TerminalSessionTicketResponse: {
-            /**
-             * Format: uuid
-             * @description 세션 ID — 감사·관리자 목록·강제 종료에서 쓰이는 식별자
-             */
-            sessionId: string;
-            /** @description 불투명 1회용 티켓 (256-bit 난수, base64url). WebSocket 핸드셰이크의 `Sec-WebSocket-Protocol` 2번째 요소에 `ticket.<값>` 형태로만 전달합니다. 저장·로그 금지. */
-            ticket: string;
-            /**
-             * @description 같은 오리진 WebSocket 경로. 콘솔은 `wss://<현재 호스트><wsPath>`로 접속합니다.
-             * @constant
-             */
-            wsPath: "/terminal/ws";
-            /**
-             * @description 핸드셰이크 1번째 요소이자 서버가 에코하는 고정 서브프로토콜명
-             * @constant
-             */
-            subprotocol: "pickle.terminal.v1";
-            /**
-             * Format: date-time
-             * @description 티켓 만료 시각 (발급 후 약 60초)
-             */
-            expiresAt: string;
-        };
-        /** @description 라이브 웹 터미널 세션 (관리자 뷰). 브리지가 역보고한 인메모리 미러 기준이며 터미널 내용은 포함하지 않습니다. */
-        TerminalSessionView: {
-            /** Format: uuid */
-            sessionId: string;
-            /** Format: int64 */
-            vmId: number;
-            /** @description VM 이름 (사용자 지정 표시명이 있으면 콘솔에서 병기) */
-            vmName: string;
-            /**
-             * Format: int64
-             * @description VM 소유 기관 ID (ORG 계층 범위 제한 기준)
-             */
-            orgId: number;
-            orgName: string;
-            /** @description VM 소유 그룹 이름 */
-            groupName: string;
-            /**
-             * Format: int64
-             * @description 세션 사용자 ID
-             */
-            userId: number;
-            userEmail: string;
-            userName: string;
-            /** @description 접속 클라이언트 IP (브리지가 보고, 감사와 동일 값) */
-            clientIp: string;
-            /**
-             * Format: date-time
-             * @description WebSocket 세션 시작 시각
-             */
-            startedAt: string;
-        };
-        /**
-         * @description 전역 사용자 역할. 축소 권한 부관리자 계층 포함 —
-         *     `ORG_MANAGER`(기관 운영자, ORG_ADMIN 하위)·`SYS_MANAGER`(시스템
-         *     운영자, SYS_ADMIN 하위): 조회·일상 운영 중심이며 위험 작업(강제
-         *     삭제·킬 스위치·역할 변경·비활성화 등)은 상위 관리자 전용입니다.
-         *     역할별 상세 허용 표는 운영자 확정 권한 매트릭스를 따릅니다.
-         * @enum {string}
-         */
-        UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
-        /**
-         * @description 계정 상태
-         * @enum {string}
-         */
-        UserStatus: "PENDING_VERIFICATION" | "ACTIVE" | "DISABLED" | "WITHDRAWN";
-        /**
-         * @description 그룹 종류 (PERSONAL은 가입 시 자동 생성)
-         * @enum {string}
-         */
-        GroupKind: "PERSONAL" | "TEAM" | "PROJECT";
-        /**
-         * @description 그룹 내 역할
-         * @enum {string}
-         */
-        GroupMemberRole: "OWNER" | "EDITOR" | "MEMBER" | "VIEWER";
-        /**
-         * @description VM 신청 상태
-         * @enum {string}
-         */
-        VmRequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
-        /**
-         * @description VM 상태 (실제 Proxmox 프로비저닝: CREATING → RUNNING,
-         *     삭제 흐름은 DELETING → 유예 후 DELETED).
-         *
-         *     - **NEEDS_ADMIN**: 프로비저닝/삭제 파이프라인이 재시도를 소진하고
-         *       파킹된 상태. 사용자 전원·삭제 op는 전부 409이며, 관리자가
-         *       대시보드에서 원인 확인·재실행으로 복구하면 원래 상태로 복귀합니다.
-         *     - **ERROR**: 생성 실패 후 보상(부분 자원 정리)이 완료되어 하부 VM이
-         *       존재하지 않는 **터미널 상태**. 유일하게 허용되는 op는
-         *       `DELETE /vms/{vmId}`이며, 파기할 실체가 없으므로 유예 없이 즉시
-         *       `DELETED`로 전이됩니다.
-         * @enum {string}
-         */
-        VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";
-        /**
-         * @description 승인 결정
-         * @enum {string}
-         */
-        ReviewDecision: "APPROVE" | "REJECT";
-        /**
-         * @description 기관 상태
-         * @enum {string}
-         */
-        OrgStatus: "ACTIVE" | "DISABLED";
-        /**
-         * @description 템플릿 상태 (버전 갱신 시 이전 버전은 DISABLED로 보존)
-         * @enum {string}
-         */
-        TemplateStatus: "ACTIVE" | "DISABLED";
-        SignupRequest: {
-            /**
-             * Format: email
-             * @description 부산대학교 이메일만 허용
-             */
-            email: string;
-            /**
-             * Format: password
-             * @description 최소 10자. 흔한/약한 비밀번호는 서버에서 추가 검사 후 거부(422).
-             */
-            password: string;
-            /** @description 표시 이름 */
-            name: string;
-            /** @description 약관 동의 목록 — **현행 문서 전체**(현재 이용약관· 개인정보처리방침 2종)의 현행 버전에 동의해야 가입할 수 있습니다. 완전성 검증은 서버가 수행합니다 (`GET /meta/terms`의 목록과 대조 — 누락·버전 불일치는 422; minItems는 문서 수를 하드코딩하지 않습니다). 동의 시각은 서버가 기록합니다. */
-            consents: components["schemas"]["ConsentInput"][];
-        };
-        LoginRequest: {
-            /** Format: email */
-            email: string;
-            /** Format: password */
-            password: string;
-        };
-        AuthTokenResponse: {
-            /** @description JWT 액세스 토큰 (15분 만료). `Authorization Bearer` 헤더로 전송. */
-            accessToken: string;
-            user: components["schemas"]["UserSummary"];
-        };
-        UserSummary: {
-            /** Format: int64 */
-            id: number;
-            /** Format: email */
-            email: string;
-            name: string;
-            role: components["schemas"]["UserRole"];
-        };
-        UserProfile: {
-            /** Format: int64 */
-            id: number;
-            /** Format: email */
-            email: string;
-            name: string;
-            role: components["schemas"]["UserRole"];
-            /**
-             * Format: int64
-             * @description ORG_ADMIN이 관리하는 기관 ID (그 외 역할은 null)
-             */
-            orgId?: number | null;
-            status: components["schemas"]["UserStatus"];
-            /** @description 내가 속한 그룹 멤버십 목록 */
-            memberships: {
-                /** Format: int64 */
-                groupId: number;
-                groupName: string;
-                groupKind: components["schemas"]["GroupKind"];
-                role: components["schemas"]["GroupMemberRole"];
-            }[];
-            /** @description 2FA(TOTP) 활성화 여부 */
-            mfaEnabled: boolean;
-            /** @description 재동의가 필요한 약관 개정판 목록 — 비어 있지 않으면 콘솔이 동의 화면을 표시하고 `POST /me/consents`로 동의를 기록합니다. 가입 이후 문서가 개정된 경우에만 나타납니다. */
-            pendingConsents: components["schemas"]["TermsVersionView"][];
-        };
-        /** @description 2FA 계정의 로그인 1단계 응답 — 토큰·쿠키는 발급되지 않으며, `POST /auth/mfa`에 `mfaToken`과 TOTP/복구 코드를 제출해야 로그인이 완료됩니다. `AuthTokenResponse`와는 `mfaRequired` 필드 유무로 구분합니다. */
-        MfaChallengeResponse: {
-            /** @constant */
-            mfaRequired: true;
-            /** @description 5분 유효·1회용 스텝업 토큰 */
-            mfaToken: string;
-        };
-        /** @description TOTP 등록 시작 응답 — 이 응답 외에는 시크릿이 다시 노출되지 않습니다. */
-        MfaSetupResponse: {
-            /** @description TOTP 시크릿 (Base32) — 인증 앱 수동 입력용 */
-            secret: string;
-            /** @description `otpauth://totp/...` URI — 콘솔이 QR 코드로 렌더 */
-            otpauthUri: string;
-        };
-        /** @description 복구 코드 발급 응답 — **이 응답에서 단 한 번만** 노출됩니다. 각 코드는 1회용이며, 재발급 시 기존 코드는 전부 무효화됩니다. */
-        MfaRecoveryCodesResponse: {
-            recoveryCodes: string[];
-        };
-        /** @description 관리자 사용자 목록 항목 */
-        UserAdminView: {
-            /** Format: int64 */
-            id: number;
-            /** Format: email */
-            email: string;
-            name: string;
-            role: components["schemas"]["UserRole"];
-            /**
-             * Format: int64
-             * @description 관리 기관 ID (ORG_ADMIN/ORG_MANAGER 외 null)
-             */
-            orgId?: number | null;
-            status: components["schemas"]["UserStatus"];
-            /** @description 2FA(TOTP) 활성화 여부 */
-            mfaEnabled: boolean;
-            /**
-             * Format: date-time
-             * @description 가입(계정 생성) 시각
-             */
-            createdAt: string;
-        };
-        /** @description 계정 상태 변경 이력 항목 (비활성화/해제/탈퇴) */
-        UserStatusChange: {
-            fromStatus: components["schemas"]["UserStatus"];
-            toStatus: components["schemas"]["UserStatus"];
-            /**
-             * Format: int64
-             * @description 수행 관리자 ID (본인 탈퇴는 본인 ID)
-             */
-            actorId?: number | null;
-            /** @description 수행자 이메일 */
-            actorEmail?: string | null;
-            /** @description 사유 (비활성화 시 필수 입력값 — 그 외 null 가능) */
-            reason?: string | null;
-            /** Format: date-time */
-            changedAt: string;
-        };
-        UserAdminDetail: components["schemas"]["UserAdminView"] & {
-            /**
-             * Format: date-time
-             * @description 탈퇴 시각 (WITHDRAWN 외 null)
-             */
-            withdrawnAt?: string | null;
-            /**
-             * Format: date-time
-             * @description 비활성화 시각 (DISABLED 외 null)
-             */
-            disabledAt?: string | null;
-            /** @description 비활성화 사유 (DISABLED 외 null) */
-            disabledReason?: string | null;
-            /** @description 그룹 멤버십 목록 (UserProfile과 동일 형식) */
-            memberships: {
-                /** Format: int64 */
-                groupId: number;
-                groupName: string;
-                groupKind: components["schemas"]["GroupKind"];
-                role: components["schemas"]["GroupMemberRole"];
-            }[];
-            /** @description 구성원인 그룹들이 보유한 삭제되지 않은 VM 수 */
-            activeVmCount: number;
-            /** @description 상태 변경 이력 (최신순) */
-            statusChanges: components["schemas"]["UserStatusChange"][];
-        };
-        UserAdminPage: {
-            content: components["schemas"]["UserAdminView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /**
-         * @description 약관 문서 종류
-         * @enum {string}
-         */
-        TermsDocType: "TERMS_OF_SERVICE" | "PRIVACY_POLICY";
-        /** @description 약관 문서 버전 메타데이터 */
-        TermsVersionView: {
-            docType: components["schemas"]["TermsDocType"];
-            /** @description 버전 번호 (개정마다 1씩 증가) */
-            version: number;
-            /** @description 문서 제목 (한국어) */
-            title: string;
-            /**
-             * Format: date-time
-             * @description 시행일
-             */
-            effectiveAt: string;
-        };
-        TermsDocumentView: components["schemas"]["TermsVersionView"] & {
-            /** @description 문서 전문 (마크다운, 한국어) */
-            body: string;
-        };
-        /** @description 약관 동의 이력 항목 */
-        ConsentView: {
-            docType: components["schemas"]["TermsDocType"];
-            version: number;
-            /** Format: date-time */
-            consentedAt: string;
-        };
-        /** @description 동의 제출 항목 (가입·재동의 공용) */
-        ConsentInput: {
-            docType: components["schemas"]["TermsDocType"];
-            /** @description 동의하는 문서 버전 (현행 버전이어야 함) */
-            version: number;
-        };
-        ConsentUpdateRequest: {
-            /** @description 동의할 문서·버전 목록 (버전은 현행 버전이어야 함) */
-            consents: components["schemas"]["ConsentInput"][];
-        };
-        /** @description 공개 시스템 상태 (점검 모드·배너·문의처) */
-        SystemStatusResponse: {
-            /** @description 점검 모드 여부 (true면 비관리자 요청 503) */
-            maintenance: boolean;
-            /** @description 점검 안내 문구 (점검 모드 아니거나 미설정 시 null) */
-            maintenanceMessage: string | null;
-            /** @description 전역 공지 배너 문구 (점검 모드와 독립 — 콘솔 상단 배너로 표시, 미설정 시 null) */
-            bannerMessage: string | null;
-            /** @description 운영 문의 이메일 (콘솔 푸터·오류 화면에 표시, 미설정 시 null) */
-            contactEmail: string | null;
-        };
-        OrgSummary: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            slug: string;
-            description?: string | null;
-            status: components["schemas"]["OrgStatus"];
-        };
-        OrgDetail: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            slug: string;
-            description?: string | null;
-            status: components["schemas"]["OrgStatus"];
+        ActivityEntryResponse: {
+            action: string;
             /** Format: date-time */
             createdAt: string;
-        };
-        VmTemplate: {
+            detail?: unknown;
             /** Format: int64 */
             id: number;
-            /** @description 기계용 이름 (예 `ubuntu-24.04`) */
-            name: string;
-            /** @description 콘솔 표시명 (한국어 가능) */
-            displayName: string;
-            /** @description 템플릿 버전 (갱신 시 새 버전 행 생성) */
-            version: number;
-            defaultVcpu: number;
-            defaultMemoryMb: number;
-            defaultDiskGb: number;
-            /** @description 이 템플릿으로 만들 수 있는 최소 디스크 크기 */
-            minDiskGb: number;
-            status: components["schemas"]["TemplateStatus"];
-            /** @description 신청서에 보여줄 안내 (한국어) */
-            notes?: string | null;
+            ip?: string | null;
+            targetId?: string | null;
+            targetType?: string | null;
         };
-        CreateGroupRequest: {
-            /**
-             * @description 생성 가능한 그룹 종류 (PERSONAL은 자동 생성이므로 제외)
-             * @enum {string}
-             */
-            kind: "TEAM" | "PROJECT";
-            name: string;
-            /** @description 전역 유일. 기본 서브도메인에 사용되므로 소문자·숫자·하이픈만 허용. */
-            slug: string;
-            description?: string | null;
-        };
-        GroupSummary: {
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            name: string;
-            slug: string;
-            description?: string | null;
-            myRole: components["schemas"]["GroupMemberRole"];
-            memberCount: number;
-        };
-        GroupDetail: {
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            name: string;
-            slug: string;
-            description?: string | null;
-            myRole: components["schemas"]["GroupMemberRole"];
-            members: components["schemas"]["GroupMember"][];
-            /** Format: date-time */
-            createdAt: string;
-        };
-        GroupMember: {
-            /** Format: int64 */
-            userId: number;
-            name: string;
+        AddGroupMemberRequest: {
             /** Format: email */
             email: string;
             role: components["schemas"]["GroupMemberRole"];
         };
-        CreateVmRequest: {
-            /**
-             * Format: int64
-             * @description 신청 주체 그룹 (OWNER/EDITOR 권한 필요)
-             */
-            groupId: number;
-            /**
-             * Format: int64
-             * @description 자원을 제공할 기관
-             */
-            orgId: number;
-            /**
-             * Format: int64
-             * @description 희망 OS 템플릿
-             */
-            templateId: number;
-            /** @description 사용 목적 (필수) */
-            purpose: string;
-            /** @description 관련 수업 또는 프로젝트명 */
-            courseOrProject?: string | null;
-            /** @description 기본값보다 높은 사양 요청 시 사유 (대형 사양은 사유 필수 — 서버 검증) */
-            specReason?: string | null;
-            /** @description 관리자에게 전달할 기타 참고 사항 */
-            extraNote?: string | null;
-            /** @description 요청 vCPU 수 */
-            reqVcpu: number;
-            /** @description 요청 메모리 (MiB) */
-            reqMemoryMb: number;
-            /** @description 요청 디스크 (GiB, 템플릿 minDiskGb 이상) */
-            reqDiskGb: number;
-            /**
-             * Format: date
-             * @description 희망 사용 시작일
-             */
-            reqStartDate?: string | null;
-            /**
-             * Format: date
-             * @description 희망 사용 종료일
-             */
-            reqEndDate?: string | null;
-            /** @description SSH 접속 필요 여부 */
-            needSsh: boolean;
-            /** @description HTTP 서비스 게시 필요 여부 */
-            needHttp: boolean;
-            /** @description 외부(캠퍼스 밖) 공개 필요 여부 */
-            needPublic: boolean;
-            /** @description 희망 서브도메인 (3~40자, 소문자·숫자·하이픈). 예약어 목록은 `GET /meta/request-options`의 `reservedSubdomains` 참조; 예약어·중복은 서버에서 검증됩니다. */
-            desiredSubdomain?: string | null;
-            /** @description 루트 도메인 (예 `pickle.pnuops.com`). 허용 목록은 `GET /meta/request-options`의 `allowedRootDomains`에서 조회합니다. */
-            rootDomain?: string | null;
-            /**
-             * Format: hostname
-             * @description 사용자 소유 커스텀 도메인 (신청 시 기록만, 연결은 퍼블리싱에서)
-             */
-            customDomain?: string | null;
-            /** @description SSH 접속명·호스트명 희망값 (3~40자, 소문자·숫자·하이픈, 하이픈으로 시작/끝 불가). 미입력(null) 시 기존처럼 자동 생성됩니다 (그룹 슬러그 + 랜덤 4자). 예약어 목록은 서브도메인 예약어 (`GET /meta/request-options`의 `reservedSubdomains`)와 공용이며, **파기된 VM의 슬러그를 포함해 재사용할 수 없습니다** — 예약어·중복은 서버에서 검증됩니다(위반 시 422). */
-            desiredSlug?: string | null;
-        };
-        /** @description 승인/반려 결정 내용 (결정된 신청에만 존재) */
-        VmRequestReview: {
-            /** Format: int64 */
-            reviewerId: number;
-            reviewerName: string;
-            decision: components["schemas"]["ReviewDecision"];
-            /** @description 결정 의견 (반려 시 필수, 신청자에게 전달) */
-            comment?: string | null;
-            /** @description 부여 vCPU (승인 시) */
-            grantedVcpu?: number | null;
-            /** @description 부여 메모리 (MiB, 승인 시) */
-            grantedMemoryMb?: number | null;
-            /** @description 부여 디스크 (GiB, 승인 시) */
-            grantedDiskGb?: number | null;
-            /**
-             * Format: int64
-             * @description 부여 템플릿 (승인 시)
-             */
-            grantedTemplateId?: number | null;
-            /** Format: date */
-            grantedStartDate?: string | null;
-            /** Format: date */
-            grantedEndDate?: string | null;
-            grantSsh?: boolean | null;
-            grantHttp?: boolean | null;
-            grantPublic?: boolean | null;
-            /** @description 관리자가 최종 부여한 플랫폼 서브도메인 라벨 (승인 시). null이면 공개 시 시스템이 자동 서브도메인(AUTO)을 생성합니다. */
-            grantedSubdomain?: string | null;
-            /** @description 부여 서브도메인의 루트 도메인 (grantedSubdomain 지정 시) */
-            grantedRootDomain?: string | null;
-            /**
-             * Format: int64
-             * @description 배치 노드 (null = 자동 배치)
-             */
-            nodeId?: number | null;
-            /** Format: date-time */
-            decidedAt: string;
-        };
-        VmRequestDetail: {
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
-            orgId: number;
-            orgName: string;
-            /** Format: int64 */
-            requesterId: number;
-            requesterName: string;
-            /** Format: int64 */
-            templateId: number;
-            purpose: string;
-            courseOrProject?: string | null;
-            specReason?: string | null;
-            extraNote?: string | null;
-            reqVcpu: number;
-            reqMemoryMb: number;
-            reqDiskGb: number;
-            /** Format: date */
-            reqStartDate?: string | null;
-            /** Format: date */
-            reqEndDate?: string | null;
-            needSsh: boolean;
-            needHttp: boolean;
-            needPublic: boolean;
-            desiredSubdomain?: string | null;
-            rootDomain?: string | null;
-            customDomain?: string | null;
-            /** @description 신청자의 SSH 접속명·호스트명 희망값 (v0.12.0, 미입력 시 null) */
-            desiredSlug?: string | null;
-            status: components["schemas"]["VmRequestStatus"];
-            /** @description 결정(승인/반려) 내용. 미결정(SUBMITTED/CANCELED) 시 null. */
-            review?: components["schemas"]["VmRequestReview"] | null;
-            /**
-             * Format: date-time
-             * @description 제출 시각
-             */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        VmRequestPage: {
-            content: components["schemas"]["VmRequestDetail"][];
-            /** @description 현재 페이지 (0부터 시작) */
-            page: number;
-            /** @description 페이지 크기 */
-            size: number;
-            /**
-             * Format: int64
-             * @description 전체 항목 수
-             */
-            totalElements: number;
-            /** @description 전체 페이지 수 */
-            totalPages: number;
-        };
-        VmSummary: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            /** @description slug 규칙으로 자동 생성되거나 신청자가 지정한 유일 호스트명 (불변, 파기 후에도 재사용되지 않음) */
-            hostname: string;
-            status: components["schemas"]["VmStatus"];
-            vcpu: number;
-            memoryMb: number;
-            diskGb: number;
-            /** Format: int64 */
-            groupId: number;
-            /** @description 소유 그룹 이름 (목록 화면 표시용) */
-            groupName: string;
-            /** @description 소속 기관 이름 (v0.9.0 — 관리자 목록의 기관 표시용. VM은 항상 기관에 속하므로 통상 항상 채워집니다 — 방어적 nullable) */
-            orgName?: string | null;
-            /** @description 사용자 지정 표시명 (v0.9.0 — VM 설정 `display_name`, EDITOR 이상 변경). 미설정 시 null이며 콘솔은 `name`을 표시합니다. 호스트네임/슬러그는 불변입니다. */
-            displayName?: string | null;
-            /**
-             * Format: int64
-             * @description 이 VM을 만든 신청 ID (출처 추적)
-             */
-            requestId: number;
-            /** @description 마지막 오류 또는 드리프트 메모 (한국어) */
-            statusDetail?: string | null;
-            /**
-             * Format: date
-             * @description 사용 종료(만료) 예정일 (미지정 시 null)
-             */
-            endDate?: string | null;
-            /**
-             * Format: date-time
-             * @description 만료 자동 종료 시각 (만료 스위퍼가 종료한 경우에만 값 존재 — 관리자가 기간을 연장하면 null로 초기화되어 다시 시작 가능)
-             */
-            expiryStoppedAt?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        VmDetail: components["schemas"]["VmSummary"] & {
-            /** Format: int64 */
-            orgId: number;
-            /** Format: int64 */
-            templateId: number;
-            /** @description 내부 IP (실제 할당 IP — 프로비저닝의 IP 할당 단계 이전에는 null) */
-            ipAddress?: string | null;
-            /** @description SSH 접속 계정 (고정 `student`) */
-            sshUsername: string;
-            /** @description SSH 게이트웨이 호스트 (예 `ssh.pickle.pnuops.com`) — 콘솔이 `ssh <hostname>@<sshHost>` 안내를 하드코딩 없이 렌더하기 위한 서버 설정값 */
-            sshHost: string;
-            /** @description 요청자의 소유 그룹 내 역할 — 콘솔의 설정 섹션 노출· 버튼 활성 판단용. 사용자 경로 `GET /vms/{vmId}`(구성원 전용)에서는 항상 존재하나, VM 상세를 반환하는 관리자 경로(비구성원 관리자)에서는 그룹 역할이 없어 **null**이 될 수 있어 nullable로 둔다. */
-            myGroupRole?: components["schemas"]["GroupMemberRole"] | null;
-            /** Format: date */
-            startDate?: string | null;
-            /** @description 진행 중이거나 마지막으로 실패한 비동기 작업(프로비저닝/삭제/재설치)의 진행 상황. 진행·실패 중인 작업이 없으면 null. */
-            provisioning?: components["schemas"]["ProvisioningTaskView"] | null;
-            /** @description 접수된 삭제 정보. 접수된 삭제가 없으면 null. */
-            deletion?: components["schemas"]["VmDeletion"] | null;
-            /** @description 승인 시 HTTP 공개(grantHttp)가 허용되었는지 여부. false면 공개 오퍼레이션은 403(`VM_HTTP_NOT_GRANTED`) — 콘솔의 공개 버튼 노출 판단에 사용합니다. */
-            httpPublishGranted: boolean;
-            /** @description 현재 HTTP 공개 상태(도메인+라우트+인증서). 미공개면 null. 라우트· 검증·인증서 진행 상황을 폴링하는 지점입니다(비동기 적용 결과 노출). */
-            publication?: components["schemas"]["PublicationView"] | null;
-            /** @description VM 비밀번호가 서버에 (암호문으로) 저장되어 있는지 여부 (v0.8.0에서 `initialPasswordAvailable`을 rename) — true면 `GET /vms/{vmId}/password`로 언제든 재열람할 수 있으며, 열람해도 false로 바뀌지 않습니다 */
-            passwordAvailable: boolean;
-            /** @description **요청자가** 이 VM의 비밀번호를 열람할 수 있는지 여부 — 내 그룹 역할 ≥ `password_reveal_min_role` 설정을 서버가 계산. false면 콘솔은 열람 버튼 대신 제한 안내를 표시합니다. `passwordAvailable`(저장 여부)과 직교합니다. */
-            passwordRevealAllowed: boolean;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        VmPage: {
-            content: components["schemas"]["VmSummary"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /**
-         * @description 비동기 작업 종류
-         * @enum {string}
-         */
-        ProvisioningTaskKind: "PROVISION" | "DELETE" | "REINSTALL";
-        /**
-         * @description 비동기 작업 상태. `RETRYING`은 단계 실패 후 백오프 재시도 대기, `NEEDS_ADMIN`은 재시도 소진으로 관리자 개입 필요.
-         * @enum {string}
-         */
-        ProvisioningTaskStatus: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "RETRYING" | "NEEDS_ADMIN";
-        /**
-         * @description VM에 대해 진행 중이거나 마지막으로 실패한 비동기 작업의 진행 상황.
-         *     비동기 실패(IP 풀 고갈, Proxmox 오류 등)는 HTTP 오류가 아니라 이 객체의
-         *     `NEEDS_ADMIN` 상태와 `lastError`로 노출됩니다.
-         */
-        ProvisioningTaskView: {
-            kind: components["schemas"]["ProvisioningTaskKind"];
-            status: components["schemas"]["ProvisioningTaskStatus"];
-            /** @description 현재 진행 단계 (0부터 시작, 프로비저닝 파이프라인 0~10단계 — HOSTKEY(호스트 키 수집) 단계 추가로 11단계) */
-            currentStep: number;
-            /** @description 전체 단계 수 */
-            totalSteps: number;
-            /** @description 현재 단계 표시명 (한국어, 예 "템플릿 복제 중") */
-            stepLabel: string;
-            /** @description 현재 단계 시도 횟수. 최초 실행 1회 + 백오프 재시도 3회로 단계당 최대 4회까지 노출됩니다. */
-            attempts: number;
-            /** @description 마지막 오류 요약 (한국어, 오류가 없으면 null) */
-            lastError?: string | null;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        /** @description 접수된 VM 삭제 정보 */
-        VmDeletion: {
-            /**
-             * @description 삭제 종류 (SELF = 본인 삭제, ADMIN = 관리자 일반 삭제, FORCE = 강제 삭제)
-             * @enum {string}
-             */
-            kind: "SELF" | "ADMIN" | "FORCE";
-            /**
-             * Format: date-time
-             * @description 파기 예정 시각
-             */
-            scheduledFor: string;
-            /**
-             * Format: date-time
-             * @description 삭제 요청(접수) 시각
-             */
-            requestedAt: string;
-            /**
-             * Format: int64
-             * @description 삭제를 요청한 사용자 ID
-             */
-            requestedById: number;
-            /** @description 삭제 사유 (관리자 일반 삭제는 필수 기재, 본인 삭제는 null) */
-            reason?: string | null;
-            /** @description **관리자가** 지금 취소할 수 있는지 여부 (유예 경과·강제 삭제만 false). 사용자에게는 kind와 무관하게 취소 권한이 없습니다 — 유예는 관리자 복구용 안전망이며, 취소는 `POST /admin/vms/{vmId}/cancel-scheduled-delete`로만 가능합니다. */
-            cancelable: boolean;
-        };
-        /** @description VM 수명주기 이벤트 (VM 파기 후에도 영구 보존) */
-        VmEvent: {
-            /** Format: int64 */
-            id: number;
-            /**
-             * @description 이벤트 종류 (삭제 접수는 종류별로 구분 — SELF_DELETE는 본인 삭제 접수, SCHEDULE_DELETE/CANCEL_SCHEDULED_DELETE는 관리자 일반 삭제 접수·취소, FORCE_DELETE는 강제 삭제 접수; **파기 완료는 공통 DELETE**. PUBLISH/UNPUBLISH는 HTTP 공개·해제, 제품기획 §14 "도메인 연결/해제·라우팅" 영구 보존 대상; PERIOD_UPDATE는 관리자 사용 기간 변경, EXPIRE_STOP은 사용 기간 만료에 의한 자동 종료(actorId null = 시스템))
-             * @enum {string}
-             */
-            type: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "FORCE_DELETE" | "REINSTALL" | "PUBLISH" | "UNPUBLISH" | "PERIOD_UPDATE" | "EXPIRE_STOP";
-            /**
-             * Format: int64
-             * @description 수행한 사용자 ID (null = 시스템/자동 작업)
-             */
-            actorId?: number | null;
-            /** @description 부가 정보 (한국어) */
-            detail?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        VmEventPage: {
-            content: components["schemas"]["VmEvent"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description VM 비밀번호 열람/재생성 응답 (v0.8.0에서 `InitialPasswordResponse`를 rename). 서버는 암호문으로 보관하므로 언제든 재열람할 수 있습니다. 사용자가 게스트에서 `passwd`로 직접 변경한 경우 저장된 값은 실제와 달라질 수 있으며, 재생성으로 복구합니다. 클라이언트는 평문을 저장하지 말고 표시 후 즉시 폐기해야 합니다. */
-        VmPasswordResponse: {
-            /** @description 비밀번호 평문 (24자, 생성 시 CSPRNG) */
-            password: string;
-            /** @description SSH 접속 계정 (고정 `student`) */
-            sshUsername: string;
-            /** @description SSH 접속 호스트 (SSH 게이트웨이 주소 — 서버 설정값, 항상 존재. `VmDetail.sshHost`와 동일 출처) */
-            sshHost: string;
-            /** @description SSH 접속 포트 (서버 설정값, 항상 존재) */
-            sshPort: number;
-        };
-        /**
-         * @description SSH 키 알고리즘 (수용 목록 — 확장은 마이너 개정)
-         * @enum {string}
-         */
-        SshKeyAlgorithm: "ED25519" | "RSA";
-        /** @description 등록된 SSH 공개키 */
-        SshKeyView: {
-            /** Format: int64 */
-            id: number;
-            /** @description 표시용 이름 (1~100자, 유일성 없음) */
-            name: string;
-            algorithm: components["schemas"]["SshKeyAlgorithm"];
-            /** @description 정규화된 OpenSSH 공개키 한 줄 (`<type> <base64>` — 등록 시 comment 제거). 공개 정보이므로 재표시·복사에 사용 가능. */
-            publicKey: string;
-            /** @description SHA-256 지문 — `SHA256:<base64, 패딩 없음>` (OpenSSH `ssh-keygen -lf` 표기와 동일). 플랫폼 전역 유일. */
-            fingerprint: string;
-            /** @description 서버가 개인키를 (암호문으로) 보관 중인지 여부 — 콘솔 "키 만들기"로 생성한 키만 true이며, true인 키만 `GET /me/ssh-keys/{keyId}/private-key` 다운로드가 가능합니다. */
-            privateKeyStored: boolean;
-            /** Format: date-time */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description 이 키로 SSH 게이트웨이 인증에 성공한 마지막 시각 (best-effort 갱신, 없으면 null) — 미사용 키 정리 판단용.
-             */
-            lastUsedAt?: string | null;
-        };
-        SshKeyCreateRequest: {
-            /** @description 표시용 이름 */
-            name: string;
-            /** @description OpenSSH 공개키 한 줄 (`ssh-ed25519 AAAA… [comment]` / `ssh-rsa AAAA… [comment]`). 서버가 파싱·정규화·지문 계산. */
-            publicKey: string;
-        };
-        SshKeyGenerateRequest: {
-            /** @description 표시용 이름 */
-            name: string;
-        };
-        /** @description 서버 생성 키의 개인키 (OpenSSH `openssh-key-v1` PEM, 비암호화). 매 다운로드는 감사 기록됩니다. 클라이언트는 파일 저장 후 권한을 제한하도록 안내해야 합니다 (chmod 600). */
-        SshKeyPrivateKeyResponse: {
-            /** @description OpenSSH PEM 형식 개인키 전문 (openssh-key-v1, BEGIN/END 마커 포함 여러 줄 — 예시는 시크릿 스캐너 오탐 방지를 위해 자리표시자로 대체) */
-            privateKey: string;
-            /** @description 권장 저장 파일명 (예 `id_ed25519_pickle`) */
-            fileName: string;
-        };
-        /**
-         * @description VM 설정 값 타입 (콘솔 렌더 기준 — BOOLEAN은 토글, ENUM은 `allowedValues` select). 플랫폼 운영 설정의 `SettingView.valueType`과는 별개 카탈로그입니다.
-         * @enum {string}
-         */
-        VmSettingValueType: "BOOLEAN" | "ENUM" | "INTEGER" | "STRING";
-        /** @description VM별 설정 항목 (코드측 레지스트리 기반 — 저장 행이 없으면 `value`=`defaultValue`). 콘솔은 이 메타데이터만으로 편집 UI를 렌더합니다(키 카탈로그 확장에 콘솔 변경 불필요). */
-        VmSettingView: {
-            /** @description 설정 키 (예 `ssh_password_enabled`) */
-            key: string;
-            /** @description 현재 유효값 (임의 JSON — 타입은 `valueType` 참조) */
-            value: unknown;
-            valueType: components["schemas"]["VmSettingValueType"];
-            /** @description ENUM일 때 선택 가능한 값 목록 (그 외 null) */
-            allowedValues?: string[] | null;
-            /** @description 기본값 (저장 행이 없을 때의 유효값) */
-            defaultValue: unknown;
-            /** @description 짧은 표시명 (한국어) */
-            label: string;
-            /** @description 설정 설명 (한국어 — 경고 함의 포함) */
-            description: string;
-            /** @description 변경에 필요한 최소 그룹 역할 */
-            requiredRole: components["schemas"]["GroupMemberRole"];
-            /** @description **요청자 기준** 지금 변경 가능한지 여부 (내 그룹 역할·VM 상태를 서버가 계산 — 콘솔이 역할 비교를 중복 구현하지 않도록) */
-            editable: boolean;
-            /** @description 마지막 변경자 이름 (변경 이력 없으면 null) */
-            updatedByName?: string | null;
-            /**
-             * Format: date-time
-             * @description 마지막 변경 시각 (변경 이력 없으면 null)
-             */
-            updatedAt?: string | null;
-        };
-        VmSettingsUpdateRequest: {
-            /** @description 변경할 키의 부분 맵 `{키: 새 값}` (최소 1개). 값 타입은 키별 `valueType` 기준으로 서버가 검증합니다. */
-            settings: {
-                [key: string]: unknown;
-            };
-        };
-        /** @description 자원 합계 (활성 VM 기준) */
-        ResourceTotals: {
-            vcpu: number;
-            memoryMb: number;
-            diskGb: number;
-        };
-        /** @description 승인 참고 화면용 VM 요약 */
-        VmBrief: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            status: components["schemas"]["VmStatus"];
-            vcpu: number;
-            memoryMb: number;
-            diskGb: number;
-            /**
-             * Format: date
-             * @description 만료 예정일
-             */
-            endDate?: string | null;
-        };
-        /** @description 승인 판단 참고 정보 (신청 상세 화면 옆 패널) */
-        ApprovalContext: {
-            /** @description 신청자 요약 */
-            applicant: {
-                /** Format: int64 */
-                id: number;
-                name: string;
-                /** Format: email */
-                email: string;
-                /**
-                 * Format: date-time
-                 * @description 가입일
-                 */
-                signupAt: string;
-                /** @description 과거 승인된 신청 수 */
-                approvedCount: number;
-                /** @description 과거 반려된 신청 수 */
-                rejectedCount: number;
-            };
-            /** @description 신청자가 모든 그룹에 걸쳐 현재 보유한 자원 */
-            applicantResources: {
-                activeVms: components["schemas"]["VmBrief"][];
-                totals: components["schemas"]["ResourceTotals"];
-            };
-            /** @description 신청 그룹 요약 (구성원·보유 자원) */
-            group: {
-                /** Format: int64 */
-                id: number;
-                name: string;
-                kind: components["schemas"]["GroupKind"];
-                members: {
-                    /** Format: int64 */
-                    userId: number;
-                    name: string;
-                    role: components["schemas"]["GroupMemberRole"];
-                }[];
-                activeVms: components["schemas"]["VmBrief"][];
-                totals: components["schemas"]["ResourceTotals"];
-            };
-            /** @description 이 사용자/그룹의 과거 신청 이력 (결정·검토 의견 포함, 최신순) */
-            history: {
-                /** Format: int64 */
-                requestId: number;
-                /** Format: date-time */
-                submittedAt: string;
-                status: components["schemas"]["VmRequestStatus"];
-                decision?: components["schemas"]["ReviewDecision"] | null;
-                /** @description 검토자 의견 */
-                comment?: string | null;
-                reviewerName?: string | null;
-            }[];
-            /** @description 기관 자원 여유 (할당 합계 vs. 노드 용량). 현재는 노드별 디스크 용량을 추적하지 않으므로 (02 데이터 모델의 nodes에는 cpu_threads· memory_mb만 있음) 디스크는 `allocated.diskGb`(할당 합계)만 제공됩니다. */
-            orgHeadroom: {
-                allocated: components["schemas"]["ResourceTotals"];
-                /** @description 노드 물리 용량 합계 */
-                capacity: {
-                    cpuThreads: number;
-                    memoryMb: number;
-                };
-                /** @description 할당 vCPU ÷ 물리 스레드 (임계값은 settings에서 관리) */
-                vcpuOvercommitRatio: number;
-                /** @description 할당 메모리 ÷ 물리 메모리 (보수적 운영) */
-                memoryUsageRatio: number;
-                /** @description 임계 초과 경고 배지 문구 (한국어) */
-                warnings: string[];
-            };
-            /** @description 임계값 기반으로 계산된 한국어 안내문 (예 "여유가 충분합니다" / "메모리 여유가 부족해 신중한 승인이 필요합니다"). */
-            guidance: string;
-        };
-        /** @description 승인 폼 (요청 사양으로 미리 채워지며 관리자가 조정 가능) */
-        ApproveVmRequest: {
-            /** @description 부여 vCPU */
-            grantedVcpu: number;
-            /** @description 부여 메모리 (MiB) */
-            grantedMemoryMb: number;
-            /** @description 부여 디스크 (GiB, 템플릿 minDiskGb 이상) */
-            grantedDiskGb: number;
-            /**
-             * Format: int64
-             * @description 부여 템플릿 (요청과 다른 템플릿으로 변경 가능)
-             */
-            grantedTemplateId: number;
-            /** Format: date */
-            grantedStartDate?: string | null;
-            /** Format: date */
-            grantedEndDate?: string | null;
-            grantSsh: boolean;
-            grantHttp: boolean;
-            grantPublic: boolean;
-            /** @description 관리자가 최종 부여하는 플랫폼 서브도메인 라벨 (RFC 1123, 소문자·숫자· 하이픈 3~40자). 신청자의 `desiredSubdomain`이 힌트로 프리필되며 관리자가 수락/변경할 수 있습니다. 예약어(www·api·admin·console·ssh·mail·smtp·ns· ns1·ns2·mx·dev·staging·test·status·docs·cdn·static 등 — 실제 목록은 settings `reserved_subdomains`, `GET /meta/request-options` 참조)·비속어· 중복은 서버에서 검증합니다(위반 시 422). **null이면 공개 시 시스템이 자동 서브도메인(AUTO)을 생성**합니다. `grantHttp=false`이면 무시됩니다. */
-            grantedSubdomain?: string | null;
-            /** @description 부여 서브도메인의 루트 도메인. `grantedSubdomain` 지정 시 필수이며 `GET /meta/request-options`의 `allowedRootDomains` 중 하나여야 합니다 (그 외 422). `grantedSubdomain`이 null(AUTO)일 때는 이 값이 있으면 그 루트를, 없으면 기본 루트(`allowedRootDomains`의 첫 항목)를 사용하므로 **AUTO 도메인도 항상 루트가 정해집니다**. */
-            grantedRootDomain?: string | null;
-            /** @description 관리자가 최종 확정하는 호스트명(SSH 접속명·슬러그, v0.12.0). 신청자의 `desiredSlug`가 프리필되며 관리자가 수락·변경할 수 있습니다. **null/공백이면 기존처럼 자동 생성**(그룹 슬러그 + 랜덤 4자)합니다. 지정 시 그대로 `vms.hostname`이 되며 이후 불변입니다. 예약어(서브도메인 예약어와 공용)·비속어·중복 (파기된 VM의 슬러그 포함)은 서버에서 검증합니다 — 위반 시 422 `validation_failed`(`grantedSlug` 필드 오류). */
-            grantedSlug?: string | null;
-            /**
-             * Format: int64
-             * @description 배치할 노드 (생략 또는 null = 자동 배치)
-             */
-            nodeId?: number | null;
-            /** @description 승인 의견 (신청자에게 전달) */
-            comment?: string | null;
-        };
-        /** @description 노드에 연결된 IP 풀 요약 */
-        IpPoolSummary: {
-            /** Format: int64 */
-            id: number;
-            /** @description 풀 CIDR (예 `172.29.0.0/16`) */
-            cidr: string;
-            /** @description 할당된 IP 수 */
-            allocatedCount: number;
-            /** @description 할당 가능한 잔여 IP 수 (예약 대역 제외) */
-            freeCount: number;
-        };
-        /** @description 노드 현황 (물리 용량·할당 합계·경고 임계값·IP 풀 여유). 용량·가동 수치는 상태 폴러(30초 주기)가 갱신합니다. */
-        NodeSummary: {
-            /** Format: int64 */
-            id: number;
-            /** @description 노드 이름 (예 `pve1`) */
-            name: string;
-            /**
-             * @description 노드 상태 (신규 VM 배치 대상은 ACTIVE만)
-             * @enum {string}
-             */
-            status: "ACTIVE" | "MAINTENANCE" | "OFFLINE";
-            /** @description 물리 CPU 스레드 수 */
-            cpuThreads: number;
-            /** @description 물리 메모리 (MiB) */
-            memoryMb: number;
-            /** @description VM 연결 브리지 (예 `vmbr2`) */
-            vmBridge: string;
-            /** @description VM 디스크 스토리지 (예 `local-lvm`) */
-            storage: string;
-            /** @description 실행 중 VM 수 */
-            runningVms: number;
-            /** @description 할당 vCPU 합계 (활성 VM 기준) */
-            allocatedVcpu: number;
-            /** @description 할당 메모리 합계 (MiB, 활성 VM 기준) */
-            allocatedMemoryMb: number;
-            /** @description 할당 vCPU ÷ 물리 스레드 */
-            cpuOvercommitRatio: number;
-            /** @description 할당 메모리 ÷ 물리 메모리 */
-            memoryAllocRatio: number;
-            /** @description CPU 오버커밋 경고 임계값 (settings에서 관리, 기본 3.0) */
-            cpuWarnThreshold: number;
-            /** @description 메모리 할당 경고 임계값 (settings에서 관리, 기본 0.8) */
-            memoryWarnThreshold: number;
-            ipPool: components["schemas"]["IpPoolSummary"];
-        };
-        /**
-         * @description 도메인 종류 (AUTO=자동 발급 서브도메인, REQUESTED=희망 서브도메인, CUSTOM=사용자 소유 도메인)
-         * @enum {string}
-         */
-        DomainKind: "AUTO" | "REQUESTED" | "CUSTOM";
-        /**
-         * @description 도메인 상태. 플랫폼 서브도메인(AUTO/REQUESTED)은 생성 즉시 ACTIVE.
-         *     커스텀 도메인은 PENDING(레코드 대기)→VERIFYING(폴링 중)→ACTIVE(검증 완료)
-         *     흐름이며, 실패 시 FAILED, 삭제 시 REMOVED.
-         * @enum {string}
-         */
-        DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
-        /**
-         * @description 라우트(공개) 적용 상태. PENDING(접수, 적용 대기)→APPLIED(proxy-agent 적용
-         *     완료)/FAILED(적용 실패, `lastError` 참조), 공개 해제 시 REMOVED.
-         * @enum {string}
-         */
-        RouteStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
-        /**
-         * @description 인증서 종류 (ORIGIN_CA_WILDCARD=플랫폼 공용 와일드카드, LETS_ENCRYPT=커스텀 도메인)
-         * @enum {string}
-         */
-        CertificateKind: "ORIGIN_CA_WILDCARD" | "LETS_ENCRYPT";
-        /**
-         * @description 인증서 상태
-         * @enum {string}
-         */
-        CertificateStatus: "ACTIVE" | "RENEWING" | "FAILED" | "REVOKED";
-        /** @description 커스텀 도메인 소유권·전파 검증 안내와 폴링 상태. 플랫폼 서브도메인에는 존재하지 않습니다(null). */
-        DomainVerification: {
-            /** @description 소유권 검증 토큰 (TXT 레코드 값) */
-            token: string;
-            /** @description 사용자가 DNS에 설정해야 하는 레코드 목록 (A + TXT) */
-            requiredRecords: {
-                /** @enum {string} */
-                type: "A" | "TXT";
-                /** @description 레코드 이름(FQDN) */
-                name: string;
-                /** @description 레코드 값 (A=프록시 IP, TXT=검증 토큰) */
-                value: string;
-            }[];
-            /** @description A 레코드가 프록시 IP를 가리키는 것으로 확인됨 */
-            aVerified: boolean;
-            /** @description TXT 소유권 레코드가 확인됨 */
-            txtVerified: boolean;
-            /**
-             * Format: date-time
-             * @description 마지막 폴링 시각
-             */
-            lastCheckedAt?: string | null;
-            /** @description 마지막 검증 실패 요약 (한국어) */
-            lastError?: string | null;
-        };
-        DomainSummary: {
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            vmId: number;
-            kind: components["schemas"]["DomainKind"];
-            fqdn: string;
-            /** @description 루트 도메인 (플랫폼 서브도메인만; 커스텀은 null) */
-            rootDomain?: string | null;
-            status: components["schemas"]["DomainStatus"];
-            /**
-             * Format: date-time
-             * @description 검증 완료 시각 (미검증/플랫폼 서브도메인은 null)
-             */
-            verifiedAt?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        DomainDetail: components["schemas"]["DomainSummary"] & {
-            /** @description 커스텀 도메인 검증 안내·상태 (플랫폼 서브도메인은 null) */
-            verification?: components["schemas"]["DomainVerification"] | null;
-        };
-        DomainPage: {
-            content: components["schemas"]["DomainSummary"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description VM 공개 라우트 상태 */
-        RouteView: {
-            /** @description 공개 대상 VM 내부 포트 */
-            targetPort: number;
-            /**
-             * @description 프록시 업스트림 프로토콜 (v1은 HTTP 고정)
-             * @enum {string}
-             */
-            protocol: "HTTP";
-            status: components["schemas"]["RouteStatus"];
-            /**
-             * Format: date-time
-             * @description proxy-agent 적용 완료 시각 (미적용 시 null)
-             */
-            appliedAt?: string | null;
-            /** @description 마지막 적용 실패 요약 (nginx stderr 등의 한국어 요약) */
-            lastError?: string | null;
-        };
-        /** @description 도메인 인증서 상태 */
-        CertificateView: {
-            kind: components["schemas"]["CertificateKind"];
-            status: components["schemas"]["CertificateStatus"];
-            /**
-             * Format: date-time
-             * @description 만료 시각
-             */
-            notAfter?: string | null;
-            /** @description 마지막 발급·갱신 실패 요약 (한국어) */
-            lastError?: string | null;
-        };
-        /** @description VM의 HTTP 공개 상태(도메인+라우트+인증서). v1은 VM당 1개. 미공개 시 VmDetail.publication은 null. */
-        PublicationView: {
-            /** @description 공개 FQDN */
-            fqdn: string;
-            domain: components["schemas"]["DomainDetail"];
-            /** @description 라이브 라우트. 적용 대기/동시 해제 전이 중에는 null일 수 있으므로 소비 측은 반드시 null 가드할 것(2026-07-13 계약 정정 — 이전 required는 오류). */
-            route?: components["schemas"]["RouteView"] | null;
-            /** @description 인증서 상태 (발급 전이면 null) */
-            certificate?: components["schemas"]["CertificateView"] | null;
-        };
-        /**
-         * @description HTTP 공개 요청. **플랫폼 서브도메인 이름은 이 요청에서 선택할 수 없습니다**
-         *     — 공개는 신청 승인 시 관리자가 확정한 서브도메인(`grantedSubdomain`,
-         *     미부여 시 시스템 자동 생성 AUTO)으로 활성화만 하며, 이 요청은 노출 포트와
-         *     (선택적) 커스텀 도메인만 지정합니다.
-         *     - `customDomain` 생략 → 승인 시 확정된 플랫폼 서브도메인(REQUESTED 또는
-         *       AUTO)으로 공개.
-         *     - `customDomain` 지정 → 사용자 소유 커스텀 도메인(CUSTOM) 연결. 소유권은
-         *       관리자 큐레이션이 아니라 DNS TXT로 **증명**되므로 자기서비스입니다.
-         *
-         *     **SSRF 방지**: 라우팅 대상 IP는 서버가 VM 할당 IP로 강제하며 이 요청에
-         *     IP 필드는 존재하지 않습니다(SSRF 방지 정책).
-         */
-        PublishRequest: {
-            /**
-             * @description 공개할 VM 내부 포트(생략 시 기본 80). VM의 SSH 포트 22는 공개할 수 없으며 서버에서 거부합니다(422).
-             * @default 80
-             */
-            port: number;
-            /**
-             * Format: hostname
-             * @description 사용자 소유 커스텀 도메인 FQDN (소유권·전파 검증 후 서비스). 생략 시 승인 시 확정된 플랫폼 서브도메인으로 공개합니다. **반드시 완전한 외부 FQDN**(다중 라벨)이어야 하며 단일 라벨은 거부됩니다. 또한 `allowedRootDomains`·플랫폼 관리 존(예 `*.pickle.pnuops.com`) **하위일 수 없습니다** — 플랫폼 서브도메인 라벨을 PENDING 커스텀 도메인으로 선점 (스쿼팅)하는 것을 막기 위함이며, 위반 시 422 `VALIDATION_FAILED`.
-             */
-            customDomain?: string | null;
-        };
-        /** @description 공개 설정 변경(부분 갱신). 최소 1개 필드 필요. **플랫폼 서브도메인 이름은 변경 대상이 아닙니다**(승인 시 확정 — 변경하려면 재신청). 노출 포트와 커스텀 도메인 연결/해제만 변경할 수 있으며, SSRF 규칙은 PublishRequest와 동일합니다. */
-        UpdatePublicationRequest: {
-            /** @description 변경할 공개 포트 (22 불가) */
-            port?: number;
-            /**
-             * Format: hostname
-             * @description 연결할 커스텀 도메인(재검증·인증서 재발급). null로 주면 커스텀 도메인 연결을 해제하고 플랫폼 서브도메인 공개로 되돌립니다. **반드시 완전한 외부 FQDN**(다중 라벨)이어야 하며 단일 라벨, 그리고 `allowedRootDomains`·플랫폼 관리 존(예 `*.pickle.pnuops.com`) 하위 값은 거부됩니다(스쿼팅 방지 — 위반 시 422 `VALIDATION_FAILED`).
-             */
-            customDomain?: string | null;
-        };
-        /** @description 관리자 라우트 목록 항목 (VM·그룹·기관 맥락 + 적용/동기화 상태) */
-        AdminRouteView: {
-            /**
-             * Format: int64
-             * @description 라우트 ID
-             */
-            id: number;
-            fqdn: string;
-            domainKind: components["schemas"]["DomainKind"];
-            /** Format: int64 */
-            vmId: number;
-            vmName: string;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
-            orgId: number;
-            orgName: string;
-            targetPort: number;
-            /** @enum {string} */
-            protocol: "HTTP";
-            status: components["schemas"]["RouteStatus"];
-            /**
-             * Format: int64
-             * @description proxy-agent가 마지막으로 적용한 generation (동기화 확인용)
-             */
-            appliedGeneration?: number | null;
-            /** Format: date-time */
-            appliedAt?: string | null;
-            /** @description 마지막 적용 실패 요약 */
-            lastError?: string | null;
-            /** Format: date-time */
-            updatedAt?: string | null;
-        };
-        AdminRoutePage: {
-            content: components["schemas"]["AdminRouteView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description 관리자 인증서 목록 항목 */
         AdminCertificateView: {
+            /** Format: int32 */
+            daysUntilExpiry?: number | null;
+            /** Format: int64 */
+            domainId?: number | null;
             /** Format: int64 */
             id: number;
             kind: components["schemas"]["CertificateKind"];
-            status: components["schemas"]["CertificateStatus"];
-            /** @description 인증서 적용 대상 (와일드카드는 루트 도메인, 커스텀은 FQDN) */
-            scope: string;
-            /**
-             * Format: int64
-             * @description 연결된 도메인 ID (공용 와일드카드는 null)
-             */
-            domainId?: number | null;
-            /**
-             * Format: date-time
-             * @description 만료 시각
-             */
-            notAfter?: string | null;
-            /** @description 만료까지 남은 일수 (만료 임박 정렬·경고용) */
-            daysUntilExpiry?: number | null;
-            /** @description 마지막 발급·갱신 실패 요약 */
             lastError?: string | null;
+            /** Format: date-time */
+            notAfter?: string | null;
+            scope: string;
+            status: components["schemas"]["CertificateStatus"];
         };
-        AdminCertificatePage: {
-            content: components["schemas"]["AdminCertificateView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        AdminDomainView: components["schemas"]["DomainSummary"] & {
-            vmName: string;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
-            orgId: number;
-            orgName: string;
-            /** @description 이 도메인의 라우트 적용 상태 (미공개면 null) */
-            routeStatus?: components["schemas"]["RouteStatus"] | null;
-            /** @description 연결된 인증서 상태 (미발급이면 null) */
+        AdminDomainView: {
             certificateStatus?: components["schemas"]["CertificateStatus"] | null;
             /** Format: date-time */
+            createdAt: string;
+            fqdn: string;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["DomainKind"];
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            rootDomain?: string | null;
+            routeStatus?: components["schemas"]["RouteStatus"] | null;
+            status: components["schemas"]["DomainStatus"];
+            /** Format: date-time */
             updatedAt?: string | null;
-        };
-        AdminDomainPage: {
-            content: components["schemas"]["AdminDomainView"][];
-            page: number;
-            size: number;
+            /** Format: date-time */
+            verifiedAt?: string | null;
             /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
+            vmId: number;
+            vmName: string;
         };
-        /** @description 인앱 알림 1건 (본인 행만 조회 가능) */
-        NotificationView: {
+        AdminGroupOptionResponse: {
             /** Format: int64 */
             id: number;
-            /** @description 알림 이벤트 카탈로그 ID (점 네임스페이스, 예 `vm.create.done`, `vm.expiry.d7`, `announcement`) */
+            /** Format: int64 */
+            memberCount: number;
+            name: string;
+            slug: string;
+        };
+        AdminNotificationResponse: {
+            /** Format: int32 */
+            attempts: number;
+            body: string;
+            channel: components["schemas"]["NotificationChannel"];
+            /** Format: date-time */
+            createdAt: string;
             event: string;
-            /** @description 알림 제목 (한국어) */
-            title: string;
-            /** @description 알림 본문 (한국어) */
-            body: string;
-            /** @description 클릭 시 이동할 콘솔 상대 경로 (예 `/console/vms/42`) — 연결 화면이 없으면 null */
-            linkPath?: string | null;
-            /**
-             * @description 중요도 (HIGH는 콘솔에서 강조 표시)
-             * @enum {string}
-             */
-            importance: "NORMAL" | "HIGH";
-            /** Format: date-time */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @description 읽음 시각 (읽지 않았으면 null)
-             */
-            readAt?: string | null;
-        };
-        NotificationPage: {
-            content: components["schemas"]["NotificationView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        UnreadCountResponse: {
-            /** @description 읽지 않은 알림 수 */
-            unreadCount: number;
-        };
-        /**
-         * @description 공지 범위 (ALL=전체 공지 — SYS_ADMIN 전용, ORG=기관 소속 사용자, GROUP=그룹 구성원)
-         * @enum {string}
-         */
-        AnnouncementScope: "ALL" | "ORG" | "GROUP";
-        AnnouncementCreateRequest: {
-            /** @description 공지 제목 */
-            title: string;
-            /** @description 공지 본문 */
-            body: string;
-            scope: components["schemas"]["AnnouncementScope"];
-            /**
-             * Format: int64
-             * @description 대상 기관 (scope=ORG). ORG_ADMIN은 자기 기관으로 고정 — 생략 가능 하며 지정 시 자기 기관과 일치해야 합니다(불일치 422). 그 외 scope는 null.
-             */
-            orgId?: number | null;
-            /**
-             * Format: int64
-             * @description 대상 그룹 (scope=GROUP일 때 필수, 그 외 null)
-             */
-            groupId?: number | null;
-        };
-        /** @description 발송된 공지 (수신자 수는 발송 시점 스냅숏) */
-        AnnouncementView: {
             /** Format: int64 */
             id: number;
+            importance: components["schemas"]["NotificationImportance"];
+            lastError?: string | null;
+            linkPath?: string | null;
+            /** Format: date-time */
+            readAt?: string | null;
+            /** Format: date-time */
+            sentAt?: string | null;
+            status: components["schemas"]["NotificationStatus"];
             title: string;
-            scope: components["schemas"]["AnnouncementScope"];
-            /**
-             * Format: int64
-             * @description 대상 기관 (ORG 범위만, 그 외 null)
-             */
-            orgId?: number | null;
-            /**
-             * Format: int64
-             * @description 대상 그룹 (GROUP 범위만, 그 외 null)
-             */
-            groupId?: number | null;
-            /** @description 발송 시점 수신자(범위 내 ACTIVE 사용자) 수 */
-            recipientCount: number;
+            userEmail: string;
+            /** Format: int64 */
+            userId: number;
+        };
+        AdminRouteView: {
+            /** Format: date-time */
+            appliedAt?: string | null;
+            /** Format: int64 */
+            appliedGeneration?: number | null;
+            domainKind: components["schemas"]["DomainKind"];
+            fqdn: string;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            /** Format: int64 */
+            id: number;
+            lastError?: string | null;
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            protocol: string;
+            status: components["schemas"]["RouteStatus"];
+            /** Format: int32 */
+            targetPort: number;
+            /** Format: date-time */
+            updatedAt?: string | null;
+            /** Format: int64 */
+            vmId: number;
+            vmName: string;
+        };
+        AdminTaskResponse: {
+            /** Format: int32 */
+            attempts: number;
             /** Format: date-time */
             createdAt: string;
-        };
-        AnnouncementPage: {
-            content: components["schemas"]["AnnouncementView"][];
-            page: number;
-            size: number;
+            /** Format: int32 */
+            currentStep: number;
+            groupName?: string | null;
+            hostname?: string | null;
+            jobrunrJobId?: string | null;
+            kind: components["schemas"]["ProvisioningTaskKind"];
+            lastError?: string | null;
             /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
+            orgId?: number | null;
+            orgName?: string | null;
+            status: components["schemas"]["ProvisioningTaskStatus"];
+            stepLabel: string;
+            /** Format: int64 */
+            taskId: number;
+            /** Format: int32 */
+            totalSteps: number;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: int64 */
+            vmId: number;
+            vmName?: string | null;
         };
-        /** @description 공지 작성 화면 그룹 선택기용 그룹 참조 항목 */
-        AdminGroupOption: {
+        /** @enum {string} */
+        AllocationStatus: "ALLOCATED" | "RELEASED";
+        AnnouncementCreateRequest: {
+            body: string;
+            /** Format: int64 */
+            groupId?: number | null;
+            /** Format: int64 */
+            orgId?: number | null;
+            scope: components["schemas"]["AnnouncementScope"];
+            title: string;
+        };
+        /** @enum {string} */
+        AnnouncementScope: "ALL" | "ORG" | "GROUP";
+        AnnouncementView: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            groupId?: number | null;
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            orgId?: number | null;
+            /** Format: int32 */
+            recipientCount: number;
+            scope: components["schemas"]["AnnouncementScope"];
+            title: string;
+        };
+        Applicant: {
+            /** Format: int64 */
+            approvedCount: number;
+            email: string;
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** Format: int64 */
+            rejectedCount: number;
+            /** Format: date-time */
+            signupAt: string;
+        };
+        ApprovalContextResponse: {
+            applicant: components["schemas"]["Applicant"];
+            applicantResources: components["schemas"]["Resources"];
+            group: components["schemas"]["GroupPanel"];
+            guidance: string;
+            history: components["schemas"]["HistoryEntry"][];
+            orgHeadroom: components["schemas"]["OrgHeadroom"];
+        };
+        ApproveVmRequestRequest: {
+            comment?: string | null;
+            grantHttp: boolean;
+            grantPublic: boolean;
+            grantSsh: boolean;
+            /** Format: int32 */
+            grantedDiskGb: number;
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: int32 */
+            grantedMemoryMb: number;
+            grantedRootDomain?: string | null;
+            grantedSlug?: string | null;
+            /** Format: date */
+            grantedStartDate?: string | null;
+            grantedSubdomain?: string | null;
+            /** Format: int64 */
+            grantedTemplateId: number;
+            /** Format: int32 */
+            grantedVcpu: number;
+            /** Format: int64 */
+            nodeId?: number | null;
+        };
+        Attention: {
+            /** Format: int64 */
+            expiredVmCount: number;
+            /** Format: int64 */
+            failedTaskCount: number;
+            /** Format: int64 */
+            needsAdminVmCount: number;
+        };
+        AuditLogViewResponse: {
+            action: string;
+            actorEmail?: string | null;
+            /** Format: int64 */
+            actorId?: number | null;
+            actorName?: string | null;
+            actorRole?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            detail?: unknown;
+            /** Format: int64 */
+            id: number;
+            ip?: string | null;
+            orgName?: string | null;
+            targetId?: string | null;
+            targetType?: string | null;
+        };
+        AuthTokenResponse: {
+            accessToken: string;
+            user: components["schemas"]["UserSummaryResponse"];
+        };
+        BeginMfaRequest: {
+            password: string;
+        };
+        Capacity: {
+            /** Format: int64 */
+            cpuThreads: number;
+            /** Format: int64 */
+            memoryMb: number;
+        };
+        /** @enum {string} */
+        CertificateKind: "ORIGIN_CA_WILDCARD" | "LETS_ENCRYPT";
+        /** @enum {string} */
+        CertificateStatus: "ACTIVE" | "RENEWING" | "FAILED" | "REVOKED";
+        CertificateView: {
+            kind: components["schemas"]["CertificateKind"];
+            lastError?: string | null;
+            /** Format: date-time */
+            notAfter?: string | null;
+            status: components["schemas"]["CertificateStatus"];
+        };
+        ChangePasswordRequest: {
+            currentPassword: string;
+            newPassword: string;
+        };
+        ConsentInput: {
+            docType: components["schemas"]["TermsDocType"];
+            /** Format: int32 */
+            version: number;
+        };
+        ConsentUpdateRequest: {
+            consents: components["schemas"]["ConsentInput"][];
+        };
+        ConsentView: {
+            /** Format: date-time */
+            consentedAt: string;
+            docType: components["schemas"]["TermsDocType"];
+            /** Format: int32 */
+            version: number;
+        };
+        CreateGroupRequest: {
+            description?: string | null;
+            /**
+             * @description 그룹 종류 — PERSONAL은 시스템 생성 전용이라 요청으로 만들 수 없습니다
+             * @enum {unknown}
+             */
+            kind: components["schemas"]["GroupKind"];
+            name: string;
+            slug: string;
+        };
+        CreateOrgRequest: {
+            description?: string | null;
+            name: string;
+            slug: string;
+        };
+        CreateVmRequestRequest: {
+            courseOrProject?: string | null;
+            customDomain?: string | null;
+            desiredSlug?: string | null;
+            desiredSubdomain?: string | null;
+            extraNote?: string | null;
+            /** Format: int64 */
+            groupId: number;
+            needHttp: boolean;
+            needPublic: boolean;
+            needSsh: boolean;
+            /** Format: int64 */
+            orgId: number;
+            purpose: string;
+            /** Format: int32 */
+            reqDiskGb: number;
+            /** Format: date */
+            reqEndDate?: string | null;
+            /** Format: int32 */
+            reqMemoryMb: number;
+            /** Format: date */
+            reqStartDate?: string | null;
+            /** Format: int32 */
+            reqVcpu: number;
+            rootDomain?: string | null;
+            specReason?: string | null;
+            /** Format: int64 */
+            templateId: number;
+        };
+        DisableMfaRequest: {
+            code?: string;
+            password: string;
+            recoveryCode?: string;
+        };
+        DisableUserRequest: {
+            reason: string;
+        };
+        DomainDetailView: {
+            /** Format: date-time */
+            createdAt: string;
+            fqdn: string;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["DomainKind"];
+            rootDomain?: string | null;
+            status: components["schemas"]["DomainStatus"];
+            verification?: components["schemas"]["DomainVerificationView"] | null;
+            /** Format: date-time */
+            verifiedAt?: string | null;
+            /** Format: int64 */
+            vmId: number;
+        };
+        /** @enum {string} */
+        DomainKind: "AUTO" | "REQUESTED" | "CUSTOM";
+        /** @enum {string} */
+        DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
+        DomainSummaryView: {
+            /** Format: date-time */
+            createdAt: string;
+            fqdn: string;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["DomainKind"];
+            rootDomain?: string | null;
+            status: components["schemas"]["DomainStatus"];
+            /** Format: date-time */
+            verifiedAt?: string | null;
+            /** Format: int64 */
+            vmId: number;
+        };
+        DomainVerificationView: {
+            aVerified: boolean;
+            /** Format: date-time */
+            lastCheckedAt?: string | null;
+            lastError?: string | null;
+            requiredRecords: components["schemas"]["RequiredRecord"][];
+            token: string;
+            txtVerified: boolean;
+        };
+        /** @enum {string} */
+        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH";
+        DriftFindingResponse: {
+            detail?: unknown;
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["DriftFindingKind"];
+            /** Format: date-time */
+            lastSeenAt: string;
+            nodeName?: string | null;
+            /** Format: int32 */
+            proxmoxVmid?: number | null;
+            resolutionNote?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolvedByEmail?: string | null;
+            /** Format: int64 */
+            resolvedById?: number | null;
+            status: components["schemas"]["DriftFindingStatus"];
+            summary: string;
+            /** Format: int64 */
+            vmId?: number | null;
+            vmName?: string | null;
+        };
+        /** @enum {string} */
+        DriftFindingStatus: "OPEN" | "RESOLVED";
+        /** @description 검증 실패 필드 한 건 (422 응답의 errors[] 원소) */
+        FieldValidationError: {
+            /** @description 실패한 요청 필드 이름 */
+            field: string;
+            /** @description 한국어 오류 메시지 */
+            message: string;
+        };
+        ForceDeleteVmRequest: {
+            confirmName: string;
+            overrideProtection?: boolean;
+        };
+        GroupDetailResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            description?: string | null;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["GroupKind"];
+            members: components["schemas"]["GroupMemberResponse"][];
+            myRole: components["schemas"]["GroupMemberRole"];
+            name: string;
+            slug: string;
+        };
+        /** @enum {string} */
+        GroupKind: "PERSONAL" | "TEAM" | "PROJECT";
+        GroupMemberResponse: {
+            email: string;
+            name: string;
+            role: components["schemas"]["GroupMemberRole"];
+            /** Format: int64 */
+            userId: number;
+        };
+        /** @enum {string} */
+        GroupMemberRole: "OWNER" | "EDITOR" | "MEMBER" | "VIEWER";
+        GroupPanel: {
+            activeVms: components["schemas"]["VmBriefResponse"][];
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["GroupKind"];
+            members: components["schemas"]["MemberBrief"][];
+            name: string;
+            totals: components["schemas"]["ResourceTotalsResponse"];
+        };
+        GroupSummaryResponse: {
+            description?: string | null;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["GroupKind"];
+            /** Format: int64 */
+            memberCount: number;
+            myRole: components["schemas"]["GroupMemberRole"];
+            name: string;
+            slug: string;
+        };
+        HistoryEntry: {
+            comment?: string | null;
+            decision?: components["schemas"]["ReviewDecision"] | null;
+            /** Format: int64 */
+            requestId: number;
+            reviewerName?: string | null;
+            status: components["schemas"]["VmRequestStatus"];
+            /** Format: date-time */
+            submittedAt: string;
+        };
+        IpAllocationResponse: {
+            /** Format: date-time */
+            allocatedAt: string;
+            hostname?: string | null;
+            /** Format: int64 */
+            id: number;
+            ip: string;
+            /** Format: int64 */
+            poolId: number;
+            poolName: string;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            status: components["schemas"]["AllocationStatus"];
+            /** Format: int64 */
+            vmId?: number | null;
+            vmName?: string | null;
+        };
+        IpPoolSummaryResponse: {
+            /** Format: int64 */
+            allocatedCount: number;
+            cidr: string;
+            /** Format: int64 */
+            freeCount: number;
+            /** Format: int64 */
+            id: number;
+        };
+        IpPoolUsage: {
+            /** Format: int64 */
+            allocatedCount: number;
+            cidr: string;
+            /** Format: int64 */
+            freeCount: number;
+            /** Format: int64 */
+            id: number;
+            name: string;
+        };
+        LoginRequest: {
+            email: string;
+            password: string;
+        };
+        MemberBrief: {
+            name: string;
+            role: components["schemas"]["GroupMemberRole"];
+            /** Format: int64 */
+            userId: number;
+        };
+        Membership: {
+            /** Format: int64 */
+            groupId: number;
+            groupKind: components["schemas"]["GroupKind"];
+            groupName: string;
+            role: components["schemas"]["GroupMemberRole"];
+        };
+        MessageResponse: {
+            message: string;
+        };
+        MfaChallengeResponse: {
+            mfaRequired: boolean;
+            mfaToken: string;
+        };
+        MfaLoginRequest: {
+            code?: string;
+            mfaToken: string;
+            recoveryCode?: string;
+        };
+        MfaRecoveryCodesResponse: {
+            recoveryCodes: string[];
+        };
+        MfaSetupResponse: {
+            otpauthUri: string;
+            secret: string;
+        };
+        NodeRatio: {
+            /** Format: double */
+            cpuOvercommitRatio: number;
+            /** Format: int64 */
+            id: number;
+            /** Format: double */
+            memoryAllocRatio: number;
+            name: string;
+            status: components["schemas"]["NodeStatus"];
+            warn: boolean;
+        };
+        /** @enum {string} */
+        NodeStatus: "ACTIVE" | "MAINTENANCE" | "OFFLINE";
+        NodeSummaryResponse: {
+            /** Format: int64 */
+            allocatedMemoryMb: number;
+            /** Format: int64 */
+            allocatedVcpu: number;
+            /** Format: double */
+            cpuOvercommitRatio: number;
+            /** Format: int32 */
+            cpuThreads: number;
+            /** Format: double */
+            cpuWarnThreshold: number;
+            /** Format: int64 */
+            id: number;
+            ipPool: components["schemas"]["IpPoolSummaryResponse"];
+            /** Format: double */
+            memoryAllocRatio: number;
+            /** Format: int32 */
+            memoryMb: number;
+            /** Format: double */
+            memoryWarnThreshold: number;
+            name: string;
+            /** Format: int64 */
+            runningVms: number;
+            status: components["schemas"]["NodeStatus"];
+            storage: string;
+            vmBridge: string;
+        };
+        /** @enum {string} */
+        NotificationChannel: "EMAIL";
+        /** @enum {string} */
+        NotificationImportance: "NORMAL" | "HIGH";
+        /** @enum {string} */
+        NotificationStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+        NotificationView: {
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            event: string;
+            /** Format: int64 */
+            id: number;
+            importance: components["schemas"]["NotificationImportance"];
+            linkPath?: string | null;
+            /** Format: date-time */
+            readAt?: string | null;
+            title: string;
+        };
+        OrgDashboardSummaryResponse: {
+            attention: components["schemas"]["Attention"];
+            /** Format: int64 */
+            expiringVmCount30d: number;
+            /** Format: int64 */
+            pendingRequestCount: number;
+            /** Format: int64 */
+            publishedServiceCount: number;
+            recentDecisions14d: components["schemas"]["RecentDecisions"];
+            resource: components["schemas"]["Resource"];
+            topGroupsByVmCount: components["schemas"]["TopGroup"][];
+            vmCountsByStatus: {
+                [key: string]: number;
+            };
+        };
+        OrgDetailResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            description?: string | null;
             /** Format: int64 */
             id: number;
             name: string;
             slug: string;
-            /** @description 그룹의 `ACTIVE` 구성원 수 — 공지 발송 수신 대상 산정과 동일 기준 (비활성/탈퇴 구성원 제외) */
-            memberCount: number;
+            status: components["schemas"]["OrgStatus"];
         };
-        /**
-         * @description 알림 이메일 발송 상태 (PENDING=발송 대기, SENT=발송 완료, FAILED=발송 실패 — 재발송 가능, SKIPPED=발송 생략 — 발송 시점에 수신자가 비활성/탈퇴 상태인 경우)
-         * @enum {string}
-         */
-        NotificationDeliveryStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
-        AdminNotificationView: components["schemas"]["NotificationView"] & {
+        OrgHeadroom: {
+            allocated: components["schemas"]["ResourceTotalsResponse"];
+            capacity: components["schemas"]["Capacity"];
+            /** Format: double */
+            memoryUsageRatio: number;
+            /** Format: double */
+            vcpuOvercommitRatio: number;
+            warnings: string[];
+        };
+        /** @enum {string} */
+        OrgStatus: "ACTIVE" | "DISABLED";
+        OrgSummaryResponse: {
+            description?: string | null;
+            /** Format: int64 */
+            id: number;
+            name: string;
+            slug: string;
+            status: components["schemas"]["OrgStatus"];
+        };
+        PageResponseActivityEntryResponse: {
+            content: components["schemas"]["ActivityEntryResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminCertificateView: {
+            content: components["schemas"]["AdminCertificateView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminDomainView: {
+            content: components["schemas"]["AdminDomainView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminNotificationResponse: {
+            content: components["schemas"]["AdminNotificationResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminRouteView: {
+            content: components["schemas"]["AdminRouteView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminTaskResponse: {
+            content: components["schemas"]["AdminTaskResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAnnouncementView: {
+            content: components["schemas"]["AnnouncementView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAuditLogViewResponse: {
+            content: components["schemas"]["AuditLogViewResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseDomainSummaryView: {
+            content: components["schemas"]["DomainSummaryView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseDriftFindingResponse: {
+            content: components["schemas"]["DriftFindingResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseIpAllocationResponse: {
+            content: components["schemas"]["IpAllocationResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseNotificationView: {
+            content: components["schemas"]["NotificationView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseUserAdminViewResponse: {
+            content: components["schemas"]["UserAdminViewResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseVmEventResponse: {
+            content: components["schemas"]["VmEventResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseVmRequestDetailResponse: {
+            content: components["schemas"]["VmRequestDetailResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseVmSummaryResponse: {
+            content: components["schemas"]["VmSummaryResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PasswordResetConfirmRequest: {
+            newPassword: string;
+            token: string;
+        };
+        PasswordResetRequest: {
+            email: string;
+        };
+        /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환됩니다. */
+        Problem: {
+            /** @description 기계 판독용 안정 오류 코드 (클라이언트 분기 기준) */
+            code: string;
+            /** @description 이 발생 건에 대한 설명 */
+            detail?: string;
+            /** @description 검증 실패 상세 (422에서만 존재) */
+            errors?: components["schemas"]["FieldValidationError"][];
+            /** @description 발생 경로 */
+            instance?: string;
             /**
-             * Format: int64
-             * @description 수신자 사용자 ID
+             * Format: int32
+             * @description HTTP 상태 코드
              */
-            userId: number;
-            /**
-             * Format: email
-             * @description 수신자 이메일
-             */
-            userEmail: string;
-            /**
-             * @description 발송 채널 (v1은 EMAIL 고정)
-             * @enum {string}
-             */
-            channel: "EMAIL";
-            status: components["schemas"]["NotificationDeliveryStatus"];
-            /** @description 발송 시도 횟수 (재발송 포함) */
+            status: number;
+            /** @description 사람이 읽는 짧은 제목 */
+            title: string;
+            /** @description 문제 유형 URI (기본 about:blank) */
+            type?: string;
+        };
+        /** @enum {string} */
+        ProvisioningTaskKind: "PROVISION" | "DELETE" | "REINSTALL";
+        ProvisioningTaskResponse: {
+            /** Format: int32 */
             attempts: number;
-            /** @description 마지막 발송 실패 요약 (한국어, 실패가 없으면 null) */
+            /** Format: int32 */
+            currentStep: number;
+            kind: components["schemas"]["ProvisioningTaskKind"];
             lastError?: string | null;
-            /**
-             * Format: date-time
-             * @description 발송 완료 시각 (미발송/실패 시 null)
-             */
-            sentAt?: string | null;
-        };
-        AdminNotificationPage: {
-            content: components["schemas"]["AdminNotificationView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description 내 활동 이력 항목 (감사 로그의 본인 행 뷰 — 로그인 이력 포함) */
-        ActivityEntry: {
-            /** Format: int64 */
-            id: number;
-            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.self_delete`) */
-            action: string;
-            /** @description 대상 리소스 종류 (예 `vm`, `group` — 없으면 null) */
-            targetType?: string | null;
-            /** @description 대상 리소스 식별자 (없으면 null) */
-            targetId?: string | null;
-            /** @description 부가 정보 (화이트리스트된 필드만 노출 — 비밀값·내부 식별자 미포함, 없으면 null) */
-            detail?: Record<string, never> | null;
-            /** @description 요청 IP (없으면 null) */
-            ip?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        ActivityPage: {
-            content: components["schemas"]["ActivityEntry"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description 감사 로그 항목 (행위자 맥락 포함) */
-        AuditLogView: {
-            /** Format: int64 */
-            id: number;
-            /**
-             * Format: int64
-             * @description 행위자 사용자 ID (null = 시스템/자동 작업)
-             */
-            actorId?: number | null;
-            /** @description 행위자 이메일 (시스템 작업은 null) */
-            actorEmail?: string | null;
-            /** @description 행위자 이름 (시스템 작업은 null) */
-            actorName?: string | null;
-            /** @description 행위 시점의 전역 역할 문자열 (시스템 작업은 null). 통상 USER/ORG_ADMIN/SYS_ADMIN이지만 인프라 데몬 감사 행은 `SSHGW` 등 UserRole 밖의 값이 올 수 있어 열린 문자열로 정의합니다 — 콘솔은 미지 값을 원문 표기. */
-            actorRole?: string | null;
-            /** @description 활동 종류 (점 네임스페이스, 예 `auth.login`, `vm.self_delete`, `setting.update`) */
-            action: string;
-            /** @description 대상 리소스 종류 (없으면 null) */
-            targetType?: string | null;
-            /** @description 대상 리소스 식별자 (없으면 null) */
-            targetId?: string | null;
-            /** @description 부가 정보 (화이트리스트된 필드만 — 없으면 null) */
-            detail?: Record<string, never> | null;
-            /** @description 요청 IP (시스템 작업은 null) */
-            ip?: string | null;
-            /** @description 행위자의 파생 소속 기관 이름 (v0.9.0 — SYS_ADMIN 감사 화면의 기관 맥락 표시용. 파생 소속이 없거나 시스템 작업이면 null, 복수 기관이면 대표 1개) */
-            orgName?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        AuditLogPage: {
-            content: components["schemas"]["AuditLogView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description 운영 설정 항목 */
-        SettingView: {
-            /** @description 설정 키 (예 `vm_delete_grace_hours`, `ssh_gateway_enabled`) */
-            key: string;
-            /** @description 설정 값 (임의 JSON — 실제 타입은 `valueType` 참조) */
-            value: unknown;
-            /**
-             * @description 값 타입 (수정 시 서버 검증 기준)
-             * @enum {string}
-             */
-            valueType: "BOOLEAN" | "INTEGER" | "NUMBER" | "STRING" | "JSON";
-            /** @description 설정 설명 (한국어) */
-            description: string;
-            /** @description 콘솔에서 수정 가능한지 여부 (false면 조회 전용 — 수정 시 404) */
-            editable: boolean;
+            status: components["schemas"]["ProvisioningTaskStatus"];
+            stepLabel: string;
+            /** Format: int32 */
+            totalSteps: number;
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @enum {string} */
+        ProvisioningTaskStatus: "PENDING" | "RUNNING" | "DONE" | "FAILED" | "RETRYING" | "NEEDS_ADMIN";
+        PublicationView: {
+            certificate?: components["schemas"]["CertificateView"] | null;
+            domain: components["schemas"]["DomainDetailView"];
+            fqdn: string;
+            route?: components["schemas"]["RouteView"] | null;
+        };
+        PublishRequest: {
+            customDomain?: string | null;
+            /** Format: int32 */
+            port?: number;
+        };
+        ReadAllResponse: {
+            /** Format: int32 */
+            updatedCount: number;
+        };
+        RecentDecisions: {
+            /** Format: int64 */
+            approvedCount: number;
+            /** Format: int64 */
+            rejectedCount: number;
+        };
+        RegenerateRecoveryCodesRequest: {
+            code: string;
+            password: string;
+        };
+        RejectVmRequestRequest: {
+            comment: string;
+        };
+        RequestOptionsResponse: {
+            allowedRootDomains: string[];
+            reservedSubdomains: string[];
+            sshHost: string;
+        };
+        RequiredRecord: {
+            name: string;
+            type: string;
+            value: string;
+        };
+        ResendVerificationRequest: {
+            email: string;
+        };
+        ResolveDriftFindingRequest: {
+            note?: string;
+        };
+        Resource: {
+            /** Format: int64 */
+            allocatedDiskGb: number;
+            /** Format: int64 */
+            allocatedMemoryMb: number;
+            /** Format: int64 */
+            allocatedVcpu: number;
+            /** Format: int64 */
+            capacityMemoryMb?: number | null;
+            /** Format: int64 */
+            capacityVcpu?: number | null;
+            guidance: string;
+        };
+        ResourceTotalsResponse: {
+            /** Format: int64 */
+            diskGb: number;
+            /** Format: int64 */
+            memoryMb: number;
+            /** Format: int32 */
+            vcpu: number;
+        };
+        Resources: {
+            activeVms: components["schemas"]["VmBriefResponse"][];
+            totals: components["schemas"]["ResourceTotalsResponse"];
+        };
+        /** @enum {string} */
+        ReviewDecision: "APPROVE" | "REJECT";
+        /** @enum {string} */
+        RouteStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
+        RouteView: {
+            /** Format: date-time */
+            appliedAt?: string | null;
+            lastError?: string | null;
+            protocol: string;
+            status: components["schemas"]["RouteStatus"];
+            /** Format: int32 */
+            targetPort: number;
+        };
+        ScheduleVmDeletionRequest: {
+            reason: string;
+            /** Format: date-time */
+            scheduledFor: string;
+        };
         SettingUpdateRequest: {
-            /** @description 새 설정 값 (임의 JSON — `valueType`에 따라 서버가 타입·범위를 검증하며 실패 시 422) */
             value: unknown;
         };
-        AdminTaskView: components["schemas"]["ProvisioningTaskView"] & {
-            /**
-             * Format: int64
-             * @description 작업 ID (`POST /admin/tasks/{taskId}/retry`의 경로 파라미터)
-             */
-            taskId: number;
-            /**
-             * Format: int64
-             * @description 대상 VM ID
-             */
-            vmId: number;
-            /** @description 대상 VM 이름. VM 행은 삭제 후에도 영구 보존되므로 통상 항상 채워집니다 — 데이터 이상 대비 방어적 nullable. */
-            vmName?: string | null;
-            /** @description 대상 VM 호스트명. VM 행 영구 보존으로 통상 항상 채워집니다 — 방어적 nullable. */
-            hostname?: string | null;
-            /**
-             * Format: int64
-             * @description 대상 VM의 기관 ID. VM은 항상 기관에 속하므로 통상 항상 채워집니다 — 방어적 nullable.
-             */
-            orgId?: number | null;
-            /** @description 대상 VM의 기관 이름 (orgId와 동일 기준의 방어적 nullable) */
-            orgName?: string | null;
-            /** @description 대상 VM의 소유 그룹 이름 (v0.9.0 — vmName과 동일 기준의 방어적 nullable) */
-            groupName?: string | null;
-            /** @description JobRunr 잡 UUID (큐 등록 전이면 null) */
-            jobrunrJobId?: string | null;
+        /** @enum {string} */
+        SettingValueType: "BOOLEAN" | "INTEGER" | "NUMBER" | "STRING" | "JSON";
+        SettingView: {
+            description: string;
+            editable: boolean;
+            key: string;
+            /** Format: date-time */
+            updatedAt: string;
+            value: unknown;
+            valueType: components["schemas"]["SettingValueType"];
+        };
+        SignupRequest: {
+            consents: components["schemas"]["ConsentInput"][];
+            email: string;
+            name: string;
+            password: string;
+        };
+        /** @enum {string} */
+        SshKeyAlgorithm: "ED25519" | "RSA";
+        SshKeyCreateRequest: {
+            name: string;
+            publicKey: string;
+        };
+        SshKeyGenerateRequest: {
+            name: string;
+        };
+        SshKeyPrivateKeyResponse: {
+            fileName: string;
+            privateKey: string;
+        };
+        SshKeyView: {
+            algorithm: components["schemas"]["SshKeyAlgorithm"];
             /** Format: date-time */
             createdAt: string;
-        };
-        AdminTaskPage: {
-            content: components["schemas"]["AdminTaskView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /**
-         * @description 드리프트 발견 상태
-         * @enum {string}
-         */
-        DriftFindingStatus: "OPEN" | "RESOLVED";
-        /**
-         * @description 드리프트 종류 (MISSING_IN_PROXMOX=DB에는 있으나 Proxmox에 없음, UNMANAGED_GUEST=Proxmox에는 있으나 DB가 모르는 게스트, SPEC_MISMATCH=DB 사양과 실제 게스트 사양 불일치)
-         * @enum {string}
-         */
-        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH";
-        /** @description 조정자(reconciler)가 감지한 DB↔Proxmox 드리프트 발견. `RESOLVED`인데 `resolvedBy*`가 null이면 조정자가 소멸을 확인하고 자동 해결한 것입니다. */
-        DriftFindingView: {
+            fingerprint: string;
             /** Format: int64 */
             id: number;
-            kind: components["schemas"]["DriftFindingKind"];
-            /**
-             * Format: int64
-             * @description 관련 VM ID (UNMANAGED_GUEST 등 DB에 없는 대상은 null)
-             */
-            vmId?: number | null;
-            /** @description 관련 VM 이름 (v0.9.0 — vmId와 동일 기준: DB에 없는 대상은 null) */
-            vmName?: string | null;
-            /** @description Proxmox VMID (Proxmox에 없는 대상은 null) */
-            proxmoxVmid?: number | null;
-            /** @description 관측된 노드 이름 (특정 불가 시 null) */
-            nodeName?: string | null;
-            /** @description 발견 한 줄 요약 (한국어) */
-            summary: string;
-            /** @description 발견 상세 (예 사양 불일치 필드별 기대/실제 값 — 없으면 null) */
-            detail?: Record<string, never> | null;
-            status: components["schemas"]["DriftFindingStatus"];
-            /**
-             * Format: date-time
-             * @description 최초 관측 시각
-             */
-            firstSeenAt: string;
-            /**
-             * Format: date-time
-             * @description 마지막 관측 시각
-             */
-            lastSeenAt: string;
-            /**
-             * Format: date-time
-             * @description 해결 시각 (OPEN이면 null)
-             */
-            resolvedAt?: string | null;
-            /**
-             * Format: int64
-             * @description 해결 처리한 관리자 ID (자동 해결·OPEN이면 null)
-             */
-            resolvedById?: number | null;
-            /** @description 해결 처리한 관리자 이메일 (자동 해결·OPEN이면 null) */
-            resolvedByEmail?: string | null;
-            /** @description 해결 메모 (없으면 null) */
-            resolutionNote?: string | null;
-        };
-        DriftFindingPage: {
-            content: components["schemas"]["DriftFindingView"][];
-            page: number;
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
-        };
-        /** @description 기관 관리자 대시보드 요약 (ORG_ADMIN 홈 / SYS_ADMIN 기관 드릴인) */
-        OrgDashboardSummary: {
-            /** @description 승인 대기(SUBMITTED) 신청 수 */
-            pendingRequestCount: number;
-            /** @description 최근 14일 결정 수 */
-            recentDecisions14d: {
-                approvedCount: number;
-                rejectedCount: number;
-            };
-            /** @description VM 상태별 개수 (키 = `VmStatus` 값) */
-            vmCountsByStatus: {
-                [key: string]: number;
-            };
-            /** @description 자원 할당 현황과 한국어 안내 */
-            resource: {
-                /** @description 할당 vCPU 합계 (활성 VM 기준) */
-                allocatedVcpu: number;
-                /** @description 할당 메모리 합계 (MiB) */
-                allocatedMemoryMb: number;
-                /** @description 할당 디스크 합계 (GiB) */
-                allocatedDiskGb: number;
-                /** @description 물리 vCPU(스레드) 용량 (기관 단위 산정 불가 시 null) */
-                capacityVcpu?: number | null;
-                /** @description 물리 메모리 용량 (MiB, 기관 단위 산정 불가 시 null) */
-                capacityMemoryMb?: number | null;
-                /** @description 임계값 기반 한국어 안내문 (승인 판단 참고와 동일한 톤) */
-                guidance: string;
-            };
-            /** @description VM 보유 수 상위 그룹 (최대 10개) */
-            topGroupsByVmCount: {
-                /** Format: int64 */
-                groupId: number;
-                name: string;
-                vmCount: number;
-            }[];
-            /** @description 공개 중인 HTTP 서비스(라우트) 수 */
-            publishedServiceCount: number;
-            /** @description 30일 이내 만료 예정 VM 수 */
-            expiringVmCount30d: number;
-            /** @description 주의가 필요한 항목 수 (대시보드 경고 배지) */
-            attention: {
-                /** @description 실패(FAILED) 작업 수 */
-                failedTaskCount: number;
-                /** @description NEEDS_ADMIN 상태 VM 수 */
-                needsAdminVmCount: number;
-                /** @description 이미 만료된 VM 수 */
-                expiredVmCount: number;
-            };
-        };
-        /** @description 시스템 대시보드 요약 (SYS_ADMIN 전용) */
-        SystemDashboardSummary: {
-            /** @description 노드별 할당 비율 요약 */
-            nodes: {
-                /** Format: int64 */
-                id: number;
-                name: string;
-                /** @enum {string} */
-                status: "ACTIVE" | "MAINTENANCE" | "OFFLINE";
-                /** @description 할당 vCPU ÷ 물리 스레드 */
-                cpuOvercommitRatio: number;
-                /** @description 할당 메모리 ÷ 물리 메모리 */
-                memoryAllocRatio: number;
-                /** @description 경고 임계값 초과 여부 */
-                warn: boolean;
-            }[];
-            /** @description VM 상태별 개수 (키 = `VmStatus` 값) */
-            vmCountsByStatus: {
-                [key: string]: number;
-            };
-            /** @description 작업 큐 요약 */
-            tasks: {
-                runningCount: number;
-                retryingCount: number;
-                needsAdminCount: number;
-                /** @description 최근 24시간 실패 작업 수 */
-                failed24hCount: number;
-            };
-            /** @description 발송 실패(FAILED) 알림 수 */
-            notificationFailureCount: number;
-            /** @description 30일 이내 만료 예정 인증서 수 */
-            certExpiring30dCount: number;
-            /** @description 미해결(OPEN) 드리프트 발견 수 */
-            openDriftFindingCount: number;
-            /** @description `ssh_password_enabled=true`로 비밀번호 SSH가 허용된 활성(비삭제) VM 수 — 개인 식별 예외이므로 대시보드에 상시 노출 (G6 관리자 가시성 요건) */
-            sshPasswordEnabledVmCount: number;
-            /** @description IP 풀별 할당/여유 현황 */
-            ipPools: {
-                /** Format: int64 */
-                id: number;
-                name: string;
-                cidr: string;
-                allocatedCount: number;
-                freeCount: number;
-            }[];
-        };
-        /**
-         * @description IP 할당 상태 (RELEASED 행은 이력으로 보존)
-         * @enum {string}
-         */
-        IpAllocationStatus: "ALLOCATED" | "RELEASED";
-        /** @description IP 할당 항목 */
-        IpAllocationView: {
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            poolId: number;
-            poolName: string;
-            /** @description 할당된 IP 주소 */
-            ip: string;
-            /**
-             * Format: int64
-             * @description 할당 대상 VM ID. VM 행은 영구 보존되므로 RELEASED 이력에서도 통상 채워집니다 — 데이터 이상 대비 방어적 nullable.
-             */
-            vmId?: number | null;
-            /** @description 할당 대상 VM 이름 (vmId와 동일 기준의 방어적 nullable) */
-            vmName?: string | null;
-            /** @description 할당 대상 VM 호스트명 (vmId와 동일 기준의 방어적 nullable) */
-            hostname?: string | null;
-            status: components["schemas"]["IpAllocationStatus"];
             /** Format: date-time */
-            allocatedAt: string;
-            /**
-             * Format: date-time
-             * @description 해제 시각 (ALLOCATED면 null)
-             */
-            releasedAt?: string | null;
+            lastUsedAt?: string | null;
+            name: string;
+            privateKeyStored: boolean;
+            publicKey: string;
         };
-        IpAllocationPage: {
-            content: components["schemas"]["IpAllocationView"][];
-            page: number;
-            size: number;
+        SystemDashboardSummaryResponse: {
             /** Format: int64 */
-            totalElements: number;
-            totalPages: number;
+            certExpiring30dCount: number;
+            ipPools: components["schemas"]["IpPoolUsage"][];
+            nodes: components["schemas"]["NodeRatio"][];
+            /** Format: int64 */
+            notificationFailureCount: number;
+            /** Format: int64 */
+            openDriftFindingCount: number;
+            /** Format: int64 */
+            sshPasswordEnabledVmCount: number;
+            tasks: components["schemas"]["Tasks"];
+            vmCountsByStatus: {
+                [key: string]: number;
+            };
+        };
+        SystemStatusResponse: {
+            bannerMessage?: string | null;
+            contactEmail?: string | null;
+            maintenance: boolean;
+            maintenanceMessage?: string | null;
+        };
+        Tasks: {
+            /** Format: int64 */
+            failed24hCount: number;
+            /** Format: int64 */
+            needsAdminCount: number;
+            /** Format: int64 */
+            retryingCount: number;
+            /** Format: int64 */
+            runningCount: number;
+        };
+        /** @enum {string} */
+        TemplateStatus: "ACTIVE" | "DISABLED";
+        TerminalSessionView: {
+            clientIp: string;
+            groupName: string;
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            sessionId: string;
+            /** Format: date-time */
+            startedAt: string;
+            userEmail: string;
+            /** Format: int64 */
+            userId: number;
+            userName: string;
+            /** Format: int64 */
+            vmId: number;
+            vmName: string;
+        };
+        TerminalTicketResponse: {
+            /** Format: date-time */
+            expiresAt: string;
+            sessionId: string;
+            subprotocol: string;
+            ticket: string;
+            wsPath: string;
+        };
+        /** @enum {string} */
+        TermsDocType: "TERMS_OF_SERVICE" | "PRIVACY_POLICY";
+        TermsDocumentView: {
+            body: string;
+            docType: components["schemas"]["TermsDocType"];
+            /** Format: date-time */
+            effectiveAt: string;
+            title: string;
+            /** Format: int32 */
+            version: number;
+        };
+        TermsVersionView: {
+            docType: components["schemas"]["TermsDocType"];
+            /** Format: date-time */
+            effectiveAt: string;
+            title: string;
+            /** Format: int32 */
+            version: number;
+        };
+        TopGroup: {
+            /** Format: int64 */
+            groupId: number;
+            name: string;
+            /** Format: int64 */
+            vmCount: number;
+        };
+        UnreadCountResponse: {
+            /** Format: int64 */
+            unreadCount: number;
+        };
+        UpdateGroupMemberRequest: {
+            role: components["schemas"]["GroupMemberRole"];
+        };
+        UpdateGroupRequest: {
+            description?: string | null;
+            name?: string;
+        };
+        UpdateOrgRequest: {
+            description?: string | null;
+            name?: string;
+            status?: components["schemas"]["OrgStatus"];
+        };
+        UpdatePublicationRequest: {
+            customDomain?: string | null;
+            /** Format: int32 */
+            port?: number;
+        };
+        UpdateUserAdminRequest: {
+            /** Format: int64 */
+            orgId?: number | null;
+            role?: components["schemas"]["UserRole"];
+        };
+        UserAdminDetailResponse: {
+            /** Format: int32 */
+            activeVmCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            disabledAt?: string | null;
+            disabledReason?: string | null;
+            email: string;
+            /** Format: int64 */
+            id: number;
+            memberships: components["schemas"]["Membership"][];
+            mfaEnabled: boolean;
+            name: string;
+            /** Format: int64 */
+            orgId?: number | null;
+            role: components["schemas"]["UserRole"];
+            status: components["schemas"]["UserStatus"];
+            statusChanges: components["schemas"]["UserStatusChangeResponse"][];
+            /** Format: date-time */
+            withdrawnAt?: string | null;
+        };
+        UserAdminViewResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            email: string;
+            /** Format: int64 */
+            id: number;
+            mfaEnabled: boolean;
+            name: string;
+            /** Format: int64 */
+            orgId?: number | null;
+            role: components["schemas"]["UserRole"];
+            status: components["schemas"]["UserStatus"];
+        };
+        UserProfileResponse: {
+            email: string;
+            /** Format: int64 */
+            id: number;
+            memberships: components["schemas"]["Membership"][];
+            mfaEnabled: boolean;
+            name: string;
+            /** Format: int64 */
+            orgId?: number | null;
+            pendingConsents: components["schemas"]["TermsVersionView"][];
+            role: components["schemas"]["UserRole"];
+            status: components["schemas"]["UserStatus"];
+        };
+        /** @enum {string} */
+        UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
+        /** @enum {string} */
+        UserStatus: "PENDING_VERIFICATION" | "ACTIVE" | "DISABLED" | "WITHDRAWN";
+        UserStatusChangeResponse: {
+            actorEmail?: string | null;
+            /** Format: int64 */
+            actorId?: number | null;
+            /** Format: date-time */
+            changedAt: string;
+            fromStatus: components["schemas"]["UserStatus"];
+            reason?: string | null;
+            toStatus: components["schemas"]["UserStatus"];
+        };
+        UserSummaryResponse: {
+            email: string;
+            /** Format: int64 */
+            id: number;
+            name: string;
+            role: components["schemas"]["UserRole"];
+        };
+        VerifyEmailRequest: {
+            token: string;
+        };
+        VmBriefResponse: {
+            /** Format: int32 */
+            diskGb: number;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            memoryMb: number;
+            name: string;
+            status: components["schemas"]["VmStatus"];
+            /** Format: int32 */
+            vcpu: number;
+        };
+        /** @enum {string} */
+        VmDeleteKind: "SELF" | "ADMIN" | "FORCE";
+        VmDeletionResponse: {
+            cancelable: boolean;
+            kind: components["schemas"]["VmDeleteKind"];
+            reason?: string | null;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: int64 */
+            requestedById: number;
+            /** Format: date-time */
+            scheduledFor: string;
+        };
+        VmDetailResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            deletion?: components["schemas"]["VmDeletionResponse"] | null;
+            /** Format: int32 */
+            diskGb: number;
+            displayName?: string | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: date-time */
+            expiryStoppedAt?: string | null;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            hostname: string;
+            httpPublishGranted: boolean;
+            /** Format: int64 */
+            id: number;
+            ipAddress?: string | null;
+            /** Format: int32 */
+            memoryMb: number;
+            myGroupRole?: components["schemas"]["GroupMemberRole"] | null;
+            name: string;
+            /** Format: int64 */
+            orgId: number;
+            orgName?: string | null;
+            passwordAvailable: boolean;
+            passwordRevealAllowed: boolean;
+            provisioning?: components["schemas"]["ProvisioningTaskResponse"] | null;
+            publication?: components["schemas"]["PublicationView"] | null;
+            /** Format: int64 */
+            requestId: number;
+            sshHost: string;
+            sshUsername: string;
+            /** Format: date */
+            startDate?: string | null;
+            status: components["schemas"]["VmStatus"];
+            statusDetail?: string | null;
+            /** Format: int64 */
+            templateId: number;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: int32 */
+            vcpu: number;
+        };
+        VmEventResponse: {
+            /** Format: int64 */
+            actorId?: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            detail?: string | null;
+            /** Format: int64 */
+            id: number;
+            type: components["schemas"]["VmEventType"];
+        };
+        /** @enum {string} */
+        VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE";
+        VmPasswordResponse: {
+            password: string;
+            sshHost: string;
+            /** Format: int32 */
+            sshPort: number;
+            sshUsername: string;
         };
         VmPeriodUpdateRequest: {
-            /**
-             * Format: date
-             * @description 새 사용 종료일 (**포함** — 당일까지 사용 가능, 만료 자동 종료는 다음 날 00:00 KST 이후). 과거(KST)이거나 `startDate`보다 이르면 422.
-             */
+            /** Format: date */
             endDate: string;
-            /**
-             * Format: date
-             * @description 새 사용 시작일 (생략 시 기존 값 유지)
-             */
+            /** Format: date */
             startDate?: string;
         };
+        VmRequestDetailResponse: {
+            courseOrProject?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            customDomain?: string | null;
+            desiredSlug?: string | null;
+            desiredSubdomain?: string | null;
+            extraNote?: string | null;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            /** Format: int64 */
+            id: number;
+            needHttp: boolean;
+            needPublic: boolean;
+            needSsh: boolean;
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            purpose: string;
+            /** Format: int32 */
+            reqDiskGb: number;
+            /** Format: date */
+            reqEndDate?: string | null;
+            /** Format: int32 */
+            reqMemoryMb: number;
+            /** Format: date */
+            reqStartDate?: string | null;
+            /** Format: int32 */
+            reqVcpu: number;
+            /** Format: int64 */
+            requesterId: number;
+            requesterName: string;
+            review?: components["schemas"]["VmRequestReviewResponse"] | null;
+            rootDomain?: string | null;
+            specReason?: string | null;
+            status: components["schemas"]["VmRequestStatus"];
+            /** Format: int64 */
+            templateId: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        VmRequestReviewResponse: {
+            comment?: string | null;
+            /** Format: date-time */
+            decidedAt: string;
+            decision: components["schemas"]["ReviewDecision"];
+            grantHttp?: boolean | null;
+            grantPublic?: boolean | null;
+            grantSsh?: boolean | null;
+            /** Format: int32 */
+            grantedDiskGb?: number | null;
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: int32 */
+            grantedMemoryMb?: number | null;
+            grantedRootDomain?: string | null;
+            /** Format: date */
+            grantedStartDate?: string | null;
+            grantedSubdomain?: string | null;
+            /** Format: int64 */
+            grantedTemplateId?: number | null;
+            /** Format: int32 */
+            grantedVcpu?: number | null;
+            /** Format: int64 */
+            nodeId?: number | null;
+            /** Format: int64 */
+            reviewerId: number;
+            reviewerName: string;
+        };
+        /** @enum {string} */
+        VmRequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+        /** @enum {string} */
+        VmSettingValueType: "BOOLEAN" | "ENUM" | "INTEGER" | "STRING";
+        VmSettingView: {
+            allowedValues?: string[] | null;
+            defaultValue: unknown;
+            description: string;
+            editable: boolean;
+            key: string;
+            label: string;
+            requiredRole: components["schemas"]["GroupMemberRole"];
+            /** Format: date-time */
+            updatedAt?: string | null;
+            updatedByName?: string | null;
+            value: unknown;
+            valueType: components["schemas"]["VmSettingValueType"];
+        };
+        VmSettingsUpdateRequest: {
+            settings: {
+                [key: string]: unknown;
+            };
+        };
+        /** @enum {string} */
+        VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";
+        VmSummaryResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            diskGb: number;
+            displayName?: string | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: date-time */
+            expiryStoppedAt?: string | null;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            hostname: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            memoryMb: number;
+            name: string;
+            orgName?: string | null;
+            /** Format: int64 */
+            requestId: number;
+            status: components["schemas"]["VmStatus"];
+            statusDetail?: string | null;
+            /** Format: int32 */
+            vcpu: number;
+        };
+        VmTemplateResponse: {
+            /** Format: int32 */
+            defaultDiskGb: number;
+            /** Format: int32 */
+            defaultMemoryMb: number;
+            /** Format: int32 */
+            defaultVcpu: number;
+            displayName: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            minDiskGb: number;
+            name: string;
+            notes?: string | null;
+            status: components["schemas"]["TemplateStatus"];
+            /** Format: int32 */
+            version: number;
+        };
+        WithdrawRequest: {
+            password: string;
+            recoveryCode?: string;
+            totpCode?: string;
+        };
     };
-    responses: {
-        /** @description 인증 실패 (액세스 토큰 없음/만료/무효) */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                /**
-                 * @example {
-                 *       "type": "about:blank",
-                 *       "title": "인증이 필요합니다",
-                 *       "status": 401,
-                 *       "detail": "액세스 토큰이 없거나 만료되었습니다. 토큰을 갱신한 뒤 다시 시도해 주세요.",
-                 *       "instance": "/api/v1/me",
-                 *       "code": "AUTH_TOKEN_INVALID"
-                 *     }
-                 */
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description 권한 없음 */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                /**
-                 * @example {
-                 *       "type": "about:blank",
-                 *       "title": "접근 권한이 없습니다",
-                 *       "status": 403,
-                 *       "detail": "이 작업을 수행할 권한이 없습니다.",
-                 *       "instance": "/api/v1/admin/vm-requests",
-                 *       "code": "ACCESS_DENIED"
-                 *     }
-                 */
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description 리소스 없음 (또는 권한상 보이지 않음) */
-        NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                /**
-                 * @example {
-                 *       "type": "about:blank",
-                 *       "title": "리소스를 찾을 수 없습니다",
-                 *       "status": 404,
-                 *       "detail": "요청한 리소스가 존재하지 않습니다.",
-                 *       "instance": "/api/v1/vm-requests/9999",
-                 *       "code": "RESOURCE_NOT_FOUND"
-                 *     }
-                 */
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description 요청 본문/파라미터 검증 실패 */
-        ValidationError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                /**
-                 * @example {
-                 *       "type": "about:blank",
-                 *       "title": "입력값이 올바르지 않습니다",
-                 *       "status": 422,
-                 *       "detail": "요청 값을 확인해 주세요.",
-                 *       "instance": "/api/v1/auth/signup",
-                 *       "code": "VALIDATION_FAILED",
-                 *       "errors": [
-                 *         {
-                 *           "field": "email",
-                 *           "message": "@pusan.ac.kr 이메일만 가입할 수 있습니다."
-                 *         },
-                 *         {
-                 *           "field": "password",
-                 *           "message": "비밀번호는 10자 이상이어야 합니다."
-                 *         }
-                 *       ]
-                 *     }
-                 */
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-        /** @description 요청 횟수 초과 (IP+계정 슬라이딩 윈도 초과 또는 연속 실패 잠금) */
-        TooManyRequests: {
-            headers: {
-                /** @description 재시도 가능까지 남은 시간(초) */
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                /**
-                 * @example {
-                 *       "type": "about:blank",
-                 *       "title": "요청이 너무 많습니다",
-                 *       "status": 429,
-                 *       "detail": "잠시 후 다시 시도해 주세요.",
-                 *       "instance": "/api/v1/auth/login",
-                 *       "code": "RATE_LIMITED"
-                 *     }
-                 */
-                "application/problem+json": components["schemas"]["Problem"];
-            };
-        };
-    };
-    parameters: {
-        /** @description 페이지 번호 (0부터 시작) */
-        Page: number;
-        /** @description 페이지 크기 */
-        Size: number;
-        /** @description 그룹 ID */
-        GroupId: number;
-        /** @description VM 신청 ID */
-        RequestId: number;
-        /** @description VM ID */
-        VmId: number;
-        /** @description SSH 키 ID */
-        SshKeyId: number;
-        /** @description 도메인 ID */
-        DomainId: number;
-        /** @description 알림 ID */
-        NotificationId: number;
-        /** @description 작업(태스크) ID */
-        TaskId: number;
-        /** @description 드리프트 발견 ID */
-        FindingId: number;
-        /** @description 웹 터미널 세션 ID (UUID) */
-        TerminalSessionId: string;
-        /**
-         * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
-         *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
-         *     누락되거나 쿠키 값과 다르면 403 (`AUTH_CSRF_INVALID`)입니다.
-         */
-        CsrfHeader: string;
-        /**
-         * @description 리프레시 토큰 쿠키 (불투명 랜덤 문자열, 14일). 로그인/갱신 시
-         *     `Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax` 속성으로 발급되므로
-         *     브라우저가 `/auth/*` 요청에만 자동 첨부합니다. 클라이언트 스크립트에서는
-         *     읽거나 쓸 수 없습니다.
-         */
-        RefreshCookie: string;
-    };
+    responses: never;
+    parameters: never;
     requestBodies: never;
     headers: never;
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    signup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "email": "example@pusan.ac.kr",
-                 *       "password": "correct-horse-battery!",
-                 *       "name": "홍길동",
-                 *       "consents": [
-                 *         {
-                 *           "docType": "TERMS_OF_SERVICE",
-                 *           "version": 1
-                 *         },
-                 *         {
-                 *           "docType": "PRIVACY_POLICY",
-                 *           "version": 1
-                 *         }
-                 *       ]
-                 *     }
-                 */
-                "application/json": components["schemas"]["SignupRequest"];
-            };
-        };
-        responses: {
-            /** @description 인증 메일 발송 접수 */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "인증 메일을 발송했습니다. 메일함을 확인해 주세요."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description 이미 가입된 이메일 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 가입된 이메일입니다",
-                     *       "status": 409,
-                     *       "detail": "해당 이메일로 가입된 계정이 이미 존재합니다.",
-                     *       "instance": "/api/v1/auth/signup",
-                     *       "code": "AUTH_EMAIL_ALREADY_REGISTERED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    verifyEmail: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "token": "3f6c1b2ae94d4d0cbb1f8a5e7c2d9e10"
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 인증 메일에 포함된 1회용 토큰 (24시간 유효) */
-                    token: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 계정 활성화 완료 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description 토큰 만료 또는 이미 사용됨 */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "인증 토큰이 만료되었습니다",
-                     *       "status": 410,
-                     *       "detail": "인증 링크가 만료되었거나 이미 사용되었습니다. 인증 메일을 다시 요청해 주세요.",
-                     *       "instance": "/api/v1/auth/verify-email",
-                     *       "code": "AUTH_VERIFICATION_TOKEN_EXPIRED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    resendVerification: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "email": "example@pusan.ac.kr"
-                 *     }
-                 */
-                "application/json": {
-                    /** Format: email */
-                    email: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 재발송 접수 (계정 존재 여부와 무관하게 동일 응답) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "해당 주소가 등록되어 있다면 인증 메일을 다시 발송했습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "email": "example@pusan.ac.kr",
-                 *       "password": "correct-horse-battery!"
-                 *     }
-                 */
-                "application/json": components["schemas"]["LoginRequest"];
-            };
-        };
-        responses: {
-            /** @description 로그인 성공 (토큰 발급) 또는 2FA 계정의 1단계 통과 (`MfaChallengeResponse` — 쿠키 미발급, `POST /auth/mfa`로 계속) */
-            200: {
-                headers: {
-                    /**
-                     * @description 리프레시 토큰 쿠키 (2FA 챌린지 응답에서는 발급되지 않음). `pickle_refresh=<opaque>; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax`
-                     * @example pickle_refresh=0aX9...redacted; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax
-                     */
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"];
-                };
-            };
-            /** @description 이메일 또는 비밀번호 불일치 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "로그인에 실패했습니다",
-                     *       "status": 401,
-                     *       "detail": "이메일 또는 비밀번호가 올바르지 않습니다.",
-                     *       "instance": "/api/v1/auth/login",
-                     *       "code": "AUTH_INVALID_CREDENTIALS"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 이메일 미인증 계정 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이메일 인증이 필요합니다",
-                     *       "status": 403,
-                     *       "detail": "가입 시 발송된 인증 메일을 확인한 뒤 다시 로그인해 주세요.",
-                     *       "instance": "/api/v1/auth/login",
-                     *       "code": "AUTH_EMAIL_NOT_VERIFIED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    refresh: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
-                 *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
-                 *     누락되거나 쿠키 값과 다르면 403 (`AUTH_CSRF_INVALID`)입니다.
-                 */
-                "X-Pickle-Csrf": components["parameters"]["CsrfHeader"];
-            };
-            path?: never;
-            cookie?: {
-                /**
-                 * @description 리프레시 토큰 쿠키 (불투명 랜덤 문자열, 14일). 로그인/갱신 시
-                 *     `Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax` 속성으로 발급되므로
-                 *     브라우저가 `/auth/*` 요청에만 자동 첨부합니다. 클라이언트 스크립트에서는
-                 *     읽거나 쓸 수 없습니다.
-                 */
-                pickle_refresh?: components["parameters"]["RefreshCookie"];
-            };
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 갱신 성공 (회전된 리프레시 쿠키 포함) */
-            200: {
-                headers: {
-                    /**
-                     * @description 회전된 리프레시 토큰 쿠키 (로그인과 동일한 속성)
-                     * @example pickle_refresh=1bY0...rotated; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax
-                     */
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiJ9.newsig",
-                     *       "user": {
-                     *         "id": 42,
-                     *         "email": "example@pusan.ac.kr",
-                     *         "name": "홍길동",
-                     *         "role": "USER"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            /** @description 쿠키 없음 / 만료 / 폐기됨 / 재사용 감지(체인 폐기) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "세션이 만료되었습니다",
-                     *       "status": 401,
-                     *       "detail": "다시 로그인해 주세요.",
-                     *       "instance": "/api/v1/auth/refresh",
-                     *       "code": "AUTH_REFRESH_TOKEN_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description CSRF 토큰 없음 또는 쿠키 값과 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "CSRF 검증에 실패했습니다",
-                     *       "status": 403,
-                     *       "detail": "요청의 CSRF 토큰이 없거나 올바르지 않습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/auth/refresh",
-                     *       "code": "AUTH_CSRF_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    logout: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description CSRF 이중 제출 토큰. 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
-                 *     (비-HttpOnly, `SameSite=Lax`, `Path=/`) 값을 그대로 전달합니다.
-                 *     누락되거나 쿠키 값과 다르면 403 (`AUTH_CSRF_INVALID`)입니다.
-                 */
-                "X-Pickle-Csrf": components["parameters"]["CsrfHeader"];
-            };
-            path?: never;
-            cookie?: {
-                /**
-                 * @description 리프레시 토큰 쿠키 (불투명 랜덤 문자열, 14일). 로그인/갱신 시
-                 *     `Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax` 속성으로 발급되므로
-                 *     브라우저가 `/auth/*` 요청에만 자동 첨부합니다. 클라이언트 스크립트에서는
-                 *     읽거나 쓸 수 없습니다.
-                 */
-                pickle_refresh?: components["parameters"]["RefreshCookie"];
-            };
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 로그아웃 완료 (쿠키 삭제) */
-            204: {
-                headers: {
-                    /**
-                     * @description 쿠키 삭제 지시
-                     * @example pickle_refresh=; Path=/api/v1/auth; Max-Age=0; HttpOnly; Secure; SameSite=Lax
-                     */
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description CSRF 토큰 없음 또는 쿠키 값과 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "CSRF 검증에 실패했습니다",
-                     *       "status": 403,
-                     *       "detail": "요청의 CSRF 토큰이 없거나 올바르지 않습니다. 페이지를 새로 고친 뒤 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/auth/logout",
-                     *       "code": "AUTH_CSRF_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    requestPasswordReset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "email": "example@pusan.ac.kr"
-                 *     }
-                 */
-                "application/json": {
-                    /** Format: email */
-                    email: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 재설정 메일 발송 접수 (계정 존재 여부와 무관하게 동일 응답) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "해당 주소가 등록되어 있다면 비밀번호 재설정 메일을 발송했습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    confirmPasswordReset: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "token": "9d2c4e1ab74f4f0e8a3b5c6d7e8f9012",
-                 *       "newPassword": "new-horse-battery-staple!"
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 재설정 메일에 포함된 1회용 토큰 (30분 유효) */
-                    token: string;
-                    /** Format: password */
-                    newPassword: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 비밀번호 변경 완료 (모든 기존 세션 무효화) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description 토큰 만료·이미 사용·무효화됨 */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "재설정 링크가 만료되었습니다",
-                     *       "status": 410,
-                     *       "detail": "재설정 링크가 만료되었거나 이미 사용되었습니다. 재설정을 다시 요청해 주세요.",
-                     *       "instance": "/api/v1/auth/password-reset/confirm",
-                     *       "code": "AUTH_RESET_TOKEN_EXPIRED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    completeMfaLogin: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "mfaToken": "5b1e...redacted",
-                 *       "code": "492817"
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 로그인 1단계가 발급한 5분 유효 1회용 토큰 */
-                    mfaToken: string;
-                    /** @description TOTP 6자리 코드 (`recoveryCode`와 택일) */
-                    code?: string;
-                    /** @description 1회용 복구 코드 (`code`와 택일) */
-                    recoveryCode?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 로그인 완료 (로그인과 동일 — 토큰쌍 + 쿠키 발급) */
-            200: {
-                headers: {
-                    /** @description 리프레시 토큰 쿠키. `pickle_refresh=<opaque>; Path=/api/v1/auth; Max-Age=1209600; HttpOnly; Secure; SameSite=Lax` */
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            /** @description 코드 불일치 (mfaToken은 유지 — 재시도 가능, 잠금 카운터 합산) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "인증 코드가 올바르지 않습니다",
-                     *       "status": 401,
-                     *       "detail": "입력한 코드가 올바르지 않습니다. 인증 앱의 최신 코드를 확인해 주세요.",
-                     *       "instance": "/api/v1/auth/mfa",
-                     *       "code": "AUTH_MFA_CODE_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description mfaToken 만료·이미 사용됨 (로그인 처음부터 다시) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "인증 세션이 만료되었습니다",
-                     *       "status": 410,
-                     *       "detail": "2단계 인증 시간이 지났습니다. 처음부터 다시 로그인해 주세요.",
-                     *       "instance": "/api/v1/auth/mfa",
-                     *       "code": "AUTH_MFA_TOKEN_EXPIRED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    getMe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 내 프로필 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 42,
-                     *       "email": "example@pusan.ac.kr",
-                     *       "name": "홍길동",
-                     *       "role": "USER",
-                     *       "orgId": null,
-                     *       "status": "ACTIVE",
-                     *       "memberships": [
-                     *         {
-                     *           "groupId": 7,
-                     *           "groupName": "홍길동",
-                     *           "groupKind": "PERSONAL",
-                     *           "role": "OWNER"
-                     *         },
-                     *         {
-                     *           "groupId": 12,
-                     *           "groupName": "캡스톤 3조",
-                     *           "groupKind": "PROJECT",
-                     *           "role": "EDITOR"
-                     *         }
-                     *       ],
-                     *       "mfaEnabled": false,
-                     *       "pendingConsents": []
-                     *     }
-                     */
-                    "application/json": components["schemas"]["UserProfile"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    listMyActivity: {
+    listAnnouncements: {
         parameters: {
             query?: {
-                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `auth.login_failed`, `vm.self_delete`) */
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAnnouncementView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AnnouncementView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAuditLogs: {
+        parameters: {
+            query?: {
+                actorEmail?: string;
                 action?: string;
-                /** @description 조회 시작일 (KST, 해당 일 00:00부터) */
+                targetType?: string;
+                targetId?: string;
                 from?: string;
-                /** @description 조회 종료일 (KST, 해당 일 24:00까지) */
                 to?: string;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                orgId?: number;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -5181,1251 +3009,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 활동 이력 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 501,
-                     *           "action": "auth.login",
-                     *           "targetType": null,
-                     *           "targetId": null,
-                     *           "detail": null,
-                     *           "ip": "127.0.0.1",
-                     *           "createdAt": "2026-07-13T09:00:00+09:00"
-                     *         },
-                     *         {
-                     *           "id": 500,
-                     *           "action": "vm.self_delete",
-                     *           "targetType": "vm",
-                     *           "targetId": "55",
-                     *           "detail": {
-                     *             "vmName": "capstone-team3-api"
-                     *           },
-                     *           "ip": "127.0.0.1",
-                     *           "createdAt": "2026-07-12T18:20:00+09:00"
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 2,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ActivityPage"];
+                    "*/*": components["schemas"]["PageResponseAuditLogViewResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listMySshKeys: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 내 SSH 키 목록 (등록 순) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": 3,
-                     *         "name": "연구실 노트북",
-                     *         "algorithm": "ED25519",
-                     *         "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0Qf…",
-                     *         "fingerprint": "SHA256:mVqyNQZoT0PC4z1uQXLzS9YFvZ1qGmO1sN8cQXAUXeQ",
-                     *         "privateKeyStored": false,
-                     *         "createdAt": "2026-07-18T10:00:00+09:00",
-                     *         "lastUsedAt": "2026-07-18T21:14:00+09:00"
-                     *       },
-                     *       {
-                     *         "id": 4,
-                     *         "name": "피클에서 만든 키",
-                     *         "algorithm": "ED25519",
-                     *         "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFo2…",
-                     *         "fingerprint": "SHA256:8dq1kQwXbFhVYcQ1sJ2m0aH7pT5uNzR3eK6yLgAvBcD",
-                     *         "privateKeyStored": true,
-                     *         "createdAt": "2026-07-18T10:05:00+09:00",
-                     *         "lastUsedAt": null
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["SshKeyView"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    registerMySshKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "name": "연구실 노트북",
-                 *       "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0Qf… user@laptop"
-                 *     }
-                 */
-                "application/json": components["schemas"]["SshKeyCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description 등록된 키 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SshKeyView"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 지문 중복 또는 키 개수 상한 초과 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 등록된 키입니다",
-                     *       "status": 409,
-                     *       "detail": "이미 등록된 키입니다. 다른 키를 사용해 주세요.",
-                     *       "instance": "/api/v1/me/ssh-keys",
-                     *       "code": "SSH_KEY_DUPLICATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 공개키 파싱 불가, 지원하지 않는 키 타입(ed25519 키를 권장), RSA 2048비트 미만, 또는 이름 형식 오류(1~100자) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "입력값이 올바르지 않습니다",
-                     *       "status": 422,
-                     *       "detail": "요청 필드를 확인해 주세요.",
-                     *       "instance": "/api/v1/me/ssh-keys",
-                     *       "code": "VALIDATION_FAILED",
-                     *       "errors": [
-                     *         {
-                     *           "field": "publicKey",
-                     *           "message": "지원하지 않는 키 형식입니다. ed25519 키를 권장합니다 (ssh-keygen -t ed25519)."
-                     *         }
-                     *       ]
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    generateMySshKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "name": "피클에서 만든 키"
-                 *     }
-                 */
-                "application/json": components["schemas"]["SshKeyGenerateRequest"];
-            };
-        };
-        responses: {
-            /** @description 생성·등록된 키 (`privateKeyStored=true`) */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SshKeyView"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 키 개수 상한(10개) 초과 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "키를 더 등록할 수 없습니다",
-                     *       "status": 409,
-                     *       "detail": "SSH 키는 사용자당 최대 10개까지 등록할 수 있습니다. 사용하지 않는 키를 삭제해 주세요.",
-                     *       "instance": "/api/v1/me/ssh-keys/generate",
-                     *       "code": "SSH_KEY_LIMIT_EXCEEDED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    deleteMySshKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description SSH 키 ID */
-                keyId: components["parameters"]["SshKeyId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 삭제 완료 */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    downloadMySshKeyPrivateKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description SSH 키 ID */
-                keyId: components["parameters"]["SshKeyId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 개인키 (OpenSSH PEM) */
-            200: {
-                headers: {
-                    /** @description 개인키 응답은 어디에도 캐시되지 않아야 합니다. */
-                    "Cache-Control"?: "no-store";
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "privateKey": "<OpenSSH PEM 형식 개인키 전문 — BEGIN/END 마커 포함 여러 줄>",
-                     *       "fileName": "id_ed25519_pickle"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["SshKeyPrivateKeyResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 키가 존재하지 않거나 타인의 키(존재 마스킹), 또는 붙여넣기로 등록되어 서버에 개인키가 없는 키 */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "리소스를 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "다운로드할 개인키가 없습니다. 직접 등록한 키의 개인키는 서버에 보관되지 않습니다.",
-                     *       "instance": "/api/v1/me/ssh-keys/3/private-key",
-                     *       "code": "RESOURCE_NOT_FOUND"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    changeMyPassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "currentPassword": "correct-horse-battery!",
-                 *       "newPassword": "new-horse-battery-staple!"
-                 *     }
-                 */
-                "application/json": {
-                    /** Format: password */
-                    currentPassword: string;
-                    /** Format: password */
-                    newPassword: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 변경 완료 — 새 토큰쌍 (다른 세션은 무효화) */
-            200: {
-                headers: {
-                    /** @description 새 리프레시 토큰 쿠키 */
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 현재 비밀번호 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 비밀번호가 올바르지 않습니다",
-                     *       "status": 403,
-                     *       "detail": "현재 비밀번호를 다시 확인해 주세요.",
-                     *       "instance": "/api/v1/me/password",
-                     *       "code": "AUTH_PASSWORD_MISMATCH"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    withdrawMyAccount: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "password": "correct-horse-battery!"
-                 *     }
-                 */
-                "application/json": {
-                    /**
-                     * Format: password
-                     * @description 본인 확인용 현재 비밀번호
-                     */
-                    password: string;
-                    /** @description 2FA 등록 계정만 필수 — TOTP 6자리 (`recoveryCode`와 택일) */
-                    totpCode?: string;
-                    /** @description 2FA 등록 계정의 대체 수단 — 1회용 복구 코드 (`totpCode`와 택일; 인증 앱 분실 시) */
-                    recoveryCode?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 탈퇴 완료 (세션 종료 — 쿠키 삭제) */
-            200: {
-                headers: {
-                    /** @description 리프레시 쿠키 삭제 지시 (`Max-Age=0`) */
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 비밀번호 또는 TOTP 코드 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "본인 확인에 실패했습니다",
-                     *       "status": 403,
-                     *       "detail": "비밀번호를 다시 확인해 주세요.",
-                     *       "instance": "/api/v1/me/withdraw",
-                     *       "code": "AUTH_PASSWORD_MISMATCH"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 탈퇴 차단 조건 미해소 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "탈퇴할 수 없습니다",
-                     *       "status": 409,
-                     *       "detail": "삭제되지 않은 VM을 보유한 그룹의 유일한 소유자입니다. 소유권을 이전하거나 VM을 먼저 삭제해 주세요.",
-                     *       "instance": "/api/v1/me/withdraw",
-                     *       "code": "ACCOUNT_SOLE_OWNER_OF_ACTIVE_GROUP"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    beginMfaTotpSetup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "password": "correct-horse-battery!"
-                 *     }
-                 */
-                "application/json": {
-                    /** Format: password */
-                    password: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 시크릿 발급 (활성화 전) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "secret": "JBSWY3DPEHPK3PXP",
-                     *       "otpauthUri": "otpauth://totp/Pickle:example@pusan.ac.kr?secret=JBSWY3DPEHPK3PXP&issuer=Pickle"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MfaSetupResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 비밀번호 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "본인 확인에 실패했습니다",
-                     *       "status": 403,
-                     *       "detail": "비밀번호를 다시 확인해 주세요.",
-                     *       "instance": "/api/v1/me/mfa/totp",
-                     *       "code": "AUTH_PASSWORD_MISMATCH"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 이미 2FA가 활성화된 계정 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 2단계 인증이 설정되어 있습니다",
-                     *       "status": 409,
-                     *       "detail": "기존 설정을 해제한 뒤 다시 등록할 수 있습니다.",
-                     *       "instance": "/api/v1/me/mfa/totp",
-                     *       "code": "MFA_ALREADY_ENROLLED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    activateMfaTotp: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "code": "492817"
-                 *     }
-                 */
-                "application/json": {
-                    code: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 활성화 완료 — 복구 코드 (1회 노출) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "recoveryCodes": [
-                     *         "f3k9-2mqx-81vz",
-                     *         "7hw4-p0ds-cn65",
-                     *         "q8rt-5jkl-m2np",
-                     *         "a1bc-9def-gh34",
-                     *         "x7yz-0uvw-st56",
-                     *         "k4mn-8pqr-bc78",
-                     *         "d2ef-6ghi-jk90",
-                     *         "v5wx-3yza-de12",
-                     *         "r9st-7uvw-fg34",
-                     *         "h6ij-4klm-no56"
-                     *       ]
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MfaRecoveryCodesResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 코드 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "인증 코드가 올바르지 않습니다",
-                     *       "status": 403,
-                     *       "detail": "인증 앱의 최신 코드를 확인해 주세요.",
-                     *       "instance": "/api/v1/me/mfa/totp/activate",
-                     *       "code": "AUTH_MFA_CODE_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 진행 중인 등록이 없거나 이미 활성화됨 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "진행 중인 2단계 인증 등록이 없습니다",
-                     *       "status": 409,
-                     *       "detail": "등록을 처음부터 다시 시작해 주세요.",
-                     *       "instance": "/api/v1/me/mfa/totp/activate",
-                     *       "code": "MFA_SETUP_NOT_IN_PROGRESS"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    disableMyMfa: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "password": "correct-horse-battery!",
-                 *       "code": "492817"
-                 *     }
-                 */
-                "application/json": {
-                    /** Format: password */
-                    password: string;
-                    /** @description TOTP 6자리 (`recoveryCode`와 택일) */
-                    code?: string;
-                    /** @description 1회용 복구 코드 (`code`와 택일) */
-                    recoveryCode?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 해제 완료 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "2단계 인증이 해제되었습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 비밀번호 또는 코드 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "본인 확인에 실패했습니다",
-                     *       "status": 403,
-                     *       "detail": "비밀번호와 인증 코드를 다시 확인해 주세요.",
-                     *       "instance": "/api/v1/me/mfa/disable",
-                     *       "code": "AUTH_MFA_CODE_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 2FA가 등록되어 있지 않음 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "2단계 인증이 설정되어 있지 않습니다",
-                     *       "status": 409,
-                     *       "detail": "해제할 2단계 인증이 없습니다.",
-                     *       "instance": "/api/v1/me/mfa/disable",
-                     *       "code": "MFA_NOT_ENROLLED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    regenerateMfaRecoveryCodes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "password": "correct-horse-battery!",
-                 *       "code": "492817"
-                 *     }
-                 */
-                "application/json": {
-                    /** Format: password */
-                    password: string;
-                    code: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 새 복구 코드 (1회 노출 — 기존 코드 전부 무효화) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MfaRecoveryCodesResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 비밀번호 또는 코드 불일치 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "본인 확인에 실패했습니다",
-                     *       "status": 403,
-                     *       "detail": "비밀번호와 인증 코드를 다시 확인해 주세요.",
-                     *       "instance": "/api/v1/me/mfa/recovery-codes",
-                     *       "code": "AUTH_MFA_CODE_INVALID"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 2FA가 등록되어 있지 않음 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "2단계 인증이 설정되어 있지 않습니다",
-                     *       "status": 409,
-                     *       "detail": "복구 코드를 발급하려면 먼저 2단계 인증을 등록해 주세요.",
-                     *       "instance": "/api/v1/me/mfa/recovery-codes",
-                     *       "code": "MFA_NOT_ENROLLED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    listMyConsents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 동의 이력 (문서·버전별, 최신순) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "docType": "TERMS_OF_SERVICE",
-                     *         "version": 1,
-                     *         "consentedAt": "2026-07-20T10:00:00+09:00"
-                     *       },
-                     *       {
-                     *         "docType": "PRIVACY_POLICY",
-                     *         "version": 1,
-                     *         "consentedAt": "2026-07-20T10:00:00+09:00"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["ConsentView"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    acceptConsents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "consents": [
-                 *         {
-                 *           "docType": "TERMS_OF_SERVICE",
-                 *           "version": 2
-                 *         }
-                 *       ]
-                 *     }
-                 */
-                "application/json": components["schemas"]["ConsentUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description 동의 기록 완료 — 갱신된 동의 이력 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConsentView"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 제출 버전이 현재 유효 버전이 아님 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "약관 버전이 갱신되었습니다",
-                     *       "status": 409,
-                     *       "detail": "약관이 개정되었습니다. 최신 내용을 확인한 뒤 다시 동의해 주세요.",
-                     *       "instance": "/api/v1/me/consents",
-                     *       "code": "CONSENT_VERSION_MISMATCH"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listOrgs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 활성 기관 목록 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": 1,
-                     *         "name": "정보컴퓨터공학부 실습지원센터",
-                     *         "slug": "cse-lab",
-                     *         "description": "학부 수업·캡스톤용 서버 자원 제공",
-                     *         "status": "ACTIVE"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["OrgSummary"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    listTemplates: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 활성 템플릿 목록 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": 1,
-                     *         "name": "ubuntu-24.04",
-                     *         "displayName": "Ubuntu 24.04 LTS (기본형)",
-                     *         "version": 1,
-                     *         "defaultVcpu": 2,
-                     *         "defaultMemoryMb": 2048,
-                     *         "defaultDiskGb": 20,
-                     *         "minDiskGb": 10,
-                     *         "status": "ACTIVE",
-                     *         "notes": "대부분의 수업·동아리 프로젝트에 적합합니다."
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["VmTemplate"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    getRequestOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 신청 선택지 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "allowedRootDomains": [
-                     *         "pickle.pnuops.com"
-                     *       ],
-                     *       "reservedSubdomains": [
-                     *         "www",
-                     *         "api",
-                     *         "admin",
-                     *         "ssh",
-                     *         "mail"
-                     *       ],
-                     *       "sshHost": "ssh.pickle.pnuops.com"
-                     *     }
-                     */
-                    "application/json": {
-                        /** @description 선택 가능한 루트 도메인 목록 (settings에서 관리) */
-                        allowedRootDomains: string[];
-                        /** @description 사용 불가 예약어 목록 (settings에서 관리 — 서브도메인·슬러그 공용) */
-                        reservedSubdomains: string[];
-                        /** @description SSH 게이트웨이 접속 호스트 (v0.12.0 — 신청서 미리보기용) */
-                        sshHost: string;
-                    };
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    getSystemStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 시스템 상태 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "maintenance": false,
-                     *       "maintenanceMessage": null,
-                     *       "bannerMessage": null,
-                     *       "contactEmail": "example@pusan.ac.kr"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["SystemStatusResponse"];
-                };
-            };
-        };
-    };
-    listTermsVersions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 현행 버전 목록 (문서 종류별 1건) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "docType": "TERMS_OF_SERVICE",
-                     *         "version": 1,
-                     *         "title": "피클 서비스 이용약관",
-                     *         "effectiveAt": "2026-07-20T00:00:00+09:00"
-                     *       },
-                     *       {
-                     *         "docType": "PRIVACY_POLICY",
-                     *         "version": 1,
-                     *         "title": "개인정보처리방침",
-                     *         "effectiveAt": "2026-07-20T00:00:00+09:00"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["TermsVersionView"][];
-                };
-            };
-        };
-    };
-    getTermsDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 문서 종류 */
-                docType: components["schemas"]["TermsDocType"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 현행 본문 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "docType": "TERMS_OF_SERVICE",
-                     *       "version": 1,
-                     *       "title": "피클 서비스 이용약관",
-                     *       "body": "# 피클 서비스 이용약관\\n\\n제1조(목적) ...",
-                     *       "effectiveAt": "2026-07-20T00:00:00+09:00"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["TermsDocumentView"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listGroups: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 내 그룹 목록 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": 7,
-                     *         "kind": "PERSONAL",
-                     *         "name": "홍길동",
-                     *         "slug": "yejun",
-                     *         "description": null,
-                     *         "myRole": "OWNER",
-                     *         "memberCount": 1
-                     *       },
-                     *       {
-                     *         "id": 12,
-                     *         "kind": "PROJECT",
-                     *         "name": "캡스톤 3조",
-                     *         "slug": "capstone-team3",
-                     *         "description": "2026-1 캡스톤디자인 3조",
-                     *         "myRole": "EDITOR",
-                     *         "memberCount": 4
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["GroupSummary"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    createGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "kind": "PROJECT",
-                 *       "name": "캡스톤 3조",
-                 *       "slug": "capstone-team3",
-                 *       "description": "2026-1 캡스톤디자인 3조"
-                 *     }
-                 */
-                "application/json": components["schemas"]["CreateGroupRequest"];
-            };
-        };
-        responses: {
-            /** @description 그룹 생성 완료 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GroupDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description slug 중복 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 사용 중인 slug입니다",
-                     *       "status": 409,
-                     *       "detail": "'capstone-team3'은(는) 이미 다른 그룹이 사용 중입니다.",
-                     *       "instance": "/api/v1/groups",
-                     *       "code": "GROUP_SLUG_DUPLICATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 그룹 상세 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 12,
-                     *       "kind": "PROJECT",
-                     *       "name": "캡스톤 3조",
-                     *       "slug": "capstone-team3",
-                     *       "description": "2026-1 캡스톤디자인 3조",
-                     *       "myRole": "OWNER",
-                     *       "members": [
-                     *         {
-                     *           "userId": 42,
-                     *           "name": "홍길동",
-                     *           "email": "example@pusan.ac.kr",
-                     *           "role": "OWNER"
-                     *         },
-                     *         {
-                     *           "userId": 57,
-                     *           "name": "김철수",
-                     *           "email": "cheolsu.kim@pusan.ac.kr",
-                     *           "role": "MEMBER"
-                     *         }
-                     *       ],
-                     *       "createdAt": "2026-07-01T10:12:00+09:00"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["GroupDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    deleteGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 삭제 완료 */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 권한 부족 (OWNER 아님) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "그룹을 삭제할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 OWNER만 그룹을 삭제할 수 있습니다.",
-                     *       "instance": "/api/v1/groups/12",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 삭제 차단 (활성 VM 보유 또는 PERSONAL 그룹) */
-            409: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6435,267 +3029,14 @@ export interface operations {
             };
         };
     };
-    updateGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "description": "2026-1 캡스톤디자인 3조 (지도교수 변경)"
-                 *     }
-                 */
-                "application/json": {
-                    name?: string;
-                    description?: string | null;
-                };
-            };
-        };
-        responses: {
-            /** @description 수정된 그룹 상세 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GroupDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    addGroupMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "email": "cheolsu.kim@pusan.ac.kr",
-                 *       "role": "MEMBER"
-                 *     }
-                 */
-                "application/json": {
-                    /**
-                     * Format: email
-                     * @description 추가할 사용자의 가입 이메일
-                     */
-                    email: string;
-                    role: components["schemas"]["GroupMemberRole"];
-                };
-            };
-        };
-        responses: {
-            /** @description 구성원 추가 완료 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "userId": 57,
-                     *       "name": "김철수",
-                     *       "email": "cheolsu.kim@pusan.ac.kr",
-                     *       "role": "MEMBER"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["GroupMember"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 권한 없음 (OWNER 아님 / PERSONAL 그룹) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "구성원을 추가할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹 소유자(OWNER)만 구성원을 추가할 수 있습니다.",
-                     *       "instance": "/api/v1/groups/12/members",
-                     *       "code": "GROUP_MEMBER_MANAGE_FORBIDDEN"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 그룹 없음 또는 해당 이메일의 가입자 없음 */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "사용자를 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "해당 이메일로 가입된 사용자가 없습니다. 가입 후 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/groups/12/members",
-                     *       "code": "GROUP_MEMBER_USER_NOT_FOUND"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 이미 그룹 구성원임 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 그룹 구성원입니다",
-                     *       "status": 409,
-                     *       "detail": "해당 사용자는 이미 이 그룹의 구성원입니다.",
-                     *       "instance": "/api/v1/groups/12/members",
-                     *       "code": "GROUP_MEMBER_ALREADY_EXISTS"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    removeGroupMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-                /** @description 대상 구성원의 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 구성원 제거 완료 */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 유일한 OWNER는 제거 불가 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "유일한 소유자는 나갈 수 없습니다",
-                     *       "status": 409,
-                     *       "detail": "소유권을 다른 구성원에게 이전한 뒤 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/groups/12/members/42",
-                     *       "code": "GROUP_SOLE_OWNER_REMOVAL"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    updateGroupMember: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 그룹 ID */
-                groupId: components["parameters"]["GroupId"];
-                /** @description 대상 구성원의 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "role": "EDITOR"
-                 *     }
-                 */
-                "application/json": {
-                    role: components["schemas"]["GroupMemberRole"];
-                };
-            };
-        };
-        responses: {
-            /** @description 변경된 구성원 정보 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GroupMember"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 유일한 OWNER의 역할 하향 불가 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "유일한 소유자의 역할은 변경할 수 없습니다",
-                     *       "status": 409,
-                     *       "detail": "소유권을 다른 구성원에게 이전한 뒤 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/groups/12/members/42",
-                     *       "code": "GROUP_SOLE_OWNER_REMOVAL"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listVmRequests: {
+    listAdminCertificates: {
         parameters: {
             query?: {
-                /** @description 신청 상태 필터 */
-                status?: components["schemas"]["VmRequestStatus"];
-                /** @description 그룹 필터 */
-                groupId?: number;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                orgId?: number;
+                status?: components["schemas"]["CertificateStatus"];
+                expiringInDays?: number;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -6703,219 +3044,34 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 신청 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmRequestPage"];
+                    "*/*": components["schemas"]["PageResponseAdminCertificateView"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    createVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "groupId": 12,
-                 *       "orgId": 1,
-                 *       "templateId": 1,
-                 *       "purpose": "캡스톤 프로젝트 백엔드 서버 운영",
-                 *       "courseOrProject": "2026-1 캡스톤디자인 3조",
-                 *       "specReason": "Spring Boot + PostgreSQL 동시 구동을 위해 메모리 2GiB 필요",
-                 *       "extraNote": "발표 기간(11월)에는 외부 공개가 필요합니다.",
-                 *       "reqVcpu": 2,
-                 *       "reqMemoryMb": 2048,
-                 *       "reqDiskGb": 20,
-                 *       "reqStartDate": "2026-07-15",
-                 *       "reqEndDate": "2026-12-20",
-                 *       "needSsh": true,
-                 *       "needHttp": true,
-                 *       "needPublic": true,
-                 *       "desiredSubdomain": "capstone-team3",
-                 *       "rootDomain": "pickle.pnuops.com",
-                 *       "customDomain": null,
-                 *       "desiredSlug": "capstone-team3"
-                 *     }
-                 */
-                "application/json": components["schemas"]["CreateVmRequest"];
-            };
-        };
-        responses: {
-            /** @description 신청 접수 완료 (상태 SUBMITTED) */
-            201: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmRequestDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 신청 권한 없음 (MEMBER/VIEWER) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM을 신청할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 OWNER 또는 EDITOR만 VM을 신청할 수 있습니다.",
-                     *       "instance": "/api/v1/vm-requests",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 신청 상세 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 101,
-                     *       "groupId": 12,
-                     *       "groupName": "캡스톤 3조",
-                     *       "orgId": 1,
-                     *       "orgName": "정보컴퓨터공학부 실습지원센터",
-                     *       "requesterId": 42,
-                     *       "requesterName": "홍길동",
-                     *       "templateId": 1,
-                     *       "purpose": "캡스톤 프로젝트 백엔드 서버 운영",
-                     *       "courseOrProject": "2026-1 캡스톤디자인 3조",
-                     *       "specReason": "Spring Boot + PostgreSQL 동시 구동을 위해 메모리 2GiB 필요",
-                     *       "extraNote": null,
-                     *       "reqVcpu": 2,
-                     *       "reqMemoryMb": 2048,
-                     *       "reqDiskGb": 20,
-                     *       "reqStartDate": "2026-07-15",
-                     *       "reqEndDate": "2026-12-20",
-                     *       "needSsh": true,
-                     *       "needHttp": true,
-                     *       "needPublic": true,
-                     *       "desiredSubdomain": "capstone-team3",
-                     *       "rootDomain": "pickle.pnuops.com",
-                     *       "customDomain": null,
-                     *       "desiredSlug": "capstone-team3",
-                     *       "status": "APPROVED",
-                     *       "review": {
-                     *         "reviewerId": 3,
-                     *         "reviewerName": "관리자김",
-                     *         "decision": "APPROVE",
-                     *         "comment": "요청 사양 그대로 승인합니다. 발표 기간 이후 삭제 부탁드립니다.",
-                     *         "grantedVcpu": 2,
-                     *         "grantedMemoryMb": 2048,
-                     *         "grantedDiskGb": 20,
-                     *         "grantedTemplateId": 1,
-                     *         "grantedStartDate": "2026-07-15",
-                     *         "grantedEndDate": "2026-12-20",
-                     *         "grantSsh": true,
-                     *         "grantHttp": true,
-                     *         "grantPublic": true,
-                     *         "grantedSubdomain": "capstone-team3",
-                     *         "grantedRootDomain": "pickle.pnuops.com",
-                     *         "nodeId": null,
-                     *         "decidedAt": "2026-07-08T14:03:00+09:00"
-                     *       },
-                     *       "createdAt": "2026-07-08T11:30:00+09:00",
-                     *       "updatedAt": "2026-07-08T14:03:00+09:00"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmRequestDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    cancelVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 취소 완료 (상태 CANCELED) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VmRequestDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 이미 결정된 신청 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 처리된 신청입니다",
-                     *       "status": 409,
-                     *       "detail": "이미 승인 또는 반려된 신청은 취소할 수 없습니다.",
-                     *       "instance": "/api/v1/vm-requests/101/cancel",
-                     *       "code": "REQUEST_ALREADY_DECIDED"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
     };
-    listVms: {
+    listAdminDomains: {
         parameters: {
             query?: {
-                /** @description 그룹 필터 */
-                groupId?: number;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                orgId?: number;
+                kind?: components["schemas"]["DomainKind"];
+                status?: components["schemas"]["DomainStatus"];
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -6923,1468 +3079,99 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description VM 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 55,
-                     *           "name": "capstone-team3-api",
-                     *           "hostname": "capstone-team3-api",
-                     *           "status": "CREATING",
-                     *           "vcpu": 2,
-                     *           "memoryMb": 2048,
-                     *           "diskGb": 20,
-                     *           "groupId": 12,
-                     *           "groupName": "캡스톤 3조",
-                     *           "requestId": 101,
-                     *           "statusDetail": null,
-                     *           "createdAt": "2026-07-08T14:03:05+09:00"
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 1,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmPage"];
+                    "*/*": components["schemas"]["PageResponseAdminDomainView"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description VM 상세 */
-            200: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비구성원에게는 존재가 마스킹됩니다 */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "리소스를 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "해당 VM이 존재하지 않습니다.",
-                     *       "instance": "/api/v1/vms/55",
-                     *       "code": "RESOURCE_NOT_FOUND"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
     };
-    deleteVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 삭제 접수 (DELETING 전이, 유예 후 파기) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "kind": "SELF",
-                     *       "scheduledFor": "2026-07-15T14:10:00+09:00",
-                     *       "requestedAt": "2026-07-08T14:10:00+09:00",
-                     *       "requestedById": 42,
-                     *       "reason": null,
-                     *       "cancelable": true
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmDeletion"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 권한 부족 (그룹 OWNER 아님) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM을 삭제할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 OWNER 또는 관리자만 VM을 삭제할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 삭제할 수 없는 상태 — 이미 DELETING/DELETED이거나 CREATING/NEEDS_ADMIN, 또는 이미 삭제가 접수됨(`deletion != null`, 관리자 삭제 포함) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "이미 삭제가 접수되었거나 진행 중인 VM입니다.",
-                     *       "instance": "/api/v1/vms/55",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    startVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 시작 요청 접수 */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "VM 시작 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM을 제어할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/start",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 시작할 수 없는 상태 — 허용 상태는 `STOPPED`뿐. RUNNING/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 (NEEDS_ADMIN은 관리자 복구 후 상태가 복귀돼야 사용 가능). 또한 사용 기간이 만료된 VM(만료 자동 종료)은 `STOPPED`여도 `VM_EXPIRED` 코드로 거부됩니다 — 관리자가 기간을 연장 (`PATCH /admin/vms/{vmId}/period`)해야 다시 시작할 수 있습니다 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "STOPPED 상태의 VM만 시작할 수 있습니다. (현재 상태 RUNNING)",
-                     *       "instance": "/api/v1/vms/55/start",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    shutdownVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 종료 요청 접수 */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "VM 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM을 제어할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/shutdown",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 종료할 수 없는 상태 — 허용 상태는 `RUNNING`뿐. STOPPED/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "RUNNING 상태의 VM만 종료할 수 있습니다. (현재 상태 STOPPED)",
-                     *       "instance": "/api/v1/vms/55/shutdown",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    rebootVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 재부팅 요청 접수 */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "VM 재부팅 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM을 제어할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/reboot",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 재부팅할 수 없는 상태 — 허용 상태는 `RUNNING`뿐. STOPPED/REBOOTING을 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "RUNNING 상태의 VM만 재부팅할 수 있습니다. (현재 상태 STOPPED)",
-                     *       "instance": "/api/v1/vms/55/reboot",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    forceStopVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 강제 종료 요청 접수 */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "VM 강제 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (MEMBER 미만) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM을 제어할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 MEMBER 이상만 VM 전원을 제어할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/force-stop",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 강제 종료할 수 없는 상태 — 허용 상태는 `RUNNING`/`REBOOTING`뿐. STOPPED를 포함해 CREATING/DELETING/DELETED/ERROR/NEEDS_ADMIN은 항상 409 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "RUNNING 또는 REBOOTING 상태의 VM만 강제 종료할 수 있습니다. (현재 상태 STOPPED)",
-                     *       "instance": "/api/v1/vms/55/force-stop",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    revealVmPassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description VM 비밀번호 */
-            200: {
-                headers: {
-                    /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
-                    "Cache-Control"?: "no-store";
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "password": "x7GmQ4vRk2LpWn9sCtYb8Zed",
-                     *       "sshUsername": "student",
-                     *       "sshHost": "ssh.pickle.pnuops.com",
-                     *       "sshPort": 22
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmPasswordResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 — 이 VM의 `password_reveal_min_role`(기본 MEMBER) 미만 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "비밀번호를 열람할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "이 VM은 그룹의 MEMBER 이상만 비밀번호를 열람할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/password",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 열람할 수 없는 상태 — CREATING(프로비저닝 미완료)뿐 아니라 DELETING/DELETED/ERROR/NEEDS_ADMIN도 409 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "VM 생성이 완료된 뒤에 비밀번호를 열람할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/password",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 저장된 비밀번호가 없음 — 초기 mock 프로비저닝으로 생성돼 비밀번호가 없는 VM, 또는 정책 변경(v0.7.0) 전 1회 열람으로 평문이 파기된 VM. 코드값은 하위호환을 위해 `VM_PASSWORD_ALREADY_VIEWED`를 유지합니다. 재생성(`POST /vms/{vmId}/password/regenerate`)으로 복구할 수 있습니다. */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "비밀번호를 열람할 수 없습니다",
-                     *       "status": 410,
-                     *       "detail": "저장된 비밀번호가 없습니다. 비밀번호 재생성으로 새 비밀번호를 만들 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/password",
-                     *       "code": "VM_PASSWORD_ALREADY_VIEWED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    regenerateVmPassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 재생성된 비밀번호 (즉시 적용됨) */
-            200: {
-                headers: {
-                    /** @description 평문 비밀번호 응답은 어디에도 캐시되지 않아야 합니다. */
-                    "Cache-Control"?: "no-store";
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "password": "nB4tWq8xKm2ZrPv6JcYh3Sdf",
-                     *       "sshUsername": "student",
-                     *       "sshHost": "ssh.pickle.pnuops.com",
-                     *       "sshPort": 22
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmPasswordResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (EDITOR 미만) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "비밀번호를 재생성할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 EDITOR 이상만 비밀번호를 재생성할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/password/regenerate",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 재생성할 수 없는 상태 — RUNNING이 아니거나 guest agent가 응답하지 않음 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "VM이 실행 중이고 게스트 에이전트가 응답할 때만 비밀번호를 재생성할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/password/regenerate",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getVmSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description VM 설정 목록 (레지스트리 순) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "key": "ssh_password_enabled",
-                     *         "value": false,
-                     *         "valueType": "BOOLEAN",
-                     *         "allowedValues": null,
-                     *         "defaultValue": false,
-                     *         "label": "비밀번호 SSH 허용",
-                     *         "description": "SSH 게이트웨이에서 비밀번호 접속을 허용합니다. 켜면 접속자 개인을 식별할 수 없습니다.",
-                     *         "requiredRole": "EDITOR",
-                     *         "editable": true,
-                     *         "updatedByName": null,
-                     *         "updatedAt": null
-                     *       },
-                     *       {
-                     *         "key": "password_reveal_min_role",
-                     *         "value": "MEMBER",
-                     *         "valueType": "ENUM",
-                     *         "allowedValues": [
-                     *           "MEMBER",
-                     *           "EDITOR",
-                     *           "OWNER"
-                     *         ],
-                     *         "defaultValue": "MEMBER",
-                     *         "label": "비밀번호 열람 최소 역할",
-                     *         "description": "VM 비밀번호(= sudo 자격)를 열람할 수 있는 최소 그룹 역할입니다.",
-                     *         "requiredRole": "OWNER",
-                     *         "editable": false,
-                     *         "updatedByName": "홍길동",
-                     *         "updatedAt": "2026-07-18T14:00:00+09:00"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["VmSettingView"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (EDITOR 미만) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "VM 설정에 접근할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 EDITOR 이상만 VM 설정을 볼 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/settings",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updateVmSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "settings": {
-                 *         "ssh_password_enabled": true
-                 *       }
-                 *     }
-                 */
-                "application/json": components["schemas"]["VmSettingsUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description 갱신된 전체 설정 목록 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VmSettingView"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 요청한 키 중 하나 이상이 내 그룹 역할로 변경 불가 (키별 필요 역할은 GET 카탈로그 참조) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "설정을 변경할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "`password_reveal_min_role` 설정은 그룹의 OWNER만 변경할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/settings",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 변경할 수 없는 상태 (DELETING/DELETED) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "삭제 중이거나 삭제된 VM의 설정은 변경할 수 없습니다.",
-                     *       "instance": "/api/v1/vms/55/settings",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 알 수 없는 설정 키, 타입 불일치, 허용값 밖, 또는 빈 맵 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "입력값이 올바르지 않습니다",
-                     *       "status": 422,
-                     *       "detail": "요청 필드를 확인해 주세요.",
-                     *       "instance": "/api/v1/vms/55/settings",
-                     *       "code": "VALIDATION_FAILED",
-                     *       "errors": [
-                     *         {
-                     *           "field": "settings.password_reveal_min_role",
-                     *           "message": "MEMBER, EDITOR, OWNER 중 하나여야 합니다."
-                     *         }
-                     *       ]
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    createTerminalSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 발급된 접속 티켓 */
-            201: {
-                headers: {
-                    /** @description 티켓 응답은 어디에도 캐시되지 않아야 합니다. */
-                    "Cache-Control"?: "no-store";
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "sessionId": "3f1c9a2e-8d4b-4f6a-9c27-5e8b1a0d4c33",
-                     *       "ticket": "Zk9xTHcyVnBSbUx0aEc4ZUtqM3NkUWJZ",
-                     *       "wsPath": "/terminal/ws",
-                     *       "subprotocol": "pickle.terminal.v1",
-                     *       "expiresAt": "2026-07-20T03:15:30Z"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["TerminalSessionTicketResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 그룹 내 권한 부족 (VIEWER — `GROUP_ROLE_INSUFFICIENT`; VM 존재를 이미 아는 열람자에게는 마스킹하지 않음, 전원 제어와 동일 규칙) 또는 관리자에 의해 이 VM의 SSH/터미널 접근이 차단됨 (`ACCESS_DENIED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "접근이 차단된 VM입니다",
-                     *       "status": 403,
-                     *       "detail": "관리자가 이 VM의 원격 접속을 차단했습니다. 관리자에게 문의하세요.",
-                     *       "instance": "/api/v1/vms/55/terminal-sessions",
-                     *       "code": "ACCESS_DENIED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            /** @description 발급할 수 없는 상태 — VM이 RUNNING이 아니거나 (`VM_INVALID_STATE`), 동시 세션 상한 초과 (`TERMINAL_SESSION_LIMIT`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "동시 터미널 세션 상한을 초과했습니다",
-                     *       "status": 409,
-                     *       "detail": "사용 중인 터미널 세션을 닫은 뒤 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/vms/55/terminal-sessions",
-                     *       "code": "TERMINAL_SESSION_LIMIT"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 티켓 발급 빈도 제한 초과 */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "요청이 너무 잦습니다",
-                     *       "status": 429,
-                     *       "detail": "잠시 후 다시 시도해 주세요.",
-                     *       "instance": "/api/v1/vms/55/terminal-sessions",
-                     *       "code": "RATE_LIMITED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 웹 터미널 기능 비활성 (전역 킬 스위치 꺼짐) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "웹 터미널을 사용할 수 없습니다",
-                     *       "status": 503,
-                     *       "detail": "웹 터미널 기능이 현재 비활성화되어 있습니다.",
-                     *       "instance": "/api/v1/vms/55/terminal-sessions",
-                     *       "code": "TERMINAL_DISABLED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listVmEvents: {
+    listDriftFindings: {
         parameters: {
             query?: {
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                status?: components["schemas"]["DriftFindingStatus"];
+                kind?: components["schemas"]["DriftFindingKind"];
+                page?: number;
+                size?: number;
             };
             header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 이벤트 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 902,
-                     *           "type": "START",
-                     *           "actorId": 42,
-                     *           "detail": null,
-                     *           "createdAt": "2026-07-09T09:12:00+09:00"
-                     *         },
-                     *         {
-                     *           "id": 901,
-                     *           "type": "CREATE",
-                     *           "actorId": null,
-                     *           "detail": "승인 신청 101에 따라 자동 생성",
-                     *           "createdAt": "2026-07-08T14:05:00+09:00"
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 2,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmEventPage"];
+                    "*/*": components["schemas"]["PageResponseDriftFindingResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            /** @description VM이 존재하지 않거나 접근 권한이 없음 — 비구성원에게는 존재가 마스킹됩니다 */
-            404: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "리소스를 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "해당 VM이 존재하지 않습니다.",
-                     *       "instance": "/api/v1/vms/55/events",
-                     *       "code": "RESOURCE_NOT_FOUND"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
         };
     };
-    publishVm: {
+    resolveDriftFinding: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
+                findingId: number;
             };
             cookie?: never;
         };
         requestBody?: {
             content: {
-                /**
-                 * @example {
-                 *       "port": 8080,
-                 *       "customDomain": null
-                 *     }
-                 */
-                "application/json": components["schemas"]["PublishRequest"];
+                "application/json": components["schemas"]["ResolveDriftFindingRequest"];
             };
         };
         responses: {
-            /** @description 공개 접수 (라우트 PENDING — 비동기 적용) */
-            202: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "fqdn": "capstone-team3.pickle.pnuops.com",
-                     *       "domain": {
-                     *         "id": 21,
-                     *         "vmId": 55,
-                     *         "kind": "REQUESTED",
-                     *         "fqdn": "capstone-team3.pickle.pnuops.com",
-                     *         "rootDomain": "pickle.pnuops.com",
-                     *         "status": "ACTIVE",
-                     *         "verifiedAt": null,
-                     *         "createdAt": "2026-07-12T09:00:00+09:00",
-                     *         "verification": null
-                     *       },
-                     *       "route": {
-                     *         "targetPort": 8080,
-                     *         "protocol": "HTTP",
-                     *         "status": "PENDING",
-                     *         "appliedAt": null,
-                     *         "lastError": null
-                     *       },
-                     *       "certificate": {
-                     *         "kind": "ORIGIN_CA_WILDCARD",
-                     *         "status": "ACTIVE",
-                     *         "notAfter": "2040-01-01T00:00:00+09:00",
-                     *         "lastError": null
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["PublicationView"];
+                    "*/*": components["schemas"]["DriftFindingResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            /** @description 권한 부족(그룹 OWNER/EDITOR 아님 — `GROUP_ROLE_INSUFFICIENT`) 또는 HTTP 공개 미허가 VM(grantHttp=false — `VM_HTTP_NOT_GRANTED`) */
-            403: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "HTTP 서비스를 공개할 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "그룹의 OWNER 또는 EDITOR만 도메인·포트를 설정할 수 있습니다.",
-                     *       "instance": "/api/v1/vms/55/publish",
-                     *       "code": "GROUP_ROLE_INSUFFICIENT"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            404: components["responses"]["NotFound"];
-            /** @description 공개할 수 없음 — 이미 공개됨(`PUBLICATION_ALREADY_EXISTS`), VM 상태가 공개 불가(RUNNING/STOPPED가 아닌 CREATING/DELETING/DELETED/ERROR/ NEEDS_ADMIN — `VM_INVALID_STATE`), 또는 FQDN 중복(`DOMAIN_FQDN_TAKEN`). FQDN 중복은 커스텀 도메인뿐 아니라 **부여 서브도메인에도** 발생할 수 있습니다 — 도메인 행은 첫 공개 시 생성되므로, 승인 시 부여된 서브도메인(REQUESTED/AUTO)이 그 사이 다른 VM에 선점되면 첫 공개에서 충돌합니다(승인 단계 중복 검증은 최선노력이며 유일성의 최종 강제는 도메인 행 생성 시점). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 공개된 VM입니다",
-                     *       "status": 409,
-                     *       "detail": "이 VM은 이미 HTTP 서비스가 공개되어 있습니다. 포트·도메인을 바꾸려면 공개 설정을 수정해 주세요.",
-                     *       "instance": "/api/v1/vms/55/publish",
-                     *       "code": "PUBLICATION_ALREADY_EXISTS"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
         };
     };
-    unpublishVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 공개 해제 접수 (vhost 제거 — 비동기) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "HTTP 서비스 공개 해제를 접수했습니다. 잠시 후 외부 접근이 차단됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updatePublication: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "port": 3000
-                 *     }
-                 */
-                "application/json": components["schemas"]["UpdatePublicationRequest"];
-            };
-        };
-        responses: {
-            /** @description 변경 접수 (라우트 재적용 — 비동기) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicationView"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description VM 또는 공개(publication) 없음 — 비구성원에게는 VM 존재가 마스킹됨 */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "공개 설정을 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "이 VM은 공개되어 있지 않습니다. 먼저 HTTP 서비스를 공개해 주세요.",
-                     *       "instance": "/api/v1/vms/55/publication",
-                     *       "code": "RESOURCE_NOT_FOUND"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 커스텀 도메인 FQDN 중복(`DOMAIN_FQDN_TAKEN`) 또는 공개 불가 상태 (`VM_INVALID_STATE`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 사용 중인 도메인입니다",
-                     *       "status": 409,
-                     *       "detail": "요청한 커스텀 도메인이 이미 다른 곳에 연결되어 있습니다. 다른 도메인을 사용해 주세요.",
-                     *       "instance": "/api/v1/vms/55/publication",
-                     *       "code": "DOMAIN_FQDN_TAKEN"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listDomains: {
+    listAdminGroups: {
         parameters: {
             query?: {
-                /** @description VM 필터 */
-                vmId?: number;
-                /** @description 도메인 상태 필터 */
-                status?: components["schemas"]["DomainStatus"];
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 도메인 목록 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DomainPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getDomain: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 도메인 ID */
-                domainId: components["parameters"]["DomainId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 도메인 상세 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 34,
-                     *       "vmId": 55,
-                     *       "kind": "CUSTOM",
-                     *       "fqdn": "capstone.example.com",
-                     *       "rootDomain": null,
-                     *       "status": "VERIFYING",
-                     *       "verifiedAt": null,
-                     *       "createdAt": "2026-07-10T09:00:00+09:00",
-                     *       "verification": {
-                     *         "token": "pv-3f6c1b2ae94d",
-                     *         "requiredRecords": [
-                     *           {
-                     *             "type": "A",
-                     *             "name": "capstone.example.com",
-                     *             "value": "164.125.249.87"
-                     *           },
-                     *           {
-                     *             "type": "TXT",
-                     *             "name": "_pickle-verify.capstone.example.com",
-                     *             "value": "pv-3f6c1b2ae94d"
-                     *           }
-                     *         ],
-                     *         "aVerified": true,
-                     *         "txtVerified": false,
-                     *         "lastCheckedAt": "2026-07-10T09:05:00+09:00",
-                     *         "lastError": "TXT 레코드를 아직 찾을 수 없습니다."
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["DomainDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    deleteDomain: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 도메인 ID */
-                domainId: components["parameters"]["DomainId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 삭제 접수 (라우트·vhost 제거, 인증서 아카이브 — 비동기) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "도메인 삭제를 접수했습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    verifyDomain: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 도메인 ID */
-                domainId: components["parameters"]["DomainId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 검증 재시도 접수 (진행 상태는 도메인 상세로 확인) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DomainDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 검증 대상이 아님 (플랫폼 서브도메인) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "검증할 수 없는 도메인입니다",
-                     *       "status": 409,
-                     *       "detail": "플랫폼 서브도메인은 소유권 검증이 필요하지 않습니다.",
-                     *       "instance": "/api/v1/domains/21/verify",
-                     *       "code": "DOMAIN_NOT_CUSTOM"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listNotifications: {
-        parameters: {
-            query?: {
-                /** @description true면 읽지 않은 알림만 조회 */
-                unreadOnly?: boolean;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 알림 목록 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 301,
-                     *           "event": "vm.create.done",
-                     *           "title": "VM 생성 완료",
-                     *           "body": "capstone-team3-api VM 생성이 완료되었습니다.",
-                     *           "linkPath": "/console/vms/55",
-                     *           "importance": "NORMAL",
-                     *           "createdAt": "2026-07-13T10:00:00+09:00",
-                     *           "readAt": null
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 1,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["NotificationPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getUnreadNotificationCount: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 읽지 않은 알림 수 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "unreadCount": 3
-                     *     }
-                     */
-                    "application/json": components["schemas"]["UnreadCountResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    markNotificationRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 알림 ID */
-                notificationId: components["parameters"]["NotificationId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 읽음 처리된 알림 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationView"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    markAllNotificationsRead: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 전체 읽음 처리 완료 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "updatedCount": 3
-                     *     }
-                     */
-                    "application/json": {
-                        /** @description 이번 호출로 읽음 처리된 알림 수 */
-                        updatedCount: number;
-                    };
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    listAdminVmRequests: {
-        parameters: {
-            query?: {
-                /** @description 신청 상태 필터 (미지정 시 모든 상태 반환) */
-                status?: components["schemas"]["VmRequestStatus"];
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
                 orgId?: number;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
             };
             header?: never;
             path?: never;
@@ -8392,390 +3179,33 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 신청 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmRequestPage"];
+                    "*/*": components["schemas"]["AdminGroupOptionResponse"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getAdminVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 신청 상세 */
-            200: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmRequestDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    getApprovalContext: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 승인 판단 참고 정보 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "applicant": {
-                     *         "id": 42,
-                     *         "name": "홍길동",
-                     *         "email": "example@pusan.ac.kr",
-                     *         "signupAt": "2026-03-02T09:00:00+09:00",
-                     *         "approvedCount": 2,
-                     *         "rejectedCount": 0
-                     *       },
-                     *       "applicantResources": {
-                     *         "activeVms": [
-                     *           {
-                     *             "id": 31,
-                     *             "name": "yejun-dev",
-                     *             "status": "RUNNING",
-                     *             "vcpu": 1,
-                     *             "memoryMb": 1024,
-                     *             "diskGb": 10,
-                     *             "endDate": "2026-08-31"
-                     *           }
-                     *         ],
-                     *         "totals": {
-                     *           "vcpu": 1,
-                     *           "memoryMb": 1024,
-                     *           "diskGb": 10
-                     *         }
-                     *       },
-                     *       "group": {
-                     *         "id": 12,
-                     *         "name": "캡스톤 3조",
-                     *         "kind": "PROJECT",
-                     *         "members": [
-                     *           {
-                     *             "userId": 42,
-                     *             "name": "홍길동",
-                     *             "role": "OWNER"
-                     *           },
-                     *           {
-                     *             "userId": 57,
-                     *             "name": "김철수",
-                     *             "role": "MEMBER"
-                     *           }
-                     *         ],
-                     *         "activeVms": [],
-                     *         "totals": {
-                     *           "vcpu": 0,
-                     *           "memoryMb": 0,
-                     *           "diskGb": 0
-                     *         }
-                     *       },
-                     *       "history": [
-                     *         {
-                     *           "requestId": 88,
-                     *           "submittedAt": "2026-04-10T13:00:00+09:00",
-                     *           "status": "APPROVED",
-                     *           "decision": "APPROVE",
-                     *           "comment": "소규모 개발용으로 승인",
-                     *           "reviewerName": "관리자김"
-                     *         }
-                     *       ],
-                     *       "orgHeadroom": {
-                     *         "allocated": {
-                     *           "vcpu": 34,
-                     *           "memoryMb": 51200,
-                     *           "diskGb": 460
-                     *         },
-                     *         "capacity": {
-                     *           "cpuThreads": 40,
-                     *           "memoryMb": 79872
-                     *         },
-                     *         "vcpuOvercommitRatio": 0.85,
-                     *         "memoryUsageRatio": 0.64,
-                     *         "warnings": []
-                     *       },
-                     *       "guidance": "여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApprovalContext"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    approveVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "grantedVcpu": 2,
-                 *       "grantedMemoryMb": 2048,
-                 *       "grantedDiskGb": 20,
-                 *       "grantedTemplateId": 1,
-                 *       "grantedStartDate": "2026-07-15",
-                 *       "grantedEndDate": "2026-12-20",
-                 *       "grantSsh": true,
-                 *       "grantHttp": true,
-                 *       "grantPublic": true,
-                 *       "grantedSubdomain": "capstone-team3",
-                 *       "grantedRootDomain": "pickle.pnuops.com",
-                 *       "grantedSlug": "capstone-team3",
-                 *       "nodeId": null,
-                 *       "comment": "요청 사양 그대로 승인합니다. 서브도메인도 요청하신 이름으로 부여합니다."
-                 *     }
-                 */
-                "application/json": components["schemas"]["ApproveVmRequest"];
-            };
-        };
-        responses: {
-            /** @description 승인 완료 (review 포함 신청 상세) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VmRequestDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 이미 결정된 신청 (승인/반려/취소됨) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 처리된 신청입니다",
-                     *       "status": 409,
-                     *       "detail": "이 신청은 이미 승인, 반려 또는 취소되었습니다.",
-                     *       "instance": "/api/v1/admin/vm-requests/101/approve",
-                     *       "code": "REQUEST_ALREADY_DECIDED"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
         };
     };
-    rejectVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM 신청 ID */
-                requestId: components["parameters"]["RequestId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "comment": "요청 메모리(8GiB)가 기관 여유 자원을 초과합니다. 2GiB로 재신청해 주세요."
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 반려 사유 (신청자에게 전달됨) */
-                    comment: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 반려 완료 (review 포함 신청 상세) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VmRequestDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 이미 결정된 신청 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 처리된 신청입니다",
-                     *       "status": 409,
-                     *       "detail": "이 신청은 이미 승인, 반려 또는 취소되었습니다.",
-                     *       "instance": "/api/v1/admin/vm-requests/101/reject",
-                     *       "code": "REQUEST_ALREADY_DECIDED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    createOrg: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "name": "정보컴퓨터공학부 실습지원센터",
-                 *       "slug": "cse-lab",
-                 *       "description": "학부 수업·캡스톤용 서버 자원 제공"
-                 *     }
-                 */
-                "application/json": {
-                    name: string;
-                    slug: string;
-                    description?: string | null;
-                };
-            };
-        };
-        responses: {
-            /** @description 기관 생성 완료 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrgDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description slug 중복 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 사용 중인 slug입니다",
-                     *       "status": 409,
-                     *       "detail": "'cse-lab'은(는) 이미 다른 기관이 사용 중입니다.",
-                     *       "instance": "/api/v1/admin/orgs",
-                     *       "code": "ORG_SLUG_DUPLICATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    updateOrg: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 기관 ID */
-                orgId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "description": "학부 수업·캡스톤·동아리용 서버 자원 제공"
-                 *     }
-                 */
-                "application/json": {
-                    name?: string;
-                    description?: string | null;
-                    status?: components["schemas"]["OrgStatus"];
-                };
-            };
-        };
-        responses: {
-            /** @description 수정된 기관 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrgDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listAdminUsers: {
+    listIpAllocations: {
         parameters: {
             query?: {
-                /** @description 이메일/이름 부분일치 검색 (대소문자 무시) */
-                q?: string;
-                /** @description 계정 상태 필터 */
-                status?: components["schemas"]["UserStatus"];
-                /** @description 전역 역할 필터 */
-                role?: components["schemas"]["UserRole"];
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
-                orgId?: number;
-                /** @description 정렬 기준 (접두사 `-`는 내림차순). 미지정 시 최신 가입 순(`-id`). 동률은 항상 `id` 내림차순으로 안정 정렬됩니다. */
-                sort?: "name" | "-name" | "email" | "-email" | "createdAt" | "-createdAt";
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                poolId?: number;
+                status?: components["schemas"]["AllocationStatus"];
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -8783,289 +3213,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 사용자 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserAdminPage"];
+                    "*/*": components["schemas"]["PageResponseIpAllocationResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getAdminUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 대상 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 사용자 상세 */
-            200: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserAdminDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    updateUserRole: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 대상 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "role": "ORG_ADMIN",
-                 *       "orgId": 1
-                 *     }
-                 */
-                "application/json": {
-                    role?: components["schemas"]["UserRole"];
-                    /**
-                     * Format: int64
-                     * @description 관리 기관 ID (role=ORG_ADMIN·ORG_MANAGER일 때 필수, 그 외 null)
-                     */
-                    orgId?: number | null;
-                };
-            };
-        };
-        responses: {
-            /** @description 변경된 사용자 요약 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 57,
-                     *       "email": "cheolsu.kim@pusan.ac.kr",
-                     *       "name": "김철수",
-                     *       "role": "ORG_ADMIN"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["UserSummary"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description 알 수 없는 사용자 */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "사용자를 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "해당 ID의 사용자가 존재하지 않습니다.",
-                     *       "instance": "/api/v1/admin/users/9999",
-                     *       "code": "RESOURCE_NOT_FOUND"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 검증 실패 (예 role=ORG_ADMIN인데 orgId 누락) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "입력값이 올바르지 않습니다",
-                     *       "status": 422,
-                     *       "detail": "요청 값을 확인해 주세요.",
-                     *       "instance": "/api/v1/admin/users/57",
-                     *       "code": "VALIDATION_FAILED",
-                     *       "errors": [
-                     *         {
-                     *           "field": "orgId",
-                     *           "message": "ORG_ADMIN 역할에는 관리 기관(orgId)을 지정해야 합니다."
-                     *         }
-                     *       ]
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    disableUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 대상 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "reason": "반복적인 자원 남용 신고 확인 (운영정책 위반)"
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 비활성화 사유 (이력·감사에 기록) */
-                    reason: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 비활성화된 사용자 상세 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserAdminDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 전환 불가 — 본인 계정(`ACCOUNT_SELF_DISABLE_FORBIDDEN`) 또는 이미 DISABLED/WITHDRAWN(`ACCOUNT_INVALID_STATE`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "비활성화할 수 없는 계정입니다",
-                     *       "status": 409,
-                     *       "detail": "본인 계정은 비활성화할 수 없습니다.",
-                     *       "instance": "/api/v1/admin/users/1/disable",
-                     *       "code": "ACCOUNT_SELF_DISABLE_FORBIDDEN"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    enableUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 대상 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 활성화된 사용자 상세 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserAdminDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 전환 불가 (DISABLED 상태가 아님 — WITHDRAWN 포함) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "활성화할 수 없는 계정입니다",
-                     *       "status": 409,
-                     *       "detail": "비활성화 상태의 계정만 활성화할 수 있습니다. 탈퇴한 계정은 되돌릴 수 없습니다.",
-                     *       "instance": "/api/v1/admin/users/57/enable",
-                     *       "code": "ACCOUNT_NOT_DISABLED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    resetUserMfa: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 대상 사용자 ID */
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 초기화 완료 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "2단계 인증을 초기화했습니다. 사용자는 비밀번호로 로그인한 뒤 다시 등록해야 합니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 2FA가 등록되어 있지 않은 사용자 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "2단계 인증이 설정되어 있지 않습니다",
-                     *       "status": 409,
-                     *       "detail": "해당 사용자는 2단계 인증을 사용하고 있지 않습니다.",
-                     *       "instance": "/api/v1/admin/users/57/mfa-reset",
-                     *       "code": "MFA_NOT_ENROLLED"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -9080,66 +3242,34 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 노드 현황 목록 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": 1,
-                     *         "name": "pve1",
-                     *         "status": "ACTIVE",
-                     *         "cpuThreads": 40,
-                     *         "memoryMb": 79872,
-                     *         "vmBridge": "vmbr2",
-                     *         "storage": "local-lvm",
-                     *         "runningVms": 6,
-                     *         "allocatedVcpu": 14,
-                     *         "allocatedMemoryMb": 20480,
-                     *         "cpuOvercommitRatio": 0.35,
-                     *         "memoryAllocRatio": 0.26,
-                     *         "cpuWarnThreshold": 3,
-                     *         "memoryWarnThreshold": 0.8,
-                     *         "ipPool": {
-                     *           "id": 1,
-                     *           "cidr": "172.29.0.0/16",
-                     *           "allocatedCount": 6,
-                     *           "freeCount": 65200
-                     *         }
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["NodeSummary"][];
+                    "*/*": components["schemas"]["NodeSummaryResponse"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
-    listAdminVms: {
+    listAdminNotifications: {
         parameters: {
             query?: {
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
-                orgId?: number;
-                /** @description 그룹 필터 */
-                groupId?: number;
-                /** @description VM 상태 필터 */
-                status?: components["schemas"]["VmStatus"];
-                /** @description 지정 일수 이내 만료 예정 VM만 조회 (오늘 ≤ `endDate` ≤ 오늘+N — 이미 만료된 VM은 제외하며 `expired=true`로 조회, DELETED/DELETING 제외). `expired`와 함께 지정하면 AND로 적용되어 빈 결과가 됩니다. */
-                expiringInDays?: number;
-                /** @description true면 이미 만료된 VM만 조회 (`endDate` < 오늘, DELETED/DELETING 제외 — `expiringInDays`와 동일 기준) */
-                expired?: boolean;
-                /** @description 이름/호스트네임 부분일치 검색 (대소문자 무시). 다른 필터와 AND로 적용됩니다. */
-                q?: string;
-                /** @description 정렬 기준 (접두사 `-`는 내림차순). 미지정 시 최신 생성 순(`-id`). 동률은 항상 `id` 내림차순으로 안정 정렬되며, `endDate` 정렬에서 기간 미지정 VM은 마지막에 옵니다. */
-                sort?: "name" | "-name" | "endDate" | "-endDate" | "createdAt" | "-createdAt";
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                status?: components["schemas"]["NotificationStatus"];
+                event?: string;
+                email?: string;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -9147,247 +3277,132 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description VM 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmPage"];
+                    "*/*": components["schemas"]["PageResponseAdminNotificationResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    scheduleVmDeletion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "scheduledFor": "2026-07-20T00:00:00+09:00",
-                 *       "reason": "사용 종료일(2026-07-10)이 지난 VM 정리 안내드립니다."
-                 *     }
-                 */
-                "application/json": {
-                    /**
-                     * Format: date-time
-                     * @description 파기 예정 시각 (최소 통보 기간 이후, 기본 7일)
-                     */
-                    scheduledFor: string;
-                    /** @description 삭제 사유 (필수 — 사용자 통보 메일에 포함) */
-                    reason: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 일반 삭제 접수 (사용자 통보 메일 발송) */
-            202: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "kind": "ADMIN",
-                     *       "scheduledFor": "2026-07-20T00:00:00+09:00",
-                     *       "requestedAt": "2026-07-08T15:00:00+09:00",
-                     *       "requestedById": 3,
-                     *       "reason": "사용 종료일(2026-07-10)이 지난 VM 정리 안내드립니다.",
-                     *       "cancelable": true
-                     *     }
-                     */
-                    "application/json": components["schemas"]["VmDeletion"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 접수할 수 없는 상태 — 이미 삭제 접수됨, 본인 삭제 유예 중(DELETING), 또는 DELETED */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "이미 삭제가 접수되었거나 진행 중인 VM입니다.",
-                     *       "instance": "/api/v1/admin/vms/55/schedule-delete",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 검증 실패 (scheduledFor가 과거이거나 최소 통보 기간 미만) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "입력값이 올바르지 않습니다",
-                     *       "status": 422,
-                     *       "detail": "요청 값을 확인해 주세요.",
-                     *       "instance": "/api/v1/admin/vms/55/schedule-delete",
-                     *       "code": "VALIDATION_FAILED",
-                     *       "errors": [
-                     *         {
-                     *           "field": "scheduledFor",
-                     *           "message": "삭제 예정일은 최소 통보 기간(7일) 이후여야 합니다."
-                     *         }
-                     *       ]
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
     };
-    cancelScheduledVmDeletion: {
+    resendAdminNotification: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
+                notificationId: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 삭제 취소 완료 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "message": "삭제가 취소되었습니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
+                    "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 취소할 수 없음 — 대기 중인 삭제가 없거나, 유예/예정 시각이 지나 이미 파기되었거나, 강제 삭제(취소 불가)임 */
-            409: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "취소할 수 있는 삭제가 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.",
-                     *       "instance": "/api/v1/admin/vms/55/cancel-scheduled-delete",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
         };
     };
-    forceDeleteVm: {
+    createOrg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrgDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateOrg: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
+                orgId: number;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                /**
-                 * @example {
-                 *       "confirmName": "capstone-team3-api"
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 파기 확인용 VM 이름 (VM의 `name`과 정확히 일치해야 함) */
-                    confirmName: string;
-                    /**
-                     * @description true면 삭제 보호(`deletion_protection`)를 무시하고 진행 — 설정을 false로 영속화한 뒤 파기 (감사에 오버라이드 사실 기록. 미지정/false면 보호 켜진 VM은 409)
-                     * @default false
-                     */
-                    overrideProtection?: boolean;
-                };
+                "application/json": components["schemas"]["UpdateOrgRequest"];
             };
         };
         responses: {
-            /** @description 강제 삭제 접수 (즉시 강제 종료 후 파기) */
-            202: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "message": "강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
+                    "*/*": components["schemas"]["OrgDetailResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 확인용 이름 불일치 */
-            409: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "확인용 이름이 일치하지 않습니다",
-                     *       "status": 409,
-                     *       "detail": "입력한 이름이 VM 이름과 일치하지 않습니다. VM 이름을 정확히 입력해 주세요.",
-                     *       "instance": "/api/v1/admin/vms/55/force-delete",
-                     *       "code": "VM_CONFIRM_NAME_MISMATCH"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
         };
     };
     listAdminRoutes: {
         parameters: {
             query?: {
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
                 orgId?: number;
-                /** @description 라우트 상태 필터 */
                 status?: components["schemas"]["RouteStatus"];
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -9395,172 +3410,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 라우트 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 12,
-                     *           "fqdn": "capstone-team3.pickle.pnuops.com",
-                     *           "domainKind": "REQUESTED",
-                     *           "vmId": 55,
-                     *           "vmName": "capstone-team3-api",
-                     *           "groupId": 12,
-                     *           "groupName": "캡스톤 3조",
-                     *           "orgId": 1,
-                     *           "orgName": "정보컴퓨터공학부 실습지원센터",
-                     *           "targetPort": 8080,
-                     *           "protocol": "HTTP",
-                     *           "status": "APPLIED",
-                     *           "appliedGeneration": 7,
-                     *           "appliedAt": "2026-07-12T09:01:00+09:00",
-                     *           "lastError": null,
-                     *           "updatedAt": "2026-07-12T09:01:00+09:00"
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 1,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AdminRoutePage"];
+                    "*/*": components["schemas"]["PageResponseAdminRouteView"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listAdminDomains: {
-        parameters: {
-            query?: {
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
-                orgId?: number;
-                /** @description 도메인 종류 필터 */
-                kind?: components["schemas"]["DomainKind"];
-                /** @description 도메인 상태 필터 */
-                status?: components["schemas"]["DomainStatus"];
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 도메인 목록 (페이지) */
-            200: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 34,
-                     *           "vmId": 55,
-                     *           "vmName": "capstone-team3-api",
-                     *           "groupId": 12,
-                     *           "groupName": "캡스톤 3조",
-                     *           "orgId": 1,
-                     *           "orgName": "정보컴퓨터공학부 실습지원센터",
-                     *           "kind": "CUSTOM",
-                     *           "fqdn": "capstone.example.com",
-                     *           "rootDomain": null,
-                     *           "status": "VERIFYING",
-                     *           "routeStatus": "PENDING",
-                     *           "certificateStatus": null,
-                     *           "verifiedAt": null,
-                     *           "createdAt": "2026-07-10T09:00:00+09:00",
-                     *           "updatedAt": "2026-07-10T09:05:00+09:00"
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 1,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AdminDomainPage"];
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listAdminCertificates: {
-        parameters: {
-            query?: {
-                /** @description 기관 필터 (SYS_ADMIN 전용) */
-                orgId?: number;
-                /** @description 인증서 상태 필터 */
-                status?: components["schemas"]["CertificateStatus"];
-                /** @description 지정 일수 이내 만료 예정 인증서만 조회 */
-                expiringInDays?: number;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 인증서 목록 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "content": [
-                     *         {
-                     *           "id": 1,
-                     *           "kind": "ORIGIN_CA_WILDCARD",
-                     *           "status": "ACTIVE",
-                     *           "scope": "*.pickle.pnuops.com",
-                     *           "domainId": null,
-                     *           "notAfter": "2040-01-01T00:00:00+09:00",
-                     *           "daysUntilExpiry": 5286,
-                     *           "lastError": null
-                     *         },
-                     *         {
-                     *           "id": 8,
-                     *           "kind": "LETS_ENCRYPT",
-                     *           "status": "ACTIVE",
-                     *           "scope": "capstone.example.com",
-                     *           "domainId": 34,
-                     *           "notAfter": "2026-10-10T00:00:00+09:00",
-                     *           "daysUntilExpiry": 90,
-                     *           "lastError": null
-                     *         }
-                     *       ],
-                     *       "page": 0,
-                     *       "size": 20,
-                     *       "totalElements": 2,
-                     *       "totalPages": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AdminCertificatePage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
         };
     };
     resyncRoutes: {
@@ -9572,280 +3439,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 재동기화 접수 (비동기 sync-all) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "라우트 전체 재동기화를 접수했습니다. 잠시 후 적용 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    listAnnouncements: {
-        parameters: {
-            query?: {
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 공지 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnnouncementPage"];
+                    "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    createAnnouncement: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "title": "7월 정기 점검 안내",
-                 *       "body": "7월 20일(월) 02:00~04:00 KST에 호스트 정기 점검이 진행됩니다.",
-                 *       "scope": "ORG",
-                 *       "orgId": 1,
-                 *       "groupId": null
-                 *     }
-                 */
-                "application/json": components["schemas"]["AnnouncementCreateRequest"];
-            };
-        };
-        responses: {
-            /** @description 공지 발송 완료 (인앱 알림 생성, 이메일은 비동기) */
-            201: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "id": 11,
-                     *       "title": "7월 정기 점검 안내",
-                     *       "scope": "ORG",
-                     *       "orgId": 1,
-                     *       "groupId": null,
-                     *       "recipientCount": 132,
-                     *       "createdAt": "2026-07-13T11:00:00+09:00"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AnnouncementView"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            /** @description 권한 없음 (전체(ALL) 공지는 SYS_ADMIN 전용) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "접근 권한이 없습니다",
-                     *       "status": 403,
-                     *       "detail": "전체 공지는 시스템 관리자만 발송할 수 있습니다.",
-                     *       "instance": "/api/v1/admin/announcements",
-                     *       "code": "ACCESS_DENIED"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
-    };
-    listAdminGroups: {
-        parameters: {
-            query?: {
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
-                orgId?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 그룹 선택지 목록 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "id": 12,
-                     *         "name": "캡스톤 3조",
-                     *         "slug": "capstone-team3",
-                     *         "memberCount": 4
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["AdminGroupOption"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    listAdminNotifications: {
-        parameters: {
-            query?: {
-                /** @description 발송 상태 필터 */
-                status?: components["schemas"]["NotificationDeliveryStatus"];
-                /** @description 알림 이벤트 카탈로그 ID 필터 (예 `vm.create.done`) */
-                event?: string;
-                /** @description 수신자 이메일 필터 */
-                email?: string;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 알림 발송 로그 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminNotificationPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    resendAdminNotification: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 알림 ID */
-                notificationId: components["parameters"]["NotificationId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 재발송 접수 (비동기 발송) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "알림 재발송을 접수했습니다. 잠시 후 발송 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 재발송할 수 없는 상태 (FAILED만 재발송 가능) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "재발송할 수 없는 알림입니다",
-                     *       "status": 409,
-                     *       "detail": "발송에 실패한(FAILED) 알림만 재발송할 수 있습니다.",
-                     *       "instance": "/api/v1/admin/notifications/301/resend",
-                     *       "code": "NOTIFICATION_NOT_RESENDABLE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listAuditLogs: {
-        parameters: {
-            query?: {
-                /** @description 행위자 이메일 필터 */
-                actorEmail?: string;
-                /** @description 활동 종류 필터 (점 네임스페이스, 예 `auth.login`, `vm.self_delete`, `setting.update`) */
-                action?: string;
-                /** @description 대상 리소스 종류 필터 (예 `vm`, `group`, `setting`) */
-                targetType?: string;
-                /** @description 대상 리소스 식별자 필터 */
-                targetId?: string;
-                /** @description 조회 시작일 (KST, 해당 일 00:00부터) */
-                from?: string;
-                /** @description 조회 종료일 (KST, 해당 일 24:00까지) */
-                to?: string;
-                /** @description 기관 필터 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
-                orgId?: number;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 감사 로그 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuditLogPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
         };
     };
     listSettings: {
@@ -9857,37 +3468,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 운영 설정 목록 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "key": "vm_delete_grace_hours",
-                     *         "value": 168,
-                     *         "valueType": "INTEGER",
-                     *         "description": "본인 삭제 후 파기까지의 유예 시간",
-                     *         "editable": true,
-                     *         "updatedAt": "2026-07-01T09:00:00+09:00"
-                     *       },
-                     *       {
-                     *         "key": "ssh_gateway_enabled",
-                     *         "value": true,
-                     *         "valueType": "BOOLEAN",
-                     *         "description": "SSH 게이트웨이 전체 활성화 (킬 스위치)",
-                     *         "editable": true,
-                     *         "updatedAt": "2026-07-01T09:00:00+09:00"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["SettingView"][];
+                    "*/*": components["schemas"]["SettingView"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     updateSetting: {
@@ -9895,233 +3493,39 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description 설정 키 (예 `ssh_gateway_enabled`) */
                 key: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                /**
-                 * @example {
-                 *       "value": false
-                 *     }
-                 */
                 "application/json": components["schemas"]["SettingUpdateRequest"];
             };
         };
         responses: {
-            /** @description 수정된 설정 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SettingView"];
+                    "*/*": components["schemas"]["SettingView"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            /** @description 알 수 없는 키 또는 수정 불가(editable=false) 키 */
-            404: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "리소스를 찾을 수 없습니다",
-                     *       "status": 404,
-                     *       "detail": "해당 설정 키가 존재하지 않거나 수정할 수 없습니다.",
-                     *       "instance": "/api/v1/admin/settings/unknown_key",
-                     *       "code": "RESOURCE_NOT_FOUND"
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listAdminTasks: {
-        parameters: {
-            query?: {
-                /** @description 작업 상태 필터 — **다중값 지원** (v0.9.0: 반복 지정 시 OR로 결합, 예 `?status=FAILED&status=NEEDS_ADMIN` — "문제 작업" 화면용) */
-                status?: components["schemas"]["ProvisioningTaskStatus"][];
-                /** @description 작업 종류 필터 */
-                kind?: components["schemas"]["ProvisioningTaskKind"];
-                /** @description VM 필터 */
-                vmId?: number;
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 작업 목록 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminTaskPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    retryAdminTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 작업(태스크) ID */
-                taskId: components["parameters"]["TaskId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 재시도 접수 (비동기 처리) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "message": "작업 재시도를 접수했습니다. 잠시 후 작업 상태가 갱신됩니다."
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 재시도할 수 없는 상태 (NEEDS_ADMIN만 재시도 가능) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "재시도할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "관리자 개입 대기(NEEDS_ADMIN) 상태의 작업만 재시도할 수 있습니다.",
-                     *       "instance": "/api/v1/admin/tasks/77/retry",
-                     *       "code": "TASK_NOT_RETRYABLE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listDriftFindings: {
-        parameters: {
-            query?: {
-                /** @description 발견 상태 필터 (생략 시 OPEN으로 동작) */
-                status?: components["schemas"]["DriftFindingStatus"];
-                /** @description 드리프트 종류 필터 */
-                kind?: components["schemas"]["DriftFindingKind"];
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 드리프트 발견 목록 (페이지) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DriftFindingPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    resolveDriftFinding: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 드리프트 발견 ID */
-                findingId: components["parameters"]["FindingId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                /**
-                 * @example {
-                 *       "note": "잔여 게스트를 수동 정리했습니다."
-                 *     }
-                 */
-                "application/json": {
-                    /** @description 해결 메모 (선택) */
-                    note?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 해결 처리된 발견 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DriftFindingView"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 이미 해결된 발견 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "이미 해결된 발견입니다",
-                     *       "status": 409,
-                     *       "detail": "이 드리프트 발견은 이미 해결 처리되었습니다.",
-                     *       "instance": "/api/v1/admin/drift-findings/9/resolve",
-                     *       "code": "DRIFT_FINDING_ALREADY_RESOLVED"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            422: components["responses"]["ValidationError"];
         };
     };
     getAdminSummary: {
         parameters: {
             query?: {
-                /** @description 기관 선택 (SYS_ADMIN 전용 — ORG_ADMIN은 자기 기관으로 고정됨) */
                 orgId?: number;
             };
             header?: never;
@@ -10130,18 +3534,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 기관 대시보드 요약 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrgDashboardSummary"];
+                    "*/*": components["schemas"]["OrgDashboardSummaryResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getSystemSummary: {
@@ -10153,30 +3563,34 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 시스템 대시보드 요약 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SystemDashboardSummary"];
+                    "*/*": components["schemas"]["SystemDashboardSummaryResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
-    listIpAllocations: {
+    listAdminTasks: {
         parameters: {
             query?: {
-                /** @description IP 풀 필터 */
-                poolId?: number;
-                /** @description 할당 상태 필터 */
-                status?: components["schemas"]["IpAllocationStatus"];
-                /** @description 페이지 번호 (0부터 시작) */
-                page?: components["parameters"]["Page"];
-                /** @description 페이지 크기 */
-                size?: components["parameters"]["Size"];
+                status?: components["schemas"]["ProvisioningTaskStatus"][];
+                kind?: components["schemas"]["ProvisioningTaskKind"];
+                vmId?: number;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -10184,94 +3598,52 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description IP 할당 목록 (페이지) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IpAllocationPage"];
+                    "*/*": components["schemas"]["PageResponseAdminTaskResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
-    updateVmPeriod: {
+    retryAdminTask: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                /** @description VM ID */
-                vmId: components["parameters"]["VmId"];
+                taskId: number;
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "endDate": "2027-02-28"
-                 *     }
-                 */
-                "application/json": components["schemas"]["VmPeriodUpdateRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description 변경된 VM 상세 */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VmDetail"];
+                    "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description 기간을 변경할 수 없는 상태 — DELETED/DELETING이거나 삭제가 접수된 VM */
-            409: {
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "현재 상태에서는 수행할 수 없는 작업입니다",
-                     *       "status": 409,
-                     *       "detail": "삭제가 접수되었거나 진행 중인 VM은 기간을 변경할 수 없습니다.",
-                     *       "instance": "/api/v1/admin/vms/55/period",
-                     *       "code": "VM_INVALID_STATE"
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 검증 실패 (endDate가 과거이거나 startDate보다 이름) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "about:blank",
-                     *       "title": "입력값이 올바르지 않습니다",
-                     *       "status": 422,
-                     *       "detail": "요청 값을 확인해 주세요.",
-                     *       "instance": "/api/v1/admin/vms/55/period",
-                     *       "code": "VALIDATION_FAILED",
-                     *       "errors": [
-                     *         {
-                     *           "field": "endDate",
-                     *           "message": "종료일은 오늘(KST) 이후여야 합니다."
-                     *         }
-                     *       ]
-                     *     }
-                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -10286,17 +3658,24 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 라이브 세션 목록 (시작 시각 내림차순) */
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TerminalSessionView"][];
+                    "*/*": components["schemas"]["TerminalSessionView"][];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     terminateTerminalSession: {
@@ -10304,22 +3683,2670 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description 웹 터미널 세션 ID (UUID) */
-                sessionId: components["parameters"]["TerminalSessionId"];
+                sessionId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 종료 지시 완료 (또는 이미 종료된 세션 — no-op) */
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: components["schemas"]["UserStatus"];
+                role?: components["schemas"]["UserRole"];
+                orgId?: number;
+                sort?: "name" | "-name" | "email" | "-email" | "createdAt" | "-createdAt";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseUserAdminViewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserAdminDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserAdminRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disableUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisableUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserAdminDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    enableUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserAdminDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resetUserMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminVmRequests: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["VmRequestStatus"];
+                orgId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminVmRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approveVmRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveVmRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getApprovalContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApprovalContextResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rejectVmRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectVmRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminVms: {
+        parameters: {
+            query?: {
+                orgId?: number;
+                groupId?: number;
+                status?: components["schemas"]["VmStatus"];
+                expiringInDays?: number;
+                expired?: boolean;
+                q?: string;
+                sort?: "name" | "-name" | "endDate" | "-endDate" | "createdAt" | "-createdAt";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVmSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelScheduledVmDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    forceDeleteVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForceDeleteVmRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateVmPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VmPeriodUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    scheduleVmDeletion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleVmDeletionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmDeletionResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description 로그인 성공(토큰 발급) 또는 2FA 챌린지 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF 이중 제출 토큰 — pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
+                "X-Pickle-Csrf": string;
+            };
+            path?: never;
+            cookie?: {
+                pickle_refresh?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    completeMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refresh: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF 이중 제출 토큰 — pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
+                "X-Pickle-Csrf": string;
+            };
+            path?: never;
+            cookie?: {
+                pickle_refresh?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resendVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    signup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listDomains: {
+        parameters: {
+            query?: {
+                vmId?: number;
+                status?: components["schemas"]["DomainStatus"];
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseDomainSummaryView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DomainDetailView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifyDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DomainDetailView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupSummaryResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGroupRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddGroupMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateGroupMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGroupMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GroupMemberResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listMyActivity: {
+        parameters: {
+            query?: {
+                action?: string;
+                from?: string;
+                to?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseActivityEntryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listMyConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsentView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    acceptConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsentView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisableMfaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    regenerateRecoveryCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegenerateRecoveryCodesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MfaRecoveryCodesResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    begin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeginMfaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MfaSetupResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivateMfaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MfaRecoveryCodesResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SshKeyView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    registerKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SshKeyCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SshKeyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    generateKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SshKeyGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SshKeyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    downloadPrivateKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SshKeyPrivateKeyResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    requestOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestOptionsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    systemStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SystemStatusResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listTerms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TermsVersionView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTerms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                docType: components["schemas"]["TermsDocType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TermsDocumentView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                unreadOnly?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseNotificationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    markAllNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReadAllResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getUnreadNotificationCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UnreadCountResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotificationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listOrgs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrgSummaryResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmTemplateResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVmRequests: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["VmRequestStatus"];
+                groupId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createVmRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVmRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVmRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelVmRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVms: {
+        parameters: {
+            query?: {
+                groupId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVmSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmDeletionResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVmEvents: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseVmEventResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    forceStopVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revealVmPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmPasswordResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    regenerateVmPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmPasswordResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unpublishVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updatePublication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PublicationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    publishVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PublishRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PublicationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rebootVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVmSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmSettingView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateVmSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VmSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmSettingView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    shutdownVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    startVm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createTerminalSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TerminalTicketResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
 }

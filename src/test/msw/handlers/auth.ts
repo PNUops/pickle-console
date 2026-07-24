@@ -15,21 +15,21 @@ export function problemResponse(problem: Schemas['Problem']) {
 
 export const USER_PASSWORD = 'correct-horse-battery!'
 
-export const studentUser: Schemas['UserSummary'] = {
+export const studentUser: Schemas['UserSummaryResponse'] = {
   id: 42,
   email: 'example@pusan.ac.kr',
   name: '홍길동',
   role: 'USER',
 }
 
-export const orgAdminUser: Schemas['UserSummary'] = {
+export const orgAdminUser: Schemas['UserSummaryResponse'] = {
   id: 7,
   email: 'admin.kim@pusan.ac.kr',
   name: '김관리',
   role: 'ORG_ADMIN',
 }
 
-export const sysAdminUser: Schemas['UserSummary'] = {
+export const sysAdminUser: Schemas['UserSummaryResponse'] = {
   id: 5,
   email: 'sysadmin.lee@pusan.ac.kr',
   name: '이시스템',
@@ -37,7 +37,7 @@ export const sysAdminUser: Schemas['UserSummary'] = {
 }
 
 /** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프. */
-export const orgManagerUser: Schemas['UserSummary'] = {
+export const orgManagerUser: Schemas['UserSummaryResponse'] = {
   id: 8,
   email: 'manager.choi@pusan.ac.kr',
   name: '최운영',
@@ -45,7 +45,7 @@ export const orgManagerUser: Schemas['UserSummary'] = {
 }
 
 /** 시스템 운영자 — SYS_ADMIN 하위, 전 기관 조회. */
-export const sysManagerUser: Schemas['UserSummary'] = {
+export const sysManagerUser: Schemas['UserSummaryResponse'] = {
   id: 6,
   email: 'sysmanager.jung@pusan.ac.kr',
   name: '정시스템운영',
@@ -53,14 +53,14 @@ export const sysManagerUser: Schemas['UserSummary'] = {
 }
 
 /** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
-export const studentBUser: Schemas['UserSummary'] = {
+export const studentBUser: Schemas['UserSummaryResponse'] = {
   id: 58,
   email: 'younghee.park@pusan.ac.kr',
   name: '박영희',
   role: 'USER',
 }
 
-export const studentProfile: Schemas['UserProfile'] = {
+export const studentProfile: Schemas['UserProfileResponse'] = {
   ...studentUser,
   orgId: null,
   status: 'ACTIVE',
@@ -71,7 +71,7 @@ export const studentProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
-export const orgAdminProfile: Schemas['UserProfile'] = {
+export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   ...orgAdminUser,
   orgId: 1,
   status: 'ACTIVE',
@@ -82,7 +82,7 @@ export const orgAdminProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
-export const sysAdminProfile: Schemas['UserProfile'] = {
+export const sysAdminProfile: Schemas['UserProfileResponse'] = {
   ...sysAdminUser,
   orgId: null,
   status: 'ACTIVE',
@@ -93,7 +93,7 @@ export const sysAdminProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
-export const orgManagerProfile: Schemas['UserProfile'] = {
+export const orgManagerProfile: Schemas['UserProfileResponse'] = {
   ...orgManagerUser,
   orgId: 1,
   status: 'ACTIVE',
@@ -104,7 +104,7 @@ export const orgManagerProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
-export const sysManagerProfile: Schemas['UserProfile'] = {
+export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   ...sysManagerUser,
   orgId: null,
   status: 'ACTIVE',
@@ -115,7 +115,7 @@ export const sysManagerProfile: Schemas['UserProfile'] = {
   pendingConsents: [],
 }
 
-export const studentBProfile: Schemas['UserProfile'] = {
+export const studentBProfile: Schemas['UserProfileResponse'] = {
   ...studentBUser,
   orgId: null,
   status: 'ACTIVE',
@@ -127,14 +127,14 @@ export const studentBProfile: Schemas['UserProfile'] = {
 }
 
 /** A 2FA-enrolled account: login returns a challenge, /auth/mfa completes it. */
-export const mfaUser: Schemas['UserSummary'] = {
+export const mfaUser: Schemas['UserSummaryResponse'] = {
   id: 61,
   email: 'twofactor@pusan.ac.kr',
   name: '이중인증',
   role: 'USER',
 }
 
-export const mfaProfile: Schemas['UserProfile'] = {
+export const mfaProfile: Schemas['UserProfileResponse'] = {
   ...mfaUser,
   orgId: null,
   status: 'ACTIVE',
@@ -148,7 +148,7 @@ export const MFA_VALID_CODE = '123456'
 export const MFA_VALID_RECOVERY_CODE = 'abcd-efgh-ijkl'
 
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
-export const ACCESS_TOKENS: Record<string, Schemas['UserProfile']> = {
+export const ACCESS_TOKENS: Record<string, Schemas['UserProfileResponse']> = {
   'access-student': studentProfile,
   'access-org-admin': orgAdminProfile,
   'access-org-manager': orgManagerProfile,
@@ -327,7 +327,7 @@ export const authHandlers: RequestHandler[] = [
 /** Refresh succeeds and issues the given access token (default: student). */
 export function refreshSuccessHandler(
   token = 'access-student',
-  user: Schemas['UserSummary'] = studentUser,
+  user: Schemas['UserSummaryResponse'] = studentUser,
   onCall?: () => void,
 ): RequestHandler {
   return http.post('*/api/v1/auth/refresh', () => {

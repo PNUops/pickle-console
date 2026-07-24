@@ -21,7 +21,7 @@ import {
 } from '../components/ui'
 import { formatDateTime, formatDday, formatSpec } from '../lib/format'
 
-type VmSummary = components['schemas']['VmSummary']
+type VmSummary = components['schemas']['VmSummaryResponse']
 
 /** 만료 임박으로 취급하는 잔여 일수 상한. */
 const EXPIRY_SOON_DAYS = 14

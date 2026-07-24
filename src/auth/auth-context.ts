@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { components } from '../api/schema'
 
-export type UserProfile = components['schemas']['UserProfile']
+export type UserProfile = components['schemas']['UserProfileResponse']
 export type UserRole = components['schemas']['UserRole']
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
