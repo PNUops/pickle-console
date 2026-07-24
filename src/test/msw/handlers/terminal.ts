@@ -23,7 +23,7 @@ function initialSessions(): TerminalSessionView[] {
       orgName: '정보컴퓨터공학부 실습지원센터',
       groupName: '캡스톤 3조',
       userId: 42,
-      userEmail: 'gildong.hong@pusan.ac.kr',
+      userEmail: 'example@pusan.ac.kr',
       userName: '홍길동',
       clientIp: '203.0.113.7',
       startedAt: '2026-07-20T02:50:00+09:00',

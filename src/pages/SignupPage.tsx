@@ -163,7 +163,7 @@ export function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="gildong.hong@pusan.ac.kr"
+                placeholder="example@pusan.ac.kr"
                 autoComplete="email"
                 required
               />

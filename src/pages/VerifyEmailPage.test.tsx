@@ -17,7 +17,7 @@ describe('이메일 인증', () => {
     expect(await screen.findByText('인증 링크가 만료되었습니다')).toBeInTheDocument()
 
     const user = userEvent.setup()
-    await user.type(screen.getByLabelText('가입한 이메일'), 'gildong.hong@pusan.ac.kr')
+    await user.type(screen.getByLabelText('가입한 이메일'), 'example@pusan.ac.kr')
     await user.click(screen.getByRole('button', { name: '인증 메일 다시 받기' }))
 
     expect(

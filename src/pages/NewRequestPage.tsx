@@ -609,7 +609,7 @@ export function NewRequestPage() {
                   <FormField
                     label="커스텀 도메인"
                     error={errors.customDomain}
-                    description="직접 소유한 도메인이 있으면 적어 주세요. 연결은 이후 단계(M4)에서 지원되며 지금은 기록만 됩니다."
+                    description="직접 소유한 도메인이 있으면 적어 주세요. 연결은 이후 단계에서 지원되며 지금은 기록만 됩니다."
                   >
                     <Input
                       value={state.customDomain}

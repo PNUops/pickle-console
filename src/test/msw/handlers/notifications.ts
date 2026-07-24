@@ -70,7 +70,7 @@ function initialDeliveryLog(): AdminNotificationView[] {
     {
       id: 404,
       userId: 42,
-      userEmail: 'gildong.hong@pusan.ac.kr',
+      userEmail: 'example@pusan.ac.kr',
       event: 'vm.create.done',
       title: 'VM 생성 완료',
       body: 'capstone-team3-api VM 생성이 완료되었습니다.',
@@ -121,7 +121,7 @@ function initialDeliveryLog(): AdminNotificationView[] {
     {
       id: 401,
       userId: 42,
-      userEmail: 'gildong.hong@pusan.ac.kr',
+      userEmail: 'example@pusan.ac.kr',
       event: 'vm.delete.completed',
       title: 'VM 삭제 완료',
       body: '요청하신 VM 삭제가 완료되었습니다.',

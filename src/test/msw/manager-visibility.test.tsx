@@ -8,14 +8,14 @@ type FixtureUser = typeof orgManagerUser
 
 /**
  * 운영자 계층(ORG_MANAGER·SYS_MANAGER)의 관리 콘솔 접근 — 라우팅 가드와
- * 내비게이션 노출이 permission-matrix.md와 일치하는지 확인한다.
+ * 내비게이션 노출이 운영자 권한 정책과 일치하는지 확인한다.
  */
 function renderAs(token: string, user: FixtureUser, path: string) {
   server.use(refreshSuccessHandler(token, user))
   renderApp(path)
 }
 
-describe('운영자 계층 화면 접근 (M6)', () => {
+describe('운영자 계층 화면 접근', () => {
   test('ORG_MANAGER는 관리 화면을 보되 시스템 섹션·기관 관리는 숨긴다', async () => {
     renderAs('access-org-manager', orgManagerUser, '/admin')
     expect(await screen.findByRole('heading', { name: '관리자 대시보드' })).toBeInTheDocument()

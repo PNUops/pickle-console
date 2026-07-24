@@ -76,7 +76,7 @@ function initialAuditRows(): StoredAuditRow[] {
       id: 501,
       actorOrgId: 1,
       actorId: 42,
-      actorEmail: 'gildong.hong@pusan.ac.kr',
+      actorEmail: 'example@pusan.ac.kr',
       actorName: '홍길동',
       actorRole: 'USER',
       action: 'auth.login',

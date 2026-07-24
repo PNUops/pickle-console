@@ -188,7 +188,7 @@ export function GroupKindBadge({ kind, className }: { kind: GroupKind; className
   )
 }
 
-/* ─── 운영 콘솔 (M5) ─── */
+/* ─── 운영 콘솔 ─── */
 
 /** 사용 종료일 D-day 배지 — 임박(D-3 이내)·경과는 danger, D-7 이내는 warning. */
 export function DdayBadge({ endDate, className }: { endDate: string; className?: string }) {

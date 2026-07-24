@@ -28,7 +28,7 @@ export type UserSummary = Schemas['UserSummary']
 export type UserRole = Schemas['UserRole']
 export type UserStatus = Schemas['UserStatus']
 export type AuthTokenResponse = Schemas['AuthTokenResponse']
-/* ─── 계정 수명주기 (M6) ─── */
+/* ─── 계정 수명주기 ─── */
 export type UserAdminView = Schemas['UserAdminView']
 export type UserAdminDetail = Schemas['UserAdminDetail']
 export type UserAdminPage = Schemas['UserAdminPage']
@@ -45,7 +45,7 @@ export type ProvisioningTaskView = Schemas['ProvisioningTaskView']
 export type VmPasswordResponse = Schemas['VmPasswordResponse']
 export type NodeSummary = Schemas['NodeSummary']
 
-/* ─── SSH 키·VM 설정 (M5.5) ─── */
+/* ─── SSH 키·VM 설정 ─── */
 export type SshKeyView = Schemas['SshKeyView']
 export type SshKeyAlgorithm = Schemas['SshKeyAlgorithm']
 export type SshKeyCreateRequest = Schemas['SshKeyCreateRequest']
@@ -57,11 +57,11 @@ export type VmSettingsUpdateRequest = Schemas['VmSettingsUpdateRequest']
 export type IpPoolSummary = Schemas['IpPoolSummary']
 export type MessageResponse = Schemas['MessageResponse']
 
-/* ─── 웹 터미널 (M6.5) ─── */
+/* ─── 웹 터미널 ─── */
 export type TerminalSessionTicket = Schemas['TerminalSessionTicketResponse']
 export type TerminalSessionView = Schemas['TerminalSessionView']
 
-/* ─── 2FA·약관 동의 (M6) ─── */
+/* ─── 2FA·약관 동의 ─── */
 export type MfaSetupResponse = Schemas['MfaSetupResponse']
 export type MfaRecoveryCodesResponse = Schemas['MfaRecoveryCodesResponse']
 export type TermsDocType = Schemas['TermsDocType']
@@ -91,7 +91,7 @@ export type AdminDomainPage = Schemas['AdminDomainPage']
 export type AdminCertificateView = Schemas['AdminCertificateView']
 export type AdminCertificatePage = Schemas['AdminCertificatePage']
 
-/* ─── 알림·운영 콘솔 (M5) ─── */
+/* ─── 알림·운영 콘솔 ─── */
 export type NotificationView = Schemas['NotificationView']
 export type NotificationPage = Schemas['NotificationPage']
 export type UnreadCountResponse = Schemas['UnreadCountResponse']
@@ -129,7 +129,7 @@ export interface RequestOptions {
   sshHost: string
 }
 
-/* ─── 점검 모드·배너·문의처 (M6, GET /meta/status) ─── */
+/* ─── 점검 모드·배너·문의처 (GET /meta/status) ─── */
 export type SystemStatus = Schemas['SystemStatusResponse']
 
 /**
@@ -277,7 +277,7 @@ export function fetchApprovalContext(requestId: number): Promise<ApprovalContext
   })
 }
 
-/* ─── vm lifecycle (M3) ─── */
+/* ─── vm lifecycle ─── */
 
 export function startVm(vmId: number): Promise<MessageResponse> {
   return guardNetwork(async () => {
@@ -350,7 +350,7 @@ export function regenerateVmPassword(vmId: number): Promise<VmPasswordResponse> 
   })
 }
 
-/* ─── VM별 설정 (M5.5, EDITOR 이상) ─── */
+/* ─── VM별 설정 (EDITOR 이상) ─── */
 
 export function fetchVmSettings(vmId: number): Promise<VmSettingView[]> {
   return guardNetwork(async () => {
@@ -377,7 +377,7 @@ export function updateVmSettings(
   })
 }
 
-/* ─── 내 SSH 키 (M5.5) ─── */
+/* ─── 내 SSH 키 ─── */
 
 export function fetchMySshKeys(): Promise<SshKeyView[]> {
   return guardNetwork(async () => {
@@ -441,7 +441,7 @@ export function fetchVmEvents(
   })
 }
 
-/* ─── 웹 터미널 (M6.5) ─── */
+/* ─── 웹 터미널 ─── */
 
 /**
  * 웹 터미널 1회용 접속 티켓 발급 (POST /vms/{vmId}/terminal-sessions).
@@ -550,7 +550,7 @@ export function verifyDomain(domainId: number): Promise<DomainDetail> {
   })
 }
 
-/* ─── admin (M3) ─── */
+/* ─── admin ─── */
 
 export function fetchAdminNodes(): Promise<NodeSummary[]> {
   return guardNetwork(async () => {
@@ -684,7 +684,7 @@ export function resyncRoutes(): Promise<MessageResponse> {
   })
 }
 
-/* ─── 작업 큐 (M5, SYS_ADMIN) ─── */
+/* ─── 작업 큐 (SYS_ADMIN) ─── */
 
 export function fetchAdminTasks(params: {
   status?: ProvisioningTaskStatus
@@ -715,7 +715,7 @@ export function retryAdminTask(taskId: number): Promise<MessageResponse> {
   })
 }
 
-/* ─── 운영 설정 (M5, SYS_ADMIN) ─── */
+/* ─── 운영 설정 (SYS_ADMIN) ─── */
 
 export function fetchSettings(): Promise<SettingView[]> {
   return guardNetwork(async () => {
@@ -736,7 +736,7 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
   })
 }
 
-/* ─── 대시보드 요약 (M5) ─── */
+/* ─── 대시보드 요약 ─── */
 
 export function fetchAdminSummary(params: { orgId?: number } = {}): Promise<OrgDashboardSummary> {
   return guardNetwork(async () => {
@@ -754,7 +754,7 @@ export function fetchSystemSummary(): Promise<SystemDashboardSummary> {
   })
 }
 
-/* ─── 알림 발송 로그·공지 (M5) ─── */
+/* ─── 알림 발송 로그·공지 ─── */
 
 export function fetchAdminNotifications(params: {
   status?: NotificationDeliveryStatus
@@ -813,7 +813,7 @@ export function createAnnouncement(
   })
 }
 
-/* ─── 드리프트·IP 할당 (M5, SYS_ADMIN) ─── */
+/* ─── 드리프트·IP 할당 (SYS_ADMIN) ─── */
 
 export function fetchDriftFindings(params: {
   status?: DriftFindingStatus
@@ -859,7 +859,7 @@ export function fetchIpAllocations(params: {
   })
 }
 
-/* ─── 감사 로그·내 활동 (M5) ─── */
+/* ─── 감사 로그·내 활동 ─── */
 
 export function fetchAuditLogs(params: {
   actorEmail?: string
@@ -893,7 +893,7 @@ export function fetchMyActivity(params: {
   })
 }
 
-/* ─── 알림 (M5) ─── */
+/* ─── 알림 ─── */
 
 export function fetchNotifications(params: {
   unreadOnly?: boolean
@@ -933,7 +933,7 @@ export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
   })
 }
 
-/* ─── 계정 수명주기 (M6) ─── */
+/* ─── 계정 수명주기 ─── */
 
 export function changeMyPassword(body: {
   currentPassword: string
@@ -958,7 +958,7 @@ export function withdrawMyAccount(body: {
   })
 }
 
-/* ─── 2FA (M6) ─── */
+/* ─── 2FA ─── */
 
 export function beginMfaSetup(password: string): Promise<MfaSetupResponse> {
   return guardNetwork(async () => {
@@ -1009,7 +1009,7 @@ export function resetUserMfa(userId: number): Promise<MessageResponse> {
   })
 }
 
-/* ─── 약관·동의 (M6) ─── */
+/* ─── 약관·동의 ─── */
 
 export function fetchCurrentTerms(): Promise<TermsVersionView[]> {
   return guardNetwork(async () => {

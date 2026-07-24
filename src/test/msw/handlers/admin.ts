@@ -153,7 +153,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         activeVms: [
           {
             id: 31,
-            name: 'gildong-dev',
+            name: 'yejun-dev',
             status: 'RUNNING',
             vcpu: 1,
             memoryMb: 1024,
@@ -538,7 +538,7 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json(updated, { status: 200 })
   }),
 
-  /* ─── admin VM ops (M3) ─── */
+  /* ─── admin VM ops ─── */
 
   http.get('*/api/v1/admin/nodes', () => HttpResponse.json(adminNodes, { status: 200 })),
 
@@ -669,7 +669,7 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json({ message }, { status: 200 })
   }),
 
-  /* ─── VM 사용 기간 변경 — 만료 연장 (M5) ─── */
+  /* ─── VM 사용 기간 변경 — 만료 연장 ─── */
 
   http.patch('*/api/v1/admin/vms/:vmId/period', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))

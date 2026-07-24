@@ -33,7 +33,7 @@ describe('회원가입 폼 검증', () => {
 
     await fillSignupForm({
       name: '홍길동',
-      email: 'gildong@gmail.com',
+      email: 'yejun@gmail.com',
       password: 'long-enough-pw',
       passwordConfirm: 'long-enough-pw',
     })
@@ -49,7 +49,7 @@ describe('회원가입 폼 검증', () => {
 
     await fillSignupForm({
       name: '홍길동',
-      email: 'gildong.hong@pusan.ac.kr',
+      email: 'example@pusan.ac.kr',
       password: 'short',
       passwordConfirm: 'short',
     })
@@ -63,7 +63,7 @@ describe('회원가입 폼 검증', () => {
 
     await fillSignupForm({
       name: '홍길동',
-      email: 'gildong.hong@pusan.ac.kr',
+      email: 'example@pusan.ac.kr',
       password: 'long-enough-pw',
       passwordConfirm: 'different-pw-123',
     })
@@ -77,7 +77,7 @@ describe('회원가입 폼 검증', () => {
 
     const user = await fillSignupForm({
       name: '홍길동',
-      email: 'gildong.hong@pusan.ac.kr',
+      email: 'example@pusan.ac.kr',
       password: 'long-enough-pw',
       passwordConfirm: 'long-enough-pw',
     })
@@ -100,7 +100,7 @@ describe('회원가입 폼 검증', () => {
 
     await fillSignupForm({
       name: '홍길동',
-      email: 'gildong.hong@pusan.ac.kr',
+      email: 'example@pusan.ac.kr',
       password: 'long-enough-pw',
       passwordConfirm: 'long-enough-pw',
       agree: false,

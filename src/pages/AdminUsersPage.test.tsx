@@ -25,13 +25,13 @@ describe('관리자 사용자 목록', () => {
     renderAsSysAdmin()
 
     await screen.findByRole('heading', { name: '사용자 관리' })
-    expect(await screen.findByText('gildong.hong@pusan.ac.kr')).toBeInTheDocument()
+    expect(await screen.findByText('example@pusan.ac.kr')).toBeInTheDocument()
     expect(screen.getByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
 
     // 상태 탭: 인증 대기 → PENDING만
     await user.click(screen.getByRole('tab', { name: '인증 대기' }))
     expect(await screen.findByText('pending.choi@pusan.ac.kr')).toBeInTheDocument()
-    expect(screen.queryByText('gildong.hong@pusan.ac.kr')).not.toBeInTheDocument()
+    expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument()
   })
 
   test('ORG_ADMIN은 파생 소속 사용자만 보고, 타 기관 사용자는 검색되지 않는다', async () => {
@@ -39,7 +39,7 @@ describe('관리자 사용자 목록', () => {
     renderAsOrgAdmin()
 
     // 파생 소속(org1) 사용자는 보인다
-    expect(await screen.findByText('gildong.hong@pusan.ac.kr')).toBeInTheDocument()
+    expect(await screen.findByText('example@pusan.ac.kr')).toBeInTheDocument()
     // 타 기관(org2) 사용자는 목록·검색에서 제외
     await user.type(screen.getByLabelText('사용자 검색'), 'outsider')
     await waitFor(() =>

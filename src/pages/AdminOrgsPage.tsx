@@ -288,7 +288,7 @@ function EditOrgModal({ org, onClose }: { org: OrgSummary; onClose: () => void }
   )
 }
 
-/** 사용자 역할 관리 — 최소한의 실무용 폼 (사용자 검색은 M5 이후). */
+/** 사용자 역할 관리 — 최소한의 실무용 폼 (사용자 검색은 이후 확장). */
 function UserRoleCard({ orgs }: { orgs: OrgSummary[] }) {
   const [userId, setUserId] = useState('')
   const [role, setRole] = useState<UserRole>('USER')

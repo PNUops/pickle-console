@@ -105,7 +105,7 @@ export const PROVISIONING_KIND_LABELS: Record<
   REINSTALL: 'VM 재설치',
 }
 
-/* ─── 운영 콘솔 (M5) ─── */
+/* ─── 운영 콘솔 ─── */
 
 export type DriftFindingKind = components['schemas']['DriftFindingKind']
 export type DriftFindingStatus = components['schemas']['DriftFindingStatus']

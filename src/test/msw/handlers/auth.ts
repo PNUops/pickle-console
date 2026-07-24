@@ -17,7 +17,7 @@ export const USER_PASSWORD = 'correct-horse-battery!'
 
 export const studentUser: Schemas['UserSummary'] = {
   id: 42,
-  email: 'gildong.hong@pusan.ac.kr',
+  email: 'example@pusan.ac.kr',
   name: '홍길동',
   role: 'USER',
 }
@@ -36,7 +36,7 @@ export const sysAdminUser: Schemas['UserSummary'] = {
   role: 'SYS_ADMIN',
 }
 
-/** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프 (M6). */
+/** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프. */
 export const orgManagerUser: Schemas['UserSummary'] = {
   id: 8,
   email: 'manager.choi@pusan.ac.kr',
@@ -44,7 +44,7 @@ export const orgManagerUser: Schemas['UserSummary'] = {
   role: 'ORG_MANAGER',
 }
 
-/** 시스템 운영자 — SYS_ADMIN 하위, 전 기관 조회 (M6). */
+/** 시스템 운영자 — SYS_ADMIN 하위, 전 기관 조회. */
 export const sysManagerUser: Schemas['UserSummary'] = {
   id: 6,
   email: 'sysmanager.jung@pusan.ac.kr',

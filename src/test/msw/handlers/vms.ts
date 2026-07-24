@@ -481,7 +481,7 @@ function initialVms(): VmDetail[] {
       createdAt: '2026-07-02T12:00:00+09:00',
       updatedAt: '2026-07-03T09:05:00+09:00',
     },
-    /* ─── 만료 큐 픽스처 (M5) — 날짜는 테스트 실행일 기준으로 동적 생성 ─── */
+    /* ─── 만료 큐 픽스처 — 날짜는 테스트 실행일 기준으로 동적 생성 ─── */
     {
       // 7일 이내 만료 임박 (D-3)
       id: 45,
@@ -603,7 +603,7 @@ export let vmStore: VmDetail[] = initialVms()
 export let vmEventStore: Record<number, VmEvent[]> = initialVmEvents()
 let nextEventId = 950
 
-/* ─── VM별 설정 레지스트리 (M5.5) — 계약 v0.8.0 카탈로그 ─── */
+/* ─── VM별 설정 레지스트리 — 계약 v0.8.0 카탈로그 ─── */
 type VmSettingView = Schemas['VmSettingView']
 type GroupMemberRole = Schemas['GroupMemberRole']
 
@@ -814,7 +814,7 @@ export const vmHandlers: RequestHandler[] = [
     return HttpResponse.json(deletion, { status: 202 })
   }),
 
-  /* ─── power ops (M3): 계약의 409 상태 조건을 그대로 강제한다 ─── */
+  /* ─── power ops: 계약의 409 상태 조건을 그대로 강제한다 ─── */
 
   http.post('*/api/v1/vms/:vmId/start', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
@@ -825,7 +825,7 @@ export const vmHandlers: RequestHandler[] = [
         `STOPPED 상태의 VM만 시작할 수 있습니다. (현재 상태 ${vm.status})`,
       )
     }
-    // 계약(M5): 만료로 자동 정지되었거나 endDate가 지난 VM은 기간 연장 전까지 시작 거부.
+    // 계약: 만료로 자동 정지되었거나 endDate가 지난 VM은 기간 연장 전까지 시작 거부.
     if (
       vm.expiryStoppedAt != null ||
       (vm.endDate != null && vm.endDate < localDateStr(0))

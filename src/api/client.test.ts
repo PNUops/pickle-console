@@ -81,7 +81,7 @@ describe('api client auth behavior', () => {
     server.use(refreshSuccessHandler('access-student', undefined, refreshCalls))
 
     const { error } = await api.POST('/auth/login', {
-      body: { email: 'gildong.hong@pusan.ac.kr', password: 'wrong-password' },
+      body: { email: 'example@pusan.ac.kr', password: 'wrong-password' },
     })
 
     expect(error?.code).toBe('AUTH_INVALID_CREDENTIALS')

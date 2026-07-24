@@ -56,7 +56,7 @@ describe('MSW 네거티브 스코핑 (ORG_ADMIN, 타 기관 orgId)', () => {
 })
 
 /**
- * M6 운영자 계층 — ORG_MANAGER는 ORG_ADMIN과 동일하게 자기 기관 스코프.
+ * 운영자 계층 — ORG_MANAGER는 ORG_ADMIN과 동일하게 자기 기관 스코프.
  * 타 기관(orgId=2) 지정/스코프 밖 사용자는 404로 마스킹된다.
  */
 describe('MSW 네거티브 스코핑 (ORG_MANAGER, 타 기관 orgId)', () => {

@@ -3,7 +3,7 @@ import { toApiError } from '../api/problem'
 import { createTerminalSession } from '../api/queries'
 
 /**
- * 웹 터미널 WebSocket 연결 훅 (M6.5).
+ * 웹 터미널 WebSocket 연결 훅.
  *
  * 흐름: ① mint (`POST /vms/{vmId}/terminal-sessions`) → ② 반환된 티켓으로
  * `wss://<host>/terminal/ws`에 2요소 서브프로토콜(`[subprotocol, "ticket.<t>"]`)로

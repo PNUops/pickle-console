@@ -9,7 +9,7 @@ type VmDetail = Schemas['VmDetail']
 type PublicationView = Schemas['PublicationView']
 type DomainDetail = Schemas['DomainDetail']
 
-/** 커스텀 도메인 검증에서 A 레코드로 안내하는 리버스 프록시 IP (plan/06). */
+/** 커스텀 도메인 검증에서 A 레코드로 안내하는 리버스 프록시 IP. */
 const PROXY_IP = '164.125.249.87'
 /** 인증서 만료일 계산에 쓰는 고정 기준 시각 (프로젝트 기준일 2026-07-12). */
 const REFERENCE_NOW = new Date('2026-07-12T00:00:00+09:00').getTime()

@@ -1,10 +1,11 @@
 import type { UserRole } from './auth-context'
 
 /**
- * Role-tier + action capability predicates, mirroring the API's authority model
- * (docs/security/permission-matrix.md). The server is the sole enforcement point;
- * these gate the console UI so an operator is never shown an action the API would
- * reject. Kept as an explicit allow-list per role — no inheritance.
+ * Role-tier + action capability predicates, mirroring the operator-confirmed
+ * permission matrix enforced by the api's PermissionMatrixTest. The server is the
+ * sole enforcement point; these gate the console UI so an operator is never shown
+ * an action the API would reject. Kept as an explicit allow-list per role — no
+ * inheritance.
  */
 
 /** ORG_ADMIN or ORG_MANAGER — pinned to their own org (derived membership). */
@@ -22,7 +23,7 @@ export function isAdminTier(role: UserRole): boolean {
   return role !== 'USER'
 }
 
-// ── action capabilities (permission-matrix.md §3–§4) ────────────────────────
+// ── action capabilities ────────────────────────────────────────────────────
 
 /** Approve / reject a VM request (§3.9). Org tier + SYS_ADMIN; SYS_MANAGER denied. */
 export function canDecideRequest(role: UserRole): boolean {

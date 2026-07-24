@@ -425,7 +425,7 @@ function PowerControls({ vm }: { vm: VmDetail }) {
 /* ─── SSH 접속 안내 ─── */
 
 /**
- * 웹 터미널(M6.5)을 열 수 있는 조건: RUNNING VM + 그룹 MEMBER 이상.
+ * 웹 터미널을 열 수 있는 조건: RUNNING VM + 그룹 MEMBER 이상.
  * 관리자 경로 상세는 그룹 역할이 없어(myGroupRole null) 노출되지 않는다.
  */
 function canUseTerminal(vm: VmDetail): boolean {
@@ -694,7 +694,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
   )
 }
 
-/* ─── VM별 설정 (M5.5, 편집자 이상) ─── */
+/* ─── VM별 설정 (편집자 이상) ─── */
 
 function VmSettingsSection({ vm }: { vm: VmDetail }) {
   // 편집 권한이 없거나 삭제 중/삭제된 VM에는 설정 영역을 노출하지 않는다.

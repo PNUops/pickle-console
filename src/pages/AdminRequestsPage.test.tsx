@@ -25,7 +25,7 @@ describe('관리자 대시보드 요약', () => {
     renderAsOrgAdmin('/admin')
 
     await screen.findByRole('heading', { name: '관리자 대시보드' })
-    // M5 요약 타일에도 '2건'이 있어 미리보기 문구로 특정한다.
+    // 요약 타일에도 '2건'이 있어 미리보기 문구로 특정한다.
     expect(await screen.findByText(/검토를 기다리는 신청이/)).toBeInTheDocument()
     expect((await screen.findAllByText('2건')).length).toBeGreaterThanOrEqual(1)
     expect(

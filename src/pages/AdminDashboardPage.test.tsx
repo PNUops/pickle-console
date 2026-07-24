@@ -65,7 +65,7 @@ describe('관리자 대시보드', () => {
       'href',
       '/admin/tasks',
     )
-    // 비밀번호 SSH 허용 타일 (G6 가시성) — 허용 VM 수(2)와 위험 톤.
+    // 비밀번호 SSH 허용 타일 (SSH 개인 식별 가시성) — 허용 VM 수(2)와 위험 톤.
     const sshTile = within(systemRow).getByRole('link', { name: '비밀번호 SSH 허용' })
     expect(sshTile).toHaveAttribute('href', '/admin/vms')
     expect(within(sshTile).getByText('2대')).toBeInTheDocument()

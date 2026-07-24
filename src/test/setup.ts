@@ -7,7 +7,7 @@ import { resetFixtures, server } from './msw/server'
 
 // jsdom엔 WebSocket이 없고, MSW의 setupServer는 listen 시점에 자체 WebSocket
 // 인터셉터를 전역에 설치한다. 따라서 스텁 주입은 server.listen **뒤**에 해야
-// MSW 인터셉터를 덮어 웹 터미널 훅이 스텁을 쓴다(M6.5).
+// MSW 인터셉터를 덮어 웹 터미널 훅이 스텁을 쓴다.
 function installStubWebSocket() {
   // MSW는 WebSocket을 읽기 전용 프로퍼티로 정의하므로 defineProperty로 덮는다.
   Object.defineProperty(globalThis, 'WebSocket', {
@@ -24,7 +24,7 @@ function installStubWebSocket() {
 // 이를 막는다.
 configure({ asyncUtilTimeout: 5000 })
 
-// jsdom은 ResizeObserver를 구현하지 않는다 — 웹 터미널 fit용 no-op 스텁(M6.5).
+// jsdom은 ResizeObserver를 구현하지 않는다 — 웹 터미널 fit용 no-op 스텁.
 if (typeof globalThis.ResizeObserver !== 'function') {
   globalThis.ResizeObserver = class {
     observe() {}

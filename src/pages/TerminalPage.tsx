@@ -12,7 +12,7 @@ import { useTerminalSocket } from '../terminal/useTerminalSocket'
 const RESIZE_DEBOUNCE_MS = 150
 
 /**
- * 웹 터미널 페이지 (M6.5) — `/console/vms/:vmId/terminal`.
+ * 웹 터미널 페이지 — `/console/vms/:vmId/terminal`.
  *
  * xterm.js + FitAddon으로 브리지(LXC 102)와 raw 바이트를 주고받는다.
  * 하드닝: 제안 API·투명도·창 조작(windowOptions) 전부 비활성, OSC 8 하이퍼링크

@@ -8,7 +8,7 @@ describe('비밀번호 재설정 흐름 (공개 페이지)', () => {
     const user = userEvent.setup()
     renderApp('/forgot-password')
 
-    await user.type(await screen.findByLabelText('이메일'), 'gildong.hong@pusan.ac.kr')
+    await user.type(await screen.findByLabelText('이메일'), 'example@pusan.ac.kr')
     await user.click(screen.getByRole('button', { name: '재설정 메일 받기' }))
 
     expect(await screen.findByText(/재설정 메일을 발송했습니다/)).toBeInTheDocument()

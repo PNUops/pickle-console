@@ -53,7 +53,7 @@ function initialUsers(): AdminUserRecord[] {
     },
     {
       id: 42,
-      email: 'gildong.hong@pusan.ac.kr',
+      email: 'example@pusan.ac.kr',
       name: '홍길동',
       role: 'USER',
       orgId: null,

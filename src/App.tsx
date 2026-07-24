@@ -46,7 +46,7 @@ import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
 
 // 웹 터미널은 xterm.js(~250kB)를 끌어오므로, 터미널을 여는 사용자에게만
-// 로드되도록 코드 분할한다(메인 번들 경량 유지, M6.5).
+// 로드되도록 코드 분할한다(메인 번들 경량 유지).
 const TerminalPage = lazy(() =>
   import('./pages/TerminalPage').then((m) => ({ default: m.TerminalPage })),
 )

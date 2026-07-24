@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:8080',
-      // 웹 터미널 WebSocket (M6.5). dev에서는 api와 같은 백엔드로 프록시하고,
+      // 웹 터미널 WebSocket. dev에서는 api와 같은 백엔드로 프록시하고,
       // 운영에서는 nginx가 `/terminal/ws`를 브리지(LXC 102)로 분기한다.
       // 정확 경로만 프록시한다 — 프리픽스('/terminal')로 잡으면 dev에서
       // '/terminal'로 시작하는 미래 SPA 라우트까지 백엔드로 넘어가 버린다.
