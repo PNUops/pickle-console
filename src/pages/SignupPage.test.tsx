@@ -109,7 +109,8 @@ describe('회원가입 폼 검증', () => {
     expect(screen.getByRole('button', { name: '회원가입' })).toBeDisabled()
   })
 
-  test('이미 가입된 이메일이면 서버 메시지를 보여준다', async () => {
+  test('이미 가입된 이메일도 동일한 인증 메일 안내 화면을 보여준다', async () => {
+    // 계정 열거 방지: 가입 여부가 응답으로 드러나지 않으므로 화면도 같아야 한다.
     renderApp('/signup')
     await screen.findByRole('heading', { name: '회원가입' })
 
@@ -121,7 +122,7 @@ describe('회원가입 폼 검증', () => {
     })
 
     expect(
-      await screen.findByText('해당 이메일로 가입된 계정이 이미 존재합니다.'),
+      await screen.findByRole('heading', { name: '인증 메일을 확인해 주세요' }),
     ).toBeInTheDocument()
   })
 })

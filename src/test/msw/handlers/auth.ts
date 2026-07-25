@@ -170,16 +170,8 @@ export const unauthorizedProblem: Schemas['Problem'] = {
 
 export const authHandlers: RequestHandler[] = [
   http.post('*/api/v1/auth/signup', async ({ request }) => {
-    const body = (await request.json()) as Schemas['SignupRequest']
-    if (body.email === 'duplicate@pusan.ac.kr') {
-      return problemResponse({
-        type: 'about:blank',
-        title: '이미 가입된 이메일입니다',
-        status: 409,
-        detail: '해당 이메일로 가입된 계정이 이미 존재합니다.',
-        code: 'AUTH_EMAIL_ALREADY_REGISTERED',
-      })
-    }
+    // 계정 열거 방지: 이미 가입된 주소든 아니든 서버 응답은 항상 같은 202.
+    await request.json()
     const response: Schemas['MessageResponse'] = {
       message: '인증 메일을 발송했습니다. 메일함을 확인해 주세요.',
     }
