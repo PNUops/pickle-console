@@ -17,8 +17,26 @@ Pickle(피클)은 부산대학교 구성원을 위한 셀프서비스 클라우�
 scripts/setup-hooks.sh   # 최초 1회: git 훅 설치
 npm install
 npm run dev              # 로컬 개발 서버 (/api·/terminal/ws 를 로컬 pickle-api :8080 으로 프록시)
-scripts/verify.sh        # lint(oxlint) → typecheck → vitest → build → npm audit
+scripts/verify.sh        # 커밋 전 전체 검증 (아래 참조)
 ```
+
+개별 스크립트:
+
+| 명령 | 내용 |
+|---|---|
+| `npm run dev` | Vite 개발 서버 |
+| `npm run lint` | oxlint (`--deny-warnings`, 경고도 실패로 취급) |
+| `npm run typecheck` | `tsc -b` 타입 검사 |
+| `npm run test` | vitest 1회 실행(`vitest run`) |
+| `npm run test:watch` | vitest 워치 모드 |
+| `npm run build` | `tsc -b` 후 프로덕션 빌드 |
+| `npm run preview` | 빌드 산출물 로컬 미리보기 |
+| `npm run gen:api` | API 타입 재생성(아래 "API 타입 생성" 참조) |
+
+`scripts/verify.sh`는 lint → typecheck → test → build를 차례로 실행한 뒤
+**차단 게이트**로 `npm audit --omit=dev --audit-level=high`를 돌린다. 런타임
+의존성에 high 이상 취약점이 하나라도 있으면 검증이 실패한다. 그 뒤에 나오는 전체
+트리 감사(`npm audit`, dev 의존성 포함)는 참고용 출력이며 검증을 실패시키지 않는다.
 
 ## 구성
 
@@ -32,6 +50,7 @@ scripts/verify.sh        # lint(oxlint) → typecheck → vitest → build → n
 - `src/api/` — 생성된 API 타입(`schema.d.ts`) + 쿼리 래퍼
 - `src/auth/` — 권한·역할 판정 / `src/layouts/`·`src/components/` — 공용 UI
 - `src/pages/` — 화면(랜딩·사용자·관리자·터미널) / `src/terminal/` — 웹 터미널
+- `src/lib/` — 공용 유틸(상태·라벨 매핑, 포맷, 검증, 폼 오류, 훅)
 - `src/test/` — vitest + MSW 목
 
 ## API 타입 생성
