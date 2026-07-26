@@ -10,7 +10,7 @@ import { createTerminalSession } from '../api/queries'
  * 접속 → ③ 브리지(LXC 102)가 종단. **자동 재연결은 하지 않는다** — 종료 사유만
  * 상태로 노출하고, 재연결은 사용자가 `reconnect()`로 mint부터 다시 시작한다.
  *
- * 프레임 프로토콜(Lane C 합의):
+ * 프레임 프로토콜:
  *   - 바이너리 프레임 = 터미널 raw 바이트(양방향).
  *   - 텍스트 프레임 = JSON. 송신 `{"type":"resize","cols":N,"rows":N}`,
  *     수신 `{"type":"exit","code":int,"message":"…"}`(close 직전 서버 전송 —

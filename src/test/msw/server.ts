@@ -19,7 +19,7 @@ import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-request
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
 import { resetTerminalFixtures, terminalHandlers } from './handlers/terminal'
 
-/** Add per-WP API mock handlers here (or compose them from feature modules). */
+/** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
   ...authHandlers,
   ...accountHandlers,

@@ -98,7 +98,7 @@ export function AppShell({
   useFocusTrap(drawerRef, { active: drawerOpen, onEscape: () => setDrawerOpen(false) })
 
   // 점검 모드·공지 배너·문의처: 공개 상태를 ~60초 폴링한다. 관리자 계층(USER
-  // 외 전 역할 — W3의 매니저 역할 포함)은 점검 중에도 콘솔을 계속 쓸 수 있고,
+  // 외 전 역할 — 매니저 역할 포함)은 점검 중에도 콘솔을 계속 쓸 수 있고,
   // 비관리자는 전체 화면 점검 안내로 차단한다. 상태 조회 실패 시엔 셸을 막지
   // 않는다(fail-open) — 상태 API 장애가 로그인 사용자를 잠그면 안 된다.
   const { user } = useAuth()

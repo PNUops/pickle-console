@@ -41,7 +41,7 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   EXPIRE_STOP: '만료 자동 종료',
 }
 
-/* ─── HTTP 공개·도메인·인증서 (M4A) ─── */
+/* ─── HTTP 공개·도메인·인증서 ─── */
 
 export type DomainKind = components['schemas']['DomainKind']
 export type DomainStatus = components['schemas']['DomainStatus']

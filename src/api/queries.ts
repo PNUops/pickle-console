@@ -70,7 +70,7 @@ export type TermsDocumentView = Schemas['TermsDocumentView']
 export type ConsentView = Schemas['ConsentView']
 export type ConsentInput = Schemas['ConsentInput']
 
-/* ─── HTTP 공개·도메인·인증서 (M4A) ─── */
+/* ─── HTTP 공개·도메인·인증서 ─── */
 export type PublicationView = Schemas['PublicationView']
 export type PublishRequest = Schemas['PublishRequest']
 export type UpdatePublicationRequest = Schemas['UpdatePublicationRequest']
@@ -240,7 +240,7 @@ export function fetchVm(vmId: number): Promise<VmDetail> {
   })
 }
 
-/* ─── admin (WP-F3) ─── */
+/* ─── admin ─── */
 
 export function fetchAdminVmRequests(params: {
   status?: VmRequestStatus
@@ -477,7 +477,7 @@ export function terminateTerminalSession(sessionId: string): Promise<void> {
   })
 }
 
-/* ─── HTTP 공개·도메인 (M4A, 사용자) ─── */
+/* ─── HTTP 공개·도메인 (사용자) ─── */
 
 export function publishVm(
   vmId: number,
@@ -631,7 +631,7 @@ export function forceDeleteVm(
   })
 }
 
-/* ─── admin: 도메인·라우트·인증서 (M4A) ─── */
+/* ─── admin: 도메인·라우트·인증서 ─── */
 
 export function fetchAdminRoutes(params: {
   orgId?: number
