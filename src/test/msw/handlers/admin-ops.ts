@@ -217,7 +217,7 @@ function initialOrgSummary(): Schemas['OrgDashboardSummaryResponse'] {
       allocatedDiskGb: 460,
       capacityVcpu: 40,
       capacityMemoryMb: 79872,
-      guidance: '여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다.',
+      guidance: '자원에 여유가 있어 승인이 가능합니다.',
     },
     topGroupsByVmCount: [
       { groupId: 12, name: '캡스톤 3조', vmCount: 3 },

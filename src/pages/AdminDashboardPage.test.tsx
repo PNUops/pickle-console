@@ -31,7 +31,7 @@ describe('관리자 대시보드', () => {
     expect(within(tiles).getByRole('link', { name: '확인 필요' })).toBeInTheDocument()
     // 자원 현황 바 + 안내 문구
     expect(screen.getByRole('progressbar', { name: 'vCPU 할당률' })).toBeInTheDocument()
-    expect(screen.getByText(/여유가 충분합니다/)).toBeInTheDocument()
+    expect(screen.getByText(/자원에 여유가 있어 승인이 가능합니다/)).toBeInTheDocument()
     // 시스템 요약 타일은 SYS_ADMIN 전용
     expect(screen.queryByRole('link', { name: '드리프트 미해결' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '알림 발송 실패' })).not.toBeInTheDocument()

@@ -191,7 +191,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         memoryUsageRatio: 0.64,
         warnings: [],
       },
-      guidance: '여유가 충분합니다. 요청 사양 그대로 승인해도 무리가 없습니다.',
+      guidance: '자원에 여유가 있어 승인이 가능합니다.',
     },
     204: {
       applicant: {
