@@ -17,7 +17,7 @@ Pickle(피클)은 부산대학교 구성원을 위한 셀프서비스 클라우�
 scripts/setup-hooks.sh   # 최초 1회: git 훅 설치
 npm install
 npm run dev              # 로컬 개발 서버 (/api·/terminal/ws 를 로컬 pickle-api :8080 으로 프록시)
-scripts/verify.sh        # 커밋 전 전체 검증 (아래 참조)
+scripts/verify.sh        # 커밋 전 전체 검증 — lint·typecheck·test·build·audit + 공개 위생 검사 (아래 참조)
 ```
 
 개별 스크립트:
@@ -68,3 +68,5 @@ npm run gen:api
 
 커밋 메시지는 `type: subject` 형식(영어, 명령형, 72자 이내)을 따르며, `setup-hooks.sh`
 로 설치되는 commit-msg 훅이 이를 강제한다.
+
+`scripts/hygiene.sh`는 이 저장소가 공개물이라는 전제를 검사한다 — 비공개 문서 저장소나 인프라 저장소를 가리키는 참조, 내부 진행 표기(마일스톤·웨이브 등)가 있으면 검증이 실패한다. 수동 점검이 두 차례 위반을 놓친 뒤 자동화했다.
