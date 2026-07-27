@@ -1,9 +1,17 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchAdminNodes, type NodeSummary } from '../api/queries'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchAdminNodes, updateAdminNode, type NodeSummary } from '../api/queries'
+import { toApiError } from '../api/problem'
+import { useAuth } from '../auth/auth-context'
+import { isSysAdminOnly } from '../auth/permissions'
 import {
   Alert,
   Badge,
+  Button,
   Card,
+  Modal,
+  PermissionNotice,
+  Select,
   Spinner,
   Table,
   TBody,
@@ -28,7 +36,11 @@ const NODE_STATUS_VARIANTS: Record<NodeSummary['status'], BadgeVariant> = {
 }
 
 export function AdminNodesPage() {
+  const { user } = useAuth()
+  const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: fetchAdminNodes })
+  const [message, setMessage] = useState<string | null>(null)
+  const [statusTarget, setStatusTarget] = useState<NodeSummary | null>(null)
 
   return (
     <div className="space-y-6">
@@ -39,6 +51,11 @@ export function AdminNodesPage() {
           상태 폴러가 갱신합니다.
         </p>
       </div>
+
+      {!isSysAdmin && (
+        <PermissionNotice>노드 상태 전환은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
+      )}
+      {message && <Alert variant="info">{message}</Alert>}
 
       {nodes.isPending && (
         <div className="flex justify-center py-12">
@@ -58,6 +75,9 @@ export function AdminNodesPage() {
                 <TH>메모리 할당</TH>
                 <TH>IP 풀 여유</TH>
                 <TH>브리지 / 스토리지</TH>
+                <TH>
+                  <span className="sr-only">작업</span>
+                </TH>
               </TR>
             </THead>
             <TBody>
@@ -95,13 +115,107 @@ export function AdminNodesPage() {
                   <TD className="whitespace-nowrap text-xs text-neutral-500">
                     {node.vmBridge} / {node.storage}
                   </TD>
+                  <TD className="text-right">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={!isSysAdmin}
+                      onClick={() => setStatusTarget(node)}
+                    >
+                      상태 전환
+                    </Button>
+                  </TD>
                 </TR>
               ))}
             </TBody>
           </Table>
         </Card>
       )}
+
+      {statusTarget && (
+        <NodeStatusModal
+          node={statusTarget}
+          onClose={() => setStatusTarget(null)}
+          onDone={(text) => {
+            setStatusTarget(null)
+            setMessage(text)
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+/* ─── 상태 전환 (SYS_ADMIN — 배치가 ACTIVE만 선택하므로 전환만으로 배치 제외) ─── */
+
+function NodeStatusModal({
+  node,
+  onClose,
+  onDone,
+}: {
+  node: NodeSummary
+  onClose: () => void
+  onDone: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const [status, setStatus] = useState<NodeSummary['status']>(node.status)
+  const [error, setError] = useState<string | null>(null)
+
+  const update = useMutation({
+    mutationFn: () => updateAdminNode(node.id, { status }),
+    onSuccess: async (updated) => {
+      setError(null)
+      onDone(`노드 ${updated.name}의 상태를 ${NODE_STATUS_LABELS[updated.status]}(으)로 전환했습니다.`)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'nodes'] })
+    },
+    onError: (err) => setError(toApiError(err, '노드 상태를 변경하지 못했습니다.').message),
+  })
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`노드 상태 전환 — ${node.name}`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            돌아가기
+          </Button>
+          <Button
+            variant={status === 'ACTIVE' ? 'primary' : 'danger'}
+            loading={update.isPending}
+            disabled={status === node.status}
+            onClick={() => update.mutate()}
+          >
+            전환
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-neutral-600">
+          배치는 ACTIVE 노드만 선택합니다 — 점검 중/오프라인으로 전환하면 신규 VM
+          배치에서 제외되며, 기존 게스트는 영향받지 않습니다.
+        </p>
+        <Select
+          aria-label="노드 상태"
+          value={status}
+          onChange={(event) => setStatus(event.target.value as NodeSummary['status'])}
+        >
+          {(Object.keys(NODE_STATUS_LABELS) as NodeSummary['status'][]).map((value) => (
+            <option key={value} value={value}>
+              {NODE_STATUS_LABELS[value]}
+            </option>
+          ))}
+        </Select>
+        {status !== 'ACTIVE' && (
+          <Alert variant="warning">
+            이 노드가 유일한 ACTIVE 노드라면 전환 시 신규 VM 배치가 불가능해집니다.
+          </Alert>
+        )}
+        {error && <Alert variant="danger">{error}</Alert>}
+      </div>
+    </Modal>
   )
 }
 

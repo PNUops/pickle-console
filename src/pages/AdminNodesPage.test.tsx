@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
@@ -31,5 +32,22 @@ describe('노드/용량', () => {
     expect(within(row).getByText('점검 중')).toBeInTheDocument()
     // CPU 3.25 > 3.0, 메모리 0.88 > 0.8 — 두 칸 모두 경고
     expect(within(row).getAllByText('임계 초과')).toHaveLength(2)
+  })
+
+  test('SYS_ADMIN은 상태 전환 모달로 노드를 점검 중으로 전환한다', async () => {
+    const user = userEvent.setup()
+    renderNodes()
+
+    const row = (await screen.findByText('pve1')).closest('tr')!
+    await user.click(within(row).getByRole('button', { name: '상태 전환' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '노드 상태 전환 — pve1' })
+    await user.selectOptions(within(dialog).getByLabelText('노드 상태'), 'MAINTENANCE')
+    expect(within(dialog).getByText(/신규 VM 배치가 불가능해집니다/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '전환' }))
+
+    expect(
+      await screen.findByText('노드 pve1의 상태를 점검 중(으)로 전환했습니다.'),
+    ).toBeInTheDocument()
   })
 })

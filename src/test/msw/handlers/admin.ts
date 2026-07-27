@@ -259,7 +259,44 @@ export function resetAdminFixtures() {
   rejectBodies = []
   userPatchBodies = []
   nextOrgId = 100
+  adminTemplates = initialAdminTemplates()
 }
+
+/** 템플릿 인벤토리 (전 상태 — 공개 /templates와 달리 은퇴 리비전 포함). */
+function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
+  return [
+    {
+      id: 1,
+      name: 'ubuntu-24.04',
+      displayName: 'Ubuntu 24.04 LTS (기본형)',
+      version: 2,
+      proxmoxVmid: 1000,
+      nodeId: 1,
+      status: 'ACTIVE',
+      defaultVcpu: 2,
+      defaultMemoryMb: 2048,
+      defaultDiskGb: 20,
+      minDiskGb: 10,
+      notes: null,
+    },
+    {
+      id: 2,
+      name: 'ubuntu-24.04',
+      displayName: 'Ubuntu 24.04 LTS (구 리비전)',
+      version: 1,
+      proxmoxVmid: 1900,
+      nodeId: 1,
+      status: 'DISABLED',
+      defaultVcpu: 2,
+      defaultMemoryMb: 2048,
+      defaultDiskGb: 20,
+      minDiskGb: 10,
+      notes: '구 계정 구성 리비전',
+    },
+  ]
+}
+
+export let adminTemplates: Schemas['AdminTemplateResponse'][] = initialAdminTemplates()
 
 const notFound = () =>
   problemResponse({
@@ -567,6 +604,26 @@ export const adminHandlers: RequestHandler[] = [
   /* ─── admin VM ops ─── */
 
   http.get('*/api/v1/admin/nodes', () => HttpResponse.json(adminNodes, { status: 200 })),
+
+  http.patch('*/api/v1/admin/nodes/:nodeId', async ({ params, request }) => {
+    const node = adminNodes.find((n) => n.id === Number(params.nodeId))
+    if (!node) return notFound()
+    const body = (await request.json()) as { status: Schemas['NodeStatus'] }
+    // adminNodes는 리셋되지 않는 공유 픽스처 — 변이 대신 갱신본만 응답한다.
+    return HttpResponse.json({ ...node, status: body.status }, { status: 200 })
+  }),
+
+  http.get('*/api/v1/admin/templates', () =>
+    HttpResponse.json(adminTemplates, { status: 200 }),
+  ),
+
+  http.patch('*/api/v1/admin/templates/:templateId', async ({ params, request }) => {
+    const template = adminTemplates.find((t) => t.id === Number(params.templateId))
+    if (!template) return notFound()
+    const body = (await request.json()) as { status: Schemas['TemplateStatus'] }
+    template.status = body.status
+    return HttpResponse.json(template, { status: 200 })
+  }),
 
   http.get('*/api/v1/admin/vms', ({ request }) => {
     const url = new URL(request.url)

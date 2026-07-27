@@ -25,6 +25,7 @@ import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AdminGroupsPage } from './pages/AdminGroupsPage'
+import { AdminTemplatesPage } from './pages/AdminTemplatesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AccountPage } from './pages/AccountPage'
@@ -200,6 +201,14 @@ function App() {
           element={
             <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNodesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="templates"
+          element={
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+              <AdminTemplatesPage />
             </RequireRole>
           }
         />

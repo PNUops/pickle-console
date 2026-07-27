@@ -45,6 +45,8 @@ export type VmEventPage = Schemas['PageResponseVmEventResponse']
 export type ProvisioningTaskView = Schemas['ProvisioningTaskResponse']
 export type VmPasswordResponse = Schemas['VmPasswordResponse']
 export type NodeSummary = Schemas['NodeSummaryResponse']
+export type AdminTemplate = Schemas['AdminTemplateResponse']
+export type TemplateStatus = Schemas['TemplateStatus']
 
 /* ─── SSH 키·VM 설정 ─── */
 export type SshKeyView = Schemas['SshKeyView']
@@ -1098,6 +1100,42 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
       params: { path: { userId } },
     })
     if (!data) throw toApiError(error, '사용자 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminTemplates(): Promise<AdminTemplate[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/templates')
+    if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminTemplate(
+  templateId: number,
+  body: { status: TemplateStatus },
+): Promise<AdminTemplate> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/templates/{templateId}', {
+      params: { path: { templateId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '템플릿 상태를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminNode(
+  nodeId: number,
+  body: { status: NodeSummary['status'] },
+): Promise<NodeSummary> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/nodes/{nodeId}', {
+      params: { path: { nodeId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '노드 상태를 변경하지 못했습니다.')
     return data
   })
 }

@@ -196,6 +196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/nodes/{nodeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminNode"];
+        trace?: never;
+    };
     "/admin/notifications": {
         parameters: {
             query?: never;
@@ -402,6 +418,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminTemplate"];
         trace?: never;
     };
     "/admin/terminal-sessions": {
@@ -1844,6 +1892,28 @@ export interface components {
             vmId: number;
             vmName?: string | null;
         };
+        AdminTemplateResponse: {
+            /** Format: int32 */
+            defaultDiskGb: number;
+            /** Format: int32 */
+            defaultMemoryMb: number;
+            /** Format: int32 */
+            defaultVcpu: number;
+            displayName: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            minDiskGb: number;
+            name: string;
+            /** Format: int64 */
+            nodeId: number;
+            notes?: string | null;
+            /** Format: int32 */
+            proxmoxVmid: number;
+            status: components["schemas"]["TemplateStatus"];
+            /** Format: int32 */
+            version: number;
+        };
         /** @enum {string} */
         AllocationStatus: "ALLOCATED" | "RELEASED";
         AnnouncementCreateRequest: {
@@ -2795,6 +2865,10 @@ export interface components {
             description?: string | null;
             name?: string;
         };
+        UpdateNodeStatusRequest: {
+            /** @description ACTIVE만 신규 VM 배치 대상 — MAINTENANCE/OFFLINE은 배치 제외 (기존 게스트 무영향) */
+            status: components["schemas"]["NodeStatus"];
+        };
         UpdateOrgRequest: {
             description?: string | null;
             hidden?: boolean;
@@ -2805,6 +2879,10 @@ export interface components {
             customDomain?: string | null;
             /** Format: int32 */
             port?: number;
+        };
+        UpdateTemplateStatusRequest: {
+            /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 VM 무영향) */
+            status: components["schemas"]["TemplateStatus"];
         };
         UpdateUserAdminRequest: {
             /** Format: int64 */
@@ -3572,6 +3650,41 @@ export interface operations {
             };
         };
     };
+    updateAdminNode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNodeStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NodeSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminNotifications: {
         parameters: {
             query?: {
@@ -4006,6 +4119,70 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminTemplateResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTemplateStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminTemplateResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
