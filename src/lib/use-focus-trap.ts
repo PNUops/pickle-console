@@ -8,6 +8,12 @@ const FOCUSABLE =
 // 포커스를 도로 끌어가고 ESC 한 번에 두 겹이 동시에 닫힌다.
 const trapStack: symbol[] = []
 
+// body 스크롤 락은 트랩별 저장/복원이 아니라 스택 전체로 관리한다(0→1에서
+// 잠그고 0으로 돌아올 때만 복원). 트랩별 저장은 라우트 이동 등 서브트리
+// 통째 언마운트에서 부모→자식 순으로 cleanup이 돌 때(안쪽 모달이 바깥이
+// 잠근 'hidden'을 마지막에 복원) body가 영구히 잠기는 결함이 있었다.
+let savedBodyOverflow = ''
+
 /**
  * 다이얼로그·드로어 공용 포커스 트랩. 활성화되면 컨테이너의 첫 포커스 가능
  * 요소로 포커스를 옮기고, Tab 순환·ESC 콜백·body 스크롤 락을 걸며,
@@ -28,13 +34,14 @@ export function useFocusTrap(
     if (!active) return
     const token = Symbol('focus-trap')
     trapStack.push(token)
+    if (trapStack.length === 1) {
+      savedBodyOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+    }
     const previouslyFocused = document.activeElement
     const container = containerRef.current
     const firstFocusable = container?.querySelector<HTMLElement>(FOCUSABLE)
     ;(firstFocusable ?? container)?.focus()
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (trapStack[trapStack.length - 1] !== token) return
@@ -72,7 +79,9 @@ export function useFocusTrap(
       const index = trapStack.indexOf(token)
       if (index !== -1) trapStack.splice(index, 1)
       document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
+      if (trapStack.length === 0) {
+        document.body.style.overflow = savedBodyOverflow
+      }
       if (previouslyFocused instanceof HTMLElement) {
         previouslyFocused.focus()
       }

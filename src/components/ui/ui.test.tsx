@@ -171,6 +171,18 @@ describe('stacked dialogs', () => {
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
+
+  test('겹친 채 통째로 언마운트돼도 body 스크롤 락이 남지 않는다', async () => {
+    // 라우트 이동 시 부모(드로어)→자식(모달) 순 cleanup이 돌아도 스택이
+    // 비는 시점에만 복원해야 한다 (회귀: 2026-07-28 리뷰).
+    const user = userEvent.setup()
+    const { unmount } = render(<Harness />)
+    await user.click(screen.getByRole('button', { name: '안쪽 열기' }))
+    expect(document.body.style.overflow).toBe('hidden')
+
+    unmount()
+    expect(document.body.style.overflow).toBe('')
+  })
 })
 
 describe('status badges', () => {
