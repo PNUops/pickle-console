@@ -37,6 +37,8 @@ scripts/verify.sh        # 커밋 전 전체 검증 — lint·typecheck·test·b
 **차단 게이트**로 `npm audit --omit=dev --audit-level=high`를 돌린다. 런타임
 의존성에 high 이상 취약점이 하나라도 있으면 검증이 실패한다. 그 뒤에 나오는 전체
 트리 감사(`npm audit`, dev 의존성 포함)는 참고용 출력이며 검증을 실패시키지 않는다.
+마지막의 공개 위생 검사(`scripts/hygiene.sh`)도 **차단 게이트**다 — 자세한 내용은
+아래 "커밋 규약" 절을 참조.
 
 ## 구성
 
