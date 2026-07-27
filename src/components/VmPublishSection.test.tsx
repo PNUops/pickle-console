@@ -18,17 +18,21 @@ async function publishCard(): Promise<HTMLElement> {
   return title.closest('div')!.parentElement as HTMLElement
 }
 
-describe('VM 공개 — 허가·권한 게이트', () => {
-  test('HTTP 공개 미허가 VM은 공개 폼 없이 안내만 보여준다', async () => {
-    renderVm(57) // web-lab: grantHttp=false
+describe('VM 공개 — 이름 선지정·권한 게이트', () => {
+  test('선지정 서브도메인이 없으면 빈 입력과 함께 제출이 막힌다', async () => {
+    renderVm(57) // web-lab: requestedSubdomain 없음 (STOPPED — 공개 가능 상태)
 
     await screen.findByRole('heading', { name: 'web-lab' })
-    expect(await screen.findByText('HTTP 공개가 허가되지 않았습니다')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'HTTP 서비스 공개' })).not.toBeInTheDocument()
+    const card = await publishCard()
+    expect(within(card).getByLabelText('서브도메인')).toHaveValue('')
+    expect(
+      within(card).getByText('공개할 서브도메인을 입력해 주세요.'),
+    ).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'HTTP 서비스 공개' })).toBeDisabled()
   })
 
   test('MEMBER는 공개 폼 없이 읽기 전용 안내만 본다', async () => {
-    renderVm(56) // algo-judge: 그룹 15 MEMBER, 허가됨, 미공개
+    renderVm(56) // algo-judge: 그룹 15 MEMBER, 미공개
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const card = await publishCard()
@@ -36,26 +40,22 @@ describe('VM 공개 — 허가·권한 게이트', () => {
       await within(card).findByText(/공개는 그룹의 소유자·편집자만/),
     ).toBeInTheDocument()
     expect(within(card).queryByRole('button', { name: 'HTTP 서비스 공개' })).not.toBeInTheDocument()
-    // 플랫폼 서브도메인 자유 입력 필드는 존재하지 않는다.
-    expect(within(card).queryByLabelText(/서브도메인/)).not.toBeInTheDocument()
+    expect(within(card).queryByLabelText('서브도메인')).not.toBeInTheDocument()
   })
 })
 
 describe('VM 공개 — 처음 공개(플랫폼 서브도메인)', () => {
   test('OWNER가 포트를 공개하면 라우트가 PENDING→APPLIED로 수렴한다', async () => {
     const user = userEvent.setup()
-    renderVm(55) // capstone-team3-api: 그룹 12 OWNER, 허가됨. CREATING→RUNNING 후 공개.
+    renderVm(55) // capstone-team3-api: 그룹 12 OWNER. CREATING→RUNNING 후 공개.
 
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
     // 생성 완료(폴링)까지 대기 후 공개 폼이 활성화된다.
     await screen.findByText('실행 중')
     const card = await publishCard()
 
-    // 플랫폼 서브도메인은 자유 입력이 아니라 안내만 노출한다 (운영자 결정).
-    expect(
-      within(card).getByText(/신청 승인 시 관리자가 부여한 이름/),
-    ).toBeInTheDocument()
-    expect(within(card).queryByLabelText(/서브도메인/)).not.toBeInTheDocument()
+    // 신청 때 선지정한 서브도메인이 채워져 있다.
+    expect(within(card).getByLabelText('서브도메인')).toHaveValue('capstone-team3')
 
     const port = within(card).getByLabelText('공개 포트')
     await user.clear(port)
@@ -64,10 +64,48 @@ describe('VM 공개 — 처음 공개(플랫폼 서브도메인)', () => {
 
     // 접수 직후 라우트 PENDING → 폴링으로 APPLIED.
     expect(
-      await within(card).findByRole('link', { name: 'capstone-team3-api-a1b2.pickle.pnuops.com' }),
+      await within(card).findByRole('link', { name: 'capstone-team3.pickle.pnuops.com' }),
     ).toBeInTheDocument()
     expect(await within(card).findByText('적용됨')).toBeInTheDocument()
     expect(within(card).getByText('8080')).toBeInTheDocument()
+  })
+
+  test('입력한 서브도메인으로 공개된다 (선지정 이름을 바꿔서 공개)', async () => {
+    const user = userEvent.setup()
+    renderVm(55)
+
+    await screen.findByRole('heading', { name: 'capstone-team3-api' })
+    await screen.findByText('실행 중')
+    const card = await publishCard()
+
+    const subdomain = within(card).getByLabelText('서브도메인')
+    await user.clear(subdomain)
+    await user.type(subdomain, 'capstone-demo')
+    await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
+
+    expect(
+      await within(card).findByRole('link', { name: 'capstone-demo.pickle.pnuops.com' }),
+    ).toBeInTheDocument()
+  })
+
+  test('예약된 서브도메인은 서버 422 메시지를 입력 옆에 그대로 보여준다', async () => {
+    const user = userEvent.setup()
+    renderVm(55)
+
+    await screen.findByRole('heading', { name: 'capstone-team3-api' })
+    await screen.findByText('실행 중')
+    const card = await publishCard()
+
+    const subdomain = within(card).getByLabelText('서브도메인')
+    await user.clear(subdomain)
+    await user.type(subdomain, 'www')
+    await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
+
+    expect(
+      await within(card).findByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
+    ).toBeInTheDocument()
+    // 입력은 그대로 남아 바로 고칠 수 있다.
+    expect(within(card).getByLabelText('서브도메인')).toHaveValue('www')
   })
 
   test('SSH 포트(22) 공개는 거부되고 필드 오류를 보여준다 (클라이언트 사전 검증)', async () => {
@@ -303,11 +341,30 @@ describe('VM 공개 — 커스텀 도메인 해제 후 재공개(revive)·삭제
     // PATCH 해제 — 서버는 커스텀 도메인 행을 REMOVED 하고 인증서를 회수한다
     // (검증 상태가 보존되는 것은 공개 해제(unpublish) 경로뿐).
     await user.click(within(card).getByRole('button', { name: '커스텀 도메인 연결 해제' }))
+    // 신청 때 선지정한 이름(shop-app)으로 복귀 — 자동 생성은 폐지됨(v0.22.0)
     expect(
-      await within(card).findByRole('link', { name: 'shop-app-a1b2.pickle.pnuops.com' }),
+      await within(card).findByRole('link', { name: 'shop-app.pickle.pnuops.com' }),
     ).toBeInTheDocument()
     expect(within(card).queryByText('남은 도메인')).not.toBeInTheDocument()
     expect(within(card).queryByText('shop.example.com')).not.toBeInTheDocument()
+  })
+
+  test('선지정 이름이 없으면 커스텀 도메인 연결 해제가 422로 막히고 안내를 보여준다', async () => {
+    const user = userEvent.setup()
+    renderVm(62) // demo-web: CUSTOM 공개, 신청서 선지정 서브도메인 없음
+
+    await screen.findByRole('heading', { name: 'demo-web' })
+    const card = await publishCard()
+    await within(card).findByRole('link', { name: 'demo.example.com' })
+
+    // 되돌릴 플랫폼 이름이 없으면 서버는 자동 생성 대신 422를 준다 — 공개를
+    // 해제한 뒤 이름을 정해 다시 공개해야 한다.
+    await user.click(within(card).getByRole('button', { name: '커스텀 도메인 연결 해제' }))
+    expect(
+      await within(card).findByText(/되돌릴 플랫폼 서브도메인이 없습니다/),
+    ).toBeInTheDocument()
+    // 기존 커스텀 도메인 공개는 그대로 남는다.
+    expect(within(card).getByRole('link', { name: 'demo.example.com' })).toBeInTheDocument()
   })
 })
 

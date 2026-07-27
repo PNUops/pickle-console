@@ -1963,20 +1963,15 @@ export interface components {
         };
         ApproveVmRequestRequest: {
             comment?: string | null;
-            grantHttp: boolean;
-            grantPublic: boolean;
-            grantSsh: boolean;
             /** Format: int32 */
             grantedDiskGb: number;
             /** Format: date */
             grantedEndDate?: string | null;
             /** Format: int32 */
             grantedMemoryMb: number;
-            grantedRootDomain?: string | null;
             grantedSlug?: string | null;
             /** Format: date */
             grantedStartDate?: string | null;
-            grantedSubdomain?: string | null;
             /** Format: int64 */
             grantedTemplateId: number;
             /** Format: int32 */
@@ -2069,15 +2064,12 @@ export interface components {
         };
         CreateVmRequestRequest: {
             courseOrProject?: string | null;
-            customDomain?: string | null;
             desiredSlug?: string | null;
             desiredSubdomain?: string | null;
+            displayName?: string | null;
             extraNote?: string | null;
             /** Format: int64 */
             groupId: number;
-            needHttp: boolean;
-            needPublic: boolean;
-            needSsh: boolean;
             /** Format: int64 */
             orgId: number;
             purpose: string;
@@ -2646,6 +2638,8 @@ export interface components {
             customDomain?: string | null;
             /** Format: int32 */
             port?: number;
+            rootDomain?: string | null;
+            subdomain?: string | null;
         };
         ReadAllResponse: {
             /** Format: int32 */
@@ -3003,7 +2997,6 @@ export interface components {
             groupId: number;
             groupName: string;
             hostname: string;
-            httpPublishGranted: boolean;
             /** Format: int64 */
             id: number;
             ipAddress?: string | null;
@@ -3020,6 +3013,8 @@ export interface components {
             publication?: components["schemas"]["PublicationView"] | null;
             /** Format: int64 */
             requestId: number;
+            requestedRootDomain?: string | null;
+            requestedSubdomain?: string | null;
             sshGatewayBlocked: boolean;
             sshHost: string;
             sshUsername: string;
@@ -3069,18 +3064,15 @@ export interface components {
             courseOrProject?: string | null;
             /** Format: date-time */
             createdAt: string;
-            customDomain?: string | null;
             desiredSlug?: string | null;
             desiredSubdomain?: string | null;
+            displayName?: string | null;
             extraNote?: string | null;
             /** Format: int64 */
             groupId: number;
             groupName: string;
             /** Format: int64 */
             id: number;
-            needHttp: boolean;
-            needPublic: boolean;
-            needSsh: boolean;
             /** Format: int64 */
             orgId: number;
             orgName: string;
@@ -3112,19 +3104,14 @@ export interface components {
             /** Format: date-time */
             decidedAt: string;
             decision: components["schemas"]["ReviewDecision"];
-            grantHttp?: boolean | null;
-            grantPublic?: boolean | null;
-            grantSsh?: boolean | null;
             /** Format: int32 */
             grantedDiskGb?: number | null;
             /** Format: date */
             grantedEndDate?: string | null;
             /** Format: int32 */
             grantedMemoryMb?: number | null;
-            grantedRootDomain?: string | null;
             /** Format: date */
             grantedStartDate?: string | null;
-            grantedSubdomain?: string | null;
             /** Format: int64 */
             grantedTemplateId?: number | null;
             /** Format: int32 */

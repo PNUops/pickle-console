@@ -22,7 +22,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Checkbox,
   FormField,
   GroupKindBadge,
   GroupRoleBadge,
@@ -127,22 +126,13 @@ export function AdminRequestDetailPage() {
                 <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
                 <Field label="사양 사유">{data.specReason ?? '—'}</Field>
                 <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
-                <Field label="네트워크">
-                  {[
-                    data.needSsh && 'SSH',
-                    data.needHttp && 'HTTP',
-                    data.needPublic && '외부 공개',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ') || '없음'}
-                </Field>
+                <Field label="표시명">{data.displayName ?? '—'}</Field>
                 <Field label="희망 호스트명(슬러그)">{data.desiredSlug ?? '자동 생성'}</Field>
-                <Field label="도메인">
+                <Field label="서브도메인 선지정">
                   {data.desiredSubdomain && data.rootDomain
                     ? `${data.desiredSubdomain}.${data.rootDomain}`
                     : '—'}
                 </Field>
-                <Field label="커스텀 도메인">{data.customDomain ?? '—'}</Field>
               </dl>
             </CardContent>
           </Card>
@@ -262,10 +252,6 @@ function DecisionSection({
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.desiredSlug ?? '')
-  const [grantedSubdomain, setGrantedSubdomain] = useState(request.desiredSubdomain ?? '')
-  const [grantSsh, setGrantSsh] = useState(request.needSsh)
-  const [grantHttp, setGrantHttp] = useState(request.needHttp)
-  const [grantPublic, setGrantPublic] = useState(request.needPublic)
   const [nodeId, setNodeId] = useState('')
   const [approveComment, setApproveComment] = useState('')
 
@@ -348,18 +334,7 @@ function DecisionSection({
     grantedTemplateId: Number(templateId),
     grantedStartDate: startDate || null,
     grantedEndDate: endDate || null,
-    grantSsh,
-    grantHttp,
-    grantPublic,
     grantedSlug: grantedSlug.trim() || null,
-    // 서브도메인 확정은 신청서에 루트 도메인이 있을 때만 의미가 있다 — 루트 없이
-    // 서브도메인만 보내면 서버가 grantedRootDomain 422를 반환한다(계약).
-    grantedSubdomain:
-      grantHttp && request.rootDomain ? grantedSubdomain.trim() || null : null,
-    grantedRootDomain:
-      grantHttp && request.rootDomain && grantedSubdomain.trim()
-        ? request.rootDomain
-        : null,
     nodeId: nodeId ? Number(nodeId) : null,
     comment: approveComment.trim() ? approveComment.trim() : null,
   })
@@ -382,9 +357,6 @@ function DecisionSection({
     if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
       errors.grantedSlug =
         '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
-    if (grantHttp && grantedSubdomain.trim() && !SUBDOMAIN_RE.test(grantedSubdomain.trim()))
-      errors.grantedSubdomain =
-        '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     setConfirm('approve')
@@ -510,37 +482,6 @@ function DecisionSection({
                 maxLength={40}
               />
             </FormField>
-            {grantHttp && request.rootDomain && (
-              <FormField
-                label="서브도메인 확정"
-                error={fieldErrors.grantedSubdomain}
-                description={`신청자의 희망 서브도메인이 채워져 있으며, 비우면 자동 생성됩니다. (루트: ${request.rootDomain})`}
-              >
-                <Input
-                  value={grantedSubdomain}
-                  onChange={(event) => setGrantedSubdomain(event.target.value)}
-                  placeholder="비우면 자동 생성"
-                  maxLength={40}
-                />
-              </FormField>
-            )}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Checkbox
-                label="SSH 접속"
-                checked={grantSsh}
-                onChange={(event) => setGrantSsh(event.target.checked)}
-              />
-              <Checkbox
-                label="HTTP 게시"
-                checked={grantHttp}
-                onChange={(event) => setGrantHttp(event.target.checked)}
-              />
-              <Checkbox
-                label="외부 공개"
-                checked={grantPublic}
-                onChange={(event) => setGrantPublic(event.target.checked)}
-              />
-            </div>
             <FormField
               label="배치 노드 ID"
               error={fieldErrors.nodeId}

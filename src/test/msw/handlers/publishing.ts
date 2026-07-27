@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { orgs } from './reference'
+import { orgs, requestOptions } from './reference'
 import { problemResponse } from './auth'
 import { recordVmEvent, vmStore } from './vms'
 
@@ -101,13 +101,27 @@ const fqdnTaken = (instance: string) =>
     type: 'about:blank',
     title: '이미 사용 중인 도메인입니다',
     status: 409,
-    detail: '요청한 커스텀 도메인이 이미 다른 곳에 연결되어 있습니다. 다른 도메인을 사용해 주세요.',
+    detail: '요청한 도메인이 이미 다른 곳에 연결되어 있습니다. 다른 이름을 사용해 주세요.',
     instance,
     code: 'DOMAIN_FQDN_TAKEN',
   })
 
 /** 공개 가능한 VM 상태 (계약: RUNNING/STOPPED 외에는 409 VM_INVALID_STATE). */
 const PUBLISHABLE_STATUSES = ['RUNNING', 'STOPPED']
+
+/** 플랫폼 서브도메인 형식 (소문자·숫자·하이픈 3~40자, 하이픈 시작·끝 불가). */
+const SUBDOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{1,38}[a-z0-9])$/
+
+/** 공개 시점 서브도메인 검증 (형식·예약어 — 서버 422와 같은 규칙). */
+function subdomainError(subdomain: string): string | null {
+  if (!SUBDOMAIN_PATTERN.test(subdomain)) {
+    return '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
+  }
+  if (requestOptions.reservedSubdomains.includes(subdomain)) {
+    return `'${subdomain}'은(는) 예약된 서브도메인이라 사용할 수 없습니다.`
+  }
+  return null
+}
 
 /** 커스텀 도메인 형식 검증 (다중 라벨 + 플랫폼 관리 존 하위 금지). */
 function customDomainError(customDomain: string): string | null {
@@ -197,20 +211,26 @@ function buildCustomPublication(vm: VmDetail, fqdn: string, port: number): Publi
 }
 
 /**
- * 플랫폼 서브도메인 publication을 구성한다. 사용자는 서브도메인 이름을 고르지 못하며
- * (계약·운영자 결정), mock은 승인 부여값을 추적하지 않으므로 자동(AUTO)
- * `<hostname>-a1b2.<root>`를 발급한다. 공용 와일드카드 인증서라 즉시 라우트 적용 대기.
+ * 플랫폼 서브도메인 publication을 구성한다. 이름은 언제나 명시적으로 정해진
+ * 값(공개 요청의 subdomain 또는 신청서에 선지정한 이름)이며, 자동 생성은 없다
+ * (계약 v0.22.0). 공용 와일드카드 인증서라 즉시 라우트 적용 대기.
  */
-function buildPlatformPublication(vm: VmDetail, port: number): PublicationView {
-  const fqdn = `${vm.hostname}-a1b2.pickle.pnuops.com`
+function buildPlatformPublication(
+  vm: VmDetail,
+  port: number,
+  subdomain: string,
+  rootDomain?: string | null,
+): PublicationView {
+  const root = rootDomain ?? vm.requestedRootDomain ?? 'pickle.pnuops.com'
+  const fqdn = `${subdomain}.${root}`
   return {
     fqdn,
     domain: {
       id: nextDomainId++,
       vmId: vm.id,
-      kind: 'AUTO',
+      kind: 'REQUESTED',
       fqdn,
-      rootDomain: 'pickle.pnuops.com',
+      rootDomain: root,
       status: 'ACTIVE',
       verifiedAt: null,
       createdAt: '2026-07-12T09:00:00+09:00',
@@ -326,16 +346,6 @@ export const publishingHandlers: RequestHandler[] = [
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFound()
     const instance = `/api/v1/vms/${vm.id}/publish`
-    if (!vm.httpPublishGranted) {
-      return problemResponse({
-        type: 'about:blank',
-        title: 'HTTP 공개가 허가되지 않은 VM입니다',
-        status: 403,
-        detail: '승인 시 HTTP 공개가 허용되지 않았습니다. 필요하면 관리자에게 문의해 주세요.',
-        instance,
-        code: 'VM_HTTP_NOT_GRANTED',
-      })
-    }
     if (vm.publication != null) {
       return problemResponse({
         type: 'about:blank',
@@ -364,6 +374,13 @@ export const publishingHandlers: RequestHandler[] = [
     if (port < 1 || port > 65535) {
       return validationFailed(instance, 'port', '포트는 1–65535 범위여야 합니다.')
     }
+    if (body.customDomain != null && body.subdomain != null) {
+      return validationFailed(
+        instance,
+        'subdomain',
+        '커스텀 도메인과 서브도메인은 함께 지정할 수 없습니다.',
+      )
+    }
     if (body.customDomain != null) {
       const err = customDomainError(body.customDomain)
       if (err) return validationFailed(instance, 'customDomain', err)
@@ -378,9 +395,23 @@ export const publishingHandlers: RequestHandler[] = [
         vm.publication = buildCustomPublication(vm, body.customDomain, port)
       }
     } else {
+      // 플랫폼 이름은 요청 본문 → 신청 선지정 순으로 정해진다. 둘 다 없으면
+      // 자동 생성 없이 422 (계약 v0.22.0).
+      const subdomain = body.subdomain ?? vm.requestedSubdomain ?? null
+      if (!subdomain) {
+        return validationFailed(
+          instance,
+          'subdomain',
+          '공개할 서브도메인을 지정해 주세요. 신청 때 선지정한 이름이 없습니다.',
+        )
+      }
+      const err = subdomainError(subdomain)
+      if (err) return validationFailed(instance, 'subdomain', err)
+      const rootDomain = body.rootDomain ?? vm.requestedRootDomain ?? 'pickle.pnuops.com'
+      if (isFqdnTaken(`${subdomain}.${rootDomain}`, vm.id)) return fqdnTaken(instance)
       // 다른 대상으로 공개하면 이 VM의 남은 행은 정리된다 (서버 retire).
       retireTombstones(vm.id)
-      vm.publication = buildPlatformPublication(vm, port)
+      vm.publication = buildPlatformPublication(vm, port, subdomain, rootDomain)
     }
     recordVmEvent(vm.id, {
       type: 'PUBLISH',
@@ -415,7 +446,20 @@ export const publishingHandlers: RequestHandler[] = [
       // 행은 커스텀이라도 REMOVED 되고 인증서가 회수된다. 남은 행(tombstone)은
       // 만들지 않는다 — 검증 상태가 보존되는 것은 unpublish(DELETE) 경로뿐.
       if (body.customDomain === null) {
-        vm.publication = buildPlatformPublication(vm, route.targetPort)
+        // 플랫폼 복귀 이름은 신청서에 선지정한 서브도메인으로만 정해진다 —
+        // 없으면 자동 생성 대신 422 (공개 해제 후 이름을 정해 다시 공개해야 한다).
+        if (!vm.requestedSubdomain) {
+          return validationFailed(
+            instance,
+            'subdomain',
+            '되돌릴 플랫폼 서브도메인이 없습니다. 공개를 해제한 뒤 이름을 지정해 다시 공개해 주세요.',
+          )
+        }
+        vm.publication = buildPlatformPublication(
+          vm,
+          route.targetPort,
+          vm.requestedSubdomain,
+        )
       } else {
         const err = customDomainError(body.customDomain)
         if (err) return validationFailed(instance, 'customDomain', err)

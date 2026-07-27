@@ -80,24 +80,12 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     expect(screen.getByText('사용 목적을 입력해 주세요.')).toBeInTheDocument()
   })
 
-  test('HTTP 게시 선택 시 서브도메인 형식·예약어를 검사한다', async () => {
+  test('서브도메인은 선택 사항이지만, 입력하면 형식·예약어·루트 도메인을 검사한다', async () => {
     const user = userEvent.setup()
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
-    await passStep1(user)
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.type(screen.getByLabelText('사용 목적'), '웹 서비스 배포')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-
-    await user.click(screen.getByRole('checkbox', { name: /HTTP 서비스 게시/ }))
-
-    // 비워둔 채 다음 → 필수 오류
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(
-      screen.getByText('HTTP 서비스를 게시하려면 서브도메인을 입력해 주세요.'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('루트 도메인을 선택해 주세요.')).toBeInTheDocument()
+    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    await user.selectOptions(screen.getByLabelText('기관'), '1')
 
     // 형식 위반
     const subdomain = screen.getByLabelText('희망 서브도메인')
@@ -112,39 +100,19 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     expect(
       screen.getByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
     ).toBeInTheDocument()
-  })
 
-  test('커스텀 도메인은 형식을 검사하고 소문자로 정규화해 전송한다', async () => {
-    const user = userEvent.setup()
-    renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
-    await passStep1(user)
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    // 서브도메인만 정하고 루트를 고르지 않으면 넘어갈 수 없다
+    await user.clear(subdomain)
+    await user.type(subdomain, 'myapp')
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.type(screen.getByLabelText('사용 목적'), '웹 서비스 배포')
+    expect(screen.getByText('루트 도메인을 선택해 주세요.')).toBeInTheDocument()
+
+    // 비워 두면 통과한다 — 공개할 때 정하면 된다
+    await user.clear(subdomain)
     await user.click(screen.getByRole('button', { name: '다음' }))
-
-    await user.click(screen.getByRole('checkbox', { name: /HTTP 서비스 게시/ }))
-    await user.type(screen.getByLabelText('희망 서브도메인'), 'myapp')
-    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
-
-    // 형식 위반 → 오류
-    const custom = screen.getByLabelText('커스텀 도메인')
-    await user.type(custom, '-bad-.example.com')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText(/커스텀 도메인 형식이 올바르지 않습니다/)).toBeInTheDocument()
-
-    // 대문자·공백 입력은 정규화되어 요약과 페이로드에 소문자로 반영된다
-    await user.clear(custom)
-    await user.type(custom, 'MyApp.Example.COM')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(await screen.findByText('신청 내용 확인')).toBeInTheDocument()
-    expect(screen.getByText('myapp.example.com')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
-    expect(createdVmRequestBodies).toHaveLength(1)
-    expect(createdVmRequestBodies[0].customDomain).toBe('myapp.example.com')
+    expect(
+      await screen.findByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -187,11 +155,8 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     const user = userEvent.setup()
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
-    await passStep1(user)
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.type(screen.getByLabelText('사용 목적'), '실습')
-    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    await user.selectOptions(screen.getByLabelText('기관'), '1')
 
     const slugInput = screen.getByLabelText('희망 호스트명(슬러그)')
     // 형식 위반
@@ -208,10 +173,20 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     // 비워 두면 통과 + 요약에 자동 생성 표시, 페이로드 null
     await user.clear(slugInput)
     await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
     expect(screen.getByText('자동 생성')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
-    expect(createdVmRequestBodies.at(-1)).toMatchObject({ desiredSlug: null })
+    expect(createdVmRequestBodies.at(-1)).toMatchObject({
+      desiredSlug: null,
+      desiredSubdomain: null,
+      rootDomain: null,
+      displayName: null,
+    })
   })
 })
 
@@ -221,8 +196,14 @@ describe('VM 신청 위저드 — 제출', () => {
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
 
-    // ① 그룹·기관
-    await passStep1(user)
+    // ① 그룹·기관·이름
+    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    await user.selectOptions(screen.getByLabelText('기관'), '1')
+    await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
+    await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
+    await user.type(screen.getByLabelText('희망 서브도메인'), 'capstone-api')
+    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
+    await user.click(screen.getByRole('button', { name: '다음' }))
 
     // ② 템플릿·사양 (기본값 그대로)
     await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
@@ -239,18 +220,11 @@ describe('VM 신청 위저드 — 제출', () => {
     })
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    // ④ 네트워크·도메인
-    await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
-    await user.click(screen.getByRole('checkbox', { name: /HTTP 서비스 게시/ }))
-    await user.click(screen.getByRole('checkbox', { name: /외부\(캠퍼스 밖\) 공개/ }))
-    await user.type(screen.getByLabelText('희망 서브도메인'), 'capstone-api')
-    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-
-    // ⑤ 확인·제출: 요약·백업 책임 고지 확인 후 제출
+    // ④ 확인·제출: 요약·백업 책임 고지 확인 후 제출
     expect(screen.getByText('신청 내용 확인')).toBeInTheDocument()
     expect(screen.getByText('capstone-api.pickle.pnuops.com')).toBeInTheDocument()
     expect(screen.getByText('capstone-api-server')).toBeInTheDocument()
+    expect(screen.getByText('캡스톤 백엔드 서버')).toBeInTheDocument()
     expect(screen.getByText('2 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
     expect(screen.getByText('백업 책임 안내')).toBeInTheDocument()
     expect(
@@ -280,13 +254,10 @@ describe('VM 신청 위저드 — 제출', () => {
       reqDiskGb: 20,
       reqStartDate: '2026-07-15',
       reqEndDate: '2026-12-20',
+      displayName: '캡스톤 백엔드 서버',
       desiredSlug: 'capstone-api-server',
-      needSsh: true,
-      needHttp: true,
-      needPublic: true,
       desiredSubdomain: 'capstone-api',
       rootDomain: 'pickle.pnuops.com',
-      customDomain: null,
     })
   })
 })

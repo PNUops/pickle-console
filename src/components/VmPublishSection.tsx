@@ -49,6 +49,14 @@ import {
 const PUBLISHABLE_STATUSES: VmDetail['status'][] = ['RUNNING', 'STOPPED']
 
 /**
+ * 폼에 표시 자리가 있는 필드 오류인지 — 자리가 없는 키(예: 변경 폼의 subdomain)는
+ * 요약 Alert로 대신 노출해 조용히 사라지지 않게 한다.
+ */
+function hasSlottedError(fieldErrors: Record<string, string>, slots: string[]): boolean {
+  return slots.some((key) => fieldErrors[key] != null)
+}
+
+/**
  * 클라이언트 측 포트 사전 검증 (서버 422 규칙과 동일: 1–65535, SSH 22 금지).
  * 통과하면 null, 아니면 필드 오류 메시지를 돌려준다.
  */
@@ -71,26 +79,6 @@ export function VmPublishSection({ vm }: { vm: VmDetail }) {
     queryFn: () => fetchGroup(vm.groupId),
   })
   const canMutate = group.data?.myRole === 'OWNER' || group.data?.myRole === 'EDITOR'
-
-  if (!vm.httpPublishGranted) {
-    // 공개가 미공개인 경우에만 안내를 노출한다 (허가된 뒤 공개된 VM은 아래 카드로).
-    if (vm.publication == null) {
-      return (
-        <Card>
-          <CardHeader>
-            <CardTitle>HTTP 서비스 공개</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert variant="info" title="HTTP 공개가 허가되지 않았습니다">
-              이 VM은 신청 승인 시 HTTP 공개가 허용되지 않았습니다. 외부 공개가
-              필요하면 관리자에게 문의해 주세요.
-            </Alert>
-            <LeftoverDomainList vm={vm} activeDomainId={null} canMutate={canMutate} />
-          </CardContent>
-        </Card>
-      )
-    }
-  }
 
   // 권한 조회 실패는 "권한 없음"과 다르다 — 읽기 전용 안내 대신 오류·재시도를 보여준다.
   const roleFallback = group.isError ? (
@@ -142,19 +130,30 @@ function RoleLoadError({ retrying, onRetry }: { retrying: boolean; onRetry: () =
 function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
   const queryClient = useQueryClient()
   const [port, setPort] = useState('80')
+  // 신청 때 선지정한 서브도메인이 있으면 채워 두고, 없으면 여기서 직접 정한다.
+  const [subdomain, setSubdomain] = useState(vm.requestedSubdomain ?? '')
   const [customDomain, setCustomDomain] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const publishable = PUBLISHABLE_STATUSES.includes(vm.status)
+  const usingCustomDomain = normalizeCustomDomain(customDomain) !== ''
+  // 플랫폼 서브도메인으로 공개하려면 이름이 있어야 한다 (서버는 없으면 422).
+  const missingSubdomain = !usingCustomDomain && subdomain.trim() === ''
 
   const publish = useMutation({
     mutationFn: () => {
       // 신청서와 같은 규칙: trim+lowercase 정규화한 값을 전송한다.
       const domain = normalizeCustomDomain(customDomain)
+      // 커스텀 도메인과 서브도메인은 함께 보낼 수 없다 (서버 422).
+      if (domain !== '') {
+        return publishVm(vm.id, { port: Number(port), customDomain: domain })
+      }
       return publishVm(vm.id, {
         port: Number(port),
-        customDomain: domain === '' ? null : domain,
+        customDomain: null,
+        subdomain: subdomain.trim(),
+        ...(vm.requestedRootDomain ? { rootDomain: vm.requestedRootDomain } : {}),
       })
     },
     onSuccess: async () => {
@@ -200,9 +199,8 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <p className="text-sm text-neutral-600">
-        VM 내부에서 열려 있는 HTTP 서비스 포트를 외부에 공개합니다. 공개 주소(플랫폼
-        서브도메인)는 <strong>신청 승인 시 관리자가 부여한 이름</strong>(미부여 시 자동
-        생성)으로 정해지며, 여기서 직접 지정할 수 없습니다.
+        VM 내부에서 열려 있는 HTTP 서비스 포트를 외부에 공개합니다. 공개 주소는 아래
+        서브도메인으로 정해지며, 나중에 바꾸려면 공개를 해제하고 다시 공개해야 합니다.
       </p>
 
       {!publishable && (
@@ -211,7 +209,7 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
           접수할 수 없습니다.
         </Alert>
       )}
-      {error && Object.keys(fieldErrors).length === 0 && (
+      {error && !hasSlottedError(fieldErrors, ['port', 'subdomain', 'customDomain']) && (
         <Alert variant="danger">{error}</Alert>
       )}
 
@@ -230,9 +228,27 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
           />
         </FormField>
         <FormField
+          label="서브도메인"
+          error={fieldErrors.subdomain}
+          description={
+            vm.requestedRootDomain
+              ? `공개 주소는 ${subdomain.trim() || '<서브도메인>'}.${vm.requestedRootDomain} 이 됩니다.`
+              : '플랫폼 도메인 아래에 공개할 이름입니다. (소문자·숫자·하이픈, 3~40자)'
+          }
+          className="min-w-64 flex-1"
+        >
+          <Input
+            placeholder="capstone-team3"
+            value={subdomain}
+            maxLength={40}
+            disabled={usingCustomDomain}
+            onChange={(event) => setSubdomain(event.target.value)}
+          />
+        </FormField>
+        <FormField
           label="커스텀 도메인 (선택)"
           error={fieldErrors.customDomain}
-          description="내 소유 도메인을 연결하려면 입력하세요. 비워 두면 플랫폼 서브도메인으로 공개됩니다."
+          description="내 소유 도메인을 연결하려면 입력하세요. 비워 두면 위 서브도메인으로 공개됩니다."
           className="min-w-64 flex-1"
         >
           <Input
@@ -243,7 +259,15 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
         </FormField>
       </div>
 
-      <Button type="submit" loading={publish.isPending} disabled={!publishable}>
+      {publishable && missingSubdomain && (
+        <p className="text-sm text-neutral-500">공개할 서브도메인을 입력해 주세요.</p>
+      )}
+
+      <Button
+        type="submit"
+        loading={publish.isPending}
+        disabled={!publishable || missingSubdomain}
+      >
         HTTP 서비스 공개
       </Button>
     </form>
@@ -555,7 +579,8 @@ function PublicationActions({
     <section className="space-y-4 border-t border-neutral-100 pt-4">
       <h3 className="text-sm font-semibold text-neutral-800">공개 설정 변경</h3>
       {message && <Alert variant="success">{message}</Alert>}
-      {error && Object.keys(fieldErrors).length === 0 && (
+      {/* 변경 폼에 자리가 없는 필드 오류(예: 플랫폼 복귀 시 subdomain)도 요약으로 노출한다. */}
+      {error && !hasSlottedError(fieldErrors, ['port', 'customDomain']) && (
         <Alert variant="danger">{error}</Alert>
       )}
 

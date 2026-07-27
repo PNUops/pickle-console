@@ -99,22 +99,13 @@ export function RequestDetailPage() {
             <Field label="사용 기간">
               {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
             </Field>
+            <Field label="표시명">{data.displayName ?? '—'}</Field>
             <Field label="호스트명(SSH 접속명)">{data.desiredSlug ?? '자동 생성'}</Field>
-            <Field label="네트워크">
-              {[
-                data.needSsh && 'SSH',
-                data.needHttp && 'HTTP',
-                data.needPublic && '외부 공개',
-              ]
-                .filter(Boolean)
-                .join(' · ') || '없음'}
-            </Field>
-            <Field label="도메인">
+            <Field label="서브도메인 선지정">
               {data.desiredSubdomain && data.rootDomain
                 ? `${data.desiredSubdomain}.${data.rootDomain}`
                 : '—'}
             </Field>
-            <Field label="커스텀 도메인">{data.customDomain ?? '—'}</Field>
           </dl>
         </CardContent>
       </Card>
@@ -162,17 +153,6 @@ function ReviewCard({
           {approved && (
             <Field label="부여 기간">
               {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}
-            </Field>
-          )}
-          {approved && (
-            <Field label="부여 네트워크">
-              {[
-                review.grantSsh && 'SSH',
-                review.grantHttp && 'HTTP',
-                review.grantPublic && '외부 공개',
-              ]
-                .filter(Boolean)
-                .join(' · ') || '없음'}
             </Field>
           )}
         </dl>

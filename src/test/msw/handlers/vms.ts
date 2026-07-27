@@ -39,7 +39,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: true,
+      requestedSubdomain: 'capstone-team3',
+      requestedRootDomain: 'pickle.pnuops.com',
       publication: null,
       provisioning: {
         kind: 'PROVISION',
@@ -56,7 +57,7 @@ function initialVms(): VmDetail[] {
       updatedAt: '2026-07-08T14:03:05+09:00',
     },
     {
-      // HTTP 공개 허가 + 미공개 RUNNING — "처음 공개" 흐름 대상.
+      // 서브도메인 선지정 + 미공개 RUNNING — "처음 공개" 흐름 대상.
       id: 56,
       name: 'algo-judge',
       hostname: 'algo-judge',
@@ -79,7 +80,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: true,
-      httpPublishGranted: true,
+      requestedSubdomain: 'algo-judge',
+      requestedRootDomain: 'pickle.pnuops.com',
       publication: null,
       provisioning: null,
       deletion: null,
@@ -87,7 +89,8 @@ function initialVms(): VmDetail[] {
       updatedAt: '2026-06-20T10:05:00+09:00',
     },
     {
-      // HTTP 공개 미허가(grantHttp=false) — 공개 폼 대신 안내만 노출.
+      // 서브도메인 선지정 없음 — 공개 폼에서 이름을 직접 입력해야 하는 흐름
+      // (그룹 12 OWNER라 공개 폼을 실제로 조작할 수 있다).
       id: 57,
       name: 'web-lab',
       hostname: 'web-lab',
@@ -95,8 +98,8 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 15,
-      groupName: '알고리즘 스터디',
+      groupId: 12,
+      groupName: '캡스톤 3조',
       requestId: 91,
       statusDetail: null,
       orgId: 1,
@@ -110,7 +113,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: null,
       deletion: null,
@@ -140,7 +144,8 @@ function initialVms(): VmDetail[] {
       endDate: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: {
         kind: 'PROVISION',
@@ -179,7 +184,8 @@ function initialVms(): VmDetail[] {
       endDate: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: null,
       deletion: null,
@@ -209,7 +215,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-07-01',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: null,
       deletion: {
@@ -248,7 +255,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-31',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: true,
+      requestedSubdomain: 'ai-team',
+      requestedRootDomain: 'pickle.pnuops.com',
       publication: {
         fqdn: 'ai-team.pickle.pnuops.com',
         domain: {
@@ -305,7 +313,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: true,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: {
         fqdn: 'demo.example.com',
         domain: {
@@ -372,7 +381,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: true,
+      requestedSubdomain: 'shop-app',
+      requestedRootDomain: 'pickle.pnuops.com',
       publication: {
         fqdn: 'shop.example.com',
         domain: {
@@ -444,7 +454,8 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-31',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: true,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: {
         fqdn: 'api.example.org',
         domain: {
@@ -517,7 +528,8 @@ function initialVms(): VmDetail[] {
       expiryStoppedAt: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: null,
       deletion: null,
@@ -549,7 +561,8 @@ function initialVms(): VmDetail[] {
       expiryStoppedAt: new Date().toISOString(),
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: null,
       deletion: null,
@@ -581,7 +594,8 @@ function initialVms(): VmDetail[] {
       expiryStoppedAt: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      httpPublishGranted: false,
+      requestedSubdomain: null,
+      requestedRootDomain: null,
       publication: null,
       provisioning: null,
       deletion: null,

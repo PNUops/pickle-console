@@ -17,7 +17,6 @@ import {
   Button,
   Card,
   CardContent,
-  Checkbox,
   FormField,
   Input,
   Select,
@@ -35,14 +34,9 @@ import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
-import {
-  CUSTOM_DOMAIN_FORMAT_MESSAGE,
-  HOSTNAME_RE,
-  normalizeCustomDomain,
-  SUBDOMAIN_RE,
-} from '../lib/validation'
+import { SUBDOMAIN_RE } from '../lib/validation'
 
-const STEPS = ['그룹·기관', '템플릿·사양', '용도·기간', '네트워크·도메인', '확인·제출']
+const STEPS = ['그룹·기관·이름', '템플릿·사양', '용도·기간', '확인·제출']
 
 /** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용). */
 const FIELD_LABELS: Record<string, string> = {
@@ -58,13 +52,10 @@ const FIELD_LABELS: Record<string, string> = {
   reqDiskGb: '디스크',
   reqStartDate: '시작일',
   reqEndDate: '종료일',
+  displayName: '표시명',
   desiredSlug: '호스트명(슬러그)',
-  needSsh: 'SSH',
-  needHttp: 'HTTP',
-  needPublic: '외부 공개',
   desiredSubdomain: '서브도메인',
   rootDomain: '루트 도메인',
-  customDomain: '커스텀 도메인',
 }
 
 interface WizardState {
@@ -80,13 +71,10 @@ interface WizardState {
   extraNote: string
   reqStartDate: string
   reqEndDate: string
+  displayName: string
   desiredSlug: string
-  needSsh: boolean
-  needHttp: boolean
-  needPublic: boolean
   desiredSubdomain: string
   rootDomain: string
-  customDomain: string
 }
 
 const INITIAL_STATE: WizardState = {
@@ -102,13 +90,10 @@ const INITIAL_STATE: WizardState = {
   extraNote: '',
   reqStartDate: '',
   reqEndDate: '',
+  displayName: '',
   desiredSlug: '',
-  needSsh: true,
-  needHttp: false,
-  needPublic: false,
   desiredSubdomain: '',
   rootDomain: '',
-  customDomain: '',
 }
 
 type FieldErrors = Partial<Record<string, string>>
@@ -173,6 +158,25 @@ export function NewRequestPage() {
     if (index === 0) {
       if (state.groupId == null) next.groupId = '신청할 그룹을 선택해 주세요.'
       if (state.orgId == null) next.orgId = '자원을 제공할 기관을 선택해 주세요.'
+      if (state.displayName.length > 100)
+        next.displayName = '표시명은 100자 이하로 입력해 주세요.'
+      if (state.desiredSlug) {
+        if (!SUBDOMAIN_RE.test(state.desiredSlug)) {
+          next.desiredSlug =
+            '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
+        } else if (options.data?.reservedSubdomains.includes(state.desiredSlug)) {
+          next.desiredSlug = `'${state.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
+        }
+      }
+      if (state.desiredSubdomain) {
+        if (!SUBDOMAIN_RE.test(state.desiredSubdomain)) {
+          next.desiredSubdomain =
+            '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
+        } else if (options.data?.reservedSubdomains.includes(state.desiredSubdomain)) {
+          next.desiredSubdomain = `'${state.desiredSubdomain}'은(는) 예약된 서브도메인이라 사용할 수 없습니다.`
+        }
+        if (!state.rootDomain) next.rootDomain = '루트 도메인을 선택해 주세요.'
+      }
     }
     if (index === 1) {
       if (state.templateId == null) {
@@ -194,28 +198,6 @@ export function NewRequestPage() {
         next.courseOrProject = '수업/프로젝트명은 200자 이하로 입력해 주세요.'
       if (state.reqStartDate && state.reqEndDate && state.reqEndDate < state.reqStartDate)
         next.reqEndDate = '종료일은 시작일 이후여야 합니다.'
-    }
-    if (index === 3 && state.desiredSlug) {
-      if (!SUBDOMAIN_RE.test(state.desiredSlug)) {
-        next.desiredSlug =
-          '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
-      } else if (options.data?.reservedSubdomains.includes(state.desiredSlug)) {
-        next.desiredSlug = `'${state.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
-      }
-    }
-    if (index === 3 && state.needHttp) {
-      if (!state.desiredSubdomain) {
-        next.desiredSubdomain = 'HTTP 서비스를 게시하려면 서브도메인을 입력해 주세요.'
-      } else if (!SUBDOMAIN_RE.test(state.desiredSubdomain)) {
-        next.desiredSubdomain =
-          '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
-      } else if (options.data?.reservedSubdomains.includes(state.desiredSubdomain)) {
-        next.desiredSubdomain = `'${state.desiredSubdomain}'은(는) 예약된 서브도메인이라 사용할 수 없습니다.`
-      }
-      if (!state.rootDomain) next.rootDomain = '루트 도메인을 선택해 주세요.'
-      const customDomain = normalizeCustomDomain(state.customDomain)
-      if (customDomain && !HOSTNAME_RE.test(customDomain))
-        next.customDomain = CUSTOM_DOMAIN_FORMAT_MESSAGE
     }
     return next
   }
@@ -305,16 +287,11 @@ export function NewRequestPage() {
     reqDiskGb: state.reqDiskGb,
     reqStartDate: state.reqStartDate || null,
     reqEndDate: state.reqEndDate || null,
+    displayName: state.displayName.trim() || null,
     desiredSlug: state.desiredSlug || null,
-    needSsh: state.needSsh,
-    needHttp: state.needHttp,
-    needPublic: state.needPublic,
-    desiredSubdomain: state.needHttp ? state.desiredSubdomain : null,
-    rootDomain: state.needHttp ? state.rootDomain : null,
-    customDomain:
-      state.needHttp && normalizeCustomDomain(state.customDomain)
-        ? normalizeCustomDomain(state.customDomain)
-        : null,
+    desiredSubdomain: state.desiredSubdomain || null,
+    // 루트 도메인은 서브도메인을 선지정했을 때만 의미가 있다.
+    rootDomain: state.desiredSubdomain ? state.rootDomain : null,
   })
 
   const onSubmit = () => {
@@ -337,7 +314,7 @@ export function NewRequestPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 신청</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          다섯 단계로 VM 사용 신청서를 작성합니다. 제출하면 관리자가 검토합니다.
+          네 단계로 VM 사용 신청서를 작성합니다. 제출하면 관리자가 검토합니다.
         </p>
       </div>
 
@@ -391,6 +368,63 @@ export function NewRequestPage() {
                   ))}
                 </Select>
               </FormField>
+
+              <div className="space-y-4 border-t border-neutral-100 pt-4">
+                <h2 className="text-sm font-semibold text-neutral-800">VM 이름·주소</h2>
+                <FormField
+                  label="표시명"
+                  error={errors.displayName}
+                  description="콘솔 목록에 보이는 이름입니다. 비워 두면 호스트명이 그대로 쓰이며, VM 설정에서 언제든 바꿀 수 있습니다."
+                >
+                  <Input
+                    value={state.displayName}
+                    onChange={(event) => update({ displayName: event.target.value })}
+                    maxLength={100}
+                    placeholder="예: 캡스톤 백엔드 서버"
+                  />
+                </FormField>
+                <FormField
+                  label="희망 호스트명(슬러그)"
+                  error={errors.desiredSlug}
+                  description={`SSH 접속명으로 쓰입니다 — ssh ${state.desiredSlug || '<슬러그>'}@${
+                    options.data?.sshHost ?? 'ssh.pickle.pnuops.com'
+                  } · 미입력 시 자동 생성됩니다.`}
+                >
+                  <Input
+                    value={state.desiredSlug}
+                    onChange={(event) => update({ desiredSlug: event.target.value })}
+                    placeholder="미입력 시 자동 생성"
+                    maxLength={40}
+                  />
+                </FormField>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    label="희망 서브도메인"
+                    error={errors.desiredSubdomain}
+                    description="선택 사항 — 지금 정하지 않으면 VM 생성 후 공개할 때 지정합니다. (소문자·숫자·하이픈, 3~40자)"
+                  >
+                    <Input
+                      value={state.desiredSubdomain}
+                      onChange={(event) => update({ desiredSubdomain: event.target.value })}
+                      placeholder="capstone-team3"
+                      maxLength={40}
+                    />
+                  </FormField>
+                  <FormField label="루트 도메인" error={errors.rootDomain}>
+                    <Select
+                      value={state.rootDomain}
+                      onChange={(event) => update({ rootDomain: event.target.value })}
+                    >
+                      <option value="">루트 도메인 선택</option>
+                      {options.data?.allowedRootDomains.map((domain) => (
+                        <option key={domain} value={domain}>
+                          {domain}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </div>
+              </div>
             </>
           )}
 
@@ -542,88 +576,6 @@ export function NewRequestPage() {
 
           {step === 3 && (
             <>
-              <FormField
-                label="희망 호스트명(슬러그)"
-                error={errors.desiredSlug}
-                description={`SSH 접속명으로 쓰입니다 — ssh ${state.desiredSlug || '<슬러그>'}@${
-                  options.data?.sshHost ?? 'ssh.pickle.pnuops.com'
-                } · 미입력 시 자동 생성됩니다.`}
-              >
-                <Input
-                  value={state.desiredSlug}
-                  onChange={(event) => update({ desiredSlug: event.target.value })}
-                  placeholder="미입력 시 자동 생성"
-                  maxLength={40}
-                />
-              </FormField>
-              <div className="space-y-3">
-                <Checkbox
-                  label="SSH 접속"
-                  description="터미널로 VM에 접속합니다."
-                  checked={state.needSsh}
-                  onChange={(event) => update({ needSsh: event.target.checked })}
-                />
-                <Checkbox
-                  label="HTTP 서비스 게시"
-                  description="웹 서비스를 도메인으로 공개합니다."
-                  checked={state.needHttp}
-                  onChange={(event) => update({ needHttp: event.target.checked })}
-                />
-                <Checkbox
-                  label="외부(캠퍼스 밖) 공개"
-                  description="학교 밖에서도 접속할 수 있게 합니다."
-                  checked={state.needPublic}
-                  onChange={(event) => update({ needPublic: event.target.checked })}
-                />
-              </div>
-              {state.needHttp && (
-                <div className="space-y-4 rounded-lg bg-neutral-50 p-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <FormField
-                      label="희망 서브도메인"
-                      required
-                      error={errors.desiredSubdomain}
-                      description="소문자·숫자·하이픈, 3~40자"
-                    >
-                      <Input
-                        value={state.desiredSubdomain}
-                        onChange={(event) => update({ desiredSubdomain: event.target.value })}
-                        placeholder="capstone-team3"
-                        maxLength={40}
-                      />
-                    </FormField>
-                    <FormField label="루트 도메인" required error={errors.rootDomain}>
-                      <Select
-                        value={state.rootDomain}
-                        onChange={(event) => update({ rootDomain: event.target.value })}
-                      >
-                        <option value="">루트 도메인 선택</option>
-                        {options.data?.allowedRootDomains.map((domain) => (
-                          <option key={domain} value={domain}>
-                            {domain}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormField>
-                  </div>
-                  <FormField
-                    label="커스텀 도메인"
-                    error={errors.customDomain}
-                    description="직접 소유한 도메인이 있으면 적어 주세요. 연결은 이후 단계에서 지원되며 지금은 기록만 됩니다."
-                  >
-                    <Input
-                      value={state.customDomain}
-                      onChange={(event) => update({ customDomain: event.target.value })}
-                      placeholder="myapp.example.com"
-                    />
-                  </FormField>
-                </div>
-              )}
-            </>
-          )}
-
-          {step === 4 && (
-            <>
               {submitError && (
                 <Alert variant="danger" title={submitError}>
                   {Object.keys(serverFieldErrors).length > 0 && (
@@ -690,6 +642,7 @@ function SummaryTable({
     ['사용 목적', state.purpose.trim()],
     ['수업/프로젝트명', state.courseOrProject.trim() || '—'],
     ['기타 참고', state.extraNote.trim() || '—'],
+    ['표시명', state.displayName.trim() || '호스트명 사용'],
     ['호스트명(SSH 접속명)', state.desiredSlug || '자동 생성'],
     [
       '사용 기간',
@@ -698,18 +651,11 @@ function SummaryTable({
         : '미지정',
     ],
     [
-      '네트워크',
-      [state.needSsh && 'SSH', state.needHttp && 'HTTP', state.needPublic && '외부 공개']
-        .filter(Boolean)
-        .join(' · ') || '없음',
-    ],
-    [
-      '도메인',
-      state.needHttp && state.desiredSubdomain && state.rootDomain
+      '서브도메인',
+      state.desiredSubdomain && state.rootDomain
         ? `${state.desiredSubdomain}.${state.rootDomain}`
-        : '—',
+        : '공개할 때 지정',
     ],
-    ['커스텀 도메인', (state.needHttp && state.customDomain.trim().toLowerCase()) || '—'],
   ]
 
   return (
