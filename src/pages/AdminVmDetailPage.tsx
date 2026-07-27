@@ -106,7 +106,6 @@ export function AdminVmDetailPage() {
           <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
             <Field label="이름" value={vm.name} />
             <Field label="호스트네임" value={vm.hostname} />
-            <Field label="상태" value={vm.status} />
             <div>
               <dt className="text-neutral-500">그룹</dt>
               <dd className="font-medium text-neutral-900">
