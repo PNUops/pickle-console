@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   disableUser,
@@ -339,7 +340,13 @@ function UserDetailBody({ userId, canManage }: { userId: number; canManage: bool
                 {m.groupName}{' '}
                 <span className="text-neutral-400">
                   ({GROUP_KIND_LABELS[m.groupKind]} · {m.role})
-                </span>
+                </span>{' '}
+                <Link
+                  to={`/admin/vms?groupId=${m.groupId}`}
+                  className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+                >
+                  VM 보기
+                </Link>
               </li>
             ))}
           </ul>

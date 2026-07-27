@@ -179,6 +179,31 @@ describe('관리자 VM 일반 삭제 접수', () => {
   })
 })
 
+describe('교차 링크·URL 필터', () => {
+  test('URL의 groupId 파라미터로 그룹 필터가 초기화된다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/vms?groupId=12')
+
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(await screen.findByText('capstone-team3-api')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
+    expect(screen.getByLabelText('그룹 필터')).toHaveValue('12')
+  })
+
+  test('드로어의 그룹 링크로 같은 그룹 VM만 필터한다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await selectVm(user, 'capstone-team3-api')
+    await user.click(screen.getByRole('button', { name: '이 그룹의 VM 보기' }))
+
+    // 드로어가 닫히고 그룹 필터가 적용된다
+    expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('그룹 필터')).toHaveValue('12')
+    await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
+  })
+})
+
 describe('VM 드로어 기간 연장', () => {
   test('드로어에서 기간을 연장하면 확인 메시지가 남는다', async () => {
     const user = userEvent.setup()

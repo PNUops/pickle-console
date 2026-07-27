@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelScheduledVmDeletion,
@@ -59,6 +60,12 @@ const STATUS_TABS: { label: string; status: VmStatus | undefined }[] = [
   { label: VM_STATUS_LABELS.ERROR, status: 'ERROR' },
 ]
 
+/** URL 쿼리의 양의 정수 파라미터. 그 외 값은 필터 미적용으로 취급한다. */
+function idParam(value: string | null): number | undefined {
+  const parsed = Number(value)
+  return value && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+}
+
 export function AdminVmsPage() {
   const { user } = useAuth()
   const role = user?.role
@@ -67,9 +74,15 @@ export function AdminVmsPage() {
   const isSysAdmin = !!role && isSysTier(role)
   const canDelete = !!role && canManageVmDeletion(role)
   const canForceDelete = !!role && isSysAdminOnly(role)
+  // 교차 링크(사용자 상세의 그룹 → VM 보기 등)를 위해 기관·그룹 필터는 URL
+  // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
+  // 되돌려 쓰지 않는다(의도된 절단).
+  const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const [groupId, setGroupId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<number | undefined>(() => idParam(searchParams.get('orgId')))
+  const [groupId, setGroupId] = useState<number | undefined>(() =>
+    idParam(searchParams.get('groupId')),
+  )
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -314,6 +327,11 @@ export function AdminVmsPage() {
             canDelete={canDelete}
             canForceDelete={canForceDelete}
             onDone={setMessage}
+            onFilterGroup={(nextGroupId) => {
+              setGroupId(nextGroupId)
+              setPage(0)
+              setSelectedId(null)
+            }}
           />
         )}
       </Drawer>
@@ -328,11 +346,13 @@ function VmDrawerContent({
   canDelete,
   canForceDelete,
   onDone,
+  onFilterGroup,
 }: {
   vm: VmSummary
   canDelete: boolean
   canForceDelete: boolean
   onDone: (message: string) => void
+  onFilterGroup: (groupId: number) => void
 }) {
   const [extendOpen, setExtendOpen] = useState(false)
   return (
@@ -344,7 +364,19 @@ function VmDrawerContent({
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="이름" value={vm.name} />
         <Field label="호스트네임" value={vm.hostname} />
-        <Field label="그룹" value={vm.groupName} />
+        <div>
+          <dt className="text-neutral-500">그룹</dt>
+          <dd className="font-medium text-neutral-900">
+            {vm.groupName}{' '}
+            <button
+              type="button"
+              onClick={() => onFilterGroup(vm.groupId)}
+              className="cursor-pointer text-sm font-normal text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+            >
+              이 그룹의 VM 보기
+            </button>
+          </dd>
+        </div>
         <Field label="기관" value={vm.orgName ?? '—'} />
         <Field label="사양" value={formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)} />
         <Field label="종료일" value={vm.endDate ?? '—'} />
