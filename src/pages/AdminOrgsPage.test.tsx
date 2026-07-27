@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import {
@@ -32,9 +32,37 @@ describe('기관 관리 — 접근 제어', () => {
     expect(screen.getByRole('link', { name: '기관 관리' })).toBeInTheDocument()
     expect(await screen.findByText('cse-lab')).toBeInTheDocument()
     expect(screen.getAllByText('테스트 기관').length).toBeGreaterThan(0)
-    // 계약 v0.3.x: OrgSummary.status를 상태 배지로 표시한다.
     const row = screen.getByText('cse-lab').closest('tr')!
     expect(within(row).getByText('활성')).toBeInTheDocument()
+    // hidden 기관에는 숨김 배지가 붙는다 (관리자 목록은 hidden 포함)
+    const hiddenRow = screen.getByText('test-org').closest('tr')!
+    expect(within(hiddenRow).getByText('숨김')).toBeInTheDocument()
+  })
+})
+
+describe('기관 비활성화·숨김 토글', () => {
+  test('수정 모달에서 상태와 숨김을 바꾸면 목록 배지가 갱신된다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await screen.findByRole('heading', { name: '기관 관리' })
+    const row = (await screen.findByText('cse-lab')).closest('tr')!
+    await user.click(within(row).getByRole('button', { name: '수정' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '기관 수정' })
+    // 의미론 안내가 함께 보인다
+    expect(
+      within(dialog).getByText(/신규 VM 신청 대상에서만 제외/),
+    ).toBeInTheDocument()
+    await user.selectOptions(within(dialog).getByLabelText('기관 상태'), 'DISABLED')
+    await user.click(within(dialog).getByLabelText('일반 사용자에게 숨김'))
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+    await waitFor(() => {
+      const updated = screen.getByText('cse-lab').closest('tr')!
+      expect(within(updated).getByText('비활성')).toBeInTheDocument()
+      expect(within(updated).getByText('숨김')).toBeInTheDocument()
+    })
   })
 })
 

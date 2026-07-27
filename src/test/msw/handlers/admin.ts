@@ -459,6 +459,21 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json(found, { status: 200 })
   }),
 
+  http.get('*/api/v1/admin/orgs', () =>
+    HttpResponse.json(
+      orgs.map((org) => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        description: org.description ?? null,
+        status: org.status,
+        hidden: org.hidden,
+        createdAt: '2026-01-05T09:00:00+09:00',
+      }) satisfies Schemas['OrgDetailResponse']),
+      { status: 200 },
+    ),
+  ),
+
   http.post('*/api/v1/admin/orgs', async ({ request }) => {
     const body = (await request.json()) as {
       name: string
@@ -497,15 +512,22 @@ export const adminHandlers: RequestHandler[] = [
   http.patch('*/api/v1/admin/orgs/:orgId', async ({ params, request }) => {
     const found = orgs.find((org) => org.id === Number(params.orgId))
     if (!found) return notFound()
-    const body = (await request.json()) as { name?: string; description?: string | null }
+    const body = (await request.json()) as {
+      name?: string
+      description?: string | null
+      status?: Schemas['OrgStatus']
+      hidden?: boolean
+    }
     if (body.name !== undefined) found.name = body.name
     if (body.description !== undefined) found.description = body.description
+    if (body.status !== undefined) found.status = body.status
+    if (body.hidden !== undefined) found.hidden = body.hidden
     const detail: Schemas['OrgDetailResponse'] = {
       id: found.id,
       name: found.name,
       slug: found.slug,
       description: found.description ?? null,
-      status: 'ACTIVE',
+      status: found.status,
       hidden: found.hidden,
       createdAt: '2026-01-05T09:00:00+09:00',
     }
@@ -609,11 +631,11 @@ export const adminHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as { scheduledFor: string; reason: string }
     const errors: { field: string; message: string }[] = []
-    const minNotice = Date.now() + 7 * 86_400_000
-    if (!body.scheduledFor || new Date(body.scheduledFor).getTime() < minNotice) {
+    // 계약: 미래 시각만 요구 (최소 통보 하한 폐지 — 미만은 콘솔 경고만)
+    if (!body.scheduledFor || new Date(body.scheduledFor).getTime() <= Date.now()) {
       errors.push({
         field: 'scheduledFor',
-        message: '삭제 예정일은 최소 통보 기간(7일) 이후여야 합니다.',
+        message: '삭제 예정일은 미래 시각이어야 합니다.',
       })
     }
     if (!body.reason?.trim()) {

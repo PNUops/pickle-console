@@ -39,11 +39,20 @@ export function todayKstDate(): string {
 
 /**
  * 접수 가능한 가장 이른 파기 예정일(YYYY-MM-DD, KST 기준).
- * 계약의 최소 통보 기간은 "현재 시각 + 7일"이고 폼은 KST 자정으로 제출하므로,
- * 자정이 항상 통보 기간을 넘는 "오늘 + 8일"을 최소값으로 제시한다.
+ * 폼은 KST 자정으로 제출하므로 "내일"이 항상 미래 시각이다.
+ * 최소 통보 기간 하한은 폐지(2026-07-27) — 계약은 미래 시각만 요구한다.
  */
 export function minScheduleDate(): string {
-  return kstDateString(new Date(Date.now() + 8 * 86_400_000))
+  return kstDateString(new Date(Date.now() + 86_400_000))
+}
+
+/**
+ * 파기 예정일이 권장 통보 기간(7일) 미만인지 — 접수는 허용하되 경고를
+ * 표시하는 기준. 폼 제출 시각(KST 자정)이 "지금 + 7일"을 넘는 최소
+ * 달력일이 "오늘 + 8일"이므로 그 미만을 짧은 통보로 본다.
+ */
+export function isShortNotice(ymd: string): boolean {
+  return ymd < kstDateString(new Date(Date.now() + 8 * 86_400_000))
 }
 
 /** 'YYYY-MM-DD' → 1970-01-01부터의 달력 일수 (TZ 무관, 정수). */

@@ -1,16 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '../api/client'
 import { toApiError } from '../api/problem'
-import { fetchOrgs, type OrgSummary } from '../api/queries'
+import { createOrg, fetchAdminOrgs, updateOrg, type OrgDetail } from '../api/queries'
 import {
   Alert,
   Badge,
   Button,
   Card,
+  Checkbox,
   FormField,
   Input,
   Modal,
+  Select,
   Spinner,
   Table,
   TBody,
@@ -26,8 +27,9 @@ import { ORG_SLUG_RE } from '../lib/validation'
 
 export function AdminOrgsPage() {
   const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<OrgSummary | null>(null)
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
+  const [editTarget, setEditTarget] = useState<OrgDetail | null>(null)
+  // 관리자 전용 목록 — 공개 /orgs와 달리 DISABLED·hidden 기관을 포함한다.
+  const orgs = useQuery({ queryKey: ['admin', 'orgs'], queryFn: fetchAdminOrgs })
 
   return (
     <div className="space-y-6">
@@ -70,9 +72,14 @@ export function AdminOrgsPage() {
                   <TD className="font-medium text-neutral-900">{org.name}</TD>
                   <TD className="font-mono text-xs text-neutral-500">{org.slug}</TD>
                   <TD>
-                    <Badge variant={org.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                    <Badge variant={org.status === 'ACTIVE' ? 'success' : 'danger'}>
                       {ORG_STATUS_LABELS[org.status]}
                     </Badge>
+                    {org.hidden && (
+                      <Badge variant="neutral" className="ml-1">
+                        숨김
+                      </Badge>
+                    )}
                   </TD>
                   <TD className="max-w-sm truncate">{org.description ?? '—'}</TD>
                   <TD>
@@ -108,14 +115,9 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
   const [formError, setFormError] = useState<string | null>(null)
 
   const create = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.POST('/admin/orgs', {
-        body: { name, slug, description: description || null },
-      })
-      if (!data) throw toApiError(error, '기관을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      return data
-    },
+    mutationFn: () => createOrg({ name, slug, description: description || null }),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'orgs'] })
       await queryClient.invalidateQueries({ queryKey: ['orgs'] })
       setName('')
       setSlug('')
@@ -208,23 +210,25 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
   )
 }
 
-function EditOrgModal({ org, onClose }: { org: OrgSummary; onClose: () => void }) {
+function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState(org.name)
   const [description, setDescription] = useState(org.description ?? '')
+  const [disabled, setDisabled] = useState(org.status === 'DISABLED')
+  const [hidden, setHidden] = useState(org.hidden)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
 
   const update = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.PATCH('/admin/orgs/{orgId}', {
-        params: { path: { orgId: org.id } },
-        body: { name, description: description || null },
-      })
-      if (!data) throw toApiError(error, '기관 정보를 수정하지 못했습니다.')
-      return data
-    },
+    mutationFn: () =>
+      updateOrg(org.id, {
+        name,
+        description: description || null,
+        status: disabled ? 'DISABLED' : 'ACTIVE',
+        hidden,
+      }),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'orgs'] })
       await queryClient.invalidateQueries({ queryKey: ['orgs'] })
       onClose()
     },
@@ -268,6 +272,28 @@ function EditOrgModal({ org, onClose }: { org: OrgSummary; onClose: () => void }
             maxLength={500}
           />
         </FormField>
+        <FormField
+          label="상태"
+          description="비활성화: 신규 VM 신청 대상에서만 제외됩니다 — 로그인·기존 VM·기관 관리자 계정은 영향받지 않습니다."
+        >
+          <Select
+            aria-label="기관 상태"
+            value={disabled ? 'DISABLED' : 'ACTIVE'}
+            onChange={(event) => setDisabled(event.target.value === 'DISABLED')}
+          >
+            <option value="ACTIVE">{ORG_STATUS_LABELS.ACTIVE}</option>
+            <option value="DISABLED">{ORG_STATUS_LABELS.DISABLED}</option>
+          </Select>
+        </FormField>
+        <Checkbox
+          label="일반 사용자에게 숨김"
+          checked={hidden}
+          onChange={(event) => setHidden(event.target.checked)}
+        />
+        <p className="text-sm text-neutral-500">
+          숨김: 일반 사용자의 신청 폼 기관 목록에서만 빠집니다 — 관리자에게는 항상
+          표시되며, 기능(신청 대상 지정·기관 관리자 로그인)은 그대로입니다.
+        </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
             취소

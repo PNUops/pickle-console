@@ -42,7 +42,7 @@ import {
 } from '../components/ui'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { formatDateTime, formatSpec, minScheduleDate } from '../lib/format'
+import { formatDateTime, formatSpec, isShortNotice, minScheduleDate } from '../lib/format'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
 
@@ -498,9 +498,15 @@ function ScheduleDeleteForm({
         </PermissionNotice>
       )}
       <p className="text-sm text-neutral-500">
-        최소 통보 기간(기본 7일) 이후 시각으로만 접수할 수 있으며, 접수 즉시
-        사용자에게 사유가 포함된 통보 메일이 발송됩니다.
+        파기 예정일(미래 시각)을 지정해 접수하며, 접수 즉시 사용자에게 사유가 포함된
+        통보 메일이 발송됩니다. 예정 시각까지는 관리자가 취소할 수 있습니다.
       </p>
+      {date && isShortNotice(date) && (
+        <Alert variant="warning">
+          권장 통보 기간(7일)보다 이른 파기 예정일입니다. 사용자가 대응할 시간이
+          짧으니 유의해 주세요.
+        </Alert>
+      )}
       {error && Object.keys(fieldErrors).length === 0 && (
         <Alert variant="danger">{error}</Alert>
       )}

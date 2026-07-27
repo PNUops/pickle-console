@@ -140,7 +140,7 @@ describe('관리자 VM 목록', () => {
 })
 
 describe('관리자 VM 일반 삭제 접수', () => {
-  test('최소 통보 기간 미만 날짜는 422 필드 에러로 표시되고, 유효하면 접수된다', async () => {
+  test('과거 날짜는 422 필드 에러, 7일 미만은 경고와 함께 접수된다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
@@ -148,16 +148,23 @@ describe('관리자 VM 일반 삭제 접수', () => {
     const dateInput = screen.getByLabelText(/파기 예정일/)
     const reasonInput = screen.getByLabelText(/삭제 사유/)
 
-    // 통보 기간(7일) 미만의 날짜 → 서버 422 → scheduledFor 필드 에러
+    // 과거 시각 → 서버 422 → scheduledFor 필드 에러 (유일하게 남은 날짜 규칙)
     fireEvent.change(dateInput, { target: { value: '2020-01-01' } })
     await user.type(reasonInput, '사용 종료일이 지난 VM 정리')
+    expect(
+      screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
     expect(
-      await screen.findByText('삭제 예정일은 최소 통보 기간(7일) 이후여야 합니다.'),
+      await screen.findByText('삭제 예정일은 미래 시각이어야 합니다.'),
     ).toBeInTheDocument()
 
-    // 유효한 날짜로 다시 제출 → 접수 안내
-    fireEvent.change(dateInput, { target: { value: '2099-01-01' } })
+    // 미래이되 권장 통보 기간(7일) 미만 → 경고 표시 상태로도 접수된다
+    const nearDate = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10)
+    fireEvent.change(dateInput, { target: { value: nearDate } })
+    expect(
+      screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
+    ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
     expect(
       await screen.findByText(

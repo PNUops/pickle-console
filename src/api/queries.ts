@@ -24,6 +24,7 @@ export type AdminVmSort = NonNullable<
 export type ApprovalContext = Schemas['ApprovalContextResponse']
 export type ApproveVmRequest = Schemas['ApproveVmRequestRequest']
 export type OrgDetail = Schemas['OrgDetailResponse']
+export type OrgStatus = Schemas['OrgStatus']
 export type UserSummary = Schemas['UserSummaryResponse']
 export type UserRole = Schemas['UserRole']
 export type UserStatus = Schemas['UserStatus']
@@ -1097,6 +1098,40 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
       params: { path: { userId } },
     })
     if (!data) throw toApiError(error, '사용자 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminOrgs(): Promise<OrgDetail[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/orgs')
+    if (!data) throw toApiError(error, '기관 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createOrg(body: {
+  name: string
+  slug: string
+  description: string | null
+}): Promise<OrgDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/orgs', { body })
+    if (!data) throw toApiError(error, '기관을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    return data
+  })
+}
+
+export function updateOrg(
+  orgId: number,
+  body: { name?: string; description?: string | null; status?: OrgStatus; hidden?: boolean },
+): Promise<OrgDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/orgs/{orgId}', {
+      params: { path: { orgId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '기관 정보를 수정하지 못했습니다.')
     return data
   })
 }
