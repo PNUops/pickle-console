@@ -733,7 +733,7 @@ export const adminHandlers: RequestHandler[] = [
     if (vm.deletion == null || vm.deletion.kind === 'FORCE' || vm.status === 'DELETED') {
       return invalidVmStateProblem(
         `/api/v1/admin/vms/${vm.id}/cancel-scheduled-delete`,
-        '취소할 수 있는 삭제가 없습니다. 유예 기간이 지났다면 이미 파기된 것입니다.',
+        '취소할 수 있는 삭제가 없습니다. 이미 파기가 시작되었거나 완료된 상태일 수 있습니다.',
       )
     }
     const kind = vm.deletion.kind
