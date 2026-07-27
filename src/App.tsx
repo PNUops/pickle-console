@@ -24,6 +24,7 @@ import { AdminTerminalSessionsPage } from './pages/AdminTerminalSessionsPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
+import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
@@ -142,6 +143,7 @@ function App() {
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
+        <Route path="vms/:vmId" element={<AdminVmDetailPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />

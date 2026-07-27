@@ -8,6 +8,7 @@ import {
   localDateStr,
   recordVmEvent,
   toVmSummary,
+  vmEventStore,
   vmStore,
 } from './vms'
 
@@ -673,6 +674,82 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   /* ─── VM 사용 기간 변경 — 만료 연장 ─── */
+
+  http.get('*/api/v1/admin/vms/:vmId', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    // 관리자 조회: 그룹 구성원이 아니므로 myGroupRole은 항상 null
+    return HttpResponse.json({ ...vm, myGroupRole: null, passwordRevealAllowed: false }, {
+      status: 200,
+    })
+  }),
+
+  http.get('*/api/v1/admin/vms/:vmId/events', ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '20')
+    const all = [...(vmEventStore[vm.id] ?? [])].sort((a, b) => b.id - a.id)
+    return HttpResponse.json(
+      {
+        content: all.slice(page * size, (page + 1) * size),
+        page,
+        size,
+        totalElements: all.length,
+        totalPages: Math.max(1, Math.ceil(all.length / size)),
+      },
+      { status: 200 },
+    )
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/start', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    if (vm.status !== 'STOPPED') {
+      return invalidVmStateProblem(
+        `/api/v1/admin/vms/${vm.id}/start`,
+        'STOPPED 상태의 VM만 시작할 수 있습니다.',
+      )
+    }
+    return HttpResponse.json(
+      { message: 'VM 시작 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
+      { status: 202 },
+    )
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/shutdown', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    if (vm.status !== 'RUNNING') {
+      return invalidVmStateProblem(
+        `/api/v1/admin/vms/${vm.id}/shutdown`,
+        'RUNNING 상태의 VM만 종료할 수 있습니다.',
+      )
+    }
+    return HttpResponse.json(
+      { message: 'VM 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
+      { status: 202 },
+    )
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/reboot', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    return HttpResponse.json(
+      { message: 'VM 재부팅 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
+      { status: 202 },
+    )
+  }),
+
+  http.post('*/api/v1/admin/vms/:vmId/force-stop', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    return HttpResponse.json(
+      { message: 'VM 강제 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
+      { status: 202 },
+    )
+  }),
 
   http.patch('*/api/v1/admin/vms/:vmId/gateway-block', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))

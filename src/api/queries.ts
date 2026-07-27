@@ -1090,6 +1090,69 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
   })
 }
 
+export function fetchAdminVm(vmId: number): Promise<VmDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vms/{vmId}', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminVmEvents(
+  vmId: number,
+  params: { page?: number; size?: number } = {},
+): Promise<VmEventPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vms/{vmId}/events', {
+      params: { path: { vmId }, query: params },
+    })
+    if (!data) throw toApiError(error, 'VM 이벤트를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function adminStartVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/start', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 시작 요청을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function adminShutdownVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/shutdown', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 종료 요청을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function adminRebootVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/reboot', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 재부팅 요청을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function adminForceStopVm(vmId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vms/{vmId}/force-stop', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 강제 종료 요청을 접수하지 못했습니다.')
+    return data
+  })
+}
+
 export function updateVmGatewayBlock(
   vmId: number,
   body: { blocked: boolean; reason?: string },
