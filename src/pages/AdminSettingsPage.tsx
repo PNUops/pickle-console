@@ -34,10 +34,18 @@ function SettingValue({ setting }: { setting: SettingView }) {
     )
   }
   if (setting.valueType === 'JSON') {
+    // 예약어 목록처럼 수백 항목짜리 배열이 셀을 무한정 늘리지 않도록 두 줄로
+    // 잘라 보여 준다 — 전체 값은 수정 모달에서 확인한다.
+    const itemCount = Array.isArray(setting.value) ? setting.value.length : null
     return (
-      <code className="font-mono text-xs text-neutral-700">
-        {JSON.stringify(setting.value)}
-      </code>
+      <div className="max-w-md">
+        {itemCount !== null && (
+          <span className="mb-0.5 block text-xs text-neutral-500">{itemCount}개 항목</span>
+        )}
+        <code className="line-clamp-2 block break-all font-mono text-xs text-neutral-700">
+          {JSON.stringify(setting.value)}
+        </code>
+      </div>
     )
   }
   return <span className="font-mono text-sm">{String(setting.value)}</span>

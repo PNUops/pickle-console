@@ -38,6 +38,8 @@ describe('플랫폼 설정', () => {
 
     const jsonRow = screen.getByText('vm_expiry_notice_days').closest('tr')!
     expect(within(jsonRow).getByText('[14,7,1]')).toBeInTheDocument()
+    // 배열 값은 항목 수를 함께 보여 준다(예약어 목록처럼 큰 배열 대비).
+    expect(within(jsonRow).getByText('3개 항목')).toBeInTheDocument()
 
     // 조회 전용(editable=false)
     const roRow = screen.getByText('deploy_profile').closest('tr')!
