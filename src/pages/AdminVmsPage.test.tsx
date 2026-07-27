@@ -7,6 +7,7 @@ import {
   problemResponse,
   refreshSuccessHandler,
   sysAdminUser,
+  sysManagerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -21,11 +22,11 @@ function renderAsSysAdmin() {
   renderApp('/admin/vms')
 }
 
-/** 목록에서 VM 행을 클릭해 관리 작업 패널을 연다. */
+/** 목록에서 VM 행을 클릭해 상세 드로어를 연다. */
 async function selectVm(user: ReturnType<typeof userEvent.setup>, name: string) {
   const row = (await screen.findByText(name)).closest('tr')!
   await user.click(row)
-  return screen.findByText(`관리 작업 — ${name}`)
+  return screen.findByRole('dialog', { name: 'VM 상세' })
 }
 
 describe('관리자 VM 목록', () => {
@@ -106,7 +107,7 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터와 강제 삭제가 노출되지 않는다', async () => {
+  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 비활성+사유로 보인다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
@@ -114,9 +115,27 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '강제 삭제' })).toBeDisabled()
+    expect(
+      screen.getByText('강제 삭제는 시스템 관리자만 수행할 수 있습니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('SYS_MANAGER에게도 드로어가 열리고 삭제 조작은 비활성+사유로 보인다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
+    renderApp('/admin/vms')
+
+    const drawer = await selectVm(user, 'algo-judge')
+    expect(within(drawer).getByText('호스트네임')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '강제 삭제' })).toBeDisabled()
+    expect(
+      screen.getByText('일반 삭제 접수·취소는 기관 관리자·시스템 관리자만 수행할 수 있습니다.'),
+    ).toBeInTheDocument()
   })
 })
 
@@ -173,9 +192,10 @@ describe('관리자 삭제 취소', () => {
         '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 시작은 사용자가 직접 수행합니다.',
       ),
     ).toBeInTheDocument()
-    // 목록 무효화로 상태 배지도 중지됨으로 갱신된다.
+    // 목록 무효화로 상태 배지도 중지됨으로 갱신된다. (드로어에도 이름이 있어
+    // 행은 목록의 이름 버튼 기준으로 찾는다.)
     await waitFor(() => {
-      const row = screen.getByText('retiring-vm').closest('tr')!
+      const row = screen.getByRole('button', { name: 'retiring-vm' }).closest('tr')!
       expect(within(row).getByText('중지됨')).toBeInTheDocument()
     })
   })
@@ -212,9 +232,10 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
         '강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.',
       ),
     ).toBeInTheDocument()
-    // 목록 무효화로 상태가 삭제됨으로 갱신된다.
+    // 목록 무효화로 상태가 삭제됨으로 갱신된다. (드로어에도 이름이 있어
+    // 행은 목록의 이름 버튼 기준으로 찾는다.)
     await waitFor(() => {
-      const row = screen.getByText('algo-judge').closest('tr')!
+      const row = screen.getByRole('button', { name: 'algo-judge' }).closest('tr')!
       expect(within(row).getByText('삭제됨')).toBeInTheDocument()
     })
   })
@@ -274,7 +295,7 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
     await user.click(within(dialog).getByRole('button', { name: '즉시 파기' }))
 
     await waitFor(() =>
-      expect(screen.queryByText('관리 작업 — algo-judge')).not.toBeInTheDocument(),
+      expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument(),
     )
     expect(
       screen.getByText('강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.'),

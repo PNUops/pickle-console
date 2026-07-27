@@ -18,13 +18,12 @@ import {
   Alert,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   ConfirmNameModal,
+  Drawer,
   FormField,
   Input,
   Pagination,
+  PermissionNotice,
   Select,
   SortableTH,
   Spinner,
@@ -306,51 +305,73 @@ export function AdminVmsPage() {
 
       {message && <Alert variant="success">{message}</Alert>}
 
-      {selected && canDelete && (
-        <VmActionPanel
-          key={selected.id}
-          vm={selected}
-          canForceDelete={canForceDelete}
-          onDone={setMessage}
-        />
-      )}
+      <Drawer open={selected !== null} onClose={() => setSelectedId(null)} title="VM 상세">
+        {selected && (
+          <VmDrawerContent
+            key={selected.id}
+            vm={selected}
+            canDelete={canDelete}
+            canForceDelete={canForceDelete}
+            onDone={setMessage}
+          />
+        )}
+      </Drawer>
     </div>
   )
 }
 
-/* ─── 관리 액션 패널 (행 선택 시) ─── */
+/* ─── 상세 드로어 본문 (행 선택 시) ─── */
 
-function VmActionPanel({
+function VmDrawerContent({
   vm,
+  canDelete,
   canForceDelete,
   onDone,
 }: {
   vm: VmSummary
+  canDelete: boolean
   canForceDelete: boolean
   onDone: (message: string) => void
 }) {
   return (
-    <Card>
-      <CardHeader className="flex items-center justify-between">
-        <CardTitle>
-          관리 작업 — {vm.name}
-        </CardTitle>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-neutral-900">{vm.displayName || vm.name}</h3>
         <VmStatusBadge status={vm.status} />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <ScheduleDeleteForm vm={vm} onDone={onDone} />
-        <CancelDeleteAction vm={vm} onDone={onDone} />
-        {canForceDelete && <ForceDeleteAction vm={vm} onDone={onDone} />}
-      </CardContent>
-    </Card>
+      </div>
+      <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+        <Field label="이름" value={vm.name} />
+        <Field label="호스트네임" value={vm.hostname} />
+        <Field label="그룹" value={vm.groupName} />
+        <Field label="기관" value={vm.orgName ?? '—'} />
+        <Field label="사양" value={formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)} />
+        <Field label="종료일" value={vm.endDate ?? '—'} />
+        <Field label="생성일" value={formatDateTime(vm.createdAt)} />
+        {vm.statusDetail && <Field label="상태 상세" value={vm.statusDetail} />}
+      </dl>
+      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={onDone} />
+      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={onDone} />
+      <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onDone} />
+    </div>
+  )
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-neutral-500">{label}</dt>
+      <dd className="font-medium text-neutral-900">{value}</dd>
+    </div>
   )
 }
 
 function ScheduleDeleteForm({
   vm,
+  canManage,
   onDone,
 }: {
   vm: VmSummary
+  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -400,6 +421,11 @@ function ScheduleDeleteForm({
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-semibold text-neutral-800">일반 삭제 접수</h3>
+      {!canManage && (
+        <PermissionNotice>
+          일반 삭제 접수·취소는 기관 관리자·시스템 관리자만 수행할 수 있습니다.
+        </PermissionNotice>
+      )}
       <p className="text-sm text-neutral-500">
         최소 통보 기간(기본 7일) 이후 시각으로만 접수할 수 있으며, 접수 즉시
         사용자에게 사유가 포함된 통보 메일이 발송됩니다.
@@ -413,6 +439,7 @@ function ScheduleDeleteForm({
             type="date"
             min={minScheduleDate()}
             value={date}
+            disabled={!canManage}
             onChange={(event) => setDate(event.target.value)}
             className="w-44"
           />
@@ -426,6 +453,7 @@ function ScheduleDeleteForm({
           <Textarea
             rows={2}
             value={reason}
+            disabled={!canManage}
             onChange={(event) => setReason(event.target.value)}
             placeholder="사용자 통보 메일에 그대로 포함됩니다."
           />
@@ -434,6 +462,7 @@ function ScheduleDeleteForm({
           type="submit"
           variant="danger"
           loading={schedule.isPending}
+          disabled={!canManage}
           className="mt-6"
         >
           일반 삭제 접수
@@ -445,9 +474,11 @@ function ScheduleDeleteForm({
 
 function CancelDeleteAction({
   vm,
+  canManage,
   onDone,
 }: {
   vm: VmSummary
+  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -473,7 +504,12 @@ function CancelDeleteAction({
         상태가 유지됩니다. 강제 삭제는 취소할 수 없습니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
-      <Button variant="secondary" loading={cancel.isPending} onClick={() => cancel.mutate()}>
+      <Button
+        variant="secondary"
+        loading={cancel.isPending}
+        disabled={!canManage}
+        onClick={() => cancel.mutate()}
+      >
         삭제 취소
       </Button>
     </section>
@@ -482,9 +518,11 @@ function CancelDeleteAction({
 
 function ForceDeleteAction({
   vm,
+  canManage,
   onDone,
 }: {
   vm: VmSummary
+  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -511,7 +549,10 @@ function ForceDeleteAction({
 
   return (
     <section className="space-y-3 rounded-lg border border-danger-200 p-4">
-      <h3 className="text-sm font-semibold text-danger-700">강제 삭제 (SYS_ADMIN)</h3>
+      <h3 className="text-sm font-semibold text-danger-700">강제 삭제</h3>
+      {!canManage && (
+        <PermissionNotice>강제 삭제는 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
+      )}
       <p className="text-sm text-neutral-500">
         보안 사고 등 비상 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
         없습니다.
@@ -519,6 +560,7 @@ function ForceDeleteAction({
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button
         variant="danger"
+        disabled={!canManage}
         onClick={() => {
           setError(null)
           setOpen(true)
