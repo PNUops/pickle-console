@@ -70,7 +70,7 @@ function initialTasks(): AdminTaskView[] {
       vmName: 'ai-train',
       hostname: 'ai-train',
       orgId: 2,
-      orgName: 'SW교육센터',
+      orgName: '테스트 기관',
       jobrunrJobId: '9999aaaa-8888-bbbb-7777-cccc6666dddd',
       kind: 'REINSTALL',
       status: 'DONE',

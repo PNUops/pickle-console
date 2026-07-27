@@ -14,7 +14,7 @@ function initialOrgs(): Schemas['OrgSummaryResponse'][] {
       description: '학부 수업·캡스톤용 서버 자원 제공',
       status: 'ACTIVE',
     },
-    { id: 2, name: 'SW교육센터', slug: 'sw-edu', description: null, status: 'ACTIVE' },
+    { id: 2, name: '테스트 기관', slug: 'test-org', description: null, status: 'ACTIVE' },
   ]
 }
 

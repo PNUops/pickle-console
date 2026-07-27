@@ -33,7 +33,7 @@ function initialSessions(): TerminalSessionView[] {
       vmId: 61,
       vmName: 'ai-train',
       orgId: 2,
-      orgName: 'SW교육센터',
+      orgName: '테스트 기관',
       groupName: '딥러닝 스터디',
       userId: 58,
       userEmail: 'younghee.park@pusan.ac.kr',

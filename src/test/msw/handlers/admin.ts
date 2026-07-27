@@ -125,7 +125,7 @@ function initialAdminRequests(): VmRequestDetail[] {
       groupId: 21,
       groupName: 'AI 동아리',
       orgId: 2,
-      orgName: 'SW교육센터',
+      orgName: '테스트 기관',
       templateId: 2,
       purpose: 'AI 동아리 모델 학습 서버',
       specReason: '데이터 전처리와 학습을 병행해 메모리가 더 필요합니다.',
