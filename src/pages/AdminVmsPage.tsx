@@ -333,7 +333,10 @@ export function AdminVmsPage() {
             vm={selected}
             canDelete={canDelete}
             canForceDelete={canForceDelete}
-            onDone={setMessage}
+            onForceDeleted={(text) => {
+              setMessage(text)
+              setSelectedId(null) // 파기된 VM의 드로어를 확정적으로 닫는다
+            }}
             onFilterGroup={(nextGroupId) => {
               setGroupId(nextGroupId)
               setPage(0)
@@ -352,16 +355,20 @@ function VmDrawerContent({
   vm,
   canDelete,
   canForceDelete,
-  onDone,
+  onForceDeleted,
   onFilterGroup,
 }: {
   vm: VmSummary
   canDelete: boolean
   canForceDelete: boolean
-  onDone: (message: string) => void
+  onForceDeleted: (message: string) => void
   onFilterGroup: (groupId: number) => void
 }) {
   const [extendOpen, setExtendOpen] = useState(false)
+  // 드로어를 열어 둔 채 끝나는 액션(연장·차단 토글·삭제 접수/취소)의 결과는
+  // 드로어 안에 표시한다 — 페이지 레벨 알림은 드로어 배경에 가려 보이지 않는다.
+  // 강제 삭제만 드로어를 닫고 페이지 알림을 쓴다.
+  const [notice, setNotice] = useState<string | null>(null)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -371,6 +378,7 @@ function VmDrawerContent({
           <VmStatusBadge status={vm.status} />
         </div>
       </div>
+      {notice && <Alert variant="success">{notice}</Alert>}
       <Link
         to={`/admin/vms/${vm.id}`}
         className="inline-block text-sm text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
@@ -413,15 +421,15 @@ function VmDrawerContent({
             onClose={() => setExtendOpen(false)}
             onDone={(text) => {
               setExtendOpen(false)
-              onDone(text)
+              setNotice(text)
             }}
           />
         )}
       </section>
-      <VmGatewayBlockSection vm={vm} canManage={canForceDelete} onDone={onDone} />
-      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={onDone} />
-      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={onDone} />
-      <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onDone} />
+      <VmGatewayBlockSection vm={vm} canManage={canForceDelete} onDone={setNotice} />
+      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={setNotice} />
+      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={setNotice} />
+      <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onForceDeleted} />
     </div>
   )
 }

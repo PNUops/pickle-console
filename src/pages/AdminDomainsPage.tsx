@@ -251,7 +251,14 @@ export function AdminDomainsPage() {
           title="도메인 상세"
         >
           {selected && (
-            <DomainDrawerContent key={selected.id} domain={selected} onDone={setMessage} />
+            <DomainDrawerContent
+              key={selected.id}
+              domain={selected}
+              onDone={(text) => {
+                setMessage(text)
+                setSelectedId(null) // 강제 해제된 도메인의 드로어를 확정적으로 닫는다
+              }}
+            />
           )}
         </Drawer>
       </TabPanel>
