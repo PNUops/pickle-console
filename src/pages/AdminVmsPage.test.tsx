@@ -278,6 +278,27 @@ describe('관리자 삭제 취소', () => {
     })
   })
 
+  test('필터 탭에서 취소로 VM이 목록을 떠나도 결과 안내가 남는다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    // 삭제 중 탭에서 취소하면 VM이 중지됨으로 바뀌어 필터된 목록을 떠나고
+    // 드로어가 닫힌다 — 결과 안내는 페이지 알림으로 남아야 한다.
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    await user.click(screen.getByRole('button', { name: '삭제 중' }))
+    await selectVm(user, 'retiring-vm')
+    await user.click(screen.getByRole('button', { name: '삭제 취소' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
+    })
+    expect(
+      screen.getByText(
+        '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 시작은 사용자가 직접 수행합니다.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   test('대기 중인 삭제가 없으면 409 안내를 보여준다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()

@@ -89,12 +89,13 @@ export function AdminVmsPage() {
   const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  // 작업 결과 메시지는 페이지 수준에서 관리한다 — 강제 삭제 등으로 VM이 필터된
-  // 목록에서 사라져 패널이 언마운트돼도 접수 확인이 함께 사라지지 않게.
-  const [message, setMessage] = useState<string | null>(null)
+  // 액션 결과는 (vmId, text)로 페이지가 소유한다: 그 VM의 드로어가 열려 있으면
+  // 드로어 안에, 액션의 결과로 VM이 필터된 목록을 떠나 드로어가 닫히면(취소로
+  // 상태 전환·강제 삭제 등) 페이지 알림으로 — 어느 경로에서도 유실되지 않는다.
+  const [feedback, setFeedback] = useState<{ vmId: number; text: string } | null>(null)
 
   const selectVm = (id: number) => {
-    if (id !== selectedId) setMessage(null) // 다른 VM의 결과가 남아 오독되지 않게
+    if (id !== selectedId) setFeedback(null) // 다른 VM의 결과가 남아 오독되지 않게
     setSelectedId(id)
   }
 
@@ -324,7 +325,9 @@ export function AdminVmsPage() {
         </>
       )}
 
-      {message && <Alert variant="success">{message}</Alert>}
+      {feedback && feedback.vmId !== selected?.id && (
+        <Alert variant="success">{feedback.text}</Alert>
+      )}
 
       <Drawer open={selected !== null} onClose={() => setSelectedId(null)} title="VM 상세">
         {selected && (
@@ -333,8 +336,10 @@ export function AdminVmsPage() {
             vm={selected}
             canDelete={canDelete}
             canForceDelete={canForceDelete}
+            notice={feedback?.vmId === selected.id ? feedback.text : null}
+            onDone={(text) => setFeedback({ vmId: selected.id, text })}
             onForceDeleted={(text) => {
-              setMessage(text)
+              setFeedback({ vmId: selected.id, text })
               setSelectedId(null) // 파기된 VM의 드로어를 확정적으로 닫는다
             }}
             onFilterGroup={(nextGroupId) => {
@@ -355,20 +360,21 @@ function VmDrawerContent({
   vm,
   canDelete,
   canForceDelete,
+  notice,
+  onDone,
   onForceDeleted,
   onFilterGroup,
 }: {
   vm: VmSummary
   canDelete: boolean
   canForceDelete: boolean
+  /** 이 VM의 액션 결과 — 페이지가 소유하고 드로어가 열려 있는 동안 여기 표시. */
+  notice: string | null
+  onDone: (message: string) => void
   onForceDeleted: (message: string) => void
   onFilterGroup: (groupId: number) => void
 }) {
   const [extendOpen, setExtendOpen] = useState(false)
-  // 드로어를 열어 둔 채 끝나는 액션(연장·차단 토글·삭제 접수/취소)의 결과는
-  // 드로어 안에 표시한다 — 페이지 레벨 알림은 드로어 배경에 가려 보이지 않는다.
-  // 강제 삭제만 드로어를 닫고 페이지 알림을 쓴다.
-  const [notice, setNotice] = useState<string | null>(null)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -421,14 +427,14 @@ function VmDrawerContent({
             onClose={() => setExtendOpen(false)}
             onDone={(text) => {
               setExtendOpen(false)
-              setNotice(text)
+              onDone(text)
             }}
           />
         )}
       </section>
-      <VmGatewayBlockSection vm={vm} canManage={canForceDelete} onDone={setNotice} />
-      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={setNotice} />
-      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={setNotice} />
+      <VmGatewayBlockSection vm={vm} canManage={canForceDelete} onDone={onDone} />
+      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={onDone} />
+      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={onDone} />
       <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onForceDeleted} />
     </div>
   )
@@ -507,7 +513,8 @@ function ScheduleDeleteForm({
       )}
       <p className="text-sm text-neutral-500">
         파기 예정일(미래 시각)을 지정해 접수하며, 접수 즉시 사용자에게 사유가 포함된
-        통보 메일이 발송됩니다. 예정 시각까지는 관리자가 취소할 수 있습니다.
+        통보 메일이 발송됩니다. 파기가 실제로 시작되기 전까지는 관리자가 취소할 수
+        있습니다.
       </p>
       {date && isShortNotice(date) && (
         <Alert variant="warning">
