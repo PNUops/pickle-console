@@ -410,7 +410,8 @@ function DecisionSection({
     <Card>
       <CardHeader className="flex items-center justify-between gap-4">
         <CardTitle>검토 결정</CardTitle>
-        <div role="tablist" aria-label="결정 종류" className="flex gap-1">
+        {/* 모드 전환 토글 버튼 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 */}
+        <div role="group" aria-label="결정 종류" className="flex gap-1">
           {(
             [
               { key: 'approve', label: '승인' },
@@ -420,8 +421,7 @@ function DecisionSection({
             <button
               key={tab.key}
               type="button"
-              role="tab"
-              aria-selected={mode === tab.key}
+              aria-pressed={mode === tab.key}
               onClick={() => switchMode(tab.key)}
               className={cn(
                 'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',

@@ -28,7 +28,7 @@ describe('만료 관리', () => {
     renderExpiry()
 
     await screen.findByRole('heading', { name: '만료 관리' })
-    await user.click(screen.getByRole('tab', { name: '30일 이내' }))
+    await user.click(screen.getByRole('button', { name: '30일 이내' }))
 
     await screen.findByText('semester-web')
     expect(screen.getByText('expiring-api')).toBeInTheDocument()
@@ -39,7 +39,7 @@ describe('만료 관리', () => {
     renderExpiry()
 
     await screen.findByRole('heading', { name: '만료 관리' })
-    await user.click(screen.getByRole('tab', { name: '만료됨' }))
+    await user.click(screen.getByRole('button', { name: '만료됨' }))
 
     const row = (await screen.findByText('expired-lab')).closest('tr')!
     expect(within(row).getByText('D+2')).toBeInTheDocument()
@@ -52,7 +52,7 @@ describe('만료 관리', () => {
     renderExpiry()
 
     await screen.findByRole('heading', { name: '만료 관리' })
-    await user.click(screen.getByRole('tab', { name: '만료됨' }))
+    await user.click(screen.getByRole('button', { name: '만료됨' }))
     const row = (await screen.findByText('expired-lab')).closest('tr')!
     await user.click(within(row).getByRole('button', { name: '기간 연장' }))
 

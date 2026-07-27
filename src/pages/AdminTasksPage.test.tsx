@@ -47,7 +47,7 @@ describe('작업 큐', () => {
 
     await screen.findByRole('heading', { name: '작업 큐' })
     await screen.findByText('stuck-vm')
-    await user.click(screen.getByRole('tab', { name: '실패' }))
+    await user.click(screen.getByRole('button', { name: '실패' }))
 
     await screen.findByText('broken-vm')
     await waitFor(() => expect(screen.queryByText('stuck-vm')).not.toBeInTheDocument())

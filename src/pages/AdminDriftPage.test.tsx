@@ -43,7 +43,7 @@ describe('드리프트', () => {
     )
 
     // 해결됨 탭: 수동 해결자는 이메일, 자동 해소는 라벨.
-    await user.click(screen.getByRole('tab', { name: '해결됨' }))
+    await user.click(screen.getByRole('button', { name: '해결됨' }))
     const manualRow = (await screen.findByText('vmid 100901 · pve1')).closest('tr')!
     expect(within(manualRow).getByText('sysadmin.lee@pusan.ac.kr')).toBeInTheDocument()
     const autoRow = screen.getByText('vmid 100900 · pve1').closest('tr')!
@@ -69,7 +69,7 @@ describe('IP 할당', () => {
 
     await screen.findByRole('heading', { name: '노드/IP' })
     await screen.findByText('172.29.0.10')
-    await user.click(screen.getByRole('tab', { name: '해제됨' }))
+    await user.click(screen.getByRole('button', { name: '해제됨' }))
 
     const row = (await screen.findByText('172.29.0.5')).closest('tr')!
     expect(within(row).getByText('해제됨')).toBeInTheDocument()

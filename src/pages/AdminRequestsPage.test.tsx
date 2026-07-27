@@ -43,8 +43,8 @@ describe('승인 대기 큐', () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findByRole('heading', { name: '승인 대기' })
-    expect(screen.getByRole('tab', { name: '승인 대기' })).toHaveAttribute(
-      'aria-selected',
+    expect(screen.getByRole('button', { name: '승인 대기' })).toHaveAttribute(
+      'aria-pressed',
       'true',
     )
     expect(await screen.findByRole('link', { name: '홍길동' })).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('승인 대기 큐', () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    await user.click(screen.getByRole('tab', { name: '승인됨' }))
+    await user.click(screen.getByRole('button', { name: '승인됨' }))
 
     expect(await screen.findByRole('link', { name: '김철수' })).toBeInTheDocument()
     await waitFor(() =>
@@ -73,7 +73,7 @@ describe('승인 대기 큐', () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    await user.click(screen.getByRole('tab', { name: '전체' }))
+    await user.click(screen.getByRole('button', { name: '전체' }))
 
     // 승인 대기(201·204) + 승인됨(202) + 반려됨(203)이 모두 나온다.
     expect(await screen.findByRole('link', { name: '김철수' })).toBeInTheDocument()

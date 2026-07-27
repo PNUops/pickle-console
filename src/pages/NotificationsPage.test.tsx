@@ -121,7 +121,7 @@ describe('알림함', () => {
     // 전체 탭에는 읽은 공지도 보인다.
     await screen.findByText('7월 정기 점검 안내')
 
-    await user.click(screen.getByRole('tab', { name: '안읽음' }))
+    await user.click(screen.getByRole('button', { name: '안읽음' }))
     await waitFor(() =>
       expect(screen.queryByText('7월 정기 점검 안내')).not.toBeInTheDocument(),
     )

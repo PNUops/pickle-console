@@ -187,7 +187,7 @@ describe('반려 폼', () => {
     renderDetail(201)
 
     await screen.findByRole('heading', { name: '신청 #201' })
-    await user.click(screen.getByRole('tab', { name: '반려' }))
+    await user.click(screen.getByRole('button', { name: '반려' }))
     await user.click(screen.getByRole('button', { name: '반려하기' }))
 
     expect(
@@ -202,7 +202,7 @@ describe('반려 폼', () => {
     renderDetail(201)
 
     await screen.findByRole('heading', { name: '신청 #201' })
-    await user.click(screen.getByRole('tab', { name: '반려' }))
+    await user.click(screen.getByRole('button', { name: '반려' }))
     await user.type(
       screen.getByLabelText('반려 사유'),
       '기관 여유 자원을 초과합니다. 2GiB로 재신청해 주세요.',

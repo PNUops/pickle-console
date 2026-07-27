@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { cn } from '../lib/cn'
+import { TabPanel, Tabs } from './ui'
 
 type OsTab = 'windows' | 'macos' | 'linux'
 
@@ -52,27 +53,10 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
 
   return (
     <div className={cn('space-y-4', className)}>
-      <div role="tablist" aria-label="운영체제" className="flex gap-1 border-b border-neutral-200">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              'cursor-pointer border-b-2 px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
-              tab === t.id
-                ? 'border-primary-600 text-primary-700'
-                : 'border-transparent text-neutral-500 hover:text-neutral-700',
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs aria-label="운영체제" tabs={TABS} value={tab} onChange={(id) => setTab(id as OsTab)} />
 
-      <div className="space-y-4">
+      {/* 안내 본문은 OS별로 갈라지는 단일 흐름 — 활성 탭이 곧 패널이다. */}
+      <TabPanel id={tab} active className="space-y-4">
         <Step title="1. 개인키 파일을 안전한 위치로 옮깁니다">
           {isWindows ? (
             <Code>{`move %USERPROFILE%\\Downloads\\${KEY_FILE} %USERPROFILE%\\.ssh\\`}</Code>
@@ -99,7 +83,7 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
             등록 후에는 <span className="font-mono">ssh {host}</span> 만으로 접속할 수 있습니다.
           </p>
         </Step>
-      </div>
+      </TabPanel>
     </div>
   )
 }

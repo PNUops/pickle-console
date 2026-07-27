@@ -30,7 +30,7 @@ describe('관리자 사용자 목록', () => {
     expect(screen.getByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
 
     // 상태 탭: 인증 대기 → PENDING만
-    await user.click(screen.getByRole('tab', { name: '인증 대기' }))
+    await user.click(screen.getByRole('button', { name: '인증 대기' }))
     expect(await screen.findByText('pending.choi@pusan.ac.kr')).toBeInTheDocument()
     expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument()
   })

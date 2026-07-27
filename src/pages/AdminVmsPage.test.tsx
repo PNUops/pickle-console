@@ -39,12 +39,12 @@ describe('관리자 VM 목록', () => {
     expect(within(row).getByText('캡스톤 3조')).toBeInTheDocument()
 
     // 상태 탭: 중지됨 → STOPPED VM만
-    await user.click(screen.getByRole('tab', { name: '중지됨' }))
+    await user.click(screen.getByRole('button', { name: '중지됨' }))
     expect(await screen.findByText('web-lab')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
 
     // 기관 필터 (SYS_ADMIN 전용): org 2 → ai-train만
-    await user.click(screen.getByRole('tab', { name: '전체' }))
+    await user.click(screen.getByRole('button', { name: '전체' }))
     await user.selectOptions(screen.getByLabelText('기관 필터'), '2')
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
@@ -365,7 +365,7 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
 
     // 실행 중 탭에서 강제 삭제 → DELETED가 되며 목록에서 빠져 패널이 사라진다.
     await screen.findByRole('heading', { name: 'VM 관리' })
-    await user.click(screen.getByRole('tab', { name: '실행 중' }))
+    await user.click(screen.getByRole('button', { name: '실행 중' }))
     await selectVm(user, 'algo-judge')
     await user.click(screen.getByRole('button', { name: '강제 삭제' }))
     const dialog = await screen.findByRole('dialog', { name: 'VM 강제 삭제' })

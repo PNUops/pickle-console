@@ -129,15 +129,15 @@ export function AdminUsersPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" aria-label="계정 상태 필터" className="flex flex-wrap gap-1">
+        {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
+        <div role="group" aria-label="계정 상태 필터" className="flex flex-wrap gap-1">
           {STATUS_TABS.map((tab) => {
             const isSelected = tab.status === status
             return (
               <button
                 key={tab.label}
                 type="button"
-                role="tab"
-                aria-selected={isSelected}
+                aria-pressed={isSelected}
                 onClick={() => {
                   setStatus(tab.status)
                   setPage(0)

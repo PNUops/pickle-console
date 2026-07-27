@@ -26,7 +26,7 @@ describe('내 신청 목록', () => {
     expect(within(table).getByText('반려됨')).toBeInTheDocument()
 
     // 반려됨 탭: 반려 건만 남는다.
-    await user.click(screen.getByRole('tab', { name: '반려됨' }))
+    await user.click(screen.getByRole('button', { name: '반려됨' }))
     expect(await screen.findByRole('link', { name: '개인 실험용 서버' })).toBeInTheDocument()
     await waitFor(() =>
       expect(
