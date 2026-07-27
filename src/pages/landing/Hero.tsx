@@ -62,10 +62,12 @@ export function Hero() {
             </Reveal>
             <Reveal delay={0.08}>
               <h1 className="mt-6 text-[2.6rem]/[1.12] font-extrabold tracking-tight text-white sm:text-6xl/[1.08] xl:text-[4.25rem]/[1.06]">
-                수업과 프로젝트를 위한 <br className="hidden sm:block" />
-                나만의 서버,{' '}
-                <span className="bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
-                  PNU Cloud, 피클
+                서비스가 시작되는 곳 <br className="hidden sm:block" />
+                <span className="whitespace-nowrap text-[0.9837em]">
+                  PNU Cloud,{' '}
+                  <span className="bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
+                    Pickle
+                  </span>
                 </span>
               </h1>
             </Reveal>

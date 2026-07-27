@@ -10,7 +10,7 @@ test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async 
 
   // 히어로 (랜딩 청크는 lazy — findBy로 로드를 기다린다)
   expect(
-    await screen.findByRole('heading', { name: /나만의 서버, PNU Cloud, 피클/ }),
+    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }),
   ).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /지금 시작하기/ })).toBeInTheDocument()
 
