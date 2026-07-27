@@ -14,6 +14,7 @@ import {
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { canManageVmDeletion, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import {
   Alert,
   Button,
@@ -333,6 +334,7 @@ function VmDrawerContent({
   canForceDelete: boolean
   onDone: (message: string) => void
 }) {
+  const [extendOpen, setExtendOpen] = useState(false)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -349,6 +351,25 @@ function VmDrawerContent({
         <Field label="생성일" value={formatDateTime(vm.createdAt)} />
         {vm.statusDetail && <Field label="상태 상세" value={vm.statusDetail} />}
       </dl>
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
+        <p className="text-sm text-neutral-500">
+          사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+        </p>
+        <Button variant="secondary" onClick={() => setExtendOpen(true)}>
+          기간 연장
+        </Button>
+        {extendOpen && (
+          <ExtendVmPeriodModal
+            vm={vm}
+            onClose={() => setExtendOpen(false)}
+            onDone={(text) => {
+              setExtendOpen(false)
+              onDone(text)
+            }}
+          />
+        )}
+      </section>
       <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={onDone} />
       <CancelDeleteAction vm={vm} canManage={canDelete} onDone={onDone} />
       <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onDone} />

@@ -179,6 +179,24 @@ describe('관리자 VM 일반 삭제 접수', () => {
   })
 })
 
+describe('VM 드로어 기간 연장', () => {
+  test('드로어에서 기간을 연장하면 확인 메시지가 남는다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await selectVm(user, 'algo-judge')
+    await user.click(screen.getByRole('button', { name: '기간 연장' }))
+    const dialog = await screen.findByRole('dialog', { name: '기간 연장 — algo-judge' })
+    fireEvent.change(within(dialog).getByLabelText(/새 종료일/), {
+      target: { value: '2099-01-01' },
+    })
+    await user.click(within(dialog).getByRole('button', { name: '연장' }))
+
+    expect(await screen.findByText(/연장되었습니다/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '기간 연장 — algo-judge' })).not.toBeInTheDocument()
+  })
+})
+
 describe('관리자 삭제 취소', () => {
   test('본인 삭제 유예 중 VM을 취소하면 중지됨으로 남는다는 안내를 보여준다', async () => {
     const user = userEvent.setup()
