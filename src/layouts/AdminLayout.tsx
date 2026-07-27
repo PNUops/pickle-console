@@ -16,6 +16,7 @@ export function AdminLayout() {
         { to: '/admin/vms', label: 'VM 관리' },
         { to: '/admin/terminal-sessions', label: '웹 터미널 세션' },
         { to: '/admin/users', label: '사용자 관리' },
+        { to: '/admin/groups', label: '그룹 관리' },
         { to: '/admin/expiry', label: '만료 관리' },
       ],
     },

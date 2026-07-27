@@ -148,6 +148,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/groups/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminGroup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/ip-allocations": {
         parameters: {
             query?: never;
@@ -1714,9 +1730,37 @@ export interface components {
             vmId: number;
             vmName: string;
         };
-        AdminGroupOptionResponse: {
+        AdminGroupDetailResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            description?: string | null;
             /** Format: int64 */
             id: number;
+            kind: components["schemas"]["GroupKind"];
+            /** Format: int64 */
+            memberCount: number;
+            members: components["schemas"]["AdminGroupMemberResponse"][];
+            name: string;
+            slug: string;
+            /** Format: int64 */
+            vmCount: number;
+        };
+        AdminGroupMemberResponse: {
+            email: string;
+            groupRole: components["schemas"]["GroupMemberRole"];
+            /** Format: date-time */
+            joinedAt: string;
+            name: string;
+            /** Format: int64 */
+            userId: number;
+            userStatus: components["schemas"]["UserStatus"];
+        };
+        AdminGroupOptionResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["GroupKind"];
             /** Format: int64 */
             memberCount: number;
             name: string;
@@ -3421,6 +3465,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminGroupOptionResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminGroupDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

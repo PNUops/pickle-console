@@ -12,10 +12,33 @@ type AdminGroupOption = Schemas['AdminGroupOptionResponse']
 /** 그룹 선택지 — 기관별. SYS_ADMIN은 전체, ORG_ADMIN은 자기 기관 그룹만. */
 const groupOptionsByOrg: Record<number, AdminGroupOption[]> = {
   1: [
-    { id: 12, name: '캡스톤 3조', slug: 'capstone-team3', memberCount: 4 },
-    { id: 15, name: '알고리즘 스터디', slug: 'algo-study', memberCount: 6 },
+    {
+      id: 12,
+      name: '캡스톤 3조',
+      slug: 'capstone-team3',
+      memberCount: 4,
+      kind: 'TEAM',
+      createdAt: '2026-06-01T10:00:00+09:00',
+    },
+    {
+      id: 15,
+      name: '알고리즘 스터디',
+      slug: 'algo-study',
+      memberCount: 6,
+      kind: 'TEAM',
+      createdAt: '2026-06-10T10:00:00+09:00',
+    },
   ],
-  2: [{ id: 21, name: 'AI 동아리', slug: 'ai-club', memberCount: 5 }],
+  2: [
+    {
+      id: 21,
+      name: 'AI 동아리',
+      slug: 'ai-club',
+      memberCount: 5,
+      kind: 'PROJECT',
+      createdAt: '2026-06-15T10:00:00+09:00',
+    },
+  ],
 }
 
 interface StoredAnnouncement extends AnnouncementView {
@@ -65,7 +88,53 @@ function toView({ senderOrgId: _senderOrgId, ...view }: StoredAnnouncement): Ann
   return view
 }
 
+/** 그룹 상세 픽스처 (계약 v0.19.0 — 구성원은 계정 상태 무관 전원). */
+const groupDetails: Record<number, Schemas['AdminGroupDetailResponse']> = {
+  12: {
+    id: 12,
+    kind: 'TEAM',
+    name: '캡스톤 3조',
+    slug: 'capstone-team3',
+    description: '캡스톤 디자인 3조',
+    createdAt: '2026-06-01T10:00:00+09:00',
+    memberCount: 4,
+    vmCount: 2,
+    members: [
+      {
+        userId: 42,
+        name: '홍길동',
+        email: 'example@pusan.ac.kr',
+        groupRole: 'OWNER',
+        userStatus: 'ACTIVE',
+        joinedAt: '2026-06-01T10:00:00+09:00',
+      },
+      {
+        userId: 77,
+        name: '박탈퇴',
+        email: 'left.park@pusan.ac.kr',
+        groupRole: 'MEMBER',
+        userStatus: 'WITHDRAWN',
+        joinedAt: '2026-06-02T10:00:00+09:00',
+      },
+    ],
+  },
+}
+
 export const announcementHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/groups/:groupId', ({ params }) => {
+    const detail = groupDetails[Number(params.groupId)]
+    if (!detail) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '해당 그룹이 존재하지 않습니다.',
+        code: 'RESOURCE_NOT_FOUND',
+      })
+    }
+    return HttpResponse.json(detail, { status: 200 })
+  }),
+
   http.get('*/api/v1/admin/groups', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)

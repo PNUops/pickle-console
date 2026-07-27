@@ -115,6 +115,7 @@ export type AdminNotificationView = Schemas['AdminNotificationResponse']
 export type AdminNotificationPage = Schemas['PageResponseAdminNotificationResponse']
 export type NotificationDeliveryStatus = Schemas['NotificationStatus']
 export type AdminGroupOption = Schemas['AdminGroupOptionResponse']
+export type AdminGroupDetail = Schemas['AdminGroupDetailResponse']
 export type AnnouncementScope = Schemas['AnnouncementScope']
 export type AnnouncementCreateRequest = Schemas['AnnouncementCreateRequest']
 export type AnnouncementView = Schemas['AnnouncementView']
@@ -786,6 +787,16 @@ export function fetchAdminGroups(params: { orgId?: number } = {}): Promise<Admin
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/groups', { params: { query: params } })
     if (!data) throw toApiError(error, '그룹 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminGroup(groupId: number): Promise<AdminGroupDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/groups/{groupId}', {
+      params: { path: { groupId } },
+    })
+    if (!data) throw toApiError(error, '그룹 정보를 불러오지 못했습니다.')
     return data
   })
 }
