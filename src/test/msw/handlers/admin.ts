@@ -479,6 +479,7 @@ export const adminHandlers: RequestHandler[] = [
       slug: body.slug,
       description: body.description ?? null,
       status: 'ACTIVE',
+      hidden: false,
       createdAt: '2026-07-08T17:30:00+09:00',
     }
     orgs.push({
@@ -487,6 +488,7 @@ export const adminHandlers: RequestHandler[] = [
       slug: created.slug,
       description: created.description,
       status: created.status,
+      hidden: created.hidden,
     })
     return HttpResponse.json(created, { status: 201 })
   }),
@@ -503,6 +505,7 @@ export const adminHandlers: RequestHandler[] = [
       slug: found.slug,
       description: found.description ?? null,
       status: 'ACTIVE',
+      hidden: found.hidden,
       createdAt: '2026-01-05T09:00:00+09:00',
     }
     return HttpResponse.json(detail, { status: 200 })

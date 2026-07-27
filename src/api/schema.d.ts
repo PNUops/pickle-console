@@ -2112,6 +2112,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             description?: string | null;
+            hidden: boolean;
             /** Format: int64 */
             id: number;
             name: string;
@@ -2131,6 +2132,7 @@ export interface components {
         OrgStatus: "ACTIVE" | "DISABLED";
         OrgSummaryResponse: {
             description?: string | null;
+            hidden: boolean;
             /** Format: int64 */
             id: number;
             name: string;
@@ -2589,6 +2591,7 @@ export interface components {
         };
         UpdateOrgRequest: {
             description?: string | null;
+            hidden?: boolean;
             name?: string;
             status?: components["schemas"]["OrgStatus"];
         };

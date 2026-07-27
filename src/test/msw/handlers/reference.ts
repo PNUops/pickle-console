@@ -13,8 +13,10 @@ function initialOrgs(): Schemas['OrgSummaryResponse'][] {
       slug: 'cse-lab',
       description: '학부 수업·캡스톤용 서버 자원 제공',
       status: 'ACTIVE',
+      hidden: false,
     },
-    { id: 2, name: '테스트 기관', slug: 'test-org', description: null, status: 'ACTIVE' },
+    // the seed org is hidden in real data; msw serves it regardless of role
+    { id: 2, name: '테스트 기관', slug: 'test-org', description: null, status: 'ACTIVE', hidden: true },
   ]
 }
 
