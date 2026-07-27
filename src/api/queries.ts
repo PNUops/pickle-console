@@ -1090,6 +1090,36 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
   })
 }
 
+export function forceReleaseDomain(domainId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/domains/{domainId}/force-release', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인을 강제 해제하지 못했습니다.')
+    return data
+  })
+}
+
+export function verifyAdminDomain(domainId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/domains/{domainId}/verify', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '재검증을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function applyAdminRoute(routeId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/routes/{routeId}/apply', {
+      params: { path: { routeId } },
+    })
+    if (!data) throw toApiError(error, '라우트 재적용을 접수하지 못했습니다.')
+    return data
+  })
+}
+
 export function fetchAdminVm(vmId: number): Promise<VmDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vms/{vmId}', {

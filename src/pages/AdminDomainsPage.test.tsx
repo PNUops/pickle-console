@@ -22,6 +22,38 @@ describe('관리자 도메인', () => {
     expect(within(verifying).getByText('적용 대기')).toBeInTheDocument()
   })
 
+  test('강제 해제는 fqdn 확인 모달을 거쳐 목록에서 제거한다', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+
+    await screen.findByRole('heading', { name: '도메인' })
+    const row = (await screen.findByText('demo.example.com')).closest('tr')!
+    await user.click(within(row).getByRole('button', { name: '강제 해제' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '도메인 강제 해제' })
+    const confirm = within(dialog).getByRole('button', { name: '강제 해제' })
+    expect(confirm).toBeDisabled()
+    await user.type(within(dialog).getByRole('textbox'), 'demo.example.com')
+    await user.click(confirm)
+
+    expect(await screen.findByText(/강제 해제했습니다/)).toBeInTheDocument()
+    expect(screen.queryByText('demo.example.com')).not.toBeInTheDocument()
+  })
+
+  test('커스텀 도메인 행에서 재검증을 접수할 수 있다', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+
+    await screen.findByRole('heading', { name: '도메인' })
+    const custom = (await screen.findByText('demo.example.com')).closest('tr')!
+    await user.click(within(custom).getByRole('button', { name: '재검증' }))
+    expect(await screen.findByText(/재검증을 접수했습니다/)).toBeInTheDocument()
+
+    // 플랫폼 서브도메인 행에는 재검증 버튼이 없다
+    const platform = (await screen.findByText('ai-team.pickle.pnuops.com')).closest('tr')!
+    expect(within(platform).queryByRole('button', { name: '재검증' })).not.toBeInTheDocument()
+  })
+
   test('종류 필터로 커스텀 도메인만 볼 수 있다', async () => {
     const user = userEvent.setup()
     renderDomains()

@@ -1,17 +1,23 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchAdminDomains,
   fetchOrgs,
+  forceReleaseDomain,
+  verifyAdminDomain,
+  type AdminDomainView,
   type DomainKind,
   type DomainStatus,
 } from '../api/queries'
+import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
 import {
   Alert,
+  Button,
   Card,
   CertificateStatusBadge,
+  ConfirmNameModal,
   DomainKindBadge,
   DomainStatusBadge,
   Pagination,
@@ -48,6 +54,9 @@ export function AdminDomainsPage() {
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
+
+  const [message, setMessage] = useState<string | null>(null)
+  const [releaseTarget, setReleaseTarget] = useState<AdminDomainView | null>(null)
 
   const domains = useQuery({
     queryKey: [
@@ -106,6 +115,8 @@ export function AdminDomainsPage() {
         </label>
       </FilterBar>
 
+      {message && <Alert variant="info">{message}</Alert>}
+
       {domains.isPending && (
         <div className="flex justify-center py-12">
           <Spinner label="도메인 목록 불러오는 중" />
@@ -130,6 +141,9 @@ export function AdminDomainsPage() {
                   <TH>라우트</TH>
                   <TH>인증서</TH>
                   <TH>검증일</TH>
+                  <TH>
+                    <span className="sr-only">작업</span>
+                  </TH>
                 </TR>
               </THead>
               <TBody>
@@ -166,6 +180,19 @@ export function AdminDomainsPage() {
                     <TD className="whitespace-nowrap text-xs text-neutral-500">
                       {domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
                     </TD>
+                    <TD className="whitespace-nowrap text-right">
+                      {domain.kind === 'CUSTOM' && (
+                        <ReverifyButton domain={domain} onDone={setMessage} />
+                      )}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="ml-2"
+                        onClick={() => setReleaseTarget(domain)}
+                      >
+                        강제 해제
+                      </Button>
+                    </TD>
                   </TR>
                 ))}
               </TBody>
@@ -178,6 +205,90 @@ export function AdminDomainsPage() {
           />
         </>
       )}
+
+      {releaseTarget && (
+        <ForceReleaseModal
+          domain={releaseTarget}
+          onClose={() => setReleaseTarget(null)}
+          onDone={(text) => {
+            setReleaseTarget(null)
+            setMessage(text)
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+/* ─── 사후 개입 (관리자 4역할 — 기관 계층은 자기 기관 한정, 서버 강제) ─── */
+
+function ReverifyButton({
+  domain,
+  onDone,
+}: {
+  domain: AdminDomainView
+  onDone: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const reverify = useMutation({
+    mutationFn: () => verifyAdminDomain(domain.id),
+    onSuccess: async (data) => {
+      onDone(data.message)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+    },
+    onError: (err) => onDone(toApiError(err, '재검증을 접수하지 못했습니다.').message),
+  })
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      loading={reverify.isPending}
+      onClick={() => reverify.mutate()}
+    >
+      재검증
+    </Button>
+  )
+}
+
+function ForceReleaseModal({
+  domain,
+  onClose,
+  onDone,
+}: {
+  domain: AdminDomainView
+  onClose: () => void
+  onDone: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+  const release = useMutation({
+    mutationFn: () => forceReleaseDomain(domain.id),
+    onSuccess: async (data) => {
+      setError(null)
+      onDone(data.message)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
+    },
+    onError: (err) => setError(toApiError(err, '도메인을 강제 해제하지 못했습니다.').message),
+  })
+
+  return (
+    <ConfirmNameModal
+      open
+      onClose={onClose}
+      title="도메인 강제 해제"
+      expectedName={domain.fqdn}
+      confirmLabel="강제 해제"
+      loading={release.isPending}
+      // 서버에 이름을 보내는 이중 확인은 아니지만, 대상 도메인을 정확히
+      // 지목했음을 클라이언트에서 한 번 더 확인한다 (되돌릴 수 없는 작업).
+      onConfirm={() => release.mutate()}
+    >
+      <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
+        라우트가 즉시 제거되고 도메인은 소멸하며 커스텀 인증서는 폐기됩니다. 다시
+        공개하려면 사용자가 새로 접수해야 합니다. 감사 기록이 남습니다.
+      </Alert>
+      {error && <Alert variant="danger">{error}</Alert>}
+    </ConfirmNameModal>
   )
 }

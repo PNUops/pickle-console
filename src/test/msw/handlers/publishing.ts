@@ -232,6 +232,7 @@ function toAdminRoute(vm: VmDetail): Schemas['AdminRouteView'] {
   const route = pub.route!
   return {
     id: pub.domain.id,
+    domainId: pub.domain.id,
     fqdn: pub.fqdn,
     domainKind: pub.domain.kind,
     vmId: vm.id,
@@ -576,6 +577,58 @@ export const publishingHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/routes/resync', () =>
     HttpResponse.json(
       { message: '라우트 전체 재동기화를 접수했습니다. 잠시 후 적용 상태가 갱신됩니다.' },
+      { status: 202 },
+    ),
+  ),
+
+  /* ─── 관리자 사후 개입 (계약 v0.18.0) ─── */
+  http.post('*/api/v1/admin/domains/:domainId/force-release', ({ params }) => {
+    const vm = publishedVms().find((v) => v.publication!.domain.id === Number(params.domainId))
+    if (!vm) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '해당 도메인이 존재하지 않습니다.',
+        code: 'RESOURCE_NOT_FOUND',
+      })
+    }
+    vm.publication = null
+    return HttpResponse.json(
+      { message: '도메인을 강제 해제했습니다. 라우트 제거가 곧 적용됩니다.' },
+      { status: 200 },
+    )
+  }),
+
+  http.post('*/api/v1/admin/domains/:domainId/verify', ({ params }) => {
+    const vm = publishedVms().find((v) => v.publication!.domain.id === Number(params.domainId))
+    if (!vm) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '해당 도메인이 존재하지 않습니다.',
+        code: 'RESOURCE_NOT_FOUND',
+      })
+    }
+    if (vm.publication!.domain.kind !== 'CUSTOM') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '검증할 수 없는 도메인입니다',
+        status: 409,
+        detail: '플랫폼 서브도메인은 소유권 검증이 필요하지 않습니다.',
+        code: 'DOMAIN_NOT_CUSTOM',
+      })
+    }
+    return HttpResponse.json(
+      { message: '소유권 재검증을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
+      { status: 202 },
+    )
+  }),
+
+  http.post('*/api/v1/admin/routes/:routeId/apply', () =>
+    HttpResponse.json(
+      { message: '라우트 재적용을 접수했습니다. 잠시 후 적용 상태가 갱신됩니다.' },
       { status: 202 },
     ),
   ),

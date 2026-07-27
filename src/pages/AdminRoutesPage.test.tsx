@@ -42,4 +42,14 @@ describe('관리자 라우팅', () => {
     await screen.findByRole('heading', { name: '도메인 라우팅' })
     expect(screen.queryByRole('button', { name: /전체 재동기화/ })).not.toBeInTheDocument()
   })
+
+  test('행 단위 재적용을 접수할 수 있다 (기관 관리자 포함)', async () => {
+    const user = userEvent.setup()
+    renderRoutes('access-org-admin', orgAdminUser)
+
+    await screen.findByRole('heading', { name: '도메인 라우팅' })
+    const failed = (await screen.findByText('shop.example.com')).closest('tr')!
+    await user.click(within(failed).getByRole('button', { name: '재적용' }))
+    expect(await screen.findByText(/라우트 재적용을 접수했습니다/)).toBeInTheDocument()
+  })
 })

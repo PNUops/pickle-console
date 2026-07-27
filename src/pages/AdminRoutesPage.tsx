@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  applyAdminRoute,
   fetchAdminRoutes,
   fetchOrgs,
   resyncRoutes,
@@ -44,6 +45,8 @@ export function AdminRoutesPage() {
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
 
+  const [message, setMessage] = useState<string | null>(null)
+
   const routes = useQuery({
     queryKey: ['admin', 'routes', { status: status ?? null, orgId: orgId ?? null, page }],
     queryFn: () => fetchAdminRoutes({ status, orgId, page, size: PAGE_SIZE }),
@@ -80,6 +83,8 @@ export function AdminRoutesPage() {
         orgs={orgs.data ?? []}
       />
 
+      {message && <Alert variant="info">{message}</Alert>}
+
       {routes.isPending && (
         <div className="flex justify-center py-12">
           <Spinner label="라우트 목록 불러오는 중" />
@@ -103,6 +108,9 @@ export function AdminRoutesPage() {
                   <TH>포트</TH>
                   <TH>상태</TH>
                   <TH>동기화</TH>
+                  <TH>
+                    <span className="sr-only">작업</span>
+                  </TH>
                 </TR>
               </THead>
               <TBody>
@@ -136,6 +144,9 @@ export function AdminRoutesPage() {
                         <span className="block">{formatDateTime(route.appliedAt)}</span>
                       )}
                     </TD>
+                    <TD className="text-right">
+                      <ApplyRouteButton routeId={route.id} onDone={setMessage} />
+                    </TD>
                   </TR>
                 ))}
               </TBody>
@@ -149,6 +160,30 @@ export function AdminRoutesPage() {
         </>
       )}
     </div>
+  )
+}
+
+/** 개별 라우트 재적용 — 관리자 4역할 (기관 계층은 자기 기관 라우트, 서버 강제). */
+function ApplyRouteButton({
+  routeId,
+  onDone,
+}: {
+  routeId: number
+  onDone: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const apply = useMutation({
+    mutationFn: () => applyAdminRoute(routeId),
+    onSuccess: async (data) => {
+      onDone(data.message)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
+    },
+    onError: (err) => onDone(toApiError(err, '라우트 재적용을 접수하지 못했습니다.').message),
+  })
+  return (
+    <Button variant="secondary" size="sm" loading={apply.isPending} onClick={() => apply.mutate()}>
+      재적용
+    </Button>
   )
 }
 
