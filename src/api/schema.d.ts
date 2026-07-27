@@ -580,6 +580,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/vms/{vmId}/gateway-block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateVmGatewayBlock"];
+        trace?: never;
+    };
     "/admin/vms/{vmId}/period": {
         parameters: {
             query?: never;
@@ -2736,6 +2752,7 @@ export interface components {
             publication?: components["schemas"]["PublicationView"] | null;
             /** Format: int64 */
             requestId: number;
+            sshGatewayBlocked: boolean;
             sshHost: string;
             sshUsername: string;
             /** Format: date */
@@ -2760,7 +2777,13 @@ export interface components {
             type: components["schemas"]["VmEventType"];
         };
         /** @enum {string} */
-        VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE";
+        VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE" | "GATEWAY_BLOCK" | "GATEWAY_UNBLOCK";
+        VmGatewayBlockUpdateRequest: {
+            /** @description true = SSH 게이트웨이·웹 터미널 차단, false = 차단 해제 */
+            blocked: boolean;
+            /** @description 차단·해제 사유 (VM 이벤트·감사 기록에 포함, 선택) */
+            reason?: string | null;
+        };
         VmPasswordResponse: {
             password: string;
             sshHost: string;
@@ -2891,6 +2914,7 @@ export interface components {
             orgName?: string | null;
             /** Format: int64 */
             requestId: number;
+            sshGatewayBlocked: boolean;
             status: components["schemas"]["VmStatus"];
             statusDetail?: string | null;
             /** Format: int32 */
@@ -4168,6 +4192,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateVmGatewayBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VmGatewayBlockUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

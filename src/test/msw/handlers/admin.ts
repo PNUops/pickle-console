@@ -674,6 +674,14 @@ export const adminHandlers: RequestHandler[] = [
 
   /* ─── VM 사용 기간 변경 — 만료 연장 ─── */
 
+  http.patch('*/api/v1/admin/vms/:vmId/gateway-block', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFound()
+    const body = (await request.json()) as Schemas['VmGatewayBlockUpdateRequest']
+    vm.sshGatewayBlocked = body.blocked
+    return HttpResponse.json(vm, { status: 200 })
+  }),
+
   http.patch('*/api/v1/admin/vms/:vmId/period', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFound()

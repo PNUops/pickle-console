@@ -39,6 +39,8 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   UNPUBLISH: 'HTTP 공개 해제',
   PERIOD_UPDATE: '사용 기간 변경',
   EXPIRE_STOP: '만료 자동 종료',
+  GATEWAY_BLOCK: 'SSH·터미널 차단',
+  GATEWAY_UNBLOCK: 'SSH·터미널 차단 해제',
 }
 
 /* ─── HTTP 공개·도메인·인증서 ─── */

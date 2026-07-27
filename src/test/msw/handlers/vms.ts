@@ -37,6 +37,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-07-15',
       endDate: '2026-12-20',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: true,
       publication: null,
@@ -76,6 +77,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-06-20',
       endDate: '2026-12-20',
+      sshGatewayBlocked: false,
       passwordAvailable: true,
       httpPublishGranted: true,
       publication: null,
@@ -106,6 +108,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-06-20',
       endDate: '2026-12-20',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -135,6 +138,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: null,
       endDate: null,
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -173,6 +177,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: null,
       endDate: null,
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -202,6 +207,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-05-01',
       endDate: '2026-07-01',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -240,6 +246,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-31',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
@@ -296,6 +303,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-07-10',
       endDate: '2026-12-20',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
@@ -362,6 +370,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-20',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
@@ -433,6 +442,7 @@ function initialVms(): VmDetail[] {
       passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-31',
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: true,
       publication: {
@@ -505,6 +515,7 @@ function initialVms(): VmDetail[] {
       startDate: localDateStr(-90),
       endDate: localDateStr(3),
       expiryStoppedAt: null,
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -536,6 +547,7 @@ function initialVms(): VmDetail[] {
       startDate: localDateStr(-120),
       endDate: localDateStr(-2),
       expiryStoppedAt: new Date().toISOString(),
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -567,6 +579,7 @@ function initialVms(): VmDetail[] {
       startDate: localDateStr(-60),
       endDate: localDateStr(20),
       expiryStoppedAt: null,
+      sshGatewayBlocked: false,
       passwordAvailable: false,
       httpPublishGranted: false,
       publication: null,
@@ -709,11 +722,11 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
 export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   const {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
-    requestId, statusDetail, endDate, expiryStoppedAt, createdAt,
+    requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
   } = vm
   return {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
-    requestId, statusDetail, endDate, expiryStoppedAt, createdAt,
+    requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
   }
 }
 

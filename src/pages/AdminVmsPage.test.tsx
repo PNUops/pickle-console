@@ -204,6 +204,34 @@ describe('교차 링크·URL 필터', () => {
   })
 })
 
+describe('SSH·웹 터미널 차단 토글', () => {
+  test('SYS_ADMIN이 드로어에서 차단하면 차단 배지와 해제 버튼으로 바뀐다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await selectVm(user, 'algo-judge')
+    await user.click(screen.getByRole('button', { name: '접속 차단' }))
+    const dialog = await screen.findByRole('dialog', { name: 'SSH·웹 터미널 차단' })
+    await user.type(within(dialog).getByPlaceholderText(/감사 기록/), '남용 신고 확인')
+    await user.click(within(dialog).getByRole('button', { name: '차단' }))
+
+    expect(await screen.findByText('SSH·웹 터미널 접속을 차단했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('SSH·터미널 차단됨')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '차단 해제' })).toBeEnabled()
+  })
+
+  test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보인다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await selectVm(user, 'algo-judge')
+    expect(screen.getByRole('button', { name: '접속 차단' })).toBeDisabled()
+    expect(
+      screen.getByText('차단 토글은 시스템 관리자만 수행할 수 있습니다.'),
+    ).toBeInTheDocument()
+  })
+})
+
 describe('VM 드로어 기간 연장', () => {
   test('드로어에서 기간을 연장하면 확인 메시지가 남는다', async () => {
     const user = userEvent.setup()

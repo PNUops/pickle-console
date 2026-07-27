@@ -1090,6 +1090,20 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
   })
 }
 
+export function updateVmGatewayBlock(
+  vmId: number,
+  body: { blocked: boolean; reason?: string },
+): Promise<VmDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/vms/{vmId}/gateway-block', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '차단 상태를 변경하지 못했습니다.')
+    return data
+  })
+}
+
 export function updateUserRole(
   userId: number,
   body: { role: UserRole; orgId: number | null },
