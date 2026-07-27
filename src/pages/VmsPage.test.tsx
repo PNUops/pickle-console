@@ -47,7 +47,7 @@ describe('VM 상세', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('실행 중')).toBeInTheDocument()
-    expect(screen.getByText('student')).toBeInTheDocument()
+    expect(screen.getByText('ubuntu')).toBeInTheDocument()
     expect(screen.getByText('10.10.0.56')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '신청 #90' })).toBeInTheDocument()
   })

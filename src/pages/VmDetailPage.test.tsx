@@ -203,7 +203,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
     expect(
       await within(dialog).findByText('x7GmQ4vRk2LpWn9sCtYb8Zed'),
     ).toBeInTheDocument()
-    expect(within(dialog).getByText('student')).toBeInTheDocument()
+    expect(within(dialog).getByText('ubuntu')).toBeInTheDocument()
 
     // 복사 버튼은 클립보드로만 복사한다.
     await user.click(within(dialog).getByRole('button', { name: '비밀번호 복사' }))

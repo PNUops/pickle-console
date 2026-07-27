@@ -60,7 +60,7 @@ export function TerminalMock() {
         <div className={cn('transition-opacity duration-500', done ? 'opacity-100' : 'opacity-0')}>
           <p className="text-neutral-400">Welcome to Ubuntu 24.04 LTS (GNU/Linux x86_64)</p>
           <p>
-            <span className="text-success-400">student@my-vm</span>
+            <span className="text-success-400">ubuntu@my-vm</span>
             <span className="text-neutral-400">:~$</span>
             {done && (
               <span
