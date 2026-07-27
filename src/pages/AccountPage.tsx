@@ -14,6 +14,7 @@ import {
 import { toApiError } from '../api/problem'
 import { setAccessToken } from '../api/token'
 import { useAuth } from '../auth/auth-context'
+import { PasswordGuidance } from '../components/PasswordGuidance'
 import {
   Alert,
   Button,
@@ -37,14 +38,14 @@ export function AccountPage() {
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
         <p className="mt-1 text-sm text-neutral-500">비밀번호 변경과 회원 탈퇴를 관리합니다.</p>
       </div>
-      <PasswordChangeSection />
+      <PasswordChangeSection email={user.email} />
       <TwoFactorSection enabled={user.mfaEnabled} />
       <WithdrawSection email={user.email} mfaEnabled={user.mfaEnabled} />
     </div>
   )
 }
 
-function PasswordChangeSection() {
+function PasswordChangeSection({ email }: { email: string }) {
   const toast = useToast()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -104,7 +105,6 @@ function PasswordChangeSection() {
             label="새 비밀번호"
             required
             error={fieldErrors.newPassword ?? fieldErrors.password}
-            description="최소 10자, 두 종류 이상의 문자를 섞어 주세요."
           >
             <Input
               type="password"
@@ -112,6 +112,7 @@ function PasswordChangeSection() {
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
             />
+            <PasswordGuidance password={newPassword} email={email} className="mt-1" />
           </FormField>
           <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
             <Input

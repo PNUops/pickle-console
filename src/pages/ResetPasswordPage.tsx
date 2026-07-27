@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import {useNavigate, useSearchParams} from 'react-router'
 import { confirmPasswordReset } from '../api/queries'
 import { ApiError, toApiError } from '../api/problem'
+import { PasswordGuidance } from '../components/PasswordGuidance'
 import { Alert, Button, FormField, Input, useToast } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { fieldErrorsOf } from '../lib/field-errors'
@@ -81,7 +82,6 @@ export function ResetPasswordPage() {
                 label="새 비밀번호"
                 required
                 error={fieldErrors.newPassword ?? fieldErrors.password}
-                description="최소 10자, 두 종류 이상의 문자를 섞어 주세요."
               >
                 <Input
                   type="password"
@@ -90,6 +90,7 @@ export function ResetPasswordPage() {
                   onChange={(event) => setNewPassword(event.target.value)}
                   required
                 />
+                <PasswordGuidance password={newPassword} className="mt-1" />
               </FormField>
               <FormField label="새 비밀번호 확인" required error={fieldErrors.confirm}>
                 <Input

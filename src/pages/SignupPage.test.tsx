@@ -43,18 +43,63 @@ describe('회원가입 폼 검증', () => {
     ).toBeInTheDocument()
   })
 
-  test('10자 미만 비밀번호는 거부한다', async () => {
+  test('8자 미만 비밀번호는 거부한다', async () => {
     renderApp('/signup')
     await screen.findByRole('heading', { name: '회원가입' })
 
     await fillSignupForm({
       name: '홍길동',
       email: 'example@pusan.ac.kr',
-      password: 'short',
-      passwordConfirm: 'short',
+      password: 'ab3d5f7', // 7자
+      passwordConfirm: 'ab3d5f7',
     })
 
-    expect(await screen.findByText('비밀번호는 10자 이상이어야 합니다.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 합니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('8자 비밀번호는 통과시킨다', async () => {
+    renderApp('/signup')
+    await screen.findByRole('heading', { name: '회원가입' })
+
+    await fillSignupForm({
+      name: '홍길동',
+      email: 'example@pusan.ac.kr',
+      password: 'ab3d5f7g', // 8자 (경계값)
+      passwordConfirm: 'ab3d5f7g',
+    })
+
+    expect(
+      await screen.findByRole('heading', { name: '인증 메일을 확인해 주세요' }),
+    ).toBeInTheDocument()
+  })
+
+  test('비밀번호 안내 체크리스트가 입력에 따라 갱신된다', async () => {
+    renderApp('/signup')
+    await screen.findByRole('heading', { name: '회원가입' })
+    const user = userEvent.setup()
+
+    const lengthRule = () => screen.getByText('8자 이상 72자 이하').closest('li')
+    // 입력 전에는 어느 규칙도 성공/미충족으로 단정하지 않는다.
+    expect(lengthRule()).toHaveTextContent('미입력')
+
+    await user.type(screen.getByLabelText('비밀번호'), 'ab3d5f7')
+    expect(lengthRule()).toHaveTextContent('미충족')
+
+    await user.type(screen.getByLabelText('비밀번호'), 'g')
+    expect(lengthRule()).toHaveTextContent('성공')
+
+    // 이메일 아이디를 포함하면 해당 규칙이 미충족으로 바뀐다.
+    await user.type(screen.getByLabelText('이메일'), 'example@pusan.ac.kr')
+    expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
+      '성공',
+    )
+    await user.clear(screen.getByLabelText('비밀번호'))
+    await user.type(screen.getByLabelText('비밀번호'), 'yejun-4321!')
+    expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
+      '미충족',
+    )
   })
 
   test('비밀번호 확인이 다르면 거부한다', async () => {

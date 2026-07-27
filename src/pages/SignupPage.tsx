@@ -7,8 +7,9 @@ import { isProblem } from '../api/problem'
 import { fetchCurrentTerms } from '../api/queries'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, Checkbox, FormField, Input } from '../components/ui'
+import { PasswordGuidance } from '../components/PasswordGuidance'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
-import { PASSWORD_MIN_LENGTH, PUSAN_EMAIL_RE } from '../lib/validation'
+import { passwordRuleError, PUSAN_EMAIL_RE } from '../lib/validation'
 
 interface FieldErrors {
   name?: string
@@ -30,8 +31,11 @@ function validate(values: {
   if (!PUSAN_EMAIL_RE.test(values.email)) {
     errors.email = '@pusan.ac.kr 이메일만 가입할 수 있습니다.'
   }
-  if (values.password.length < PASSWORD_MIN_LENGTH) {
-    errors.password = `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`
+  // 구조 규칙(길이·바이트·반복·연속·이메일 포함)은 미리 막고, 유출 차단목록
+  // 판정은 서버가 한다.
+  const passwordError = passwordRuleError(values.password, values.email)
+  if (passwordError) {
+    errors.password = passwordError
   }
   if (values.passwordConfirm !== values.password) {
     errors.passwordConfirm = '비밀번호가 일치하지 않습니다.'
@@ -168,12 +172,7 @@ export function SignupPage() {
                 required
               />
             </FormField>
-            <FormField
-              label="비밀번호"
-              required
-              error={fieldErrors.password}
-              description={`${PASSWORD_MIN_LENGTH}자 이상 입력해 주세요.`}
-            >
+            <FormField label="비밀번호" required error={fieldErrors.password}>
               <Input
                 type="password"
                 value={password}
@@ -181,6 +180,7 @@ export function SignupPage() {
                 autoComplete="new-password"
                 required
               />
+              <PasswordGuidance password={password} email={email} className="mt-1" />
             </FormField>
             <FormField label="비밀번호 확인" required error={fieldErrors.passwordConfirm}>
               <Input

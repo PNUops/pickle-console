@@ -225,3 +225,10 @@
 .auth-dark label .text-neutral-500 {
   color: var(--color-neutral-400);
 }
+/* 비밀번호 안내 체크리스트 표식 — 어두운 배경에서는 밝은 톤으로 */
+.auth-dark .text-success-600 {
+  color: var(--color-success-400);
+}
+.auth-dark .text-danger-600 {
+  color: var(--color-danger-400);
+}

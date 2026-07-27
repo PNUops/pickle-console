@@ -22,14 +22,16 @@ const weakPasswordProblem = (instance: string) =>
     detail: '요청 값을 확인해 주세요.',
     instance,
     code: 'VALIDATION_FAILED',
-    errors: [{ field: 'newPassword', message: '비밀번호는 10자 이상이어야 합니다.' }],
+    errors: [
+      { field: 'newPassword', message: '비밀번호는 8자 이상 72자 이하여야 합니다.' },
+    ],
   })
 
 export const accountHandlers: RequestHandler[] = [
   http.put('*/api/v1/me/password', async ({ request }) => {
     const body = (await request.json()) as { currentPassword: string; newPassword: string }
     if (body.currentPassword !== USER_PASSWORD) return passwordMismatch('/api/v1/me/password')
-    if (body.newPassword.length < 10) return weakPasswordProblem('/api/v1/me/password')
+    if (body.newPassword.length < 8) return weakPasswordProblem('/api/v1/me/password')
     const response: Schemas['AuthTokenResponse'] = {
       accessToken: 'access-user',
       user: regularUser,
@@ -65,7 +67,7 @@ export const accountHandlers: RequestHandler[] = [
         code: 'AUTH_RESET_TOKEN_EXPIRED',
       })
     }
-    if (body.newPassword.length < 10) return weakPasswordProblem('/api/v1/auth/password-reset/confirm')
+    if (body.newPassword.length < 8) return weakPasswordProblem('/api/v1/auth/password-reset/confirm')
     const response: Schemas['MessageResponse'] = {
       message: '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.',
     }

@@ -1,7 +1,124 @@
 /** Mirrors the contract regex for signup email (openapi.yaml SignupRequest). */
 export const PUSAN_EMAIL_RE = /^[A-Za-z0-9._%+-]+@pusan\.ac\.kr$/
 
-export const PASSWORD_MIN_LENGTH = 10
+export const PASSWORD_MIN_LENGTH = 8
+
+/** BCrypt는 72바이트까지만 해시하므로 서버·클라이언트 모두 72를 상한으로 쓴다. */
+export const PASSWORD_MAX_LENGTH = 72
+export const PASSWORD_MAX_BYTES = 72
+
+/**
+ * 서버 비밀번호 정책 중 **구조 규칙**을 그대로 옮긴 클라이언트 미리보기 결과.
+ * 유출 비밀번호 차단목록(약 4.7만 건)은 서버에만 있으므로 여기서 판정하지 않는다.
+ */
+export interface PasswordRuleStatus {
+  /** 8자 이상 72자 이하. */
+  length: boolean
+  /** UTF-8 기준 72바이트 이하(한글은 글자당 3바이트). */
+  byteLimit: boolean
+  /** 서로 다른 문자가 3종 이상(같은 문자 반복 금지). */
+  noRepetition: boolean
+  /** 연속된 문자·숫자로만 이루어지지 않음. */
+  noSequence: boolean
+  /** 이메일 아이디(로컬 파트)를 포함하지 않음. */
+  noEmail: boolean
+}
+
+/** UTF-8 바이트 길이(서버의 getBytes(UTF_8).length와 같은 값). */
+export function passwordByteLength(password: string): number {
+  return new TextEncoder().encode(password).length
+}
+
+/** 소문자화 후 영숫자만 남긴 형태 — 반복·연속 판정의 입력(서버와 동일). */
+function strip(lowerPassword: string): string {
+  return lowerPassword.replace(/[^a-z0-9]/g, '')
+}
+
+/** 영숫자만 남긴 문자열이 6자 이상이면서 전부 오름차순 또는 내림차순인지. */
+function isSequential(stripped: string): boolean {
+  if (stripped.length < 6) return false
+  let ascending = true
+  let descending = true
+  for (let i = 1; i < stripped.length; i += 1) {
+    const current = stripped.charCodeAt(i)
+    const previous = stripped.charCodeAt(i - 1)
+    if (current !== previous + 1) ascending = false
+    if (current !== previous - 1) descending = false
+  }
+  return ascending || descending
+}
+
+/**
+ * 서버 정책의 구조 규칙을 미리 계산한다(제출 전 안내용).
+ * 판정 권한은 서버에 있고, 차단목록·플랫폼 단어 검사는 제출 시 서버가 수행한다.
+ */
+export function passwordRuleStatus(password: string, email?: string): PasswordRuleStatus {
+  const lower = password.toLowerCase()
+  const stripped = strip(lower)
+  const localPart = (email ?? '').toLowerCase().split('@', 1)[0]
+  return {
+    length: password.length >= PASSWORD_MIN_LENGTH && password.length <= PASSWORD_MAX_LENGTH,
+    byteLimit: passwordByteLength(password) <= PASSWORD_MAX_BYTES,
+    noRepetition: new Set(lower).size > 2,
+    noSequence: !isSequential(stripped),
+    noEmail: !(localPart.length >= 4 && lower.includes(localPart)),
+  }
+}
+
+/** 체크리스트 항목 문구 — 제출 차단 메시지와 같은 문장을 쓴다. */
+export const PASSWORD_RULE_LABELS: Record<keyof PasswordRuleStatus, string> = {
+  length: `${PASSWORD_MIN_LENGTH}자 이상 ${PASSWORD_MAX_LENGTH}자 이하`,
+  byteLimit: `UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하 (한글은 한 글자가 3바이트)`,
+  noRepetition: '같은 문자만 반복하지 않기',
+  noSequence: '연속된 문자·숫자로만 이루어지지 않기',
+  noEmail: '이메일 주소를 포함하지 않기',
+}
+
+/** 규칙 순서(체크리스트 표시 순서 = 서버 검사 순서에 맞춘 순서). */
+export const PASSWORD_RULE_ORDER: (keyof PasswordRuleStatus)[] = [
+  'length',
+  'byteLimit',
+  'noRepetition',
+  'noSequence',
+  'noEmail',
+]
+
+/** 구조 규칙 위반 시 폼에 표시할 첫 번째 오류 문구(없으면 null). */
+export function passwordRuleError(password: string, email?: string): string | null {
+  const status = passwordRuleStatus(password, email)
+  if (!status.length) {
+    return `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상 ${PASSWORD_MAX_LENGTH}자 이하여야 합니다.`
+  }
+  if (!status.byteLimit) {
+    return `비밀번호가 너무 깁니다. 한글 등 다국어 문자를 포함하면 더 짧게 입력해 주세요. (UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하)`
+  }
+  if (!status.noRepetition) return '같은 문자가 반복되는 비밀번호는 사용할 수 없습니다.'
+  if (!status.noSequence) return '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없습니다.'
+  if (!status.noEmail) return '이메일 주소가 포함된 비밀번호는 사용할 수 없습니다.'
+  return null
+}
+
+/**
+ * 아주 단순한 강도 추정치(0~3). 길이와 문자 종류 수만 본다 — 사전 공격
+ * 내성을 계산하지 않으므로 정밀한 점수가 아니라 대략적인 힌트로만 쓴다.
+ * 흔한 비밀번호 여부는 서버 차단목록이 판정한다.
+ */
+export function passwordStrength(password: string): 0 | 1 | 2 | 3 {
+  if (password.length < PASSWORD_MIN_LENGTH) return 0
+  const status = passwordRuleStatus(password)
+  if (!status.byteLimit || !status.noRepetition || !status.noSequence) return 0
+
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) =>
+    re.test(password),
+  ).length
+  const lengthPoints = password.length >= 16 ? 2 : password.length >= 12 ? 1 : 0
+  const varietyPoints = classes >= 3 ? 2 : classes === 2 ? 1 : 0
+  const score = Math.min(3, lengthPoints + varietyPoints)
+  return score as 0 | 1 | 2 | 3
+}
+
+/** 강도 점수 표시 문구. */
+export const PASSWORD_STRENGTH_LABELS = ['매우 약함', '약함', '보통', '강함'] as const
 
 /** Mirrors the contract regex for group slug (openapi.yaml CreateGroupRequest). */
 export const GROUP_SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/
