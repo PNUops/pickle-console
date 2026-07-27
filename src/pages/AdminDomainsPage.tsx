@@ -79,6 +79,11 @@ export function AdminDomainsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
+  const selectDomain = (id: number) => {
+    if (id !== selectedId) setMessage(null) // 다른 도메인의 결과가 남아 오독되지 않게
+    setSelectedId(id)
+  }
+
   const domains = useQuery({
     queryKey: [
       'admin',
@@ -185,14 +190,14 @@ export function AdminDomainsPage() {
                         'cursor-pointer',
                         domain.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
                       )}
-                      onClick={() => setSelectedId(domain.id)}
+                      onClick={() => selectDomain(domain.id)}
                     >
                       <TD>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation()
-                            setSelectedId(domain.id)
+                            selectDomain(domain.id)
                           }}
                           className="cursor-pointer font-mono text-sm text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                         >
@@ -268,6 +273,9 @@ function DomainDrawerContent({
   onDone: (message: string) => void
 }) {
   const [releaseOpen, setReleaseOpen] = useState(false)
+  // 드로어 안에서 실행하는 액션(재검증·재적용)의 결과는 드로어 안에 보여야
+  // 한다 — 페이지 레벨 알림은 열린 드로어의 배경에 가려 보이지 않는다.
+  const [notice, setNotice] = useState<{ variant: 'info' | 'danger'; text: string } | null>(null)
 
   // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
   // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
@@ -276,6 +284,8 @@ function DomainDrawerContent({
     queryFn: () => fetchAdminRoutes({ page: 0, size: 100 }),
   })
   const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
+  const routesTruncated =
+    routes.isSuccess && routes.data.totalElements > routes.data.content.length
 
   return (
     <div className="space-y-6">
@@ -283,6 +293,7 @@ function DomainDrawerContent({
         <h3 className="font-mono text-lg font-semibold text-neutral-900">{domain.fqdn}</h3>
         <DomainStatusBadge status={domain.status} />
       </div>
+      {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="종류" value={DOMAIN_KIND_LABELS[domain.kind]} />
         <Field label="루트 도메인" value={domain.rootDomain ?? '—'} />
@@ -312,14 +323,21 @@ function DomainDrawerContent({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">라우트</h3>
         {routes.isPending && <Spinner label="라우트 불러오는 중" />}
-        {routes.isSuccess && !route && (
+        {routes.isError && <Alert variant="danger">{routes.error.message}</Alert>}
+        {routes.isSuccess && !route && !routesTruncated && (
           <p className="text-sm text-neutral-500">살아 있는 라우트가 없습니다.</p>
+        )}
+        {routes.isSuccess && !route && routesTruncated && (
+          <Alert variant="warning">
+            라우트가 많아 일부만 조회했습니다 — 이 도메인의 라우트는 표시하지 못할 수
+            있습니다.
+          </Alert>
         )}
         {route && (
           <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
             <div className="flex items-center justify-between">
               <RouteStatusBadge status={route.status} />
-              <ApplyRouteButton routeId={route.id} onDone={onDone} />
+              <ApplyRouteButton routeId={route.id} onResult={setNotice} />
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
               <Field label="대상 포트" value={String(route.targetPort)} />
@@ -356,7 +374,9 @@ function DomainDrawerContent({
           수행합니다. 기관 계층은 자기 기관 VM의 도메인에만 적용됩니다.
         </p>
         <div className="flex flex-wrap gap-2">
-          {domain.kind === 'CUSTOM' && <ReverifyButton domain={domain} onDone={onDone} />}
+          {domain.kind === 'CUSTOM' && (
+            <ReverifyButton domain={domain} onResult={setNotice} />
+          )}
           <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
             강제 해제
           </Button>
@@ -388,21 +408,27 @@ function Field({ label, value }: { label: string; value: string }) {
 
 /* ─── 사후 개입 액션 (관리자 4역할 — 기관 계층은 자기 기관, 서버 강제) ─── */
 
+type DrawerNotice = { variant: 'info' | 'danger'; text: string }
+
 function ReverifyButton({
   domain,
-  onDone,
+  onResult,
 }: {
   domain: AdminDomainView
-  onDone: (message: string) => void
+  onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
   const reverify = useMutation({
     mutationFn: () => verifyAdminDomain(domain.id),
     onSuccess: async (data) => {
-      onDone(data.message)
+      onResult({ variant: 'info', text: data.message })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
     },
-    onError: (err) => onDone(toApiError(err, '재검증을 접수하지 못했습니다.').message),
+    onError: (err) =>
+      onResult({
+        variant: 'danger',
+        text: toApiError(err, '재검증을 접수하지 못했습니다.').message,
+      }),
   })
   return (
     <Button
@@ -419,20 +445,24 @@ function ReverifyButton({
 /** 개별 라우트 재적용 — 전역 sync-all 없이 이 도메인의 라우트만 재전파. */
 function ApplyRouteButton({
   routeId,
-  onDone,
+  onResult,
 }: {
   routeId: number
-  onDone: (message: string) => void
+  onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
   const apply = useMutation({
     mutationFn: () => applyAdminRoute(routeId),
     onSuccess: async (data) => {
-      onDone(data.message)
+      onResult({ variant: 'info', text: data.message })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
     },
-    onError: (err) => onDone(toApiError(err, '라우트 재적용을 접수하지 못했습니다.').message),
+    onError: (err) =>
+      onResult({
+        variant: 'danger',
+        text: toApiError(err, '라우트 재적용을 접수하지 못했습니다.').message,
+      }),
   })
   return (
     <Button variant="secondary" size="sm" loading={apply.isPending} onClick={() => apply.mutate()}>
