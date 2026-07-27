@@ -626,10 +626,32 @@ export const publishingHandlers: RequestHandler[] = [
     )
   }),
 
-  http.post('*/api/v1/admin/routes/:routeId/apply', () =>
-    HttpResponse.json(
+  http.post('*/api/v1/admin/routes/:routeId/apply', ({ params }) => {
+    // msw 라우트 id = 도메인 id (toAdminRoute 참조)
+    const hit = findByDomainId(Number(params.routeId))
+    if (!hit) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '해당 라우트가 존재하지 않습니다.',
+        code: 'RESOURCE_NOT_FOUND',
+      })
+    }
+    // 실서버 규칙: 라이브 라우트의 재적용은 검증 완료(ACTIVE) 도메인만
+    const { pub } = hit
+    if (pub.route?.status !== 'REMOVED' && pub.domain.status !== 'ACTIVE') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '현재 상태에서는 수행할 수 없는 작업입니다',
+        status: 409,
+        detail: `소유권 검증이 완료(ACTIVE)된 도메인의 라우트만 재적용할 수 있습니다. (현재 상태 ${pub.domain.status})`,
+        code: 'DOMAIN_NOT_ACTIVE',
+      })
+    }
+    return HttpResponse.json(
       { message: '라우트 재적용을 접수했습니다. 잠시 후 적용 상태가 갱신됩니다.' },
       { status: 202 },
-    ),
-  ),
+    )
+  }),
 ]
