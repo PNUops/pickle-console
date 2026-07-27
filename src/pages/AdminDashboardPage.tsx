@@ -88,7 +88,7 @@ export function AdminDashboardPage() {
                 .reduce((sum, pool) => sum + pool.freeCount, 0)
                 .toLocaleString()}개`}
               hint={`${system.data.ipPools.length}개 풀`}
-              to="/admin/ips"
+              to="/admin/nodes?tab=ips"
             />
             <StatTile
               label="드리프트 미해결"

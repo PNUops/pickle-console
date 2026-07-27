@@ -51,7 +51,7 @@ describe('관리자 대시보드', () => {
     )
     expect(within(systemRow).getByRole('link', { name: 'IP 여유' })).toHaveAttribute(
       'href',
-      '/admin/ips',
+      '/admin/nodes?tab=ips',
     )
     expect(within(systemRow).getByRole('link', { name: '드리프트 미해결' })).toHaveAttribute(
       'href',

@@ -8,16 +8,13 @@ import { AuthLayout } from './layouts/AuthLayout'
 import { PublicLayout } from './layouts/PublicLayout'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminAuditPage } from './pages/AdminAuditPage'
-import { AdminCertificatesPage } from './pages/AdminCertificatesPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminDomainsPage } from './pages/AdminDomainsPage'
 import { AdminDriftPage } from './pages/AdminDriftPage'
 import { AdminExpiryPage } from './pages/AdminExpiryPage'
-import { AdminIpsPage } from './pages/AdminIpsPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminNotificationLogPage } from './pages/AdminNotificationLogPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
-import { AdminRoutesPage } from './pages/AdminRoutesPage'
 import { AdminSettingsPage } from './pages/AdminSettingsPage'
 import { AdminTasksPage } from './pages/AdminTasksPage'
 import { AdminTerminalSessionsPage } from './pages/AdminTerminalSessionsPage'
@@ -154,8 +151,6 @@ function App() {
         <Route path="audit" element={<AdminAuditPage />} />
         <Route path="announcements" element={<AdminAnnouncementsPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
-        <Route path="routes" element={<AdminRoutesPage />} />
-        <Route path="certificates" element={<AdminCertificatesPage />} />
         <Route
           path="notification-log"
           element={
@@ -169,14 +164,6 @@ function App() {
           element={
             <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminDriftPage />
-            </RequireRole>
-          }
-        />
-        <Route
-          path="ips"
-          element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
-              <AdminIpsPage />
             </RequireRole>
           }
         />

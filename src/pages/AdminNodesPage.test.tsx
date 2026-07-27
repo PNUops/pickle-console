@@ -14,7 +14,7 @@ describe('노드/용량', () => {
   test('노드별 상태·할당/용량·IP 풀 여유를 나열한다', async () => {
     renderNodes()
 
-    await screen.findByRole('heading', { name: '노드/용량' })
+    await screen.findByRole('heading', { name: '노드/IP', level: 1 })
     const row = (await screen.findByText('pve1')).closest('tr')!
     expect(within(row).getByText('활성')).toBeInTheDocument()
     expect(within(row).getByText('14 vCPU / 40 스레드')).toBeInTheDocument()

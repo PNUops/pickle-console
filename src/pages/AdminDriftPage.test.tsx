@@ -53,9 +53,9 @@ describe('드리프트', () => {
 
 describe('IP 할당', () => {
   test('풀 요약 카드와 할당 이력 테이블을 보여준다', async () => {
-    renderAsSysAdmin('/admin/ips')
+    renderAsSysAdmin('/admin/nodes?tab=ips')
 
-    await screen.findByRole('heading', { name: 'IP 할당' })
+    await screen.findByRole('heading', { name: '노드/IP' })
     // 노드 ipPool 재사용 요약 카드
     await screen.findByText('pve1 · 172.29.0.0/16')
     const row = (await screen.findByText('172.29.0.10')).closest('tr')!
@@ -65,9 +65,9 @@ describe('IP 할당', () => {
 
   test('해제됨 탭은 해제 이력만 보여준다', async () => {
     const user = userEvent.setup()
-    renderAsSysAdmin('/admin/ips')
+    renderAsSysAdmin('/admin/nodes?tab=ips')
 
-    await screen.findByRole('heading', { name: 'IP 할당' })
+    await screen.findByRole('heading', { name: '노드/IP' })
     await screen.findByText('172.29.0.10')
     await user.click(screen.getByRole('tab', { name: '해제됨' }))
 

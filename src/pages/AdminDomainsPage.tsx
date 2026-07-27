@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  applyAdminRoute,
   fetchAdminDomains,
+  fetchAdminRoutes,
   fetchOrgs,
   forceReleaseDomain,
+  resyncRoutes,
   verifyAdminDomain,
   type AdminDomainView,
   type DomainKind,
@@ -12,6 +16,8 @@ import {
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
+import { CertificatesSection } from '../components/CertificatesSection'
+import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
   Button,
@@ -20,22 +26,30 @@ import {
   ConfirmNameModal,
   DomainKindBadge,
   DomainStatusBadge,
+  Drawer,
   Pagination,
   RouteStatusBadge,
   Select,
   Spinner,
   Table,
+  TabPanel,
+  Tabs,
   TBody,
   TD,
   TH,
   THead,
   TR,
 } from '../components/ui'
+import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
-import { FilterBar } from '../components/FilterBar'
 
 const PAGE_SIZE = 20
+
+const SCREEN_TABS = [
+  { id: 'domains', label: '도메인' },
+  { id: 'certificates', label: '인증서' },
+]
 
 const STATUS_TABS: { label: string; status: DomainStatus | undefined }[] = [
   { label: '전체', status: undefined },
@@ -47,16 +61,23 @@ const STATUS_TABS: { label: string; status: DomainStatus | undefined }[] = [
 
 const KINDS: DomainKind[] = ['AUTO', 'REQUESTED', 'CUSTOM']
 
+/**
+ * 공개 서비스 — 도메인 중심 1화면. 운영자가 실제로 겪는 단위("이 도메인이 왜
+ * 안 열리나")에 맞춰 도메인 행 선택 시 드로어에 라우트·인증서·검증 상태와
+ * 사후 개입 액션을 함께 보여준다. 인증서 축(만료 임박 일괄 점검)은 별도 탭.
+ */
 export function AdminDomainsPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
-
   const [message, setMessage] = useState<string | null>(null)
-  const [releaseTarget, setReleaseTarget] = useState<AdminDomainView | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const domains = useQuery({
     queryKey: [
@@ -69,150 +90,286 @@ export function AdminDomainsPage() {
   })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
+  const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">도메인</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM에 연결된 도메인(자동·희망 서브도메인·커스텀)과
-          라우트·인증서 상태입니다.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용·인증서 상태입니다.
+            행을 선택하면 라우트·인증서 상세와 개입 작업이 열립니다.
+          </p>
+        </div>
+        {isSysAdmin && <ResyncButton />}
       </div>
 
-      <FilterBar
-        tabs={STATUS_TABS}
-        status={status}
-        onStatus={(next) => {
-          setStatus(next)
-          setPage(0)
-        }}
-        isSysAdmin={isSysAdmin}
-        orgId={orgId}
-        onOrg={(next) => {
-          setOrgId(next)
-          setPage(0)
-        }}
-        orgs={orgs.data ?? []}
-      >
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          종류
-          <Select
-            aria-label="종류 필터"
-            className="w-44"
-            value={kind ?? ''}
-            onChange={(event) => {
-              setKind((event.target.value || undefined) as DomainKind | undefined)
-              setPage(0)
-            }}
-          >
-            <option value="">전체 종류</option>
-            {KINDS.map((k) => (
-              <option key={k} value={k}>
-                {DOMAIN_KIND_LABELS[k]}
-              </option>
-            ))}
-          </Select>
-        </label>
-      </FilterBar>
+      <Tabs
+        aria-label="공개 서비스 탭"
+        tabs={SCREEN_TABS}
+        value={activeTab}
+        onChange={(id) => setSearchParams(id === 'domains' ? {} : { tab: id }, { replace: true })}
+      />
 
-      {message && <Alert variant="info">{message}</Alert>}
+      <TabPanel id="domains" active={activeTab === 'domains'} className="space-y-6">
+        <FilterBar
+          tabs={STATUS_TABS}
+          status={status}
+          onStatus={(next) => {
+            setStatus(next)
+            setPage(0)
+          }}
+          isSysAdmin={isSysAdmin}
+          orgId={orgId}
+          onOrg={(next) => {
+            setOrgId(next)
+            setPage(0)
+          }}
+          orgs={orgs.data ?? []}
+        >
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            종류
+            <Select
+              aria-label="종류 필터"
+              className="w-44"
+              value={kind ?? ''}
+              onChange={(event) => {
+                setKind((event.target.value || undefined) as DomainKind | undefined)
+                setPage(0)
+              }}
+            >
+              <option value="">전체 종류</option>
+              {KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {DOMAIN_KIND_LABELS[k]}
+                </option>
+              ))}
+            </Select>
+          </label>
+        </FilterBar>
 
-      {domains.isPending && (
-        <div className="flex justify-center py-12">
-          <Spinner label="도메인 목록 불러오는 중" />
-        </div>
-      )}
-      {domains.isError && <Alert variant="danger">{domains.error.message}</Alert>}
-      {domains.isSuccess && domains.data.content.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">
-          연결된 도메인이 없습니다.
-        </Card>
-      )}
-      {domains.isSuccess && domains.data.content.length > 0 && (
-        <>
-          <Card>
-            <Table>
-              <THead>
-                <TR>
-                  <TH>도메인</TH>
-                  <TH>VM / 그룹</TH>
-                  {isSysAdmin && <TH>기관</TH>}
-                  <TH>상태</TH>
-                  <TH>라우트</TH>
-                  <TH>인증서</TH>
-                  <TH>검증일</TH>
-                  <TH>
-                    <span className="sr-only">작업</span>
-                  </TH>
-                </TR>
-              </THead>
-              <TBody>
-                {domains.data.content.map((domain) => (
-                  <TR key={domain.id}>
-                    <TD>
-                      <span className="font-mono text-sm">{domain.fqdn}</span>
-                      <span className="mt-0.5 block">
-                        <DomainKindBadge kind={domain.kind} />
-                      </span>
-                    </TD>
-                    <TD>
-                      {domain.vmName}
-                      <span className="block text-xs text-neutral-500">{domain.groupName}</span>
-                    </TD>
-                    {isSysAdmin && <TD>{domain.orgName}</TD>}
-                    <TD>
-                      <DomainStatusBadge status={domain.status} />
-                    </TD>
-                    <TD>
-                      {domain.routeStatus ? (
-                        <RouteStatusBadge status={domain.routeStatus} />
-                      ) : (
-                        <span className="text-xs text-neutral-400">—</span>
-                      )}
-                    </TD>
-                    <TD>
-                      {domain.certificateStatus ? (
-                        <CertificateStatusBadge status={domain.certificateStatus} />
-                      ) : (
-                        <span className="text-xs text-neutral-400">—</span>
-                      )}
-                    </TD>
-                    <TD className="whitespace-nowrap text-xs text-neutral-500">
-                      {domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
-                    </TD>
-                    <TD className="whitespace-nowrap text-right">
-                      {domain.kind === 'CUSTOM' && (
-                        <ReverifyButton domain={domain} onDone={setMessage} />
-                      )}
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        className="ml-2"
-                        onClick={() => setReleaseTarget(domain)}
-                      >
-                        강제 해제
-                      </Button>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
+        {message && <Alert variant="info">{message}</Alert>}
+
+        {domains.isPending && (
+          <div className="flex justify-center py-12">
+            <Spinner label="도메인 목록 불러오는 중" />
+          </div>
+        )}
+        {domains.isError && <Alert variant="danger">{domains.error.message}</Alert>}
+        {domains.isSuccess && domains.data.content.length === 0 && (
+          <Card className="p-8 text-center text-sm text-neutral-500">
+            연결된 도메인이 없습니다.
           </Card>
-          <Pagination
-            page={domains.data.page}
-            totalPages={domains.data.totalPages}
-            onPageChange={setPage}
-          />
-        </>
-      )}
+        )}
+        {domains.isSuccess && domains.data.content.length > 0 && (
+          <>
+            <Card>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>도메인</TH>
+                    <TH>VM / 그룹</TH>
+                    {isSysAdmin && <TH>기관</TH>}
+                    <TH>상태</TH>
+                    <TH>라우트</TH>
+                    <TH>인증서</TH>
+                    <TH>검증일</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {domains.data.content.map((domain) => (
+                    <TR
+                      key={domain.id}
+                      className={cn(
+                        'cursor-pointer',
+                        domain.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
+                      )}
+                      onClick={() => setSelectedId(domain.id)}
+                    >
+                      <TD>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setSelectedId(domain.id)
+                          }}
+                          className="cursor-pointer font-mono text-sm text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+                        >
+                          {domain.fqdn}
+                        </button>
+                        <span className="mt-0.5 block">
+                          <DomainKindBadge kind={domain.kind} />
+                        </span>
+                      </TD>
+                      <TD>
+                        {domain.vmName}
+                        <span className="block text-xs text-neutral-500">{domain.groupName}</span>
+                      </TD>
+                      {isSysAdmin && <TD>{domain.orgName}</TD>}
+                      <TD>
+                        <DomainStatusBadge status={domain.status} />
+                      </TD>
+                      <TD>
+                        {domain.routeStatus ? (
+                          <RouteStatusBadge status={domain.routeStatus} />
+                        ) : (
+                          <span className="text-xs text-neutral-400">—</span>
+                        )}
+                      </TD>
+                      <TD>
+                        {domain.certificateStatus ? (
+                          <CertificateStatusBadge status={domain.certificateStatus} />
+                        ) : (
+                          <span className="text-xs text-neutral-400">—</span>
+                        )}
+                      </TD>
+                      <TD className="whitespace-nowrap text-xs text-neutral-500">
+                        {domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </Card>
+            <Pagination
+              page={domains.data.page}
+              totalPages={domains.data.totalPages}
+              onPageChange={setPage}
+            />
+          </>
+        )}
 
-      {releaseTarget && (
+        <Drawer
+          open={selected !== null}
+          onClose={() => setSelectedId(null)}
+          title="도메인 상세"
+        >
+          {selected && (
+            <DomainDrawerContent key={selected.id} domain={selected} onDone={setMessage} />
+          )}
+        </Drawer>
+      </TabPanel>
+
+      <TabPanel id="certificates" active={activeTab === 'certificates'}>
+        <CertificatesSection />
+      </TabPanel>
+    </div>
+  )
+}
+
+/* ─── 상세 드로어 (검증·라우트·인증서 + 사후 개입) ─── */
+
+function DomainDrawerContent({
+  domain,
+  onDone,
+}: {
+  domain: AdminDomainView
+  onDone: (message: string) => void
+}) {
+  const [releaseOpen, setReleaseOpen] = useState(false)
+
+  // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
+  // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
+  const routes = useQuery({
+    queryKey: ['admin', 'routes', { forDomainJoin: true }],
+    queryFn: () => fetchAdminRoutes({ page: 0, size: 100 }),
+  })
+  const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="font-mono text-lg font-semibold text-neutral-900">{domain.fqdn}</h3>
+        <DomainStatusBadge status={domain.status} />
+      </div>
+      <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+        <Field label="종류" value={DOMAIN_KIND_LABELS[domain.kind]} />
+        <Field label="루트 도메인" value={domain.rootDomain ?? '—'} />
+        <div>
+          <dt className="text-neutral-500">VM</dt>
+          <dd className="font-medium text-neutral-900">
+            {domain.vmName ?? '—'}{' '}
+            {domain.vmId != null && (
+              <Link
+                to={`/admin/vms/${domain.vmId}`}
+                className="text-sm font-normal text-primary-700 hover:underline"
+              >
+                상세
+              </Link>
+            )}
+            <span className="block text-xs font-normal text-neutral-500">{domain.groupName}</span>
+          </dd>
+        </div>
+        <Field label="기관" value={domain.orgName ?? '—'} />
+        <Field
+          label="검증일"
+          value={domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
+        />
+        <Field label="등록일" value={formatDateTime(domain.createdAt)} />
+      </dl>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">라우트</h3>
+        {routes.isPending && <Spinner label="라우트 불러오는 중" />}
+        {routes.isSuccess && !route && (
+          <p className="text-sm text-neutral-500">살아 있는 라우트가 없습니다.</p>
+        )}
+        {route && (
+          <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
+            <div className="flex items-center justify-between">
+              <RouteStatusBadge status={route.status} />
+              <ApplyRouteButton routeId={route.id} onDone={onDone} />
+            </div>
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+              <Field label="대상 포트" value={String(route.targetPort)} />
+              <Field
+                label="동기화"
+                value={
+                  route.appliedGeneration != null ? `gen ${route.appliedGeneration}` : '미적용'
+                }
+              />
+              {route.appliedAt && (
+                <Field label="적용 시각" value={formatDateTime(route.appliedAt)} />
+              )}
+            </dl>
+            {route.status === 'FAILED' && route.lastError && (
+              <Alert variant="danger">{route.lastError}</Alert>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">인증서</h3>
+        {domain.certificateStatus ? (
+          <CertificateStatusBadge status={domain.certificateStatus} />
+        ) : (
+          <p className="text-sm text-neutral-500">연결된 인증서가 없습니다.</p>
+        )}
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+        <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
+        <p className="text-sm text-neutral-500">
+          커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기)를
+          수행합니다. 기관 계층은 자기 기관 VM의 도메인에만 적용됩니다.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {domain.kind === 'CUSTOM' && <ReverifyButton domain={domain} onDone={onDone} />}
+          <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
+            강제 해제
+          </Button>
+        </div>
+      </section>
+
+      {releaseOpen && (
         <ForceReleaseModal
-          domain={releaseTarget}
-          onClose={() => setReleaseTarget(null)}
+          domain={domain}
+          onClose={() => setReleaseOpen(false)}
           onDone={(text) => {
-            setReleaseTarget(null)
-            setMessage(text)
+            setReleaseOpen(false)
+            onDone(text)
           }}
         />
       )}
@@ -220,7 +377,16 @@ export function AdminDomainsPage() {
   )
 }
 
-/* ─── 사후 개입 (관리자 4역할 — 기관 계층은 자기 기관 한정, 서버 강제) ─── */
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-neutral-500">{label}</dt>
+      <dd className="font-medium text-neutral-900">{value}</dd>
+    </div>
+  )
+}
+
+/* ─── 사후 개입 액션 (관리자 4역할 — 기관 계층은 자기 기관, 서버 강제) ─── */
 
 function ReverifyButton({
   domain,
@@ -246,6 +412,31 @@ function ReverifyButton({
       onClick={() => reverify.mutate()}
     >
       재검증
+    </Button>
+  )
+}
+
+/** 개별 라우트 재적용 — 전역 sync-all 없이 이 도메인의 라우트만 재전파. */
+function ApplyRouteButton({
+  routeId,
+  onDone,
+}: {
+  routeId: number
+  onDone: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const apply = useMutation({
+    mutationFn: () => applyAdminRoute(routeId),
+    onSuccess: async (data) => {
+      onDone(data.message)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+    },
+    onError: (err) => onDone(toApiError(err, '라우트 재적용을 접수하지 못했습니다.').message),
+  })
+  return (
+    <Button variant="secondary" size="sm" loading={apply.isPending} onClick={() => apply.mutate()}>
+      재적용
     </Button>
   )
 }
@@ -290,5 +481,37 @@ function ForceReleaseModal({
       </Alert>
       {error && <Alert variant="danger">{error}</Alert>}
     </ConfirmNameModal>
+  )
+}
+
+/* ─── 전체 재동기화 (SYS 계층 — 매니페스트 권위적 prune) ─── */
+
+function ResyncButton() {
+  const queryClient = useQueryClient()
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const resync = useMutation({
+    mutationFn: resyncRoutes,
+    onSuccess: async (data) => {
+      setError(null)
+      setMessage(data.message)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+    },
+    onError: (err) => {
+      setMessage(null)
+      setError(toApiError(err, '라우트 재동기화를 접수하지 못했습니다.').message)
+    },
+  })
+
+  return (
+    <div className="flex flex-col items-end gap-2">
+      <Button variant="secondary" loading={resync.isPending} onClick={() => resync.mutate()}>
+        전체 재동기화 (sync-all)
+      </Button>
+      {message && <Alert variant="info">{message}</Alert>}
+      {error && <Alert variant="danger">{error}</Alert>}
+    </div>
   )
 }

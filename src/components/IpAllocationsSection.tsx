@@ -5,7 +5,7 @@ import {
   fetchIpAllocations,
   type IpAllocationStatus,
 } from '../api/queries'
-import { FilterBar } from '../components/FilterBar'
+import { FilterBar } from './FilterBar'
 import {
   Alert,
   Card,
@@ -20,7 +20,7 @@ import {
   TH,
   THead,
   TR,
-} from '../components/ui'
+} from './ui'
 import { formatDateTime } from '../lib/format'
 import { IP_ALLOCATION_STATUS_LABELS } from '../lib/status'
 
@@ -32,8 +32,8 @@ const TABS: { label: string; status: IpAllocationStatus | undefined }[] = [
   { label: IP_ALLOCATION_STATUS_LABELS.RELEASED, status: 'RELEASED' },
 ]
 
-/** IP 할당 현황 — 풀별 여유와 할당/해제 이력 (SYS_ADMIN). */
-export function AdminIpsPage() {
+/** IP 할당 현황 — 풀별 여유와 할당/해제 이력. 노드/IP 화면의 IP 탭. */
+export function IpAllocationsSection() {
   const [status, setStatus] = useState<IpAllocationStatus | undefined>(undefined)
   const [poolId, setPoolId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -48,13 +48,6 @@ export function AdminIpsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">IP 할당</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          노드별 IP 풀 여유와 VM 할당/해제 이력입니다. 해제된 IP도 이력으로 남습니다.
-        </p>
-      </div>
-
       {nodes.isSuccess && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {nodes.data.map((node) => (

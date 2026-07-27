@@ -22,11 +22,8 @@ export function AdminLayout() {
     },
     {
       heading: '공개 서비스',
-      items: [
-        { to: '/admin/domains', label: '도메인' },
-        { to: '/admin/routes', label: '라우팅' },
-        { to: '/admin/certificates', label: '인증서' },
-      ],
+      // 도메인 중심 1화면(라우팅 흡수) + 인증서 탭 — 3메뉴 통합 (2026-07-27).
+      items: [{ to: '/admin/domains', label: '도메인·인증서' }],
     },
     {
       heading: '소통',
@@ -43,8 +40,7 @@ export function AdminLayout() {
           {
             heading: '시스템',
             items: [
-              { to: '/admin/nodes', label: '노드/용량' },
-              { to: '/admin/ips', label: 'IP 할당' },
+              { to: '/admin/nodes', label: '노드/IP' },
               { to: '/admin/templates', label: '템플릿 관리' },
               ...(sysAdmin ? [{ to: '/admin/orgs', label: '기관 관리' }] : []),
               { to: '/admin/tasks', label: '작업' },

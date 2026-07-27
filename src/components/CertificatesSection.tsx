@@ -21,10 +21,10 @@ import {
   TH,
   THead,
   TR,
-} from '../components/ui'
+} from './ui'
 import { formatDateTime } from '../lib/format'
 import { CERTIFICATE_KIND_LABELS, CERTIFICATE_STATUS_LABELS } from '../lib/status'
-import { FilterBar } from '../components/FilterBar'
+import { FilterBar } from './FilterBar'
 
 const PAGE_SIZE = 20
 
@@ -38,7 +38,8 @@ const STATUS_TABS: { label: string; status: CertificateStatus | undefined }[] = 
   { label: CERTIFICATE_STATUS_LABELS.FAILED, status: 'FAILED' },
 ]
 
-export function AdminCertificatesPage() {
+/** 인증서 만료·발급 상태 — 공개 서비스 화면의 인증서 탭 (만료 임박 일괄 점검 축). */
+export function CertificatesSection() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
@@ -61,13 +62,6 @@ export function AdminCertificatesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">인증서</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          플랫폼 공용 와일드카드와 커스텀 도메인 Let's Encrypt 인증서의 만료·발급 상태입니다.
-        </p>
-      </div>
-
       <FilterBar
         tabs={STATUS_TABS}
         status={status}

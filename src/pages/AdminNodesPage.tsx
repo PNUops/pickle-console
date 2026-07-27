@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminNodes, updateAdminNode, type NodeSummary } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { isSysAdminOnly } from '../auth/permissions'
+import { IpAllocationsSection } from '../components/IpAllocationsSection'
 import {
   Alert,
   Badge,
@@ -14,6 +16,8 @@ import {
   Select,
   Spinner,
   Table,
+  TabPanel,
+  Tabs,
   TBody,
   TD,
   TH,
@@ -22,6 +26,11 @@ import {
   type BadgeVariant,
 } from '../components/ui'
 import { formatMemory } from '../lib/format'
+
+const SCREEN_TABS = [
+  { id: 'nodes', label: '노드' },
+  { id: 'ips', label: 'IP 할당' },
+]
 
 const NODE_STATUS_LABELS: Record<NodeSummary['status'], string> = {
   ACTIVE: '활성',
@@ -38,6 +47,9 @@ const NODE_STATUS_VARIANTS: Record<NodeSummary['status'], BadgeVariant> = {
 export function AdminNodesPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'nodes'
   const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: fetchAdminNodes })
   const [message, setMessage] = useState<string | null>(null)
   const [statusTarget, setStatusTarget] = useState<NodeSummary | null>(null)
@@ -45,13 +57,25 @@ export function AdminNodesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">노드/용량</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">노드/IP</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Proxmox 노드별 물리 용량과 할당 합계, IP 풀 여유입니다. 수치는 30초 주기
-          상태 폴러가 갱신합니다.
+          Proxmox 노드별 물리 용량·할당 합계와 IP 풀 할당 현황입니다. 수치는 30초
+          주기 상태 폴러가 갱신합니다.
         </p>
       </div>
 
+      <Tabs
+        aria-label="노드/IP 탭"
+        tabs={SCREEN_TABS}
+        value={activeTab}
+        onChange={(id) => setSearchParams(id === 'nodes' ? {} : { tab: id }, { replace: true })}
+      />
+
+      <TabPanel id="ips" active={activeTab === 'ips'}>
+        <IpAllocationsSection />
+      </TabPanel>
+
+      <TabPanel id="nodes" active={activeTab === 'nodes'} className="space-y-6">
       {!isSysAdmin && (
         <PermissionNotice>노드 상태 전환은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
       )}
@@ -142,6 +166,7 @@ export function AdminNodesPage() {
           }}
         />
       )}
+      </TabPanel>
     </div>
   )
 }
