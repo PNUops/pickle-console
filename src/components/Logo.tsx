@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { SERVICE_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
 export function Logo({
@@ -39,7 +40,7 @@ export function Logo({
           tone === 'inverse' ? 'text-white' : 'text-neutral-900',
         )}
       >
-        피클
+        {SERVICE_NAME}
       </span>
     </Link>
   )

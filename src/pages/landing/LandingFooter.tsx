@@ -1,6 +1,7 @@
 
 import { TransitionLink } from '../../components/TransitionLink'
 import { Logo } from '../../components/Logo'
+import { SERVICE_TAGLINE } from '../../lib/brand'
 
 export function LandingFooter() {
   return (
@@ -35,7 +36,7 @@ export function LandingFooter() {
           </nav>
         </div>
         <p className="mt-10 border-t border-white/10 pt-6 text-xs text-neutral-400">
-          피클 — 부산대학교 클라우드 플랫폼
+          {SERVICE_TAGLINE}
         </p>
       </div>
     </footer>

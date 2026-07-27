@@ -138,7 +138,7 @@ function EmptyState({
             등록된 SSH 키가 없습니다
           </p>
           <p className="mt-1 max-w-md text-sm text-neutral-500">
-            SSH 키를 등록해야 VM에 접속할 수 있습니다. 피클에서 새 키를 만들거나,
+            SSH 키를 등록해야 VM에 접속할 수 있습니다. Pickle에서 새 키를 만들거나,
             이미 가지고 있는 공개키를 등록하세요.
           </p>
         </div>
@@ -346,7 +346,7 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
       ) : (
         <form onSubmit={submit} className="space-y-4" noValidate>
           <p className="text-sm text-neutral-600">
-            피클이 ed25519 키쌍을 만들어 등록합니다. 개인키는 이 페이지에서 언제든
+            Pickle이 ed25519 키쌍을 만들어 등록합니다. 개인키는 이 페이지에서 언제든
             다시 내려받을 수 있습니다.
           </p>
           {error && <Alert variant="danger">{error}</Alert>}
@@ -354,7 +354,7 @@ function GenerateKeyModal({ onClose }: { onClose: () => void }) {
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="예: 피클에서 만든 키"
+              placeholder="예: Pickle에서 만든 키"
               maxLength={100}
             />
           </FormField>

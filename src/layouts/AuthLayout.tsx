@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import {Outlet} from 'react-router'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { Logo } from '../components/Logo'
+import { SERVICE_TAGLINE } from '../lib/brand'
 import { cn } from '../lib/cn'
 
 /**
@@ -72,7 +73,7 @@ export function AuthLayout() {
       </main>
 
       <footer className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6 text-sm text-neutral-400 sm:px-6">
-        피클 — 부산대학교 클라우드 플랫폼
+        {SERVICE_TAGLINE}
       </footer>
     </div>
   )

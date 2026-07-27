@@ -19,7 +19,7 @@ function initialKeys(): SshKeyView[] {
     },
     {
       id: 4,
-      name: '피클에서 만든 키',
+      name: 'Pickle에서 만든 키',
       algorithm: 'ED25519',
       publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFo2111111111111111111111111111111111111111',
       fingerprint: 'SHA256:8dq1kQwXbFhVYcQ1sJ2m0aH7pT5uNzR3eK6yLgAvBcD',

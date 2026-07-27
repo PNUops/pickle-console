@@ -44,7 +44,7 @@ export function TerminalMock() {
         <span aria-hidden="true" className="size-3 rounded-full bg-danger-400/80" />
         <span aria-hidden="true" className="size-3 rounded-full bg-warning-400/80" />
         <span aria-hidden="true" className="size-3 rounded-full bg-success-400/80" />
-        <span className="ml-2 font-mono text-xs text-neutral-400">ssh — 피클 게이트웨이</span>
+        <span className="ml-2 font-mono text-xs text-neutral-400">ssh — Pickle 게이트웨이</span>
       </div>
       {/* 세션 */}
       <div className="min-h-44 p-5 font-mono text-[13px] leading-7 text-neutral-300">

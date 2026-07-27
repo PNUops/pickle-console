@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router'
 import { Logo } from '../components/Logo'
+import { SERVICE_TAGLINE } from '../lib/brand'
 import { homePathFor, useAuth } from '../auth/auth-context'
 
 export function PublicLayout() {
@@ -42,7 +43,7 @@ export function PublicLayout() {
       </main>
       <footer className="border-t border-neutral-200 bg-white">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 text-sm text-neutral-500 sm:px-6">
-          피클 — 부산대학교 클라우드 플랫폼
+          {SERVICE_TAGLINE}
         </div>
       </footer>
     </div>

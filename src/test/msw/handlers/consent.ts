@@ -7,7 +7,7 @@ export const currentTerms: Schemas['TermsVersionView'][] = [
   {
     docType: 'TERMS_OF_SERVICE',
     version: 1,
-    title: '피클 서비스 이용약관',
+    title: '부산대학교 클라우드 플랫폼 서비스 이용약관',
     effectiveAt: '2026-07-20T00:00:00+09:00',
   },
   {
@@ -19,7 +19,7 @@ export const currentTerms: Schemas['TermsVersionView'][] = [
 ]
 
 const termsBodies: Record<Schemas['TermsDocType'], string> = {
-  TERMS_OF_SERVICE: '# 피클 서비스 이용약관\n\n제1조(목적) 이 약관은 ...',
+  TERMS_OF_SERVICE: '# 부산대학교 클라우드 플랫폼 서비스 이용약관\n\n제1조(목적) 이 약관은 ...',
   PRIVACY_POLICY: '# 개인정보처리방침\n\n1. 수집하는 개인정보 항목 ...',
 }
 

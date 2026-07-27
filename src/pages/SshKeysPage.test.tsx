@@ -29,7 +29,7 @@ describe('SSH 키 페이지', () => {
     renderKeys()
 
     const pasteRow = (await screen.findByText('연구실 노트북')).closest('tr') as HTMLElement
-    const genRow = screen.getByText('피클에서 만든 키').closest('tr') as HTMLElement
+    const genRow = screen.getByText('Pickle에서 만든 키').closest('tr') as HTMLElement
 
     // 붙여넣기 키(privateKeyStored=false)는 개인키 다운로드 버튼이 없다.
     expect(
@@ -141,7 +141,7 @@ describe('SSH 키 — 만들기·다운로드', () => {
     const user = userEvent.setup()
     renderKeys()
 
-    const genRow = (await screen.findByText('피클에서 만든 키')).closest('tr') as HTMLElement
+    const genRow = (await screen.findByText('Pickle에서 만든 키')).closest('tr') as HTMLElement
     await user.click(within(genRow).getByRole('button', { name: '개인키 다운로드' }))
 
     expect(URL.createObjectURL).toHaveBeenCalled()

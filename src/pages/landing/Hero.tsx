@@ -65,7 +65,7 @@ export function Hero() {
                 수업과 프로젝트를 위한 <br className="hidden sm:block" />
                 나만의 서버,{' '}
                 <span className="bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
-                  피클
+                  PNU Cloud, 피클
                 </span>
               </h1>
             </Reveal>

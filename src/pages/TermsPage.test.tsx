@@ -5,7 +5,7 @@ import { renderApp } from '../test/render'
 describe('약관 공개 페이지', () => {
   test('문서 본문을 인증 없이 표시한다', async () => {
     renderApp('/terms/TERMS_OF_SERVICE')
-    expect(await screen.findByRole('heading', { name: '피클 서비스 이용약관' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '부산대학교 클라우드 플랫폼 서비스 이용약관' })).toBeInTheDocument()
     expect(screen.getByText(/버전 1/)).toBeInTheDocument()
   })
 
