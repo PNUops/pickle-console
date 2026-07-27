@@ -8,6 +8,7 @@ import { usePopover } from './use-popover'
 import { TabPanel, Tabs } from './Tabs'
 import { Button } from './Button'
 import { ConfirmNameModal } from './ConfirmNameModal'
+import { Drawer } from './Drawer'
 import { FormField } from './FormField'
 import { Input } from './Input'
 import { Modal } from './Modal'
@@ -76,6 +77,54 @@ describe('Modal', () => {
       <Modal open onClose={onClose} title="확인">
         내용
       </Modal>,
+    )
+    const dialog = screen.getByRole('dialog')
+    const backdrop = dialog.parentElement?.firstElementChild as HTMLElement
+    await user.click(backdrop)
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Drawer', () => {
+  function Harness() {
+    const [open, setOpen] = useState(false)
+    return (
+      <MemoryRouter>
+        <button type="button" onClick={() => setOpen(true)}>
+          상세 열기
+        </button>
+        <Drawer open={open} onClose={() => setOpen(false)} title="상세" footer={<span>푸터</span>}>
+          <p>본문</p>
+          <button type="button">본문 버튼</button>
+        </Drawer>
+      </MemoryRouter>
+    )
+  }
+
+  test('다이얼로그 시맨틱으로 열리고 Escape로 닫히며 포커스를 복원한다', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: '상세 열기' })
+    await user.click(trigger)
+
+    const dialog = screen.getByRole('dialog', { name: '상세' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByText('푸터')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
+  test('오버레이 클릭으로 닫힌다', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <MemoryRouter>
+        <Drawer open onClose={onClose} title="상세">
+          본문
+        </Drawer>
+      </MemoryRouter>,
     )
     const dialog = screen.getByRole('dialog')
     const backdrop = dialog.parentElement?.firstElementChild as HTMLElement
