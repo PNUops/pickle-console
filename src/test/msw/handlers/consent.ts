@@ -13,7 +13,7 @@ export const currentTerms: Schemas['TermsVersionView'][] = [
   {
     docType: 'PRIVACY_POLICY',
     version: 1,
-    title: '개인정보처리방침',
+    title: '부산대학교 클라우드 플랫폼 개인정보처리방침',
     effectiveAt: '2026-07-20T00:00:00+09:00',
   },
 ]
