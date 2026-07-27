@@ -3,6 +3,11 @@ import { useEffect, useRef, type RefObject } from 'react'
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+// 활성 트랩 스택. 트랩이 겹치면(드로어 위 모달 등) 최상단 트랩만 Tab·ESC를
+// 처리해야 한다 — 둘 다 document 레벨 리스너라, 가드가 없으면 바깥 트랩이
+// 포커스를 도로 끌어가고 ESC 한 번에 두 겹이 동시에 닫힌다.
+const trapStack: symbol[] = []
+
 /**
  * 다이얼로그·드로어 공용 포커스 트랩. 활성화되면 컨테이너의 첫 포커스 가능
  * 요소로 포커스를 옮기고, Tab 순환·ESC 콜백·body 스크롤 락을 걸며,
@@ -21,6 +26,8 @@ export function useFocusTrap(
 
   useEffect(() => {
     if (!active) return
+    const token = Symbol('focus-trap')
+    trapStack.push(token)
     const previouslyFocused = document.activeElement
     const container = containerRef.current
     const firstFocusable = container?.querySelector<HTMLElement>(FOCUSABLE)
@@ -30,6 +37,7 @@ export function useFocusTrap(
     document.body.style.overflow = 'hidden'
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (trapStack[trapStack.length - 1] !== token) return
       if (event.key === 'Escape') {
         event.stopPropagation()
         onEscapeRef.current()
@@ -61,6 +69,8 @@ export function useFocusTrap(
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
+      const index = trapStack.indexOf(token)
+      if (index !== -1) trapStack.splice(index, 1)
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previousOverflow
       if (previouslyFocused instanceof HTMLElement) {

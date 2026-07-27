@@ -84,6 +84,46 @@ describe('Modal', () => {
   })
 })
 
+describe('stacked dialogs', () => {
+  function Harness() {
+    const [outerOpen, setOuterOpen] = useState(true)
+    const [innerOpen, setInnerOpen] = useState(false)
+    return (
+      <>
+        <Modal open={outerOpen} onClose={() => setOuterOpen(false)} title="바깥">
+          <button type="button" onClick={() => setInnerOpen(true)}>
+            안쪽 열기
+          </button>
+        </Modal>
+        <Modal open={innerOpen} onClose={() => setInnerOpen(false)} title="안쪽">
+          <button type="button">안쪽 버튼</button>
+        </Modal>
+      </>
+    )
+  }
+
+  test('키보드 처리가 최상단 다이얼로그에만 적용된다', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByRole('button', { name: '안쪽 열기' }))
+    const inner = screen.getByRole('dialog', { name: '안쪽' })
+
+    // Tab 순환이 안쪽 다이얼로그를 벗어나지 않는다
+    await user.tab()
+    expect(inner.contains(document.activeElement)).toBe(true)
+    await user.tab()
+    expect(inner.contains(document.activeElement)).toBe(true)
+
+    // Escape 한 번에 안쪽만 닫히고, 바깥은 남는다
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '안쪽' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '바깥' })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
 describe('status badges', () => {
   test('renders Korean labels for request and VM states', () => {
     render(
