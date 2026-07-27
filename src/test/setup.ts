@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { clearReauthToken } from '../api/reauth'
 import { setAccessToken } from '../api/token'
 import { StubWebSocket } from './StubWebSocket'
 import { resetFixtures, server } from './msw/server'
@@ -76,6 +77,7 @@ afterEach(() => {
   resetFixtures()
   StubWebSocket.reset()
   setAccessToken(null)
+  clearReauthToken() // 재인증(sudo-mode) 토큰도 테스트 간 새지 않게 한다
   sessionStorage.clear() // 위저드 초안 등 세션 저장소가 테스트 간 새지 않게 한다
 })
 afterAll(() => server.close())

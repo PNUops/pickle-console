@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
 import App from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
+import { ReauthProvider } from '../auth/ReauthProvider'
 import { ToastProvider } from '../components/ui'
 
 /** Render the full app (routing + auth + query) at the given route. */
@@ -18,7 +19,9 @@ export function renderApp(route = '/') {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-            <App />
+            <ReauthProvider>
+              <App />
+            </ReauthProvider>
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>

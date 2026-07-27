@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api, getCsrfToken, refreshSession } from '../api/client'
 import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
+import { clearReauthToken } from '../api/reauth'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { AuthContext, type AuthStatus, type LoginResult, type UserProfile } from './auth-context'
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       onSessionExpired(() => {
+        clearReauthToken()
         queryClient.clear()
         setState({ status: 'unauthenticated', user: null })
       }),
@@ -69,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw toApiError(me.error, '사용자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')
     }
     // 직전 세션(다른 계정)의 캐시가 새 세션 화면에 렌더링되지 않도록 비운다.
+    // 재인증 토큰도 세션에 매인 값이므로 계정이 바뀌면 반드시 버린다.
+    clearReauthToken()
     queryClient.clear()
     setState({ status: 'authenticated', user: me.data })
     return me.data
@@ -116,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
     } finally {
       clearAccessToken()
+      clearReauthToken()
       queryClient.clear()
       // 같은 탭에서 다음 사용자가 이전 사용자의 신청서 초안을 물려받지 않게 지운다.
       sessionStorage.removeItem(VM_REQUEST_DRAFT_KEY)

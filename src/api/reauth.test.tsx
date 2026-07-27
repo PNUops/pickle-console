@@ -1,0 +1,170 @@
+import { useState } from 'react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, test } from 'vitest'
+import { api } from './client'
+import { getReauthToken } from './reauth'
+import { setAccessToken } from './token'
+import { ReauthProvider } from '../auth/ReauthProvider'
+import {
+  RATE_LIMITED_PASSWORD,
+  REAUTH_TOKEN,
+  USER_PASSWORD,
+  reauthGateHandlers,
+} from '../test/msw/handlers/auth'
+import { server } from '../test/msw/server'
+
+/** 재인증 게이트를 켠 민감 작업 하나(개인키 조회)를 버튼으로 노출하는 하네스. */
+function Harness() {
+  const [results, setResults] = useState<string[]>([])
+  const call = async () => {
+    const { data, error } = await api.GET('/me/ssh-keys/{keyId}/private-key', {
+      params: { path: { keyId: 4 } },
+    })
+    setResults((prev) => [...prev, data ? `ok:${data.fileName}` : `err:${error?.code ?? 'unknown'}`])
+  }
+  return (
+    <ReauthProvider>
+      <button type="button" onClick={() => void call()}>
+        개인키 내려받기
+      </button>
+      <ul aria-label="호출 결과">
+        {results.map((result, index) => (
+          <li key={index}>{result}</li>
+        ))}
+      </ul>
+    </ReauthProvider>
+  )
+}
+
+function renderHarness() {
+  server.use(...reauthGateHandlers('GET /me/ssh-keys/:keyId/private-key'))
+  const user = userEvent.setup()
+  render(<Harness />)
+  return user
+}
+
+const passwordField = () => screen.getByLabelText('비밀번호')
+
+beforeEach(() => {
+  setAccessToken('access-user')
+})
+
+describe('재인증(sudo-mode) 흐름', () => {
+  test('403 REAUTH_REQUIRED면 모달이 뜨고, 비밀번호 확인 후 원래 요청이 재시도된다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+
+    expect(await screen.findByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(
+      screen.getByText(/민감한 작업입니다\. 계속하려면 비밀번호를 입력해 주세요\./),
+    ).toBeInTheDocument()
+
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    // 토큰이 발급되고(메모리), 원래 호출이 헤더를 달고 재시도되어 성공한다.
+    // 게이트 핸들러는 헤더가 없으면 403이므로 성공 자체가 헤더 부착의 증거다.
+    expect(await screen.findByText('ok:id_ed25519_pickle')).toBeInTheDocument()
+    expect(getReauthToken()).toBe(REAUTH_TOKEN)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('비밀번호가 틀리면 모달에 오류가 남고, 다시 입력하면 성공한다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+
+    await user.type(passwordField(), 'wrong-password')
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('비밀번호가 일치하지 않습니다.')
+    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(getReauthToken()).toBeNull()
+
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByText('ok:id_ed25519_pickle')).toBeInTheDocument()
+  })
+
+  test('요청 과다(429)면 서버 메시지를 보여주고 모달을 열어 둔다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+
+    await user.type(passwordField(), RATE_LIMITED_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '비밀번호 확인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+    )
+    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+  })
+
+  test('취소하면 호출부가 원래 403을 받고(멈추지 않고) 토큰도 남지 않는다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+
+    await user.click(screen.getByRole('button', { name: '취소' }))
+
+    expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
+    expect(getReauthToken()).toBeNull()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('본문이 있는 요청도 재시도에서 본문이 보존된다', async () => {
+    server.use(...reauthGateHandlers('POST /me/ssh-keys'))
+    const user = userEvent.setup()
+    const outcome: string[] = []
+    render(
+      <ReauthProvider>
+        <button
+          type="button"
+          onClick={() =>
+            void api
+              .POST('/me/ssh-keys', {
+                body: {
+                  name: '재인증 테스트 키',
+                  publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIReauth000000000000000000 note',
+                },
+              })
+              .then(({ data, error }) =>
+                outcome.push(data ? `ok:${data.name}` : `err:${error?.code ?? 'unknown'}`),
+              )
+          }
+        >
+          키 등록
+        </button>
+      </ReauthProvider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: '키 등록' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+
+    // 재시도가 원래 본문(name/publicKey)을 그대로 다시 보내야 201이 나온다.
+    await waitFor(() => expect(outcome).toEqual(['ok:재인증 테스트 키']))
+  })
+
+  test('유효한 토큰이 있으면 두 번째 민감 작업은 모달 없이 통과한다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+    expect(await screen.findByText('ok:id_ed25519_pickle')).toBeInTheDocument()
+
+    // 두 번째 호출: 보유 토큰이 자동으로 붙으므로 게이트를 그대로 통과한다.
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await waitFor(() => expect(screen.getAllByText('ok:id_ed25519_pickle')).toHaveLength(2))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})

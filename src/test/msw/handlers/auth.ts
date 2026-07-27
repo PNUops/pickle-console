@@ -158,6 +158,22 @@ export const ACCESS_TOKENS: Record<string, Schemas['UserProfileResponse']> = {
   'access-mfa': mfaProfile,
 }
 
+/* ─── 재인증 (sudo-mode) ─── */
+
+/** POST /auth/reverify가 발급하는 목 토큰 — 민감 작업이 헤더로 요구한다. */
+export const REAUTH_TOKEN = 'reauth-token-1'
+
+/** 이 비밀번호로 재확인을 시도하면 잠금(429)을 흉내 낸다. */
+export const RATE_LIMITED_PASSWORD = 'rate-limited-password'
+
+export const reauthRequiredProblem: Schemas['Problem'] = {
+  type: 'about:blank',
+  title: '재인증이 필요합니다',
+  status: 403,
+  detail: '민감한 작업입니다. 비밀번호를 다시 확인해 주세요.',
+  code: 'REAUTH_REQUIRED',
+}
+
 export const unauthorizedProblem: Schemas['Problem'] = {
   type: 'about:blank',
   title: '인증이 필요합니다',
@@ -273,6 +289,34 @@ export const authHandlers: RequestHandler[] = [
 
   http.post('*/api/v1/auth/logout', () => new HttpResponse(null, { status: 204 })),
 
+  // 재인증(sudo-mode): 비밀번호를 다시 확인하고 10분짜리 다회용 토큰을 발급한다.
+  http.post('*/api/v1/auth/reverify', async ({ request }) => {
+    const body = (await request.json()) as Schemas['ReverifyRequest']
+    if (body.password === RATE_LIMITED_PASSWORD) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '요청이 너무 많습니다',
+        status: 429,
+        detail: '비밀번호 확인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+        code: 'RATE_LIMITED',
+      })
+    }
+    if (body.password !== USER_PASSWORD) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '비밀번호가 올바르지 않습니다',
+        status: 403,
+        detail: '비밀번호가 일치하지 않습니다.',
+        code: 'AUTH_PASSWORD_MISMATCH',
+      })
+    }
+    const response: Schemas['ReverifyResponse'] = {
+      reauthToken: REAUTH_TOKEN,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    }
+    return HttpResponse.json(response, { status: 200 })
+  }),
+
   http.post('*/api/v1/auth/verify-email', async ({ request }) => {
     const { token } = (await request.json()) as { token: string }
     if (token === 'valid-token') {
@@ -315,6 +359,38 @@ export const authHandlers: RequestHandler[] = [
 ]
 
 /* ─── overrides for specific test scenarios ─── */
+
+/**
+ * 민감 작업의 재인증 게이트를 켠다 (opt-in — 기본 핸들러는 헤더를 요구하지 않으므로
+ * 기존 스위트가 그대로 통과한다). `server.use(...reauthGateHandlers('DELETE /vms/:vmId'))`
+ * 처럼 쓰면 해당 경로는 `X-Reauth-Token`이 없을 때 403 REAUTH_REQUIRED를 돌려주고,
+ * 헤더가 있으면 undefined를 반환해 원래(기본) 핸들러로 넘어간다.
+ *
+ * spec 형식: `'<METHOD> <path>'` — path는 `/api/v1` 아래의 계약 경로(MSW 패턴,
+ * 예: `/me/ssh-keys/:keyId`).
+ */
+export function reauthGateHandlers(...specs: string[]): RequestHandler[] {
+  return specs.map((spec) => {
+    const [method, path] = spec.split(' ')
+    const resolver = ({ request }: { request: Request }) =>
+      request.headers.get('X-Reauth-Token')
+        ? undefined
+        : problemResponse({ ...reauthRequiredProblem, instance: `/api/v1${path}` })
+    const url = `*/api/v1${path}`
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return http.get(url, resolver)
+      case 'POST':
+        return http.post(url, resolver)
+      case 'PATCH':
+        return http.patch(url, resolver)
+      case 'DELETE':
+        return http.delete(url, resolver)
+      default:
+        throw new Error(`reauthGateHandlers: unsupported method ${method}`)
+    }
+  })
+}
 
 /** Refresh succeeds and issues the given access token (default: the regular user). */
 export function refreshSuccessHandler(

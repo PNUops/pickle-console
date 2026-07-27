@@ -12,6 +12,7 @@ import '@fontsource/pretendard/800.css'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider.tsx'
+import { ReauthProvider } from './auth/ReauthProvider.tsx'
 import { ToastProvider } from './components/ui'
 
 const queryClient = new QueryClient({
@@ -29,7 +30,9 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-            <App />
+            <ReauthProvider>
+              <App />
+            </ReauthProvider>
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>
