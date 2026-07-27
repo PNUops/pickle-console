@@ -8,7 +8,7 @@ import { server } from '../test/msw/server'
 import { useTerminalSocket } from './useTerminalSocket'
 
 function render(vmId = 56, onData: (b: Uint8Array) => void = () => {}) {
-  setAccessToken('access-student')
+  setAccessToken('access-user')
   return renderHook(() => useTerminalSocket(vmId, onData))
 }
 

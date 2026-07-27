@@ -8,7 +8,7 @@ import { renderApp } from '../test/render'
 
 /** 사용자 세션으로 VM 상세의 도메인·공개 탭을 연다 (그룹 12=OWNER, 그룹 15=MEMBER). */
 function renderVm(vmId: number) {
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}?tab=publish`)
 }
 

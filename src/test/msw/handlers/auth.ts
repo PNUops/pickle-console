@@ -15,7 +15,7 @@ export function problemResponse(problem: Schemas['Problem']) {
 
 export const USER_PASSWORD = 'correct-horse-battery!'
 
-export const studentUser: Schemas['UserSummaryResponse'] = {
+export const regularUser: Schemas['UserSummaryResponse'] = {
   id: 42,
   email: 'example@pusan.ac.kr',
   name: '홍길동',
@@ -53,15 +53,15 @@ export const sysManagerUser: Schemas['UserSummaryResponse'] = {
 }
 
 /** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
-export const studentBUser: Schemas['UserSummaryResponse'] = {
+export const regularUserB: Schemas['UserSummaryResponse'] = {
   id: 58,
   email: 'younghee.park@pusan.ac.kr',
   name: '박영희',
   role: 'USER',
 }
 
-export const studentProfile: Schemas['UserProfileResponse'] = {
-  ...studentUser,
+export const regularProfile: Schemas['UserProfileResponse'] = {
+  ...regularUser,
   orgId: null,
   status: 'ACTIVE',
   memberships: [
@@ -115,8 +115,8 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   pendingConsents: [],
 }
 
-export const studentBProfile: Schemas['UserProfileResponse'] = {
-  ...studentBUser,
+export const regularProfileB: Schemas['UserProfileResponse'] = {
+  ...regularUserB,
   orgId: null,
   status: 'ACTIVE',
   memberships: [
@@ -149,12 +149,12 @@ export const MFA_VALID_RECOVERY_CODE = 'abcd-efgh-ijkl'
 
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfileResponse']> = {
-  'access-student': studentProfile,
+  'access-user': regularProfile,
   'access-org-admin': orgAdminProfile,
   'access-org-manager': orgManagerProfile,
   'access-sys-admin': sysAdminProfile,
   'access-sys-manager': sysManagerProfile,
-  'access-student-b': studentBProfile,
+  'access-user-b': regularProfileB,
   'access-mfa': mfaProfile,
 }
 
@@ -209,12 +209,12 @@ export const authHandlers: RequestHandler[] = [
     const account =
       body.password !== USER_PASSWORD
         ? null
-        : body.email === studentUser.email
-          ? { user: studentUser, token: 'access-student' }
+        : body.email === regularUser.email
+          ? { user: regularUser, token: 'access-user' }
           : body.email === orgAdminUser.email
             ? { user: orgAdminUser, token: 'access-org-admin' }
-            : body.email === studentBUser.email
-              ? { user: studentBUser, token: 'access-student-b' }
+            : body.email === regularUserB.email
+              ? { user: regularUserB, token: 'access-user-b' }
               : null
     if (!account) {
       return problemResponse({
@@ -316,10 +316,10 @@ export const authHandlers: RequestHandler[] = [
 
 /* ─── overrides for specific test scenarios ─── */
 
-/** Refresh succeeds and issues the given access token (default: student). */
+/** Refresh succeeds and issues the given access token (default: the regular user). */
 export function refreshSuccessHandler(
-  token = 'access-student',
-  user: Schemas['UserSummaryResponse'] = studentUser,
+  token = 'access-user',
+  user: Schemas['UserSummaryResponse'] = regularUser,
   onCall?: () => void,
 ): RequestHandler {
   return http.post('*/api/v1/auth/refresh', () => {

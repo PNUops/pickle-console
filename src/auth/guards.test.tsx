@@ -6,7 +6,7 @@ import { server } from '../test/msw/server'
 import {
   refreshSuccessHandler,
   orgAdminUser,
-  studentBUser,
+  regularUserB,
   USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { vmRequestStore } from '../test/msw/handlers/vm-requests'
@@ -20,14 +20,14 @@ describe('라우트 가드', () => {
   })
 
   test('세션이 복원된 사용자는 /console 대시보드를 본다', async () => {
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 
   test('사용자가 /admin에 접근하면 /console로 돌려보낸다', async () => {
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/admin')
 
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
@@ -44,7 +44,7 @@ describe('라우트 가드', () => {
 
   test('세션 복원 중 /me 네트워크 예외가 나도 로딩에 갇히지 않고 로그인 화면으로 보낸다', async () => {
     server.use(
-      refreshSuccessHandler('access-student'),
+      refreshSuccessHandler('access-user'),
       http.get('*/api/v1/me', () => HttpResponse.error()),
     )
     renderApp('/console')
@@ -56,7 +56,7 @@ describe('라우트 가드', () => {
 describe('계정 전환 시 캐시 격리', () => {
   test('로그아웃 후 다른 계정으로 로그인하면 이전 계정의 캐시 데이터가 보이지 않는다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/requests')
 
     // A(홍길동) 세션: 신청 목록이 캐시에 올라간다.
@@ -73,7 +73,7 @@ describe('계정 전환 시 캐시 격리', () => {
     vmRequestStore.splice(0, vmRequestStore.length)
 
     // B(박영희)로 로그인.
-    await user.type(screen.getByLabelText('이메일'), studentBUser.email)
+    await user.type(screen.getByLabelText('이메일'), regularUserB.email)
     await user.type(screen.getByLabelText('비밀번호'), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '로그인' }))
     await screen.findByRole('heading', { name: '대시보드' })

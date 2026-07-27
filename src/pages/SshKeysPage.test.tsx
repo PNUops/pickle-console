@@ -8,7 +8,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 function renderKeys() {
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp('/console/ssh-keys')
 }
 

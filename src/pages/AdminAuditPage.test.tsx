@@ -67,7 +67,7 @@ describe('감사 로그', () => {
 
 describe('내 활동', () => {
   test('사용자는 로그인 기록과 IP, 보안 안내 문구를 본다', async () => {
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/activity')
 
     await screen.findByRole('heading', { name: '내 활동' })

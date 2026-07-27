@@ -7,7 +7,7 @@ import {
   USER_PASSWORD,
   mfaUser,
   orgAdminUser,
-  studentUser,
+  regularUser,
 } from '../test/msw/handlers/auth'
 import { renderApp } from '../test/render'
 
@@ -24,7 +24,7 @@ describe('로그인', () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    await submitLogin(studentUser.email, USER_PASSWORD)
+    await submitLogin(regularUser.email, USER_PASSWORD)
 
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
     expect(screen.getByText(/홍길동님, 환영합니다/)).toBeInTheDocument()
@@ -45,7 +45,7 @@ describe('로그인', () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    await submitLogin(studentUser.email, 'wrong-password-99')
+    await submitLogin(regularUser.email, 'wrong-password-99')
 
     expect(
       await screen.findByText('이메일 또는 비밀번호가 올바르지 않습니다.'),

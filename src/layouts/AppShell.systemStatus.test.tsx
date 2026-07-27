@@ -13,7 +13,7 @@ describe('점검 모드·공지 배너·문의처 (AppShell)', () => {
       maintenanceMessage: '디스크 교체 중입니다',
       contactEmail: 'ops@pickle.local',
     })
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     expect(await screen.findByRole('heading', { name: '서비스 점검 중' })).toBeInTheDocument()
@@ -38,7 +38,7 @@ describe('점검 모드·공지 배너·문의처 (AppShell)', () => {
 
   test('공지 배너는 표시되며 세션 동안 닫을 수 있다', async () => {
     setSystemStatus({ bannerMessage: '오늘 22시 정기 점검 예정' })
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     expect(await screen.findByText('오늘 22시 정기 점검 예정')).toBeInTheDocument()
@@ -48,7 +48,7 @@ describe('점검 모드·공지 배너·문의처 (AppShell)', () => {
 
   test('문의 이메일은 셸 푸터에 mailto 링크로 노출된다', async () => {
     setSystemStatus({ contactEmail: 'help@pickle.local' })
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     expect(await screen.findByRole('link', { name: 'help@pickle.local' })).toHaveAttribute(

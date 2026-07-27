@@ -7,7 +7,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 function renderRequests(path = '/console/requests') {
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp(path)
 }
 

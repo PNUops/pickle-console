@@ -21,7 +21,7 @@ vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 
 function renderTerminal(vmId = 56) {
   resetXtermMock()
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}/terminal`)
 }
 

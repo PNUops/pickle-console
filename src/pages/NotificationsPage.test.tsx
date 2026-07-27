@@ -7,7 +7,7 @@ import { renderApp } from '../test/render'
 
 describe('알림 종(bell)', () => {
   test('사용자 상단 바에 읽지 않은 알림 수를 배지로 보여준다', async () => {
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     const bell = await screen.findByRole('button', { name: '읽지 않은 알림 2개' })
@@ -16,7 +16,7 @@ describe('알림 종(bell)', () => {
 
   test('종을 누르면 최근 알림 팝오버가 열리고 전체 보기가 알림함으로 연결된다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 2개' }))
@@ -30,7 +30,7 @@ describe('알림 종(bell)', () => {
 
   test('팝오버에서 linkPath 알림을 누르면 해당 화면으로 이동하고 읽음 처리된다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 2개' }))
@@ -45,7 +45,7 @@ describe('알림 종(bell)', () => {
 
   test('팝오버 모두 읽음으로 배지가 사라진다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 2개' }))
@@ -77,7 +77,7 @@ describe('알림 종(bell)', () => {
 describe('알림함', () => {
   test('알림을 누르면 읽음 처리되어 종 배지 수가 줄어든다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/notifications')
 
     await screen.findByRole('heading', { name: '알림함' })
@@ -91,7 +91,7 @@ describe('알림함', () => {
 
   test('linkPath가 있는 알림을 누르면 해당 화면으로 이동한다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/notifications')
 
     await screen.findByRole('heading', { name: '알림함' })
@@ -103,7 +103,7 @@ describe('알림함', () => {
 
   test('모두 읽음을 누르면 종 배지가 사라진다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/notifications')
 
     await screen.findByRole('heading', { name: '알림함' })
@@ -114,7 +114,7 @@ describe('알림함', () => {
 
   test('안읽음 탭은 읽지 않은 알림만 보여준다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/notifications')
 
     await screen.findByRole('heading', { name: '알림함' })

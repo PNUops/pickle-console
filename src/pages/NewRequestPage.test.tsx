@@ -7,7 +7,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 function renderWizard() {
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp('/console/requests/new')
 }
 
@@ -151,7 +151,7 @@ describe('VM 신청 위저드 — 단계 검증', () => {
 describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
   test('새로고침(재마운트) 후에도 URL step과 입력값이 유지된다', async () => {
     const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     const first = renderApp('/console/requests/new')
     await screen.findByRole('heading', { name: 'VM 신청' })
 
@@ -174,7 +174,7 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
   })
 
   test('완료되지 않은 단계로 직접 진입하면 첫 미완료 단계로 돌려보낸다', async () => {
-    server.use(refreshSuccessHandler('access-student'))
+    server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/requests/new?step=4')
 
     // 아무것도 입력하지 않았으므로 1단계(그룹·기관)로 되돌아간다.

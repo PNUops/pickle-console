@@ -5,7 +5,7 @@ import { getAccessToken, onSessionExpired, setAccessToken } from './token'
 import { server } from '../test/msw/server'
 import {
   refreshSuccessHandler,
-  studentProfile,
+  regularProfile,
 } from '../test/msw/handlers/auth'
 
 beforeEach(() => {
@@ -14,34 +14,34 @@ beforeEach(() => {
 
 describe('api client auth behavior', () => {
   test('attaches the bearer token to requests', async () => {
-    setAccessToken('access-student')
+    setAccessToken('access-user')
     const { data, error } = await api.GET('/me')
     expect(error).toBeUndefined()
-    expect(data).toEqual(studentProfile)
+    expect(data).toEqual(regularProfile)
   })
 
   test('on 401, refreshes once and retries the original request', async () => {
     const refreshCalls = vi.fn()
-    server.use(refreshSuccessHandler('access-student', undefined, refreshCalls))
+    server.use(refreshSuccessHandler('access-user', undefined, refreshCalls))
 
     setAccessToken('stale-token')
     const { data, error } = await api.GET('/me')
 
     expect(error).toBeUndefined()
-    expect(data).toEqual(studentProfile)
+    expect(data).toEqual(regularProfile)
     expect(refreshCalls).toHaveBeenCalledTimes(1)
-    expect(getAccessToken()).toBe('access-student')
+    expect(getAccessToken()).toBe('access-user')
   })
 
   test('parallel 401s share a single refresh (single-flight)', async () => {
     const refreshCalls = vi.fn()
-    server.use(refreshSuccessHandler('access-student', undefined, refreshCalls))
+    server.use(refreshSuccessHandler('access-user', undefined, refreshCalls))
 
     setAccessToken('stale-token')
     const [a, b] = await Promise.all([api.GET('/me'), api.GET('/me')])
 
-    expect(a.data).toEqual(studentProfile)
-    expect(b.data).toEqual(studentProfile)
+    expect(a.data).toEqual(regularProfile)
+    expect(b.data).toEqual(regularProfile)
     expect(refreshCalls).toHaveBeenCalledTimes(1)
   })
 
@@ -79,7 +79,7 @@ describe('api client auth behavior', () => {
 
   test('a 401 from login does not trigger a refresh attempt', async () => {
     const refreshCalls = vi.fn()
-    server.use(refreshSuccessHandler('access-student', undefined, refreshCalls))
+    server.use(refreshSuccessHandler('access-user', undefined, refreshCalls))
 
     const { error } = await api.POST('/auth/login', {
       body: { email: 'example@pusan.ac.kr', password: 'wrong-password' },

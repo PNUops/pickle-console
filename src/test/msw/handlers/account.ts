@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse, studentUser, USER_PASSWORD } from './auth'
+import { problemResponse, regularUser, USER_PASSWORD } from './auth'
 
 type Schemas = components['schemas']
 
@@ -31,8 +31,8 @@ export const accountHandlers: RequestHandler[] = [
     if (body.currentPassword !== USER_PASSWORD) return passwordMismatch('/api/v1/me/password')
     if (body.newPassword.length < 10) return weakPasswordProblem('/api/v1/me/password')
     const response: Schemas['AuthTokenResponse'] = {
-      accessToken: 'access-student',
-      user: studentUser,
+      accessToken: 'access-user',
+      user: regularUser,
     }
     return HttpResponse.json(response, { status: 200 })
   }),

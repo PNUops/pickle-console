@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
-import { refreshSuccessHandler, studentProfile, studentUser } from '../test/msw/handlers/auth'
+import { refreshSuccessHandler, regularProfile, regularUser } from '../test/msw/handlers/auth'
 import { currentTerms } from '../test/msw/handlers/consent'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -12,10 +12,10 @@ describe('약관 재동의 게이트', () => {
     const user = userEvent.setup()
     let accepted = false
     server.use(
-      refreshSuccessHandler('access-student', studentUser),
+      refreshSuccessHandler('access-user', regularUser),
       http.get('*/api/v1/me', () =>
         HttpResponse.json(
-          accepted ? studentProfile : { ...studentProfile, pendingConsents: currentTerms },
+          accepted ? regularProfile : { ...regularProfile, pendingConsents: currentTerms },
           { status: 200 },
         ),
       ),
@@ -44,13 +44,13 @@ describe('약관 재동의 게이트', () => {
     let postCount = 0
     const revisedTerms = currentTerms.map((t) => ({ ...t, version: t.version + 1 }))
     server.use(
-      refreshSuccessHandler('access-student', studentUser),
+      refreshSuccessHandler('access-user', regularUser),
       http.get('*/api/v1/me', () =>
         HttpResponse.json(
           accepted
-            ? studentProfile
+            ? regularProfile
             : {
-                ...studentProfile,
+                ...regularProfile,
                 // after the 409 the reload serves the revised versions
                 pendingConsents: postCount === 0 ? currentTerms : revisedTerms,
               },

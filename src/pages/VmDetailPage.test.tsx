@@ -9,7 +9,7 @@ import { renderApp } from '../test/render'
 
 /** VM 상세를 연다. tab을 주면 해당 탭 딥링크(?tab=)로 진입한다. */
 function renderVm(vmId: number, tab?: 'publish' | 'settings' | 'activity') {
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}${tab ? `?tab=${tab}` : ''}`)
 }
 

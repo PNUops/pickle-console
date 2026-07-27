@@ -5,14 +5,14 @@ import {
   MFA_VALID_CODE,
   mfaUser,
   refreshSuccessHandler,
-  studentUser,
+  regularUser,
   USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 function renderAccount() {
-  server.use(refreshSuccessHandler('access-student', studentUser))
+  server.use(refreshSuccessHandler('access-user', regularUser))
   renderApp('/console/account')
 }
 
@@ -70,7 +70,7 @@ describe('계정 설정 — 회원 탈퇴', () => {
     const confirmBtn = dialog.getByRole('button', { name: '탈퇴하기' })
     expect(confirmBtn).toBeDisabled()
 
-    await user.type(dialog.getByLabelText(/계속하려면 이메일/), studentUser.email)
+    await user.type(dialog.getByLabelText(/계속하려면 이메일/), regularUser.email)
     await user.type(dialog.getByLabelText('비밀번호 확인'), USER_PASSWORD)
     expect(confirmBtn).toBeEnabled()
     await user.click(confirmBtn)
@@ -87,7 +87,7 @@ describe('계정 설정 — 회원 탈퇴', () => {
 
     await user.click(await screen.findByRole('button', { name: '회원 탈퇴' }))
     const dialog = within(screen.getByRole('dialog'))
-    await user.type(dialog.getByLabelText(/계속하려면 이메일/), studentUser.email)
+    await user.type(dialog.getByLabelText(/계속하려면 이메일/), regularUser.email)
     await user.type(dialog.getByLabelText('비밀번호 확인'), 'wrong-password!')
     await user.click(dialog.getByRole('button', { name: '탈퇴하기' }))
 

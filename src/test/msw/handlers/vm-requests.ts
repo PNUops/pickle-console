@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse, studentUser } from './auth'
+import { problemResponse, regularUser } from './auth'
 
 type Schemas = components['schemas']
 type VmRequestDetail = Schemas['VmRequestDetailResponse']
@@ -14,8 +14,8 @@ function baseRequest(): Omit<
     groupName: '캡스톤 3조',
     orgId: 1,
     orgName: '정보컴퓨터공학부 실습지원센터',
-    requesterId: studentUser.id,
-    requesterName: studentUser.name,
+    requesterId: regularUser.id,
+    requesterName: regularUser.name,
     templateId: 1,
     courseOrProject: '2026-1 캡스톤디자인 3조',
     specReason: null,
@@ -148,8 +148,8 @@ export const vmRequestHandlers: RequestHandler[] = [
       id: nextRequestId++,
       groupName: '캡스톤 3조',
       orgName: '정보컴퓨터공학부 실습지원센터',
-      requesterId: studentUser.id,
-      requesterName: studentUser.name,
+      requesterId: regularUser.id,
+      requesterName: regularUser.name,
       courseOrProject: body.courseOrProject ?? null,
       specReason: body.specReason ?? null,
       extraNote: body.extraNote ?? null,

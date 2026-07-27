@@ -8,7 +8,7 @@ import { onMaintenanceDetected } from './maintenance'
 
 describe('점검 모드 503 감지', () => {
   test('503 MAINTENANCE_MODE 응답이 점검 알림을 발화한다', async () => {
-    setAccessToken('access-student')
+    setAccessToken('access-user')
     server.use(
       http.get('*/api/v1/notifications/unread-count', () =>
         HttpResponse.json(
@@ -28,7 +28,7 @@ describe('점검 모드 503 감지', () => {
   })
 
   test('다른 503(비-점검)은 알림을 발화하지 않는다', async () => {
-    setAccessToken('access-student')
+    setAccessToken('access-user')
     server.use(
       http.get('*/api/v1/notifications/unread-count', () =>
         HttpResponse.json(

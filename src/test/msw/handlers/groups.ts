@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse, studentUser } from './auth'
+import { problemResponse, regularUser } from './auth'
 
 type Schemas = components['schemas']
 
@@ -19,9 +19,9 @@ interface GroupRecord {
 }
 
 const me = (): Schemas['GroupMemberResponse'] => ({
-  userId: studentUser.id,
-  name: studentUser.name,
-  email: studentUser.email,
+  userId: regularUser.id,
+  name: regularUser.name,
+  email: regularUser.email,
   role: 'OWNER',
 })
 
@@ -101,14 +101,14 @@ export function resetGroupFixtures() {
 function toSummary(record: GroupRecord): Schemas['GroupSummaryResponse'] {
   const { id, kind, name, slug, description } = record.detail
   const myRole =
-    record.members.find((m) => m.userId === studentUser.id)?.role ?? 'VIEWER'
+    record.members.find((m) => m.userId === regularUser.id)?.role ?? 'VIEWER'
   return { id, kind, name, slug, description, myRole, memberCount: record.members.length }
 }
 
 function toDetail(record: GroupRecord): Schemas['GroupDetailResponse'] {
   // myRole은 서버처럼 현재 구성원 상태에서 계산한다 (역할 변경/OWNER 이전 반영).
   const myRole =
-    record.members.find((m) => m.userId === studentUser.id)?.role ??
+    record.members.find((m) => m.userId === regularUser.id)?.role ??
     record.detail.myRole
   return { ...record.detail, myRole, members: record.members }
 }

@@ -5,7 +5,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 function renderVms(path = '/console/vms') {
-  server.use(refreshSuccessHandler('access-student'))
+  server.use(refreshSuccessHandler('access-user'))
   renderApp(path)
 }
 

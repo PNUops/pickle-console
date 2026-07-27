@@ -1,7 +1,7 @@
 import { isOrgTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { orgAdminUser, problemResponse, studentUser } from './auth'
+import { orgAdminUser, problemResponse, regularUser } from './auth'
 import { orgs } from './reference'
 import {
   invalidVmStateProblem,
@@ -25,8 +25,8 @@ export function submittedAdminRequest(id: number): VmRequestDetail {
     groupName: '캡스톤 3조',
     orgId: 1,
     orgName: '정보컴퓨터공학부 실습지원센터',
-    requesterId: studentUser.id,
-    requesterName: studentUser.name,
+    requesterId: regularUser.id,
+    requesterName: regularUser.name,
     templateId: 1,
     purpose: `추가 실습 서버 ${id}`,
     courseOrProject: null,
@@ -142,9 +142,9 @@ function initialContexts(): Record<number, ApprovalContext> {
   return {
     201: {
       applicant: {
-        id: studentUser.id,
-        name: studentUser.name,
-        email: studentUser.email,
+        id: regularUser.id,
+        name: regularUser.name,
+        email: regularUser.email,
         signupAt: '2026-03-02T09:00:00+09:00',
         approvedCount: 2,
         rejectedCount: 0,
@@ -281,7 +281,7 @@ const alreadyDecided = (instance: string) =>
 
 /** Known users for PATCH /admin/users/{userId}. */
 const knownUsers: Record<number, Schemas['UserSummaryResponse']> = {
-  42: studentUser,
+  42: regularUser,
   57: { id: 57, email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'USER' },
 }
 
