@@ -20,7 +20,7 @@ export const currentTerms: Schemas['TermsVersionView'][] = [
 
 const termsBodies: Record<Schemas['TermsDocType'], string> = {
   TERMS_OF_SERVICE: '# 부산대학교 클라우드 플랫폼 서비스 이용약관\n\n제1조(목적) 이 약관은 ...',
-  PRIVACY_POLICY: '# 개인정보처리방침\n\n1. 수집하는 개인정보 항목 ...',
+  PRIVACY_POLICY: '# 부산대학교 클라우드 플랫폼 개인정보처리방침\n\n1. 수집하는 개인정보 항목 ...',
 }
 
 export const consentHandlers: RequestHandler[] = [
