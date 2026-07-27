@@ -17,6 +17,7 @@ function baseRequest(): Omit<
     requesterId: regularUser.id,
     requesterName: regularUser.name,
     templateId: 1,
+    flavorId: 2,
     courseOrProject: '2026-1 캡스톤디자인 3조',
     specReason: null,
     extraNote: null,

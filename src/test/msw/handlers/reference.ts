@@ -38,33 +38,59 @@ export function resetReferenceFixtures() {
   systemStatus = initialSystemStatus()
 }
 
-export const basicTemplate: Schemas['VmTemplateResponse'] = {
+/** OS 카탈로그 — 공개 /templates는 ACTIVE 리비전만 노출한다. */
+export const ubuntuTemplate: Schemas['VmTemplateResponse'] = {
   id: 1,
   name: 'ubuntu-24.04',
-  displayName: 'Ubuntu 24.04 LTS (기본형)',
-  version: 1,
-  defaultVcpu: 2,
-  defaultMemoryMb: 2048,
-  defaultDiskGb: 20,
+  displayName: 'Ubuntu 24.04 LTS',
+  version: 2,
   minDiskGb: 10,
   status: 'ACTIVE',
   notes: '대부분의 수업·동아리 프로젝트에 적합합니다.',
 }
 
-export const largeTemplate: Schemas['VmTemplateResponse'] = {
-  id: 2,
-  name: 'ubuntu-24.04-db',
-  displayName: 'Ubuntu 24.04 LTS (DB 실습형)',
-  version: 1,
-  defaultVcpu: 4,
-  defaultMemoryMb: 4096,
-  defaultDiskGb: 40,
-  minDiskGb: 20,
+export const templates: Schemas['VmTemplateResponse'][] = [ubuntuTemplate]
+
+/* ─── 사양 프리셋 (OS와 직교하는 축) ─── */
+
+export const smallFlavor: Schemas['VmFlavorResponse'] = {
+  id: 1,
+  name: 'small',
+  displayName: '소형',
+  vcpu: 1,
+  memoryMb: 1024,
+  diskGb: 10,
   status: 'ACTIVE',
-  notes: 'DB·데이터 처리 실습용 템플릿입니다.',
+  notes: '간단한 실습·정적 웹 서버에 적합합니다.',
 }
 
-export const templates: Schemas['VmTemplateResponse'][] = [basicTemplate, largeTemplate]
+export const basicFlavor: Schemas['VmFlavorResponse'] = {
+  id: 2,
+  name: 'basic',
+  displayName: '기본형',
+  vcpu: 2,
+  memoryMb: 2048,
+  diskGb: 20,
+  status: 'ACTIVE',
+  notes: '대부분의 수업·캡스톤 프로젝트에 적합합니다.',
+}
+
+export const largeFlavor: Schemas['VmFlavorResponse'] = {
+  id: 3,
+  name: 'large',
+  displayName: '대형',
+  vcpu: 4,
+  memoryMb: 8192,
+  diskGb: 40,
+  status: 'ACTIVE',
+  notes: 'DB·데이터 처리 실습용입니다.',
+}
+
+export const vmFlavors: Schemas['VmFlavorResponse'][] = [
+  smallFlavor,
+  basicFlavor,
+  largeFlavor,
+]
 
 export const requestOptions = {
   allowedRootDomains: ['pickle.pnuops.com', 'lab.pnuops.com'],
@@ -77,6 +103,7 @@ export const requestOptions = {
 export const referenceHandlers: RequestHandler[] = [
   http.get('*/api/v1/orgs', () => HttpResponse.json(orgs, { status: 200 })),
   http.get('*/api/v1/templates', () => HttpResponse.json(templates, { status: 200 })),
+  http.get('*/api/v1/vm-flavors', () => HttpResponse.json(vmFlavors, { status: 200 })),
   http.get('*/api/v1/meta/request-options', () =>
     HttpResponse.json(requestOptions, { status: 200 }),
   ),

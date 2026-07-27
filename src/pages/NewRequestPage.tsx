@@ -8,9 +8,10 @@ import {
   fetchOrgs,
   fetchRequestOptions,
   fetchTemplates,
+  fetchVmFlavors,
   type CreateVmRequest,
+  type VmFlavor,
   type VmRequestDetail,
-  type VmTemplate,
 } from '../api/queries'
 import {
   Alert,
@@ -36,13 +37,14 @@ import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { SUBDOMAIN_RE } from '../lib/validation'
 
-const STEPS = ['그룹·기관·이름', '템플릿·사양', '용도·기간', '확인·제출']
+const STEPS = ['그룹·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
 
 /** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용). */
 const FIELD_LABELS: Record<string, string> = {
   groupId: '그룹',
   orgId: '기관',
-  templateId: '템플릿',
+  templateId: 'OS',
+  flavorId: '사양 프리셋',
   purpose: '용도',
   courseOrProject: '수업/프로젝트',
   specReason: '사양 사유',
@@ -62,6 +64,7 @@ interface WizardState {
   groupId: number | null
   orgId: number | null
   templateId: number | null
+  flavorId: number | null
   reqVcpu: number
   reqMemoryMb: number
   reqDiskGb: number
@@ -81,6 +84,7 @@ const INITIAL_STATE: WizardState = {
   groupId: null,
   orgId: null,
   templateId: null,
+  flavorId: null,
   reqVcpu: 1,
   reqMemoryMb: 1024,
   reqDiskGb: 10,
@@ -117,13 +121,13 @@ function parseStepParam(value: string | null): number {
   return Number.isInteger(n) && n >= 1 && n <= STEPS.length ? n - 1 : 0
 }
 
-/** 템플릿 기본값을 초과하는 사양인지 (초과 시 specReason 필수 — 서버와 동일 규칙). */
-function exceedsTemplateDefaults(state: WizardState, template: VmTemplate | undefined): boolean {
-  if (!template) return false
+/** 선택한 사양 프리셋을 초과하는 요청인지 (초과 시 specReason 필수 — 서버와 동일 규칙). */
+function exceedsFlavor(state: WizardState, flavor: VmFlavor | undefined): boolean {
+  if (!flavor) return false
   return (
-    state.reqVcpu > template.defaultVcpu ||
-    state.reqMemoryMb > template.defaultMemoryMb ||
-    state.reqDiskGb > template.defaultDiskGb
+    state.reqVcpu > flavor.vcpu ||
+    state.reqMemoryMb > flavor.memoryMb ||
+    state.reqDiskGb > flavor.diskGb
   )
 }
 
@@ -131,6 +135,7 @@ export function NewRequestPage() {
   const groups = useQuery({ queryKey: ['groups'], queryFn: fetchGroups })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
   const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
   const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
 
   const queryClient = useQueryClient()
@@ -144,14 +149,20 @@ export function NewRequestPage() {
   const update = (patch: Partial<WizardState>) => setState((prev) => ({ ...prev, ...patch }))
 
   const isLoading =
-    groups.isPending || orgs.isPending || templates.isPending || options.isPending
-  const loadError = groups.error ?? orgs.error ?? templates.error ?? options.error
+    groups.isPending ||
+    orgs.isPending ||
+    templates.isPending ||
+    flavors.isPending ||
+    options.isPending
+  const loadError =
+    groups.error ?? orgs.error ?? templates.error ?? flavors.error ?? options.error
   const ready = !isLoading && !loadError
 
   const eligibleGroups = (groups.data ?? []).filter(
     (g) => g.myRole === 'OWNER' || g.myRole === 'EDITOR',
   )
   const selectedTemplate = templates.data?.find((t) => t.id === state.templateId)
+  const selectedFlavor = flavors.data?.find((f) => f.id === state.flavorId)
 
   const validateStep = (index: number): FieldErrors => {
     const next: FieldErrors = {}
@@ -179,15 +190,15 @@ export function NewRequestPage() {
       }
     }
     if (index === 1) {
-      if (state.templateId == null) {
-        next.templateId = '템플릿을 선택해 주세요.'
-      } else if (selectedTemplate) {
+      if (state.templateId == null) next.templateId = 'OS를 선택해 주세요.'
+      if (state.flavorId == null) next.flavorId = '사양 프리셋을 선택해 주세요.'
+      if (selectedTemplate && selectedFlavor) {
         if (state.reqVcpu < 1) next.reqVcpu = 'vCPU는 1 이상이어야 합니다.'
         if (state.reqMemoryMb < 256) next.reqMemoryMb = '메모리는 256 MiB 이상이어야 합니다.'
         if (state.reqDiskGb < selectedTemplate.minDiskGb)
-          next.reqDiskGb = `디스크는 이 템플릿의 최소 크기(${selectedTemplate.minDiskGb} GiB) 이상이어야 합니다.`
-        if (exceedsTemplateDefaults(state, selectedTemplate) && !state.specReason.trim())
-          next.specReason = '기본 사양보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
+          next.reqDiskGb = `디스크는 이 OS의 최소 크기(${selectedTemplate.minDiskGb} GiB) 이상이어야 합니다.`
+        if (exceedsFlavor(state, selectedFlavor) && !state.specReason.trim())
+          next.specReason = '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
       }
     }
     if (index === 2) {
@@ -278,6 +289,7 @@ export function NewRequestPage() {
     groupId: state.groupId!,
     orgId: state.orgId!,
     templateId: state.templateId!,
+    flavorId: state.flavorId!,
     purpose: state.purpose.trim(),
     courseOrProject: state.courseOrProject.trim() || null,
     specReason: state.specReason.trim() || null,
@@ -432,7 +444,7 @@ export function NewRequestPage() {
             <>
               <fieldset>
                 <legend className="text-sm font-medium text-neutral-700">
-                  템플릿 <span aria-hidden="true" className="text-danger-600">*</span>
+                  OS 선택 <span aria-hidden="true" className="text-danger-600">*</span>
                 </legend>
                 {errors.templateId && (
                   <p role="alert" className="mt-1 text-sm text-danger-600">
@@ -447,14 +459,7 @@ export function NewRequestPage() {
                         key={template.id}
                         type="button"
                         aria-pressed={selected}
-                        onClick={() =>
-                          update({
-                            templateId: template.id,
-                            reqVcpu: template.defaultVcpu,
-                            reqMemoryMb: template.defaultMemoryMb,
-                            reqDiskGb: template.defaultDiskGb,
-                          })
-                        }
+                        onClick={() => update({ templateId: template.id })}
                         className={cn(
                           'cursor-pointer rounded-card border p-4 text-left focus-visible:outline-2 focus-visible:outline-primary-600',
                           selected
@@ -462,14 +467,11 @@ export function NewRequestPage() {
                             : 'border-neutral-200 bg-white hover:border-neutral-300',
                         )}
                       >
-                        <p className="font-medium text-neutral-900">{template.displayName}</p>
+                        <p className="font-medium text-neutral-900">
+                          {template.displayName} <span className="text-neutral-400">v{template.version}</span>
+                        </p>
                         <p className="mt-1 text-sm text-neutral-500">
-                          기본{' '}
-                          {formatSpec(
-                            template.defaultVcpu,
-                            template.defaultMemoryMb,
-                            template.defaultDiskGb,
-                          )}
+                          최소 디스크 {template.minDiskGb} GiB
                         </p>
                         {template.notes && (
                           <p className="mt-1 text-xs text-neutral-500">{template.notes}</p>
@@ -480,7 +482,52 @@ export function NewRequestPage() {
                 </div>
               </fieldset>
 
-              {selectedTemplate && (
+              <fieldset className="border-t border-neutral-100 pt-4">
+                <legend className="text-sm font-medium text-neutral-700">
+                  사양 선택 <span aria-hidden="true" className="text-danger-600">*</span>
+                </legend>
+                {errors.flavorId && (
+                  <p role="alert" className="mt-1 text-sm text-danger-600">
+                    {errors.flavorId}
+                  </p>
+                )}
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {flavors.data?.map((flavor) => {
+                    const selected = flavor.id === state.flavorId
+                    return (
+                      <button
+                        key={flavor.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          update({
+                            flavorId: flavor.id,
+                            reqVcpu: flavor.vcpu,
+                            reqMemoryMb: flavor.memoryMb,
+                            reqDiskGb: flavor.diskGb,
+                          })
+                        }
+                        className={cn(
+                          'cursor-pointer rounded-card border p-4 text-left focus-visible:outline-2 focus-visible:outline-primary-600',
+                          selected
+                            ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500'
+                            : 'border-neutral-200 bg-white hover:border-neutral-300',
+                        )}
+                      >
+                        <p className="font-medium text-neutral-900">{flavor.displayName}</p>
+                        <p className="mt-1 text-sm text-neutral-500">
+                          {formatSpec(flavor.vcpu, flavor.memoryMb, flavor.diskGb)}
+                        </p>
+                        {flavor.notes && (
+                          <p className="mt-1 text-xs text-neutral-500">{flavor.notes}</p>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              {selectedTemplate && selectedFlavor && (
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <FormField label="vCPU" required error={errors.reqVcpu}>
@@ -509,12 +556,12 @@ export function NewRequestPage() {
                       />
                     </FormField>
                   </div>
-                  {exceedsTemplateDefaults(state, selectedTemplate) && (
+                  {exceedsFlavor(state, selectedFlavor) && (
                     <FormField
                       label="사양 사유"
                       required
                       error={errors.specReason}
-                      description="기본 사양보다 높은 사양을 요청하는 이유를 적어 주세요. 관리자 검토에 사용됩니다."
+                      description={`선택한 프리셋(${selectedFlavor.displayName})보다 높은 사양을 요청하는 이유를 적어 주세요. 관리자 검토에 사용됩니다.`}
                     >
                       <Textarea
                         value={state.specReason}
@@ -596,6 +643,7 @@ export function NewRequestPage() {
                 }
                 orgName={orgs.data?.find((o) => o.id === state.orgId)?.name ?? String(state.orgId)}
                 templateName={selectedTemplate?.displayName ?? String(state.templateId)}
+                flavorName={selectedFlavor?.displayName ?? String(state.flavorId)}
               />
               <Alert variant="warning" title="백업 책임 안내">
                 플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
@@ -627,16 +675,19 @@ function SummaryTable({
   groupName,
   orgName,
   templateName,
+  flavorName,
 }: {
   state: WizardState
   groupName: string
   orgName: string
   templateName: string
+  flavorName: string
 }) {
   const rows: [string, string][] = [
     ['그룹', groupName],
     ['기관', orgName],
-    ['템플릿', templateName],
+    ['OS', templateName],
+    ['사양 프리셋', flavorName],
     ['요청 사양', `${state.reqVcpu} vCPU · ${formatMemory(state.reqMemoryMb)} · ${state.reqDiskGb} GiB`],
     ['사양 사유', state.specReason.trim() || '—'],
     ['사용 목적', state.purpose.trim()],

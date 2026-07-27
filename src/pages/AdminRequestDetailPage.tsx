@@ -9,6 +9,7 @@ import {
   fetchAdminVmRequest,
   fetchApprovalContext,
   fetchTemplates,
+  fetchVmFlavors,
   type ApprovalContext,
   type ApproveVmRequest,
   type VmRequestDetail,
@@ -56,6 +57,7 @@ export function AdminRequestDetailPage() {
     queryFn: () => fetchAdminVmRequest(requestId),
   })
   const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
 
   if (request.isPending) {
     return (
@@ -74,6 +76,10 @@ export function AdminRequestDetailPage() {
     return (
       templates.data?.find((t) => t.id === templateId)?.displayName ?? `템플릿 #${templateId}`
     )
+  }
+  const flavorName = (flavorId: number | null | undefined) => {
+    if (flavorId == null) return '—'
+    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? `프리셋 #${flavorId}`
   }
 
   return (
@@ -115,7 +121,8 @@ export function AdminRequestDetailPage() {
                 <Field label="신청자">{data.requesterName}</Field>
                 <Field label="그룹">{data.groupName}</Field>
                 <Field label="기관">{data.orgName}</Field>
-                <Field label="템플릿">{templateName(data.templateId)}</Field>
+                <Field label="OS">{templateName(data.templateId)}</Field>
+                <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
                 <Field label="요청 사양">
                   {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
                 </Field>

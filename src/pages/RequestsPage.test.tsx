@@ -57,6 +57,33 @@ describe('신청 상세', () => {
     expect(screen.getAllByText('2 vCPU · 2 GiB · 20 GiB').length).toBeGreaterThan(0)
   })
 
+  test('OS와 사양 프리셋을 각각 보여준다', async () => {
+    renderRequests('/console/requests/101')
+
+    await screen.findByRole('heading', { name: '신청 #101' })
+    const os = screen.getByText('OS').closest('div')!
+    expect(within(os).getByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
+    const flavor = screen.getByText('사양 프리셋').closest('div')!
+    expect(await within(flavor).findByText('기본형')).toBeInTheDocument()
+  })
+
+  test('공개 목록에 없는(은퇴한) 프리셋은 번호로 대체한다', async () => {
+    vmRequestStore.find((r) => r.id === 101)!.flavorId = 9
+    renderRequests('/console/requests/101')
+
+    await screen.findByRole('heading', { name: '신청 #101' })
+    expect(await screen.findByText('프리셋 #9')).toBeInTheDocument()
+  })
+
+  test('프리셋 없이 접수된 신청은 사양 프리셋을 —로 보여준다', async () => {
+    vmRequestStore.find((r) => r.id === 101)!.flavorId = null
+    renderRequests('/console/requests/101')
+
+    await screen.findByRole('heading', { name: '신청 #101' })
+    const flavor = screen.getByText('사양 프리셋').closest('div')!
+    expect(within(flavor).getByText('—')).toBeInTheDocument()
+  })
+
   test('검토 중 신청은 확인 모달을 거쳐 취소할 수 있다', async () => {
     const user = userEvent.setup()
     renderRequests('/console/requests/101')

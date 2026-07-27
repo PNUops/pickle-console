@@ -2,7 +2,7 @@ import { isOrgTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, regularUser } from './auth'
-import { orgs } from './reference'
+import { orgs, vmFlavors } from './reference'
 import {
   invalidVmStateProblem,
   localDateStr,
@@ -29,6 +29,7 @@ export function submittedAdminRequest(id: number): VmRequestDetail {
     requesterId: regularUser.id,
     requesterName: regularUser.name,
     templateId: 1,
+    flavorId: 2,
     purpose: `추가 실습 서버 ${id}`,
     courseOrProject: null,
     specReason: null,
@@ -118,7 +119,8 @@ function initialAdminRequests(): VmRequestDetail[] {
       groupName: 'AI 동아리',
       orgId: 2,
       orgName: '테스트 기관',
-      templateId: 2,
+      templateId: 1,
+      flavorId: 3,
       purpose: 'AI 동아리 모델 학습 서버',
       specReason: '데이터 전처리와 학습을 병행해 메모리가 더 필요합니다.',
       reqVcpu: 4,
@@ -251,6 +253,8 @@ export function resetAdminFixtures() {
   userPatchBodies = []
   nextOrgId = 100
   adminTemplates = initialAdminTemplates()
+  adminFlavors = initialAdminFlavors()
+  nextFlavorId = 100
 }
 
 /** 템플릿 인벤토리 (전 상태 — 공개 /templates와 달리 은퇴 리비전 포함). */
@@ -259,14 +263,11 @@ function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
     {
       id: 1,
       name: 'ubuntu-24.04',
-      displayName: 'Ubuntu 24.04 LTS (기본형)',
+      displayName: 'Ubuntu 24.04 LTS',
       version: 2,
       proxmoxVmid: 1000,
       nodeId: 1,
       status: 'ACTIVE',
-      defaultVcpu: 2,
-      defaultMemoryMb: 2048,
-      defaultDiskGb: 20,
       minDiskGb: 10,
       notes: null,
     },
@@ -278,9 +279,6 @@ function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
       proxmoxVmid: 1900,
       nodeId: 1,
       status: 'DISABLED',
-      defaultVcpu: 2,
-      defaultMemoryMb: 2048,
-      defaultDiskGb: 20,
       minDiskGb: 10,
       notes: '구 계정 구성 리비전',
     },
@@ -288,6 +286,28 @@ function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
 }
 
 export let adminTemplates: Schemas['AdminTemplateResponse'][] = initialAdminTemplates()
+
+/** 사양 프리셋 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴 프리셋 포함). */
+function initialAdminFlavors(): Schemas['VmFlavorResponse'][] {
+  return [
+    ...vmFlavors.map((flavor) => ({ ...flavor })),
+    {
+      id: 9,
+      name: 'legacy',
+      displayName: '구형 프리셋',
+      vcpu: 1,
+      memoryMb: 512,
+      diskGb: 10,
+      status: 'DISABLED',
+      notes: '메모리가 부족해 은퇴시킨 프리셋',
+    },
+  ]
+}
+
+export let adminFlavors: Schemas['VmFlavorResponse'][] = initialAdminFlavors()
+
+/** POST /admin/vm-flavors 로 만들어진 프리셋의 id 채번. */
+let nextFlavorId = 100
 
 const notFound = () =>
   problemResponse({
@@ -608,6 +628,58 @@ export const adminHandlers: RequestHandler[] = [
     const body = (await request.json()) as { status: Schemas['TemplateStatus'] }
     template.status = body.status
     return HttpResponse.json(template, { status: 200 })
+  }),
+
+  http.get('*/api/v1/admin/vm-flavors', () =>
+    HttpResponse.json(adminFlavors, { status: 200 }),
+  ),
+
+  http.post('*/api/v1/admin/vm-flavors', async ({ request }) => {
+    const body = (await request.json()) as Schemas['CreateVmFlavorRequest']
+    if (adminFlavors.some((f) => f.name === body.name)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'name', message: '이미 사용 중인 프리셋 이름입니다.' }],
+      })
+    }
+    const created: Schemas['VmFlavorResponse'] = {
+      id: nextFlavorId++,
+      name: body.name,
+      displayName: body.displayName,
+      vcpu: body.vcpu,
+      memoryMb: body.memoryMb,
+      diskGb: body.diskGb,
+      status: 'ACTIVE',
+      notes: body.notes ?? null,
+    }
+    adminFlavors.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.patch('*/api/v1/admin/vm-flavors/:flavorId', async ({ params, request }) => {
+    const flavor = adminFlavors.find((f) => f.id === Number(params.flavorId))
+    if (!flavor) return notFound()
+    const body = (await request.json()) as Schemas['UpdateVmFlavorRequest']
+    if (Object.values(body).every((value) => value == null)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '변경할 값을 하나 이상 지정해 주세요.',
+        code: 'VALIDATION_FAILED',
+      })
+    }
+    if (body.displayName != null) flavor.displayName = body.displayName
+    if (body.vcpu != null) flavor.vcpu = body.vcpu
+    if (body.memoryMb != null) flavor.memoryMb = body.memoryMb
+    if (body.diskGb != null) flavor.diskGb = body.diskGb
+    if (body.notes !== undefined) flavor.notes = body.notes
+    if (body.status != null) flavor.status = body.status
+    return HttpResponse.json(flavor, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/vms', ({ request }) => {

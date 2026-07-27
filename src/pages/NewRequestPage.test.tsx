@@ -36,42 +36,57 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     expect(screen.getByText('자원을 제공할 기관을 선택해 주세요.')).toBeInTheDocument()
   })
 
-  test('템플릿 선택 시 기본 사양이 채워지고, 기본값 초과 시 사유가 필수가 된다', async () => {
+  test('OS와 사양 프리셋을 각각 골라야 하고, 프리셋 초과 시 사유가 필수가 된다', async () => {
     const user = userEvent.setup()
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
     await passStep1(user)
 
-    // 템플릿 없이 다음 → 오류
+    // 두 축을 모두 고르지 않으면 다음으로 넘어갈 수 없다
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('템플릿을 선택해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('OS를 선택해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('사양 프리셋을 선택해 주세요.')).toBeInTheDocument()
 
-    // 템플릿 선택 → 기본 사양 프리필
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    // OS만 골라도 아직 사양 축이 비어 있다 (사양 입력도 나오지 않는다)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    expect(screen.queryByLabelText('vCPU')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.queryByText('OS를 선택해 주세요.')).not.toBeInTheDocument()
+    expect(screen.getByText('사양 프리셋을 선택해 주세요.')).toBeInTheDocument()
+
+    // 프리셋 선택 → 프리셋 값으로 사양이 프리필된다
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
     expect(screen.getByLabelText('vCPU')).toHaveValue(2)
     expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
 
-    // 템플릿 최소 디스크 미만이면 오류
+    // OS 최소 디스크 미만이면 오류
     const disk = screen.getByLabelText('디스크 (GiB)')
     await user.clear(disk)
     await user.type(disk, '5')
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(
-      screen.getByText('디스크는 이 템플릿의 최소 크기(10 GiB) 이상이어야 합니다.'),
+      screen.getByText('디스크는 이 OS의 최소 크기(10 GiB) 이상이어야 합니다.'),
     ).toBeInTheDocument()
     await user.clear(disk)
     await user.type(disk, '20')
 
-    // 기본값 초과(메모리 4096)면 사양 사유가 필수
+    // 선택한 프리셋 초과(메모리 4096 > 기본형 2048)면 사양 사유가 필수
     const memory = screen.getByLabelText('메모리 (MiB)')
     await user.clear(memory)
     await user.type(memory, '4096')
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(
-      screen.getByText('기본 사양보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'),
+      screen.getByText('선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'),
     ).toBeInTheDocument()
 
+    // 더 큰 프리셋(대형 4c/8GiB)으로 바꾸면 초과가 아니게 되어 사유 입력이 사라진다
+    await user.click(screen.getByRole('button', { name: /대형/ }))
+    expect(screen.queryByLabelText('사양 사유')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
+    await user.clear(screen.getByLabelText('메모리 (MiB)'))
+    await user.type(screen.getByLabelText('메모리 (MiB)'), '4096')
     await user.type(screen.getByLabelText('사양 사유'), 'DB와 백엔드 동시 구동')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
@@ -111,7 +126,7 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     await user.clear(subdomain)
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(
-      await screen.findByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }),
+      await screen.findByRole('button', { name: /Ubuntu 24\.04 LTS/ }),
     ).toBeInTheDocument()
   })
 })
@@ -123,9 +138,10 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
     const first = renderApp('/console/requests/new')
     await screen.findByRole('heading', { name: 'VM 신청' })
 
-    // 1~2단계 진행: 그룹·기관 선택 후 템플릿 선택.
+    // 1~2단계 진행: 그룹·기관 선택 후 OS·사양 프리셋 선택.
     await passStep1(user)
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
     await screen.findByLabelText('사용 목적') // 3단계 도착 (?step=3)
 
@@ -133,12 +149,17 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
     first.unmount()
     renderApp('/console/requests/new?step=2')
 
-    // 2단계가 열리고 템플릿·사양 입력이 초안에서 복원된다.
+    // 2단계가 열리고 OS·프리셋·사양 입력이 초안에서 복원된다.
     expect(await screen.findByLabelText('vCPU')).toHaveValue(2)
     expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
-    expect(
-      screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }),
-    ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /기본형/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   test('완료되지 않은 단계로 직접 진입하면 첫 미완료 단계로 돌려보낸다', async () => {
@@ -173,7 +194,8 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     // 비워 두면 통과 + 요약에 자동 생성 표시, 페이로드 null
     await user.clear(slugInput)
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.type(screen.getByLabelText('사용 목적'), '실습')
     await user.click(screen.getByRole('button', { name: '다음' }))
@@ -205,8 +227,9 @@ describe('VM 신청 위저드 — 제출', () => {
     await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    // ② 템플릿·사양 (기본값 그대로)
-    await user.click(screen.getByRole('button', { name: /Ubuntu 24.04 LTS \(기본형\)/ }))
+    // ② OS·사양 (프리셋 값 그대로)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     // ③ 용도·기간
@@ -222,6 +245,9 @@ describe('VM 신청 위저드 — 제출', () => {
 
     // ④ 확인·제출: 요약·백업 책임 고지 확인 후 제출
     expect(screen.getByText('신청 내용 확인')).toBeInTheDocument()
+    // 요약에 두 축이 각각 나온다.
+    expect(screen.getByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
+    expect(screen.getByText('기본형')).toBeInTheDocument()
     expect(screen.getByText('capstone-api.pickle.pnuops.com')).toBeInTheDocument()
     expect(screen.getByText('capstone-api-server')).toBeInTheDocument()
     expect(screen.getByText('캡스톤 백엔드 서버')).toBeInTheDocument()
@@ -245,6 +271,7 @@ describe('VM 신청 위저드 — 제출', () => {
       groupId: 12,
       orgId: 1,
       templateId: 1,
+      flavorId: 2,
       purpose: '캡스톤 백엔드 API 서버 운영',
       courseOrProject: '2026-1 캡스톤디자인',
       specReason: null,

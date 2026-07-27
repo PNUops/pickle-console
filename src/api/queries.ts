@@ -10,6 +10,9 @@ export type GroupMember = Schemas['GroupMemberResponse']
 export type GroupMemberRole = Schemas['GroupMemberRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
 export type VmTemplate = Schemas['VmTemplateResponse']
+export type VmFlavor = Schemas['VmFlavorResponse']
+export type CreateVmFlavor = Schemas['CreateVmFlavorRequest']
+export type UpdateVmFlavor = Schemas['UpdateVmFlavorRequest']
 export type CreateVmRequest = Schemas['CreateVmRequestRequest']
 export type VmRequestDetail = Schemas['VmRequestDetailResponse']
 export type VmRequestPage = Schemas['PageResponseVmRequestDetailResponse']
@@ -185,6 +188,15 @@ export function fetchTemplates(): Promise<VmTemplate[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/templates')
     if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 신청 위저드의 사양 축 — ACTIVE 프리셋만 id 순으로 온다. */
+export function fetchVmFlavors(): Promise<VmFlavor[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vm-flavors')
+    if (!data) throw toApiError(error, '사양 프리셋 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -1122,6 +1134,37 @@ export function updateAdminTemplate(
       body,
     })
     if (!data) throw toApiError(error, '템플릿 상태를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+/** 사양 프리셋 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴 프리셋 포함). */
+export function fetchAdminVmFlavors(): Promise<VmFlavor[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vm-flavors')
+    if (!data) throw toApiError(error, '사양 프리셋 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createAdminVmFlavor(body: CreateVmFlavor): Promise<VmFlavor> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/vm-flavors', { body })
+    if (!data) throw toApiError(error, '사양 프리셋을 만들지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminVmFlavor(
+  flavorId: number,
+  body: UpdateVmFlavor,
+): Promise<VmFlavor> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/vm-flavors/{flavorId}', {
+      params: { path: { flavorId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '사양 프리셋을 수정하지 못했습니다.')
     return data
   })
 }

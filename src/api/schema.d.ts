@@ -564,6 +564,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/vm-flavors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminVmFlavors"];
+        put?: never;
+        post: operations["createAdminVmFlavor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/vm-flavors/{flavorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminVmFlavor"];
+        trace?: never;
+    };
     "/admin/vm-requests": {
         parameters: {
             query?: never;
@@ -1460,6 +1492,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vm-flavors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVmFlavors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vm-requests": {
         parameters: {
             query?: never;
@@ -1893,12 +1941,6 @@ export interface components {
             vmName?: string | null;
         };
         AdminTemplateResponse: {
-            /** Format: int32 */
-            defaultDiskGb: number;
-            /** Format: int32 */
-            defaultMemoryMb: number;
-            /** Format: int32 */
-            defaultVcpu: number;
             displayName: string;
             /** Format: int64 */
             id: number;
@@ -2062,12 +2104,25 @@ export interface components {
             name: string;
             slug: string;
         };
+        CreateVmFlavorRequest: {
+            /** Format: int32 */
+            diskGb: number;
+            displayName: string;
+            /** Format: int32 */
+            memoryMb: number;
+            name: string;
+            notes?: string | null;
+            /** Format: int32 */
+            vcpu: number;
+        };
         CreateVmRequestRequest: {
             courseOrProject?: string | null;
             desiredSlug?: string | null;
             desiredSubdomain?: string | null;
             displayName?: string | null;
             extraNote?: string | null;
+            /** Format: int64 */
+            flavorId: number;
             /** Format: int64 */
             groupId: number;
             /** Format: int64 */
@@ -2883,6 +2938,18 @@ export interface components {
             orgId?: number | null;
             role?: components["schemas"]["UserRole"];
         };
+        UpdateVmFlavorRequest: {
+            /** Format: int32 */
+            diskGb?: number | null;
+            displayName?: string | null;
+            /** Format: int32 */
+            memoryMb?: number | null;
+            notes?: string | null;
+            /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 신청·VM 무영향) */
+            status?: components["schemas"]["TemplateStatus"] | null;
+            /** Format: int32 */
+            vcpu?: number | null;
+        };
         UserAdminDetailResponse: {
             /** Format: int32 */
             activeVmCount: number;
@@ -3041,6 +3108,20 @@ export interface components {
         };
         /** @enum {string} */
         VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE" | "GATEWAY_BLOCK" | "GATEWAY_UNBLOCK";
+        VmFlavorResponse: {
+            /** Format: int32 */
+            diskGb: number;
+            displayName: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            memoryMb: number;
+            name: string;
+            notes?: string | null;
+            status: components["schemas"]["TemplateStatus"];
+            /** Format: int32 */
+            vcpu: number;
+        };
         VmGatewayBlockUpdateRequest: {
             /** @description true = SSH 게이트웨이·웹 터미널 차단, false = 차단 해제 */
             blocked: boolean;
@@ -3068,6 +3149,8 @@ export interface components {
             desiredSubdomain?: string | null;
             displayName?: string | null;
             extraNote?: string | null;
+            /** Format: int64 */
+            flavorId?: number | null;
             /** Format: int64 */
             groupId: number;
             groupName: string;
@@ -3176,12 +3259,6 @@ export interface components {
             vcpu: number;
         };
         VmTemplateResponse: {
-            /** Format: int32 */
-            defaultDiskGb: number;
-            /** Format: int32 */
-            defaultMemoryMb: number;
-            /** Format: int32 */
-            defaultVcpu: number;
             displayName: string;
             /** Format: int64 */
             id: number;
@@ -4428,6 +4505,103 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminVmFlavors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmFlavorResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createAdminVmFlavor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVmFlavorRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmFlavorResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminVmFlavor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flavorId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVmFlavorRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmFlavorResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -6452,6 +6626,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmTemplateResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVmFlavors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmFlavorResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

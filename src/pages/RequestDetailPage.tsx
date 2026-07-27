@@ -3,7 +3,12 @@ import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
-import { fetchTemplates, fetchVmRequest, type VmRequestDetail } from '../api/queries'
+import {
+  fetchTemplates,
+  fetchVmFlavors,
+  fetchVmRequest,
+  type VmRequestDetail,
+} from '../api/queries'
 import {
   Alert,
   Badge,
@@ -27,6 +32,7 @@ export function RequestDetailPage() {
     queryFn: () => fetchVmRequest(requestId),
   })
   const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
 
   if (request.isPending) {
     return (
@@ -45,6 +51,10 @@ export function RequestDetailPage() {
     return (
       templates.data?.find((t) => t.id === templateId)?.displayName ?? `템플릿 #${templateId}`
     )
+  }
+  const flavorName = (flavorId: number | null | undefined) => {
+    if (flavorId == null) return '—'
+    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? `프리셋 #${flavorId}`
   }
 
   return (
@@ -88,7 +98,8 @@ export function RequestDetailPage() {
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             <Field label="그룹">{data.groupName}</Field>
             <Field label="기관">{data.orgName}</Field>
-            <Field label="템플릿">{templateName(data.templateId)}</Field>
+            <Field label="OS">{templateName(data.templateId)}</Field>
+            <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
             <Field label="요청 사양">
               {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
             </Field>
