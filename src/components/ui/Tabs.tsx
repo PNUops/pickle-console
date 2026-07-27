@@ -16,11 +16,18 @@ export function Tabs({
   value,
   onChange,
   'aria-label': ariaLabel,
+  idPrefix = '',
 }: {
   tabs: TabItem[]
   value: string
   onChange: (id: string) => void
   'aria-label': string
+  /**
+   * 같은 탭 집합이 한 화면에 두 번 마운트될 수 있으면(예: 페이지 카드와 모달)
+   * `useId()` 값을 넘겨 DOM id 충돌을 막는다. 짝이 되는 {@link TabPanel}에도
+   * 같은 값을 넘겨야 aria-controls가 제 패널을 가리킨다.
+   */
+  idPrefix?: string
 }) {
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -30,7 +37,7 @@ export function Tabs({
     // 상태 반영 직후 해당 탭 버튼으로 포커스 이동
     requestAnimationFrame(() => {
       listRef.current
-        ?.querySelector<HTMLButtonElement>(`#tab-${CSS.escape(tab.id)}`)
+        ?.querySelector<HTMLButtonElement>(`#${CSS.escape(`${idPrefix}tab-${tab.id}`)}`)
         ?.focus()
     })
   }
@@ -72,9 +79,9 @@ export function Tabs({
             key={tab.id}
             type="button"
             role="tab"
-            id={`tab-${tab.id}`}
+            id={`${idPrefix}tab-${tab.id}`}
             aria-selected={selected}
-            aria-controls={`tabpanel-${tab.id}`}
+            aria-controls={`${idPrefix}tabpanel-${tab.id}`}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn(
@@ -97,18 +104,21 @@ export function TabPanel({
   active,
   children,
   className,
+  idPrefix = '',
 }: {
   id: string
   active: boolean
   children: ReactNode
   className?: string
+  /** 짝이 되는 {@link Tabs}와 같은 값 — 다중 마운트 시 id 충돌 방지. */
+  idPrefix?: string
 }) {
   if (!active) return null
   return (
     <div
       role="tabpanel"
-      id={`tabpanel-${id}`}
-      aria-labelledby={`tab-${id}`}
+      id={`${idPrefix}tabpanel-${id}`}
+      aria-labelledby={`${idPrefix}tab-${id}`}
       tabIndex={-1}
       className={className}
     >

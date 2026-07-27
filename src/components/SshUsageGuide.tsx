@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { cn } from '../lib/cn'
 import { TabPanel, Tabs } from './ui'
 
@@ -43,6 +43,8 @@ export interface SshUsageGuideProps {
  * 게이트웨이는 사용자명으로 대상 VM을 라우팅하므로 로그인 계정은 VM 호스트명이다.
  */
 export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuideProps) {
+  // 페이지 카드와 키 발급 모달에 동시에 마운트될 수 있어 탭 id를 인스턴스별로 구분한다.
+  const uid = useId()
   const [tab, setTab] = useState<OsTab>('macos')
   const host = hostname ?? '<VM 호스트명>'
   const gateway = sshHost ?? '<SSH 게이트웨이>'
@@ -53,10 +55,16 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
 
   return (
     <div className={cn('space-y-4', className)}>
-      <Tabs aria-label="운영체제" tabs={TABS} value={tab} onChange={(id) => setTab(id as OsTab)} />
+      <Tabs
+        aria-label="운영체제"
+        tabs={TABS}
+        value={tab}
+        onChange={(id) => setTab(id as OsTab)}
+        idPrefix={uid}
+      />
 
       {/* 안내 본문은 OS별로 갈라지는 단일 흐름 — 활성 탭이 곧 패널이다. */}
-      <TabPanel id={tab} active className="space-y-4">
+      <TabPanel id={tab} active idPrefix={uid} className="space-y-4">
         <Step title="1. 개인키 파일을 안전한 위치로 옮깁니다">
           {isWindows ? (
             <Code>{`move %USERPROFILE%\\Downloads\\${KEY_FILE} %USERPROFILE%\\.ssh\\`}</Code>
