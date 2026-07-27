@@ -1,7 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import { userPatchBodies } from '../test/msw/handlers/admin'
 import {
   orgAdminUser,
   refreshSuccessHandler,
@@ -67,57 +66,9 @@ describe('기관 생성/수정', () => {
     await user.type(within(dialog).getByLabelText('slug'), 'ai-edu')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
-    // 목록 테이블과 관리 기관 선택지 양쪽에 새 기관이 나타난다.
+    // 목록 테이블에 새 기관이 나타난다. (역할 변경은 사용자 관리 상세로 이동)
     expect(await screen.findAllByText('AI융합교육원')).not.toHaveLength(0)
     expect(screen.getByText('ai-edu')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-})
-
-describe('사용자 역할 관리', () => {
-  test('기관 관리자 역할인데 기관을 고르지 않으면 제출하지 않고 오류를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAsSysAdmin()
-
-    await screen.findByRole('heading', { name: '기관 관리' })
-    await user.type(screen.getByLabelText('사용자 ID'), '57')
-    await user.selectOptions(screen.getByLabelText('역할'), 'ORG_ADMIN')
-    await user.click(screen.getByRole('button', { name: '역할 변경' }))
-
-    expect(
-      screen.getByText('기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.'),
-    ).toBeInTheDocument()
-    expect(userPatchBodies).toHaveLength(0)
-  })
-
-  test('기관을 지정해 역할을 변경하면 성공 안내를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAsSysAdmin()
-
-    await screen.findByRole('heading', { name: '기관 관리' })
-    await user.type(screen.getByLabelText('사용자 ID'), '57')
-    await user.selectOptions(screen.getByLabelText('역할'), 'ORG_ADMIN')
-    await user.selectOptions(screen.getByLabelText('관리 기관'), '1')
-    await user.click(screen.getByRole('button', { name: '역할 변경' }))
-
-    expect(
-      await screen.findByText(/김철수.*기관 관리자.*변경했습니다/),
-    ).toBeInTheDocument()
-    expect(userPatchBodies).toEqual([
-      { userId: 57, body: { role: 'ORG_ADMIN', orgId: 1 } },
-    ])
-  })
-
-  test('없는 사용자면 404 안내를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAsSysAdmin()
-
-    await screen.findByRole('heading', { name: '기관 관리' })
-    await user.type(screen.getByLabelText('사용자 ID'), '9999')
-    await user.click(screen.getByRole('button', { name: '역할 변경' }))
-
-    expect(
-      await screen.findByText('해당 ID의 사용자가 존재하지 않습니다.'),
-    ).toBeInTheDocument()
   })
 })

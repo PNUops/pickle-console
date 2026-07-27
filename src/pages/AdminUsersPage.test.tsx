@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
+import { userPatchBodies } from '../test/msw/handlers/admin'
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -94,6 +95,43 @@ describe('관리자 사용자 목록', () => {
     expect(screen.queryByRole('dialog', { name: '사용자 상세' })).not.toBeInTheDocument()
   })
 
+  test('SYS_ADMIN은 상세에서 역할을 변경할 수 있고 기관 미선택이면 제출하지 않는다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('역할 관리')
+
+    // 기관 계층 역할인데 기관을 고르지 않으면 클라이언트에서 막는다
+    await user.selectOptions(drawer.getByLabelText('역할'), 'ORG_ADMIN')
+    await user.click(drawer.getByRole('button', { name: '역할 변경' }))
+    expect(
+      drawer.getByText('기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.'),
+    ).toBeInTheDocument()
+    expect(userPatchBodies).toHaveLength(0)
+
+    // 기관을 지정하면 선택된 사용자를 대상으로 제출된다 (ID 수기 입력 없음)
+    await user.selectOptions(drawer.getByLabelText('관리 기관'), '1')
+    await user.click(drawer.getByRole('button', { name: '역할 변경' }))
+    expect(await screen.findByText(/홍길동.*기관 관리자.*변경했습니다/)).toBeInTheDocument()
+    expect(userPatchBodies).toEqual([{ userId: 42, body: { role: 'ORG_ADMIN', orgId: 1 } }])
+  })
+
+  test('ORG_ADMIN에게는 역할 변경이 보이되 비활성 상태다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('역할 관리')
+    expect(
+      drawer.getByText('역할 변경은 시스템 관리자만 수행할 수 있습니다.'),
+    ).toBeInTheDocument()
+    expect(drawer.getByRole('button', { name: '역할 변경' })).toBeDisabled()
+    expect(drawer.getByLabelText('역할')).toBeDisabled()
+  })
+
   test('ORG_ADMIN에게도 상태 관리가 보이되 비활성 상태로 사유가 표시된다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
@@ -102,7 +140,7 @@ describe('관리자 사용자 목록', () => {
     await screen.findByText('그룹 멤버십')
     expect(screen.getByText('계정 상태 관리')).toBeInTheDocument()
     expect(
-      screen.getByText(/시스템 관리자만 수행할 수 있습니다/),
+      screen.getByText('계정 상태 변경과 2단계 인증 초기화는 시스템 관리자만 수행할 수 있습니다.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '계정 비활성화' })).toBeDisabled()
   })

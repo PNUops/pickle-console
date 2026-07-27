@@ -2,20 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
-import { isOrgTier } from '../auth/permissions'
-import { fetchOrgs, type OrgSummary, type UserSummary } from '../api/queries'
+import { fetchOrgs, type OrgSummary } from '../api/queries'
 import {
   Alert,
   Badge,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   FormField,
   Input,
   Modal,
-  Select,
   Spinner,
   Table,
   TBody,
@@ -26,7 +21,7 @@ import {
   Textarea,
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { ORG_STATUS_LABELS, USER_ROLE_LABELS, type UserRole } from '../lib/labels'
+import { ORG_STATUS_LABELS } from '../lib/labels'
 import { ORG_SLUG_RE } from '../lib/validation'
 
 export function AdminOrgsPage() {
@@ -95,8 +90,6 @@ export function AdminOrgsPage() {
           </Table>
         </Card>
       )}
-
-      <UserRoleCard orgs={orgs.data ?? []} />
 
       <CreateOrgModal open={createOpen} onClose={() => setCreateOpen(false)} />
       {editTarget && (
@@ -288,122 +281,3 @@ function EditOrgModal({ org, onClose }: { org: OrgSummary; onClose: () => void }
   )
 }
 
-/** 사용자 역할 관리 — 최소한의 실무용 폼 (사용자 검색은 이후 확장). */
-function UserRoleCard({ orgs }: { orgs: OrgSummary[] }) {
-  const [userId, setUserId] = useState('')
-  const [role, setRole] = useState<UserRole>('USER')
-  const [orgId, setOrgId] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [formError, setFormError] = useState<string | null>(null)
-  const [updated, setUpdated] = useState<UserSummary | null>(null)
-
-  const update = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await api.PATCH('/admin/users/{userId}', {
-        params: { path: { userId: Number(userId) } },
-        body: { role, orgId: isOrgTier(role) ? Number(orgId) : null },
-      })
-      if (!data) throw toApiError(error, '사용자 역할을 변경하지 못했습니다.')
-      return data
-    },
-    onSuccess: (user) => {
-      setUpdated(user)
-      setFieldErrors({})
-      setFormError(null)
-    },
-    onError: (error) => {
-      setUpdated(null)
-      const apiError = toApiError(error, '사용자 역할을 변경하지 못했습니다.')
-      const mapped = fieldErrorsOf(apiError.problem)
-      if (Object.keys(mapped).length > 0) {
-        setFieldErrors(mapped)
-        return
-      }
-      setFormError(apiError.message)
-    },
-  })
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setFormError(null)
-    setUpdated(null)
-    const errors: Record<string, string> = {}
-    if (!userId || !Number.isInteger(Number(userId)) || Number(userId) < 1)
-      errors.userId = '사용자 ID를 숫자로 입력해 주세요.'
-    if (isOrgTier(role) && !orgId)
-      errors.orgId = '기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.'
-    setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
-    update.mutate()
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>사용자 역할 관리</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <p className="text-sm text-neutral-500">
-            사용자의 전역 역할을 변경합니다. 역할이 바뀌면 해당 사용자의 기존 로그인
-            세션은 무효화됩니다.
-          </p>
-          {formError && <Alert variant="danger">{formError}</Alert>}
-          {updated && (
-            <Alert variant="success">
-              {updated.name}({updated.email})님의 역할을{' '}
-              {USER_ROLE_LABELS[updated.role]}(으)로 변경했습니다.
-            </Alert>
-          )}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField label="사용자 ID" required error={fieldErrors.userId}>
-              <Input
-                type="number"
-                min={1}
-                value={userId}
-                onChange={(event) => setUserId(event.target.value)}
-                placeholder="42"
-              />
-            </FormField>
-            <FormField label="역할" required error={fieldErrors.role}>
-              <Select
-                value={role}
-                onChange={(event) => setRole(event.target.value as UserRole)}
-              >
-                {(Object.keys(USER_ROLE_LABELS) as UserRole[]).map((value) => (
-                  <option key={value} value={value}>
-                    {USER_ROLE_LABELS[value]}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField
-              label="관리 기관"
-              required={isOrgTier(role)}
-              error={fieldErrors.orgId}
-              description="기관 관리자·기관 운영자 역할일 때만 지정합니다."
-            >
-              <Select
-                value={orgId}
-                onChange={(event) => setOrgId(event.target.value)}
-                disabled={!isOrgTier(role)}
-              >
-                <option value="">선택 안 함</option>
-                {orgs.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          </div>
-          <div className="flex justify-end">
-            <Button type="submit" loading={update.isPending}>
-              역할 변경
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  )
-}

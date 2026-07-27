@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   disableUser,
@@ -7,20 +7,23 @@ import {
   fetchAdminUsers,
   fetchOrgs,
   resetUserMfa,
+  updateUserRole,
   type AdminUserSort,
+  type UserAdminDetail,
   type UserAdminView,
   type UserRole,
   type UserStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { isOrgTier, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
   Button,
   Card,
   Drawer,
+  FormField,
   Input,
   Modal,
   Pagination,
@@ -361,6 +364,8 @@ function UserDetailBody({ userId, canManage }: { userId: number; canManage: bool
         )}
       </section>
 
+      <UserRoleSection user={user} canManage={canManage} />
+
       <UserStatusActions
         userId={userId}
         status={user.status}
@@ -368,6 +373,105 @@ function UserDetailBody({ userId, canManage }: { userId: number; canManage: bool
         canManage={canManage}
       />
     </div>
+  )
+}
+
+/* ─── 역할 관리 (수행은 SYS_ADMIN 전용, 표시는 전 관리자) ─── */
+
+function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage: boolean }) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [role, setRole] = useState<UserRole>(user.role)
+  const [orgId, setOrgId] = useState(user.orgId != null ? String(user.orgId) : '')
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: canManage })
+
+  const update = useMutation({
+    mutationFn: () =>
+      updateUserRole(user.id, { role, orgId: isOrgTier(role) ? Number(orgId) : null }),
+    onSuccess: async (updated) => {
+      setError(null)
+      setFieldErrors({})
+      toast.success(
+        `${updated.name}(${updated.email})님의 역할을 ${USER_ROLE_LABELS[updated.role]}(으)로 변경했습니다.`,
+      )
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+    onError: (err) => {
+      const apiError = toApiError(err, '사용자 역할을 변경하지 못했습니다.')
+      const mapped = fieldErrorsOf(apiError.problem)
+      setFieldErrors(mapped)
+      setError(Object.keys(mapped).length > 0 ? null : apiError.message)
+    },
+  })
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    setError(null)
+    if (isOrgTier(role) && !orgId) {
+      setFieldErrors({ orgId: '기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.' })
+      return
+    }
+    setFieldErrors({})
+    update.mutate()
+  }
+
+  return (
+    <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+      <h3 className="text-sm font-semibold text-neutral-800">역할 관리</h3>
+      {!canManage && (
+        <PermissionNotice>역할 변경은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
+      )}
+      <p className="text-sm text-neutral-500">
+        전역 역할을 변경합니다. 역할이 바뀌면 이 사용자의 기존 로그인 세션은 무효화됩니다.
+      </p>
+      {error && <Alert variant="danger">{error}</Alert>}
+      <form onSubmit={submit} className="flex flex-wrap items-start gap-4" noValidate>
+        <FormField label="역할" required error={fieldErrors.role}>
+          <Select
+            value={role}
+            disabled={!canManage}
+            onChange={(event) => setRole(event.target.value as UserRole)}
+            className="w-40"
+          >
+            {(Object.keys(USER_ROLE_LABELS) as UserRole[]).map((value) => (
+              <option key={value} value={value}>
+                {USER_ROLE_LABELS[value]}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField
+          label="관리 기관"
+          required={isOrgTier(role)}
+          error={fieldErrors.orgId}
+          description="기관 관리자·기관 운영자 역할일 때만 지정합니다."
+        >
+          <Select
+            value={orgId}
+            disabled={!canManage || !isOrgTier(role)}
+            onChange={(event) => setOrgId(event.target.value)}
+            className="w-56"
+          >
+            <option value="">선택 안 함</option>
+            {orgs.data?.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <Button
+          type="submit"
+          disabled={!canManage}
+          loading={update.isPending}
+          className="mt-6"
+        >
+          역할 변경
+        </Button>
+      </form>
+    </section>
   )
 }
 

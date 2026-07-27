@@ -1090,6 +1090,20 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
   })
 }
 
+export function updateUserRole(
+  userId: number,
+  body: { role: UserRole; orgId: number | null },
+): Promise<UserSummary> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/users/{userId}', {
+      params: { path: { userId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '사용자 역할을 변경하지 못했습니다.')
+    return data
+  })
+}
+
 export function disableUser(userId: number, reason: string): Promise<UserAdminDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/users/{userId}/disable', {
