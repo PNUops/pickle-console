@@ -20,12 +20,11 @@ import {
   Badge,
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  Drawer,
   Input,
   Modal,
   Pagination,
+  PermissionNotice,
   Select,
   Spinner,
   Table,
@@ -278,16 +277,22 @@ export function AdminUsersPage() {
         </>
       )}
 
-      {selectedId !== null && (
-        <UserDetailPanel key={selectedId} userId={selectedId} canManage={canManageAccounts} />
-      )}
+      <Drawer
+        open={selectedId !== null}
+        onClose={() => setSelectedId(null)}
+        title="사용자 상세"
+      >
+        {selectedId !== null && (
+          <UserDetailBody key={selectedId} userId={selectedId} canManage={canManageAccounts} />
+        )}
+      </Drawer>
     </div>
   )
 }
 
-/* ─── 상세 패널 (행 선택 시) ─── */
+/* ─── 상세 드로어 본문 (행 선택 시) ─── */
 
-function UserDetailPanel({ userId, canManage }: { userId: number; canManage: boolean }) {
+function UserDetailBody({ userId, canManage }: { userId: number; canManage: boolean }) {
   const detail = useQuery({
     queryKey: ['admin', 'users', 'detail', userId],
     queryFn: () => fetchAdminUser(userId),
@@ -295,9 +300,9 @@ function UserDetailPanel({ userId, canManage }: { userId: number; canManage: boo
 
   if (detail.isPending) {
     return (
-      <Card className="p-8">
+      <div className="flex justify-center py-12">
         <Spinner label="사용자 상세 불러오는 중" />
-      </Card>
+      </div>
     )
   }
   if (detail.isError) {
@@ -306,62 +311,63 @@ function UserDetailPanel({ userId, canManage }: { userId: number; canManage: boo
 
   const user = detail.data
   return (
-    <Card>
-      <CardHeader className="flex items-center justify-between">
-        <CardTitle>{user.name}</CardTitle>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-neutral-900">{user.name}</h3>
         <UserStatusBadge status={user.status} />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-          <Field label="이메일" value={user.email} />
-          <Field label="역할" value={USER_ROLE_LABELS[user.role]} />
-          <Field label="가입일" value={formatDateTime(user.createdAt)} />
-          <Field label="활성 VM 수" value={String(user.activeVmCount)} />
-          <Field label="2단계 인증" value={user.mfaEnabled ? '사용' : '미사용'} />
-          {user.disabledReason && <Field label="비활성화 사유" value={user.disabledReason} />}
-        </dl>
+      </div>
+      <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+        <Field label="이메일" value={user.email} />
+        <Field label="역할" value={USER_ROLE_LABELS[user.role]} />
+        <Field label="가입일" value={formatDateTime(user.createdAt)} />
+        <Field label="활성 VM 수" value={String(user.activeVmCount)} />
+        <Field label="2단계 인증" value={user.mfaEnabled ? '사용' : '미사용'} />
+        {user.disabledReason && <Field label="비활성화 사유" value={user.disabledReason} />}
+      </dl>
 
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-neutral-800">그룹 멤버십</h3>
-          {user.memberships.length === 0 ? (
-            <p className="text-sm text-neutral-500">소속된 그룹이 없습니다.</p>
-          ) : (
-            <ul className="space-y-1 text-sm text-neutral-700">
-              {user.memberships.map((m) => (
-                <li key={m.groupId}>
-                  {m.groupName}{' '}
-                  <span className="text-neutral-400">
-                    ({GROUP_KIND_LABELS[m.groupKind]} · {m.role})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-neutral-800">상태 변경 이력</h3>
-          {user.statusChanges.length === 0 ? (
-            <p className="text-sm text-neutral-500">변경 이력이 없습니다.</p>
-          ) : (
-            <ul className="space-y-1 text-sm text-neutral-600">
-              {user.statusChanges.map((change, i) => (
-                <li key={i}>
-                  {formatDateTime(change.changedAt)} · {USER_STATUS_LABELS[change.fromStatus]} →{' '}
-                  {USER_STATUS_LABELS[change.toStatus]}
-                  {change.actorEmail && <span className="text-neutral-400"> ({change.actorEmail})</span>}
-                  {change.reason && <span className="text-neutral-400"> — {change.reason}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {canManage && (
-          <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} />
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">그룹 멤버십</h3>
+        {user.memberships.length === 0 ? (
+          <p className="text-sm text-neutral-500">소속된 그룹이 없습니다.</p>
+        ) : (
+          <ul className="space-y-1 text-sm text-neutral-700">
+            {user.memberships.map((m) => (
+              <li key={m.groupId}>
+                {m.groupName}{' '}
+                <span className="text-neutral-400">
+                  ({GROUP_KIND_LABELS[m.groupKind]} · {m.role})
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
-      </CardContent>
-    </Card>
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">상태 변경 이력</h3>
+        {user.statusChanges.length === 0 ? (
+          <p className="text-sm text-neutral-500">변경 이력이 없습니다.</p>
+        ) : (
+          <ul className="space-y-1 text-sm text-neutral-600">
+            {user.statusChanges.map((change, i) => (
+              <li key={i}>
+                {formatDateTime(change.changedAt)} · {USER_STATUS_LABELS[change.fromStatus]} →{' '}
+                {USER_STATUS_LABELS[change.toStatus]}
+                {change.actorEmail && <span className="text-neutral-400"> ({change.actorEmail})</span>}
+                {change.reason && <span className="text-neutral-400"> — {change.reason}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <UserStatusActions
+        userId={userId}
+        status={user.status}
+        mfaEnabled={user.mfaEnabled}
+        canManage={canManage}
+      />
+    </div>
   )
 }
 
@@ -374,16 +380,18 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-/* ─── 비활성화/해제 (SYS_ADMIN 전용) ─── */
+/* ─── 비활성화/해제 (수행은 SYS_ADMIN 전용, 표시는 전 관리자) ─── */
 
 function UserStatusActions({
   userId,
   status,
   mfaEnabled,
+  canManage,
 }: {
   userId: number
   status: UserStatus
   mfaEnabled: boolean
+  canManage: boolean
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -442,14 +450,24 @@ function UserStatusActions({
 
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-      <h3 className="text-sm font-semibold text-neutral-800">계정 상태 관리 (SYS_ADMIN)</h3>
+      <h3 className="text-sm font-semibold text-neutral-800">계정 상태 관리</h3>
+      {!canManage && (
+        <PermissionNotice>
+          계정 상태 변경과 2단계 인증 초기화는 시스템 관리자만 수행할 수 있습니다.
+        </PermissionNotice>
+      )}
       {error && <Alert variant="danger">{error}</Alert>}
       {status === 'DISABLED' ? (
         <>
           <p className="text-sm text-neutral-500">
             비활성화 직전 상태로 복원합니다. 미인증 상태였던 계정은 다시 인증 대기로 돌아갑니다.
           </p>
-          <Button variant="secondary" loading={enable.isPending} onClick={() => enable.mutate()}>
+          <Button
+            variant="secondary"
+            loading={enable.isPending}
+            disabled={!canManage}
+            onClick={() => enable.mutate()}
+          >
             비활성화 해제
           </Button>
         </>
@@ -459,7 +477,7 @@ function UserStatusActions({
             계정을 비활성화하면 즉시 로그인·SSH 접속이 차단됩니다. 그룹·VM은 유지되며 해제 시
             원상 복귀됩니다.
           </p>
-          <Button variant="danger" onClick={() => setOpen(true)}>
+          <Button variant="danger" disabled={!canManage} onClick={() => setOpen(true)}>
             계정 비활성화
           </Button>
         </>
@@ -513,7 +531,7 @@ function UserStatusActions({
             인증 앱·복구 코드를 모두 분실한 사용자의 2단계 인증을 초기화합니다. 오프라인 본인 확인
             후에만 수행해야 하는 민감 작업입니다.
           </p>
-          <Button variant="secondary" onClick={() => setMfaResetOpen(true)}>
+          <Button variant="secondary" disabled={!canManage} onClick={() => setMfaResetOpen(true)}>
             2단계 인증 초기화
           </Button>
         </div>

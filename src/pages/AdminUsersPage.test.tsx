@@ -52,8 +52,8 @@ describe('관리자 사용자 목록', () => {
     renderAsSysAdmin()
 
     await openDetail(user, '홍길동')
-    // 상세 패널: 활성 VM 수·멤버십이 보인다
-    const panel = (await screen.findByText('계정 상태 관리 (SYS_ADMIN)')).closest('section')!
+    // 상세 드로어: 활성 VM 수·멤버십이 보인다
+    const panel = (await screen.findByText('계정 상태 관리')).closest('section')!
     expect(screen.getByText('연구팀')).toBeInTheDocument()
 
     // 비활성화 모달 — 사유 없이는 버튼 비활성
@@ -76,18 +76,34 @@ describe('관리자 사용자 목록', () => {
     await openDetail(user, '홍길동')
     await user.click(await screen.findByRole('button', { name: '2단계 인증 초기화' }))
 
-    const dialog = within(screen.getByRole('dialog'))
+    const dialog = within(screen.getByRole('dialog', { name: '2단계 인증 초기화' }))
     await user.click(dialog.getByRole('button', { name: '초기화' }))
 
     expect(await screen.findByText(/2단계 인증을 초기화했습니다/)).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 비활성화 조작이 노출되지 않는다', async () => {
+  test('상세는 드로어로 열리고 닫기 버튼으로 닫힌다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    const drawer = await screen.findByRole('dialog', { name: '사용자 상세' })
+    expect(drawer).toHaveAttribute('aria-modal', 'true')
+
+    await user.click(within(drawer).getByRole('button', { name: '닫기' }))
+    expect(screen.queryByRole('dialog', { name: '사용자 상세' })).not.toBeInTheDocument()
+  })
+
+  test('ORG_ADMIN에게도 상태 관리가 보이되 비활성 상태로 사유가 표시된다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await openDetail(user, '홍길동')
     await screen.findByText('그룹 멤버십')
-    expect(screen.queryByText('계정 상태 관리 (SYS_ADMIN)')).not.toBeInTheDocument()
+    expect(screen.getByText('계정 상태 관리')).toBeInTheDocument()
+    expect(
+      screen.getByText(/시스템 관리자만 수행할 수 있습니다/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '계정 비활성화' })).toBeDisabled()
   })
 })
