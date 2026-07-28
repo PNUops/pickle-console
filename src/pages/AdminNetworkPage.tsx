@@ -52,11 +52,7 @@ import {
   useToast,
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
-import {
-  CAMPUS_IP_STATUS_LABELS,
-  PORT_MAPPING_PROTO_LABELS,
-  PORT_MAPPING_STATUS_LABELS,
-} from '../lib/status'
+import { CAMPUS_IP_STATUS_LABELS, PORT_MAPPING_STATUS_LABELS } from '../lib/status'
 
 const PAGE_SIZE = 20
 
@@ -416,8 +412,7 @@ function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
                     </TD>
                     <TD>{mapping.relayName}</TD>
                     <TD className="font-mono text-sm whitespace-nowrap">
-                      :{mapping.publicPort} → {mapping.targetPort}/
-                      {PORT_MAPPING_PROTO_LABELS[mapping.proto]}
+                      :{mapping.publicPort} → {mapping.targetPort}/{mapping.proto}
                     </TD>
                     <TD>
                       <PortForwardApplyStateBadge state={mapping.applyState} />
@@ -479,8 +474,11 @@ function MappingDrawerContent({
 
   const unsuspend = useMutation({
     mutationFn: () => unsuspendAdminPortMapping(mapping.id),
-    onSuccess: async (data) => {
-      setNotice({ variant: 'info', text: data.message })
+    onSuccess: async () => {
+      setNotice({
+        variant: 'info',
+        text: '포트 매핑 정지를 해제했습니다. 다음 릴레이 동기화에서 전달이 복원됩니다.',
+      })
       await invalidate()
     },
     onError: (err) =>
@@ -494,8 +492,7 @@ function MappingDrawerContent({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="font-mono text-lg font-semibold text-neutral-900">
-          :{mapping.publicPort} → {mapping.targetPort}/
-          {PORT_MAPPING_PROTO_LABELS[mapping.proto]}
+          :{mapping.publicPort} → {mapping.targetPort}/{mapping.proto}
         </h3>
         <span className="flex items-center gap-1.5">
           <PortForwardApplyStateBadge state={mapping.applyState} />
@@ -598,7 +595,8 @@ function SuspendMappingModal({
 
   const suspend = useMutation({
     mutationFn: () => suspendAdminPortMapping(mapping.id, reason.trim()),
-    onSuccess: (data) => onDone(data.message),
+    onSuccess: () =>
+      onDone('포트 매핑을 정지했습니다. 다음 릴레이 동기화에서 공인 포트가 닫힙니다.'),
     onError: (err) => setError(toApiError(err, '포트 매핑을 정지하지 못했습니다.').message),
   })
 

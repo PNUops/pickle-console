@@ -108,8 +108,8 @@ export type CampusIpRequestStatus = Schemas['CampusIpRequestStatus']
 export type CreateCampusIpRequest = Schemas['CreateCampusIpRequest']
 export type AdminRelayView = Schemas['AdminRelayView']
 export type RelayTokenResponse = Schemas['RelayTokenResponse']
-export type AdminPortMappingView = Schemas['AdminPortMappingView']
-export type AdminPortMappingPage = Schemas['PageResponseAdminPortMappingView']
+export type AdminPortMappingView = Schemas['AdminPortMappingResponse']
+export type AdminPortMappingPage = Schemas['PageResponseAdminPortMappingResponse']
 export type UpdatePortMappingGuardsRequest = Schemas['UpdatePortMappingGuardsRequest']
 export type AdminCampusIpRequestView = Schemas['AdminCampusIpRequestView']
 export type AdminCampusIpRequestPage = Schemas['PageResponseAdminCampusIpRequestView']
@@ -697,10 +697,11 @@ export function fetchAdminPortMappings(params: {
   })
 }
 
+/** 매핑 정지 — 갱신된 매핑(정지 사유 포함)을 돌려받는다. 릴레이 반영은 비동기. */
 export function suspendAdminPortMapping(
   mappingId: number,
   reason: string,
-): Promise<MessageResponse> {
+): Promise<AdminPortMappingView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/port-mappings/{mappingId}/suspend', {
       params: { path: { mappingId } },
@@ -711,7 +712,9 @@ export function suspendAdminPortMapping(
   })
 }
 
-export function unsuspendAdminPortMapping(mappingId: number): Promise<MessageResponse> {
+export function unsuspendAdminPortMapping(
+  mappingId: number,
+): Promise<AdminPortMappingView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST(
       '/admin/port-mappings/{mappingId}/unsuspend',

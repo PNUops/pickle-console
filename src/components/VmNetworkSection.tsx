@@ -16,7 +16,6 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { PORT_MAPPING_PROTO_LABELS } from '../lib/status'
 import { useAuth } from '../auth/auth-context'
 import { isAdminTier } from '../auth/permissions'
 import {
@@ -201,7 +200,7 @@ function PortForwardingCard({
 function CreateForwardingForm({ vm }: { vm: VmDetail }) {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [proto, setProto] = useState<PortMappingProto>('tcp')
+  const [proto, setProto] = useState<PortMappingProto>('TCP')
   const [targetPort, setTargetPort] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -254,8 +253,8 @@ function CreateForwardingForm({ vm }: { vm: VmDetail }) {
             value={proto}
             onChange={(event) => setProto(event.target.value as PortMappingProto)}
           >
-            <option value="tcp">TCP</option>
-            <option value="udp">UDP</option>
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
           </Select>
         </FormField>
         <FormField
@@ -335,7 +334,7 @@ function ForwardingList({
               →
             </span>
             <code className="font-mono text-sm text-neutral-800">
-              {f.targetPort}/{PORT_MAPPING_PROTO_LABELS[f.proto]}
+              {f.targetPort}/{f.proto}
             </code>
             <PortForwardApplyStateBadge state={f.applyState} />
             {f.status === 'SUSPENDED' && <PortMappingStatusBadge status={f.status} />}

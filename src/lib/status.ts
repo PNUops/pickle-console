@@ -106,12 +106,6 @@ export const PORT_MAPPING_STATUS_LABELS: Record<PortMappingStatus, string> = {
   SUSPENDED: '정지됨',
 }
 
-/** 프로토콜 표기 — 계약 값은 소문자, 표시는 대문자. */
-export const PORT_MAPPING_PROTO_LABELS: Record<PortMappingProto, string> = {
-  tcp: 'TCP',
-  udp: 'UDP',
-}
-
 /**
  * 캠퍼스 IP 신청 상태. APPROVED는 플랫폼 심사 통과(정보전산원 절차 착수) 시점
  * 이라 '승인됨'으로 표기한다 (계약 v0.27.0 설명 기준).

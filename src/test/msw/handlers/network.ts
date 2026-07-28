@@ -5,7 +5,7 @@ import { vmStore } from './vms'
 
 type Schemas = components['schemas']
 type PortForwardingView = Schemas['PortForwardingView']
-type AdminPortMappingView = Schemas['AdminPortMappingView']
+type AdminPortMappingView = Schemas['AdminPortMappingResponse']
 type AdminRelayView = Schemas['AdminRelayView']
 
 /** 릴레이 공개 호스트 — 테스트 픽스처 (RFC 5737 문서용 대역). */
@@ -56,7 +56,7 @@ function initialForwardings(): ForwardingRecord[] {
       id: 101,
       vmId: 56,
       relayId: 1,
-      proto: 'tcp',
+      proto: 'TCP',
       publicPort: 12345,
       targetPort: 8080,
       status: 'ACTIVE',
@@ -73,7 +73,7 @@ function initialForwardings(): ForwardingRecord[] {
       id: 102,
       vmId: 56,
       relayId: 1,
-      proto: 'udp',
+      proto: 'UDP',
       publicPort: 13001,
       targetPort: 51820,
       status: 'SUSPENDED',
@@ -90,7 +90,7 @@ function initialForwardings(): ForwardingRecord[] {
       id: 103,
       vmId: 45,
       relayId: 1,
-      proto: 'tcp',
+      proto: 'TCP',
       publicPort: 14000,
       targetPort: 3000,
       status: 'ACTIVE',
@@ -364,10 +364,8 @@ export const networkHandlers: RequestHandler[] = [
     record.status = 'SUSPENDED'
     record.suspendedReason = body.reason.trim()
     record.suspendedBy = 5
-    return HttpResponse.json(
-      { message: '포트 매핑을 정지했습니다. 다음 릴레이 동기화에서 공인 포트가 닫힙니다.' },
-      { status: 202 },
-    )
+    // 계약: 갱신된 매핑을 200으로 돌려준다 (릴레이 반영은 비동기).
+    return HttpResponse.json(toAdminView(record), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/port-mappings/:mappingId/unsuspend', ({ params }) => {
@@ -386,10 +384,7 @@ export const networkHandlers: RequestHandler[] = [
     record.status = 'ACTIVE'
     record.suspendedReason = null
     record.suspendedBy = null
-    return HttpResponse.json(
-      { message: '포트 매핑 정지를 해제했습니다. 다음 릴레이 동기화에서 전달이 복원됩니다.' },
-      { status: 202 },
-    )
+    return HttpResponse.json(toAdminView(record), { status: 200 })
   }),
 
   http.delete('*/api/v1/admin/port-mappings/:mappingId', ({ params }) => {

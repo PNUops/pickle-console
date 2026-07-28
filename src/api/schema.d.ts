@@ -2134,7 +2134,7 @@ export interface components {
             /** Format: int64 */
             userId: number;
         };
-        AdminPortMappingView: {
+        AdminPortMappingResponse: {
             applyState: components["schemas"]["PortForwardApplyState"];
             /** Format: date-time */
             createdAt: string;
@@ -2905,8 +2905,8 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
-        PageResponseAdminPortMappingView: {
-            content: components["schemas"]["AdminPortMappingView"][];
+        PageResponseAdminPortMappingResponse: {
+            content: components["schemas"]["AdminPortMappingResponse"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -3082,7 +3082,7 @@ export interface components {
             targetPort: number;
         };
         /** @enum {string} */
-        PortMappingProto: "tcp" | "udp";
+        PortMappingProto: "TCP" | "UDP";
         /** @enum {string} */
         PortMappingStatus: "ACTIVE" | "SUSPENDED";
         /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환됩니다. */
@@ -4495,7 +4495,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseAdminPortMappingView"];
+                    "*/*": components["schemas"]["PageResponseAdminPortMappingResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -4561,7 +4561,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AdminPortMappingView"];
+                    "*/*": components["schemas"]["AdminPortMappingResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -4590,13 +4590,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Accepted */
-            202: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MessageResponse"];
+                    "*/*": components["schemas"]["AdminPortMappingResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -4621,13 +4621,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Accepted */
-            202: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MessageResponse"];
+                    "*/*": components["schemas"]["AdminPortMappingResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7900,14 +7900,12 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["MessageResponse"];
-                };
+                content?: never;
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
