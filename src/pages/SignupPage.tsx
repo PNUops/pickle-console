@@ -11,6 +11,9 @@ import { PasswordGuidance } from '../components/PasswordGuidance'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { passwordRuleError, PUSAN_EMAIL_RE } from '../lib/validation'
 
+/** 체크리스트를 비밀번호 입력의 설명으로 연결하기 위한 고정 id. */
+const GUIDANCE_ID = 'signup-password-guidance'
+
 interface FieldErrors {
   name?: string
   email?: string
@@ -178,9 +181,15 @@ export function SignupPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="new-password"
+                aria-describedby={GUIDANCE_ID}
                 required
               />
-              <PasswordGuidance password={password} email={email} className="mt-1" />
+              <PasswordGuidance
+                password={password}
+                email={email}
+                id={GUIDANCE_ID}
+                className="mt-1"
+              />
             </FormField>
             <FormField label="비밀번호 확인" required error={fieldErrors.passwordConfirm}>
               <Input

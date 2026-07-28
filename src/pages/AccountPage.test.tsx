@@ -47,6 +47,21 @@ describe('계정 설정 — 비밀번호 변경', () => {
     expect(await screen.findByText('새 비밀번호가 일치하지 않습니다.')).toBeInTheDocument()
   })
 
+  test('구조 규칙에 걸리는 새 비밀번호는 제출 전에 막는다', async () => {
+    const user = userEvent.setup()
+    renderAccount()
+
+    await user.type(await screen.findByLabelText('현재 비밀번호'), USER_PASSWORD)
+    await user.type(screen.getByLabelText('새 비밀번호'), 'short')
+    await user.type(screen.getByLabelText('새 비밀번호 확인'), 'short')
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
+
+    expect(
+      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 합니다.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
+  })
+
   test('현재 비밀번호가 틀리면 서버 오류(403)를 보여준다', async () => {
     const user = userEvent.setup()
     renderAccount()

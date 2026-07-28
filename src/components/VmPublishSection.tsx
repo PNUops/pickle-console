@@ -48,12 +48,46 @@ import {
 /** 이 상태에서만 공개(publish) 접수가 가능하다 (계약: 그 외 409 VM_INVALID_STATE). */
 const PUBLISHABLE_STATUSES: VmDetail['status'][] = ['RUNNING', 'STOPPED']
 
+/** 요약 Alert에서 필드 키 대신 보여줄 이름. */
+const FIELD_LABELS: Record<string, string> = {
+  port: '공개 포트',
+  subdomain: '서브도메인',
+  customDomain: '커스텀 도메인',
+  rootDomain: '루트 도메인',
+}
+
 /**
- * 폼에 표시 자리가 있는 필드 오류인지 — 자리가 없는 키(예: 변경 폼의 subdomain)는
- * 요약 Alert로 대신 노출해 조용히 사라지지 않게 한다.
+ * 폼 오류 요약 Alert. 폼에 표시 자리가 있는 필드 오류(slots)는 해당 필드 밑에
+ * 이미 보이므로 요약을 숨기고, 자리가 없는 키(예: 변경 폼의 subdomain)는 목록으로
+ * 함께 노출해 서버가 준 메시지가 조용히 사라지지 않게 한다.
  */
-function hasSlottedError(fieldErrors: Record<string, string>, slots: string[]): boolean {
-  return slots.some((key) => fieldErrors[key] != null)
+function ErrorSummary({
+  error,
+  fieldErrors,
+  slots,
+}: {
+  error: string | null
+  fieldErrors: Record<string, string>
+  slots: string[]
+}) {
+  if (!error) return null
+  const unslotted = Object.entries(fieldErrors).filter(([field]) => !slots.includes(field))
+  const hasSlotted = slots.some((key) => fieldErrors[key] != null)
+  if (unslotted.length === 0 && hasSlotted) return null
+
+  return (
+    <Alert variant="danger" title={error}>
+      {unslotted.length > 0 && (
+        <ul className="list-disc space-y-0.5 pl-4">
+          {unslotted.map(([field, message]) => (
+            <li key={field}>
+              {FIELD_LABELS[field] ?? field}: {message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Alert>
+  )
 }
 
 /**
@@ -209,9 +243,11 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
           접수할 수 없습니다.
         </Alert>
       )}
-      {error && !hasSlottedError(fieldErrors, ['port', 'subdomain', 'customDomain']) && (
-        <Alert variant="danger">{error}</Alert>
-      )}
+      <ErrorSummary
+        error={error}
+        fieldErrors={fieldErrors}
+        slots={['port', 'subdomain', 'customDomain']}
+      />
 
       <div className="flex flex-wrap items-start gap-4">
         <FormField
@@ -538,6 +574,7 @@ function PublicationActions({
     },
     onError: (err) => {
       setUnpublishOpen(false)
+      setFieldErrors({})
       setError(toApiError(err, '공개 해제를 접수하지 못했습니다.').message)
     },
   })
@@ -557,6 +594,7 @@ function PublicationActions({
 
   const detachCustom = () => {
     setError(null)
+    setFieldErrors({})
     setMessage(null)
     change.mutate({ customDomain: null })
   }
@@ -580,9 +618,7 @@ function PublicationActions({
       <h3 className="text-sm font-semibold text-neutral-800">공개 설정 변경</h3>
       {message && <Alert variant="success">{message}</Alert>}
       {/* 변경 폼에 자리가 없는 필드 오류(예: 플랫폼 복귀 시 subdomain)도 요약으로 노출한다. */}
-      {error && !hasSlottedError(fieldErrors, ['port', 'customDomain']) && (
-        <Alert variant="danger">{error}</Alert>
-      )}
+      <ErrorSummary error={error} fieldErrors={fieldErrors} slots={['port', 'customDomain']} />
 
       <form onSubmit={submitPort} className="flex flex-wrap items-start gap-4" noValidate>
         <FormField

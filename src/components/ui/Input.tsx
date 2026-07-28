@@ -7,11 +7,17 @@ export interface InputProps extends ComponentPropsWithRef<'input'> {
   invalid?: boolean
 }
 
-export function Input({ invalid, className, ...rest }: InputProps) {
+export function Input({
+  invalid,
+  className,
+  'aria-describedby': ariaDescribedBy,
+  ...rest
+}: InputProps) {
   const field = useFieldContext()
   const isInvalid = invalid ?? field?.invalid ?? false
+  // 호출부가 준 aria-describedby는 필드 컨텍스트의 설명·오류를 덮지 않고 덧붙인다.
   const describedBy =
-    [field?.errorId, field?.descriptionId].filter(Boolean).join(' ') || undefined
+    [field?.errorId, field?.descriptionId, ariaDescribedBy].filter(Boolean).join(' ') || undefined
 
   return (
     <input

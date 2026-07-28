@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
-import { onReauthRequired, setReauthToken } from '../api/reauth'
+import { clearReauthToken, onReauthRequired, setReauthToken } from '../api/reauth'
+import { onSessionExpired } from '../api/token'
 import { Button, FormField, Input, Modal } from '../components/ui'
 
 /**
@@ -19,14 +20,19 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const resolveRef = useRef<((granted: boolean) => void) | null>(null)
+  // 확인 요청이 취소로 마감됐는지 — 전송 중 취소(Esc·배경 클릭·취소 버튼)한 뒤
+  // 뒤늦게 도착한 응답의 grant를 저장하지 않기 위한 표시.
+  const abandonedRef = useRef(false)
 
   /** 대기 중인 요청자에게 결과를 딱 한 번 돌려주고 모달을 닫는다. */
   const settle = useCallback((granted: boolean) => {
     const resolve = resolveRef.current
     resolveRef.current = null
+    if (!granted) abandonedRef.current = true
     setOpen(false)
     setSubmitting(false)
     setPassword('')
+    setError(null)
     resolve?.(granted)
   }, [])
 
@@ -35,6 +41,7 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
       () =>
         new Promise<boolean>((resolve) => {
           resolveRef.current = resolve
+          abandonedRef.current = false
           setPassword('')
           setError(null)
           setSubmitting(false)
@@ -65,15 +72,33 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
           // 모달을 열어 둔다 — 잠금 정책은 로그인과 공유한다.
           throw toApiError(failure, '비밀번호 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
         }
+        if (abandonedRef.current) {
+          // 응답을 기다리는 동안 사용자가 취소했거나 세션이 끝났다 — 이 grant는
+          // 아무도 요청하지 않은 것이므로 저장하지 않고 버린다.
+          clearReauthToken()
+          return
+        }
         setReauthToken(data.reauthToken, data.expiresAt)
         settle(true)
       } catch (failure) {
+        if (abandonedRef.current) return
         setError(toApiError(failure, '비밀번호 확인에 실패했습니다.').message)
         setSubmitting(false)
         setPassword('')
       }
     },
     [password, settle, submitting],
+  )
+
+  // 세션이 끊기면(401 복구 실패) 열려 있던 확인 모달을 취소로 닫는다 — 재인증
+  // 토큰은 세션에 매인 값이라 남겨 둘 수 없다(AuthProvider도 함께 비운다).
+  useEffect(
+    () =>
+      onSessionExpired(() => {
+        clearReauthToken()
+        settle(false)
+      }),
+    [settle],
   )
 
   return (

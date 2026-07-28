@@ -28,6 +28,10 @@ import {
   useToast,
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
+import { passwordRuleError } from '../lib/validation'
+
+/** 체크리스트를 새 비밀번호 입력의 설명으로 연결하기 위한 고정 id. */
+const GUIDANCE_ID = 'account-password-guidance'
 
 export function AccountPage() {
   const { user } = useAuth()
@@ -78,6 +82,12 @@ function PasswordChangeSection({ email }: { email: string }) {
     event.preventDefault()
     setError(null)
     setFieldErrors({})
+    // 구조 규칙은 제출 전에 막고(같은 문구), 유출 차단목록 판정은 서버가 한다.
+    const ruleError = passwordRuleError(newPassword, email)
+    if (ruleError) {
+      setFieldErrors({ newPassword: ruleError })
+      return
+    }
     if (newPassword !== confirmPassword) {
       setFieldErrors({ confirmPassword: '새 비밀번호가 일치하지 않습니다.' })
       return
@@ -111,8 +121,14 @@ function PasswordChangeSection({ email }: { email: string }) {
               autoComplete="new-password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
+              aria-describedby={GUIDANCE_ID}
             />
-            <PasswordGuidance password={newPassword} email={email} className="mt-1" />
+            <PasswordGuidance
+              password={newPassword}
+              email={email}
+              id={GUIDANCE_ID}
+              className="mt-1"
+            />
           </FormField>
           <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
             <Input

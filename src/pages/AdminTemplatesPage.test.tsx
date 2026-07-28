@@ -104,6 +104,28 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
     expect(within(updated).getByText('1 vCPU · 2 GiB · 10 GiB')).toBeInTheDocument()
   })
 
+  test('비고를 비우고 저장하면 실제로 지워진다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/templates')
+
+    const before = await findFlavorRow('소형')
+    expect(within(before).getByText('간단한 실습·정적 웹 서버에 적합합니다.')).toBeInTheDocument()
+    await user.click(within(before).getByRole('button', { name: '수정' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '사양 프리셋 수정' })
+    await user.clear(within(dialog).getByLabelText('비고'))
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('사양 프리셋을 수정했습니다.')).toBeInTheDocument()
+    // 빈 값은 null이 아니라 빈 문자열로 보내야 서버가 "변경 없음"으로 보지 않는다.
+    const after = flavorRow('소형')
+    expect(
+      within(after).queryByText('간단한 실습·정적 웹 서버에 적합합니다.'),
+    ).not.toBeInTheDocument()
+    expect(within(after).getByText('—')).toBeInTheDocument()
+  })
+
   test('마지막 ACTIVE 프리셋이 아니면 경고 없이 은퇴시킨다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))

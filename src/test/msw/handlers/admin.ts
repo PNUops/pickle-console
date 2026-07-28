@@ -677,7 +677,9 @@ export const adminHandlers: RequestHandler[] = [
     if (body.vcpu != null) flavor.vcpu = body.vcpu
     if (body.memoryMb != null) flavor.memoryMb = body.memoryMb
     if (body.diskGb != null) flavor.diskGb = body.diskGb
-    if (body.notes !== undefined) flavor.notes = body.notes
+    // 부분 수정 규칙은 다른 필드와 같다 — null/미지정은 "변경 없음"이고,
+    // 빈 문자열이 비고를 지운다 (서버 Texts.blankToNull과 동일).
+    if (body.notes != null) flavor.notes = body.notes.trim() === '' ? null : body.notes.trim()
     if (body.status != null) flavor.status = body.status
     return HttpResponse.json(flavor, { status: 200 })
   }),

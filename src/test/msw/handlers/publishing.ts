@@ -85,12 +85,16 @@ const notFound = () =>
     code: 'RESOURCE_NOT_FOUND',
   })
 
+/**
+ * 서버 GlobalExceptionHandler와 같은 모양의 422 — detail은 항상 일반 문구이고,
+ * 구체적인 사유는 errors[]에만 담긴다 (필드 메시지를 detail로 복제하지 않는다).
+ */
 const validationFailed = (instance: string, field: string, message: string) =>
   problemResponse({
     type: 'about:blank',
     title: '입력값이 올바르지 않습니다',
     status: 422,
-    detail: message,
+    detail: '요청 값을 확인해 주세요.',
     instance,
     code: 'VALIDATION_FAILED',
     errors: [{ field, message }],

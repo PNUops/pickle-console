@@ -532,7 +532,9 @@ function EditFlavorModal({
         vcpu: Number(vcpu),
         memoryMb: Number(memoryMb),
         diskGb: Number(diskGb),
-        notes: notes.trim() || null,
+        // 부분 수정에서 null은 "변경 없음"이다 — 비고를 지우려면 빈 문자열을
+        // 보내야 서버가 null로 저장한다.
+        notes: notes.trim(),
       }),
     onSuccess: async () => {
       onDone('사양 프리셋을 수정했습니다.')

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { api } from './client'
 import { getReauthToken } from './reauth'
-import { setAccessToken } from './token'
+import { notifySessionExpired, setAccessToken } from './token'
 import { ReauthProvider } from '../auth/ReauthProvider'
 import {
   RATE_LIMITED_PASSWORD,
@@ -116,6 +117,72 @@ describe('재인증(sudo-mode) 흐름', () => {
     expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
     expect(getReauthToken()).toBeNull()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('전송 중에 닫으면 뒤늦게 도착한 grant를 저장하지 않는다', async () => {
+    let release: () => void = () => {}
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const user = renderHarness()
+    // 응답을 붙잡아 두고 그 사이에 모달을 닫는다 (취소·Esc·배경 클릭과 같은 경로).
+    server.use(
+      http.post('*/api/v1/auth/reverify', async () => {
+        await inFlight
+        return HttpResponse.json(
+          { reauthToken: REAUTH_TOKEN, expiresAt: new Date(Date.now() + 600_000).toISOString() },
+          { status: 200 },
+        )
+      }),
+    )
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+
+    expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
+    release()
+
+    // 응답이 도착해도 grant는 적립되지 않는다 — 다음 민감 작업은 다시 모달을 띄운다.
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    expect(await screen.findByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(getReauthToken()).toBeNull()
+  })
+
+  test('보유한 grant는 /auth/* 요청에는 붙지 않는다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+    expect(await screen.findByText('ok:id_ed25519_pickle')).toBeInTheDocument()
+
+    let sentHeader: string | null = 'unset'
+    server.use(
+      http.post('*/api/v1/auth/logout', ({ request }) => {
+        sentHeader = request.headers.get('X-Reauth-Token')
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await api.POST('/auth/logout', { params: { header: { 'X-Pickle-Csrf': 'csrf-token' } } })
+
+    expect(sentHeader).toBeNull()
+  })
+
+  test('세션이 만료되면 열려 있던 확인 모달을 닫고 취소로 마감한다', async () => {
+    const user = renderHarness()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+
+    act(() => notifySessionExpired())
+
+    expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(getReauthToken()).toBeNull()
   })
 
   test('본문이 있는 요청도 재시도에서 본문이 보존된다', async () => {

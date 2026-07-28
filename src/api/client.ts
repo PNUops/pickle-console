@@ -61,12 +61,13 @@ export function refreshSession(): Promise<boolean> {
 /**
  * Attaches the bearer token and, while a sudo-mode grant is held, the
  * `X-Reauth-Token` header the 11 sensitive operations demand (계약 v0.24.0).
- * Sending it unconditionally is harmless on the other endpoints and keeps the
- * grant multi-use for its full 10 minutes.
+ * Sending it on the other endpoints is harmless and keeps the grant multi-use
+ * for its full 10 minutes. /auth/* is excluded: those endpoints authenticate on
+ * their own (reverify/login/refresh) and never consume a grant.
  */
 function withAuthHeader(request: Request): Request {
   const token = getAccessToken()
-  const reauthToken = getReauthToken()
+  const reauthToken = isAuthEndpoint(request.url) ? null : getReauthToken()
   if (!token && !reauthToken) return request
   const headers = new Headers(request.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)

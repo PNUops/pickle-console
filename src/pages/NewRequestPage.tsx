@@ -504,7 +504,9 @@ export function NewRequestPage() {
                             flavorId: flavor.id,
                             reqVcpu: flavor.vcpu,
                             reqMemoryMb: flavor.memoryMb,
-                            reqDiskGb: flavor.diskGb,
+                            // 선택한 OS의 최소 디스크가 더 크면 그 값으로 올려 채운다 —
+                            // 프리셋 값 그대로 넣으면 곧바로 검증에 걸린다.
+                            reqDiskGb: Math.max(flavor.diskGb, selectedTemplate?.minDiskGb ?? 0),
                           })
                         }
                         className={cn(

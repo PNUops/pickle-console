@@ -74,6 +74,12 @@ export const PASSWORD_RULE_LABELS: Record<keyof PasswordRuleStatus, string> = {
   noEmail: '이메일 주소를 포함하지 않기',
 }
 
+/**
+ * 이메일을 알아야만 판정할 수 있는 규칙 — 이메일이 없는 화면(예: 재설정 링크)에서는
+ * 통과로 표시하지 않고 "서버에서 확인"으로 남긴다.
+ */
+export const EMAIL_DEPENDENT_RULES: readonly (keyof PasswordRuleStatus)[] = ['noEmail']
+
 /** 규칙 순서(체크리스트 표시 순서 = 서버 검사 순서에 맞춘 순서). */
 export const PASSWORD_RULE_ORDER: (keyof PasswordRuleStatus)[] = [
   'length',
