@@ -337,7 +337,7 @@ const adminNodes: Schemas['NodeSummaryResponse'][] = [
     memoryAllocRatio: 0.26,
     cpuWarnThreshold: 3.0,
     memoryWarnThreshold: 0.8,
-    ipPool: { id: 1, cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
+    ipPool: { id: 1, name: 'guest-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
   },
   {
     // 임계 초과 경고 배지 확인용 (CPU·메모리 모두 임계값 초과)
@@ -355,7 +355,7 @@ const adminNodes: Schemas['NodeSummaryResponse'][] = [
     memoryAllocRatio: 0.88,
     cpuWarnThreshold: 3.0,
     memoryWarnThreshold: 0.8,
-    ipPool: { id: 2, cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
+    ipPool: { id: 2, name: 'mgmt-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
   },
 ]
 

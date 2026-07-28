@@ -65,6 +65,7 @@ import {
 import { GROUP_ROLE_LABELS, type GroupMemberRole } from '../lib/labels'
 import { SshUsageGuide } from '../components/SshUsageGuide'
 import { VmPublishSection } from '../components/VmPublishSection'
+import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
 
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
@@ -93,6 +94,7 @@ const EVENTS_PAGE_SIZE = 10
 const VM_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
   { id: 'publish', label: '도메인·공개' },
+  { id: 'network', label: '네트워크' },
   { id: 'settings', label: '설정' },
   { id: 'activity', label: '활동' },
 ]
@@ -262,6 +264,10 @@ export function VmDetailPage() {
 
       <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">
         <VmPublishSection vm={data} />
+      </TabPanel>
+
+      <TabPanel id="network" active={activeTab === 'network'} className="space-y-6">
+        <VmNetworkSection vm={data} />
       </TabPanel>
 
       <TabPanel id="settings" active={activeTab === 'settings'} className="space-y-6">

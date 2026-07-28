@@ -97,6 +97,25 @@ export type AdminDomainPage = Schemas['PageResponseAdminDomainView']
 export type AdminCertificateView = Schemas['AdminCertificateView']
 export type AdminCertificatePage = Schemas['PageResponseAdminCertificateView']
 
+/* ─── 포트포워딩·릴레이·캠퍼스 IP (v0.27.0) ─── */
+export type PortForwardingView = Schemas['PortForwardingView']
+export type CreatePortForwardingRequest = Schemas['CreatePortForwardingRequest']
+export type PortMappingProto = Schemas['PortMappingProto']
+export type PortForwardApplyState = Schemas['PortForwardApplyState']
+export type PortMappingStatus = Schemas['PortMappingStatus']
+export type CampusIpRequestView = Schemas['CampusIpRequestView']
+export type CampusIpRequestStatus = Schemas['CampusIpRequestStatus']
+export type CreateCampusIpRequest = Schemas['CreateCampusIpRequest']
+export type AdminRelayView = Schemas['AdminRelayView']
+export type RelayTokenResponse = Schemas['RelayTokenResponse']
+export type AdminPortMappingView = Schemas['AdminPortMappingView']
+export type AdminPortMappingPage = Schemas['PageResponseAdminPortMappingView']
+export type UpdatePortMappingGuardsRequest = Schemas['UpdatePortMappingGuardsRequest']
+export type AdminCampusIpRequestView = Schemas['AdminCampusIpRequestView']
+export type AdminCampusIpRequestPage = Schemas['PageResponseAdminCampusIpRequestView']
+export type UpdateCampusIpRequestStatusRequest =
+  Schemas['UpdateCampusIpRequestStatusRequest']
+
 /* ─── 알림·운영 콘솔 ─── */
 export type NotificationView = Schemas['NotificationView']
 export type NotificationPage = Schemas['PageResponseNotificationView']
@@ -562,6 +581,197 @@ export function verifyDomain(domainId: number): Promise<DomainDetail> {
       params: { path: { domainId } },
     })
     if (!data) throw toApiError(error, '도메인 검증 재시도를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 포트포워딩·캠퍼스 IP (사용자) ─── */
+
+export function fetchVmPortForwardings(vmId: number): Promise<PortForwardingView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/port-forwardings', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '포트포워딩 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createVmPortForwarding(
+  vmId: number,
+  body: CreatePortForwardingRequest,
+): Promise<PortForwardingView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/port-forwardings', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '포트포워딩을 만들지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteVmPortForwarding(
+  vmId: number,
+  portForwardingId: number,
+): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.DELETE(
+      '/vms/{vmId}/port-forwardings/{portForwardingId}',
+      { params: { path: { vmId, portForwardingId } } },
+    )
+    if (!data) throw toApiError(error, '포트포워딩 삭제를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchVmCampusIpRequests(vmId: number): Promise<CampusIpRequestView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/campus-ip-requests', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '캠퍼스 IP 신청 이력을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createVmCampusIpRequest(
+  vmId: number,
+  body: CreateCampusIpRequest,
+): Promise<CampusIpRequestView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/campus-ip-requests', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '캠퍼스 IP 신청을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/** REQUESTED 상태의 신청만 취소할 수 있다 (그 외 409, 멱등 아님 — 204). */
+export function cancelVmCampusIpRequest(vmId: number, requestId: number): Promise<void> {
+  return guardNetwork(async () => {
+    const { error, response } = await api.DELETE(
+      '/vms/{vmId}/campus-ip-requests/{requestId}',
+      { params: { path: { vmId, requestId } } },
+    )
+    if (!response.ok) throw toApiError(error, '캠퍼스 IP 신청을 취소하지 못했습니다.')
+  })
+}
+
+/* ─── admin: 릴레이·포트 매핑·캠퍼스 IP ─── */
+
+export function fetchAdminRelays(): Promise<AdminRelayView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/relays')
+    if (!data) throw toApiError(error, '릴레이 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 릴레이 동기화 토큰 발급 — 평문 토큰은 이 응답에서만 확인할 수 있다. */
+export function issueAdminRelayToken(relayId: number): Promise<RelayTokenResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/relays/{relayId}/token', {
+      params: { path: { relayId } },
+    })
+    if (!data) throw toApiError(error, '릴레이 토큰을 발급하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminPortMappings(params: {
+  relayId?: number
+  vmId?: number
+  status?: PortMappingStatus
+  page?: number
+  size?: number
+} = {}): Promise<AdminPortMappingPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/port-mappings', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '포트 매핑 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function suspendAdminPortMapping(
+  mappingId: number,
+  reason: string,
+): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/port-mappings/{mappingId}/suspend', {
+      params: { path: { mappingId } },
+      body: { reason },
+    })
+    if (!data) throw toApiError(error, '포트 매핑을 정지하지 못했습니다.')
+    return data
+  })
+}
+
+export function unsuspendAdminPortMapping(mappingId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST(
+      '/admin/port-mappings/{mappingId}/unsuspend',
+      { params: { path: { mappingId } } },
+    )
+    if (!data) throw toApiError(error, '포트 매핑 정지를 해제하지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteAdminPortMapping(mappingId: number): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.DELETE('/admin/port-mappings/{mappingId}', {
+      params: { path: { mappingId } },
+    })
+    if (!data) throw toApiError(error, '포트 매핑 삭제를 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/** 매핑별 연결 가드 조정 (SYS_ADMIN) — null = 기본값 복귀, 0 = 해당 가드 해제. */
+export function updateAdminPortMappingGuards(
+  mappingId: number,
+  body: UpdatePortMappingGuardsRequest,
+): Promise<AdminPortMappingView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/port-mappings/{mappingId}/guards', {
+      params: { path: { mappingId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '연결 가드를 조정하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminCampusIpRequests(params: {
+  status?: CampusIpRequestStatus
+  orgId?: number
+  page?: number
+  size?: number
+} = {}): Promise<AdminCampusIpRequestPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/campus-ip-requests', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '캠퍼스 IP 신청 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminCampusIpRequestStatus(
+  requestId: number,
+  body: UpdateCampusIpRequestStatusRequest,
+): Promise<AdminCampusIpRequestView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST(
+      '/admin/campus-ip-requests/{requestId}/status',
+      { params: { path: { requestId } }, body },
+    )
+    if (!data) throw toApiError(error, '신청 상태를 전환하지 못했습니다.')
     return data
   })
 }
