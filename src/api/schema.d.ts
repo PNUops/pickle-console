@@ -5241,12 +5241,12 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 이중 제출 토큰 — pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
+                /** @description CSRF 이중 제출 토큰 — __Host-pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
                 "X-Pickle-Csrf": string;
             };
             path?: never;
             cookie?: {
-                pickle_refresh?: string;
+                "__Host-pickle_refresh"?: string;
             };
         };
         requestBody?: never;
@@ -5372,12 +5372,12 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 이중 제출 토큰 — pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
+                /** @description CSRF 이중 제출 토큰 — __Host-pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
                 "X-Pickle-Csrf": string;
             };
             path?: never;
             cookie?: {
-                pickle_refresh?: string;
+                "__Host-pickle_refresh"?: string;
             };
         };
         requestBody?: never;

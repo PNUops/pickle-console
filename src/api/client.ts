@@ -23,13 +23,16 @@ function isAuthEndpoint(url: string): boolean {
 let refreshInFlight: Promise<boolean> | null = null
 
 /**
- * CSRF 이중 제출 토큰: 로그인/갱신 시 발급되는 `pickle_csrf` 쿠키
- * (비-HttpOnly, SameSite=Lax, Path=/) 값. `/auth/refresh`·`/auth/logout`
- * 호출 시 `X-Pickle-Csrf` 헤더로 되돌려 보낸다 (계약 v0.3.0).
+ * CSRF 이중 제출 토큰: 로그인/갱신 시 발급되는 `__Host-pickle_csrf` 쿠키
+ * (비-HttpOnly, SameSite=Strict, Path=/) 값. `/auth/refresh`·`/auth/logout`
+ * 호출 시 `X-Pickle-Csrf` 헤더로 되돌려 보낸다.
+ *
+ * 쿠키 이름 전체를 앵커로 잡는다. 접두사 없는 `pickle_csrf`가 남아 있어도
+ * `(?:^|;\s*)`가 이름의 시작을 강제하므로 그 쪽에 걸리지 않는다.
  */
 export function getCsrfToken(): string {
   if (typeof document === 'undefined') return ''
-  const match = /(?:^|;\s*)pickle_csrf=([^;]*)/.exec(document.cookie)
+  const match = /(?:^|;\s*)__Host-pickle_csrf=([^;]*)/.exec(document.cookie)
   return match ? decodeURIComponent(match[1]) : ''
 }
 

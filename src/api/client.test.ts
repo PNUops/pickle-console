@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { api } from './client'
+import { api, getCsrfToken } from './client'
 import type { Problem } from './problem'
 import { getAccessToken, onSessionExpired, setAccessToken } from './token'
 import { server } from '../test/msw/server'
@@ -91,5 +91,36 @@ describe('api client auth behavior', () => {
     const problemError: Problem | undefined = error
     expect(problemError?.code).toBe('AUTH_INVALID_CREDENTIALS')
     expect(refreshCalls).not.toHaveBeenCalled()
+  })
+})
+
+describe('getCsrfToken', () => {
+  const setCookie = (value: string) => {
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => value,
+    })
+  }
+
+  test('reads the __Host- prefixed CSRF cookie', () => {
+    setCookie('other=1; __Host-pickle_csrf=abc123; another=2')
+    expect(getCsrfToken()).toBe('abc123')
+  })
+
+  test('reads it when it is the only cookie', () => {
+    setCookie('__Host-pickle_csrf=solo')
+    expect(getCsrfToken()).toBe('solo')
+  })
+
+  test('percent-decodes the value', () => {
+    setCookie('__Host-pickle_csrf=a%2Fb')
+    expect(getCsrfToken()).toBe('a/b')
+  })
+
+  // The name is matched whole: a leftover unprefixed cookie is a different
+  // cookie, and echoing its value would fail the server-side double-submit check.
+  test('ignores an unprefixed pickle_csrf cookie', () => {
+    setCookie('pickle_csrf=stale-value')
+    expect(getCsrfToken()).toBe('')
   })
 })
