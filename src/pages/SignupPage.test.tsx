@@ -33,7 +33,7 @@ describe('회원가입 폼 검증', () => {
 
     await fillSignupForm({
       name: '홍길동',
-      email: 'yejun@gmail.com',
+      email: 'example@gmail.com',
       password: 'long-enough-pw',
       passwordConfirm: 'long-enough-pw',
     })
@@ -101,7 +101,7 @@ describe('회원가입 폼 검증', () => {
       '성공',
     )
     await user.clear(screen.getByLabelText('비밀번호'))
-    await user.type(screen.getByLabelText('비밀번호'), 'yejun-4321!')
+    await user.type(screen.getByLabelText('비밀번호'), 'example-4321!')
     expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
       '미충족',
     )

@@ -45,12 +45,12 @@ describe('passwordRuleStatus — 서버 구조 규칙 미러', () => {
   })
 
   test('이메일 로컬 파트가 4자 이상이고 포함되면 미충족', () => {
-    expect(passwordRuleStatus('YeJun-4321!', 'example@pusan.ac.kr').noEmail).toBe(false)
+    expect(passwordRuleStatus('Example-4321!', 'example@pusan.ac.kr').noEmail).toBe(false)
     expect(passwordRuleStatus('other-4321!', 'example@pusan.ac.kr').noEmail).toBe(true)
     // 3자 로컬 파트는 검사하지 않는다.
     expect(passwordRuleStatus('abc-12345!', 'abc@pusan.ac.kr').noEmail).toBe(true)
     // 이메일을 넘기지 않으면 항상 충족.
-    expect(passwordRuleStatus('yejun-4321!').noEmail).toBe(true)
+    expect(passwordRuleStatus('example-4321!').noEmail).toBe(true)
   })
 })
 
@@ -66,7 +66,7 @@ describe('passwordRuleError', () => {
     expect(passwordRuleError('abcdefgh')).toBe(
       '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없습니다.',
     )
-    expect(passwordRuleError('yejun-4321!', 'example@pusan.ac.kr')).toBe(
+    expect(passwordRuleError('example-4321!', 'example@pusan.ac.kr')).toBe(
       '이메일 주소가 포함된 비밀번호는 사용할 수 없습니다.',
     )
   })

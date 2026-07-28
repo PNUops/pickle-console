@@ -147,7 +147,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         activeVms: [
           {
             id: 31,
-            name: 'yejun-dev',
+            name: 'example-dev',
             status: 'RUNNING',
             vcpu: 1,
             memoryMb: 1024,

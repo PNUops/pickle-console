@@ -40,7 +40,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     expect(within(panel).getByText('example@pusan.ac.kr')).toBeInTheDocument()
     expect(within(panel).getByText('승인 2회 · 반려 0회')).toBeInTheDocument()
     // 2) 신청자 보유 자원
-    expect(within(panel).getByText('yejun-dev')).toBeInTheDocument()
+    expect(within(panel).getByText('example-dev')).toBeInTheDocument()
     expect(within(panel).getByText('합계 1 vCPU · 1 GiB · 10 GiB')).toBeInTheDocument()
     // 3) 신청 그룹
     expect(within(panel).getByText('캡스톤 3조')).toBeInTheDocument()

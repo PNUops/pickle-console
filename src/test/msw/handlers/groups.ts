@@ -32,7 +32,7 @@ function initialGroups(): GroupRecord[] {
         id: 7,
         kind: 'PERSONAL',
         name: '홍길동',
-        slug: 'yejun-shin',
+        slug: 'example-shin',
         description: null,
         myRole: 'OWNER',
         createdAt: '2026-06-01T09:00:00+09:00',
