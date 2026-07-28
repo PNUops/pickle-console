@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local secrets (never committed)
+.env
+*.pem
+*.key
+id_rsa*
+id_ed25519*
