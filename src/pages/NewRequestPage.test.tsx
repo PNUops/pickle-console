@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { createdVmRequestBodies } from '../test/msw/handlers/vm-requests'
+import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -168,6 +169,66 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
 
     // 아무것도 입력하지 않았으므로 1단계(그룹·기관)로 되돌아간다.
     expect(await screen.findByLabelText('신청 그룹')).toBeInTheDocument()
+  })
+
+  test('선택 목록에 없는 사양 프리셋이 초안에 남아 있으면 2단계에서 막힌다', async () => {
+    const user = userEvent.setup()
+    // 은퇴(DISABLED)한 프리셋 id가 초안에 남은 상황 — 공개 목록에는 없는 값이다.
+    sessionStorage.setItem(
+      VM_REQUEST_DRAFT_KEY,
+      JSON.stringify({
+        groupId: 12,
+        orgId: 1,
+        templateId: 1,
+        flavorId: 9,
+        reqVcpu: 1,
+        reqMemoryMb: 512,
+        reqDiskGb: 10,
+        purpose: '실습 서버',
+      }),
+    )
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/requests/new?step=4')
+
+    // 확인 단계로 직접 진입해도 2단계에서 멈춘다 (요약에 원시 id가 새지 않는다).
+    expect(await screen.findByRole('button', { name: /기본형/ })).toBeInTheDocument()
+    expect(screen.queryByText('신청 내용 확인')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('사양 프리셋을 선택해 주세요.')).toBeInTheDocument()
+
+    // 목록에 있는 프리셋을 고르면 그대로 진행된다.
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(await screen.findByLabelText('사용 목적')).toBeInTheDocument()
+  })
+})
+
+describe('VM 신청 위저드 — OS·사양 축의 상호 보정', () => {
+  test('OS를 고르면 디스크가 그 OS의 최소치까지 올라가고, 그보다 큰 값은 유지된다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await screen.findByRole('heading', { name: 'VM 신청' })
+    await passStep1(user)
+
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
+
+    // 최소치 미만으로 직접 낮춘 뒤 OS를 (다시) 고르면 최소 디스크로 보정된다.
+    const disk = screen.getByLabelText('디스크 (GiB)')
+    await user.clear(disk)
+    await user.type(disk, '5')
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(10)
+
+    // 최소치를 이미 넘는 값은 OS 선택으로 줄어들지 않는다.
+    await user.clear(screen.getByLabelText('디스크 (GiB)'))
+    await user.type(screen.getByLabelText('디스크 (GiB)'), '20')
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(await screen.findByLabelText('사용 목적')).toBeInTheDocument()
   })
 })
 

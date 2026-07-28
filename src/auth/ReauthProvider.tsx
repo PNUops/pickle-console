@@ -20,15 +20,16 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const resolveRef = useRef<((granted: boolean) => void) | null>(null)
-  // 확인 요청이 취소로 마감됐는지 — 전송 중 취소(Esc·배경 클릭·취소 버튼)한 뒤
-  // 뒤늦게 도착한 응답의 grant를 저장하지 않기 위한 표시.
-  const abandonedRef = useRef(false)
+  // 확인 요청의 세대 — 프롬프트가 열릴 때와 마감될 때마다 올라간다. 전송 중
+  // 취소(Esc·배경 클릭·취소 버튼)한 뒤 뒤늦게 도착한 응답이 grant를 적립하거나
+  // 그 사이에 새로 열린 모달의 상태를 건드리지 못하게 하는 기준값이다.
+  const genRef = useRef(0)
 
   /** 대기 중인 요청자에게 결과를 딱 한 번 돌려주고 모달을 닫는다. */
   const settle = useCallback((granted: boolean) => {
     const resolve = resolveRef.current
     resolveRef.current = null
-    if (!granted) abandonedRef.current = true
+    genRef.current += 1
     setOpen(false)
     setSubmitting(false)
     setPassword('')
@@ -41,7 +42,7 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
       () =>
         new Promise<boolean>((resolve) => {
           resolveRef.current = resolve
-          abandonedRef.current = false
+          genRef.current += 1
           setPassword('')
           setError(null)
           setSubmitting(false)
@@ -51,8 +52,10 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
     return () => {
       unsubscribe()
       // 언마운트 시 남은 약속을 취소로 마감한다 — 호출부가 영원히 기다리지 않게.
+      // 세대도 올려 전송 중이던 요청의 뒤늦은 grant가 적립되지 않게 한다.
       const pending = resolveRef.current
       resolveRef.current = null
+      genRef.current += 1
       pending?.(false)
     }
   }, [])
@@ -63,6 +66,9 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
       if (submitting || password.length === 0) return
       setSubmitting(true)
       setError(null)
+      // 응답을 기다리는 사이에 이 요청이 마감(취소·세션 만료)되고 새 프롬프트가
+      // 열렸을 수 있다 — 그때는 세대가 달라지므로 결과를 통째로 버린다.
+      const generation = genRef.current
       try {
         const { data, error: failure } = await guardNetwork(() =>
           api.POST('/auth/reverify', { body: { password } }),
@@ -72,7 +78,7 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
           // 모달을 열어 둔다 — 잠금 정책은 로그인과 공유한다.
           throw toApiError(failure, '비밀번호 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
         }
-        if (abandonedRef.current) {
+        if (generation !== genRef.current) {
           // 응답을 기다리는 동안 사용자가 취소했거나 세션이 끝났다 — 이 grant는
           // 아무도 요청하지 않은 것이므로 저장하지 않고 버린다.
           clearReauthToken()
@@ -81,7 +87,8 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
         setReauthToken(data.reauthToken, data.expiresAt)
         settle(true)
       } catch (failure) {
-        if (abandonedRef.current) return
+        // 이미 마감된 요청의 실패는 새 모달에 오류로 흘려보내지 않는다.
+        if (generation !== genRef.current) return
         setError(toApiError(failure, '비밀번호 확인에 실패했습니다.').message)
         setSubmitting(false)
         setPassword('')

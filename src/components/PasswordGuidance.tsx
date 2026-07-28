@@ -27,10 +27,10 @@ const BAR_TONES = ['bg-danger-500', 'bg-warning-500', 'bg-primary-500', 'bg-succ
 export function PasswordGuidance({ password, email, id, className }: PasswordGuidanceProps) {
   const pristine = password.length === 0
   const status = passwordRuleStatus(password, email)
-  // 이메일을 모르면 "이메일 주소 포함" 규칙은 클라이언트가 판정할 수 없다 —
-  // 통과한 것처럼 ✓를 보여주지 않고 서버 확인 예정임을 알린다.
+  // 이메일을 모르면(미전달·아직 입력 전) "이메일 주소 포함" 규칙은 클라이언트가
+  // 판정할 수 없다 — 통과한 것처럼 ✓를 보여주지 않고 서버 확인 예정임을 알린다.
   const unverifiable = (rule: (typeof PASSWORD_RULE_ORDER)[number]) =>
-    email === undefined && EMAIL_DEPENDENT_RULES.includes(rule)
+    !email?.trim() && EMAIL_DEPENDENT_RULES.includes(rule)
   const score = passwordStrength(password)
   const strengthLabel = pristine ? '미입력' : PASSWORD_STRENGTH_LABELS[score]
 

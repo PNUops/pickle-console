@@ -90,6 +90,11 @@ describe('회원가입 폼 검증', () => {
     await user.type(screen.getByLabelText('비밀번호'), 'g')
     expect(lengthRule()).toHaveTextContent('성공')
 
+    // 이메일을 아직 입력하지 않았으면 이메일 의존 규칙은 통과로 단정하지 않는다.
+    expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
+      '서버에서 확인',
+    )
+
     // 이메일 아이디를 포함하면 해당 규칙이 미충족으로 바뀐다.
     await user.type(screen.getByLabelText('이메일'), 'example@pusan.ac.kr')
     expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(

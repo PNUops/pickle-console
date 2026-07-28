@@ -190,8 +190,11 @@ export function NewRequestPage() {
       }
     }
     if (index === 1) {
-      if (state.templateId == null) next.templateId = 'OS를 선택해 주세요.'
-      if (state.flavorId == null) next.flavorId = '사양 프리셋을 선택해 주세요.'
+      // 목록에 없는 id(초안에 남은 은퇴 OS·프리셋, 직접 넣은 값)는 선택되지 않은
+      // 것으로 본다 — 그대로 두면 요약이 원시 id를 보여주고 제출이 422로 튕긴다.
+      if (state.templateId == null || !selectedTemplate) next.templateId = 'OS를 선택해 주세요.'
+      if (state.flavorId == null || !selectedFlavor)
+        next.flavorId = '사양 프리셋을 선택해 주세요.'
       if (selectedTemplate && selectedFlavor) {
         if (state.reqVcpu < 1) next.reqVcpu = 'vCPU는 1 이상이어야 합니다.'
         if (state.reqMemoryMb < 256) next.reqMemoryMb = '메모리는 256 MiB 이상이어야 합니다.'
@@ -459,7 +462,14 @@ export function NewRequestPage() {
                         key={template.id}
                         type="button"
                         aria-pressed={selected}
-                        onClick={() => update({ templateId: template.id })}
+                        onClick={() =>
+                          update({
+                            templateId: template.id,
+                            // 이미 고른 사양(또는 직접 입력값)이 이 OS의 최소 디스크보다
+                            // 작으면 끌어올린다 — 사양을 먼저 골랐거나 OS를 바꾼 경우.
+                            reqDiskGb: Math.max(state.reqDiskGb, template.minDiskGb),
+                          })
+                        }
                         className={cn(
                           'cursor-pointer rounded-card border p-4 text-left focus-visible:outline-2 focus-visible:outline-primary-600',
                           selected

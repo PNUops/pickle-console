@@ -568,6 +568,7 @@ function PublicationActions({
     onSuccess: async (data) => {
       setUnpublishOpen(false)
       setError(null)
+      setFieldErrors({})
       setMessage(data.message)
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
@@ -575,6 +576,8 @@ function PublicationActions({
     onError: (err) => {
       setUnpublishOpen(false)
       setFieldErrors({})
+      // 직전 변경의 성공 배너가 실패 알림과 나란히 남지 않게 함께 지운다.
+      setMessage(null)
       setError(toApiError(err, '공개 해제를 접수하지 못했습니다.').message)
     },
   })
@@ -617,8 +620,14 @@ function PublicationActions({
     <section className="space-y-4 border-t border-neutral-100 pt-4">
       <h3 className="text-sm font-semibold text-neutral-800">공개 설정 변경</h3>
       {message && <Alert variant="success">{message}</Alert>}
-      {/* 변경 폼에 자리가 없는 필드 오류(예: 플랫폼 복귀 시 subdomain)도 요약으로 노출한다. */}
-      <ErrorSummary error={error} fieldErrors={fieldErrors} slots={['port', 'customDomain']} />
+      {/* 변경 폼에 자리가 없는 필드 오류(예: 플랫폼 복귀 시 subdomain)도 요약으로 노출한다.
+          커스텀 도메인이 이미 연결된 상태에서는 도메인 입력칸 자체가 없으므로
+          customDomain 오류도 표시 자리가 없다 — 요약으로 돌린다. */}
+      <ErrorSummary
+        error={error}
+        fieldErrors={fieldErrors}
+        slots={isCustom ? ['port'] : ['port', 'customDomain']}
+      />
 
       <form onSubmit={submitPort} className="flex flex-wrap items-start gap-4" noValidate>
         <FormField

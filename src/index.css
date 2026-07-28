@@ -222,7 +222,10 @@
 .auth-dark label .text-neutral-800 {
   color: var(--color-neutral-100);
 }
-.auth-dark label .text-neutral-500 {
+/* 보조 안내 문구(약관 설명, 필드 설명, 비밀번호 안내) — neutral-500은 어두운
+   배경에서 대비가 모자라므로 인증 화면에서만 한 단계 밝게 올린다. 비활성 입력의
+   disabled:text-neutral-500은 다른 클래스라 영향을 받지 않는다. */
+.auth-dark .text-neutral-500 {
   color: var(--color-neutral-400);
 }
 /* 비밀번호 안내 체크리스트 표식 — 어두운 배경에서는 밝은 톤으로 */

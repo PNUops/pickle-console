@@ -2,7 +2,7 @@ import { isOrgTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, regularUser } from './auth'
-import { orgs, vmFlavors } from './reference'
+import { flavorStore, orgs, resetFlavorStore } from './reference'
 import {
   invalidVmStateProblem,
   localDateStr,
@@ -253,7 +253,7 @@ export function resetAdminFixtures() {
   userPatchBodies = []
   nextOrgId = 100
   adminTemplates = initialAdminTemplates()
-  adminFlavors = initialAdminFlavors()
+  resetFlavorStore()
   nextFlavorId = 100
 }
 
@@ -287,24 +287,8 @@ function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
 
 export let adminTemplates: Schemas['AdminTemplateResponse'][] = initialAdminTemplates()
 
-/** 사양 프리셋 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴 프리셋 포함). */
-function initialAdminFlavors(): Schemas['VmFlavorResponse'][] {
-  return [
-    ...vmFlavors.map((flavor) => ({ ...flavor })),
-    {
-      id: 9,
-      name: 'legacy',
-      displayName: '구형 프리셋',
-      vcpu: 1,
-      memoryMb: 512,
-      diskGb: 10,
-      status: 'DISABLED',
-      notes: '메모리가 부족해 은퇴시킨 프리셋',
-    },
-  ]
-}
-
-export let adminFlavors: Schemas['VmFlavorResponse'][] = initialAdminFlavors()
+/* 사양 프리셋 인벤토리는 공개 목록과 공유하는 저장소(flavorStore)를 그대로 쓴다 —
+   관리자 목록은 전 상태를, 공개 목록은 ACTIVE만 노출한다. */
 
 /** POST /admin/vm-flavors 로 만들어진 프리셋의 id 채번. */
 let nextFlavorId = 100
@@ -631,12 +615,12 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/admin/vm-flavors', () =>
-    HttpResponse.json(adminFlavors, { status: 200 }),
+    HttpResponse.json(flavorStore, { status: 200 }),
   ),
 
   http.post('*/api/v1/admin/vm-flavors', async ({ request }) => {
     const body = (await request.json()) as Schemas['CreateVmFlavorRequest']
-    if (adminFlavors.some((f) => f.name === body.name)) {
+    if (flavorStore.some((f) => f.name === body.name)) {
       return problemResponse({
         type: 'about:blank',
         title: '입력값이 올바르지 않습니다',
@@ -656,12 +640,12 @@ export const adminHandlers: RequestHandler[] = [
       status: 'ACTIVE',
       notes: body.notes ?? null,
     }
-    adminFlavors.push(created)
+    flavorStore.push(created)
     return HttpResponse.json(created, { status: 201 })
   }),
 
   http.patch('*/api/v1/admin/vm-flavors/:flavorId', async ({ params, request }) => {
-    const flavor = adminFlavors.find((f) => f.id === Number(params.flavorId))
+    const flavor = flavorStore.find((f) => f.id === Number(params.flavorId))
     if (!flavor) return notFound()
     const body = (await request.json()) as Schemas['UpdateVmFlavorRequest']
     if (Object.values(body).every((value) => value == null)) {

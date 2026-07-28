@@ -11,6 +11,7 @@ import {
   RATE_LIMITED_PASSWORD,
   REAUTH_TOKEN,
   USER_PASSWORD,
+  problemResponse,
   reauthGateHandlers,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
@@ -149,6 +150,86 @@ describe('재인증(sudo-mode) 흐름', () => {
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
     expect(await screen.findByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
     expect(getReauthToken()).toBeNull()
+  })
+
+  test('전송 중 취소하고 새 프롬프트를 열면 뒤늦은 grant가 새 모달을 건드리지 않는다', async () => {
+    let release: () => void = () => {}
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const user = renderHarness()
+    server.use(
+      http.post('*/api/v1/auth/reverify', async () => {
+        await inFlight
+        return HttpResponse.json(
+          { reauthToken: REAUTH_TOKEN, expiresAt: new Date(Date.now() + 600_000).toISOString() },
+          { status: 200 },
+        )
+      }),
+    )
+
+    // 첫 확인 요청: 응답을 붙잡아 둔 채 취소한다.
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(passwordField(), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '확인' }))
+    // 전송 중에는 취소 버튼이 잠기므로 닫기(X)로 마감한다 — Esc·배경 클릭과 같은 경로.
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+    expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
+
+    // 이전 응답이 도착하기 전에 새 확인 요청이 시작된다.
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    release()
+
+    // 뒤늦은 grant는 적립되지도, 새 모달을 닫지도 않는다 (입력도 그대로 유지).
+    await user.type(passwordField(), USER_PASSWORD)
+    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(passwordField()).toHaveValue(USER_PASSWORD)
+    expect(getReauthToken()).toBeNull()
+
+    // 새 모달로 확인하면 그때 발급된 grant로 원래 요청이 재시도된다.
+    await user.click(screen.getByRole('button', { name: '확인' }))
+    expect(await screen.findByText('ok:id_ed25519_pickle')).toBeInTheDocument()
+    expect(getReauthToken()).toBe(REAUTH_TOKEN)
+  })
+
+  test('전송 중 취소한 요청의 뒤늦은 실패는 새 모달에 오류로 새지 않는다', async () => {
+    let release: () => void = () => {}
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const user = renderHarness()
+    server.use(
+      http.post('*/api/v1/auth/reverify', async () => {
+        await inFlight
+        return problemResponse({
+          type: 'about:blank',
+          title: '본인 확인에 실패했습니다',
+          status: 403,
+          detail: '비밀번호가 일치하지 않습니다.',
+          instance: '/api/v1/auth/reverify',
+          code: 'AUTH_PASSWORD_MISMATCH',
+        })
+      }),
+    )
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(passwordField(), 'wrong-password')
+    await user.click(screen.getByRole('button', { name: '확인' }))
+    // 전송 중에는 취소 버튼이 잠기므로 닫기(X)로 마감한다 — Esc·배경 클릭과 같은 경로.
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+    expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
+    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    release()
+
+    // 새 모달은 오류 없이 처음 상태 그대로다.
+    await user.type(passwordField(), USER_PASSWORD)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
   })
 
   test('보유한 grant는 /auth/* 요청에는 붙지 않는다', async () => {

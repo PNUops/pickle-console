@@ -27,11 +27,34 @@ const weakPasswordProblem = (instance: string) =>
     ],
   })
 
+/** 유출 차단목록에 걸리는 비밀번호 — 서버가 실제로 막는 값 중 하나. */
+export const BLOCKLISTED_PASSWORD = 'password123'
+
+/**
+ * 차단목록 위반 422. 구조 규칙 위반(newPassword)과 달리 서버는 검사 대상 값의
+ * 이름을 `password`로 돌려주므로, 콘솔의 필드 매핑 폴백을 실제로 태운다.
+ */
+const blocklistedPasswordProblem = (instance: string) =>
+  problemResponse({
+    type: 'about:blank',
+    title: '입력값이 올바르지 않습니다',
+    status: 422,
+    detail: '요청 값을 확인해 주세요.',
+    instance,
+    code: 'VALIDATION_FAILED',
+    errors: [
+      { field: 'password', message: '너무 흔한 비밀번호입니다. 다른 비밀번호를 사용해 주세요.' },
+    ],
+  })
+
 export const accountHandlers: RequestHandler[] = [
   http.put('*/api/v1/me/password', async ({ request }) => {
     const body = (await request.json()) as { currentPassword: string; newPassword: string }
     if (body.currentPassword !== USER_PASSWORD) return passwordMismatch('/api/v1/me/password')
     if (body.newPassword.length < 8) return weakPasswordProblem('/api/v1/me/password')
+    if (body.newPassword === BLOCKLISTED_PASSWORD) {
+      return blocklistedPasswordProblem('/api/v1/me/password')
+    }
     const response: Schemas['AuthTokenResponse'] = {
       accessToken: 'access-user',
       user: regularUser,
@@ -68,6 +91,9 @@ export const accountHandlers: RequestHandler[] = [
       })
     }
     if (body.newPassword.length < 8) return weakPasswordProblem('/api/v1/auth/password-reset/confirm')
+    if (body.newPassword === BLOCKLISTED_PASSWORD) {
+      return blocklistedPasswordProblem('/api/v1/auth/password-reset/confirm')
+    }
     const response: Schemas['MessageResponse'] = {
       message: '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.',
     }

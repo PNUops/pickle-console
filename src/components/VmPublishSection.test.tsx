@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { vmStore } from '../test/msw/handlers/vms'
@@ -198,6 +199,48 @@ describe('VM 공개 — 변경·해제', () => {
     expect(
       await within(card).findByRole('button', { name: 'HTTP 서비스 공개' }),
     ).toBeInTheDocument()
+  })
+
+  test('공개 해제가 실패하면 직전 변경 성공 배너가 남지 않는다', async () => {
+    const user = userEvent.setup()
+    renderVm(63)
+
+    await screen.findByRole('heading', { name: 'shop-app' })
+    const card = await publishCard()
+    await within(card).findByRole('link', { name: 'shop.example.com' })
+
+    // 먼저 포트 변경을 성공시켜 성공 배너를 띄운다.
+    const port = within(card).getByLabelText('공개 포트')
+    await user.clear(port)
+    await user.type(port, '9090')
+    await user.click(within(card).getByRole('button', { name: '포트 변경' }))
+    expect(await within(card).findByText(/공개 설정 변경을 접수했습니다/)).toBeInTheDocument()
+
+    // 이어진 공개 해제가 실패하면 성공 배너 대신 실패 사유만 남아야 한다.
+    server.use(
+      http.delete('*/api/v1/vms/63/publication', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '현재 상태에서는 처리할 수 없습니다',
+            status: 409,
+            detail: '이미 해제 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요.',
+            instance: '/api/v1/vms/63/publication',
+            code: 'VM_INVALID_STATE',
+          },
+          { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    await user.click(within(card).getByRole('button', { name: 'HTTP 공개 해제' }))
+    const dialog = await screen.findByRole('dialog', { name: 'HTTP 공개 해제' })
+    await user.type(within(dialog).getByRole('textbox'), 'shop-app')
+    await user.click(within(dialog).getByRole('button', { name: '공개 해제' }))
+
+    expect(
+      await within(card).findByText(/이미 해제 작업이 진행 중입니다/),
+    ).toBeInTheDocument()
+    expect(within(card).queryByText(/공개 설정 변경을 접수했습니다/)).not.toBeInTheDocument()
   })
 })
 
