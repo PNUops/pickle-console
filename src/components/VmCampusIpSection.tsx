@@ -87,16 +87,19 @@ function parsePorts(raw: string): { ports: number[] } | { error: string } {
 }
 
 /**
- * 캠퍼스 IP 절 — 기관 관리자 계층 이상 + 그룹 구성원에게만 렌더링된다
- * (게이트는 부모 VmNetworkSection이 담당). 활성 신청이 있으면 상태 카드를,
- * 없으면 신청 폼을 보여준다.
+ * 캠퍼스 IP 절 — 그룹 구성원이면 상태를 읽고, 소유자·편집자만 신청·취소한다
+ * (포트포워딩과 같은 기준). 활성 신청이 있으면 상태 카드를, 없으면 신청 폼을
+ * 보여준다.
  */
 export function VmCampusIpSection({
   vm,
   canMutate,
+  rolePending,
 }: {
   vm: VmDetail
   canMutate: boolean
+  /** 그룹 역할 조회 중 — 읽기 전용 문구가 잠깐 번쩍이지 않게 로딩으로 대체한다. */
+  rolePending: boolean
 }) {
   const requests = useQuery({
     queryKey: ['vms', vm.id, 'campus-ip-requests'],
@@ -114,20 +117,21 @@ export function VmCampusIpSection({
         <CardTitle className="flex items-center gap-2">
           캠퍼스 IP
           <InfoTip label="캠퍼스 IP 도움말">
-            VM에 교내(캠퍼스) IP를 연결하는 신청입니다. 플랫폼 심사 승인 후
-            정보전산원 교내 IP 신청 절차를 거쳐 주소가 부여됩니다. 기관 관리자
-            계층 이상만 신청할 수 있습니다.
+            VM을 캠퍼스 네트워크의 교내 IP(10.x)로 연결하는 신청입니다. 관리자
+            승인 후 주소가 부여되며, 부여된 주소는 기본 차단 상태로 신청한
+            포트만 열립니다.
           </InfoTip>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          캠퍼스 IP는 정보전산원 교내 IP 신청 절차를 거쳐 할당되며, 대외 절차가
-          포함되어 처리에 시간이 걸릴 수 있습니다. 할당된 주소는 기본 차단
-          상태로 연결되고 신청한 포트만 개방됩니다.
+          승인되면 VM이 캠퍼스 네트워크의 교내 IP(10.x)로 연결됩니다. 부여된
+          주소는 기본 차단 상태이며 신청한 포트만 개방됩니다. 이후 공인 IP
+          연결(NAT)이 필요하면 정보전산원 포털에서 직접 신청하며, 상세 절차는
+          메뉴얼로 제공될 예정입니다.
         </p>
 
-        {requests.isPending && (
+        {(requests.isPending || rolePending) && (
           <div className="flex justify-center py-6">
             <Spinner label="캠퍼스 IP 신청 이력 불러오는 중" />
           </div>
@@ -135,6 +139,7 @@ export function VmCampusIpSection({
         {requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
 
         {requests.isSuccess &&
+          !rolePending &&
           (active ? (
             <ActiveRequestCard vm={vm} request={active} canMutate={canMutate} />
           ) : (
@@ -187,7 +192,7 @@ function ActiveRequestCard({
     },
     onError: async (err) => {
       setError(toApiError(err, '캠퍼스 IP 신청을 취소하지 못했습니다.').message)
-      // 409(이미 심사 시작)면 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
+      // 409(이미 활성 신청 존재)면 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
   })
@@ -212,17 +217,17 @@ function ActiveRequestCard({
       </div>
       {error && <Alert variant="danger">{error}</Alert>}
       {request.status === 'REQUESTED' && (
-        <p className="text-sm text-neutral-600">관리자 심사를 기다리고 있습니다.</p>
+        <p className="text-sm text-neutral-600">관리자 확인을 기다리고 있습니다.</p>
       )}
       {request.status === 'APPROVED' && (
         <p className="text-sm text-neutral-600">
-          플랫폼 심사를 통과해 정보전산원 교내 IP 신청 절차가 진행 중입니다. 절차가
-          끝나면 주소가 표시됩니다.
+          승인되었습니다. VM을 캠퍼스 네트워크에 연결하는 작업이 끝나면 부여된
+          교내 IP가 여기에 표시됩니다.
         </p>
       )}
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
         {request.status === 'GRANTED' && (
-          <SummaryField label="할당된 캠퍼스 IP">
+          <SummaryField label="연결된 교내 IP">
             <code className="font-mono">{request.grantedAddress ?? '—'}</code>
           </SummaryField>
         )}
@@ -277,17 +282,21 @@ function RequestForm({ vm }: { vm: VmDetail }) {
       setFieldErrors({})
       setPurpose('')
       setPortsRaw('')
-      toast.success('캠퍼스 IP 신청을 접수했습니다. 심사 후 절차가 진행됩니다.')
+      toast.success('캠퍼스 IP 신청을 접수했습니다. 관리자 확인 후 연결됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: async (err) => {
       const apiError = toApiError(err, '캠퍼스 IP 신청을 접수하지 못했습니다.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
-      setError(apiError.message)
-      // 409(이미 활성 신청 존재)면 최신 이력을 다시 불러와 상태 카드로 전환한다.
+      // 409(이미 활성 신청 존재)면 최신 이력을 다시 불러와 상태 카드로 전환하는데,
+      // 그러면 이 폼과 함께 인라인 오류도 사라진다 — 사유가 남도록 토스트로 알린다.
       if (apiError.problem?.status === 409) {
+        setError(null)
+        toast.error(apiError.message)
         await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+        return
       }
+      setError(apiError.message)
     },
   })
 
@@ -314,12 +323,12 @@ function RequestForm({ vm }: { vm: VmDetail }) {
         label="신청 목적"
         required
         error={fieldErrors.purpose}
-        description="관리자와 정보전산원 심사 자료로 사용됩니다."
+        description="어떤 일에 쓰는지 알려 주시면 관리자가 확인 후 연결합니다."
       >
         <Textarea
           rows={3}
           value={purpose}
-          maxLength={500}
+          maxLength={1000}
           placeholder="예: 학과 실습 서버 외부 연동 (교내망 고정 주소 필요)"
           onChange={(event) => setPurpose(event.target.value)}
         />
@@ -328,7 +337,7 @@ function RequestForm({ vm }: { vm: VmDetail }) {
         label="개방 포트"
         required
         error={fieldErrors.ports}
-        description="쉼표로 구분해 입력합니다 (예: 80, 443). 신청한 포트만 개방됩니다."
+        description="쉼표로 구분해 입력합니다 (예: 80, 443). 여기 적은 포트만 열립니다."
         className="max-w-md"
       >
         <Input

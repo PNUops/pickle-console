@@ -107,8 +107,8 @@ export const PORT_MAPPING_STATUS_LABELS: Record<PortMappingStatus, string> = {
 }
 
 /**
- * 캠퍼스 IP 신청 상태. APPROVED는 플랫폼 심사 통과(정보전산원 절차 착수) 시점
- * 이라 '승인됨'으로 표기한다 (계약 v0.27.0 설명 기준).
+ * 캠퍼스 IP 신청 상태. APPROVED는 관리자가 신청을 받아들인 시점이고, 실제
+ * 교내 IP가 붙으면 GRANTED가 된다.
  */
 export const CAMPUS_IP_STATUS_LABELS: Record<CampusIpRequestStatus, string> = {
   REQUESTED: '신청됨',

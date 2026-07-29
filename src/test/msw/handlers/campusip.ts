@@ -8,8 +8,8 @@ type CampusIpRequestView = Schemas['CampusIpRequestView']
 type AdminCampusIpRequestView = Schemas['AdminCampusIpRequestView']
 type CampusIpRequestStatus = Schemas['CampusIpRequestStatus']
 
-/** 부여된 캠퍼스 IP 픽스처 — RFC 5737 문서용 대역. */
-export const GRANTED_CAMPUS_IP = '198.51.100.20'
+/** 연결된 교내 IP 픽스처 — 캠퍼스 대역(10.0.0.0/8) 안의 주소여야 한다. */
+export const GRANTED_CAMPUS_IP = '10.20.30.40'
 
 interface CampusIpRecord {
   id: number
@@ -29,7 +29,7 @@ interface CampusIpRecord {
 function initialRequests(): CampusIpRecord[] {
   return [
     {
-      // shop-app(63, 그룹 12) — 심사 대기 신청 (관리자 전환·사용자 상태 카드용).
+      // shop-app(63, 그룹 12) — 승인 대기 신청 (관리자 전환·사용자 상태 카드용).
       id: 7,
       vmId: 63,
       purpose: '학과 실습 서버 외부 연동 (교내망 고정 주소 필요)',
@@ -51,7 +51,7 @@ function initialRequests(): CampusIpRecord[] {
       ports: [8443],
       status: 'GRANTED',
       grantedAddress: GRANTED_CAMPUS_IP,
-      adminNote: '정보전산원 절차 완료',
+      adminNote: '캠퍼스 네트워크 연결 완료',
       requestedBy: 7,
       requesterEmail: 'admin.kim@pusan.ac.kr',
       processedAt: '2026-07-10T15:00:00+09:00',
@@ -204,6 +204,7 @@ export const campusIpHandlers: RequestHandler[] = [
         type: 'about:blank',
         title: '취소할 수 없는 신청입니다',
         status: 409,
+        // 서버 메시지를 그대로 옮긴 값 — api 문구가 바뀌면 여기도 함께 맞춘다.
         detail: '심사가 시작된 캠퍼스 IP 신청은 취소할 수 없습니다. 관리자에게 문의하세요.',
         instance: `/api/v1/vms/${record.vmId}/campus-ip-requests/${record.id}`,
         code: 'CAMPUS_IP_INVALID_TRANSITION',
@@ -217,13 +218,13 @@ export const campusIpHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/campus-ip-requests', ({ request }) => {
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
-    const orgId = url.searchParams.get('orgId')
+    const vmId = url.searchParams.get('vmId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const items = campusIpStore
       .map(toAdminView)
       .filter((r) => !status || r.status === status)
-      .filter((r) => !orgId || r.orgId === Number(orgId))
+      .filter((r) => !vmId || r.vmId === Number(vmId))
       .sort((a, b) => b.id - a.id)
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
@@ -253,6 +254,14 @@ export const campusIpHandlers: RequestHandler[] = [
             instance,
             'grantedAddress',
             'GRANTED 전환에는 올바른 IPv4 주소가 필요합니다.',
+          )
+        }
+        // 교내 IP는 캠퍼스 대역 안이어야 한다 (서버와 같은 규칙).
+        if (!address.startsWith('10.')) {
+          return validationFailed(
+            instance,
+            'grantedAddress',
+            '교내 IP는 10.0.0.0/8 대역의 주소여야 합니다.',
           )
         }
         record.grantedAddress = address

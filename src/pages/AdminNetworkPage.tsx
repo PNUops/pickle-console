@@ -19,6 +19,7 @@ import {
   type UpdatePortMappingGuardsRequest,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { fieldErrorsOf } from '../lib/field-errors'
 import { useAuth } from '../auth/auth-context'
 import { isSysAdminOnly } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
@@ -465,6 +466,7 @@ function MappingDrawerContent({
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [notice, setNotice] = useState<DrawerNotice | null>(null)
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -474,18 +476,20 @@ function MappingDrawerContent({
 
   const unsuspend = useMutation({
     mutationFn: () => unsuspendAdminPortMapping(mapping.id),
+    // 성공 피드백은 토스트로 — 상태 필터 활성 시 행이 목록에서 빠지면 드로어가
+    // 닫혀 드로어 내부 알림은 소실되기 때문이다.
     onSuccess: async () => {
-      setNotice({
-        variant: 'info',
-        text: '포트 매핑 정지를 해제했습니다. 다음 릴레이 동기화에서 전달이 복원됩니다.',
-      })
+      toast.success('포트 매핑 정지를 해제했습니다. 다음 릴레이 동기화에서 전달이 복원됩니다.')
       await invalidate()
     },
-    onError: (err) =>
+    onError: async (err) => {
       setNotice({
         variant: 'danger',
         text: toApiError(err, '포트 매핑 정지를 해제하지 못했습니다.').message,
-      }),
+      })
+      // 409(정지 상태 아님) 등은 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
+      await invalidate()
+    },
   })
 
   return (
@@ -561,7 +565,7 @@ function MappingDrawerContent({
           onClose={() => setSuspendOpen(false)}
           onDone={async (text) => {
             setSuspendOpen(false)
-            setNotice({ variant: 'info', text })
+            toast.success(text)
             await invalidate()
           }}
         />
@@ -590,6 +594,7 @@ function SuspendMappingModal({
   onClose: () => void
   onDone: (message: string) => void
 }) {
+  const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -597,7 +602,14 @@ function SuspendMappingModal({
     mutationFn: () => suspendAdminPortMapping(mapping.id, reason.trim()),
     onSuccess: () =>
       onDone('포트 매핑을 정지했습니다. 다음 릴레이 동기화에서 공인 포트가 닫힙니다.'),
-    onError: (err) => setError(toApiError(err, '포트 매핑을 정지하지 못했습니다.').message),
+    onError: async (err) => {
+      const apiError = toApiError(err, '포트 매핑을 정지하지 못했습니다.')
+      setError(apiError.message)
+      // 409(이미 정지됨)는 화면이 뒤처진 것 — 목록을 다시 불러온다.
+      if (apiError.problem?.status === 409) {
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
+      }
+    },
   })
 
   return (
@@ -632,7 +644,7 @@ function SuspendMappingModal({
           <Textarea
             rows={2}
             value={reason}
-            maxLength={200}
+            maxLength={500}
             onChange={(event) => setReason(event.target.value)}
             placeholder="감사 기록과 소유 그룹 알림에 포함됩니다."
           />
@@ -651,12 +663,19 @@ function DeleteMappingModal({
   onClose: () => void
   onDone: (message: string) => void
 }) {
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const remove = useMutation({
     mutationFn: () => deleteAdminPortMapping(mapping.id),
     onSuccess: (data) => onDone(data.message),
-    onError: (err) =>
-      setError(toApiError(err, '포트 매핑 삭제를 접수하지 못했습니다.').message),
+    onError: async (err) => {
+      const apiError = toApiError(err, '포트 매핑 삭제를 접수하지 못했습니다.')
+      setError(apiError.message)
+      // 이미 사라진 매핑(404)이면 목록을 다시 불러와 낡은 행을 정리한다.
+      if (apiError.problem?.status === 404) {
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
+      }
+    },
   })
 
   return (
@@ -706,6 +725,7 @@ function GuardsSection({
   onNotice: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       GUARD_FIELDS.map(({ key }) => [key, mapping[key] == null ? '' : String(mapping[key])]),
@@ -716,8 +736,9 @@ function GuardsSection({
   const save = useMutation({
     mutationFn: (body: UpdatePortMappingGuardsRequest) =>
       updateAdminPortMappingGuards(mapping.id, body),
+    // 성공은 토스트 — 상태 필터에 따라 드로어가 닫혀도 피드백이 남게 한다.
     onSuccess: async () => {
-      onNotice({ variant: 'info', text: '연결 가드를 조정했습니다. 다음 동기화에서 수렴합니다.' })
+      toast.success('연결 가드를 조정했습니다. 다음 동기화에서 수렴합니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
     },
     onError: (err) =>
@@ -945,7 +966,7 @@ function CampusDrawerContent({
         )}
         {request.grantedAddress && (
           <Field
-            label="부여된 캠퍼스 IP"
+            label="연결된 교내 IP"
             value={<code className="font-mono">{request.grantedAddress}</code>}
           />
         )}
@@ -970,6 +991,14 @@ function CampusDrawerContent({
 
 /** IPv4 형식 사전 검증 (서버 422 규칙과 동일). */
 const IPV4_RE = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
+
+/** 교내 IP는 캠퍼스 대역(10.0.0.0/8) 안이어야 한다 (서버가 강제). */
+function grantedAddressError(raw: string): string | null {
+  const address = raw.trim()
+  if (!IPV4_RE.test(address)) return '올바른 IPv4 주소를 입력해 주세요.'
+  if (!address.startsWith('10.')) return '교내 IP는 10.0.0.0/8 대역의 주소여야 합니다.'
+  return null
+}
 
 /** 상태별 허용 전이 (계약: 그 외 409 CAMPUS_IP_INVALID_TRANSITION). */
 const TRANSITIONS: Record<
@@ -1018,7 +1047,16 @@ function CampusTransitionSection({
       toast.success(`신청을 '${CAMPUS_IP_STATUS_LABELS[updated.status]}' 상태로 전환했습니다.`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'campus-ip-requests'] })
     },
-    onError: (err) => setError(toApiError(err, '신청 상태를 전환하지 못했습니다.').message),
+    onError: (err) => {
+      const apiError = toApiError(err, '신청 상태를 전환하지 못했습니다.')
+      // 서버 422의 grantedAddress 필드 오류는 입력 옆에 그대로 보여준다.
+      const fieldMessage = fieldErrorsOf(apiError.problem).grantedAddress
+      if (fieldMessage) {
+        setAddressError(fieldMessage)
+        return
+      }
+      setError(apiError.message)
+    },
   })
 
   if (transitions.length === 0) {
@@ -1033,9 +1071,12 @@ function CampusTransitionSection({
   const run = (to: CampusIpRequestStatus) => {
     setError(null)
     setAddressError(null)
-    if (to === 'GRANTED' && !IPV4_RE.test(grantedAddress.trim())) {
-      setAddressError('올바른 IPv4 주소를 입력해 주세요.')
-      return
+    if (to === 'GRANTED') {
+      const invalid = grantedAddressError(grantedAddress)
+      if (invalid) {
+        setAddressError(invalid)
+        return
+      }
     }
     update.mutate(to)
   }
@@ -1057,16 +1098,16 @@ function CampusTransitionSection({
 
       {needsAddress && (
         <FormField
-          label="부여된 캠퍼스 IP"
+          label="연결된 교내 IP"
           required
           error={addressError ?? undefined}
-          description="할당 전환에만 필요합니다 (IPv4)."
+          description="할당 전환에만 필요합니다. 캠퍼스 대역(10.0.0.0/8)의 IPv4 주소."
           className="max-w-xs"
         >
           <Input
             disabled={!isSysAdmin}
             value={grantedAddress}
-            placeholder="예: 203.0.113.10"
+            placeholder="예: 10.20.30.40"
             onChange={(event) => setGrantedAddress(event.target.value)}
           />
         </FormField>
@@ -1077,7 +1118,7 @@ function CampusTransitionSection({
       >
         <Textarea
           rows={2}
-          maxLength={500}
+          maxLength={1000}
           disabled={!isSysAdmin}
           value={adminNote}
           onChange={(event) => setAdminNote(event.target.value)}

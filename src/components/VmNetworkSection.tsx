@@ -16,8 +16,6 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { useAuth } from '../auth/auth-context'
-import { isAdminTier } from '../auth/permissions'
 import {
   Alert,
   Button,
@@ -90,11 +88,11 @@ function targetPortError(raw: string): string | null {
 }
 
 /**
- * VM 네트워크 탭 — 포트포워딩(일반 TCP/UDP 포트 노출) 절과, 기관 관리자
- * 계층 이상에게만 보이는 캠퍼스 IP 절로 구성된다.
+ * VM 네트워크 탭 — 포트포워딩(일반 TCP/UDP 포트 노출) 절과 캠퍼스 IP 절.
+ * 두 절 모두 그룹 역할이 기준이다: 구성원은 상태를 읽고, 소유자·편집자만
+ * 만들거나 지운다.
  */
 export function VmNetworkSection({ vm }: { vm: VmDetail }) {
-  const { user } = useAuth()
   // 그룹 myRole로 변경 권한을 판정한다 (계약: 생성·삭제는 EDITOR 이상).
   const group = useQuery({
     queryKey: ['groups', vm.groupId],
@@ -119,12 +117,15 @@ export function VmNetworkSection({ vm }: { vm: VmDetail }) {
 
   return (
     <>
-      <PortForwardingCard vm={vm} canMutate={canMutate} roleFallback={roleFallback} />
-      {/* 캠퍼스 IP는 기관 관리자 계층 이상에게만 제공되는 표면이다 (계약 이중
-          게이트) — 일반 USER에게는 절 자체를 렌더링하지 않는다. */}
-      {user && isAdminTier(user.role) && (
-        <VmCampusIpSection vm={vm} canMutate={canMutate} />
-      )}
+      <PortForwardingCard
+        vm={vm}
+        canMutate={canMutate}
+        rolePending={group.isPending}
+        roleFallback={roleFallback}
+      />
+      {/* 캠퍼스 IP도 포트포워딩과 같은 그룹 기준이다 — 구성원은 상태를 읽고,
+          소유자·편집자만 신청·취소한다. */}
+      <VmCampusIpSection vm={vm} canMutate={canMutate} rolePending={group.isPending} />
     </>
   )
 }
@@ -134,10 +135,13 @@ export function VmNetworkSection({ vm }: { vm: VmDetail }) {
 function PortForwardingCard({
   vm,
   canMutate,
+  rolePending,
   roleFallback,
 }: {
   vm: VmDetail
   canMutate: boolean
+  /** 그룹 역할 조회 중 — 읽기 전용 문구가 잠깐 번쩍이지 않게 로딩으로 대체한다. */
+  rolePending: boolean
   roleFallback: ReactNode
 }) {
   const forwardings = useQuery({
@@ -185,11 +189,18 @@ function PortForwardingCard({
           </div>
         </Alert>
 
-        {roleFallback ?? (canMutate ? <CreateForwardingForm vm={vm} /> : (
-          <p className="text-sm text-neutral-500">
-            포트포워딩 생성·삭제는 그룹의 소유자·편집자만 할 수 있습니다.
-          </p>
-        ))}
+        {roleFallback ??
+          (rolePending ? (
+            <div className="flex justify-center py-4">
+              <Spinner label="권한 정보 확인 중" />
+            </div>
+          ) : canMutate ? (
+            <CreateForwardingForm vm={vm} />
+          ) : (
+            <p className="text-sm text-neutral-500">
+              포트포워딩 생성·삭제는 그룹의 소유자·편집자만 할 수 있습니다.
+            </p>
+          ))}
 
         <ForwardingList vm={vm} canMutate={canMutate} query={forwardings} />
       </CardContent>
@@ -305,8 +316,14 @@ function ForwardingList({
       toast.success(data.message)
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
-    onError: (err) =>
-      setError(toApiError(err, '포트포워딩 삭제를 접수하지 못했습니다.').message),
+    onError: async (err) => {
+      const apiError = toApiError(err, '포트포워딩 삭제를 접수하지 못했습니다.')
+      setError(apiError.message)
+      // 이미 서버에서 사라진 매핑(404)이면 목록을 다시 불러와 낡은 행을 정리한다.
+      if (apiError.problem?.status === 404) {
+        await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+      }
+    },
   })
 
   if (query.isPending) {

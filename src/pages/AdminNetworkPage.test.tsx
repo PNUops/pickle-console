@@ -1,10 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
+import { fetchAdminCampusIpRequests } from '../api/queries'
 import {
+  reauthGateHandlers,
   refreshSuccessHandler,
   sysAdminUser,
   sysManagerUser,
+  USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { RELAY_TOKEN_PLAINTEXT } from '../test/msw/handlers/network'
 import { server } from '../test/msw/server'
@@ -74,6 +78,27 @@ describe('네트워크 — 릴레이 탭', () => {
       expect(screen.queryByText(RELAY_TOKEN_PLAINTEXT)).not.toBeInTheDocument(),
     )
   })
+
+  test('발급이 재인증을 요구하면 비밀번호 확인 모달을 거쳐 재시도된다', async () => {
+    const user = userEvent.setup()
+    // 서버가 X-Reauth-Token 없는 발급을 403 REAUTH_REQUIRED로 거절하는 상황.
+    server.use(...reauthGateHandlers('POST /admin/relays/:relayId/token'))
+    renderNetwork()
+
+    await screen.findByText('relay-1')
+    await user.click(screen.getByRole('button', { name: '토큰 재발급' }))
+    const confirm = await screen.findByRole('dialog', { name: '토큰 재발급' })
+    await user.click(within(confirm).getByRole('button', { name: '토큰 재발급' }))
+
+    // fetch 계층이 403을 가로채 재인증 모달을 띄운다.
+    const reauth = await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await user.type(within(reauth).getByLabelText('비밀번호'), USER_PASSWORD)
+    await user.click(within(reauth).getByRole('button', { name: '확인' }))
+
+    // 원래 발급 요청이 헤더를 달고 재시도되어 토큰이 1회 표시된다.
+    const result = await screen.findByRole('dialog', { name: '릴레이 토큰 발급 완료' })
+    expect(within(result).getByText(RELAY_TOKEN_PLAINTEXT)).toBeInTheDocument()
+  })
 })
 
 describe('네트워크 — 포트포워딩 탭', () => {
@@ -92,7 +117,8 @@ describe('네트워크 — 포트포워딩 탭', () => {
     await user.type(within(modal).getByLabelText(/정지 사유/), '과도한 트래픽 발생')
     await user.click(submit)
 
-    expect(await within(drawer).findByText(/포트 매핑을 정지했습니다/)).toBeInTheDocument()
+    // 성공 피드백은 토스트 — 상태 필터로 행이 빠져 드로어가 닫혀도 남는다.
+    expect(await screen.findByText(/포트 매핑을 정지했습니다/)).toBeInTheDocument()
     // 목록 재조회로 드로어의 상태 배지도 정지됨으로 바뀐다.
     expect(await within(drawer).findByText('정지됨')).toBeInTheDocument()
     // 정지된 매핑은 재개 버튼을 노출한다.
@@ -112,8 +138,16 @@ describe('네트워크 — 포트포워딩 탭', () => {
     expect(within(drawer).getByRole('button', { name: '가드 저장' })).toBeDisabled()
   })
 
-  test('SYS_ADMIN은 가드를 저장할 수 있다 (빈칸=기본값, 0=해제)', async () => {
+  test('SYS_ADMIN은 가드를 저장할 수 있다 (빈칸=null 기본값, 0=해제 payload)', async () => {
     const user = userEvent.setup()
+    // 전송 본문을 캡처해 null(기본값 복귀) vs 0(가드 해제) 의미론을 단정한다.
+    let captured: unknown
+    server.use(
+      http.patch('*/api/v1/admin/port-mappings/:mappingId/guards', async ({ request }) => {
+        captured = await request.clone().json()
+        return undefined // 기본 핸들러로 통과
+      }),
+    )
     renderNetwork('forwardings')
 
     await user.click(await screen.findByRole('button', { name: 'expiring-api' }))
@@ -123,7 +157,14 @@ describe('네트워크 — 포트포워딩 탭', () => {
     await user.type(within(drawer).getByLabelText('동시 연결 상한'), '2048')
     await user.type(within(drawer).getByLabelText('출발지별 초당 신규'), '0')
     await user.click(within(drawer).getByRole('button', { name: '가드 저장' }))
-    expect(await within(drawer).findByText(/연결 가드를 조정했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/연결 가드를 조정했습니다/)).toBeInTheDocument()
+    expect(captured).toEqual({
+      ctMax: 2048,
+      newConnRate: null,
+      newConnBurst: null,
+      perSourceRate: 0,
+      perSourceBurst: null,
+    })
   })
 })
 
@@ -141,17 +182,26 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
     await user.click(within(drawer).getByRole('button', { name: '승인' }))
     expect(await screen.findByText(/'승인됨' 상태로 전환했습니다/)).toBeInTheDocument()
 
-    // APPROVED → 할당: IPv4 없이 누르면 클라이언트 검증이 막는다.
+    // APPROVED → 할당: 주소 없이 누르면 클라이언트 검증이 막는다.
     const grant = await within(drawer).findByRole('button', { name: '할당' })
     await user.click(grant)
     expect(
       await within(drawer).findByText('올바른 IPv4 주소를 입력해 주세요.'),
     ).toBeInTheDocument()
 
-    await user.type(within(drawer).getByLabelText(/부여된 캠퍼스 IP/), '198.51.100.30')
+    // 캠퍼스 대역(10.0.0.0/8) 밖 주소도 왕복 없이 막는다.
+    const address = within(drawer).getByLabelText(/연결된 교내 IP/)
+    await user.type(address, '203.0.113.9')
+    await user.click(grant)
+    expect(
+      await within(drawer).findByText('교내 IP는 10.0.0.0/8 대역의 주소여야 합니다.'),
+    ).toBeInTheDocument()
+
+    await user.clear(address)
+    await user.type(address, '10.20.30.40')
     await user.click(grant)
     expect(await screen.findByText(/'할당됨' 상태로 전환했습니다/)).toBeInTheDocument()
-    expect(await within(drawer).findByText('198.51.100.30')).toBeInTheDocument()
+    expect(await within(drawer).findByText('10.20.30.40')).toBeInTheDocument()
     // GRANTED → 회수만 가능하다.
     expect(await within(drawer).findByRole('button', { name: '회수' })).toBeInTheDocument()
   })
@@ -177,5 +227,14 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
     await user.click(screen.getByRole('button', { name: '할당됨' }))
     expect(await screen.findByRole('button', { name: 'ai-train' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'shop-app' })).not.toBeInTheDocument()
+  })
+
+  test('목록 API는 계약의 vmId 필터를 지원한다', async () => {
+    const filtered = await fetchAdminCampusIpRequests({ vmId: 61 })
+    expect(filtered.content).toHaveLength(1)
+    expect(filtered.content[0].vmId).toBe(61)
+
+    const all = await fetchAdminCampusIpRequests()
+    expect(all.content.length).toBeGreaterThan(1)
   })
 })

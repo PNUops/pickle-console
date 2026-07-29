@@ -131,30 +131,79 @@ describe('VM 네트워크 탭 — 포트포워딩', () => {
     await user.click(screen.getByRole('button', { name: '포트포워딩 만들기' }))
     expect(await screen.findByText('포트는 1–65535 범위여야 합니다.')).toBeInTheDocument()
   })
-})
 
-describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
-  test('일반 USER에게는 캠퍼스 IP 절이 렌더링되지 않는다', async () => {
+  test('적용 실패 매핑은 실패 배지를 보이고 완만한 폴링으로 회복을 반영한다', async () => {
+    // 첫 응답은 FAILED, 이후 응답은 ACTIVE — 실패만 남아도 느린 폴링이
+    // 계속되어 관리자 개입 후 회복이 화면에 반영됨을 확인한다.
+    let calls = 0
+    server.use(
+      http.get('*/api/v1/vms/56/port-forwardings', () => {
+        calls += 1
+        return HttpResponse.json([
+          {
+            id: 900,
+            proto: 'TCP',
+            publicHost: RELAY_PUBLIC_HOST,
+            publicPort: 16000,
+            targetPort: 9000,
+            status: 'ACTIVE',
+            applyState: calls < 2 ? 'FAILED' : 'ACTIVE',
+            createdAt: '2026-07-11T10:00:00+09:00',
+          },
+        ])
+      }),
+    )
+    renderNetworkTab(56)
+
+    expect(await screen.findByText('실패')).toBeInTheDocument()
+    // 느린 폴링 주기(테스트 250ms) 후 회복이 반영된다.
+    expect(await screen.findByText('활성')).toBeInTheDocument()
+  })
+
+  test('폼에 자리가 없는 서버 필드 오류도 요약 목록으로 노출된다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/v1/vms/45/port-forwardings', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값이 올바르지 않습니다',
+            status: 422,
+            detail: '요청 값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [{ field: 'relayId', message: '사용 가능한 릴레이가 없습니다.' }],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
     renderNetworkTab(45)
 
     await screen.findByRole('heading', { name: 'expiring-api' })
-    await screen.findByText(`${RELAY_PUBLIC_HOST}:14000`)
-    expect(screen.queryByText('캠퍼스 IP')).not.toBeInTheDocument()
-    expect(screen.queryByText(/정보전산원/)).not.toBeInTheDocument()
-  })
-
-  test('ORG_MANAGER는 신청 폼을 보고 신청 → 상태 카드 → 취소까지 진행한다', async () => {
-    const user = userEvent.setup()
-    renderSection(57, 'access-org-manager', orgManagerUser) // web-lab: 그룹 12
-
-    // 의무 안내 문구: 정보전산원 절차 + 기본 차단·신청 포트만 개방.
+    await user.type(await screen.findByLabelText('대상 포트'), '8080')
+    await user.click(screen.getByRole('button', { name: '포트포워딩 만들기' }))
+    // relayId는 폼에 표시 자리가 없다 — 요약 Alert 목록으로 노출돼야 한다.
     expect(
-      await screen.findByText(/캠퍼스 IP는 정보전산원 교내 IP 신청 절차를 거쳐 할당되며/),
+      await screen.findByText(/relayId: 사용 가능한 릴레이가 없습니다\./),
     ).toBeInTheDocument()
+  })
+})
+
+describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
+  test('일반 USER(OWNER)가 신청 폼을 보고 신청 → 상태 카드 → 취소까지 진행한다', async () => {
+    const user = userEvent.setup()
+    renderNetworkTab(57) // web-lab: 그룹 12 OWNER
+
+    await screen.findByRole('heading', { name: 'web-lab' })
+    // 개정된 안내: 교내 IP(10.x) 연결 + 기본 차단·신청 포트만 개방 + 공인 IP는 별도.
+    expect(
+      await screen.findByText(/승인되면 VM이 캠퍼스 네트워크의 교내 IP\(10\.x\)로 연결됩니다/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/신청한 포트만 개방됩니다/)).toBeInTheDocument()
 
     await user.type(
       await screen.findByLabelText('신청 목적'),
-      '학과 실습 서버 외부 연동 (교내망 고정 주소 필요)',
+      '학과 실습 서버 연동 (교내망 고정 주소 필요)',
     )
     await user.type(screen.getByLabelText('개방 포트'), '443, 80, 443')
     await user.click(screen.getByRole('button', { name: '캠퍼스 IP 신청' }))
@@ -168,6 +217,22 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
     expect(await screen.findByRole('button', { name: '캠퍼스 IP 신청' })).toBeInTheDocument()
   })
 
+  test('MEMBER는 캠퍼스 IP 상태를 읽되 신청·취소는 할 수 없다', async () => {
+    renderNetworkTab(56) // algo-judge: 그룹 15 MEMBER
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      await screen.findByText(/캠퍼스 IP 신청·취소는 그룹의 소유자·편집자만/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '캠퍼스 IP 신청' })).not.toBeInTheDocument()
+  })
+
+  test('관리자 계층 세션에서도 같은 그룹 기준으로 동작한다', async () => {
+    renderSection(57, 'access-org-manager', orgManagerUser) // web-lab: 그룹 12
+
+    expect(await screen.findByRole('button', { name: '캠퍼스 IP 신청' })).toBeInTheDocument()
+  })
+
   test('진행 중 신청이 있으면 폼 대신 상태 카드를 보여준다 (GRANTED 주소 노출)', async () => {
     server.use(
       http.get('*/api/v1/vms/57/campus-ip-requests', () =>
@@ -178,22 +243,111 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
             purpose: '연구 장비 연동',
             ports: [8443],
             status: 'GRANTED',
-            grantedAddress: '198.51.100.20',
-            adminNote: '정보전산원 절차 완료',
-            requestedBy: 8,
+            grantedAddress: '10.20.30.40',
+            adminNote: '캠퍼스 네트워크 연결 완료',
+            requestedBy: 42,
             processedAt: '2026-07-10T15:00:00+09:00',
             createdAt: '2026-07-01T09:00:00+09:00',
           },
         ]),
       ),
     )
-    renderSection(57, 'access-org-manager', orgManagerUser)
+    renderNetworkTab(57)
 
     expect(await screen.findByText('할당됨')).toBeInTheDocument()
-    expect(screen.getByText('198.51.100.20')).toBeInTheDocument()
-    expect(screen.getByText(/정보전산원 절차 완료/)).toBeInTheDocument()
+    expect(screen.getByText('10.20.30.40')).toBeInTheDocument()
+    expect(screen.getByText(/캠퍼스 네트워크 연결 완료/)).toBeInTheDocument()
     // GRANTED는 사용자가 취소할 수 없고, 새 신청 폼도 없다.
     expect(screen.queryByRole('button', { name: '신청 취소' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '캠퍼스 IP 신청' })).not.toBeInTheDocument()
+  })
+
+  test('이미 활성 신청이 있으면 409를 안내하고 상태 카드로 전환한다', async () => {
+    const user = userEvent.setup()
+    // 폼을 그린 뒤(빈 이력) 제출 시점에 서버가 409를 돌려주는 경합 상황.
+    let listCalls = 0
+    server.use(
+      http.post('*/api/v1/vms/57/campus-ip-requests', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '이미 진행 중인 캠퍼스 IP 신청이 있습니다',
+            status: 409,
+            detail: '이 VM에는 이미 진행 중이거나 부여된 캠퍼스 IP 신청이 있습니다.',
+            code: 'CAMPUS_IP_REQUEST_EXISTS',
+          },
+          { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+      http.get('*/api/v1/vms/57/campus-ip-requests', () => {
+        listCalls += 1
+        if (listCalls === 1) return HttpResponse.json([])
+        return HttpResponse.json([
+          {
+            id: 11,
+            vmId: 57,
+            purpose: '다른 구성원이 먼저 신청함',
+            ports: [80],
+            status: 'REQUESTED',
+            grantedAddress: null,
+            adminNote: null,
+            requestedBy: 57,
+            processedAt: null,
+            createdAt: '2026-07-11T09:00:00+09:00',
+          },
+        ])
+      }),
+    )
+    renderNetworkTab(57)
+
+    await user.type(await screen.findByLabelText('신청 목적'), '중복 신청 시도')
+    await user.type(screen.getByLabelText('개방 포트'), '80')
+    await user.click(screen.getByRole('button', { name: '캠퍼스 IP 신청' }))
+
+    expect(
+      await screen.findByText(/이미 진행 중이거나 부여된 캠퍼스 IP 신청이 있습니다/),
+    ).toBeInTheDocument()
+    // 무효화로 최신 이력을 다시 읽어 상태 카드로 전환된다.
+    expect(await screen.findByText('신청됨')).toBeInTheDocument()
+  })
+
+  test('승인 절차가 시작된 신청의 취소 거부(409)는 사유를 보여준다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('*/api/v1/vms/57/campus-ip-requests', () =>
+        HttpResponse.json([
+          {
+            id: 12,
+            vmId: 57,
+            purpose: '연구 장비 연동',
+            ports: [80],
+            status: 'REQUESTED',
+            grantedAddress: null,
+            adminNote: null,
+            requestedBy: 42,
+            processedAt: null,
+            createdAt: '2026-07-11T09:00:00+09:00',
+          },
+        ]),
+      ),
+      http.delete('*/api/v1/vms/57/campus-ip-requests/12', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '취소할 수 없는 신청입니다',
+            status: 409,
+            // 서버가 돌려주는 문구를 그대로 옮긴 값 (api 카피 변경 시 함께 맞춘다).
+            detail: '심사가 시작된 캠퍼스 IP 신청은 취소할 수 없습니다. 관리자에게 문의하세요.',
+            code: 'CAMPUS_IP_INVALID_TRANSITION',
+          },
+          { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    renderNetworkTab(57)
+
+    await user.click(await screen.findByRole('button', { name: '신청 취소' }))
+    // 서버 문구 전문이 아니라 안정된 조각으로 단정한다 (api 카피 변경에 견딤).
+    expect(await screen.findByText(/취소할 수 없습니다/)).toBeInTheDocument()
   })
 })

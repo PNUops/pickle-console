@@ -752,7 +752,7 @@ export function updateAdminPortMappingGuards(
 
 export function fetchAdminCampusIpRequests(params: {
   status?: CampusIpRequestStatus
-  orgId?: number
+  vmId?: number
   page?: number
   size?: number
 } = {}): Promise<AdminCampusIpRequestPage> {
