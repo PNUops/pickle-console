@@ -2015,11 +2015,13 @@ export interface components {
             adminNote?: string | null;
             /** Format: date-time */
             createdAt: string;
+            /** @description 연결된 교내 IP 주소 (10.0.0.0/8) */
             grantedAddress?: string | null;
             /** Format: int64 */
             id: number;
             /** Format: int64 */
             orgId?: number | null;
+            /** @description 사용할 포트 번호 목록 */
             ports: number[];
             /** Format: date-time */
             processedAt?: string | null;
@@ -2031,6 +2033,7 @@ export interface components {
             requestedBy: number;
             /** @description 신청자 이메일 */
             requesterEmail?: string | null;
+            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
             /** Format: int64 */
             vmId: number;
@@ -2409,11 +2412,11 @@ export interface components {
             adminNote?: string | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 할당된 교내 IP (GRANTED 이후) */
+            /** @description 연결된 교내 IP 주소 (GRANTED 이후) */
             grantedAddress?: string | null;
             /** Format: int64 */
             id: number;
-            /** @description 공개할 포트 번호 목록 (중복 제거·오름차순 정규화) */
+            /** @description 사용할 포트 번호 목록 (중복 제거·오름차순 정규화) */
             ports: number[];
             /** Format: date-time */
             processedAt?: string | null;
@@ -2421,6 +2424,7 @@ export interface components {
             purpose: string;
             /** Format: int64 */
             requestedBy: number;
+            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
             /** Format: int64 */
             vmId: number;
@@ -2462,7 +2466,7 @@ export interface components {
             version: number;
         };
         CreateCampusIpRequest: {
-            /** @description 공개가 필요한 포트 번호 목록 (1~65535, 최대 32개) */
+            /** @description 교내 IP로 사용할 포트 번호 목록 (1~65535, 최대 32개) */
             ports: number[];
             /** @description 신청 목적 (관리자 검토 자료) */
             purpose: string;
@@ -3058,7 +3062,7 @@ export interface components {
         /** @enum {string} */
         PortForwardApplyState: "PENDING" | "ACTIVE" | "FAILED";
         PortForwardingView: {
-            /** @description 릴레이 반영 상태 (PENDING = 반영 대기, ACTIVE = 반영 완료, FAILED = 적용 실패) */
+            /** @description 릴레이 반영 상태 (PENDING = 대기, ACTIVE = 활성, FAILED = 실패) */
             applyState: components["schemas"]["PortForwardApplyState"];
             /** Format: date-time */
             createdAt: string;
@@ -3368,9 +3372,9 @@ export interface components {
         UpdateCampusIpRequestStatusRequest: {
             /** @description 관리자 메모 (신청자 알림에 포함) */
             adminNote?: string | null;
-            /** @description 할당된 교내 IP (GRANTED 전환 시 필수, IPv4) */
+            /** @description 연결한 교내 IP 주소 (GRANTED 전환 시 필수, 10.0.0.0/8 대역) */
             grantedAddress?: string | null;
-            /** @description 전환할 상태 */
+            /** @description 전환할 상태 (APPROVED = 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
         };
         UpdateGroupMemberRequest: {
