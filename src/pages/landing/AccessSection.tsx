@@ -1,3 +1,4 @@
+import { SSH_GATEWAY_HOST } from '../../lib/hosts'
 import { icons } from './landing-data'
 import { Reveal } from './Reveal'
 import { SectionHeading } from './SectionHeading'
@@ -9,7 +10,7 @@ const accessMethods = [
     title: 'SSH 게이트웨이',
     description:
       '콘솔에 등록한 SSH 키로 접속합니다. 교내망 밖에서도 VPN 없이 연결됩니다.',
-    meta: 'ssh <vm-slug>@ssh.pickle.pnuops.com',
+    meta: `ssh <vm-slug>@${SSH_GATEWAY_HOST}`,
   },
   {
     icon: 'terminal',

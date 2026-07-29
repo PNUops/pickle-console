@@ -113,9 +113,9 @@ export function resetFlavorStore() {
 }
 
 export const requestOptions = {
-  allowedRootDomains: ['pickle.pnuops.com', 'lab.pnuops.com'],
+  allowedRootDomains: ['pusan.dev', 'lab.example'],
   reservedSubdomains: ['www', 'api', 'admin', 'ssh', 'mail'],
-  sshHost: 'ssh.pickle.pnuops.com',
+  sshHost: 'ssh.pcl.kr',
 }
 
 /* ─── handlers ─── */

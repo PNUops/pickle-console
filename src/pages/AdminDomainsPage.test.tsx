@@ -29,7 +29,7 @@ describe('공개 서비스 — 도메인 탭', () => {
     const user = userEvent.setup()
     renderDomains()
 
-    await user.click(await screen.findByRole('button', { name: 'ai-team.pickle.pnuops.com' }))
+    await user.click(await screen.findByRole('button', { name: 'ai-team.pusan.dev' }))
     const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
     // 라우트 상세(포트·동기화)와 VM 교차 링크
     expect(await drawer.findByText('대상 포트')).toBeInTheDocument()
@@ -87,11 +87,11 @@ describe('공개 서비스 — 도메인 탭', () => {
     renderDomains()
 
     await screen.findByRole('heading', { name: '공개 서비스', level: 1 })
-    await screen.findByText('ai-team.pickle.pnuops.com')
+    await screen.findByText('ai-team.pusan.dev')
 
     await user.selectOptions(screen.getByLabelText('종류 필터'), 'CUSTOM')
     expect(await screen.findByText('demo.example.com')).toBeInTheDocument()
-    expect(screen.queryByText('ai-team.pickle.pnuops.com')).not.toBeInTheDocument()
+    expect(screen.queryByText('ai-team.pusan.dev')).not.toBeInTheDocument()
   })
 })
 
@@ -121,7 +121,7 @@ describe('공개 서비스 — 전체 재동기화·인증서 탭', () => {
     await screen.findByRole('heading', { name: '공개 서비스', level: 1 })
     await user.click(screen.getByRole('tab', { name: '인증서' }))
 
-    expect(await screen.findByText('*.pickle.pnuops.com')).toBeInTheDocument()
+    expect(await screen.findByText('*.pusan.dev')).toBeInTheDocument()
     expect(screen.getByLabelText('30일 이내 만료만')).toBeInTheDocument()
   })
 })

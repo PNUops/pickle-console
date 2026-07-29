@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { cn } from '../lib/cn'
+import { SSH_GATEWAY_HOST } from '../lib/hosts'
 import { TabPanel, Tabs } from './ui'
 
 type OsTab = 'windows' | 'macos' | 'linux'
@@ -47,7 +48,7 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
   const uid = useId()
   const [tab, setTab] = useState<OsTab>('macos')
   const host = hostname ?? '<VM 호스트명>'
-  const gateway = sshHost ?? '<SSH 게이트웨이>'
+  const gateway = sshHost ?? SSH_GATEWAY_HOST
   const isWindows = tab === 'windows'
   const keyPath = isWindows
     ? `%USERPROFILE%\\.ssh\\${KEY_FILE}`

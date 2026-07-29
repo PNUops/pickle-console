@@ -29,7 +29,7 @@ function baseRequest(): Omit<
     displayName: '캡스톤 백엔드 서버',
     desiredSlug: null,
     desiredSubdomain: 'capstone-team3',
-    rootDomain: 'pickle.pnuops.com',
+    rootDomain: 'pusan.dev',
   }
 }
 

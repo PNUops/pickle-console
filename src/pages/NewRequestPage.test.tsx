@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { requestOptions } from '../test/msw/handlers/reference'
 import { createdVmRequestBodies } from '../test/msw/handlers/vm-requests'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { server } from '../test/msw/server'
@@ -233,6 +234,17 @@ describe('VM 신청 위저드 — OS·사양 축의 상호 보정', () => {
 })
 
 describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
+  // 서버가 게이트웨이 호스트를 주면 그것을, 못 주면 상수를 쓴다. fallback 분기는
+  // 도메인 전환 때마다 갱신을 잊기 쉬운데 그동안 어떤 테스트도 태우지 않았다.
+  test('SSH 게이트웨이 호스트는 서버 값을 쓰고, 응답이 없으면 상수로 안내한다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await screen.findByRole('heading', { name: 'VM 신청' })
+    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    await user.selectOptions(screen.getByLabelText('기관'), '1')
+    expect(screen.getByText(new RegExp(`@${requestOptions.sshHost}`))).toBeInTheDocument()
+  })
+
   test('형식·예약어를 검사하고, 비워 두면 자동 생성으로 제출된다', async () => {
     const user = userEvent.setup()
     renderWizard()
@@ -285,7 +297,7 @@ describe('VM 신청 위저드 — 제출', () => {
     await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
     await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
     await user.type(screen.getByLabelText('희망 서브도메인'), 'capstone-api')
-    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pickle.pnuops.com')
+    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pusan.dev')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     // ② OS·사양 (프리셋 값 그대로)
@@ -309,7 +321,7 @@ describe('VM 신청 위저드 — 제출', () => {
     // 요약에 두 축이 각각 나온다.
     expect(screen.getByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
     expect(screen.getByText('기본형')).toBeInTheDocument()
-    expect(screen.getByText('capstone-api.pickle.pnuops.com')).toBeInTheDocument()
+    expect(screen.getByText('capstone-api.pusan.dev')).toBeInTheDocument()
     expect(screen.getByText('capstone-api-server')).toBeInTheDocument()
     expect(screen.getByText('캡스톤 백엔드 서버')).toBeInTheDocument()
     expect(screen.getByText('2 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
@@ -345,7 +357,7 @@ describe('VM 신청 위저드 — 제출', () => {
       displayName: '캡스톤 백엔드 서버',
       desiredSlug: 'capstone-api-server',
       desiredSubdomain: 'capstone-api',
-      rootDomain: 'pickle.pnuops.com',
+      rootDomain: 'pusan.dev',
     })
   })
 })

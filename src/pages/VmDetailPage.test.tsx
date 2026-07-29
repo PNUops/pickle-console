@@ -373,7 +373,7 @@ describe('VM 상세 — SSH 접속', () => {
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    expect(screen.getByText('ssh algo-judge@ssh.pickle.pnuops.com')).toBeInTheDocument()
+    expect(screen.getByText('ssh algo-judge@ssh.pcl.kr')).toBeInTheDocument()
     expect(screen.getByText('접속 방법 보기')).toBeInTheDocument()
   })
 

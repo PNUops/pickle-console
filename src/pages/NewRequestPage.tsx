@@ -32,6 +32,7 @@ import {
   Textarea,
 } from '../components/ui'
 import { cn } from '../lib/cn'
+import { SSH_GATEWAY_HOST } from '../lib/hosts'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
@@ -402,7 +403,7 @@ export function NewRequestPage() {
                   label="희망 호스트명(슬러그)"
                   error={errors.desiredSlug}
                   description={`SSH 접속명으로 쓰입니다 — ssh ${state.desiredSlug || '<슬러그>'}@${
-                    options.data?.sshHost ?? 'ssh.pickle.pnuops.com'
+                    options.data?.sshHost ?? SSH_GATEWAY_HOST
                   } · 미입력 시 자동 생성됩니다.`}
                 >
                   <Input

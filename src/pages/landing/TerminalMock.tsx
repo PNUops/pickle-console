@@ -1,8 +1,9 @@
 import { useInView, useReducedMotion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '../../lib/cn'
+import { SSH_GATEWAY_HOST } from '../../lib/hosts'
 
-const COMMAND = 'ssh my-vm@ssh.pickle.pnuops.com'
+const COMMAND = `ssh my-vm@${SSH_GATEWAY_HOST}`
 
 /**
  * SSH 접속을 그대로 보여 주는 터미널 목업 — 화면에 들어오면 명령을 타이핑한다.
