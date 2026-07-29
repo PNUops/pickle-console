@@ -38,6 +38,8 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   PUBLISH: 'HTTP 공개',
   UNPUBLISH: 'HTTP 공개 해제',
   PERIOD_UPDATE: '사용 기간 변경',
+  PORT_FORWARD_CREATE: '포트포워딩 생성',
+  PORT_FORWARD_DELETE: '포트포워딩 삭제',
   EXPIRE_STOP: '만료 자동 종료',
   GATEWAY_BLOCK: 'SSH·터미널 차단',
   GATEWAY_UNBLOCK: 'SSH·터미널 차단 해제',
@@ -82,6 +84,38 @@ export const CERTIFICATE_STATUS_LABELS: Record<CertificateStatus, string> = {
   RENEWING: '갱신 중',
   FAILED: '발급 실패',
   REVOKED: '폐기됨',
+}
+
+/* ─── 포트포워딩·캠퍼스 IP ─── */
+
+export type PortForwardApplyState = components['schemas']['PortForwardApplyState']
+export type PortMappingStatus = components['schemas']['PortMappingStatus']
+export type PortMappingProto = components['schemas']['PortMappingProto']
+export type CampusIpRequestStatus = components['schemas']['CampusIpRequestStatus']
+
+/** 릴레이 반영 상태 — 서버가 적용 세대 비교로 파생하는 값 (용어 확정 2026-07-29). */
+export const PORT_FORWARD_APPLY_STATE_LABELS: Record<PortForwardApplyState, string> = {
+  PENDING: '대기',
+  ACTIVE: '활성',
+  FAILED: '실패',
+}
+
+/** 매핑 상태 — SUSPENDED는 관리자·자동 정지 ('적용' 접두 없이 '정지됨'). */
+export const PORT_MAPPING_STATUS_LABELS: Record<PortMappingStatus, string> = {
+  ACTIVE: '활성',
+  SUSPENDED: '정지됨',
+}
+
+/**
+ * 캠퍼스 IP 신청 상태. APPROVED는 관리자가 신청을 받아들인 시점이고, 실제
+ * 교내 IP가 붙으면 GRANTED가 된다.
+ */
+export const CAMPUS_IP_STATUS_LABELS: Record<CampusIpRequestStatus, string> = {
+  REQUESTED: '신청됨',
+  APPROVED: '승인됨',
+  GRANTED: '할당됨',
+  REJECTED: '반려됨',
+  REVOKED: '회수됨',
 }
 
 /** 삭제 예정 배너 제목 — 삭제 종류(kind)별 안내 문구. */

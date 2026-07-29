@@ -9,6 +9,7 @@ import {
 import { formatDday } from '../../lib/format'
 import {
   ANNOUNCEMENT_SCOPE_LABELS,
+  CAMPUS_IP_STATUS_LABELS,
   CERTIFICATE_STATUS_LABELS,
   DELIVERY_STATUS_LABELS,
   DOMAIN_KIND_LABELS,
@@ -16,11 +17,14 @@ import {
   DRIFT_KIND_LABELS,
   DRIFT_STATUS_LABELS,
   IP_ALLOCATION_STATUS_LABELS,
+  PORT_FORWARD_APPLY_STATE_LABELS,
+  PORT_MAPPING_STATUS_LABELS,
   REQUEST_STATUS_LABELS,
   ROUTE_STATUS_LABELS,
   TASK_STATUS_LABELS,
   VM_STATUS_LABELS,
   type AnnouncementScope,
+  type CampusIpRequestStatus,
   type CertificateStatus,
   type DomainKind,
   type DomainStatus,
@@ -28,6 +32,8 @@ import {
   type DriftFindingStatus,
   type IpAllocationStatus,
   type NotificationDeliveryStatus,
+  type PortForwardApplyState,
+  type PortMappingStatus,
   type ProvisioningTaskStatus,
   type RouteStatus,
   type VmRequestStatus,
@@ -320,6 +326,71 @@ export function AnnouncementScopeBadge({
   return (
     <Badge variant={ANNOUNCEMENT_SCOPE_VARIANTS[scope]} className={className}>
       {ANNOUNCEMENT_SCOPE_LABELS[scope]}
+    </Badge>
+  )
+}
+
+/* ─── 포트포워딩·캠퍼스 IP ─── */
+
+const PORT_FORWARD_APPLY_STATE_VARIANTS: Record<PortForwardApplyState, BadgeVariant> = {
+  PENDING: 'neutral',
+  ACTIVE: 'success',
+  FAILED: 'danger',
+}
+
+/** 릴레이 반영 상태 배지 — 대기(수렴 전)/활성/실패. */
+export function PortForwardApplyStateBadge({
+  state,
+  className,
+}: {
+  state: PortForwardApplyState
+  className?: string
+}) {
+  return (
+    <Badge variant={PORT_FORWARD_APPLY_STATE_VARIANTS[state]} className={className}>
+      {PORT_FORWARD_APPLY_STATE_LABELS[state]}
+    </Badge>
+  )
+}
+
+const PORT_MAPPING_STATUS_VARIANTS: Record<PortMappingStatus, BadgeVariant> = {
+  ACTIVE: 'success',
+  SUSPENDED: 'warning',
+}
+
+/** 매핑 상태 배지 — 관리자·자동 정지(SUSPENDED)를 경고 톤으로 표시한다. */
+export function PortMappingStatusBadge({
+  status,
+  className,
+}: {
+  status: PortMappingStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={PORT_MAPPING_STATUS_VARIANTS[status]} className={className}>
+      {PORT_MAPPING_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const CAMPUS_IP_STATUS_VARIANTS: Record<CampusIpRequestStatus, BadgeVariant> = {
+  REQUESTED: 'info',
+  APPROVED: 'primary',
+  GRANTED: 'success',
+  REJECTED: 'danger',
+  REVOKED: 'neutral',
+}
+
+export function CampusIpStatusBadge({
+  status,
+  className,
+}: {
+  status: CampusIpRequestStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={CAMPUS_IP_STATUS_VARIANTS[status]} className={className}>
+      {CAMPUS_IP_STATUS_LABELS[status]}
     </Badge>
   )
 }

@@ -12,6 +12,7 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminDomainsPage } from './pages/AdminDomainsPage'
 import { AdminDriftPage } from './pages/AdminDriftPage'
 import { AdminExpiryPage } from './pages/AdminExpiryPage'
+import { AdminNetworkPage } from './pages/AdminNetworkPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminNotificationLogPage } from './pages/AdminNotificationLogPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
@@ -188,6 +189,14 @@ function App() {
           element={
             <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNodesPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="network"
+          element={
+            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+              <AdminNetworkPage />
             </RequireRole>
           }
         />

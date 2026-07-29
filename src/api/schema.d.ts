@@ -36,6 +36,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/campus-ip-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminCampusIpRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/campus-ip-requests/{requestId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["updateAdminCampusIpRequestStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/certificates": {
         parameters: {
             query?: never;
@@ -274,6 +306,118 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateOrg"];
+        trace?: never;
+    };
+    "/admin/port-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminPortMappings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/port-mappings/{mappingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteAdminPortMapping"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/port-mappings/{mappingId}/guards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminPortMappingGuards"];
+        trace?: never;
+    };
+    "/admin/port-mappings/{mappingId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspendAdminPortMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/port-mappings/{mappingId}/unsuspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unsuspendAdminPortMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/relays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminRelays"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/relays/{relayId}/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["issueAdminRelayToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/routes": {
@@ -1604,6 +1748,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/campus-ip-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVmCampusIpRequests"];
+        put?: never;
+        post: operations["requestVmCampusIp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/campus-ip-requests/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["cancelVmCampusIpRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/events": {
         parameters: {
             query?: never;
@@ -1663,6 +1839,38 @@ export interface paths {
         put?: never;
         post: operations["regenerateVmPassword"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/port-forwardings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVmPortForwardings"];
+        put?: never;
+        post: operations["createVmPortForwarding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/port-forwardings/{portForwardingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteVmPortForwarding"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1803,6 +2011,34 @@ export interface components {
             email: string;
             role: components["schemas"]["GroupMemberRole"];
         };
+        AdminCampusIpRequestView: {
+            adminNote?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 연결된 교내 IP 주소 (10.0.0.0/8) */
+            grantedAddress?: string | null;
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            orgId?: number | null;
+            /** @description 사용할 포트 번호 목록 */
+            ports: number[];
+            /** Format: date-time */
+            processedAt?: string | null;
+            /** Format: int64 */
+            processedBy?: number | null;
+            /** @description 신청 목적 */
+            purpose: string;
+            /** Format: int64 */
+            requestedBy: number;
+            /** @description 신청자 이메일 */
+            requesterEmail?: string | null;
+            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
+            status: components["schemas"]["CampusIpRequestStatus"];
+            /** Format: int64 */
+            vmId: number;
+            vmName?: string | null;
+        };
         AdminCertificateView: {
             /** Format: int32 */
             daysUntilExpiry?: number | null;
@@ -1900,6 +2136,106 @@ export interface components {
             userEmail: string;
             /** Format: int64 */
             userId: number;
+        };
+        AdminPortMappingResponse: {
+            applyState: components["schemas"]["PortForwardApplyState"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            createdBy: number;
+            /**
+             * Format: int32
+             * @description 동시 연결 상한 오버라이드 (null = 에이전트 기본, 0 = 해제)
+             */
+            ctMax?: number | null;
+            /** Format: int64 */
+            id: number;
+            /**
+             * Format: int32
+             * @description 신규 연결 버스트 오버라이드
+             */
+            newConnBurst?: number | null;
+            /**
+             * Format: int32
+             * @description 초당 신규 연결 상한 오버라이드
+             */
+            newConnRate?: number | null;
+            /**
+             * Format: int32
+             * @description 출발지별 버스트 오버라이드
+             */
+            perSourceBurst?: number | null;
+            /**
+             * Format: int32
+             * @description 출발지별 초당 신규 연결 상한 오버라이드
+             */
+            perSourceRate?: number | null;
+            proto: components["schemas"]["PortMappingProto"];
+            /** Format: int32 */
+            publicPort: number;
+            /** Format: int64 */
+            relayId: number;
+            relayName: string;
+            status: components["schemas"]["PortMappingStatus"];
+            /**
+             * Format: int64
+             * @description 정지한 관리자 id (자동 정지면 null)
+             */
+            suspendedBy?: number | null;
+            /** @description 정지 사유 (SUSPENDED일 때) */
+            suspendedReason?: string | null;
+            /** Format: int32 */
+            targetPort: number;
+            /** Format: int64 */
+            vmId: number;
+            vmName?: string | null;
+        };
+        AdminRelayView: {
+            agentVersion?: string | null;
+            /**
+             * Format: int64
+             * @description 에이전트가 적용을 확인한 마지막 세대
+             */
+            appliedGeneration: number;
+            /**
+             * Format: int32
+             * @description 공개 포트 대역 끝
+             */
+            bandEnd: number;
+            /**
+             * Format: int32
+             * @description 공개 포트 대역 시작
+             */
+            bandStart: number;
+            /**
+             * Format: int32
+             * @description 공개 포트 대역 사용률(%)
+             */
+            bandUsagePercent: number;
+            /** @description 접촉 두절 여부 (마지막 동기화가 폴링 주기 3배를 초과) */
+            contactLost: boolean;
+            enabled: boolean;
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            lastContactAt?: string | null;
+            /** @description 에이전트가 보고한 마지막 적용 오류(JSON, 정화됨). 없으면 null */
+            lastError?: string | null;
+            /**
+             * Format: int64
+             * @description 이 릴레이의 매핑 수
+             */
+            mappingCount: number;
+            /**
+             * Format: int64
+             * @description 현재 매핑 세대 (매핑 변경마다 증가)
+             */
+            mappingGeneration: number;
+            name: string;
+            /** @description 사용자 접속용 공개 호스트 (설정 전이면 null) */
+            publicHost?: string | null;
+            /** @description 동기화 토큰 발급 여부 (미발급이면 에이전트 인증이 항상 실패) */
+            tokenIssued: boolean;
         };
         AdminRouteView: {
             /** Format: date-time */
@@ -2069,6 +2405,30 @@ export interface components {
         BeginMfaRequest: {
             password: string;
         };
+        /** @enum {string} */
+        CampusIpRequestStatus: "REQUESTED" | "APPROVED" | "GRANTED" | "REJECTED" | "REVOKED";
+        CampusIpRequestView: {
+            /** @description 관리자 메모 */
+            adminNote?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 연결된 교내 IP 주소 (GRANTED 이후) */
+            grantedAddress?: string | null;
+            /** Format: int64 */
+            id: number;
+            /** @description 사용할 포트 번호 목록 (중복 제거·오름차순 정규화) */
+            ports: number[];
+            /** Format: date-time */
+            processedAt?: string | null;
+            /** @description 신청 목적 */
+            purpose: string;
+            /** Format: int64 */
+            requestedBy: number;
+            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
+            status: components["schemas"]["CampusIpRequestStatus"];
+            /** Format: int64 */
+            vmId: number;
+        };
         Capacity: {
             /** Format: int64 */
             cpuThreads: number;
@@ -2105,6 +2465,12 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        CreateCampusIpRequest: {
+            /** @description 교내 IP로 사용할 포트 번호 목록 (1~65535, 최대 32개) */
+            ports: number[];
+            /** @description 신청 목적 (관리자 검토 자료) */
+            purpose: string;
+        };
         CreateGroupRequest: {
             description?: string | null;
             /**
@@ -2119,6 +2485,15 @@ export interface components {
             description?: string | null;
             name: string;
             slug: string;
+        };
+        CreatePortForwardingRequest: {
+            /** @description 프로토콜 (tcp | udp) */
+            proto: components["schemas"]["PortMappingProto"];
+            /**
+             * Format: int32
+             * @description VM 내부에서 노출할 대상 포트 (1~65535)
+             */
+            targetPort: number;
         };
         CreateVmFlavorRequest: {
             /** Format: int32 */
@@ -2326,6 +2701,7 @@ export interface components {
             freeCount: number;
             /** Format: int64 */
             id: number;
+            name: string;
         };
         IpPoolUsage: {
             /** Format: int64 */
@@ -2489,6 +2865,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseAdminCampusIpRequestView: {
+            content: components["schemas"]["AdminCampusIpRequestView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseAdminCertificateView: {
             content: components["schemas"]["AdminCertificateView"][];
             /** Format: int32 */
@@ -2513,6 +2900,17 @@ export interface components {
         };
         PageResponseAdminNotificationResponse: {
             content: components["schemas"]["AdminNotificationResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminPortMappingResponse: {
+            content: components["schemas"]["AdminPortMappingResponse"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -2661,6 +3059,36 @@ export interface components {
         PasswordResetRequest: {
             email: string;
         };
+        /** @enum {string} */
+        PortForwardApplyState: "PENDING" | "ACTIVE" | "FAILED";
+        PortForwardingView: {
+            /** @description 릴레이 반영 상태 (PENDING = 대기, ACTIVE = 활성, FAILED = 실패) */
+            applyState: components["schemas"]["PortForwardApplyState"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            id: number;
+            /** @description 프로토콜 (tcp | udp) */
+            proto: components["schemas"]["PortMappingProto"];
+            /** @description 접속에 사용할 공개 호스트. 아직 설정 전이면 null */
+            publicHost?: string | null;
+            /**
+             * Format: int32
+             * @description 릴레이에서 열린 공개 포트
+             */
+            publicPort: number;
+            /** @description 매핑 상태 (SUSPENDED = 관리자·자동 정지) */
+            status: components["schemas"]["PortMappingStatus"];
+            /**
+             * Format: int32
+             * @description VM 내부 대상 포트
+             */
+            targetPort: number;
+        };
+        /** @enum {string} */
+        PortMappingProto: "TCP" | "UDP";
+        /** @enum {string} */
+        PortMappingStatus: "ACTIVE" | "SUSPENDED";
         /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환됩니다. */
         Problem: {
             /** @description 기계 판독용 안정 오류 코드 (클라이언트 분기 기준) */
@@ -2728,6 +3156,12 @@ export interface components {
         };
         RejectVmRequestRequest: {
             comment: string;
+        };
+        RelayTokenResponse: {
+            /** Format: int64 */
+            relayId: number;
+            /** @description 새 동기화 토큰(64자 hex). 이 응답에서만 확인 가능하며 저장되지 않습니다 */
+            token: string;
         };
         RequestOptionsResponse: {
             allowedRootDomains: string[];
@@ -2842,6 +3276,10 @@ export interface components {
             privateKeyStored: boolean;
             publicKey: string;
         };
+        SuspendPortMappingRequest: {
+            /** @description 정지 사유 (소유 그룹에 알림으로 전달) */
+            reason: string;
+        };
         SystemDashboardSummaryResponse: {
             /** Format: int64 */
             certExpiring30dCount: number;
@@ -2931,6 +3369,14 @@ export interface components {
             /** Format: int64 */
             unreadCount: number;
         };
+        UpdateCampusIpRequestStatusRequest: {
+            /** @description 관리자 메모 (신청자 알림에 포함) */
+            adminNote?: string | null;
+            /** @description 연결한 교내 IP 주소 (GRANTED 전환 시 필수, 10.0.0.0/8 대역) */
+            grantedAddress?: string | null;
+            /** @description 전환할 상태 (APPROVED = 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
+            status: components["schemas"]["CampusIpRequestStatus"];
+        };
         UpdateGroupMemberRequest: {
             role: components["schemas"]["GroupMemberRole"];
         };
@@ -2947,6 +3393,33 @@ export interface components {
             hidden?: boolean;
             name?: string;
             status?: components["schemas"]["OrgStatus"];
+        };
+        UpdatePortMappingGuardsRequest: {
+            /**
+             * Format: int32
+             * @description 매핑별 동시 연결 상한 (null = 기본값, 0 = 해제)
+             */
+            ctMax?: number | null;
+            /**
+             * Format: int32
+             * @description 신규 연결 버스트
+             */
+            newConnBurst?: number | null;
+            /**
+             * Format: int32
+             * @description 초당 신규 연결 상한
+             */
+            newConnRate?: number | null;
+            /**
+             * Format: int32
+             * @description 출발지별 버스트
+             */
+            perSourceBurst?: number | null;
+            /**
+             * Format: int32
+             * @description 출발지별 초당 신규 연결 상한
+             */
+            perSourceRate?: number | null;
         };
         UpdatePublicationRequest: {
             customDomain?: string | null;
@@ -3131,7 +3604,7 @@ export interface components {
             type: components["schemas"]["VmEventType"];
         };
         /** @enum {string} */
-        VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE" | "GATEWAY_BLOCK" | "GATEWAY_UNBLOCK";
+        VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE" | "GATEWAY_BLOCK" | "GATEWAY_UNBLOCK" | "PORT_FORWARD_CREATE" | "PORT_FORWARD_DELETE";
         VmFlavorResponse: {
             /** Format: int32 */
             diskGb: number;
@@ -3399,6 +3872,75 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseAuditLogViewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminCampusIpRequests: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["CampusIpRequestStatus"];
+                vmId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminCampusIpRequestView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminCampusIpRequestStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCampusIpRequestStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminCampusIpRequestView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -3923,6 +4465,245 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrgDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminPortMappings: {
+        parameters: {
+            query?: {
+                relayId?: number;
+                vmId?: number;
+                status?: components["schemas"]["PortMappingStatus"];
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminPortMappingResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteAdminPortMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mappingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminPortMappingGuards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mappingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePortMappingGuardsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminPortMappingResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    suspendAdminPortMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mappingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuspendPortMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminPortMappingResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unsuspendAdminPortMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mappingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminPortMappingResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminRelays: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminRelayView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    issueAdminRelayToken: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                relayId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RelayTokenResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7045,6 +7826,102 @@ export interface operations {
             };
         };
     };
+    listVmCampusIpRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CampusIpRequestView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    requestVmCampusIp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCampusIpRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CampusIpRequestView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelVmCampusIpRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listVmEvents: {
         parameters: {
             query?: {
@@ -7183,6 +8060,104 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVmPortForwardings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PortForwardingView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createVmPortForwarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePortForwardingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PortForwardingView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteVmPortForwarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+                portForwardingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

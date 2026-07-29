@@ -6,10 +6,12 @@ import { adminOpsHandlers, resetAdminOpsFixtures } from './handlers/admin-ops'
 import { announcementHandlers, resetAnnouncementFixtures } from './handlers/announcements'
 import { auditHandlers, resetAuditFixtures } from './handlers/audit'
 import { authHandlers } from './handlers/auth'
+import { campusIpHandlers, resetCampusIpFixtures } from './handlers/campusip'
 import { consentHandlers } from './handlers/consent'
 import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
 import { groupHandlers, resetGroupFixtures } from './handlers/groups'
+import { networkHandlers, resetNetworkFixtures } from './handlers/network'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
@@ -33,6 +35,8 @@ export const handlers: RequestHandler[] = [
   ...terminalHandlers,
   ...sshKeyHandlers,
   ...publishingHandlers,
+  ...networkHandlers,
+  ...campusIpHandlers,
   ...adminHandlers,
   ...adminOpsHandlers,
   ...auditHandlers,
@@ -53,6 +57,8 @@ export function resetFixtures() {
   resetTerminalFixtures()
   resetSshKeyFixtures()
   resetPublishingFixtures()
+  resetNetworkFixtures()
+  resetCampusIpFixtures()
   resetAdminFixtures()
   resetAdminOpsFixtures()
   resetAuditFixtures()
