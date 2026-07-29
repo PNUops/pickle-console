@@ -1,6 +1,5 @@
 import { useId, useState } from 'react'
 import { cn } from '../lib/cn'
-import { SSH_GATEWAY_HOST } from '../lib/hosts'
 import { TabPanel, Tabs } from './ui'
 
 type OsTab = 'windows' | 'macos' | 'linux'
@@ -48,7 +47,11 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
   const uid = useId()
   const [tab, setTab] = useState<OsTab>('macos')
   const host = hostname ?? '<VM 호스트명>'
-  const gateway = sshHost ?? SSH_GATEWAY_HOST
+  // Deliberately NOT the SSH_GATEWAY_HOST constant: this is an authenticated
+  // screen and `sshHost` comes from the VM response, so a client-side constant
+  // here would put a possibly-wrong host into copy-pasteable command text and
+  // make it look authoritative. A visible placeholder is the honest fallback.
+  const gateway = sshHost ?? '<SSH 게이트웨이>'
   const isWindows = tab === 'windows'
   const keyPath = isWindows
     ? `%USERPROFILE%\\.ssh\\${KEY_FILE}`
