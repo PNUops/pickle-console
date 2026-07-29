@@ -2302,8 +2302,11 @@ export interface components {
             /** Format: int64 */
             nodeId: number;
             notes?: string | null;
+            osFamily: string;
+            osVersion: string;
             /** Format: int32 */
             proxmoxVmid: number;
+            sshUsername: string;
             status: components["schemas"]["TemplateStatus"];
             /** Format: int32 */
             version: number;
@@ -3763,6 +3766,9 @@ export interface components {
             minDiskGb: number;
             name: string;
             notes?: string | null;
+            osFamily: string;
+            osVersion: string;
+            sshUsername: string;
             status: components["schemas"]["TemplateStatus"];
             /** Format: int32 */
             version: number;
