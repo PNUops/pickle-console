@@ -65,7 +65,7 @@ describe('VM 공개 — 처음 공개(플랫폼 서브도메인)', () => {
 
     // 접수 직후 라우트 PENDING → 폴링으로 APPLIED.
     expect(
-      await within(card).findByRole('link', { name: 'capstone-team3.pickle.pnuops.com' }),
+      await within(card).findByRole('link', { name: 'capstone-team3.pusan.dev' }),
     ).toBeInTheDocument()
     expect(await within(card).findByText('적용됨')).toBeInTheDocument()
     expect(within(card).getByText('8080')).toBeInTheDocument()
@@ -85,7 +85,7 @@ describe('VM 공개 — 처음 공개(플랫폼 서브도메인)', () => {
     await user.click(within(card).getByRole('button', { name: 'HTTP 서비스 공개' }))
 
     expect(
-      await within(card).findByRole('link', { name: 'capstone-demo.pickle.pnuops.com' }),
+      await within(card).findByRole('link', { name: 'capstone-demo.pusan.dev' }),
     ).toBeInTheDocument()
   })
 
@@ -386,7 +386,7 @@ describe('VM 공개 — 커스텀 도메인 해제 후 재공개(revive)·삭제
     await user.click(within(card).getByRole('button', { name: '커스텀 도메인 연결 해제' }))
     // 신청 때 선지정한 이름(shop-app)으로 복귀 — 자동 생성은 폐지됨(v0.22.0)
     expect(
-      await within(card).findByRole('link', { name: 'shop-app.pickle.pnuops.com' }),
+      await within(card).findByRole('link', { name: 'shop-app.pusan.dev' }),
     ).toBeInTheDocument()
     expect(within(card).queryByText('남은 도메인')).not.toBeInTheDocument()
     expect(within(card).queryByText('shop.example.com')).not.toBeInTheDocument()

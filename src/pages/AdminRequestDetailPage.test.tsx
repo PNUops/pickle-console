@@ -22,7 +22,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
 
     await screen.findByRole('heading', { name: '신청 #201' })
     expect(screen.getByText('캡스톤 프로젝트 백엔드 서버 운영')).toBeInTheDocument()
-    expect(screen.getByText('capstone-team3.pickle.pnuops.com')).toBeInTheDocument()
+    expect(screen.getByText('capstone-team3.pusan.dev')).toBeInTheDocument()
     // OS·사양 프리셋은 각각의 축으로 표시된다.
     const os = screen.getByText('OS').closest('div')!
     expect(await within(os).findByText('Ubuntu 24.04 LTS')).toBeInTheDocument()

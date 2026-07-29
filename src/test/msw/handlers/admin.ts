@@ -61,7 +61,7 @@ function initialAdminRequests(): VmRequestDetail[] {
       displayName: '캡스톤 백엔드 서버',
       desiredSlug: 'capstone-api',
       desiredSubdomain: 'capstone-team3',
-      rootDomain: 'pickle.pnuops.com',
+      rootDomain: 'pusan.dev',
       createdAt: '2026-07-08T11:30:00+09:00',
       updatedAt: '2026-07-08T11:30:00+09:00',
     },

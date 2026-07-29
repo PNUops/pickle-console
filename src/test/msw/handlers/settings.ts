@@ -41,7 +41,7 @@ function initialSettings(): SettingView[] {
     },
     {
       key: 'allowed_root_domains',
-      value: ['pickle.pnuops.com'],
+      value: ['pusan.dev'],
       valueType: 'JSON',
       description: '신청서에서 선택 가능한 루트 도메인 목록.',
       editable: true,

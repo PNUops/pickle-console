@@ -133,7 +133,7 @@ function customDomainError(customDomain: string): string | null {
   if (labels.length < 2 || labels.some((l) => l.length === 0)) {
     return '커스텀 도메인은 완전한 외부 FQDN(예: app.example.com)이어야 합니다.'
   }
-  if (customDomain.endsWith('.pickle.pnuops.com') || customDomain === 'pickle.pnuops.com') {
+  if (customDomain.endsWith('.pusan.dev') || customDomain === 'pusan.dev') {
     return '플랫폼이 관리하는 도메인 하위 이름은 커스텀 도메인으로 사용할 수 없습니다.'
   }
   return null
@@ -225,7 +225,7 @@ function buildPlatformPublication(
   subdomain: string,
   rootDomain?: string | null,
 ): PublicationView {
-  const root = rootDomain ?? vm.requestedRootDomain ?? 'pickle.pnuops.com'
+  const root = rootDomain ?? vm.requestedRootDomain ?? 'pusan.dev'
   const fqdn = `${subdomain}.${root}`
   return {
     fqdn,
@@ -308,7 +308,7 @@ function adminCertificates(orgId?: number): Schemas['AdminCertificateView'][] {
     id: 1,
     kind: 'ORIGIN_CA_WILDCARD',
     status: 'ACTIVE',
-    scope: '*.pickle.pnuops.com',
+    scope: '*.pusan.dev',
     domainId: null,
     notAfter: '2040-01-01T00:00:00+09:00',
     daysUntilExpiry: daysUntil('2040-01-01T00:00:00+09:00'),
@@ -411,7 +411,7 @@ export const publishingHandlers: RequestHandler[] = [
       }
       const err = subdomainError(subdomain)
       if (err) return validationFailed(instance, 'subdomain', err)
-      const rootDomain = body.rootDomain ?? vm.requestedRootDomain ?? 'pickle.pnuops.com'
+      const rootDomain = body.rootDomain ?? vm.requestedRootDomain ?? 'pusan.dev'
       if (isFqdnTaken(`${subdomain}.${rootDomain}`, vm.id)) return fqdnTaken(instance)
       // 다른 대상으로 공개하면 이 VM의 남은 행은 정리된다 (서버 retire).
       retireTombstones(vm.id)
