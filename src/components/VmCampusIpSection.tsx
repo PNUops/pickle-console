@@ -217,7 +217,7 @@ function ActiveRequestCard({
       </div>
       {error && <Alert variant="danger">{error}</Alert>}
       {request.status === 'REQUESTED' && (
-        <p className="text-sm text-neutral-600">관리자 확인을 기다리고 있습니다.</p>
+        <p className="text-sm text-neutral-600">관리자 검토를 기다리고 있습니다.</p>
       )}
       {request.status === 'APPROVED' && (
         <p className="text-sm text-neutral-600">
@@ -282,7 +282,7 @@ function RequestForm({ vm }: { vm: VmDetail }) {
       setFieldErrors({})
       setPurpose('')
       setPortsRaw('')
-      toast.success('캠퍼스 IP 신청을 접수했습니다. 관리자 확인 후 연결됩니다.')
+      toast.success('캠퍼스 IP 신청을 접수했습니다. 관리자 검토 후 연결됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: async (err) => {
@@ -323,7 +323,7 @@ function RequestForm({ vm }: { vm: VmDetail }) {
         label="신청 목적"
         required
         error={fieldErrors.purpose}
-        description="어떤 일에 쓰는지 알려 주시면 관리자가 확인 후 연결합니다."
+        description="어떤 일에 쓰는지 알려 주시면 관리자가 검토 후 연결합니다."
       >
         <Textarea
           rows={3}

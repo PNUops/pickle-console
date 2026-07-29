@@ -311,7 +311,7 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
     expect(await screen.findByText('신청됨')).toBeInTheDocument()
   })
 
-  test('승인 절차가 시작된 신청의 취소 거부(409)는 사유를 보여준다', async () => {
+  test('검토가 시작된 신청의 취소 거부(409)는 사유를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/v1/vms/57/campus-ip-requests', () =>
