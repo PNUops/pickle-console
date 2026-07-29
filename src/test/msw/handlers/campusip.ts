@@ -69,12 +69,24 @@ export function resetCampusIpFixtures() {
   nextRequestId = 100
 }
 
-const notFound = () =>
+/* 아래 오류 봉투는 서버(CampusIpRequestService)의 제목·본문과 1:1로 맞춘다 —
+   모의가 실서버와 어긋나면 테스트가 진짜 버그를 가린다. */
+
+const vmNotFound = () =>
   problemResponse({
     type: 'about:blank',
     title: '리소스를 찾을 수 없습니다',
     status: 404,
-    detail: '요청한 리소스가 존재하지 않습니다.',
+    detail: '해당 VM이 존재하지 않습니다.',
+    code: 'RESOURCE_NOT_FOUND',
+  })
+
+const requestNotFound = () =>
+  problemResponse({
+    type: 'about:blank',
+    title: '리소스를 찾을 수 없습니다',
+    status: 404,
+    detail: '해당 교내 IP 신청이 존재하지 않습니다.',
     code: 'RESOURCE_NOT_FOUND',
   })
 
@@ -145,7 +157,7 @@ export const campusIpHandlers: RequestHandler[] = [
   /* ─── 사용자 (이중 게이트는 서버 강제 — mock은 자원 존재만 검사) ─── */
   http.get('*/api/v1/vms/:vmId/campus-ip-requests', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
-    if (!vm) return notFound()
+    if (!vm) return vmNotFound()
     const items = campusIpStore
       .filter((r) => r.vmId === vm.id)
       .sort((a, b) => b.id - a.id)
@@ -155,14 +167,15 @@ export const campusIpHandlers: RequestHandler[] = [
 
   http.post('*/api/v1/vms/:vmId/campus-ip-requests', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
-    if (!vm) return notFound()
+    if (!vm) return vmNotFound()
     const instance = `/api/v1/vms/${vm.id}/campus-ip-requests`
     if (campusIpStore.some((r) => r.vmId === vm.id && ACTIVE_STATUSES.includes(r.status))) {
       return problemResponse({
         type: 'about:blank',
-        title: '이미 진행 중인 캠퍼스 IP 신청이 있습니다',
+        title: '이미 진행 중인 신청이 있습니다',
         status: 409,
-        detail: '이 VM에는 이미 진행 중이거나 부여된 캠퍼스 IP 신청이 있습니다.',
+        detail:
+          '이 VM에는 진행 중인 교내 IP 신청이 이미 있습니다. 기존 신청이 끝난 뒤 다시 신청해 주세요.',
         instance,
         code: 'CAMPUS_IP_REQUEST_EXISTS',
       })
@@ -171,8 +184,11 @@ export const campusIpHandlers: RequestHandler[] = [
     if (!body.purpose || body.purpose.trim() === '') {
       return validationFailed(instance, 'purpose', '신청 목적을 입력해 주세요.')
     }
-    if (!Array.isArray(body.ports) || body.ports.length === 0 || body.ports.length > 32) {
-      return validationFailed(instance, 'ports', '포트는 1~32개로 지정해 주세요.')
+    if (!Array.isArray(body.ports) || body.ports.some((p) => p < 1 || p > 65535)) {
+      return validationFailed(instance, 'ports[0]', '포트는 1~65535 범위여야 합니다.')
+    }
+    if (new Set(body.ports).size > 32) {
+      return validationFailed(instance, 'ports', '포트는 최대 32개까지 신청할 수 있습니다.')
     }
     const record: CampusIpRecord = {
       id: nextRequestId++,
@@ -197,15 +213,14 @@ export const campusIpHandlers: RequestHandler[] = [
     const index = campusIpStore.findIndex(
       (r) => r.id === Number(params.requestId) && r.vmId === Number(params.vmId),
     )
-    if (index < 0) return notFound()
+    if (index < 0) return requestNotFound()
     const record = campusIpStore[index]
     if (record.status !== 'REQUESTED') {
       return problemResponse({
         type: 'about:blank',
-        title: '취소할 수 없는 신청입니다',
+        title: '전환할 수 없는 상태입니다',
         status: 409,
-        // 서버 메시지를 그대로 옮긴 값 — api 문구가 바뀌면 여기도 함께 맞춘다.
-        detail: '심사가 시작된 캠퍼스 IP 신청은 취소할 수 없습니다. 관리자에게 문의하세요.',
+        detail: '검토가 시작되기 전(REQUESTED)의 신청만 취소할 수 있습니다.',
         instance: `/api/v1/vms/${record.vmId}/campus-ip-requests/${record.id}`,
         code: 'CAMPUS_IP_INVALID_TRANSITION',
       })
@@ -233,14 +248,14 @@ export const campusIpHandlers: RequestHandler[] = [
     '*/api/v1/admin/campus-ip-requests/:requestId/status',
     async ({ params, request }) => {
       const record = campusIpStore.find((r) => r.id === Number(params.requestId))
-      if (!record) return notFound()
+      if (!record) return requestNotFound()
       const instance = `/api/v1/admin/campus-ip-requests/${record.id}/status`
       const body = (await request.json().catch(() => ({}))) as
         Schemas['UpdateCampusIpRequestStatusRequest']
       if (!isLegalTransition(record.status, body.status)) {
         return problemResponse({
           type: 'about:blank',
-          title: '허용되지 않는 상태 전환입니다',
+          title: '전환할 수 없는 상태입니다',
           status: 409,
           detail: `'${record.status}'에서 '${body.status}'(으)로 전환할 수 없습니다.`,
           instance,

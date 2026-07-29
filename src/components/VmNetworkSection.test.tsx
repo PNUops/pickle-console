@@ -273,7 +273,8 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
             type: 'about:blank',
             title: '이미 진행 중인 캠퍼스 IP 신청이 있습니다',
             status: 409,
-            detail: '이 VM에는 이미 진행 중이거나 부여된 캠퍼스 IP 신청이 있습니다.',
+            detail:
+              '이 VM에는 진행 중인 교내 IP 신청이 이미 있습니다. 기존 신청이 끝난 뒤 다시 신청해 주세요.',
             code: 'CAMPUS_IP_REQUEST_EXISTS',
           },
           { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
@@ -305,7 +306,7 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
     await user.click(screen.getByRole('button', { name: '캠퍼스 IP 신청' }))
 
     expect(
-      await screen.findByText(/이미 진행 중이거나 부여된 캠퍼스 IP 신청이 있습니다/),
+      await screen.findByText(/진행 중인 교내 IP 신청이 이미 있습니다/),
     ).toBeInTheDocument()
     // 무효화로 최신 이력을 다시 읽어 상태 카드로 전환된다.
     expect(await screen.findByText('신청됨')).toBeInTheDocument()
@@ -334,10 +335,9 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
         HttpResponse.json(
           {
             type: 'about:blank',
-            title: '취소할 수 없는 신청입니다',
+            title: '전환할 수 없는 상태입니다',
             status: 409,
-            // 서버가 돌려주는 문구를 그대로 옮긴 값 (api 카피 변경 시 함께 맞춘다).
-            detail: '심사가 시작된 캠퍼스 IP 신청은 취소할 수 없습니다. 관리자에게 문의하세요.',
+            detail: '검토가 시작되기 전(REQUESTED)의 신청만 취소할 수 있습니다.',
             code: 'CAMPUS_IP_INVALID_TRANSITION',
           },
           { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
@@ -348,6 +348,6 @@ describe('VM 네트워크 탭 — 캠퍼스 IP 절', () => {
 
     await user.click(await screen.findByRole('button', { name: '신청 취소' }))
     // 서버 문구 전문이 아니라 안정된 조각으로 단정한다 (api 카피 변경에 견딤).
-    expect(await screen.findByText(/취소할 수 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/검토가 시작되기 전/)).toBeInTheDocument()
   })
 })
