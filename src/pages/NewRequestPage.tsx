@@ -455,6 +455,12 @@ export function NewRequestPage() {
                     {errors.templateId}
                   </p>
                 )}
+                {templates.data?.length === 0 && (
+                  <Alert variant="warning" className="mt-2">
+                    신청할 수 있는 OS가 아직 없습니다. 관리자가 OS를 등록하면 신청할 수
+                    있습니다.
+                  </Alert>
+                )}
                 <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {templates.data?.map((template) => {
                     const selected = template.id === state.templateId
