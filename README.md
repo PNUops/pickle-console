@@ -31,7 +31,7 @@ VM 신청서(4스텝), 승인 대기, 대시보드, SSH 키 등록, 웹 터미�
 ## 주요 기능
 
 플랫폼은 VM 신청·승인·생성, SSH와 웹 터미널 접속, 도메인 공개, 만료와
-삭제까지를 다룹니다. 이 저장소가 맡는 부분은 아래와 같습니다.
+삭제까지를 다룹니다. 이 레포지토리가 맡는 부분은 아래와 같습니다.
 
 - **사용자 여정**: 회원가입부터 신청, 접속, 도메인 공개, 삭제까지 인프라를 몰라도 따라갈 수
   있게 안내합니다.
@@ -51,7 +51,7 @@ VM 신청서(4스텝), 승인 대기, 대시보드, SSH 키 등록, 웹 터미�
 API는 항상 자기 오리진의 `/api`로 호출합니다. 로컬에서는 Vite 프록시가, 운영에서는
 nginx가 같은 경로를 백엔드로 넘기므로 런타임 설정이 필요 없습니다.
 
-TypeScript 타입은 백엔드가 생성한 OpenAPI 스펙에서 만들어 저장소에 커밋합니다. 명세가
+TypeScript 타입은 백엔드가 생성한 OpenAPI 스펙에서 만들어 레포지토리에 커밋합니다. 명세가
 바뀌면 diff에 드러나고, 스펙과 어긋난 코드는 타입 검사가 잡아냅니다.
 
 테스트는 MSW로 API 전체를 목킹해 백엔드 없이 전 화면을 돌립니다. 핸들러 픽스처가
@@ -94,10 +94,10 @@ scripts/verify.sh        # lint → typecheck → test → build → 취약점 �
 npm run gen:api   # ../api/contract/openapi.yaml → src/api/schema.d.ts
 ```
 
-[pickle-api](https://github.com/PNUops/pickle-api) 저장소가 형제 디렉터리(`../api`)로
+[pickle-api](https://github.com/PNUops/pickle-api) 레포지토리가 형제 디렉터리(`../api`)로
 체크아웃돼 있다고 가정합니다. 산출물 `src/api/schema.d.ts`는 커밋 대상입니다.
 
-## 저장소 구조
+## 레포지토리 구조
 
 ```
 src/api/         생성된 타입(schema.d.ts)과 쿼리 래퍼
@@ -112,7 +112,7 @@ assets/          README 스크린샷
 
 ## 전체 아키텍처
 
-<!-- arch:begin — 저장소 공통 블록입니다. 손으로 고치지 마세요. -->
+<!-- arch:begin — 레포지토리 공통 블록입니다. 손으로 고치지 마세요. -->
 ```mermaid
 flowchart LR
     subgraph ext [외부]
@@ -169,7 +169,7 @@ flowchart LR
     IB -.->|템플릿 빌드| PVE
 ```
 
-| 저장소 | 역할 |
+| 레포지토리 | 역할 |
 |---|---|
 | [pickle-api](https://github.com/PNUops/pickle-api) | REST API와 프로비저닝 워커 (Spring Boot 4, Java 25, PostgreSQL 18, JobRunr) |
 | [pickle-console](https://github.com/PNUops/pickle-console) | 사용자·관리자 웹 콘솔 (React 19, TypeScript) |
