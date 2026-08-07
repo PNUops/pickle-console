@@ -21,7 +21,7 @@ describe('공개 서비스 — 도메인 탭', () => {
     await screen.findByRole('heading', { name: '공개 서비스', level: 1 })
     const verifying = (await screen.findByText('demo.example.com')).closest('tr')!
     expect(within(verifying).getByText('검증 중')).toBeInTheDocument()
-    expect(within(verifying).getByText('커스텀 도메인')).toBeInTheDocument()
+    expect(within(verifying).getByText('커스텀')).toBeInTheDocument()
     expect(within(verifying).getByText('적용 대기')).toBeInTheDocument()
   })
 

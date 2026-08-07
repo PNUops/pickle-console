@@ -6,6 +6,7 @@ export {
   CertificateStatusBadge,
   DdayBadge,
   DeliveryStatusBadge,
+  DomainConnectionBadge,
   DomainKindBadge,
   DomainStatusBadge,
   DriftKindBadge,
@@ -26,6 +27,7 @@ export { Card, CardContent, CardFooter, CardHeader, CardTitle } from './Card'
 export { Checkbox } from './Checkbox'
 export { ConfirmNameModal } from './ConfirmNameModal'
 export { Drawer, type DrawerProps } from './Drawer'
+export { ErrorSummary, type ErrorSummaryProps } from './ErrorSummary'
 export { FormField } from './FormField'
 export { InfoTip } from './InfoTip'
 export { Input } from './Input'

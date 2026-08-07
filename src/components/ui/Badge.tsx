@@ -180,6 +180,24 @@ export function DomainKindBadge({ kind, className }: { kind: DomainKind; classNa
   )
 }
 
+/**
+ * 도메인 접힌 연결 상태 배지 — 라벨·톤은 `foldDomainStatus()` 파생 결과를
+ * 구조 그대로 받는다 (파생 규칙은 vm-domains/domain-status.ts가 단일 출처).
+ */
+export function DomainConnectionBadge({
+  status,
+  className,
+}: {
+  status: { label: string; tone: BadgeVariant }
+  className?: string
+}) {
+  return (
+    <Badge variant={status.tone} className={className}>
+      {status.label}
+    </Badge>
+  )
+}
+
 const GROUP_KIND_VARIANTS: Record<GroupKind, BadgeVariant> = {
   PERSONAL: 'neutral',
   TEAM: 'info',

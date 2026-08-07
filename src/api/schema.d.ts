@@ -1201,7 +1201,7 @@ export interface paths {
         delete: operations["deleteDomain"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["updateDomain"];
         trace?: never;
     };
     "/domains/{domainId}/verify": {
@@ -1780,6 +1780,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createVmDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/events": {
         parameters: {
             query?: never;
@@ -1871,38 +1887,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteVmPortForwarding"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vms/{vmId}/publication": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["unpublishVm"];
-        options?: never;
-        head?: never;
-        patch: operations["updatePublication"];
-        trace?: never;
-    };
-    "/vms/{vmId}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["publishVm"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2498,6 +2482,13 @@ export interface components {
              */
             targetPort: number;
         };
+        CreateVmDomainRequest: {
+            customDomain?: string | null;
+            /** Format: int32 */
+            port?: number;
+            rootDomain?: string | null;
+            subdomain?: string | null;
+        };
         CreateVmFlavorRequest: {
             /** Format: int32 */
             diskGb: number;
@@ -2512,7 +2503,6 @@ export interface components {
         CreateVmRequestRequest: {
             courseOrProject?: string | null;
             desiredSlug?: string | null;
-            desiredSubdomain?: string | null;
             displayName?: string | null;
             extraNote?: string | null;
             /** Format: int64 */
@@ -2532,7 +2522,6 @@ export interface components {
             reqStartDate?: string | null;
             /** Format: int32 */
             reqVcpu: number;
-            rootDomain?: string | null;
             specReason?: string | null;
             /** Format: int64 */
             templateId: number;
@@ -2552,6 +2541,10 @@ export interface components {
             /** Format: int64 */
             id: number;
             kind: components["schemas"]["DomainKind"];
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
             rootDomain?: string | null;
             status: components["schemas"]["DomainStatus"];
             verification?: components["schemas"]["DomainVerificationView"] | null;
@@ -2571,6 +2564,10 @@ export interface components {
             /** Format: int64 */
             id: number;
             kind: components["schemas"]["DomainKind"];
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
             rootDomain?: string | null;
             status: components["schemas"]["DomainStatus"];
             /** Format: date-time */
@@ -3136,13 +3133,6 @@ export interface components {
             fqdn: string;
             route?: components["schemas"]["RouteView"] | null;
         };
-        PublishRequest: {
-            customDomain?: string | null;
-            /** Format: int32 */
-            port?: number;
-            rootDomain?: string | null;
-            subdomain?: string | null;
-        };
         ReadAllResponse: {
             /** Format: int32 */
             updatedCount: number;
@@ -3380,6 +3370,10 @@ export interface components {
             /** @description 전환할 상태 (APPROVED = 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
         };
+        UpdateDomainRequest: {
+            /** Format: int32 */
+            port?: number;
+        };
         UpdateGroupMemberRequest: {
             role: components["schemas"]["GroupMemberRole"];
         };
@@ -3423,11 +3417,6 @@ export interface components {
              * @description 출발지별 초당 신규 연결 상한
              */
             perSourceRate?: number | null;
-        };
-        UpdatePublicationRequest: {
-            customDomain?: string | null;
-            /** Format: int32 */
-            port?: number;
         };
         UpdateTemplateStatusRequest: {
             /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 VM 무영향) */
@@ -3577,11 +3566,9 @@ export interface components {
             passwordAvailable: boolean;
             passwordRevealAllowed: boolean;
             provisioning?: components["schemas"]["ProvisioningTaskResponse"] | null;
-            publication?: components["schemas"]["PublicationView"] | null;
+            publications: components["schemas"]["PublicationView"][];
             /** Format: int64 */
             requestId: number;
-            requestedRootDomain?: string | null;
-            requestedSubdomain?: string | null;
             sshGatewayBlocked: boolean;
             sshHost: string;
             sshUsername: string;
@@ -6417,6 +6404,41 @@ export interface operations {
             };
         };
     };
+    updateDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDomainRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PublicationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     verifyDomain: {
         parameters: {
             query?: never;
@@ -7928,6 +7950,41 @@ export interface operations {
             };
         };
     };
+    createVmDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateVmDomainRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PublicationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listVmEvents: {
         parameters: {
             query?: {
@@ -8164,107 +8221,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    unpublishVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                vmId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    updatePublication: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                vmId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdatePublicationRequest"];
-            };
-        };
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PublicationView"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    publishVm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                vmId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PublishRequest"];
-            };
-        };
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PublicationView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

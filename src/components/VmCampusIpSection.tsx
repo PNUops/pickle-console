@@ -18,6 +18,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ErrorSummary,
   FormField,
   InfoTip,
   Input,
@@ -30,35 +31,6 @@ import {
 const FIELD_LABELS: Record<string, string> = {
   purpose: '신청 목적',
   ports: '개방 포트',
-}
-
-function ErrorSummary({
-  error,
-  fieldErrors,
-  slots,
-}: {
-  error: string | null
-  fieldErrors: Record<string, string>
-  slots: string[]
-}) {
-  if (!error) return null
-  const unslotted = Object.entries(fieldErrors).filter(([field]) => !slots.includes(field))
-  const hasSlotted = slots.some((key) => fieldErrors[key] != null)
-  if (unslotted.length === 0 && hasSlotted) return null
-
-  return (
-    <Alert variant="danger" title={error}>
-      {unslotted.length > 0 && (
-        <ul className="list-disc space-y-0.5 pl-4">
-          {unslotted.map(([field, message]) => (
-            <li key={field}>
-              {FIELD_LABELS[field] ?? field}: {message}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Alert>
-  )
 }
 
 /** 진행 중(활성)으로 취급하는 상태 — VM당 1건 제한에 걸리는 상태와 동일. */
@@ -318,7 +290,12 @@ function RequestForm({ vm }: { vm: VmDetail }) {
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
-      <ErrorSummary error={error} fieldErrors={fieldErrors} slots={['purpose', 'ports']} />
+      <ErrorSummary
+        error={error}
+        fieldErrors={fieldErrors}
+        slots={['purpose', 'ports']}
+        fieldLabels={FIELD_LABELS}
+      />
       <FormField
         label="신청 목적"
         required

@@ -149,8 +149,9 @@ export const vmRequestHandlers: RequestHandler[] = [
       reqEndDate: body.reqEndDate ?? null,
       displayName: body.displayName ?? null,
       desiredSlug: body.desiredSlug ?? null,
-      desiredSubdomain: body.desiredSubdomain ?? null,
-      rootDomain: body.rootDomain ?? null,
+      // 신청서에서 도메인 축이 빠졌다 — 새 신청의 이력 필드는 항상 비어 있다.
+      desiredSubdomain: null,
+      rootDomain: null,
       status: 'SUBMITTED',
       review: null,
       createdAt: '2026-07-08T15:00:00+09:00',
