@@ -65,6 +65,7 @@ import {
 import { GROUP_ROLE_LABELS, type GroupMemberRole } from '../lib/labels'
 import { SshUsageGuide } from '../components/SshUsageGuide'
 import { VmPublishSection } from '../components/VmPublishSection'
+import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
 
@@ -90,10 +91,15 @@ const EVENTS_PAGE_SIZE = 10
 /**
  * VM 상세 탭 구성. 배열 순서가 렌더 순서 — 추후 '모니터링'(사용량 차트, 로드맵)
  * 탭은 여기 한 항목을 추가하는 것으로 확장한다.
+ *
+ * 도메인·포트는 이 VM을 바깥에서 닿게 하는 수단을 모은 탭이고(웹 주소를 붙이는
+ * HTTP 공개, 웹이 아닌 포트를 그대로 여는 포트 포워딩), 네트워크는 이 VM이 어느
+ * 망에 놓이는지를 다루는 탭이다(캠퍼스 IP, 이후 방화벽·주소 설정).
+ * 탭 id는 기존 `?tab=` 링크가 계속 열리도록 유지한다.
  */
 const VM_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
-  { id: 'publish', label: '도메인·공개' },
+  { id: 'publish', label: '도메인·포트' },
   { id: 'network', label: '네트워크' },
   { id: 'settings', label: '설정' },
   { id: 'activity', label: '활동' },
@@ -264,6 +270,7 @@ export function VmDetailPage() {
 
       <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">
         <VmPublishSection vm={data} />
+        <VmPortForwardingSection vm={data} />
       </TabPanel>
 
       <TabPanel id="network" active={activeTab === 'network'} className="space-y-6">

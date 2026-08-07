@@ -4,6 +4,7 @@ import {
   deleteDomain,
   fetchDomains,
   fetchGroup,
+  fetchRequestOptions,
   publishVm,
   unpublishVm,
   updatePublication,
@@ -15,6 +16,7 @@ import {
   type VmDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
 import {
@@ -28,9 +30,11 @@ import {
   ConfirmNameModal,
   DomainKindBadge,
   DomainStatusBadge,
+  ErrorSummary,
   FormField,
   Input,
   RouteStatusBadge,
+  Select,
   Table,
   TBody,
   TD,
@@ -42,6 +46,7 @@ import { CERTIFICATE_KIND_LABELS } from '../lib/status'
 import {
   CUSTOM_DOMAIN_FORMAT_MESSAGE,
   HOSTNAME_RE,
+  SUBDOMAIN_RE,
   normalizeCustomDomain,
 } from '../lib/validation'
 
@@ -54,40 +59,6 @@ const FIELD_LABELS: Record<string, string> = {
   subdomain: '서브도메인',
   customDomain: '커스텀 도메인',
   rootDomain: '루트 도메인',
-}
-
-/**
- * 폼 오류 요약 Alert. 폼에 표시 자리가 있는 필드 오류(slots)는 해당 필드 밑에
- * 이미 보이므로 요약을 숨기고, 자리가 없는 키(예: 변경 폼의 subdomain)는 목록으로
- * 함께 노출해 서버가 준 메시지가 조용히 사라지지 않게 한다.
- */
-function ErrorSummary({
-  error,
-  fieldErrors,
-  slots,
-}: {
-  error: string | null
-  fieldErrors: Record<string, string>
-  slots: string[]
-}) {
-  if (!error) return null
-  const unslotted = Object.entries(fieldErrors).filter(([field]) => !slots.includes(field))
-  const hasSlotted = slots.some((key) => fieldErrors[key] != null)
-  if (unslotted.length === 0 && hasSlotted) return null
-
-  return (
-    <Alert variant="danger" title={error}>
-      {unslotted.length > 0 && (
-        <ul className="list-disc space-y-0.5 pl-4">
-          {unslotted.map(([field, message]) => (
-            <li key={field}>
-              {FIELD_LABELS[field] ?? field}: {message}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Alert>
-  )
 }
 
 /**
@@ -163,31 +134,40 @@ function RoleLoadError({ retrying, onRetry }: { retrying: boolean; onRetry: () =
 
 function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
   const queryClient = useQueryClient()
+  // 루트 도메인 목록은 신청서와 같은 출처를 쓴다 — 두 화면이 다른 목록을 보여줄 수 없게.
+  const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
+  const allowedRoots = options.data?.allowedRootDomains ?? []
+  const [mode, setMode] = useState<AddressMode>('PLATFORM')
   const [port, setPort] = useState('80')
   // 신청 때 선지정한 서브도메인이 있으면 채워 두고, 없으면 여기서 직접 정한다.
   const [subdomain, setSubdomain] = useState(vm.requestedSubdomain ?? '')
+  const [rootDomain, setRootDomain] = useState(vm.requestedRootDomain ?? '')
   const [customDomain, setCustomDomain] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const publishable = PUBLISHABLE_STATUSES.includes(vm.status)
-  const usingCustomDomain = normalizeCustomDomain(customDomain) !== ''
-  // 플랫폼 서브도메인으로 공개하려면 이름이 있어야 한다 (서버는 없으면 422).
+  const usingCustomDomain = mode === 'CUSTOM'
+  // 목록을 받았는데 아직 고르지 않았다면 첫 항목이 기본값이다 (서버도 같은 값을 쓴다).
+  const effectiveRoot = rootDomain || allowedRoots[0] || ''
   const missingSubdomain = !usingCustomDomain && subdomain.trim() === ''
+  const missingCustomDomain = usingCustomDomain && normalizeCustomDomain(customDomain) === ''
 
   const publish = useMutation({
     mutationFn: () => {
-      // 신청서와 같은 규칙: trim+lowercase 정규화한 값을 전송한다.
-      const domain = normalizeCustomDomain(customDomain)
       // 커스텀 도메인과 서브도메인은 함께 보낼 수 없다 (서버 422).
-      if (domain !== '') {
-        return publishVm(vm.id, { port: Number(port), customDomain: domain })
+      if (usingCustomDomain) {
+        // 신청서와 같은 규칙: trim+lowercase 정규화한 값을 전송한다.
+        return publishVm(vm.id, {
+          port: Number(port),
+          customDomain: normalizeCustomDomain(customDomain),
+        })
       }
       return publishVm(vm.id, {
         port: Number(port),
         customDomain: null,
         subdomain: subdomain.trim(),
-        ...(vm.requestedRootDomain ? { rootDomain: vm.requestedRootDomain } : {}),
+        ...(effectiveRoot ? { rootDomain: effectiveRoot } : {}),
       })
     },
     onSuccess: async () => {
@@ -221,20 +201,34 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
       setFieldErrors({ port: portError })
       return
     }
-    // 커스텀 도메인 사전 검증 (서버 422와 동일 규칙) — 왕복 없이 즉시 안내한다.
-    const domain = normalizeCustomDomain(customDomain)
-    if (domain !== '' && !HOSTNAME_RE.test(domain)) {
-      setFieldErrors({ customDomain: CUSTOM_DOMAIN_FORMAT_MESSAGE })
-      return
+    if (usingCustomDomain) {
+      // 커스텀 도메인 사전 검증 (서버 422와 동일 규칙) — 왕복 없이 즉시 안내한다.
+      const domain = normalizeCustomDomain(customDomain)
+      if (!HOSTNAME_RE.test(domain)) {
+        setFieldErrors({ customDomain: CUSTOM_DOMAIN_FORMAT_MESSAGE })
+        return
+      }
+    } else {
+      // 서브도메인도 신청서와 같은 규칙으로 미리 거른다 — 종전에는 서버 422를
+      // 왕복해야 알 수 있었고, 같은 이름을 신청서에서는 즉시 거부했다.
+      const nameError = subdomainFieldError(subdomain, options.data?.reservedSubdomains)
+      if (nameError) {
+        setFieldErrors({ subdomain: nameError })
+        return
+      }
+      if (!effectiveRoot) {
+        setFieldErrors({ rootDomain: '루트 도메인을 선택해 주세요.' })
+        return
+      }
     }
     publish.mutate()
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
+    <form onSubmit={submit} className="space-y-5" noValidate>
       <p className="text-sm text-neutral-600">
-        VM 내부에서 열려 있는 HTTP 서비스 포트를 외부에 공개합니다. 공개 주소는 아래
-        서브도메인으로 정해지며, 나중에 바꾸려면 공개를 해제하고 다시 공개해야 합니다.
+        VM 내부에서 열려 있는 HTTP 서비스 포트를 외부에 공개합니다. 공개한 뒤 포트는
+        바로 바꿀 수 있고, 주소를 바꾸려면 공개를 해제하고 다시 공개합니다.
       </p>
 
       {!publishable && (
@@ -246,46 +240,18 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
       <ErrorSummary
         error={error}
         fieldErrors={fieldErrors}
-        slots={['port', 'subdomain', 'customDomain']}
+        slots={['port', 'subdomain', 'rootDomain', 'customDomain']}
+        fieldLabels={FIELD_LABELS}
       />
 
-      <div className="flex flex-wrap items-start gap-4">
+      <AddressModeChoice mode={mode} onChange={setMode} />
+
+      {usingCustomDomain ? (
         <FormField
-          label="공개 포트"
+          label="커스텀 도메인"
           required
-          error={fieldErrors.port}
-          description="기본 80. VM의 SSH 포트(22)는 공개할 수 없습니다."
-          className="w-40"
-        >
-          <Input
-            inputMode="numeric"
-            value={port}
-            onChange={(event) => setPort(event.target.value)}
-          />
-        </FormField>
-        <FormField
-          label="서브도메인"
-          error={fieldErrors.subdomain}
-          description={
-            vm.requestedRootDomain
-              ? `공개 주소는 ${subdomain.trim() || '<서브도메인>'}.${vm.requestedRootDomain} 이 됩니다.`
-              : '플랫폼 도메인 아래에 공개할 이름입니다. (소문자·숫자·하이픈, 3~40자)'
-          }
-          className="min-w-64 flex-1"
-        >
-          <Input
-            placeholder="capstone-team3"
-            value={subdomain}
-            maxLength={40}
-            disabled={usingCustomDomain}
-            onChange={(event) => setSubdomain(event.target.value)}
-          />
-        </FormField>
-        <FormField
-          label="커스텀 도메인 (선택)"
           error={fieldErrors.customDomain}
-          description="내 소유 도메인을 연결하려면 입력하세요. 비워 두면 위 서브도메인으로 공개됩니다."
-          className="min-w-64 flex-1"
+          description="내가 소유한 도메인을 연결합니다. 공개 후 안내되는 DNS 레코드를 등록해야 인증서가 발급됩니다."
         >
           <Input
             placeholder="app.example.com"
@@ -293,21 +259,146 @@ function PublishForm({ vm, canMutate }: { vm: VmDetail; canMutate: boolean }) {
             onChange={(event) => setCustomDomain(event.target.value)}
           />
         </FormField>
-      </div>
-
-      {publishable && missingSubdomain && (
-        <p className="text-sm text-neutral-500">공개할 서브도메인을 입력해 주세요.</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              label="서브도메인"
+              required
+              error={fieldErrors.subdomain}
+              description="소문자·숫자·하이픈, 3~40자"
+            >
+              <Input
+                placeholder="capstone-team3"
+                value={subdomain}
+                maxLength={40}
+                onChange={(event) => setSubdomain(event.target.value)}
+              />
+            </FormField>
+            <FormField label="루트 도메인" required error={fieldErrors.rootDomain}>
+              <Select
+                value={effectiveRoot}
+                disabled={allowedRoots.length === 0}
+                onChange={(event) => setRootDomain(event.target.value)}
+              >
+                {allowedRoots.length === 0 && <option value="">불러오는 중…</option>}
+                {allowedRoots.map((root) => (
+                  <option key={root} value={root}>
+                    {root}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
+          <AddressPreview subdomain={subdomain} rootDomain={effectiveRoot} />
+        </div>
       )}
+
+      <FormField
+        label="공개 포트"
+        required
+        error={fieldErrors.port}
+        description="VM 안에서 서비스가 듣고 있는 포트입니다. 기본 80, SSH 포트(22)는 공개할 수 없습니다."
+        className="sm:w-48"
+      >
+        <Input
+          inputMode="numeric"
+          value={port}
+          onChange={(event) => setPort(event.target.value)}
+        />
+      </FormField>
 
       <Button
         type="submit"
         loading={publish.isPending}
-        disabled={!publishable || missingSubdomain}
+        disabled={!publishable || missingSubdomain || missingCustomDomain}
       >
         HTTP 서비스 공개
       </Button>
     </form>
   )
+}
+
+/** 공개 주소를 플랫폼 서브도메인으로 받을지, 내 도메인을 연결할지. */
+type AddressMode = 'PLATFORM' | 'CUSTOM'
+
+const ADDRESS_MODES: { value: AddressMode; label: string; hint: string }[] = [
+  { value: 'PLATFORM', label: '플랫폼 도메인', hint: '바로 공개, 인증서 자동' },
+  { value: 'CUSTOM', label: '내 도메인 연결', hint: 'DNS 레코드 등록 필요' },
+]
+
+function AddressModeChoice({
+  mode,
+  onChange,
+}: {
+  mode: AddressMode
+  onChange: (mode: AddressMode) => void
+}) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium text-neutral-700">공개 주소</legend>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {ADDRESS_MODES.map((option) => (
+          <label
+            key={option.value}
+            className={cn(
+              'flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 text-sm',
+              mode === option.value
+                ? 'border-primary-600 bg-primary-50/60'
+                : 'border-neutral-200 hover:bg-neutral-50',
+            )}
+          >
+            <input
+              type="radio"
+              name="publish-address-mode"
+              className="mt-0.5 size-4 accent-primary-600"
+              checked={mode === option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span>
+              <span className="block font-medium text-neutral-800">{option.label}</span>
+              <span className="block text-xs text-neutral-500">{option.hint}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/** 입력한 이름이 어떤 주소가 되는지 그대로 보여 준다. */
+function AddressPreview({
+  subdomain,
+  rootDomain,
+}: {
+  subdomain: string
+  rootDomain: string
+}) {
+  const name = subdomain.trim()
+  return (
+    <p className="rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+      공개 주소{' '}
+      <code className="font-mono text-neutral-900">
+        https://{name || '<서브도메인>'}
+        {rootDomain ? `.${rootDomain}` : ''}
+      </code>
+    </p>
+  )
+}
+
+/**
+ * 서브도메인 사전 검증 — 신청서 화면과 같은 규칙(형식 + 예약어)으로 미리 거른다.
+ * 금칙어는 서버만 알고 있으므로 그쪽은 422로 돌아온다.
+ */
+function subdomainFieldError(raw: string, reserved: string[] | undefined): string | null {
+  const name = raw.trim()
+  if (!SUBDOMAIN_RE.test(name)) {
+    return '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
+  }
+  if (reserved?.includes(name)) {
+    return `'${name}'은(는) 예약된 서브도메인이라 사용할 수 없습니다.`
+  }
+  return null
 }
 
 /* ─── 공개 상태 상세 + 변경/해제 ─── */
@@ -627,6 +718,7 @@ function PublicationActions({
         error={error}
         fieldErrors={fieldErrors}
         slots={isCustom ? ['port'] : ['port', 'customDomain']}
+        fieldLabels={FIELD_LABELS}
       />
 
       <form onSubmit={submitPort} className="flex flex-wrap items-start gap-4" noValidate>
