@@ -6,9 +6,11 @@ import { fetchSystemStatus } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
 import { Logo } from '../components/Logo'
+import { navIcons } from '../components/nav-icons'
 import { MaintenanceScreen } from '../components/MaintenanceScreen'
 import { NotificationBell } from '../components/NotificationBell'
 import { PostLoginOverlay } from '../components/PostLoginOverlay'
+import { CONTACT_URL, DOCS_PATH, FEEDBACK_URL } from '../lib/brand'
 import { cn } from '../lib/cn'
 import { useFocusTrap } from '../lib/use-focus-trap'
 import { UserMenu } from './UserMenu'
@@ -28,6 +30,67 @@ export interface NavItem {
 export interface NavSection {
   heading?: string
   items: NavItem[]
+}
+
+const NAV_LINK_BASE =
+  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600'
+
+const FOOTER_LINK_IDLE = 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+
+const externalMark = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.75"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="ml-auto size-3.5 shrink-0 text-neutral-400"
+    aria-label="새 탭에서 열림"
+    role="img"
+  >
+    <path d="M14 4h6v6" />
+    <path d="M20 4 10 14" />
+    <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
+  </svg>
+)
+
+/** 사이드바 하단 고정 링크 — 가이드·문의·의견. */
+function ShellFooterNav({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <div className="space-y-1 border-t border-neutral-100 p-3">
+      <NavLink
+        to={DOCS_PATH}
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          cn(NAV_LINK_BASE, isActive ? 'bg-primary-50 text-primary-800' : FOOTER_LINK_IDLE)
+        }
+      >
+        {navIcons.book}
+        사용 가이드
+      </NavLink>
+      <a
+        href={CONTACT_URL}
+        target="_blank"
+        rel="noreferrer"
+        className={cn(NAV_LINK_BASE, FOOTER_LINK_IDLE)}
+      >
+        {navIcons.chat}
+        1:1 문의하기
+        {externalMark}
+      </a>
+      <a
+        href={FEEDBACK_URL}
+        target="_blank"
+        rel="noreferrer"
+        className={cn(NAV_LINK_BASE, FOOTER_LINK_IDLE)}
+      >
+        {navIcons.megaphone}
+        개선 의견 남기기
+        {externalMark}
+      </a>
+    </div>
+  )
 }
 
 /** 사이드바·모바일 드로어가 공유하는 내비게이션 본문. */
@@ -57,7 +120,7 @@ function ShellNav({
               onClick={onNavigate}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
+                  NAV_LINK_BASE,
                   isActive
                     ? 'bg-primary-50 text-primary-800'
                     : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
@@ -187,11 +250,12 @@ export function AppShell({
   return (
     <div className="flex min-h-screen">
       <PostLoginOverlay />
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
         <div className="flex h-16 items-center border-b border-neutral-100 px-5">
           <Logo to={home} />
         </div>
         <ShellNav navLabel={navLabel} navSections={navSections} />
+        <ShellFooterNav />
       </aside>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
@@ -227,6 +291,7 @@ export function AppShell({
               navSections={navSections}
               onNavigate={() => setDrawerOpen(false)}
             />
+            <ShellFooterNav onNavigate={() => setDrawerOpen(false)} />
           </div>
         </div>
       )}
