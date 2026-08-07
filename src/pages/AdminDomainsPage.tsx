@@ -57,6 +57,8 @@ const STATUS_TABS: { label: string; status: DomainStatus | undefined }[] = [
   { label: DOMAIN_STATUS_LABELS.VERIFYING, status: 'VERIFYING' },
   { label: DOMAIN_STATUS_LABELS.PENDING, status: 'PENDING' },
   { label: DOMAIN_STATUS_LABELS.FAILED, status: 'FAILED' },
+  // 해제 후 이름 예약이 남은 행도 REMOVED로 조회된다 (예약 중 축).
+  { label: DOMAIN_STATUS_LABELS.REMOVED, status: 'REMOVED' },
 ]
 
 const KINDS: DomainKind[] = ['AUTO', 'REQUESTED', 'CUSTOM']
@@ -377,8 +379,9 @@ function DomainDrawerContent({
       <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
         <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
         <p className="text-sm text-neutral-500">
-          커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기)를
-          수행합니다. 기관 계층은 자기 기관 VM의 도메인에만 적용됩니다.
+          커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
+          즉시 회수)를 수행합니다. 해제됨(이름 예약 중) 행의 강제 해제는 예약된
+          이름을 즉시 회수합니다. 기관 계층은 자기 기관 VM의 도메인에만 적용됩니다.
         </p>
         <div className="flex flex-wrap gap-2">
           {domain.kind === 'CUSTOM' && (
@@ -513,8 +516,9 @@ function ForceReleaseModal({
       onConfirm={() => release.mutate()}
     >
       <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
-        라우트가 즉시 제거되고 도메인은 소멸하며 커스텀 인증서는 폐기됩니다. 다시
-        공개하려면 사용자가 새로 접수해야 합니다. 감사 기록이 남습니다.
+        라우트가 즉시 제거되고 이름이 즉시 회수되어 다른 사용자가 사용할 수 있게
+        됩니다. 커스텀 인증서는 폐기됩니다. 다시 공개하려면 사용자가 새로 접수해야
+        합니다. 감사 기록이 남습니다.
       </Alert>
       {error && <Alert variant="danger">{error}</Alert>}
     </ConfirmNameModal>
