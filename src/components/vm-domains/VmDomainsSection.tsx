@@ -38,11 +38,10 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
   })
 
   const live = vm.publications
-  // 해제됐지만 이름 예약이 남은 행 — 예약이 없는 REMOVED(커스텀 해제 등)는
-  // 이미 끝난 이름이므로 보여줄 것이 없다.
-  const reserved = (domains.data?.content ?? []).filter(
-    (d) => d.status === 'REMOVED' && d.reservedUntil != null,
-  )
+  // 해제(예약 중) 판별 기준은 releasedAt이다 — 서버는 예약용 상태값을 두지 않아
+  // status는 ACTIVE로 남아 있을 수 있다. 살아있는 라우트가 있는 도메인만
+  // publications에 오므로, 목록 조회에서 releasedAt이 찍힌 행이 예약 절이 된다.
+  const reserved = (domains.data?.content ?? []).filter((d) => d.releasedAt != null)
 
   const connectable = CONNECTABLE_STATUSES.includes(vm.status)
   const empty = live.length === 0 && reserved.length === 0

@@ -23,10 +23,11 @@ export const NAME_RESERVATION_DAYS = 7
 let nextDomainId = 900
 
 /**
- * 해제됐지만 이름 예약이 남은 플랫폼 서브도메인 행 (status REMOVED +
- * reservedUntil). 예약 중에는 같은 VM이 같은 이름으로 다시 연결할 수 있고,
- * DELETE(즉시 반납)나 예약 만료로 이름이 풀린다. 커스텀 도메인은 해제 즉시
- * 이름이 풀리므로 여기 남지 않는다.
+ * 해제됐지만 이름 예약이 남은 플랫폼 서브도메인 행. 서버는 예약용 상태값을
+ * 두지 않는다 — status는 그대로 두고 releasedAt이 채워지는 것으로 예약을
+ * 표현하며, 언제 풀리는지는 reservedUntil이 알려 준다. 예약 중에는 같은 VM이
+ * 같은 이름으로 다시 연결할 수 있고, DELETE(즉시 반납)나 예약 만료로 이름이
+ * 풀린다. 커스텀 도메인은 해제 즉시 이름이 풀리므로 여기 남지 않는다.
  */
 let reservedDomains: DomainDetail[] = initialReservedDomains()
 
@@ -41,7 +42,8 @@ function initialReservedDomains(): DomainDetail[] {
       kind: 'REQUESTED',
       fqdn: 'shop-old.pusan.dev',
       rootDomain: 'pusan.dev',
-      status: 'REMOVED',
+      // 예약 중이어도 status는 예약 전 값 그대로다 (판별은 releasedAt).
+      status: 'ACTIVE',
       verifiedAt: null,
       createdAt: '2026-06-20T09:00:00+09:00',
       releasedAt,
@@ -510,7 +512,6 @@ export const publishingHandlers: RequestHandler[] = [
     }
     reservedDomains.push({
       ...pub.domain,
-      status: 'REMOVED',
       releasedAt: new Date(Date.now()).toISOString(),
       reservedUntil: new Date(
         Date.now() + NAME_RESERVATION_DAYS * 86_400_000,

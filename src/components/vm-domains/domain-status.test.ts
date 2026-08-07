@@ -18,10 +18,11 @@ const cert = (status: CertificateView['status']): CertificateView => ({
 })
 
 describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
-  test('해제됨 + 예약 중이면 다른 축과 무관하게 예약 중이다', () => {
+  test('releasedAt이 찍히면 다른 축과 무관하게 예약 중이다', () => {
     const fold = foldDomainStatus({
       kind: 'REQUESTED',
-      status: 'REMOVED',
+      // 서버는 예약용 상태값을 두지 않는다 — status는 ACTIVE로 남는다.
+      status: 'ACTIVE',
       releasedAt: '2026-08-06T09:00:00+09:00',
       reservedUntil: '2026-08-13T09:00:00+09:00',
       // 해제 전 남은 실패 축이 있어도 예약 중이 이긴다.
@@ -35,8 +36,18 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
     )
   })
 
-  test('해제됐지만 예약 만료를 모르면 날짜 없는 안내로 접힌다', () => {
+  test('releasedAt 없이 status만으로는 예약 중으로 접히지 않는다', () => {
+    // 판별 기준은 releasedAt 하나다 — REMOVED 값 자체는 예약을 뜻하지 않는다.
     const fold = foldDomainStatus({ kind: 'REQUESTED', status: 'REMOVED' })
+    expect(fold.key).not.toBe('reserved')
+  })
+
+  test('해제됐지만 예약 만료를 모르면 날짜 없는 안내로 접힌다', () => {
+    const fold = foldDomainStatus({
+      kind: 'REQUESTED',
+      status: 'ACTIVE',
+      releasedAt: '2026-08-06T09:00:00+09:00',
+    })
     expect(fold.key).toBe('reserved')
     expect(fold.hint).toContain('이름이 풀립니다')
   })

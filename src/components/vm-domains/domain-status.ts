@@ -50,8 +50,9 @@ const KST_MONTH_DAY = new Intl.DateTimeFormat('ko-KR', {
  * 위에서 첫 일치: 예약 중 → 실패 → 레코드 대기 → 연결 중 → 연결됨.
  */
 export function foldDomainStatus(axes: DomainAxes): FoldedDomainStatus {
-  // 해제된 도메인 — 트래픽을 받지 않으며, 예약이 남아 있으면 다시 연결할 수 있다.
-  if (axes.status === 'REMOVED') {
+  // 해제(예약 중) 판별은 status가 아니라 releasedAt이다 — 서버는 예약을 위한
+  // 상태값을 두지 않아, 예약 중인 행의 status는 ACTIVE로 남아 있을 수 있다.
+  if (axes.releasedAt != null) {
     return {
       key: 'reserved',
       label: '예약 중',
