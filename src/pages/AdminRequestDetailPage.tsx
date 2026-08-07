@@ -135,11 +135,14 @@ export function AdminRequestDetailPage() {
                 <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
                 <Field label="표시명">{data.displayName ?? '—'}</Field>
                 <Field label="희망 호스트명(슬러그)">{data.desiredSlug ?? '자동 생성'}</Field>
-                <Field label="서브도메인 선지정">
-                  {data.desiredSubdomain && data.rootDomain
-                    ? `${data.desiredSubdomain}.${data.rootDomain}`
-                    : '—'}
-                </Field>
+                {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
+                {data.desiredSubdomain && (
+                  <Field label="서브도메인 선지정">
+                    {data.rootDomain
+                      ? `${data.desiredSubdomain}.${data.rootDomain}`
+                      : data.desiredSubdomain}
+                  </Field>
+                )}
               </dl>
             </CardContent>
           </Card>

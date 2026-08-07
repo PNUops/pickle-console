@@ -78,8 +78,8 @@ export type ConsentInput = Schemas['ConsentInput']
 
 /* ─── HTTP 공개·도메인·인증서 ─── */
 export type PublicationView = Schemas['PublicationView']
-export type PublishRequest = Schemas['PublishRequest']
-export type UpdatePublicationRequest = Schemas['UpdatePublicationRequest']
+export type CreateVmDomainRequest = Schemas['CreateVmDomainRequest']
+export type UpdateDomainRequest = Schemas['UpdateDomainRequest']
 export type RouteView = Schemas['RouteView']
 export type CertificateView = Schemas['CertificateView']
 export type DomainSummary = Schemas['DomainSummaryView']
@@ -514,40 +514,32 @@ export function terminateTerminalSession(sessionId: string): Promise<void> {
 
 /* ─── HTTP 공개·도메인 (사용자) ─── */
 
-export function publishVm(
+/** VM에 도메인 연결 접수 — 플랫폼 서브도메인 또는 커스텀 도메인 (동시 지정 422). */
+export function createVmDomain(
   vmId: number,
-  body: PublishRequest,
+  body: CreateVmDomainRequest,
 ): Promise<PublicationView> {
   return guardNetwork(async () => {
-    const { data, error } = await api.POST('/vms/{vmId}/publish', {
+    const { data, error } = await api.POST('/vms/{vmId}/domains', {
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, 'HTTP 서비스 공개를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 연결을 접수하지 못했습니다.')
     return data
   })
 }
 
-export function updatePublication(
-  vmId: number,
-  body: UpdatePublicationRequest,
+/** 도메인별 공개 포트 변경 — 라우트 재적용은 비동기. */
+export function updateDomainPort(
+  domainId: number,
+  body: UpdateDomainRequest,
 ): Promise<PublicationView> {
   return guardNetwork(async () => {
-    const { data, error } = await api.PATCH('/vms/{vmId}/publication', {
-      params: { path: { vmId } },
+    const { data, error } = await api.PATCH('/domains/{domainId}', {
+      params: { path: { domainId } },
       body,
     })
-    if (!data) throw toApiError(error, '공개 설정 변경을 접수하지 못했습니다.')
-    return data
-  })
-}
-
-export function unpublishVm(vmId: number): Promise<MessageResponse> {
-  return guardNetwork(async () => {
-    const { data, error } = await api.DELETE('/vms/{vmId}/publication', {
-      params: { path: { vmId } },
-    })
-    if (!data) throw toApiError(error, '공개 해제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '공개 포트 변경을 접수하지 못했습니다.')
     return data
   })
 }
@@ -565,12 +557,16 @@ export function fetchDomains(params: {
   })
 }
 
+/**
+ * 도메인 해제 — 서빙 중이면 접근이 중단되고(플랫폼 서브도메인은 이름이 일정
+ * 기간 예약), 이미 예약 중인 행이면 이름을 즉시 반납한다.
+ */
 export function deleteDomain(domainId: number): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/domains/{domainId}', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 해제를 접수하지 못했습니다.')
     return data
   })
 }

@@ -6,6 +6,7 @@ export {
   CertificateStatusBadge,
   DdayBadge,
   DeliveryStatusBadge,
+  DomainConnectionBadge,
   DomainKindBadge,
   DomainStatusBadge,
   DriftKindBadge,

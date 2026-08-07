@@ -98,39 +98,13 @@ describe('VM 신청 위저드 — 단계 검증', () => {
     expect(screen.getByText('사용 목적을 입력해 주세요.')).toBeInTheDocument()
   })
 
-  test('서브도메인은 선택 사항이지만, 입력하면 형식·예약어·루트 도메인을 검사한다', async () => {
-    const user = userEvent.setup()
+  test('신청서에는 도메인(서브도메인·루트) 입력이 없다 — 도메인은 VM 생성 후 연결한다', async () => {
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
-    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
-    await user.selectOptions(screen.getByLabelText('기관'), '1')
+    await screen.findByLabelText('신청 그룹')
 
-    // 형식 위반
-    const subdomain = screen.getByLabelText('희망 서브도메인')
-    await user.type(subdomain, 'Bad_Sub')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText(/서브도메인은 소문자·숫자·하이픈만 사용해/)).toBeInTheDocument()
-
-    // 예약어
-    await user.clear(subdomain)
-    await user.type(subdomain, 'www')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(
-      screen.getByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
-    ).toBeInTheDocument()
-
-    // 서브도메인만 정하고 루트를 고르지 않으면 넘어갈 수 없다
-    await user.clear(subdomain)
-    await user.type(subdomain, 'myapp')
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('루트 도메인을 선택해 주세요.')).toBeInTheDocument()
-
-    // 비워 두면 통과한다 — 공개할 때 정하면 된다
-    await user.clear(subdomain)
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(
-      await screen.findByRole('button', { name: /Ubuntu 24\.04 LTS/ }),
-    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('희망 서브도메인')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('루트 도메인')).not.toBeInTheDocument()
   })
 })
 
@@ -298,8 +272,6 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
     expect(createdVmRequestBodies.at(-1)).toMatchObject({
       desiredSlug: null,
-      desiredSubdomain: null,
-      rootDomain: null,
       displayName: null,
     })
   })
@@ -316,8 +288,6 @@ describe('VM 신청 위저드 — 제출', () => {
     await user.selectOptions(screen.getByLabelText('기관'), '1')
     await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
     await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
-    await user.type(screen.getByLabelText('희망 서브도메인'), 'capstone-api')
-    await user.selectOptions(screen.getByLabelText('루트 도메인'), 'pusan.dev')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     // ② OS·사양 (프리셋 값 그대로)
@@ -341,7 +311,6 @@ describe('VM 신청 위저드 — 제출', () => {
     // 요약에 두 축이 각각 나온다.
     expect(screen.getByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
     expect(screen.getByText('기본형')).toBeInTheDocument()
-    expect(screen.getByText('capstone-api.pusan.dev')).toBeInTheDocument()
     expect(screen.getByText('capstone-api-server')).toBeInTheDocument()
     expect(screen.getByText('캡스톤 백엔드 서버')).toBeInTheDocument()
     expect(screen.getByText('2 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
@@ -376,8 +345,6 @@ describe('VM 신청 위저드 — 제출', () => {
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
       desiredSlug: 'capstone-api-server',
-      desiredSubdomain: 'capstone-api',
-      rootDomain: 'pusan.dev',
     })
   })
 })

@@ -39,9 +39,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: 'capstone-team3',
-      requestedRootDomain: 'pusan.dev',
-      publication: null,
+      publications: [],
       provisioning: {
         kind: 'PROVISION',
         status: 'RUNNING',
@@ -80,9 +78,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: true,
-      requestedSubdomain: 'algo-judge',
-      requestedRootDomain: 'pusan.dev',
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: null,
       createdAt: '2026-06-20T10:00:00+09:00',
@@ -113,9 +109,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: null,
       createdAt: '2026-06-21T10:00:00+09:00',
@@ -144,9 +138,7 @@ function initialVms(): VmDetail[] {
       endDate: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: {
         kind: 'PROVISION',
         status: 'NEEDS_ADMIN',
@@ -184,9 +176,7 @@ function initialVms(): VmDetail[] {
       endDate: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: null,
       createdAt: '2026-07-07T12:00:00+09:00',
@@ -215,9 +205,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-07-01',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: {
         kind: 'SELF',
@@ -255,9 +243,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-31',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: 'ai-team',
-      requestedRootDomain: 'pusan.dev',
-      publication: {
+      publications: [{
         fqdn: 'ai-team.pusan.dev',
         domain: {
           id: 21,
@@ -283,7 +269,7 @@ function initialVms(): VmDetail[] {
           notAfter: '2040-01-01T00:00:00+09:00',
           lastError: null,
         },
-      },
+      }],
       provisioning: null,
       deletion: null,
       createdAt: '2026-07-01T10:00:00+09:00',
@@ -313,9 +299,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: {
+      publications: [{
         fqdn: 'demo.example.com',
         domain: {
           id: 34,
@@ -350,15 +334,15 @@ function initialVms(): VmDetail[] {
           lastError: null,
         },
         certificate: null,
-      },
+      }],
       provisioning: null,
       deletion: null,
       createdAt: '2026-07-10T09:00:00+09:00',
       updatedAt: '2026-07-10T09:05:00+09:00',
     },
     {
-      // 커스텀 도메인 검증 완료(ACTIVE)했지만 라우트 적용 실패(FAILED) — nginx 오류 노출.
-      // 인증서(LE)는 발급 완료, 만료 임박(12일).
+      // 도메인 2개 서빙 — 플랫폼 서브도메인(정상) + 커스텀(검증 완료지만 라우트
+      // 적용 실패, nginx 오류 노출). 커스텀 인증서(LE)는 발급 완료, 만료 임박.
       id: 63,
       name: 'shop-app',
       hostname: 'shop-app',
@@ -381,9 +365,33 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-20',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: 'shop-app',
-      requestedRootDomain: 'pusan.dev',
-      publication: {
+      publications: [{
+        fqdn: 'shop-app.pusan.dev',
+        domain: {
+          id: 30,
+          vmId: 63,
+          kind: 'REQUESTED',
+          fqdn: 'shop-app.pusan.dev',
+          rootDomain: 'pusan.dev',
+          status: 'ACTIVE',
+          verifiedAt: null,
+          createdAt: '2026-07-01T11:00:00+09:00',
+          verification: null,
+        },
+        route: {
+          targetPort: 8080,
+          protocol: 'HTTP',
+          status: 'APPLIED',
+          appliedAt: '2026-07-01T11:01:00+09:00',
+          lastError: null,
+        },
+        certificate: {
+          kind: 'ORIGIN_CA_WILDCARD',
+          status: 'ACTIVE',
+          notAfter: '2040-01-01T00:00:00+09:00',
+          lastError: null,
+        },
+      }, {
         fqdn: 'shop.example.com',
         domain: {
           id: 35,
@@ -423,7 +431,7 @@ function initialVms(): VmDetail[] {
           notAfter: '2026-07-24T00:00:00+09:00',
           lastError: null,
         },
-      },
+      }],
       provisioning: null,
       deletion: null,
       createdAt: '2026-07-01T12:00:00+09:00',
@@ -454,9 +462,7 @@ function initialVms(): VmDetail[] {
       endDate: '2026-12-31',
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: {
+      publications: [{
         fqdn: 'api.example.org',
         domain: {
           id: 36,
@@ -496,7 +502,7 @@ function initialVms(): VmDetail[] {
           notAfter: null,
           lastError: "Let's Encrypt 발급 실패: rateLimited (재시도 대기)",
         },
-      },
+      }],
       provisioning: null,
       deletion: null,
       createdAt: '2026-07-02T12:00:00+09:00',
@@ -528,9 +534,7 @@ function initialVms(): VmDetail[] {
       expiryStoppedAt: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: null,
       createdAt: '2026-04-14T10:00:00+09:00',
@@ -561,9 +565,7 @@ function initialVms(): VmDetail[] {
       expiryStoppedAt: new Date().toISOString(),
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: null,
       createdAt: '2026-03-15T10:00:00+09:00',
@@ -594,9 +596,7 @@ function initialVms(): VmDetail[] {
       expiryStoppedAt: null,
       sshGatewayBlocked: false,
       passwordAvailable: false,
-      requestedSubdomain: null,
-      requestedRootDomain: null,
-      publication: null,
+      publications: [],
       provisioning: null,
       deletion: null,
       createdAt: '2026-05-14T10:00:00+09:00',
@@ -704,7 +704,7 @@ export function vmSettingsOf(vm: VmDetail): VmSettingView[] {
 export const VM_RUNNING_AFTER_FETCHES = 2
 let detailFetchCounts: Record<number, number> = {}
 
-/** 플랫폼 서브도메인 라우트가 PENDING→APPLIED로 전이하기까지의 GET 횟수 (폴링 테스트). */
+/** 라우트가 PENDING→APPLIED로 전이하기까지의 GET 횟수 — 도메인별 계수 (폴링 테스트). */
 export const ROUTE_APPLIED_AFTER_FETCHES = 2
 let routeFetchCounts: Record<number, number> = {}
 
@@ -786,14 +786,19 @@ export const vmHandlers: RequestHandler[] = [
     }
     // 라우트 적용이 진행 중인 공개는 비동기 적용을 흉내내 PENDING→APPLIED로 수렴.
     // 검증 전(비ACTIVE) 커스텀 도메인은 소유권 검증이 끝나야 라우트가 적용되므로
-    // 여기서 전이시키지 않는다 (revive된 ACTIVE 커스텀은 즉시 적용 대기 — 수렴 대상).
-    const route = vm.publication?.route
-    const domain = vm.publication?.domain
-    if (route?.status === 'PENDING' && (domain?.kind !== 'CUSTOM' || domain.status === 'ACTIVE')) {
-      const count = (routeFetchCounts[vm.id] = (routeFetchCounts[vm.id] ?? 0) + 1)
-      if (count >= ROUTE_APPLIED_AFTER_FETCHES) {
-        route.status = 'APPLIED'
-        route.appliedAt = '2026-07-12T09:05:00+09:00'
+    // 여기서 전이시키지 않는다. 도메인별로 따로 계수한다 (다중 도메인).
+    for (const pub of vm.publications) {
+      const route = pub.route
+      if (
+        route?.status === 'PENDING' &&
+        (pub.domain.kind !== 'CUSTOM' || pub.domain.status === 'ACTIVE')
+      ) {
+        const count = (routeFetchCounts[pub.domain.id] =
+          (routeFetchCounts[pub.domain.id] ?? 0) + 1)
+        if (count >= ROUTE_APPLIED_AFTER_FETCHES) {
+          route.status = 'APPLIED'
+          route.appliedAt = '2026-07-12T09:05:00+09:00'
+        }
       }
     }
     return HttpResponse.json(vm, { status: 200 })

@@ -35,8 +35,8 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   CANCEL_SCHEDULED_DELETE: '삭제 취소',
   FORCE_DELETE: '강제 삭제 접수',
   REINSTALL: '재설치',
-  PUBLISH: 'HTTP 공개',
-  UNPUBLISH: 'HTTP 공개 해제',
+  PUBLISH: '도메인 연결',
+  UNPUBLISH: '도메인 해제',
   PERIOD_UPDATE: '사용 기간 변경',
   PORT_FORWARD_CREATE: '포트포워딩 생성',
   PORT_FORWARD_DELETE: '포트포워딩 삭제',
@@ -53,10 +53,11 @@ export type RouteStatus = components['schemas']['RouteStatus']
 export type CertificateKind = components['schemas']['CertificateKind']
 export type CertificateStatus = components['schemas']['CertificateStatus']
 
+/** 사용자 관점 이분법(플랫폼/커스텀)을 따른다 — AUTO는 폐지된 자동 생성의 잔재 표기. */
 export const DOMAIN_KIND_LABELS: Record<DomainKind, string> = {
-  AUTO: '자동 서브도메인',
-  REQUESTED: '희망 서브도메인',
-  CUSTOM: '커스텀 도메인',
+  AUTO: '플랫폼 (자동)',
+  REQUESTED: '플랫폼',
+  CUSTOM: '커스텀',
 }
 
 export const DOMAIN_STATUS_LABELS: Record<DomainStatus, string> = {

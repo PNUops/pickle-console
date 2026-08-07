@@ -57,8 +57,6 @@ const FIELD_LABELS: Record<string, string> = {
   reqEndDate: '종료일',
   displayName: '표시명',
   desiredSlug: '호스트명(슬러그)',
-  desiredSubdomain: '서브도메인',
-  rootDomain: '루트 도메인',
 }
 
 interface WizardState {
@@ -77,8 +75,6 @@ interface WizardState {
   reqEndDate: string
   displayName: string
   desiredSlug: string
-  desiredSubdomain: string
-  rootDomain: string
 }
 
 const INITIAL_STATE: WizardState = {
@@ -97,8 +93,6 @@ const INITIAL_STATE: WizardState = {
   reqEndDate: '',
   displayName: '',
   desiredSlug: '',
-  desiredSubdomain: '',
-  rootDomain: '',
 }
 
 type FieldErrors = Partial<Record<string, string>>
@@ -179,15 +173,6 @@ export function NewRequestPage() {
         } else if (options.data?.reservedSubdomains.includes(state.desiredSlug)) {
           next.desiredSlug = `'${state.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
         }
-      }
-      if (state.desiredSubdomain) {
-        if (!SUBDOMAIN_RE.test(state.desiredSubdomain)) {
-          next.desiredSubdomain =
-            '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
-        } else if (options.data?.reservedSubdomains.includes(state.desiredSubdomain)) {
-          next.desiredSubdomain = `'${state.desiredSubdomain}'은(는) 예약된 서브도메인이라 사용할 수 없습니다.`
-        }
-        if (!state.rootDomain) next.rootDomain = '루트 도메인을 선택해 주세요.'
       }
     }
     if (index === 1) {
@@ -305,9 +290,6 @@ export function NewRequestPage() {
     reqEndDate: state.reqEndDate || null,
     displayName: state.displayName.trim() || null,
     desiredSlug: state.desiredSlug || null,
-    desiredSubdomain: state.desiredSubdomain || null,
-    // 루트 도메인은 서브도메인을 선지정했을 때만 의미가 있다.
-    rootDomain: state.desiredSubdomain ? state.rootDomain : null,
   })
 
   const onSubmit = () => {
@@ -386,7 +368,7 @@ export function NewRequestPage() {
               </FormField>
 
               <div className="space-y-4 border-t border-neutral-100 pt-4">
-                <h2 className="text-sm font-semibold text-neutral-800">VM 이름·주소</h2>
+                <h2 className="text-sm font-semibold text-neutral-800">VM 이름</h2>
                 <FormField
                   label="표시명"
                   error={errors.displayName}
@@ -413,33 +395,6 @@ export function NewRequestPage() {
                     maxLength={40}
                   />
                 </FormField>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField
-                    label="희망 서브도메인"
-                    error={errors.desiredSubdomain}
-                    description="선택 사항 — 지금 정하지 않으면 VM 생성 후 공개할 때 지정합니다. (소문자·숫자·하이픈, 3~40자)"
-                  >
-                    <Input
-                      value={state.desiredSubdomain}
-                      onChange={(event) => update({ desiredSubdomain: event.target.value })}
-                      placeholder="capstone-team3"
-                      maxLength={40}
-                    />
-                  </FormField>
-                  <FormField label="루트 도메인" error={errors.rootDomain}>
-                    <Select
-                      value={state.rootDomain}
-                      onChange={(event) => update({ rootDomain: event.target.value })}
-                    >
-                      <option value="">루트 도메인 선택</option>
-                      {options.data?.allowedRootDomains.map((domain) => (
-                        <option key={domain} value={domain}>
-                          {domain}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
               </div>
             </>
           )}
@@ -719,12 +674,6 @@ function SummaryTable({
       state.reqStartDate || state.reqEndDate
         ? `${state.reqStartDate || '미지정'} ~ ${state.reqEndDate || '미지정'}`
         : '미지정',
-    ],
-    [
-      '서브도메인',
-      state.desiredSubdomain && state.rootDomain
-        ? `${state.desiredSubdomain}.${state.rootDomain}`
-        : '공개할 때 지정',
     ],
   ]
 

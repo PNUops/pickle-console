@@ -64,7 +64,8 @@ import {
 } from '../lib/status'
 import { GROUP_ROLE_LABELS, type GroupMemberRole } from '../lib/labels'
 import { SshUsageGuide } from '../components/SshUsageGuide'
-import { VmPublishSection } from '../components/VmPublishSection'
+import { VmDomainsSection } from '../components/vm-domains/VmDomainsSection'
+import { domainPollRate } from '../components/vm-domains/domain-status'
 import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
@@ -119,31 +120,18 @@ export function VmDetailPage() {
       const activeTask =
         data.provisioning != null &&
         ACTIVE_TASK_STATUSES.includes(data.provisioning.status)
-      // 공개 라우트 적용·도메인 검증·인증서 발급도 비동기이므로 진행 중이면 폴링한다.
-      // 시스템이 곧 수렴시키는 전이(라우트 적용 대기, 인증서 갱신)는 빠르게,
-      // 사용자 DNS 조치를 기다리는 상태(커스텀 도메인 검증 대기·실패)는 완만하게.
-      const pub = data.publication
-      const route = pub?.route ?? null
-      // 검증이 끝난(또는 검증이 필요 없는) 공개의 라우트가 아직 없거나 PENDING이면
-      // proxy 적용이 진행 중이다 — 접수 직후 과도기(route 미생성)도 포함.
-      const applying =
-        pub != null &&
-        (route == null || route.status === 'PENDING') &&
-        (pub.domain.kind !== 'CUSTOM' || pub.domain.status === 'ACTIVE')
-      const systemProgress =
-        pub != null && (applying || pub.certificate?.status === 'RENEWING')
-      // 커스텀 도메인이 검증을 통과하지 못한 상태 — DNS 레코드 추가·전파라는
-      // 사용자 조치를 기다리므로 무한 3초 폴링 대신 느린 주기로 갱신한다.
-      const awaitingUserDns =
-        pub != null &&
-        pub.domain.kind === 'CUSTOM' &&
-        (pub.domain.status === 'PENDING' ||
-          pub.domain.status === 'VERIFYING' ||
-          pub.domain.status === 'FAILED')
-      if (POLLING_VM_STATUSES.includes(data.status) || activeTask || systemProgress) {
+      // 라우트 적용·도메인 검증·인증서 발급도 비동기이므로 진행 중이면 폴링한다.
+      // 어느 도메인이든 시스템이 곧 수렴시키는 전이(라우트 적용 대기, 인증서
+      // 발급·갱신)가 있으면 빠르게, 사용자 DNS 조치 대기만 남았으면 완만하게.
+      const domainRate = domainPollRate(data.publications)
+      if (
+        POLLING_VM_STATUSES.includes(data.status) ||
+        activeTask ||
+        domainRate === 'fast'
+      ) {
         return POLL_MS
       }
-      return awaitingUserDns ? SLOW_POLL_MS : false
+      return domainRate === 'slow' ? SLOW_POLL_MS : false
     },
   })
 
@@ -269,7 +257,7 @@ export function VmDetailPage() {
       </TabPanel>
 
       <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">
-        <VmPublishSection vm={data} />
+        <VmDomainsSection vm={data} />
         <VmPortForwardingSection vm={data} />
       </TabPanel>
 
