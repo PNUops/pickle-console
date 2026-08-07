@@ -28,6 +28,7 @@ import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
+import { DocsPage } from './pages/DocsPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GroupDetailPage } from './pages/GroupDetailPage'
 import { GroupsPage } from './pages/GroupsPage'
@@ -93,6 +94,8 @@ function App() {
       </Route>
       <Route element={<PublicLayout />}>
         <Route path="terms/:docType" element={<TermsPage />} />
+        {/* 사용자 문서 — 본문은 준비 중이고, 사이드바 링크가 가리킬 경로만 먼저 둔다. */}
+        <Route path="docs" element={<DocsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route

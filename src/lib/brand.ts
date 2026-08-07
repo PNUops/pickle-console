@@ -8,3 +8,12 @@ export const SERVICE_NAME = 'PNU Cloud'
 
 /** 푸터 식별 줄 — 통용명과 한국어 정식명의 병기(허용된 병행 표기 자리). */
 export const SERVICE_TAGLINE = 'PNU Cloud — 부산대학교 클라우드 플랫폼'
+
+/** 의견 접수 창구(외부 게시판) — 콘솔에서는 항상 새 탭으로 연다. */
+export const FEEDBACK_URL = 'https://feedback.pnuops.com/'
+
+/** 1:1 문의 창구 — 카카오 채널 채팅(외부 서비스, 새 탭). */
+export const CONTACT_URL = 'https://pf.kakao.com/_xmxjxmUn/chat'
+
+/** 사용법 문서 경로(콘솔 내부 라우트). 본문은 준비 중. */
+export const DOCS_PATH = '/docs'

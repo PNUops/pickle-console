@@ -47,3 +47,31 @@ describe('모바일 드로어 내비게이션', () => {
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
   })
 })
+
+describe('사이드바 하단 참고 링크', () => {
+  test('가이드는 콘솔 내부 경로로, 문의·의견은 새 탭 외부 링크로 걸린다', async () => {
+    renderConsole()
+
+    const guide = await screen.findByRole('link', { name: '사용 가이드' })
+    expect(guide).toHaveAttribute('href', '/docs')
+    expect(guide).not.toHaveAttribute('target')
+
+    for (const name of ['1:1 문의하기', '개선 의견 남기기']) {
+      const link = screen.getByRole('link', { name: new RegExp(name) })
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link.getAttribute('href')).toMatch(/^https:\/\//)
+    }
+  })
+
+  test('모바일 드로어에도 같은 링크가 실린다', async () => {
+    renderConsole()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: '메뉴 열기' }))
+    const drawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
+    expect(within(drawer).getByRole('link', { name: '사용 가이드' })).toBeInTheDocument()
+    expect(
+      within(drawer).getByRole('link', { name: /개선 의견 남기기/ }),
+    ).toBeInTheDocument()
+  })
+})
