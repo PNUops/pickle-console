@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchDomains, type DomainSummary, type VmDetail } from '../../api/queries'
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { useVmGroupRole } from '../vm-group-role'
-import { AddPlatformSubdomainModal } from './AddPlatformSubdomainModal'
+import { AddPlatformSubdomainDrawer } from './AddPlatformSubdomainDrawer'
 import { ConnectCustomDomainDrawer } from './ConnectCustomDomainDrawer'
 import { DomainDrawer } from './DomainDrawer'
 import { DomainRow } from './DomainRow'
@@ -165,8 +165,14 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
                       live={false}
                       reservedUntil={domain.reservedUntil}
                       onDetail={() => setDrawerId(domain.id)}
+                      // 다시 연결은 플랫폼 이름 전용이다: 예약 절에 남은 커스텀
+                      // 행은 즉시 회수 대상 잔재라, 플랫폼 추가 모달에 전체
+                      // 주소를 서브도메인으로 채우는 오동작만 만든다. 커스텀은
+                      // '내 도메인 연결'로 다시 잇는다.
                       onReconnect={
-                        canMutate && connectable ? () => reconnect(domain) : undefined
+                        canMutate && connectable && domain.kind !== 'CUSTOM'
+                          ? () => reconnect(domain)
+                          : undefined
                       }
                     />
                   ))}
@@ -187,7 +193,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
       />
 
       {platformModal && (
-        <AddPlatformSubdomainModal
+        <AddPlatformSubdomainDrawer
           vm={vm}
           open
           onClose={() => setPlatformModal(null)}

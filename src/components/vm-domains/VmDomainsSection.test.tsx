@@ -111,7 +111,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 })
 
-describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
+describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => {
   test('이름·루트·포트를 접수하면 행이 생기고 폴링으로 연결됨에 수렴한다', async () => {
     const user = userEvent.setup()
     renderVm(57)
@@ -130,11 +130,12 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
     const port = within(modal).getByLabelText('공개 포트')
     await user.clear(port)
     await user.type(port, '8080')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
 
-    // 토스트로 접수를 확인하고 모달은 닫힌다.
+    // 커스텀 연결과 같은 모양으로, 같은 드로어가 접수된 도메인 상세로 전환된다.
+    const detail = await screen.findByRole('dialog', { name: 'web-lab.pusan.dev' })
     expect(
-      await screen.findByText('web-lab.pusan.dev 연결을 접수했습니다. 잠시 후 적용됩니다.'),
+      within(detail).getByText(/연결을 접수했습니다\. 적용이 끝나면/),
     ).toBeInTheDocument()
     // 행이 생기고, 라우트 PENDING → 폴링 → APPLIED로 연결됨에 수렴한다.
     expect(
@@ -156,22 +157,23 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
 
     const modal = await screen.findByRole('dialog', { name: '플랫폼 서브도메인 추가' })
     await user.type(within(modal).getByLabelText('서브도메인'), 'www')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
     expect(
       await within(modal).findByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
     ).toBeInTheDocument()
   })
 
-  test('상한 초과 409는 안내 문구로 흡수한다 (상한값은 서버만 안다)', async () => {
+  test('상한 초과 409는 서버 안내(상한값·행동 지침)를 그대로 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
       http.post('*/api/v1/vms/57/domains', () =>
         HttpResponse.json(
           {
             type: 'about:blank',
-            title: '플랫폼 서브도메인 상한에 도달했습니다',
+            title: '플랫폼 서브도메인 개수 제한에 도달했습니다',
             status: 409,
-            detail: '플랫폼 서브도메인은 VM당 3개까지 연결할 수 있습니다.',
+            detail:
+              '이 VM에는 플랫폼 서브도메인을 최대 3개까지 연결할 수 있습니다. 기존 서브도메인을 해제하거나 커스텀 도메인을 사용해 주세요.',
             instance: '/api/v1/vms/57/domains',
             code: 'DOMAIN_LIMIT_REACHED',
           },
@@ -188,11 +190,13 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
     )
     const modal = await screen.findByRole('dialog', { name: '플랫폼 서브도메인 추가' })
     await user.type(within(modal).getByLabelText('서브도메인'), 'one-more')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
 
+    // 상한값(몇 개까지)과 다음 행동(해제 또는 커스텀 도메인)은 서버 detail에만
+    // 있다 — 자체 문구로 덮으면 사용자가 무엇을 지워야 하는지 알 수 없다.
     expect(
       await within(modal).findByText(
-        '플랫폼 서브도메인 상한에 도달해 연결을 접수하지 못했습니다.',
+        '이 VM에는 플랫폼 서브도메인을 최대 3개까지 연결할 수 있습니다. 기존 서브도메인을 해제하거나 커스텀 도메인을 사용해 주세요.',
       ),
     ).toBeInTheDocument()
   })
@@ -369,7 +373,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 })
 
 describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
-  test('다시 연결 — 예약된 이름이 채워진 추가 모달을 거쳐 서빙 목록으로 돌아온다', async () => {
+  test('다시 연결 — 예약된 이름이 채워진 추가 드로어를 거쳐 서빙 목록으로 돌아온다', async () => {
     const user = userEvent.setup()
     renderVm(63)
 
@@ -380,10 +384,10 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
     const modal = await screen.findByRole('dialog', { name: '플랫폼 서브도메인 추가' })
     // 예약된 이름·루트가 채워져 있고, 포트만 확인하면 된다.
     expect(within(modal).getByLabelText('서브도메인')).toHaveValue('shop-old')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
 
     expect(
-      await screen.findByText('shop-old.pusan.dev 연결을 접수했습니다. 잠시 후 적용됩니다.'),
+      await screen.findByRole('dialog', { name: 'shop-old.pusan.dev' }),
     ).toBeInTheDocument()
     // 예약 절에서 빠지고 서빙 목록에 링크로 나타난다.
     expect(
@@ -392,6 +396,45 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
     await waitFor(() =>
       expect(within(card).queryByText('예약 중', { selector: 'h3' })).not.toBeInTheDocument(),
     )
+  })
+
+  test('예약 절의 커스텀 잔재에는 다시 연결이 없다 (플랫폼 이름 전용)', async () => {
+    // 해제 시각이 남은 커스텀 행은 즉시 회수 대상 잔재다. 다시 연결 버튼은
+    // 플랫폼 추가 모달을 열어 전체 주소를 서브도메인 칸에 넣는 오동작만
+    // 만들므로, 커스텀 행에는 버튼 자체를 내지 않는다.
+    server.use(
+      http.get('*/api/v1/domains', () =>
+        HttpResponse.json({
+          content: [
+            {
+              id: 901,
+              vmId: 63,
+              kind: 'CUSTOM',
+              fqdn: 'legacy.example.com',
+              rootDomain: null,
+              status: 'PENDING',
+              verifiedAt: null,
+              createdAt: '2026-06-01T00:00:00+09:00',
+              releasedAt: '2026-07-11T00:00:00+09:00',
+              reservedUntil: '2026-07-11T00:00:00+09:00',
+            },
+          ],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+    )
+    renderVm(63)
+
+    await screen.findByRole('heading', { name: 'shop-app' })
+    const card = await domainsCard()
+    await within(card).findByText('legacy.example.com')
+    expect(within(card).getByText('예약 중', { selector: 'h3' })).toBeInTheDocument()
+    expect(
+      within(card).queryByRole('button', { name: '다시 연결' }),
+    ).not.toBeInTheDocument()
   })
 
   test('즉시 반납 — 드로어에서 확인을 거쳐 이름이 바로 풀린다', async () => {

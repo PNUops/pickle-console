@@ -31,6 +31,25 @@ let nextDomainId = 900
  */
 let reservedDomains: DomainDetail[] = initialReservedDomains()
 
+/**
+ * REMOVED 행. 실서버는 반납·회수·강제 해제 때 행을 지우지 않고 REMOVED로
+ * 바꾸며(releasedAt은 함께 지운다 — REMOVED 행은 아무것도 예약하지 않는다),
+ * 목록에서는 기본적으로 숨기고 status=REMOVED 명시 요청에만 노출한다.
+ * mock이 행을 배열에서 빼 버리면 이 목록 규칙이 가려진다.
+ */
+let removedDomains: DomainDetail[] = []
+
+/** 행을 REMOVED 묘비로 바꿔 보관한다 (실서버의 retire와 같은 모양). */
+function retireDomain(d: DomainDetail) {
+  removedDomains.push({
+    ...d,
+    status: 'REMOVED',
+    releasedAt: null,
+    reservedUntil: null,
+    verification: null,
+  })
+}
+
 /** 예약 중 픽스처 — D-day 표시는 실행 시점 기준이라 만료를 동적으로 만든다. */
 function initialReservedDomains(): DomainDetail[] {
   const releasedAt = new Date(Date.now() - 86_400_000).toISOString()
@@ -56,6 +75,7 @@ function initialReservedDomains(): DomainDetail[] {
 export function resetPublishingFixtures() {
   nextDomainId = 900
   reservedDomains = initialReservedDomains()
+  removedDomains = []
 }
 
 /* ─── org 이름 조회 (관리자 목록의 기관 맥락) ─── */
@@ -124,9 +144,9 @@ const fqdnTaken = (instance: string) =>
 const limitReached = (instance: string) =>
   problemResponse({
     type: 'about:blank',
-    title: '플랫폼 서브도메인 상한에 도달했습니다',
+    title: '플랫폼 서브도메인 개수 제한에 도달했습니다',
     status: 409,
-    detail: `플랫폼 서브도메인은 VM당 ${PLATFORM_DOMAIN_LIMIT}개까지 연결할 수 있습니다. 기존 서브도메인을 해제한 뒤 다시 시도해 주세요.`,
+    detail: `이 VM에는 플랫폼 서브도메인을 최대 ${PLATFORM_DOMAIN_LIMIT}개까지 연결할 수 있습니다. 기존 서브도메인을 해제하거나 커스텀 도메인을 사용해 주세요.`,
     instance,
     code: 'DOMAIN_LIMIT_REACHED',
   })
@@ -439,9 +459,11 @@ export const publishingHandlers: RequestHandler[] = [
     const items = [
       ...livePublications().map(({ pub }) => toDomainSummary(pub.domain)),
       ...reservedDomains.map(toDomainSummary),
+      ...removedDomains.map(toDomainSummary),
     ]
       .filter((d) => !vmId || d.vmId === Number(vmId))
-      .filter((d) => !status || d.status === status)
+      // 실서버 규칙: REMOVED는 기본 숨김, status=REMOVED 명시 때만 노출.
+      .filter((d) => (status ? d.status === status : d.status !== 'REMOVED'))
       .sort((a, b) => b.id - a.id)
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
@@ -451,6 +473,7 @@ export const publishingHandlers: RequestHandler[] = [
     const domain =
       findLive(domainId)?.pub.domain ??
       reservedDomains.find((d) => d.id === domainId) ??
+      removedDomains.find((d) => d.id === domainId) ??
       null
     if (!domain) return notFound()
     return HttpResponse.json(domain satisfies DomainDetail, { status: 200 })
@@ -483,12 +506,13 @@ export const publishingHandlers: RequestHandler[] = [
   /* ─── 해제 / 즉시 반납 ─── */
   http.delete('*/api/v1/domains/:domainId', ({ params }) => {
     const domainId = Number(params.domainId)
-    // 이미 예약 중인 행이면 즉시 반납 — 이름이 바로 풀린다.
+    // 이미 예약 중인 행이면 즉시 반납 — 행은 REMOVED로 남고 이름이 바로 풀린다.
     const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
     if (reservedIdx >= 0) {
       const [returned] = reservedDomains.splice(reservedIdx, 1)
+      retireDomain(returned!)
       return HttpResponse.json(
-        { message: `${returned.fqdn} 이름을 반납했습니다. 이름이 즉시 풀립니다.` },
+        { message: `${returned!.fqdn} 이름을 반납했습니다. 이름이 즉시 풀립니다.` },
         { status: 202 },
       )
     }
@@ -505,6 +529,8 @@ export const publishingHandlers: RequestHandler[] = [
       createdAt: '2026-07-12T09:20:00+09:00',
     })
     if (pub.domain.kind === 'CUSTOM') {
+      // 커스텀은 예약 없이 즉시 회수 — REMOVED 묘비만 남는다.
+      retireDomain(pub.domain)
       return HttpResponse.json(
         { message: `${pub.fqdn} 연결을 해제했습니다.` },
         { status: 202 },
@@ -586,10 +612,12 @@ export const publishingHandlers: RequestHandler[] = [
     const items = [
       ...livePublications().map(({ vm, pub }) => toAdminDomain(vm, pub)),
       ...reservedDomains.map(reservedToAdminDomain),
+      ...removedDomains.map(reservedToAdminDomain),
     ]
       .filter((d) => !orgId || d.orgId === Number(orgId))
       .filter((d) => !kind || d.kind === kind)
-      .filter((d) => !status || d.status === status)
+      // 실서버 규칙: REMOVED는 기본 숨김, status=REMOVED 명시 때만 노출.
+      .filter((d) => (status ? d.status === status : d.status !== 'REMOVED'))
       .sort((a, b) => b.id - a.id)
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
@@ -621,10 +649,11 @@ export const publishingHandlers: RequestHandler[] = [
   /* ─── 관리자 사후 개입 ─── */
   http.post('*/api/v1/admin/domains/:domainId/force-release', ({ params }) => {
     const domainId = Number(params.domainId)
-    // 예약 중 행의 강제 해제 = 즉시 반납.
+    // 예약 중 행의 강제 해제 = 즉시 반납 (행은 REMOVED로 남는다).
     const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
     if (reservedIdx >= 0) {
-      reservedDomains.splice(reservedIdx, 1)
+      const [reserved] = reservedDomains.splice(reservedIdx, 1)
+      retireDomain(reserved!)
       return HttpResponse.json(
         { message: '예약된 이름을 즉시 회수했습니다.' },
         { status: 200 },
@@ -632,6 +661,7 @@ export const publishingHandlers: RequestHandler[] = [
     }
     const found = findLive(domainId)
     if (!found) {
+      // 이미 REMOVED인 행도 실서버처럼 같은 404로 가린다.
       return problemResponse({
         type: 'about:blank',
         title: '리소스를 찾을 수 없습니다',
@@ -640,10 +670,11 @@ export const publishingHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     }
-    // 강제 해제는 이름을 즉시 회수한다 — 예약을 남기지 않는다.
+    // 강제 해제는 이름을 즉시 회수한다 — 예약 없이 REMOVED 묘비만 남는다.
     found.vm.publications = found.vm.publications.filter(
       (p) => p.domain.id !== domainId,
     )
+    retireDomain(found.pub.domain)
     return HttpResponse.json(
       { message: '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 라우트 제거가 곧 적용됩니다.' },
       { status: 200 },
