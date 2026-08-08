@@ -20,10 +20,12 @@ import { CertificatesSection } from '../components/CertificatesSection'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CertificateStatusBadge,
   ConfirmNameModal,
+  DdayBadge,
   DomainKindBadge,
   DomainStatusBadge,
   Drawer,
@@ -41,7 +43,7 @@ import {
   TR,
 } from '../components/ui'
 import { cn } from '../lib/cn'
-import { formatDateTime } from '../lib/format'
+import { formatDateTime, kstDateString } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
 
 const PAGE_SIZE = 20
@@ -214,6 +216,17 @@ export function AdminDomainsPage() {
                       {isSysAdmin && <TD>{domain.orgName}</TD>}
                       <TD>
                         <DomainStatusBadge status={domain.status} />
+                        {/* 예약 판별은 status가 아니라 releasedAt이다 — 해제된
+                            행의 status는 ACTIVE로 남아, 이 배지가 없으면
+                            "라우트 없는 ACTIVE"와 구분되지 않는다. */}
+                        {domain.releasedAt && (
+                          <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                            <Badge variant="neutral">예약 중</Badge>
+                            {domain.reservedUntil && (
+                              <DdayBadge endDate={kstDateString(new Date(domain.reservedUntil))} />
+                            )}
+                          </span>
+                        )}
                       </TD>
                       <TD>
                         {domain.routeStatus ? (
@@ -325,7 +338,29 @@ function DomainDrawerContent({
           value={domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
         />
         <Field label="등록일" value={formatDateTime(domain.createdAt)} />
+        {domain.releasedAt && (
+          <>
+            <Field label="해제 시각" value={formatDateTime(domain.releasedAt)} />
+            <div>
+              <dt className="text-neutral-500">예약 만료</dt>
+              <dd className="flex items-center gap-2 font-medium text-neutral-900">
+                {domain.reservedUntil ? formatDateTime(domain.reservedUntil) : '—'}
+                {domain.reservedUntil && (
+                  <DdayBadge endDate={kstDateString(new Date(domain.reservedUntil))} />
+                )}
+              </dd>
+            </div>
+          </>
+        )}
       </dl>
+
+      {domain.releasedAt && (
+        <Alert variant="info">
+          해제된 뒤 이 VM에 이름만 예약된 상태입니다 — 트래픽은 받지 않습니다. 예약이
+          만료되면 이름이 자동으로 회수되고, 그 전에는 소유 그룹이 같은 이름으로 다시
+          연결할 수 있습니다. 이름을 먼저 풀어야 한다면 아래 강제 해제를 씁니다.
+        </Alert>
+      )}
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">라우트</h3>
@@ -513,9 +548,21 @@ function ForceReleaseModal({
       onConfirm={() => release.mutate()}
     >
       <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
-        라우트가 즉시 제거되고 이름이 즉시 회수되어 다른 사용자가 사용할 수 있게
-        됩니다. 커스텀 인증서는 폐기됩니다. 다시 공개하려면 사용자가 새로 접수해야
-        합니다. 감사 기록이 남습니다.
+        {domain.releasedAt ? (
+          // 예약 중인 행에는 내릴 라우트가 없다 — 남은 효과는 예약 만료를
+          // 기다리지 않고 이름을 지금 푸는 것이다.
+          <>
+            예약이 만료되기를 기다리지 않고 이름이 즉시 회수되어 다른 사용자가 사용할
+            수 있게 됩니다. 소유 그룹은 이 이름으로 다시 연결할 수 없게 됩니다. 감사
+            기록이 남습니다.
+          </>
+        ) : (
+          <>
+            라우트가 즉시 제거되고 이름이 즉시 회수되어 다른 사용자가 사용할 수 있게
+            됩니다. 커스텀 인증서는 폐기됩니다. 다시 공개하려면 사용자가 새로 접수해야
+            합니다. 감사 기록이 남습니다.
+          </>
+        )}
       </Alert>
       {error && <Alert variant="danger">{error}</Alert>}
     </ConfirmNameModal>

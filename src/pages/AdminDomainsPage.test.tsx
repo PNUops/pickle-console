@@ -82,6 +82,35 @@ describe('공개 서비스 — 도메인 탭', () => {
     expect(await drawer.findByText(/소유권 검증이 완료/)).toBeInTheDocument()
   })
 
+  test('예약 중인 이름은 목록에서 예약 배지와 만료 D-day로 구분된다', async () => {
+    renderDomains()
+
+    // 예약 중 행의 status는 ACTIVE 그대로다 — 배지가 없으면 라우트 없는
+    // 평범한 ACTIVE 도메인과 구분되지 않는다.
+    const reserved = (await screen.findByText('shop-old.pusan.dev')).closest('tr')!
+    expect(within(reserved).getByText('연결됨')).toBeInTheDocument()
+    expect(within(reserved).getByText('예약 중')).toBeInTheDocument()
+    expect(within(reserved).getByText(/^D-/)).toBeInTheDocument()
+
+    const serving = (await screen.findByText('ai-team.pusan.dev')).closest('tr')!
+    expect(within(serving).queryByText('예약 중')).not.toBeInTheDocument()
+  })
+
+  test('예약 중 행의 드로어는 해제 시각·예약 만료와 강제 해제 의미를 보여준다', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+
+    await user.click(await screen.findByRole('button', { name: 'shop-old.pusan.dev' }))
+    const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
+    expect(await drawer.findByText('해제 시각')).toBeInTheDocument()
+    expect(drawer.getByText('예약 만료')).toBeInTheDocument()
+
+    // 내릴 라우트가 없는 행이므로 확인 문구도 이름 회수만 말해야 한다.
+    await user.click(drawer.getByRole('button', { name: '강제 해제' }))
+    const confirm = within(await screen.findByRole('dialog', { name: '도메인 강제 해제' }))
+    expect(confirm.getByText(/예약이 만료되기를 기다리지 않고/)).toBeInTheDocument()
+  })
+
   test('종류 필터로 커스텀 도메인만 볼 수 있다', async () => {
     const user = userEvent.setup()
     renderDomains()
