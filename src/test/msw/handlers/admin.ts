@@ -257,7 +257,7 @@ export function resetAdminFixtures() {
   nextFlavorId = 100
 }
 
-/** 템플릿 인벤토리 (전 상태 — 공개 /os-images와 달리 은퇴 리비전 포함). */
+/** OS 이미지 인벤토리 (전 상태 — 공개 /os-images와 달리 은퇴 리비전 포함). */
 function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
   return [
     {

@@ -37,7 +37,7 @@ import { formatSpec } from '../lib/format'
 const FLAVOR_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 
 /**
- * 템플릿·사양 관리 — OS 카탈로그(템플릿)와 사양 프리셋을 각각 나열하고
+ * OS 이미지·사양 관리 — OS 카탈로그와 사양 프리셋을 각각 나열하고
  * ACTIVE/DISABLED 를 토글한다. 프리셋은 등록·값 수정까지 지원한다.
  */
 export function AdminOsImagesPage() {
@@ -58,32 +58,32 @@ export function AdminOsImagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">템플릿·사양 관리</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">OS 이미지·사양 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          신청 위저드의 두 축입니다 — OS 템플릿과 사양 프리셋. 은퇴(비활성)해도 기존 VM은
+          신청 위저드의 두 축입니다 — OS 이미지와 사양 프리셋. 은퇴(비활성)해도 기존 VM은
           영향받지 않습니다.
         </p>
       </div>
 
       {!isSysAdmin && (
         <PermissionNotice>
-          템플릿·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.
+          OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.
         </PermissionNotice>
       )}
       {message && <Alert variant="info">{message}</Alert>}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-neutral-900">OS 템플릿</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">OS 이미지</h2>
 
         {osImages.isPending && (
           <div className="flex justify-center py-12">
-            <Spinner label="템플릿 목록 불러오는 중" />
+            <Spinner label="OS 이미지 목록 불러오는 중" />
           </div>
         )}
         {osImages.isError && <Alert variant="danger">{osImages.error.message}</Alert>}
         {osImages.isSuccess && osImages.data.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            등록된 템플릿이 없습니다.
+            등록된 OS 이미지가 없습니다.
           </Card>
         )}
         {osImages.isSuccess && osImages.data.length > 0 && (
@@ -298,18 +298,18 @@ function ToggleOsImageModal({
       updateAdminOsImage(image.id, { status: retiring ? 'DISABLED' : 'ACTIVE' }),
     onSuccess: async () => {
       setError(null)
-      onDone(retiring ? '템플릿을 은퇴시켰습니다.' : '템플릿을 다시 활성화했습니다.')
+      onDone(retiring ? 'OS 이미지를 은퇴시켰습니다.' : 'OS 이미지를 다시 활성화했습니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'os-images'] })
       await queryClient.invalidateQueries({ queryKey: ['os-images'] })
     },
-    onError: (err) => setError(toApiError(err, '템플릿 상태를 변경하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, 'OS 이미지 상태를 변경하지 못했습니다.').message),
   })
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={retiring ? '템플릿 은퇴' : '템플릿 활성화'}
+      title={retiring ? 'OS 이미지 은퇴' : 'OS 이미지 활성화'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -340,7 +340,7 @@ function ToggleOsImageModal({
         )}
         {lastActive && (
           <Alert variant="warning">
-            마지막 ACTIVE 템플릿입니다 — 은퇴시키면 신규 VM 신청이 불가능해집니다.
+            마지막 ACTIVE OS 이미지입니다 — 은퇴시키면 신규 VM 신청이 불가능해집니다.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}

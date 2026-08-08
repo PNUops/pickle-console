@@ -19,12 +19,12 @@ async function findFlavorRow(displayName: string) {
   return (await screen.findByText(displayName)).closest('tr')!
 }
 
-describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
-  test('전 상태 템플릿을 나열하고 은퇴 리비전에 배지를 붙인다', async () => {
+describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
+  test('전 상태 OS 이미지를 나열하고 은퇴 리비전에 배지를 붙인다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
 
-    await screen.findByRole('heading', { name: '템플릿·사양 관리' })
+    await screen.findByRole('heading', { name: 'OS 이미지·사양 관리' })
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     expect(within(active).getByText('활성')).toBeInTheDocument()
     // 기본 사양 대신 OS 축의 최소 디스크가 보인다.
@@ -34,7 +34,7 @@ describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
     expect(within(retired).getByRole('button', { name: '되살리기' })).toBeEnabled()
   })
 
-  test('마지막 ACTIVE 템플릿 은퇴 시 경고를 띄우고 전환한다', async () => {
+  test('마지막 ACTIVE OS 이미지 은퇴 시 경고를 띄우고 전환한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
@@ -42,11 +42,11 @@ describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     await user.click(within(active).getByRole('button', { name: '은퇴' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '템플릿 은퇴' })
-    expect(within(dialog).getByText(/마지막 ACTIVE 템플릿입니다/)).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'OS 이미지 은퇴' })
+    expect(within(dialog).getByText(/마지막 ACTIVE OS 이미지입니다/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
-    expect(await screen.findByText('템플릿을 은퇴시켰습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('OS 이미지를 은퇴시켰습니다.')).toBeInTheDocument()
     const updated = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     expect(within(updated).getByText('은퇴')).toBeInTheDocument()
   })
@@ -55,16 +55,16 @@ describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/os-images')
 
-    await screen.findByRole('heading', { name: '템플릿·사양 관리' })
+    await screen.findByRole('heading', { name: 'OS 이미지·사양 관리' })
     expect(
-      screen.getByText('템플릿·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.'),
+      screen.getByText('OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.'),
     ).toBeInTheDocument()
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     expect(within(active).getByRole('button', { name: '은퇴' })).toBeDisabled()
   })
 })
 
-describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
+describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
   test('전 상태 프리셋을 사양과 함께 나열하고 은퇴 프리셋에 배지를 붙인다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
@@ -200,7 +200,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
 
     const basic = await findFlavorRow('기본형')
     expect(
-      screen.getByText('템플릿·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.'),
+      screen.getByText('OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '프리셋 추가' })).toBeDisabled()
     expect(within(basic).getByRole('button', { name: '수정' })).toBeDisabled()

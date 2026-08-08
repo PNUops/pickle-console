@@ -61,7 +61,7 @@ export function AdminRequestsPage() {
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
   const imageName = (imageId: number) =>
-    osImages.data?.find((t) => t.id === imageId)?.displayName ?? `템플릿 #${imageId}`
+    osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
 
   return (
     <div className="space-y-6">
@@ -140,7 +140,7 @@ export function AdminRequestsPage() {
                 <TR>
                   <TH>신청자</TH>
                   <TH>그룹</TH>
-                  <TH>템플릿 / 요청 사양</TH>
+                  <TH>OS 이미지 / 요청 사양</TH>
                   <TH>신청일</TH>
                   <TH>상태</TH>
                 </TR>

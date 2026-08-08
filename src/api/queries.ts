@@ -206,7 +206,7 @@ export function fetchOrgs(): Promise<OrgSummary[]> {
 export function fetchOsImages(): Promise<OsImage[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/os-images')
-    if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'OS 이미지 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -1328,7 +1328,7 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
 export function fetchAdminOsImages(): Promise<AdminOsImage[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/os-images')
-    if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'OS 이미지 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -1342,7 +1342,7 @@ export function updateAdminOsImage(
       params: { path: { imageId } },
       body,
     })
-    if (!data) throw toApiError(error, '템플릿 상태를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'OS 이미지 상태를 변경하지 못했습니다.')
     return data
   })
 }

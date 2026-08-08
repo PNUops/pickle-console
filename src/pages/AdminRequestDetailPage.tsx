@@ -74,7 +74,7 @@ export function AdminRequestDetailPage() {
   const imageName = (imageId: number | null | undefined) => {
     if (imageId == null) return '—'
     return (
-      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `템플릿 #${imageId}`
+      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
     )
   }
   const flavorName = (flavorId: number | null | undefined) => {
@@ -147,14 +147,14 @@ export function AdminRequestDetailPage() {
             </CardContent>
           </Card>
 
-          {/* 템플릿 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
+          {/* OS 이미지 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
               명시하고 재시도 경로를 제공한다 (무음 실종 방지). */}
           {data.status === 'SUBMITTED' &&
             canDecide &&
             (osImages.isError ? (
-              <Alert variant="danger" title="템플릿 목록을 불러오지 못했습니다">
+              <Alert variant="danger" title="OS 이미지 목록을 불러오지 못했습니다">
                 <div className="space-y-2">
-                  <p>승인·반려를 결정하려면 템플릿 목록이 필요합니다.</p>
+                  <p>승인·반려를 결정하려면 OS 이미지 목록이 필요합니다.</p>
                   <Button
                     size="sm"
                     variant="secondary"
@@ -176,7 +176,7 @@ export function AdminRequestDetailPage() {
               />
             ) : (
               <div className="flex justify-center py-6">
-                <Spinner label="템플릿 목록 불러오는 중" />
+                <Spinner label="OS 이미지 목록 불러오는 중" />
               </div>
             ))}
         </div>
@@ -223,7 +223,7 @@ function DecisionResultCard({
                 {formatSpec(review.grantedVcpu, review.grantedMemoryMb, review.grantedDiskGb)}
               </Field>
             )}
-          {approved && <Field label="부여 템플릿">{imageName}</Field>}
+          {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
           {approved && (
             <Field label="부여 기간">
               {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}
@@ -361,7 +361,7 @@ function DecisionSection({
     if (!Number.isInteger(Number(diskGb)) || Number(diskGb) < 1)
       errors.grantedDiskGb = '디스크는 1 GiB 이상으로 입력해 주세요.'
     else if (image && Number(diskGb) < image.minDiskGb)
-      errors.grantedDiskGb = `디스크는 이 템플릿의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
+      errors.grantedDiskGb = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
     if (nodeId && (!Number.isInteger(Number(nodeId)) || Number(nodeId) < 1))
       errors.nodeId = '노드 ID는 1 이상의 정수로 입력하거나 비워 두세요.'
     if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
@@ -452,7 +452,7 @@ function DecisionSection({
                 />
               </FormField>
             </div>
-            <FormField label="템플릿" required error={fieldErrors.grantedImageId}>
+            <FormField label="OS 이미지" required error={fieldErrors.grantedImageId}>
               <Select
                 value={imageId}
                 onChange={(event) => setImageId(event.target.value)}

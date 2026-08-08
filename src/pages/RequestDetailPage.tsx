@@ -49,7 +49,7 @@ export function RequestDetailPage() {
   const imageName = (imageId: number | null | undefined) => {
     if (imageId == null) return '—'
     return (
-      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `템플릿 #${imageId}`
+      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
     )
   }
   const flavorName = (flavorId: number | null | undefined) => {
@@ -163,7 +163,7 @@ function ReviewCard({
                 {formatSpec(review.grantedVcpu, review.grantedMemoryMb, review.grantedDiskGb)}
               </Field>
             )}
-          {approved && <Field label="부여 템플릿">{imageName}</Field>}
+          {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
           {approved && (
             <Field label="부여 기간">
               {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}

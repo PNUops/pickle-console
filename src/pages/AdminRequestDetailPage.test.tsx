@@ -104,7 +104,7 @@ describe('승인 폼', () => {
     expect(screen.getByLabelText('vCPU')).toHaveValue(2)
     expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
-    expect(screen.getByLabelText('템플릿')).toHaveValue('1')
+    expect(screen.getByLabelText('OS 이미지')).toHaveValue('1')
     expect(screen.getByLabelText('사용 시작일')).toHaveValue('2026-07-15')
     expect(screen.getByLabelText('사용 종료일')).toHaveValue('2026-12-20')
     expect(screen.getByLabelText('배치 노드 ID')).toHaveValue(null)
@@ -159,8 +159,8 @@ describe('승인 폼', () => {
   })
 })
 
-describe('결정 폼 — 템플릿 조회 실패', () => {
-  test('템플릿 조회가 실패하면 결정 폼이 조용히 사라지지 않고 오류·재시도를 보여준다', async () => {
+describe('결정 폼 — OS 이미지 조회 실패', () => {
+  test('OS 이미지 조회가 실패하면 결정 폼이 조용히 사라지지 않고 오류·재시도를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/v1/os-images', () => HttpResponse.json(null, { status: 500 }), {
@@ -171,7 +171,7 @@ describe('결정 폼 — 템플릿 조회 실패', () => {
 
     await screen.findByRole('heading', { name: '신청 #201' })
     expect(
-      await screen.findByText('템플릿 목록을 불러오지 못했습니다'),
+      await screen.findByText('OS 이미지 목록을 불러오지 못했습니다'),
     ).toBeInTheDocument()
 
     // 재시도하면 기본 핸들러(정상 응답)로 복구되어 결정 폼이 나타난다.
