@@ -44,7 +44,7 @@ const STEPS = ['그룹·기관·이름', 'OS·사양', '용도·기간', '확인
 const FIELD_LABELS: Record<string, string> = {
   groupId: '그룹',
   orgId: '기관',
-  templateId: 'OS',
+  imageId: 'OS',
   flavorId: '사양 프리셋',
   purpose: '용도',
   courseOrProject: '수업/프로젝트',
@@ -277,7 +277,7 @@ export function NewRequestPage() {
   const buildPayload = (): CreateVmRequest => ({
     groupId: state.groupId!,
     orgId: state.orgId!,
-    templateId: state.templateId!,
+    imageId: state.templateId!,
     flavorId: state.flavorId!,
     purpose: state.purpose.trim(),
     courseOrProject: state.courseOrProject.trim() || null,

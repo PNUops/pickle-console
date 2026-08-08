@@ -39,7 +39,7 @@ function initialReservedDomains(): DomainDetail[] {
     {
       id: 22,
       vmId: 63,
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       fqdn: 'shop-old.pusan.dev',
       rootDomain: 'pusan.dev',
       // 예약 중이어도 status는 예약 전 값 그대로다 (판별은 releasedAt).
@@ -226,7 +226,7 @@ function buildPlatformPublication(
     domain: {
       id: nextDomainId++,
       vmId: vm.id,
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       fqdn,
       rootDomain,
       status: 'ACTIVE',

@@ -59,7 +59,7 @@ const STATUS_TABS: { label: string; status: DomainStatus | undefined }[] = [
   { label: DOMAIN_STATUS_LABELS.FAILED, status: 'FAILED' },
 ]
 
-const KINDS: DomainKind[] = ['AUTO', 'REQUESTED', 'CUSTOM']
+const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM']
 
 /**
  * 공개 서비스 — 도메인 중심 1화면. 운영자가 실제로 겪는 단위("이 도메인이 왜

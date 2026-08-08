@@ -56,7 +56,7 @@ export type CertificateStatus = components['schemas']['CertificateStatus']
 /** 사용자 관점 이분법(플랫폼/커스텀)을 따른다 — AUTO는 폐지된 자동 생성의 잔재 표기. */
 export const DOMAIN_KIND_LABELS: Record<DomainKind, string> = {
   AUTO: '플랫폼 (자동)',
-  REQUESTED: '플랫폼',
+  PLATFORM: '플랫폼',
   CUSTOM: '커스텀',
 }
 

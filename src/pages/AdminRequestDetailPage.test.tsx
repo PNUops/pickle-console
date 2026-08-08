@@ -131,7 +131,7 @@ describe('승인 폼', () => {
       grantedVcpu: 2,
       grantedMemoryMb: 2048,
       grantedDiskGb: 20,
-      grantedTemplateId: 1,
+      grantedImageId: 1,
       grantedStartDate: '2026-07-15',
       grantedEndDate: '2026-12-20',
       grantedSlug: 'capstone-api',
@@ -163,7 +163,7 @@ describe('결정 폼 — 템플릿 조회 실패', () => {
   test('템플릿 조회가 실패하면 결정 폼이 조용히 사라지지 않고 오류·재시도를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
-      http.get('*/api/v1/templates', () => HttpResponse.json(null, { status: 500 }), {
+      http.get('*/api/v1/os-images', () => HttpResponse.json(null, { status: 500 }), {
         once: true,
       }),
     )

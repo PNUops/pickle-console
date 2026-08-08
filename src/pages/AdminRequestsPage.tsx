@@ -166,7 +166,7 @@ export function AdminRequestsPage() {
                     </TD>
                     <TD>{request.groupName}</TD>
                     <TD className="whitespace-nowrap">
-                      <span className="block">{templateName(request.templateId)}</span>
+                      <span className="block">{templateName(request.imageId)}</span>
                       <span className="block text-xs text-neutral-500">
                         {formatSpec(request.reqVcpu, request.reqMemoryMb, request.reqDiskGb)}
                       </span>

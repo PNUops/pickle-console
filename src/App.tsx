@@ -204,7 +204,7 @@ function App() {
           }
         />
         <Route
-          path="templates"
+          path="os-images"
           element={
             <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminTemplatesPage />

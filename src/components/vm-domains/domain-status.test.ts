@@ -20,7 +20,7 @@ const cert = (status: CertificateView['status']): CertificateView => ({
 describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
   test('releasedAt이 찍히면 다른 축과 무관하게 예약 중이다', () => {
     const fold = foldDomainStatus({
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       // 서버는 예약용 상태값을 두지 않는다 — status는 ACTIVE로 남는다.
       status: 'ACTIVE',
       releasedAt: '2026-08-06T09:00:00+09:00',
@@ -38,13 +38,13 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
 
   test('releasedAt 없이 status만으로는 예약 중으로 접히지 않는다', () => {
     // 판별 기준은 releasedAt 하나다 — REMOVED 값 자체는 예약을 뜻하지 않는다.
-    const fold = foldDomainStatus({ kind: 'REQUESTED', status: 'REMOVED' })
+    const fold = foldDomainStatus({ kind: 'PLATFORM', status: 'REMOVED' })
     expect(fold.key).not.toBe('reserved')
   })
 
   test('해제됐지만 예약 만료를 모르면 날짜 없는 안내로 접힌다', () => {
     const fold = foldDomainStatus({
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       status: 'ACTIVE',
       releasedAt: '2026-08-06T09:00:00+09:00',
     })
@@ -126,7 +126,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
 
   test('라우트 적용 대기(PENDING 또는 미생성)는 적용 안내로 접힌다', () => {
     const pending = foldDomainStatus({
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       status: 'ACTIVE',
       certificate: { ...cert('ACTIVE'), kind: 'ORIGIN_CA_WILDCARD' },
       route: route('PENDING'),
@@ -136,7 +136,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
 
     // 접수 직후 과도기 — 라우트 블록이 아직 없어도 크래시 없이 연결 중이다.
     const missing = foldDomainStatus({
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       status: 'ACTIVE',
       certificate: { ...cert('ACTIVE'), kind: 'ORIGIN_CA_WILDCARD' },
       route: null,
@@ -159,7 +159,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
 
   test('플랫폼 서브도메인은 인증서 블록이 없어도 라우트만 적용되면 연결됨이다', () => {
     const fold = foldDomainStatus({
-      kind: 'REQUESTED',
+      kind: 'PLATFORM',
       status: 'ACTIVE',
       certificate: { ...cert('ACTIVE'), kind: 'ORIGIN_CA_WILDCARD' },
       route: route('APPLIED'),
@@ -171,12 +171,12 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
 /* ─── 폴링 단계 파생 ─── */
 
 function pub(overrides: {
-  kind?: 'REQUESTED' | 'CUSTOM'
+  kind?: 'PLATFORM' | 'CUSTOM'
   status?: 'PENDING' | 'VERIFYING' | 'ACTIVE' | 'FAILED'
   route?: RouteView | null
   certificate?: CertificateView | null
 }): PublicationView {
-  const kind = overrides.kind ?? 'REQUESTED'
+  const kind = overrides.kind ?? 'PLATFORM'
   const status = overrides.status ?? 'ACTIVE'
   return {
     fqdn: 'x.pusan.dev',

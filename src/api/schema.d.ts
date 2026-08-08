@@ -308,6 +308,38 @@ export interface paths {
         patch: operations["updateOrg"];
         trace?: never;
     };
+    "/admin/os-images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminOsImages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/os-images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminOsImage"];
+        trace?: never;
+    };
     "/admin/port-mappings": {
         parameters: {
             query?: never;
@@ -562,38 +594,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/admin/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listAdminTemplates"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/templates/{templateId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["updateAdminTemplate"];
         trace?: never;
     };
     "/admin/terminal-sessions": {
@@ -1636,14 +1636,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/templates": {
+    "/os-images": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listTemplates"];
+        get: operations["listOsImages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2121,6 +2121,25 @@ export interface components {
             /** Format: int64 */
             userId: number;
         };
+        AdminOsImageResponse: {
+            displayName: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            minDiskGb: number;
+            name: string;
+            /** Format: int64 */
+            nodeId: number;
+            notes?: string | null;
+            osFamily: string;
+            osVersion: string;
+            /** Format: int32 */
+            proxmoxVmid: number;
+            sshUsername: string;
+            status: components["schemas"]["CatalogStatus"];
+            /** Format: int32 */
+            version: number;
+        };
         AdminPortMappingResponse: {
             applyState: components["schemas"]["PortForwardApplyState"];
             /** Format: date-time */
@@ -2276,25 +2295,6 @@ export interface components {
             vmId: number;
             vmName?: string | null;
         };
-        AdminTemplateResponse: {
-            displayName: string;
-            /** Format: int64 */
-            id: number;
-            /** Format: int32 */
-            minDiskGb: number;
-            name: string;
-            /** Format: int64 */
-            nodeId: number;
-            notes?: string | null;
-            osFamily: string;
-            osVersion: string;
-            /** Format: int32 */
-            proxmoxVmid: number;
-            sshUsername: string;
-            status: components["schemas"]["TemplateStatus"];
-            /** Format: int32 */
-            version: number;
-        };
         /** @enum {string} */
         AllocationStatus: "ALLOCATED" | "RELEASED";
         AnnouncementCreateRequest: {
@@ -2348,13 +2348,13 @@ export interface components {
             grantedDiskGb: number;
             /** Format: date */
             grantedEndDate?: string | null;
+            /** Format: int64 */
+            grantedImageId: number;
             /** Format: int32 */
             grantedMemoryMb: number;
             grantedSlug?: string | null;
             /** Format: date */
             grantedStartDate?: string | null;
-            /** Format: int64 */
-            grantedTemplateId: number;
             /** Format: int32 */
             grantedVcpu: number;
             /** Format: int64 */
@@ -2422,6 +2422,8 @@ export interface components {
             /** Format: int64 */
             memoryMb: number;
         };
+        /** @enum {string} */
+        CatalogStatus: "ACTIVE" | "DISABLED";
         /** @enum {string} */
         CertificateKind: "ORIGIN_CA_WILDCARD" | "LETS_ENCRYPT";
         /** @enum {string} */
@@ -2510,6 +2512,8 @@ export interface components {
             /** Format: int64 */
             groupId: number;
             /** Format: int64 */
+            imageId: number;
+            /** Format: int64 */
             orgId: number;
             purpose: string;
             /** Format: int32 */
@@ -2523,8 +2527,6 @@ export interface components {
             /** Format: int32 */
             reqVcpu: number;
             specReason?: string | null;
-            /** Format: int64 */
-            templateId: number;
         };
         DisableMfaRequest: {
             code?: string;
@@ -2554,7 +2556,7 @@ export interface components {
             vmId: number;
         };
         /** @enum {string} */
-        DomainKind: "AUTO" | "REQUESTED" | "CUSTOM";
+        DomainKind: "AUTO" | "PLATFORM" | "CUSTOM";
         /** @enum {string} */
         DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
         DomainSummaryView: {
@@ -2853,6 +2855,21 @@ export interface components {
             name: string;
             slug: string;
             status: components["schemas"]["OrgStatus"];
+        };
+        OsImageResponse: {
+            displayName: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            minDiskGb: number;
+            name: string;
+            notes?: string | null;
+            osFamily: string;
+            osVersion: string;
+            sshUsername: string;
+            status: components["schemas"]["CatalogStatus"];
+            /** Format: int32 */
+            version: number;
         };
         PageResponseActivityEntryResponse: {
             content: components["schemas"]["ActivityEntryResponse"][];
@@ -3305,8 +3322,6 @@ export interface components {
             /** Format: int64 */
             runningCount: number;
         };
-        /** @enum {string} */
-        TemplateStatus: "ACTIVE" | "DISABLED";
         TerminalSessionView: {
             clientIp: string;
             groupName: string;
@@ -3391,6 +3406,10 @@ export interface components {
             name?: string;
             status?: components["schemas"]["OrgStatus"];
         };
+        UpdateOsImageStatusRequest: {
+            /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 VM 무영향) */
+            status: components["schemas"]["CatalogStatus"];
+        };
         UpdatePortMappingGuardsRequest: {
             /**
              * Format: int32
@@ -3418,10 +3437,6 @@ export interface components {
              */
             perSourceRate?: number | null;
         };
-        UpdateTemplateStatusRequest: {
-            /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 VM 무영향) */
-            status: components["schemas"]["TemplateStatus"];
-        };
         UpdateUserAdminRequest: {
             /** Format: int64 */
             orgId?: number | null;
@@ -3435,7 +3450,7 @@ export interface components {
             memoryMb?: number | null;
             notes?: string | null;
             /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 신청·VM 무영향) */
-            status?: components["schemas"]["TemplateStatus"] | null;
+            status?: components["schemas"]["CatalogStatus"] | null;
             /** Format: int32 */
             vcpu?: number | null;
         };
@@ -3555,6 +3570,8 @@ export interface components {
             hostname: string;
             /** Format: int64 */
             id: number;
+            /** Format: int64 */
+            imageId: number;
             ipAddress?: string | null;
             /** Format: int32 */
             memoryMb: number;
@@ -3576,8 +3593,6 @@ export interface components {
             startDate?: string | null;
             status: components["schemas"]["VmStatus"];
             statusDetail?: string | null;
-            /** Format: int64 */
-            templateId: number;
             /** Format: date-time */
             updatedAt: string;
             /** Format: int32 */
@@ -3605,7 +3620,7 @@ export interface components {
             memoryMb: number;
             name: string;
             notes?: string | null;
-            status: components["schemas"]["TemplateStatus"];
+            status: components["schemas"]["CatalogStatus"];
             /** Format: int32 */
             vcpu: number;
         };
@@ -3644,6 +3659,8 @@ export interface components {
             /** Format: int64 */
             id: number;
             /** Format: int64 */
+            imageId: number;
+            /** Format: int64 */
             orgId: number;
             orgName: string;
             purpose: string;
@@ -3664,8 +3681,6 @@ export interface components {
             rootDomain?: string | null;
             specReason?: string | null;
             status: components["schemas"]["VmRequestStatus"];
-            /** Format: int64 */
-            templateId: number;
             /** Format: date-time */
             updatedAt: string;
         };
@@ -3678,12 +3693,12 @@ export interface components {
             grantedDiskGb?: number | null;
             /** Format: date */
             grantedEndDate?: string | null;
+            /** Format: int64 */
+            grantedImageId?: number | null;
             /** Format: int32 */
             grantedMemoryMb?: number | null;
             /** Format: date */
             grantedStartDate?: string | null;
-            /** Format: int64 */
-            grantedTemplateId?: number | null;
             /** Format: int32 */
             grantedVcpu?: number | null;
             /** Format: int64 */
@@ -3744,21 +3759,6 @@ export interface components {
             statusDetail?: string | null;
             /** Format: int32 */
             vcpu: number;
-        };
-        VmTemplateResponse: {
-            displayName: string;
-            /** Format: int64 */
-            id: number;
-            /** Format: int32 */
-            minDiskGb: number;
-            name: string;
-            notes?: string | null;
-            osFamily: string;
-            osVersion: string;
-            sshUsername: string;
-            status: components["schemas"]["TemplateStatus"];
-            /** Format: int32 */
-            version: number;
         };
         WithdrawRequest: {
             password: string;
@@ -4471,6 +4471,70 @@ export interface operations {
             };
         };
     };
+    listAdminOsImages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOsImageResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminOsImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                imageId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOsImageStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOsImageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminPortMappings: {
         parameters: {
             query?: {
@@ -4981,70 +5045,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listAdminTemplates: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["AdminTemplateResponse"][];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    updateAdminTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                templateId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTemplateStatusRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["AdminTemplateResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7560,7 +7560,7 @@ export interface operations {
             };
         };
     };
-    listTemplates: {
+    listOsImages: {
         parameters: {
             query?: never;
             header?: never;
@@ -7575,7 +7575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VmTemplateResponse"][];
+                    "*/*": components["schemas"]["OsImageResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

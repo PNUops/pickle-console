@@ -87,7 +87,7 @@ export function RequestDetailPage() {
       )}
 
       {data.review && (
-        <ReviewCard review={data.review} templateName={templateName(data.review.grantedTemplateId)} />
+        <ReviewCard review={data.review} templateName={templateName(data.review.grantedImageId)} />
       )}
 
       <Card>
@@ -98,7 +98,7 @@ export function RequestDetailPage() {
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             <Field label="그룹">{data.groupName}</Field>
             <Field label="기관">{data.orgName}</Field>
-            <Field label="OS">{templateName(data.templateId)}</Field>
+            <Field label="OS">{templateName(data.imageId)}</Field>
             <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
             <Field label="요청 사양">
               {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}

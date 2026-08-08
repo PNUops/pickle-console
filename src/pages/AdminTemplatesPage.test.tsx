@@ -22,7 +22,7 @@ async function findFlavorRow(displayName: string) {
 describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
   test('전 상태 템플릿을 나열하고 은퇴 리비전에 배지를 붙인다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await screen.findByRole('heading', { name: '템플릿·사양 관리' })
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
@@ -37,7 +37,7 @@ describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
   test('마지막 ACTIVE 템플릿 은퇴 시 경고를 띄우고 전환한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     await user.click(within(active).getByRole('button', { name: '은퇴' }))
@@ -53,7 +53,7 @@ describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
 
   test('SYS_MANAGER에게는 토글이 비활성+사유로 보인다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await screen.findByRole('heading', { name: '템플릿·사양 관리' })
     expect(
@@ -67,7 +67,7 @@ describe('관리자 템플릿·사양 관리 — OS 템플릿', () => {
 describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
   test('전 상태 프리셋을 사양과 함께 나열하고 은퇴 프리셋에 배지를 붙인다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await screen.findByRole('heading', { name: '사양 프리셋' })
     const basic = await findFlavorRow('기본형')
@@ -82,7 +82,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
   test('수정 모달에서 값을 바꾸면 표에 반영된다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await user.click(
       within(await findFlavorRow('소형')).getByRole('button', { name: '수정' }),
@@ -107,7 +107,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
   test('비고를 비우고 저장하면 실제로 지워진다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     const before = await findFlavorRow('소형')
     expect(within(before).getByText('간단한 실습·정적 웹 서버에 적합합니다.')).toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
   test('마지막 ACTIVE 프리셋이 아니면 경고 없이 은퇴시킨다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await user.click(
       within(await findFlavorRow('대형')).getByRole('button', { name: '은퇴' }),
@@ -146,7 +146,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
   test('프리셋을 추가하고, 이름이 중복되면 422 필드 오류를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await findFlavorRow('기본형')
     await user.click(screen.getByRole('button', { name: '프리셋 추가' }))
@@ -179,7 +179,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
   test('이름 형식이 어긋나면 서버 호출 없이 막는다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     await findFlavorRow('기본형')
     await user.click(screen.getByRole('button', { name: '프리셋 추가' }))
@@ -196,7 +196,7 @@ describe('관리자 템플릿·사양 관리 — 사양 프리셋', () => {
 
   test('SYS_MANAGER에게는 프리셋 작업이 비활성+사유로 보인다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
-    renderApp('/admin/templates')
+    renderApp('/admin/os-images')
 
     const basic = await findFlavorRow('기본형')
     expect(

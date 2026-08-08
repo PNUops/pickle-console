@@ -108,7 +108,7 @@ export function AdminRequestDetailPage() {
           {data.review && (
             <DecisionResultCard
               review={data.review}
-              templateName={templateName(data.review.grantedTemplateId)}
+              templateName={templateName(data.review.grantedImageId)}
             />
           )}
 
@@ -121,7 +121,7 @@ export function AdminRequestDetailPage() {
                 <Field label="신청자">{data.requesterName}</Field>
                 <Field label="그룹">{data.groupName}</Field>
                 <Field label="기관">{data.orgName}</Field>
-                <Field label="OS">{templateName(data.templateId)}</Field>
+                <Field label="OS">{templateName(data.imageId)}</Field>
                 <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
                 <Field label="요청 사양">
                   {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
@@ -258,7 +258,7 @@ function DecisionSection({
   const [vcpu, setVcpu] = useState(String(request.reqVcpu))
   const [memoryMb, setMemoryMb] = useState(String(request.reqMemoryMb))
   const [diskGb, setDiskGb] = useState(String(request.reqDiskGb))
-  const [templateId, setTemplateId] = useState(String(request.templateId))
+  const [templateId, setTemplateId] = useState(String(request.imageId))
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.desiredSlug ?? '')
@@ -341,7 +341,7 @@ function DecisionSection({
     grantedVcpu: Number(vcpu),
     grantedMemoryMb: Number(memoryMb),
     grantedDiskGb: Number(diskGb),
-    grantedTemplateId: Number(templateId),
+    grantedImageId: Number(templateId),
     grantedStartDate: startDate || null,
     grantedEndDate: endDate || null,
     grantedSlug: grantedSlug.trim() || null,
@@ -452,7 +452,7 @@ function DecisionSection({
                 />
               </FormField>
             </div>
-            <FormField label="템플릿" required error={fieldErrors.grantedTemplateId}>
+            <FormField label="템플릿" required error={fieldErrors.grantedImageId}>
               <Select
                 value={templateId}
                 onChange={(event) => setTemplateId(event.target.value)}
