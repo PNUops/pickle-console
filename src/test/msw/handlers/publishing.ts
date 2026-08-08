@@ -298,6 +298,8 @@ function toAdminDomain(vm: VmDetail, pub: PublicationView): Schemas['AdminDomain
     rootDomain: pub.domain.rootDomain,
     status: pub.domain.status,
     verifiedAt: pub.domain.verifiedAt,
+    releasedAt: null,
+    reservedUntil: null,
     createdAt: pub.domain.createdAt,
     vmName: vm.name,
     groupId: vm.groupId,
@@ -310,7 +312,10 @@ function toAdminDomain(vm: VmDetail, pub: PublicationView): Schemas['AdminDomain
   }
 }
 
-/** 예약 중 행의 관리자 목록 표현 — 라우트·인증서 축이 없다. */
+/**
+ * 예약 중(또는 REMOVED) 행의 관리자 목록 표현 — 라우트·인증서 축이 없다.
+ * 예약 축은 사용자 목록과 같은 값이 그대로 실린다.
+ */
 function reservedToAdminDomain(d: DomainDetail): Schemas['AdminDomainView'] {
   const vm = vmStore.find((v) => v.id === d.vmId)
   return {
@@ -321,6 +326,8 @@ function reservedToAdminDomain(d: DomainDetail): Schemas['AdminDomainView'] {
     rootDomain: d.rootDomain,
     status: d.status,
     verifiedAt: d.verifiedAt,
+    releasedAt: d.releasedAt ?? null,
+    reservedUntil: d.reservedUntil ?? null,
     createdAt: d.createdAt,
     vmName: vm?.name ?? `vm-${d.vmId}`,
     groupId: vm?.groupId ?? 0,

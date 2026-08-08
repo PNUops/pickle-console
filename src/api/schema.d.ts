@@ -2051,6 +2051,10 @@ export interface components {
             /** Format: int64 */
             orgId: number;
             orgName: string;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
             rootDomain?: string | null;
             routeStatus?: components["schemas"]["RouteStatus"] | null;
             status: components["schemas"]["DomainStatus"];
