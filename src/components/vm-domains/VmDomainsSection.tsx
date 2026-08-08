@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchDomains, type DomainSummary, type VmDetail } from '../../api/queries'
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { useVmGroupRole } from '../vm-group-role'
-import { AddPlatformSubdomainModal } from './AddPlatformSubdomainModal'
+import { AddPlatformSubdomainDrawer } from './AddPlatformSubdomainDrawer'
 import { ConnectCustomDomainDrawer } from './ConnectCustomDomainDrawer'
 import { DomainDrawer } from './DomainDrawer'
 import { DomainRow } from './DomainRow'
@@ -193,7 +193,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
       />
 
       {platformModal && (
-        <AddPlatformSubdomainModal
+        <AddPlatformSubdomainDrawer
           vm={vm}
           open
           onClose={() => setPlatformModal(null)}

@@ -111,7 +111,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 })
 
-describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
+describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => {
   test('이름·루트·포트를 접수하면 행이 생기고 폴링으로 연결됨에 수렴한다', async () => {
     const user = userEvent.setup()
     renderVm(57)
@@ -130,11 +130,12 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
     const port = within(modal).getByLabelText('공개 포트')
     await user.clear(port)
     await user.type(port, '8080')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
 
-    // 토스트로 접수를 확인하고 모달은 닫힌다.
+    // 커스텀 연결과 같은 모양으로, 같은 드로어가 접수된 도메인 상세로 전환된다.
+    const detail = await screen.findByRole('dialog', { name: 'web-lab.pusan.dev' })
     expect(
-      await screen.findByText('web-lab.pusan.dev 연결을 접수했습니다. 잠시 후 적용됩니다.'),
+      within(detail).getByText(/연결을 접수했습니다\. 적용이 끝나면/),
     ).toBeInTheDocument()
     // 행이 생기고, 라우트 PENDING → 폴링 → APPLIED로 연결됨에 수렴한다.
     expect(
@@ -156,7 +157,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
 
     const modal = await screen.findByRole('dialog', { name: '플랫폼 서브도메인 추가' })
     await user.type(within(modal).getByLabelText('서브도메인'), 'www')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
     expect(
       await within(modal).findByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
     ).toBeInTheDocument()
@@ -189,7 +190,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
     )
     const modal = await screen.findByRole('dialog', { name: '플랫폼 서브도메인 추가' })
     await user.type(within(modal).getByLabelText('서브도메인'), 'one-more')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
 
     // 상한값(몇 개까지)과 다음 행동(해제 또는 커스텀 도메인)은 서버 detail에만
     // 있다 — 자체 문구로 덮으면 사용자가 무엇을 지워야 하는지 알 수 없다.
@@ -372,7 +373,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 })
 
 describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
-  test('다시 연결 — 예약된 이름이 채워진 추가 모달을 거쳐 서빙 목록으로 돌아온다', async () => {
+  test('다시 연결 — 예약된 이름이 채워진 추가 드로어를 거쳐 서빙 목록으로 돌아온다', async () => {
     const user = userEvent.setup()
     renderVm(63)
 
@@ -383,10 +384,10 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
     const modal = await screen.findByRole('dialog', { name: '플랫폼 서브도메인 추가' })
     // 예약된 이름·루트가 채워져 있고, 포트만 확인하면 된다.
     expect(within(modal).getByLabelText('서브도메인')).toHaveValue('shop-old')
-    await user.click(within(modal).getByRole('button', { name: '연결' }))
+    await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
 
     expect(
-      await screen.findByText('shop-old.pusan.dev 연결을 접수했습니다. 잠시 후 적용됩니다.'),
+      await screen.findByRole('dialog', { name: 'shop-old.pusan.dev' }),
     ).toBeInTheDocument()
     // 예약 절에서 빠지고 서빙 목록에 링크로 나타난다.
     expect(
