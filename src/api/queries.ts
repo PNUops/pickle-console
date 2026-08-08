@@ -9,7 +9,7 @@ export type GroupDetail = Schemas['GroupDetailResponse']
 export type GroupMember = Schemas['GroupMemberResponse']
 export type GroupMemberRole = Schemas['GroupMemberRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
-export type VmTemplate = Schemas['OsImageResponse']
+export type OsImage = Schemas['OsImageResponse']
 export type VmFlavor = Schemas['VmFlavorResponse']
 export type CreateVmFlavor = Schemas['CreateVmFlavorRequest']
 export type UpdateVmFlavor = Schemas['UpdateVmFlavorRequest']
@@ -48,8 +48,8 @@ export type VmEventPage = Schemas['PageResponseVmEventResponse']
 export type ProvisioningTaskView = Schemas['ProvisioningTaskResponse']
 export type VmPasswordResponse = Schemas['VmPasswordResponse']
 export type NodeSummary = Schemas['NodeSummaryResponse']
-export type AdminTemplate = Schemas['AdminOsImageResponse']
-export type TemplateStatus = Schemas['CatalogStatus']
+export type AdminOsImage = Schemas['AdminOsImageResponse']
+export type CatalogStatus = Schemas['CatalogStatus']
 
 /* ─── SSH 키·VM 설정 ─── */
 export type SshKeyView = Schemas['SshKeyView']
@@ -203,7 +203,7 @@ export function fetchOrgs(): Promise<OrgSummary[]> {
   })
 }
 
-export function fetchTemplates(): Promise<VmTemplate[]> {
+export function fetchOsImages(): Promise<OsImage[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/os-images')
     if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
@@ -1325,7 +1325,7 @@ export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
   })
 }
 
-export function fetchAdminTemplates(): Promise<AdminTemplate[]> {
+export function fetchAdminOsImages(): Promise<AdminOsImage[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/os-images')
     if (!data) throw toApiError(error, '템플릿 목록을 불러오지 못했습니다.')
@@ -1333,10 +1333,10 @@ export function fetchAdminTemplates(): Promise<AdminTemplate[]> {
   })
 }
 
-export function updateAdminTemplate(
+export function updateAdminOsImage(
   imageId: number,
-  body: { status: TemplateStatus },
-): Promise<AdminTemplate> {
+  body: { status: CatalogStatus },
+): Promise<AdminOsImage> {
   return guardNetwork(async () => {
     const { data, error } = await api.PATCH('/admin/os-images/{imageId}', {
       params: { path: { imageId } },

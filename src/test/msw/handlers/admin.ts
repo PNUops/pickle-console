@@ -252,13 +252,13 @@ export function resetAdminFixtures() {
   rejectBodies = []
   userPatchBodies = []
   nextOrgId = 100
-  adminTemplates = initialAdminTemplates()
+  adminOsImages = initialAdminOsImages()
   resetFlavorStore()
   nextFlavorId = 100
 }
 
 /** 템플릿 인벤토리 (전 상태 — 공개 /os-images와 달리 은퇴 리비전 포함). */
-function initialAdminTemplates(): Schemas['AdminOsImageResponse'][] {
+function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
   return [
     {
       id: 1,
@@ -291,7 +291,7 @@ function initialAdminTemplates(): Schemas['AdminOsImageResponse'][] {
   ]
 }
 
-export let adminTemplates: Schemas['AdminOsImageResponse'][] = initialAdminTemplates()
+export let adminOsImages: Schemas['AdminOsImageResponse'][] = initialAdminOsImages()
 
 /* 사양 프리셋 인벤토리는 공개 목록과 공유하는 저장소(flavorStore)를 그대로 쓴다 —
    관리자 목록은 전 상태를, 공개 목록은 ACTIVE만 노출한다. */
@@ -609,15 +609,15 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/admin/os-images', () =>
-    HttpResponse.json(adminTemplates, { status: 200 }),
+    HttpResponse.json(adminOsImages, { status: 200 }),
   ),
 
   http.patch('*/api/v1/admin/os-images/:imageId', async ({ params, request }) => {
-    const template = adminTemplates.find((t) => t.id === Number(params.imageId))
-    if (!template) return notFound()
+    const image = adminOsImages.find((t) => t.id === Number(params.imageId))
+    if (!image) return notFound()
     const body = (await request.json()) as { status: Schemas['CatalogStatus'] }
-    template.status = body.status
-    return HttpResponse.json(template, { status: 200 })
+    image.status = body.status
+    return HttpResponse.json(image, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/vm-flavors', () =>

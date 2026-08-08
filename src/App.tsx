@@ -23,7 +23,7 @@ import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AdminGroupsPage } from './pages/AdminGroupsPage'
-import { AdminTemplatesPage } from './pages/AdminTemplatesPage'
+import { AdminOsImagesPage } from './pages/AdminOsImagesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AccountPage } from './pages/AccountPage'
@@ -207,7 +207,7 @@ function App() {
           path="os-images"
           element={
             <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
-              <AdminTemplatesPage />
+              <AdminOsImagesPage />
             </RequireRole>
           }
         />

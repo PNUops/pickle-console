@@ -155,7 +155,7 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
       JSON.stringify({
         groupId: 12,
         orgId: 1,
-        templateId: 1,
+        imageId: 1,
         flavorId: 9,
         reqVcpu: 1,
         reqMemoryMb: 512,
