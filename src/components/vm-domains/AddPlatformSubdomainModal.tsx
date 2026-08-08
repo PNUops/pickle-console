@@ -79,9 +79,10 @@ export function AddPlatformSubdomainModal({
     onError: (err) => {
       const apiError = toApiError(err, '도메인 연결을 접수하지 못했습니다.')
       if (apiError.code === 'DOMAIN_LIMIT_REACHED') {
-        // 상한값은 관리자 설정이라 클라이언트가 미리 알 수 없다 — 409를 안내로 흡수.
+        // 상한값과 행동 지침(몇 개까지인지, 해제하거나 커스텀 도메인을 쓰라는
+        // 안내)은 서버 detail에만 있다 — 자체 문구로 덮지 않고 그대로 보여준다.
         setFieldErrors({})
-        setError('플랫폼 서브도메인 상한에 도달해 연결을 접수하지 못했습니다.')
+        setError(apiError.message)
         return
       }
       if (apiError.code === 'DOMAIN_FQDN_TAKEN') {

@@ -162,16 +162,17 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
     ).toBeInTheDocument()
   })
 
-  test('상한 초과 409는 안내 문구로 흡수한다 (상한값은 서버만 안다)', async () => {
+  test('상한 초과 409는 서버 안내(상한값·행동 지침)를 그대로 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
       http.post('*/api/v1/vms/57/domains', () =>
         HttpResponse.json(
           {
             type: 'about:blank',
-            title: '플랫폼 서브도메인 상한에 도달했습니다',
+            title: '플랫폼 서브도메인 개수 제한에 도달했습니다',
             status: 409,
-            detail: '플랫폼 서브도메인은 VM당 3개까지 연결할 수 있습니다.',
+            detail:
+              '이 VM에는 플랫폼 서브도메인을 최대 3개까지 연결할 수 있습니다. 기존 서브도메인을 해제하거나 커스텀 도메인을 사용해 주세요.',
             instance: '/api/v1/vms/57/domains',
             code: 'DOMAIN_LIMIT_REACHED',
           },
@@ -190,9 +191,11 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (모달)', () => {
     await user.type(within(modal).getByLabelText('서브도메인'), 'one-more')
     await user.click(within(modal).getByRole('button', { name: '연결' }))
 
+    // 상한값(몇 개까지)과 다음 행동(해제 또는 커스텀 도메인)은 서버 detail에만
+    // 있다 — 자체 문구로 덮으면 사용자가 무엇을 지워야 하는지 알 수 없다.
     expect(
       await within(modal).findByText(
-        '플랫폼 서브도메인 상한에 도달해 연결을 접수하지 못했습니다.',
+        '이 VM에는 플랫폼 서브도메인을 최대 3개까지 연결할 수 있습니다. 기존 서브도메인을 해제하거나 커스텀 도메인을 사용해 주세요.',
       ),
     ).toBeInTheDocument()
   })
