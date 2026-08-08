@@ -397,6 +397,45 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
     )
   })
 
+  test('예약 절의 커스텀 잔재에는 다시 연결이 없다 (플랫폼 이름 전용)', async () => {
+    // 해제 시각이 남은 커스텀 행은 즉시 회수 대상 잔재다. 다시 연결 버튼은
+    // 플랫폼 추가 모달을 열어 전체 주소를 서브도메인 칸에 넣는 오동작만
+    // 만들므로, 커스텀 행에는 버튼 자체를 내지 않는다.
+    server.use(
+      http.get('*/api/v1/domains', () =>
+        HttpResponse.json({
+          content: [
+            {
+              id: 901,
+              vmId: 63,
+              kind: 'CUSTOM',
+              fqdn: 'legacy.example.com',
+              rootDomain: null,
+              status: 'PENDING',
+              verifiedAt: null,
+              createdAt: '2026-06-01T00:00:00+09:00',
+              releasedAt: '2026-07-11T00:00:00+09:00',
+              reservedUntil: '2026-07-11T00:00:00+09:00',
+            },
+          ],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+    )
+    renderVm(63)
+
+    await screen.findByRole('heading', { name: 'shop-app' })
+    const card = await domainsCard()
+    await within(card).findByText('legacy.example.com')
+    expect(within(card).getByText('예약 중', { selector: 'h3' })).toBeInTheDocument()
+    expect(
+      within(card).queryByRole('button', { name: '다시 연결' }),
+    ).not.toBeInTheDocument()
+  })
+
   test('즉시 반납 — 드로어에서 확인을 거쳐 이름이 바로 풀린다', async () => {
     const user = userEvent.setup()
     renderVm(63)
