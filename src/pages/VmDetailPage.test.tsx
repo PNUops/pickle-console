@@ -91,7 +91,7 @@ describe('VM 상세 — 진행 패널', () => {
     renderVm(55)
 
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
-    expect(screen.getByText(/템플릿 복제 중/)).toBeInTheDocument()
+    expect(screen.getByText(/OS 이미지 복제 중/)).toBeInTheDocument()
 
     // mock 프로비저닝 완료 → 실행 중으로 갱신되고 패널이 사라진다.
     expect(await screen.findByText('실행 중')).toBeInTheDocument()

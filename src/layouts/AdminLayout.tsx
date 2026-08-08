@@ -42,7 +42,7 @@ export function AdminLayout() {
             items: [
               { to: '/admin/nodes', label: '노드/IP' },
               { to: '/admin/network', label: '네트워크' },
-              { to: '/admin/templates', label: '템플릿 관리' },
+              { to: '/admin/os-images', label: 'OS 이미지 관리' },
               ...(sysAdmin ? [{ to: '/admin/orgs', label: '기관 관리' }] : []),
               { to: '/admin/tasks', label: '작업' },
               { to: '/admin/settings', label: '플랫폼 설정' },

@@ -39,8 +39,8 @@ export function resetReferenceFixtures() {
   resetFlavorStore()
 }
 
-/** OS 카탈로그 — 공개 /templates는 ACTIVE 리비전만 노출한다. */
-export const ubuntuTemplate: Schemas['VmTemplateResponse'] = {
+/** OS 카탈로그 — 공개 /os-images는 ACTIVE 리비전만 노출한다. */
+export const ubuntuOsImage: Schemas['OsImageResponse'] = {
   id: 1,
   name: 'ubuntu-24.04',
   displayName: 'Ubuntu 24.04 LTS',
@@ -53,7 +53,7 @@ export const ubuntuTemplate: Schemas['VmTemplateResponse'] = {
   notes: '대부분의 수업·동아리 프로젝트에 적합합니다.',
 }
 
-export const templates: Schemas['VmTemplateResponse'][] = [ubuntuTemplate]
+export const osImages: Schemas['OsImageResponse'][] = [ubuntuOsImage]
 
 /* ─── 사양 프리셋 (OS와 직교하는 축) ─── */
 
@@ -125,7 +125,7 @@ export const requestOptions = {
 
 export const referenceHandlers: RequestHandler[] = [
   http.get('*/api/v1/orgs', () => HttpResponse.json(orgs, { status: 200 })),
-  http.get('*/api/v1/templates', () => HttpResponse.json(templates, { status: 200 })),
+  http.get('*/api/v1/os-images', () => HttpResponse.json(osImages, { status: 200 })),
   // 공개 목록은 ACTIVE 프리셋만 노출한다 (은퇴 프리셋은 관리자 목록에만 남는다).
   http.get('*/api/v1/vm-flavors', () =>
     HttpResponse.json(

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import {
-  fetchTemplates,
+  fetchOsImages,
   fetchVmFlavors,
   fetchVmRequest,
   type VmRequestDetail,
@@ -31,7 +31,7 @@ export function RequestDetailPage() {
     queryKey: ['vm-requests', requestId],
     queryFn: () => fetchVmRequest(requestId),
   })
-  const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
 
   if (request.isPending) {
@@ -46,10 +46,10 @@ export function RequestDetailPage() {
   }
 
   const data = request.data
-  const templateName = (templateId: number | null | undefined) => {
-    if (templateId == null) return '—'
+  const imageName = (imageId: number | null | undefined) => {
+    if (imageId == null) return '—'
     return (
-      templates.data?.find((t) => t.id === templateId)?.displayName ?? `템플릿 #${templateId}`
+      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
     )
   }
   const flavorName = (flavorId: number | null | undefined) => {
@@ -87,7 +87,7 @@ export function RequestDetailPage() {
       )}
 
       {data.review && (
-        <ReviewCard review={data.review} templateName={templateName(data.review.grantedTemplateId)} />
+        <ReviewCard review={data.review} imageName={imageName(data.review.grantedImageId)} />
       )}
 
       <Card>
@@ -98,7 +98,7 @@ export function RequestDetailPage() {
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             <Field label="그룹">{data.groupName}</Field>
             <Field label="기관">{data.orgName}</Field>
-            <Field label="OS">{templateName(data.templateId)}</Field>
+            <Field label="OS">{imageName(data.imageId)}</Field>
             <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
             <Field label="요청 사양">
               {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
@@ -138,10 +138,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function ReviewCard({
   review,
-  templateName,
+  imageName,
 }: {
   review: NonNullable<VmRequestDetail['review']>
-  templateName: string
+  imageName: string
 }) {
   const approved = review.decision === 'APPROVE'
   return (
@@ -163,7 +163,7 @@ function ReviewCard({
                 {formatSpec(review.grantedVcpu, review.grantedMemoryMb, review.grantedDiskGb)}
               </Field>
             )}
-          {approved && <Field label="부여 템플릿">{templateName}</Field>}
+          {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
           {approved && (
             <Field label="부여 기간">
               {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}

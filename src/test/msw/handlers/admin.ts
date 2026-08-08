@@ -28,7 +28,7 @@ export function submittedAdminRequest(id: number): VmRequestDetail {
     orgName: '정보컴퓨터공학부 실습지원센터',
     requesterId: regularUser.id,
     requesterName: regularUser.name,
-    templateId: 1,
+    imageId: 1,
     flavorId: 2,
     purpose: `추가 실습 서버 ${id}`,
     courseOrProject: null,
@@ -81,7 +81,7 @@ function initialAdminRequests(): VmRequestDetail[] {
         grantedVcpu: 2,
         grantedMemoryMb: 2048,
         grantedDiskGb: 20,
-        grantedTemplateId: 1,
+        grantedImageId: 1,
         grantedStartDate: null,
         grantedEndDate: null,
         nodeId: null,
@@ -102,7 +102,7 @@ function initialAdminRequests(): VmRequestDetail[] {
         grantedVcpu: null,
         grantedMemoryMb: null,
         grantedDiskGb: null,
-        grantedTemplateId: null,
+        grantedImageId: null,
         grantedStartDate: null,
         grantedEndDate: null,
         nodeId: null,
@@ -119,7 +119,7 @@ function initialAdminRequests(): VmRequestDetail[] {
       groupName: 'AI 동아리',
       orgId: 2,
       orgName: '테스트 기관',
-      templateId: 1,
+      imageId: 1,
       flavorId: 3,
       purpose: 'AI 동아리 모델 학습 서버',
       specReason: '데이터 전처리와 학습을 병행해 메모리가 더 필요합니다.',
@@ -252,13 +252,13 @@ export function resetAdminFixtures() {
   rejectBodies = []
   userPatchBodies = []
   nextOrgId = 100
-  adminTemplates = initialAdminTemplates()
+  adminOsImages = initialAdminOsImages()
   resetFlavorStore()
   nextFlavorId = 100
 }
 
-/** 템플릿 인벤토리 (전 상태 — 공개 /templates와 달리 은퇴 리비전 포함). */
-function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
+/** OS 이미지 인벤토리 (전 상태 — 공개 /os-images와 달리 은퇴 리비전 포함). */
+function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
   return [
     {
       id: 1,
@@ -291,7 +291,7 @@ function initialAdminTemplates(): Schemas['AdminTemplateResponse'][] {
   ]
 }
 
-export let adminTemplates: Schemas['AdminTemplateResponse'][] = initialAdminTemplates()
+export let adminOsImages: Schemas['AdminOsImageResponse'][] = initialAdminOsImages()
 
 /* 사양 프리셋 인벤토리는 공개 목록과 공유하는 저장소(flavorStore)를 그대로 쓴다 —
    관리자 목록은 전 상태를, 공개 목록은 ACTIVE만 노출한다. */
@@ -443,7 +443,7 @@ export const adminHandlers: RequestHandler[] = [
       grantedVcpu: body.grantedVcpu,
       grantedMemoryMb: body.grantedMemoryMb,
       grantedDiskGb: body.grantedDiskGb,
-      grantedTemplateId: body.grantedTemplateId,
+      grantedImageId: body.grantedImageId,
       grantedStartDate: body.grantedStartDate ?? null,
       grantedEndDate: body.grantedEndDate ?? null,
       nodeId: body.nodeId ?? null,
@@ -481,7 +481,7 @@ export const adminHandlers: RequestHandler[] = [
       grantedVcpu: null,
       grantedMemoryMb: null,
       grantedDiskGb: null,
-      grantedTemplateId: null,
+      grantedImageId: null,
       grantedStartDate: null,
       grantedEndDate: null,
       nodeId: null,
@@ -608,16 +608,16 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json({ ...node, status: body.status }, { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/templates', () =>
-    HttpResponse.json(adminTemplates, { status: 200 }),
+  http.get('*/api/v1/admin/os-images', () =>
+    HttpResponse.json(adminOsImages, { status: 200 }),
   ),
 
-  http.patch('*/api/v1/admin/templates/:templateId', async ({ params, request }) => {
-    const template = adminTemplates.find((t) => t.id === Number(params.templateId))
-    if (!template) return notFound()
-    const body = (await request.json()) as { status: Schemas['TemplateStatus'] }
-    template.status = body.status
-    return HttpResponse.json(template, { status: 200 })
+  http.patch('*/api/v1/admin/os-images/:imageId', async ({ params, request }) => {
+    const image = adminOsImages.find((t) => t.id === Number(params.imageId))
+    if (!image) return notFound()
+    const body = (await request.json()) as { status: Schemas['CatalogStatus'] }
+    image.status = body.status
+    return HttpResponse.json(image, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/vm-flavors', () =>

@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminVmRequests,
   fetchOrgs,
-  fetchTemplates,
+  fetchOsImages,
   type VmRequestStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
@@ -57,11 +57,11 @@ export function AdminRequestsPage() {
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
-  const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
-  const templateName = (templateId: number) =>
-    templates.data?.find((t) => t.id === templateId)?.displayName ?? `템플릿 #${templateId}`
+  const imageName = (imageId: number) =>
+    osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
 
   return (
     <div className="space-y-6">
@@ -140,7 +140,7 @@ export function AdminRequestsPage() {
                 <TR>
                   <TH>신청자</TH>
                   <TH>그룹</TH>
-                  <TH>템플릿 / 요청 사양</TH>
+                  <TH>OS 이미지 / 요청 사양</TH>
                   <TH>신청일</TH>
                   <TH>상태</TH>
                 </TR>
@@ -166,7 +166,7 @@ export function AdminRequestsPage() {
                     </TD>
                     <TD>{request.groupName}</TD>
                     <TD className="whitespace-nowrap">
-                      <span className="block">{templateName(request.templateId)}</span>
+                      <span className="block">{imageName(request.imageId)}</span>
                       <span className="block text-xs text-neutral-500">
                         {formatSpec(request.reqVcpu, request.reqMemoryMb, request.reqDiskGb)}
                       </span>

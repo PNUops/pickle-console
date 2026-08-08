@@ -7,7 +7,7 @@ import {
   fetchGroups,
   fetchOrgs,
   fetchRequestOptions,
-  fetchTemplates,
+  fetchOsImages,
   fetchVmFlavors,
   type CreateVmRequest,
   type VmFlavor,
@@ -44,7 +44,7 @@ const STEPS = ['그룹·기관·이름', 'OS·사양', '용도·기간', '확인
 const FIELD_LABELS: Record<string, string> = {
   groupId: '그룹',
   orgId: '기관',
-  templateId: 'OS',
+  imageId: 'OS',
   flavorId: '사양 프리셋',
   purpose: '용도',
   courseOrProject: '수업/프로젝트',
@@ -62,7 +62,7 @@ const FIELD_LABELS: Record<string, string> = {
 interface WizardState {
   groupId: number | null
   orgId: number | null
-  templateId: number | null
+  imageId: number | null
   flavorId: number | null
   reqVcpu: number
   reqMemoryMb: number
@@ -80,7 +80,7 @@ interface WizardState {
 const INITIAL_STATE: WizardState = {
   groupId: null,
   orgId: null,
-  templateId: null,
+  imageId: null,
   flavorId: null,
   reqVcpu: 1,
   reqMemoryMb: 1024,
@@ -129,7 +129,7 @@ function exceedsFlavor(state: WizardState, flavor: VmFlavor | undefined): boolea
 export function NewRequestPage() {
   const groups = useQuery({ queryKey: ['groups'], queryFn: fetchGroups })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
-  const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
   const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
 
@@ -146,17 +146,17 @@ export function NewRequestPage() {
   const isLoading =
     groups.isPending ||
     orgs.isPending ||
-    templates.isPending ||
+    osImages.isPending ||
     flavors.isPending ||
     options.isPending
   const loadError =
-    groups.error ?? orgs.error ?? templates.error ?? flavors.error ?? options.error
+    groups.error ?? orgs.error ?? osImages.error ?? flavors.error ?? options.error
   const ready = !isLoading && !loadError
 
   const eligibleGroups = (groups.data ?? []).filter(
     (g) => g.myRole === 'OWNER' || g.myRole === 'EDITOR',
   )
-  const selectedTemplate = templates.data?.find((t) => t.id === state.templateId)
+  const selectedImage = osImages.data?.find((t) => t.id === state.imageId)
   const selectedFlavor = flavors.data?.find((f) => f.id === state.flavorId)
 
   const validateStep = (index: number): FieldErrors => {
@@ -178,14 +178,14 @@ export function NewRequestPage() {
     if (index === 1) {
       // 목록에 없는 id(초안에 남은 은퇴 OS·프리셋, 직접 넣은 값)는 선택되지 않은
       // 것으로 본다 — 그대로 두면 요약이 원시 id를 보여주고 제출이 422로 튕긴다.
-      if (state.templateId == null || !selectedTemplate) next.templateId = 'OS를 선택해 주세요.'
+      if (state.imageId == null || !selectedImage) next.imageId = 'OS를 선택해 주세요.'
       if (state.flavorId == null || !selectedFlavor)
         next.flavorId = '사양 프리셋을 선택해 주세요.'
-      if (selectedTemplate && selectedFlavor) {
+      if (selectedImage && selectedFlavor) {
         if (state.reqVcpu < 1) next.reqVcpu = 'vCPU는 1 이상이어야 합니다.'
         if (state.reqMemoryMb < 256) next.reqMemoryMb = '메모리는 256 MiB 이상이어야 합니다.'
-        if (state.reqDiskGb < selectedTemplate.minDiskGb)
-          next.reqDiskGb = `디스크는 이 OS의 최소 크기(${selectedTemplate.minDiskGb} GiB) 이상이어야 합니다.`
+        if (state.reqDiskGb < selectedImage.minDiskGb)
+          next.reqDiskGb = `디스크는 이 OS의 최소 크기(${selectedImage.minDiskGb} GiB) 이상이어야 합니다.`
         if (exceedsFlavor(state, selectedFlavor) && !state.specReason.trim())
           next.specReason = '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
       }
@@ -277,7 +277,7 @@ export function NewRequestPage() {
   const buildPayload = (): CreateVmRequest => ({
     groupId: state.groupId!,
     orgId: state.orgId!,
-    templateId: state.templateId!,
+    imageId: state.imageId!,
     flavorId: state.flavorId!,
     purpose: state.purpose.trim(),
     courseOrProject: state.courseOrProject.trim() || null,
@@ -405,31 +405,31 @@ export function NewRequestPage() {
                 <legend className="text-sm font-medium text-neutral-700">
                   OS 선택 <span aria-hidden="true" className="text-danger-600">*</span>
                 </legend>
-                {errors.templateId && (
+                {errors.imageId && (
                   <p role="alert" className="mt-1 text-sm text-danger-600">
-                    {errors.templateId}
+                    {errors.imageId}
                   </p>
                 )}
-                {templates.data?.length === 0 && (
+                {osImages.data?.length === 0 && (
                   <Alert variant="warning" className="mt-2">
                     신청할 수 있는 OS가 아직 없습니다. 관리자가 OS를 등록하면 신청할 수
                     있습니다.
                   </Alert>
                 )}
                 <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {templates.data?.map((template) => {
-                    const selected = template.id === state.templateId
+                  {osImages.data?.map((image) => {
+                    const selected = image.id === state.imageId
                     return (
                       <button
-                        key={template.id}
+                        key={image.id}
                         type="button"
                         aria-pressed={selected}
                         onClick={() =>
                           update({
-                            templateId: template.id,
+                            imageId: image.id,
                             // 이미 고른 사양(또는 직접 입력값)이 이 OS의 최소 디스크보다
                             // 작으면 끌어올린다 — 사양을 먼저 골랐거나 OS를 바꾼 경우.
-                            reqDiskGb: Math.max(state.reqDiskGb, template.minDiskGb),
+                            reqDiskGb: Math.max(state.reqDiskGb, image.minDiskGb),
                           })
                         }
                         className={cn(
@@ -440,13 +440,13 @@ export function NewRequestPage() {
                         )}
                       >
                         <p className="font-medium text-neutral-900">
-                          {template.displayName} <span className="text-neutral-400">v{template.version}</span>
+                          {image.displayName} <span className="text-neutral-400">v{image.version}</span>
                         </p>
                         <p className="mt-1 text-sm text-neutral-500">
-                          최소 디스크 {template.minDiskGb} GiB
+                          최소 디스크 {image.minDiskGb} GiB
                         </p>
-                        {template.notes && (
-                          <p className="mt-1 text-xs text-neutral-500">{template.notes}</p>
+                        {image.notes && (
+                          <p className="mt-1 text-xs text-neutral-500">{image.notes}</p>
                         )}
                       </button>
                     )
@@ -478,7 +478,7 @@ export function NewRequestPage() {
                             reqMemoryMb: flavor.memoryMb,
                             // 선택한 OS의 최소 디스크가 더 크면 그 값으로 올려 채운다 —
                             // 프리셋 값 그대로 넣으면 곧바로 검증에 걸린다.
-                            reqDiskGb: Math.max(flavor.diskGb, selectedTemplate?.minDiskGb ?? 0),
+                            reqDiskGb: Math.max(flavor.diskGb, selectedImage?.minDiskGb ?? 0),
                           })
                         }
                         className={cn(
@@ -501,7 +501,7 @@ export function NewRequestPage() {
                 </div>
               </fieldset>
 
-              {selectedTemplate && selectedFlavor && (
+              {selectedImage && selectedFlavor && (
                 <>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <FormField label="vCPU" required error={errors.reqVcpu}>
@@ -524,7 +524,7 @@ export function NewRequestPage() {
                     <FormField label="디스크 (GiB)" required error={errors.reqDiskGb}>
                       <Input
                         type="number"
-                        min={selectedTemplate.minDiskGb}
+                        min={selectedImage.minDiskGb}
                         value={state.reqDiskGb}
                         onChange={(event) => update({ reqDiskGb: Number(event.target.value) })}
                       />
@@ -616,7 +616,7 @@ export function NewRequestPage() {
                   eligibleGroups.find((g) => g.id === state.groupId)?.name ?? String(state.groupId)
                 }
                 orgName={orgs.data?.find((o) => o.id === state.orgId)?.name ?? String(state.orgId)}
-                templateName={selectedTemplate?.displayName ?? String(state.templateId)}
+                imageName={selectedImage?.displayName ?? String(state.imageId)}
                 flavorName={selectedFlavor?.displayName ?? String(state.flavorId)}
               />
               <Alert variant="warning" title="백업 책임 안내">
@@ -648,19 +648,19 @@ function SummaryTable({
   state,
   groupName,
   orgName,
-  templateName,
+  imageName,
   flavorName,
 }: {
   state: WizardState
   groupName: string
   orgName: string
-  templateName: string
+  imageName: string
   flavorName: string
 }) {
   const rows: [string, string][] = [
     ['그룹', groupName],
     ['기관', orgName],
-    ['OS', templateName],
+    ['OS', imageName],
     ['사양 프리셋', flavorName],
     ['요청 사양', `${state.reqVcpu} vCPU · ${formatMemory(state.reqMemoryMb)} · ${state.reqDiskGb} GiB`],
     ['사양 사유', state.specReason.trim() || '—'],

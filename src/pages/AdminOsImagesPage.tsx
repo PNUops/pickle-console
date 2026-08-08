@@ -2,11 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createAdminVmFlavor,
-  fetchAdminTemplates,
+  fetchAdminOsImages,
   fetchAdminVmFlavors,
-  updateAdminTemplate,
+  updateAdminOsImage,
   updateAdminVmFlavor,
-  type AdminTemplate,
+  type AdminOsImage,
   type VmFlavor,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
@@ -37,56 +37,56 @@ import { formatSpec } from '../lib/format'
 const FLAVOR_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 
 /**
- * 템플릿·사양 관리 — OS 카탈로그(템플릿)와 사양 프리셋을 각각 나열하고
+ * OS 이미지·사양 관리 — OS 카탈로그와 사양 프리셋을 각각 나열하고
  * ACTIVE/DISABLED 를 토글한다. 프리셋은 등록·값 수정까지 지원한다.
  */
-export function AdminTemplatesPage() {
+export function AdminOsImagesPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const [message, setMessage] = useState<string | null>(null)
-  const [toggleTarget, setToggleTarget] = useState<AdminTemplate | null>(null)
+  const [toggleTarget, setToggleTarget] = useState<AdminOsImage | null>(null)
   const [flavorToggleTarget, setFlavorToggleTarget] = useState<VmFlavor | null>(null)
   const [flavorEditTarget, setFlavorEditTarget] = useState<VmFlavor | null>(null)
   const [flavorCreateOpen, setFlavorCreateOpen] = useState(false)
 
-  const templates = useQuery({ queryKey: ['admin', 'templates'], queryFn: fetchAdminTemplates })
+  const osImages = useQuery({ queryKey: ['admin', 'os-images'], queryFn: fetchAdminOsImages })
   const flavors = useQuery({ queryKey: ['admin', 'vm-flavors'], queryFn: fetchAdminVmFlavors })
 
-  const activeCount = templates.data?.filter((t) => t.status === 'ACTIVE').length ?? 0
+  const activeCount = osImages.data?.filter((t) => t.status === 'ACTIVE').length ?? 0
   const activeFlavorCount = flavors.data?.filter((f) => f.status === 'ACTIVE').length ?? 0
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">템플릿·사양 관리</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">OS 이미지·사양 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          신청 위저드의 두 축입니다 — OS 템플릿과 사양 프리셋. 은퇴(비활성)해도 기존 VM은
+          신청 위저드의 두 축입니다 — OS 이미지와 사양 프리셋. 은퇴(비활성)해도 기존 VM은
           영향받지 않습니다.
         </p>
       </div>
 
       {!isSysAdmin && (
         <PermissionNotice>
-          템플릿·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.
+          OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.
         </PermissionNotice>
       )}
       {message && <Alert variant="info">{message}</Alert>}
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-neutral-900">OS 템플릿</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">OS 이미지</h2>
 
-        {templates.isPending && (
+        {osImages.isPending && (
           <div className="flex justify-center py-12">
-            <Spinner label="템플릿 목록 불러오는 중" />
+            <Spinner label="OS 이미지 목록 불러오는 중" />
           </div>
         )}
-        {templates.isError && <Alert variant="danger">{templates.error.message}</Alert>}
-        {templates.isSuccess && templates.data.length === 0 && (
+        {osImages.isError && <Alert variant="danger">{osImages.error.message}</Alert>}
+        {osImages.isSuccess && osImages.data.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            등록된 템플릿이 없습니다.
+            등록된 OS 이미지가 없습니다.
           </Card>
         )}
-        {templates.isSuccess && templates.data.length > 0 && (
+        {osImages.isSuccess && osImages.data.length > 0 && (
           <Card>
             <Table>
               <THead>
@@ -103,32 +103,32 @@ export function AdminTemplatesPage() {
                 </TR>
               </THead>
               <TBody>
-                {templates.data.map((template) => (
-                  <TR key={template.id}>
-                    <TD className="font-medium text-neutral-900">{template.displayName}</TD>
+                {osImages.data.map((image) => (
+                  <TR key={image.id}>
+                    <TD className="font-medium text-neutral-900">{image.displayName}</TD>
                     <TD className="font-mono text-xs text-neutral-500">
-                      {template.name} · v{template.version}
+                      {image.name} · v{image.version}
                     </TD>
                     <TD>
-                      <Badge variant={template.status === 'ACTIVE' ? 'success' : 'neutral'}>
-                        {template.status === 'ACTIVE' ? '활성' : '은퇴'}
+                      <Badge variant={image.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                        {image.status === 'ACTIVE' ? '활성' : '은퇴'}
                       </Badge>
                     </TD>
                     <TD className="whitespace-nowrap text-xs text-neutral-500">
-                      {template.nodeId} / {template.proxmoxVmid}
+                      {image.nodeId} / {image.proxmoxVmid}
                     </TD>
-                    <TD className="whitespace-nowrap">{template.minDiskGb} GiB</TD>
+                    <TD className="whitespace-nowrap">{image.minDiskGb} GiB</TD>
                     <TD className="max-w-xs truncate text-xs text-neutral-500">
-                      {template.notes ?? '—'}
+                      {image.notes ?? '—'}
                     </TD>
                     <TD className="text-right">
                       <Button
                         variant="secondary"
                         size="sm"
                         disabled={!isSysAdmin}
-                        onClick={() => setToggleTarget(template)}
+                        onClick={() => setToggleTarget(image)}
                       >
-                        {template.status === 'ACTIVE' ? '은퇴' : '되살리기'}
+                        {image.status === 'ACTIVE' ? '은퇴' : '되살리기'}
                       </Button>
                     </TD>
                   </TR>
@@ -222,8 +222,8 @@ export function AdminTemplatesPage() {
       </section>
 
       {toggleTarget && (
-        <ToggleTemplateModal
-          template={toggleTarget}
+        <ToggleOsImageModal
+          image={toggleTarget}
           lastActive={toggleTarget.status === 'ACTIVE' && activeCount <= 1}
           onClose={() => setToggleTarget(null)}
           onDone={(text) => {
@@ -278,38 +278,38 @@ function useFlavorInvalidation() {
   }
 }
 
-function ToggleTemplateModal({
-  template,
+function ToggleOsImageModal({
+  image,
   lastActive,
   onClose,
   onDone,
 }: {
-  template: AdminTemplate
+  image: AdminOsImage
   lastActive: boolean
   onClose: () => void
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
-  const retiring = template.status === 'ACTIVE'
+  const retiring = image.status === 'ACTIVE'
 
   const toggle = useMutation({
     mutationFn: () =>
-      updateAdminTemplate(template.id, { status: retiring ? 'DISABLED' : 'ACTIVE' }),
+      updateAdminOsImage(image.id, { status: retiring ? 'DISABLED' : 'ACTIVE' }),
     onSuccess: async () => {
       setError(null)
-      onDone(retiring ? '템플릿을 은퇴시켰습니다.' : '템플릿을 다시 활성화했습니다.')
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] })
-      await queryClient.invalidateQueries({ queryKey: ['templates'] })
+      onDone(retiring ? 'OS 이미지를 은퇴시켰습니다.' : 'OS 이미지를 다시 활성화했습니다.')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'os-images'] })
+      await queryClient.invalidateQueries({ queryKey: ['os-images'] })
     },
-    onError: (err) => setError(toApiError(err, '템플릿 상태를 변경하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, 'OS 이미지 상태를 변경하지 못했습니다.').message),
   })
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={retiring ? '템플릿 은퇴' : '템플릿 활성화'}
+      title={retiring ? 'OS 이미지 은퇴' : 'OS 이미지 활성화'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -328,19 +328,19 @@ function ToggleTemplateModal({
       <div className="space-y-3">
         {retiring ? (
           <p className="text-sm text-neutral-600">
-            <strong>{template.displayName}</strong> (v{template.version})을(를) 은퇴시키면
+            <strong>{image.displayName}</strong> (v{image.version})을(를) 은퇴시키면
             신청 위저드에서 사라지고 새 신청 검증에서 거부됩니다. 기존 VM은 영향받지
             않으며, 언제든 다시 활성화할 수 있습니다.
           </p>
         ) : (
           <p className="text-sm text-neutral-600">
-            <strong>{template.displayName}</strong> (v{template.version})을(를) 다시 신청
+            <strong>{image.displayName}</strong> (v{image.version})을(를) 다시 신청
             위저드에 노출합니다.
           </p>
         )}
         {lastActive && (
           <Alert variant="warning">
-            마지막 ACTIVE 템플릿입니다 — 은퇴시키면 신규 VM 신청이 불가능해집니다.
+            마지막 ACTIVE OS 이미지입니다 — 은퇴시키면 신규 VM 신청이 불가능해집니다.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}

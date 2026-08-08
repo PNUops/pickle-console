@@ -8,12 +8,12 @@ import { canDecideRequest } from '../auth/permissions'
 import {
   fetchAdminVmRequest,
   fetchApprovalContext,
-  fetchTemplates,
+  fetchOsImages,
   fetchVmFlavors,
   type ApprovalContext,
   type ApproveVmRequest,
   type VmRequestDetail,
-  type VmTemplate,
+  type OsImage,
 } from '../api/queries'
 import {
   Alert,
@@ -56,7 +56,7 @@ export function AdminRequestDetailPage() {
     queryKey: ['admin', 'vm-requests', requestId],
     queryFn: () => fetchAdminVmRequest(requestId),
   })
-  const templates = useQuery({ queryKey: ['templates'], queryFn: fetchTemplates })
+  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
 
   if (request.isPending) {
@@ -71,10 +71,10 @@ export function AdminRequestDetailPage() {
   }
 
   const data = request.data
-  const templateName = (templateId: number | null | undefined) => {
-    if (templateId == null) return '—'
+  const imageName = (imageId: number | null | undefined) => {
+    if (imageId == null) return '—'
     return (
-      templates.data?.find((t) => t.id === templateId)?.displayName ?? `템플릿 #${templateId}`
+      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
     )
   }
   const flavorName = (flavorId: number | null | undefined) => {
@@ -108,7 +108,7 @@ export function AdminRequestDetailPage() {
           {data.review && (
             <DecisionResultCard
               review={data.review}
-              templateName={templateName(data.review.grantedTemplateId)}
+              imageName={imageName(data.review.grantedImageId)}
             />
           )}
 
@@ -121,7 +121,7 @@ export function AdminRequestDetailPage() {
                 <Field label="신청자">{data.requesterName}</Field>
                 <Field label="그룹">{data.groupName}</Field>
                 <Field label="기관">{data.orgName}</Field>
-                <Field label="OS">{templateName(data.templateId)}</Field>
+                <Field label="OS">{imageName(data.imageId)}</Field>
                 <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
                 <Field label="요청 사양">
                   {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
@@ -147,36 +147,36 @@ export function AdminRequestDetailPage() {
             </CardContent>
           </Card>
 
-          {/* 템플릿 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
+          {/* OS 이미지 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
               명시하고 재시도 경로를 제공한다 (무음 실종 방지). */}
           {data.status === 'SUBMITTED' &&
             canDecide &&
-            (templates.isError ? (
-              <Alert variant="danger" title="템플릿 목록을 불러오지 못했습니다">
+            (osImages.isError ? (
+              <Alert variant="danger" title="OS 이미지 목록을 불러오지 못했습니다">
                 <div className="space-y-2">
-                  <p>승인·반려를 결정하려면 템플릿 목록이 필요합니다.</p>
+                  <p>승인·반려를 결정하려면 OS 이미지 목록이 필요합니다.</p>
                   <Button
                     size="sm"
                     variant="secondary"
-                    loading={templates.isFetching}
-                    onClick={() => void templates.refetch()}
+                    loading={osImages.isFetching}
+                    onClick={() => void osImages.refetch()}
                   >
                     다시 시도
                   </Button>
                 </div>
               </Alert>
-            ) : templates.data ? (
+            ) : osImages.data ? (
               <DecisionSection
                 // 같은 라우트 패턴 간 이동(A→B) 시 재마운트를 강제해 이전 신청의
                 // 프리필(슬러그·사양)이 남지 않게 한다.
                 key={data.id}
                 request={data}
-                templates={templates.data}
+                osImages={osImages.data}
                 onNotice={setNotice}
               />
             ) : (
               <div className="flex justify-center py-6">
-                <Spinner label="템플릿 목록 불러오는 중" />
+                <Spinner label="OS 이미지 목록 불러오는 중" />
               </div>
             ))}
         </div>
@@ -198,10 +198,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function DecisionResultCard({
   review,
-  templateName,
+  imageName,
 }: {
   review: NonNullable<VmRequestDetail['review']>
-  templateName: string
+  imageName: string
 }) {
   const approved = review.decision === 'APPROVE'
   return (
@@ -223,7 +223,7 @@ function DecisionResultCard({
                 {formatSpec(review.grantedVcpu, review.grantedMemoryMb, review.grantedDiskGb)}
               </Field>
             )}
-          {approved && <Field label="부여 템플릿">{templateName}</Field>}
+          {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
           {approved && (
             <Field label="부여 기간">
               {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}
@@ -244,11 +244,11 @@ function DecisionResultCard({
 
 function DecisionSection({
   request,
-  templates,
+  osImages,
   onNotice,
 }: {
   request: VmRequestDetail
-  templates: VmTemplate[]
+  osImages: OsImage[]
   onNotice: (notice: Notice | null) => void
 }) {
   const queryClient = useQueryClient()
@@ -258,7 +258,7 @@ function DecisionSection({
   const [vcpu, setVcpu] = useState(String(request.reqVcpu))
   const [memoryMb, setMemoryMb] = useState(String(request.reqMemoryMb))
   const [diskGb, setDiskGb] = useState(String(request.reqDiskGb))
-  const [templateId, setTemplateId] = useState(String(request.templateId))
+  const [imageId, setImageId] = useState(String(request.imageId))
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.desiredSlug ?? '')
@@ -341,7 +341,7 @@ function DecisionSection({
     grantedVcpu: Number(vcpu),
     grantedMemoryMb: Number(memoryMb),
     grantedDiskGb: Number(diskGb),
-    grantedTemplateId: Number(templateId),
+    grantedImageId: Number(imageId),
     grantedStartDate: startDate || null,
     grantedEndDate: endDate || null,
     grantedSlug: grantedSlug.trim() || null,
@@ -353,15 +353,15 @@ function DecisionSection({
     event.preventDefault()
     onNotice(null)
     const errors: Record<string, string> = {}
-    const template = templates.find((t) => t.id === Number(templateId))
+    const image = osImages.find((t) => t.id === Number(imageId))
     if (!Number.isInteger(Number(vcpu)) || Number(vcpu) < 1)
       errors.grantedVcpu = 'vCPU는 1 이상의 정수로 입력해 주세요.'
     if (!Number.isInteger(Number(memoryMb)) || Number(memoryMb) < 256)
       errors.grantedMemoryMb = '메모리는 256 MiB 이상으로 입력해 주세요.'
     if (!Number.isInteger(Number(diskGb)) || Number(diskGb) < 1)
       errors.grantedDiskGb = '디스크는 1 GiB 이상으로 입력해 주세요.'
-    else if (template && Number(diskGb) < template.minDiskGb)
-      errors.grantedDiskGb = `디스크는 이 템플릿의 최소 크기(${template.minDiskGb} GiB) 이상이어야 합니다.`
+    else if (image && Number(diskGb) < image.minDiskGb)
+      errors.grantedDiskGb = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
     if (nodeId && (!Number.isInteger(Number(nodeId)) || Number(nodeId) < 1))
       errors.nodeId = '노드 ID는 1 이상의 정수로 입력하거나 비워 두세요.'
     if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
@@ -452,14 +452,14 @@ function DecisionSection({
                 />
               </FormField>
             </div>
-            <FormField label="템플릿" required error={fieldErrors.grantedTemplateId}>
+            <FormField label="OS 이미지" required error={fieldErrors.grantedImageId}>
               <Select
-                value={templateId}
-                onChange={(event) => setTemplateId(event.target.value)}
+                value={imageId}
+                onChange={(event) => setImageId(event.target.value)}
               >
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.displayName}
+                {osImages.map((image) => (
+                  <option key={image.id} value={image.id}>
+                    {image.displayName}
                   </option>
                 ))}
               </Select>
@@ -562,7 +562,7 @@ function DecisionSection({
             <p>아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.</p>
             <p className="font-medium text-neutral-800">
               {formatSpec(Number(vcpu), Number(memoryMb), Number(diskGb))} ·{' '}
-              {templates.find((t) => t.id === Number(templateId))?.displayName}
+              {osImages.find((t) => t.id === Number(imageId))?.displayName}
             </p>
             <p>{nodeId ? `노드 #${nodeId}에 배치` : '자동 배치'}</p>
           </div>

@@ -58,7 +58,7 @@ function initialTasks(): AdminTaskView[] {
       status: 'RUNNING',
       currentStep: 3,
       totalSteps: 10,
-      stepLabel: '템플릿 복제 중',
+      stepLabel: 'OS 이미지 복제 중',
       attempts: 1,
       lastError: null,
       createdAt: '2026-07-08T14:03:05+09:00',

@@ -51,7 +51,7 @@ describe('승인 대기 큐', () => {
     expect(screen.getByRole('link', { name: '박영희' })).toBeInTheDocument()
     // 승인/반려된 건은 기본 탭에 없다.
     expect(screen.queryByRole('link', { name: '김철수' })).not.toBeInTheDocument()
-    // 템플릿/사양 요약이 표시된다.
+    // OS 이미지/사양 요약이 표시된다.
     expect(screen.getByText('4 vCPU · 4 GiB · 40 GiB')).toBeInTheDocument()
   })
 

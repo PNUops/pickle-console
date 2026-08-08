@@ -155,7 +155,7 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
       JSON.stringify({
         groupId: 12,
         orgId: 1,
-        templateId: 1,
+        imageId: 1,
         flavorId: 9,
         reqVcpu: 1,
         reqMemoryMb: 512,
@@ -210,12 +210,12 @@ describe('VM 신청 위저드 — OS·사양 축의 상호 보정', () => {
 
 describe('VM 신청 위저드 — 빈 OS 카탈로그', () => {
   // 갓 설치한 환경은 카탈로그가 비어 있다. 마이그레이션이 심는 행은 그 호스트에
-  // 없을 수도 있는 템플릿을 가리키므로, 카탈로그는 운영자가 실제 템플릿을 등록할
+  // 없을 수도 있는 OS 이미지를 가리키므로, 카탈로그는 운영자가 실제 OS 이미지를 등록할
   // 때까지 비어 있는 것이 정상이다. 그때 이 단계가 빈 격자만 보여 주면 사용자는
   // "OS를 선택해 주세요"라는 따를 수 없는 안내 앞에 멈춘다.
   test('고를 OS가 없으면 빈 격자 대신 이유를 안내한다', async () => {
     const user = userEvent.setup()
-    server.use(http.get('*/api/v1/templates', () => HttpResponse.json([], { status: 200 })))
+    server.use(http.get('*/api/v1/os-images', () => HttpResponse.json([], { status: 200 })))
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
     await passStep1(user)
@@ -332,7 +332,7 @@ describe('VM 신청 위저드 — 제출', () => {
     expect(createdVmRequestBodies[0]).toEqual({
       groupId: 12,
       orgId: 1,
-      templateId: 1,
+      imageId: 1,
       flavorId: 2,
       purpose: '캡스톤 백엔드 API 서버 운영',
       courseOrProject: '2026-1 캡스톤디자인',
