@@ -9,7 +9,7 @@ import {
   regularUserB,
   USER_PASSWORD,
 } from '../test/msw/handlers/auth'
-import { vmRequestStore } from '../test/msw/handlers/vm-requests'
+import { requestStore } from '../test/msw/handlers/requests'
 import { renderApp } from '../test/render'
 
 describe('라우트 가드', () => {
@@ -70,7 +70,7 @@ describe('계정 전환 시 캐시 격리', () => {
     await screen.findByRole('heading', { name: '로그인' })
 
     // 로그아웃 사이 서버 데이터가 바뀐 상황을 재현 (B에게는 신청이 없다).
-    vmRequestStore.splice(0, vmRequestStore.length)
+    requestStore.splice(0, requestStore.length)
 
     // B(박영희)로 로그인.
     await user.type(screen.getByLabelText('이메일'), regularUserB.email)

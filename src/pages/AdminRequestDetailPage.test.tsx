@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
-  adminVmRequestStore,
+  adminRequestStore,
   approveBodies,
   rejectBodies,
 } from '../test/msw/handlers/admin'
@@ -34,26 +34,26 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     })
     // guidance 안내문
     expect(
-      within(panel).getByText('자원에 여유가 있어 승인이 가능합니다.'),
+      within(panel).getByText('리소스에 여유가 있어 승인이 가능합니다.'),
     ).toBeInTheDocument()
     // 1) 신청자
     expect(within(panel).getByText('example@pusan.ac.kr')).toBeInTheDocument()
     expect(within(panel).getByText('승인 2회 · 반려 0회')).toBeInTheDocument()
-    // 2) 신청자 보유 자원
+    // 2) 신청자 보유 리소스
     expect(within(panel).getByText('example-dev')).toBeInTheDocument()
     expect(within(panel).getByText('합계 1 vCPU · 1 GiB · 10 GiB')).toBeInTheDocument()
-    // 3) 신청 그룹
+    // 3) 신청 워크스페이스
     expect(within(panel).getByText('캡스톤 3조')).toBeInTheDocument()
     expect(within(panel).getByText('김철수')).toBeInTheDocument()
     // 4) 신청 이력
     expect(within(panel).getByText('신청 #88')).toBeInTheDocument()
     expect(within(panel).getByText('소규모 개발용으로 승인')).toBeInTheDocument()
-    // 5) 기관 자원 여유
+    // 5) 기관 리소스 여유
     expect(within(panel).getByText('34 vCPU / 40 스레드')).toBeInTheDocument()
     expect(within(panel).getByText(/메모리 사용률 64%/)).toBeInTheDocument()
   })
 
-  test('기관 자원 경고가 있으면 경고 배지와 신중 안내문을 보여준다', async () => {
+  test('기관 리소스 경고가 있으면 경고 배지와 신중 안내문을 보여준다', async () => {
     renderDetail(204)
 
     const panel = await screen.findByRole('complementary', {
@@ -72,7 +72,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
 
   test('참고 정보를 불러오지 못해도 결정 폼은 계속 쓸 수 있다', async () => {
     server.use(
-      http.get('*/api/v1/admin/vm-requests/:requestId/context', () =>
+      http.get('*/api/v1/admin/requests/:requestId/context', () =>
         HttpResponse.json(
           {
             type: 'about:blank',
@@ -128,15 +128,17 @@ describe('승인 폼', () => {
     expect(approveBodies).toHaveLength(1)
     expect(approveBodies[0].requestId).toBe(201)
     expect(approveBodies[0].body).toEqual({
-      grantedVcpu: 2,
-      grantedMemoryMb: 2048,
-      grantedDiskGb: 20,
-      grantedImageId: 1,
       grantedStartDate: '2026-07-15',
       grantedEndDate: '2026-12-20',
-      grantedSlug: 'capstone-api',
-      nodeId: null,
       comment: null,
+      vm: {
+        grantedVcpu: 2,
+        grantedMemoryMb: 2048,
+        grantedDiskGb: 20,
+        grantedImageId: 1,
+        grantedSlug: 'capstone-api',
+        nodeId: null,
+      },
     })
   })
 
@@ -146,7 +148,7 @@ describe('승인 폼', () => {
 
     await screen.findByRole('heading', { name: '신청 #201' })
     // 상세를 보는 사이 다른 관리자가 먼저 처리한 상황을 재현한다.
-    const target = adminVmRequestStore.find((r) => r.id === 201)!
+    const target = adminRequestStore.find((r) => r.id === 201)!
     target.status = 'APPROVED'
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
@@ -204,7 +206,7 @@ describe('반려 폼', () => {
     await user.click(screen.getByRole('button', { name: '반려' }))
     await user.type(
       screen.getByLabelText('반려 사유'),
-      '기관 여유 자원을 초과합니다. 2GiB로 재신청해 주세요.',
+      '기관 여유 리소스를 초과합니다. 2GiB로 재신청해 주세요.',
     )
     await user.click(screen.getByRole('button', { name: '반려하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 반려' })
@@ -216,7 +218,7 @@ describe('반려 폼', () => {
     expect(rejectBodies).toEqual([
       {
         requestId: 201,
-        body: { comment: '기관 여유 자원을 초과합니다. 2GiB로 재신청해 주세요.' },
+        body: { comment: '기관 여유 리소스를 초과합니다. 2GiB로 재신청해 주세요.' },
       },
     ])
     expect(await screen.findAllByText('반려됨')).not.toHaveLength(0)

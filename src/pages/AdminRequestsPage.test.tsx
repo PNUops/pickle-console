@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { orgAdminUser, sysAdminUser } from '../test/msw/handlers/auth'
 import {
-  adminVmRequestStore,
+  adminRequestStore,
   submittedAdminRequest,
 } from '../test/msw/handlers/admin'
 import { renderApp } from '../test/render'
@@ -103,7 +103,7 @@ describe('승인 대기 큐', () => {
 
   test('10건이 넘으면 페이지네이션으로 나눠 보여준다', async () => {
     for (let id = 300; id < 309; id++) {
-      adminVmRequestStore.push(submittedAdminRequest(id))
+      adminRequestStore.push(submittedAdminRequest(id))
     }
     const user = userEvent.setup()
     renderAsOrgAdmin('/admin/requests')

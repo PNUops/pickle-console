@@ -37,7 +37,7 @@ export function AdminOrgsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">기관 관리</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            자원을 제공하는 기관을 관리하고 기관 관리자를 지정합니다.
+            리소스를 제공하는 기관을 관리하고 기관 관리자를 지정합니다.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>기관 만들기</Button>
@@ -51,7 +51,7 @@ export function AdminOrgsPage() {
       {orgs.isError && <Alert variant="danger">{orgs.error.message}</Alert>}
       {orgs.isSuccess && orgs.data.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          등록된 기관이 없습니다. 기관을 만들어 자원 제공을 시작하세요.
+          등록된 기관이 없습니다. 기관을 만들어 리소스 제공을 시작하세요.
         </Card>
       )}
       {orgs.isSuccess && orgs.data.length > 0 && (
@@ -193,7 +193,7 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
           <Textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="학부 수업·캡스톤용 서버 자원 제공"
+            placeholder="학부 수업·캡스톤용 서버 리소스 제공"
             maxLength={500}
           />
         </FormField>

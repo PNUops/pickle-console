@@ -1,9 +1,9 @@
 import type { components } from '../api/schema'
 
-export type VmRequestStatus = components['schemas']['VmRequestStatus']
+export type RequestStatus = components['schemas']['RequestStatus']
 export type VmStatus = components['schemas']['VmStatus']
 
-export const REQUEST_STATUS_LABELS: Record<VmRequestStatus, string> = {
+export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   SUBMITTED: '승인 대기',
   APPROVED: '승인됨',
   REJECTED: '반려됨',
@@ -186,7 +186,7 @@ export const IP_ALLOCATION_STATUS_LABELS: Record<IpAllocationStatus, string> = {
 export const ANNOUNCEMENT_SCOPE_LABELS: Record<AnnouncementScope, string> = {
   ALL: '전체',
   ORG: '기관',
-  GROUP: '그룹',
+  WORKSPACE: '워크스페이스',
 }
 
 /**
@@ -200,10 +200,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'auth.login_failed': '로그인 실패',
   'auth.refresh_reuse_detected': '리프레시 토큰 재사용 감지',
   'auth.logout': '로그아웃',
-  'group.create': '그룹 생성',
-  'group.member_add': '구성원 추가',
-  'group.member_update': '구성원 역할 변경',
-  'group.member_remove': '구성원 제거',
+  'workspace.create': '워크스페이스 생성',
+  'workspace.member_add': '구성원 추가',
+  'workspace.member_update': '구성원 역할 변경',
+  'workspace.member_remove': '구성원 제거',
   'request.create': '신청 제출',
   'request.cancel': '신청 취소',
   'request.approve': '신청 승인',

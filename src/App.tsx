@@ -22,7 +22,7 @@ import { AdminTerminalSessionsPage } from './pages/AdminTerminalSessionsPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
-import { AdminGroupsPage } from './pages/AdminGroupsPage'
+import { AdminWorkspacesPage } from './pages/AdminWorkspacesPage'
 import { AdminOsImagesPage } from './pages/AdminOsImagesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
@@ -30,8 +30,8 @@ import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { DocsPage } from './pages/DocsPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
-import { GroupDetailPage } from './pages/GroupDetailPage'
-import { GroupsPage } from './pages/GroupsPage'
+import { WorkspaceDetailPage } from './pages/WorkspaceDetailPage'
+import { WorkspacesPage } from './pages/WorkspacesPage'
 import { LoginPage } from './pages/LoginPage'
 import { MyActivityPage } from './pages/MyActivityPage'
 import { NewRequestPage } from './pages/NewRequestPage'
@@ -108,8 +108,8 @@ function App() {
         }
       >
         <Route index element={<ConsoleDashboardPage />} />
-        <Route path="groups" element={<GroupsPage />} />
-        <Route path="groups/:groupId" element={<GroupDetailPage />} />
+        <Route path="workspaces" element={<WorkspacesPage />} />
+        <Route path="workspaces/:workspaceId" element={<WorkspaceDetailPage />} />
         <Route path="requests" element={<RequestsPage />} />
         <Route path="requests/new" element={<NewRequestPage />} />
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
@@ -152,7 +152,7 @@ function App() {
         <Route path="vms/:vmId" element={<AdminVmDetailPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
-        <Route path="groups" element={<AdminGroupsPage />} />
+        <Route path="workspaces" element={<AdminWorkspacesPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="audit" element={<AdminAuditPage />} />

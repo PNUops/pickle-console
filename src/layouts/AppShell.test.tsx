@@ -26,9 +26,9 @@ describe('모바일 드로어 내비게이션', () => {
       'true',
     )
 
-    await user.click(within(drawer).getByRole('link', { name: '내 그룹' }))
+    await user.click(within(drawer).getByRole('link', { name: '내 워크스페이스' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: '내 그룹' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '내 워크스페이스' })).toBeInTheDocument()
   })
 
   test('ESC와 닫기 버튼으로 드로어를 닫을 수 있다', async () => {

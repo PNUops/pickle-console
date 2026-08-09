@@ -217,11 +217,11 @@ function initialOrgSummary(): Schemas['OrgDashboardSummaryResponse'] {
       allocatedDiskGb: 460,
       capacityVcpu: 40,
       capacityMemoryMb: 79872,
-      guidance: '자원에 여유가 있어 승인이 가능합니다.',
+      guidance: '리소스에 여유가 있어 승인이 가능합니다.',
     },
-    topGroupsByVmCount: [
-      { groupId: 12, name: '캡스톤 3조', vmCount: 3 },
-      { groupId: 15, name: '알고리즘 스터디', vmCount: 2 },
+    topWorkspacesByVmCount: [
+      { workspaceId: 12, name: '캡스톤 3조', vmCount: 3 },
+      { workspaceId: 15, name: '알고리즘 스터디', vmCount: 2 },
     ],
     publishedServiceCount: 4,
     expiringVmCount30d: 3,

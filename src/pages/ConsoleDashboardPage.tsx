@@ -5,7 +5,7 @@ import {
   fetchMySshKeys,
   fetchNotifications,
   fetchUnreadCount,
-  fetchVmRequests,
+  fetchRequests,
   fetchVms,
 } from '../api/queries'
 import type { components } from '../api/schema'
@@ -38,8 +38,8 @@ export function ConsoleDashboardPage() {
     queryFn: () => fetchVms({ size: 50 }),
   })
   const pendingRequests = useQuery({
-    queryKey: ['vm-requests', { status: 'SUBMITTED', page: 0, size: 3 }],
-    queryFn: () => fetchVmRequests({ status: 'SUBMITTED', page: 0, size: 3 }),
+    queryKey: ['requests', { status: 'SUBMITTED', page: 0, size: 3 }],
+    queryFn: () => fetchRequests({ status: 'SUBMITTED', page: 0, size: 3 }),
   })
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -81,10 +81,10 @@ export function ConsoleDashboardPage() {
             VM 신청
           </Link>
           <Link
-            to="/console/groups"
+            to="/console/workspaces"
             className="inline-flex h-9 items-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
           >
-            그룹 만들기
+            워크스페이스 만들기
           </Link>
         </div>
       </div>
@@ -177,7 +177,7 @@ export function ConsoleDashboardPage() {
                         )}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-neutral-500">
-                        {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)} · {vm.groupName}
+                        {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)} · {vm.workspaceName}
                       </p>
                     </div>
                     {vm.status === 'RUNNING' && (
@@ -216,7 +216,7 @@ export function ConsoleDashboardPage() {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-neutral-900">
-                      {request.groupName} · {formatSpec(request.reqVcpu, request.reqMemoryMb, request.reqDiskGb)}
+                      {request.workspaceName} · {formatSpec(request.vm?.reqVcpu, request.vm?.reqMemoryMb, request.vm?.reqDiskGb)}
                     </span>
                     <span className="mt-0.5 block text-xs text-neutral-500">
                       {formatDateTime(request.createdAt)} 제출

@@ -88,7 +88,7 @@ export function VmGatewayBlockSection({
           {nextBlocked ? (
             <Alert variant="warning">
               차단 즉시 이 VM으로의 SSH 게이트웨이 라우팅과 웹 터미널 세션 생성이
-              거부됩니다. 그룹 구성원에게 별도 통지는 발송되지 않습니다.
+              거부됩니다. 워크스페이스 구성원에게 별도 통지는 발송되지 않습니다.
             </Alert>
           ) : (
             <p className="text-sm text-neutral-600">

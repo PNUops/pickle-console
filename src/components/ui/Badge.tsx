@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import {
-  GROUP_KIND_LABELS,
-  GROUP_ROLE_LABELS,
+  WORKSPACE_KIND_LABELS,
+  WORKSPACE_ROLE_LABELS,
   RESOURCE_ROLE_LABELS,
-  type GroupKind,
-  type GroupMemberRole,
+  type WorkspaceKind,
+  type WorkspaceMemberRole,
   type ResourceRole,
 } from '../../lib/labels'
 import { formatDday } from '../../lib/format'
@@ -38,7 +38,7 @@ import {
   type PortMappingStatus,
   type ProvisioningTaskStatus,
   type RouteStatus,
-  type VmRequestStatus,
+  type RequestStatus,
   type VmStatus,
 } from '../../lib/status'
 
@@ -73,14 +73,14 @@ export function Badge({ variant = 'neutral', className, children }: BadgeProps) 
   )
 }
 
-const REQUEST_STATUS_VARIANTS: Record<VmRequestStatus, BadgeVariant> = {
+const REQUEST_STATUS_VARIANTS: Record<RequestStatus, BadgeVariant> = {
   SUBMITTED: 'info',
   APPROVED: 'success',
   REJECTED: 'danger',
   CANCELED: 'neutral',
 }
 
-export function RequestStatusBadge({ status, className }: { status: VmRequestStatus; className?: string }) {
+export function RequestStatusBadge({ status, className }: { status: RequestStatus; className?: string }) {
   return (
     <Badge variant={REQUEST_STATUS_VARIANTS[status]} className={className}>
       {REQUEST_STATUS_LABELS[status]}
@@ -200,16 +200,16 @@ export function DomainConnectionBadge({
   )
 }
 
-const GROUP_KIND_VARIANTS: Record<GroupKind, BadgeVariant> = {
+const WORKSPACE_KIND_VARIANTS: Record<WorkspaceKind, BadgeVariant> = {
   PERSONAL: 'neutral',
   TEAM: 'info',
   PROJECT: 'primary',
 }
 
-export function GroupKindBadge({ kind, className }: { kind: GroupKind; className?: string }) {
+export function WorkspaceKindBadge({ kind, className }: { kind: WorkspaceKind; className?: string }) {
   return (
-    <Badge variant={GROUP_KIND_VARIANTS[kind]} className={className}>
-      {GROUP_KIND_LABELS[kind]}
+    <Badge variant={WORKSPACE_KIND_VARIANTS[kind]} className={className}>
+      {WORKSPACE_KIND_LABELS[kind]}
     </Badge>
   )
 }
@@ -333,7 +333,7 @@ export function IpAllocationStatusBadge({
 const ANNOUNCEMENT_SCOPE_VARIANTS: Record<AnnouncementScope, BadgeVariant> = {
   ALL: 'primary',
   ORG: 'info',
-  GROUP: 'neutral',
+  WORKSPACE: 'neutral',
 }
 
 export function AnnouncementScopeBadge({
@@ -415,7 +415,7 @@ export function CampusIpStatusBadge({
   )
 }
 
-const GROUP_ROLE_VARIANTS: Record<GroupMemberRole, BadgeVariant> = {
+const WORKSPACE_ROLE_VARIANTS: Record<WorkspaceMemberRole, BadgeVariant> = {
   OWNER: 'primary',
   MEMBER: 'neutral',
 }
@@ -427,7 +427,7 @@ const RESOURCE_ROLE_VARIANTS: Record<ResourceRole, BadgeVariant> = {
   VIEWER: 'neutral',
 }
 
-/** 접근 목록의 등급 배지. 그룹 배지와 색 규칙을 공유한다. */
+/** 접근 목록의 등급 배지. 워크스페이스 배지와 색 규칙을 공유한다. */
 export function ResourceRoleBadge({ role, className }: { role: ResourceRole; className?: string }) {
   return (
     <Badge variant={RESOURCE_ROLE_VARIANTS[role]} className={className}>
@@ -436,10 +436,10 @@ export function ResourceRoleBadge({ role, className }: { role: ResourceRole; cla
   )
 }
 
-export function GroupRoleBadge({ role, className }: { role: GroupMemberRole; className?: string }) {
+export function WorkspaceRoleBadge({ role, className }: { role: WorkspaceMemberRole; className?: string }) {
   return (
-    <Badge variant={GROUP_ROLE_VARIANTS[role]} className={className}>
-      {GROUP_ROLE_LABELS[role]}
+    <Badge variant={WORKSPACE_ROLE_VARIANTS[role]} className={className}>
+      {WORKSPACE_ROLE_LABELS[role]}
     </Badge>
   )
 }

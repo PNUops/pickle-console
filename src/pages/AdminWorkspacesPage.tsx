@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { fetchAdminGroup, fetchAdminGroups, fetchOrgs } from '../api/queries'
+import { fetchAdminWorkspace, fetchAdminWorkspaces, fetchOrgs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
 import {
@@ -9,7 +9,7 @@ import {
   Badge,
   Card,
   Drawer,
-  GroupKindBadge,
+  WorkspaceKindBadge,
   Select,
   Spinner,
   Table,
@@ -22,34 +22,34 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
 import {
-  GROUP_ROLE_LABELS,
+  WORKSPACE_ROLE_LABELS,
   USER_STATUS_LABELS,
   type UserStatus,
 } from '../lib/labels'
 
 /**
- * 관리자 그룹 관리 — 조회 우선(구성원 감사·오너 부재 그룹 파악).
- * 그룹 변경(생성·역할 조정·삭제)은 다음 단계.
+ * 관리자 워크스페이스 관리 — 조회 우선(구성원 감사·오너 부재 워크스페이스 파악).
+ * 워크스페이스 변경(생성·역할 조정·삭제)은 다음 단계.
  */
-export function AdminGroupsPage() {
+export function AdminWorkspacesPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  const groups = useQuery({
-    queryKey: ['admin', 'groups', { orgId: orgId ?? null }],
-    queryFn: () => fetchAdminGroups(orgId !== undefined ? { orgId } : {}),
+  const workspaces = useQuery({
+    queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
+    queryFn: () => fetchAdminWorkspaces(orgId !== undefined ? { orgId } : {}),
   })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">그룹 관리</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">워크스페이스 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관에 연결된'} 그룹과 구성원을 조회합니다. 구성원
-          변경은 그룹 소유자가 수행합니다.
+          {isSysAdmin ? '전체' : '우리 기관에 연결된'} 워크스페이스와 구성원을 조회합니다. 구성원
+          변경은 워크스페이스 소유자가 수행합니다.
         </p>
       </div>
 
@@ -74,16 +74,16 @@ export function AdminGroupsPage() {
         </label>
       )}
 
-      {groups.isPending && (
+      {workspaces.isPending && (
         <div className="flex justify-center py-12">
-          <Spinner label="그룹 목록 불러오는 중" />
+          <Spinner label="워크스페이스 목록 불러오는 중" />
         </div>
       )}
-      {groups.isError && <Alert variant="danger">{groups.error.message}</Alert>}
-      {groups.isSuccess && groups.data.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">표시할 그룹이 없습니다.</Card>
+      {workspaces.isError && <Alert variant="danger">{workspaces.error.message}</Alert>}
+      {workspaces.isSuccess && workspaces.data.length === 0 && (
+        <Card className="p-8 text-center text-sm text-neutral-500">표시할 워크스페이스가 없습니다.</Card>
       )}
-      {groups.isSuccess && groups.data.length > 0 && (
+      {workspaces.isSuccess && workspaces.data.length > 0 && (
         <Card>
           <Table>
             <THead>
@@ -96,33 +96,32 @@ export function AdminGroupsPage() {
               </TR>
             </THead>
             <TBody>
-              {groups.data.map((group) => (
+              {workspaces.data.map((workspace) => (
                 <TR
-                  key={group.id}
+                  key={workspace.id}
                   className={cn(
                     'cursor-pointer',
-                    group.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
+                    workspace.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
                   )}
-                  onClick={() => setSelectedId(group.id)}
+                  onClick={() => setSelectedId(workspace.id)}
                 >
                   <TD>
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation()
-                        setSelectedId(group.id)
+                        setSelectedId(workspace.id)
                       }}
                       className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                     >
-                      {group.name}
+                      {workspace.name}
                     </button>
                   </TD>
-                  <TD className="font-mono text-xs text-neutral-500">{group.slug}</TD>
                   <TD>
-                    <GroupKindBadge kind={group.kind} />
+                    <WorkspaceKindBadge kind={workspace.kind} />
                   </TD>
-                  <TD>{group.memberCount}</TD>
-                  <TD className="whitespace-nowrap">{formatDateTime(group.createdAt)}</TD>
+                  <TD>{workspace.memberCount}</TD>
+                  <TD className="whitespace-nowrap">{formatDateTime(workspace.createdAt)}</TD>
                 </TR>
               ))}
             </TBody>
@@ -133,9 +132,9 @@ export function AdminGroupsPage() {
       <Drawer
         open={selectedId !== null}
         onClose={() => setSelectedId(null)}
-        title="그룹 상세"
+        title="워크스페이스 상세"
       >
-        {selectedId !== null && <GroupDetailBody key={selectedId} groupId={selectedId} />}
+        {selectedId !== null && <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} />}
       </Drawer>
     </div>
   )
@@ -150,16 +149,16 @@ const USER_STATUS_VARIANT: Record<UserStatus, 'success' | 'warning' | 'danger' |
   WITHDRAWN: 'neutral',
 }
 
-function GroupDetailBody({ groupId }: { groupId: number }) {
+function WorkspaceDetailBody({ workspaceId }: { workspaceId: number }) {
   const detail = useQuery({
-    queryKey: ['admin', 'groups', 'detail', groupId],
-    queryFn: () => fetchAdminGroup(groupId),
+    queryKey: ['admin', 'workspaces', 'detail', workspaceId],
+    queryFn: () => fetchAdminWorkspace(workspaceId),
   })
 
   if (detail.isPending) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner label="그룹 상세 불러오는 중" />
+        <Spinner label="워크스페이스 상세 불러오는 중" />
       </div>
     )
   }
@@ -167,35 +166,34 @@ function GroupDetailBody({ groupId }: { groupId: number }) {
     return <Alert variant="danger">{detail.error.message}</Alert>
   }
 
-  const group = detail.data
+  const workspace = detail.data
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900">{group.name}</h3>
-        <GroupKindBadge kind={group.kind} />
+        <h3 className="text-lg font-semibold text-neutral-900">{workspace.name}</h3>
+        <WorkspaceKindBadge kind={workspace.kind} />
       </div>
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-        <Field label="슬러그" value={group.slug} />
-        <Field label="생성일" value={formatDateTime(group.createdAt)} />
-        <Field label="활성 구성원" value={String(group.memberCount)} />
+        <Field label="생성일" value={formatDateTime(workspace.createdAt)} />
+        <Field label="활성 구성원" value={String(workspace.memberCount)} />
         <div>
           <dt className="text-neutral-500">VM</dt>
           <dd className="font-medium text-neutral-900">
-            {group.vmCount}대{' '}
+            {workspace.vmCount}대{' '}
             <Link
-              to={`/admin/vms?groupId=${group.id}`}
+              to={`/admin/vms?workspaceId=${workspace.id}`}
               className="text-sm font-normal text-primary-700 hover:underline"
             >
               VM 보기
             </Link>
           </dd>
         </div>
-        {group.description && <Field label="설명" value={group.description} />}
+        {workspace.description && <Field label="설명" value={workspace.description} />}
       </dl>
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">구성원</h3>
-        {group.members.length === 0 ? (
+        {workspace.members.length === 0 ? (
           <p className="text-sm text-neutral-500">구성원이 없습니다.</p>
         ) : (
           <Table>
@@ -208,13 +206,13 @@ function GroupDetailBody({ groupId }: { groupId: number }) {
               </TR>
             </THead>
             <TBody>
-              {group.members.map((member) => (
+              {workspace.members.map((member) => (
                 <TR key={member.userId}>
                   <TD>
                     {member.name}
                     <span className="block text-xs text-neutral-500">{member.email}</span>
                   </TD>
-                  <TD>{GROUP_ROLE_LABELS[member.groupRole]}</TD>
+                  <TD>{WORKSPACE_ROLE_LABELS[member.workspaceRole]}</TD>
                   <TD>
                     <Badge variant={USER_STATUS_VARIANT[member.userStatus]}>
                       {USER_STATUS_LABELS[member.userStatus]}

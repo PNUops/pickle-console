@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import {
   createAnnouncement,
-  fetchAdminGroups,
+  fetchAdminWorkspaces,
   fetchAdminSummary,
   fetchAdminUser,
   fetchAuditLogs,
@@ -29,8 +29,8 @@ describe('MSW 네거티브 스코핑 (ORG_ADMIN, 타 기관 orgId)', () => {
     })
   })
 
-  test('그룹 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAdminGroups({ orgId: 2 })).rejects.toMatchObject({
+  test('워크스페이스 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
+    await expect(fetchAdminWorkspaces({ orgId: 2 })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
@@ -76,8 +76,8 @@ describe('MSW 네거티브 스코핑 (ORG_MANAGER, 타 기관 orgId)', () => {
     })
   })
 
-  test('그룹 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAdminGroups({ orgId: 2 })).rejects.toMatchObject({
+  test('워크스페이스 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
+    await expect(fetchAdminWorkspaces({ orgId: 2 })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })

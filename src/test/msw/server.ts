@@ -10,14 +10,14 @@ import { campusIpHandlers, resetCampusIpFixtures } from './handlers/campusip'
 import { consentHandlers } from './handlers/consent'
 import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
-import { groupHandlers, resetGroupFixtures } from './handlers/groups'
+import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces'
 import { networkHandlers, resetNetworkFixtures } from './handlers/network'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
 import { resetSettingFixtures, settingHandlers } from './handlers/settings'
 import { resetSshKeyFixtures, sshKeyHandlers } from './handlers/ssh-keys'
-import { resetVmRequestFixtures, vmRequestHandlers } from './handlers/vm-requests'
+import { resetRequestFixtures, requestHandlers } from './handlers/requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
 import { resetTerminalFixtures, terminalHandlers } from './handlers/terminal'
 
@@ -29,8 +29,8 @@ export const handlers: RequestHandler[] = [
   ...consentHandlers,
   ...userHandlers,
   ...referenceHandlers,
-  ...groupHandlers,
-  ...vmRequestHandlers,
+  ...workspaceHandlers,
+  ...requestHandlers,
   ...vmHandlers,
   ...terminalHandlers,
   ...sshKeyHandlers,
@@ -51,8 +51,8 @@ export const server = setupServer(...handlers)
 export function resetFixtures() {
   resetUserFixtures()
   resetReferenceFixtures()
-  resetGroupFixtures()
-  resetVmRequestFixtures()
+  resetWorkspaceFixtures()
+  resetRequestFixtures()
   resetVmFixtures()
   resetTerminalFixtures()
   resetSshKeyFixtures()

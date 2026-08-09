@@ -89,7 +89,7 @@ export const steps: Step[] = [
   },
   {
     title: '검토',
-    description: '기관 관리자가 자원 여유와 신청 내용을 검토합니다. 반려 시 사유가 안내됩니다.',
+    description: '기관 관리자가 리소스 여유와 신청 내용을 검토합니다. 반려 시 사유가 안내됩니다.',
   },
   {
     title: '승인',
@@ -152,7 +152,7 @@ export const features: Feature[] = [
   },
   {
     icon: 'users',
-    title: '그룹과 역할',
+    title: '워크스페이스와 역할',
     description: '팀·프로젝트 단위로 서버를 함께 쓰고, 멤버마다 권한을 다르게 줄 수 있습니다.',
   },
   {

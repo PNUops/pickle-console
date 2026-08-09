@@ -111,8 +111,8 @@ describe('useTerminalSocket — mint 실패 매핑', () => {
     [403, 'ACCESS_DENIED', '관리자가 이 VM의 원격 접속을 차단했습니다. 관리자에게 문의하세요.'],
     [
       403,
-      'GROUP_ROLE_INSUFFICIENT',
-      '웹 터미널은 그룹 참여자(MEMBER) 이상만 사용할 수 있습니다.',
+      'WORKSPACE_ROLE_INSUFFICIENT',
+      '웹 터미널은 워크스페이스 참여자(MEMBER) 이상만 사용할 수 있습니다.',
     ],
   ])('%i %s → 한국어 메시지, WS는 열리지 않는다', async (status, code, message) => {
     server.use(

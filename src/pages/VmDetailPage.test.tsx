@@ -459,7 +459,7 @@ describe('VM 상세 — VM 설정', () => {
             allowedValues: ['MEMBER', 'EDITOR', 'OWNER'],
             defaultValue: 'MEMBER',
             label: '비밀번호 열람 최소 역할',
-            description: 'VM 비밀번호를 열람할 수 있는 최소 그룹 역할입니다.',
+            description: 'VM 비밀번호를 열람할 수 있는 최소 워크스페이스 역할입니다.',
             requiredRole: 'OWNER',
             editable: false,
             updatedByName: null,

@@ -107,11 +107,11 @@ export function AdminVmDetailPage() {
             <Field label="이름" value={vm.name} />
             <Field label="호스트네임" value={vm.hostname} />
             <div>
-              <dt className="text-neutral-500">그룹</dt>
+              <dt className="text-neutral-500">워크스페이스</dt>
               <dd className="font-medium text-neutral-900">
-                {vm.groupName}{' '}
+                {vm.workspaceName}{' '}
                 <Link
-                  to={`/admin/vms?groupId=${vm.groupId}`}
+                  to={`/admin/vms?workspaceId=${vm.workspaceId}`}
                   className="text-sm font-normal text-primary-700 hover:underline"
                 >
                   VM 보기
@@ -223,7 +223,7 @@ function PowerSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string) 
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">전원 제어 (관리자 개입)</h3>
       <p className="text-sm text-neutral-500">
-        그룹 구성원 자격 없이 수행하는 관리자 개입입니다. 종료·재부팅·강제 종료는 정지
+        워크스페이스 구성원 자격 없이 수행하는 관리자 개입입니다. 종료·재부팅·강제 종료는 정지
         보호 설정을 우회하며, 접수 전건이 감사 기록에 남습니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}

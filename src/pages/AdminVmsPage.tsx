@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelScheduledVmDeletion,
-  fetchAdminGroups,
+  fetchAdminWorkspaces,
   forceDeleteVm,
   fetchAdminVms,
   fetchOrgs,
@@ -76,14 +76,14 @@ export function AdminVmsPage() {
   const isSysAdmin = !!role && isSysTier(role)
   const canDelete = !!role && canManageVmDeletion(role)
   const canForceDelete = !!role && isSysAdminOnly(role)
-  // 교차 링크(사용자 상세의 그룹 → VM 보기 등)를 위해 기관·그룹 필터는 URL
+  // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
   // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
   // 되돌려 쓰지 않는다(의도된 절단).
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<number | undefined>(() => idParam(searchParams.get('orgId')))
-  const [groupId, setGroupId] = useState<number | undefined>(() =>
-    idParam(searchParams.get('groupId')),
+  const [workspaceId, setWorkspaceId] = useState<number | undefined>(() =>
+    idParam(searchParams.get('workspaceId')),
   )
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
@@ -111,14 +111,14 @@ export function AdminVmsPage() {
       {
         status: status ?? null,
         orgId: orgId ?? null,
-        groupId: groupId ?? null,
+        workspaceId: workspaceId ?? null,
         q: q ?? null,
         sort: sort ?? null,
         page,
         size: PAGE_SIZE,
       },
     ],
-    queryFn: () => fetchAdminVms({ status, orgId, groupId, q, sort, page, size: PAGE_SIZE }),
+    queryFn: () => fetchAdminVms({ status, orgId, workspaceId, q, sort, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
 
@@ -129,10 +129,10 @@ export function AdminVmsPage() {
     setPage(0)
   }
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
-  // ORG_ADMIN은 자기 기관 그룹으로 고정, SYS_ADMIN은 선택한 기관으로 좁혀진다.
-  const groups = useQuery({
-    queryKey: ['admin', 'groups', { orgId: orgId ?? null }],
-    queryFn: () => fetchAdminGroups(orgId !== undefined ? { orgId } : {}),
+  // ORG_ADMIN은 자기 기관 워크스페이스로 고정, SYS_ADMIN은 선택한 기관으로 좁혀진다.
+  const workspaces = useQuery({
+    queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
+    queryFn: () => fetchAdminWorkspaces(orgId !== undefined ? { orgId } : {}),
   })
 
   const selected = vms.data?.content.find((vm) => vm.id === selectedId) ?? null
@@ -148,8 +148,8 @@ export function AdminVmsPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
-        <div role="group" aria-label="VM 상태 필터" className="flex flex-wrap gap-1">
+        {/* 필터 토글 버튼 워크스페이스 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
+        <div role="workspace" aria-label="VM 상태 필터" className="flex flex-wrap gap-1">
           {STATUS_TABS.map((tab) => {
             const isSelected = tab.status === status
             return (
@@ -194,7 +194,7 @@ export function AdminVmsPage() {
                 value={orgId ?? ''}
                 onChange={(event) => {
                   setOrgId(event.target.value ? Number(event.target.value) : undefined)
-                  setGroupId(undefined) // 기관이 바뀌면 이전 기관의 그룹 선택은 무효
+                  setWorkspaceId(undefined) // 기관이 바뀌면 이전 기관의 워크스페이스 선택은 무효
                   setPage(0)
                 }}
               >
@@ -208,22 +208,22 @@ export function AdminVmsPage() {
             </label>
           )}
           <label className="flex items-center gap-2 text-sm text-neutral-600">
-            그룹
+            워크스페이스
             <Select
-              aria-label="그룹 필터"
+              aria-label="워크스페이스 필터"
               className="w-56"
-              value={groupId ?? ''}
+              value={workspaceId ?? ''}
               onChange={(event) => {
-                setGroupId(event.target.value ? Number(event.target.value) : undefined)
+                setWorkspaceId(event.target.value ? Number(event.target.value) : undefined)
                 setPage(0)
               }}
             >
               <option value="">
-                {groups.isError ? '전체 그룹 (목록 조회 실패)' : '전체 그룹'}
+                {workspaces.isError ? '전체 워크스페이스 (목록 조회 실패)' : '전체 워크스페이스'}
               </option>
-              {groups.data?.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name} ({group.slug})
+              {workspaces.data?.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
                 </option>
               ))}
             </Select>
@@ -252,7 +252,7 @@ export function AdminVmsPage() {
                     이름
                   </SortableTH>
                   <TH>상태</TH>
-                  <TH>그룹</TH>
+                  <TH>워크스페이스</TH>
                   <TH>기관</TH>
                   <TH>사양</TH>
                   <SortableTH direction={sortDirection('endDate')} onSort={onSort('endDate')}>
@@ -305,7 +305,7 @@ export function AdminVmsPage() {
                         </Badge>
                       )}
                     </TD>
-                    <TD>{vm.groupName}</TD>
+                    <TD>{vm.workspaceName}</TD>
                     <TD>{vm.orgName ?? '—'}</TD>
                     <TD className="whitespace-nowrap">
                       {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
@@ -342,8 +342,8 @@ export function AdminVmsPage() {
               setFeedback({ vmId: selected.id, text })
               setSelectedId(null) // 파기된 VM의 드로어를 확정적으로 닫는다
             }}
-            onFilterGroup={(nextGroupId) => {
-              setGroupId(nextGroupId)
+            onFilterWorkspace={(nextWorkspaceId) => {
+              setWorkspaceId(nextWorkspaceId)
               setPage(0)
               setSelectedId(null)
             }}
@@ -363,7 +363,7 @@ function VmDrawerContent({
   notice,
   onDone,
   onForceDeleted,
-  onFilterGroup,
+  onFilterWorkspace,
 }: {
   vm: VmSummary
   canDelete: boolean
@@ -372,7 +372,7 @@ function VmDrawerContent({
   notice: string | null
   onDone: (message: string) => void
   onForceDeleted: (message: string) => void
-  onFilterGroup: (groupId: number) => void
+  onFilterWorkspace: (workspaceId: number) => void
 }) {
   const [extendOpen, setExtendOpen] = useState(false)
   return (
@@ -395,15 +395,15 @@ function VmDrawerContent({
         <Field label="이름" value={vm.name} />
         <Field label="호스트네임" value={vm.hostname ?? '—'} />
         <div>
-          <dt className="text-neutral-500">그룹</dt>
+          <dt className="text-neutral-500">워크스페이스</dt>
           <dd className="font-medium text-neutral-900">
-            {vm.groupName}{' '}
+            {vm.workspaceName}{' '}
             <button
               type="button"
-              onClick={() => onFilterGroup(vm.groupId)}
+              onClick={() => onFilterWorkspace(vm.workspaceId)}
               className="cursor-pointer text-sm font-normal text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
             >
-              이 그룹의 VM 보기
+              이 워크스페이스의 VM 보기
             </button>
           </dd>
         </div>

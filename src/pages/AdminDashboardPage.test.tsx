@@ -9,7 +9,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 describe('관리자 대시보드', () => {
-  test('ORG_ADMIN은 기관 요약 타일과 자원 현황을 보고 시스템 요약은 없다', async () => {
+  test('ORG_ADMIN은 기관 요약 타일과 리소스 현황을 보고 시스템 요약은 없다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin')
 
@@ -29,9 +29,9 @@ describe('관리자 대시보드', () => {
       '/admin/expiry',
     )
     expect(within(tiles).getByRole('link', { name: '확인 필요' })).toBeInTheDocument()
-    // 자원 현황 바 + 안내 문구
+    // 리소스 현황 바 + 안내 문구
     expect(screen.getByRole('progressbar', { name: 'vCPU 할당률' })).toBeInTheDocument()
-    expect(screen.getByText(/자원에 여유가 있어 승인이 가능합니다/)).toBeInTheDocument()
+    expect(screen.getByText(/리소스에 여유가 있어 승인이 가능합니다/)).toBeInTheDocument()
     // 시스템 요약 타일은 SYS_ADMIN 전용
     expect(screen.queryByRole('link', { name: '드리프트 미해결' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '알림 발송 실패' })).not.toBeInTheDocument()

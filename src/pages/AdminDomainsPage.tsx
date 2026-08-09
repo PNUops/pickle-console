@@ -176,7 +176,7 @@ export function AdminDomainsPage() {
                 <THead>
                   <TR>
                     <TH>도메인</TH>
-                    <TH>VM / 그룹</TH>
+                    <TH>VM / 워크스페이스</TH>
                     {isSysAdmin && <TH>기관</TH>}
                     <TH>상태</TH>
                     <TH>라우트</TH>
@@ -211,7 +211,7 @@ export function AdminDomainsPage() {
                       </TD>
                       <TD>
                         {domain.vmName}
-                        <span className="block text-xs text-neutral-500">{domain.groupName}</span>
+                        <span className="block text-xs text-neutral-500">{domain.workspaceName}</span>
                       </TD>
                       {isSysAdmin && <TD>{domain.orgName}</TD>}
                       <TD>
@@ -329,7 +329,7 @@ function DomainDrawerContent({
                 상세
               </Link>
             )}
-            <span className="block text-xs font-normal text-neutral-500">{domain.groupName}</span>
+            <span className="block text-xs font-normal text-neutral-500">{domain.workspaceName}</span>
           </dd>
         </div>
         <Field label="기관" value={domain.orgName ?? '—'} />
@@ -357,7 +357,7 @@ function DomainDrawerContent({
       {domain.releasedAt && (
         <Alert variant="info">
           해제된 뒤 이 VM에 이름만 예약된 상태입니다 — 트래픽은 받지 않습니다. 예약이
-          만료되면 이름이 자동으로 회수되고, 그 전에는 소유 그룹이 같은 이름으로 다시
+          만료되면 이름이 자동으로 회수되고, 그 전에는 소유 워크스페이스가 같은 이름으로 다시
           연결할 수 있습니다. 이름을 먼저 풀어야 한다면 아래 강제 해제를 씁니다.
         </Alert>
       )}
@@ -553,7 +553,7 @@ function ForceReleaseModal({
           // 기다리지 않고 이름을 지금 푸는 것이다.
           <>
             예약이 만료되기를 기다리지 않고 이름이 즉시 회수되어 다른 사용자가 사용할
-            수 있게 됩니다. 소유 그룹은 이 이름으로 다시 연결할 수 없게 됩니다. 감사
+            수 있게 됩니다. 소유 워크스페이스는 이 이름으로 다시 연결할 수 없게 됩니다. 감사
             기록이 남습니다.
           </>
         ) : (

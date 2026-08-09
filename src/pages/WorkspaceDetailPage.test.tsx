@@ -5,51 +5,51 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-function renderGroup(groupId: number) {
+function renderWorkspace(workspaceId: number) {
   server.use(refreshSuccessHandler('access-user'))
-  renderApp(`/console/groups/${groupId}`)
+  renderApp(`/console/workspaces/${workspaceId}`)
 }
 
-describe('그룹 상세 — 역할별 UI', () => {
+describe('워크스페이스 상세 — 역할별 UI', () => {
   test('OWNER는 정보 수정·구성원 추가·역할 변경·제거 UI를 본다', async () => {
-    renderGroup(12)
+    renderWorkspace(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
     expect(screen.getByRole('button', { name: '정보 수정' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '구성원 추가' })).toBeInTheDocument()
     expect(screen.getByLabelText('김철수 역할 변경')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: '제거' })).toHaveLength(3)
-    expect(screen.getByRole('button', { name: '그룹 나가기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '워크스페이스 나가기' })).toBeInTheDocument()
   })
 
   test('MEMBER는 읽기 전용으로 보고 나가기만 할 수 있다', async () => {
-    renderGroup(15)
+    renderWorkspace(15)
     await screen.findByRole('heading', { name: '알고리즘 스터디' })
 
     expect(screen.queryByRole('button', { name: '정보 수정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/역할 변경/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '제거' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '그룹 나가기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '워크스페이스 나가기' })).toBeInTheDocument()
   })
 
-  test('PERSONAL 그룹은 안내 문구와 함께 구성원 관리가 비활성화된다', async () => {
-    renderGroup(7)
+  test('PERSONAL 워크스페이스는 안내 문구와 함께 구성원 관리가 비활성화된다', async () => {
+    renderWorkspace(7)
     await screen.findByRole('heading', { name: '홍길동' })
 
     expect(
-      screen.getByText(/개인 그룹은 회원가입 시 자동으로 생성되는 그룹/),
+      screen.getByText(/개인 워크스페이스는 회원가입 시 자동으로 생성되는 워크스페이스/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '그룹 나가기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '워크스페이스 나가기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/역할 변경/)).not.toBeInTheDocument()
   })
 })
 
-describe('그룹 상세 — 구성원 관리', () => {
+describe('워크스페이스 상세 — 구성원 관리', () => {
   test('소유자 지정은 이메일 입력으로 확인한 뒤에만 실행된다', async () => {
     const user = userEvent.setup()
-    renderGroup(12)
+    renderWorkspace(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
     await user.selectOptions(screen.getByLabelText('김철수 역할 변경'), 'OWNER')
@@ -78,7 +78,7 @@ describe('그룹 상세 — 구성원 관리', () => {
 
   test('이메일로 구성원을 추가하고, 미가입 이메일이면 안내를 보여준다', async () => {
     const user = userEvent.setup()
-    renderGroup(12)
+    renderWorkspace(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
     await user.type(screen.getByLabelText('이메일'), 'nobody@pusan.ac.kr')
@@ -97,11 +97,11 @@ describe('그룹 상세 — 구성원 관리', () => {
 
   test('유일한 OWNER가 나가려 하면 409 안내를 보여준다', async () => {
     const user = userEvent.setup()
-    renderGroup(12)
+    renderWorkspace(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
-    await user.click(screen.getByRole('button', { name: '그룹 나가기' }))
-    const dialog = await screen.findByRole('dialog', { name: '그룹 나가기' })
+    await user.click(screen.getByRole('button', { name: '워크스페이스 나가기' }))
+    const dialog = await screen.findByRole('dialog', { name: '워크스페이스 나가기' })
     await user.click(within(dialog).getByRole('button', { name: '나가기' }))
 
     expect(
@@ -109,53 +109,53 @@ describe('그룹 상세 — 구성원 관리', () => {
     ).toBeInTheDocument()
   })
 
-  test('구성원은 그룹을 나가면 그룹 목록으로 이동한다', async () => {
+  test('구성원은 워크스페이스를 나가면 워크스페이스 목록으로 이동한다', async () => {
     const user = userEvent.setup()
-    renderGroup(15)
+    renderWorkspace(15)
     await screen.findByRole('heading', { name: '알고리즘 스터디' })
 
-    await user.click(screen.getByRole('button', { name: '그룹 나가기' }))
-    const dialog = await screen.findByRole('dialog', { name: '그룹 나가기' })
+    await user.click(screen.getByRole('button', { name: '워크스페이스 나가기' }))
+    const dialog = await screen.findByRole('dialog', { name: '워크스페이스 나가기' })
     await user.click(within(dialog).getByRole('button', { name: '나가기' }))
 
-    expect(await screen.findByRole('heading', { name: '내 그룹' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '내 워크스페이스' })).toBeInTheDocument()
     expect(screen.queryByText('알고리즘 스터디')).not.toBeInTheDocument()
   })
 })
 
-describe('그룹 상세 — 그룹 삭제(위험 구역)', () => {
-  test('OWNER는 위험 구역(그룹 삭제)을 본다', async () => {
-    renderGroup(12)
+describe('워크스페이스 상세 — 워크스페이스 삭제(위험 구역)', () => {
+  test('OWNER는 위험 구역(워크스페이스 삭제)을 본다', async () => {
+    renderWorkspace(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
     expect(screen.getByRole('heading', { name: '위험 구역' })).toBeInTheDocument()
   })
 
-  test('PERSONAL 그룹에는 위험 구역이 없다', async () => {
-    renderGroup(7)
+  test('PERSONAL 워크스페이스에는 위험 구역이 없다', async () => {
+    renderWorkspace(7)
     await screen.findByRole('heading', { name: '홍길동' })
     expect(screen.queryByRole('heading', { name: '위험 구역' })).not.toBeInTheDocument()
   })
 
   test('MEMBER에게는 위험 구역이 없다', async () => {
-    renderGroup(15)
+    renderWorkspace(15)
     await screen.findByRole('heading', { name: '알고리즘 스터디' })
     expect(screen.queryByRole('heading', { name: '위험 구역' })).not.toBeInTheDocument()
   })
 
-  test('이름을 정확히 입력해야 삭제되고, 이후 그룹 목록으로 이동한다', async () => {
+  test('이름을 정확히 입력해야 삭제되고, 이후 워크스페이스 목록으로 이동한다', async () => {
     const user = userEvent.setup()
-    renderGroup(12)
+    renderWorkspace(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
-    await user.click(screen.getByRole('button', { name: '그룹 삭제' }))
-    const dialog = await screen.findByRole('dialog', { name: '그룹 삭제' })
-    const confirm = within(dialog).getByRole('button', { name: '그룹 삭제' })
+    await user.click(screen.getByRole('button', { name: '워크스페이스 삭제' }))
+    const dialog = await screen.findByRole('dialog', { name: '워크스페이스 삭제' })
+    const confirm = within(dialog).getByRole('button', { name: '워크스페이스 삭제' })
     expect(confirm).toBeDisabled()
 
     await user.type(within(dialog).getByRole('textbox'), '캡스톤 3조')
     expect(confirm).toBeEnabled()
     await user.click(confirm)
 
-    expect(await screen.findByRole('heading', { name: '내 그룹' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '내 워크스페이스' })).toBeInTheDocument()
   })
 })

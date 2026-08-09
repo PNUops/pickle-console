@@ -30,7 +30,7 @@ async function selectVm(user: ReturnType<typeof userEvent.setup>, name: string) 
 }
 
 describe('관리자 VM 목록', () => {
-  test('VM을 그룹 이름과 함께 나열하고 상태 탭·기관 필터가 동작한다', async () => {
+  test('VM을 워크스페이스 이름과 함께 나열하고 상태 탭·기관 필터가 동작한다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
@@ -89,21 +89,21 @@ describe('관리자 VM 목록', () => {
     expect(screen.getByRole('columnheader', { name: '이름' })).not.toHaveAttribute('aria-sort')
   })
 
-  test('그룹 필터 드롭다운으로 그룹을 좁힐 수 있고, 기관 변경 시 선택이 초기화된다', async () => {
+  test('워크스페이스 필터 드롭다운으로 워크스페이스를 좁힐 수 있고, 기관 변경 시 선택이 초기화된다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
     await screen.findByText('capstone-team3-api')
-    const groupSelect = screen.getByLabelText('그룹 필터')
-    expect(within(groupSelect).getByRole('option', { name: /캡스톤 3조/ })).toBeInTheDocument()
+    const workspaceSelect = screen.getByLabelText('워크스페이스 필터')
+    expect(within(workspaceSelect).getByRole('option', { name: /캡스톤 3조/ })).toBeInTheDocument()
 
-    await user.selectOptions(groupSelect, '12')
+    await user.selectOptions(workspaceSelect, '12')
     expect(await screen.findByText('capstone-team3-api')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
 
-    // 기관을 바꾸면 이전 기관의 그룹 선택은 무효 → 전체 그룹으로 초기화
+    // 기관을 바꾸면 이전 기관의 워크스페이스 선택은 무효 → 전체 워크스페이스로 초기화
     await user.selectOptions(screen.getByLabelText('기관 필터'), '2')
-    expect(screen.getByLabelText('그룹 필터')).toHaveValue('')
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('')
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
@@ -187,26 +187,26 @@ describe('관리자 VM 일반 삭제 접수', () => {
 })
 
 describe('교차 링크·URL 필터', () => {
-  test('URL의 groupId 파라미터로 그룹 필터가 초기화된다', async () => {
+  test('URL의 workspaceId 파라미터로 워크스페이스 필터가 초기화된다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/vms?groupId=12')
+    renderApp('/admin/vms?workspaceId=12')
 
     await screen.findByRole('heading', { name: 'VM 관리' })
     expect(await screen.findByText('capstone-team3-api')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
-    expect(screen.getByLabelText('그룹 필터')).toHaveValue('12')
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('12')
   })
 
-  test('드로어의 그룹 링크로 같은 그룹 VM만 필터한다', async () => {
+  test('드로어의 워크스페이스 링크로 같은 워크스페이스 VM만 필터한다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
     await selectVm(user, 'capstone-team3-api')
-    await user.click(screen.getByRole('button', { name: '이 그룹의 VM 보기' }))
+    await user.click(screen.getByRole('button', { name: '이 워크스페이스의 VM 보기' }))
 
-    // 드로어가 닫히고 그룹 필터가 적용된다
+    // 드로어가 닫히고 워크스페이스 필터가 적용된다
     expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('그룹 필터')).toHaveValue('12')
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('12')
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
   })
 })

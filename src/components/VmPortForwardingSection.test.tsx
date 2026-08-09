@@ -44,7 +44,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
 
   test('OWNER가 만들면 대기 → 폴링으로 활성에 수렴한다', async () => {
     const user = userEvent.setup()
-    renderPublishTab(45) // expiring-api: 그룹 12 OWNER, RUNNING + IP
+    renderPublishTab(45) // expiring-api: 워크스페이스 12 OWNER, RUNNING + IP
 
     await screen.findByRole('heading', { name: 'expiring-api' })
     const port = await screen.findByLabelText('대상 포트')

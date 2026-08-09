@@ -55,7 +55,7 @@ function targetPortError(raw: string): string | null {
 /**
  * 포트포워딩 절 — HTTP 공개와 함께 '도메인·포트' 탭에 산다. 둘 다 이 VM을 바깥에
  * 닿게 하는 수단이라 한 화면에서 고른다: 웹이면 위쪽 공개, 그 밖의 TCP/UDP면 이쪽.
- * 그룹 역할이 기준이다 — 구성원은 상태를 읽고, 소유자·편집자만 만들거나 지운다.
+ * 워크스페이스 역할이 기준이다 — 구성원은 상태를 읽고, 소유자·편집자만 만들거나 지운다.
  */
 export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
   const canMutate = vm.settingsEditAllowed

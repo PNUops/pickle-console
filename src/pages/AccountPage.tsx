@@ -555,7 +555,7 @@ function WithdrawSection({ email, mfaEnabled }: { email: string; mfaEnabled: boo
           개인정보처리방침에 따라 영구 보존되며, <strong>같은 이메일로는 다시 가입할 수 없습니다.</strong>
         </p>
         <p className="text-sm text-neutral-500">
-          삭제되지 않은 VM을 보유한 그룹의 유일한 소유자이거나 개인 그룹에 VM이 남아 있으면 먼저
+          삭제되지 않은 VM을 보유한 워크스페이스의 유일한 소유자이거나 개인 워크스페이스에 VM이 남아 있으면 먼저
           정리해야 탈퇴할 수 있습니다.
         </p>
         <Button variant="danger" onClick={() => setOpen(true)}>

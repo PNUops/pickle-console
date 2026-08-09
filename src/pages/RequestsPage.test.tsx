@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { vmRequestStore } from '../test/msw/handlers/vm-requests'
+import { requestStore } from '../test/msw/handlers/requests'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -68,7 +68,7 @@ describe('신청 상세', () => {
   })
 
   test('공개 목록에 없는(은퇴한) 프리셋은 번호로 대체한다', async () => {
-    vmRequestStore.find((r) => r.id === 101)!.flavorId = 9
+    requestStore.find((r) => r.id === 101)!.vm!.flavorId = 9
     renderRequests('/console/requests/101')
 
     await screen.findByRole('heading', { name: '신청 #101' })
@@ -76,7 +76,7 @@ describe('신청 상세', () => {
   })
 
   test('프리셋 없이 접수된 신청은 사양 프리셋을 —로 보여준다', async () => {
-    vmRequestStore.find((r) => r.id === 101)!.flavorId = null
+    requestStore.find((r) => r.id === 101)!.vm!.flavorId = null
     renderRequests('/console/requests/101')
 
     await screen.findByRole('heading', { name: '신청 #101' })
@@ -105,7 +105,7 @@ describe('신청 상세', () => {
 
     await screen.findByRole('heading', { name: '신청 #101' })
     // 상세를 보는 사이 관리자가 승인한 상황을 재현한다.
-    const target = vmRequestStore.find((r) => r.id === 101)!
+    const target = requestStore.find((r) => r.id === 101)!
     target.status = 'APPROVED'
 
     await user.click(screen.getByRole('button', { name: '신청 취소' }))

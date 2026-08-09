@@ -1,15 +1,15 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
-import { groupMembersOf } from './groups'
+import { workspaceMembersOf } from './workspaces'
 
 type Schemas = components['schemas']
 type VmDetail = Schemas['VmDetailResponse']
 type VmEvent = Schemas['VmEventResponse']
 type ResourceRole = Schemas['ResourceRole']
-type VmAccessGrant = Schemas['VmAccessGrantView']
+type VmAccessGrant = Schemas['ResourceAccessGrantView']
 
-/** 자원 축 등급의 강약 (VIEWER < MEMBER < EDITOR < OWNER). */
+/** 리소스 축 등급의 강약 (VIEWER < MEMBER < EDITOR < OWNER). */
 const RESOURCE_ROLE_RANK: Record<ResourceRole, number> = {
   VIEWER: 0,
   MEMBER: 1,
@@ -17,10 +17,10 @@ const RESOURCE_ROLE_RANK: Record<ResourceRole, number> = {
   OWNER: 3,
 }
 
-/** 자원 등급을 서버와 같은 규칙으로 능력 불리언으로 편다 (VmDetailResponse.from). */
+/** 리소스 등급을 서버와 같은 규칙으로 능력 불리언으로 편다 (VmDetailResponse.from). */
 export function accessOf(
   role: ResourceRole | null,
-  { groupOwner = false }: { groupOwner?: boolean } = {},
+  { workspaceOwner = false }: { workspaceOwner?: boolean } = {},
 ): Pick<
   VmDetail,
   | 'myResourceRole'
@@ -30,13 +30,13 @@ export function accessOf(
   | 'accessManageAllowed'
   | 'deleteAllowed'
 > {
-  // 그룹 소유자는 목록에 없어도 상시로 조회는 된다 — 서버가 열람자로 셈한다.
-  const effective: ResourceRole | null = role ?? (groupOwner ? 'VIEWER' : null)
+  // 워크스페이스 소유자는 목록에 없어도 상시로 조회는 된다 — 서버가 열람자로 셈한다.
+  const effective: ResourceRole | null = role ?? (workspaceOwner ? 'VIEWER' : null)
   const rank = effective == null ? -1 : RESOURCE_ROLE_RANK[effective]
   const atLeastMember = rank >= RESOURCE_ROLE_RANK.MEMBER
   const atLeastEditor = rank >= RESOURCE_ROLE_RANK.EDITOR
-  // 목록 관리·삭제는 자원 소유자의 권한이거나 그룹 소유자의 상시 권한이다.
-  const manages = role === 'OWNER' || groupOwner
+  // 목록 관리·삭제는 리소스 소유자의 권한이거나 워크스페이스 소유자의 상시 권한이다.
+  const manages = role === 'OWNER' || workspaceOwner
   return {
     myResourceRole: effective,
     accessAllowed: atLeastMember,
@@ -65,8 +65,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 102,
       statusDetail: null,
       orgId: 1,
@@ -104,8 +104,8 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 15,
-      groupName: '알고리즘 스터디',
+      workspaceId: 15,
+      workspaceName: '알고리즘 스터디',
       requestId: 90,
       statusDetail: null,
       orgId: 1,
@@ -127,7 +127,7 @@ function initialVms(): VmDetail[] {
     },
     {
       // 서브도메인 선지정 없음 — 공개 폼에서 이름을 직접 입력해야 하는 흐름
-      // (그룹 12 OWNER라 공개 폼을 실제로 조작할 수 있다).
+      // (워크스페이스 12 OWNER라 공개 폼을 실제로 조작할 수 있다).
       id: 57,
       name: 'web-lab',
       hostname: 'web-lab',
@@ -135,8 +135,8 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 91,
       statusDetail: null,
       orgId: 1,
@@ -164,8 +164,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 103,
       statusDetail: '프로비저닝 재시도가 소진되어 관리자 확인이 필요합니다.',
       orgId: 1,
@@ -202,10 +202,10 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 104,
-      statusDetail: '생성이 실패해 부분 자원이 정리되었습니다.',
+      statusDetail: '생성이 실패해 부분 리소스가 정리되었습니다.',
       orgId: 1,
       imageId: 1,
       ipAddress: null,
@@ -231,8 +231,8 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 15,
-      groupName: '알고리즘 스터디',
+      workspaceId: 15,
+      workspaceName: '알고리즘 스터디',
       requestId: 92,
       statusDetail: null,
       orgId: 1,
@@ -269,8 +269,8 @@ function initialVms(): VmDetail[] {
       vcpu: 4,
       memoryMb: 4096,
       diskGb: 40,
-      groupId: 21,
-      groupName: 'AI 동아리',
+      workspaceId: 21,
+      workspaceName: 'AI 동아리',
       requestId: 105,
       statusDetail: null,
       orgId: 2,
@@ -325,8 +325,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 106,
       statusDetail: null,
       orgId: 1,
@@ -391,8 +391,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 107,
       statusDetail: null,
       orgId: 1,
@@ -488,8 +488,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 21,
-      groupName: 'AI 동아리',
+      workspaceId: 21,
+      workspaceName: 'AI 동아리',
       requestId: 108,
       statusDetail: null,
       orgId: 2,
@@ -550,8 +550,8 @@ function initialVms(): VmDetail[] {
       updatedAt: '2026-07-03T09:05:00+09:00',
     },
     {
-      // 소속 그룹의 VM이지만 접근 목록에 내가 없다 — 목록에서 제한 행으로 나오고
-      // 상세는 404다. 그룹 15에서 나는 구성원일 뿐이라 상시 권한도 없다.
+      // 소속 워크스페이스의 VM이지만 접근 목록에 내가 없다 — 목록에서 제한 행으로 나오고
+      // 상세는 404다. 워크스페이스 15에서 나는 구성원일 뿐이라 상시 권한도 없다.
       id: 44,
       name: 'ml-notebook',
       hostname: 'ml-notebook',
@@ -559,8 +559,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 15,
-      groupName: '알고리즘 스터디',
+      workspaceId: 15,
+      workspaceName: '알고리즘 스터디',
       requestId: 112,
       statusDetail: null,
       orgId: 1,
@@ -590,8 +590,8 @@ function initialVms(): VmDetail[] {
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      groupId: 12,
-      groupName: '캡스톤 3조',
+      workspaceId: 12,
+      workspaceName: '캡스톤 3조',
       requestId: 109,
       statusDetail: null,
       orgId: 1,
@@ -621,8 +621,8 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 15,
-      groupName: '알고리즘 스터디',
+      workspaceId: 15,
+      workspaceName: '알고리즘 스터디',
       requestId: 110,
       statusDetail: null,
       orgId: 1,
@@ -652,8 +652,8 @@ function initialVms(): VmDetail[] {
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      groupId: 21,
-      groupName: 'AI 동아리',
+      workspaceId: 21,
+      workspaceName: 'AI 동아리',
       requestId: 111,
       statusDetail: null,
       orgId: 2,
@@ -784,7 +784,7 @@ export function resetVmFixtures() {
 }
 
 /**
- * 그 VM의 접근 목록을 관리할 수 있는 사람으로 만든다 — 부여 없는 그룹 소유자가
+ * 그 VM의 접근 목록을 관리할 수 있는 사람으로 만든다 — 부여 없는 워크스페이스 소유자가
  * 그렇다. 상세는 여전히 막히고 목록 관리만 열리는, 서버와 같은 조합이다.
  * {@link resetVmFixtures}가 되돌린다.
  */
@@ -816,11 +816,11 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
  */
 export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   const {
-    id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
+    id, name, hostname, status, vcpu, memoryMb, diskGb, workspaceId, workspaceName,
     requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
   } = vm
   return {
-    id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
+    id, name, hostname, status, vcpu, memoryMb, diskGb, workspaceId, workspaceName,
     requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
     accessLimited: false, ownerNames: [], accessManageAllowed: vm.accessManageAllowed,
   }
@@ -832,9 +832,9 @@ export function toRestrictedVmSummary(
   ownerNames: string[],
   accessManageAllowed = false,
 ): Schemas['VmSummaryResponse'] {
-  const { id, name, status, groupId, groupName, createdAt } = vm
+  const { id, name, status, workspaceId, workspaceName, createdAt } = vm
   return {
-    id, name, status, groupId, groupName, createdAt,
+    id, name, status, workspaceId, workspaceName, createdAt,
     hostname: null, vcpu: null, memoryMb: null, diskGb: null, requestId: null,
     statusDetail: null, sshGatewayBlocked: null, endDate: null, expiryStoppedAt: null,
     orgName: null, accessLimited: true, ownerNames, accessManageAllowed,
@@ -852,7 +852,7 @@ function grantOwnerNames(vmId: number): string[] {
 
 function initialVmAccessGrants(): Record<number, VmAccessGrant[]> {
   return {
-    // algo-judge — 나(42)는 소유자, 김철수(57)는 참여자, 그룹 전체는 열람자.
+    // algo-judge — 나(42)는 소유자, 김철수(57)는 참여자, 워크스페이스 전체는 열람자.
     56: [
       {
         id: 301,
@@ -870,7 +870,7 @@ function initialVmAccessGrants(): Record<number, VmAccessGrant[]> {
       },
       {
         id: 303,
-        granteeType: 'GROUP',
+        granteeType: 'WORKSPACE',
         user: null,
         role: 'VIEWER',
         createdAt: '2026-06-22T10:00:00+09:00',
@@ -905,16 +905,16 @@ let nextGrantId = 400
 export const vmHandlers: RequestHandler[] = [
   http.get('*/api/v1/vms', ({ request }) => {
     const url = new URL(request.url)
-    const groupId = url.searchParams.get('groupId')
+    const workspaceId = url.searchParams.get('workspaceId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = vmStore
-      .filter((vm) => !groupId || vm.groupId === Number(groupId))
+      .filter((vm) => !workspaceId || vm.workspaceId === Number(workspaceId))
       .sort((a, b) => b.id - a.id)
     const body: Schemas['PageResponseVmSummaryResponse'] = {
       content: filtered
         .slice(page * size, (page + 1) * size)
-        // 접근 목록에 없고 그룹 소유자도 아니면 제한 행으로 내려간다.
+        // 접근 목록에 없고 워크스페이스 소유자도 아니면 제한 행으로 내려간다.
         .map((vm) =>
           vm.myResourceRole == null
             ? toRestrictedVmSummary(vm, grantOwnerNames(vm.id), vm.accessManageAllowed)
@@ -939,12 +939,12 @@ export const vmHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     }
-    // 소속 그룹의 VM이지만 접근 목록에 없으면 존재만 알고 안은 못 본다 (403).
+    // 소속 워크스페이스의 VM이지만 접근 목록에 없으면 존재만 알고 안은 못 본다 (403).
     if (vm.myResourceRole == null) {
       return accessDeniedProblem(
         `/api/v1/vms/${vm.id}`,
         '이 VM에 접근할 권한이 없습니다',
-        '이 VM의 접근 목록에 등록되어 있지 않습니다. 자원 소유자에게 접근 권한을 요청해 주세요.',
+        '이 VM의 접근 목록에 등록되어 있지 않습니다. 리소스 소유자에게 접근 권한을 요청해 주세요.',
       )
     }
     if (vm.status === 'CREATING') {
@@ -1243,7 +1243,7 @@ export const vmHandlers: RequestHandler[] = [
           errors: [{ field: `settings.${key}`, message: '알 수 없는 설정 키입니다.' }],
         })
       }
-      // password_reveal_min_role은 자원 소유자 전용 — 편집자가 바꾸려 하면 403.
+      // password_reveal_min_role은 리소스 소유자 전용 — 편집자가 바꾸려 하면 403.
       if (key === 'password_reveal_min_role' && vm.myResourceRole !== 'OWNER') {
         return accessDeniedProblem(
           `/api/v1/vms/${vm.id}/settings`,
@@ -1273,26 +1273,27 @@ export const vmHandlers: RequestHandler[] = [
     return HttpResponse.json(body, { status: 200 })
   }),
 
-  /* ─── VM 접근 목록 — 자원 소유자와 그룹 소유자만 읽고 쓴다 ─── */
+  /* ─── VM 접근 목록 — 리소스 소유자와 워크스페이스 소유자만 읽고 쓴다 ─── */
 
   http.get('*/api/v1/vms/:vmId/access', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
-    // 서버와 같은 모양: 목록만이 아니라 어느 VM의 것인지도 함께 — 이 화면을
-    // 여는 사람은 그 VM의 상세를 못 여는 경우가 있다.
+    // 서버와 같은 모양: 목록만이 아니라 어느 리소스의 것인지도 함께 — 이
+    // 화면을 여는 사람은 그 리소스의 상세를 못 여는 경우가 있다.
     return HttpResponse.json({
-      vm: {
+      resource: {
         id: vm.id,
+        type: 'VM',
         name: vm.name,
         displayName: vm.displayName ?? null,
         status: vm.status,
-        groupId: vm.groupId,
-        groupName: vm.groupName,
+        workspaceId: vm.workspaceId,
+        workspaceName: vm.workspaceName,
       },
       grants: vmAccessStore[vm.id] ?? [],
-    } satisfies Schemas['VmAccessListResponse'], { status: 200 })
+    } satisfies Schemas['ResourceAccessListResponse'], { status: 200 })
   }),
 
   http.post('*/api/v1/vms/:vmId/access', async ({ params, request }) => {
@@ -1300,17 +1301,17 @@ export const vmHandlers: RequestHandler[] = [
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
-    const body = (await request.json()) as Schemas['AddVmAccessGrantRequest']
+    const body = (await request.json()) as Schemas['AddResourceAccessGrantRequest']
     const grants = (vmAccessStore[vm.id] ??= [])
-    if (body.granteeType === 'GROUP') {
-      const capped = groupWideRoleProblem(body.role)
+    if (body.granteeType === 'WORKSPACE') {
+      const capped = workspaceWideRoleProblem(body.role)
       if (capped) return capped
-      if (grants.some((grant) => grant.granteeType === 'GROUP')) {
+      if (grants.some((grant) => grant.granteeType === 'WORKSPACE')) {
         return alreadyListedProblem()
       }
       const grant: VmAccessGrant = {
         id: nextGrantId++,
-        granteeType: 'GROUP',
+        granteeType: 'WORKSPACE',
         user: null,
         role: body.role,
         createdAt: '2026-08-09T10:00:00+09:00',
@@ -1318,12 +1319,12 @@ export const vmHandlers: RequestHandler[] = [
       grants.push(grant)
       return HttpResponse.json(grant, { status: 201 })
     }
-    const member = groupMembersOf(vm.groupId).find((m) => m.userId === body.userId)
+    const member = workspaceMembersOf(vm.workspaceId).find((m) => m.userId === body.userId)
     if (!member) {
       return validationProblem(
         `/api/v1/vms/${vm.id}/access`,
         'userId',
-        '이 VM을 소유한 그룹의 구성원만 접근 권한을 받을 수 있습니다. 먼저 그룹에 추가해 주세요.',
+        '이 VM을 소유한 워크스페이스의 구성원만 접근 권한을 받을 수 있습니다. 먼저 워크스페이스에 추가해 주세요.',
       )
     }
     if (grants.some((grant) => grant.user?.userId === member.userId)) {
@@ -1347,9 +1348,9 @@ export const vmHandlers: RequestHandler[] = [
     if (denied) return denied
     const grant = (vmAccessStore[vm.id] ?? []).find((g) => g.id === Number(params.grantId))
     if (!grant) return notFoundProblem()
-    const body = (await request.json()) as Schemas['UpdateVmAccessGrantRequest']
-    if (grant.granteeType === 'GROUP') {
-      const capped = groupWideRoleProblem(body.role)
+    const body = (await request.json()) as Schemas['UpdateResourceAccessGrantRequest']
+    if (grant.granteeType === 'WORKSPACE') {
+      const capped = workspaceWideRoleProblem(body.role)
       if (capped) return capped
     }
     grant.role = body.role
@@ -1375,24 +1376,24 @@ function requireGrantManager(vm: VmDetail) {
     : accessDeniedProblem(
         `/api/v1/vms/${vm.id}/access`,
         '접근 권한을 관리할 권한이 없습니다',
-        '이 VM의 소유자 또는 그룹 소유자만 접근 권한을 관리할 수 있습니다.',
+        '이 VM의 소유자 또는 워크스페이스 소유자만 접근 권한을 관리할 수 있습니다.',
       )
 }
 
-/** 그룹 전체 항목은 참여자·열람자까지만 — 서버와 같은 상한. */
-function groupWideRoleProblem(role: ResourceRole) {
+/** 워크스페이스 전체 항목은 참여자·열람자까지만 — 서버와 같은 상한. */
+function workspaceWideRoleProblem(role: ResourceRole) {
   if (role !== 'OWNER' && role !== 'EDITOR') return null
   return problemResponse({
     type: 'about:blank',
     title: '입력값이 올바르지 않습니다',
     status: 422,
-    detail: '그룹 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.',
+    detail: '워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.',
     code: 'VALIDATION_FAILED',
     errors: [
       {
         field: 'role',
         message:
-          '그룹 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다. 그보다 높은 등급은 '
+          '워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다. 그보다 높은 등급은 '
           + '구성원을 지정해 부여해 주세요.',
       },
     ],
@@ -1419,7 +1420,7 @@ const validationProblem = (instance: string, field: string, message: string) =>
     errors: [{ field, message }],
   })
 
-/** 접근 권한 분기 테스트용 — 이 VM 상세를 지정한 자원 등급으로 내려주는 임시 핸들러. */
+/** 접근 권한 분기 테스트용 — 이 VM 상세를 지정한 리소스 등급으로 내려주는 임시 핸들러. */
 export function vmDetailAs(
   vmId: number,
   role: ResourceRole | null,
@@ -1459,7 +1460,7 @@ export function vmSummaryAs(
   })
 }
 
-/** 접근 목록이 막는 403 — 계약상 코드는 GROUP_ROLE_INSUFFICIENT 하나다. */
+/** 접근 목록이 막는 403 — 계약상 코드는 WORKSPACE_ROLE_INSUFFICIENT 하나다. */
 function accessDeniedProblem(instance: string, title: string, detail: string) {
   return problemResponse({
     type: 'about:blank',
@@ -1467,7 +1468,7 @@ function accessDeniedProblem(instance: string, title: string, detail: string) {
     status: 403,
     detail,
     instance,
-    code: 'GROUP_ROLE_INSUFFICIENT',
+    code: 'WORKSPACE_ROLE_INSUFFICIENT',
   })
 }
 

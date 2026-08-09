@@ -29,7 +29,7 @@ interface CampusIpRecord {
 function initialRequests(): CampusIpRecord[] {
   return [
     {
-      // shop-app(63, 그룹 12) — 승인 대기 신청 (관리자 전환·사용자 상태 카드용).
+      // shop-app(63, 워크스페이스 12) — 승인 대기 신청 (관리자 전환·사용자 상태 카드용).
       id: 7,
       vmId: 63,
       purpose: '학과 실습 서버 외부 연동 (교내망 고정 주소 필요)',
@@ -154,7 +154,7 @@ function paginate<T>(items: T[], page: number, size: number) {
 }
 
 export const campusIpHandlers: RequestHandler[] = [
-  /* ─── 사용자 (이중 게이트는 서버 강제 — mock은 자원 존재만 검사) ─── */
+  /* ─── 사용자 (이중 게이트는 서버 강제 — mock은 리소스 존재만 검사) ─── */
   http.get('*/api/v1/vms/:vmId/campus-ip-requests', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return vmNotFound()

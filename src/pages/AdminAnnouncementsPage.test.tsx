@@ -47,7 +47,7 @@ describe('알림 발송 이력', () => {
 })
 
 describe('공지 보내기', () => {
-  test('ORG_ADMIN에게는 전체 대상이 없고 자기 기관 그룹만 고를 수 있다', async () => {
+  test('ORG_ADMIN에게는 전체 대상이 없고 자기 기관 워크스페이스만 고를 수 있다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin/announcements')
@@ -56,8 +56,8 @@ describe('공지 보내기', () => {
     expect(screen.queryByRole('radio', { name: '전체' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: '우리 기관 전체' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: '특정 그룹' }))
-    // 자기 기관(org 1) 그룹만 로드된다.
+    await user.click(screen.getByRole('radio', { name: '특정 워크스페이스' }))
+    // 자기 기관(org 1) 워크스페이스만 로드된다.
     expect(await screen.findByRole('option', { name: '캡스톤 3조 (4명)' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'AI 동아리 (5명)' })).not.toBeInTheDocument()
   })

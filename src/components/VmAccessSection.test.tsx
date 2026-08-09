@@ -6,7 +6,7 @@ import { vmDetailAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-/** VM 상세의 접근 탭을 연다 (기본 픽스처: 로그인 사용자가 자원 소유자). */
+/** VM 상세의 접근 탭을 연다 (기본 픽스처: 로그인 사용자가 리소스 소유자). */
 function renderAccessTab(vmId: number) {
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}?tab=access`)
@@ -49,24 +49,24 @@ describe('VM 접근 탭 — 노출 조건', () => {
 })
 
 describe('VM 접근 탭 — 목록', () => {
-  test('사용자 항목과 그룹 전체 항목을 등급과 함께 나열한다', async () => {
+  test('사용자 항목과 워크스페이스 전체 항목을 등급과 함께 나열한다', async () => {
     renderAccessTab(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const myRow = await grantRow('홍길동')
     expect(within(myRow).getByRole('combobox')).toHaveValue('OWNER')
 
-    const groupRow = await grantRow('그룹 전체')
-    expect(within(groupRow).getByText(/이 VM을 소유한 그룹의 구성원 전원/)).toBeInTheDocument()
-    expect(within(groupRow).getByRole('combobox')).toHaveValue('VIEWER')
+    const workspaceRow = await grantRow('워크스페이스 전체')
+    expect(within(workspaceRow).getByText(/이 VM을 소유한 워크스페이스의 구성원 전원/)).toBeInTheDocument()
+    expect(within(workspaceRow).getByRole('combobox')).toHaveValue('VIEWER')
   })
 
-  test('그룹 전체 항목에는 소유자·편집자 등급을 고를 수 없다', async () => {
+  test('워크스페이스 전체 항목에는 소유자·편집자 등급을 고를 수 없다', async () => {
     renderAccessTab(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    const groupRow = await grantRow('그룹 전체')
-    const select = within(groupRow).getByRole('combobox')
+    const workspaceRow = await grantRow('워크스페이스 전체')
+    const select = within(workspaceRow).getByRole('combobox')
     expect(within(select).getByRole('option', { name: '참여자' })).toBeInTheDocument()
     expect(within(select).getByRole('option', { name: '열람자' })).toBeInTheDocument()
     expect(within(select).queryByRole('option', { name: '소유자' })).not.toBeInTheDocument()
@@ -75,14 +75,14 @@ describe('VM 접근 탭 — 목록', () => {
 })
 
 describe('VM 접근 탭 — 부여·변경·회수', () => {
-  test('그룹 구성원에게 등급을 골라 부여하면 목록에 나타난다', async () => {
+  test('워크스페이스 구성원에게 등급을 골라 부여하면 목록에 나타난다', async () => {
     const user = userEvent.setup()
-    renderAccessTab(57) // web-lab: 그룹 12, 목록에는 나(소유자)만 있다
+    renderAccessTab(57) // web-lab: 워크스페이스 12, 목록에는 나(소유자)만 있다
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(await screen.findByText(/접근 권한 \(1건\)/)).toBeInTheDocument()
 
-    // 후보 목록은 접근 목록 응답이 알려 준 그룹을 다시 물어 채워진다 — 두 번째
+    // 후보 목록은 접근 목록 응답이 알려 준 워크스페이스를 다시 물어 채워진다 — 두 번째
     // 질의라 먼저 도착을 기다린다.
     await screen.findByRole('option', { name: /김철수/ })
     await user.selectOptions(screen.getByLabelText('대상'), '57')
@@ -99,10 +99,10 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const target = await screen.findByLabelText('대상')
-    // 그룹 15의 구성원은 나와 김철수뿐이고 둘 다 이미 목록에 있다.
+    // 워크스페이스 15의 구성원은 나와 김철수뿐이고 둘 다 이미 목록에 있다.
     expect(within(target).queryByRole('option', { name: /김철수/ })).not.toBeInTheDocument()
-    // 그룹 전체 항목도 이미 있으므로 다시 만들 수 없다.
-    expect(within(target).queryByRole('option', { name: '그룹 전체' })).not.toBeInTheDocument()
+    // 워크스페이스 전체 항목도 이미 있으므로 다시 만들 수 없다.
+    expect(within(target).queryByRole('option', { name: '워크스페이스 전체' })).not.toBeInTheDocument()
   })
 
   test('등급을 바꾸면 그 자리에서 반영된다', async () => {

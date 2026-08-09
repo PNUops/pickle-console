@@ -5,21 +5,21 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-function renderGroups() {
+function renderWorkspaces() {
   server.use(refreshSuccessHandler('access-user'))
-  renderApp('/console/groups')
+  renderApp('/console/workspaces')
 }
 
 async function openCreateModal() {
   const user = userEvent.setup()
-  await screen.findByRole('heading', { name: '내 그룹' })
-  await user.click(screen.getByRole('button', { name: '새 그룹 만들기' }))
-  return { user, dialog: screen.getByRole('dialog', { name: '새 그룹 만들기' }) }
+  await screen.findByRole('heading', { name: '내 워크스페이스' })
+  await user.click(screen.getByRole('button', { name: '새 워크스페이스 만들기' }))
+  return { user, dialog: screen.getByRole('dialog', { name: '새 워크스페이스 만들기' }) }
 }
 
-describe('내 그룹 목록', () => {
-  test('그룹 종류·역할 배지와 함께 내 그룹을 나열한다', async () => {
-    renderGroups()
+describe('내 워크스페이스 목록', () => {
+  test('워크스페이스 종류·역할 배지와 함께 내 워크스페이스를 나열한다', async () => {
+    renderWorkspaces()
 
     const row = (await screen.findByRole('link', { name: '캡스톤 3조' })).closest('tr')!
     expect(within(row).getByText('프로젝트')).toBeInTheDocument()
@@ -35,48 +35,42 @@ describe('내 그룹 목록', () => {
   })
 })
 
-describe('그룹 생성', () => {
-  test('slug 형식이 잘못되면 한국어 오류를 보여준다', async () => {
-    renderGroups()
+describe('워크스페이스 생성', () => {
+  test('이름을 비우면 한국어 오류를 보여준다', async () => {
+    renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 
-    await user.type(within(dialog).getByLabelText('그룹 이름'), '새 팀')
-    await user.type(within(dialog).getByLabelText('slug'), 'Bad Slug!')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
     expect(
-      within(dialog).getByText(/slug는 소문자·숫자·하이픈만 사용해/),
+      within(dialog).getByText('워크스페이스 이름을 입력해 주세요.'),
     ).toBeInTheDocument()
   })
 
-  test('slug가 중복되면 서버의 GROUP_SLUG_DUPLICATE 메시지를 slug 필드에 보여준다', async () => {
-    renderGroups()
+  test('같은 이름을 다시 써도 만들 수 있다 (이름은 키가 아니다)', async () => {
+    renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 
-    await user.type(within(dialog).getByLabelText('그룹 이름'), '중복 팀')
-    await user.type(within(dialog).getByLabelText('slug'), 'capstone-team3')
+    await user.type(within(dialog).getByLabelText('워크스페이스 이름'), '캡스톤 3조')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
     expect(
-      await within(dialog).findByText(
-        "'capstone-team3'은(는) 이미 다른 그룹이 사용 중입니다.",
-      ),
+      await screen.findByRole('heading', { name: '캡스톤 3조' }),
     ).toBeInTheDocument()
   })
 
-  test('생성에 성공하면 새 그룹 상세 페이지로 이동한다', async () => {
-    renderGroups()
+  test('생성에 성공하면 새 워크스페이스 상세 페이지로 이동한다', async () => {
+    renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 
     await user.selectOptions(within(dialog).getByLabelText('종류'), 'PROJECT')
-    await user.type(within(dialog).getByLabelText('그룹 이름'), '졸업과제 7조')
-    await user.type(within(dialog).getByLabelText('slug'), 'grad-team7')
+    await user.type(within(dialog).getByLabelText('워크스페이스 이름'), '졸업과제 7조')
     await user.type(within(dialog).getByLabelText('설명'), '2026-2 졸업과제 7조')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
     expect(
       await screen.findByRole('heading', { name: '졸업과제 7조' }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/grad-team7/)).toBeInTheDocument()
+    expect(screen.getByText(/2026-2 졸업과제 7조/)).toBeInTheDocument()
   })
 })

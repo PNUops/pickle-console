@@ -59,7 +59,7 @@ function parsePorts(raw: string): { ports: number[] } | { error: string } {
 }
 
 /**
- * 캠퍼스 IP 절 — 그룹 구성원이면 상태를 읽고, 소유자·편집자만 신청·취소한다
+ * 캠퍼스 IP 절 — 워크스페이스 구성원이면 상태를 읽고, 소유자·편집자만 신청·취소한다
  * (포트포워딩과 같은 기준). 활성 신청이 있으면 상태 카드를, 없으면 신청 폼을
  * 보여준다.
  */
@@ -69,7 +69,7 @@ export function VmCampusIpSection({
 }: {
   vm: VmDetail
   canMutate: boolean
-  /** 그룹 역할 조회 중 — 읽기 전용 문구가 잠깐 번쩍이지 않게 로딩으로 대체한다. */
+  /** 워크스페이스 역할 조회 중 — 읽기 전용 문구가 잠깐 번쩍이지 않게 로딩으로 대체한다. */
 }) {
   const requests = useQuery({
     queryKey: ['vms', vm.id, 'campus-ip-requests'],

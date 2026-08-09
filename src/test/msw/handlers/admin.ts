@@ -14,36 +14,40 @@ import {
 } from './vms'
 
 type Schemas = components['schemas']
-type VmRequestDetail = Schemas['VmRequestDetailResponse']
+type RequestDetail = Schemas['RequestDetailResponse']
 type ApprovalContext = Schemas['ApprovalContextResponse']
 
 /* ─── fixtures: 관리자 큐용 신청 (org 1 + org 2) ─── */
 
 /** 승인 대기(SUBMITTED) 신청 팩토리 — 페이지네이션 테스트용 대량 시딩에 사용. */
-export function submittedAdminRequest(id: number): VmRequestDetail {
+export function submittedAdminRequest(id: number): RequestDetail {
   return {
     id,
-    groupId: 12,
-    groupName: '캡스톤 3조',
+    workspaceId: 12,
+    workspaceName: '캡스톤 3조',
     orgId: 1,
     orgName: '정보컴퓨터공학부 실습지원센터',
     requesterId: regularUser.id,
     requesterName: regularUser.name,
-    imageId: 1,
-    flavorId: 2,
+    type: 'VM',
     purpose: `추가 실습 서버 ${id}`,
     courseOrProject: null,
-    specReason: null,
     extraNote: null,
-    reqVcpu: 2,
-    reqMemoryMb: 2048,
-    reqDiskGb: 20,
     reqStartDate: null,
     reqEndDate: null,
     displayName: null,
-    desiredSlug: null,
-    desiredSubdomain: null,
-    rootDomain: null,
+    vm: {
+      imageId: 1,
+      flavorId: 2,
+      reqVcpu: 2,
+      reqMemoryMb: 2048,
+      reqDiskGb: 20,
+      specReason: null,
+      desiredSlug: null,
+      desiredSubdomain: null,
+      rootDomain: null,
+      granted: null,
+    },
     status: 'SUBMITTED',
     review: null,
     createdAt: '2026-07-01T10:00:00+09:00',
@@ -51,7 +55,7 @@ export function submittedAdminRequest(id: number): VmRequestDetail {
   }
 }
 
-function initialAdminRequests(): VmRequestDetail[] {
+function initialAdminRequests(): RequestDetail[] {
   return [
     {
       ...submittedAdminRequest(201),
@@ -60,9 +64,12 @@ function initialAdminRequests(): VmRequestDetail[] {
       reqStartDate: '2026-07-15',
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
-      desiredSlug: 'capstone-api',
-      desiredSubdomain: 'capstone-team3',
-      rootDomain: 'pusan.dev',
+      vm: {
+        ...submittedAdminRequest(0).vm!,
+        desiredSlug: 'capstone-api',
+        desiredSubdomain: 'capstone-team3',
+        rootDomain: 'pusan.dev',
+      },
       createdAt: '2026-07-08T11:30:00+09:00',
       updatedAt: '2026-07-08T11:30:00+09:00',
     },
@@ -70,8 +77,8 @@ function initialAdminRequests(): VmRequestDetail[] {
       ...submittedAdminRequest(202),
       requesterId: 57,
       requesterName: '김철수',
-      groupId: 13,
-      groupName: '알고리즘 스터디',
+      workspaceId: 13,
+      workspaceName: '알고리즘 스터디',
       purpose: '알고리즘 스터디 채점 서버',
       status: 'APPROVED',
       review: {
@@ -79,13 +86,8 @@ function initialAdminRequests(): VmRequestDetail[] {
         reviewerName: orgAdminUser.name,
         decision: 'APPROVE',
         comment: '요청 사양 그대로 승인합니다.',
-        grantedVcpu: 2,
-        grantedMemoryMb: 2048,
-        grantedDiskGb: 20,
-        grantedImageId: 1,
         grantedStartDate: null,
         grantedEndDate: null,
-        nodeId: null,
         decidedAt: '2026-07-07T14:03:00+09:00',
       },
       createdAt: '2026-07-07T09:00:00+09:00',
@@ -100,13 +102,8 @@ function initialAdminRequests(): VmRequestDetail[] {
         reviewerName: orgAdminUser.name,
         decision: 'REJECT',
         comment: '용도가 불분명합니다. 구체적인 사용 계획을 적어 다시 신청해 주세요.',
-        grantedVcpu: null,
-        grantedMemoryMb: null,
-        grantedDiskGb: null,
-        grantedImageId: null,
         grantedStartDate: null,
         grantedEndDate: null,
-        nodeId: null,
         decidedAt: '2026-07-06T16:20:00+09:00',
       },
       createdAt: '2026-07-05T13:00:00+09:00',
@@ -116,17 +113,19 @@ function initialAdminRequests(): VmRequestDetail[] {
       ...submittedAdminRequest(204),
       requesterId: 58,
       requesterName: '박영희',
-      groupId: 21,
-      groupName: 'AI 동아리',
+      workspaceId: 21,
+      workspaceName: 'AI 동아리',
       orgId: 2,
       orgName: '테스트 기관',
-      imageId: 1,
-      flavorId: 3,
       purpose: 'AI 동아리 모델 학습 서버',
-      specReason: '데이터 전처리와 학습을 병행해 메모리가 더 필요합니다.',
-      reqVcpu: 4,
-      reqMemoryMb: 4096,
-      reqDiskGb: 40,
+      vm: {
+        ...submittedAdminRequest(0).vm!,
+        flavorId: 3,
+        reqVcpu: 4,
+        reqMemoryMb: 4096,
+        reqDiskGb: 40,
+        specReason: '데이터 전처리와 학습을 병행해 메모리가 더 필요합니다.',
+      },
       createdAt: '2026-07-08T09:10:00+09:00',
       updatedAt: '2026-07-08T09:10:00+09:00',
     },
@@ -158,7 +157,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         ],
         totals: { vcpu: 1, memoryMb: 1024, diskGb: 10 },
       },
-      group: {
+      workspace: {
         id: 12,
         name: '캡스톤 3조',
         kind: 'PROJECT',
@@ -186,7 +185,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         memoryUsageRatio: 0.64,
         warnings: [],
       },
-      guidance: '자원에 여유가 있어 승인이 가능합니다.',
+      guidance: '리소스에 여유가 있어 승인이 가능합니다.',
     },
     204: {
       applicant: {
@@ -201,7 +200,7 @@ function initialContexts(): Record<number, ApprovalContext> {
         activeVms: [],
         totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
       },
-      group: {
+      workspace: {
         id: 21,
         name: 'AI 동아리',
         kind: 'TEAM',
@@ -234,12 +233,12 @@ function initialContexts(): Record<number, ApprovalContext> {
   }
 }
 
-export let adminVmRequestStore: VmRequestDetail[] = initialAdminRequests()
+export let adminRequestStore: RequestDetail[] = initialAdminRequests()
 let approvalContexts: Record<number, ApprovalContext> = initialContexts()
 let nextOrgId = 100
 
 /** Bodies received by decision endpoints, for payload-correctness assertions. */
-export let approveBodies: { requestId: number; body: Schemas['ApproveVmRequestRequest'] }[] = []
+export let approveBodies: { requestId: number; body: Schemas['ApproveRequestRequest'] }[] = []
 export let rejectBodies: { requestId: number; body: { comment: string } }[] = []
 export let userPatchBodies: {
   userId: number
@@ -247,7 +246,7 @@ export let userPatchBodies: {
 }[] = []
 
 export function resetAdminFixtures() {
-  adminVmRequestStore = initialAdminRequests()
+  adminRequestStore = initialAdminRequests()
   approvalContexts = initialContexts()
   approveBodies = []
   rejectBodies = []
@@ -393,18 +392,18 @@ function adminVmComparator(sort: string | null) {
 }
 
 export const adminHandlers: RequestHandler[] = [
-  http.get('*/api/v1/admin/vm-requests', ({ request }) => {
+  http.get('*/api/v1/admin/requests', ({ request }) => {
     const url = new URL(request.url)
     // 계약(v0.2.3): status 미지정 시 모든 상태를 반환한다.
     const status = url.searchParams.get('status')
     const orgId = url.searchParams.get('orgId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const filtered = adminVmRequestStore
+    const filtered = adminRequestStore
       .filter((r) => !status || r.status === status)
       .filter((r) => !orgId || r.orgId === Number(orgId))
       .sort((a, b) => b.id - a.id)
-    const body: Schemas['PageResponseVmRequestDetailResponse'] = {
+    const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
       size,
@@ -414,26 +413,26 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json(body, { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/vm-requests/:requestId', ({ params }) => {
-    const found = adminVmRequestStore.find((r) => r.id === Number(params.requestId))
+  http.get('*/api/v1/admin/requests/:requestId', ({ params }) => {
+    const found = adminRequestStore.find((r) => r.id === Number(params.requestId))
     if (!found) return notFound()
     return HttpResponse.json(found, { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/vm-requests/:requestId/context', ({ params }) => {
+  http.get('*/api/v1/admin/requests/:requestId/context', ({ params }) => {
     const context = approvalContexts[Number(params.requestId)]
     if (!context) return notFound()
     return HttpResponse.json(context, { status: 200 })
   }),
 
-  http.post('*/api/v1/admin/vm-requests/:requestId/approve', async ({ params, request }) => {
+  http.post('*/api/v1/admin/requests/:requestId/approve', async ({ params, request }) => {
     const requestId = Number(params.requestId)
-    const found = adminVmRequestStore.find((r) => r.id === requestId)
+    const found = adminRequestStore.find((r) => r.id === requestId)
     if (!found) return notFound()
     if (found.status !== 'SUBMITTED') {
-      return alreadyDecided(`/api/v1/admin/vm-requests/${requestId}/approve`)
+      return alreadyDecided(`/api/v1/admin/requests/${requestId}/approve`)
     }
-    const body = (await request.json()) as Schemas['ApproveVmRequestRequest']
+    const body = (await request.json()) as Schemas['ApproveRequestRequest']
     approveBodies.push({ requestId, body })
     found.status = 'APPROVED'
     found.review = {
@@ -441,25 +440,20 @@ export const adminHandlers: RequestHandler[] = [
       reviewerName: orgAdminUser.name,
       decision: 'APPROVE',
       comment: body.comment ?? null,
-      grantedVcpu: body.grantedVcpu,
-      grantedMemoryMb: body.grantedMemoryMb,
-      grantedDiskGb: body.grantedDiskGb,
-      grantedImageId: body.grantedImageId,
       grantedStartDate: body.grantedStartDate ?? null,
       grantedEndDate: body.grantedEndDate ?? null,
-      nodeId: body.nodeId ?? null,
       decidedAt: '2026-07-08T17:00:00+09:00',
     }
     found.updatedAt = '2026-07-08T17:00:00+09:00'
     return HttpResponse.json(found, { status: 200 })
   }),
 
-  http.post('*/api/v1/admin/vm-requests/:requestId/reject', async ({ params, request }) => {
+  http.post('*/api/v1/admin/requests/:requestId/reject', async ({ params, request }) => {
     const requestId = Number(params.requestId)
-    const found = adminVmRequestStore.find((r) => r.id === requestId)
+    const found = adminRequestStore.find((r) => r.id === requestId)
     if (!found) return notFound()
     if (found.status !== 'SUBMITTED') {
-      return alreadyDecided(`/api/v1/admin/vm-requests/${requestId}/reject`)
+      return alreadyDecided(`/api/v1/admin/requests/${requestId}/reject`)
     }
     const body = (await request.json()) as { comment: string }
     if (!body.comment) {
@@ -479,13 +473,8 @@ export const adminHandlers: RequestHandler[] = [
       reviewerName: orgAdminUser.name,
       decision: 'REJECT',
       comment: body.comment,
-      grantedVcpu: null,
-      grantedMemoryMb: null,
-      grantedDiskGb: null,
-      grantedImageId: null,
       grantedStartDate: null,
       grantedEndDate: null,
-      nodeId: null,
       decidedAt: '2026-07-08T17:00:00+09:00',
     }
     found.updatedAt = '2026-07-08T17:00:00+09:00'
@@ -678,7 +667,7 @@ export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/vms', ({ request }) => {
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
-    const groupId = url.searchParams.get('groupId')
+    const workspaceId = url.searchParams.get('workspaceId')
     const status = url.searchParams.get('status')
     const expiringInDays = url.searchParams.get('expiringInDays')
     const expired = url.searchParams.get('expired')
@@ -688,7 +677,7 @@ export const adminHandlers: RequestHandler[] = [
     const today = localDateStr(0)
     const filtered = vmStore
       .filter((vm) => !orgId || vm.orgId === Number(orgId))
-      .filter((vm) => !groupId || vm.groupId === Number(groupId))
+      .filter((vm) => !workspaceId || vm.workspaceId === Number(workspaceId))
       .filter((vm) => !status || vm.status === status)
       // 계약 v0.6.1: q = 이름/호스트네임 부분일치 (대소문자 무시)
       .filter(

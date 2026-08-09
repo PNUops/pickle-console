@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchVmAccessGrants } from '../api/queries'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { Alert, Spinner, VmStatusBadge } from '../components/ui'
+import type { VmStatus } from '../lib/status'
 
 /**
  * VM 하나의 접근 권한만 다루는 화면.
  *
  * VM 상세와 따로 있는 이유가 있다 — 이 화면을 여는 사람은 그 VM의 상세를 열 수
- * 없는 경우가 있다. 그룹 소유자는 접근 목록에 없으면 안을 못 보지만 누가 접근할지는
- * 정할 수 있고, 소유자가 그룹을 떠난 VM을 되살리는 길이 그것뿐이다. 그래서 여기서는
+ * 없는 경우가 있다. 워크스페이스 소유자는 접근 목록에 없으면 안을 못 보지만 누가 접근할지는
+ * 정할 수 있고, 소유자가 워크스페이스를 떠난 VM을 되살리는 길이 그것뿐이다. 그래서 여기서는
  * 상세를 부르지 않고, 이름·상태는 접근 목록 응답이 함께 주는 것만 쓴다.
  */
 export function VmAccessPage() {
@@ -19,7 +20,7 @@ export function VmAccessPage() {
     queryKey: ['vms', vmId, 'access'],
     queryFn: () => fetchVmAccessGrants(vmId),
   })
-  const vm = access.data?.vm
+  const vm = access.data?.resource
 
   return (
     <div className="space-y-6">
@@ -40,13 +41,13 @@ export function VmAccessPage() {
               <h1 className="text-xl font-semibold text-neutral-900">
                 {vm?.displayName || vm?.name}
               </h1>
-              {vm && <VmStatusBadge status={vm.status} />}
+              {vm?.type === 'VM' && <VmStatusBadge status={vm.status as VmStatus} />}
             </div>
             <p className="text-sm text-neutral-500">
               {vm?.displayName && (
                 <span className="mr-2 text-neutral-400">{vm.name}</span>
               )}
-              {vm?.groupName} 소유
+              {vm?.workspaceName} 소유
             </p>
           </header>
           <VmAccessSection vmId={vmId} />
