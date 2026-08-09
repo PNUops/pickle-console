@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { asGrantManager, vmSummaryAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -36,6 +37,34 @@ describe('내 VM 목록', () => {
     expect(
       within(limitedRow).getByText(/접근 권한이 없습니다 — 김철수 님에게 요청하세요/),
     ).toBeInTheDocument()
+    // 접근 권한이 없는 구성원에게는 관리 진입점도 없다.
+    expect(
+      within(limitedRow).queryByRole('link', { name: '접근 권한 관리' }),
+    ).not.toBeInTheDocument()
+  })
+
+  test('그룹 소유자는 안을 못 봐도 제한 행에서 접근 권한 관리로 갈 수 있다', async () => {
+    // 상세는 막혀 있으므로 목록이 유일한 진입점이고, 소유자가 떠난 VM을
+    // 되살리는 길이기도 하다.
+    server.use(vmSummaryAs(44, { accessManageAllowed: true }))
+    renderVms()
+
+    const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
+    const manage = within(limitedRow).getByRole('link', { name: '접근 권한 관리' })
+    expect(manage).toHaveAttribute('href', '/console/vms/44/access')
+    // 그래도 안은 여전히 안 보인다.
+    expect(screen.queryByRole('link', { name: 'ml-notebook' })).not.toBeInTheDocument()
+  })
+
+  test('접근 권한 화면은 VM 상세가 막혀 있어도 열린다', async () => {
+    // 이 수정의 전부다 — 상세를 부르면 403이라, 화면이 상세에 기대면 관리
+    // 경로가 통째로 닫힌다. 이름·상태는 접근 목록 응답이 준 것으로만 그린다.
+    asGrantManager(44)
+    renderVms('/console/vms/44/access')
+
+    expect(await screen.findByRole('heading', { name: 'ml-notebook' })).toBeInTheDocument()
+    expect(screen.getByText(/알고리즘 스터디 소유/)).toBeInTheDocument()
+    expect(await screen.findByText(/접근 권한 \(/)).toBeInTheDocument()
   })
 })
 

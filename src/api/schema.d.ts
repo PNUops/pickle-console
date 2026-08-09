@@ -1757,7 +1757,7 @@ export interface paths {
         };
         /**
          * 접근 권한 목록
-         * @description 이 VM의 접근 권한 전체입니다. VM 소유자와 그룹 소유자만 볼 수 있습니다.
+         * @description 이 VM의 접근 권한 전체와, 그 목록이 어느 VM의 것인지 알려 주는 최소 정보입니다. VM 소유자와 그룹 소유자만 볼 수 있습니다.
          */
         get: operations["listVmAccessGrants"];
         put?: never;
@@ -3601,6 +3601,18 @@ export interface components {
         VerifyEmailRequest: {
             token: string;
         };
+        /** @description 접근 권한이 없는 사람에게도 보이는 범위의 VM 정보 */
+        Vm: {
+            /** @description 표시명. 지정되지 않았으면 null입니다. */
+            displayName?: string | null;
+            /** Format: int64 */
+            groupId: number;
+            groupName: string;
+            /** Format: int64 */
+            id: number;
+            name: string;
+            status: components["schemas"]["VmStatus"];
+        };
         /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 그룹 전체입니다. */
         VmAccessGrantView: {
             /** Format: date-time */
@@ -3613,6 +3625,13 @@ export interface components {
             role: components["schemas"]["ResourceRole"];
             /** @description 대상 사용자. 그룹 전체 항목이면 null입니다. */
             user?: components["schemas"]["Grantee"] | null;
+        };
+        /** @description VM 접근 권한 목록과, 그 목록이 어느 VM의 것인지 알려 주는 최소 정보 */
+        VmAccessListResponse: {
+            /** @description 접근 권한 항목 */
+            grants: components["schemas"]["VmAccessGrantView"][];
+            /** @description 이 목록이 속한 VM */
+            vm: components["schemas"]["Vm"];
         };
         VmBriefResponse: {
             /** Format: int32 */
@@ -3833,6 +3852,8 @@ export interface components {
         VmSummaryResponse: {
             /** @description true면 이 VM의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
             accessLimited: boolean;
+            /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 그룹 소유자가 참입니다. */
+            accessManageAllowed: boolean;
             /** Format: date-time */
             createdAt: string;
             /**
@@ -7983,7 +8004,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VmAccessGrantView"][];
+                    "*/*": components["schemas"]["VmAccessListResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

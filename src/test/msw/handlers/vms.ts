@@ -783,6 +783,16 @@ export function resetVmFixtures() {
   routeFetchCounts = {}
 }
 
+/**
+ * 그 VM의 접근 목록을 관리할 수 있는 사람으로 만든다 — 부여 없는 그룹 소유자가
+ * 그렇다. 상세는 여전히 막히고 목록 관리만 열리는, 서버와 같은 조합이다.
+ * {@link resetVmFixtures}가 되돌린다.
+ */
+export function asGrantManager(vmId: number) {
+  const vm = vmStore.find((v) => v.id === vmId)
+  if (vm) vm.accessManageAllowed = true
+}
+
 /** Prepend a lifecycle event for assertions on event history refreshes. */
 export function recordVmEvent(vmId: number, event: Omit<VmEvent, 'id'>) {
   const list = (vmEventStore[vmId] ??= [])
@@ -812,7 +822,7 @@ export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   return {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
     requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
-    accessLimited: false, ownerNames: [],
+    accessLimited: false, ownerNames: [], accessManageAllowed: vm.accessManageAllowed,
   }
 }
 
@@ -820,13 +830,14 @@ export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
 export function toRestrictedVmSummary(
   vm: VmDetail,
   ownerNames: string[],
+  accessManageAllowed = false,
 ): Schemas['VmSummaryResponse'] {
   const { id, name, status, groupId, groupName, createdAt } = vm
   return {
     id, name, status, groupId, groupName, createdAt,
     hostname: null, vcpu: null, memoryMb: null, diskGb: null, requestId: null,
     statusDetail: null, sshGatewayBlocked: null, endDate: null, expiryStoppedAt: null,
-    orgName: null, accessLimited: true, ownerNames,
+    orgName: null, accessLimited: true, ownerNames, accessManageAllowed,
   }
 }
 
@@ -906,7 +917,7 @@ export const vmHandlers: RequestHandler[] = [
         // 접근 목록에 없고 그룹 소유자도 아니면 제한 행으로 내려간다.
         .map((vm) =>
           vm.myResourceRole == null
-            ? toRestrictedVmSummary(vm, grantOwnerNames(vm.id))
+            ? toRestrictedVmSummary(vm, grantOwnerNames(vm.id), vm.accessManageAllowed)
             : toVmSummary(vm),
         ),
       page,
@@ -1269,7 +1280,19 @@ export const vmHandlers: RequestHandler[] = [
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
-    return HttpResponse.json(vmAccessStore[vm.id] ?? [], { status: 200 })
+    // 서버와 같은 모양: 목록만이 아니라 어느 VM의 것인지도 함께 — 이 화면을
+    // 여는 사람은 그 VM의 상세를 못 여는 경우가 있다.
+    return HttpResponse.json({
+      vm: {
+        id: vm.id,
+        name: vm.name,
+        displayName: vm.displayName ?? null,
+        status: vm.status,
+        groupId: vm.groupId,
+        groupName: vm.groupName,
+      },
+      grants: vmAccessStore[vm.id] ?? [],
+    } satisfies Schemas['VmAccessListResponse'], { status: 200 })
   }),
 
   http.post('*/api/v1/vms/:vmId/access', async ({ params, request }) => {
@@ -1405,6 +1428,34 @@ export function vmDetailAs(
   return http.get(`*/api/v1/vms/${vmId}`, () => {
     const vm = vmStore.find((v) => v.id === vmId)!
     return HttpResponse.json({ ...vm, ...accessOf(role), ...overrides }, { status: 200 })
+  })
+}
+
+/**
+ * 목록 한 행만 바꿔 내려주는 임시 핸들러. 제한 행에서만 드러나는 것(관리 진입점
+ * 등)을 그 행 하나로 재현하려고 쓴다 — 상세용 {@link vmDetailAs}의 목록판이다.
+ */
+export function vmSummaryAs(
+  vmId: number,
+  patch: Partial<Schemas['VmSummaryResponse']>,
+): RequestHandler {
+  return http.get('*/api/v1/vms', () => {
+    const rows = vmStore
+      .slice()
+      .sort((a, b) => b.id - a.id)
+      .map((vm) => {
+        const row = vm.myResourceRole == null
+          ? toRestrictedVmSummary(vm, grantOwnerNames(vm.id), vm.accessManageAllowed)
+          : toVmSummary(vm)
+        return vm.id === vmId ? { ...row, ...patch } : row
+      })
+    return HttpResponse.json({
+      content: rows,
+      page: 0,
+      size: 20,
+      totalElements: rows.length,
+      totalPages: 1,
+    } satisfies Schemas['PageResponseVmSummaryResponse'], { status: 200 })
   })
 }
 
