@@ -143,6 +143,7 @@ export function AppShell({
   navLabel,
   items,
   sections,
+  sidebarTop,
   notificationsTo,
 }: {
   home: string
@@ -151,6 +152,8 @@ export function AppShell({
   items?: NavItem[]
   /** 섹션 내비게이션 — 지정하면 items보다 우선한다. */
   sections?: NavSection[]
+  /** 내비게이션 위에 놓이는 요소 (워크스페이스 선택기 등). */
+  sidebarTop?: ReactNode
   /** 알림함 경로 — 지정하면 상단 바에 알림 종을 노출한다. */
   notificationsTo?: string
 }) {
@@ -254,6 +257,7 @@ export function AppShell({
         <div className="flex h-16 items-center border-b border-neutral-100 px-5">
           <Logo to={home} />
         </div>
+        {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
         <ShellNav navLabel={navLabel} navSections={navSections} />
         <ShellFooterNav />
       </aside>
@@ -286,6 +290,7 @@ export function AppShell({
                 </svg>
               </button>
             </div>
+            {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
             <ShellNav
               navLabel={navLabel}
               navSections={navSections}

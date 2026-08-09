@@ -3,6 +3,8 @@ import { Route, Routes, useLocation } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
 import { Spinner } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
+import { ResourcesPage } from './pages/ResourcesPage'
+import { ScopeProvider } from './lib/scope'
 import { ConsoleLayout } from './layouts/ConsoleLayout'
 import { AuthLayout } from './layouts/AuthLayout'
 import { PublicLayout } from './layouts/PublicLayout'
@@ -103,13 +105,16 @@ function App() {
         path="console"
         element={
           <RequireRole roles={['USER']}>
-            <ConsoleLayout />
+            <ScopeProvider>
+              <ConsoleLayout />
+            </ScopeProvider>
           </RequireRole>
         }
       >
         <Route index element={<ConsoleDashboardPage />} />
         <Route path="workspaces" element={<WorkspacesPage />} />
         <Route path="workspaces/:workspaceId" element={<WorkspaceDetailPage />} />
+        <Route path="resources" element={<ResourcesPage />} />
         <Route path="requests" element={<RequestsPage />} />
         <Route path="requests/new" element={<NewRequestPage />} />
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
@@ -135,6 +140,13 @@ function App() {
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
+        {/* Workspace-scoped views of the same lists. Declared after the fixed
+            paths above so `/console/vms` is never read as a workspace id. */}
+        <Route path=":workspaceId" element={<ConsoleDashboardPage />} />
+        <Route path=":workspaceId/resources" element={<ResourcesPage />} />
+        <Route path=":workspaceId/vms" element={<VmsPage />} />
+        <Route path=":workspaceId/requests" element={<RequestsPage />} />
+        <Route path=":workspaceId/requests/new" element={<NewRequestPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route

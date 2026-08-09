@@ -260,10 +260,31 @@ export function fetchRequest(requestId: number): Promise<RequestDetail> {
   })
 }
 
-export function fetchVms(params: { page?: number; size?: number }): Promise<VmPage> {
+export function fetchVms(params: {
+  page?: number
+  size?: number
+  workspaceId?: number
+}): Promise<VmPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms', { params: { query: params } })
     if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export type ResourceSummary = Schemas['ResourceSummaryResponse']
+export type ResourcePage = Schemas['PageResponseResourceSummaryResponse']
+
+/** The type-agnostic inventory: what this person has, whatever kind it is. */
+export function fetchResources(params: {
+  page?: number
+  size?: number
+  workspaceId?: number
+  type?: ResourceSummary['type']
+}): Promise<ResourcePage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/resources', { params: { query: params } })
+    if (!data) throw toApiError(error, '리소스 목록을 불러오지 못했습니다.')
     return data
   })
 }

@@ -16,12 +16,14 @@ import {
   VmStatusBadge,
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { useScope } from '../lib/use-scope'
 
 export function VmsPage() {
+  const scope = useScope()
   const [page, setPage] = useState(0)
   const vms = useQuery({
-    queryKey: ['vms', { page }],
-    queryFn: () => fetchVms({ page }),
+    queryKey: ['vms', { page, workspaceId: scope }],
+    queryFn: () => fetchVms({ page, workspaceId: scope ?? undefined }),
     placeholderData: keepPreviousData,
     // 비동기 전이 중(생성·삭제·재부팅) VM이 있으면 3초마다 새로 고친다 (상세와 동일 기준).
     refetchInterval: (query) =>

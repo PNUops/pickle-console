@@ -130,8 +130,15 @@ const notFound = () =>
 /* ─── handlers ─── */
 
 export const workspaceHandlers: RequestHandler[] = [
+  // 서버와 같은 범위: 내가 속한 워크스페이스만. 나간 워크스페이스가 목록과
+  // 워크스페이스 선택기에서 함께 사라지는 것이 이 필터에 달려 있다.
   http.get('*/api/v1/workspaces', () =>
-    HttpResponse.json(workspaceStore.map(toSummary), { status: 200 }),
+    HttpResponse.json(
+      workspaceStore
+        .filter((record) => record.members.some((m) => m.userId === regularUser.id))
+        .map(toSummary),
+      { status: 200 },
+    ),
   ),
 
   http.post('*/api/v1/workspaces', async ({ request }) => {
