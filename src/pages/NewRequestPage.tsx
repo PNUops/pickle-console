@@ -38,7 +38,7 @@ import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { SUBDOMAIN_RE } from '../lib/validation'
 
-const STEPS = ['워크스페이스·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
+const STEPS = ['종류', '워크스페이스·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
 
 /** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용). */
 const FIELD_LABELS: Record<string, string> = {
@@ -160,7 +160,7 @@ export function NewRequestPage() {
 
   const validateStep = (index: number): FieldErrors => {
     const next: FieldErrors = {}
-    if (index === 0) {
+    if (index === 1) {
       if (state.workspaceId == null) next.workspaceId = '신청할 워크스페이스를 선택해 주세요.'
       if (state.orgId == null) next.orgId = '리소스를 제공할 기관을 선택해 주세요.'
       if (state.displayName.length > 100)
@@ -174,7 +174,7 @@ export function NewRequestPage() {
         }
       }
     }
-    if (index === 1) {
+    if (index === 2) {
       // 목록에 없는 id(초안에 남은 은퇴 OS·프리셋, 직접 넣은 값)는 선택되지 않은
       // 것으로 본다 — 그대로 두면 요약이 원시 id를 보여주고 제출이 422로 튕긴다.
       if (state.imageId == null || !selectedImage) next.imageId = 'OS를 선택해 주세요.'
@@ -189,7 +189,7 @@ export function NewRequestPage() {
           next.specReason = '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
       }
     }
-    if (index === 2) {
+    if (index === 3) {
       if (!state.purpose.trim()) next.purpose = '사용 목적을 입력해 주세요.'
       else if (state.purpose.length > 2000)
         next.purpose = '사용 목적은 2000자 이하로 입력해 주세요.'
@@ -312,9 +312,9 @@ export function NewRequestPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">VM 신청</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">리소스 신청</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          네 단계로 VM 사용 신청서를 작성합니다. 제출하면 관리자가 검토합니다.
+          다섯 단계로 신청서를 작성합니다. 제출하면 관리자가 검토합니다.
         </p>
       </div>
 
@@ -323,6 +323,27 @@ export function NewRequestPage() {
       <Card>
         <CardContent className="space-y-5 py-6">
           {step === 0 && (
+            <div className="space-y-4">
+              <p className="text-sm text-neutral-600">무엇을 신청할지 고르세요.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  aria-pressed="true"
+                  className="cursor-pointer rounded-xl border-2 border-primary-500 bg-primary-50/40 p-4 text-left"
+                >
+                  <span className="block font-medium text-neutral-900">가상 머신 (VM)</span>
+                  <span className="mt-1 block text-sm text-neutral-500">
+                    SSH로 접속해 쓰는 리눅스 서버입니다.
+                  </span>
+                </button>
+              </div>
+              <p className="text-xs text-neutral-400">
+                컨테이너와 LLM API 키는 준비 중입니다.
+              </p>
+            </div>
+          )}
+
+          {step === 1 && (
             <>
               {eligibleWorkspaces.length === 0 && (
                 <Alert variant="warning">
@@ -401,7 +422,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 2 && (
             <>
               <fieldset>
                 <legend className="text-sm font-medium text-neutral-700">
@@ -552,7 +573,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
               <FormField label="사용 목적" required error={errors.purpose}>
                 <Textarea
@@ -597,7 +618,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               {submitError && (
                 <Alert variant="danger" title={submitError}>
