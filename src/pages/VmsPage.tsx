@@ -89,6 +89,20 @@ export function VmsPage() {
                           접근 권한이 없습니다
                           {vm.ownerNames.length > 0 &&
                             ` — ${vm.ownerNames.join(', ')} 님에게 요청하세요`}
+                          {/* 그룹 소유자는 이 VM 안을 볼 수 없어도 누가 접근할지는
+                              정할 수 있다. 상세로 못 들어가므로 목록이 그 유일한
+                              진입점이고, 소유자가 떠난 VM을 되살리는 길이기도 하다. */}
+                          {vm.accessManageAllowed && (
+                            <>
+                              {' '}
+                              <Link
+                                to={`/console/vms/${vm.id}/access`}
+                                className="font-medium text-primary-700 hover:underline"
+                              >
+                                접근 권한 관리
+                              </Link>
+                            </>
+                          )}
                         </p>
                       )}
                     </TD>

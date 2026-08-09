@@ -416,8 +416,13 @@ export function updateVmSettings(
 /* ─── VM 접근 권한 (자원 소유자·그룹 소유자) ─── */
 
 export type VmAccessGrant = Schemas['VmAccessGrantView']
+export type VmAccessList = Schemas['VmAccessListResponse']
 
-export function fetchVmAccessGrants(vmId: number): Promise<VmAccessGrant[]> {
+/**
+ * 목록과 함께 어느 VM의 것인지도 받는다 — 이 화면을 여는 사람은 그 VM의 상세를
+ * 못 여는 경우가 있어(그룹 소유자), 이름을 다른 데서 가져올 수 없다.
+ */
+export function fetchVmAccessGrants(vmId: number): Promise<VmAccessList> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}/access', {
       params: { path: { vmId } },

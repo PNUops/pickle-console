@@ -8,7 +8,6 @@ import {
   updateVmAccessGrant,
   type ResourceRole,
   type VmAccessGrant,
-  type VmDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import {
@@ -38,27 +37,31 @@ const GROUP_WIDE_ASSIGNABLE: ResourceRole[] = ['MEMBER', 'VIEWER']
  * 않는다. 그래서 화면의 중심은 "누구에게 무엇까지"이고, 회수할 때는 회수가
  * 닿지 않는 것(이미 본 비밀번호, 이미 열린 SSH 세션)을 같이 말해 준다.
  */
-export function VmAccessSection({ vm }: { vm: VmDetail }) {
+export function VmAccessSection({ vmId }: { vmId: number }) {
   const queryClient = useQueryClient()
-  const grants = useQuery({
-    queryKey: ['vms', vm.id, 'access'],
-    queryFn: () => fetchVmAccessGrants(vm.id),
+  const access = useQuery({
+    queryKey: ['vms', vmId, 'access'],
+    queryFn: () => fetchVmAccessGrants(vmId),
   })
+  // 소유 그룹은 응답이 알려 준다 — VM 상세를 못 여는 사람도 이 화면은 열기 때문에
+  // 그룹 id 를 상세에서 가져올 수 없다.
+  const groupId = access.data?.vm.groupId
   const group = useQuery({
-    queryKey: ['groups', vm.groupId],
-    queryFn: () => fetchGroup(vm.groupId),
+    queryKey: ['groups', groupId],
+    queryFn: () => fetchGroup(groupId!),
+    enabled: groupId != null,
   })
   const [error, setError] = useState<string | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<VmAccessGrant | null>(null)
 
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ['vms', vm.id, 'access'] })
-    void queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
+    void queryClient.invalidateQueries({ queryKey: ['vms', vmId, 'access'] })
+    void queryClient.invalidateQueries({ queryKey: ['vms', vmId] })
   }
 
   const changeRole = useMutation({
     mutationFn: ({ grantId, role }: { grantId: number; role: ResourceRole }) =>
-      updateVmAccessGrant(vm.id, grantId, role),
+      updateVmAccessGrant(vmId, grantId, role),
     onSuccess: () => {
       setError(null)
       invalidate()
@@ -67,7 +70,7 @@ export function VmAccessSection({ vm }: { vm: VmDetail }) {
   })
 
   const revoke = useMutation({
-    mutationFn: (grantId: number) => removeVmAccessGrant(vm.id, grantId),
+    mutationFn: (grantId: number) => removeVmAccessGrant(vmId, grantId),
     onSuccess: () => {
       setError(null)
       setRevokeTarget(null)
@@ -79,7 +82,7 @@ export function VmAccessSection({ vm }: { vm: VmDetail }) {
     },
   })
 
-  const rows = grants.data ?? []
+  const rows = access.data?.grants ?? []
   const listed = new Set(rows.map((grant) => grant.user?.userId).filter(Boolean))
   const candidates = (group.data?.members ?? []).filter(
     (member) => !listed.has(member.userId),
@@ -98,11 +101,11 @@ export function VmAccessSection({ vm }: { vm: VmDetail }) {
             목록에 없으면 이름과 상태만 보입니다.
           </p>
           {error && <Alert variant="danger">{error}</Alert>}
-          {grants.isPending ? (
+          {access.isPending ? (
             <Spinner />
-          ) : grants.isError ? (
+          ) : access.isError ? (
             <Alert variant="warning" title="접근 권한을 불러오지 못했습니다">
-              <Button size="sm" variant="secondary" onClick={() => void grants.refetch()}>
+              <Button size="sm" variant="secondary" onClick={() => void access.refetch()}>
                 다시 시도
               </Button>
             </Alert>
@@ -162,7 +165,7 @@ export function VmAccessSection({ vm }: { vm: VmDetail }) {
       </Card>
 
       <AddGrantForm
-        vmId={vm.id}
+        vmId={vmId}
         candidates={candidates}
         hasGroupWide={hasGroupWide}
         onError={setError}

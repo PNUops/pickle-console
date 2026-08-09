@@ -275,7 +275,7 @@ export function VmDetailPage() {
       </TabPanel>
 
       <TabPanel id="access" active={activeTab === 'access'} className="space-y-6">
-        <VmAccessSection vm={data} />
+        <VmAccessSection vmId={data.id} />
       </TabPanel>
 
       <TabPanel id="settings" active={activeTab === 'settings'} className="space-y-6">

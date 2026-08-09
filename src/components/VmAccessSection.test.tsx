@@ -82,6 +82,9 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(await screen.findByText(/접근 권한 \(1건\)/)).toBeInTheDocument()
 
+    // 후보 목록은 접근 목록 응답이 알려 준 그룹을 다시 물어 채워진다 — 두 번째
+    // 질의라 먼저 도착을 기다린다.
+    await screen.findByRole('option', { name: /김철수/ })
     await user.selectOptions(screen.getByLabelText('대상'), '57')
     await user.selectOptions(screen.getByLabelText('등급'), 'EDITOR')
     await user.click(screen.getByRole('button', { name: '부여' }))

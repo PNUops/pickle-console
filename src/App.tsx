@@ -44,6 +44,7 @@ import { SignupPage } from './pages/SignupPage'
 import { SshKeysPage } from './pages/SshKeysPage'
 import { TermsPage } from './pages/TermsPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
+import { VmAccessPage } from './pages/VmAccessPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
 
@@ -114,6 +115,8 @@ function App() {
         <Route path="requests/:requestId" element={<RequestDetailPage />} />
         <Route path="vms" element={<VmsPage />} />
         <Route path="vms/:vmId" element={<VmDetailPage />} />
+        {/* 상세와 별개 라우트 — 상세가 막힌 사람도 접근 권한은 관리할 수 있다. */}
+        <Route path="vms/:vmId/access" element={<VmAccessPage />} />
         <Route
           path="vms/:vmId/terminal"
           element={
