@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateVmPeriod, type VmSummary } from '../api/queries'
+import { updateVmPeriod } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { Alert, Button, FormField, Input, Modal } from './ui'
 import { fieldErrorsOf } from '../lib/field-errors'
@@ -15,7 +15,7 @@ export function ExtendVmPeriodModal({
   onClose,
   onDone,
 }: {
-  vm: VmSummary
+  vm: { id: number; name: string; endDate?: string | null }
   onClose: () => void
   onDone: (message: string) => void
 }) {

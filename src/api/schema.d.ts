@@ -1748,6 +1748,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 접근 권한 목록
+         * @description 이 VM의 접근 권한 전체입니다. VM 소유자와 그룹 소유자만 볼 수 있습니다.
+         */
+        get: operations["listVmAccessGrants"];
+        put?: never;
+        /**
+         * 접근 권한 부여
+         * @description 지정한 사용자 또는 소유 그룹 전체에 이 VM의 접근 권한을 부여합니다. 사용자는 이 VM을 소유한 그룹의 구성원이어야 하고, 그룹 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         */
+        post: operations["addVmAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/access/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 접근 권한 회수
+         * @description 회수해도 이미 열람한 초기 비밀번호와 이미 열려 있는 SSH 세션은 회수되지 않습니다. 필요하면 비밀번호를 재생성해 주세요.
+         */
+        delete: operations["removeVmAccessGrant"];
+        options?: never;
+        head?: never;
+        /** 접근 권한 등급 변경 */
+        patch: operations["updateVmAccessGrant"];
+        trace?: never;
+    };
     "/vms/{vmId}/campus-ip-requests": {
         parameters: {
             query?: never;
@@ -1976,6 +2021,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        AccessGranteeType: "USER" | "GROUP";
         ActivateMfaRequest: {
             code: string;
         };
@@ -1994,6 +2041,17 @@ export interface components {
             /** Format: email */
             email: string;
             role: components["schemas"]["GroupMemberRole"];
+        };
+        AddVmAccessGrantRequest: {
+            /** @description USER는 지정된 사용자 한 명, GROUP은 소유 그룹 전체 */
+            granteeType: components["schemas"]["AccessGranteeType"];
+            /** @description 부여할 등급. 그룹 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
+            role: components["schemas"]["ResourceRole"];
+            /**
+             * Format: int64
+             * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 그룹의 구성원이어야 합니다.
+             */
+            userId?: number | null;
         };
         AdminCampusIpRequestView: {
             adminNote?: string | null;
@@ -2629,6 +2687,13 @@ export interface components {
             confirmName: string;
             overrideProtection?: boolean;
         };
+        /** @description 접근 권한을 가진 사용자 */
+        Grantee: {
+            email: string;
+            name: string;
+            /** Format: int64 */
+            userId: number;
+        };
         GroupDetailResponse: {
             /** Format: date-time */
             createdAt: string;
@@ -2651,7 +2716,7 @@ export interface components {
             userId: number;
         };
         /** @enum {string} */
-        GroupMemberRole: "OWNER" | "EDITOR" | "MEMBER" | "VIEWER";
+        GroupMemberRole: "OWNER" | "MEMBER";
         GroupPanel: {
             activeVms: components["schemas"]["VmBriefResponse"][];
             /** Format: int64 */
@@ -3206,6 +3271,8 @@ export interface components {
             capacityVcpu?: number | null;
             guidance: string;
         };
+        /** @enum {string} */
+        ResourceRole: "OWNER" | "EDITOR" | "MEMBER" | "VIEWER";
         ResourceTotalsResponse: {
             /** Format: int64 */
             diskGb: number;
@@ -3446,6 +3513,10 @@ export interface components {
             orgId?: number | null;
             role?: components["schemas"]["UserRole"];
         };
+        UpdateVmAccessGrantRequest: {
+            /** @description 새 등급. 그룹 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
+            role: components["schemas"]["ResourceRole"];
+        };
         UpdateVmFlavorRequest: {
             /** Format: int32 */
             diskGb?: number | null;
@@ -3530,6 +3601,19 @@ export interface components {
         VerifyEmailRequest: {
             token: string;
         };
+        /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 그룹 전체입니다. */
+        VmAccessGrantView: {
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 대상 종류 — USER는 지정된 사용자, GROUP은 소유 그룹 전체 */
+            granteeType: components["schemas"]["AccessGranteeType"];
+            /** Format: int64 */
+            id: number;
+            /** @description 이 대상이 이 VM에서 갖는 등급 */
+            role: components["schemas"]["ResourceRole"];
+            /** @description 대상 사용자. 그룹 전체 항목이면 null입니다. */
+            user?: components["schemas"]["Grantee"] | null;
+        };
         VmBriefResponse: {
             /** Format: int32 */
             diskGb: number;
@@ -3558,8 +3642,14 @@ export interface components {
             scheduledFor: string;
         };
         VmDetailResponse: {
+            /** @description SSH·웹 터미널로 이 VM에 접속할 수 있는지 */
+            accessAllowed: boolean;
+            /** @description 접근 권한 목록을 관리할 수 있는지 */
+            accessManageAllowed: boolean;
             /** Format: date-time */
             createdAt: string;
+            /** @description 삭제를 접수할 수 있는지 */
+            deleteAllowed: boolean;
             deletion?: components["schemas"]["VmDeletionResponse"] | null;
             /** Format: int32 */
             diskGb: number;
@@ -3579,17 +3669,21 @@ export interface components {
             ipAddress?: string | null;
             /** Format: int32 */
             memoryMb: number;
-            myGroupRole?: components["schemas"]["GroupMemberRole"] | null;
+            myResourceRole?: components["schemas"]["ResourceRole"] | null;
             name: string;
             /** Format: int64 */
             orgId: number;
             orgName?: string | null;
             passwordAvailable: boolean;
             passwordRevealAllowed: boolean;
+            /** @description 전원을 제어할 수 있는지 */
+            powerControlAllowed: boolean;
             provisioning?: components["schemas"]["ProvisioningTaskResponse"] | null;
             publications: components["schemas"]["PublicationView"][];
             /** Format: int64 */
             requestId: number;
+            /** @description VM 설정을 볼·바꿀 수 있는지 */
+            settingsEditAllowed: boolean;
             sshGatewayBlocked: boolean;
             sshHost: string;
             sshUsername: string;
@@ -3722,7 +3816,7 @@ export interface components {
             editable: boolean;
             key: string;
             label: string;
-            requiredRole: components["schemas"]["GroupMemberRole"];
+            requiredRole: components["schemas"]["ResourceRole"];
             /** Format: date-time */
             updatedAt?: string | null;
             updatedByName?: string | null;
@@ -3737,10 +3831,15 @@ export interface components {
         /** @enum {string} */
         VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";
         VmSummaryResponse: {
+            /** @description true면 이 VM의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
+            accessLimited: boolean;
             /** Format: date-time */
             createdAt: string;
-            /** Format: int32 */
-            diskGb: number;
+            /**
+             * Format: int32
+             * @description 디스크(GiB). 접근 권한이 없으면 생략됩니다.
+             */
+            diskGb?: number | null;
             displayName?: string | null;
             /** Format: date */
             endDate?: string | null;
@@ -3749,20 +3848,29 @@ export interface components {
             /** Format: int64 */
             groupId: number;
             groupName: string;
-            hostname: string;
+            /** @description SSH 슬러그. 접근 권한이 없으면 생략됩니다. */
+            hostname?: string | null;
             /** Format: int64 */
             id: number;
-            /** Format: int32 */
-            memoryMb: number;
+            /**
+             * Format: int32
+             * @description 메모리(MiB). 접근 권한이 없으면 생략됩니다.
+             */
+            memoryMb?: number | null;
             name: string;
             orgName?: string | null;
+            /** @description 이 VM의 소유자 이름. 접근을 요청할 상대입니다. */
+            ownerNames: string[];
             /** Format: int64 */
-            requestId: number;
-            sshGatewayBlocked: boolean;
+            requestId?: number | null;
+            sshGatewayBlocked?: boolean | null;
             status: components["schemas"]["VmStatus"];
             statusDetail?: string | null;
-            /** Format: int32 */
-            vcpu: number;
+            /**
+             * Format: int32
+             * @description vCPU. 접근 권한이 없으면 생략됩니다.
+             */
+            vcpu?: number | null;
         };
         WithdrawRequest: {
             password: string;
@@ -7836,6 +7944,174 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmDeletionResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listVmAccessGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmAccessGrantView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addVmAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddVmAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeVmAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                vmId: number;
+                grantId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateVmAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                vmId: number;
+                grantId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVmAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmAccessGrantView"];
                 };
             };
             /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */

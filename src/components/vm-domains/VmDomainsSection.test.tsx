@@ -5,8 +5,9 @@ import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
+import { vmDetailAs } from '../../test/msw/handlers/vms'
 
-/** 사용자 세션으로 VM 상세의 도메인·포트 탭을 연다 (그룹 12=OWNER, 그룹 15=MEMBER). */
+/** 사용자 세션으로 VM 상세의 도메인·포트 탭을 연다 (픽스처는 자원 소유자 기준). */
 function renderVm(vmId: number) {
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}?tab=publish`)
@@ -81,13 +82,14 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
     expect(within(card).getByText('연결됨')).toBeInTheDocument()
   })
 
-  test('MEMBER는 읽기 전용 — 추가·해제 진입점 대신 안내만 보인다', async () => {
-    renderVm(56) // algo-judge: 그룹 15 MEMBER
+  test('참여자는 읽기 전용 — 추가·해제 진입점 대신 안내만 보인다', async () => {
+    server.use(vmDetailAs(56, 'MEMBER'))
+    renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const card = await domainsCard()
     expect(
-      await within(card).findByText(/도메인 연결·해제는 그룹의 소유자·편집자만/),
+      await within(card).findByText(/도메인 연결·해제는 이 VM의 소유자·편집자만/),
     ).toBeInTheDocument()
     expect(
       within(card).queryByRole('button', { name: /플랫폼 서브도메인 추가/ }),

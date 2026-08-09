@@ -103,6 +103,15 @@ export function formatMemory(memoryMb: number): string {
 }
 
 /** Compact spec summary: '2 vCPU · 2 GiB · 20 GiB'. */
-export function formatSpec(vcpu: number, memoryMb: number, diskGb: number): string {
+/**
+ * 접근 권한이 없는 VM은 사양을 내려받지 못한다(서버가 지움). 그런 행에서는
+ * 각 값이 없으므로 사양 자리에 대시를 표시한다.
+ */
+export function formatSpec(
+  vcpu: number | null | undefined,
+  memoryMb: number | null | undefined,
+  diskGb: number | null | undefined,
+): string {
+  if (vcpu == null || memoryMb == null || diskGb == null) return '—'
   return `${vcpu} vCPU · ${formatMemory(memoryMb)} · ${diskGb} GiB`
 }

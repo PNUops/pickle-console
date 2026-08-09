@@ -4,6 +4,7 @@ import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, regularUser } from './auth'
 import { flavorStore, orgs, resetFlavorStore } from './reference'
 import {
+  accessOf,
   invalidVmStateProblem,
   localDateStr,
   recordVmEvent,
@@ -806,10 +807,12 @@ export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/vms/:vmId', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFound()
-    // 관리자 조회: 그룹 구성원이 아니므로 myGroupRole은 항상 null
-    return HttpResponse.json({ ...vm, myGroupRole: null, passwordRevealAllowed: false }, {
-      status: 200,
-    })
+    // 관리자 조회의 권한은 기관 스코프라 이 VM의 접근 목록과 무관하다 — 서버도
+    // myResourceRole을 null로 두고 능력 불리언을 모두 false로 내려준다.
+    return HttpResponse.json(
+      { ...vm, ...accessOf(null), passwordRevealAllowed: false },
+      { status: 200 },
+    )
   }),
 
   http.get('*/api/v1/admin/vms/:vmId/events', ({ params, request }) => {

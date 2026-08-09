@@ -24,6 +24,19 @@ describe('내 VM 목록', () => {
     expect(within(runningRow).getByText('실행 중')).toBeInTheDocument()
     expect(within(runningRow).getByText('알고리즘 스터디')).toBeInTheDocument()
   })
+
+  test('접근 권한이 없는 VM은 이름·상태만 나오고 누구에게 요청할지 알려 준다', async () => {
+    renderVms()
+
+    // 같은 그룹의 VM이지만 접근 목록에 없다 — 상세로 가는 링크도, 사양도 없다.
+    const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
+    expect(screen.queryByRole('link', { name: 'ml-notebook' })).not.toBeInTheDocument()
+    expect(within(limitedRow).getByText('실행 중')).toBeInTheDocument()
+    expect(within(limitedRow).getByText('—')).toBeInTheDocument()
+    expect(
+      within(limitedRow).getByText(/접근 권한이 없습니다 — 김철수 님에게 요청하세요/),
+    ).toBeInTheDocument()
+  })
 })
 
 describe('VM 상세', () => {

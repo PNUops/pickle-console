@@ -1,10 +1,51 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
+import { groupMembersOf } from './groups'
 
 type Schemas = components['schemas']
 type VmDetail = Schemas['VmDetailResponse']
 type VmEvent = Schemas['VmEventResponse']
+type ResourceRole = Schemas['ResourceRole']
+type VmAccessGrant = Schemas['VmAccessGrantView']
+
+/** 자원 축 등급의 강약 (VIEWER < MEMBER < EDITOR < OWNER). */
+const RESOURCE_ROLE_RANK: Record<ResourceRole, number> = {
+  VIEWER: 0,
+  MEMBER: 1,
+  EDITOR: 2,
+  OWNER: 3,
+}
+
+/** 자원 등급을 서버와 같은 규칙으로 능력 불리언으로 편다 (VmDetailResponse.from). */
+export function accessOf(
+  role: ResourceRole | null,
+  { groupOwner = false }: { groupOwner?: boolean } = {},
+): Pick<
+  VmDetail,
+  | 'myResourceRole'
+  | 'accessAllowed'
+  | 'powerControlAllowed'
+  | 'settingsEditAllowed'
+  | 'accessManageAllowed'
+  | 'deleteAllowed'
+> {
+  // 그룹 소유자는 목록에 없어도 상시로 조회는 된다 — 서버가 열람자로 셈한다.
+  const effective: ResourceRole | null = role ?? (groupOwner ? 'VIEWER' : null)
+  const rank = effective == null ? -1 : RESOURCE_ROLE_RANK[effective]
+  const atLeastMember = rank >= RESOURCE_ROLE_RANK.MEMBER
+  const atLeastEditor = rank >= RESOURCE_ROLE_RANK.EDITOR
+  // 목록 관리·삭제는 자원 소유자의 권한이거나 그룹 소유자의 상시 권한이다.
+  const manages = role === 'OWNER' || groupOwner
+  return {
+    myResourceRole: effective,
+    accessAllowed: atLeastMember,
+    powerControlAllowed: atLeastMember,
+    settingsEditAllowed: atLeastEditor,
+    accessManageAllowed: manages,
+    deleteAllowed: manages,
+  }
+}
 
 /** 오늘(로컬) 기준 offset일 뒤의 날짜 문자열 (YYYY-MM-DD) — 만료 픽스처용. */
 export function localDateStr(offsetDays = 0): string {
@@ -33,7 +74,7 @@ function initialVms(): VmDetail[] {
       ipAddress: null,
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-07-15',
       endDate: '2026-12-20',
@@ -72,7 +113,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.56',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-06-20',
       endDate: '2026-12-20',
@@ -103,7 +144,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.57',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-06-20',
       endDate: '2026-12-20',
@@ -132,7 +173,7 @@ function initialVms(): VmDetail[] {
       ipAddress: null,
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: null,
       endDate: null,
@@ -170,7 +211,7 @@ function initialVms(): VmDetail[] {
       ipAddress: null,
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: null,
       endDate: null,
@@ -199,7 +240,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.60',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-05-01',
       endDate: '2026-07-01',
@@ -237,7 +278,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.61',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-31',
@@ -293,7 +334,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.62',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-07-10',
       endDate: '2026-12-20',
@@ -359,7 +400,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.63',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-20',
@@ -456,7 +497,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.64',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: '2026-07-01',
       endDate: '2026-12-31',
@@ -508,6 +549,37 @@ function initialVms(): VmDetail[] {
       createdAt: '2026-07-02T12:00:00+09:00',
       updatedAt: '2026-07-03T09:05:00+09:00',
     },
+    {
+      // 소속 그룹의 VM이지만 접근 목록에 내가 없다 — 목록에서 제한 행으로 나오고
+      // 상세는 404다. 그룹 15에서 나는 구성원일 뿐이라 상시 권한도 없다.
+      id: 44,
+      name: 'ml-notebook',
+      hostname: 'ml-notebook',
+      status: 'RUNNING',
+      vcpu: 2,
+      memoryMb: 2048,
+      diskGb: 20,
+      groupId: 15,
+      groupName: '알고리즘 스터디',
+      requestId: 112,
+      statusDetail: null,
+      orgId: 1,
+      imageId: 1,
+      ipAddress: '10.10.0.44',
+      sshUsername: 'ubuntu',
+      sshHost: 'ssh.pcl.kr',
+      ...accessOf(null),
+      passwordRevealAllowed: false,
+      startDate: '2026-07-01',
+      endDate: '2026-12-20',
+      sshGatewayBlocked: false,
+      passwordAvailable: false,
+      publications: [],
+      provisioning: null,
+      deletion: null,
+      createdAt: '2026-07-01T10:00:00+09:00',
+      updatedAt: '2026-07-01T10:00:00+09:00',
+    },
     /* ─── 만료 큐 픽스처 — 날짜는 테스트 실행일 기준으로 동적 생성 ─── */
     {
       // 7일 이내 만료 임박 (D-3)
@@ -527,7 +599,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.45',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: localDateStr(-90),
       endDate: localDateStr(3),
@@ -558,7 +630,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.46',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: localDateStr(-120),
       endDate: localDateStr(-2),
@@ -589,7 +661,7 @@ function initialVms(): VmDetail[] {
       ipAddress: '10.10.0.47',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
-      myGroupRole: 'OWNER',
+      ...accessOf('OWNER'),
       passwordRevealAllowed: true,
       startDate: localDateStr(-60),
       endDate: localDateStr(20),
@@ -632,7 +704,6 @@ let nextEventId = 950
 
 /* ─── VM별 설정 레지스트리 — 계약 v0.8.0 카탈로그 ─── */
 type VmSettingView = Schemas['VmSettingView']
-type GroupMemberRole = Schemas['GroupMemberRole']
 
 interface VmSettingCatalogEntry {
   valueType: VmSettingView['valueType']
@@ -640,7 +711,7 @@ interface VmSettingCatalogEntry {
   defaultValue: unknown
   label: string
   description: string
-  requiredRole: GroupMemberRole
+  requiredRole: ResourceRole
 }
 
 export const VM_SETTING_CATALOG: Record<string, VmSettingCatalogEntry> = {
@@ -658,16 +729,9 @@ export const VM_SETTING_CATALOG: Record<string, VmSettingCatalogEntry> = {
     allowedValues: ['MEMBER', 'EDITOR', 'OWNER'],
     defaultValue: 'MEMBER',
     label: '비밀번호 열람 최소 역할',
-    description: 'VM 비밀번호(= sudo 자격)를 열람할 수 있는 최소 그룹 역할입니다.',
+    description: 'VM 비밀번호(= sudo 자격)를 열람할 수 있는 최소 접근 등급입니다.',
     requiredRole: 'OWNER',
   },
-}
-
-const ROLE_RANK: Record<GroupMemberRole, number> = {
-  VIEWER: 0,
-  MEMBER: 1,
-  EDITOR: 2,
-  OWNER: 3,
 }
 
 /** VM별 설정 저장 오버라이드 ({vmId: {key: value}}) — 미저장 키는 기본값. */
@@ -689,8 +753,8 @@ export function vmSettingsOf(vm: VmDetail): VmSettingView[] {
       description: meta.description,
       requiredRole: meta.requiredRole,
       editable:
-        stateEditable && vm.myGroupRole != null
-        && ROLE_RANK[vm.myGroupRole] >= ROLE_RANK[meta.requiredRole],
+        stateEditable && vm.myResourceRole != null
+        && RESOURCE_ROLE_RANK[vm.myResourceRole] >= RESOURCE_ROLE_RANK[meta.requiredRole],
       updatedByName: stored ? '홍길동' : null,
       updatedAt: stored ? '2026-07-18T14:00:00+09:00' : null,
     }
@@ -712,7 +776,9 @@ export function resetVmFixtures() {
   vmStore = initialVms()
   vmEventStore = initialVmEvents()
   vmSettingStore = {}
+  vmAccessStore = initialVmAccessGrants()
   nextEventId = 950
+  nextGrantId = 400
   detailFetchCounts = {}
   routeFetchCounts = {}
 }
@@ -733,6 +799,11 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
     code: 'VM_INVALID_STATE',
   })
 
+/**
+ * 목록 행. 접근 목록에 없는 사람에게는 서버가 기계에 대한 값을 아예 빼고
+ * 이름·상태·소유자만 내려주므로(VmSummaryResponse.restricted), mock도 값을
+ * 비우는 대신 필드를 지운다 — 콘솔이 null을 견디는지가 여기서 드러난다.
+ */
 export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   const {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
@@ -741,8 +812,84 @@ export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   return {
     id, name, hostname, status, vcpu, memoryMb, diskGb, groupId, groupName,
     requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
+    accessLimited: false, ownerNames: [],
   }
 }
+
+/** 접근 권한이 없는 사람이 보는 행 — 이름·상태·소유자뿐이다. */
+export function toRestrictedVmSummary(
+  vm: VmDetail,
+  ownerNames: string[],
+): Schemas['VmSummaryResponse'] {
+  const { id, name, status, groupId, groupName, createdAt } = vm
+  return {
+    id, name, status, groupId, groupName, createdAt,
+    hostname: null, vcpu: null, memoryMb: null, diskGb: null, requestId: null,
+    statusDetail: null, sshGatewayBlocked: null, endDate: null, expiryStoppedAt: null,
+    orgName: null, accessLimited: true, ownerNames,
+  }
+}
+
+/* ─── VM 접근 목록 (계약 v0.33.0) ─── */
+
+/** 접근 목록의 소유자 이름 — 제한 행이 "누구에게 요청하라"고 말할 때 쓴다. */
+function grantOwnerNames(vmId: number): string[] {
+  return (vmAccessStore[vmId] ?? [])
+    .filter((grant) => grant.role === 'OWNER' && grant.user)
+    .map((grant) => grant.user!.name)
+}
+
+function initialVmAccessGrants(): Record<number, VmAccessGrant[]> {
+  return {
+    // algo-judge — 나(42)는 소유자, 김철수(57)는 참여자, 그룹 전체는 열람자.
+    56: [
+      {
+        id: 301,
+        granteeType: 'USER',
+        user: { userId: 42, name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-06-20T10:00:00+09:00',
+      },
+      {
+        id: 302,
+        granteeType: 'USER',
+        user: { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        role: 'MEMBER',
+        createdAt: '2026-06-21T10:00:00+09:00',
+      },
+      {
+        id: 303,
+        granteeType: 'GROUP',
+        user: null,
+        role: 'VIEWER',
+        createdAt: '2026-06-22T10:00:00+09:00',
+      },
+    ],
+    // web-lab — 신청자였던 나만 소유자로 올라가 있는 갓 만들어진 상태.
+    57: [
+      {
+        id: 305,
+        granteeType: 'USER',
+        user: { userId: 42, name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-06-21T10:00:00+09:00',
+      },
+    ],
+    // ml-notebook — 나는 목록에 없다 (제한 행의 근거).
+    44: [
+      {
+        id: 311,
+        granteeType: 'USER',
+        user: { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-07-01T10:00:00+09:00',
+      },
+    ],
+  }
+}
+
+export let vmAccessStore: Record<number, VmAccessGrant[]> = initialVmAccessGrants()
+let nextGrantId = 400
 
 export const vmHandlers: RequestHandler[] = [
   http.get('*/api/v1/vms', ({ request }) => {
@@ -754,7 +901,14 @@ export const vmHandlers: RequestHandler[] = [
       .filter((vm) => !groupId || vm.groupId === Number(groupId))
       .sort((a, b) => b.id - a.id)
     const body: Schemas['PageResponseVmSummaryResponse'] = {
-      content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
+      content: filtered
+        .slice(page * size, (page + 1) * size)
+        // 접근 목록에 없고 그룹 소유자도 아니면 제한 행으로 내려간다.
+        .map((vm) =>
+          vm.myResourceRole == null
+            ? toRestrictedVmSummary(vm, grantOwnerNames(vm.id))
+            : toVmSummary(vm),
+        ),
       page,
       size,
       totalElements: filtered.length,
@@ -773,6 +927,14 @@ export const vmHandlers: RequestHandler[] = [
         detail: '요청한 리소스가 존재하지 않습니다.',
         code: 'RESOURCE_NOT_FOUND',
       })
+    }
+    // 소속 그룹의 VM이지만 접근 목록에 없으면 존재만 알고 안은 못 본다 (403).
+    if (vm.myResourceRole == null) {
+      return accessDeniedProblem(
+        `/api/v1/vms/${vm.id}`,
+        '이 VM에 접근할 권한이 없습니다',
+        '이 VM의 접근 목록에 등록되어 있지 않습니다. 자원 소유자에게 접근 권한을 요청해 주세요.',
+      )
     }
     if (vm.status === 'CREATING') {
       const count = (detailFetchCounts[vm.id] = (detailFetchCounts[vm.id] ?? 0) + 1)
@@ -963,14 +1125,11 @@ export const vmHandlers: RequestHandler[] = [
     }
     // password_reveal_min_role 게이트: 서버가 계산한 passwordRevealAllowed를 그대로 강제.
     if (!vm.passwordRevealAllowed) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '비밀번호를 열람할 권한이 없습니다',
-        status: 403,
-        detail: '이 VM은 그룹의 MEMBER 이상만 비밀번호를 열람할 수 있습니다.',
-        instance: `/api/v1/vms/${vm.id}/password`,
-        code: 'GROUP_ROLE_INSUFFICIENT',
-      })
+      return accessDeniedProblem(
+        `/api/v1/vms/${vm.id}/password`,
+        '비밀번호를 열람할 권한이 없습니다',
+        '이 VM은 접근 목록의 참여자 이상만 비밀번호를 열람할 수 있습니다.',
+      )
     }
     if (!vm.passwordAvailable) {
       return problemResponse({
@@ -998,15 +1157,12 @@ export const vmHandlers: RequestHandler[] = [
   http.post('*/api/v1/vms/:vmId/password/regenerate', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()
-    if (vm.myGroupRole !== 'EDITOR' && vm.myGroupRole !== 'OWNER') {
-      return problemResponse({
-        type: 'about:blank',
-        title: '비밀번호를 재생성할 권한이 없습니다',
-        status: 403,
-        detail: '그룹의 EDITOR 이상만 비밀번호를 재생성할 수 있습니다.',
-        instance: `/api/v1/vms/${vm.id}/password/regenerate`,
-        code: 'GROUP_ROLE_INSUFFICIENT',
-      })
+    if (!vm.settingsEditAllowed) {
+      return accessDeniedProblem(
+        `/api/v1/vms/${vm.id}/password/regenerate`,
+        '비밀번호를 재생성할 권한이 없습니다',
+        '이 VM의 편집자 이상만 비밀번호를 재생성할 수 있습니다.',
+      )
     }
     if (vm.status !== 'RUNNING') {
       return invalidVmStateProblem(
@@ -1031,15 +1187,12 @@ export const vmHandlers: RequestHandler[] = [
   http.get('*/api/v1/vms/:vmId/settings', ({ params }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()
-    if (vm.myGroupRole !== 'EDITOR' && vm.myGroupRole !== 'OWNER') {
-      return problemResponse({
-        type: 'about:blank',
-        title: 'VM 설정에 접근할 권한이 없습니다',
-        status: 403,
-        detail: '그룹의 EDITOR 이상만 VM 설정을 볼 수 있습니다.',
-        instance: `/api/v1/vms/${vm.id}/settings`,
-        code: 'GROUP_ROLE_INSUFFICIENT',
-      })
+    if (!vm.settingsEditAllowed) {
+      return accessDeniedProblem(
+        `/api/v1/vms/${vm.id}/settings`,
+        'VM 설정에 접근할 권한이 없습니다',
+        '이 VM의 편집자 이상만 VM 설정을 볼 수 있습니다.',
+      )
     }
     return HttpResponse.json(vmSettingsOf(vm), { status: 200 })
   }),
@@ -1048,15 +1201,12 @@ export const vmHandlers: RequestHandler[] = [
   http.patch('*/api/v1/vms/:vmId/settings', async ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === Number(params.vmId))
     if (!vm) return notFoundProblem()
-    if (vm.myGroupRole !== 'EDITOR' && vm.myGroupRole !== 'OWNER') {
-      return problemResponse({
-        type: 'about:blank',
-        title: '설정에 접근할 권한이 없습니다',
-        status: 403,
-        detail: '그룹의 EDITOR 이상만 VM 설정을 변경할 수 있습니다.',
-        instance: `/api/v1/vms/${vm.id}/settings`,
-        code: 'GROUP_ROLE_INSUFFICIENT',
-      })
+    if (!vm.settingsEditAllowed) {
+      return accessDeniedProblem(
+        `/api/v1/vms/${vm.id}/settings`,
+        '설정에 접근할 권한이 없습니다',
+        '이 VM의 편집자 이상만 VM 설정을 변경할 수 있습니다.',
+      )
     }
     const body = (await request.json()) as Schemas['VmSettingsUpdateRequest']
     const entries = Object.entries(body.settings ?? {})
@@ -1082,16 +1232,13 @@ export const vmHandlers: RequestHandler[] = [
           errors: [{ field: `settings.${key}`, message: '알 수 없는 설정 키입니다.' }],
         })
       }
-      // password_reveal_min_role은 OWNER 전용 — EDITOR가 바꾸려 하면 403.
-      if (key === 'password_reveal_min_role' && vm.myGroupRole !== 'OWNER') {
-        return problemResponse({
-          type: 'about:blank',
-          title: '설정을 변경할 권한이 없습니다',
-          status: 403,
-          detail: '`password_reveal_min_role` 설정은 그룹의 OWNER만 변경할 수 있습니다.',
-          instance: `/api/v1/vms/${vm.id}/settings`,
-          code: 'GROUP_ROLE_INSUFFICIENT',
-        })
+      // password_reveal_min_role은 자원 소유자 전용 — 편집자가 바꾸려 하면 403.
+      if (key === 'password_reveal_min_role' && vm.myResourceRole !== 'OWNER') {
+        return accessDeniedProblem(
+          `/api/v1/vms/${vm.id}/settings`,
+          '설정을 변경할 권한이 없습니다',
+          '`password_reveal_min_role` 설정은 이 VM의 소유자만 변경할 수 있습니다.',
+        )
       }
       vmSettingStore[vm.id] = { ...(vmSettingStore[vm.id] ?? {}), [key]: value }
     }
@@ -1114,7 +1261,164 @@ export const vmHandlers: RequestHandler[] = [
     }
     return HttpResponse.json(body, { status: 200 })
   }),
+
+  /* ─── VM 접근 목록 — 자원 소유자와 그룹 소유자만 읽고 쓴다 ─── */
+
+  http.get('*/api/v1/vms/:vmId/access', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    const denied = requireGrantManager(vm)
+    if (denied) return denied
+    return HttpResponse.json(vmAccessStore[vm.id] ?? [], { status: 200 })
+  }),
+
+  http.post('*/api/v1/vms/:vmId/access', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    const denied = requireGrantManager(vm)
+    if (denied) return denied
+    const body = (await request.json()) as Schemas['AddVmAccessGrantRequest']
+    const grants = (vmAccessStore[vm.id] ??= [])
+    if (body.granteeType === 'GROUP') {
+      const capped = groupWideRoleProblem(body.role)
+      if (capped) return capped
+      if (grants.some((grant) => grant.granteeType === 'GROUP')) {
+        return alreadyListedProblem()
+      }
+      const grant: VmAccessGrant = {
+        id: nextGrantId++,
+        granteeType: 'GROUP',
+        user: null,
+        role: body.role,
+        createdAt: '2026-08-09T10:00:00+09:00',
+      }
+      grants.push(grant)
+      return HttpResponse.json(grant, { status: 201 })
+    }
+    const member = groupMembersOf(vm.groupId).find((m) => m.userId === body.userId)
+    if (!member) {
+      return validationProblem(
+        `/api/v1/vms/${vm.id}/access`,
+        'userId',
+        '이 VM을 소유한 그룹의 구성원만 접근 권한을 받을 수 있습니다. 먼저 그룹에 추가해 주세요.',
+      )
+    }
+    if (grants.some((grant) => grant.user?.userId === member.userId)) {
+      return alreadyListedProblem()
+    }
+    const grant: VmAccessGrant = {
+      id: nextGrantId++,
+      granteeType: 'USER',
+      user: { userId: member.userId, name: member.name, email: member.email },
+      role: body.role,
+      createdAt: '2026-08-09T10:00:00+09:00',
+    }
+    grants.push(grant)
+    return HttpResponse.json(grant, { status: 201 })
+  }),
+
+  http.patch('*/api/v1/vms/:vmId/access/:grantId', async ({ params, request }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    const denied = requireGrantManager(vm)
+    if (denied) return denied
+    const grant = (vmAccessStore[vm.id] ?? []).find((g) => g.id === Number(params.grantId))
+    if (!grant) return notFoundProblem()
+    const body = (await request.json()) as Schemas['UpdateVmAccessGrantRequest']
+    if (grant.granteeType === 'GROUP') {
+      const capped = groupWideRoleProblem(body.role)
+      if (capped) return capped
+    }
+    grant.role = body.role
+    return HttpResponse.json(grant, { status: 200 })
+  }),
+
+  http.delete('*/api/v1/vms/:vmId/access/:grantId', ({ params }) => {
+    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    if (!vm) return notFoundProblem()
+    const denied = requireGrantManager(vm)
+    if (denied) return denied
+    const grants = vmAccessStore[vm.id] ?? []
+    const index = grants.findIndex((g) => g.id === Number(params.grantId))
+    if (index < 0) return notFoundProblem()
+    grants.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
 ]
+
+function requireGrantManager(vm: VmDetail) {
+  return vm.accessManageAllowed
+    ? null
+    : accessDeniedProblem(
+        `/api/v1/vms/${vm.id}/access`,
+        '접근 권한을 관리할 권한이 없습니다',
+        '이 VM의 소유자 또는 그룹 소유자만 접근 권한을 관리할 수 있습니다.',
+      )
+}
+
+/** 그룹 전체 항목은 참여자·열람자까지만 — 서버와 같은 상한. */
+function groupWideRoleProblem(role: ResourceRole) {
+  if (role !== 'OWNER' && role !== 'EDITOR') return null
+  return problemResponse({
+    type: 'about:blank',
+    title: '입력값이 올바르지 않습니다',
+    status: 422,
+    detail: '그룹 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.',
+    code: 'VALIDATION_FAILED',
+    errors: [
+      {
+        field: 'role',
+        message:
+          '그룹 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다. 그보다 높은 등급은 '
+          + '구성원을 지정해 부여해 주세요.',
+      },
+    ],
+  })
+}
+
+const alreadyListedProblem = () =>
+  problemResponse({
+    type: 'about:blank',
+    title: '이미 접근 권한이 있습니다',
+    status: 409,
+    detail: '이 대상은 이미 이 VM의 접근 목록에 있습니다. 등급을 바꾸려면 기존 항목을 수정해 주세요.',
+    code: 'VM_ACCESS_GRANT_EXISTS',
+  })
+
+const validationProblem = (instance: string, field: string, message: string) =>
+  problemResponse({
+    type: 'about:blank',
+    title: '입력값이 올바르지 않습니다',
+    status: 422,
+    detail: message,
+    instance,
+    code: 'VALIDATION_FAILED',
+    errors: [{ field, message }],
+  })
+
+/** 접근 권한 분기 테스트용 — 이 VM 상세를 지정한 자원 등급으로 내려주는 임시 핸들러. */
+export function vmDetailAs(
+  vmId: number,
+  role: ResourceRole | null,
+  overrides: Partial<VmDetail> = {},
+): RequestHandler {
+  return http.get(`*/api/v1/vms/${vmId}`, () => {
+    const vm = vmStore.find((v) => v.id === vmId)!
+    return HttpResponse.json({ ...vm, ...accessOf(role), ...overrides }, { status: 200 })
+  })
+}
+
+/** 접근 목록이 막는 403 — 계약상 코드는 GROUP_ROLE_INSUFFICIENT 하나다. */
+function accessDeniedProblem(instance: string, title: string, detail: string) {
+  return problemResponse({
+    type: 'about:blank',
+    title,
+    status: 403,
+    detail,
+    instance,
+    code: 'GROUP_ROLE_INSUFFICIENT',
+  })
+}
 
 function notFoundProblem() {
   return problemResponse({

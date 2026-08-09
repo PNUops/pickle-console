@@ -153,9 +153,8 @@ export function NewRequestPage() {
     groups.error ?? orgs.error ?? osImages.error ?? flavors.error ?? options.error
   const ready = !isLoading && !loadError
 
-  const eligibleGroups = (groups.data ?? []).filter(
-    (g) => g.myRole === 'OWNER' || g.myRole === 'EDITOR',
-  )
+  // 신청은 구성원이면 누구나 할 수 있다 — 문턱은 승인이 잡는다.
+  const eligibleGroups = groups.data ?? []
   const selectedImage = osImages.data?.find((t) => t.id === state.imageId)
   const selectedFlavor = flavors.data?.find((f) => f.id === state.flavorId)
 
@@ -324,7 +323,7 @@ export function NewRequestPage() {
             <>
               {eligibleGroups.length === 0 && (
                 <Alert variant="warning">
-                  VM을 신청할 수 있는 그룹이 없습니다. 그룹의 소유자 또는 편집자만 신청할 수
+                  VM을 신청할 수 있는 그룹이 없습니다. 그룹에 속해 있어야 신청할 수
                   있습니다.{' '}
                   <Link to="/console/groups" className="font-medium underline">
                     내 그룹에서 그룹을 만들어 주세요.
@@ -335,7 +334,7 @@ export function NewRequestPage() {
                 label="신청 그룹"
                 required
                 error={errors.groupId}
-                description="VM은 그룹 명의로 만들어집니다. 소유자·편집자인 그룹만 선택할 수 있습니다."
+                description="VM은 그룹 명의로 만들어집니다. 만들어진 VM은 신청한 사람만 접근할 수 있고, 접근 권한은 생성 후 VM 상세에서 부여합니다."
               >
                 <Select
                   value={state.groupId ?? ''}

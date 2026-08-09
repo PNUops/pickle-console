@@ -37,7 +37,7 @@ import {
   CardTitle,
   ConfirmNameModal,
   DdayBadge,
-  GroupRoleBadge,
+  ResourceRoleBadge,
   Input,
   Modal,
   Pagination,
@@ -62,11 +62,12 @@ import {
   PROVISIONING_KIND_LABELS,
   VM_EVENT_LABELS,
 } from '../lib/status'
-import { GROUP_ROLE_LABELS, type GroupMemberRole } from '../lib/labels'
+import { RESOURCE_ROLE_LABELS, type ResourceRole } from '../lib/labels'
 import { SshUsageGuide } from '../components/SshUsageGuide'
 import { VmDomainsSection } from '../components/vm-domains/VmDomainsSection'
 import { domainPollRate } from '../components/vm-domains/domain-status'
 import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
+import { VmAccessSection } from '../components/VmAccessSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
 
@@ -102,6 +103,7 @@ const VM_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
   { id: 'publish', label: '도메인·포트' },
   { id: 'network', label: '네트워크' },
+  { id: 'access', label: '접근' },
   { id: 'settings', label: '설정' },
   { id: 'activity', label: '활동' },
 ]
@@ -156,10 +158,17 @@ export function VmDetailPage() {
   // 설정 탭은 편집 권한자에게만 노출(내부 섹션 가드와 일관). 잘못된/숨김 tab 값은
   // 개요로 폴백한다(URL은 그대로 두어도 무해).
   const settingsVisible =
-    canEditVm(data.myGroupRole) &&
+    data.settingsEditAllowed &&
     data.status !== 'DELETING' &&
     data.status !== 'DELETED'
-  const tabs = VM_TABS.filter((tab) => tab.id !== 'settings' || settingsVisible)
+  // 접근 탭은 이 VM의 접근 권한을 관리할 수 있는 사람에게만 — 자원 소유자와
+  // 그룹 소유자다.
+  const accessVisible = data.accessManageAllowed && data.status !== 'DELETED'
+  const tabs = VM_TABS.filter((tab) => {
+    if (tab.id === 'settings') return settingsVisible
+    if (tab.id === 'access') return accessVisible
+    return true
+  })
   const rawTab = searchParams.get('tab')
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
@@ -263,6 +272,10 @@ export function VmDetailPage() {
 
       <TabPanel id="network" active={activeTab === 'network'} className="space-y-6">
         <VmNetworkSection vm={data} />
+      </TabPanel>
+
+      <TabPanel id="access" active={activeTab === 'access'} className="space-y-6">
+        <VmAccessSection vm={data} />
       </TabPanel>
 
       <TabPanel id="settings" active={activeTab === 'settings'} className="space-y-6">
@@ -425,16 +438,9 @@ function PowerControls({ vm }: { vm: VmDetail }) {
 
 /* ─── SSH 접속 안내 ─── */
 
-/**
- * 웹 터미널을 열 수 있는 조건: RUNNING VM + 그룹 MEMBER 이상.
- * 관리자 경로 상세는 그룹 역할이 없어(myGroupRole null) 노출되지 않는다.
- */
+/** 웹 터미널을 열 수 있는 조건: RUNNING VM + 접속 권한(서버 판정). */
 function canUseTerminal(vm: VmDetail): boolean {
-  const role = vm.myGroupRole
-  return (
-    vm.status === 'RUNNING' &&
-    (role === 'MEMBER' || role === 'EDITOR' || role === 'OWNER')
-  )
+  return vm.status === 'RUNNING' && vm.accessAllowed
 }
 
 /** SSH 접속 명령·사용법 안내. 키가 하나도 없으면 접속 불가 경고 + 등록 유도. */
@@ -495,13 +501,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
 /** 계약상 열람이 허용되는 상태 (그 외는 409). */
 const PASSWORD_VIEWABLE_STATUSES: VmStatus[] = ['RUNNING', 'STOPPED', 'REBOOTING']
 
-/**
- * 재생성은 EDITOR 이상 권한이 필요하다 (계약). 관리자 경로의 VM 상세는
- * 그룹 역할이 없어(myGroupRole null) 편집 불가로 취급한다.
- */
-function canEditVm(role: GroupMemberRole | null | undefined): boolean {
-  return role === 'EDITOR' || role === 'OWNER'
-}
+
 
 function VmPasswordSection({ vm }: { vm: VmDetail }) {
   const queryClient = useQueryClient()
@@ -554,7 +554,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
     reveal.mutate()
   }
 
-  const editable = canEditVm(vm.myGroupRole)
+  const editable = vm.settingsEditAllowed
   const canRegenerate = editable && vm.status === 'RUNNING'
   const viewable = PASSWORD_VIEWABLE_STATUSES.includes(vm.status)
 
@@ -593,7 +593,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
             저장된 비밀번호가 없습니다.
             {canRegenerate
               ? ' 아래 재생성으로 새 비밀번호를 만들 수 있습니다.'
-              : ' 비밀번호 재생성은 그룹의 편집자 이상만 할 수 있습니다.'}
+              : ' 비밀번호 재생성은 이 VM의 편집자 이상만 할 수 있습니다.'}
           </Alert>
         )}
 
@@ -699,7 +699,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
 
 function VmSettingsSection({ vm }: { vm: VmDetail }) {
   // 편집 권한이 없거나 삭제 중/삭제된 VM에는 설정 영역을 노출하지 않는다.
-  if (!canEditVm(vm.myGroupRole)) return null
+  if (!vm.settingsEditAllowed) return null
   if (vm.status === 'DELETING' || vm.status === 'DELETED') return null
   return <VmSettingsCard vm={vm} />
 }
@@ -780,7 +780,7 @@ function VmSettingRow({ vmId, setting }: { vmId: number; setting: VmSettingView 
     },
   })
 
-  const requiredLabel = GROUP_ROLE_LABELS[setting.requiredRole]
+  const requiredLabel = RESOURCE_ROLE_LABELS[setting.requiredRole]
 
   return (
     <div className="space-y-2">
@@ -837,7 +837,10 @@ function VmSettingRow({ vmId, setting }: { vmId: number; setting: VmSettingView 
           <p>비밀번호 접속을 허용하면:</p>
           <ul className="list-disc space-y-1 pl-5">
             <li>누가 접속했는지 개인을 식별할 수 없습니다.</li>
-            <li>그룹에서 제거된 구성원도 비밀번호를 아는 한 계속 접속할 수 있습니다.</li>
+            <li>
+              <strong>이 경로는 접근 권한 목록을 검사하지 않습니다.</strong> 비밀번호를
+              아는 사람이면 목록에 없어도, 접근 권한을 회수한 뒤에도 접속할 수 있습니다.
+            </li>
             <li>이 변경은 감사 기록되며 관리자에게 표시됩니다.</li>
           </ul>
         </div>
@@ -890,7 +893,7 @@ function VmSettingControl({
   const current = String(setting.value)
   return (
     <div className="flex items-center gap-2">
-      {isRoleEnum && <GroupRoleBadge role={current as GroupMemberRole} />}
+      {isRoleEnum && <ResourceRoleBadge role={current as ResourceRole} />}
       <Select
         className="w-40"
         value={current}
@@ -900,7 +903,7 @@ function VmSettingControl({
       >
         {(setting.allowedValues ?? []).map((option) => (
           <option key={option} value={option}>
-            {isRoleEnum ? GROUP_ROLE_LABELS[option as GroupMemberRole] : option}
+            {isRoleEnum ? RESOURCE_ROLE_LABELS[option as ResourceRole] : option}
           </option>
         ))}
       </Select>

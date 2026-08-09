@@ -47,16 +47,16 @@ describe('그룹 상세 — 역할별 UI', () => {
 })
 
 describe('그룹 상세 — 구성원 관리', () => {
-  test('소유권 이전은 이메일 입력으로 확인한 뒤에만 실행된다', async () => {
+  test('소유자 지정은 이메일 입력으로 확인한 뒤에만 실행된다', async () => {
     const user = userEvent.setup()
     renderGroup(12)
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
     await user.selectOptions(screen.getByLabelText('김철수 역할 변경'), 'OWNER')
 
-    const dialog = await screen.findByRole('dialog', { name: '소유권 이전' })
-    expect(within(dialog).getByText(/정말 소유권을 이전하시겠습니까/)).toBeInTheDocument()
-    const confirmButton = within(dialog).getByRole('button', { name: '소유권 이전' })
+    const dialog = await screen.findByRole('dialog', { name: '소유자 지정' })
+    expect(within(dialog).getByText(/님을 소유자로 지정합니다/)).toBeInTheDocument()
+    const confirmButton = within(dialog).getByRole('button', { name: '소유자로 지정' })
     expect(confirmButton).toBeDisabled()
 
     await user.type(
@@ -66,14 +66,14 @@ describe('그룹 상세 — 구성원 관리', () => {
     expect(confirmButton).toBeEnabled()
     await user.click(confirmButton)
 
-    // 이전 후에는 내가 OWNER가 아니므로 관리 UI가 사라지고 역할 배지만 남는다.
+    // 소유자는 여러 명일 수 있다 — 지정해도 내 소유자 권한은 그대로다.
     await waitFor(() =>
-      expect(screen.queryByLabelText('김철수 역할 변경')).not.toBeInTheDocument(),
+      expect(screen.getByLabelText('김철수 역할 변경')).toHaveValue('OWNER'),
     )
-    const cheolsuRow = screen.getByText('김철수').closest('tr')!
-    expect(within(cheolsuRow).getByText('소유자')).toBeInTheDocument()
     const myRow = screen.getByText('(나)').closest('tr')!
-    expect(within(myRow).getByText('편집자')).toBeInTheDocument()
+    expect(within(myRow).getByText('소유자')).toBeInTheDocument()
+    // 내가 여전히 소유자이므로 관리 UI도 남는다.
+    expect(screen.getByRole('heading', { name: '구성원 추가' })).toBeInTheDocument()
   })
 
   test('이메일로 구성원을 추가하고, 미가입 이메일이면 안내를 보여준다', async () => {

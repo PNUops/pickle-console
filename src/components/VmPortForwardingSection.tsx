@@ -32,7 +32,6 @@ import {
   Spinner,
   useToast,
 } from './ui'
-import { useVmGroupRole } from './vm-group-role'
 
 /** 반영 대기(PENDING) 매핑이 있을 때의 폴링 주기 — 릴레이 폴링 수렴을 따라간다. */
 const PENDING_POLL_MS = import.meta.env.MODE === 'test' ? 50 : 10_000
@@ -59,7 +58,7 @@ function targetPortError(raw: string): string | null {
  * 그룹 역할이 기준이다 — 구성원은 상태를 읽고, 소유자·편집자만 만들거나 지운다.
  */
 export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
-  const { canMutate, rolePending, roleFallback } = useVmGroupRole(vm)
+  const canMutate = vm.settingsEditAllowed
   const forwardings = useQuery({
     queryKey: ['vms', vm.id, 'port-forwardings'],
     queryFn: () => fetchVmPortForwardings(vm.id),
@@ -105,18 +104,13 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
           </div>
         </Alert>
 
-        {roleFallback ??
-          (rolePending ? (
-            <div className="flex justify-center py-4">
-              <Spinner label="권한 정보 확인 중" />
-            </div>
-          ) : canMutate ? (
-            <CreateForwardingForm vm={vm} />
-          ) : (
-            <p className="text-sm text-neutral-500">
-              포트포워딩 생성·삭제는 그룹의 소유자·편집자만 할 수 있습니다.
-            </p>
-          ))}
+        {canMutate ? (
+          <CreateForwardingForm vm={vm} />
+        ) : (
+          <p className="text-sm text-neutral-500">
+            포트포워딩 생성·삭제는 이 VM의 소유자·편집자만 할 수 있습니다.
+          </p>
+        )}
 
         <ForwardingList vm={vm} canMutate={canMutate} query={forwardings} />
       </CardContent>

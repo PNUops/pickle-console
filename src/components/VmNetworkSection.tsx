@@ -1,6 +1,5 @@
 import type { VmDetail } from '../api/queries'
 import { VmCampusIpSection } from './VmCampusIpSection'
-import { useVmGroupRole } from './vm-group-role'
 
 /**
  * VM 네트워크 탭 — 이 VM이 어느 망에 어떻게 놓이는지를 다룬다. 지금은 캠퍼스 IP
@@ -8,7 +7,5 @@ import { useVmGroupRole } from './vm-group-role'
  * 바깥으로 여는 수단(HTTP 공개·포트 포워딩)은 '도메인·포트' 탭이 담당한다.
  */
 export function VmNetworkSection({ vm }: { vm: VmDetail }) {
-  const { canMutate, rolePending } = useVmGroupRole(vm)
-
-  return <VmCampusIpSection vm={vm} canMutate={canMutate} rolePending={rolePending} />
+  return <VmCampusIpSection vm={vm} canMutate={vm.settingsEditAllowed} />
 }

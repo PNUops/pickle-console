@@ -7,7 +7,7 @@ import { describe, expect, test } from 'vitest'
 import { AuthProvider } from '../auth/AuthProvider'
 import { ReauthProvider } from '../auth/ReauthProvider'
 import { orgManagerUser, refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { vmStore } from '../test/msw/handlers/vms'
+import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { ToastProvider } from './ui'
@@ -80,18 +80,20 @@ describe('VM 네트워크 탭 — 캠퍼스 IP', () => {
     expect(await screen.findByRole('button', { name: '캠퍼스 IP 신청' })).toBeInTheDocument()
   })
 
-  test('MEMBER는 캠퍼스 IP 상태를 읽되 신청·취소는 할 수 없다', async () => {
-    renderNetworkTab(56) // algo-judge: 그룹 15 MEMBER
+  test('참여자는 캠퍼스 IP 상태를 읽되 신청·취소는 할 수 없다', async () => {
+    server.use(vmDetailAs(56, 'MEMBER'))
+    renderNetworkTab(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText(/캠퍼스 IP 신청·취소는 그룹의 소유자·편집자만/),
+      await screen.findByText(/캠퍼스 IP 신청·취소는 이 VM의 소유자·편집자만/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '캠퍼스 IP 신청' })).not.toBeInTheDocument()
   })
 
-  test('관리자 계층 세션에서도 같은 그룹 기준으로 동작한다', async () => {
-    renderSection(57, 'access-org-manager', orgManagerUser) // web-lab: 그룹 12
+  test('관리자 계층 세션에서도 판정은 VM이 내려준 권한을 따른다', async () => {
+    // 콘솔은 세션 등급을 보지 않는다 — 픽스처 57은 편집 권한이 있는 VM이다.
+    renderSection(57, 'access-org-manager', orgManagerUser)
 
     expect(await screen.findByRole('button', { name: '캠퍼스 IP 신청' })).toBeInTheDocument()
   })

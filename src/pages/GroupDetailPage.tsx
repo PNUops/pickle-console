@@ -32,7 +32,7 @@ import {
 import { GROUP_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 
-const ASSIGNABLE_ROLES: GroupMemberRole[] = ['OWNER', 'EDITOR', 'MEMBER', 'VIEWER']
+const ASSIGNABLE_ROLES: GroupMemberRole[] = ['OWNER', 'MEMBER']
 
 export function GroupDetailPage() {
   const params = useParams()
@@ -321,6 +321,8 @@ function MembersSection({
   const onRoleSelect = (member: GroupMember, role: GroupMemberRole) => {
     setActionError(null)
     if (role === member.role) return
+    // 소유자는 여러 명일 수 있다. 지정은 확인을 한 번 받고(그룹 전체를 다룰 수
+    // 있게 되는 일이라), 해제는 바로 반영한다 — 마지막 한 명이면 서버가 막는다.
     if (role === 'OWNER') {
       setTransferTarget(member)
       return
@@ -526,9 +528,7 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
             value={role}
             onChange={(event) => setRole(event.target.value as GroupMemberRole)}
           >
-            <option value="EDITOR">{GROUP_ROLE_LABELS.EDITOR}</option>
             <option value="MEMBER">{GROUP_ROLE_LABELS.MEMBER}</option>
-            <option value="VIEWER">{GROUP_ROLE_LABELS.VIEWER}</option>
           </Select>
         </FormField>
         <Button type="submit" loading={add.isPending}>
@@ -563,7 +563,7 @@ function OwnershipTransferModal({
     <Modal
       open={target !== null}
       onClose={close}
-      title="소유권 이전"
+      title="소유자 지정"
       footer={
         <>
           <Button variant="secondary" onClick={close} disabled={pending}>
@@ -580,15 +580,16 @@ function OwnershipTransferModal({
               }
             }}
           >
-            소유권 이전
+            소유자로 지정
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         <p className="text-sm text-neutral-600">
-          정말 소유권을 이전하시겠습니까? {target?.name} 님이 새 소유자(OWNER)가 되고,
-          회원님은 편집자(EDITOR)로 변경됩니다. 이 작업은 새 소유자만 되돌릴 수 있습니다.
+          {target?.name} 님을 소유자로 지정합니다. 소유자는 그룹 정보와 구성원을 관리하고,
+          그룹이 소유한 자원을 조회·삭제하며 접근 권한을 관리할 수 있습니다. 회원님의
+          소유자 권한은 그대로 유지됩니다.
         </p>
         <FormField
           label="확인 이메일"

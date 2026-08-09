@@ -3,8 +3,10 @@ import { cn } from '../../lib/cn'
 import {
   GROUP_KIND_LABELS,
   GROUP_ROLE_LABELS,
+  RESOURCE_ROLE_LABELS,
   type GroupKind,
   type GroupMemberRole,
+  type ResourceRole,
 } from '../../lib/labels'
 import { formatDday } from '../../lib/format'
 import {
@@ -415,9 +417,23 @@ export function CampusIpStatusBadge({
 
 const GROUP_ROLE_VARIANTS: Record<GroupMemberRole, BadgeVariant> = {
   OWNER: 'primary',
+  MEMBER: 'neutral',
+}
+
+const RESOURCE_ROLE_VARIANTS: Record<ResourceRole, BadgeVariant> = {
+  OWNER: 'primary',
   EDITOR: 'info',
   MEMBER: 'neutral',
   VIEWER: 'neutral',
+}
+
+/** 접근 목록의 등급 배지. 그룹 배지와 색 규칙을 공유한다. */
+export function ResourceRoleBadge({ role, className }: { role: ResourceRole; className?: string }) {
+  return (
+    <Badge variant={RESOURCE_ROLE_VARIANTS[role]} className={className}>
+      {RESOURCE_ROLE_LABELS[role]}
+    </Badge>
+  )
 }
 
 export function GroupRoleBadge({ role, className }: { role: GroupMemberRole; className?: string }) {

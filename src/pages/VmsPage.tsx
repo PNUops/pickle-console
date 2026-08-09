@@ -69,14 +69,27 @@ export function VmsPage() {
                 {vms.data.content.map((vm) => (
                   <TR key={vm.id}>
                     <TD>
-                      <Link
-                        to={`/console/vms/${vm.id}`}
-                        className="font-medium text-primary-700 hover:underline"
-                      >
-                        {vm.displayName || vm.name}
-                      </Link>
+                      {vm.accessLimited ? (
+                        <span className="font-medium text-neutral-500">
+                          {vm.displayName || vm.name}
+                        </span>
+                      ) : (
+                        <Link
+                          to={`/console/vms/${vm.id}`}
+                          className="font-medium text-primary-700 hover:underline"
+                        >
+                          {vm.displayName || vm.name}
+                        </Link>
+                      )}
                       {vm.displayName && (
                         <span className="ml-1 text-xs text-neutral-400">{vm.name}</span>
+                      )}
+                      {vm.accessLimited && (
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          접근 권한이 없습니다
+                          {vm.ownerNames.length > 0 &&
+                            ` — ${vm.ownerNames.join(', ')} 님에게 요청하세요`}
+                        </p>
                       )}
                     </TD>
                     <TD>

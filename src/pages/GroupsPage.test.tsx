@@ -31,7 +31,7 @@ describe('내 그룹 목록', () => {
 
     const teamRow = screen.getByRole('link', { name: '알고리즘 스터디' }).closest('tr')!
     expect(within(teamRow).getByText('팀')).toBeInTheDocument()
-    expect(within(teamRow).getByText('참여자')).toBeInTheDocument()
+    expect(within(teamRow).getByText('구성원')).toBeInTheDocument()
   })
 })
 

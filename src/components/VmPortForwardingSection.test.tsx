@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { RELAY_PUBLIC_HOST } from '../test/msw/handlers/network'
+import { vmDetailAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -18,8 +19,10 @@ function renderPublishTab(
 }
 
 describe('VM 도메인·포트 탭 — 포트포워딩', () => {
-  test('MEMBER는 목록·상태 배지를 읽기 전용으로 본다', async () => {
-    renderPublishTab(56) // algo-judge: 그룹 15 — 로그인 사용자는 MEMBER
+  test('참여자는 목록·상태 배지를 읽기 전용으로 본다', async () => {
+    // 접근 목록에서 참여자면 설정을 바꿀 수 없다(settingsEditAllowed=false).
+    server.use(vmDetailAs(56, 'MEMBER'))
+    renderPublishTab(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     // 활성 매핑 + 정지된 매핑이 함께 나열된다.
@@ -29,7 +32,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     expect(screen.getByText('정지됨')).toBeInTheDocument()
     // 읽기 전용: 생성 폼도 삭제 버튼도 없다.
     expect(
-      screen.getByText(/포트포워딩 생성·삭제는 그룹의 소유자·편집자만/),
+      screen.getByText(/포트포워딩 생성·삭제는 이 VM의 소유자·편집자만/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '포트포워딩 만들기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
@@ -55,23 +58,10 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     await within(row).findByText('활성')
   })
 
-  test('EDITOR도 생성 폼을 보고 매핑을 삭제할 수 있다', async () => {
+  test('편집자도 생성 폼을 보고 매핑을 삭제할 수 있다', async () => {
     const user = userEvent.setup()
-    // 그룹 12 역할을 EDITOR로 바꿔 EDITOR 게이트를 확인한다.
-    server.use(
-      http.get('*/api/v1/groups/12', () =>
-        HttpResponse.json({
-          id: 12,
-          kind: 'PROJECT',
-          name: '캡스톤 3조',
-          slug: 'capstone-team3',
-          description: null,
-          myRole: 'EDITOR',
-          createdAt: '2026-07-01T10:12:00+09:00',
-          members: [],
-        }),
-      ),
-    )
+    // 소유자가 아니어도 편집자면 만들고 지울 수 있다 (settingsEditAllowed).
+    server.use(vmDetailAs(45, 'EDITOR'))
     renderPublishTab(45)
 
     await screen.findByRole('heading', { name: 'expiring-api' })

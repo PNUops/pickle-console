@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchDomains, type DomainSummary, type VmDetail } from '../../api/queries'
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
-import { useVmGroupRole } from '../vm-group-role'
 import { AddPlatformSubdomainDrawer } from './AddPlatformSubdomainDrawer'
 import { ConnectCustomDomainDrawer } from './ConnectCustomDomainDrawer'
 import { DomainDrawer } from './DomainDrawer'
@@ -25,7 +24,7 @@ interface PlatformModalState {
  * 조회에서 온다 — 예약 행은 트래픽을 받지 않으므로 절을 분리해 보여준다.
  */
 export function VmDomainsSection({ vm }: { vm: VmDetail }) {
-  const { canMutate, roleFallback } = useVmGroupRole(vm)
+  const canMutate = vm.settingsEditAllowed
   const [drawerId, setDrawerId] = useState<number | null>(null)
   const [platformModal, setPlatformModal] = useState<PlatformModalState | null>(null)
   const [customOpen, setCustomOpen] = useState(false)
@@ -97,8 +96,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
               서브도메인은 바로 연결되고, 내 소유 도메인은 DNS 확인을 거쳐
               연결됩니다.
             </p>
-            {(roleFallback ??
-              (canMutate ? (
+            {(canMutate ? (
                 <div className="flex flex-wrap justify-center gap-2">
                   <AddButtons
                     connectable={connectable}
@@ -108,7 +106,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
                 </div>
               ) : (
                 <ReadOnlyNote />
-              )))}
+              ))}
           </div>
         ) : (
           <>
@@ -134,8 +132,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
             )}
 
             {!empty &&
-              (roleFallback ??
-                (canMutate ? (
+              (canMutate ? (
                   <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-4">
                     <AddButtons
                       connectable={connectable}
@@ -145,7 +142,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
                   </div>
                 ) : (
                   <ReadOnlyNote />
-                )))}
+                ))}
 
             {reserved.length > 0 && (
               <section className="space-y-1 border-t border-neutral-100 pt-4">
@@ -239,7 +236,7 @@ function AddButtons({
 function ReadOnlyNote() {
   return (
     <p className="text-sm text-neutral-500">
-      도메인 연결·해제는 그룹의 소유자·편집자만 할 수 있습니다.
+      도메인 연결·해제는 이 VM의 소유자·편집자만 할 수 있습니다.
     </p>
   )
 }

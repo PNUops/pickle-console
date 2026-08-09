@@ -17,6 +17,7 @@ export {
   PortForwardApplyStateBadge,
   PortMappingStatusBadge,
   RequestStatusBadge,
+  ResourceRoleBadge,
   RouteStatusBadge,
   TaskStatusBadge,
   VmStatusBadge,
