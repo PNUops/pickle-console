@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import type { ResourceSummary } from '../../api/queries'
 import { consolePaths } from '../../lib/paths'
 import { VmStatusBadge } from '../ui'
@@ -15,20 +16,32 @@ import type { VmStatus } from '../../lib/status'
 export type ResourceTypeEntry = {
   label: string
   detailPath: (id: number) => string
-  /** A short line under the name: the specification, an expiry, whatever fits. */
-  summaryLine: (resource: ResourceSummary) => ReactNode
   statusBadge: (resource: ResourceSummary) => ReactNode
+  /**
+   * Whether this row still counts as something the person has. Each type owns
+   * the judgment because the states are its own: a destroyed VM and a revoked
+   * key are both "gone", and nothing outside knows that from the string.
+   */
+  isActive: (resource: ResourceSummary) => boolean
+  /** An optional shortcut shown on the dashboard row (the web terminal, say). */
+  rowAction?: (resource: ResourceSummary) => ReactNode
 }
 
 export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> = {
   VM: {
     label: 'VM',
     detailPath: (id) => consolePaths.vmDetail(id),
-    // The inventory does not carry a VM's specification, and asking for it per
-    // row would undo the point of one flat list. The VM's own list still shows
-    // it; here the workspace is what tells the rows apart.
-    summaryLine: (resource) => resource.workspaceName,
     statusBadge: (resource) => <VmStatusBadge status={resource.status as VmStatus} />,
+    isActive: (resource) => resource.status !== 'DELETED' && resource.status !== 'DELETING',
+    rowAction: (resource) =>
+      resource.status === 'RUNNING' ? (
+        <Link
+          to={consolePaths.vmTerminal(resource.id)}
+          className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+        >
+          웹 터미널
+        </Link>
+      ) : null,
   },
 }
 

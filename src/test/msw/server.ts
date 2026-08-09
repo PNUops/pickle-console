@@ -12,6 +12,7 @@ import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
 import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces'
 import { networkHandlers, resetNetworkFixtures } from './handlers/network'
+import { resourceHandlers } from './handlers/resources'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
@@ -32,6 +33,7 @@ export const handlers: RequestHandler[] = [
   ...workspaceHandlers,
   ...requestHandlers,
   ...vmHandlers,
+  ...resourceHandlers,
   ...terminalHandlers,
   ...sshKeyHandlers,
   ...publishingHandlers,
