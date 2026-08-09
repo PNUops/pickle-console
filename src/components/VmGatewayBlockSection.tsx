@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateVmGatewayBlock, type VmSummary } from '../api/queries'
+import { updateVmGatewayBlock } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { Alert, Button, Modal, PermissionNotice, Textarea } from './ui'
 
@@ -14,7 +14,7 @@ export function VmGatewayBlockSection({
   canManage,
   onDone,
 }: {
-  vm: VmSummary
+  vm: { id: number; sshGatewayBlocked?: boolean | null }
   canManage: boolean
   onDone: (message: string) => void
 }) {

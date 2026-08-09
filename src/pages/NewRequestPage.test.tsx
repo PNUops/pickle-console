@@ -21,18 +21,17 @@ async function passStep1(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('VM 신청 위저드 — 단계 검증', () => {
-  test('그룹·기관을 선택하기 전에는 다음으로 넘어갈 수 없고, 신청 권한이 있는 그룹만 보인다', async () => {
+  test('그룹·기관을 선택하기 전에는 다음으로 넘어갈 수 없고, 속한 그룹이 모두 보인다', async () => {
     const user = userEvent.setup()
     renderWizard()
     await screen.findByRole('heading', { name: 'VM 신청' })
 
-    // OWNER/EDITOR 그룹만 선택지에 나온다 (알고리즘 스터디는 MEMBER라 제외).
+    // 신청은 구성원이면 누구나 한다 — 문턱은 승인이 잡으므로 소속 그룹이 다 나온다.
     const groupSelect = screen.getByLabelText('신청 그룹')
     expect(groupSelect).toContainHTML('캡스톤 3조')
     expect(groupSelect).toContainHTML('홍길동')
-    // EDITOR 그룹도 신청 가능 (EDITOR 게이트).
     expect(groupSelect).toContainHTML('데이터베이스 실습')
-    expect(groupSelect).not.toContainHTML('알고리즘 스터디')
+    expect(groupSelect).toContainHTML('알고리즘 스터디')
 
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByText('신청할 그룹을 선택해 주세요.')).toBeInTheDocument()

@@ -8,6 +8,7 @@ export type GroupSummary = Schemas['GroupSummaryResponse']
 export type GroupDetail = Schemas['GroupDetailResponse']
 export type GroupMember = Schemas['GroupMemberResponse']
 export type GroupMemberRole = Schemas['GroupMemberRole']
+export type ResourceRole = Schemas['ResourceRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
 export type OsImage = Schemas['OsImageResponse']
 export type VmFlavor = Schemas['VmFlavorResponse']
@@ -409,6 +410,59 @@ export function updateVmSettings(
     })
     if (!data) throw toApiError(error, 'VM 설정을 변경하지 못했습니다.')
     return data
+  })
+}
+
+/* ─── VM 접근 권한 (자원 소유자·그룹 소유자) ─── */
+
+export type VmAccessGrant = Schemas['VmAccessGrantView']
+
+export function fetchVmAccessGrants(vmId: number): Promise<VmAccessGrant[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/access', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 사용자 지정 부여 또는 그룹 전체 부여. 재인증은 클라이언트가 알아서 붙인다. */
+export function addVmAccessGrant(
+  vmId: number,
+  body: { granteeType: 'USER' | 'GROUP'; userId?: number; role: ResourceRole },
+): Promise<VmAccessGrant> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/vms/{vmId}/access', {
+      params: { path: { vmId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateVmAccessGrant(
+  vmId: number,
+  grantId: number,
+  role: ResourceRole,
+): Promise<VmAccessGrant> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/vms/{vmId}/access/{grantId}', {
+      params: { path: { vmId, grantId } },
+      body: { role },
+    })
+    if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function removeVmAccessGrant(vmId: number, grantId: number): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/vms/{vmId}/access/{grantId}', {
+      params: { path: { vmId, grantId } },
+    })
+    if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
   })
 }
 

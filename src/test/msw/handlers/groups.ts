@@ -51,25 +51,25 @@ function initialGroups(): GroupRecord[] {
       },
       members: [
         me(),
-        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'EDITOR' },
+        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MEMBER' },
         { userId: 58, name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
-        { userId: 59, name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'VIEWER' },
+        { userId: 59, name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'MEMBER' },
       ],
     },
     {
-      // EDITOR 게이트 검증용 — 로그인 사용자(42)가 EDITOR인 그룹.
+      // 로그인 사용자(42)가 구성원(소유자가 아님)인 두 번째 그룹.
       detail: {
         id: 14,
         kind: 'PROJECT',
         name: '데이터베이스 실습',
         slug: 'db-lab',
         description: '2026-1 데이터베이스 실습 조교팀',
-        myRole: 'EDITOR',
+        myRole: 'MEMBER',
         createdAt: '2026-06-20T14:00:00+09:00',
       },
       members: [
         { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'OWNER' },
-        { ...me(), role: 'EDITOR' },
+        { ...me(), role: 'MEMBER' },
       ],
     },
     {
@@ -101,7 +101,7 @@ export function resetGroupFixtures() {
 function toSummary(record: GroupRecord): Schemas['GroupSummaryResponse'] {
   const { id, kind, name, slug, description } = record.detail
   const myRole =
-    record.members.find((m) => m.userId === regularUser.id)?.role ?? 'VIEWER'
+    record.members.find((m) => m.userId === regularUser.id)?.role ?? 'MEMBER'
   return { id, kind, name, slug, description, myRole, memberCount: record.members.length }
 }
 
@@ -111,6 +111,11 @@ function toDetail(record: GroupRecord): Schemas['GroupDetailResponse'] {
     record.members.find((m) => m.userId === regularUser.id)?.role ??
     record.detail.myRole
   return { ...record.detail, myRole, members: record.members }
+}
+
+/** 이 그룹의 구성원 — VM 접근 목록 mock이 부여 대상 자격을 확인할 때 쓴다. */
+export function groupMembersOf(groupId: number): Schemas['GroupMemberResponse'][] {
+  return groupStore.find((g) => g.detail.id === groupId)?.members ?? []
 }
 
 function findGroup(groupId: string | readonly string[]): GroupRecord | undefined {
@@ -225,11 +230,17 @@ export const groupHandlers: RequestHandler[] = [
     const member = record?.members.find((m) => m.userId === Number(params.userId))
     if (!record || !member) return notFound()
     const body = (await request.json()) as { role: Schemas['GroupMemberRole'] }
-    if (body.role === 'OWNER') {
-      // Ownership transfer: the previous OWNER is demoted to EDITOR.
-      for (const m of record.members) {
-        if (m.role === 'OWNER') m.role = 'EDITOR'
-      }
+    // 소유자는 여러 명일 수 있다 — 지정해도 지정한 사람은 그대로 소유자로 남는다.
+    // 막는 것은 마지막 한 명의 해제뿐이다 (그러면 그룹을 다룰 사람이 없어진다).
+    const owners = record.members.filter((m) => m.role === 'OWNER').length
+    if (member.role === 'OWNER' && body.role !== 'OWNER' && owners <= 1) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '유일한 소유자의 역할은 변경할 수 없습니다',
+        status: 409,
+        detail: '소유권을 다른 구성원에게 이전한 뒤 다시 시도해 주세요.',
+        code: 'GROUP_SOLE_OWNER_REMOVAL',
+      })
     }
     member.role = body.role
     return HttpResponse.json(member, { status: 200 })

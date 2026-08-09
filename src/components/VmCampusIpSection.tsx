@@ -66,12 +66,10 @@ function parsePorts(raw: string): { ports: number[] } | { error: string } {
 export function VmCampusIpSection({
   vm,
   canMutate,
-  rolePending,
 }: {
   vm: VmDetail
   canMutate: boolean
   /** 그룹 역할 조회 중 — 읽기 전용 문구가 잠깐 번쩍이지 않게 로딩으로 대체한다. */
-  rolePending: boolean
 }) {
   const requests = useQuery({
     queryKey: ['vms', vm.id, 'campus-ip-requests'],
@@ -103,7 +101,7 @@ export function VmCampusIpSection({
           메뉴얼로 제공될 예정입니다.
         </p>
 
-        {(requests.isPending || rolePending) && (
+        {requests.isPending && (
           <div className="flex justify-center py-6">
             <Spinner label="캠퍼스 IP 신청 이력 불러오는 중" />
           </div>
@@ -111,7 +109,6 @@ export function VmCampusIpSection({
         {requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
 
         {requests.isSuccess &&
-          !rolePending &&
           (active ? (
             <ActiveRequestCard vm={vm} request={active} canMutate={canMutate} />
           ) : (
@@ -121,7 +118,7 @@ export function VmCampusIpSection({
                 <RequestForm vm={vm} />
               ) : (
                 <p className="text-sm text-neutral-500">
-                  캠퍼스 IP 신청·취소는 그룹의 소유자·편집자만 할 수 있습니다.
+                  캠퍼스 IP 신청·취소는 이 VM의 소유자·편집자만 할 수 있습니다.
                 </p>
               )}
             </>

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { vmStore } from '../test/msw/handlers/vms'
+import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -224,12 +224,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
   })
 
   test('열람 권한이 없으면(passwordRevealAllowed=false) 버튼 대신 제한 안내를 보여준다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
-    server.use(
-      http.get('*/api/v1/vms/56', () =>
-        HttpResponse.json({ ...base, myGroupRole: 'MEMBER', passwordRevealAllowed: false }),
-      ),
-    )
+    server.use(vmDetailAs(56, 'MEMBER', { passwordRevealAllowed: false }))
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
@@ -237,7 +232,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
       await screen.findByText(/비밀번호 열람이 제한되어 있습니다/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '비밀번호 보기' })).not.toBeInTheDocument()
-    // MEMBER는 재생성 버튼도 없다 (EDITOR 이상).
+    // 참여자는 설정을 바꿀 수 없으므로 재생성 버튼도 없다 (settingsEditAllowed=false).
     expect(screen.queryByRole('button', { name: '비밀번호 재생성' })).not.toBeInTheDocument()
   })
 
@@ -392,13 +387,8 @@ describe('VM 상세 — SSH 접속', () => {
 /* ─── 웹 터미널 열기 버튼 ─── */
 
 describe('VM 상세 — 웹 터미널 열기', () => {
-  test('RUNNING + MEMBER 이상이면 웹 터미널 열기 버튼을 보여준다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
-    server.use(
-      http.get('*/api/v1/vms/56', () =>
-        HttpResponse.json({ ...base, status: 'RUNNING', myGroupRole: 'MEMBER' }),
-      ),
-    )
+  test('RUNNING + 접속 권한이 있으면 웹 터미널 열기 버튼을 보여준다', async () => {
+    server.use(vmDetailAs(56, 'MEMBER', { status: 'RUNNING' }))
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
@@ -414,13 +404,9 @@ describe('VM 상세 — 웹 터미널 열기', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('VIEWER 역할에는 웹 터미널 열기 버튼이 없다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
-    server.use(
-      http.get('*/api/v1/vms/56', () =>
-        HttpResponse.json({ ...base, status: 'RUNNING', myGroupRole: 'VIEWER' }),
-      ),
-    )
+  test('접속 권한이 없으면(accessAllowed=false) 웹 터미널 열기 버튼이 없다', async () => {
+    // 열람자는 상태만 볼 수 있다 — 안으로 들어가는 수단은 주어지지 않는다.
+    server.use(vmDetailAs(56, 'VIEWER', { status: 'RUNNING' }))
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
@@ -449,8 +435,12 @@ describe('VM 상세 — VM 설정', () => {
     expect(
       within(dialog).getByText(/누가 접속했는지 개인을 식별할 수 없습니다/),
     ).toBeInTheDocument()
+    // 비밀번호 경로는 접근 목록을 검사하지 않는다 — 회수해도 막히지 않음을 알린다.
     expect(
-      within(dialog).getByText(/그룹에서 제거된 구성원도 비밀번호를 아는 한 계속 접속할 수 있습니다/),
+      within(dialog).getByText(/이 경로는 접근 권한 목록을 검사하지 않습니다/),
+    ).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/접근 권한을 회수한 뒤에도 접속할 수 있습니다/),
     ).toBeInTheDocument()
 
     await user.click(within(dialog).getByRole('button', { name: '허용' }))
@@ -488,12 +478,7 @@ describe('VM 상세 — VM 설정', () => {
   })
 
   test('참여자(MEMBER)에게는 VM 설정 섹션이 노출되지 않는다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
-    server.use(
-      http.get('*/api/v1/vms/56', () =>
-        HttpResponse.json({ ...base, myGroupRole: 'MEMBER', passwordRevealAllowed: true }),
-      ),
-    )
+    server.use(vmDetailAs(56, 'MEMBER', { passwordRevealAllowed: true }))
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
@@ -519,12 +504,7 @@ describe('VM 상세 — 탭', () => {
   })
 
   test('참여자(MEMBER)에게는 설정 탭 자체가 노출되지 않는다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
-    server.use(
-      http.get('*/api/v1/vms/56', () =>
-        HttpResponse.json({ ...base, myGroupRole: 'MEMBER', passwordRevealAllowed: true }),
-      ),
-    )
+    server.use(vmDetailAs(56, 'MEMBER', { passwordRevealAllowed: true }))
     renderVm(56)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
