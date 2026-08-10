@@ -646,7 +646,7 @@ function SuspendMappingModal({
             value={reason}
             maxLength={500}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="감사 기록과 소유 그룹 알림에 포함됩니다."
+            placeholder="감사 기록과 소유 워크스페이스 알림에 포함됩니다."
           />
         </label>
       </div>
@@ -697,7 +697,7 @@ function DeleteMappingModal({
       <div className="space-y-3">
         <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
           매핑이 제거되고 공인 포트 {mapping.publicPort}이(가) 재할당 풀로 돌아갑니다.
-          감사 기록과 소유 그룹 알림이 남습니다.
+          감사 기록과 소유 워크스페이스 알림이 남습니다.
         </Alert>
         {error && <Alert variant="danger">{error}</Alert>}
       </div>
@@ -1114,7 +1114,7 @@ function CampusTransitionSection({
       )}
       <FormField
         label="관리자 메모 (선택)"
-        description="신청 그룹에 발송되는 알림에 포함됩니다."
+        description="신청 워크스페이스에 발송되는 알림에 포함됩니다."
       >
         <Textarea
           rows={2}

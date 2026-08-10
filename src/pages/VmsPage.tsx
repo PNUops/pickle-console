@@ -16,12 +16,14 @@ import {
   VmStatusBadge,
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { useScope } from '../lib/use-scope'
 
 export function VmsPage() {
+  const scope = useScope()
   const [page, setPage] = useState(0)
   const vms = useQuery({
-    queryKey: ['vms', { page }],
-    queryFn: () => fetchVms({ page }),
+    queryKey: ['vms', { page, workspaceId: scope }],
+    queryFn: () => fetchVms({ page, workspaceId: scope ?? undefined }),
     placeholderData: keepPreviousData,
     // 비동기 전이 중(생성·삭제·재부팅) VM이 있으면 3초마다 새로 고친다 (상세와 동일 기준).
     refetchInterval: (query) =>
@@ -36,7 +38,7 @@ export function VmsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">내 VM</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          내가 속한 그룹의 VM 목록입니다. 승인된 신청의 VM은 생성이 끝나면 실행 중으로
+          내가 속한 워크스페이스의 VM 목록입니다. 승인된 신청의 VM은 생성이 끝나면 실행 중으로
           바뀝니다.
         </p>
       </div>
@@ -61,7 +63,7 @@ export function VmsPage() {
                   <TH>이름</TH>
                   <TH>상태</TH>
                   <TH>사양</TH>
-                  <TH>그룹</TH>
+                  <TH>워크스페이스</TH>
                   <TH>생성일</TH>
                 </TR>
               </THead>
@@ -89,7 +91,7 @@ export function VmsPage() {
                           접근 권한이 없습니다
                           {vm.ownerNames.length > 0 &&
                             ` — ${vm.ownerNames.join(', ')} 님에게 요청하세요`}
-                          {/* 그룹 소유자는 이 VM 안을 볼 수 없어도 누가 접근할지는
+                          {/* 워크스페이스 소유자는 이 VM 안을 볼 수 없어도 누가 접근할지는
                               정할 수 있다. 상세로 못 들어가므로 목록이 그 유일한
                               진입점이고, 소유자가 떠난 VM을 되살리는 길이기도 하다. */}
                           {vm.accessManageAllowed && (
@@ -112,7 +114,7 @@ export function VmsPage() {
                     <TD className="whitespace-nowrap">
                       {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
                     </TD>
-                    <TD>{vm.groupName}</TD>
+                    <TD>{vm.workspaceName}</TD>
                     <TD className="whitespace-nowrap">{formatDateTime(vm.createdAt)}</TD>
                   </TR>
                 ))}

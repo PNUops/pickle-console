@@ -4,20 +4,20 @@ import type { components, operations } from './schema'
 
 type Schemas = components['schemas']
 
-export type GroupSummary = Schemas['GroupSummaryResponse']
-export type GroupDetail = Schemas['GroupDetailResponse']
-export type GroupMember = Schemas['GroupMemberResponse']
-export type GroupMemberRole = Schemas['GroupMemberRole']
+export type WorkspaceSummary = Schemas['WorkspaceSummaryResponse']
+export type WorkspaceDetail = Schemas['WorkspaceDetailResponse']
+export type WorkspaceMember = Schemas['WorkspaceMemberResponse']
+export type WorkspaceMemberRole = Schemas['WorkspaceMemberRole']
 export type ResourceRole = Schemas['ResourceRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
 export type OsImage = Schemas['OsImageResponse']
 export type VmFlavor = Schemas['VmFlavorResponse']
 export type CreateVmFlavor = Schemas['CreateVmFlavorRequest']
 export type UpdateVmFlavor = Schemas['UpdateVmFlavorRequest']
-export type CreateVmRequest = Schemas['CreateVmRequestRequest']
-export type VmRequestDetail = Schemas['VmRequestDetailResponse']
-export type VmRequestPage = Schemas['PageResponseVmRequestDetailResponse']
-export type VmRequestStatus = Schemas['VmRequestStatus']
+export type CreateRequest = Schemas['CreateRequestRequest']
+export type RequestDetail = Schemas['RequestDetailResponse']
+export type RequestPage = Schemas['PageResponseRequestDetailResponse']
+export type RequestStatus = Schemas['RequestStatus']
 export type VmSummary = Schemas['VmSummaryResponse']
 export type VmDetail = Schemas['VmDetailResponse']
 export type VmPage = Schemas['PageResponseVmSummaryResponse']
@@ -26,7 +26,7 @@ export type AdminVmSort = NonNullable<
   operations['listAdminVms']['parameters']['query']
 >['sort']
 export type ApprovalContext = Schemas['ApprovalContextResponse']
-export type ApproveVmRequest = Schemas['ApproveVmRequestRequest']
+export type ApproveRequest = Schemas['ApproveRequestRequest']
 export type OrgDetail = Schemas['OrgDetailResponse']
 export type OrgStatus = Schemas['OrgStatus']
 export type UserSummary = Schemas['UserSummaryResponse']
@@ -140,8 +140,8 @@ export type IpAllocationStatus = Schemas['AllocationStatus']
 export type AdminNotificationView = Schemas['AdminNotificationResponse']
 export type AdminNotificationPage = Schemas['PageResponseAdminNotificationResponse']
 export type NotificationDeliveryStatus = Schemas['NotificationStatus']
-export type AdminGroupOption = Schemas['AdminGroupOptionResponse']
-export type AdminGroupDetail = Schemas['AdminGroupDetailResponse']
+export type AdminWorkspaceOption = Schemas['AdminWorkspaceOptionResponse']
+export type AdminWorkspaceDetail = Schemas['AdminWorkspaceDetailResponse']
 export type AnnouncementScope = Schemas['AnnouncementScope']
 export type AnnouncementCreateRequest = Schemas['AnnouncementCreateRequest']
 export type AnnouncementView = Schemas['AnnouncementView']
@@ -178,20 +178,20 @@ export async function guardNetwork<T>(run: () => Promise<T>): Promise<T> {
 
 /* ─── query functions (throw ApiError so useQuery surfaces Korean messages) ─── */
 
-export function fetchGroups(): Promise<GroupSummary[]> {
+export function fetchWorkspaces(): Promise<WorkspaceSummary[]> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/groups')
-    if (!data) throw toApiError(error, '그룹 목록을 불러오지 못했습니다.')
+    const { data, error } = await api.GET('/workspaces')
+    if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')
     return data
   })
 }
 
-export function fetchGroup(groupId: number): Promise<GroupDetail> {
+export function fetchWorkspace(workspaceId: number): Promise<WorkspaceDetail> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/groups/{groupId}', {
-      params: { path: { groupId } },
+    const { data, error } = await api.GET('/workspaces/{workspaceId}', {
+      params: { path: { workspaceId } },
     })
-    if (!data) throw toApiError(error, '그룹 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했습니다.')
     return data
   })
 }
@@ -238,21 +238,22 @@ export function fetchSystemStatus(): Promise<SystemStatus> {
   })
 }
 
-export function fetchVmRequests(params: {
-  status?: VmRequestStatus
+export function fetchRequests(params: {
+  status?: RequestStatus
   page?: number
   size?: number
-}): Promise<VmRequestPage> {
+  workspaceId?: number
+}): Promise<RequestPage> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/vm-requests', { params: { query: params } })
+    const { data, error } = await api.GET('/requests', { params: { query: params } })
     if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
     return data
   })
 }
 
-export function fetchVmRequest(requestId: number): Promise<VmRequestDetail> {
+export function fetchRequest(requestId: number): Promise<RequestDetail> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/vm-requests/{requestId}', {
+    const { data, error } = await api.GET('/requests/{requestId}', {
       params: { path: { requestId } },
     })
     if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
@@ -260,10 +261,31 @@ export function fetchVmRequest(requestId: number): Promise<VmRequestDetail> {
   })
 }
 
-export function fetchVms(params: { page?: number; size?: number }): Promise<VmPage> {
+export function fetchVms(params: {
+  page?: number
+  size?: number
+  workspaceId?: number
+}): Promise<VmPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms', { params: { query: params } })
     if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export type ResourceSummary = Schemas['ResourceSummaryResponse']
+export type ResourcePage = Schemas['PageResponseResourceSummaryResponse']
+
+/** The type-agnostic inventory: what this person has, whatever kind it is. */
+export function fetchResources(params: {
+  page?: number
+  size?: number
+  workspaceId?: number
+  type?: ResourceSummary['type']
+}): Promise<ResourcePage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/resources', { params: { query: params } })
+    if (!data) throw toApiError(error, '리소스 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -278,14 +300,14 @@ export function fetchVm(vmId: number): Promise<VmDetail> {
 
 /* ─── admin ─── */
 
-export function fetchAdminVmRequests(params: {
-  status?: VmRequestStatus
+export function fetchAdminRequests(params: {
+  status?: RequestStatus
   orgId?: number
   page?: number
   size?: number
-}): Promise<VmRequestPage> {
+}): Promise<RequestPage> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/admin/vm-requests', {
+    const { data, error } = await api.GET('/admin/requests', {
       params: { query: params },
     })
     if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
@@ -293,9 +315,9 @@ export function fetchAdminVmRequests(params: {
   })
 }
 
-export function fetchAdminVmRequest(requestId: number): Promise<VmRequestDetail> {
+export function fetchAdminRequest(requestId: number): Promise<RequestDetail> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/admin/vm-requests/{requestId}', {
+    const { data, error } = await api.GET('/admin/requests/{requestId}', {
       params: { path: { requestId } },
     })
     if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
@@ -305,7 +327,7 @@ export function fetchAdminVmRequest(requestId: number): Promise<VmRequestDetail>
 
 export function fetchApprovalContext(requestId: number): Promise<ApprovalContext> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/admin/vm-requests/{requestId}/context', {
+    const { data, error } = await api.GET('/admin/requests/{requestId}/context', {
       params: { path: { requestId } },
     })
     if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했습니다.')
@@ -413,14 +435,14 @@ export function updateVmSettings(
   })
 }
 
-/* ─── VM 접근 권한 (자원 소유자·그룹 소유자) ─── */
+/* ─── VM 접근 권한 (리소스 소유자·워크스페이스 소유자) ─── */
 
-export type VmAccessGrant = Schemas['VmAccessGrantView']
-export type VmAccessList = Schemas['VmAccessListResponse']
+export type VmAccessGrant = Schemas['ResourceAccessGrantView']
+export type VmAccessList = Schemas['ResourceAccessListResponse']
 
 /**
  * 목록과 함께 어느 VM의 것인지도 받는다 — 이 화면을 여는 사람은 그 VM의 상세를
- * 못 여는 경우가 있어(그룹 소유자), 이름을 다른 데서 가져올 수 없다.
+ * 못 여는 경우가 있어(워크스페이스 소유자), 이름을 다른 데서 가져올 수 없다.
  */
 export function fetchVmAccessGrants(vmId: number): Promise<VmAccessList> {
   return guardNetwork(async () => {
@@ -432,10 +454,10 @@ export function fetchVmAccessGrants(vmId: number): Promise<VmAccessList> {
   })
 }
 
-/** 사용자 지정 부여 또는 그룹 전체 부여. 재인증은 클라이언트가 알아서 붙인다. */
+/** 사용자 지정 부여 또는 워크스페이스 전체 부여. 재인증은 클라이언트가 알아서 붙인다. */
 export function addVmAccessGrant(
   vmId: number,
-  body: { granteeType: 'USER' | 'GROUP'; userId?: number; role: ResourceRole },
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: number; role: ResourceRole },
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/access', {
@@ -846,7 +868,7 @@ export function fetchAdminNodes(): Promise<NodeSummary[]> {
 
 export function fetchAdminVms(params: {
   orgId?: number
-  groupId?: number
+  workspaceId?: number
   status?: VmStatus
   expiringInDays?: number
   expired?: boolean
@@ -1066,20 +1088,20 @@ export function resendAdminNotification(notificationId: number): Promise<Message
   })
 }
 
-export function fetchAdminGroups(params: { orgId?: number } = {}): Promise<AdminGroupOption[]> {
+export function fetchAdminWorkspaces(params: { orgId?: number } = {}): Promise<AdminWorkspaceOption[]> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/admin/groups', { params: { query: params } })
-    if (!data) throw toApiError(error, '그룹 목록을 불러오지 못했습니다.')
+    const { data, error } = await api.GET('/admin/workspaces', { params: { query: params } })
+    if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')
     return data
   })
 }
 
-export function fetchAdminGroup(groupId: number): Promise<AdminGroupDetail> {
+export function fetchAdminWorkspace(workspaceId: number): Promise<AdminWorkspaceDetail> {
   return guardNetwork(async () => {
-    const { data, error } = await api.GET('/admin/groups/{groupId}', {
-      params: { path: { groupId } },
+    const { data, error } = await api.GET('/admin/workspaces/{workspaceId}', {
+      params: { path: { workspaceId } },
     })
-    if (!data) throw toApiError(error, '그룹 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했습니다.')
     return data
   })
 }

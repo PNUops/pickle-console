@@ -45,7 +45,7 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
-import { GROUP_KIND_LABELS, USER_ROLE_LABELS, USER_STATUS_LABELS } from '../lib/labels'
+import { WORKSPACE_KIND_LABELS, USER_ROLE_LABELS, USER_STATUS_LABELS } from '../lib/labels'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 
 type SortKey = 'name' | 'email' | 'createdAt'
@@ -129,8 +129,8 @@ export function AdminUsersPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
-        <div role="group" aria-label="계정 상태 필터" className="flex flex-wrap gap-1">
+        {/* 필터 토글 버튼 워크스페이스 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
+        <div role="workspace" aria-label="계정 상태 필터" className="flex flex-wrap gap-1">
           {STATUS_TABS.map((tab) => {
             const isSelected = tab.status === status
             return (
@@ -330,19 +330,19 @@ function UserDetailBody({ userId, canManage }: { userId: number; canManage: bool
       </dl>
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold text-neutral-800">그룹 멤버십</h3>
+        <h3 className="text-sm font-semibold text-neutral-800">워크스페이스 멤버십</h3>
         {user.memberships.length === 0 ? (
-          <p className="text-sm text-neutral-500">소속된 그룹이 없습니다.</p>
+          <p className="text-sm text-neutral-500">소속된 워크스페이스가 없습니다.</p>
         ) : (
           <ul className="space-y-1 text-sm text-neutral-700">
             {user.memberships.map((m) => (
-              <li key={m.groupId}>
-                {m.groupName}{' '}
+              <li key={m.workspaceId}>
+                {m.workspaceName}{' '}
                 <span className="text-neutral-400">
-                  ({GROUP_KIND_LABELS[m.groupKind]} · {m.role})
+                  ({WORKSPACE_KIND_LABELS[m.workspaceKind]} · {m.role})
                 </span>{' '}
                 <Link
-                  to={`/admin/vms?groupId=${m.groupId}`}
+                  to={`/admin/vms?workspaceId=${m.workspaceId}`}
                   className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                 >
                   VM 보기
@@ -585,7 +585,7 @@ function UserStatusActions({
       ) : (
         <>
           <p className="text-sm text-neutral-500">
-            계정을 비활성화하면 즉시 로그인·SSH 접속이 차단됩니다. 그룹·VM은 유지되며 해제 시
+            계정을 비활성화하면 즉시 로그인·SSH 접속이 차단됩니다. 워크스페이스·VM은 유지되며 해제 시
             원상 복귀됩니다.
           </p>
           <Button variant="danger" disabled={!canManage} onClick={() => setOpen(true)}>

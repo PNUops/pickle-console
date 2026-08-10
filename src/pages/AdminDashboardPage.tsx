@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminSummary,
-  fetchAdminVmRequests,
+  fetchAdminRequests,
   fetchSystemSummary,
   type OrgDashboardSummary,
 } from '../api/queries'
@@ -25,7 +25,7 @@ function countOf(counts: Record<string, number>, key: string): number {
 }
 
 /**
- * 관리자 홈 — 기관 요약 타일 + 자원 현황 + (SYS_ADMIN) 시스템 요약 + 승인 대기 미리보기.
+ * 관리자 홈 — 기관 요약 타일 + 리소스 현황 + (SYS_ADMIN) 시스템 요약 + 승인 대기 미리보기.
  */
 export function AdminDashboardPage() {
   const { user } = useAuth()
@@ -41,8 +41,8 @@ export function AdminDashboardPage() {
     enabled: isSysAdmin,
   })
   const pending = useQuery({
-    queryKey: ['admin', 'vm-requests', { status: 'SUBMITTED', page: 0, size: 5 }],
-    queryFn: () => fetchAdminVmRequests({ status: 'SUBMITTED', page: 0, size: 5 }),
+    queryKey: ['admin', 'requests', { status: 'SUBMITTED', page: 0, size: 5 }],
+    queryFn: () => fetchAdminRequests({ status: 'SUBMITTED', page: 0, size: 5 }),
   })
 
   return (
@@ -159,7 +159,7 @@ export function AdminDashboardPage() {
                             {request.purpose}
                           </span>
                           <span className="mt-0.5 block text-xs text-neutral-500">
-                            {request.requesterName} · {request.groupName}
+                            {request.requesterName} · {request.workspaceName}
                           </span>
                         </span>
                         <span className="shrink-0 text-xs text-neutral-400">
@@ -224,7 +224,7 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>자원 현황</CardTitle>
+        <CardTitle>리소스 현황</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <ResourceBar

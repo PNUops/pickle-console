@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createAnnouncement,
-  fetchAdminGroups,
+  fetchAdminWorkspaces,
   fetchAnnouncements,
   fetchOrgs,
   type AnnouncementCreateRequest,
@@ -29,9 +29,9 @@ import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
 
 /** 대상 선택 옵션 — 역할에 따라 노출이 다르다. */
-type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'GROUP'
+type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'WORKSPACE'
 
-/** 공지 보내기 — 범위(전체/기관/그룹)를 골라 발송하고 최근 공지를 확인한다. */
+/** 공지 보내기 — 범위(전체/기관/워크스페이스)를 골라 발송하고 최근 공지를 확인한다. */
 export function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const isSysAdmin = user?.role === 'SYS_ADMIN'
@@ -43,19 +43,19 @@ export function AdminAnnouncementsPage() {
   const [body, setBody] = useState('')
   const [target, setTarget] = useState<TargetKind>(isSysAdmin ? 'ALL' : 'ORG_ALL')
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const [groupId, setGroupId] = useState<number | undefined>(undefined)
+  const [workspaceId, setWorkspaceId] = useState<number | undefined>(undefined)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
 
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
-  // SYS_ADMIN 그룹 대상: 기관을 먼저 고른 뒤 그 기관 그룹을 불러온다.
-  const groupsEnabled = target === 'GROUP' && (!isSysAdmin || orgId != null)
-  const groups = useQuery({
-    queryKey: ['admin', 'groups', { orgId: (isSysAdmin ? orgId : null) ?? null }],
-    queryFn: () => fetchAdminGroups(isSysAdmin ? { orgId } : {}),
-    enabled: groupsEnabled,
+  // SYS_ADMIN 워크스페이스 대상: 기관을 먼저 고른 뒤 그 기관 워크스페이스를 불러온다.
+  const workspacesEnabled = target === 'WORKSPACE' && (!isSysAdmin || orgId != null)
+  const workspaces = useQuery({
+    queryKey: ['admin', 'workspaces', { orgId: (isSysAdmin ? orgId : null) ?? null }],
+    queryFn: () => fetchAdminWorkspaces(isSysAdmin ? { orgId } : {}),
+    enabled: workspacesEnabled,
   })
   const recent = useQuery({
     queryKey: ['admin', 'announcements', { page: 0 }],
@@ -73,7 +73,7 @@ export function AdminAnnouncementsPage() {
       setBody('')
       setTarget(isSysAdmin ? 'ALL' : 'ORG_ALL')
       setOrgId(undefined)
-      setGroupId(undefined)
+      setWorkspaceId(undefined)
       setFieldErrors({})
       setError(null)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'announcements'] })
@@ -90,7 +90,7 @@ export function AdminAnnouncementsPage() {
     if (target === 'ALL') return { title, body, scope: 'ALL' }
     if (target === 'ORG_ALL') return { title, body, scope: 'ORG' }
     if (target === 'ORG_PICK') return { title, body, scope: 'ORG', orgId }
-    return { title, body, scope: 'GROUP', groupId }
+    return { title, body, scope: 'WORKSPACE', workspaceId }
   }
 
   /** 확인 모달에 다시 보여줄 대상 설명. */
@@ -101,8 +101,8 @@ export function AdminAnnouncementsPage() {
       const org = (orgs.data ?? []).find((o) => o.id === orgId)
       return `기관 '${org?.name ?? ''}' 소속 사용자`
     }
-    const group = (groups.data ?? []).find((g) => g.id === groupId)
-    return `그룹 '${group?.name ?? ''}' 구성원`
+    const workspace = (workspaces.data ?? []).find((g) => g.id === workspaceId)
+    return `워크스페이스 '${workspace?.name ?? ''}' 구성원`
   }
 
   const submit = (event: FormEvent) => {
@@ -113,7 +113,7 @@ export function AdminAnnouncementsPage() {
     if (!title.trim()) errors.title = '제목을 입력해 주세요.'
     if (!body.trim()) errors.body = '내용을 입력해 주세요.'
     if (target === 'ORG_PICK' && orgId == null) errors.orgId = '대상 기관을 선택해 주세요.'
-    if (target === 'GROUP' && groupId == null) errors.groupId = '대상 그룹을 선택해 주세요.'
+    if (target === 'WORKSPACE' && workspaceId == null) errors.workspaceId = '대상 워크스페이스를 선택해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     setConfirming(true)
@@ -123,11 +123,11 @@ export function AdminAnnouncementsPage() {
     ? [
         { kind: 'ALL', label: '전체' },
         { kind: 'ORG_PICK', label: '특정 기관' },
-        { kind: 'GROUP', label: '특정 그룹' },
+        { kind: 'WORKSPACE', label: '특정 워크스페이스' },
       ]
     : [
         { kind: 'ORG_ALL', label: '우리 기관 전체' },
-        { kind: 'GROUP', label: '특정 그룹' },
+        { kind: 'WORKSPACE', label: '특정 워크스페이스' },
       ]
 
   return (
@@ -185,7 +185,7 @@ export function AdminAnnouncementsPage() {
                       checked={target === option.kind}
                       onChange={() => {
                         setTarget(option.kind)
-                        setGroupId(undefined)
+                        setWorkspaceId(undefined)
                       }}
                     />
                     {option.label}
@@ -213,16 +213,16 @@ export function AdminAnnouncementsPage() {
               </FormField>
             )}
 
-            {target === 'GROUP' && (
+            {target === 'WORKSPACE' && (
               <div className="flex flex-wrap gap-4">
                 {isSysAdmin && (
-                  <FormField label="그룹의 기관" required>
+                  <FormField label="워크스페이스의 기관" required>
                     <Select
                       className="w-64"
                       value={orgId ?? ''}
                       onChange={(event) => {
                         setOrgId(event.target.value ? Number(event.target.value) : undefined)
-                        setGroupId(undefined)
+                        setWorkspaceId(undefined)
                       }}
                     >
                       <option value="">기관 선택</option>
@@ -234,19 +234,19 @@ export function AdminAnnouncementsPage() {
                     </Select>
                   </FormField>
                 )}
-                <FormField label="대상 그룹" required error={fieldErrors.groupId}>
+                <FormField label="대상 워크스페이스" required error={fieldErrors.workspaceId}>
                   <Select
                     className="w-64"
-                    value={groupId ?? ''}
-                    disabled={!groupsEnabled || groups.isPending}
+                    value={workspaceId ?? ''}
+                    disabled={!workspacesEnabled || workspaces.isPending}
                     onChange={(event) => {
-                      setGroupId(event.target.value ? Number(event.target.value) : undefined)
+                      setWorkspaceId(event.target.value ? Number(event.target.value) : undefined)
                     }}
                   >
-                    <option value="">그룹 선택</option>
-                    {(groups.data ?? []).map((group) => (
-                      <option key={group.id} value={group.id}>
-                        {group.name} ({group.memberCount}명)
+                    <option value="">워크스페이스 선택</option>
+                    {(workspaces.data ?? []).map((workspace) => (
+                      <option key={workspace.id} value={workspace.id}>
+                        {workspace.name} ({workspace.memberCount}명)
                       </option>
                     ))}
                   </Select>

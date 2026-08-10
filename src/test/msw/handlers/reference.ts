@@ -11,7 +11,7 @@ function initialOrgs(): Schemas['OrgSummaryResponse'][] {
       id: 1,
       name: '정보컴퓨터공학부 실습지원센터',
       slug: 'cse-lab',
-      description: '학부 수업·캡스톤용 서버 자원 제공',
+      description: '학부 수업·캡스톤용 서버 리소스 제공',
       status: 'ACTIVE',
       hidden: false,
     },

@@ -30,7 +30,7 @@ export function FilterBar<S>({
         // 탭처럼 보이지만 목록 필터 토글 버튼이다 — ARIA tabs 패턴(로빙
         // 탭인덱스·화살표 이동·tabpanel)을 구현하지 않으므로 tab 롤을 쓰지
         // 않는다. 진짜 탭은 ui/Tabs 컴포넌트를 쓴다.
-        <div role="group" aria-label="상태 필터" className="flex flex-wrap gap-1">
+        <div role="workspace" aria-label="상태 필터" className="flex flex-wrap gap-1">
           {tabs.map((tab) => {
             const selected = tab.status === status
             return (

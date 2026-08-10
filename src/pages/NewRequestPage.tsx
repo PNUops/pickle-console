@@ -4,14 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import {
-  fetchGroups,
+  fetchWorkspaces,
   fetchOrgs,
   fetchRequestOptions,
   fetchOsImages,
   fetchVmFlavors,
-  type CreateVmRequest,
+  type CreateRequest,
   type VmFlavor,
-  type VmRequestDetail,
+  type RequestDetail,
 } from '../api/queries'
 import {
   Alert,
@@ -38,11 +38,11 @@ import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { SUBDOMAIN_RE } from '../lib/validation'
 
-const STEPS = ['그룹·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
+const STEPS = ['종류', '워크스페이스·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
 
 /** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용). */
 const FIELD_LABELS: Record<string, string> = {
-  groupId: '그룹',
+  workspaceId: '워크스페이스',
   orgId: '기관',
   imageId: 'OS',
   flavorId: '사양 프리셋',
@@ -60,7 +60,7 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 interface WizardState {
-  groupId: number | null
+  workspaceId: number | null
   orgId: number | null
   imageId: number | null
   flavorId: number | null
@@ -78,7 +78,7 @@ interface WizardState {
 }
 
 const INITIAL_STATE: WizardState = {
-  groupId: null,
+  workspaceId: null,
   orgId: null,
   imageId: null,
   flavorId: null,
@@ -127,7 +127,7 @@ function exceedsFlavor(state: WizardState, flavor: VmFlavor | undefined): boolea
 }
 
 export function NewRequestPage() {
-  const groups = useQuery({ queryKey: ['groups'], queryFn: fetchGroups })
+  const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: fetchWorkspaces })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
@@ -139,30 +139,30 @@ export function NewRequestPage() {
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
-  const [submitted, setSubmitted] = useState<VmRequestDetail | null>(null)
+  const [submitted, setSubmitted] = useState<RequestDetail | null>(null)
 
   const update = (patch: Partial<WizardState>) => setState((prev) => ({ ...prev, ...patch }))
 
   const isLoading =
-    groups.isPending ||
+    workspaces.isPending ||
     orgs.isPending ||
     osImages.isPending ||
     flavors.isPending ||
     options.isPending
   const loadError =
-    groups.error ?? orgs.error ?? osImages.error ?? flavors.error ?? options.error
+    workspaces.error ?? orgs.error ?? osImages.error ?? flavors.error ?? options.error
   const ready = !isLoading && !loadError
 
   // 신청은 구성원이면 누구나 할 수 있다 — 문턱은 승인이 잡는다.
-  const eligibleGroups = groups.data ?? []
+  const eligibleWorkspaces = workspaces.data ?? []
   const selectedImage = osImages.data?.find((t) => t.id === state.imageId)
   const selectedFlavor = flavors.data?.find((f) => f.id === state.flavorId)
 
   const validateStep = (index: number): FieldErrors => {
     const next: FieldErrors = {}
-    if (index === 0) {
-      if (state.groupId == null) next.groupId = '신청할 그룹을 선택해 주세요.'
-      if (state.orgId == null) next.orgId = '자원을 제공할 기관을 선택해 주세요.'
+    if (index === 1) {
+      if (state.workspaceId == null) next.workspaceId = '신청할 워크스페이스를 선택해 주세요.'
+      if (state.orgId == null) next.orgId = '리소스를 제공할 기관을 선택해 주세요.'
       if (state.displayName.length > 100)
         next.displayName = '표시명은 100자 이하로 입력해 주세요.'
       if (state.desiredSlug) {
@@ -174,7 +174,7 @@ export function NewRequestPage() {
         }
       }
     }
-    if (index === 1) {
+    if (index === 2) {
       // 목록에 없는 id(초안에 남은 은퇴 OS·프리셋, 직접 넣은 값)는 선택되지 않은
       // 것으로 본다 — 그대로 두면 요약이 원시 id를 보여주고 제출이 422로 튕긴다.
       if (state.imageId == null || !selectedImage) next.imageId = 'OS를 선택해 주세요.'
@@ -189,7 +189,7 @@ export function NewRequestPage() {
           next.specReason = '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
       }
     }
-    if (index === 2) {
+    if (index === 3) {
       if (!state.purpose.trim()) next.purpose = '사용 목적을 입력해 주세요.'
       else if (state.purpose.length > 2000)
         next.purpose = '사용 목적은 2000자 이하로 입력해 주세요.'
@@ -229,14 +229,14 @@ export function NewRequestPage() {
   }, [state, submitted])
 
   const submit = useMutation({
-    mutationFn: async (body: CreateVmRequest) => {
-      const { data, error } = await api.POST('/vm-requests', { body })
+    mutationFn: async (body: CreateRequest) => {
+      const { data, error } = await api.POST('/requests', { body })
       if (!data) throw toApiError(error, '신청을 제출하지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return data
     },
     onSuccess: (data) => {
       sessionStorage.removeItem(DRAFT_KEY)
-      void queryClient.invalidateQueries({ queryKey: ['vm-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['requests'] })
       setSubmitted(data)
     },
     onError: (err) => {
@@ -273,22 +273,25 @@ export function NewRequestPage() {
     goToStep(Math.max(step - 1, 0))
   }
 
-  const buildPayload = (): CreateVmRequest => ({
-    groupId: state.groupId!,
+  const buildPayload = (): CreateRequest => ({
+    type: 'VM',
+    workspaceId: state.workspaceId!,
     orgId: state.orgId!,
-    imageId: state.imageId!,
-    flavorId: state.flavorId!,
     purpose: state.purpose.trim(),
     courseOrProject: state.courseOrProject.trim() || null,
-    specReason: state.specReason.trim() || null,
     extraNote: state.extraNote.trim() || null,
-    reqVcpu: state.reqVcpu,
-    reqMemoryMb: state.reqMemoryMb,
-    reqDiskGb: state.reqDiskGb,
     reqStartDate: state.reqStartDate || null,
     reqEndDate: state.reqEndDate || null,
     displayName: state.displayName.trim() || null,
-    desiredSlug: state.desiredSlug || null,
+    vm: {
+      imageId: state.imageId!,
+      flavorId: state.flavorId!,
+      reqVcpu: state.reqVcpu,
+      reqMemoryMb: state.reqMemoryMb,
+      reqDiskGb: state.reqDiskGb,
+      specReason: state.specReason.trim() || null,
+      desiredSlug: state.desiredSlug || null,
+    },
   })
 
   const onSubmit = () => {
@@ -309,9 +312,9 @@ export function NewRequestPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">VM 신청</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">리소스 신청</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          네 단계로 VM 사용 신청서를 작성합니다. 제출하면 관리자가 검토합니다.
+          다섯 단계로 신청서를 작성합니다. 제출하면 관리자가 검토합니다.
         </p>
       </div>
 
@@ -320,32 +323,53 @@ export function NewRequestPage() {
       <Card>
         <CardContent className="space-y-5 py-6">
           {step === 0 && (
+            <div className="space-y-4">
+              <p className="text-sm text-neutral-600">무엇을 신청할지 고르세요.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  aria-pressed="true"
+                  className="cursor-pointer rounded-xl border-2 border-primary-500 bg-primary-50/40 p-4 text-left"
+                >
+                  <span className="block font-medium text-neutral-900">가상 머신 (VM)</span>
+                  <span className="mt-1 block text-sm text-neutral-500">
+                    SSH로 접속해 쓰는 리눅스 서버입니다.
+                  </span>
+                </button>
+              </div>
+              <p className="text-xs text-neutral-400">
+                컨테이너와 LLM API 키는 준비 중입니다.
+              </p>
+            </div>
+          )}
+
+          {step === 1 && (
             <>
-              {eligibleGroups.length === 0 && (
+              {eligibleWorkspaces.length === 0 && (
                 <Alert variant="warning">
-                  VM을 신청할 수 있는 그룹이 없습니다. 그룹에 속해 있어야 신청할 수
+                  VM을 신청할 수 있는 워크스페이스가 없습니다. 워크스페이스에 속해 있어야 신청할 수
                   있습니다.{' '}
-                  <Link to="/console/groups" className="font-medium underline">
-                    내 그룹에서 그룹을 만들어 주세요.
+                  <Link to="/console/workspaces" className="font-medium underline">
+                    내 워크스페이스에서 워크스페이스를 만들어 주세요.
                   </Link>
                 </Alert>
               )}
               <FormField
-                label="신청 그룹"
+                label="신청 워크스페이스"
                 required
-                error={errors.groupId}
-                description="VM은 그룹 명의로 만들어집니다. 만들어진 VM은 신청한 사람만 접근할 수 있고, 접근 권한은 생성 후 VM 상세에서 부여합니다."
+                error={errors.workspaceId}
+                description="VM은 워크스페이스 명의로 만들어집니다. 만들어진 VM은 신청한 사람만 접근할 수 있고, 접근 권한은 생성 후 VM 상세에서 부여합니다."
               >
                 <Select
-                  value={state.groupId ?? ''}
+                  value={state.workspaceId ?? ''}
                   onChange={(event) =>
-                    update({ groupId: event.target.value ? Number(event.target.value) : null })
+                    update({ workspaceId: event.target.value ? Number(event.target.value) : null })
                   }
                 >
-                  <option value="">그룹 선택</option>
-                  {eligibleGroups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name} ({group.slug})
+                  <option value="">워크스페이스 선택</option>
+                  {eligibleWorkspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
                     </option>
                   ))}
                 </Select>
@@ -398,7 +422,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 2 && (
             <>
               <fieldset>
                 <legend className="text-sm font-medium text-neutral-700">
@@ -549,7 +573,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <>
               <FormField label="사용 목적" required error={errors.purpose}>
                 <Textarea
@@ -594,7 +618,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <>
               {submitError && (
                 <Alert variant="danger" title={submitError}>
@@ -611,8 +635,8 @@ export function NewRequestPage() {
               )}
               <SummaryTable
                 state={state}
-                groupName={
-                  eligibleGroups.find((g) => g.id === state.groupId)?.name ?? String(state.groupId)
+                workspaceName={
+                  eligibleWorkspaces.find((g) => g.id === state.workspaceId)?.name ?? String(state.workspaceId)
                 }
                 orgName={orgs.data?.find((o) => o.id === state.orgId)?.name ?? String(state.orgId)}
                 imageName={selectedImage?.displayName ?? String(state.imageId)}
@@ -645,19 +669,19 @@ export function NewRequestPage() {
 
 function SummaryTable({
   state,
-  groupName,
+  workspaceName,
   orgName,
   imageName,
   flavorName,
 }: {
   state: WizardState
-  groupName: string
+  workspaceName: string
   orgName: string
   imageName: string
   flavorName: string
 }) {
   const rows: [string, string][] = [
-    ['그룹', groupName],
+    ['워크스페이스', workspaceName],
     ['기관', orgName],
     ['OS', imageName],
     ['사양 프리셋', flavorName],
@@ -699,7 +723,7 @@ function SummaryTable({
   )
 }
 
-function SubmitSuccess({ request }: { request: VmRequestDetail }) {
+function SubmitSuccess({ request }: { request: RequestDetail }) {
   return (
     <div className="mx-auto max-w-lg py-12 text-center">
       <div

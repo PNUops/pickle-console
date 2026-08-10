@@ -55,7 +55,7 @@ function renderSection(
 describe('VM 네트워크 탭 — 캠퍼스 IP', () => {
   test('일반 USER(OWNER)가 신청 폼을 보고 신청 → 상태 카드 → 취소까지 진행한다', async () => {
     const user = userEvent.setup()
-    renderNetworkTab(57) // web-lab: 그룹 12 OWNER
+    renderNetworkTab(57) // web-lab: 워크스페이스 12 OWNER
 
     await screen.findByRole('heading', { name: 'web-lab' })
     // 개정된 안내: 교내 IP(10.x) 연결 + 기본 차단·신청 포트만 개방 + 공인 IP는 별도.

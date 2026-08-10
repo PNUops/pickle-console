@@ -61,7 +61,7 @@ describe('관리자 사용자 목록', () => {
     await user.click(within(panel).getByRole('button', { name: '계정 비활성화' }))
     const disableBtn = screen.getByRole('button', { name: '비활성화' })
     expect(disableBtn).toBeDisabled()
-    await user.type(screen.getByPlaceholderText(/비활성화 사유를 입력/), '자원 남용 신고 확인')
+    await user.type(screen.getByPlaceholderText(/비활성화 사유를 입력/), '리소스 남용 신고 확인')
     await user.click(screen.getByRole('button', { name: '비활성화' }))
 
     // 상세가 갱신돼 해제 버튼이 나타난다
@@ -83,7 +83,7 @@ describe('관리자 사용자 목록', () => {
     expect(await screen.findByText(/2단계 인증을 초기화했습니다/)).toBeInTheDocument()
   })
 
-  test('그룹 멤버십의 VM 보기 링크로 VM 관리에 그룹 필터가 적용된다', async () => {
+  test('워크스페이스 멤버십의 VM 보기 링크로 VM 관리에 워크스페이스 필터가 적용된다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
@@ -92,7 +92,7 @@ describe('관리자 사용자 목록', () => {
     const membership = (await drawer.findByText('연구팀')).closest('li')!
     await user.click(within(membership).getByRole('link', { name: 'VM 보기' }))
 
-    // 라우트 이동으로 드로어가 닫히고, 해당 그룹의 VM만 조회된다 (연구팀 VM 없음)
+    // 라우트 이동으로 드로어가 닫히고, 해당 워크스페이스의 VM만 조회된다 (연구팀 VM 없음)
     await screen.findByRole('heading', { name: 'VM 관리' })
     expect(screen.queryByRole('dialog', { name: '사용자 상세' })).not.toBeInTheDocument()
     expect(await screen.findByText('표시할 VM이 없습니다.')).toBeInTheDocument()
@@ -152,7 +152,7 @@ describe('관리자 사용자 목록', () => {
     renderAsOrgAdmin()
 
     await openDetail(user, '홍길동')
-    await screen.findByText('그룹 멤버십')
+    await screen.findByText('워크스페이스 멤버십')
     expect(screen.getByText('계정 상태 관리')).toBeInTheDocument()
     expect(
       screen.getByText('계정 상태 변경과 2단계 인증 초기화는 시스템 관리자만 수행할 수 있습니다.'),

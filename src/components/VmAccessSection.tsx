@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addVmAccessGrant,
-  fetchGroup,
+  fetchWorkspace,
   fetchVmAccessGrants,
   removeVmAccessGrant,
   updateVmAccessGrant,
@@ -27,13 +27,13 @@ import { RESOURCE_ROLE_HINTS, RESOURCE_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 
 const ASSIGNABLE: ResourceRole[] = ['OWNER', 'EDITOR', 'MEMBER', 'VIEWER']
-/** 그룹 전체에는 자원을 좌우하는 등급을 줄 수 없다 (서버도 같은 제한). */
-const GROUP_WIDE_ASSIGNABLE: ResourceRole[] = ['MEMBER', 'VIEWER']
+/** 워크스페이스 전체에는 리소스를 좌우하는 등급을 줄 수 없다 (서버도 같은 제한). */
+const WORKSPACE_WIDE_ASSIGNABLE: ResourceRole[] = ['MEMBER', 'VIEWER']
 
 /**
  * 이 VM에 누가 접근할 수 있는지를 정하는 탭.
  *
- * 접근은 이 목록으로만 판정한다 — 그룹에 속해 있다는 것만으로는 이 VM에 닿지
+ * 접근은 이 목록으로만 판정한다 — 워크스페이스에 속해 있다는 것만으로는 이 VM에 닿지
  * 않는다. 그래서 화면의 중심은 "누구에게 무엇까지"이고, 회수할 때는 회수가
  * 닿지 않는 것(이미 본 비밀번호, 이미 열린 SSH 세션)을 같이 말해 준다.
  */
@@ -43,13 +43,13 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
     queryKey: ['vms', vmId, 'access'],
     queryFn: () => fetchVmAccessGrants(vmId),
   })
-  // 소유 그룹은 응답이 알려 준다 — VM 상세를 못 여는 사람도 이 화면은 열기 때문에
-  // 그룹 id 를 상세에서 가져올 수 없다.
-  const groupId = access.data?.vm.groupId
-  const group = useQuery({
-    queryKey: ['groups', groupId],
-    queryFn: () => fetchGroup(groupId!),
-    enabled: groupId != null,
+  // 소유 워크스페이스는 응답이 알려 준다 — VM 상세를 못 여는 사람도 이 화면은 열기 때문에
+  // 워크스페이스 id 를 상세에서 가져올 수 없다.
+  const workspaceId = access.data?.resource.workspaceId
+  const workspace = useQuery({
+    queryKey: ['workspaces', workspaceId],
+    queryFn: () => fetchWorkspace(workspaceId!),
+    enabled: workspaceId != null,
   })
   const [error, setError] = useState<string | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<VmAccessGrant | null>(null)
@@ -84,10 +84,10 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
 
   const rows = access.data?.grants ?? []
   const listed = new Set(rows.map((grant) => grant.user?.userId).filter(Boolean))
-  const candidates = (group.data?.members ?? []).filter(
+  const candidates = (workspace.data?.members ?? []).filter(
     (member) => !listed.has(member.userId),
   )
-  const hasGroupWide = rows.some((grant) => grant.granteeType === 'GROUP')
+  const hasWorkspaceWide = rows.some((grant) => grant.granteeType === 'WORKSPACE')
 
   return (
     <div className="space-y-4">
@@ -97,7 +97,7 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-neutral-600">
-            이 VM에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 그룹이라도
+            이 VM에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스이라도
             목록에 없으면 이름과 상태만 보입니다.
           </p>
           {error && <Alert variant="danger">{error}</Alert>}
@@ -115,11 +115,11 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
                 <li key={grant.id} className="flex flex-wrap items-center gap-3 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-neutral-900">
-                      {grant.granteeType === 'GROUP' ? '그룹 전체' : grant.user?.name}
+                      {grant.granteeType === 'WORKSPACE' ? '워크스페이스 전체' : grant.user?.name}
                     </p>
                     <p className="truncate text-xs text-neutral-500">
-                      {grant.granteeType === 'GROUP'
-                        ? '이 VM을 소유한 그룹의 구성원 전원'
+                      {grant.granteeType === 'WORKSPACE'
+                        ? '이 VM을 소유한 워크스페이스의 구성원 전원'
                         : grant.user?.email}
                       {' · '}
                       {formatDateTime(grant.createdAt)} 부여
@@ -137,7 +137,7 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
                       })
                     }
                   >
-                    {(grant.granteeType === 'GROUP' ? GROUP_WIDE_ASSIGNABLE : ASSIGNABLE).map(
+                    {(grant.granteeType === 'WORKSPACE' ? WORKSPACE_WIDE_ASSIGNABLE : ASSIGNABLE).map(
                       (role) => (
                         <option key={role} value={role}>
                           {RESOURCE_ROLE_LABELS[role]}
@@ -167,7 +167,7 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
       <AddGrantForm
         vmId={vmId}
         candidates={candidates}
-        hasGroupWide={hasGroupWide}
+        hasWorkspaceWide={hasWorkspaceWide}
         onError={setError}
         onDone={invalidate}
       />
@@ -187,26 +187,26 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
 function AddGrantForm({
   vmId,
   candidates,
-  hasGroupWide,
+  hasWorkspaceWide,
   onError,
   onDone,
 }: {
   vmId: number
   candidates: { userId: number; name: string; email: string }[]
-  hasGroupWide: boolean
+  hasWorkspaceWide: boolean
   onError: (message: string | null) => void
   onDone: () => void
 }) {
   const [target, setTarget] = useState<string>('')
   const [role, setRole] = useState<ResourceRole>('MEMBER')
-  const groupWide = target === 'GROUP'
-  const assignable = groupWide ? GROUP_WIDE_ASSIGNABLE : ASSIGNABLE
+  const workspaceWide = target === 'WORKSPACE'
+  const assignable = workspaceWide ? WORKSPACE_WIDE_ASSIGNABLE : ASSIGNABLE
 
   const add = useMutation({
     mutationFn: () =>
       addVmAccessGrant(vmId, {
-        granteeType: groupWide ? 'GROUP' : 'USER',
-        userId: groupWide ? undefined : Number(target),
+        granteeType: workspaceWide ? 'WORKSPACE' : 'USER',
+        userId: workspaceWide ? undefined : Number(target),
         role,
       }),
     onSuccess: () => {
@@ -234,7 +234,7 @@ function AddGrantForm({
           <FormField label="대상" className="w-full sm:w-64">
             <Select value={target} onChange={(event) => setTarget(event.target.value)}>
               <option value="">선택</option>
-              {!hasGroupWide && <option value="GROUP">그룹 전체</option>}
+              {!hasWorkspaceWide && <option value="WORKSPACE">워크스페이스 전체</option>}
               {candidates.map((member) => (
                 <option key={member.userId} value={String(member.userId)}>
                   {member.name} ({member.email})
@@ -263,7 +263,7 @@ function AddGrantForm({
           </Button>
         </form>
         <p className="mt-3 text-xs text-neutral-500">
-          이 VM을 소유한 그룹의 구성원만 부여 대상이 됩니다. 그룹 전체에는 참여자
+          이 VM을 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자
           또는 열람자까지만 줄 수 있습니다.
         </p>
       </CardContent>
@@ -283,7 +283,7 @@ function RevokeModal({
   onCancel: () => void
   onConfirm: () => void
 }) {
-  const who = grant.granteeType === 'GROUP' ? '그룹 전체' : (grant.user?.name ?? '이 사용자')
+  const who = grant.granteeType === 'WORKSPACE' ? '워크스페이스 전체' : (grant.user?.name ?? '이 사용자')
   return (
     <Modal
       open

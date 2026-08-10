@@ -6,13 +6,13 @@ import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { canDecideRequest } from '../auth/permissions'
 import {
-  fetchAdminVmRequest,
+  fetchAdminRequest,
   fetchApprovalContext,
   fetchOsImages,
   fetchVmFlavors,
   type ApprovalContext,
-  type ApproveVmRequest,
-  type VmRequestDetail,
+  type ApproveRequest,
+  type RequestDetail,
   type OsImage,
 } from '../api/queries'
 import {
@@ -24,8 +24,8 @@ import {
   CardHeader,
   CardTitle,
   FormField,
-  GroupKindBadge,
-  GroupRoleBadge,
+  WorkspaceKindBadge,
+  WorkspaceRoleBadge,
   Input,
   Modal,
   RequestStatusBadge,
@@ -53,8 +53,8 @@ export function AdminRequestDetailPage() {
   const canDecide = !!user && canDecideRequest(user.role)
 
   const request = useQuery({
-    queryKey: ['admin', 'vm-requests', requestId],
-    queryFn: () => fetchAdminVmRequest(requestId),
+    queryKey: ['admin', 'requests', requestId],
+    queryFn: () => fetchAdminRequest(requestId),
   })
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
@@ -108,7 +108,8 @@ export function AdminRequestDetailPage() {
           {data.review && (
             <DecisionResultCard
               review={data.review}
-              imageName={imageName(data.review.grantedImageId)}
+              vmGranted={data.vm?.granted}
+              imageName={imageName(data.vm?.granted?.grantedImageId)}
             />
           )}
 
@@ -119,28 +120,28 @@ export function AdminRequestDetailPage() {
             <CardContent>
               <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
                 <Field label="신청자">{data.requesterName}</Field>
-                <Field label="그룹">{data.groupName}</Field>
+                <Field label="워크스페이스">{data.workspaceName}</Field>
                 <Field label="기관">{data.orgName}</Field>
-                <Field label="OS">{imageName(data.imageId)}</Field>
-                <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
+                <Field label="OS">{imageName(data.vm?.imageId)}</Field>
+                <Field label="사양 프리셋">{flavorName(data.vm?.flavorId)}</Field>
                 <Field label="요청 사양">
-                  {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
+                  {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
                 </Field>
                 <Field label="사용 기간">
                   {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
                 </Field>
                 <Field label="용도">{data.purpose}</Field>
                 <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
-                <Field label="사양 사유">{data.specReason ?? '—'}</Field>
+                <Field label="사양 사유">{data.vm?.specReason ?? '—'}</Field>
                 <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
                 <Field label="표시명">{data.displayName ?? '—'}</Field>
-                <Field label="희망 호스트명(슬러그)">{data.desiredSlug ?? '자동 생성'}</Field>
+                <Field label="희망 호스트명(슬러그)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
                 {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
-                {data.desiredSubdomain && (
+                {data.vm?.desiredSubdomain && (
                   <Field label="서브도메인 선지정">
-                    {data.rootDomain
-                      ? `${data.desiredSubdomain}.${data.rootDomain}`
-                      : data.desiredSubdomain}
+                    {data.vm?.rootDomain
+                      ? `${data.vm?.desiredSubdomain}.${data.vm?.rootDomain}`
+                      : data.vm?.desiredSubdomain}
                   </Field>
                 )}
               </dl>
@@ -198,9 +199,11 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function DecisionResultCard({
   review,
+  vmGranted,
   imageName,
 }: {
-  review: NonNullable<VmRequestDetail['review']>
+  review: NonNullable<RequestDetail['review']>
+  vmGranted: NonNullable<RequestDetail['vm']>['granted']
   imageName: string
 }) {
   const approved = review.decision === 'APPROVE'
@@ -216,11 +219,11 @@ function DecisionResultCard({
           <Field label="처리 시각">{formatDateTime(review.decidedAt)}</Field>
           {review.comment && <Field label="검토 의견">{review.comment}</Field>}
           {approved &&
-            review.grantedVcpu != null &&
-            review.grantedMemoryMb != null &&
-            review.grantedDiskGb != null && (
+            vmGranted?.grantedVcpu != null &&
+            vmGranted?.grantedMemoryMb != null &&
+            vmGranted?.grantedDiskGb != null && (
               <Field label="부여 사양">
-                {formatSpec(review.grantedVcpu, review.grantedMemoryMb, review.grantedDiskGb)}
+                {formatSpec(vmGranted?.grantedVcpu, vmGranted?.grantedMemoryMb, vmGranted?.grantedDiskGb)}
               </Field>
             )}
           {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
@@ -231,7 +234,7 @@ function DecisionResultCard({
           )}
           {approved && (
             <Field label="배치 노드">
-              {review.nodeId == null ? '자동 배치' : `노드 #${review.nodeId}`}
+              {vmGranted?.nodeId == null ? '자동 배치' : `노드 #${vmGranted?.nodeId}`}
             </Field>
           )}
         </dl>
@@ -247,7 +250,7 @@ function DecisionSection({
   osImages,
   onNotice,
 }: {
-  request: VmRequestDetail
+  request: RequestDetail
   osImages: OsImage[]
   onNotice: (notice: Notice | null) => void
 }) {
@@ -255,13 +258,13 @@ function DecisionSection({
   const [mode, setMode] = useState<'approve' | 'reject'>('approve')
 
   // 승인 폼 — 요청 사양으로 프리필
-  const [vcpu, setVcpu] = useState(String(request.reqVcpu))
-  const [memoryMb, setMemoryMb] = useState(String(request.reqMemoryMb))
-  const [diskGb, setDiskGb] = useState(String(request.reqDiskGb))
-  const [imageId, setImageId] = useState(String(request.imageId))
+  const [vcpu, setVcpu] = useState(String(request.vm?.reqVcpu))
+  const [memoryMb, setMemoryMb] = useState(String(request.vm?.reqMemoryMb))
+  const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
+  const [imageId, setImageId] = useState(String(request.vm?.imageId))
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
-  const [grantedSlug, setGrantedSlug] = useState(request.desiredSlug ?? '')
+  const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
   const [nodeId, setNodeId] = useState('')
   const [approveComment, setApproveComment] = useState('')
 
@@ -272,7 +275,7 @@ function DecisionSection({
   const [confirm, setConfirm] = useState<'approve' | 'reject' | null>(null)
 
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: ['admin', 'vm-requests'] })
+    queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] })
 
   const handleError = (error: unknown, fallback: string) => {
     setConfirm(null)
@@ -298,8 +301,8 @@ function DecisionSection({
   }
 
   const approve = useMutation({
-    mutationFn: async (body: ApproveVmRequest) => {
-      const { data, error } = await api.POST('/admin/vm-requests/{requestId}/approve', {
+    mutationFn: async (body: ApproveRequest) => {
+      const { data, error } = await api.POST('/admin/requests/{requestId}/approve', {
         params: { path: { requestId: request.id } },
         body,
       })
@@ -319,7 +322,7 @@ function DecisionSection({
 
   const reject = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST('/admin/vm-requests/{requestId}/reject', {
+      const { data, error } = await api.POST('/admin/requests/{requestId}/reject', {
         params: { path: { requestId: request.id } },
         body: { comment: rejectComment.trim() },
       })
@@ -337,16 +340,18 @@ function DecisionSection({
     onError: (error) => handleError(error, '신청을 반려하지 못했습니다.'),
   })
 
-  const approveBody = (): ApproveVmRequest => ({
-    grantedVcpu: Number(vcpu),
-    grantedMemoryMb: Number(memoryMb),
-    grantedDiskGb: Number(diskGb),
-    grantedImageId: Number(imageId),
+  const approveBody = (): ApproveRequest => ({
     grantedStartDate: startDate || null,
     grantedEndDate: endDate || null,
-    grantedSlug: grantedSlug.trim() || null,
-    nodeId: nodeId ? Number(nodeId) : null,
     comment: approveComment.trim() ? approveComment.trim() : null,
+    vm: {
+      grantedVcpu: Number(vcpu),
+      grantedMemoryMb: Number(memoryMb),
+      grantedDiskGb: Number(diskGb),
+      grantedImageId: Number(imageId),
+      grantedSlug: grantedSlug.trim() || null,
+      nodeId: nodeId ? Number(nodeId) : null,
+    },
   })
 
   const submitApprove = (event: FormEvent) => {
@@ -393,7 +398,7 @@ function DecisionSection({
       <CardHeader className="flex items-center justify-between gap-4">
         <CardTitle>검토 결정</CardTitle>
         {/* 모드 전환 토글 버튼 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 */}
-        <div role="group" aria-label="결정 종류" className="flex gap-1">
+        <div role="workspace" aria-label="결정 종류" className="flex gap-1">
           {(
             [
               { key: 'approve', label: '승인' },
@@ -600,7 +605,7 @@ function DecisionSection({
 
 function ApprovalContextPanel({ requestId }: { requestId: number }) {
   const context = useQuery({
-    queryKey: ['admin', 'vm-requests', requestId, 'context'],
+    queryKey: ['admin', 'requests', requestId, 'context'],
     queryFn: () => fetchApprovalContext(requestId),
   })
 
@@ -645,7 +650,7 @@ function ApprovalContextPanel({ requestId }: { requestId: number }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">신청자 보유 자원</CardTitle>
+          <CardTitle className="text-sm">신청자 보유 리소스</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-neutral-700">
           <VmBriefList vms={data.applicantResources.activeVms} />
@@ -655,23 +660,23 @@ function ApprovalContextPanel({ requestId }: { requestId: number }) {
 
       <Card>
         <CardHeader className="flex items-center gap-2">
-          <CardTitle className="text-sm">신청 그룹</CardTitle>
-          <GroupKindBadge kind={data.group.kind} />
+          <CardTitle className="text-sm">신청 워크스페이스</CardTitle>
+          <WorkspaceKindBadge kind={data.workspace.kind} />
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-neutral-700">
-          <p className="font-medium text-neutral-900">{data.group.name}</p>
+          <p className="font-medium text-neutral-900">{data.workspace.name}</p>
           <ul className="space-y-1">
-            {data.group.members.map((member) => (
+            {data.workspace.members.map((member) => (
               <li key={member.userId} className="flex items-center justify-between gap-2">
                 <span>{member.name}</span>
-                <GroupRoleBadge role={member.role} />
+                <WorkspaceRoleBadge role={member.role} />
               </li>
             ))}
           </ul>
           <div className="border-t border-neutral-100 pt-2">
-            <p className="mb-1 text-xs font-medium text-neutral-500">그룹 보유 VM</p>
-            <VmBriefList vms={data.group.activeVms} />
-            <TotalsLine totals={data.group.totals} />
+            <p className="mb-1 text-xs font-medium text-neutral-500">워크스페이스 보유 VM</p>
+            <VmBriefList vms={data.workspace.activeVms} />
+            <TotalsLine totals={data.workspace.totals} />
           </div>
         </CardContent>
       </Card>
@@ -705,7 +710,7 @@ function ApprovalContextPanel({ requestId }: { requestId: number }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">기관 자원 여유</CardTitle>
+          <CardTitle className="text-sm">기관 리소스 여유</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-neutral-700">
           {data.orgHeadroom.warnings.length > 0 && (

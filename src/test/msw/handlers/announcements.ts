@@ -5,17 +5,16 @@ import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
 
 type Schemas = components['schemas']
 type AnnouncementView = Schemas['AnnouncementView']
-type AdminGroupOption = Schemas['AdminGroupOptionResponse']
+type AdminWorkspaceOption = Schemas['AdminWorkspaceOptionResponse']
 
 /* ─── fixtures ─── */
 
-/** 그룹 선택지 — 기관별. SYS_ADMIN은 전체, ORG_ADMIN은 자기 기관 그룹만. */
-const groupOptionsByOrg: Record<number, AdminGroupOption[]> = {
+/** 워크스페이스 선택지 — 기관별. SYS_ADMIN은 전체, ORG_ADMIN은 자기 기관 워크스페이스만. */
+const workspaceOptionsByOrg: Record<number, AdminWorkspaceOption[]> = {
   1: [
     {
       id: 12,
       name: '캡스톤 3조',
-      slug: 'capstone-team3',
       memberCount: 4,
       kind: 'TEAM',
       createdAt: '2026-06-01T10:00:00+09:00',
@@ -23,7 +22,6 @@ const groupOptionsByOrg: Record<number, AdminGroupOption[]> = {
     {
       id: 15,
       name: '알고리즘 스터디',
-      slug: 'algo-study',
       memberCount: 6,
       kind: 'TEAM',
       createdAt: '2026-06-10T10:00:00+09:00',
@@ -33,7 +31,6 @@ const groupOptionsByOrg: Record<number, AdminGroupOption[]> = {
     {
       id: 21,
       name: 'AI 동아리',
-      slug: 'ai-club',
       memberCount: 5,
       kind: 'PROJECT',
       createdAt: '2026-06-15T10:00:00+09:00',
@@ -54,7 +51,7 @@ function initialAnnouncements(): StoredAnnouncement[] {
       title: '7월 정기 점검 안내',
       scope: 'ORG',
       orgId: 1,
-      groupId: null,
+      workspaceId: null,
       recipientCount: 132,
       createdAt: '2026-07-10T11:00:00+09:00',
     },
@@ -64,7 +61,7 @@ function initialAnnouncements(): StoredAnnouncement[] {
       title: '플랫폼 오픈 안내',
       scope: 'ALL',
       orgId: null,
-      groupId: null,
+      workspaceId: null,
       recipientCount: 480,
       createdAt: '2026-07-01T09:00:00+09:00',
     },
@@ -88,13 +85,12 @@ function toView({ senderOrgId: _senderOrgId, ...view }: StoredAnnouncement): Ann
   return view
 }
 
-/** 그룹 상세 픽스처 (계약 v0.19.0 — 구성원은 계정 상태 무관 전원). */
-const groupDetails: Record<number, Schemas['AdminGroupDetailResponse']> = {
+/** 워크스페이스 상세 픽스처 (계약 v0.19.0 — 구성원은 계정 상태 무관 전원). */
+const workspaceDetails: Record<number, Schemas['AdminWorkspaceDetailResponse']> = {
   12: {
     id: 12,
     kind: 'TEAM',
     name: '캡스톤 3조',
-    slug: 'capstone-team3',
     description: '캡스톤 디자인 3조',
     createdAt: '2026-06-01T10:00:00+09:00',
     memberCount: 4,
@@ -104,7 +100,7 @@ const groupDetails: Record<number, Schemas['AdminGroupDetailResponse']> = {
         userId: 42,
         name: '홍길동',
         email: 'example@pusan.ac.kr',
-        groupRole: 'OWNER',
+        workspaceRole: 'OWNER',
         userStatus: 'ACTIVE',
         joinedAt: '2026-06-01T10:00:00+09:00',
       },
@@ -112,7 +108,7 @@ const groupDetails: Record<number, Schemas['AdminGroupDetailResponse']> = {
         userId: 77,
         name: '박탈퇴',
         email: 'left.park@pusan.ac.kr',
-        groupRole: 'MEMBER',
+        workspaceRole: 'MEMBER',
         userStatus: 'WITHDRAWN',
         joinedAt: '2026-06-02T10:00:00+09:00',
       },
@@ -121,21 +117,21 @@ const groupDetails: Record<number, Schemas['AdminGroupDetailResponse']> = {
 }
 
 export const announcementHandlers: RequestHandler[] = [
-  http.get('*/api/v1/admin/groups/:groupId', ({ params }) => {
-    const detail = groupDetails[Number(params.groupId)]
+  http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => {
+    const detail = workspaceDetails[Number(params.workspaceId)]
     if (!detail) {
       return problemResponse({
         type: 'about:blank',
         title: '리소스를 찾을 수 없습니다',
         status: 404,
-        detail: '해당 그룹이 존재하지 않습니다.',
+        detail: '해당 워크스페이스가 존재하지 않습니다.',
         code: 'RESOURCE_NOT_FOUND',
       })
     }
     return HttpResponse.json(detail, { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/groups', ({ request }) => {
+  http.get('*/api/v1/admin/workspaces', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
@@ -148,15 +144,15 @@ export const announcementHandlers: RequestHandler[] = [
           title: '리소스를 찾을 수 없습니다',
           status: 404,
           detail: '요청한 리소스가 존재하지 않습니다.',
-          instance: '/api/v1/admin/groups',
+          instance: '/api/v1/admin/workspaces',
           code: 'RESOURCE_NOT_FOUND',
         })
       }
-      return HttpResponse.json(groupOptionsByOrg[profile.orgId ?? 0] ?? [], { status: 200 })
+      return HttpResponse.json(workspaceOptionsByOrg[profile.orgId ?? 0] ?? [], { status: 200 })
     }
     const options = orgId
-      ? (groupOptionsByOrg[Number(orgId)] ?? [])
-      : Object.values(groupOptionsByOrg).flat()
+      ? (workspaceOptionsByOrg[Number(orgId)] ?? [])
+      : Object.values(workspaceOptionsByOrg).flat()
     return HttpResponse.json(options, { status: 200 })
   }),
 
@@ -217,7 +213,7 @@ export const announcementHandlers: RequestHandler[] = [
         errors: [{ field: 'orgId', message: '자기 기관으로만 발송할 수 있습니다.' }],
       })
     }
-    if (body.scope === 'GROUP' && body.groupId == null) {
+    if (body.scope === 'WORKSPACE' && body.workspaceId == null) {
       return problemResponse({
         type: 'about:blank',
         title: '입력값이 올바르지 않습니다',
@@ -225,7 +221,7 @@ export const announcementHandlers: RequestHandler[] = [
         detail: '요청 값을 확인해 주세요.',
         instance: '/api/v1/admin/announcements',
         code: 'VALIDATION_FAILED',
-        errors: [{ field: 'groupId', message: '대상 그룹을 선택해 주세요.' }],
+        errors: [{ field: 'workspaceId', message: '대상 워크스페이스를 선택해 주세요.' }],
       })
     }
 
@@ -234,16 +230,16 @@ export const announcementHandlers: RequestHandler[] = [
         ? 480
         : body.scope === 'ORG'
           ? 132
-          : (Object.values(groupOptionsByOrg)
+          : (Object.values(workspaceOptionsByOrg)
               .flat()
-              .find((g) => g.id === body.groupId)?.memberCount ?? 0)
+              .find((g) => g.id === body.workspaceId)?.memberCount ?? 0)
     const created: StoredAnnouncement = {
       id: nextAnnouncementId++,
       senderOrgId: isSysTier(profile.role) ? null : (profile.orgId ?? null),
       title: body.title,
       scope: body.scope,
       orgId: body.scope === 'ORG' ? (body.orgId ?? profile.orgId ?? null) : null,
-      groupId: body.scope === 'GROUP' ? (body.groupId ?? null) : null,
+      workspaceId: body.scope === 'WORKSPACE' ? (body.workspaceId ?? null) : null,
       recipientCount,
       createdAt: new Date().toISOString(),
     }

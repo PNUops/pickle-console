@@ -22,7 +22,7 @@ describe('운영자 계층 화면 접근', () => {
     expect(screen.getByRole('link', { name: '승인 대기' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'VM 관리' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '사용자 관리' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '그룹 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '워크스페이스 관리' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '기관 관리' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '노드/IP' })).not.toBeInTheDocument()
   })

@@ -161,8 +161,8 @@ export function VmDetailPage() {
     data.settingsEditAllowed &&
     data.status !== 'DELETING' &&
     data.status !== 'DELETED'
-  // 접근 탭은 이 VM의 접근 권한을 관리할 수 있는 사람에게만 — 자원 소유자와
-  // 그룹 소유자다.
+  // 접근 탭은 이 VM의 접근 권한을 관리할 수 있는 사람에게만 — 리소스 소유자와
+  // 워크스페이스 소유자다.
   const accessVisible = data.accessManageAllowed && data.status !== 'DELETED'
   const tabs = VM_TABS.filter((tab) => {
     if (tab.id === 'settings') return settingsVisible
@@ -194,7 +194,7 @@ export function VmDetailPage() {
           </div>
           <p className="mt-1 text-sm text-neutral-500">
             {data.displayName && <span>{data.name} · </span>}
-            {data.hostname} · {data.groupName}
+            {data.hostname} · {data.workspaceName}
           </p>
         </div>
         <PowerControls vm={data} />
@@ -241,7 +241,7 @@ export function VmDetailPage() {
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
               <Field label="사양">{formatSpec(data.vcpu, data.memoryMb, data.diskGb)}</Field>
-              <Field label="그룹">{data.groupName}</Field>
+              <Field label="워크스페이스">{data.workspaceName}</Field>
               <Field label="내부 IP">{data.ipAddress ?? '할당 전'}</Field>
               <Field label="SSH 계정">{data.sshUsername}</Field>
               <Field label="사용 기간">
@@ -483,7 +483,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
           </code>
           <CopyButton value={command} label="복사" />
         </div>
-        <details className="group">
+        <details className="workspace">
           <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
             접속 방법 보기
           </summary>
@@ -583,7 +583,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
 
         {vm.passwordAvailable && !vm.passwordRevealAllowed && (
           <Alert variant="info">
-            이 VM은 비밀번호 열람이 제한되어 있습니다. 열람하려면 더 높은 그룹
+            이 VM은 비밀번호 열람이 제한되어 있습니다. 열람하려면 더 높은 워크스페이스
             역할이 필요합니다.
           </Alert>
         )}

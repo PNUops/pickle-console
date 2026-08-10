@@ -11,7 +11,7 @@ function renderVms(path = '/console/vms') {
 }
 
 describe('내 VM 목록', () => {
-  test('VM을 상태·사양·그룹과 함께 나열한다', async () => {
+  test('VM을 상태·사양·워크스페이스와 함께 나열한다', async () => {
     renderVms()
 
     const creatingRow = (
@@ -29,7 +29,7 @@ describe('내 VM 목록', () => {
   test('접근 권한이 없는 VM은 이름·상태만 나오고 누구에게 요청할지 알려 준다', async () => {
     renderVms()
 
-    // 같은 그룹의 VM이지만 접근 목록에 없다 — 상세로 가는 링크도, 사양도 없다.
+    // 같은 워크스페이스의 VM이지만 접근 목록에 없다 — 상세로 가는 링크도, 사양도 없다.
     const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
     expect(screen.queryByRole('link', { name: 'ml-notebook' })).not.toBeInTheDocument()
     expect(within(limitedRow).getByText('실행 중')).toBeInTheDocument()
@@ -43,7 +43,7 @@ describe('내 VM 목록', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('그룹 소유자는 안을 못 봐도 제한 행에서 접근 권한 관리로 갈 수 있다', async () => {
+  test('워크스페이스 소유자는 안을 못 봐도 제한 행에서 접근 권한 관리로 갈 수 있다', async () => {
     // 상세는 막혀 있으므로 목록이 유일한 진입점이고, 소유자가 떠난 VM을
     // 되살리는 길이기도 하다.
     server.use(vmSummaryAs(44, { accessManageAllowed: true }))

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { requestOptions } from '../test/msw/handlers/reference'
-import { createdVmRequestBodies } from '../test/msw/handlers/vm-requests'
+import { createdRequestBodies } from '../test/msw/handlers/requests'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -14,34 +14,42 @@ function renderWizard() {
   renderApp('/console/requests/new')
 }
 
+/** 종류 선택 단계 — 지금은 VM 하나뿐이라 넘어가기만 하면 된다. */
+async function passTypeStep(user: ReturnType<typeof userEvent.setup>) {
+  await screen.findByRole('button', { name: /가상 머신/ })
+  await user.click(screen.getByRole('button', { name: '다음' }))
+}
+
 async function passStep1(user: ReturnType<typeof userEvent.setup>) {
-  await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+  await passTypeStep(user)
+  await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
   await user.selectOptions(screen.getByLabelText('기관'), '1')
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 
 describe('VM 신청 위저드 — 단계 검증', () => {
-  test('그룹·기관을 선택하기 전에는 다음으로 넘어갈 수 없고, 속한 그룹이 모두 보인다', async () => {
+  test('워크스페이스·기관을 선택하기 전에는 다음으로 넘어갈 수 없고, 속한 워크스페이스가 모두 보인다', async () => {
     const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passTypeStep(user)
 
-    // 신청은 구성원이면 누구나 한다 — 문턱은 승인이 잡으므로 소속 그룹이 다 나온다.
-    const groupSelect = screen.getByLabelText('신청 그룹')
-    expect(groupSelect).toContainHTML('캡스톤 3조')
-    expect(groupSelect).toContainHTML('홍길동')
-    expect(groupSelect).toContainHTML('데이터베이스 실습')
-    expect(groupSelect).toContainHTML('알고리즘 스터디')
+    // 신청은 구성원이면 누구나 한다 — 문턱은 승인이 잡으므로 소속 워크스페이스가 다 나온다.
+    const workspaceSelect = await screen.findByLabelText('신청 워크스페이스')
+    expect(workspaceSelect).toContainHTML('캡스톤 3조')
+    expect(workspaceSelect).toContainHTML('홍길동')
+    expect(workspaceSelect).toContainHTML('데이터베이스 실습')
+    expect(workspaceSelect).toContainHTML('알고리즘 스터디')
 
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('신청할 그룹을 선택해 주세요.')).toBeInTheDocument()
-    expect(screen.getByText('자원을 제공할 기관을 선택해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('신청할 워크스페이스를 선택해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('리소스를 제공할 기관을 선택해 주세요.')).toBeInTheDocument()
   })
 
   test('OS와 사양 프리셋을 각각 골라야 하고, 프리셋 초과 시 사유가 필수가 된다', async () => {
     const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
+    await screen.findByRole('heading', { name: '리소스 신청' })
     await passStep1(user)
 
     // 두 축을 모두 고르지 않으면 다음으로 넘어갈 수 없다
@@ -98,9 +106,11 @@ describe('VM 신청 위저드 — 단계 검증', () => {
   })
 
   test('신청서에는 도메인(서브도메인·루트) 입력이 없다 — 도메인은 VM 생성 후 연결한다', async () => {
+    const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
-    await screen.findByLabelText('신청 그룹')
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passTypeStep(user)
+    await screen.findByLabelText('신청 워크스페이스')
 
     expect(screen.queryByLabelText('희망 서브도메인')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('루트 도메인')).not.toBeInTheDocument()
@@ -112,20 +122,20 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-user'))
     const first = renderApp('/console/requests/new')
-    await screen.findByRole('heading', { name: 'VM 신청' })
+    await screen.findByRole('heading', { name: '리소스 신청' })
 
-    // 1~2단계 진행: 그룹·기관 선택 후 OS·사양 프리셋 선택.
+    // 1~2단계 진행: 워크스페이스·기관 선택 후 OS·사양 프리셋 선택.
     await passStep1(user)
     await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
     await user.click(screen.getByRole('button', { name: /기본형/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await screen.findByLabelText('사용 목적') // 3단계 도착 (?step=3)
+    await screen.findByLabelText('사용 목적') // 용도 단계 도착 (?step=4)
 
-    // 브라우저 새로고침/뒤로가기를 재현: 앱을 다시 열어 ?step=2로 진입.
+    // 브라우저 새로고침/뒤로가기를 재현: 앱을 다시 열어 OS·사양 단계로 진입.
     first.unmount()
-    renderApp('/console/requests/new?step=2')
+    renderApp('/console/requests/new?step=3')
 
-    // 2단계가 열리고 OS·프리셋·사양 입력이 초안에서 복원된다.
+    // OS·사양 단계가 열리고 입력이 초안에서 복원된다.
     expect(await screen.findByLabelText('vCPU')).toHaveValue(2)
     expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
     expect(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ })).toHaveAttribute(
@@ -140,10 +150,10 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
 
   test('완료되지 않은 단계로 직접 진입하면 첫 미완료 단계로 돌려보낸다', async () => {
     server.use(refreshSuccessHandler('access-user'))
-    renderApp('/console/requests/new?step=4')
+    renderApp('/console/requests/new?step=5')
 
-    // 아무것도 입력하지 않았으므로 1단계(그룹·기관)로 되돌아간다.
-    expect(await screen.findByLabelText('신청 그룹')).toBeInTheDocument()
+    // 아무것도 입력하지 않았으므로 워크스페이스·기관 단계로 되돌아간다.
+    expect(await screen.findByLabelText('신청 워크스페이스')).toBeInTheDocument()
   })
 
   test('선택 목록에 없는 사양 프리셋이 초안에 남아 있으면 2단계에서 막힌다', async () => {
@@ -152,7 +162,7 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
     sessionStorage.setItem(
       VM_REQUEST_DRAFT_KEY,
       JSON.stringify({
-        groupId: 12,
+        workspaceId: 12,
         orgId: 1,
         imageId: 1,
         flavorId: 9,
@@ -163,7 +173,7 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
-    renderApp('/console/requests/new?step=4')
+    renderApp('/console/requests/new?step=5')
 
     // 확인 단계로 직접 진입해도 2단계에서 멈춘다 (요약에 원시 id가 새지 않는다).
     expect(await screen.findByRole('button', { name: /기본형/ })).toBeInTheDocument()
@@ -183,7 +193,7 @@ describe('VM 신청 위저드 — OS·사양 축의 상호 보정', () => {
   test('OS를 고르면 디스크가 그 OS의 최소치까지 올라가고, 그보다 큰 값은 유지된다', async () => {
     const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
+    await screen.findByRole('heading', { name: '리소스 신청' })
     await passStep1(user)
 
     await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
@@ -216,7 +226,7 @@ describe('VM 신청 위저드 — 빈 OS 카탈로그', () => {
     const user = userEvent.setup()
     server.use(http.get('*/api/v1/os-images', () => HttpResponse.json([], { status: 200 })))
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
+    await screen.findByRole('heading', { name: '리소스 신청' })
     await passStep1(user)
 
     expect(
@@ -232,8 +242,9 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
   test('SSH 게이트웨이 호스트는 서버 값을 쓰고, 응답이 없으면 상수로 안내한다', async () => {
     const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
-    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passTypeStep(user)
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
     await user.selectOptions(screen.getByLabelText('기관'), '1')
     expect(screen.getByText(new RegExp(`@${requestOptions.sshHost}`))).toBeInTheDocument()
   })
@@ -241,8 +252,9 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
   test('형식·예약어를 검사하고, 비워 두면 자동 생성으로 제출된다', async () => {
     const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
-    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passTypeStep(user)
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
     await user.selectOptions(screen.getByLabelText('기관'), '1')
 
     const slugInput = screen.getByLabelText('희망 호스트명(슬러그)')
@@ -269,9 +281,9 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     expect(screen.getByText('자동 생성')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
-    expect(createdVmRequestBodies.at(-1)).toMatchObject({
-      desiredSlug: null,
+    expect(createdRequestBodies.at(-1)).toMatchObject({
       displayName: null,
+      vm: { desiredSlug: null },
     })
   })
 })
@@ -280,10 +292,13 @@ describe('VM 신청 위저드 — 제출', () => {
   test('전체 단계를 통과하면 계약에 맞는 페이로드로 제출하고 완료 화면을 보여준다', async () => {
     const user = userEvent.setup()
     renderWizard()
-    await screen.findByRole('heading', { name: 'VM 신청' })
+    await screen.findByRole('heading', { name: '리소스 신청' })
 
-    // ① 그룹·기관·이름
-    await user.selectOptions(await screen.findByLabelText('신청 그룹'), '12')
+    // ① 종류
+    await passTypeStep(user)
+
+    // ② 워크스페이스·기관·이름
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
     await user.selectOptions(screen.getByLabelText('기관'), '1')
     await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
     await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
@@ -326,24 +341,27 @@ describe('VM 신청 위저드 — 제출', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '내 신청으로 이동' })).toBeInTheDocument()
 
-    // 서버로 간 페이로드가 계약(CreateVmRequest)과 정확히 일치한다.
-    expect(createdVmRequestBodies).toHaveLength(1)
-    expect(createdVmRequestBodies[0]).toEqual({
-      groupId: 12,
+    // 서버로 간 페이로드가 계약(CreateRequest)과 정확히 일치한다.
+    expect(createdRequestBodies).toHaveLength(1)
+    expect(createdRequestBodies[0]).toEqual({
+      type: 'VM',
+      workspaceId: 12,
       orgId: 1,
-      imageId: 1,
-      flavorId: 2,
       purpose: '캡스톤 백엔드 API 서버 운영',
       courseOrProject: '2026-1 캡스톤디자인',
-      specReason: null,
       extraNote: null,
-      reqVcpu: 2,
-      reqMemoryMb: 2048,
-      reqDiskGb: 20,
       reqStartDate: '2026-07-15',
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
-      desiredSlug: 'capstone-api-server',
+      vm: {
+        imageId: 1,
+        flavorId: 2,
+        reqVcpu: 2,
+        reqMemoryMb: 2048,
+        reqDiskGb: 20,
+        specReason: null,
+        desiredSlug: 'capstone-api-server',
+      },
     })
   })
 })

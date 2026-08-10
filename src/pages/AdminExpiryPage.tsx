@@ -123,7 +123,7 @@ export function AdminExpiryPage() {
                   <TR key={vm.id}>
                     <TD>
                       <span className="font-medium text-neutral-900">{vm.name}</span>
-                      <span className="block text-xs text-neutral-500">{vm.groupName}</span>
+                      <span className="block text-xs text-neutral-500">{vm.workspaceName}</span>
                     </TD>
                     <TD className="whitespace-nowrap">
                       {vm.endDate}

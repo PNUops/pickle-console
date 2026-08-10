@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
-  fetchAdminVmRequests,
+  fetchAdminRequests,
   fetchOrgs,
   fetchOsImages,
-  type VmRequestStatus,
+  type RequestStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
@@ -31,7 +31,7 @@ const PAGE_SIZE = 10
 
 // 탭 라벨은 상태 배지와 같은 표준 라벨(status.ts)을 쓴다. 기본 탭은 승인 대기(SUBMITTED),
 // '전체'는 status 미지정 (계약 v0.2.3부터 전체 상태를 반환).
-const STATUS_TABS: { label: string; status: VmRequestStatus | undefined }[] = [
+const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
   { label: REQUEST_STATUS_LABELS.SUBMITTED, status: 'SUBMITTED' },
   { label: REQUEST_STATUS_LABELS.APPROVED, status: 'APPROVED' },
   { label: REQUEST_STATUS_LABELS.REJECTED, status: 'REJECTED' },
@@ -42,17 +42,17 @@ export function AdminRequestsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const isSysAdmin = !!user && isSysTier(user.role)
-  const [status, setStatus] = useState<VmRequestStatus | undefined>('SUBMITTED')
+  const [status, setStatus] = useState<RequestStatus | undefined>('SUBMITTED')
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   const requests = useQuery({
     queryKey: [
       'admin',
-      'vm-requests',
+      'requests',
       { status: status ?? null, orgId: orgId ?? null, page, size: PAGE_SIZE },
     ],
-    queryFn: () => fetchAdminVmRequests({ status, orgId, page, size: PAGE_SIZE }),
+    queryFn: () => fetchAdminRequests({ status, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
@@ -60,7 +60,7 @@ export function AdminRequestsPage() {
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
-  const imageName = (imageId: number) =>
+  const imageName = (imageId: number | undefined) =>
     osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
 
   return (
@@ -73,8 +73,8 @@ export function AdminRequestsPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
-        <div role="group" aria-label="신청 상태 필터" className="flex flex-wrap gap-1">
+        {/* 필터 토글 버튼 워크스페이스 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
+        <div role="workspace" aria-label="신청 상태 필터" className="flex flex-wrap gap-1">
           {STATUS_TABS.map((tab) => {
             const selected = tab.status === status
             return (
@@ -139,7 +139,7 @@ export function AdminRequestsPage() {
               <THead>
                 <TR>
                   <TH>신청자</TH>
-                  <TH>그룹</TH>
+                  <TH>워크스페이스</TH>
                   <TH>OS 이미지 / 요청 사양</TH>
                   <TH>신청일</TH>
                   <TH>상태</TH>
@@ -164,11 +164,11 @@ export function AdminRequestsPage() {
                         {request.purpose}
                       </span>
                     </TD>
-                    <TD>{request.groupName}</TD>
+                    <TD>{request.workspaceName}</TD>
                     <TD className="whitespace-nowrap">
-                      <span className="block">{imageName(request.imageId)}</span>
+                      <span className="block">{imageName(request.vm?.imageId)}</span>
                       <span className="block text-xs text-neutral-500">
-                        {formatSpec(request.reqVcpu, request.reqMemoryMb, request.reqDiskGb)}
+                        {formatSpec(request.vm?.reqVcpu, request.vm?.reqMemoryMb, request.vm?.reqDiskGb)}
                       </span>
                     </TD>
                     <TD className="whitespace-nowrap">{formatDateTime(request.createdAt)}</TD>

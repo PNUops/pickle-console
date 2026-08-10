@@ -23,7 +23,7 @@ describe('점검 모드·공지 배너·문의처 (AppShell)', () => {
       'mailto:ops@pickle.local',
     )
     // 콘솔 내비게이션은 차단 화면에 존재하지 않는다.
-    expect(screen.queryByRole('link', { name: '내 그룹' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '내 워크스페이스' })).not.toBeInTheDocument()
   })
 
   test('점검 중 관리자는 상단 경고 스트립만 보이고 콘솔은 계속 쓸 수 있다', async () => {

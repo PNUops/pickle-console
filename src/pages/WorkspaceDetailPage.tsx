@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
-import { fetchGroup, type GroupDetail, type GroupMember, type GroupMemberRole } from '../api/queries'
+import { fetchWorkspace, type WorkspaceDetail, type WorkspaceMember, type WorkspaceMemberRole } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import {
   Alert,
@@ -14,8 +14,8 @@ import {
   CardTitle,
   ConfirmNameModal,
   FormField,
-  GroupKindBadge,
-  GroupRoleBadge,
+  WorkspaceKindBadge,
+  WorkspaceRoleBadge,
   Input,
   Modal,
   Select,
@@ -29,51 +29,51 @@ import {
   Textarea,
   useToast,
 } from '../components/ui'
-import { GROUP_ROLE_LABELS } from '../lib/labels'
+import { WORKSPACE_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 
-const ASSIGNABLE_ROLES: GroupMemberRole[] = ['OWNER', 'MEMBER']
+const ASSIGNABLE_ROLES: WorkspaceMemberRole[] = ['OWNER', 'MEMBER']
 
-export function GroupDetailPage() {
+export function WorkspaceDetailPage() {
   const params = useParams()
-  const groupId = Number(params.groupId)
-  const group = useQuery({
-    queryKey: ['groups', groupId],
-    queryFn: () => fetchGroup(groupId),
+  const workspaceId = Number(params.workspaceId)
+  const workspace = useQuery({
+    queryKey: ['workspaces', workspaceId],
+    queryFn: () => fetchWorkspace(workspaceId),
   })
 
-  if (group.isPending) {
+  if (workspace.isPending) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner label="그룹 정보 불러오는 중" />
+        <Spinner label="워크스페이스 정보 불러오는 중" />
       </div>
     )
   }
-  if (group.isError) {
-    return <Alert variant="danger">{group.error.message}</Alert>
+  if (workspace.isError) {
+    return <Alert variant="danger">{workspace.error.message}</Alert>
   }
 
-  const data = group.data
+  const data = workspace.data
   // 계약 v0.3.x부터 서버가 내 역할을 직접 내려준다 (구성원 목록 스캔 불필요).
   const myRole = data.myRole
 
   return (
     <div className="space-y-6">
       <nav className="text-sm">
-        <Link to="/console/groups" className="text-primary-700 hover:underline">
-          ← 내 그룹
+        <Link to="/console/workspaces" className="text-primary-700 hover:underline">
+          ← 내 워크스페이스
         </Link>
       </nav>
-      <GroupInfoSection group={data} myRole={myRole} />
-      <MembersSection group={data} myRole={myRole} />
-      {myRole === 'OWNER' && data.kind !== 'PERSONAL' && <DangerZoneSection group={data} />}
+      <WorkspaceInfoSection workspace={data} myRole={myRole} />
+      <MembersSection workspace={data} myRole={myRole} />
+      {myRole === 'OWNER' && data.kind !== 'PERSONAL' && <DangerZoneSection workspace={data} />}
     </div>
   )
 }
 
-/* ─── danger zone: group delete (contract: OWNER only, name-confirmed) ─── */
+/* ─── danger zone: workspace delete (contract: OWNER only, name-confirmed) ─── */
 
-function DangerZoneSection({ group }: { group: GroupDetail }) {
+function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -82,21 +82,21 @@ function DangerZoneSection({ group }: { group: GroupDetail }) {
 
   const remove = useMutation({
     mutationFn: async () => {
-      const { error: err, response } = await api.DELETE('/groups/{groupId}', {
-        params: { path: { groupId: group.id } },
+      const { error: err, response } = await api.DELETE('/workspaces/{workspaceId}', {
+        params: { path: { workspaceId: workspace.id } },
       })
-      if (!response.ok) throw toApiError(err, '그룹을 삭제하지 못했습니다.')
+      if (!response.ok) throw toApiError(err, '워크스페이스를 삭제하지 못했습니다.')
     },
     onSuccess: async () => {
       setOpen(false)
-      toast.success('그룹을 삭제했습니다.')
-      await queryClient.invalidateQueries({ queryKey: ['groups'] })
-      navigate('/console/groups')
+      toast.success('워크스페이스를 삭제했습니다.')
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+      navigate('/console/workspaces')
     },
     onError: (err) => {
       setOpen(false)
       // 활성 VM 보유·PERSONAL 등 서버의 problem detail을 그대로 노출한다.
-      setError(toApiError(err, '그룹을 삭제하지 못했습니다.').message)
+      setError(toApiError(err, '워크스페이스를 삭제하지 못했습니다.').message)
     },
   })
 
@@ -109,7 +109,7 @@ function DangerZoneSection({ group }: { group: GroupDetail }) {
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-neutral-600">
-            그룹을 삭제하면 모든 목록에서 사라집니다. 삭제되지 않은 VM이 있으면 먼저
+            워크스페이스를 삭제하면 모든 목록에서 사라집니다. 삭제되지 않은 VM이 있으면 먼저
             VM을 삭제(파기 완료)해야 합니다. 구성원 전원에게 알림이 발송됩니다.
           </p>
           <Button
@@ -119,36 +119,36 @@ function DangerZoneSection({ group }: { group: GroupDetail }) {
               setOpen(true)
             }}
           >
-            그룹 삭제
+            워크스페이스 삭제
           </Button>
         </div>
       </CardContent>
       <ConfirmNameModal
         open={open}
         onClose={() => setOpen(false)}
-        title="그룹 삭제"
-        expectedName={group.name}
-        confirmLabel="그룹 삭제"
+        title="워크스페이스 삭제"
+        expectedName={workspace.name}
+        confirmLabel="워크스페이스 삭제"
         loading={remove.isPending}
         onConfirm={() => remove.mutate()}
       >
         <Alert variant="danger">
-          이 작업은 되돌릴 수 없습니다. 같은 이름·슬러그로 새 그룹을 다시 만들 수는 있지만,
-          기존 그룹의 구성원 구성은 복구되지 않습니다.
+          이 작업은 되돌릴 수 없습니다. 같은 이름·슬러그로 새 워크스페이스를 다시 만들 수는 있지만,
+          기존 워크스페이스의 구성원 구성은 복구되지 않습니다.
         </Alert>
       </ConfirmNameModal>
     </Card>
   )
 }
 
-/* ─── group info + edit (contract: OWNER only) ─── */
+/* ─── workspace info + edit (contract: OWNER only) ─── */
 
-function GroupInfoSection({
-  group,
+function WorkspaceInfoSection({
+  workspace,
   myRole,
 }: {
-  group: GroupDetail
-  myRole: GroupMemberRole | null
+  workspace: WorkspaceDetail
+  myRole: WorkspaceMemberRole | null
 }) {
   const [editOpen, setEditOpen] = useState(false)
 
@@ -157,14 +157,14 @@ function GroupInfoSection({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-neutral-900">{group.name}</h1>
-            <GroupKindBadge kind={group.kind} />
+            <h1 className="text-2xl font-bold text-neutral-900">{workspace.name}</h1>
+            <WorkspaceKindBadge kind={workspace.kind} />
           </div>
           <p className="mt-1 text-sm text-neutral-500">
-            {group.slug} · 생성일 {formatDateTime(group.createdAt)}
+            생성일 {formatDateTime(workspace.createdAt)}
           </p>
-          {group.description && (
-            <p className="mt-2 text-sm text-neutral-600">{group.description}</p>
+          {workspace.description && (
+            <p className="mt-2 text-sm text-neutral-600">{workspace.description}</p>
           )}
         </div>
         {myRole === 'OWNER' && (
@@ -174,54 +174,54 @@ function GroupInfoSection({
         )}
       </div>
       {/* 열 때마다 마운트해 지난 편집의 임시 입력이 남지 않게 한다. */}
-      {editOpen && <EditGroupModal group={group} onClose={() => setEditOpen(false)} />}
+      {editOpen && <EditWorkspaceModal workspace={workspace} onClose={() => setEditOpen(false)} />}
     </div>
   )
 }
 
-function EditGroupModal({
-  group,
+function EditWorkspaceModal({
+  workspace,
   onClose,
 }: {
-  group: GroupDetail
+  workspace: WorkspaceDetail
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
-  const [name, setName] = useState(group.name)
-  const [description, setDescription] = useState(group.description ?? '')
+  const [name, setName] = useState(workspace.name)
+  const [description, setDescription] = useState(workspace.description ?? '')
   const [error, setError] = useState<string | null>(null)
 
   const update = useMutation({
     mutationFn: async () => {
-      const { data, error: err } = await api.PATCH('/groups/{groupId}', {
-        params: { path: { groupId: group.id } },
+      const { data, error: err } = await api.PATCH('/workspaces/{workspaceId}', {
+        params: { path: { workspaceId: workspace.id } },
         body: { name, description: description || null },
       })
-      if (!data) throw toApiError(err, '그룹 정보를 수정하지 못했습니다.')
+      if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.')
       return data
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['groups'] })
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       onClose()
     },
-    onError: (err) => setError(toApiError(err, '그룹 정보를 수정하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.').message),
   })
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setError(null)
     if (!name.trim()) {
-      setError('그룹 이름을 입력해 주세요.')
+      setError('워크스페이스 이름을 입력해 주세요.')
       return
     }
     update.mutate()
   }
 
   return (
-    <Modal open onClose={onClose} title="그룹 정보 수정">
+    <Modal open onClose={onClose} title="워크스페이스 정보 수정">
       <form onSubmit={submit} className="space-y-4" noValidate>
         {error && <Alert variant="danger">{error}</Alert>}
-        <FormField label="그룹 이름" required>
+        <FormField label="워크스페이스 이름" required>
           <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} />
         </FormField>
         <FormField label="설명">
@@ -247,30 +247,30 @@ function EditGroupModal({
 /* ─── members ─── */
 
 function MembersSection({
-  group,
+  workspace,
   myRole,
 }: {
-  group: GroupDetail
-  myRole: GroupMemberRole | null
+  workspace: WorkspaceDetail
+  myRole: WorkspaceMemberRole | null
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const toast = useToast()
   const [actionError, setActionError] = useState<string | null>(null)
-  const [transferTarget, setTransferTarget] = useState<GroupMember | null>(null)
-  const [removeTarget, setRemoveTarget] = useState<GroupMember | null>(null)
+  const [transferTarget, setTransferTarget] = useState<WorkspaceMember | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<WorkspaceMember | null>(null)
   const [leaveOpen, setLeaveOpen] = useState(false)
 
-  const isPersonal = group.kind === 'PERSONAL'
+  const isPersonal = workspace.kind === 'PERSONAL'
   const canManage = myRole === 'OWNER' && !isPersonal
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['groups'] })
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['workspaces'] })
 
   const changeRole = useMutation({
-    mutationFn: async ({ member, role }: { member: GroupMember; role: GroupMemberRole }) => {
-      const { data, error } = await api.PATCH('/groups/{groupId}/members/{userId}', {
-        params: { path: { groupId: group.id, userId: member.userId } },
+    mutationFn: async ({ member, role }: { member: WorkspaceMember; role: WorkspaceMemberRole }) => {
+      const { data, error } = await api.PATCH('/workspaces/{workspaceId}/members/{userId}', {
+        params: { path: { workspaceId: workspace.id, userId: member.userId } },
         body: { role },
       })
       if (!data) throw toApiError(error, '역할을 변경하지 못했습니다.')
@@ -292,9 +292,9 @@ function MembersSection({
   })
 
   const removeMember = useMutation({
-    mutationFn: async (member: GroupMember) => {
-      const { error, response } = await api.DELETE('/groups/{groupId}/members/{userId}', {
-        params: { path: { groupId: group.id, userId: member.userId } },
+    mutationFn: async (member: WorkspaceMember) => {
+      const { error, response } = await api.DELETE('/workspaces/{workspaceId}/members/{userId}', {
+        params: { path: { workspaceId: workspace.id, userId: member.userId } },
       })
       if (!response.ok) throw toApiError(error, '구성원을 제거하지 못했습니다.')
       return member
@@ -303,12 +303,12 @@ function MembersSection({
       setRemoveTarget(null)
       setLeaveOpen(false)
       if (member.userId === user?.id) {
-        toast.success('그룹에서 나갔습니다.')
-        navigate('/console/groups')
-        await queryClient.invalidateQueries({ queryKey: ['groups'] })
+        toast.success('워크스페이스에서 나갔습니다.')
+        navigate('/console/workspaces')
+        await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
         return
       }
-      toast.success(`${member.name} 님을 그룹에서 제거했습니다.`)
+      toast.success(`${member.name} 님을 워크스페이스에서 제거했습니다.`)
       await refresh()
     },
     onError: (err) => {
@@ -318,10 +318,10 @@ function MembersSection({
     },
   })
 
-  const onRoleSelect = (member: GroupMember, role: GroupMemberRole) => {
+  const onRoleSelect = (member: WorkspaceMember, role: WorkspaceMemberRole) => {
     setActionError(null)
     if (role === member.role) return
-    // 소유자는 여러 명일 수 있다. 지정은 확인을 한 번 받고(그룹 전체를 다룰 수
+    // 소유자는 여러 명일 수 있다. 지정은 확인을 한 번 받고(워크스페이스 전체를 다룰 수
     // 있게 되는 일이라), 해제는 바로 반영한다 — 마지막 한 명이면 서버가 막는다.
     if (role === 'OWNER') {
       setTransferTarget(member)
@@ -333,17 +333,17 @@ function MembersSection({
   return (
     <Card>
       <CardHeader className="flex items-center justify-between">
-        <CardTitle>구성원 ({group.members.length}명)</CardTitle>
+        <CardTitle>구성원 ({workspace.members.length}명)</CardTitle>
         {!isPersonal && myRole && (
           <Button variant="secondary" size="sm" onClick={() => setLeaveOpen(true)}>
-            그룹 나가기
+            워크스페이스 나가기
           </Button>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
         {isPersonal && (
           <Alert variant="info">
-            개인 그룹은 회원가입 시 자동으로 생성되는 그룹으로, 구성원을 추가하거나 역할을
+            개인 워크스페이스는 회원가입 시 자동으로 생성되는 워크스페이스로, 구성원을 추가하거나 역할을
             변경할 수 없습니다.
           </Alert>
         )}
@@ -358,7 +358,7 @@ function MembersSection({
             </TR>
           </THead>
           <TBody>
-            {group.members.map((member) => {
+            {workspace.members.map((member) => {
               const isSelf = member.userId === user?.id
               return (
                 <TR key={member.userId}>
@@ -374,18 +374,18 @@ function MembersSection({
                           aria-label={`${member.name} 역할 변경`}
                           value={member.role}
                           onChange={(event) =>
-                            onRoleSelect(member, event.target.value as GroupMemberRole)
+                            onRoleSelect(member, event.target.value as WorkspaceMemberRole)
                           }
                         >
                           {ASSIGNABLE_ROLES.map((role) => (
                             <option key={role} value={role}>
-                              {GROUP_ROLE_LABELS[role]}
+                              {WORKSPACE_ROLE_LABELS[role]}
                             </option>
                           ))}
                         </Select>
                       </div>
                     ) : (
-                      <GroupRoleBadge role={member.role} />
+                      <WorkspaceRoleBadge role={member.role} />
                     )}
                   </TD>
                   {canManage && (
@@ -410,7 +410,7 @@ function MembersSection({
             })}
           </TBody>
         </Table>
-        {canManage && <AddMemberForm groupId={group.id} onAdded={refresh} />}
+        {canManage && <AddMemberForm workspaceId={workspace.id} onAdded={refresh} />}
       </CardContent>
 
       <OwnershipTransferModal
@@ -440,14 +440,14 @@ function MembersSection({
         }
       >
         <p className="text-sm text-neutral-600">
-          {removeTarget?.name}({removeTarget?.email}) 님을 이 그룹에서 제거하시겠습니까?
+          {removeTarget?.name}({removeTarget?.email}) 님을 이 워크스페이스에서 제거하시겠습니까?
         </p>
       </Modal>
 
       <Modal
         open={leaveOpen}
         onClose={() => setLeaveOpen(false)}
-        title="그룹 나가기"
+        title="워크스페이스 나가기"
         footer={
           <>
             <Button variant="secondary" onClick={() => setLeaveOpen(false)}>
@@ -457,7 +457,7 @@ function MembersSection({
               variant="danger"
               loading={removeMember.isPending}
               onClick={() => {
-                const self = group.members.find((m) => m.userId === user?.id)
+                const self = workspace.members.find((m) => m.userId === user?.id)
                 if (self) removeMember.mutate(self)
               }}
             >
@@ -467,7 +467,7 @@ function MembersSection({
         }
       >
         <p className="text-sm text-neutral-600">
-          정말 이 그룹에서 나가시겠습니까? 나간 후에는 다시 초대받아야 합니다.
+          정말 이 워크스페이스에서 나가시겠습니까? 나간 후에는 다시 초대받아야 합니다.
         </p>
       </Modal>
     </Card>
@@ -476,16 +476,16 @@ function MembersSection({
 
 /* ─── add member (contract: OWNER only) ─── */
 
-function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => void }) {
+function AddMemberForm({ workspaceId, onAdded }: { workspaceId: number; onAdded: () => void }) {
   const toast = useToast()
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<GroupMemberRole>('MEMBER')
+  const [role, setRole] = useState<WorkspaceMemberRole>('MEMBER')
   const [error, setError] = useState<string | null>(null)
 
   const add = useMutation({
     mutationFn: async () => {
-      const { data, error: err } = await api.POST('/groups/{groupId}/members', {
-        params: { path: { groupId } },
+      const { data, error: err } = await api.POST('/workspaces/{workspaceId}/members', {
+        params: { path: { workspaceId } },
         body: { email, role },
       })
       if (!data) throw toApiError(err, '구성원을 추가하지 못했습니다.')
@@ -526,9 +526,9 @@ function AddMemberForm({ groupId, onAdded }: { groupId: number; onAdded: () => v
         <FormField label="역할" className="w-full sm:w-36">
           <Select
             value={role}
-            onChange={(event) => setRole(event.target.value as GroupMemberRole)}
+            onChange={(event) => setRole(event.target.value as WorkspaceMemberRole)}
           >
-            <option value="MEMBER">{GROUP_ROLE_LABELS.MEMBER}</option>
+            <option value="MEMBER">{WORKSPACE_ROLE_LABELS.MEMBER}</option>
           </Select>
         </FormField>
         <Button type="submit" loading={add.isPending}>
@@ -547,10 +547,10 @@ function OwnershipTransferModal({
   onCancel,
   onConfirm,
 }: {
-  target: GroupMember | null
+  target: WorkspaceMember | null
   pending: boolean
   onCancel: () => void
-  onConfirm: (member: GroupMember) => void
+  onConfirm: (member: WorkspaceMember) => void
 }) {
   const [confirmEmail, setConfirmEmail] = useState('')
 
@@ -587,8 +587,8 @@ function OwnershipTransferModal({
     >
       <div className="space-y-4">
         <p className="text-sm text-neutral-600">
-          {target?.name} 님을 소유자로 지정합니다. 소유자는 그룹 정보와 구성원을 관리하고,
-          그룹이 소유한 자원을 조회·삭제하며 접근 권한을 관리할 수 있습니다. 회원님의
+          {target?.name} 님을 소유자로 지정합니다. 소유자는 워크스페이스 정보와 구성원을 관리하고,
+          워크스페이스가 소유한 리소스를 조회·삭제하며 접근 권한을 관리할 수 있습니다. 회원님의
           소유자 권한은 그대로 유지됩니다.
         </p>
         <FormField

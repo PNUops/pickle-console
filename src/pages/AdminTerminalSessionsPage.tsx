@@ -65,7 +65,7 @@ export function AdminTerminalSessionsPage() {
               <TR>
                 <TH>VM</TH>
                 <TH>기관</TH>
-                <TH>그룹</TH>
+                <TH>워크스페이스</TH>
                 <TH>사용자</TH>
                 <TH>클라이언트 IP</TH>
                 <TH>시작 시각</TH>
@@ -118,7 +118,7 @@ function SessionRow({
     <TR>
       <TD className="font-medium text-neutral-900">{session.vmName}</TD>
       <TD className="text-neutral-600">{session.orgName}</TD>
-      <TD className="text-neutral-600">{session.groupName}</TD>
+      <TD className="text-neutral-600">{session.workspaceName}</TD>
       <TD>
         <div className="text-neutral-900">{session.userName}</div>
         <div className="text-xs text-neutral-500">{session.userEmail}</div>

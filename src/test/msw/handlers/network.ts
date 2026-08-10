@@ -52,7 +52,7 @@ const defaultGuards = () => ({
 function initialForwardings(): ForwardingRecord[] {
   return [
     {
-      // algo-judge(56, 그룹 15 — 로그인 사용자는 MEMBER): 읽기 전용 목록 확인용.
+      // algo-judge(56, 워크스페이스 15 — 로그인 사용자는 MEMBER): 읽기 전용 목록 확인용.
       id: 101,
       vmId: 56,
       relayId: 1,
@@ -86,7 +86,7 @@ function initialForwardings(): ForwardingRecord[] {
       createdAt: '2026-07-11T11:00:00+09:00',
     },
     {
-      // build-server(45, 그룹 12 — 로그인 사용자는 OWNER): 삭제 흐름 확인용.
+      // build-server(45, 워크스페이스 12 — 로그인 사용자는 OWNER): 삭제 흐름 확인용.
       id: 103,
       vmId: 45,
       relayId: 1,

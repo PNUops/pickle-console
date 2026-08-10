@@ -7,7 +7,7 @@ import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
 import { vmDetailAs } from '../../test/msw/handlers/vms'
 
-/** 사용자 세션으로 VM 상세의 도메인·포트 탭을 연다 (픽스처는 자원 소유자 기준). */
+/** 사용자 세션으로 VM 상세의 도메인·포트 탭을 연다 (픽스처는 리소스 소유자 기준). */
 function renderVm(vmId: number) {
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}?tab=publish`)

@@ -164,38 +164,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listAdminGroups"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/groups/{groupId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getAdminGroup"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/admin/ip-allocations": {
         parameters: {
             query?: never;
@@ -446,6 +414,86 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["issueAdminRelayToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests/{requestId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approveRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests/{requestId}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getApprovalContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests/{requestId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -740,86 +788,6 @@ export interface paths {
         patch: operations["updateAdminVmFlavor"];
         trace?: never;
     };
-    "/admin/vm-requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listAdminVmRequests"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getAdminVmRequest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approveVmRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}/context": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getApprovalContext"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/vm-requests/{requestId}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rejectVmRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/admin/vms": {
         parameters: {
             query?: never;
@@ -1006,6 +974,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["adminStartVm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminWorkspaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminWorkspace"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1218,70 +1218,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/groups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listGroups"];
-        put?: never;
-        post: operations["createGroup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/groups/{groupId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getGroup"];
-        put?: never;
-        post?: never;
-        delete: operations["deleteGroup"];
-        options?: never;
-        head?: never;
-        patch: operations["updateGroup"];
-        trace?: never;
-    };
-    "/groups/{groupId}/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["addGroupMember"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/groups/{groupId}/members/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["removeGroupMember"];
-        options?: never;
-        head?: never;
-        patch: operations["updateGroupMember"];
         trace?: never;
     };
     "/me": {
@@ -1652,6 +1588,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRequests"];
+        put?: never;
+        post: operations["createRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listResources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vm-flavors": {
         parameters: {
             query?: never;
@@ -1662,54 +1662,6 @@ export interface paths {
         get: operations["listVmFlavors"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vm-requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listVmRequests"];
-        put?: never;
-        post: operations["createVmRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vm-requests/{requestId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getVmRequest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vm-requests/{requestId}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cancelVmRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1757,13 +1709,13 @@ export interface paths {
         };
         /**
          * 접근 권한 목록
-         * @description 이 VM의 접근 권한 전체와, 그 목록이 어느 VM의 것인지 알려 주는 최소 정보입니다. VM 소유자와 그룹 소유자만 볼 수 있습니다.
+         * @description 이 VM의 접근 권한 전체와, 그 목록이 어느 VM의 것인지 알려 주는 최소 정보입니다. VM 소유자와 워크스페이스 소유자만 볼 수 있습니다.
          */
         get: operations["listVmAccessGrants"];
         put?: never;
         /**
          * 접근 권한 부여
-         * @description 지정한 사용자 또는 소유 그룹 전체에 이 VM의 접근 권한을 부여합니다. 사용자는 이 VM을 소유한 그룹의 구성원이어야 하고, 그룹 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 VM의 접근 권한을 부여합니다. 사용자는 이 VM을 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
          */
         post: operations["addVmAccessGrant"];
         delete?: never;
@@ -2017,12 +1969,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listWorkspaces"];
+        put?: never;
+        post: operations["createWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getWorkspace"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteWorkspace"];
+        options?: never;
+        head?: never;
+        patch: operations["updateWorkspace"];
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["addWorkspaceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeWorkspaceMember"];
+        options?: never;
+        head?: never;
+        patch: operations["updateWorkspaceMember"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        AccessGranteeType: "USER" | "GROUP";
+        AccessGranteeType: "USER" | "WORKSPACE";
         ActivateMfaRequest: {
             code: string;
         };
@@ -2037,21 +2053,21 @@ export interface components {
             targetId?: string | null;
             targetType?: string | null;
         };
-        AddGroupMemberRequest: {
-            /** Format: email */
-            email: string;
-            role: components["schemas"]["GroupMemberRole"];
-        };
-        AddVmAccessGrantRequest: {
-            /** @description USER는 지정된 사용자 한 명, GROUP은 소유 그룹 전체 */
+        AddResourceAccessGrantRequest: {
+            /** @description USER는 지정된 사용자 한 명, WORKSPACE은 소유 워크스페이스 전체 */
             granteeType: components["schemas"]["AccessGranteeType"];
-            /** @description 부여할 등급. 그룹 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
+            /** @description 부여할 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
             /**
              * Format: int64
-             * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 그룹의 구성원이어야 합니다.
+             * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 워크스페이스의 구성원이어야 합니다.
              */
             userId?: number | null;
+        };
+        AddWorkspaceMemberRequest: {
+            /** Format: email */
+            email: string;
+            role: components["schemas"]["WorkspaceMemberRole"];
         };
         AdminCampusIpRequestView: {
             adminNote?: string | null;
@@ -2101,9 +2117,6 @@ export interface components {
             createdAt: string;
             fqdn: string;
             /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
             id: number;
             kind: components["schemas"]["DomainKind"];
             /** Format: int64 */
@@ -2123,42 +2136,9 @@ export interface components {
             /** Format: int64 */
             vmId: number;
             vmName: string;
-        };
-        AdminGroupDetailResponse: {
-            /** Format: date-time */
-            createdAt: string;
-            description?: string | null;
             /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            /** Format: int64 */
-            memberCount: number;
-            members: components["schemas"]["AdminGroupMemberResponse"][];
-            name: string;
-            slug: string;
-            /** Format: int64 */
-            vmCount: number;
-        };
-        AdminGroupMemberResponse: {
-            email: string;
-            groupRole: components["schemas"]["GroupMemberRole"];
-            /** Format: date-time */
-            joinedAt: string;
-            name: string;
-            /** Format: int64 */
-            userId: number;
-            userStatus: components["schemas"]["UserStatus"];
-        };
-        AdminGroupOptionResponse: {
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            /** Format: int64 */
-            memberCount: number;
-            name: string;
-            slug: string;
+            workspaceId: number;
+            workspaceName: string;
         };
         AdminNotificationResponse: {
             /** Format: int32 */
@@ -2312,9 +2292,6 @@ export interface components {
             domainKind: components["schemas"]["DomainKind"];
             fqdn: string;
             /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
             id: number;
             lastError?: string | null;
             /** Format: int64 */
@@ -2329,6 +2306,9 @@ export interface components {
             /** Format: int64 */
             vmId: number;
             vmName: string;
+            /** Format: int64 */
+            workspaceId: number;
+            workspaceName: string;
         };
         AdminTaskResponse: {
             /** Format: int32 */
@@ -2337,7 +2317,6 @@ export interface components {
             createdAt: string;
             /** Format: int32 */
             currentStep: number;
-            groupName?: string | null;
             hostname?: string | null;
             jobrunrJobId?: string | null;
             kind: components["schemas"]["ProvisioningTaskKind"];
@@ -2356,25 +2335,58 @@ export interface components {
             /** Format: int64 */
             vmId: number;
             vmName?: string | null;
+            workspaceName?: string | null;
+        };
+        AdminWorkspaceDetailResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            description?: string | null;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["WorkspaceKind"];
+            /** Format: int64 */
+            memberCount: number;
+            members: components["schemas"]["AdminWorkspaceMemberResponse"][];
+            name: string;
+            /** Format: int64 */
+            vmCount: number;
+        };
+        AdminWorkspaceMemberResponse: {
+            email: string;
+            /** Format: date-time */
+            joinedAt: string;
+            name: string;
+            /** Format: int64 */
+            userId: number;
+            userStatus: components["schemas"]["UserStatus"];
+            workspaceRole: components["schemas"]["WorkspaceMemberRole"];
+        };
+        AdminWorkspaceOptionResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["WorkspaceKind"];
+            /** Format: int64 */
+            memberCount: number;
+            name: string;
         };
         /** @enum {string} */
         AllocationStatus: "ALLOCATED" | "RELEASED";
         AnnouncementCreateRequest: {
             body: string;
             /** Format: int64 */
-            groupId?: number | null;
-            /** Format: int64 */
             orgId?: number | null;
             scope: components["schemas"]["AnnouncementScope"];
             title: string;
+            /** Format: int64 */
+            workspaceId?: number | null;
         };
         /** @enum {string} */
-        AnnouncementScope: "ALL" | "ORG" | "GROUP";
+        AnnouncementScope: "ALL" | "ORG" | "WORKSPACE";
         AnnouncementView: {
             /** Format: date-time */
             createdAt: string;
-            /** Format: int64 */
-            groupId?: number | null;
             /** Format: int64 */
             id: number;
             /** Format: int64 */
@@ -2383,6 +2395,8 @@ export interface components {
             recipientCount: number;
             scope: components["schemas"]["AnnouncementScope"];
             title: string;
+            /** Format: int64 */
+            workspaceId?: number | null;
         };
         Applicant: {
             /** Format: int64 */
@@ -2399,24 +2413,27 @@ export interface components {
         ApprovalContextResponse: {
             applicant: components["schemas"]["Applicant"];
             applicantResources: components["schemas"]["Resources"];
-            group: components["schemas"]["GroupPanel"];
             guidance: string;
             history: components["schemas"]["HistoryEntry"][];
             orgHeadroom: components["schemas"]["OrgHeadroom"];
+            workspace: components["schemas"]["WorkspacePanel"];
         };
-        ApproveVmRequestRequest: {
+        ApproveRequestRequest: {
             comment?: string | null;
-            /** Format: int32 */
-            grantedDiskGb: number;
             /** Format: date */
             grantedEndDate?: string | null;
+            /** Format: date */
+            grantedStartDate?: string | null;
+            vm?: components["schemas"]["ApproveVmRequestSpec"] | null;
+        };
+        ApproveVmRequestSpec: {
+            /** Format: int32 */
+            grantedDiskGb: number;
             /** Format: int64 */
             grantedImageId: number;
             /** Format: int32 */
             grantedMemoryMb: number;
             grantedSlug?: string | null;
-            /** Format: date */
-            grantedStartDate?: string | null;
             /** Format: int32 */
             grantedVcpu: number;
             /** Format: int64 */
@@ -2522,16 +2539,6 @@ export interface components {
             /** @description 신청 목적 (관리자 검토 자료) */
             purpose: string;
         };
-        CreateGroupRequest: {
-            description?: string | null;
-            /**
-             * @description 그룹 종류 — PERSONAL은 시스템 생성 전용이라 요청으로 만들 수 없습니다
-             * @enum {unknown}
-             */
-            kind: components["schemas"]["GroupKind"];
-            name: string;
-            slug: string;
-        };
         CreateOrgRequest: {
             description?: string | null;
             name: string;
@@ -2545,6 +2552,22 @@ export interface components {
              * @description VM 내부에서 노출할 대상 포트 (1~65535)
              */
             targetPort: number;
+        };
+        CreateRequestRequest: {
+            courseOrProject?: string | null;
+            displayName?: string | null;
+            extraNote?: string | null;
+            /** Format: int64 */
+            orgId: number;
+            purpose: string;
+            /** Format: date */
+            reqEndDate?: string | null;
+            /** Format: date */
+            reqStartDate?: string | null;
+            type: components["schemas"]["ResourceType"];
+            vm?: components["schemas"]["CreateVmRequestSpec"] | null;
+            /** Format: int64 */
+            workspaceId: number;
         };
         CreateVmDomainRequest: {
             customDomain?: string | null;
@@ -2564,31 +2587,28 @@ export interface components {
             /** Format: int32 */
             vcpu: number;
         };
-        CreateVmRequestRequest: {
-            courseOrProject?: string | null;
+        CreateVmRequestSpec: {
             desiredSlug?: string | null;
-            displayName?: string | null;
-            extraNote?: string | null;
             /** Format: int64 */
             flavorId: number;
             /** Format: int64 */
-            groupId: number;
-            /** Format: int64 */
             imageId: number;
-            /** Format: int64 */
-            orgId: number;
-            purpose: string;
             /** Format: int32 */
             reqDiskGb: number;
-            /** Format: date */
-            reqEndDate?: string | null;
             /** Format: int32 */
             reqMemoryMb: number;
-            /** Format: date */
-            reqStartDate?: string | null;
             /** Format: int32 */
             reqVcpu: number;
             specReason?: string | null;
+        };
+        CreateWorkspaceRequest: {
+            description?: string | null;
+            /**
+             * @description 워크스페이스 종류 — PERSONAL은 시스템 생성 전용이라 요청으로 만들 수 없습니다
+             * @enum {unknown}
+             */
+            kind: components["schemas"]["WorkspaceKind"];
+            name: string;
         };
         DisableMfaRequest: {
             code?: string;
@@ -2694,56 +2714,13 @@ export interface components {
             /** Format: int64 */
             userId: number;
         };
-        GroupDetailResponse: {
-            /** Format: date-time */
-            createdAt: string;
-            description?: string | null;
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            members: components["schemas"]["GroupMemberResponse"][];
-            myRole: components["schemas"]["GroupMemberRole"];
-            name: string;
-            slug: string;
-        };
-        /** @enum {string} */
-        GroupKind: "PERSONAL" | "TEAM" | "PROJECT";
-        GroupMemberResponse: {
-            email: string;
-            name: string;
-            role: components["schemas"]["GroupMemberRole"];
-            /** Format: int64 */
-            userId: number;
-        };
-        /** @enum {string} */
-        GroupMemberRole: "OWNER" | "MEMBER";
-        GroupPanel: {
-            activeVms: components["schemas"]["VmBriefResponse"][];
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            members: components["schemas"]["MemberBrief"][];
-            name: string;
-            totals: components["schemas"]["ResourceTotalsResponse"];
-        };
-        GroupSummaryResponse: {
-            description?: string | null;
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["GroupKind"];
-            /** Format: int64 */
-            memberCount: number;
-            myRole: components["schemas"]["GroupMemberRole"];
-            name: string;
-            slug: string;
-        };
         HistoryEntry: {
             comment?: string | null;
             decision?: components["schemas"]["ReviewDecision"] | null;
             /** Format: int64 */
             requestId: number;
             reviewerName?: string | null;
-            status: components["schemas"]["VmRequestStatus"];
+            status: components["schemas"]["RequestStatus"];
             /** Format: date-time */
             submittedAt: string;
         };
@@ -2790,16 +2767,16 @@ export interface components {
         };
         MemberBrief: {
             name: string;
-            role: components["schemas"]["GroupMemberRole"];
+            role: components["schemas"]["WorkspaceMemberRole"];
             /** Format: int64 */
             userId: number;
         };
         Membership: {
+            role: components["schemas"]["WorkspaceMemberRole"];
             /** Format: int64 */
-            groupId: number;
-            groupKind: components["schemas"]["GroupKind"];
-            groupName: string;
-            role: components["schemas"]["GroupMemberRole"];
+            workspaceId: number;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
         };
         MessageResponse: {
             message: string;
@@ -2889,7 +2866,7 @@ export interface components {
             publishedServiceCount: number;
             recentDecisions14d: components["schemas"]["RecentDecisions"];
             resource: components["schemas"]["Resource"];
-            topGroupsByVmCount: components["schemas"]["TopGroup"][];
+            topWorkspacesByVmCount: components["schemas"]["TopWorkspace"][];
             vmCountsByStatus: {
                 [key: string]: number;
             };
@@ -3094,6 +3071,28 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseRequestDetailResponse: {
+            content: components["schemas"]["RequestDetailResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseResourceSummaryResponse: {
+            content: components["schemas"]["ResourceSummaryResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseUserAdminViewResponse: {
             content: components["schemas"]["UserAdminViewResponse"][];
             /** Format: int32 */
@@ -3107,17 +3106,6 @@ export interface components {
         };
         PageResponseVmEventResponse: {
             content: components["schemas"]["VmEventResponse"][];
-            /** Format: int32 */
-            page: number;
-            /** Format: int32 */
-            size: number;
-            /** Format: int64 */
-            totalElements: number;
-            /** Format: int32 */
-            totalPages: number;
-        };
-        PageResponseVmRequestDetailResponse: {
-            content: components["schemas"]["VmRequestDetailResponse"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -3233,7 +3221,7 @@ export interface components {
             code: string;
             password: string;
         };
-        RejectVmRequestRequest: {
+        RejectRequestRequest: {
             comment: string;
         };
         RelayTokenResponse: {
@@ -3242,11 +3230,55 @@ export interface components {
             /** @description 새 동기화 토큰(64자 hex). 이 응답에서만 확인 가능하며 저장되지 않습니다 */
             token: string;
         };
+        RequestDetailResponse: {
+            courseOrProject?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            displayName?: string | null;
+            extraNote?: string | null;
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            orgId: number;
+            orgName: string;
+            purpose: string;
+            /** Format: date */
+            reqEndDate?: string | null;
+            /** Format: date */
+            reqStartDate?: string | null;
+            /** Format: int64 */
+            requesterId: number;
+            requesterName: string;
+            review?: components["schemas"]["RequestReviewResponse"] | null;
+            status: components["schemas"]["RequestStatus"];
+            type: components["schemas"]["ResourceType"];
+            /** Format: date-time */
+            updatedAt: string;
+            vm?: components["schemas"]["VmRequestSpecResponse"] | null;
+            /** Format: int64 */
+            workspaceId: number;
+            workspaceName: string;
+        };
         RequestOptionsResponse: {
             allowedRootDomains: string[];
             reservedSubdomains: string[];
             sshHost: string;
         };
+        RequestReviewResponse: {
+            comment?: string | null;
+            /** Format: date-time */
+            decidedAt: string;
+            decision: components["schemas"]["ReviewDecision"];
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: date */
+            grantedStartDate?: string | null;
+            /** Format: int64 */
+            reviewerId: number;
+            reviewerName: string;
+        };
+        /** @enum {string} */
+        RequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
         RequiredRecord: {
             name: string;
             type: string;
@@ -3271,8 +3303,58 @@ export interface components {
             capacityVcpu?: number | null;
             guidance: string;
         };
+        /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 워크스페이스 전체입니다. */
+        ResourceAccessGrantView: {
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 대상 종류 — USER는 지정된 사용자, WORKSPACE은 소유 워크스페이스 전체 */
+            granteeType: components["schemas"]["AccessGranteeType"];
+            /** Format: int64 */
+            id: number;
+            /** @description 이 대상이 이 VM에서 갖는 등급 */
+            role: components["schemas"]["ResourceRole"];
+            /** @description 대상 사용자. 워크스페이스 전체 항목이면 null입니다. */
+            user?: components["schemas"]["Grantee"] | null;
+        };
+        /** @description 리소스 접근 권한 목록과, 그 목록이 어느 리소스의 것인지 알려 주는 최소 정보 */
+        ResourceAccessListResponse: {
+            /** @description 접근 권한 항목 */
+            grants: components["schemas"]["ResourceAccessGrantView"][];
+            /** @description 이 목록이 속한 리소스 */
+            resource: components["schemas"]["ResourceBrief"];
+        };
+        /** @description 접근 권한이 없는 사람에게도 보이는 범위의 리소스 정보 */
+        ResourceBrief: {
+            /** @description 표시명. 지정되지 않았으면 null입니다. */
+            displayName?: string | null;
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** @description 리소스 종류의 상태값. 종류마다 어휘가 다릅니다. */
+            status: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: int64 */
+            workspaceId: number;
+            workspaceName: string;
+        };
         /** @enum {string} */
         ResourceRole: "OWNER" | "EDITOR" | "MEMBER" | "VIEWER";
+        ResourceSummaryResponse: {
+            accessLimited: boolean;
+            accessManageAllowed: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            displayName?: string | null;
+            /** Format: int64 */
+            id: number;
+            name: string;
+            ownerNames: string[];
+            status: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: int64 */
+            workspaceId: number;
+            workspaceName: string;
+        };
         ResourceTotalsResponse: {
             /** Format: int64 */
             diskGb: number;
@@ -3281,6 +3363,8 @@ export interface components {
             /** Format: int32 */
             vcpu: number;
         };
+        /** @enum {string} */
+        ResourceType: "VM";
         Resources: {
             activeVms: components["schemas"]["VmBriefResponse"][];
             totals: components["schemas"]["ResourceTotalsResponse"];
@@ -3358,7 +3442,7 @@ export interface components {
             publicKey: string;
         };
         SuspendPortMappingRequest: {
-            /** @description 정지 사유 (소유 그룹에 알림으로 전달) */
+            /** @description 정지 사유 (소유 워크스페이스에 알림으로 전달) */
             reason: string;
         };
         SystemDashboardSummaryResponse: {
@@ -3395,7 +3479,6 @@ export interface components {
         };
         TerminalSessionView: {
             clientIp: string;
-            groupName: string;
             /** Format: int64 */
             orgId: number;
             orgName: string;
@@ -3409,6 +3492,7 @@ export interface components {
             /** Format: int64 */
             vmId: number;
             vmName: string;
+            workspaceName: string;
         };
         TerminalTicketResponse: {
             /** Format: date-time */
@@ -3437,12 +3521,12 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
-        TopGroup: {
-            /** Format: int64 */
-            groupId: number;
+        TopWorkspace: {
             name: string;
             /** Format: int64 */
             vmCount: number;
+            /** Format: int64 */
+            workspaceId: number;
         };
         UnreadCountResponse: {
             /** Format: int64 */
@@ -3459,13 +3543,6 @@ export interface components {
         UpdateDomainRequest: {
             /** Format: int32 */
             port?: number;
-        };
-        UpdateGroupMemberRequest: {
-            role: components["schemas"]["GroupMemberRole"];
-        };
-        UpdateGroupRequest: {
-            description?: string | null;
-            name?: string;
         };
         UpdateNodeStatusRequest: {
             /** @description ACTIVE만 신규 VM 배치 대상 — MAINTENANCE/OFFLINE은 배치 제외 (기존 게스트 무영향) */
@@ -3508,14 +3585,14 @@ export interface components {
              */
             perSourceRate?: number | null;
         };
+        UpdateResourceAccessGrantRequest: {
+            /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
+            role: components["schemas"]["ResourceRole"];
+        };
         UpdateUserAdminRequest: {
             /** Format: int64 */
             orgId?: number | null;
             role?: components["schemas"]["UserRole"];
-        };
-        UpdateVmAccessGrantRequest: {
-            /** @description 새 등급. 그룹 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
-            role: components["schemas"]["ResourceRole"];
         };
         UpdateVmFlavorRequest: {
             /** Format: int32 */
@@ -3528,6 +3605,13 @@ export interface components {
             status?: components["schemas"]["CatalogStatus"] | null;
             /** Format: int32 */
             vcpu?: number | null;
+        };
+        UpdateWorkspaceMemberRequest: {
+            role: components["schemas"]["WorkspaceMemberRole"];
+        };
+        UpdateWorkspaceRequest: {
+            description?: string | null;
+            name?: string;
         };
         UserAdminDetailResponse: {
             /** Format: int32 */
@@ -3601,38 +3685,6 @@ export interface components {
         VerifyEmailRequest: {
             token: string;
         };
-        /** @description 접근 권한이 없는 사람에게도 보이는 범위의 VM 정보 */
-        Vm: {
-            /** @description 표시명. 지정되지 않았으면 null입니다. */
-            displayName?: string | null;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
-            id: number;
-            name: string;
-            status: components["schemas"]["VmStatus"];
-        };
-        /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 그룹 전체입니다. */
-        VmAccessGrantView: {
-            /** Format: date-time */
-            createdAt: string;
-            /** @description 대상 종류 — USER는 지정된 사용자, GROUP은 소유 그룹 전체 */
-            granteeType: components["schemas"]["AccessGranteeType"];
-            /** Format: int64 */
-            id: number;
-            /** @description 이 대상이 이 VM에서 갖는 등급 */
-            role: components["schemas"]["ResourceRole"];
-            /** @description 대상 사용자. 그룹 전체 항목이면 null입니다. */
-            user?: components["schemas"]["Grantee"] | null;
-        };
-        /** @description VM 접근 권한 목록과, 그 목록이 어느 VM의 것인지 알려 주는 최소 정보 */
-        VmAccessListResponse: {
-            /** @description 접근 권한 항목 */
-            grants: components["schemas"]["VmAccessGrantView"][];
-            /** @description 이 목록이 속한 VM */
-            vm: components["schemas"]["Vm"];
-        };
         VmBriefResponse: {
             /** Format: int32 */
             diskGb: number;
@@ -3677,9 +3729,6 @@ export interface components {
             endDate?: string | null;
             /** Format: date-time */
             expiryStoppedAt?: string | null;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
             hostname: string;
             /** Format: int64 */
             id: number;
@@ -3714,6 +3763,9 @@ export interface components {
             updatedAt: string;
             /** Format: int32 */
             vcpu: number;
+            /** Format: int64 */
+            workspaceId: number;
+            workspaceName: string;
         };
         VmEventResponse: {
             /** Format: int64 */
@@ -3747,6 +3799,18 @@ export interface components {
             /** @description 차단·해제 사유 (VM 이벤트·감사 기록에 포함, 선택) */
             reason?: string | null;
         };
+        VmGrantedSpecResponse: {
+            /** Format: int32 */
+            grantedDiskGb: number;
+            /** Format: int64 */
+            grantedImageId: number;
+            /** Format: int32 */
+            grantedMemoryMb: number;
+            /** Format: int32 */
+            grantedVcpu: number;
+            /** Format: int64 */
+            nodeId?: number | null;
+        };
         VmPasswordResponse: {
             password: string;
             sshHost: string;
@@ -3760,72 +3824,23 @@ export interface components {
             /** Format: date */
             startDate?: string;
         };
-        VmRequestDetailResponse: {
-            courseOrProject?: string | null;
-            /** Format: date-time */
-            createdAt: string;
+        VmRequestSpecResponse: {
             desiredSlug?: string | null;
             desiredSubdomain?: string | null;
-            displayName?: string | null;
-            extraNote?: string | null;
             /** Format: int64 */
             flavorId?: number | null;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
-            /** Format: int64 */
-            id: number;
+            granted?: components["schemas"]["VmGrantedSpecResponse"] | null;
             /** Format: int64 */
             imageId: number;
-            /** Format: int64 */
-            orgId: number;
-            orgName: string;
-            purpose: string;
             /** Format: int32 */
             reqDiskGb: number;
-            /** Format: date */
-            reqEndDate?: string | null;
             /** Format: int32 */
             reqMemoryMb: number;
-            /** Format: date */
-            reqStartDate?: string | null;
             /** Format: int32 */
             reqVcpu: number;
-            /** Format: int64 */
-            requesterId: number;
-            requesterName: string;
-            review?: components["schemas"]["VmRequestReviewResponse"] | null;
             rootDomain?: string | null;
             specReason?: string | null;
-            status: components["schemas"]["VmRequestStatus"];
-            /** Format: date-time */
-            updatedAt: string;
         };
-        VmRequestReviewResponse: {
-            comment?: string | null;
-            /** Format: date-time */
-            decidedAt: string;
-            decision: components["schemas"]["ReviewDecision"];
-            /** Format: int32 */
-            grantedDiskGb?: number | null;
-            /** Format: date */
-            grantedEndDate?: string | null;
-            /** Format: int64 */
-            grantedImageId?: number | null;
-            /** Format: int32 */
-            grantedMemoryMb?: number | null;
-            /** Format: date */
-            grantedStartDate?: string | null;
-            /** Format: int32 */
-            grantedVcpu?: number | null;
-            /** Format: int64 */
-            nodeId?: number | null;
-            /** Format: int64 */
-            reviewerId: number;
-            reviewerName: string;
-        };
-        /** @enum {string} */
-        VmRequestStatus: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
         /** @enum {string} */
         VmSettingValueType: "BOOLEAN" | "ENUM" | "INTEGER" | "STRING";
         VmSettingView: {
@@ -3852,7 +3867,7 @@ export interface components {
         VmSummaryResponse: {
             /** @description true면 이 VM의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
             accessLimited: boolean;
-            /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 그룹 소유자가 참입니다. */
+            /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 워크스페이스 소유자가 참입니다. */
             accessManageAllowed: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -3866,9 +3881,6 @@ export interface components {
             endDate?: string | null;
             /** Format: date-time */
             expiryStoppedAt?: string | null;
-            /** Format: int64 */
-            groupId: number;
-            groupName: string;
             /** @description SSH 슬러그. 접근 권한이 없으면 생략됩니다. */
             hostname?: string | null;
             /** Format: int64 */
@@ -3892,11 +3904,55 @@ export interface components {
              * @description vCPU. 접근 권한이 없으면 생략됩니다.
              */
             vcpu?: number | null;
+            /** Format: int64 */
+            workspaceId: number;
+            workspaceName: string;
         };
         WithdrawRequest: {
             password: string;
             recoveryCode?: string;
             totpCode?: string;
+        };
+        WorkspaceDetailResponse: {
+            /** Format: date-time */
+            createdAt: string;
+            description?: string | null;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["WorkspaceKind"];
+            members: components["schemas"]["WorkspaceMemberResponse"][];
+            myRole: components["schemas"]["WorkspaceMemberRole"];
+            name: string;
+        };
+        /** @enum {string} */
+        WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT";
+        WorkspaceMemberResponse: {
+            email: string;
+            name: string;
+            role: components["schemas"]["WorkspaceMemberRole"];
+            /** Format: int64 */
+            userId: number;
+        };
+        /** @enum {string} */
+        WorkspaceMemberRole: "OWNER" | "MEMBER";
+        WorkspacePanel: {
+            activeVms: components["schemas"]["VmBriefResponse"][];
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["WorkspaceKind"];
+            members: components["schemas"]["MemberBrief"][];
+            name: string;
+            totals: components["schemas"]["ResourceTotalsResponse"];
+        };
+        WorkspaceSummaryResponse: {
+            description?: string | null;
+            /** Format: int64 */
+            id: number;
+            kind: components["schemas"]["WorkspaceKind"];
+            /** Format: int64 */
+            memberCount: number;
+            myRole: components["schemas"]["WorkspaceMemberRole"];
+            name: string;
         };
     };
     responses: never;
@@ -4268,68 +4324,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DriftFindingResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listAdminGroups: {
-        parameters: {
-            query?: {
-                orgId?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["AdminGroupOptionResponse"][];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getAdminGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                groupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["AdminGroupDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -4894,6 +4888,173 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminRequests: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["RequestStatus"];
+                type?: components["schemas"]["ResourceType"];
+                orgId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approveRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getApprovalContext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApprovalContextResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rejectRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -5546,177 +5707,11 @@ export interface operations {
             };
         };
     };
-    listAdminVmRequests: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["VmRequestStatus"];
-                orgId?: number;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PageResponseVmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getAdminVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requestId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    approveVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requestId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ApproveVmRequestRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getApprovalContext: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requestId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApprovalContextResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    rejectVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requestId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RejectVmRequestRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     listAdminVms: {
         parameters: {
             query?: {
                 orgId?: number;
-                groupId?: number;
+                workspaceId?: number;
                 status?: components["schemas"]["VmStatus"];
                 expiringInDays?: number;
                 expired?: boolean;
@@ -6098,6 +6093,68 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminWorkspaces: {
+        parameters: {
+            query?: {
+                orgId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminWorkspaceOptionResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminWorkspaceDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -6590,300 +6647,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DomainDetailView"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listGroups: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupSummaryResponse"][];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    createGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateGroupRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                groupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    deleteGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                groupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    updateGroup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                groupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateGroupRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    addGroupMember: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
-            path: {
-                groupId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddGroupMemberRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupMemberResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    removeGroupMember: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
-            path: {
-                groupId: number;
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    updateGroupMember: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
-            path: {
-                groupId: number;
-                userId: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateGroupMemberRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["GroupMemberResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7722,6 +7485,170 @@ export interface operations {
             };
         };
     };
+    listRequests: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["RequestStatus"];
+                type?: components["schemas"]["ResourceType"];
+                workspaceId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseRequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listResources: {
+        parameters: {
+            query?: {
+                type?: components["schemas"]["ResourceType"];
+                workspaceId?: number;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseResourceSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listVmFlavors: {
         parameters: {
             query?: never;
@@ -7751,139 +7678,10 @@ export interface operations {
             };
         };
     };
-    listVmRequests: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["VmRequestStatus"];
-                groupId?: number;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PageResponseVmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    createVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateVmRequestRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    getVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requestId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    cancelVmRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requestId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["VmRequestDetailResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     listVms: {
         parameters: {
             query?: {
-                groupId?: number;
+                workspaceId?: number;
                 page?: number;
                 size?: number;
             };
@@ -8004,7 +7802,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VmAccessListResponse"];
+                    "*/*": components["schemas"]["ResourceAccessListResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -8032,7 +7830,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AddVmAccessGrantRequest"];
+                "application/json": components["schemas"]["AddResourceAccessGrantRequest"];
             };
         };
         responses: {
@@ -8042,7 +7840,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VmAccessGrantView"];
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
             /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
@@ -8122,7 +7920,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateVmAccessGrantRequest"];
+                "application/json": components["schemas"]["UpdateResourceAccessGrantRequest"];
             };
         };
         responses: {
@@ -8132,7 +7930,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["VmAccessGrantView"];
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
             /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
@@ -8724,6 +8522,300 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TerminalTicketResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceSummaryResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                workspaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddWorkspaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                workspaceId: number;
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                workspaceId: number;
+                userId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

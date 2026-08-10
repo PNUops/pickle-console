@@ -6,8 +6,8 @@ import { toApiError } from '../api/problem'
 import {
   fetchOsImages,
   fetchVmFlavors,
-  fetchVmRequest,
-  type VmRequestDetail,
+  fetchRequest,
+  type RequestDetail,
 } from '../api/queries'
 import {
   Alert,
@@ -28,8 +28,8 @@ export function RequestDetailPage() {
   const requestId = Number(params.requestId)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const request = useQuery({
-    queryKey: ['vm-requests', requestId],
-    queryFn: () => fetchVmRequest(requestId),
+    queryKey: ['requests', requestId],
+    queryFn: () => fetchRequest(requestId),
   })
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
@@ -87,7 +87,7 @@ export function RequestDetailPage() {
       )}
 
       {data.review && (
-        <ReviewCard review={data.review} imageName={imageName(data.review.grantedImageId)} />
+        <ReviewCard review={data.review} vmGranted={data.vm?.granted} imageName={imageName(data.vm?.granted?.grantedImageId)} />
       )}
 
       <Card>
@@ -96,28 +96,28 @@ export function RequestDetailPage() {
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-            <Field label="그룹">{data.groupName}</Field>
+            <Field label="워크스페이스">{data.workspaceName}</Field>
             <Field label="기관">{data.orgName}</Field>
-            <Field label="OS">{imageName(data.imageId)}</Field>
-            <Field label="사양 프리셋">{flavorName(data.flavorId)}</Field>
+            <Field label="OS">{imageName(data.vm?.imageId)}</Field>
+            <Field label="사양 프리셋">{flavorName(data.vm?.flavorId)}</Field>
             <Field label="요청 사양">
-              {formatSpec(data.reqVcpu, data.reqMemoryMb, data.reqDiskGb)}
+              {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
             </Field>
             <Field label="용도">{data.purpose}</Field>
             <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
-            <Field label="사양 사유">{data.specReason ?? '—'}</Field>
+            <Field label="사양 사유">{data.vm?.specReason ?? '—'}</Field>
             <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
             <Field label="사용 기간">
               {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
             </Field>
             <Field label="표시명">{data.displayName ?? '—'}</Field>
-            <Field label="호스트명(SSH 접속명)">{data.desiredSlug ?? '자동 생성'}</Field>
+            <Field label="호스트명(SSH 접속명)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
             {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
-            {data.desiredSubdomain && (
+            {data.vm?.desiredSubdomain && (
               <Field label="서브도메인 선지정">
-                {data.rootDomain
-                  ? `${data.desiredSubdomain}.${data.rootDomain}`
-                  : data.desiredSubdomain}
+                {data.vm?.rootDomain
+                  ? `${data.vm?.desiredSubdomain}.${data.vm?.rootDomain}`
+                  : data.vm?.desiredSubdomain}
               </Field>
             )}
           </dl>
@@ -138,9 +138,11 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function ReviewCard({
   review,
+  vmGranted,
   imageName,
 }: {
-  review: NonNullable<VmRequestDetail['review']>
+  review: NonNullable<RequestDetail['review']>
+  vmGranted: NonNullable<RequestDetail['vm']>['granted']
   imageName: string
 }) {
   const approved = review.decision === 'APPROVE'
@@ -156,11 +158,11 @@ function ReviewCard({
           <Field label="처리 시각">{formatDateTime(review.decidedAt)}</Field>
           {review.comment && <Field label="검토 의견">{review.comment}</Field>}
           {approved &&
-            review.grantedVcpu != null &&
-            review.grantedMemoryMb != null &&
-            review.grantedDiskGb != null && (
+            vmGranted?.grantedVcpu != null &&
+            vmGranted?.grantedMemoryMb != null &&
+            vmGranted?.grantedDiskGb != null && (
               <Field label="부여 사양">
-                {formatSpec(review.grantedVcpu, review.grantedMemoryMb, review.grantedDiskGb)}
+                {formatSpec(vmGranted?.grantedVcpu, vmGranted?.grantedMemoryMb, vmGranted?.grantedDiskGb)}
               </Field>
             )}
           {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
@@ -187,7 +189,7 @@ function CancelRequestButton({
 
   const cancel = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST('/vm-requests/{requestId}/cancel', {
+      const { data, error } = await api.POST('/requests/{requestId}/cancel', {
         params: { path: { requestId } },
       })
       if (!data) throw toApiError(error, '신청을 취소하지 못했습니다.')
@@ -196,13 +198,13 @@ function CancelRequestButton({
     onSuccess: async () => {
       setConfirmOpen(false)
       onError(null)
-      await queryClient.invalidateQueries({ queryKey: ['vm-requests'] })
+      await queryClient.invalidateQueries({ queryKey: ['requests'] })
     },
     onError: async (err) => {
       setConfirmOpen(false)
       onError(toApiError(err, '신청을 취소하지 못했습니다.').message)
       // 이미 처리된 신청이면 최신 상태를 다시 불러온다.
-      await queryClient.invalidateQueries({ queryKey: ['vm-requests'] })
+      await queryClient.invalidateQueries({ queryKey: ['requests'] })
     },
   })
 

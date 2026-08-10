@@ -126,13 +126,11 @@ export function passwordStrength(password: string): 0 | 1 | 2 | 3 {
 /** 강도 점수 표시 문구. */
 export const PASSWORD_STRENGTH_LABELS = ['매우 약함', '약함', '보통', '강함'] as const
 
-/** Mirrors the contract regex for group slug (openapi.yaml CreateGroupRequest). */
-export const GROUP_SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/
 
 /** Mirrors the contract regex for org slug (openapi.yaml POST /admin/orgs). */
 export const ORG_SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/
 
-/** Mirrors the contract regex for desiredSubdomain (openapi.yaml CreateVmRequest, 3~40자). */
+/** Mirrors the contract regex for desiredSubdomain (openapi.yaml CreateRequest, 3~40자). */
 export const SUBDOMAIN_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/
 
 /**

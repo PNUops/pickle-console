@@ -1,25 +1,25 @@
 import type { components } from '../api/schema'
 
-export type GroupKind = components['schemas']['GroupKind']
-export type GroupMemberRole = components['schemas']['GroupMemberRole']
+export type WorkspaceKind = components['schemas']['WorkspaceKind']
+export type WorkspaceMemberRole = components['schemas']['WorkspaceMemberRole']
 export type ResourceRole = components['schemas']['ResourceRole']
 export type UserRole = components['schemas']['UserRole']
 export type UserStatus = components['schemas']['UserStatus']
 export type OrgStatus = components['schemas']['OrgStatus']
 
-export const GROUP_KIND_LABELS: Record<GroupKind, string> = {
+export const WORKSPACE_KIND_LABELS: Record<WorkspaceKind, string> = {
   PERSONAL: '개인',
   TEAM: '팀',
   PROJECT: '프로젝트',
 }
 
-/** 그룹 축 — 그룹 자체에 대한 권한. 2단이다. */
-export const GROUP_ROLE_LABELS: Record<GroupMemberRole, string> = {
+/** 워크스페이스 축 — 워크스페이스 자체에 대한 권한. 2단이다. */
+export const WORKSPACE_ROLE_LABELS: Record<WorkspaceMemberRole, string> = {
   OWNER: '소유자',
   MEMBER: '구성원',
 }
 
-/** 자원 축 — 자원 하나에 대한 권한. 접근 목록의 등급이다. */
+/** 리소스 축 — 리소스 하나에 대한 권한. 접근 목록의 등급이다. */
 export const RESOURCE_ROLE_LABELS: Record<ResourceRole, string> = {
   OWNER: '소유자',
   EDITOR: '편집자',
