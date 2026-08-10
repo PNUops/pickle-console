@@ -120,6 +120,17 @@ describe('관리자 대시보드 — 하이퍼바이저 실측', () => {
       within(systemRow).queryByRole('progressbar', { name: '물리 메모리 사용률' }),
     ).not.toBeInTheDocument()
   })
+  test('측정된 노드가 전체보다 적으면 합계를 전체로 읽히게 두지 않는다', async () => {
+    // 픽스처는 노드 2대 중 pve1만 읽힌 상태다(pve2 무응답). 합계는 pve1 것뿐이라,
+    // 그것을 플랫폼 용량으로 읽으면 실제보다 작게 보인다.
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    expect(
+      within(systemRow).getAllByText(/노드 2대 중 1대에서 읽은 값입니다/),
+    ).toHaveLength(2)
+  })
 })
 
 describe('관리자 대시보드 — 오프라인으로 지정된 노드', () => {

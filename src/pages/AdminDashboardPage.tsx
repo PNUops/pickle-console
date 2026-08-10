@@ -5,6 +5,7 @@ import {
   fetchAdminSummary,
   fetchAdminRequests,
   fetchSystemSummary,
+  type LiveCoverage,
   type NodeLive,
   type NodeRatio,
   type OrgDashboardSummary,
@@ -154,7 +155,11 @@ export function AdminDashboardPage() {
               tone={system.data.sshPasswordEnabledVmCount > 0 ? 'danger' : 'normal'}
             />
           </div>
-          <NodesLiveTiles live={system.data.nodesLive} nodes={system.data.nodes} />
+          <NodesLiveTiles
+            live={system.data.nodesLive}
+            nodes={system.data.nodes}
+            coverage={system.data.liveCoverage}
+          />
         </section>
       )}
 
@@ -263,7 +268,15 @@ function OrgSummaryTiles({ summary }: { summary: OrgDashboardSummary }) {
  * 운영자가 오프라인으로 지정해 둔 노드가 응답하지 않는 것은 예정된 상태이므로
  * 경보로 올리지 않는다 — 그러지 않으면 진짜 장애가 상시 경보에 묻힌다.
  */
-function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] }) {
+function NodesLiveTiles({
+  live,
+  nodes,
+  coverage,
+}: {
+  live: NodeLive[]
+  nodes: NodeRatio[]
+  coverage: LiveCoverage
+}) {
   const statusById = new Map(nodes.map((node) => [node.id, node.status]))
   const reachable = live.filter((node) => node.reachable)
   const unreachable = live.filter((node) => !node.reachable)
@@ -297,6 +310,8 @@ function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] 
       <LiveUsageTile
         label="물리 메모리"
         usage={sumLivePair(reachable, 'memUsedBytes', 'memTotalBytes')}
+        measuredNodeCount={coverage.memoryMeasuredNodeCount}
+        nodeCount={coverage.nodeCount}
         registered={registered}
         anyReachable={reachable.length > 0}
         unexpectedOutage={unexpected > 0}
@@ -304,6 +319,8 @@ function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] 
       <LiveUsageTile
         label="스토리지"
         usage={sumLivePair(reachable, 'storageUsedBytes', 'storageTotalBytes')}
+        measuredNodeCount={coverage.storageMeasuredNodeCount}
+        nodeCount={coverage.nodeCount}
         registered={registered}
         anyReachable={reachable.length > 0}
         unexpectedOutage={unexpected > 0}
@@ -322,6 +339,8 @@ function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] 
 function LiveUsageTile({
   label,
   usage,
+  measuredNodeCount,
+  nodeCount,
   registered,
   anyReachable,
   unexpectedOutage,
@@ -329,6 +348,13 @@ function LiveUsageTile({
 }: {
   label: string
   usage: { used: number; total: number } | null
+  /**
+   * 이 합계가 몇 대에서 나왔는지 / 전부 몇 대인지. 스토리지 권한만 빠진 노드는
+   * 응답한 것으로 남으므로, 두 수가 다르면 합계는 플랫폼 전체가 아니다 — 그것을
+   * 전체로 읽히게 두면 용량이 실제보다 작게 보인다.
+   */
+  measuredNodeCount: number
+  nodeCount: number
   /** 실측 대상 노드가 한 대라도 있는가 — 없으면 '오프라인만 남았다'가 아니다. */
   registered: boolean
   anyReachable: boolean
@@ -371,6 +397,12 @@ function LiveUsageTile({
               capacity={usage.total}
               capacityLabel={formatBytes(usage.total)}
             />
+            {measuredNodeCount < nodeCount && (
+              <p className="text-xs text-neutral-600">
+                노드 {nodeCount}대 중 {measuredNodeCount}대에서 읽은 값입니다 — 플랫폼
+                전체 수치가 아닙니다
+              </p>
+            )}
             {hint && <p className="text-xs text-neutral-500">{hint}</p>}
           </>
         )}

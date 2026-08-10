@@ -2843,6 +2843,23 @@ export interface components {
             id: number;
             name: string;
         };
+        LiveCoverage: {
+            /**
+             * Format: int32
+             * @description 메모리 측정값이 있는 노드 수 — nodeCount보다 작으면 메모리 합계는 부분 측정
+             */
+            memoryMeasuredNodeCount: number;
+            /**
+             * Format: int32
+             * @description nodesLive 행 수 (플랫폼 전체 노드 수)
+             */
+            nodeCount: number;
+            /**
+             * Format: int32
+             * @description 스토리지 측정값이 있는 노드 수 — nodeCount보다 작으면 스토리지 합계는 부분 측정
+             */
+            storageMeasuredNodeCount: number;
+        };
         LoginRequest: {
             email: string;
             password: string;
@@ -2891,7 +2908,7 @@ export interface components {
             name: string;
             /** Format: int64 */
             nodeId: number;
-            /** @description false = 이 노드의 Proxmox API가 응답하지 않음 — 나머지 필드는 null */
+            /** @description true = 이 노드가 상태 조회에 응답함. false = 응답하지 않음이며 나머지 필드는 모두 null. true여도 스토리지 조회는 별도 권한이라 storage* 필드는 null일 수 있음 */
             reachable: boolean;
             /** Format: int64 */
             storageTotalBytes?: number | null;
@@ -3605,6 +3622,7 @@ export interface components {
             /** Format: int64 */
             certExpiring30dCount: number;
             ipPools: components["schemas"]["IpPoolUsage"][];
+            liveCoverage: components["schemas"]["LiveCoverage"];
             nodes: components["schemas"]["NodeRatio"][];
             nodesLive: components["schemas"]["NodeLiveResponse"][];
             /** Format: int64 */
@@ -4085,6 +4103,7 @@ export interface components {
              * @description 메모리(MiB). 접근 권한이 없으면 생략됩니다.
              */
             memoryMb?: number | null;
+            /** @description SSH 슬러그. 접근 권한이 없으면 대신 표시 이름이 들어갑니다. */
             name: string;
             orgName?: string | null;
             /** @description 이 VM의 소유자 이름. 접근을 요청할 상대입니다. */

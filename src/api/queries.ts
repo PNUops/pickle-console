@@ -151,6 +151,7 @@ export type AnnouncementPage = Schemas['PageResponseAnnouncementView']
 export type OrgDashboardSummary = Schemas['OrgDashboardSummaryResponse']
 export type SystemDashboardSummary = Schemas['SystemDashboardSummaryResponse']
 export type NodeLive = Schemas['NodeLiveResponse']
+export type LiveCoverage = Schemas['LiveCoverage']
 /** 시스템 요약이 함께 싣는 노드별 할당 비율·운영 상태. */
 export type NodeRatio = Schemas['NodeRatio']
 
