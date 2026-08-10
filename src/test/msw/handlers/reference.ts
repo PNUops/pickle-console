@@ -1,5 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 
@@ -8,15 +9,14 @@ type Schemas = components['schemas']
 function initialOrgs(): Schemas['OrgSummaryResponse'][] {
   return [
     {
-      id: 1,
+      id: uuid(1),
       name: '정보컴퓨터공학부 실습지원센터',
-      slug: 'cse-lab',
       description: '학부 수업·캡스톤용 서버 리소스 제공',
       status: 'ACTIVE',
       hidden: false,
     },
     // the seed org is hidden in real data; msw serves it regardless of role
-    { id: 2, name: '테스트 기관', slug: 'test-org', description: null, status: 'ACTIVE', hidden: true },
+    { id: uuid(2), name: '테스트 기관', description: null, status: 'ACTIVE', hidden: true },
   ]
 }
 
@@ -41,7 +41,7 @@ export function resetReferenceFixtures() {
 
 /** OS 카탈로그 — 공개 /os-images는 ACTIVE 리비전만 노출한다. */
 export const ubuntuOsImage: Schemas['OsImageResponse'] = {
-  id: 1,
+  id: uuid(1),
   name: 'ubuntu-24.04',
   displayName: 'Ubuntu 24.04 LTS',
   osFamily: 'ubuntu',
@@ -66,7 +66,7 @@ export const osImages: Schemas['OsImageResponse'][] = [ubuntuOsImage]
 function initialFlavors(): Schemas['VmFlavorResponse'][] {
   return [
     {
-      id: 1,
+      id: uuid(1),
       name: 'small',
       displayName: '소형',
       vcpu: 1,
@@ -76,7 +76,7 @@ function initialFlavors(): Schemas['VmFlavorResponse'][] {
       notes: '간단한 실습·정적 웹 서버에 적합합니다.',
     },
     {
-      id: 2,
+      id: uuid(2),
       name: 'basic',
       displayName: '기본형',
       vcpu: 2,
@@ -86,7 +86,7 @@ function initialFlavors(): Schemas['VmFlavorResponse'][] {
       notes: '대부분의 수업·캡스톤 프로젝트에 적합합니다.',
     },
     {
-      id: 3,
+      id: uuid(3),
       name: 'large',
       displayName: '대형',
       vcpu: 4,
@@ -96,7 +96,7 @@ function initialFlavors(): Schemas['VmFlavorResponse'][] {
       notes: 'DB·데이터 처리 실습용입니다.',
     },
     {
-      id: 9,
+      id: uuid(9),
       name: 'legacy',
       displayName: '구형 프리셋',
       vcpu: 1,

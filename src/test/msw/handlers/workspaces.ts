@@ -1,16 +1,17 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse, regularUser } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 
 /* ─── fixture users addable by email ─── */
 
 export const knownUsers: Schemas['WorkspaceMemberResponse'][] = [
-  { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MEMBER' },
-  { userId: 58, name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
-  { userId: 59, name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'MEMBER' },
-  { userId: 60, name: '최수진', email: 'sujin.choi@pusan.ac.kr', role: 'MEMBER' },
+  { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MEMBER' },
+  { userId: uuid(58), name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
+  { userId: uuid(59), name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'MEMBER' },
+  { userId: uuid(60), name: '최수진', email: 'sujin.choi@pusan.ac.kr', role: 'MEMBER' },
 ]
 
 interface WorkspaceRecord {
@@ -29,7 +30,7 @@ function initialWorkspaces(): WorkspaceRecord[] {
   return [
     {
       detail: {
-        id: 7,
+        id: uuid(7),
         kind: 'PERSONAL',
         name: '홍길동',
         description: null,
@@ -40,7 +41,7 @@ function initialWorkspaces(): WorkspaceRecord[] {
     },
     {
       detail: {
-        id: 12,
+        id: uuid(12),
         kind: 'PROJECT',
         name: '캡스톤 3조',
         description: '2026-1 캡스톤디자인 3조',
@@ -49,15 +50,15 @@ function initialWorkspaces(): WorkspaceRecord[] {
       },
       members: [
         me(),
-        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MEMBER' },
-        { userId: 58, name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
-        { userId: 59, name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'MEMBER' },
+        { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'MEMBER' },
+        { userId: uuid(58), name: '이영희', email: 'younghee.lee@pusan.ac.kr', role: 'MEMBER' },
+        { userId: uuid(59), name: '박민수', email: 'minsu.park@pusan.ac.kr', role: 'MEMBER' },
       ],
     },
     {
       // 로그인 사용자(42)가 구성원(소유자가 아님)인 두 번째 워크스페이스.
       detail: {
-        id: 14,
+        id: uuid(14),
         kind: 'PROJECT',
         name: '데이터베이스 실습',
         description: '2026-1 데이터베이스 실습 조교팀',
@@ -65,13 +66,13 @@ function initialWorkspaces(): WorkspaceRecord[] {
         createdAt: '2026-06-20T14:00:00+09:00',
       },
       members: [
-        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'OWNER' },
+        { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'OWNER' },
         { ...me(), role: 'MEMBER' },
       ],
     },
     {
       detail: {
-        id: 15,
+        id: uuid(15),
         kind: 'TEAM',
         name: '알고리즘 스터디',
         description: '주 1회 문제 풀이 모임',
@@ -79,7 +80,7 @@ function initialWorkspaces(): WorkspaceRecord[] {
         createdAt: '2026-06-15T20:00:00+09:00',
       },
       members: [
-        { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'OWNER' },
+        { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr', role: 'OWNER' },
         { ...me(), role: 'MEMBER' },
       ],
     },
@@ -110,17 +111,17 @@ function toDetail(record: WorkspaceRecord): Schemas['WorkspaceDetailResponse'] {
 }
 
 /** 로그인 사용자가 이 워크스페이스의 구성원인지 — 목록 mock의 조회 범위 판단. */
-export function isMyWorkspace(workspaceId: number): boolean {
+export function isMyWorkspace(workspaceId: string | null | undefined): boolean {
   return workspaceMembersOf(workspaceId).some((m) => m.userId === regularUser.id)
 }
 
 /** 이 워크스페이스의 구성원 — VM 접근 목록 mock이 부여 대상 자격을 확인할 때 쓴다. */
-export function workspaceMembersOf(workspaceId: number): Schemas['WorkspaceMemberResponse'][] {
+export function workspaceMembersOf(workspaceId: string | null | undefined): Schemas['WorkspaceMemberResponse'][] {
   return workspaceStore.find((g) => g.detail.id === workspaceId)?.members ?? []
 }
 
 function findWorkspace(workspaceId: string | readonly string[]): WorkspaceRecord | undefined {
-  return workspaceStore.find((g) => g.detail.id === Number(workspaceId))
+  return workspaceStore.find((g) => g.detail.id === workspaceId)
 }
 
 const notFound = () =>
@@ -150,7 +151,7 @@ export const workspaceHandlers: RequestHandler[] = [
     const body = (await request.json()) as Schemas['CreateWorkspaceRequest']
     const record: WorkspaceRecord = {
       detail: {
-        id: nextWorkspaceId++,
+        id: uuid(nextWorkspaceId++),
         kind: body.kind,
         name: body.name,
         description: body.description ?? null,
@@ -225,7 +226,7 @@ export const workspaceHandlers: RequestHandler[] = [
 
   http.patch('*/api/v1/workspaces/:workspaceId/members/:userId', async ({ params, request }) => {
     const record = findWorkspace(params.workspaceId!)
-    const member = record?.members.find((m) => m.userId === Number(params.userId))
+    const member = record?.members.find((m) => m.userId === String(params.userId))
     if (!record || !member) return notFound()
     const body = (await request.json()) as { role: Schemas['WorkspaceMemberRole'] }
     // 소유자는 여러 명일 수 있다 — 지정해도 지정한 사람은 그대로 소유자로 남는다.
@@ -246,7 +247,7 @@ export const workspaceHandlers: RequestHandler[] = [
 
   http.delete('*/api/v1/workspaces/:workspaceId/members/:userId', ({ params }) => {
     const record = findWorkspace(params.workspaceId!)
-    const member = record?.members.find((m) => m.userId === Number(params.userId))
+    const member = record?.members.find((m) => m.userId === String(params.userId))
     if (!record || !member) return notFound()
     const ownerCount = record.members.filter((m) => m.role === 'OWNER').length
     if (member.role === 'OWNER' && ownerCount <= 1) {

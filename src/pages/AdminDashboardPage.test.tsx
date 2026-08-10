@@ -8,6 +8,7 @@ import {
 import { orgSummaryFixture, systemSummaryFixture } from '../test/msw/handlers/admin-ops'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 describe('관리자 대시보드', () => {
   test('ORG_ADMIN은 기관 요약 타일과 리소스 현황을 보고 시스템 요약은 없다', async () => {
@@ -138,7 +139,7 @@ describe('관리자 대시보드 — 오프라인으로 지정된 노드', () =>
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     // pve2는 이미 응답하지 않는 노드다 — 상태만 오프라인으로 바꾼다.
     systemSummaryFixture.nodes = systemSummaryFixture.nodes.map((node) =>
-      node.id === 2 ? { ...node, status: 'OFFLINE' } : node,
+      node.id === uuid(2) ? { ...node, status: 'OFFLINE' } : node,
     )
     renderApp('/admin')
 
@@ -233,7 +234,7 @@ describe('관리자 대시보드 — 실측값이 비어 있을 때', () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     systemSummaryFixture.nodesLive = [
       {
-        nodeId: 1,
+        nodeId: uuid(1),
         name: 'pve1',
         reachable: true,
         cpu: 0.2,

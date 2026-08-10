@@ -2,6 +2,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
 import { vmStore } from './vms'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type PortForwardingView = Schemas['PortForwardingView']
@@ -17,15 +18,15 @@ export const RELAY_TOKEN_PLAINTEXT =
   '3f6c1b2ae94d4d0cbb1f8a5e7c2d9e10aa55bb66cc77dd88ee99ff00a1b2c3d4'
 
 interface ForwardingRecord {
-  id: number
-  vmId: number
-  relayId: number
+  id: string
+  vmId: string
+  relayId: string
   proto: Schemas['PortMappingProto']
   publicPort: number
   targetPort: number
   status: Schemas['PortMappingStatus']
   suspendedReason: string | null
-  suspendedBy: number | null
+  suspendedBy: string | null
   /** true면 릴레이가 적용 실패를 보고한 매핑 (applyState FAILED). */
   applyFailed: boolean
   /** PENDING 전이 카운터 — 목록 GET마다 증가, 임계에 닿으면 ACTIVE. */
@@ -37,7 +38,7 @@ interface ForwardingRecord {
     perSourceRate: number | null
     perSourceBurst: number | null
   }
-  createdBy: number
+  createdBy: string
   createdAt: string
 }
 
@@ -53,9 +54,9 @@ function initialForwardings(): ForwardingRecord[] {
   return [
     {
       // algo-judge(56, 워크스페이스 15 — 로그인 사용자는 MEMBER): 읽기 전용 목록 확인용.
-      id: 101,
-      vmId: 56,
-      relayId: 1,
+      id: uuid(101),
+      vmId: uuid(56),
+      relayId: uuid(1),
       proto: 'TCP',
       publicPort: 12345,
       targetPort: 8080,
@@ -65,31 +66,31 @@ function initialForwardings(): ForwardingRecord[] {
       applyFailed: false,
       fetchesSincePending: null,
       guards: defaultGuards(),
-      createdBy: 57,
+      createdBy: uuid(57),
       createdAt: '2026-07-11T10:00:00+09:00',
     },
     {
       // 정지된 매핑 — 관리자 정지 해제·사용자 정지 표시 확인용.
-      id: 102,
-      vmId: 56,
-      relayId: 1,
+      id: uuid(102),
+      vmId: uuid(56),
+      relayId: uuid(1),
       proto: 'UDP',
       publicPort: 13001,
       targetPort: 51820,
       status: 'SUSPENDED',
       suspendedReason: '과도한 트래픽 발생',
-      suspendedBy: 5,
+      suspendedBy: uuid(5),
       applyFailed: false,
       fetchesSincePending: null,
       guards: defaultGuards(),
-      createdBy: 57,
+      createdBy: uuid(57),
       createdAt: '2026-07-11T11:00:00+09:00',
     },
     {
       // build-server(45, 워크스페이스 12 — 로그인 사용자는 OWNER): 삭제 흐름 확인용.
-      id: 103,
-      vmId: 45,
-      relayId: 1,
+      id: uuid(103),
+      vmId: uuid(45),
+      relayId: uuid(1),
       proto: 'TCP',
       publicPort: 14000,
       targetPort: 3000,
@@ -99,7 +100,7 @@ function initialForwardings(): ForwardingRecord[] {
       applyFailed: false,
       fetchesSincePending: null,
       guards: defaultGuards(),
-      createdBy: 42,
+      createdBy: uuid(42),
       createdAt: '2026-07-11T12:00:00+09:00',
     },
   ]
@@ -110,7 +111,7 @@ type RelayRecord = AdminRelayView
 function initialRelays(): RelayRecord[] {
   return [
     {
-      id: 1,
+      id: uuid(1),
       name: 'relay-1',
       publicHost: RELAY_PUBLIC_HOST,
       bandStart: 10000,
@@ -128,7 +129,7 @@ function initialRelays(): RelayRecord[] {
     },
     {
       // 이상 상태 릴레이 — 접촉 두절 + 적용 지연 + 적용 실패 + 대역 사용률 경고.
-      id: 2,
+      id: uuid(2),
       name: 'relay-2',
       publicHost: null,
       bandStart: 20000,
@@ -244,18 +245,18 @@ function paginate<T>(items: T[], page: number, size: number) {
 export const networkHandlers: RequestHandler[] = [
   /* ─── 포트포워딩 (사용자) ─── */
   http.get('*/api/v1/vms/:vmId/port-forwardings', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const records = forwardingStore
       .filter((f) => f.vmId === vm.id)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const views = records.map(toUserView)
     advancePending(records)
     return HttpResponse.json(views, { status: 200 })
   }),
 
   http.post('*/api/v1/vms/:vmId/port-forwardings', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const instance = `/api/v1/vms/${vm.id}/port-forwardings`
     if (vm.status !== 'RUNNING' || vm.ipAddress == null) {
@@ -277,9 +278,9 @@ export const networkHandlers: RequestHandler[] = [
       return validationFailed(instance, 'targetPort', '포트는 1–65535 범위여야 합니다.')
     }
     const record: ForwardingRecord = {
-      id: nextForwardingId++,
+      id: uuid(nextForwardingId++),
       vmId: vm.id,
-      relayId: 1,
+      relayId: uuid(1),
       proto: body.proto,
       publicPort: nextPublicPort++,
       targetPort: body.targetPort,
@@ -289,7 +290,7 @@ export const networkHandlers: RequestHandler[] = [
       applyFailed: false,
       fetchesSincePending: 0,
       guards: defaultGuards(),
-      createdBy: 42,
+      createdBy: uuid(42),
       createdAt: '2026-07-12T09:00:00+09:00',
     }
     forwardingStore.push(record)
@@ -299,7 +300,7 @@ export const networkHandlers: RequestHandler[] = [
   http.delete('*/api/v1/vms/:vmId/port-forwardings/:portForwardingId', ({ params }) => {
     const index = forwardingStore.findIndex(
       (f) =>
-        f.id === Number(params.portForwardingId) && f.vmId === Number(params.vmId),
+        f.id === String(params.portForwardingId) && f.vmId === String(params.vmId),
     )
     if (index < 0) return notFound()
     forwardingStore.splice(index, 1)
@@ -315,7 +316,7 @@ export const networkHandlers: RequestHandler[] = [
   ),
 
   http.post('*/api/v1/admin/relays/:relayId/token', ({ params }) => {
-    const relay = relayStore.find((r) => r.id === Number(params.relayId))
+    const relay = relayStore.find((r) => r.id === String(params.relayId))
     if (!relay) return notFound()
     relay.tokenIssued = true
     const response: Schemas['RelayTokenResponse'] = {
@@ -334,17 +335,17 @@ export const networkHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const records = forwardingStore
-      .filter((f) => !relayId || f.relayId === Number(relayId))
-      .filter((f) => !vmId || f.vmId === Number(vmId))
+      .filter((f) => !relayId || f.relayId === relayId)
+      .filter((f) => !vmId || f.vmId === vmId)
       .filter((f) => !status || f.status === status)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const views = records.map(toAdminView)
     advancePending(records)
     return HttpResponse.json(paginate(views, page, size), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/port-mappings/:mappingId/suspend', async ({ params, request }) => {
-    const record = forwardingStore.find((f) => f.id === Number(params.mappingId))
+    const record = forwardingStore.find((f) => f.id === String(params.mappingId))
     if (!record) return notFound()
     const instance = `/api/v1/admin/port-mappings/${record.id}/suspend`
     const body = (await request.json().catch(() => ({}))) as { reason?: string }
@@ -363,13 +364,13 @@ export const networkHandlers: RequestHandler[] = [
     }
     record.status = 'SUSPENDED'
     record.suspendedReason = body.reason.trim()
-    record.suspendedBy = 5
+    record.suspendedBy = uuid(5)
     // 계약: 갱신된 매핑을 200으로 돌려준다 (릴레이 반영은 비동기).
     return HttpResponse.json(toAdminView(record), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/port-mappings/:mappingId/unsuspend', ({ params }) => {
-    const record = forwardingStore.find((f) => f.id === Number(params.mappingId))
+    const record = forwardingStore.find((f) => f.id === String(params.mappingId))
     if (!record) return notFound()
     if (record.status !== 'SUSPENDED') {
       return problemResponse({
@@ -388,14 +389,14 @@ export const networkHandlers: RequestHandler[] = [
   }),
 
   http.delete('*/api/v1/admin/port-mappings/:mappingId', ({ params }) => {
-    const index = forwardingStore.findIndex((f) => f.id === Number(params.mappingId))
+    const index = forwardingStore.findIndex((f) => f.id === String(params.mappingId))
     if (index < 0) return notFound()
     forwardingStore.splice(index, 1)
     return HttpResponse.json({ message: '포트 매핑 삭제를 접수했습니다.' }, { status: 202 })
   }),
 
   http.patch('*/api/v1/admin/port-mappings/:mappingId/guards', async ({ params, request }) => {
-    const record = forwardingStore.find((f) => f.id === Number(params.mappingId))
+    const record = forwardingStore.find((f) => f.id === String(params.mappingId))
     if (!record) return notFound()
     const body = (await request.json().catch(() => ({}))) as Partial<
       ForwardingRecord['guards']

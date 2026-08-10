@@ -11,6 +11,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderAsOrgAdmin() {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -45,7 +46,7 @@ describe('관리자 VM 목록', () => {
 
     // 기관 필터 (SYS_ADMIN 전용): org 2 → ai-train만
     await user.click(screen.getByRole('button', { name: '전체' }))
-    await user.selectOptions(screen.getByLabelText('기관 필터'), '2')
+    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(2))
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
   })
@@ -97,12 +98,12 @@ describe('관리자 VM 목록', () => {
     const workspaceSelect = screen.getByLabelText('워크스페이스 필터')
     expect(within(workspaceSelect).getByRole('option', { name: /캡스톤 3조/ })).toBeInTheDocument()
 
-    await user.selectOptions(workspaceSelect, '12')
+    await user.selectOptions(workspaceSelect, uuid(12))
     expect(await screen.findByText('capstone-team3-api')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
 
     // 기관을 바꾸면 이전 기관의 워크스페이스 선택은 무효 → 전체 워크스페이스로 초기화
-    await user.selectOptions(screen.getByLabelText('기관 필터'), '2')
+    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(2))
     expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('')
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
@@ -189,12 +190,12 @@ describe('관리자 VM 일반 삭제 접수', () => {
 describe('교차 링크·URL 필터', () => {
   test('URL의 workspaceId 파라미터로 워크스페이스 필터가 초기화된다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/vms?workspaceId=12')
+    renderApp(`/admin/vms?workspaceId=${uuid(12)}`)
 
     await screen.findByRole('heading', { name: 'VM 관리' })
     expect(await screen.findByText('capstone-team3-api')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
-    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('12')
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue(uuid(12))
   })
 
   test('드로어의 워크스페이스 링크로 같은 워크스페이스 VM만 필터한다', async () => {
@@ -206,7 +207,7 @@ describe('교차 링크·URL 필터', () => {
 
     // 드로어가 닫히고 워크스페이스 필터가 적용된다
     expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('12')
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue(uuid(12))
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
   })
 })

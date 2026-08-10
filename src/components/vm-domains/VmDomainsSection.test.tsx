@@ -6,9 +6,10 @@ import { refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
 import { vmDetailAs } from '../../test/msw/handlers/vms'
+import { uuid } from '../../test/msw/ids'
 
 /** 사용자 세션으로 VM 상세의 도메인·포트 탭을 연다 (픽스처는 리소스 소유자 기준). */
-function renderVm(vmId: number) {
+function renderVm(vmId: string) {
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}?tab=publish`)
 }
@@ -21,7 +22,7 @@ async function domainsCard(): Promise<HTMLElement> {
 
 describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   test('도메인이 없으면 빈 상태와 두 진입점을 보여준다', async () => {
-    renderVm(57) // web-lab: 도메인 없음, OWNER, STOPPED(연결 가능)
+    renderVm(uuid(57)) // web-lab: 도메인 없음, OWNER, STOPPED(연결 가능)
 
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
@@ -35,7 +36,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 
   test('1개 서빙은 N=1일 뿐 — 같은 목록 행으로 주소·포트·상태를 보여준다', async () => {
-    renderVm(61) // ai-train: 플랫폼 1개 서빙
+    renderVm(uuid(61)) // ai-train: 플랫폼 1개 서빙
 
     await screen.findByRole('heading', { name: 'ai-train' })
     const card = await domainsCard()
@@ -50,7 +51,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 
   test('예약 중 절 — 트래픽을 받지 않는 이름을 서빙 목록과 분리해 보여준다', async () => {
-    renderVm(63) // shop-app: 서빙 2개 + 예약 중 1개(shop-old)
+    renderVm(uuid(63)) // shop-app: 서빙 2개 + 예약 중 1개(shop-old)
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -66,7 +67,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 
   test('N개 서빙 — 도메인마다 행이 하나씩 나오고 실패 축을 지목한다', async () => {
-    renderVm(63) // shop-app: 플랫폼(정상) + 커스텀(라우트 실패)
+    renderVm(uuid(63)) // shop-app: 플랫폼(정상) + 커스텀(라우트 실패)
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -83,8 +84,8 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 
   test('참여자는 읽기 전용 — 추가·해제 진입점 대신 안내만 보인다', async () => {
-    server.use(vmDetailAs(56, 'MEMBER'))
-    renderVm(56)
+    server.use(vmDetailAs(uuid(56), 'MEMBER'))
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const card = await domainsCard()
@@ -97,7 +98,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
   })
 
   test('연결 불가 상태(NEEDS_ADMIN)면 추가 버튼이 비활성화되고 사유를 안내한다', async () => {
-    renderVm(58) // stuck-vm: NEEDS_ADMIN, OWNER
+    renderVm(uuid(58)) // stuck-vm: NEEDS_ADMIN, OWNER
 
     await screen.findByRole('heading', { name: 'stuck-vm' })
     const card = await domainsCard()
@@ -116,7 +117,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
 describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => {
   test('이름·루트·포트를 접수하면 행이 생기고 폴링으로 연결됨에 수렴한다', async () => {
     const user = userEvent.setup()
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
@@ -149,7 +150,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => 
 
   test('예약어 이름은 서버 왕복 없이 필드 오류로 막는다', async () => {
     const user = userEvent.setup()
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
@@ -168,7 +169,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => 
   test('상한 초과 409는 서버 안내(상한값·행동 지침)를 그대로 보여준다', async () => {
     const user = userEvent.setup()
     server.use(
-      http.post('*/api/v1/vms/57/domains', () =>
+      http.post(`*/api/v1/vms/${uuid(57)}/domains`, () =>
         HttpResponse.json(
           {
             type: 'about:blank',
@@ -176,14 +177,14 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => 
             status: 409,
             detail:
               '이 VM에는 플랫폼 서브도메인을 최대 3개까지 연결할 수 있습니다. 기존 서브도메인을 해제하거나 커스텀 도메인을 사용해 주세요.',
-            instance: '/api/v1/vms/57/domains',
+            instance: `/api/v1/vms/${uuid(57)}/domains`,
             code: 'DOMAIN_LIMIT_REACHED',
           },
           { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
         ),
       ),
     )
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
@@ -207,7 +208,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => 
 describe('VM 도메인 — 내 도메인 연결 (드로어)', () => {
   test('접수하면 같은 드로어가 도메인 상세로 전환되어 DNS 레코드 표가 보인다', async () => {
     const user = userEvent.setup()
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
@@ -235,7 +236,7 @@ describe('VM 도메인 — 내 도메인 연결 (드로어)', () => {
 
   test('형식이 틀린 커스텀 도메인은 서버 왕복 없이 필드 오류를 보여준다', async () => {
     const user = userEvent.setup()
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
@@ -253,7 +254,7 @@ describe('VM 도메인 — 내 도메인 연결 (드로어)', () => {
 describe('VM 도메인 — 드로어의 검증 재확인·포트 변경', () => {
   test('검증 중 커스텀 도메인은 드로어에서 레코드 상태를 보여주고 재확인할 수 있다', async () => {
     const user = userEvent.setup()
-    renderVm(62) // demo-web: CUSTOM VERIFYING (A 확인, TXT 대기)
+    renderVm(uuid(62)) // demo-web: CUSTOM VERIFYING (A 확인, TXT 대기)
 
     await screen.findByRole('heading', { name: 'demo-web' })
     const card = await domainsCard()
@@ -273,7 +274,7 @@ describe('VM 도메인 — 드로어의 검증 재확인·포트 변경', () => 
 
   test('포트 변경은 도메인 단위로 접수된다', async () => {
     const user = userEvent.setup()
-    renderVm(63) // shop-app: 플랫폼 행(APPLIED)의 포트만 바꾼다
+    renderVm(uuid(63)) // shop-app: 플랫폼 행(APPLIED)의 포트만 바꾼다
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -298,7 +299,7 @@ describe('VM 도메인 — 드로어의 검증 재확인·포트 변경', () => 
 describe('VM 도메인 — 해제 확인의 무게', () => {
   test('커스텀 도메인 해제 문구 — 이름이 바로 풀린다 (마지막 아님 → 승격 없음)', async () => {
     const user = userEvent.setup()
-    renderVm(63) // 도메인 2개 서빙
+    renderVm(uuid(63)) // 도메인 2개 서빙
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -327,7 +328,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 
   test('플랫폼 도메인 해제는 예약 안내를 보여주고 예약 중 절로 옮긴다', async () => {
     const user = userEvent.setup()
-    renderVm(63) // 서빙 2개 — 플랫폼 행 해제
+    renderVm(uuid(63)) // 서빙 2개 — 플랫폼 행 해제
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -358,7 +359,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 
   test('마지막 도메인 해제는 danger 경고로 승격된다', async () => {
     const user = userEvent.setup()
-    renderVm(62) // demo-web: 서빙 1개 — 마지막 도메인
+    renderVm(uuid(62)) // demo-web: 서빙 1개 — 마지막 도메인
 
     await screen.findByRole('heading', { name: 'demo-web' })
     const card = await domainsCard()
@@ -377,7 +378,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
   test('다시 연결 — 예약된 이름이 채워진 추가 드로어를 거쳐 서빙 목록으로 돌아온다', async () => {
     const user = userEvent.setup()
-    renderVm(63)
+    renderVm(uuid(63))
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -409,8 +410,8 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
         HttpResponse.json({
           content: [
             {
-              id: 901,
-              vmId: 63,
+              id: uuid(901),
+              vmId: uuid(63),
               kind: 'CUSTOM',
               fqdn: 'legacy.example.com',
               rootDomain: null,
@@ -428,7 +429,7 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
         }),
       ),
     )
-    renderVm(63)
+    renderVm(uuid(63))
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()
@@ -441,7 +442,7 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
 
   test('즉시 반납 — 드로어에서 확인을 거쳐 이름이 바로 풀린다', async () => {
     const user = userEvent.setup()
-    renderVm(63)
+    renderVm(uuid(63))
 
     await screen.findByRole('heading', { name: 'shop-app' })
     const card = await domainsCard()

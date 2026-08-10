@@ -4,6 +4,7 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { asGrantManager, vmSummaryAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderVms(path = '/console/vms') {
   server.use(refreshSuccessHandler('access-user'))
@@ -46,12 +47,12 @@ describe('내 VM 목록', () => {
   test('워크스페이스 소유자는 안을 못 봐도 제한 행에서 접근 권한 관리로 갈 수 있다', async () => {
     // 상세는 막혀 있으므로 목록이 유일한 진입점이고, 소유자가 떠난 VM을
     // 되살리는 길이기도 하다.
-    server.use(vmSummaryAs(44, { accessManageAllowed: true }))
+    server.use(vmSummaryAs(uuid(44), { accessManageAllowed: true }))
     renderVms()
 
     const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
     const manage = within(limitedRow).getByRole('link', { name: '접근 권한 관리' })
-    expect(manage).toHaveAttribute('href', '/console/vms/44/access')
+    expect(manage).toHaveAttribute('href', `/console/vms/${uuid(44)}/access`)
     // 그래도 안은 여전히 안 보인다.
     expect(screen.queryByRole('link', { name: 'ml-notebook' })).not.toBeInTheDocument()
   })
@@ -59,8 +60,8 @@ describe('내 VM 목록', () => {
   test('접근 권한 화면은 VM 상세가 막혀 있어도 열린다', async () => {
     // 이 수정의 전부다 — 상세를 부르면 403이라, 화면이 상세에 기대면 관리
     // 경로가 통째로 닫힌다. 이름·상태는 접근 목록 응답이 준 것으로만 그린다.
-    asGrantManager(44)
-    renderVms('/console/vms/44/access')
+    asGrantManager(uuid(44))
+    renderVms(`/console/vms/${uuid(44)}/access`)
 
     expect(await screen.findByRole('heading', { name: 'ml-notebook' })).toBeInTheDocument()
     expect(screen.getByText(/알고리즘 스터디 소유/)).toBeInTheDocument()
@@ -70,7 +71,7 @@ describe('내 VM 목록', () => {
 
 describe('VM 상세', () => {
   test('생성 중 VM은 폴링으로 실행 중 전이를 자동 반영한다', async () => {
-    renderVms('/console/vms/55')
+    renderVms(`/console/vms/${uuid(55)}`)
 
     // 첫 응답: 생성 중 + 안내 배너, IP는 아직 없음
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
@@ -85,12 +86,12 @@ describe('VM 상세', () => {
   })
 
   test('실행 중 VM은 접속 정보와 생성 신청 링크를 보여준다', async () => {
-    renderVms('/console/vms/56')
+    renderVms(`/console/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('실행 중')).toBeInTheDocument()
     expect(screen.getByText('ubuntu')).toBeInTheDocument()
     expect(screen.getByText('10.10.0.56')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '신청 #90' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '신청 상세' })).toBeInTheDocument()
   })
 })

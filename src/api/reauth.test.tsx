@@ -15,13 +15,14 @@ import {
   reauthGateHandlers,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
+import { uuid } from '../test/msw/ids'
 
 /** 재인증 게이트를 켠 민감 작업 하나(개인키 조회)를 버튼으로 노출하는 하네스. */
 function Harness() {
   const [results, setResults] = useState<string[]>([])
   const call = async () => {
     const { data, error } = await api.GET('/me/ssh-keys/{keyId}/private-key', {
-      params: { path: { keyId: 4 } },
+      params: { path: { keyId: uuid(4) } },
     })
     setResults((prev) => [...prev, data ? `ok:${data.fileName}` : `err:${error?.code ?? 'unknown'}`])
   }

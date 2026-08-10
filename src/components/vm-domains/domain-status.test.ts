@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import type { CertificateView, PublicationView, RouteView } from '../../api/queries'
 import { domainPollRate, foldDomainStatus } from './domain-status'
+import { uuid } from '../../test/msw/ids'
 
 const route = (status: RouteView['status']): RouteView => ({
   targetPort: 80,
@@ -181,8 +182,8 @@ function pub(overrides: {
   return {
     fqdn: 'x.pusan.dev',
     domain: {
-      id: 1,
-      vmId: 1,
+      id: uuid(1),
+      vmId: uuid(1),
       kind,
       fqdn: 'x.pusan.dev',
       rootDomain: kind === 'CUSTOM' ? null : 'pusan.dev',

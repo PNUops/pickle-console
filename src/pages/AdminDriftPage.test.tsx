@@ -15,7 +15,7 @@ describe('드리프트', () => {
     renderAsSysAdmin('/admin/drift')
 
     await screen.findByRole('heading', { name: '드리프트' })
-    const row = (await screen.findByText('VM #59 · vmid 100059 · pve1')).closest('tr')!
+    const row = (await screen.findByText('이름 미상 VM · vmid 100059 · pve1')).closest('tr')!
     expect(within(row).getByText('Proxmox에 없음')).toBeInTheDocument()
     expect(within(row).getByText(/broken-vm/)).toBeInTheDocument()
     // 해결된 발견은 미해결 탭에 없다.

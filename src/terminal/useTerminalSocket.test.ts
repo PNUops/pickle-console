@@ -6,15 +6,16 @@ import { problemResponse } from '../test/msw/handlers/auth'
 import { StubWebSocket } from '../test/StubWebSocket'
 import { server } from '../test/msw/server'
 import { useTerminalSocket } from './useTerminalSocket'
+import { uuid } from '../test/msw/ids'
 
-function render(vmId = 56, onData: (b: Uint8Array) => void = () => {}) {
+function render(vmId = uuid(56), onData: (b: Uint8Array) => void = () => {}) {
   setAccessToken('access-user')
   return renderHook(() => useTerminalSocket(vmId, onData))
 }
 
 /** mint 성공 후 WS가 생성되고 open까지 진행된 상태를 만든다. */
 async function connectAndOpen(onData?: (b: Uint8Array) => void) {
-  const hook = render(56, onData)
+  const hook = render(uuid(56), onData)
   await waitFor(() => expect(StubWebSocket.instances).toHaveLength(1))
   const ws = StubWebSocket.last()
   act(() => ws.simulateOpen())

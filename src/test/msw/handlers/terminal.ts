@@ -1,5 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type TerminalSessionView = Schemas['TerminalSessionView']
@@ -17,12 +18,12 @@ function initialSessions(): TerminalSessionView[] {
   return [
     {
       sessionId: 'aaaa1111-bbbb-2222-cccc-3333dddd4444',
-      vmId: 56,
+      vmId: uuid(56),
       vmName: 'algo-judge',
-      orgId: 1,
+      orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
       workspaceName: '캡스톤 3조',
-      userId: 42,
+      userId: uuid(42),
       userEmail: 'example@pusan.ac.kr',
       userName: '홍길동',
       clientIp: '203.0.113.7',
@@ -30,12 +31,12 @@ function initialSessions(): TerminalSessionView[] {
     },
     {
       sessionId: 'bbbb2222-cccc-3333-dddd-4444eeee5555',
-      vmId: 61,
+      vmId: uuid(61),
       vmName: 'ai-train',
-      orgId: 2,
+      orgId: uuid(2),
       orgName: '테스트 기관',
       workspaceName: '딥러닝 스터디',
-      userId: 58,
+      userId: uuid(58),
       userEmail: 'younghee.park@pusan.ac.kr',
       userName: '박영희',
       clientIp: '203.0.113.9',

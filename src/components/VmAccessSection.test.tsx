@@ -5,9 +5,10 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { vmDetailAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 /** VM 상세의 접근 탭을 연다 (기본 픽스처: 로그인 사용자가 리소스 소유자). */
-function renderAccessTab(vmId: number) {
+function renderAccessTab(vmId: string) {
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}?tab=access`)
 }
@@ -30,7 +31,7 @@ async function grantRow(name: string): Promise<HTMLElement> {
 
 describe('VM 접근 탭 — 노출 조건', () => {
   test('접근 권한을 관리할 수 있을 때만 탭이 보인다', async () => {
-    renderAccessTab(56)
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '접근' })).toBeInTheDocument()
@@ -39,8 +40,8 @@ describe('VM 접근 탭 — 노출 조건', () => {
 
   test('관리 권한이 없으면 탭이 없고 딥링크는 개요로 되돌아간다', async () => {
     // 편집자는 설정까지는 바꾸지만 누가 들어올지는 정하지 못한다.
-    server.use(vmDetailAs(56, 'EDITOR'))
-    renderAccessTab(56)
+    server.use(vmDetailAs(uuid(56), 'EDITOR'))
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.queryByRole('tab', { name: '접근' })).not.toBeInTheDocument()
@@ -50,7 +51,7 @@ describe('VM 접근 탭 — 노출 조건', () => {
 
 describe('VM 접근 탭 — 목록', () => {
   test('사용자 항목과 워크스페이스 전체 항목을 등급과 함께 나열한다', async () => {
-    renderAccessTab(56)
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const myRow = await grantRow('홍길동')
@@ -62,7 +63,7 @@ describe('VM 접근 탭 — 목록', () => {
   })
 
   test('워크스페이스 전체 항목에는 소유자·편집자 등급을 고를 수 없다', async () => {
-    renderAccessTab(56)
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const workspaceRow = await grantRow('워크스페이스 전체')
@@ -77,7 +78,7 @@ describe('VM 접근 탭 — 목록', () => {
 describe('VM 접근 탭 — 부여·변경·회수', () => {
   test('워크스페이스 구성원에게 등급을 골라 부여하면 목록에 나타난다', async () => {
     const user = userEvent.setup()
-    renderAccessTab(57) // web-lab: 워크스페이스 12, 목록에는 나(소유자)만 있다
+    renderAccessTab(uuid(57)) // web-lab: 워크스페이스 12, 목록에는 나(소유자)만 있다
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(await screen.findByText(/접근 권한 \(1건\)/)).toBeInTheDocument()
@@ -85,7 +86,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
     // 후보 목록은 접근 목록 응답이 알려 준 워크스페이스를 다시 물어 채워진다 — 두 번째
     // 질의라 먼저 도착을 기다린다.
     await screen.findByRole('option', { name: /김철수/ })
-    await user.selectOptions(screen.getByLabelText('대상'), '57')
+    await user.selectOptions(screen.getByLabelText('대상'), uuid(57))
     await user.selectOptions(screen.getByLabelText('등급'), 'EDITOR')
     await user.click(screen.getByRole('button', { name: '부여' }))
 
@@ -95,7 +96,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
   })
 
   test('이미 목록에 있는 사람은 부여 대상에 나오지 않는다', async () => {
-    renderAccessTab(56)
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const target = await screen.findByLabelText('대상')
@@ -107,7 +108,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
 
   test('등급을 바꾸면 그 자리에서 반영된다', async () => {
     const user = userEvent.setup()
-    renderAccessTab(56)
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const row = await grantRow('김철수')
@@ -120,7 +121,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
 
   test('회수 모달은 회수가 되돌리지 못하는 것을 먼저 알리고, 확인하면 목록에서 사라진다', async () => {
     const user = userEvent.setup()
-    renderAccessTab(56)
+    renderAccessTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const row = await grantRow('김철수')

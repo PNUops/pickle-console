@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse, regularUser } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type RequestDetail = Schemas['RequestDetailResponse']
@@ -10,9 +11,9 @@ function baseRequest(): Omit<
   'id' | 'purpose' | 'status' | 'review' | 'createdAt' | 'updatedAt'
 > {
   return {
-    workspaceId: 12,
+    workspaceId: uuid(12),
     workspaceName: '캡스톤 3조',
-    orgId: 1,
+    orgId: uuid(1),
     orgName: '정보컴퓨터공학부 실습지원센터',
     requesterId: regularUser.id,
     requesterName: regularUser.name,
@@ -23,8 +24,8 @@ function baseRequest(): Omit<
     reqEndDate: '2026-12-20',
     displayName: '캡스톤 백엔드 서버',
     vm: {
-      imageId: 1,
-      flavorId: 2,
+      imageId: uuid(1),
+      flavorId: uuid(2),
       reqVcpu: 2,
       reqMemoryMb: 2048,
       reqDiskGb: 20,
@@ -40,7 +41,7 @@ function initialRequests(): RequestDetail[] {
   return [
     {
       ...baseRequest(),
-      id: 101,
+      id: uuid(101),
       purpose: '캡스톤 프로젝트 백엔드 서버 운영',
       status: 'SUBMITTED',
       review: null,
@@ -49,11 +50,11 @@ function initialRequests(): RequestDetail[] {
     },
     {
       ...baseRequest(),
-      id: 102,
+      id: uuid(102),
       purpose: '알고리즘 스터디 채점 서버',
       status: 'APPROVED',
       review: {
-        reviewerId: 3,
+        reviewerId: uuid(3),
         reviewerName: '관리자김',
         decision: 'APPROVE',
         comment: '요청 사양 그대로 승인합니다.',
@@ -67,7 +68,7 @@ function initialRequests(): RequestDetail[] {
           grantedVcpu: 2,
           grantedMemoryMb: 2048,
           grantedDiskGb: 20,
-          grantedImageId: 1,
+          grantedImageId: uuid(1),
           nodeId: null,
         },
       },
@@ -76,11 +77,11 @@ function initialRequests(): RequestDetail[] {
     },
     {
       ...baseRequest(),
-      id: 103,
+      id: uuid(103),
       purpose: '개인 실험용 서버',
       status: 'REJECTED',
       review: {
-        reviewerId: 3,
+        reviewerId: uuid(3),
         reviewerName: '관리자김',
         decision: 'REJECT',
         comment: '용도가 불분명합니다. 구체적인 사용 계획을 적어 다시 신청해 주세요.',
@@ -124,8 +125,8 @@ export const requestHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = requestStore
       .filter((r) => !status || r.status === status)
-      .filter((r) => workspaceId == null || r.workspaceId === Number(workspaceId))
-      .sort((a, b) => b.id - a.id)
+      .filter((r) => workspaceId == null || r.workspaceId === workspaceId)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
@@ -142,7 +143,7 @@ export const requestHandlers: RequestHandler[] = [
     const created: RequestDetail = {
       ...baseRequest(),
       ...body,
-      id: nextRequestId++,
+      id: uuid(nextRequestId++),
       workspaceName: '캡스톤 3조',
       orgName: '정보컴퓨터공학부 실습지원센터',
       requesterId: regularUser.id,
@@ -153,7 +154,7 @@ export const requestHandlers: RequestHandler[] = [
       reqEndDate: body.reqEndDate ?? null,
       displayName: body.displayName ?? null,
       vm: {
-        imageId: body.vm?.imageId ?? 1,
+        imageId: body.vm?.imageId ?? uuid(1),
         flavorId: body.vm?.flavorId ?? null,
         reqVcpu: body.vm?.reqVcpu ?? 1,
         reqMemoryMb: body.vm?.reqMemoryMb ?? 1024,
@@ -175,13 +176,13 @@ export const requestHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/requests/:requestId', ({ params }) => {
-    const found = requestStore.find((r) => r.id === Number(params.requestId))
+    const found = requestStore.find((r) => r.id === String(params.requestId))
     if (!found) return notFound()
     return HttpResponse.json(found, { status: 200 })
   }),
 
   http.post('*/api/v1/requests/:requestId/cancel', ({ params }) => {
-    const found = requestStore.find((r) => r.id === Number(params.requestId))
+    const found = requestStore.find((r) => r.id === String(params.requestId))
     if (!found) return notFound()
     if (found.status !== 'SUBMITTED') {
       return problemResponse({

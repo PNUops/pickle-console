@@ -14,6 +14,7 @@ import {
 } from '../test/msw/handlers/metrics'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderNodes() {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -23,7 +24,7 @@ function renderNodes() {
 /** 노드 한 대만 있는 목록으로 바꿔 끼운다 — 상태별 화면을 좁혀 보기 위해. */
 function onlyNode(status: components['schemas']['NodeStatus']) {
   const node: components['schemas']['NodeSummaryResponse'] = {
-    id: 1,
+    id: uuid(1),
     name: 'pve1',
     status,
     cpuThreads: 40,
@@ -39,7 +40,7 @@ function onlyNode(status: components['schemas']['NodeStatus']) {
     cpuWarnThreshold: 3.0,
     memoryWarnThreshold: 0.8,
     ipPool: {
-      id: 1,
+      id: uuid(1),
       name: 'guest-pool',
       cidr: '172.29.0.0/16',
       allocatedCount: 6,
@@ -167,7 +168,7 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
       onlyNode('OFFLINE'),
       http.get('*/api/v1/admin/nodes/:nodeId/metrics', () => {
         metricsCalls += 1
-        return metricsUnavailableProblem('/api/v1/admin/nodes/1/metrics')
+        return metricsUnavailableProblem(`/api/v1/admin/nodes/${uuid(1)}/metrics`)
       }),
     )
     renderNodes()
@@ -188,7 +189,7 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
       onlyNode('ACTIVE'),
       http.get('*/api/v1/admin/nodes/:nodeId/metrics', () => {
         metricsCalls += 1
-        return metricsUnavailableProblem('/api/v1/admin/nodes/1/metrics')
+        return metricsUnavailableProblem(`/api/v1/admin/nodes/${uuid(1)}/metrics`)
       }),
     )
     renderNodes()
@@ -214,7 +215,7 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
         // 첫 조회만 실패하고(pveproxy 재시작 같은 순간 장애) 이후에는 답한다.
         if (!failed) {
           failed = true
-          return metricsUnavailableProblem('/api/v1/admin/nodes/1/metrics')
+          return metricsUnavailableProblem(`/api/v1/admin/nodes/${uuid(1)}/metrics`)
         }
         const timeframe = new URL(request.url).searchParams.get('timeframe') ?? 'HOUR'
         return HttpResponse.json(nodeMetricsFixture(timeframe), { status: 200 })

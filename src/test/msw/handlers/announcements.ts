@@ -2,6 +2,7 @@ import { isOrgTier, isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type AnnouncementView = Schemas['AnnouncementView']
@@ -10,26 +11,26 @@ type AdminWorkspaceOption = Schemas['AdminWorkspaceOptionResponse']
 /* ─── fixtures ─── */
 
 /** 워크스페이스 선택지 — 기관별. SYS_ADMIN은 전체, ORG_ADMIN은 자기 기관 워크스페이스만. */
-const workspaceOptionsByOrg: Record<number, AdminWorkspaceOption[]> = {
-  1: [
+const workspaceOptionsByOrg: Record<string, AdminWorkspaceOption[]> = {
+  [uuid(1)]: [
     {
-      id: 12,
+      id: uuid(12),
       name: '캡스톤 3조',
       memberCount: 4,
       kind: 'TEAM',
       createdAt: '2026-06-01T10:00:00+09:00',
     },
     {
-      id: 15,
+      id: uuid(15),
       name: '알고리즘 스터디',
       memberCount: 6,
       kind: 'TEAM',
       createdAt: '2026-06-10T10:00:00+09:00',
     },
   ],
-  2: [
+  [uuid(2)]: [
     {
-      id: 21,
+      id: uuid(21),
       name: 'AI 동아리',
       memberCount: 5,
       kind: 'PROJECT',
@@ -40,23 +41,23 @@ const workspaceOptionsByOrg: Record<number, AdminWorkspaceOption[]> = {
 
 interface StoredAnnouncement extends AnnouncementView {
   /** 발송자 기관 (ORG_ADMIN 가시성 판정용 — SYS_ADMIN 발송은 null) */
-  senderOrgId: number | null
+  senderOrgId: string | null
 }
 
 function initialAnnouncements(): StoredAnnouncement[] {
   return [
     {
-      id: 11,
-      senderOrgId: 1,
+      id: uuid(11),
+      senderOrgId: uuid(1),
       title: '7월 정기 점검 안내',
       scope: 'ORG',
-      orgId: 1,
+      orgId: uuid(1),
       workspaceId: null,
       recipientCount: 132,
       createdAt: '2026-07-10T11:00:00+09:00',
     },
     {
-      id: 10,
+      id: uuid(10),
       senderOrgId: null,
       title: '플랫폼 오픈 안내',
       scope: 'ALL',
@@ -86,9 +87,9 @@ function toView({ senderOrgId: _senderOrgId, ...view }: StoredAnnouncement): Ann
 }
 
 /** 워크스페이스 상세 픽스처 (계약 v0.19.0 — 구성원은 계정 상태 무관 전원). */
-const workspaceDetails: Record<number, Schemas['AdminWorkspaceDetailResponse']> = {
-  12: {
-    id: 12,
+const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> = {
+  [uuid(12)]: {
+    id: uuid(12),
     kind: 'TEAM',
     name: '캡스톤 3조',
     description: '캡스톤 디자인 3조',
@@ -97,7 +98,7 @@ const workspaceDetails: Record<number, Schemas['AdminWorkspaceDetailResponse']> 
     vmCount: 2,
     members: [
       {
-        userId: 42,
+        userId: uuid(42),
         name: '홍길동',
         email: 'example@pusan.ac.kr',
         workspaceRole: 'OWNER',
@@ -105,7 +106,7 @@ const workspaceDetails: Record<number, Schemas['AdminWorkspaceDetailResponse']> 
         joinedAt: '2026-06-01T10:00:00+09:00',
       },
       {
-        userId: 77,
+        userId: uuid(77),
         name: '박탈퇴',
         email: 'left.park@pusan.ac.kr',
         workspaceRole: 'MEMBER',
@@ -118,7 +119,7 @@ const workspaceDetails: Record<number, Schemas['AdminWorkspaceDetailResponse']> 
 
 export const announcementHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => {
-    const detail = workspaceDetails[Number(params.workspaceId)]
+    const detail = workspaceDetails[String(params.workspaceId)]
     if (!detail) {
       return problemResponse({
         type: 'about:blank',
@@ -138,7 +139,7 @@ export const announcementHandlers: RequestHandler[] = [
     const orgId = url.searchParams.get('orgId')
     if (isOrgTier(profile.role)) {
       // 계약: orgId 필터는 SYS_ADMIN 전용 — 다른 기관 지정 시 404 (존재 비공개)
-      if (orgId && Number(orgId) !== profile.orgId) {
+      if (orgId && orgId !== profile.orgId) {
         return problemResponse({
           type: 'about:blank',
           title: '리소스를 찾을 수 없습니다',
@@ -151,7 +152,7 @@ export const announcementHandlers: RequestHandler[] = [
       return HttpResponse.json(workspaceOptionsByOrg[profile.orgId ?? 0] ?? [], { status: 200 })
     }
     const options = orgId
-      ? (workspaceOptionsByOrg[Number(orgId)] ?? [])
+      ? (workspaceOptionsByOrg[orgId] ?? [])
       : Object.values(workspaceOptionsByOrg).flat()
     return HttpResponse.json(options, { status: 200 })
   }),
@@ -170,7 +171,7 @@ export const announcementHandlers: RequestHandler[] = [
           a.scope === 'ALL' ||
           a.senderOrgId === profile.orgId,
       )
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseAnnouncementView'] = {
       content: visible.slice(page * size, (page + 1) * size).map(toView),
       page,
@@ -234,7 +235,7 @@ export const announcementHandlers: RequestHandler[] = [
               .flat()
               .find((g) => g.id === body.workspaceId)?.memberCount ?? 0)
     const created: StoredAnnouncement = {
-      id: nextAnnouncementId++,
+      id: uuid(nextAnnouncementId++),
       senderOrgId: isSysTier(profile.role) ? null : (profile.orgId ?? null),
       title: body.title,
       scope: body.scope,

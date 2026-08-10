@@ -7,6 +7,7 @@ import { StubWebSocket } from '../test/StubWebSocket'
 import { mockTerminals, resetXtermMock } from '../test/xtermMock'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 // xterm.js는 jsdom에서 무거우므로 목으로 대체한다.
 vi.mock('@xterm/xterm', async () => {
@@ -19,7 +20,7 @@ vi.mock('@xterm/addon-fit', async () => {
 })
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 
-function renderTerminal(vmId = 56) {
+function renderTerminal(vmId = uuid(56)) {
   resetXtermMock()
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}/terminal`)
@@ -33,14 +34,14 @@ async function waitForWs(): Promise<StubWebSocket> {
 
 describe('TerminalPage — 연결·프레임', () => {
   test('VM 이름 헤더를 보여주고 mint→WS로 연결한다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     expect(await screen.findByText('웹 터미널 · algo-judge')).toBeInTheDocument()
     const ws = await waitForWs()
     expect(ws.protocols).toEqual(['pickle.terminal.v1', 'ticket.test-ticket-abc'])
   })
 
   test('수신 바이너리 프레임은 터미널에 write된다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     const ws = await waitForWs()
     act(() => ws.simulateOpen())
     act(() => ws.simulateBinary(new TextEncoder().encode('hi')))
@@ -49,7 +50,7 @@ describe('TerminalPage — 연결·프레임', () => {
   })
 
   test('터미널 입력(onData)은 바이너리 프레임으로 송신된다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     const ws = await waitForWs()
     act(() => ws.simulateOpen())
     const term = mockTerminals.at(-1)!
@@ -58,7 +59,7 @@ describe('TerminalPage — 연결·프레임', () => {
   })
 
   test('open 시 초기 resize 프레임을 보낸다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     const ws = await waitForWs()
     act(() => ws.simulateOpen())
     await waitFor(() =>
@@ -71,7 +72,7 @@ describe('TerminalPage — 연결·프레임', () => {
 
 describe('TerminalPage — 종료 오버레이', () => {
   test('일반 종료는 사유와 다시 연결 버튼을 보여준다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     const ws = await waitForWs()
     act(() => ws.simulateOpen())
     act(() => ws.simulateServerClose(1000))
@@ -80,7 +81,7 @@ describe('TerminalPage — 종료 오버레이', () => {
   })
 
   test('관리자 종료(4002)는 다시 연결 버튼을 숨긴다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     const ws = await waitForWs()
     act(() => ws.simulateOpen())
     act(() => ws.simulateServerClose(4002))
@@ -89,7 +90,7 @@ describe('TerminalPage — 종료 오버레이', () => {
   })
 
   test('기능 비활성(4005)도 다시 연결 버튼을 숨긴다', async () => {
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     const ws = await waitForWs()
     act(() => ws.simulateOpen())
     act(() => ws.simulateServerClose(4005))
@@ -111,7 +112,7 @@ describe('TerminalPage — 종료 오버레이', () => {
         }),
       ),
     )
-    renderTerminal(56)
+    renderTerminal(uuid(56))
     expect(
       await screen.findByText('웹 터미널 기능이 현재 비활성화되어 있습니다.'),
     ).toBeInTheDocument()

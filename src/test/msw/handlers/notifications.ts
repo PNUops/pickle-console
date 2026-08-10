@@ -1,32 +1,33 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type NotificationView = Schemas['NotificationView']
 
 /** 내부 저장용 알림 행 — 소유자(userId)를 함께 들고 응답 시 제거한다. */
 interface StoredNotification extends NotificationView {
-  userId: number
+  userId: string
 }
 
 function initialNotifications(): StoredNotification[] {
   return [
     /* ─── 사용자 홍길동(42) ─── */
     {
-      userId: 42,
-      id: 301,
+      userId: uuid(42),
+      id: uuid(301),
       event: 'vm.create.done',
       title: 'VM 생성 완료',
       body: 'capstone-team3-api VM 생성이 완료되었습니다.',
-      linkPath: '/console/vms/55',
+      linkPath: `/console/vms/${uuid(55)}`,
       importance: 'NORMAL',
       createdAt: '2026-07-13T10:00:00+09:00',
       readAt: null,
     },
     {
-      userId: 42,
-      id: 302,
+      userId: uuid(42),
+      id: uuid(302),
       event: 'vm.expiry.d7',
       title: 'VM 만료 7일 전',
       body: 'algo-judge VM의 사용 기간이 7일 뒤 만료됩니다. 필요하면 관리자에게 연장을 요청해 주세요.',
@@ -36,8 +37,8 @@ function initialNotifications(): StoredNotification[] {
       readAt: null,
     },
     {
-      userId: 42,
-      id: 303,
+      userId: uuid(42),
+      id: uuid(303),
       event: 'announcement',
       title: '7월 정기 점검 안내',
       body: '7월 20일(월) 02:00~04:00 KST에 호스트 정기 점검이 진행됩니다.',
@@ -48,12 +49,12 @@ function initialNotifications(): StoredNotification[] {
     },
     /* ─── 기관 관리자 김관리(7) ─── */
     {
-      userId: 7,
-      id: 310,
+      userId: uuid(7),
+      id: uuid(310),
       event: 'request.submitted',
       title: '새 VM 신청',
       body: '홍길동님이 VM 신청(추가 실습 서버)을 제출했습니다.',
-      linkPath: '/admin/requests/201',
+      linkPath: `/admin/requests/${uuid(201)}`,
       importance: 'NORMAL',
       createdAt: '2026-07-13T08:30:00+09:00',
       readAt: null,
@@ -68,13 +69,13 @@ type AdminNotificationView = Schemas['AdminNotificationResponse']
 function initialDeliveryLog(): AdminNotificationView[] {
   return [
     {
-      id: 404,
-      userId: 42,
+      id: uuid(404),
+      userId: uuid(42),
       userEmail: 'example@pusan.ac.kr',
       event: 'vm.create.done',
       title: 'VM 생성 완료',
       body: 'capstone-team3-api VM 생성이 완료되었습니다.',
-      linkPath: '/console/vms/55',
+      linkPath: `/console/vms/${uuid(55)}`,
       importance: 'NORMAL',
       channel: 'EMAIL',
       status: 'SENT',
@@ -85,8 +86,8 @@ function initialDeliveryLog(): AdminNotificationView[] {
       readAt: null,
     },
     {
-      id: 403,
-      userId: 58,
+      id: uuid(403),
+      userId: uuid(58),
       userEmail: 'younghee.park@pusan.ac.kr',
       event: 'vm.expiry.d7',
       title: 'VM 만료 7일 전',
@@ -102,8 +103,8 @@ function initialDeliveryLog(): AdminNotificationView[] {
       readAt: null,
     },
     {
-      id: 402,
-      userId: 57,
+      id: uuid(402),
+      userId: uuid(57),
       userEmail: 'cheolsu.kim@pusan.ac.kr',
       event: 'announcement',
       title: '7월 정기 점검 안내',
@@ -119,8 +120,8 @@ function initialDeliveryLog(): AdminNotificationView[] {
       readAt: null,
     },
     {
-      id: 401,
-      userId: 42,
+      id: uuid(401),
+      userId: uuid(42),
       userEmail: 'example@pusan.ac.kr',
       event: 'vm.delete.completed',
       title: 'VM 삭제 완료',
@@ -146,7 +147,7 @@ export function resetNotificationFixtures() {
   deliveryLogStore = initialDeliveryLog()
 }
 
-function userIdOf(request: Request): number | null {
+function userIdOf(request: Request): string | null {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
   return ACCESS_TOKENS[token]?.id ?? null
 }
@@ -200,7 +201,7 @@ export const notificationHandlers: RequestHandler[] = [
     const userId = userIdOf(request)
     if (userId == null) return problemResponse(unauthorizedProblem)
     const found = notificationStore.find(
-      (n) => n.id === Number(params.notificationId) && n.userId === userId,
+      (n) => n.id === String(params.notificationId) && n.userId === userId,
     )
     if (!found) return notFound() // 타인 알림은 존재 마스킹(404)
     // 멱등: 이미 읽었으면 최초 읽음 시각 유지.
@@ -234,7 +235,7 @@ export const notificationHandlers: RequestHandler[] = [
       .filter((n) => !status || n.status === status)
       .filter((n) => !event || n.event === event)
       .filter((n) => !email || n.userEmail.includes(email))
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseAdminNotificationResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
@@ -246,7 +247,7 @@ export const notificationHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/notifications/:notificationId/resend', ({ params }) => {
-    const found = deliveryLogStore.find((n) => n.id === Number(params.notificationId))
+    const found = deliveryLogStore.find((n) => n.id === String(params.notificationId))
     if (!found) return notFound()
     // 계약: FAILED만 재발송 가능
     if (found.status !== 'FAILED') {

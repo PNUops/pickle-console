@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type SshKeyView = Schemas['SshKeyView']
@@ -8,7 +9,7 @@ type SshKeyView = Schemas['SshKeyView']
 function initialKeys(): SshKeyView[] {
   return [
     {
-      id: 3,
+      id: uuid(3),
       name: '연구실 노트북',
       algorithm: 'ED25519',
       publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0Qf0000000000000000000000000000000000000',
@@ -18,7 +19,7 @@ function initialKeys(): SshKeyView[] {
       lastUsedAt: '2026-07-18T21:14:00+09:00',
     },
     {
-      id: 4,
+      id: uuid(4),
       name: 'Pickle에서 만든 키',
       algorithm: 'ED25519',
       publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFo2111111111111111111111111111111111111111',
@@ -102,7 +103,7 @@ export const sshKeyHandlers: RequestHandler[] = [
       ? 'RSA'
       : 'ED25519'
     const key: SshKeyView = {
-      id: nextKeyId++,
+      id: uuid(nextKeyId++),
       name,
       algorithm,
       // comment 제거 정규화를 흉내낸다 (앞 두 토큰만 유지).
@@ -140,13 +141,13 @@ export const sshKeyHandlers: RequestHandler[] = [
         code: 'SSH_KEY_LIMIT_EXCEEDED',
       })
     }
-    const id = nextKeyId++
+    const n = nextKeyId++
     const key: SshKeyView = {
-      id,
+      id: uuid(n),
       name,
       algorithm: 'ED25519',
-      publicKey: `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGEN${id}00000000000000000000000000000000000`,
-      fingerprint: `SHA256:gen${id}ZyXwVuTsRqPoNmLkJiHgFeDcBa9876543210zZ`,
+      publicKey: `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGEN${n}00000000000000000000000000000000000`,
+      fingerprint: `SHA256:gen${n}ZyXwVuTsRqPoNmLkJiHgFeDcBa9876543210zZ`,
       privateKeyStored: true,
       createdAt: '2026-07-19T09:10:00+09:00',
       lastUsedAt: null,
@@ -156,7 +157,7 @@ export const sshKeyHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/me/ssh-keys/:keyId/private-key', ({ params }) => {
-    const key = sshKeyStore.find((k) => k.id === Number(params.keyId))
+    const key = sshKeyStore.find((k) => k.id === String(params.keyId))
     // 존재하지 않거나 붙여넣기 등록(개인키 미보관)이면 404.
     if (!key || !key.privateKeyStored) {
       return problemResponse({
@@ -177,7 +178,7 @@ export const sshKeyHandlers: RequestHandler[] = [
   }),
 
   http.delete('*/api/v1/me/ssh-keys/:keyId', ({ params }) => {
-    const key = sshKeyStore.find((k) => k.id === Number(params.keyId))
+    const key = sshKeyStore.find((k) => k.id === String(params.keyId))
     if (!key) {
       return problemResponse({
         type: 'about:blank',

@@ -8,6 +8,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 describe('관리자 워크스페이스 관리', () => {
   test('SYS_ADMIN은 전체 워크스페이스를 종류·구성원 수와 함께 나열한다', async () => {
@@ -33,7 +34,7 @@ describe('관리자 워크스페이스 관리', () => {
     expect(drawer.getByText('탈퇴')).toBeInTheDocument()
     expect(drawer.getByRole('link', { name: 'VM 보기' })).toHaveAttribute(
       'href',
-      '/admin/vms?workspaceId=12',
+      `/admin/vms?workspaceId=${uuid(12)}`,
     )
   })
 

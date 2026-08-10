@@ -8,6 +8,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderAsSysAdmin(path: string) {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -16,7 +17,7 @@ function renderAsSysAdmin(path: string) {
 
 describe('관리자 VM 상세', () => {
   test('개요 탭에 요약과 상태에 맞는 전원 버튼이 보인다', async () => {
-    renderAsSysAdmin('/admin/vms/56')
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('10.10.0.56')).toBeInTheDocument()
@@ -31,7 +32,7 @@ describe('관리자 VM 상세', () => {
 
   test('종료는 확인 모달을 거쳐 접수 메시지를 보여준다', async () => {
     const user = userEvent.setup()
-    renderAsSysAdmin('/admin/vms/56')
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: '종료' }))
@@ -45,7 +46,7 @@ describe('관리자 VM 상세', () => {
   })
 
   test('STOPPED VM은 시작만 활성화된다', async () => {
-    renderAsSysAdmin('/admin/vms/57')
+    renderAsSysAdmin(`/admin/vms/${uuid(57)}`)
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(screen.getByRole('button', { name: '시작' })).toBeEnabled()
@@ -55,7 +56,7 @@ describe('관리자 VM 상세', () => {
 
   test('이벤트 탭은 이력을 최신순으로 보여준다', async () => {
     const user = userEvent.setup()
-    renderAsSysAdmin('/admin/vms/56')
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('tab', { name: '이벤트' }))
@@ -68,7 +69,7 @@ describe('관리자 VM 상세', () => {
 
   test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보이고 전원 제어는 열려 있다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
-    renderApp('/admin/vms/56')
+    renderApp(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('button', { name: '종료' })).toBeEnabled()
