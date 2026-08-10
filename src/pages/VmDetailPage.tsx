@@ -270,12 +270,19 @@ export function VmDetailPage() {
                 )}
               </Field>
               <Field label="생성 신청">
-                <Link
-                  to={`/console/requests/${data.requestId}`}
-                  className="text-primary-700 hover:underline"
-                >
-                  신청 #{data.requestId}
-                </Link>
+                {/* 신청 행이 사라진 VM은 가리킬 곳이 없다. 링크 이름에 식별자를
+                    넣지 않는 것은 그것이 UUID여서 읽는 사람에게 알려주는 것이
+                    없기 때문이다. */}
+                {data.requestId == null ? (
+                  '—'
+                ) : (
+                  <Link
+                    to={`/console/requests/${data.requestId}`}
+                    className="text-primary-700 hover:underline"
+                  >
+                    신청 상세
+                  </Link>
+                )}
               </Field>
               <Field label="생성일">{formatDateTime(data.createdAt)}</Field>
               <Field label="마지막 갱신">{formatDateTime(data.updatedAt)}</Field>
@@ -1159,7 +1166,7 @@ function VmEventsSection({ vmId }: { vmId: string }) {
                     <TD className="whitespace-nowrap">{formatDateTime(event.createdAt)}</TD>
                     <TD className="whitespace-nowrap">{VM_EVENT_LABELS[event.type]}</TD>
                     <TD className="whitespace-nowrap">
-                      {event.actorId == null ? '시스템' : `사용자 #${event.actorId}`}
+                      {event.actorId == null ? '시스템' : '사용자'}
                     </TD>
                     <TD>{event.detail ?? '—'}</TD>
                   </TR>

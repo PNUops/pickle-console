@@ -781,7 +781,7 @@ function SubmitSuccess({ request }: { request: RequestDetail }) {
       </div>
       <h1 className="mt-4 text-2xl font-bold text-neutral-900">신청이 접수되었습니다</h1>
       <p className="mt-2 text-sm text-neutral-600">
-        신청 번호 #{request.id} — 관리자 검토 후 결과를 확인할 수 있습니다.
+        신청 번호 {request.id} — 관리자 검토 후 결과를 확인할 수 있습니다.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Link to={`/console/requests/${request.id}`}>

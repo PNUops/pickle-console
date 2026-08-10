@@ -61,7 +61,7 @@ export function AdminRequestsPage() {
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
   const imageName = (imageId: string | undefined) =>
-    osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
+    osImages.data?.find((t) => t.id === imageId)?.displayName ?? '알 수 없는 OS 이미지'
 
   return (
     <div className="space-y-6">

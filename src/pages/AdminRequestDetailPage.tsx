@@ -98,7 +98,7 @@ export function AdminRequestDetailPage() {
 
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-neutral-900">신청 #{data.id}</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">신청 상세</h1>
           <RequestStatusBadge status={data.status} />
         </div>
         <p className="mt-1 text-sm text-neutral-500">
@@ -697,7 +697,7 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
               {data.history.map((item) => (
                 <li key={item.requestId} className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">신청 #{item.requestId}</span>
+                    <span className="font-medium">지난 신청</span>
                     <RequestStatusBadge status={item.status} />
                   </div>
                   <p className="text-xs text-neutral-500">

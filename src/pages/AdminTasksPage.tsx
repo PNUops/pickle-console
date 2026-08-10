@@ -122,7 +122,7 @@ export function AdminTasksPage() {
                       </span>
                     </TD>
                     <TD>
-                      {task.vmName ?? `VM #${task.vmId}`}
+                      {task.vmName ?? '이름 미상 VM'}
                       {/* hostname은 이름과 다를 때만 보조 표기 (중복 노출 방지) */}
                       {task.hostname && task.hostname !== task.vmName && (
                         <span className="block font-mono text-xs text-neutral-500">
@@ -226,7 +226,7 @@ function RetryConfirmModal({
     >
       <div className="space-y-3">
         <p className="text-sm text-neutral-600">
-          <strong>{task.vmName ?? `VM #${task.vmId}`}</strong>의{' '}
+          <strong>{task.vmName ?? '이름 미상 VM'}</strong>의{' '}
           {PROVISIONING_KIND_LABELS[task.kind]} 작업을 실패한 단계(
           {task.stepLabel})부터 다시 시도합니다. 원인을 해결한 뒤 실행해 주세요.
         </p>
