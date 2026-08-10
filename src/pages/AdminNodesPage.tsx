@@ -43,7 +43,7 @@ const CapacityTrendSection = lazy(
 const SCREEN_TABS = [
   { id: 'nodes', label: '노드' },
   { id: 'ips', label: 'IP 할당' },
-  { id: 'trend', label: '용량 추이' },
+  { id: 'trend', label: '할당 추이' },
 ]
 
 const NODE_STATUS_LABELS: Record<NodeSummary['status'], string> = {
@@ -60,7 +60,7 @@ const NODE_STATUS_VARIANTS: Record<NodeSummary['status'], BadgeVariant> = {
 
 export function AdminNodesPage() {
   const { user } = useAuth()
-  // 상태 전환은 SYS_ADMIN 전용이지만, 용량 추이 조회·기관 좁혀 보기는 SYS 티어
+  // 상태 전환은 SYS_ADMIN 전용이지만, 할당 추이 조회·기관 좁혀 보기는 SYS 티어
   // 전체가 가진 권한이다 — 쓰기 게이트를 읽기 게이트로 돌려쓰지 않는다.
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const canFilterTrendByOrg = !!user && isSysTier(user.role)
@@ -93,11 +93,11 @@ export function AdminNodesPage() {
       </TabPanel>
 
       <TabPanel id="trend" active={activeTab === 'trend'}>
-        <ErrorBoundary label="용량 추이">
+        <ErrorBoundary label="할당 추이">
           <Suspense
             fallback={
               <div className="flex justify-center py-12">
-                <Spinner label="용량 추이 불러오는 중" />
+                <Spinner label="할당 추이 불러오는 중" />
               </div>
             }
           >

@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import type { CapacityTrendPoint } from '../../api/queries'
-import { allocationSummary, trendTimes } from './capacity-series'
+import {
+  allocationSummary,
+  constantSeries,
+  formatVcpu,
+  formatVmCount,
+  trendTimes,
+} from './capacity-series'
 
 function point(day: string, vcpu: number, memoryMb: number): CapacityTrendPoint {
   return { day, vcpu, memoryMb, diskGb: 100, vmCount: 3 }
@@ -65,5 +71,26 @@ describe('trendTimes', () => {
     expect(trendTimes([point('2026-08-10', 1, 1024)])).toEqual([
       Date.parse('2026-08-10T00:00:00+09:00') / 1000,
     ])
+  })
+
+  test('점 수만큼 길이가 맞아야 축과 어긋나지 않는다', () => {
+    expect(trendTimes([])).toEqual([])
+    expect(
+      trendTimes([point('2026-08-09', 1, 1024), point('2026-08-10', 1, 1024)]),
+    ).toHaveLength(2)
+  })
+})
+
+describe('기준선·값 표기', () => {
+  test('현재 용량 기준선은 구간 내내 같은 값을 점 수만큼 채운다', () => {
+    expect(constantSeries(3, 40)).toEqual([40, 40, 40])
+    expect(constantSeries(0, 40)).toEqual([])
+  })
+
+  test('눈금이 정수가 아닐 수 있어 소수 한 자리까지 허용한다', () => {
+    expect(formatVcpu(12)).toBe('12 vCPU')
+    expect(formatVcpu(12.5)).toBe('12.5 vCPU')
+    expect(formatVmCount(8)).toBe('8대')
+    expect(formatVmCount(8.25)).toBe('8.3대')
   })
 })

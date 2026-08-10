@@ -31,8 +31,6 @@ export interface MetricsPanelProps<T extends MetricsPayload> {
   queryFn: (timeframe: MetricsTimeframe) => Promise<T>
   /** 첫 조회 스피너의 이름. */
   pendingLabel: string
-  /** 갱신 시각 줄 뒤에 붙는 설명 — 빈 구간이 무엇인지 화면마다 다르게 말한다. */
-  gapNote: string
   /** 응답은 왔지만 아직 쌓인 점이 없을 때. */
   emptyMessage: string
   /** 자료를 받았어도 그릴 대상이 아닐 때의 안내 (아직 준비되지 않은 VM 등). */
@@ -53,7 +51,6 @@ export function MetricsPanel<T extends MetricsPayload>({
   queryKey,
   queryFn,
   pendingLabel,
-  gapNote,
   emptyMessage,
   unavailableNotice,
   children,
@@ -125,7 +122,7 @@ export function MetricsPanel<T extends MetricsPayload>({
         {data && notice == null && data.points.length > 0 && (
           <>
             <p className="text-xs text-neutral-500">
-              마지막 갱신 {formatDateTime(data.fetchedAt)} · {gapNote}
+              마지막 갱신 {formatDateTime(data.fetchedAt)}
             </p>
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               {children({ data, times, axisFormat })}

@@ -1,24 +1,12 @@
 import {
   fetchAdminNodeMetrics,
   type MetricsTimeframe,
-  type NodeMetricPoint,
   type NodeMetrics,
 } from '../../api/queries'
 import { formatByteRate, formatBytes, formatPercent } from '../../lib/format'
 import { MetricsPanel } from '../metrics/MetricsPanel'
+import { pickSeries } from '../metrics/metric-series'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
-
-/** 계열 값 추출기 — null(응답이 없던 구간)은 그대로 통과시켜 빈 구간으로 남긴다. */
-function pick(
-  points: NodeMetricPoint[],
-  key: keyof NodeMetricPoint,
-  scale = 1,
-): (number | null)[] {
-  return points.map((point) => {
-    const value = point[key]
-    return typeof value === 'number' ? value * scale : null
-  })
-}
 
 /**
  * 노드 사용량 시계열 — CPU·iowait, 메모리, 네트워크.
@@ -44,7 +32,6 @@ export default function NodeMetricsSection({
         timeframe,
       ]}
       queryFn={(timeframe: MetricsTimeframe) => fetchAdminNodeMetrics(nodeId, timeframe)}
-      gapNote="응답이 없던 구간은 비어 있습니다."
       emptyMessage="아직 쌓인 사용량 데이터가 없습니다."
     >
       {({ data, times, axisFormat }) => (
@@ -53,22 +40,21 @@ export default function NodeMetricsSection({
             title="CPU"
             times={times}
             series={[
-              { label: 'CPU 사용률', data: pick(data.points, 'cpu', 100) },
-              { label: 'I/O 대기', data: pick(data.points, 'iowait', 100) },
+              { label: 'CPU 사용률', data: pickSeries(data.points, 'cpu', 100) },
+              { label: 'I/O 대기', data: pickSeries(data.points, 'iowait', 100) },
             ]}
             format={formatPercent}
             formatTime={axisFormat}
             yMax={100}
-            caption="노드 전체 스레드를 100%로 본 사용률입니다. I/O 대기가 높으면 저장장치가 병목입니다."
           />
           <TimeSeriesChart
             title="메모리"
             times={times}
             series={[
-              { label: '사용', data: pick(data.points, 'memUsedBytes') },
+              { label: '사용', data: pickSeries(data.points, 'memUsedBytes') },
               {
                 label: '전체',
-                data: pick(data.points, 'memTotalBytes'),
+                data: pickSeries(data.points, 'memTotalBytes'),
                 reference: true,
               },
             ]}
@@ -80,8 +66,8 @@ export default function NodeMetricsSection({
             title="네트워크"
             times={times}
             series={[
-              { label: '수신', data: pick(data.points, 'netinBps') },
-              { label: '송신', data: pick(data.points, 'netoutBps') },
+              { label: '수신', data: pickSeries(data.points, 'netinBps') },
+              { label: '송신', data: pickSeries(data.points, 'netoutBps') },
             ]}
             format={formatByteRate}
             formatTime={axisFormat}

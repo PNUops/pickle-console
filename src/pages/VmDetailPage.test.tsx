@@ -519,7 +519,7 @@ describe('VM 상세 — 탭', () => {
 /* ─── 사용량(모니터링) 탭 ─── */
 
 describe('VM 상세 — 모니터링', () => {
-  test('모니터링 탭은 네 개의 사용량 차트와 빈 구간 안내를 보여준다', async () => {
+  test('모니터링 탭은 네 개의 사용량 차트와 갱신 시각을 보여준다', async () => {
     renderVm(56, 'monitoring')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
@@ -531,15 +531,12 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.getByRole('heading', { name: '메모리' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '네트워크' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '디스크 I/O' })).toBeInTheDocument()
-    expect(screen.getByText(/중지된 동안의 구간은 비어 있습니다/)).toBeInTheDocument()
-    // 게스트 에이전트 기준임을 메모리 차트가 밝힌다.
-    expect(
-      screen.getByText(/게스트 에이전트가 보고한 내부 사용량 기준/),
-    ).toBeInTheDocument()
-    // 캔버스가 없는 환경에서도 값은 표로 읽을 수 있다 (메모리 최대 = 2 GiB).
-    expect(screen.getAllByText('2.00 GiB').length).toBeGreaterThan(0)
-    // 자료가 없는 구간은 0이 아니라 대시로 남는다.
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    // 차트마다 제목이 그림 영역의 접근 가능한 이름이 된다.
+    expect(screen.getByRole('img', { name: 'CPU' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '디스크 I/O' })).toBeInTheDocument()
+    expect(screen.getByText(/마지막 갱신/)).toBeInTheDocument()
+    // 값 읽는 창구는 차트뿐이다 — 접이식 표는 두지 않는다.
+    expect(screen.queryByText('표로 보기')).not.toBeInTheDocument()
   })
 
   test('개요에서 모니터링 탭으로 전환하고 조회 구간을 바꿀 수 있다', async () => {
