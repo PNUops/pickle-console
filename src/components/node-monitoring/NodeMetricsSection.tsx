@@ -45,7 +45,11 @@ export default function NodeMetricsSection({
   })
 
   const data = metrics.data
-  const axisFormat = timeframeAxisFormat(timeframe)
+  // 축 라벨은 화면에 그려진 자료의 구간을 따른다 — 구간을 바꾼 직후(또는 새 구간
+  // 조회가 실패해 이전 자료가 남아 있을 때) 선택값을 따르면 라벨이 자료와 어긋난다.
+  const axisFormat = timeframeAxisFormat(
+    (data?.timeframe as MetricsTimeframe | undefined) ?? timeframe,
+  )
   const times = data ? data.points.map((point) => toEpochSeconds(point.time)) : []
 
   return (
