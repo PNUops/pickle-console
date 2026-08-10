@@ -16,7 +16,7 @@ import type { VmStatus } from '../../lib/status'
 export type ResourceTypeEntry = {
   label: string
   /** Absent when this build has no screen for the type — the row stays text. */
-  detailPath?: (id: number) => string
+  detailPath?: (id: string) => string
   statusBadge: (resource: ResourceSummary) => ReactNode
   /**
    * Whether this row still counts as something the person has. Each type owns

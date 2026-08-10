@@ -35,7 +35,7 @@ interface DomainDrawerProps {
   /** 예약 중(해제됨) 도메인 행 — 서빙 목록에 없는 id는 여기서 찾는다. */
   reserved: DomainSummary[]
   /** 열려 있는 도메인 id (null = 닫힘). */
-  openId: number | null
+  openId: string | null
   onClose: () => void
   canMutate: boolean
   /** 포트 변경·해제 성공 후 상위 목록의 "직전 사용 포트" 기억을 갱신한다. */

@@ -37,7 +37,7 @@ const WORKSPACE_WIDE_ASSIGNABLE: ResourceRole[] = ['MEMBER', 'VIEWER']
  * 않는다. 그래서 화면의 중심은 "누구에게 무엇까지"이고, 회수할 때는 회수가
  * 닿지 않는 것(이미 본 비밀번호, 이미 열린 SSH 세션)을 같이 말해 준다.
  */
-export function VmAccessSection({ vmId }: { vmId: number }) {
+export function VmAccessSection({ vmId }: { vmId: string }) {
   const queryClient = useQueryClient()
   const access = useQuery({
     queryKey: ['vms', vmId, 'access'],
@@ -60,7 +60,7 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
   }
 
   const changeRole = useMutation({
-    mutationFn: ({ grantId, role }: { grantId: number; role: ResourceRole }) =>
+    mutationFn: ({ grantId, role }: { grantId: string; role: ResourceRole }) =>
       updateVmAccessGrant(vmId, grantId, role),
     onSuccess: () => {
       setError(null)
@@ -70,7 +70,7 @@ export function VmAccessSection({ vmId }: { vmId: number }) {
   })
 
   const revoke = useMutation({
-    mutationFn: (grantId: number) => removeVmAccessGrant(vmId, grantId),
+    mutationFn: (grantId: string) => removeVmAccessGrant(vmId, grantId),
     onSuccess: () => {
       setError(null)
       setRevokeTarget(null)
@@ -191,8 +191,8 @@ function AddGrantForm({
   onError,
   onDone,
 }: {
-  vmId: number
-  candidates: { userId: number; name: string; email: string }[]
+  vmId: string
+  candidates: { userId: string; name: string; email: string }[]
   hasWorkspaceWide: boolean
   onError: (message: string | null) => void
   onDone: () => void
@@ -206,7 +206,7 @@ function AddGrantForm({
     mutationFn: () =>
       addVmAccessGrant(vmId, {
         granteeType: workspaceWide ? 'WORKSPACE' : 'USER',
-        userId: workspaceWide ? undefined : Number(target),
+        userId: workspaceWide ? undefined : target,
         role,
       }),
     onSuccess: () => {

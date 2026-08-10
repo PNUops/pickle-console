@@ -16,7 +16,7 @@ export default function NodeMetricsSection({
   nodeId,
   nodeName,
 }: {
-  nodeId: number
+  nodeId: string
   nodeName: string
 }) {
   return (

@@ -19,7 +19,7 @@ function notProvisionedNotice(data: VmMetrics) {
  * VM 사용량 탭 본문 — CPU·메모리·네트워크·디스크 I/O 시계열.
  * uPlot을 끌어오므로 상세 화면에서 지연 로드한다(기본 내보내기).
  */
-export default function VmMonitoringSection({ vmId }: { vmId: number }) {
+export default function VmMonitoringSection({ vmId }: { vmId: string }) {
   return (
     <MetricsPanel<VmMetrics>
       title="사용량"
