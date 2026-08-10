@@ -35,7 +35,7 @@ const TABS: { label: string; status: IpAllocationStatus | undefined }[] = [
 /** IP 할당 현황 — 풀별 여유와 할당/해제 이력. 노드/IP 화면의 IP 탭. */
 export function IpAllocationsSection() {
   const [status, setStatus] = useState<IpAllocationStatus | undefined>(undefined)
-  const [poolId, setPoolId] = useState<number | undefined>(undefined)
+  const [poolId, setPoolId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   // 풀 요약은 노드 현황의 ipPool 정보를 재사용한다 (별도 요약 API 불필요).
@@ -81,7 +81,7 @@ export function IpAllocationsSection() {
             className="w-56"
             value={poolId ?? ''}
             onChange={(event) => {
-              setPoolId(event.target.value ? Number(event.target.value) : undefined)
+              setPoolId(event.target.value || undefined)
               setPage(0)
             }}
           >

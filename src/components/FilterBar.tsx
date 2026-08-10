@@ -19,9 +19,9 @@ export function FilterBar<S>({
   status: S | undefined
   onStatus: (status: S | undefined) => void
   isSysAdmin: boolean
-  orgId: number | undefined
-  onOrg: (orgId: number | undefined) => void
-  orgs: { id: number; name: string }[]
+  orgId: string | undefined
+  onOrg: (orgId: string | undefined) => void
+  orgs: { id: string; name: string }[]
   children?: ReactNode
 }) {
   return (
@@ -61,7 +61,9 @@ export function FilterBar<S>({
               aria-label="기관 필터"
               className="w-56"
               value={orgId ?? ''}
-              onChange={(event) => onOrg(event.target.value ? Number(event.target.value) : undefined)}
+              // DOM 값은 언제나 문자열이고 기관 id도 이제 문자열이다 — 빈
+              // 문자열("전체 기관")만 없음으로 접는다.
+              onChange={(event) => onOrg(event.target.value || undefined)}
             >
               <option value="">전체 기관</option>
               {orgs.map((org) => (
