@@ -7,6 +7,7 @@ import '@xterm/xterm/css/xterm.css'
 import { fetchVm } from '../api/queries'
 import { Alert, Button, Spinner } from '../components/ui'
 import { useTerminalSocket } from '../terminal/useTerminalSocket'
+import { isUuid } from '../lib/validation'
 
 /** resize 프레임 송신 디바운스 (ms). */
 const RESIZE_DEBOUNCE_MS = 150
@@ -21,9 +22,14 @@ const RESIZE_DEBOUNCE_MS = 150
  */
 export function TerminalPage() {
   const params = useParams()
-  const vmId = Number(params.vmId)
+  const vmId = params.vmId ?? ''
 
-  const vm = useQuery({ queryKey: ['vms', vmId], queryFn: () => fetchVm(vmId) })
+  const vm = useQuery({
+    queryKey: ['vms', vmId],
+    queryFn: () => fetchVm(vmId),
+    // 형식부터 틀린 주소는 서버에 물어볼 것이 없다 — 소켓 훅이 사유를 표시한다.
+    enabled: isUuid(vmId),
+  })
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -100,7 +106,9 @@ export function TerminalPage() {
     if (term) sendResize(term.cols, term.rows)
   }, [phase.status, sendResize])
 
-  const title = vm.data ? vm.data.displayName || vm.data.name : `VM #${vmId}`
+  // 이름을 아직(또는 끝내) 모를 때의 폴백. 식별자는 UUID라 제목에 넣어도
+  // 읽는 사람에게 알려주는 것이 없으므로 종류만 밝힌다.
+  const title = vm.data ? vm.data.displayName || vm.data.name : 'VM'
 
   return (
     <div className="space-y-4">

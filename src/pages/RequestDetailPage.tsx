@@ -22,18 +22,25 @@ import {
   Spinner,
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 export function RequestDetailPage() {
   const params = useParams()
-  const requestId = Number(params.requestId)
+  const requestId = params.requestId ?? ''
+  const idValid = isUuid(requestId)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const request = useQuery({
     queryKey: ['requests', requestId],
     queryFn: () => fetchRequest(requestId),
+    // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
+    enabled: idValid,
   })
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
 
+  if (!idValid) {
+    return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+  }
   if (request.isPending) {
     return (
       <div className="flex justify-center py-12">
@@ -46,15 +53,15 @@ export function RequestDetailPage() {
   }
 
   const data = request.data
-  const imageName = (imageId: number | null | undefined) => {
+  // 목록에 없는 id는 지워진 이미지·프리셋이다. 식별자가 UUID가 된 뒤로는
+  // 화면에 그대로 붙여도 읽는 사람에게 알려주는 것이 없어 종류만 밝힌다.
+  const imageName = (imageId: string | null | undefined) => {
     if (imageId == null) return '—'
-    return (
-      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
-    )
+    return osImages.data?.find((t) => t.id === imageId)?.displayName ?? '알 수 없는 OS 이미지'
   }
-  const flavorName = (flavorId: number | null | undefined) => {
+  const flavorName = (flavorId: string | null | undefined) => {
     if (flavorId == null) return '—'
-    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? `프리셋 #${flavorId}`
+    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? '알 수 없는 프리셋'
   }
 
   return (
@@ -181,7 +188,7 @@ function CancelRequestButton({
   requestId,
   onError,
 }: {
-  requestId: number
+  requestId: string
   onError: (message: string | null) => void
 }) {
   const queryClient = useQueryClient()

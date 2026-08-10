@@ -4,6 +4,7 @@ import { fetchVmAccessGrants } from '../api/queries'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { Alert, Spinner, VmStatusBadge } from '../components/ui'
 import type { VmStatus } from '../lib/status'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 /**
  * VM 하나의 접근 권한만 다루는 화면.
@@ -15,10 +16,13 @@ import type { VmStatus } from '../lib/status'
  */
 export function VmAccessPage() {
   const params = useParams()
-  const vmId = Number(params.vmId)
+  const vmId = params.vmId ?? ''
+  const idValid = isUuid(vmId)
   const access = useQuery({
     queryKey: ['vms', vmId, 'access'],
     queryFn: () => fetchVmAccessGrants(vmId),
+    // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
+    enabled: idValid,
   })
   const vm = access.data?.resource
 
@@ -30,7 +34,9 @@ export function VmAccessPage() {
         </Link>
       </nav>
 
-      {access.isPending ? (
+      {!idValid ? (
+        <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+      ) : access.isPending ? (
         <Spinner label="접근 권한 불러오는 중" />
       ) : access.isError ? (
         <Alert variant="danger">{access.error.message}</Alert>

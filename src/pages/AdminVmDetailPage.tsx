@@ -35,6 +35,7 @@ import {
   VmStatusBadge,
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
+import { isUuid } from '../lib/validation'
 import { VM_EVENT_LABELS, type VmEventType } from '../lib/status'
 
 const TABS = [
@@ -49,7 +50,8 @@ const TABS = [
  */
 export function AdminVmDetailPage() {
   const { vmId: vmIdParam } = useParams()
-  const vmId = Number(vmIdParam)
+  const vmId = vmIdParam ?? ''
+  const idValid = isUuid(vmId)
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -60,10 +62,10 @@ export function AdminVmDetailPage() {
   const detail = useQuery({
     queryKey: ['admin', 'vms', 'detail', vmId],
     queryFn: () => fetchAdminVm(vmId),
-    enabled: Number.isInteger(vmId) && vmId > 0,
+    enabled: idValid,
   })
 
-  if (!Number.isInteger(vmId) || vmId <= 0) {
+  if (!idValid) {
     return <Alert variant="danger">잘못된 VM 주소입니다.</Alert>
   }
   if (detail.isPending) {
@@ -159,7 +161,7 @@ type PowerActionKey = 'start' | 'shutdown' | 'reboot' | 'forceStop'
 const POWER_ACTIONS: {
   key: PowerActionKey
   label: string
-  mutate: (vmId: number) => Promise<MessageResponse>
+  mutate: (vmId: string) => Promise<MessageResponse>
   enabledFor: (status: VmDetail['status']) => boolean
   variant: 'primary' | 'secondary' | 'danger'
   confirm: string
@@ -295,7 +297,7 @@ function PeriodSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string)
 
 const EVENTS_PAGE_SIZE = 20
 
-function EventsSection({ vmId }: { vmId: number }) {
+function EventsSection({ vmId }: { vmId: string }) {
   const [page, setPage] = useState(0)
   const events = useQuery({
     queryKey: ['admin', 'vms', 'events', vmId, { page, size: EVENTS_PAGE_SIZE }],

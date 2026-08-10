@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toApiError } from '../api/problem'
 import { createTerminalSession } from '../api/queries'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 /**
  * 웹 터미널 WebSocket 연결 훅.
@@ -89,7 +90,7 @@ function isExitFrame(value: unknown): value is ExitFrame {
  * @param onOpen  WS open 콜백(선택) — 포커스·초기 fit 등.
  */
 export function useTerminalSocket(
-  vmId: number,
+  vmId: string,
   onData: (bytes: Uint8Array) => void,
   onOpen?: () => void,
 ): TerminalConnection {
@@ -131,6 +132,17 @@ export function useTerminalSocket(
     let pendingExit: ExitFrame | null = null
 
     async function connect() {
+      // 형식부터 틀린 주소로는 티켓을 받을 수 없다 — mint를 건너뛰고 사유를
+      // 바로 보여준다. 재연결해도 주소가 그대로이므로 버튼은 감춘다.
+      if (!isUuid(vmId)) {
+        setPhase({
+          status: 'closed',
+          code: 0,
+          message: INVALID_ID_MESSAGE,
+          canReconnect: false,
+        })
+        return
+      }
       let ticket
       try {
         ticket = await createTerminalSession(vmId)
