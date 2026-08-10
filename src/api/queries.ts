@@ -1,3 +1,5 @@
+import type { QueryClient } from '@tanstack/react-query'
+
 import { api } from './client'
 import { ApiError, toApiError } from './problem'
 import type { components, operations } from './schema'
@@ -282,6 +284,22 @@ export function fetchVms(params: {
     if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
     return data
   })
+}
+
+/**
+ * Every list that shows a resource, invalidated together.
+ *
+ * A VM appears twice now — under its own kind at /vms and in the type-agnostic
+ * inventory at /resources — and a mutation that refreshes only the first leaves
+ * the second showing a machine that is already gone. Callers that changed one
+ * resource's existence or state invalidate through here, so a second kind of
+ * resource joins the set by editing this function and nothing else.
+ */
+export function invalidateResourceLists(queryClient: QueryClient): Promise<unknown> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['vms'] }),
+    queryClient.invalidateQueries({ queryKey: ['resources'] }),
+  ])
 }
 
 export type ResourceSummary = Schemas['ResourceSummaryResponse']

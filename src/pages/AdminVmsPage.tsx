@@ -11,6 +11,7 @@ import {
   type AdminVmSort,
   type VmStatus,
   type VmSummary,
+  invalidateResourceLists,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -148,8 +149,8 @@ export function AdminVmsPage() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 필터 토글 버튼 워크스페이스 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
-        <div role="workspace" aria-label="VM 상태 필터" className="flex flex-wrap gap-1">
+        {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
+        <div role="group" aria-label="VM 상태 필터" className="flex flex-wrap gap-1">
           {STATUS_TABS.map((tab) => {
             const isSelected = tab.status === status
             return (
@@ -479,7 +480,7 @@ function ScheduleDeleteForm({
       setReason('')
       onDone('일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
     onError: (err) => {
       const apiError = toApiError(err, '일반 삭제를 접수하지 못했습니다.')
@@ -582,7 +583,7 @@ function CancelDeleteAction({
       setError(null)
       onDone(data.message) // kind별 결과 문구는 서버 메시지를 그대로 보여준다.
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
     onError: (err) => setError(toApiError(err, '접수된 삭제를 취소하지 못했습니다.').message),
   })
@@ -628,7 +629,7 @@ function ForceDeleteAction({
       setError(null)
       onDone(data.message)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
     onError: async (err) => {
       // 모달을 유지해 입력한 이름을 보존하고 오류를 모달 안에 인라인으로 보여준다.

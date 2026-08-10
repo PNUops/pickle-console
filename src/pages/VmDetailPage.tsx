@@ -25,6 +25,7 @@ import {
   type VmDetail,
   type VmSettingView,
   type VmStatus,
+  invalidateResourceLists,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import {
@@ -385,13 +386,13 @@ function PowerControls({ vm }: { vm: VmDetail }) {
       setError(null)
       // 전이 반영은 상태 배지가 담당하므로 접수 안내는 일시 토스트면 충분하다.
       toast.success(data.message)
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
     onError: async (err) => {
       setConfirming(null)
       setError(toApiError(err, 'VM 전원 제어 요청에 실패했습니다.').message)
       // 409(상태 불일치) 등은 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
   })
 
@@ -1009,12 +1010,12 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
     onSuccess: async () => {
       setOpen(false)
       setError(null)
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
     onError: async (err) => {
       setOpen(false)
       setError(toApiError(err, 'VM 삭제를 접수하지 못했습니다.').message)
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
   })
 

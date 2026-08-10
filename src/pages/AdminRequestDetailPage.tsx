@@ -398,7 +398,7 @@ function DecisionSection({
       <CardHeader className="flex items-center justify-between gap-4">
         <CardTitle>검토 결정</CardTitle>
         {/* 모드 전환 토글 버튼 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 */}
-        <div role="workspace" aria-label="결정 종류" className="flex gap-1">
+        <div role="group" aria-label="결정 종류" className="flex gap-1">
           {(
             [
               { key: 'approve', label: '승인' },

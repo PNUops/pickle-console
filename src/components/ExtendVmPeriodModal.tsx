@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateVmPeriod } from '../api/queries'
+import { invalidateResourceLists, updateVmPeriod } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { Alert, Button, FormField, Input, Modal } from './ui'
 import { fieldErrorsOf } from '../lib/field-errors'
@@ -28,7 +28,7 @@ export function ExtendVmPeriodModal({
     mutationFn: () => updateVmPeriod(vm.id, { endDate }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
       onDone('연장되었습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.')
     },
     onError: (err) => {

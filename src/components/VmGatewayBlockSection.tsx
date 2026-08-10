@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateVmGatewayBlock } from '../api/queries'
+import { invalidateResourceLists, updateVmGatewayBlock } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { Alert, Button, Modal, PermissionNotice, Textarea } from './ui'
 
@@ -36,7 +36,7 @@ export function VmGatewayBlockSection({
       setError(null)
       onDone(nextBlocked ? 'SSH·웹 터미널 접속을 차단했습니다.' : '차단을 해제했습니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
-      await queryClient.invalidateQueries({ queryKey: ['vms'] })
+      await invalidateResourceLists(queryClient)
     },
     onError: (err) => {
       setError(toApiError(err, '차단 상태를 변경하지 못했습니다.').message)
