@@ -202,7 +202,7 @@ export function fetchWorkspaces(): Promise<WorkspaceSummary[]> {
   })
 }
 
-export function fetchWorkspace(workspaceId: number): Promise<WorkspaceDetail> {
+export function fetchWorkspace(workspaceId: string): Promise<WorkspaceDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/workspaces/{workspaceId}', {
       params: { path: { workspaceId } },
@@ -258,7 +258,7 @@ export function fetchRequests(params: {
   status?: RequestStatus
   page?: number
   size?: number
-  workspaceId?: number
+  workspaceId?: string
 }): Promise<RequestPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/requests', { params: { query: params } })
@@ -267,7 +267,7 @@ export function fetchRequests(params: {
   })
 }
 
-export function fetchRequest(requestId: number): Promise<RequestDetail> {
+export function fetchRequest(requestId: string): Promise<RequestDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/requests/{requestId}', {
       params: { path: { requestId } },
@@ -280,7 +280,7 @@ export function fetchRequest(requestId: number): Promise<RequestDetail> {
 export function fetchVms(params: {
   page?: number
   size?: number
-  workspaceId?: number
+  workspaceId?: string
 }): Promise<VmPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms', { params: { query: params } })
@@ -312,7 +312,7 @@ export type ResourcePage = Schemas['PageResponseResourceSummaryResponse']
 export function fetchResources(params: {
   page?: number
   size?: number
-  workspaceId?: number
+  workspaceId?: string
   type?: ResourceSummary['type']
 }): Promise<ResourcePage> {
   return guardNetwork(async () => {
@@ -322,7 +322,7 @@ export function fetchResources(params: {
   })
 }
 
-export function fetchVm(vmId: number): Promise<VmDetail> {
+export function fetchVm(vmId: string): Promise<VmDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}', { params: { path: { vmId } } })
     if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
@@ -334,7 +334,7 @@ export function fetchVm(vmId: number): Promise<VmDetail> {
 
 export function fetchAdminRequests(params: {
   status?: RequestStatus
-  orgId?: number
+  orgId?: string
   page?: number
   size?: number
 }): Promise<RequestPage> {
@@ -347,7 +347,7 @@ export function fetchAdminRequests(params: {
   })
 }
 
-export function fetchAdminRequest(requestId: number): Promise<RequestDetail> {
+export function fetchAdminRequest(requestId: string): Promise<RequestDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/requests/{requestId}', {
       params: { path: { requestId } },
@@ -357,7 +357,7 @@ export function fetchAdminRequest(requestId: number): Promise<RequestDetail> {
   })
 }
 
-export function fetchApprovalContext(requestId: number): Promise<ApprovalContext> {
+export function fetchApprovalContext(requestId: string): Promise<ApprovalContext> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/requests/{requestId}/context', {
       params: { path: { requestId } },
@@ -369,7 +369,7 @@ export function fetchApprovalContext(requestId: number): Promise<ApprovalContext
 
 /* ─── vm lifecycle ─── */
 
-export function startVm(vmId: number): Promise<MessageResponse> {
+export function startVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/start', {
       params: { path: { vmId } },
@@ -379,7 +379,7 @@ export function startVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function shutdownVm(vmId: number): Promise<MessageResponse> {
+export function shutdownVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/shutdown', {
       params: { path: { vmId } },
@@ -389,7 +389,7 @@ export function shutdownVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function rebootVm(vmId: number): Promise<MessageResponse> {
+export function rebootVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/reboot', {
       params: { path: { vmId } },
@@ -399,7 +399,7 @@ export function rebootVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function forceStopVm(vmId: number): Promise<MessageResponse> {
+export function forceStopVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/force-stop', {
       params: { path: { vmId } },
@@ -409,7 +409,7 @@ export function forceStopVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function deleteVm(vmId: number): Promise<VmDeletion> {
+export function deleteVm(vmId: string): Promise<VmDeletion> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/vms/{vmId}', {
       params: { path: { vmId } },
@@ -419,7 +419,7 @@ export function deleteVm(vmId: number): Promise<VmDeletion> {
   })
 }
 
-export function revealVmPassword(vmId: number): Promise<VmPasswordResponse> {
+export function revealVmPassword(vmId: string): Promise<VmPasswordResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}/password', {
       params: { path: { vmId } },
@@ -430,7 +430,7 @@ export function revealVmPassword(vmId: number): Promise<VmPasswordResponse> {
 }
 
 /** VM 비밀번호 재생성 (시스템 생성, EDITOR 이상) — 즉시 적용된 새 비밀번호를 돌려받는다. */
-export function regenerateVmPassword(vmId: number): Promise<VmPasswordResponse> {
+export function regenerateVmPassword(vmId: string): Promise<VmPasswordResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/password/regenerate', {
       params: { path: { vmId } },
@@ -442,7 +442,7 @@ export function regenerateVmPassword(vmId: number): Promise<VmPasswordResponse> 
 
 /* ─── VM별 설정 (EDITOR 이상) ─── */
 
-export function fetchVmSettings(vmId: number): Promise<VmSettingView[]> {
+export function fetchVmSettings(vmId: string): Promise<VmSettingView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}/settings', {
       params: { path: { vmId } },
@@ -454,7 +454,7 @@ export function fetchVmSettings(vmId: number): Promise<VmSettingView[]> {
 
 /** 설정 키의 부분 맵을 원자적으로 변경한다 — 갱신된 전체 설정 목록을 돌려받는다. */
 export function updateVmSettings(
-  vmId: number,
+  vmId: string,
   settings: Record<string, unknown>,
 ): Promise<VmSettingView[]> {
   return guardNetwork(async () => {
@@ -476,7 +476,7 @@ export type VmAccessList = Schemas['ResourceAccessListResponse']
  * 목록과 함께 어느 VM의 것인지도 받는다 — 이 화면을 여는 사람은 그 VM의 상세를
  * 못 여는 경우가 있어(워크스페이스 소유자), 이름을 다른 데서 가져올 수 없다.
  */
-export function fetchVmAccessGrants(vmId: number): Promise<VmAccessList> {
+export function fetchVmAccessGrants(vmId: string): Promise<VmAccessList> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}/access', {
       params: { path: { vmId } },
@@ -488,8 +488,8 @@ export function fetchVmAccessGrants(vmId: number): Promise<VmAccessList> {
 
 /** 사용자 지정 부여 또는 워크스페이스 전체 부여. 재인증은 클라이언트가 알아서 붙인다. */
 export function addVmAccessGrant(
-  vmId: number,
-  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: number; role: ResourceRole },
+  vmId: string,
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/access', {
@@ -502,8 +502,8 @@ export function addVmAccessGrant(
 }
 
 export function updateVmAccessGrant(
-  vmId: number,
-  grantId: number,
+  vmId: string,
+  grantId: string,
   role: ResourceRole,
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
@@ -516,7 +516,7 @@ export function updateVmAccessGrant(
   })
 }
 
-export function removeVmAccessGrant(vmId: number, grantId: number): Promise<void> {
+export function removeVmAccessGrant(vmId: string, grantId: string): Promise<void> {
   return guardNetwork(async () => {
     const { error } = await api.DELETE('/vms/{vmId}/access/{grantId}', {
       params: { path: { vmId, grantId } },
@@ -555,7 +555,7 @@ export function generateMySshKey(body: SshKeyGenerateRequest): Promise<SshKeyVie
 
 /** 서버 생성 키의 개인키 재다운로드 (매 다운로드 감사) — 붙여넣기 키는 404. */
 export function downloadMySshKeyPrivateKey(
-  keyId: number,
+  keyId: string,
 ): Promise<SshKeyPrivateKeyResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/me/ssh-keys/{keyId}/private-key', {
@@ -566,7 +566,7 @@ export function downloadMySshKeyPrivateKey(
   })
 }
 
-export function deleteMySshKey(keyId: number): Promise<void> {
+export function deleteMySshKey(keyId: string): Promise<void> {
   return guardNetwork(async () => {
     const { error, response } = await api.DELETE('/me/ssh-keys/{keyId}', {
       params: { path: { keyId } },
@@ -577,7 +577,7 @@ export function deleteMySshKey(keyId: number): Promise<void> {
 
 
 export function fetchVmEvents(
-  vmId: number,
+  vmId: string,
   params: { page?: number; size?: number } = {},
 ): Promise<VmEventPage> {
   return guardNetwork(async () => {
@@ -595,7 +595,7 @@ export function fetchVmEvents(
  * 프로비저닝되지 않은 VM은 200 + available=false로 온다.
  */
 export function fetchVmMetrics(
-  vmId: number,
+  vmId: string,
   timeframe: MetricsTimeframe,
 ): Promise<VmMetrics> {
   return guardNetwork(async () => {
@@ -613,7 +613,7 @@ export function fetchVmMetrics(
  * 웹 터미널 1회용 접속 티켓 발급 (POST /vms/{vmId}/terminal-sessions).
  * 실패는 ApiError로 던져 호출부(훅)가 Problem code로 한국어 메시지를 분기한다.
  */
-export function createTerminalSession(vmId: number): Promise<TerminalSessionTicket> {
+export function createTerminalSession(vmId: string): Promise<TerminalSessionTicket> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/terminal-sessions', {
       params: { path: { vmId } },
@@ -647,7 +647,7 @@ export function terminateTerminalSession(sessionId: string): Promise<void> {
 
 /** VM에 도메인 연결 접수 — 플랫폼 서브도메인 또는 커스텀 도메인 (동시 지정 422). */
 export function createVmDomain(
-  vmId: number,
+  vmId: string,
   body: CreateVmDomainRequest,
 ): Promise<PublicationView> {
   return guardNetwork(async () => {
@@ -662,7 +662,7 @@ export function createVmDomain(
 
 /** 도메인별 공개 포트 변경 — 라우트 재적용은 비동기. */
 export function updateDomainPort(
-  domainId: number,
+  domainId: string,
   body: UpdateDomainRequest,
 ): Promise<PublicationView> {
   return guardNetwork(async () => {
@@ -676,7 +676,7 @@ export function updateDomainPort(
 }
 
 export function fetchDomains(params: {
-  vmId?: number
+  vmId?: string
   status?: DomainStatus
   page?: number
   size?: number
@@ -692,7 +692,7 @@ export function fetchDomains(params: {
  * 도메인 해제 — 서빙 중이면 접근이 중단되고(플랫폼 서브도메인은 이름이 일정
  * 기간 예약), 이미 예약 중인 행이면 이름을 즉시 반납한다.
  */
-export function deleteDomain(domainId: number): Promise<MessageResponse> {
+export function deleteDomain(domainId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/domains/{domainId}', {
       params: { path: { domainId } },
@@ -702,7 +702,7 @@ export function deleteDomain(domainId: number): Promise<MessageResponse> {
   })
 }
 
-export function verifyDomain(domainId: number): Promise<DomainDetail> {
+export function verifyDomain(domainId: string): Promise<DomainDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/domains/{domainId}/verify', {
       params: { path: { domainId } },
@@ -714,7 +714,7 @@ export function verifyDomain(domainId: number): Promise<DomainDetail> {
 
 /* ─── 포트포워딩·캠퍼스 IP (사용자) ─── */
 
-export function fetchVmPortForwardings(vmId: number): Promise<PortForwardingView[]> {
+export function fetchVmPortForwardings(vmId: string): Promise<PortForwardingView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}/port-forwardings', {
       params: { path: { vmId } },
@@ -725,7 +725,7 @@ export function fetchVmPortForwardings(vmId: number): Promise<PortForwardingView
 }
 
 export function createVmPortForwarding(
-  vmId: number,
+  vmId: string,
   body: CreatePortForwardingRequest,
 ): Promise<PortForwardingView> {
   return guardNetwork(async () => {
@@ -739,8 +739,8 @@ export function createVmPortForwarding(
 }
 
 export function deleteVmPortForwarding(
-  vmId: number,
-  portForwardingId: number,
+  vmId: string,
+  portForwardingId: string,
 ): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE(
@@ -752,7 +752,7 @@ export function deleteVmPortForwarding(
   })
 }
 
-export function fetchVmCampusIpRequests(vmId: number): Promise<CampusIpRequestView[]> {
+export function fetchVmCampusIpRequests(vmId: string): Promise<CampusIpRequestView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}/campus-ip-requests', {
       params: { path: { vmId } },
@@ -763,7 +763,7 @@ export function fetchVmCampusIpRequests(vmId: number): Promise<CampusIpRequestVi
 }
 
 export function createVmCampusIpRequest(
-  vmId: number,
+  vmId: string,
   body: CreateCampusIpRequest,
 ): Promise<CampusIpRequestView> {
   return guardNetwork(async () => {
@@ -777,7 +777,7 @@ export function createVmCampusIpRequest(
 }
 
 /** REQUESTED 상태의 신청만 취소할 수 있다 (그 외 409, 멱등 아님 — 204). */
-export function cancelVmCampusIpRequest(vmId: number, requestId: number): Promise<void> {
+export function cancelVmCampusIpRequest(vmId: string, requestId: string): Promise<void> {
   return guardNetwork(async () => {
     const { error, response } = await api.DELETE(
       '/vms/{vmId}/campus-ip-requests/{requestId}',
@@ -798,7 +798,7 @@ export function fetchAdminRelays(): Promise<AdminRelayView[]> {
 }
 
 /** 릴레이 동기화 토큰 발급 — 평문 토큰은 이 응답에서만 확인할 수 있다. */
-export function issueAdminRelayToken(relayId: number): Promise<RelayTokenResponse> {
+export function issueAdminRelayToken(relayId: string): Promise<RelayTokenResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/relays/{relayId}/token', {
       params: { path: { relayId } },
@@ -809,8 +809,8 @@ export function issueAdminRelayToken(relayId: number): Promise<RelayTokenRespons
 }
 
 export function fetchAdminPortMappings(params: {
-  relayId?: number
-  vmId?: number
+  relayId?: string
+  vmId?: string
   status?: PortMappingStatus
   page?: number
   size?: number
@@ -826,7 +826,7 @@ export function fetchAdminPortMappings(params: {
 
 /** 매핑 정지 — 갱신된 매핑(정지 사유 포함)을 돌려받는다. 릴레이 반영은 비동기. */
 export function suspendAdminPortMapping(
-  mappingId: number,
+  mappingId: string,
   reason: string,
 ): Promise<AdminPortMappingView> {
   return guardNetwork(async () => {
@@ -840,7 +840,7 @@ export function suspendAdminPortMapping(
 }
 
 export function unsuspendAdminPortMapping(
-  mappingId: number,
+  mappingId: string,
 ): Promise<AdminPortMappingView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST(
@@ -852,7 +852,7 @@ export function unsuspendAdminPortMapping(
   })
 }
 
-export function deleteAdminPortMapping(mappingId: number): Promise<MessageResponse> {
+export function deleteAdminPortMapping(mappingId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/admin/port-mappings/{mappingId}', {
       params: { path: { mappingId } },
@@ -864,7 +864,7 @@ export function deleteAdminPortMapping(mappingId: number): Promise<MessageRespon
 
 /** 매핑별 연결 가드 조정 (SYS_ADMIN) — null = 기본값 복귀, 0 = 해당 가드 해제. */
 export function updateAdminPortMappingGuards(
-  mappingId: number,
+  mappingId: string,
   body: UpdatePortMappingGuardsRequest,
 ): Promise<AdminPortMappingView> {
   return guardNetwork(async () => {
@@ -879,7 +879,7 @@ export function updateAdminPortMappingGuards(
 
 export function fetchAdminCampusIpRequests(params: {
   status?: CampusIpRequestStatus
-  vmId?: number
+  vmId?: string
   page?: number
   size?: number
 } = {}): Promise<AdminCampusIpRequestPage> {
@@ -893,7 +893,7 @@ export function fetchAdminCampusIpRequests(params: {
 }
 
 export function updateAdminCampusIpRequestStatus(
-  requestId: number,
+  requestId: string,
   body: UpdateCampusIpRequestStatusRequest,
 ): Promise<AdminCampusIpRequestView> {
   return guardNetwork(async () => {
@@ -917,8 +917,8 @@ export function fetchAdminNodes(): Promise<NodeSummary[]> {
 }
 
 export function fetchAdminVms(params: {
-  orgId?: number
-  workspaceId?: number
+  orgId?: string
+  workspaceId?: string
   status?: VmStatus
   expiringInDays?: number
   expired?: boolean
@@ -936,7 +936,7 @@ export function fetchAdminVms(params: {
 
 /** VM 사용 기간 변경(만료 연장) — 동기 반영이라 갱신된 VM 상세를 돌려받는다. */
 export function updateVmPeriod(
-  vmId: number,
+  vmId: string,
   body: VmPeriodUpdateRequest,
 ): Promise<VmDetail> {
   return guardNetwork(async () => {
@@ -950,7 +950,7 @@ export function updateVmPeriod(
 }
 
 export function scheduleVmDeletion(
-  vmId: number,
+  vmId: string,
   body: { scheduledFor: string; reason: string },
 ): Promise<VmDeletion> {
   return guardNetwork(async () => {
@@ -963,7 +963,7 @@ export function scheduleVmDeletion(
   })
 }
 
-export function cancelScheduledVmDeletion(vmId: number): Promise<MessageResponse> {
+export function cancelScheduledVmDeletion(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vms/{vmId}/cancel-scheduled-delete', {
       params: { path: { vmId } },
@@ -974,7 +974,7 @@ export function cancelScheduledVmDeletion(vmId: number): Promise<MessageResponse
 }
 
 export function forceDeleteVm(
-  vmId: number,
+  vmId: string,
   confirmName: string,
 ): Promise<MessageResponse> {
   return guardNetwork(async () => {
@@ -990,7 +990,7 @@ export function forceDeleteVm(
 /* ─── admin: 도메인·라우트·인증서 ─── */
 
 export function fetchAdminRoutes(params: {
-  orgId?: number
+  orgId?: string
   status?: RouteStatus
   page?: number
   size?: number
@@ -1003,7 +1003,7 @@ export function fetchAdminRoutes(params: {
 }
 
 export function fetchAdminDomains(params: {
-  orgId?: number
+  orgId?: string
   kind?: DomainKind
   status?: DomainStatus
   page?: number
@@ -1017,7 +1017,7 @@ export function fetchAdminDomains(params: {
 }
 
 export function fetchAdminCertificates(params: {
-  orgId?: number
+  orgId?: string
   status?: CertificateStatus
   expiringInDays?: number
   page?: number
@@ -1045,7 +1045,7 @@ export function resyncRoutes(): Promise<MessageResponse> {
 export function fetchAdminTasks(params: {
   status?: ProvisioningTaskStatus
   kind?: ProvisioningTaskKind
-  vmId?: number
+  vmId?: string
   page?: number
   size?: number
 } = {}): Promise<AdminTaskPage> {
@@ -1061,7 +1061,7 @@ export function fetchAdminTasks(params: {
   })
 }
 
-export function retryAdminTask(taskId: number): Promise<MessageResponse> {
+export function retryAdminTask(taskId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/tasks/{taskId}/retry', {
       params: { path: { taskId } },
@@ -1094,7 +1094,7 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
 
 /* ─── 대시보드 요약 ─── */
 
-export function fetchAdminSummary(params: { orgId?: number } = {}): Promise<OrgDashboardSummary> {
+export function fetchAdminSummary(params: { orgId?: string } = {}): Promise<OrgDashboardSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/summary', { params: { query: params } })
     if (!data) throw toApiError(error, '대시보드 요약을 불러오지 못했습니다.')
@@ -1112,7 +1112,7 @@ export function fetchSystemSummary(): Promise<SystemDashboardSummary> {
 
 /** 노드 사용량 시계열 (GET /admin/nodes/{nodeId}/metrics — 시스템 관리자 전용). */
 export function fetchAdminNodeMetrics(
-  nodeId: number,
+  nodeId: string,
   timeframe: MetricsTimeframe,
 ): Promise<NodeMetrics> {
   return guardNetwork(async () => {
@@ -1130,7 +1130,7 @@ export function fetchAdminNodeMetrics(
  * 생략해 플랫폼 전체를 본다.
  */
 export function fetchCapacityTrend(
-  params: { days?: number; orgId?: number } = {},
+  params: { days?: number; orgId?: string } = {},
 ): Promise<CapacityTrend> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/capacity-trend', {
@@ -1159,7 +1159,7 @@ export function fetchAdminNotifications(params: {
   })
 }
 
-export function resendAdminNotification(notificationId: number): Promise<MessageResponse> {
+export function resendAdminNotification(notificationId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/notifications/{notificationId}/resend', {
       params: { path: { notificationId } },
@@ -1169,7 +1169,7 @@ export function resendAdminNotification(notificationId: number): Promise<Message
   })
 }
 
-export function fetchAdminWorkspaces(params: { orgId?: number } = {}): Promise<AdminWorkspaceOption[]> {
+export function fetchAdminWorkspaces(params: { orgId?: string } = {}): Promise<AdminWorkspaceOption[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/workspaces', { params: { query: params } })
     if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')
@@ -1177,7 +1177,7 @@ export function fetchAdminWorkspaces(params: { orgId?: number } = {}): Promise<A
   })
 }
 
-export function fetchAdminWorkspace(workspaceId: number): Promise<AdminWorkspaceDetail> {
+export function fetchAdminWorkspace(workspaceId: string): Promise<AdminWorkspaceDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/workspaces/{workspaceId}', {
       params: { path: { workspaceId } },
@@ -1228,7 +1228,7 @@ export function fetchDriftFindings(params: {
 }
 
 export function resolveDriftFinding(
-  findingId: number,
+  findingId: string,
   note?: string,
 ): Promise<DriftFindingView> {
   return guardNetwork(async () => {
@@ -1242,7 +1242,7 @@ export function resolveDriftFinding(
 }
 
 export function fetchIpAllocations(params: {
-  poolId?: number
+  poolId?: string
   status?: IpAllocationStatus
   page?: number
   size?: number
@@ -1265,7 +1265,7 @@ export function fetchAuditLogs(params: {
   targetId?: string
   from?: string
   to?: string
-  orgId?: number
+  orgId?: string
   page?: number
   size?: number
 } = {}): Promise<AuditLogPage> {
@@ -1312,7 +1312,7 @@ export function fetchUnreadCount(): Promise<UnreadCountResponse> {
   })
 }
 
-export function markNotificationRead(notificationId: number): Promise<NotificationView> {
+export function markNotificationRead(notificationId: string): Promise<NotificationView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/notifications/{notificationId}/read', {
       params: { path: { notificationId } },
@@ -1396,7 +1396,7 @@ export function regenerateRecoveryCodes(body: {
   })
 }
 
-export function resetUserMfa(userId: number): Promise<MessageResponse> {
+export function resetUserMfa(userId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/users/{userId}/mfa-reset', {
       params: { path: { userId } },
@@ -1465,7 +1465,7 @@ export function fetchAdminUsers(params: {
   q?: string
   status?: UserStatus
   role?: UserRole
-  orgId?: number
+  orgId?: string
   sort?: AdminUserSort
   page?: number
   size?: number
@@ -1477,7 +1477,7 @@ export function fetchAdminUsers(params: {
   })
 }
 
-export function fetchAdminUser(userId: number): Promise<UserAdminDetail> {
+export function fetchAdminUser(userId: string): Promise<UserAdminDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/users/{userId}', {
       params: { path: { userId } },
@@ -1496,7 +1496,7 @@ export function fetchAdminOsImages(): Promise<AdminOsImage[]> {
 }
 
 export function updateAdminOsImage(
-  imageId: number,
+  imageId: string,
   body: { status: CatalogStatus },
 ): Promise<AdminOsImage> {
   return guardNetwork(async () => {
@@ -1527,7 +1527,7 @@ export function createAdminVmFlavor(body: CreateVmFlavor): Promise<VmFlavor> {
 }
 
 export function updateAdminVmFlavor(
-  flavorId: number,
+  flavorId: string,
   body: UpdateVmFlavor,
 ): Promise<VmFlavor> {
   return guardNetwork(async () => {
@@ -1541,7 +1541,7 @@ export function updateAdminVmFlavor(
 }
 
 export function updateAdminNode(
-  nodeId: number,
+  nodeId: string,
   body: { status: NodeSummary['status'] },
 ): Promise<NodeSummary> {
   return guardNetwork(async () => {
@@ -1564,7 +1564,6 @@ export function fetchAdminOrgs(): Promise<OrgDetail[]> {
 
 export function createOrg(body: {
   name: string
-  slug: string
   description: string | null
 }): Promise<OrgDetail> {
   return guardNetwork(async () => {
@@ -1575,7 +1574,7 @@ export function createOrg(body: {
 }
 
 export function updateOrg(
-  orgId: number,
+  orgId: string,
   body: { name?: string; description?: string | null; status?: OrgStatus; hidden?: boolean },
 ): Promise<OrgDetail> {
   return guardNetwork(async () => {
@@ -1588,7 +1587,7 @@ export function updateOrg(
   })
 }
 
-export function forceReleaseDomain(domainId: number): Promise<MessageResponse> {
+export function forceReleaseDomain(domainId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/domains/{domainId}/force-release', {
       params: { path: { domainId } },
@@ -1598,7 +1597,7 @@ export function forceReleaseDomain(domainId: number): Promise<MessageResponse> {
   })
 }
 
-export function verifyAdminDomain(domainId: number): Promise<MessageResponse> {
+export function verifyAdminDomain(domainId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/domains/{domainId}/verify', {
       params: { path: { domainId } },
@@ -1608,7 +1607,7 @@ export function verifyAdminDomain(domainId: number): Promise<MessageResponse> {
   })
 }
 
-export function applyAdminRoute(routeId: number): Promise<MessageResponse> {
+export function applyAdminRoute(routeId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/routes/{routeId}/apply', {
       params: { path: { routeId } },
@@ -1618,7 +1617,7 @@ export function applyAdminRoute(routeId: number): Promise<MessageResponse> {
   })
 }
 
-export function fetchAdminVm(vmId: number): Promise<VmDetail> {
+export function fetchAdminVm(vmId: string): Promise<VmDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vms/{vmId}', {
       params: { path: { vmId } },
@@ -1629,7 +1628,7 @@ export function fetchAdminVm(vmId: number): Promise<VmDetail> {
 }
 
 export function fetchAdminVmEvents(
-  vmId: number,
+  vmId: string,
   params: { page?: number; size?: number } = {},
 ): Promise<VmEventPage> {
   return guardNetwork(async () => {
@@ -1641,7 +1640,7 @@ export function fetchAdminVmEvents(
   })
 }
 
-export function adminStartVm(vmId: number): Promise<MessageResponse> {
+export function adminStartVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vms/{vmId}/start', {
       params: { path: { vmId } },
@@ -1651,7 +1650,7 @@ export function adminStartVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function adminShutdownVm(vmId: number): Promise<MessageResponse> {
+export function adminShutdownVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vms/{vmId}/shutdown', {
       params: { path: { vmId } },
@@ -1661,7 +1660,7 @@ export function adminShutdownVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function adminRebootVm(vmId: number): Promise<MessageResponse> {
+export function adminRebootVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vms/{vmId}/reboot', {
       params: { path: { vmId } },
@@ -1671,7 +1670,7 @@ export function adminRebootVm(vmId: number): Promise<MessageResponse> {
   })
 }
 
-export function adminForceStopVm(vmId: number): Promise<MessageResponse> {
+export function adminForceStopVm(vmId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vms/{vmId}/force-stop', {
       params: { path: { vmId } },
@@ -1682,7 +1681,7 @@ export function adminForceStopVm(vmId: number): Promise<MessageResponse> {
 }
 
 export function updateVmGatewayBlock(
-  vmId: number,
+  vmId: string,
   body: { blocked: boolean; reason?: string },
 ): Promise<VmDetail> {
   return guardNetwork(async () => {
@@ -1696,8 +1695,8 @@ export function updateVmGatewayBlock(
 }
 
 export function updateUserRole(
-  userId: number,
-  body: { role: UserRole; orgId: number | null },
+  userId: string,
+  body: { role: UserRole; orgId: string | null },
 ): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.PATCH('/admin/users/{userId}', {
@@ -1709,7 +1708,7 @@ export function updateUserRole(
   })
 }
 
-export function disableUser(userId: number, reason: string): Promise<UserAdminDetail> {
+export function disableUser(userId: string, reason: string): Promise<UserAdminDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/users/{userId}/disable', {
       params: { path: { userId } },
@@ -1720,7 +1719,7 @@ export function disableUser(userId: number, reason: string): Promise<UserAdminDe
   })
 }
 
-export function enableUser(userId: number): Promise<UserAdminDetail> {
+export function enableUser(userId: string): Promise<UserAdminDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/users/{userId}/enable', {
       params: { path: { userId } },
