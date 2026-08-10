@@ -4,6 +4,7 @@ import { matchPath, useLocation, useNavigate } from 'react-router'
 import { fetchWorkspaces } from '../api/queries'
 import { consolePathInScope } from './paths'
 import { ScopeContext, type Scope } from './scope-context'
+import { isUuid } from './validation'
 
 /**
  * Publishes the workspace scope the URL asks for.
@@ -25,9 +26,10 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
       matchPath('/console/:workspaceId', location.pathname) ??
       matchPath('/console/:workspaceId/*', location.pathname)
     const raw = match?.params.workspaceId
-    if (raw == null) return null
-    const asNumber = Number(raw)
-    return Number.isFinite(asNumber) ? asNumber : null
+    // A segment that is not a UUID names no workspace, so it is no scope —
+    // same answer as an unscoped URL, and the membership check below never
+    // sees a value that could not have come from the workspace list.
+    return isUuid(raw) ? raw : null
   }, [location.pathname])
 
   // The same query the selector reads, so membership costs no extra request.

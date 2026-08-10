@@ -22,7 +22,7 @@ export function WorkspaceScopeSelector() {
   const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: fetchWorkspaces })
 
   const switchTo = (next: string) => {
-    navigate(consolePathInScope(next === 'all' ? null : Number(next), location.pathname))
+    navigate(consolePathInScope(next === 'all' ? null : next, location.pathname))
   }
 
   // A scope with no option yet — the list is still loading — must not read as
