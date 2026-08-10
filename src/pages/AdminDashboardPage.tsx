@@ -31,10 +31,21 @@ function countOf(counts: Record<string, number>, key: string): number {
   return counts[key] ?? 0
 }
 
-/** 응답한 노드들의 값 합계 — 값이 하나도 없으면 null(표시할 수치가 없다). */
-function sumLive(nodes: NodeLive[], key: 'memUsedBytes' | 'memTotalBytes' | 'storageUsedBytes' | 'storageTotalBytes'): number | null {
-  const values = nodes.map((node) => node[key]).filter((value): value is number => value != null)
-  return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0)
+/**
+ * 사용/전체를 한 쌍으로 합산한다 — 둘 다 보고한 노드만 센다. 한쪽만 있는 노드를
+ * 분자에 넣으면 분모에 없는 값이 섞여 비율이 틀어진다. 셀 값이 하나도 없으면 null.
+ */
+function sumLivePair(
+  nodes: NodeLive[],
+  usedKey: 'memUsedBytes' | 'storageUsedBytes',
+  totalKey: 'memTotalBytes' | 'storageTotalBytes',
+): { used: number; total: number } | null {
+  const measured = nodes.filter((node) => node[usedKey] != null && node[totalKey] != null)
+  if (measured.length === 0) return null
+  return {
+    used: measured.reduce((sum, node) => sum + (node[usedKey] ?? 0), 0),
+    total: measured.reduce((sum, node) => sum + (node[totalKey] ?? 0), 0),
+  }
 }
 
 /**
@@ -265,47 +276,55 @@ function NodesLiveTiles({ nodes }: { nodes: NodeLive[] }) {
       />
       <LiveUsageTile
         label="물리 메모리"
-        used={sumLive(reachable, 'memUsedBytes')}
-        total={sumLive(reachable, 'memTotalBytes')}
+        usage={sumLivePair(reachable, 'memUsedBytes', 'memTotalBytes')}
+        anyReachable={reachable.length > 0}
       />
       <LiveUsageTile
         label="스토리지"
-        used={sumLive(reachable, 'storageUsedBytes')}
-        total={sumLive(reachable, 'storageTotalBytes')}
+        usage={sumLivePair(reachable, 'storageUsedBytes', 'storageTotalBytes')}
+        anyReachable={reachable.length > 0}
         hint="게스트 디스크가 놓이는 풀"
       />
     </div>
   )
 }
 
+/**
+ * 노드가 모두 응답하지 않으면 연결 끊김, 응답은 했는데 그 값을 못 읽었으면
+ * 측정값 없음 — 둘은 원인이 다르므로 같은 문구로 뭉뚱그리지 않는다.
+ */
 function LiveUsageTile({
   label,
-  used,
-  total,
+  usage,
+  anyReachable,
   hint,
 }: {
   label: string
-  used: number | null
-  total: number | null
+  usage: { used: number; total: number } | null
+  anyReachable: boolean
   hint?: string
 }) {
   return (
-    <Card className={used == null || total == null ? 'border-danger-200' : undefined}>
+    <Card className={usage == null && !anyReachable ? 'border-danger-200' : undefined}>
       <div className="space-y-2 px-5 py-4">
-        {used == null || total == null ? (
+        {usage == null ? (
           <>
             <div className="text-xs font-medium text-neutral-500">{label}</div>
-            <p className="text-sm font-semibold text-danger-600">연결 끊김</p>
+            {anyReachable ? (
+              <p className="text-sm text-neutral-500">측정값 없음</p>
+            ) : (
+              <p className="text-sm font-semibold text-danger-600">연결 끊김</p>
+            )}
           </>
         ) : (
           <>
             <ResourceBar
               label={label}
               ratioNoun="사용률"
-              allocated={used}
-              allocatedLabel={formatBytes(used)}
-              capacity={total}
-              capacityLabel={formatBytes(total)}
+              allocated={usage.used}
+              allocatedLabel={formatBytes(usage.used)}
+              capacity={usage.total}
+              capacityLabel={formatBytes(usage.total)}
             />
             {hint && <p className="text-xs text-neutral-500">{hint}</p>}
           </>

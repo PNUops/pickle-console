@@ -148,3 +148,28 @@ describe('관리자 대시보드 — 할당 추이', () => {
     expect(screen.getByText('460 GiB / 900 GiB (51%)')).toBeInTheDocument()
   })
 })
+
+describe('관리자 대시보드 — 실측값이 비어 있을 때', () => {
+  test('노드는 응답했지만 수치를 못 읽으면 연결 끊김이 아니라 측정값 없음이다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    systemSummaryFixture.nodesLive = [
+      {
+        nodeId: 1,
+        name: 'pve1',
+        reachable: true,
+        cpu: 0.2,
+        memTotalBytes: null,
+        memUsedBytes: null,
+        storageTotalBytes: null,
+        storageUsedBytes: null,
+        checkedAt: '2026-08-10T12:00:00+09:00',
+      },
+    ]
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    expect(within(systemRow).getByText('정상 1 / 끊김 0')).toBeInTheDocument()
+    expect(within(systemRow).getAllByText('측정값 없음')).toHaveLength(2)
+    expect(within(systemRow).queryByText('연결 끊김')).not.toBeInTheDocument()
+  })
+})

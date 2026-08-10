@@ -94,6 +94,24 @@ function seriesColor(series: ChartSeries, index: number): string {
   return CHART_SERIES[index % CHART_SERIES.length]
 }
 
+/**
+ * 값이 실제로 달라졌는지 — 호출부는 렌더마다 새 배열을 만들므로 참조 비교로는
+ * 알 수 없다. 점 수가 수십 개라 값 비교가 더 싸고, 이것으로 폴링 때가 아닌 렌더에
+ * setData(축 초기화 포함)가 도는 것을 막는다.
+ */
+function sameData(a: uPlot.AlignedData, b: uPlot.AlignedData): boolean {
+  if (a.length !== b.length) return false
+  for (let series = 0; series < a.length; series += 1) {
+    const left = a[series] as (number | null)[]
+    const right = b[series] as (number | null)[]
+    if (left.length !== right.length) return false
+    for (let index = 0; index < left.length; index += 1) {
+      if (left[index] !== right[index]) return false
+    }
+  }
+  return true
+}
+
 /** 표 보기에 쓸 인덱스 — 처음과 끝을 포함해 고르게 솎는다. */
 function sampledIndexes(length: number): number[] {
   if (length <= TABLE_ROWS) return Array.from({ length }, (_, i) => i)
@@ -139,6 +157,8 @@ export function TimeSeriesChart({
   const formatRef = useRef(format)
   const formatTimeRef = useRef(formatTime)
   const dataRef = useRef(data)
+  /** 플롯에 이미 밀어 넣은 자료 — 값이 그대로면 다시 밀지 않는다. */
+  const pushedRef = useRef<uPlot.AlignedData | null>(null)
   formatRef.current = format
   formatTimeRef.current = formatTime
   dataRef.current = data
@@ -206,7 +226,13 @@ export function TimeSeriesChart({
               setHover(null)
               return
             }
-            setHover({ index, left, top: plot.cursor.top ?? 0 })
+            // cursor 좌표는 플롯 영역(.u-over) 기준이고 툴팁은 래퍼 기준이라,
+            // 좌측 y축 폭만큼 어긋난다 — 플롯 영역의 오프셋을 더해 맞춘다.
+            setHover({
+              index,
+              left: left + plot.over.offsetLeft,
+              top: (plot.cursor.top ?? 0) + plot.over.offsetTop,
+            })
           },
         ],
       },
@@ -214,6 +240,7 @@ export function TimeSeriesChart({
 
     const plot = new uPlot(options, dataRef.current, host)
     plotRef.current = plot
+    pushedRef.current = dataRef.current
 
     const observer = new ResizeObserver(() => {
       plot.setSize({ width: host.clientWidth || 600, height })
@@ -224,12 +251,19 @@ export function TimeSeriesChart({
       observer.disconnect()
       plot.destroy()
       plotRef.current = null
+      pushedRef.current = null
       setHover(null)
     }
   }, [seriesKey, height, yMax, splitBase])
 
+  // 값이 그대로면 setData를 호출하지 않는다 — setData는 축을 되돌리므로 폴링과
+  // 무관한 리렌더마다 부르면 사용자가 잡아 둔 확대가 풀린다.
   useEffect(() => {
-    plotRef.current?.setData(data)
+    const plot = plotRef.current
+    if (!plot) return
+    if (pushedRef.current != null && sameData(pushedRef.current, data)) return
+    plot.setData(data)
+    pushedRef.current = data
   }, [data])
 
   const hovered = hover != null && hover.index < times.length ? hover : null
