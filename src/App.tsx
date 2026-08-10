@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
-import { Spinner } from './components/ui'
+import { ErrorBoundary, Spinner } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ResourcesPage } from './pages/ResourcesPage'
 import { ScopeProvider } from './lib/scope'
@@ -82,9 +82,13 @@ function App() {
       <Route
         index
         element={
-          <Suspense fallback={<div className="min-h-svh bg-neutral-950" />}>
-            <LandingPage />
-          </Suspense>
+          // 청크 로드가 실패하면(배포 직후 낡은 탭) 첫 화면이 통째로 빈 페이지가
+          // 된다 — 경계를 두어 안내와 새로고침 길을 남긴다.
+          <ErrorBoundary label="소개">
+            <Suspense fallback={<div className="min-h-svh bg-neutral-950" />}>
+              <LandingPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
       {/* 인증 화면은 랜딩과 톤을 잇는 다크 레이아웃 — 약관/404는 라이트 유지. */}
@@ -125,15 +129,17 @@ function App() {
         <Route
           path="vms/:vmId/terminal"
           element={
-            <Suspense
-              fallback={
-                <div className="flex justify-center py-12">
-                  <Spinner label="터미널 불러오는 중" />
-                </div>
-              }
-            >
-              <TerminalPage />
-            </Suspense>
+            <ErrorBoundary label="터미널">
+              <Suspense
+                fallback={
+                  <div className="flex justify-center py-12">
+                    <Spinner label="터미널 불러오는 중" />
+                  </div>
+                }
+              >
+                <TerminalPage />
+              </Suspense>
+            </ErrorBoundary>
           }
         />
         <Route path="ssh-keys" element={<SshKeysPage />} />

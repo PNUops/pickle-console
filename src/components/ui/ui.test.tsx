@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { MemoryRouter } from 'react-router'
+import { Link, MemoryRouter, useLocation } from 'react-router'
 import { describe, expect, test, vi } from 'vitest'
 import { PopoverPanel } from './Popover'
 import { usePopover } from './use-popover'
@@ -417,16 +417,23 @@ describe('ErrorBoundary', () => {
     throw new Error('청크를 불러오지 못했습니다')
   }
 
+  /** VM 56에서만 무너지는 패널 — 다음 VM으로 옮기면 멀쩡하다. */
+  function BoomOnFirstVm() {
+    const { pathname } = useLocation()
+    if (pathname === '/vms/56') throw new Error('청크를 불러오지 못했습니다')
+    return <p>멀쩡한 패널</p>
+  }
+
   test('패널 하나가 무너져도 안내로 바뀌고 화면은 남는다', () => {
     // React와 경계 자신이 원인을 콘솔에 남긴다 — 테스트 출력만 조용히 한다.
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
     render(
-      <div>
+      <MemoryRouter>
         <ErrorBoundary label="할당 추이">
           <Boom />
         </ErrorBoundary>
         <p>나머지 화면</p>
-      </div>,
+      </MemoryRouter>,
     )
 
     expect(
@@ -438,10 +445,51 @@ describe('ErrorBoundary', () => {
 
   test('멀쩡한 자식은 그대로 그린다', () => {
     render(
-      <ErrorBoundary label="사용량">
-        <p>차트</p>
-      </ErrorBoundary>,
+      <MemoryRouter>
+        <ErrorBoundary label="사용량">
+          <p>차트</p>
+        </ErrorBoundary>
+      </MemoryRouter>,
     )
     expect(screen.getByText('차트')).toBeInTheDocument()
+  })
+
+  test('다른 화면으로 옮기면 앞 화면의 실패를 물려받지 않는다', async () => {
+    const user = userEvent.setup()
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <MemoryRouter initialEntries={['/vms/56']}>
+        <ErrorBoundary label="사용량">
+          <BoomOnFirstVm />
+        </ErrorBoundary>
+        <Link to="/vms/57">다음 VM</Link>
+      </MemoryRouter>,
+    )
+    expect(screen.getByText(/사용량 화면을 불러오지 못했습니다/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: '다음 VM' }))
+
+    expect(screen.getByText('멀쩡한 패널')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/사용량 화면을 불러오지 못했습니다/),
+    ).not.toBeInTheDocument()
+    logged.mockRestore()
+  })
+
+  test('대체 화면을 넘기면 기본 안내 대신 그것을 그린다', () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <MemoryRouter>
+        <ErrorBoundary label="히어로 3D" fallback={<p>정적 폴백</p>}>
+          <Boom />
+        </ErrorBoundary>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('정적 폴백')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/히어로 3D 화면을 불러오지 못했습니다/),
+    ).not.toBeInTheDocument()
+    logged.mockRestore()
   })
 })
