@@ -5,6 +5,7 @@ import {
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
+import { systemSummaryFixture } from '../test/msw/handlers/admin-ops'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -75,5 +76,75 @@ describe('관리자 대시보드', () => {
     expect(screen.getByRole('heading', { name: '소통' })).toBeInTheDocument()
     // 승인 대기 미리보기 카드는 유지된다
     expect(await screen.findByText(/검토를 기다리는 신청이/)).toBeInTheDocument()
+  })
+})
+
+describe('관리자 대시보드 — 하이퍼바이저 실측', () => {
+  test('SYS_ADMIN은 노드 연결·물리 메모리·스토리지 실측 타일을 본다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    // pve1은 응답, pve2는 끊김 — 하나라도 끊기면 위험 톤이다.
+    const connection = within(systemRow).getByText('Proxmox 연결').parentElement!
+    expect(within(connection).getByText('정상 1 / 끊김 1')).toBeInTheDocument()
+    expect(within(connection).getByText('정상 1 / 끊김 1')).toHaveClass('text-danger-600')
+    // 실측 사용량은 할당률이 아니라 사용률로 읽힌다.
+    expect(
+      within(systemRow).getByRole('progressbar', { name: '물리 메모리 사용률' }),
+    ).toBeInTheDocument()
+    expect(
+      within(systemRow).getByRole('progressbar', { name: '스토리지 사용률' }),
+    ).toBeInTheDocument()
+    expect(within(systemRow).getByText('24.0 GiB / 78.0 GiB (31%)')).toBeInTheDocument()
+    expect(within(systemRow).getByText('320 GiB / 900 GiB (36%)')).toBeInTheDocument()
+  })
+
+  test('모든 노드가 끊기면 수치 대신 연결 끊김을 표시한다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    systemSummaryFixture.nodesLive = systemSummaryFixture.nodesLive.map((node) => ({
+      ...node,
+      reachable: false,
+      memTotalBytes: null,
+      memUsedBytes: null,
+      storageTotalBytes: null,
+      storageUsedBytes: null,
+      checkedAt: null,
+    }))
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    expect(within(systemRow).getByText('정상 0 / 끊김 2')).toBeInTheDocument()
+    expect(within(systemRow).getAllByText('연결 끊김')).toHaveLength(2)
+    expect(
+      within(systemRow).queryByRole('progressbar', { name: '물리 메모리 사용률' }),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('관리자 대시보드 — 할당 추이', () => {
+  test('기관 관리자는 평문 요약 문장과 자원별 차트를 본다', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp('/admin')
+
+    expect(
+      await screen.findByText(
+        '최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었습니다. 메모리는 32 GiB에서 48 GiB로 늘었습니다.',
+      ),
+    ).toBeInTheDocument()
+    const trend = screen.getByRole('heading', { name: '할당 추이 (최근 90일)' })
+      .parentElement!.parentElement as HTMLElement
+    expect(within(trend).getByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
+    expect(within(trend).getByRole('heading', { name: '메모리 할당' })).toBeInTheDocument()
+  })
+
+  test('기관 리소스 카드는 디스크 할당도 용량과 함께 보여준다', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp('/admin')
+
+    expect(
+      await screen.findByRole('progressbar', { name: '디스크 할당률' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('460 GiB / 900 GiB (51%)')).toBeInTheDocument()
   })
 })

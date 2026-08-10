@@ -1,9 +1,11 @@
+import { Suspense, lazy } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminSummary,
   fetchAdminRequests,
   fetchSystemSummary,
+  type NodeLive,
   type OrgDashboardSummary,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
@@ -17,11 +19,22 @@ import {
   Spinner,
   StatTile,
 } from '../components/ui'
-import { formatDateTime, formatMemory } from '../lib/format'
+import { formatBytes, formatDateTime, formatMemory } from '../lib/format'
+
+// 할당 추이 카드는 uPlot을 끌어오므로 대시보드 진입 번들과 분리한다.
+const OrgAllocationTrendCard = lazy(
+  () => import('../components/capacity-trend/OrgAllocationTrendCard'),
+)
 
 /** VM 상태별 개수 맵에서 안전하게 꺼낸다 (없으면 0). */
 function countOf(counts: Record<string, number>, key: string): number {
   return counts[key] ?? 0
+}
+
+/** 응답한 노드들의 값 합계 — 값이 하나도 없으면 null(표시할 수치가 없다). */
+function sumLive(nodes: NodeLive[], key: 'memUsedBytes' | 'memTotalBytes' | 'storageUsedBytes' | 'storageTotalBytes'): number | null {
+  const values = nodes.map((node) => node[key]).filter((value): value is number => value != null)
+  return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0)
 }
 
 /**
@@ -65,6 +78,15 @@ export function AdminDashboardPage() {
         <>
           <OrgSummaryTiles summary={summary.data} />
           <ResourceCard summary={summary.data} />
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-8">
+                <Spinner label="할당 추이 불러오는 중" />
+              </div>
+            }
+          >
+            <OrgAllocationTrendCard />
+          </Suspense>
         </>
       )}
 
@@ -117,6 +139,7 @@ export function AdminDashboardPage() {
               tone={system.data.sshPasswordEnabledVmCount > 0 ? 'danger' : 'normal'}
             />
           </div>
+          <NodesLiveTiles nodes={system.data.nodesLive} />
         </section>
       )}
 
@@ -219,6 +242,79 @@ function OrgSummaryTiles({ summary }: { summary: OrgDashboardSummary }) {
   )
 }
 
+/**
+ * 하이퍼바이저에서 방금 읽어 온 실측 타일 — 할당 합계(위 타일)와 달리 지금 실제로
+ * 쓰이고 있는 값이다. 응답하지 않는 노드는 수치 대신 연결 끊김으로 표시한다.
+ */
+function NodesLiveTiles({ nodes }: { nodes: NodeLive[] }) {
+  const reachable = nodes.filter((node) => node.reachable)
+  const unreachable = nodes.length - reachable.length
+  const lastChecked = reachable
+    .map((node) => node.checkedAt)
+    .filter((at): at is string => at != null)
+    .sort()
+    .at(-1)
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <StatTile
+        label="Proxmox 연결"
+        value={`정상 ${reachable.length} / 끊김 ${unreachable}`}
+        hint={lastChecked ? `마지막 확인 ${formatDateTime(lastChecked)}` : '확인 기록 없음'}
+        tone={unreachable > 0 ? 'danger' : 'normal'}
+      />
+      <LiveUsageTile
+        label="물리 메모리"
+        used={sumLive(reachable, 'memUsedBytes')}
+        total={sumLive(reachable, 'memTotalBytes')}
+      />
+      <LiveUsageTile
+        label="스토리지"
+        used={sumLive(reachable, 'storageUsedBytes')}
+        total={sumLive(reachable, 'storageTotalBytes')}
+        hint="게스트 디스크가 놓이는 풀"
+      />
+    </div>
+  )
+}
+
+function LiveUsageTile({
+  label,
+  used,
+  total,
+  hint,
+}: {
+  label: string
+  used: number | null
+  total: number | null
+  hint?: string
+}) {
+  return (
+    <Card className={used == null || total == null ? 'border-danger-200' : undefined}>
+      <div className="space-y-2 px-5 py-4">
+        {used == null || total == null ? (
+          <>
+            <div className="text-xs font-medium text-neutral-500">{label}</div>
+            <p className="text-sm font-semibold text-danger-600">연결 끊김</p>
+          </>
+        ) : (
+          <>
+            <ResourceBar
+              label={label}
+              ratioNoun="사용률"
+              allocated={used}
+              allocatedLabel={formatBytes(used)}
+              capacity={total}
+              capacityLabel={formatBytes(total)}
+            />
+            {hint && <p className="text-xs text-neutral-500">{hint}</p>}
+          </>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
   const { resource } = summary
   return (
@@ -247,6 +343,15 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
               : null
           }
         />
+        <ResourceBar
+          label="디스크"
+          allocatedLabel={`${resource.allocatedDiskGb} GiB`}
+          allocated={resource.allocatedDiskGb}
+          capacity={resource.capacityDiskGb ?? null}
+          capacityLabel={
+            resource.capacityDiskGb != null ? `${resource.capacityDiskGb} GiB` : null
+          }
+        />
         <p className="text-sm text-neutral-600">{resource.guidance}</p>
       </CardContent>
     </Card>
@@ -259,12 +364,15 @@ function ResourceBar({
   allocatedLabel,
   capacity,
   capacityLabel,
+  ratioNoun = '할당률',
 }: {
   label: string
   allocated: number
   allocatedLabel: string
   capacity: number | null
   capacityLabel: string | null
+  /** 막대가 나타내는 비율의 이름 — 할당 합계는 할당률, 실측치는 사용률. */
+  ratioNoun?: string
 }) {
   const ratio = capacity != null && capacity > 0 ? allocated / capacity : null
   const percent = ratio != null ? Math.min(Math.round(ratio * 100), 100) : null
@@ -281,7 +389,7 @@ function ResourceBar({
       {percent != null && (
         <div
           role="progressbar"
-          aria-label={`${label} 할당률`}
+          aria-label={`${label} ${ratioNoun}`}
           aria-valuenow={percent}
           aria-valuemin={0}
           aria-valuemax={100}

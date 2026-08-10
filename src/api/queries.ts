@@ -148,6 +148,17 @@ export type AnnouncementView = Schemas['AnnouncementView']
 export type AnnouncementPage = Schemas['PageResponseAnnouncementView']
 export type OrgDashboardSummary = Schemas['OrgDashboardSummaryResponse']
 export type SystemDashboardSummary = Schemas['SystemDashboardSummaryResponse']
+export type NodeLive = Schemas['NodeLiveResponse']
+
+/* ─── 사용량·용량 추이 (계약 v0.35.0) ─── */
+/** 조회 구간 — HOUR/DAY/WEEK/MONTH/YEAR (구간이 길수록 해상도가 거칠어진다). */
+export type MetricsTimeframe = Schemas['RrdTimeframe']
+export type VmMetrics = Schemas['VmMetricsResponse']
+export type VmMetricPoint = Schemas['VmMetricPointResponse']
+export type NodeMetrics = Schemas['NodeMetricsResponse']
+export type NodeMetricPoint = Schemas['NodeMetricPointResponse']
+export type CapacityTrend = Schemas['CapacityTrendResponse']
+export type CapacityTrendPoint = Schemas['CapacityTrendPointResponse']
 
 export interface RequestOptions {
   allowedRootDomains: string[]
@@ -553,6 +564,24 @@ export function fetchVmEvents(
       params: { path: { vmId }, query: params },
     })
     if (!data) throw toApiError(error, 'VM 이벤트 이력을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * VM 사용량 시계열 (GET /vms/{vmId}/metrics).
+ * 하이퍼바이저에 물어볼 수 없으면 503 METRICS_UNAVAILABLE이 오고, 아직
+ * 프로비저닝되지 않은 VM은 200 + available=false로 온다.
+ */
+export function fetchVmMetrics(
+  vmId: number,
+  timeframe: MetricsTimeframe,
+): Promise<VmMetrics> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/metrics', {
+      params: { path: { vmId }, query: { timeframe } },
+    })
+    if (!data) throw toApiError(error, '사용량 데이터를 불러오지 못했습니다.')
     return data
   })
 }
@@ -1056,6 +1085,37 @@ export function fetchSystemSummary(): Promise<SystemDashboardSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/system-summary')
     if (!data) throw toApiError(error, '시스템 요약을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 노드 사용량 시계열 (GET /admin/nodes/{nodeId}/metrics — 시스템 관리자 전용). */
+export function fetchAdminNodeMetrics(
+  nodeId: number,
+  timeframe: MetricsTimeframe,
+): Promise<NodeMetrics> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/nodes/{nodeId}/metrics', {
+      params: { path: { nodeId }, query: { timeframe } },
+    })
+    if (!data) throw toApiError(error, '노드 사용량 데이터를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 할당 용량 추이 (GET /admin/capacity-trend).
+ * 기관 관리자는 자기 기관으로 고정되고, 시스템 관리자는 orgId를 지정하거나
+ * 생략해 플랫폼 전체를 본다.
+ */
+export function fetchCapacityTrend(
+  params: { days?: number; orgId?: number } = {},
+): Promise<CapacityTrend> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/capacity-trend', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '용량 추이를 불러오지 못했습니다.')
     return data
   })
 }

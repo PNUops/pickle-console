@@ -8,7 +8,10 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 /** VM 상세를 연다. tab을 주면 해당 탭 딥링크(?tab=)로 진입한다. */
-function renderVm(vmId: number, tab?: 'publish' | 'settings' | 'activity') {
+function renderVm(
+  vmId: number,
+  tab?: 'publish' | 'settings' | 'activity' | 'monitoring',
+) {
   server.use(refreshSuccessHandler('access-user'))
   renderApp(`/console/vms/${vmId}${tab ? `?tab=${tab}` : ''}`)
 }
@@ -510,5 +513,73 @@ describe('VM 상세 — 탭', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '개요' })).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
+  })
+})
+
+/* ─── 사용량(모니터링) 탭 ─── */
+
+describe('VM 상세 — 모니터링', () => {
+  test('모니터링 탭은 네 개의 사용량 차트와 빈 구간 안내를 보여준다', async () => {
+    renderVm(56, 'monitoring')
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.getByRole('tab', { name: '모니터링' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(await screen.findByRole('heading', { name: 'CPU' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '메모리' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '네트워크' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '디스크 I/O' })).toBeInTheDocument()
+    expect(screen.getByText(/중지된 동안의 구간은 비어 있습니다/)).toBeInTheDocument()
+    // 게스트 에이전트 기준임을 메모리 차트가 밝힌다.
+    expect(
+      screen.getByText(/게스트 에이전트가 보고한 내부 사용량 기준/),
+    ).toBeInTheDocument()
+    // 캔버스가 없는 환경에서도 값은 표로 읽을 수 있다 (메모리 최대 = 2 GiB).
+    expect(screen.getAllByText('2.00 GiB').length).toBeGreaterThan(0)
+    // 자료가 없는 구간은 0이 아니라 대시로 남는다.
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+
+  test('개요에서 모니터링 탭으로 전환하고 조회 구간을 바꿀 수 있다', async () => {
+    const user = userEvent.setup()
+    renderVm(56)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('tab', { name: '모니터링' }))
+
+    const switcher = await screen.findByRole('group', { name: '조회 구간' })
+    expect(within(switcher).getByRole('button', { name: '1시간' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await user.click(within(switcher).getByRole('button', { name: '1주' }))
+    expect(within(switcher).getByRole('button', { name: '1주' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    // 구간을 바꿔도 차트는 유지된다 (이전 자료를 들고 있다가 교체).
+    expect(await screen.findByRole('heading', { name: 'CPU' })).toBeInTheDocument()
+  })
+
+  test('아직 프로비저닝되지 않은 VM은 차분한 안내만 보여준다', async () => {
+    renderVm(55, 'monitoring')
+
+    expect(
+      await screen.findByText('VM이 준비되면 사용량 데이터가 표시됩니다.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'CPU' })).not.toBeInTheDocument()
+  })
+
+  test('하이퍼바이저 조회 실패(503)는 첫 조회에서 오류 안내로 끝난다', async () => {
+    renderVm(59, 'monitoring')
+
+    expect(
+      await screen.findByText(
+        '하이퍼바이저에서 사용량을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      ),
+    ).toBeInTheDocument()
   })
 })
