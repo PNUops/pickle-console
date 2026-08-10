@@ -38,7 +38,10 @@ export function splitsFor(base: SplitBase, min: number, max: number): number[] {
     base === 'binary'
       ? 1024 ** Math.min(4, Math.max(0, Math.floor(Math.log(max) / Math.log(1024))))
       : 1
-  const step = Math.max(niceStepNear(span / 4 / unit) * unit, base === 'integer' ? 1 : 0)
+  // 두 축 모두 1이 하한이다: 바이트도 대수도 1 미만 눈금은 뜻이 없고, 소수 눈금은
+  // 정수로 포맷되면서 '0 B / 0 B / 1 B / 1 B'처럼 같은 라벨을 여러 번 찍는다
+  // (할당이 아직 0인 기관의 추이 카드가 그렇게 보였다).
+  const step = Math.max(niceStepNear(span / 4 / unit) * unit, 1)
   if (!(step > 0)) return [min]
   const ticks: number[] = []
   for (let tick = Math.ceil(min / step) * step; tick <= max + step / 1000; tick += step) {

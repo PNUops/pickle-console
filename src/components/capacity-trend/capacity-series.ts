@@ -67,8 +67,19 @@ function vcpuCount(value: number): string {
  * 구간 전체를 견줘 평문 한두 문장으로 요약한다 — 기관 대시보드의 독자는 지표를
  * 읽는 사람이 아니라 승인·정리를 판단하는 사람이라, 숫자 나열 대신 문장을 먼저 준다.
  */
+/**
+ * 구간 내내 아무것도 할당돼 있지 않았는지 — 자원을 아직 받지 않은 기관(신설 기관이
+ * 그렇다)에서는 0으로 눕는 선을 그리는 것보다 문장 하나가 정확하다.
+ */
+export function hasAllocation(points: CapacityTrendPoint[]): boolean {
+  return points.some(
+    (point) => point.vcpu > 0 || point.memoryMb > 0 || point.diskGb > 0 || point.vmCount > 0,
+  )
+}
+
 export function allocationSummary(points: CapacityTrendPoint[]): string {
   if (points.length === 0) return `최근 ${TREND_DAYS}일 동안 기록된 할당 변화가 없습니다.`
+  if (!hasAllocation(points)) return `최근 ${TREND_DAYS}일 동안 할당된 자원이 없습니다.`
   const sentences: string[] = []
   const vcpu = describeMovement(
     `최근 ${TREND_DAYS}일 동안 할당 vCPU가`,

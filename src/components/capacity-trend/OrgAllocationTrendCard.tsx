@@ -8,6 +8,7 @@ import {
   BYTES_PER_MB,
   TREND_DAYS,
   allocationSummary,
+  hasAllocation,
   formatVcpu,
   trendTimes,
 } from './capacity-series'
@@ -40,7 +41,10 @@ export default function OrgAllocationTrendCard() {
         {trend.isSuccess && (
           <>
             <p className="text-sm text-neutral-600">{allocationSummary(points)}</p>
-            {points.length > 0 && (
+            {/* 할당이 내내 0인 기관에는 차트를 그리지 않는다 — 0으로 눕는 선 두 개는
+                위 문장이 이미 말한 것을 되풀이할 뿐이다. 관리자 화면 쪽은 용량
+                기준선이 함께 있어 0도 정보가 되므로 거기서는 계속 그린다. */}
+            {points.length > 0 && hasAllocation(points) && (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <TimeSeriesChart
                   title="vCPU 할당"
