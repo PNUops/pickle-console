@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchRequests, type RequestStatus } from '../api/queries'
+import { useScope } from '../lib/use-scope'
 import {
   Alert,
   Card,
@@ -29,12 +30,13 @@ const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
 ]
 
 export function RequestsPage() {
+  const scope = useScope()
   const [status, setStatus] = useState<RequestStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   const requests = useQuery({
-    queryKey: ['requests', { status: status ?? null, page }],
-    queryFn: () => fetchRequests({ status, page }),
+    queryKey: ['requests', { status: status ?? null, page, workspaceId: scope }],
+    queryFn: () => fetchRequests({ status, page, workspaceId: scope ?? undefined }),
     placeholderData: keepPreviousData,
   })
 

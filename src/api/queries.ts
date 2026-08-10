@@ -242,6 +242,7 @@ export function fetchRequests(params: {
   status?: RequestStatus
   page?: number
   size?: number
+  workspaceId?: number
 }): Promise<RequestPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/requests', { params: { query: params } })

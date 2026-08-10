@@ -119,10 +119,12 @@ export const requestHandlers: RequestHandler[] = [
   http.get('*/api/v1/requests', ({ request }) => {
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
+    const workspaceId = url.searchParams.get('workspaceId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = requestStore
       .filter((r) => !status || r.status === status)
+      .filter((r) => workspaceId == null || r.workspaceId === Number(workspaceId))
       .sort((a, b) => b.id - a.id)
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
