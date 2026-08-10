@@ -18,14 +18,19 @@ import {
 const DAY_OPTIONS = [30, 90, 180, 365]
 
 /**
- * 할당 용량 추이 — 자원별로 차트를 나눠 그리고 각 차트에 현재 용량 기준선을 얹는다.
+ * 할당 추이 — 자원별로 차트를 나눠 그리고 각 차트에 현재 용량 기준선을 얹는다.
  * (vCPU·메모리·디스크는 단위가 달라 한 축에 겹칠 수 없다.)
  * uPlot을 끌어오므로 노드 화면에서 지연 로드한다(기본 내보내기).
  */
-export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boolean }) {
+export default function CapacityTrendSection({
+  /** 기관을 좁혀 볼 수 있는가 — 기관 경계가 없는 SYS 티어에게만 열린다. */
+  canFilterByOrg,
+}: {
+  canFilterByOrg: boolean
+}) {
   const [days, setDays] = useState(90)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: canFilterByOrg })
   const trend = useQuery({
     queryKey: ['admin', 'capacity-trend', { days, orgId: orgId ?? null }],
     queryFn: () => fetchCapacityTrend({ days, orgId }),
@@ -39,7 +44,7 @@ export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boole
   return (
     <Card>
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-        <CardTitle>용량 추이</CardTitle>
+        <CardTitle>할당 추이</CardTitle>
         <div className="flex flex-wrap items-center gap-3">
           <div role="group" aria-label="조회 기간" className="flex flex-wrap gap-1">
             {DAY_OPTIONS.map((option) => {
@@ -62,7 +67,7 @@ export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boole
               )
             })}
           </div>
-          {isSysAdmin && (
+          {canFilterByOrg && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               기관
               <Select
@@ -86,13 +91,13 @@ export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boole
       <CardContent className="space-y-4">
         {trend.isPending && (
           <div className="flex justify-center py-6">
-            <Spinner label="용량 추이 불러오는 중" />
+            <Spinner label="할당 추이 불러오는 중" />
           </div>
         )}
         {trend.isError && !data && <Alert variant="danger">{trend.error.message}</Alert>}
         {trend.isError && data && (
           <Alert variant="warning">
-            용량 추이를 일시적으로 불러오지 못했습니다. 이전에 받은 값을 표시합니다.
+            할당 추이를 일시적으로 불러오지 못했습니다. 이전에 받은 값을 표시합니다.
           </Alert>
         )}
 
@@ -103,8 +108,7 @@ export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boole
         {data && points.length > 0 && (
           <>
             <p className="text-xs text-neutral-500">
-              {data.from} ~ {data.to} · 각 날짜에 살아 있던 VM의 할당 합이며, 점선은 현재
-              용량입니다.
+              {data.from} ~ {data.to}
             </p>
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <TimeSeriesChart

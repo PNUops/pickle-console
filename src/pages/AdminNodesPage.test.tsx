@@ -1,13 +1,49 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
-import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import type { components } from '../api/schema'
+import {
+  refreshSuccessHandler,
+  sysAdminUser,
+  sysManagerUser,
+} from '../test/msw/handlers/auth'
+import { metricsUnavailableProblem } from '../test/msw/handlers/metrics'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 function renderNodes() {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
   renderApp('/admin/nodes')
+}
+
+/** 노드 한 대만 있는 목록으로 바꿔 끼운다 — 상태별 화면을 좁혀 보기 위해. */
+function onlyNode(status: components['schemas']['NodeStatus']) {
+  const node: components['schemas']['NodeSummaryResponse'] = {
+    id: 1,
+    name: 'pve1',
+    status,
+    cpuThreads: 40,
+    memoryMb: 79872,
+    vmBridge: 'vmbr2',
+    storage: 'local-lvm',
+    diskCapacityGb: 900,
+    runningVms: 6,
+    allocatedVcpu: 14,
+    allocatedMemoryMb: 20480,
+    cpuOvercommitRatio: 0.35,
+    memoryAllocRatio: 0.26,
+    cpuWarnThreshold: 3.0,
+    memoryWarnThreshold: 0.8,
+    ipPool: {
+      id: 1,
+      name: 'guest-pool',
+      cidr: '172.29.0.0/16',
+      allocatedCount: 6,
+      freeCount: 65200,
+    },
+  }
+  return http.get('*/api/v1/admin/nodes', () => HttpResponse.json([node], { status: 200 }))
 }
 
 describe('노드/용량', () => {
@@ -52,7 +88,7 @@ describe('노드/용량', () => {
   })
 })
 
-describe('노드/용량 — 사용량·용량 추이', () => {
+describe('노드/용량 — 사용량·할당 추이', () => {
   test('노드 탭 아래에 노드별 실측 사용량 차트를 펼쳐 둔다', async () => {
     renderNodes()
 
@@ -78,12 +114,19 @@ describe('노드/용량 — 사용량·용량 추이', () => {
     expect(within(other).getByText('풀 용량 미측정')).toBeInTheDocument()
   })
 
-  test('용량 추이 탭은 자원별 차트를 보여주고 기간을 바꿀 수 있다', async () => {
+  test('할당 추이 탭은 자원별 차트를 보여주고 기간을 바꿀 수 있다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    // 라벨은 '할당 추이'로 통일하되, 기존 링크가 계속 열리도록 tab id는 그대로다.
     renderApp('/admin/nodes?tab=trend')
 
+    expect(await screen.findByRole('tab', { name: '할당 추이' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
     expect(await screen.findByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
+    // 섹션 제목도 같은 용어를 쓴다.
+    expect(screen.getByRole('heading', { name: '할당 추이', level: 2 })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '메모리 할당' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '디스크 할당' })).toBeInTheDocument()
     // VM 대수는 단위가 달라 같은 축에 얹지 않고 별도 차트로 둔다.
@@ -101,5 +144,61 @@ describe('노드/용량 — 사용량·용량 추이', () => {
     )
     // 시스템 관리자는 기관을 좁혀 볼 수 있다.
     expect(screen.getByRole('combobox')).toBeInTheDocument()
+  })
+
+  test('SYS_MANAGER도 할당 추이에서 기관을 좁혀 볼 수 있다', async () => {
+    // 기관 필터는 SYS 티어 전체가 가진 읽기 권한이다 — 상태 전환(SYS_ADMIN 전용)
+    // 게이트를 그대로 돌려쓰면 SYS_MANAGER가 필터를 잃는다.
+    server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
+    renderApp('/admin/nodes?tab=trend')
+
+    expect(await screen.findByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+  })
+})
+
+describe('노드/용량 — 잴 수 없는 상태', () => {
+  test('오프라인 노드는 사용량을 조회하지 않고 사실만 알린다', async () => {
+    let metricsCalls = 0
+    server.use(
+      onlyNode('OFFLINE'),
+      http.get('*/api/v1/admin/nodes/:nodeId/metrics', () => {
+        metricsCalls += 1
+        return metricsUnavailableProblem('/api/v1/admin/nodes/1/metrics')
+      }),
+    )
+    renderNodes()
+
+    expect(
+      await screen.findByText('오프라인으로 지정된 노드여서 사용량을 수집하지 않습니다.'),
+    ).toBeInTheDocument()
+    // 사용량 영역 자체를 띄우지 않으므로 조회 구간 스위처도, 조회도 없다.
+    expect(
+      screen.queryByRole('group', { name: 'pve1 조회 구간' }),
+    ).not.toBeInTheDocument()
+    expect(metricsCalls).toBe(0)
+  })
+
+  test('하이퍼바이저가 응답하지 않으면 경보 대신 차분한 안내로 멈춘다', async () => {
+    let metricsCalls = 0
+    server.use(
+      onlyNode('ACTIVE'),
+      http.get('*/api/v1/admin/nodes/:nodeId/metrics', () => {
+        metricsCalls += 1
+        return metricsUnavailableProblem('/api/v1/admin/nodes/1/metrics')
+      }),
+    )
+    renderNodes()
+
+    const notice = await screen.findByText(
+      '하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다.',
+    )
+    expect(notice.closest('[role="alert"]')).toBeNull()
+    // 같은 답이 돌아올 조회를 재시도·폴링으로 되풀이하지 않는다
+    // (테스트 모드 폴링 주기는 250ms).
+    const attempts = metricsCalls
+    await new Promise((resolve) => setTimeout(resolve, 900))
+    await waitFor(() => expect(metricsCalls).toBe(attempts))
+    expect(attempts).toBe(1)
   })
 })

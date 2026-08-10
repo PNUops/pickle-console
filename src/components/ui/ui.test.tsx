@@ -9,6 +9,7 @@ import { TabPanel, Tabs } from './Tabs'
 import { Button } from './Button'
 import { ConfirmNameModal } from './ConfirmNameModal'
 import { Drawer } from './Drawer'
+import { ErrorBoundary } from './ErrorBoundary'
 import { FormField } from './FormField'
 import { Input } from './Input'
 import { Modal } from './Modal'
@@ -408,5 +409,39 @@ describe('Popover', () => {
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: '패널' })).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
+  })
+})
+
+describe('ErrorBoundary', () => {
+  function Boom(): never {
+    throw new Error('청크를 불러오지 못했습니다')
+  }
+
+  test('패널 하나가 무너져도 안내로 바뀌고 화면은 남는다', () => {
+    // React와 경계 자신이 원인을 콘솔에 남긴다 — 테스트 출력만 조용히 한다.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <div>
+        <ErrorBoundary label="할당 추이">
+          <Boom />
+        </ErrorBoundary>
+        <p>나머지 화면</p>
+      </div>,
+    )
+
+    expect(
+      screen.getByText(/할당 추이 화면을 불러오지 못했습니다/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('나머지 화면')).toBeInTheDocument()
+    logged.mockRestore()
+  })
+
+  test('멀쩡한 자식은 그대로 그린다', () => {
+    render(
+      <ErrorBoundary label="사용량">
+        <p>차트</p>
+      </ErrorBoundary>,
+    )
+    expect(screen.getByText('차트')).toBeInTheDocument()
   })
 })

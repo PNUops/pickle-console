@@ -6,6 +6,7 @@ import {
   fetchAdminRequests,
   fetchSystemSummary,
   type NodeLive,
+  type NodeRatio,
   type OrgDashboardSummary,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
@@ -16,6 +17,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ErrorBoundary,
   Spinner,
   StatTile,
 } from '../components/ui'
@@ -89,15 +91,17 @@ export function AdminDashboardPage() {
         <>
           <OrgSummaryTiles summary={summary.data} />
           <ResourceCard summary={summary.data} />
-          <Suspense
-            fallback={
-              <div className="flex justify-center py-8">
-                <Spinner label="할당 추이 불러오는 중" />
-              </div>
-            }
-          >
-            <OrgAllocationTrendCard />
-          </Suspense>
+          <ErrorBoundary label="할당 추이">
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-8">
+                  <Spinner label="할당 추이 불러오는 중" />
+                </div>
+              }
+            >
+              <OrgAllocationTrendCard />
+            </Suspense>
+          </ErrorBoundary>
         </>
       )}
 
@@ -150,7 +154,7 @@ export function AdminDashboardPage() {
               tone={system.data.sshPasswordEnabledVmCount > 0 ? 'danger' : 'normal'}
             />
           </div>
-          <NodesLiveTiles nodes={system.data.nodesLive} />
+          <NodesLiveTiles live={system.data.nodesLive} nodes={system.data.nodes} />
         </section>
       )}
 
@@ -255,34 +259,47 @@ function OrgSummaryTiles({ summary }: { summary: OrgDashboardSummary }) {
 
 /**
  * 하이퍼바이저에서 방금 읽어 온 실측 타일 — 할당 합계(위 타일)와 달리 지금 실제로
- * 쓰이고 있는 값이다. 응답하지 않는 노드는 수치 대신 연결 끊김으로 표시한다.
+ * 쓰이고 있는 값이다. 응답하지 않는 노드는 수치 대신 연결 끊김으로 표시하되,
+ * 운영자가 오프라인으로 지정해 둔 노드가 응답하지 않는 것은 예정된 상태이므로
+ * 경보로 올리지 않는다 — 그러지 않으면 진짜 장애가 상시 경보에 묻힌다.
  */
-function NodesLiveTiles({ nodes }: { nodes: NodeLive[] }) {
-  const reachable = nodes.filter((node) => node.reachable)
-  const unreachable = nodes.length - reachable.length
+function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] }) {
+  const statusById = new Map(nodes.map((node) => [node.id, node.status]))
+  const reachable = live.filter((node) => node.reachable)
+  const unreachable = live.filter((node) => !node.reachable)
+  const offline = unreachable.filter((node) => statusById.get(node.nodeId) === 'OFFLINE')
+  const unexpected = unreachable.length - offline.length
   const lastChecked = reachable
     .map((node) => node.checkedAt)
     .filter((at): at is string => at != null)
     .sort()
     .at(-1)
+  const hint = [
+    lastChecked ? `마지막 확인 ${formatDateTime(lastChecked)}` : '확인 기록 없음',
+    offline.length > 0 ? `끊김 ${offline.length}대는 오프라인으로 지정된 노드` : null,
+  ]
+    .filter((part): part is string => part != null)
+    .join(' · ')
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <StatTile
         label="Proxmox 연결"
-        value={`정상 ${reachable.length} / 끊김 ${unreachable}`}
-        hint={lastChecked ? `마지막 확인 ${formatDateTime(lastChecked)}` : '확인 기록 없음'}
-        tone={unreachable > 0 ? 'danger' : 'normal'}
+        value={`정상 ${reachable.length} / 끊김 ${unreachable.length}`}
+        hint={hint}
+        tone={unexpected > 0 ? 'danger' : 'normal'}
       />
       <LiveUsageTile
         label="물리 메모리"
         usage={sumLivePair(reachable, 'memUsedBytes', 'memTotalBytes')}
         anyReachable={reachable.length > 0}
+        unexpectedOutage={unexpected > 0}
       />
       <LiveUsageTile
         label="스토리지"
         usage={sumLivePair(reachable, 'storageUsedBytes', 'storageTotalBytes')}
         anyReachable={reachable.length > 0}
+        unexpectedOutage={unexpected > 0}
         hint="게스트 디스크가 놓이는 풀"
       />
     </div>
@@ -291,29 +308,38 @@ function NodesLiveTiles({ nodes }: { nodes: NodeLive[] }) {
 
 /**
  * 노드가 모두 응답하지 않으면 연결 끊김, 응답은 했는데 그 값을 못 읽었으면
- * 측정값 없음 — 둘은 원인이 다르므로 같은 문구로 뭉뚱그리지 않는다.
+ * 측정값 없음 — 둘은 원인이 다르므로 같은 문구로 뭉뚱그리지 않는다. 오프라인으로
+ * 지정된 노드만 남아 조용한 경우는 장애가 아니므로 붉게 칠하지 않는다.
  */
 function LiveUsageTile({
   label,
   usage,
   anyReachable,
+  unexpectedOutage,
   hint,
 }: {
   label: string
   usage: { used: number; total: number } | null
   anyReachable: boolean
+  /** 끊긴 노드 중 오프라인 지정이 아닌 것이 있는가 — 그때만 장애로 읽는다. */
+  unexpectedOutage: boolean
   hint?: string
 }) {
+  const outage = usage == null && !anyReachable
   return (
-    <Card className={usage == null && !anyReachable ? 'border-danger-200' : undefined}>
+    <Card className={outage && unexpectedOutage ? 'border-danger-200' : undefined}>
       <div className="space-y-2 px-5 py-4">
         {usage == null ? (
           <>
             <div className="text-xs font-medium text-neutral-500">{label}</div>
             {anyReachable ? (
               <p className="text-sm text-neutral-500">측정값 없음</p>
-            ) : (
+            ) : unexpectedOutage ? (
               <p className="text-sm font-semibold text-danger-600">연결 끊김</p>
+            ) : (
+              <p className="text-sm text-neutral-500">
+                오프라인 노드만 있어 측정값이 없습니다
+              </p>
             )}
           </>
         ) : (
@@ -362,6 +388,8 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
               : null
           }
         />
+        {/* 디스크 풀은 씬 프로비저닝이라 할당 합계가 풀 용량을 넘을 수 있다 —
+            분모는 참고용이지 배치를 막는 한계가 아니므로 경고색을 입히지 않는다. */}
         <ResourceBar
           label="디스크"
           allocatedLabel={`${resource.allocatedDiskGb} GiB`}
@@ -370,6 +398,8 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
           capacityLabel={
             resource.capacityDiskGb != null ? `${resource.capacityDiskGb} GiB` : null
           }
+          advisory
+          overNote="디스크 할당 합계가 풀 용량을 넘었습니다. 씬 프로비저닝 풀이라 참고용 수치이며, 배치를 막는 한계는 아닙니다."
         />
         <p className="text-sm text-neutral-600">{resource.guidance}</p>
       </CardContent>
@@ -384,6 +414,8 @@ function ResourceBar({
   capacity,
   capacityLabel,
   ratioNoun = '할당률',
+  advisory = false,
+  overNote,
 }: {
   label: string
   allocated: number
@@ -392,41 +424,52 @@ function ResourceBar({
   capacityLabel: string | null
   /** 막대가 나타내는 비율의 이름 — 할당 합계는 할당률, 실측치는 사용률. */
   ratioNoun?: string
+  /** 분모가 넘어설 수 없는 한계가 아니라 참고값인가 — 경고색을 입히지 않는다. */
+  advisory?: boolean
+  /** 100%를 넘었을 때 덧붙이는 설명 (참고용 분모에서만 쓴다). */
+  overNote?: string
 }) {
   const ratio = capacity != null && capacity > 0 ? allocated / capacity : null
-  const percent = ratio != null ? Math.min(Math.round(ratio * 100), 100) : null
+  // 비율은 있는 그대로 적는다 — 120%를 100%로 줄여 쓰면 넘어선 사실이 사라진다.
+  const percent = ratio != null ? Math.round(ratio * 100) : null
+  // 막대는 자기 폭을 넘을 수 없으므로 그림만 잘라 그리고, 넘어선 사실은 글로 밝힌다.
+  const barPercent = percent != null ? Math.min(percent, 100) : null
+  const over = percent != null && percent > 100
+  const valueLabel = `${allocatedLabel}${capacityLabel ? ` / ${capacityLabel}` : ''}${
+    percent != null ? ` (${percent}%)` : ''
+  }`
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-neutral-700">{label}</span>
-        <span className="text-neutral-500">
-          {allocatedLabel}
-          {capacityLabel && ` / ${capacityLabel}`}
-          {percent != null && ` (${percent}%)`}
-        </span>
+        <span className="text-neutral-500">{valueLabel}</span>
       </div>
-      {percent != null && (
+      {barPercent != null && (
         <div
           role="progressbar"
           aria-label={`${label} ${ratioNoun}`}
-          aria-valuenow={percent}
+          aria-valuenow={percent ?? undefined}
           aria-valuemin={0}
-          aria-valuemax={100}
+          aria-valuemax={Math.max(100, percent ?? 0)}
+          aria-valuetext={valueLabel}
           className="h-2 overflow-hidden rounded-full bg-neutral-100"
         >
           <div
             className={
               'h-full rounded-full ' +
-              (ratio != null && ratio >= 0.85
-                ? 'bg-danger-500'
-                : ratio != null && ratio >= 0.7
-                  ? 'bg-warning-500'
-                  : 'bg-primary-500')
+              (advisory
+                ? 'bg-primary-500'
+                : ratio != null && ratio >= 0.85
+                  ? 'bg-danger-500'
+                  : ratio != null && ratio >= 0.7
+                    ? 'bg-warning-500'
+                    : 'bg-primary-500')
             }
-            style={{ width: `${percent}%` }}
+            style={{ width: `${barPercent}%` }}
           />
         </div>
       )}
+      {over && overNote && <p className="text-xs text-neutral-500">{overNote}</p>}
     </div>
   )
 }

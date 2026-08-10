@@ -151,8 +151,10 @@ export type AnnouncementPage = Schemas['PageResponseAnnouncementView']
 export type OrgDashboardSummary = Schemas['OrgDashboardSummaryResponse']
 export type SystemDashboardSummary = Schemas['SystemDashboardSummaryResponse']
 export type NodeLive = Schemas['NodeLiveResponse']
+/** 시스템 요약이 함께 싣는 노드별 할당 비율·운영 상태. */
+export type NodeRatio = Schemas['NodeRatio']
 
-/* ─── 사용량·용량 추이 (계약 v0.35.0) ─── */
+/* ─── 사용량·할당 추이 (계약 v0.35.0) ─── */
 /** 조회 구간 — HOUR/DAY/WEEK/MONTH/YEAR (구간이 길수록 해상도가 거칠어진다). */
 export type MetricsTimeframe = Schemas['RrdTimeframe']
 export type VmMetrics = Schemas['VmMetricsResponse']
@@ -1122,7 +1124,7 @@ export function fetchAdminNodeMetrics(
 }
 
 /**
- * 할당 용량 추이 (GET /admin/capacity-trend).
+ * 할당 추이 (GET /admin/capacity-trend).
  * 기관 관리자는 자기 기관으로 고정되고, 시스템 관리자는 orgId를 지정하거나
  * 생략해 플랫폼 전체를 본다.
  */
@@ -1133,7 +1135,7 @@ export function fetchCapacityTrend(
     const { data, error } = await api.GET('/admin/capacity-trend', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '용량 추이를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '할당 추이를 불러오지 못했습니다.')
     return data
   })
 }

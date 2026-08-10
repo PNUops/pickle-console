@@ -5,7 +5,7 @@ import {
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
-import { systemSummaryFixture } from '../test/msw/handlers/admin-ops'
+import { orgSummaryFixture, systemSummaryFixture } from '../test/msw/handlers/admin-ops'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -118,6 +118,74 @@ describe('관리자 대시보드 — 하이퍼바이저 실측', () => {
     expect(within(systemRow).getAllByText('연결 끊김')).toHaveLength(2)
     expect(
       within(systemRow).queryByRole('progressbar', { name: '물리 메모리 사용률' }),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('관리자 대시보드 — 오프라인으로 지정된 노드', () => {
+  test('운영자가 내려 둔 노드의 무응답은 경보가 아니다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    // pve2는 이미 응답하지 않는 노드다 — 상태만 오프라인으로 바꾼다.
+    systemSummaryFixture.nodes = systemSummaryFixture.nodes.map((node) =>
+      node.id === 2 ? { ...node, status: 'OFFLINE' } : node,
+    )
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    const connection = within(systemRow).getByText('Proxmox 연결').parentElement!
+    const value = within(connection).getByText('정상 1 / 끊김 1')
+    expect(value).not.toHaveClass('text-danger-600')
+    expect(
+      within(connection).getByText(/끊김 1대는 오프라인으로 지정된 노드/),
+    ).toBeInTheDocument()
+  })
+
+  test('오프라인이 아닌 노드가 응답하지 않으면 그대로 경보다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    const connection = within(systemRow).getByText('Proxmox 연결').parentElement!
+    // 픽스처의 pve2는 점검 중(MAINTENANCE)이면서 응답이 없다 — 진짜 장애다.
+    expect(within(connection).getByText('정상 1 / 끊김 1')).toHaveClass('text-danger-600')
+  })
+})
+
+describe('관리자 대시보드 — 씬 프로비저닝 디스크', () => {
+  test('풀 용량을 넘은 할당을 100%로 줄여 쓰지 않고 그대로 알린다', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    orgSummaryFixture.resource = {
+      ...orgSummaryFixture.resource,
+      allocatedDiskGb: 1080,
+      capacityDiskGb: 900,
+      // 한계가 분명한 메모리는 임계를 넘긴 채로 둔다 (색 규칙이 남아 있는지 확인).
+      allocatedMemoryMb: 71_000,
+    }
+    renderApp('/admin')
+
+    const bar = await screen.findByRole('progressbar', { name: '디스크 할당률' })
+    expect(screen.getByText('1080 GiB / 900 GiB (120%)')).toBeInTheDocument()
+    expect(bar).toHaveAttribute('aria-valuenow', '120')
+    // 넘어설 수 없는 한계가 아니므로 경고색을 입히지 않는다.
+    expect(bar.firstElementChild).toHaveClass('bg-primary-500')
+    expect(bar.firstElementChild).not.toHaveClass('bg-danger-500')
+    expect(
+      screen.getByText(/디스크 할당 합계가 풀 용량을 넘었습니다/),
+    ).toBeInTheDocument()
+    // 한계가 분명한 메모리 막대는 임계 색을 그대로 쓴다.
+    const memory = screen.getByRole('progressbar', { name: '메모리 할당률' })
+    expect(memory.firstElementChild).toHaveClass('bg-danger-500')
+  })
+
+  test('풀 용량 안이면 넘었다는 문장은 나오지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp('/admin')
+
+    expect(
+      await screen.findByRole('progressbar', { name: '디스크 할당률' }),
+    ).toHaveAttribute('aria-valuenow', '51')
+    expect(
+      screen.queryByText(/디스크 할당 합계가 풀 용량을 넘었습니다/),
     ).not.toBeInTheDocument()
   })
 })

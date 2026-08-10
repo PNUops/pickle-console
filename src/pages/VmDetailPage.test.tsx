@@ -519,7 +519,7 @@ describe('VM 상세 — 탭', () => {
 /* ─── 사용량(모니터링) 탭 ─── */
 
 describe('VM 상세 — 모니터링', () => {
-  test('모니터링 탭은 네 개의 사용량 차트와 빈 구간 안내를 보여준다', async () => {
+  test('모니터링 탭은 네 개의 사용량 차트와 갱신 시각을 보여준다', async () => {
     renderVm(56, 'monitoring')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
@@ -531,15 +531,12 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.getByRole('heading', { name: '메모리' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '네트워크' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '디스크 I/O' })).toBeInTheDocument()
-    expect(screen.getByText(/중지된 동안의 구간은 비어 있습니다/)).toBeInTheDocument()
-    // 게스트 에이전트 기준임을 메모리 차트가 밝힌다.
-    expect(
-      screen.getByText(/게스트 에이전트가 보고한 내부 사용량 기준/),
-    ).toBeInTheDocument()
-    // 캔버스가 없는 환경에서도 값은 표로 읽을 수 있다 (메모리 최대 = 2 GiB).
-    expect(screen.getAllByText('2.00 GiB').length).toBeGreaterThan(0)
-    // 자료가 없는 구간은 0이 아니라 대시로 남는다.
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    // 차트마다 제목이 그림 영역의 접근 가능한 이름이 된다.
+    expect(screen.getByRole('img', { name: 'CPU' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '디스크 I/O' })).toBeInTheDocument()
+    expect(screen.getByText(/마지막 갱신/)).toBeInTheDocument()
+    // 값 읽는 창구는 차트뿐이다 — 접이식 표는 두지 않는다.
+    expect(screen.queryByText('표로 보기')).not.toBeInTheDocument()
   })
 
   test('개요에서 모니터링 탭으로 전환하고 조회 구간을 바꿀 수 있다', async () => {
@@ -573,13 +570,35 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.queryByRole('heading', { name: 'CPU' })).not.toBeInTheDocument()
   })
 
-  test('하이퍼바이저 조회 실패(503)는 첫 조회에서 오류 안내로 끝난다', async () => {
+  test('하이퍼바이저에 물어볼 수 없으면 오류가 아니라 차분한 안내로 끝난다', async () => {
     renderVm(59, 'monitoring')
 
-    expect(
-      await screen.findByText(
-        '하이퍼바이저에서 사용량을 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.',
-      ),
-    ).toBeInTheDocument()
+    const notice = await screen.findByText(
+      '하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다.',
+    )
+    // 잴 수 없다는 사실은 장애 경보가 아니다 — 붉은 경보로 띄우지 않는다.
+    expect(notice.closest('[role="alert"]')).toBeNull()
+  })
+
+  test('삭제 중인 VM은 모니터링 탭을 아예 열지 않는다', async () => {
+    // 삭제 중에도 하이퍼바이저 식별자는 남아 있어, 탭을 두면 사라지는 게스트를
+    // 30초마다 조회해 실패한다.
+    renderVm(60, 'monitoring')
+
+    await screen.findByRole('heading', { name: 'retiring-vm' })
+    expect(screen.queryByRole('tab', { name: '모니터링' })).not.toBeInTheDocument()
+    // 딥링크로 들어와도 개요로 되돌아간다.
+    expect(screen.getByRole('tab', { name: '개요' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.queryByRole('heading', { name: 'CPU' })).not.toBeInTheDocument()
+  })
+
+  test('중지된 VM에는 모니터링 탭이 그대로 있다', async () => {
+    renderVm(57)
+
+    await screen.findByRole('heading', { name: 'web-lab' })
+    expect(screen.getByRole('tab', { name: '모니터링' })).toBeInTheDocument()
   })
 })

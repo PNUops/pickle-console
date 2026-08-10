@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
+import { isolatedIndexes, splitsFor, type SplitBase } from './chart-scales'
 import {
   CHART_AXIS_TEXT,
   CHART_GRID,
@@ -16,37 +17,6 @@ export interface ChartSeries {
   color?: string
   /** 최대치·용량 기준선 — 중립색 파선으로 그린다. */
   reference?: boolean
-}
-
-/**
- * y축 눈금을 읽기 좋은 수로 끊는 방식.
- *  - binary: 1024 단위(512 MiB·1 GiB…) — 바이트 값에 쓴다. 기본 선형 눈금은
- *    '1.86 GiB' 같은 값을 만든다.
- *  - integer: 정수 — vCPU·대수처럼 소수가 의미 없는 값에 쓴다.
- */
-export type SplitBase = 'binary' | 'integer'
-
-/** 1·2·5 계단에서 x 이상인 가장 작은 값. */
-function niceStep(value: number): number {
-  const power = 10 ** Math.floor(Math.log10(value))
-  const scaled = value / power
-  return (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * power
-}
-
-/** 대략 네 칸으로 나뉘는 눈금 배열 — 축이 붐비지 않는 정도. */
-function splitsFor(base: SplitBase, min: number, max: number): number[] {
-  const span = max - min
-  if (span <= 0) return [min]
-  const unit =
-    base === 'binary'
-      ? 1024 ** Math.min(4, Math.max(0, Math.floor(Math.log(max) / Math.log(1024))))
-      : 1
-  const step = Math.max(niceStep(span / 4 / unit) * unit, base === 'integer' ? 1 : 0)
-  const ticks: number[] = []
-  for (let tick = Math.ceil(min / step) * step; tick <= max + step / 1000; tick += step) {
-    ticks.push(tick)
-  }
-  return ticks
 }
 
 export interface TimeSeriesChartProps {
@@ -67,9 +37,6 @@ export interface TimeSeriesChartProps {
   /** 차트 아래 보조 설명. */
   caption?: ReactNode
 }
-
-/** 표 보기에 넣을 최대 행 수 — 값을 훑기 좋은 정도로만 솎아 낸다. */
-const TABLE_ROWS = 12
 
 /**
  * canvas 2d 컨텍스트를 쓸 수 있는 환경인지 (jsdom·구형 브라우저에서는 없다).
@@ -112,13 +79,6 @@ function sameData(a: uPlot.AlignedData, b: uPlot.AlignedData): boolean {
   return true
 }
 
-/** 표 보기에 쓸 인덱스 — 처음과 끝을 포함해 고르게 솎는다. */
-function sampledIndexes(length: number): number[] {
-  if (length <= TABLE_ROWS) return Array.from({ length }, (_, i) => i)
-  const step = (length - 1) / (TABLE_ROWS - 1)
-  return Array.from({ length: TABLE_ROWS }, (_, i) => Math.round(i * step))
-}
-
 /**
  * uPlot 얇은 래퍼 — 시계열 하나를 그린다. 값이 null인 구간은 이어 붙이지 않고
  * 빈 구간으로 남긴다(VM이 중지된 동안 등). 축은 하나뿐이며, 단위가 다른 값은
@@ -135,6 +95,8 @@ export function TimeSeriesChart({
   height = 200,
   caption,
 }: TimeSeriesChartProps) {
+  // 그림 영역의 접근 가능한 이름은 제목이 맡는다 — 차트 안에 읽을 텍스트가 없다.
+  const titleId = useId()
   const hostRef = useRef<HTMLDivElement>(null)
   const plotRef = useRef<uPlot | null>(null)
   const [hover, setHover] = useState<{ index: number; left: number; top: number } | null>(
@@ -213,7 +175,13 @@ export function TimeSeriesChart({
             width: reference ? 1.5 : 2,
             dash: reference ? [4, 4] : undefined,
             spanGaps: false,
-            points: { show: false },
+            // 선으로는 그려지지 않는 외톨이 표본만 점으로 남긴다 — 빈 구간은 그대로 빈 구간이다.
+            points: {
+              show: true,
+              size: 5,
+              filter: (plot, seriesIndex) =>
+                isolatedIndexes(plot.data[seriesIndex] as (number | null)[]),
+            },
           } satisfies uPlot.Series
         }),
       ],
@@ -267,12 +235,13 @@ export function TimeSeriesChart({
   }, [data])
 
   const hovered = hover != null && hover.index < times.length ? hover : null
-  const rows = sampledIndexes(times.length)
 
   return (
     <figure className="space-y-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
+        <h3 id={titleId} className="text-sm font-semibold text-neutral-800">
+          {title}
+        </h3>
         {series.length > 1 && (
           <ul className="flex flex-wrap items-center gap-3">
             {series.map((item, index) => (
@@ -295,7 +264,13 @@ export function TimeSeriesChart({
         )}
       </div>
 
-      <div ref={hostRef} className="relative w-full" style={{ height }}>
+      <div
+        ref={hostRef}
+        role="img"
+        aria-labelledby={titleId}
+        className="relative w-full"
+        style={{ height }}
+      >
         {hovered && (
           <div
             aria-hidden="true"
@@ -323,42 +298,6 @@ export function TimeSeriesChart({
 
       {caption && <figcaption className="text-xs text-neutral-500">{caption}</figcaption>}
 
-      <details className="text-xs text-neutral-500">
-        <summary className="cursor-pointer text-primary-700 hover:underline">
-          표로 보기
-        </summary>
-        <div className="mt-2 overflow-x-auto">
-          <table className="w-full text-left tabular-nums">
-            <caption className="sr-only">{title} 값 표</caption>
-            <thead>
-              <tr className="text-neutral-500">
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  시각
-                </th>
-                {series.map((item) => (
-                  <th key={item.label} scope="col" className="py-1 pr-3 font-medium">
-                    {item.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="text-neutral-700">
-              {rows.map((index) => (
-                <tr key={times[index]}>
-                  <th scope="row" className="py-1 pr-3 font-normal whitespace-nowrap">
-                    {formatTime(times[index])}
-                  </th>
-                  {series.map((item) => (
-                    <td key={item.label} className="py-1 pr-3 whitespace-nowrap">
-                      {formatValue(item.data[index], format)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
     </figure>
   )
 }

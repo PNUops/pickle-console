@@ -38,6 +38,7 @@ import {
   CardTitle,
   ConfirmNameModal,
   DdayBadge,
+  ErrorBoundary,
   ResourceRoleBadge,
   Input,
   Modal,
@@ -171,8 +172,9 @@ export function VmDetailPage() {
   // 접근 탭은 이 VM의 접근 권한을 관리할 수 있는 사람에게만 — 리소스 소유자와
   // 워크스페이스 소유자다.
   const accessVisible = data.accessManageAllowed && data.status !== 'DELETED'
-  // 삭제된 VM은 하이퍼바이저에 물어볼 실체가 없으므로 사용량 탭을 감춘다.
-  const monitoringVisible = data.status !== 'DELETED'
+  // 삭제 중·삭제된 VM은 하이퍼바이저에 물어볼 실체가 사라지는 중이거나 없으므로
+  // 사용량 탭을 감춘다 — 그대로 두면 사라진 게스트를 30초마다 조회해 실패한다.
+  const monitoringVisible = data.status !== 'DELETING' && data.status !== 'DELETED'
   const tabs = VM_TABS.filter((tab) => {
     if (tab.id === 'settings') return settingsVisible
     if (tab.id === 'access') return accessVisible
@@ -276,15 +278,17 @@ export function VmDetailPage() {
       </TabPanel>
 
       <TabPanel id="monitoring" active={activeTab === 'monitoring'} className="space-y-6">
-        <Suspense
-          fallback={
-            <div className="flex justify-center py-12">
-              <Spinner label="사용량 화면 불러오는 중" />
-            </div>
-          }
-        >
-          <VmMonitoringSection vmId={vmId} />
-        </Suspense>
+        <ErrorBoundary label="사용량">
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <Spinner label="사용량 화면 불러오는 중" />
+              </div>
+            }
+          >
+            <VmMonitoringSection vmId={vmId} />
+          </Suspense>
+        </ErrorBoundary>
       </TabPanel>
 
       <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">
