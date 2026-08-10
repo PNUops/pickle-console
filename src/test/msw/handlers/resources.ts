@@ -1,14 +1,16 @@
 import { http, HttpResponse } from 'msw'
 import type { components } from '../../../api/schema'
-import { vmStore } from './vms'
+import { toResourceSummary, vmStore } from './vms'
+import { isMyWorkspace } from './workspaces'
 
 type Schemas = components['schemas']
 
 /**
  * The type-agnostic inventory, derived from the VM store.
  *
- * Built from the same rows the VM list serves so the two surfaces cannot
- * disagree in a test the way they must not disagree on the server.
+ * Built from the same rows the VM list serves, through the same mapping, so
+ * the two surfaces cannot disagree in a test the way they must not disagree on
+ * the server: what is restricted here is restricted there.
  */
 export const resourceHandlers = [
   http.get('*/api/v1/resources', ({ request }) => {
@@ -19,21 +21,11 @@ export const resourceHandlers = [
     const page = Number(url.searchParams.get('page') ?? '0')
 
     const rows: Schemas['ResourceSummaryResponse'][] = vmStore
+      // 서버와 같은 조회 범위: 내가 구성원인 워크스페이스의 리소스만 보인다.
+      .filter((vm) => isMyWorkspace(vm.workspaceId))
       .filter((vm) => (workspaceId == null ? true : vm.workspaceId === Number(workspaceId)))
       .filter(() => type == null || type === 'VM')
-      .map((vm) => ({
-        id: vm.id,
-        type: 'VM',
-        name: vm.name,
-        displayName: vm.displayName ?? null,
-        status: vm.status,
-        workspaceId: vm.workspaceId,
-        workspaceName: vm.workspaceName,
-        accessLimited: false,
-        ownerNames: [],
-        accessManageAllowed: false,
-        createdAt: vm.createdAt,
-      }))
+      .map(toResourceSummary)
 
     const start = page * size
     return HttpResponse.json(

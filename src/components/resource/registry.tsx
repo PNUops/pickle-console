@@ -15,7 +15,8 @@ import type { VmStatus } from '../../lib/status'
  */
 export type ResourceTypeEntry = {
   label: string
-  detailPath: (id: number) => string
+  /** Absent when this build has no screen for the type — the row stays text. */
+  detailPath?: (id: number) => string
   statusBadge: (resource: ResourceSummary) => ReactNode
   /**
    * Whether this row still counts as something the person has. Each type owns
@@ -45,7 +46,25 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
   },
 }
 
+/**
+ * The entry for a type this build does not know.
+ *
+ * The record looks total to the compiler, but the api and the console deploy
+ * on their own schedules: a type added server-side reaches a console still
+ * running the old bundle. A row it cannot describe degrades to its raw type
+ * and status rather than taking the whole screen down with it.
+ */
+function unknownTypeEntry(type: string): ResourceTypeEntry {
+  return {
+    label: type,
+    statusBadge: (resource) => resource.status,
+    // Counted as something the person has: it came back from the inventory,
+    // and only the type itself knows which of its states mean "gone".
+    isActive: () => true,
+  }
+}
+
 export function resourceTypeEntry(type: ResourceSummary['type']): ResourceTypeEntry {
-  return RESOURCE_TYPES[type]
+  return RESOURCE_TYPES[type] ?? unknownTypeEntry(type)
 }
 

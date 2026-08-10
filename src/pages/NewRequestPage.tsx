@@ -155,14 +155,21 @@ export function NewRequestPage() {
 
   // 신청은 구성원이면 누구나 할 수 있다 — 문턱은 승인이 잡는다.
   const eligibleWorkspaces = workspaces.data ?? []
+  const selectedWorkspace = eligibleWorkspaces.find((g) => g.id === state.workspaceId)
+  const selectedOrg = orgs.data?.find((o) => o.id === state.orgId)
   const selectedImage = osImages.data?.find((t) => t.id === state.imageId)
   const selectedFlavor = flavors.data?.find((f) => f.id === state.flavorId)
 
   const validateStep = (index: number): FieldErrors => {
     const next: FieldErrors = {}
     if (index === 1) {
-      if (state.workspaceId == null) next.workspaceId = '신청할 워크스페이스를 선택해 주세요.'
-      if (state.orgId == null) next.orgId = '리소스를 제공할 기관을 선택해 주세요.'
+      // 목록에 없는 id(초안에 남은, 그새 나온 워크스페이스나 없어진 기관)는 선택되지
+      // 않은 것으로 본다 — Select는 이미 비어 보이는데 상태에는 남아 있어, 그대로
+      // 두면 요약이 원시 id를 보여주고 제출이 403·422로 튕긴다.
+      if (state.workspaceId == null || !selectedWorkspace)
+        next.workspaceId = '신청할 워크스페이스를 선택해 주세요.'
+      if (state.orgId == null || !selectedOrg)
+        next.orgId = '리소스를 제공할 기관을 선택해 주세요.'
       if (state.displayName.length > 100)
         next.displayName = '표시명은 100자 이하로 입력해 주세요.'
       if (state.desiredSlug) {
@@ -635,10 +642,8 @@ export function NewRequestPage() {
               )}
               <SummaryTable
                 state={state}
-                workspaceName={
-                  eligibleWorkspaces.find((g) => g.id === state.workspaceId)?.name ?? String(state.workspaceId)
-                }
-                orgName={orgs.data?.find((o) => o.id === state.orgId)?.name ?? String(state.orgId)}
+                workspaceName={selectedWorkspace?.name ?? String(state.workspaceId)}
+                orgName={selectedOrg?.name ?? String(state.orgId)}
                 imageName={selectedImage?.displayName ?? String(state.imageId)}
                 flavorName={selectedFlavor?.displayName ?? String(state.flavorId)}
               />
