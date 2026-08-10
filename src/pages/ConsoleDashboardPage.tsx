@@ -46,8 +46,9 @@ export function ConsoleDashboardPage() {
     queryFn: () => fetchVms({ size: 50, workspaceId: scope ?? undefined }),
   })
   const pendingRequests = useQuery({
-    queryKey: ['requests', { status: 'SUBMITTED', page: 0, size: 3 }],
-    queryFn: () => fetchRequests({ status: 'SUBMITTED', page: 0, size: 3 }),
+    queryKey: ['requests', { status: 'SUBMITTED', page: 0, size: 3, workspaceId: scope }],
+    queryFn: () =>
+      fetchRequests({ status: 'SUBMITTED', page: 0, size: 3, workspaceId: scope ?? undefined }),
   })
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -88,13 +89,13 @@ export function ConsoleDashboardPage() {
         </div>
         <div className="flex gap-2">
           <Link
-            to="/console/requests/new"
+            to={consolePaths.newRequest(scope)}
             className="inline-flex h-9 items-center rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
           >
             VM 신청
           </Link>
           <Link
-            to="/console/workspaces"
+            to={consolePaths.workspaces}
             className="inline-flex h-9 items-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
           >
             워크스페이스 만들기
@@ -115,12 +116,12 @@ export function ConsoleDashboardPage() {
         <StatTile
           label="대기 중 신청"
           value={pendingRequests.isPending ? '—' : `${pendingRequests.data?.totalElements ?? 0}건`}
-          to="/console/requests"
+          to={consolePaths.requests(scope)}
         />
         <StatTile
           label="읽지 않은 알림"
           value={unread.isPending ? '—' : `${unread.data?.unreadCount ?? 0}건`}
-          to="/console/notifications"
+          to={consolePaths.notifications}
         />
         <StatTile
           label="만료 임박"
@@ -133,7 +134,7 @@ export function ConsoleDashboardPage() {
                 : `${EXPIRY_SOON_DAYS}일 내 만료 없음`
           }
           tone={expiring && expiring.dday.daysLeft <= 7 ? 'danger' : 'normal'}
-          to={expiring ? `/console/vms/${expiring.vm.id}` : undefined}
+          to={expiring ? consolePaths.vmDetail(expiring.vm.id) : undefined}
         />
       </div>
 
@@ -178,12 +179,20 @@ export function ConsoleDashboardPage() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <Link
-                          to={entry.detailPath(resource.id)}
-                          className="truncate font-medium text-neutral-900 hover:text-primary-700 hover:underline"
-                        >
-                          {resource.displayName || resource.name}
-                        </Link>
+                        {/* 목록과 같은 규칙 — 접근 권한이 없거나 상세 화면이 없는
+                            종류면 링크를 걸지 않는다 (열면 403인 링크는 없다). */}
+                        {resource.accessLimited || !entry.detailPath ? (
+                          <span className="truncate font-medium text-neutral-500">
+                            {resource.displayName || resource.name}
+                          </span>
+                        ) : (
+                          <Link
+                            to={entry.detailPath(resource.id)}
+                            className="truncate font-medium text-neutral-900 hover:text-primary-700 hover:underline"
+                          >
+                            {resource.displayName || resource.name}
+                          </Link>
+                        )}
                         {entry.statusBadge(resource)}
                       </div>
                       <p className="mt-0.5 truncate text-xs text-neutral-500">
@@ -205,7 +214,7 @@ export function ConsoleDashboardPage() {
           <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3.5">
             <h2 className="font-semibold text-neutral-900">진행 중 신청</h2>
             <Link
-              to="/console/requests"
+              to={consolePaths.requests(scope)}
               className="text-sm font-medium text-primary-700 hover:text-primary-800"
             >
               모두 보기 →
@@ -215,7 +224,7 @@ export function ConsoleDashboardPage() {
             {pendingRequests.data.content.map((request) => (
               <li key={request.id}>
                 <Link
-                  to={`/console/requests/${request.id}`}
+                  to={consolePaths.requestDetail(request.id)}
                   className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-neutral-50"
                 >
                   <span className="min-w-0">
@@ -239,7 +248,7 @@ export function ConsoleDashboardPage() {
         <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3.5">
           <h2 className="font-semibold text-neutral-900">최근 알림</h2>
           <Link
-            to="/console/notifications"
+            to={consolePaths.notifications}
             className="text-sm font-medium text-primary-700 hover:text-primary-800"
           >
             알림함 →
@@ -291,7 +300,7 @@ function SshKeyReminder({ hasVm }: { hasVm: boolean }) {
         </p>
         <div className="flex items-center gap-3">
           <Link
-            to="/console/ssh-keys"
+            to={consolePaths.sshKeys}
             className="font-medium text-primary-700 hover:underline"
           >
             SSH 키 등록하기 →
