@@ -23,7 +23,6 @@ import {
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { ORG_STATUS_LABELS } from '../lib/labels'
-import { ORG_SLUG_RE } from '../lib/validation'
 
 export function AdminOrgsPage() {
   const [createOpen, setCreateOpen] = useState(false)
@@ -60,7 +59,6 @@ export function AdminOrgsPage() {
             <THead>
               <TR>
                 <TH>이름</TH>
-                <TH>slug</TH>
                 <TH>상태</TH>
                 <TH>설명</TH>
                 <TH className="w-20" />
@@ -70,7 +68,6 @@ export function AdminOrgsPage() {
               {orgs.data.map((org) => (
                 <TR key={org.id}>
                   <TD className="font-medium text-neutral-900">{org.name}</TD>
-                  <TD className="font-mono text-xs text-neutral-500">{org.slug}</TD>
                   <TD>
                     <Badge variant={org.status === 'ACTIVE' ? 'success' : 'danger'}>
                       {ORG_STATUS_LABELS[org.status]}
@@ -109,18 +106,16 @@ export function AdminOrgsPage() {
 function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
 
   const create = useMutation({
-    mutationFn: () => createOrg({ name, slug, description: description || null }),
+    mutationFn: () => createOrg({ name, description: description || null }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'orgs'] })
       await queryClient.invalidateQueries({ queryKey: ['orgs'] })
       setName('')
-      setSlug('')
       setDescription('')
       setFieldErrors({})
       setFormError(null)
@@ -128,10 +123,6 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
     },
     onError: (error) => {
       const apiError = toApiError(error, '기관을 만들지 못했습니다.')
-      if (apiError.code === 'ORG_SLUG_DUPLICATE') {
-        setFieldErrors({ slug: apiError.message })
-        return
-      }
       const mapped = fieldErrorsOf(apiError.problem)
       if (Object.keys(mapped).length > 0) {
         setFieldErrors(mapped)
@@ -154,10 +145,6 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
     const errors: Record<string, string> = {}
     if (!name.trim()) errors.name = '기관 이름을 입력해 주세요.'
     else if (name.length > 100) errors.name = '기관 이름은 100자 이하로 입력해 주세요.'
-    if (!slug) errors.slug = 'slug를 입력해 주세요.'
-    else if (!ORG_SLUG_RE.test(slug))
-      errors.slug =
-        'slug는 소문자·숫자·하이픈만 사용해 40자 이하로 입력해 주세요. (하이픈으로 시작·끝 불가)'
     if (description.length > 500) errors.description = '설명은 500자 이하로 입력해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
@@ -174,19 +161,6 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
             onChange={(event) => setName(event.target.value)}
             placeholder="정보컴퓨터공학부 실습지원센터"
             maxLength={100}
-          />
-        </FormField>
-        <FormField
-          label="slug"
-          required
-          error={fieldErrors.slug}
-          description="시스템 전체에서 유일해야 하며, 만든 뒤에는 변경할 수 없습니다."
-        >
-          <Input
-            value={slug}
-            onChange={(event) => setSlug(event.target.value)}
-            placeholder="cse-lab"
-            maxLength={40}
           />
         </FormField>
         <FormField label="설명" error={fieldErrors.description}>
@@ -261,9 +235,6 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
         {formError && <Alert variant="danger">{formError}</Alert>}
         <FormField label="기관 이름" required error={fieldErrors.name}>
           <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} />
-        </FormField>
-        <FormField label="slug" description="slug는 변경할 수 없습니다.">
-          <Input value={org.slug} disabled />
         </FormField>
         <FormField label="설명" error={fieldErrors.description}>
           <Textarea
