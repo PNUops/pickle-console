@@ -269,35 +269,42 @@ function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] 
   const unreachable = live.filter((node) => !node.reachable)
   const offline = unreachable.filter((node) => statusById.get(node.nodeId) === 'OFFLINE')
   const unexpected = unreachable.length - offline.length
+  // 노드가 한 대도 없는 것과 있는 노드가 모두 오프라인인 것은 다른 사실이다 —
+  // 앞의 경우 '정상 0 / 끊김 0'은 멀쩡해 보이지만 실은 하이퍼바이저가 없는 상태다.
+  const registered = live.length > 0
   const lastChecked = reachable
     .map((node) => node.checkedAt)
     .filter((at): at is string => at != null)
     .sort()
     .at(-1)
-  const hint = [
-    lastChecked ? `마지막 확인 ${formatDateTime(lastChecked)}` : '확인 기록 없음',
-    offline.length > 0 ? `끊김 ${offline.length}대는 오프라인으로 지정된 노드` : null,
-  ]
-    .filter((part): part is string => part != null)
-    .join(' · ')
+  const hint = registered
+    ? [
+        lastChecked ? `마지막 확인 ${formatDateTime(lastChecked)}` : '확인 기록 없음',
+        offline.length > 0 ? `끊김 ${offline.length}대는 오프라인으로 지정된 노드` : null,
+      ]
+        .filter((part): part is string => part != null)
+        .join(' · ')
+    : '연결된 하이퍼바이저가 없습니다'
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <StatTile
         label="Proxmox 연결"
-        value={`정상 ${reachable.length} / 끊김 ${unreachable.length}`}
+        value={registered ? `정상 ${reachable.length} / 끊김 ${unreachable.length}` : '노드 없음'}
         hint={hint}
-        tone={unexpected > 0 ? 'danger' : 'normal'}
+        tone={unexpected > 0 || !registered ? 'danger' : 'normal'}
       />
       <LiveUsageTile
         label="물리 메모리"
         usage={sumLivePair(reachable, 'memUsedBytes', 'memTotalBytes')}
+        registered={registered}
         anyReachable={reachable.length > 0}
         unexpectedOutage={unexpected > 0}
       />
       <LiveUsageTile
         label="스토리지"
         usage={sumLivePair(reachable, 'storageUsedBytes', 'storageTotalBytes')}
+        registered={registered}
         anyReachable={reachable.length > 0}
         unexpectedOutage={unexpected > 0}
         hint="게스트 디스크가 놓이는 풀"
@@ -307,19 +314,23 @@ function NodesLiveTiles({ live, nodes }: { live: NodeLive[]; nodes: NodeRatio[] 
 }
 
 /**
- * 노드가 모두 응답하지 않으면 연결 끊김, 응답은 했는데 그 값을 못 읽었으면
- * 측정값 없음 — 둘은 원인이 다르므로 같은 문구로 뭉뚱그리지 않는다. 오프라인으로
- * 지정된 노드만 남아 조용한 경우는 장애가 아니므로 붉게 칠하지 않는다.
+ * 등록된 노드가 없으면 그 사실 자체가 장애, 노드가 모두 응답하지 않으면 연결 끊김,
+ * 응답은 했는데 그 값을 못 읽었으면 측정값 없음 — 원인이 다르므로 같은 문구로
+ * 뭉뚱그리지 않는다. 오프라인으로 지정된 노드만 남아 조용한 경우는 장애가 아니므로
+ * 붉게 칠하지 않는다.
  */
 function LiveUsageTile({
   label,
   usage,
+  registered,
   anyReachable,
   unexpectedOutage,
   hint,
 }: {
   label: string
   usage: { used: number; total: number } | null
+  /** 실측 대상 노드가 한 대라도 있는가 — 없으면 '오프라인만 남았다'가 아니다. */
+  registered: boolean
   anyReachable: boolean
   /** 끊긴 노드 중 오프라인 지정이 아닌 것이 있는가 — 그때만 장애로 읽는다. */
   unexpectedOutage: boolean
@@ -327,12 +338,20 @@ function LiveUsageTile({
 }) {
   const outage = usage == null && !anyReachable
   return (
-    <Card className={outage && unexpectedOutage ? 'border-danger-200' : undefined}>
+    <Card
+      className={
+        outage && (unexpectedOutage || !registered) ? 'border-danger-200' : undefined
+      }
+    >
       <div className="space-y-2 px-5 py-4">
         {usage == null ? (
           <>
             <div className="text-xs font-medium text-neutral-500">{label}</div>
-            {anyReachable ? (
+            {!registered ? (
+              <p className="text-sm font-semibold text-danger-600">
+                등록된 노드가 없습니다
+              </p>
+            ) : anyReachable ? (
               <p className="text-sm text-neutral-500">측정값 없음</p>
             ) : unexpectedOutage ? (
               <p className="text-sm font-semibold text-danger-600">연결 끊김</p>

@@ -240,4 +240,23 @@ describe('관리자 대시보드 — 실측값이 비어 있을 때', () => {
     expect(within(systemRow).getAllByText('측정값 없음')).toHaveLength(2)
     expect(within(systemRow).queryByText('연결 끊김')).not.toBeInTheDocument()
   })
+
+  test('노드가 한 대도 없으면 오프라인 안내가 아니라 노드 없음으로 알린다', async () => {
+    // '정상 0 / 끊김 0'은 멀쩡해 보이지만 하이퍼바이저가 아예 없는 상태다 —
+    // 오프라인으로 지정해 둔 노드만 조용한 경우와 뭉뚱그리면 장애가 묻힌다.
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    systemSummaryFixture.nodesLive = []
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    const connection = within(systemRow).getByText('Proxmox 연결').parentElement!
+    expect(within(connection).getByText('노드 없음')).toHaveClass('text-danger-600')
+    expect(
+      within(connection).getByText('연결된 하이퍼바이저가 없습니다'),
+    ).toBeInTheDocument()
+    expect(within(systemRow).getAllByText('등록된 노드가 없습니다')).toHaveLength(2)
+    expect(
+      within(systemRow).queryByText('오프라인 노드만 있어 측정값이 없습니다'),
+    ).not.toBeInTheDocument()
+  })
 })
