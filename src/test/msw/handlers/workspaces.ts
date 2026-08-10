@@ -109,6 +109,11 @@ function toDetail(record: WorkspaceRecord): Schemas['WorkspaceDetailResponse'] {
   return { ...record.detail, myRole, members: record.members }
 }
 
+/** 로그인 사용자가 이 워크스페이스의 구성원인지 — 목록 mock의 조회 범위 판단. */
+export function isMyWorkspace(workspaceId: number): boolean {
+  return workspaceMembersOf(workspaceId).some((m) => m.userId === regularUser.id)
+}
+
 /** 이 워크스페이스의 구성원 — VM 접근 목록 mock이 부여 대상 자격을 확인할 때 쓴다. */
 export function workspaceMembersOf(workspaceId: number): Schemas['WorkspaceMemberResponse'][] {
   return workspaceStore.find((g) => g.detail.id === workspaceId)?.members ?? []

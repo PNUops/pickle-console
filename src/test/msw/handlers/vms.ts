@@ -1,7 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
-import { workspaceMembersOf } from './workspaces'
+import { isMyWorkspace, workspaceMembersOf } from './workspaces'
 
 type Schemas = components['schemas']
 type VmDetail = Schemas['VmDetailResponse']
@@ -841,6 +841,30 @@ export function toRestrictedVmSummary(
   }
 }
 
+/**
+ * 같은 행을 종류 무관 인벤토리 모양으로 옮긴다.
+ *
+ * 제한 여부 판단은 VM 목록과 이 한 곳에서만 내린다 — 두 화면이 같은 행을 두고
+ * 서로 다른 말을 하면, 권한 결함이 테스트에 걸리지 않고 지나간다.
+ * 이름은 서버가 주는 대로 옮긴다 (표시명·호스트명 중 무엇을 주는지는 서버가 정한다).
+ */
+export function toResourceSummary(vm: VmDetail): Schemas['ResourceSummaryResponse'] {
+  const limited = vm.myResourceRole == null
+  return {
+    id: vm.id,
+    type: 'VM',
+    name: vm.name,
+    displayName: vm.displayName ?? null,
+    status: vm.status,
+    workspaceId: vm.workspaceId,
+    workspaceName: vm.workspaceName,
+    accessLimited: limited,
+    ownerNames: limited ? grantOwnerNames(vm.id) : [],
+    accessManageAllowed: vm.accessManageAllowed,
+    createdAt: vm.createdAt,
+  }
+}
+
 /* ─── VM 접근 목록 (계약 v0.33.0) ─── */
 
 /** 접근 목록의 소유자 이름 — 제한 행이 "누구에게 요청하라"고 말할 때 쓴다. */
@@ -909,6 +933,9 @@ export const vmHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = vmStore
+      // 서버와 같은 조회 범위: 내가 구성원인 워크스페이스의 VM만 보인다.
+      // (범위 질의는 그 위에 얹히는 필터일 뿐, 범위를 넓히지 못한다.)
+      .filter((vm) => isMyWorkspace(vm.workspaceId))
       .filter((vm) => !workspaceId || vm.workspaceId === Number(workspaceId))
       .sort((a, b) => b.id - a.id)
     const body: Schemas['PageResponseVmSummaryResponse'] = {
@@ -1442,7 +1469,7 @@ export function vmSummaryAs(
 ): RequestHandler {
   return http.get('*/api/v1/vms', () => {
     const rows = vmStore
-      .slice()
+      .filter((vm) => isMyWorkspace(vm.workspaceId))
       .sort((a, b) => b.id - a.id)
       .map((vm) => {
         const row = vm.myResourceRole == null
