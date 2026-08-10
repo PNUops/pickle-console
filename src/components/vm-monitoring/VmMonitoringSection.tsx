@@ -28,6 +28,7 @@ export default function VmMonitoringSection({ vmId }: { vmId: number }) {
       queryKey={(timeframe: MetricsTimeframe) => ['vms', vmId, 'metrics', timeframe]}
       queryFn={(timeframe: MetricsTimeframe) => fetchVmMetrics(vmId, timeframe)}
       emptyMessage="아직 쌓인 사용량 데이터가 없습니다. 잠시 후 다시 확인해 주세요."
+      blankWindowMessage="이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다."
       unavailableNotice={notProvisionedNotice}
     >
       {({ data, times, axisFormat }) => (

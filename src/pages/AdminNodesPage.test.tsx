@@ -8,7 +8,10 @@ import {
   sysAdminUser,
   sysManagerUser,
 } from '../test/msw/handlers/auth'
-import { metricsUnavailableProblem } from '../test/msw/handlers/metrics'
+import {
+  metricsUnavailableProblem,
+  nodeMetricsFixture,
+} from '../test/msw/handlers/metrics'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -191,14 +194,37 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     renderNodes()
 
     const notice = await screen.findByText(
-      '하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다.',
+      /하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/,
     )
     expect(notice.closest('[role="alert"]')).toBeNull()
-    // 같은 답이 돌아올 조회를 재시도·폴링으로 되풀이하지 않는다
-    // (테스트 모드 폴링 주기는 250ms).
-    const attempts = metricsCalls
+    // 안내는 차분하되 조회는 이어 간다 — 문구도 그렇게 말한다.
+    expect(notice).toHaveTextContent('다시 시도하는 중입니다')
+    // 다만 정상 주기(테스트 모드 250ms)보다 촘촘해지지는 않는다: 물러선 주기는
+    // 500ms라 900ms 동안 서너 번을 넘지 않는다.
+    await waitFor(() => expect(metricsCalls).toBeGreaterThan(1))
     await new Promise((resolve) => setTimeout(resolve, 900))
-    await waitFor(() => expect(metricsCalls).toBe(attempts))
-    expect(attempts).toBe(1)
+    expect(metricsCalls).toBeLessThan(5)
+  })
+
+  test('하이퍼바이저가 돌아오면 새로고침 없이 차트가 되살아난다', async () => {
+    let failed = false
+    server.use(
+      onlyNode('ACTIVE'),
+      http.get('*/api/v1/admin/nodes/:nodeId/metrics', ({ request }) => {
+        // 첫 조회만 실패하고(pveproxy 재시작 같은 순간 장애) 이후에는 답한다.
+        if (!failed) {
+          failed = true
+          return metricsUnavailableProblem('/api/v1/admin/nodes/1/metrics')
+        }
+        const timeframe = new URL(request.url).searchParams.get('timeframe') ?? 'HOUR'
+        return HttpResponse.json(nodeMetricsFixture(timeframe), { status: 200 })
+      }),
+    )
+    renderNodes()
+
+    await screen.findByText(/하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/)
+    // 아무 조작 없이 다음 조회 주기에 스스로 되돌아온다.
+    expect(await screen.findByRole('heading', { name: 'CPU' })).toBeInTheDocument()
+    expect(screen.queryByText(/하이퍼바이저가 응답하지 않아/)).not.toBeInTheDocument()
   })
 })
