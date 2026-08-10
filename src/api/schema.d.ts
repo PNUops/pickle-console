@@ -2871,8 +2871,8 @@ export interface components {
         };
         Membership: {
             role: components["schemas"]["WorkspaceMemberRole"];
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
             workspaceKind: components["schemas"]["WorkspaceKind"];
             workspaceName: string;
         };

@@ -84,11 +84,7 @@ describe('관리자 사용자 목록', () => {
     expect(await screen.findByText(/2단계 인증을 초기화했습니다/)).toBeInTheDocument()
   })
 
-  // 서버가 멤버십 행의 workspaceId만 내부 bigint PK로 남겨 두어(다른 식별자는
-  // 전부 UUID) 이 링크는 UUID 필터에 숫자를 실어 보낸다. 콘솔이 가진 자료로는
-  // 고칠 수 없다 — 멤버십 행에 UUID가 아예 없다. 서버가 그 필드를 UUID로
-  // 내려주면 링크도 이 테스트도 그대로 되살아난다.
-  test.skip('워크스페이스 멤버십의 VM 보기 링크로 VM 관리에 워크스페이스 필터가 적용된다', async () => {
+  test('워크스페이스 멤버십의 VM 보기 링크로 VM 관리에 워크스페이스 필터가 적용된다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 

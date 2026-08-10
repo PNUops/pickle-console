@@ -66,7 +66,7 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 7, workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -77,7 +77,7 @@ export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   orgId: uuid(1),
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 9, workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -88,7 +88,7 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 5, workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -99,7 +99,7 @@ export const orgManagerProfile: Schemas['UserProfileResponse'] = {
   orgId: uuid(1),
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 12, workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(12), workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -110,7 +110,7 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 13, workspaceName: '정시스템운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(13), workspaceName: '정시스템운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -121,7 +121,7 @@ export const regularProfileB: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 8, workspaceName: '박영희', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(8), workspaceName: '박영희', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -139,7 +139,7 @@ export const mfaProfile: Schemas['UserProfileResponse'] = {
   ...mfaUser,
   orgId: null,
   status: 'ACTIVE',
-  memberships: [{ workspaceId: 11, workspaceName: '이중인증', workspaceKind: 'PERSONAL', role: 'OWNER' }],
+  memberships: [{ workspaceId: uuid(11), workspaceName: '이중인증', workspaceKind: 'PERSONAL', role: 'OWNER' }],
   mfaEnabled: true,
   pendingConsents: [],
 }
