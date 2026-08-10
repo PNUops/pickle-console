@@ -17,13 +17,38 @@ describe('splitsFor — 실제 화면에 뜨는 구간의 눈금', () => {
     const [min, max] = scaleRange(79_872 * MiB)
     expect([min, max]).toEqual([0, 93_000_000_000])
     const splits = splitsFor('binary', min, max)
-    expect(splits).toEqual([0, 20 * GiB, 40 * GiB, 60 * GiB, 80 * GiB])
+    expect(splits).toEqual([0, 16 * GiB, 32 * GiB, 48 * GiB, 64 * GiB, 80 * GiB])
     expect(splits.map(formatBytes)).toEqual([
       '0 B',
-      '20.0 GiB',
-      '40.0 GiB',
-      '60.0 GiB',
+      '16.0 GiB',
+      '32.0 GiB',
+      '48.0 GiB',
+      '64.0 GiB',
       '80.0 GiB',
+    ])
+  })
+
+  test('메모리 1 GiB짜리 VM 축도 1024 배수로만 끊긴다', () => {
+    // 단위를 최대치에서 고르던 때는 폭이 단위의 0.2배로 잡혀 축이
+    // '205 MiB / 410 MiB / 614 MiB'로 보였다.
+    const [min, max] = scaleRange(1.02 * GiB)
+    expect(splitsFor('binary', min, max).map(formatBytes)).toEqual([
+      '0 B',
+      '256 MiB',
+      '512 MiB',
+      '768 MiB',
+      '1.00 GiB',
+    ])
+  })
+
+  test('메모리 2 GiB짜리 VM 축은 1024 경계를 넘어도 딱 떨어진다', () => {
+    const [min, max] = scaleRange(2 * GiB)
+    expect(splitsFor('binary', min, max).map(formatBytes)).toEqual([
+      '0 B',
+      '512 MiB',
+      '1.00 GiB',
+      '1.50 GiB',
+      '2.00 GiB',
     ])
   })
 
@@ -32,14 +57,32 @@ describe('splitsFor — 실제 화면에 뜨는 구간의 눈금', () => {
     // 보였다: 눈금 폭이 1바이트 밑으로 쪼개지고 라벨은 정수로 포맷되기 때문이다.
     const [min, max] = scaleRange(0)
     const labels = splitsFor('binary', min, max).map(formatBytes)
+    expect(labels).toEqual(['0 B', '32 B', '64 B', '96 B'])
     expect(new Set(labels).size).toBe(labels.length)
   })
 
   test('네트워크(~130 kB/s) 축은 1024 배수 눈금을 유지한다', () => {
     const [min, max] = scaleRange(130_000)
     const splits = splitsFor('binary', min, max)
-    expect(splits).toEqual([0, 50 * 1024, 100 * 1024])
-    expect(splits.map(formatByteRate)).toEqual(['0 B/s', '50.0 KiB/s', '100 KiB/s'])
+    expect(splits).toEqual([0, 32 * 1024, 64 * 1024, 96 * 1024, 128 * 1024])
+    expect(splits.map(formatByteRate)).toEqual([
+      '0 B/s',
+      '32.0 KiB/s',
+      '64.0 KiB/s',
+      '96.0 KiB/s',
+      '128 KiB/s',
+    ])
+  })
+
+  test('네트워크(~1 MiB/s) 축도 단위가 바뀌는 자리에서 깨지지 않는다', () => {
+    const [min, max] = scaleRange(1.05 * MiB)
+    expect(splitsFor('binary', min, max).map(formatByteRate)).toEqual([
+      '0 B/s',
+      '256 KiB/s',
+      '512 KiB/s',
+      '768 KiB/s',
+      '1.00 MiB/s',
+    ])
   })
 
   test('vCPU처럼 작은 정수 축은 정수 눈금을 촘촘히 남긴다', () => {
@@ -47,6 +90,15 @@ describe('splitsFor — 실제 화면에 뜨는 구간의 눈금', () => {
     expect(splitsFor('integer', ...scaleRange(20))).toEqual([0, 5, 10, 15, 20])
     // 3 vCPU처럼 아주 작은 값도 소수 눈금으로 쪼개지 않는다.
     expect(splitsFor('integer', ...scaleRange(3))).toEqual([0, 1, 2, 3])
+    // 22 vCPU 구간도 꼭대기까지 라벨이 붙는다.
+    expect(splitsFor('integer', ...scaleRange(22))).toEqual([0, 5, 10, 15, 20, 25])
+  })
+
+  test('12 vCPU처럼 애매한 구간에서도 꼭대기가 비지 않는다', () => {
+    // 폭 5를 고르면 0·5·10에서 끝나 축 위쪽 29%에 라벨이 없다.
+    expect(splitsFor('integer', ...scaleRange(12))).toEqual([
+      0, 2, 4, 6, 8, 10, 12, 14,
+    ])
   })
 
   test('0~100 백분율 구간은 20단위로 끊긴다', () => {

@@ -120,6 +120,17 @@ describe('관리자 대시보드 — 하이퍼바이저 실측', () => {
       within(systemRow).queryByRole('progressbar', { name: '물리 메모리 사용률' }),
     ).not.toBeInTheDocument()
   })
+  test('측정된 노드가 전체보다 적으면 합계를 전체로 읽히게 두지 않는다', async () => {
+    // 픽스처는 노드 2대 중 pve1만 읽힌 상태다(pve2 무응답). 합계는 pve1 것뿐이라,
+    // 그것을 플랫폼 용량으로 읽으면 실제보다 작게 보인다.
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    expect(
+      within(systemRow).getAllByText(/노드 2대 중 1대에서 읽은 값입니다/),
+    ).toHaveLength(2)
+  })
 })
 
 describe('관리자 대시보드 — 오프라인으로 지정된 노드', () => {
@@ -239,5 +250,24 @@ describe('관리자 대시보드 — 실측값이 비어 있을 때', () => {
     expect(within(systemRow).getByText('정상 1 / 끊김 0')).toBeInTheDocument()
     expect(within(systemRow).getAllByText('측정값 없음')).toHaveLength(2)
     expect(within(systemRow).queryByText('연결 끊김')).not.toBeInTheDocument()
+  })
+
+  test('노드가 한 대도 없으면 오프라인 안내가 아니라 노드 없음으로 알린다', async () => {
+    // '정상 0 / 끊김 0'은 멀쩡해 보이지만 하이퍼바이저가 아예 없는 상태다 —
+    // 오프라인으로 지정해 둔 노드만 조용한 경우와 뭉뚱그리면 장애가 묻힌다.
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    systemSummaryFixture.nodesLive = []
+    renderApp('/admin')
+
+    const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
+    const connection = within(systemRow).getByText('Proxmox 연결').parentElement!
+    expect(within(connection).getByText('노드 없음')).toHaveClass('text-danger-600')
+    expect(
+      within(connection).getByText('연결된 하이퍼바이저가 없습니다'),
+    ).toBeInTheDocument()
+    expect(within(systemRow).getAllByText('등록된 노드가 없습니다')).toHaveLength(2)
+    expect(
+      within(systemRow).queryByText('오프라인 노드만 있어 측정값이 없습니다'),
+    ).not.toBeInTheDocument()
   })
 })

@@ -1,8 +1,11 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { useLocation } from 'react-router'
 
 export interface ErrorBoundaryProps {
   /** 이 패널의 이름 — 안내 문구가 어느 칸이 비었는지 밝힌다. */
   label: string
+  /** 기본 안내 대신 그릴 대체 화면 (3D 히어로의 정적 폴백 등). */
+  fallback?: ReactNode
   children: ReactNode
 }
 
@@ -10,12 +13,7 @@ interface ErrorBoundaryState {
   failed: boolean
 }
 
-/**
- * 지연 로드하는 패널 하나를 감싸는 오류 경계 — 배포 직후 낡은 청크를 불러오다
- * 실패하면 그 패널만 안내로 바뀌고 나머지 화면은 그대로 남는다. (React는 오류
- * 경계를 클래스 컴포넌트로만 제공한다.)
- */
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundaryView extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { failed: false }
 
   static getDerivedStateFromError(): ErrorBoundaryState {
@@ -29,6 +27,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render(): ReactNode {
     if (!this.state.failed) return this.props.children
+    if (this.props.fallback != null) return this.props.fallback
     return (
       <div
         role="status"
@@ -39,4 +38,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       </div>
     )
   }
+}
+
+/**
+ * 지연 로드하는 패널 하나를 감싸는 오류 경계 — 배포 직후 낡은 청크를 불러오다
+ * 실패하면 그 패널만 안내로 바뀌고 나머지 화면은 그대로 남는다. (React는 오류
+ * 경계를 클래스 컴포넌트로만 제공한다.)
+ *
+ * 경로가 바뀌면 경계를 다시 세운다: 같은 라우트 요소를 쓰는 다음 화면(VM 56 →
+ * VM 57)까지 앞 화면의 실패를 물려받으면, 멀쩡한 패널이 새로고침 전까지 안내로
+ * 덮인다.
+ */
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  const { pathname } = useLocation()
+  return <ErrorBoundaryView key={pathname} {...props} />
 }

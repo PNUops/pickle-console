@@ -1,4 +1,5 @@
-import { Component, Suspense, lazy, type ReactNode } from 'react'
+import { Suspense, lazy } from 'react'
+import { ErrorBoundary } from '../../components/ui'
 import { HeroFallback } from './HeroFallback'
 
 // three + R3F(~160KB gzip)는 랜딩 히어로에서만 쓰므로 지연 로드한다.
@@ -15,19 +16,6 @@ function FallbackLayer() {
   )
 }
 
-/** 3D 청크 로드/렌더 실패 시(구형 브라우저, 네트워크 오류) 정적 폴백으로 강등. */
-class SceneErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-
-  static getDerivedStateFromError() {
-    return { failed: true }
-  }
-
-  render() {
-    return this.state.failed ? <FallbackLayer /> : this.props.children
-  }
-}
-
 /**
  * 히어로 전체를 덮는 3D 레이어. pointer-events를 끊어 위의 텍스트/CTA(z-10)와
  * 상호작용이 충돌하지 않는다(패럴랙스는 HeroScene이 window 좌표로 추적).
@@ -35,11 +23,12 @@ class SceneErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
 export function HeroVisual() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-      <SceneErrorBoundary>
+      {/* 3D 청크 로드/렌더 실패 시(구형 브라우저, 네트워크 오류) 정적 폴백으로 강등. */}
+      <ErrorBoundary label="히어로 3D" fallback={<FallbackLayer />}>
         <Suspense fallback={<FallbackLayer />}>
           <HeroScene />
         </Suspense>
-      </SceneErrorBoundary>
+      </ErrorBoundary>
     </div>
   )
 }

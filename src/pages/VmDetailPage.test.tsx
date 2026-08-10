@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { vmMetricsFixture } from '../test/msw/handlers/metrics'
 import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -537,6 +538,57 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.getByText(/마지막 갱신/)).toBeInTheDocument()
     // 값 읽는 창구는 차트뿐이다 — 접이식 표는 두지 않는다.
     expect(screen.queryByText('표로 보기')).not.toBeInTheDocument()
+    // 잰 값이 있는 구간에는 '값이 없다'는 안내를 붙이지 않는다.
+    expect(
+      screen.queryByText('이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다.'),
+    ).not.toBeInTheDocument()
+  })
+
+  test('캔버스를 못 쓰는 브라우저에서는 빈 판 대신 이유를 적는다', async () => {
+    // jsdom에는 canvas 2d 컨텍스트가 없다 — 그리지 못하는 브라우저와 같은 경로다.
+    renderVm(56, 'monitoring')
+
+    const chart = await screen.findByRole('img', { name: 'CPU' })
+    expect(chart).toHaveAccessibleDescription(
+      '이 브라우저에서는 차트를 그릴 수 없습니다.',
+    )
+    expect(
+      within(chart).getByText('이 브라우저에서는 차트를 그릴 수 없습니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('구간 내내 잰 값이 없으면 빈 차트만 남기지 않고 이유를 밝힌다', async () => {
+    // 한 시간 내내 꺼져 있던 VM — 점은 오지만 값이 전부 비어 있다.
+    server.use(
+      http.get('*/api/v1/vms/:vmId/metrics', ({ request }) => {
+        const timeframe = new URL(request.url).searchParams.get('timeframe') ?? 'HOUR'
+        const fixture = vmMetricsFixture(timeframe)
+        return HttpResponse.json(
+          {
+            ...fixture,
+            points: fixture.points.map((point) => ({
+              time: point.time,
+              cpu: null,
+              memBytes: null,
+              memHostBytes: null,
+              maxmemBytes: null,
+              netinBps: null,
+              netoutBps: null,
+              diskReadBps: null,
+              diskWriteBps: null,
+            })),
+          },
+          { status: 200 },
+        )
+      }),
+    )
+    renderVm(56, 'monitoring')
+
+    expect(
+      await screen.findByText('이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다.'),
+    ).toBeInTheDocument()
+    // 안내가 차트를 대신하지는 않는다 — 시간 축이 있는 빈 차트는 그대로 둔다.
+    expect(screen.getByRole('heading', { name: 'CPU' })).toBeInTheDocument()
   })
 
   test('개요에서 모니터링 탭으로 전환하고 조회 구간을 바꿀 수 있다', async () => {
@@ -570,14 +622,16 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.queryByRole('heading', { name: 'CPU' })).not.toBeInTheDocument()
   })
 
-  test('하이퍼바이저에 물어볼 수 없으면 오류가 아니라 차분한 안내로 끝난다', async () => {
+  test('하이퍼바이저에 물어볼 수 없으면 오류가 아니라 차분한 안내로 알린다', async () => {
     renderVm(59, 'monitoring')
 
     const notice = await screen.findByText(
-      '하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다.',
+      /하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/,
     )
     // 잴 수 없다는 사실은 장애 경보가 아니다 — 붉은 경보로 띄우지 않는다.
     expect(notice.closest('[role="alert"]')).toBeNull()
+    // 대신 멈춰 있지도 않다 — 계속 물어보는 중임을 문구가 밝힌다.
+    expect(notice).toHaveTextContent('다시 시도하는 중입니다')
   })
 
   test('삭제 중인 VM은 모니터링 탭을 아예 열지 않는다', async () => {

@@ -20,12 +20,12 @@ export interface ChartSeries {
 }
 
 export interface TimeSeriesChartProps {
-  /** 차트 제목 — 접근 가능한 이름이자 표 보기의 캡션. */
+  /** 차트 제목 — 그림 영역의 접근 가능한 이름이기도 하다. */
   title: string
   /** x축 값 (epoch 초, 오름차순). */
   times: number[]
   series: ChartSeries[]
-  /** y값 포맷터 — 축·툴팁·표가 공유한다. */
+  /** y값 포맷터 — 축과 툴팁이 공유한다. */
   format: (value: number) => string
   /** x축·툴팁의 시각 라벨 포맷터. */
   formatTime: (seconds: number) => string
@@ -40,8 +40,8 @@ export interface TimeSeriesChartProps {
 
 /**
  * canvas 2d 컨텍스트를 쓸 수 있는 환경인지 (jsdom·구형 브라우저에서는 없다).
- * 한 번만 조사하고 결과를 재사용한다 — 없으면 차트는 그리지 않고 제목·범례·표
- * 보기만 남는다(값은 표로 여전히 읽을 수 있다).
+ * 한 번만 조사하고 결과를 재사용한다 — 없으면 빈 판을 남기지 않고 그릴 수 없다는
+ * 사실을 적는다.
  */
 let canvasSupport: boolean | null = null
 function supportsCanvas(): boolean {
@@ -97,6 +97,8 @@ export function TimeSeriesChart({
 }: TimeSeriesChartProps) {
   // 그림 영역의 접근 가능한 이름은 제목이 맡는다 — 차트 안에 읽을 텍스트가 없다.
   const titleId = useId()
+  const noticeId = useId()
+  const canDraw = supportsCanvas()
   const hostRef = useRef<HTMLDivElement>(null)
   const plotRef = useRef<uPlot | null>(null)
   const [hover, setHover] = useState<{ index: number; left: number; top: number } | null>(
@@ -268,9 +270,20 @@ export function TimeSeriesChart({
         ref={hostRef}
         role="img"
         aria-labelledby={titleId}
+        aria-describedby={canDraw ? undefined : noticeId}
         className="relative w-full"
         style={{ height }}
       >
+        {/* 그릴 수 없는 환경에서는 빈 판 대신 그 사실을 남긴다 — 값을 대신 읽을
+            표는 두지 않기로 했으므로, 최소한 이유는 화면에 있어야 한다. */}
+        {!canDraw && (
+          <p
+            id={noticeId}
+            className="flex h-full items-center justify-center px-2 text-center text-sm text-neutral-500"
+          >
+            이 브라우저에서는 차트를 그릴 수 없습니다.
+          </p>
+        )}
         {hovered && (
           <div
             aria-hidden="true"
@@ -297,7 +310,6 @@ export function TimeSeriesChart({
       </div>
 
       {caption && <figcaption className="text-xs text-neutral-500">{caption}</figcaption>}
-
     </figure>
   )
 }

@@ -275,6 +275,8 @@ function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
         checkedAt: null,
       },
     ],
+    // 두 대 중 pve1만 읽혔으니 합계는 플랫폼 전체가 아니다 — 화면이 그렇게 말해야 한다.
+    liveCoverage: { nodeCount: 2, memoryMeasuredNodeCount: 1, storageMeasuredNodeCount: 1 },
     vmCountsByStatus: { RUNNING: 18, STOPPED: 7, CREATING: 1, ERROR: 1, NEEDS_ADMIN: 1 },
     tasks: { runningCount: 1, retryingCount: 0, needsAdminCount: 1, failed24hCount: 1 },
     notificationFailureCount: 1,
