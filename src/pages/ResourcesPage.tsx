@@ -76,7 +76,9 @@ export function ResourcesPage() {
                   return (
                     <TR key={`${resource.type}-${resource.id}`}>
                       <TD>
-                        {resource.accessLimited ? (
+                        {/* 접근 권한이 없거나, 이 빌드가 모르는 종류라 상세 화면이
+                            없으면 링크 없이 이름만 보여 준다. */}
+                        {resource.accessLimited || !entry.detailPath ? (
                           <span className="font-medium text-neutral-500">
                             {resource.displayName || resource.name}
                           </span>
