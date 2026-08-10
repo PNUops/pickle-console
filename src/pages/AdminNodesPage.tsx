@@ -4,13 +4,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminNodes, updateAdminNode, type NodeSummary } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { isSysAdminOnly } from '../auth/permissions'
+import { isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { IpAllocationsSection } from '../components/IpAllocationsSection'
 import {
   Alert,
   Badge,
   Button,
   Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  ErrorBoundary,
   Modal,
   PermissionNotice,
   Select,
@@ -56,7 +60,10 @@ const NODE_STATUS_VARIANTS: Record<NodeSummary['status'], BadgeVariant> = {
 
 export function AdminNodesPage() {
   const { user } = useAuth()
+  // 상태 전환은 SYS_ADMIN 전용이지만, 용량 추이 조회·기관 좁혀 보기는 SYS 티어
+  // 전체가 가진 권한이다 — 쓰기 게이트를 읽기 게이트로 돌려쓰지 않는다.
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
+  const canFilterTrendByOrg = !!user && isSysTier(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'nodes'
@@ -86,15 +93,17 @@ export function AdminNodesPage() {
       </TabPanel>
 
       <TabPanel id="trend" active={activeTab === 'trend'}>
-        <Suspense
-          fallback={
-            <div className="flex justify-center py-12">
-              <Spinner label="용량 추이 불러오는 중" />
-            </div>
-          }
-        >
-          <CapacityTrendSection isSysAdmin={isSysAdmin} />
-        </Suspense>
+        <ErrorBoundary label="용량 추이">
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <Spinner label="용량 추이 불러오는 중" />
+              </div>
+            }
+          >
+            <CapacityTrendSection canFilterByOrg={canFilterTrendByOrg} />
+          </Suspense>
+        </ErrorBoundary>
       </TabPanel>
 
       <TabPanel id="nodes" active={activeTab === 'nodes'} className="space-y-6">
@@ -182,20 +191,35 @@ export function AdminNodesPage() {
         </Card>
       )}
 
-      {/* 노드별 실측 사용량 — 노드가 하나뿐인 지금은 항상 펼쳐 둔다. */}
+      {/* 노드별 실측 사용량 — 노드가 하나뿐인 지금은 항상 펼쳐 둔다. 오프라인으로
+          지정된 노드는 물어볼 대상이 아니므로 폴링을 걸지 않고 사실만 적는다. */}
       {nodes.isSuccess &&
-        nodes.data.map((node) => (
-          <Suspense
-            key={node.id}
-            fallback={
-              <div className="flex justify-center py-8">
-                <Spinner label="노드 사용량 불러오는 중" />
-              </div>
-            }
-          >
-            <NodeMetricsSection nodeId={node.id} nodeName={node.name} />
-          </Suspense>
-        ))}
+        nodes.data.map((node) =>
+          node.status === 'OFFLINE' ? (
+            <Card key={node.id}>
+              <CardHeader>
+                <CardTitle>{node.name} 사용량</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-neutral-500">
+                  오프라인으로 지정된 노드여서 사용량을 수집하지 않습니다.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ErrorBoundary key={node.id} label={`${node.name} 사용량`}>
+              <Suspense
+                fallback={
+                  <div className="flex justify-center py-8">
+                    <Spinner label="노드 사용량 불러오는 중" />
+                  </div>
+                }
+              >
+                <NodeMetricsSection nodeId={node.id} nodeName={node.name} />
+              </Suspense>
+            </ErrorBoundary>
+          ),
+        )}
 
       {statusTarget && (
         <NodeStatusModal

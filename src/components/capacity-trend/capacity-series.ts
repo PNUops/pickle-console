@@ -30,29 +30,58 @@ export function formatVmCount(value: number): string {
 }
 
 /**
- * 첫날과 마지막 날을 견줘 평문 한두 문장으로 요약한다 — 기관 대시보드의 독자는
- * 지표를 읽는 사람이 아니라 승인·정리를 판단하는 사람이라, 숫자 나열 대신 문장을
- * 먼저 준다.
+ * 구간 안에서 값이 실제로 어떻게 움직였는지 — 양 끝만 견주면 올랐다 되돌아온
+ * 구간이 "변화가 없습니다"로 뒤집혀 읽힌다. 승인을 판단하는 사람이 가장 먼저
+ * 읽는 문장이라 그 뒤집힘이 그대로 판단이 된다.
+ */
+function describeMovement(
+  lead: string,
+  values: number[],
+  format: (value: number) => string,
+): string | null {
+  const first = values[0]
+  const last = values[values.length - 1]
+  const peak = Math.max(...values)
+  const trough = Math.min(...values)
+
+  if (last !== first) {
+    const direction = last > first ? '늘었습니다' : '줄었습니다'
+    const extremes: string[] = []
+    if (trough < Math.min(first, last)) extremes.push(`최소 ${format(trough)}`)
+    if (peak > Math.max(first, last)) extremes.push(`최대 ${format(peak)}`)
+    const tail = extremes.length > 0 ? `(기간 중 ${extremes.join(', ')})` : ''
+    return `${lead} ${format(first)}에서 ${format(last)}로 ${direction}${tail}.`
+  }
+  if (peak !== trough) {
+    return `${lead} ${format(trough)}에서 ${format(peak)} 사이를 오간 뒤 ${format(last)}로 돌아왔습니다.`
+  }
+  return null
+}
+
+/** vCPU 문장에 쓰는 값 표기 — 축 라벨(formatVcpu)과 달리 문장에서는 '개'로 센다. */
+function vcpuCount(value: number): string {
+  return `${value}개`
+}
+
+/**
+ * 구간 전체를 견줘 평문 한두 문장으로 요약한다 — 기관 대시보드의 독자는 지표를
+ * 읽는 사람이 아니라 승인·정리를 판단하는 사람이라, 숫자 나열 대신 문장을 먼저 준다.
  */
 export function allocationSummary(points: CapacityTrendPoint[]): string {
   if (points.length === 0) return `최근 ${TREND_DAYS}일 동안 기록된 할당 변화가 없습니다.`
-  const first = points[0]
-  const last = points[points.length - 1]
   const sentences: string[] = []
-  if (last.vcpu !== first.vcpu) {
-    const direction = last.vcpu > first.vcpu ? '늘었습니다' : '줄었습니다'
-    sentences.push(
-      `최근 ${TREND_DAYS}일 동안 할당 vCPU가 ${first.vcpu}개에서 ${last.vcpu}개로 ${direction}.`,
-    )
-  }
-  if (last.memoryMb !== first.memoryMb) {
-    const direction = last.memoryMb > first.memoryMb ? '늘었습니다' : '줄었습니다'
-    const lead =
-      sentences.length === 0 ? `최근 ${TREND_DAYS}일 동안 할당 메모리가` : '메모리는'
-    sentences.push(
-      `${lead} ${formatMemory(first.memoryMb)}에서 ${formatMemory(last.memoryMb)}로 ${direction}.`,
-    )
-  }
+  const vcpu = describeMovement(
+    `최근 ${TREND_DAYS}일 동안 할당 vCPU가`,
+    points.map((point) => point.vcpu),
+    vcpuCount,
+  )
+  if (vcpu != null) sentences.push(vcpu)
+  const memory = describeMovement(
+    sentences.length === 0 ? `최근 ${TREND_DAYS}일 동안 할당 메모리가` : '메모리는',
+    points.map((point) => point.memoryMb),
+    formatMemory,
+  )
+  if (memory != null) sentences.push(memory)
   if (sentences.length === 0) return `최근 ${TREND_DAYS}일 동안 할당량 변화가 없습니다.`
   return sentences.join(' ')
 }

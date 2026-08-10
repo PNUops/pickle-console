@@ -22,10 +22,15 @@ const DAY_OPTIONS = [30, 90, 180, 365]
  * (vCPU·메모리·디스크는 단위가 달라 한 축에 겹칠 수 없다.)
  * uPlot을 끌어오므로 노드 화면에서 지연 로드한다(기본 내보내기).
  */
-export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boolean }) {
+export default function CapacityTrendSection({
+  /** 기관을 좁혀 볼 수 있는가 — 기관 경계가 없는 SYS 티어에게만 열린다. */
+  canFilterByOrg,
+}: {
+  canFilterByOrg: boolean
+}) {
   const [days, setDays] = useState(90)
   const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: canFilterByOrg })
   const trend = useQuery({
     queryKey: ['admin', 'capacity-trend', { days, orgId: orgId ?? null }],
     queryFn: () => fetchCapacityTrend({ days, orgId }),
@@ -62,7 +67,7 @@ export default function CapacityTrendSection({ isSysAdmin }: { isSysAdmin: boole
               )
             })}
           </div>
-          {isSysAdmin && (
+          {canFilterByOrg && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               기관
               <Select

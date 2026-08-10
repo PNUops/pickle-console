@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
+import { isolatedIndexes, splitsFor, type SplitBase } from './chart-scales'
 import {
   CHART_AXIS_TEXT,
   CHART_GRID,
@@ -16,37 +17,6 @@ export interface ChartSeries {
   color?: string
   /** 최대치·용량 기준선 — 중립색 파선으로 그린다. */
   reference?: boolean
-}
-
-/**
- * y축 눈금을 읽기 좋은 수로 끊는 방식.
- *  - binary: 1024 단위(512 MiB·1 GiB…) — 바이트 값에 쓴다. 기본 선형 눈금은
- *    '1.86 GiB' 같은 값을 만든다.
- *  - integer: 정수 — vCPU·대수처럼 소수가 의미 없는 값에 쓴다.
- */
-export type SplitBase = 'binary' | 'integer'
-
-/** 1·2·5 계단에서 x 이상인 가장 작은 값. */
-function niceStep(value: number): number {
-  const power = 10 ** Math.floor(Math.log10(value))
-  const scaled = value / power
-  return (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * power
-}
-
-/** 대략 네 칸으로 나뉘는 눈금 배열 — 축이 붐비지 않는 정도. */
-function splitsFor(base: SplitBase, min: number, max: number): number[] {
-  const span = max - min
-  if (span <= 0) return [min]
-  const unit =
-    base === 'binary'
-      ? 1024 ** Math.min(4, Math.max(0, Math.floor(Math.log(max) / Math.log(1024))))
-      : 1
-  const step = Math.max(niceStep(span / 4 / unit) * unit, base === 'integer' ? 1 : 0)
-  const ticks: number[] = []
-  for (let tick = Math.ceil(min / step) * step; tick <= max + step / 1000; tick += step) {
-    ticks.push(tick)
-  }
-  return ticks
 }
 
 export interface TimeSeriesChartProps {
@@ -213,7 +183,13 @@ export function TimeSeriesChart({
             width: reference ? 1.5 : 2,
             dash: reference ? [4, 4] : undefined,
             spanGaps: false,
-            points: { show: false },
+            // 선으로는 그려지지 않는 외톨이 표본만 점으로 남긴다 — 빈 구간은 그대로 빈 구간이다.
+            points: {
+              show: true,
+              size: 5,
+              filter: (plot, seriesIndex) =>
+                isolatedIndexes(plot.data[seriesIndex] as (number | null)[]),
+            },
           } satisfies uPlot.Series
         }),
       ],
