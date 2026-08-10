@@ -36,7 +36,7 @@ import { SSH_GATEWAY_HOST } from '../lib/hosts'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
-import { SUBDOMAIN_RE } from '../lib/validation'
+import { SUBDOMAIN_RE, isUuid } from '../lib/validation'
 
 const STEPS = ['종류', '워크스페이스·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
 
@@ -60,10 +60,10 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 interface WizardState {
-  workspaceId: number | null
-  orgId: number | null
-  imageId: number | null
-  flavorId: number | null
+  workspaceId: string | null
+  orgId: string | null
+  imageId: string | null
+  flavorId: string | null
   reqVcpu: number
   reqMemoryMb: number
   reqDiskGb: number
@@ -100,11 +100,45 @@ type FieldErrors = Partial<Record<string, string>>
 /** 새로고침/뒤로가기에도 작성 중인 신청서를 유지하기 위한 세션 저장 키. */
 const DRAFT_KEY = VM_REQUEST_DRAFT_KEY
 
+/** 초안에서 식별자를 담는 필드 — 값이 있다면 UUID 문자열이어야 한다. */
+const DRAFT_ID_FIELDS = ['workspaceId', 'orgId', 'imageId', 'flavorId'] as const
+/** 초안에서 수치를 담는 필드. */
+const DRAFT_NUMBER_FIELDS = ['reqVcpu', 'reqMemoryMb', 'reqDiskGb'] as const
+
+/**
+ * 저장된 초안이 지금의 WizardState와 같은 모양인지.
+ *
+ * 식별자가 숫자에서 UUID로 바뀌었으므로, 그 전에 저장된 초안은 신청 본문에
+ * 숫자 id를 실어 보낸다 — 타입은 통과하고 서버에서야 틀어지는 종류의 값이다.
+ * 필드 하나라도 모양이 다르면 초안 전체를 버린다: 일부만 살리면 사용자가
+ * 고르지 않은 값이 남아 더 헷갈린다.
+ */
+function isCompatibleDraft(value: unknown): value is Partial<WizardState> {
+  if (typeof value !== 'object' || value == null) return false
+  const draft = value as Record<string, unknown>
+  for (const field of DRAFT_ID_FIELDS) {
+    const id = draft[field]
+    if (id === undefined || id === null) continue
+    if (!isUuid(typeof id === 'string' ? id : null)) return false
+  }
+  for (const field of DRAFT_NUMBER_FIELDS) {
+    const n = draft[field]
+    if (n !== undefined && typeof n !== 'number') return false
+  }
+  return true
+}
+
 function loadDraft(): WizardState {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY)
     if (!raw) return INITIAL_STATE
-    return { ...INITIAL_STATE, ...(JSON.parse(raw) as Partial<WizardState>) }
+    const parsed: unknown = JSON.parse(raw)
+    if (!isCompatibleDraft(parsed)) {
+      // 남겨 두면 매 진입마다 같은 판정을 반복한다.
+      sessionStorage.removeItem(DRAFT_KEY)
+      return INITIAL_STATE
+    }
+    return { ...INITIAL_STATE, ...parsed }
   } catch {
     return INITIAL_STATE
   }
@@ -370,7 +404,7 @@ export function NewRequestPage() {
                 <Select
                   value={state.workspaceId ?? ''}
                   onChange={(event) =>
-                    update({ workspaceId: event.target.value ? Number(event.target.value) : null })
+                    update({ workspaceId: event.target.value || null })
                   }
                 >
                   <option value="">워크스페이스 선택</option>
@@ -385,7 +419,7 @@ export function NewRequestPage() {
                 <Select
                   value={state.orgId ?? ''}
                   onChange={(event) =>
-                    update({ orgId: event.target.value ? Number(event.target.value) : null })
+                    update({ orgId: event.target.value || null })
                   }
                 >
                   <option value="">기관 선택</option>
@@ -640,12 +674,14 @@ export function NewRequestPage() {
                   )}
                 </Alert>
               )}
+              {/* 고른 항목이 목록에서 사라진 드문 경우 이름 자리는 '—'로 둔다 —
+                  식별자를 그대로 보여 봐야 UUID라 알려주는 것이 없다. */}
               <SummaryTable
                 state={state}
-                workspaceName={selectedWorkspace?.name ?? String(state.workspaceId)}
-                orgName={selectedOrg?.name ?? String(state.orgId)}
-                imageName={selectedImage?.displayName ?? String(state.imageId)}
-                flavorName={selectedFlavor?.displayName ?? String(state.flavorId)}
+                workspaceName={selectedWorkspace?.name ?? '—'}
+                orgName={selectedOrg?.name ?? '—'}
+                imageName={selectedImage?.displayName ?? '—'}
+                flavorName={selectedFlavor?.displayName ?? '—'}
               />
               <Alert variant="warning" title="백업 책임 안내">
                 플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
