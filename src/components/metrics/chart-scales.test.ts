@@ -27,6 +27,14 @@ describe('splitsFor — 실제 화면에 뜨는 구간의 눈금', () => {
     ])
   })
 
+  test('값이 내내 0인 축은 같은 라벨을 여러 번 찍지 않는다', () => {
+    // 할당이 아직 0인 기관의 추이 카드가 '1 B / 1 B / 1 B / 0 B / 0 B / 0 B'로
+    // 보였다: 눈금 폭이 1바이트 밑으로 쪼개지고 라벨은 정수로 포맷되기 때문이다.
+    const [min, max] = scaleRange(0)
+    const labels = splitsFor('binary', min, max).map(formatBytes)
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+
   test('네트워크(~130 kB/s) 축은 1024 배수 눈금을 유지한다', () => {
     const [min, max] = scaleRange(130_000)
     const splits = splitsFor('binary', min, max)
