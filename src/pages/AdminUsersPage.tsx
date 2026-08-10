@@ -82,11 +82,11 @@ export function AdminUsersPage() {
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)
   const [role, setRole] = useState<UserRole | undefined>(undefined)
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminUserSort | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const debouncedQ = useDebouncedValue(qInput).trim()
   const q = debouncedQ.length > 0 ? debouncedQ : undefined
@@ -193,7 +193,7 @@ export function AdminUsersPage() {
                 className="w-56"
                 value={orgId ?? ''}
                 onChange={(event) => {
-                  setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                  setOrgId(event.target.value || undefined)
                   setPage(0)
                 }}
               >
@@ -296,7 +296,7 @@ export function AdminUsersPage() {
 
 /* ─── 상세 드로어 본문 (행 선택 시) ─── */
 
-function UserDetailBody({ userId, canManage }: { userId: number; canManage: boolean }) {
+function UserDetailBody({ userId, canManage }: { userId: string; canManage: boolean }) {
   const detail = useQuery({
     queryKey: ['admin', 'users', 'detail', userId],
     queryFn: () => fetchAdminUser(userId),
@@ -396,7 +396,7 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
 
   const update = useMutation({
     mutationFn: () =>
-      updateUserRole(user.id, { role, orgId: isOrgTier(role) ? Number(orgId) : null }),
+      updateUserRole(user.id, { role, orgId: isOrgTier(role) ? orgId : null }),
     onSuccess: async (updated) => {
       setError(null)
       setFieldErrors({})
@@ -499,7 +499,7 @@ function UserStatusActions({
   mfaEnabled,
   canManage,
 }: {
-  userId: number
+  userId: string
   status: UserStatus
   mfaEnabled: boolean
   canManage: boolean

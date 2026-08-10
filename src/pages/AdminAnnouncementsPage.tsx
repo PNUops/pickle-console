@@ -42,8 +42,8 @@ export function AdminAnnouncementsPage() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [target, setTarget] = useState<TargetKind>(isSysAdmin ? 'ALL' : 'ORG_ALL')
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const [workspaceId, setWorkspaceId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
+  const [workspaceId, setWorkspaceId] = useState<string | undefined>(undefined)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -200,7 +200,7 @@ export function AdminAnnouncementsPage() {
                   className="w-72"
                   value={orgId ?? ''}
                   onChange={(event) => {
-                    setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                    setOrgId(event.target.value || undefined)
                   }}
                 >
                   <option value="">기관 선택</option>
@@ -221,7 +221,7 @@ export function AdminAnnouncementsPage() {
                       className="w-64"
                       value={orgId ?? ''}
                       onChange={(event) => {
-                        setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                        setOrgId(event.target.value || undefined)
                         setWorkspaceId(undefined)
                       }}
                     >
@@ -240,7 +240,7 @@ export function AdminAnnouncementsPage() {
                     value={workspaceId ?? ''}
                     disabled={!workspacesEnabled || workspaces.isPending}
                     onChange={(event) => {
-                      setWorkspaceId(event.target.value ? Number(event.target.value) : undefined)
+                      setWorkspaceId(event.target.value || undefined)
                     }}
                   >
                     <option value="">워크스페이스 선택</option>

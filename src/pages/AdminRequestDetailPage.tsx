@@ -36,7 +36,7 @@ import {
 } from '../components/ui'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { SUBDOMAIN_RE } from '../lib/validation'
+import { INVALID_ID_MESSAGE, SUBDOMAIN_RE, isUuid } from '../lib/validation'
 import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
 
 interface Notice {
@@ -46,7 +46,8 @@ interface Notice {
 
 export function AdminRequestDetailPage() {
   const params = useParams()
-  const requestId = Number(params.requestId)
+  const requestId = params.requestId ?? ''
+  const idValid = isUuid(requestId)
   const [notice, setNotice] = useState<Notice | null>(null)
   const { user } = useAuth()
   // 승인·반려는 org 계층 + SYS_ADMIN만 — SYS_MANAGER는 조회만(§3.9 †15).
@@ -55,10 +56,15 @@ export function AdminRequestDetailPage() {
   const request = useQuery({
     queryKey: ['admin', 'requests', requestId],
     queryFn: () => fetchAdminRequest(requestId),
+    // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
+    enabled: idValid,
   })
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
 
+  if (!idValid) {
+    return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+  }
   if (request.isPending) {
     return (
       <div className="flex justify-center py-12">
@@ -71,15 +77,15 @@ export function AdminRequestDetailPage() {
   }
 
   const data = request.data
-  const imageName = (imageId: number | null | undefined) => {
+  // 목록에 없는 id는 지워진 이미지다. 식별자가 UUID가 된 뒤로는 화면에 그대로
+  // 붙여도 읽는 사람에게 알려주는 것이 없어 종류만 밝힌다.
+  const imageName = (imageId: string | null | undefined) => {
     if (imageId == null) return '—'
-    return (
-      osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
-    )
+    return osImages.data?.find((t) => t.id === imageId)?.displayName ?? '알 수 없는 OS 이미지'
   }
-  const flavorName = (flavorId: number | null | undefined) => {
+  const flavorName = (flavorId: string | null | undefined) => {
     if (flavorId == null) return '—'
-    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? `프리셋 #${flavorId}`
+    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? '알 수 없는 프리셋'
   }
 
   return (
@@ -234,7 +240,7 @@ function DecisionResultCard({
           )}
           {approved && (
             <Field label="배치 노드">
-              {vmGranted?.nodeId == null ? '자동 배치' : `노드 #${vmGranted?.nodeId}`}
+              {vmGranted?.nodeId == null ? '자동 배치' : '노드 지정 배치'}
             </Field>
           )}
         </dl>
@@ -348,9 +354,9 @@ function DecisionSection({
       grantedVcpu: Number(vcpu),
       grantedMemoryMb: Number(memoryMb),
       grantedDiskGb: Number(diskGb),
-      grantedImageId: Number(imageId),
+      grantedImageId: imageId,
       grantedSlug: grantedSlug.trim() || null,
-      nodeId: nodeId ? Number(nodeId) : null,
+      nodeId: nodeId.trim() || null,
     },
   })
 
@@ -358,7 +364,7 @@ function DecisionSection({
     event.preventDefault()
     onNotice(null)
     const errors: Record<string, string> = {}
-    const image = osImages.find((t) => t.id === Number(imageId))
+    const image = osImages.find((t) => t.id === imageId)
     if (!Number.isInteger(Number(vcpu)) || Number(vcpu) < 1)
       errors.grantedVcpu = 'vCPU는 1 이상의 정수로 입력해 주세요.'
     if (!Number.isInteger(Number(memoryMb)) || Number(memoryMb) < 256)
@@ -367,8 +373,8 @@ function DecisionSection({
       errors.grantedDiskGb = '디스크는 1 GiB 이상으로 입력해 주세요.'
     else if (image && Number(diskGb) < image.minDiskGb)
       errors.grantedDiskGb = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
-    if (nodeId && (!Number.isInteger(Number(nodeId)) || Number(nodeId) < 1))
-      errors.nodeId = '노드 ID는 1 이상의 정수로 입력하거나 비워 두세요.'
+    if (nodeId.trim() && !isUuid(nodeId.trim()))
+      errors.nodeId = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
     if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
       errors.grantedSlug =
         '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
@@ -503,8 +509,6 @@ function DecisionSection({
               description="비워 두면 자동 배치됩니다."
             >
               <Input
-                type="number"
-                min={1}
                 value={nodeId}
                 onChange={(event) => setNodeId(event.target.value)}
                 placeholder="자동 배치"
@@ -567,9 +571,9 @@ function DecisionSection({
             <p>아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.</p>
             <p className="font-medium text-neutral-800">
               {formatSpec(Number(vcpu), Number(memoryMb), Number(diskGb))} ·{' '}
-              {osImages.find((t) => t.id === Number(imageId))?.displayName}
+              {osImages.find((t) => t.id === imageId)?.displayName}
             </p>
-            <p>{nodeId ? `노드 #${nodeId}에 배치` : '자동 배치'}</p>
+            <p>{nodeId.trim() ? `지정한 노드에 배치` : '자동 배치'}</p>
           </div>
         </Modal>
 
@@ -603,7 +607,7 @@ function DecisionSection({
 
 /* ─── 승인 판단 참고 패널 ─── */
 
-function ApprovalContextPanel({ requestId }: { requestId: number }) {
+function ApprovalContextPanel({ requestId }: { requestId: string }) {
   const context = useQuery({
     queryKey: ['admin', 'requests', requestId, 'context'],
     queryFn: () => fetchApprovalContext(requestId),

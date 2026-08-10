@@ -43,7 +43,7 @@ export function AdminRequestsPage() {
   const navigate = useNavigate()
   const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<RequestStatus | undefined>('SUBMITTED')
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   const requests = useQuery({
@@ -60,7 +60,7 @@ export function AdminRequestsPage() {
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
-  const imageName = (imageId: number | undefined) =>
+  const imageName = (imageId: string | undefined) =>
     osImages.data?.find((t) => t.id === imageId)?.displayName ?? `OS 이미지 #${imageId}`
 
   return (
@@ -106,7 +106,7 @@ export function AdminRequestsPage() {
               className="w-56"
               value={orgId ?? ''}
               onChange={(event) => {
-                setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                setOrgId(event.target.value || undefined)
                 setPage(0)
               }}
             >

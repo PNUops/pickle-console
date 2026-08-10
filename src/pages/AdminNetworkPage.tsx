@@ -335,7 +335,7 @@ const MAPPING_STATUS_TABS: { label: string; status: PortMappingStatus | undefine
 function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
   const [status, setStatus] = useState<PortMappingStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const mappings = useQuery({
@@ -825,7 +825,7 @@ const CAMPUS_STATUS_TABS: { label: string; status: CampusIpRequestStatus | undef
 function CampusTab({ isSysAdmin }: { isSysAdmin: boolean }) {
   const [status, setStatus] = useState<CampusIpRequestStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const requests = useQuery({
     queryKey: ['admin', 'campus-ip-requests', { status: status ?? null, page }],
