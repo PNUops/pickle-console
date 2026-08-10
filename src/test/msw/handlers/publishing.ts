@@ -3,6 +3,7 @@ import type { components } from '../../../api/schema'
 import { orgs, requestOptions } from './reference'
 import { problemResponse } from './auth'
 import { recordVmEvent, vmStore } from './vms'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type VmDetail = Schemas['VmDetailResponse']
@@ -56,8 +57,8 @@ function initialReservedDomains(): DomainDetail[] {
   const reservedUntil = new Date(Date.now() + 6 * 86_400_000).toISOString()
   return [
     {
-      id: 22,
-      vmId: 63,
+      id: uuid(22),
+      vmId: uuid(63),
       kind: 'PLATFORM',
       fqdn: 'shop-old.pusan.dev',
       rootDomain: 'pusan.dev',
@@ -79,8 +80,8 @@ export function resetPublishingFixtures() {
 }
 
 /* ─── org 이름 조회 (관리자 목록의 기관 맥락) ─── */
-function orgName(orgId: number): string {
-  return orgs.find((o) => o.id === orgId)?.name ?? `기관 #${orgId}`
+function orgName(orgId: string | null | undefined): string {
+  return orgs.find((o) => o.id === orgId)?.name ?? '알 수 없는 기관'
 }
 
 /* ─── 서빙 중 공개 순회 ─── */
@@ -88,7 +89,7 @@ function livePublications(): { vm: VmDetail; pub: PublicationView }[] {
   return vmStore.flatMap((vm) => vm.publications.map((pub) => ({ vm, pub })))
 }
 
-function findLive(domainId: number): { vm: VmDetail; pub: PublicationView } | null {
+function findLive(domainId: string): { vm: VmDetail; pub: PublicationView } | null {
   return livePublications().find(({ pub }) => pub.domain.id === domainId) ?? null
 }
 
@@ -184,7 +185,7 @@ function customDomainError(customDomain: string): string | null {
  * FQDN 점유 검사 — 서빙 중인 모든 도메인과, 다른 VM 몫으로 예약된 이름이
  * 점유다. 같은 VM의 예약 이름은 점유가 아니다 (다시 연결 대상).
  */
-function isFqdnTaken(fqdn: string, exceptVmId: number): boolean {
+function isFqdnTaken(fqdn: string, exceptVmId: string): boolean {
   return (
     livePublications().some(({ pub }) => pub.fqdn === fqdn) ||
     reservedDomains.some((d) => d.vmId !== exceptVmId && d.fqdn === fqdn)
@@ -192,7 +193,7 @@ function isFqdnTaken(fqdn: string, exceptVmId: number): boolean {
 }
 
 /** 같은 VM·같은 FQDN의 예약 행을 꺼낸다 (다시 연결이면 예약 목록에서 제거). */
-function takeReserved(vmId: number, fqdn: string): DomainDetail | null {
+function takeReserved(vmId: string, fqdn: string): DomainDetail | null {
   const idx = reservedDomains.findIndex((d) => d.vmId === vmId && d.fqdn === fqdn)
   return idx >= 0 ? reservedDomains.splice(idx, 1)[0] : null
 }
@@ -203,7 +204,7 @@ function buildCustomPublication(vm: VmDetail, fqdn: string, port: number): Publi
   return {
     fqdn,
     domain: {
-      id: nextDomainId++,
+      id: uuid(nextDomainId++),
       vmId: vm.id,
       kind: 'CUSTOM',
       fqdn,
@@ -244,7 +245,7 @@ function buildPlatformPublication(
   return {
     fqdn,
     domain: {
-      id: nextDomainId++,
+      id: uuid(nextDomainId++),
       vmId: vm.id,
       kind: 'PLATFORM',
       fqdn,
@@ -275,9 +276,9 @@ function toAdminRoute(vm: VmDetail, pub: PublicationView): Schemas['AdminRouteVi
     domainKind: pub.domain.kind,
     vmId: vm.id,
     vmName: vm.name,
-    workspaceId: vm.workspaceId,
+    workspaceId: vm.workspaceId!,
     workspaceName: vm.workspaceName,
-    orgId: vm.orgId,
+    orgId: vm.orgId!,
     orgName: orgName(vm.orgId),
     targetPort: route.targetPort,
     protocol: 'HTTP',
@@ -302,9 +303,9 @@ function toAdminDomain(vm: VmDetail, pub: PublicationView): Schemas['AdminDomain
     reservedUntil: null,
     createdAt: pub.domain.createdAt,
     vmName: vm.name,
-    workspaceId: vm.workspaceId,
+    workspaceId: vm.workspaceId!,
     workspaceName: vm.workspaceName,
-    orgId: vm.orgId,
+    orgId: vm.orgId!,
     orgName: orgName(vm.orgId),
     routeStatus: pub.route?.status ?? null,
     certificateStatus: pub.certificate?.status ?? null,
@@ -330,9 +331,9 @@ function reservedToAdminDomain(d: DomainDetail): Schemas['AdminDomainView'] {
     reservedUntil: d.reservedUntil ?? null,
     createdAt: d.createdAt,
     vmName: vm?.name ?? `vm-${d.vmId}`,
-    workspaceId: vm?.workspaceId ?? 0,
+    workspaceId: vm?.workspaceId ?? uuid(0),
     workspaceName: vm?.workspaceName ?? '—',
-    orgId: vm?.orgId ?? 0,
+    orgId: vm?.orgId ?? uuid(0),
     orgName: vm ? orgName(vm.orgId) : '—',
     routeStatus: null,
     certificateStatus: null,
@@ -346,9 +347,9 @@ function daysUntil(notAfter: string | null): number | null {
 }
 
 /** 관리자 인증서 목록: 공용 와일드카드 1개 + 커스텀 도메인별 LE 인증서. */
-function adminCertificates(orgId?: number): Schemas['AdminCertificateView'][] {
+function adminCertificates(orgId?: string): Schemas['AdminCertificateView'][] {
   const wildcard: Schemas['AdminCertificateView'] = {
-    id: 1,
+    id: uuid(1),
     kind: 'ORIGIN_CA_WILDCARD',
     status: 'ACTIVE',
     scope: '*.pusan.dev',
@@ -363,7 +364,7 @@ function adminCertificates(orgId?: number): Schemas['AdminCertificateView'][] {
     .map(({ pub }) => {
       const cert = pub.certificate!
       return {
-        id: 1000 + pub.domain.id,
+        id: uuid(1000) + pub.domain.id,
         kind: 'LETS_ENCRYPT' as const,
         status: cert.status,
         scope: pub.fqdn,
@@ -389,7 +390,7 @@ function paginate<T>(items: T[], page: number, size: number): Schemas['PageRespo
 export const publishingHandlers: RequestHandler[] = [
   /* ─── 도메인 연결 (사용자) ─── */
   http.post('*/api/v1/vms/:vmId/domains', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const instance = `/api/v1/vms/${vm.id}/domains`
     if (!CONNECTABLE_STATUSES.includes(vm.status)) {
@@ -449,7 +450,7 @@ export const publishingHandlers: RequestHandler[] = [
     vm.publications = [...vm.publications, pub]
     recordVmEvent(vm.id, {
       type: 'PUBLISH',
-      actorId: 42,
+      actorId: uuid(42),
       detail: pub.fqdn,
       createdAt: '2026-07-12T09:00:00+09:00',
     })
@@ -468,15 +469,15 @@ export const publishingHandlers: RequestHandler[] = [
       ...reservedDomains.map(toDomainSummary),
       ...removedDomains.map(toDomainSummary),
     ]
-      .filter((d) => !vmId || d.vmId === Number(vmId))
+      .filter((d) => !vmId || d.vmId === vmId)
       // 실서버 규칙: REMOVED는 기본 숨김, status=REMOVED 명시 때만 노출.
       .filter((d) => (status ? d.status === status : d.status !== 'REMOVED'))
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
 
   http.get('*/api/v1/domains/:domainId', ({ params }) => {
-    const domainId = Number(params.domainId)
+    const domainId = String(params.domainId)
     const domain =
       findLive(domainId)?.pub.domain ??
       reservedDomains.find((d) => d.id === domainId) ??
@@ -488,7 +489,7 @@ export const publishingHandlers: RequestHandler[] = [
 
   /* ─── 포트 변경 (도메인 단위) ─── */
   http.patch('*/api/v1/domains/:domainId', async ({ params, request }) => {
-    const found = findLive(Number(params.domainId))
+    const found = findLive(String(params.domainId))
     if (!found || found.pub.route == null) return notFound()
     const instance = `/api/v1/domains/${params.domainId}`
     const body = (await request.json().catch(() => ({}))) as Schemas['UpdateDomainRequest']
@@ -512,7 +513,7 @@ export const publishingHandlers: RequestHandler[] = [
 
   /* ─── 해제 / 즉시 반납 ─── */
   http.delete('*/api/v1/domains/:domainId', ({ params }) => {
-    const domainId = Number(params.domainId)
+    const domainId = String(params.domainId)
     // 이미 예약 중인 행이면 즉시 반납 — 행은 REMOVED로 남고 이름이 바로 풀린다.
     const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
     if (reservedIdx >= 0) {
@@ -531,7 +532,7 @@ export const publishingHandlers: RequestHandler[] = [
     vm.updatedAt = '2026-07-12T09:20:00+09:00'
     recordVmEvent(vm.id, {
       type: 'UNPUBLISH',
-      actorId: 42,
+      actorId: uuid(42),
       detail: pub.fqdn,
       createdAt: '2026-07-12T09:20:00+09:00',
     })
@@ -560,7 +561,7 @@ export const publishingHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/domains/:domainId/verify', ({ params }) => {
-    const found = findLive(Number(params.domainId))
+    const found = findLive(String(params.domainId))
     if (!found) return notFound()
     const { pub } = found
     const domain = pub.domain
@@ -602,10 +603,10 @@ export const publishingHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
     const items = livePublications()
       .filter(({ pub }) => pub.route != null)
-      .filter(({ vm }) => !orgId || vm.orgId === Number(orgId))
+      .filter(({ vm }) => !orgId || vm.orgId === orgId)
       .map(({ vm, pub }) => toAdminRoute(vm, pub))
       .filter((r) => !status || r.status === status)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
 
@@ -621,11 +622,11 @@ export const publishingHandlers: RequestHandler[] = [
       ...reservedDomains.map(reservedToAdminDomain),
       ...removedDomains.map(reservedToAdminDomain),
     ]
-      .filter((d) => !orgId || d.orgId === Number(orgId))
+      .filter((d) => !orgId || d.orgId === orgId)
       .filter((d) => !kind || d.kind === kind)
       // 실서버 규칙: REMOVED는 기본 숨김, status=REMOVED 명시 때만 노출.
       .filter((d) => (status ? d.status === status : d.status !== 'REMOVED'))
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
 
@@ -636,7 +637,7 @@ export const publishingHandlers: RequestHandler[] = [
     const orgId = url.searchParams.get('orgId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const items = adminCertificates(orgId ? Number(orgId) : undefined)
+    const items = adminCertificates(orgId ? orgId : undefined)
       .filter((c) => !status || c.status === status)
       .filter(
         (c) =>
@@ -655,7 +656,7 @@ export const publishingHandlers: RequestHandler[] = [
 
   /* ─── 관리자 사후 개입 ─── */
   http.post('*/api/v1/admin/domains/:domainId/force-release', ({ params }) => {
-    const domainId = Number(params.domainId)
+    const domainId = String(params.domainId)
     // 예약 중 행의 강제 해제 = 즉시 반납 (행은 REMOVED로 남는다).
     const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
     if (reservedIdx >= 0) {
@@ -689,7 +690,7 @@ export const publishingHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/domains/:domainId/verify', ({ params }) => {
-    const found = findLive(Number(params.domainId))
+    const found = findLive(String(params.domainId))
     if (!found) {
       return problemResponse({
         type: 'about:blank',
@@ -716,7 +717,7 @@ export const publishingHandlers: RequestHandler[] = [
 
   http.post('*/api/v1/admin/routes/:routeId/apply', ({ params }) => {
     // msw 라우트 id = 도메인 id (toAdminRoute 참조)
-    const hit = findLive(Number(params.routeId))
+    const hit = findLive(String(params.routeId))
     if (!hit) {
       return problemResponse({
         type: 'about:blank',

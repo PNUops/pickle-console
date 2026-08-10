@@ -2,6 +2,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
 import { vmStore } from './vms'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type CampusIpRequestView = Schemas['CampusIpRequestView']
@@ -12,17 +13,17 @@ type CampusIpRequestStatus = Schemas['CampusIpRequestStatus']
 export const GRANTED_CAMPUS_IP = '10.20.30.40'
 
 interface CampusIpRecord {
-  id: number
-  vmId: number
+  id: string
+  vmId: string
   purpose: string
   ports: number[]
   status: CampusIpRequestStatus
   grantedAddress: string | null
   adminNote: string | null
-  requestedBy: number
+  requestedBy: string
   requesterEmail: string
   processedAt: string | null
-  processedBy: number | null
+  processedBy: string | null
   createdAt: string
 }
 
@@ -30,14 +31,14 @@ function initialRequests(): CampusIpRecord[] {
   return [
     {
       // shop-app(63, 워크스페이스 12) — 승인 대기 신청 (관리자 전환·사용자 상태 카드용).
-      id: 7,
-      vmId: 63,
+      id: uuid(7),
+      vmId: uuid(63),
       purpose: '학과 실습 서버 외부 연동 (교내망 고정 주소 필요)',
       ports: [80, 443],
       status: 'REQUESTED',
       grantedAddress: null,
       adminNote: null,
-      requestedBy: 7,
+      requestedBy: uuid(7),
       requesterEmail: 'admin.kim@pusan.ac.kr',
       processedAt: null,
       processedBy: null,
@@ -45,17 +46,17 @@ function initialRequests(): CampusIpRecord[] {
     },
     {
       // data-pipeline(61, 기관 2) — 부여 완료 신청 (회수 전이·주소 표시용).
-      id: 6,
-      vmId: 61,
+      id: uuid(6),
+      vmId: uuid(61),
       purpose: '연구실 수집 장비 연동용 교내 고정 주소',
       ports: [8443],
       status: 'GRANTED',
       grantedAddress: GRANTED_CAMPUS_IP,
       adminNote: '캠퍼스 네트워크 연결 완료',
-      requestedBy: 7,
+      requestedBy: uuid(7),
       requesterEmail: 'admin.kim@pusan.ac.kr',
       processedAt: '2026-07-10T15:00:00+09:00',
-      processedBy: 5,
+      processedBy: uuid(5),
       createdAt: '2026-07-01T09:00:00+09:00',
     },
   ]
@@ -156,17 +157,17 @@ function paginate<T>(items: T[], page: number, size: number) {
 export const campusIpHandlers: RequestHandler[] = [
   /* ─── 사용자 (이중 게이트는 서버 강제 — mock은 리소스 존재만 검사) ─── */
   http.get('*/api/v1/vms/:vmId/campus-ip-requests', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return vmNotFound()
     const items = campusIpStore
       .filter((r) => r.vmId === vm.id)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
       .map(toUserView)
     return HttpResponse.json(items, { status: 200 })
   }),
 
   http.post('*/api/v1/vms/:vmId/campus-ip-requests', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return vmNotFound()
     const instance = `/api/v1/vms/${vm.id}/campus-ip-requests`
     if (campusIpStore.some((r) => r.vmId === vm.id && ACTIVE_STATUSES.includes(r.status))) {
@@ -191,7 +192,7 @@ export const campusIpHandlers: RequestHandler[] = [
       return validationFailed(instance, 'ports', '포트는 최대 32개까지 신청할 수 있습니다.')
     }
     const record: CampusIpRecord = {
-      id: nextRequestId++,
+      id: uuid(nextRequestId++),
       vmId: vm.id,
       purpose: body.purpose.trim(),
       // 서버 정규화와 동일: 중복 제거 + 오름차순.
@@ -199,7 +200,7 @@ export const campusIpHandlers: RequestHandler[] = [
       status: 'REQUESTED',
       grantedAddress: null,
       adminNote: null,
-      requestedBy: 42,
+      requestedBy: uuid(42),
       requesterEmail: 'example@pusan.ac.kr',
       processedAt: null,
       processedBy: null,
@@ -211,7 +212,7 @@ export const campusIpHandlers: RequestHandler[] = [
 
   http.delete('*/api/v1/vms/:vmId/campus-ip-requests/:requestId', ({ params }) => {
     const index = campusIpStore.findIndex(
-      (r) => r.id === Number(params.requestId) && r.vmId === Number(params.vmId),
+      (r) => r.id === String(params.requestId) && r.vmId === String(params.vmId),
     )
     if (index < 0) return requestNotFound()
     const record = campusIpStore[index]
@@ -239,15 +240,15 @@ export const campusIpHandlers: RequestHandler[] = [
     const items = campusIpStore
       .map(toAdminView)
       .filter((r) => !status || r.status === status)
-      .filter((r) => !vmId || r.vmId === Number(vmId))
-      .sort((a, b) => b.id - a.id)
+      .filter((r) => !vmId || r.vmId === vmId)
+      .sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
   }),
 
   http.post(
     '*/api/v1/admin/campus-ip-requests/:requestId/status',
     async ({ params, request }) => {
-      const record = campusIpStore.find((r) => r.id === Number(params.requestId))
+      const record = campusIpStore.find((r) => r.id === String(params.requestId))
       if (!record) return requestNotFound()
       const instance = `/api/v1/admin/campus-ip-requests/${record.id}/status`
       const body = (await request.json().catch(() => ({}))) as
@@ -284,7 +285,7 @@ export const campusIpHandlers: RequestHandler[] = [
       record.status = body.status
       record.adminNote = body.adminNote?.trim() || record.adminNote
       record.processedAt = '2026-07-12T09:30:00+09:00'
-      record.processedBy = 5
+      record.processedBy = uuid(5)
       return HttpResponse.json(toAdminView(record), { status: 200 })
     },
   ),

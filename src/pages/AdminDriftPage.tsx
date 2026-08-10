@@ -39,7 +39,7 @@ const TABS: { label: string; status: DriftFindingStatus | undefined }[] = [
 function targetOf(finding: DriftFindingView): string {
   const parts = [
     // v0.9.0: prefer the VM name when known, falling back to its id.
-    finding.vmName ?? (finding.vmId != null ? `VM #${finding.vmId}` : null),
+    finding.vmName ?? (finding.vmId != null ? '이름 미상 VM' : null),
     finding.proxmoxVmid != null ? `vmid ${finding.proxmoxVmid}` : null,
     finding.nodeName ?? null,
   ].filter(Boolean)

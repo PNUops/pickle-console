@@ -5,6 +5,7 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { requestStore } from '../test/msw/handlers/requests'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderRequests(path = '/console/requests') {
   server.use(refreshSuccessHandler('access-user'))
@@ -38,9 +39,9 @@ describe('내 신청 목록', () => {
 
 describe('신청 상세', () => {
   test('반려된 신청은 검토 의견을 보여준다', async () => {
-    renderRequests('/console/requests/103')
+    renderRequests(`/console/requests/${uuid(103)}`)
 
-    await screen.findByRole('heading', { name: '신청 #103' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.getByText('반려')).toBeInTheDocument()
     expect(
       screen.getByText('용도가 불분명합니다. 구체적인 사용 계획을 적어 다시 신청해 주세요.'),
@@ -49,18 +50,18 @@ describe('신청 상세', () => {
   })
 
   test('승인된 신청은 부여 사양을 보여준다', async () => {
-    renderRequests('/console/requests/102')
+    renderRequests(`/console/requests/${uuid(102)}`)
 
-    await screen.findByRole('heading', { name: '신청 #102' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.getByText('검토 결과')).toBeInTheDocument()
     expect(screen.getByText('부여 사양')).toBeInTheDocument()
     expect(screen.getAllByText('2 vCPU · 2 GiB · 20 GiB').length).toBeGreaterThan(0)
   })
 
   test('OS와 사양 프리셋을 각각 보여준다', async () => {
-    renderRequests('/console/requests/101')
+    renderRequests(`/console/requests/${uuid(101)}`)
 
-    await screen.findByRole('heading', { name: '신청 #101' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     const os = screen.getByText('OS').closest('div')!
     expect(within(os).getByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
     const flavor = screen.getByText('사양 프리셋').closest('div')!
@@ -68,27 +69,27 @@ describe('신청 상세', () => {
   })
 
   test('공개 목록에 없는(은퇴한) 프리셋은 번호로 대체한다', async () => {
-    requestStore.find((r) => r.id === 101)!.vm!.flavorId = 9
-    renderRequests('/console/requests/101')
+    requestStore.find((r) => r.id === uuid(101))!.vm!.flavorId = uuid(9)
+    renderRequests(`/console/requests/${uuid(101)}`)
 
-    await screen.findByRole('heading', { name: '신청 #101' })
-    expect(await screen.findByText('프리셋 #9')).toBeInTheDocument()
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(await screen.findByText('알 수 없는 프리셋')).toBeInTheDocument()
   })
 
   test('프리셋 없이 접수된 신청은 사양 프리셋을 —로 보여준다', async () => {
-    requestStore.find((r) => r.id === 101)!.vm!.flavorId = null
-    renderRequests('/console/requests/101')
+    requestStore.find((r) => r.id === uuid(101))!.vm!.flavorId = null
+    renderRequests(`/console/requests/${uuid(101)}`)
 
-    await screen.findByRole('heading', { name: '신청 #101' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     const flavor = screen.getByText('사양 프리셋').closest('div')!
     expect(within(flavor).getByText('—')).toBeInTheDocument()
   })
 
   test('검토 중 신청은 확인 모달을 거쳐 취소할 수 있다', async () => {
     const user = userEvent.setup()
-    renderRequests('/console/requests/101')
+    renderRequests(`/console/requests/${uuid(101)}`)
 
-    await screen.findByRole('heading', { name: '신청 #101' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     await user.click(screen.getByRole('button', { name: '신청 취소' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 취소' })
@@ -101,11 +102,11 @@ describe('신청 상세', () => {
 
   test('이미 처리된 신청을 취소하면 409 안내를 보여주고 상태를 새로 고친다', async () => {
     const user = userEvent.setup()
-    renderRequests('/console/requests/101')
+    renderRequests(`/console/requests/${uuid(101)}`)
 
-    await screen.findByRole('heading', { name: '신청 #101' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     // 상세를 보는 사이 관리자가 승인한 상황을 재현한다.
-    const target = requestStore.find((r) => r.id === 101)!
+    const target = requestStore.find((r) => r.id === uuid(101))!
     target.status = 'APPROVED'
 
     await user.click(screen.getByRole('button', { name: '신청 취소' }))

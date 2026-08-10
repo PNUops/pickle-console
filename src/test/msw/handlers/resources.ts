@@ -23,7 +23,7 @@ export const resourceHandlers = [
     const rows: Schemas['ResourceSummaryResponse'][] = vmStore
       // 서버와 같은 조회 범위: 내가 구성원인 워크스페이스의 리소스만 보인다.
       .filter((vm) => isMyWorkspace(vm.workspaceId))
-      .filter((vm) => (workspaceId == null ? true : vm.workspaceId === Number(workspaceId)))
+      .filter((vm) => (workspaceId == null ? true : vm.workspaceId === workspaceId))
       .filter(() => type == null || type === 'VM')
       .map(toResourceSummary)
 

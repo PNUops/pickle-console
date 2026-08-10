@@ -3,6 +3,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgAdminUser, problemResponse, regularUser } from './auth'
 import { flavorStore, orgs, resetFlavorStore } from './reference'
+import { uuid } from '../ids'
 import {
   accessOf,
   invalidVmStateProblem,
@@ -20,25 +21,25 @@ type ApprovalContext = Schemas['ApprovalContextResponse']
 /* ─── fixtures: 관리자 큐용 신청 (org 1 + org 2) ─── */
 
 /** 승인 대기(SUBMITTED) 신청 팩토리 — 페이지네이션 테스트용 대량 시딩에 사용. */
-export function submittedAdminRequest(id: number): RequestDetail {
+export function submittedAdminRequest(n: number): RequestDetail {
   return {
-    id,
-    workspaceId: 12,
+    id: uuid(n),
+    workspaceId: uuid(12),
     workspaceName: '캡스톤 3조',
-    orgId: 1,
+    orgId: uuid(1),
     orgName: '정보컴퓨터공학부 실습지원센터',
     requesterId: regularUser.id,
     requesterName: regularUser.name,
     type: 'VM',
-    purpose: `추가 실습 서버 ${id}`,
+    purpose: `추가 실습 서버 ${n}`,
     courseOrProject: null,
     extraNote: null,
     reqStartDate: null,
     reqEndDate: null,
     displayName: null,
     vm: {
-      imageId: 1,
-      flavorId: 2,
+      imageId: uuid(1),
+      flavorId: uuid(2),
       reqVcpu: 2,
       reqMemoryMb: 2048,
       reqDiskGb: 20,
@@ -75,9 +76,9 @@ function initialAdminRequests(): RequestDetail[] {
     },
     {
       ...submittedAdminRequest(202),
-      requesterId: 57,
+      requesterId: uuid(57),
       requesterName: '김철수',
-      workspaceId: 13,
+      workspaceId: uuid(13),
       workspaceName: '알고리즘 스터디',
       purpose: '알고리즘 스터디 채점 서버',
       status: 'APPROVED',
@@ -111,16 +112,16 @@ function initialAdminRequests(): RequestDetail[] {
     },
     {
       ...submittedAdminRequest(204),
-      requesterId: 58,
+      requesterId: uuid(58),
       requesterName: '박영희',
-      workspaceId: 21,
+      workspaceId: uuid(21),
       workspaceName: 'AI 동아리',
-      orgId: 2,
+      orgId: uuid(2),
       orgName: '테스트 기관',
       purpose: 'AI 동아리 모델 학습 서버',
       vm: {
         ...submittedAdminRequest(0).vm!,
-        flavorId: 3,
+        flavorId: uuid(3),
         reqVcpu: 4,
         reqMemoryMb: 4096,
         reqDiskGb: 40,
@@ -132,9 +133,9 @@ function initialAdminRequests(): RequestDetail[] {
   ]
 }
 
-function initialContexts(): Record<number, ApprovalContext> {
+function initialContexts(): Record<string, ApprovalContext> {
   return {
-    201: {
+    [uuid(201)]: {
       applicant: {
         id: regularUser.id,
         name: regularUser.name,
@@ -146,7 +147,7 @@ function initialContexts(): Record<number, ApprovalContext> {
       applicantResources: {
         activeVms: [
           {
-            id: 31,
+            id: uuid(31),
             name: 'example-dev',
             status: 'RUNNING',
             vcpu: 1,
@@ -158,19 +159,19 @@ function initialContexts(): Record<number, ApprovalContext> {
         totals: { vcpu: 1, memoryMb: 1024, diskGb: 10 },
       },
       workspace: {
-        id: 12,
+        id: uuid(12),
         name: '캡스톤 3조',
         kind: 'PROJECT',
         members: [
-          { userId: 42, name: '홍길동', role: 'OWNER' },
-          { userId: 57, name: '김철수', role: 'MEMBER' },
+          { userId: uuid(42), name: '홍길동', role: 'OWNER' },
+          { userId: uuid(57), name: '김철수', role: 'MEMBER' },
         ],
         activeVms: [],
         totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
       },
       history: [
         {
-          requestId: 88,
+          requestId: uuid(88),
           submittedAt: '2026-04-10T13:00:00+09:00',
           status: 'APPROVED',
           decision: 'APPROVE',
@@ -187,9 +188,9 @@ function initialContexts(): Record<number, ApprovalContext> {
       },
       guidance: '리소스에 여유가 있어 승인이 가능합니다.',
     },
-    204: {
+    [uuid(204)]: {
       applicant: {
-        id: 58,
+        id: uuid(58),
         name: '박영희',
         email: 'younghee.park@pusan.ac.kr',
         signupAt: '2026-05-01T10:00:00+09:00',
@@ -201,16 +202,16 @@ function initialContexts(): Record<number, ApprovalContext> {
         totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
       },
       workspace: {
-        id: 21,
+        id: uuid(21),
         name: 'AI 동아리',
         kind: 'TEAM',
-        members: [{ userId: 58, name: '박영희', role: 'OWNER' }],
+        members: [{ userId: uuid(58), name: '박영희', role: 'OWNER' }],
         activeVms: [],
         totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
       },
       history: [
         {
-          requestId: 95,
+          requestId: uuid(95),
           submittedAt: '2026-06-01T10:00:00+09:00',
           status: 'REJECTED',
           decision: 'REJECT',
@@ -234,15 +235,15 @@ function initialContexts(): Record<number, ApprovalContext> {
 }
 
 export let adminRequestStore: RequestDetail[] = initialAdminRequests()
-let approvalContexts: Record<number, ApprovalContext> = initialContexts()
+let approvalContexts: Record<string, ApprovalContext> = initialContexts()
 let nextOrgId = 100
 
 /** Bodies received by decision endpoints, for payload-correctness assertions. */
-export let approveBodies: { requestId: number; body: Schemas['ApproveRequestRequest'] }[] = []
-export let rejectBodies: { requestId: number; body: { comment: string } }[] = []
+export let approveBodies: { requestId: string; body: Schemas['ApproveRequestRequest'] }[] = []
+export let rejectBodies: { requestId: string; body: { comment: string } }[] = []
 export let userPatchBodies: {
-  userId: number
-  body: { role?: Schemas['UserRole']; orgId?: number | null }
+  userId: string
+  body: { role?: Schemas['UserRole']; orgId?: string | null }
 }[] = []
 
 export function resetAdminFixtures() {
@@ -261,7 +262,7 @@ export function resetAdminFixtures() {
 function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
   return [
     {
-      id: 1,
+      id: uuid(1),
       name: 'ubuntu-24.04',
       displayName: 'Ubuntu 24.04 LTS',
       osFamily: 'ubuntu',
@@ -269,13 +270,13 @@ function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
       sshUsername: 'ubuntu',
       version: 2,
       proxmoxVmid: 1000,
-      nodeId: 1,
+      nodeId: uuid(1),
       status: 'ACTIVE',
       minDiskGb: 10,
       notes: null,
     },
     {
-      id: 2,
+      id: uuid(2),
       name: 'ubuntu-24.04',
       displayName: 'Ubuntu 24.04 LTS (구 리비전)',
       osFamily: 'ubuntu',
@@ -283,7 +284,7 @@ function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
       sshUsername: 'ubuntu',
       version: 1,
       proxmoxVmid: 1900,
-      nodeId: 1,
+      nodeId: uuid(1),
       status: 'DISABLED',
       minDiskGb: 10,
       notes: '구 계정 구성 리비전',
@@ -319,9 +320,9 @@ const alreadyDecided = (instance: string) =>
   })
 
 /** Known users for PATCH /admin/users/{userId}. */
-const knownUsers: Record<number, Schemas['UserSummaryResponse']> = {
-  42: regularUser,
-  57: { id: 57, email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'USER' },
+const knownUsers: Record<string, Schemas['UserSummaryResponse']> = {
+  [uuid(42)]: regularUser,
+  [uuid(57)]: { id: uuid(57), email: 'cheolsu.kim@pusan.ac.kr', name: '김철수', role: 'USER' },
 }
 
 
@@ -329,7 +330,7 @@ const knownUsers: Record<number, Schemas['UserSummaryResponse']> = {
 
 const adminNodes: Schemas['NodeSummaryResponse'][] = [
   {
-    id: 1,
+    id: uuid(1),
     name: 'pve1',
     status: 'ACTIVE',
     cpuThreads: 40,
@@ -344,11 +345,11 @@ const adminNodes: Schemas['NodeSummaryResponse'][] = [
     memoryAllocRatio: 0.26,
     cpuWarnThreshold: 3.0,
     memoryWarnThreshold: 0.8,
-    ipPool: { id: 1, name: 'guest-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
+    ipPool: { id: uuid(1), name: 'guest-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
   },
   {
     // 임계 초과 경고 배지 확인용 (CPU·메모리 모두 임계값 초과)
-    id: 2,
+    id: uuid(2),
     name: 'pve2',
     status: 'MAINTENANCE',
     cpuThreads: 16,
@@ -363,7 +364,7 @@ const adminNodes: Schemas['NodeSummaryResponse'][] = [
     memoryAllocRatio: 0.88,
     cpuWarnThreshold: 3.0,
     memoryWarnThreshold: 0.8,
-    ipPool: { id: 2, name: 'mgmt-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
+    ipPool: { id: uuid(2), name: 'mgmt-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
   },
 ]
 
@@ -373,7 +374,7 @@ const adminNodes: Schemas['NodeSummaryResponse'][] = [
  */
 function adminVmComparator(sort: string | null) {
   type Row = (typeof vmStore)[number]
-  const byIdDesc = (a: Row, b: Row) => b.id - a.id
+  const byIdDesc = (a: Row, b: Row) => b.id.localeCompare(a.id)
   if (!sort) return byIdDesc
   const desc = sort.startsWith('-')
   const key = desc ? sort.slice(1) : sort
@@ -403,8 +404,8 @@ export const adminHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = adminRequestStore
       .filter((r) => !status || r.status === status)
-      .filter((r) => !orgId || r.orgId === Number(orgId))
-      .sort((a, b) => b.id - a.id)
+      .filter((r) => !orgId || r.orgId === orgId)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
@@ -416,19 +417,19 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/admin/requests/:requestId', ({ params }) => {
-    const found = adminRequestStore.find((r) => r.id === Number(params.requestId))
+    const found = adminRequestStore.find((r) => r.id === String(params.requestId))
     if (!found) return notFound()
     return HttpResponse.json(found, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/requests/:requestId/context', ({ params }) => {
-    const context = approvalContexts[Number(params.requestId)]
+    const context = approvalContexts[String(params.requestId)]
     if (!context) return notFound()
     return HttpResponse.json(context, { status: 200 })
   }),
 
   http.post('*/api/v1/admin/requests/:requestId/approve', async ({ params, request }) => {
-    const requestId = Number(params.requestId)
+    const requestId = String(params.requestId)
     const found = adminRequestStore.find((r) => r.id === requestId)
     if (!found) return notFound()
     if (found.status !== 'SUBMITTED') {
@@ -451,7 +452,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/requests/:requestId/reject', async ({ params, request }) => {
-    const requestId = Number(params.requestId)
+    const requestId = String(params.requestId)
     const found = adminRequestStore.find((r) => r.id === requestId)
     if (!found) return notFound()
     if (found.status !== 'SUBMITTED') {
@@ -488,7 +489,6 @@ export const adminHandlers: RequestHandler[] = [
       orgs.map((org) => ({
         id: org.id,
         name: org.name,
-        slug: org.slug,
         description: org.description ?? null,
         status: org.status,
         hidden: org.hidden,
@@ -501,22 +501,11 @@ export const adminHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/orgs', async ({ request }) => {
     const body = (await request.json()) as {
       name: string
-      slug: string
       description?: string | null
     }
-    if (orgs.some((org) => org.slug === body.slug)) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '이미 사용 중인 slug입니다',
-        status: 409,
-        detail: `'${body.slug}'은(는) 이미 다른 기관이 사용 중입니다.`,
-        code: 'ORG_SLUG_DUPLICATE',
-      })
-    }
     const created: Schemas['OrgDetailResponse'] = {
-      id: nextOrgId++,
+      id: uuid(nextOrgId++),
       name: body.name,
-      slug: body.slug,
       description: body.description ?? null,
       status: 'ACTIVE',
       hidden: false,
@@ -525,7 +514,6 @@ export const adminHandlers: RequestHandler[] = [
     orgs.push({
       id: created.id,
       name: created.name,
-      slug: created.slug,
       description: created.description,
       status: created.status,
       hidden: created.hidden,
@@ -534,7 +522,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.patch('*/api/v1/admin/orgs/:orgId', async ({ params, request }) => {
-    const found = orgs.find((org) => org.id === Number(params.orgId))
+    const found = orgs.find((org) => org.id === String(params.orgId))
     if (!found) return notFound()
     const body = (await request.json()) as {
       name?: string
@@ -549,7 +537,6 @@ export const adminHandlers: RequestHandler[] = [
     const detail: Schemas['OrgDetailResponse'] = {
       id: found.id,
       name: found.name,
-      slug: found.slug,
       description: found.description ?? null,
       status: found.status,
       hidden: found.hidden,
@@ -559,7 +546,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.patch('*/api/v1/admin/users/:userId', async ({ params, request }) => {
-    const user = knownUsers[Number(params.userId)]
+    const user = knownUsers[String(params.userId)]
     if (!user) {
       return problemResponse({
         type: 'about:blank',
@@ -571,7 +558,7 @@ export const adminHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as {
       role?: Schemas['UserRole']
-      orgId?: number | null
+      orgId?: string | null
     }
     if (body.role && isOrgTier(body.role) && body.orgId == null) {
       return problemResponse({
@@ -583,7 +570,7 @@ export const adminHandlers: RequestHandler[] = [
         errors: [{ field: 'orgId', message: '관리할 기관을 선택해 주세요.' }],
       })
     }
-    userPatchBodies.push({ userId: Number(params.userId), body })
+    userPatchBodies.push({ userId: String(params.userId), body })
     const updated: Schemas['UserSummaryResponse'] = { ...user, role: body.role ?? user.role }
     return HttpResponse.json(updated, { status: 200 })
   }),
@@ -593,7 +580,7 @@ export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/nodes', () => HttpResponse.json(adminNodes, { status: 200 })),
 
   http.patch('*/api/v1/admin/nodes/:nodeId', async ({ params, request }) => {
-    const node = adminNodes.find((n) => n.id === Number(params.nodeId))
+    const node = adminNodes.find((n) => n.id === String(params.nodeId))
     if (!node) return notFound()
     const body = (await request.json()) as { status: Schemas['NodeStatus'] }
     // adminNodes는 리셋되지 않는 공유 픽스처 — 변이 대신 갱신본만 응답한다.
@@ -605,7 +592,7 @@ export const adminHandlers: RequestHandler[] = [
   ),
 
   http.patch('*/api/v1/admin/os-images/:imageId', async ({ params, request }) => {
-    const image = adminOsImages.find((t) => t.id === Number(params.imageId))
+    const image = adminOsImages.find((t) => t.id === String(params.imageId))
     if (!image) return notFound()
     const body = (await request.json()) as { status: Schemas['CatalogStatus'] }
     image.status = body.status
@@ -629,7 +616,7 @@ export const adminHandlers: RequestHandler[] = [
       })
     }
     const created: Schemas['VmFlavorResponse'] = {
-      id: nextFlavorId++,
+      id: uuid(nextFlavorId++),
       name: body.name,
       displayName: body.displayName,
       vcpu: body.vcpu,
@@ -643,7 +630,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.patch('*/api/v1/admin/vm-flavors/:flavorId', async ({ params, request }) => {
-    const flavor = flavorStore.find((f) => f.id === Number(params.flavorId))
+    const flavor = flavorStore.find((f) => f.id === String(params.flavorId))
     if (!flavor) return notFound()
     const body = (await request.json()) as Schemas['UpdateVmFlavorRequest']
     if (Object.values(body).every((value) => value == null)) {
@@ -678,8 +665,8 @@ export const adminHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
     const today = localDateStr(0)
     const filtered = vmStore
-      .filter((vm) => !orgId || vm.orgId === Number(orgId))
-      .filter((vm) => !workspaceId || vm.workspaceId === Number(workspaceId))
+      .filter((vm) => !orgId || vm.orgId === orgId)
+      .filter((vm) => !workspaceId || vm.workspaceId === workspaceId)
       .filter((vm) => !status || vm.status === status)
       // 계약 v0.6.1: q = 이름/호스트네임 부분일치 (대소문자 무시)
       .filter(
@@ -719,7 +706,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/schedule-delete', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     if (vm.deletion != null || vm.status === 'DELETING' || vm.status === 'DELETED') {
       return invalidVmStateProblem(
@@ -769,7 +756,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/cancel-scheduled-delete', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     if (vm.deletion == null || vm.deletion.kind === 'FORCE' || vm.status === 'DELETED') {
       return invalidVmStateProblem(
@@ -796,7 +783,7 @@ export const adminHandlers: RequestHandler[] = [
   /* ─── VM 사용 기간 변경 — 만료 연장 ─── */
 
   http.get('*/api/v1/admin/vms/:vmId', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     // 관리자 조회의 권한은 기관 스코프라 이 VM의 접근 목록과 무관하다 — 서버도
     // myResourceRole을 null로 두고 능력 불리언을 모두 false로 내려준다.
@@ -807,12 +794,12 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/admin/vms/:vmId/events', ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const all = [...(vmEventStore[vm.id] ?? [])].sort((a, b) => b.id - a.id)
+    const all = [...(vmEventStore[vm.id] ?? [])].sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(
       {
         content: all.slice(page * size, (page + 1) * size),
@@ -826,7 +813,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/start', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     if (vm.status !== 'STOPPED') {
       return invalidVmStateProblem(
@@ -841,7 +828,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/shutdown', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     if (vm.status !== 'RUNNING') {
       return invalidVmStateProblem(
@@ -856,7 +843,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/reboot', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     return HttpResponse.json(
       { message: 'VM 재부팅 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
@@ -865,7 +852,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/force-stop', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     return HttpResponse.json(
       { message: 'VM 강제 종료 요청을 접수했습니다. 잠시 후 상태가 갱신됩니다.' },
@@ -874,7 +861,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.patch('*/api/v1/admin/vms/:vmId/gateway-block', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const body = (await request.json()) as Schemas['VmGatewayBlockUpdateRequest']
     vm.sshGatewayBlocked = body.blocked
@@ -882,7 +869,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.patch('*/api/v1/admin/vms/:vmId/period', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     if (vm.status === 'DELETED' || vm.status === 'DELETING' || vm.deletion != null) {
       return invalidVmStateProblem(
@@ -929,7 +916,7 @@ export const adminHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/vms/:vmId/force-delete', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const body = (await request.json()) as { confirmName: string }
     if (body.confirmName !== vm.name) {
@@ -948,13 +935,13 @@ export const adminHandlers: RequestHandler[] = [
       kind: 'FORCE',
       scheduledFor: '2026-07-08T17:00:00+09:00',
       requestedAt: '2026-07-08T17:00:00+09:00',
-      requestedById: 5,
+      requestedById: uuid(5),
       reason: null,
       cancelable: false,
     }
     recordVmEvent(vm.id, {
       type: 'FORCE_DELETE',
-      actorId: 5,
+      actorId: uuid(5),
       detail: null,
       createdAt: '2026-07-08T17:00:00+09:00',
     })

@@ -9,6 +9,7 @@ import {
 import { renderApp } from '../test/render'
 import { server } from '../test/msw/server'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { uuid } from '../test/msw/ids'
 
 function renderAsOrgAdmin(path: string) {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -93,7 +94,7 @@ describe('승인 대기 큐', () => {
     renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    await user.selectOptions(await screen.findByLabelText('기관 필터'), '2')
+    await user.selectOptions(await screen.findByLabelText('기관 필터'), uuid(2))
 
     expect(await screen.findByRole('link', { name: '박영희' })).toBeInTheDocument()
     await waitFor(() =>

@@ -127,8 +127,23 @@ export function passwordStrength(password: string): 0 | 1 | 2 | 3 {
 export const PASSWORD_STRENGTH_LABELS = ['매우 약함', '약함', '보통', '강함'] as const
 
 
-/** Mirrors the contract regex for org slug (openapi.yaml POST /admin/orgs). */
-export const ORG_SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/
+/**
+ * Every identifier that crosses the API boundary is a UUID (contract
+ * `format: uuid`), so a route segment that is not one cannot name a row.
+ *
+ * The console reads ids out of the URL, where anything at all can appear. A
+ * malformed id used to be a number that parsed to NaN and silently fetched
+ * nothing; matching the shape up front lets a page say "없는 주소" instead of
+ * rendering an empty screen.
+ */
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isUuid(value: string | undefined | null): value is string {
+  return value != null && UUID_RE.test(value)
+}
+
+/** 주소의 식별자가 UUID 형식이 아닐 때 상세 화면이 공통으로 쓰는 문구. */
+export const INVALID_ID_MESSAGE = '올바르지 않은 주소입니다. 주소를 확인해 주세요.'
 
 /** Mirrors the contract regex for desiredSubdomain (openapi.yaml CreateRequest, 3~40자). */
 export const SUBDOMAIN_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/

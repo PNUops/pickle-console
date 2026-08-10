@@ -34,8 +34,8 @@ import {
 export function AdminWorkspacesPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const workspaces = useQuery({
     queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
@@ -61,7 +61,7 @@ export function AdminWorkspacesPage() {
             className="w-56"
             value={orgId ?? ''}
             onChange={(event) => {
-              setOrgId(event.target.value ? Number(event.target.value) : undefined)
+              setOrgId(event.target.value || undefined)
             }}
           >
             <option value="">전체 기관</option>
@@ -149,7 +149,7 @@ const USER_STATUS_VARIANT: Record<UserStatus, 'success' | 'warning' | 'danger' |
   WITHDRAWN: 'neutral',
 }
 
-function WorkspaceDetailBody({ workspaceId }: { workspaceId: number }) {
+function WorkspaceDetailBody({ workspaceId }: { workspaceId: string }) {
   const detail = useQuery({
     queryKey: ['admin', 'workspaces', 'detail', workspaceId],
     queryFn: () => fetchAdminWorkspace(workspaceId),

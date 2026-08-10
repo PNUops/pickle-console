@@ -2,15 +2,16 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import type { ResourceSummary } from '../../api/queries'
 import { resourceTypeEntry } from './registry'
+import { uuid } from '../../test/msw/ids'
 
 function resource(overrides: Partial<ResourceSummary> = {}): ResourceSummary {
   return {
-    id: 55,
+    id: uuid(55),
     type: 'VM',
     name: 'capstone-team3-api',
     displayName: null,
     status: 'RUNNING',
-    workspaceId: 12,
+    workspaceId: uuid(12),
     workspaceName: '캡스톤 3조',
     accessLimited: false,
     ownerNames: [],
@@ -28,7 +29,7 @@ describe('리소스 종류 레지스트리', () => {
     const entry = resourceTypeEntry('VM')
 
     expect(entry.label).toBe('VM')
-    expect(entry.detailPath?.(55)).toBe('/console/vms/55')
+    expect(entry.detailPath?.(uuid(55))).toBe(`/console/vms/${uuid(55)}`)
     expect(entry.isActive(resource())).toBe(true)
     expect(entry.isActive(resource({ status: 'DELETED' }))).toBe(false)
   })

@@ -2,6 +2,7 @@ import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type AuditLogView = Schemas['AuditLogViewResponse']
@@ -10,16 +11,16 @@ type ActivityEntry = Schemas['ActivityEntryResponse']
 /** 내부 저장용 감사 행 — 가시성 판정을 위해 행위자 기관을 함께 든다. */
 interface StoredAuditRow extends AuditLogView {
   /** 행위자 소속 기관 (ORG_ADMIN 가시성 판정용, 시스템·무소속은 null) */
-  actorOrgId: number | null
+  actorOrgId: string | null
 }
 
 function initialAuditRows(): StoredAuditRow[] {
   return [
     {
       // sshgw 감사 행 — actorRole은 UserRole 밖의 열린 값 (계약 v0.5.x 정합 수정)
-      id: 505,
+      id: uuid(505),
       actorOrgId: null,
-      actorId: 90,
+      actorId: uuid(90),
       actorEmail: null,
       actorName: 'ssh-gateway',
       actorRole: 'SSHGW',
@@ -31,9 +32,9 @@ function initialAuditRows(): StoredAuditRow[] {
       createdAt: '2026-07-13T11:00:00+09:00',
     },
     {
-      id: 504,
-      actorOrgId: 2,
-      actorId: 58,
+      id: uuid(504),
+      actorOrgId: uuid(2),
+      actorId: uuid(58),
       actorEmail: 'younghee.park@pusan.ac.kr',
       actorName: '박영희',
       actorRole: 'USER',
@@ -45,9 +46,9 @@ function initialAuditRows(): StoredAuditRow[] {
       createdAt: '2026-07-13T10:30:00+09:00',
     },
     {
-      id: 503,
+      id: uuid(503),
       actorOrgId: null,
-      actorId: 5,
+      actorId: uuid(5),
       actorEmail: 'sysadmin.lee@pusan.ac.kr',
       actorName: '이시스템',
       actorRole: 'SYS_ADMIN',
@@ -59,9 +60,9 @@ function initialAuditRows(): StoredAuditRow[] {
       createdAt: '2026-07-13T10:00:00+09:00',
     },
     {
-      id: 502,
-      actorOrgId: 1,
-      actorId: 7,
+      id: uuid(502),
+      actorOrgId: uuid(1),
+      actorId: uuid(7),
       actorEmail: 'admin.kim@pusan.ac.kr',
       actorName: '김관리',
       actorRole: 'ORG_ADMIN',
@@ -73,9 +74,9 @@ function initialAuditRows(): StoredAuditRow[] {
       createdAt: '2026-07-13T09:40:00+09:00',
     },
     {
-      id: 501,
-      actorOrgId: 1,
-      actorId: 42,
+      id: uuid(501),
+      actorOrgId: uuid(1),
+      actorId: uuid(42),
       actorEmail: 'example@pusan.ac.kr',
       actorName: '홍길동',
       actorRole: 'USER',
@@ -93,7 +94,7 @@ function initialAuditRows(): StoredAuditRow[] {
 function initialActivityRows(): ActivityEntry[] {
   return [
     {
-      id: 601,
+      id: uuid(601),
       action: 'auth.login',
       targetType: null,
       targetId: null,
@@ -102,7 +103,7 @@ function initialActivityRows(): ActivityEntry[] {
       createdAt: '2026-07-13T09:00:00+09:00',
     },
     {
-      id: 600,
+      id: uuid(600),
       action: 'vm.self_delete',
       targetType: 'vm',
       targetId: '60',
@@ -111,7 +112,7 @@ function initialActivityRows(): ActivityEntry[] {
       createdAt: '2026-07-08T14:10:00+09:00',
     },
     {
-      id: 599,
+      id: uuid(599),
       action: 'auth.login',
       targetType: null,
       targetId: null,
@@ -163,7 +164,7 @@ export const auditHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
 
     // 계약: orgId 필터는 SYS_ADMIN 전용 — ORG_ADMIN이 다른 기관을 지정하면 404 (존재 비공개)
-    if (orgId && !isSysTier(profile.role) && Number(orgId) !== profile.orgId) {
+    if (orgId && !isSysTier(profile.role) && orgId !== profile.orgId) {
       return problemResponse({
         type: 'about:blank',
         title: '리소스를 찾을 수 없습니다',
@@ -177,12 +178,12 @@ export const auditHandlers: RequestHandler[] = [
     const filtered = auditStore
       // ORG_ADMIN은 행위자가 자기 기관 소속인 행만 (계약)
       .filter((row) => isSysTier(profile.role) || row.actorOrgId === profile.orgId)
-      .filter((row) => !orgId || row.actorOrgId === Number(orgId))
+      .filter((row) => !orgId || row.actorOrgId === orgId)
       .filter((row) => !action || row.action === action)
       .filter((row) => !actorEmail || (row.actorEmail ?? '').includes(actorEmail))
       .filter((row) => !from || row.createdAt.slice(0, 10) >= from)
       .filter((row) => !to || row.createdAt.slice(0, 10) <= to)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
       .map(toView)
     return HttpResponse.json(paged(filtered, page, size), { status: 200 })
   }),
@@ -195,9 +196,9 @@ export const auditHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     // 픽스처는 사용자(42) 기준 — 다른 계정은 빈 목록.
-    const rows = (profile.id === 42 ? activityStore : [])
+    const rows = (profile.id === uuid(42) ? activityStore : [])
       .filter((row) => !action || row.action === action)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(paged(rows, page, size), { status: 200 })
   }),
 ]

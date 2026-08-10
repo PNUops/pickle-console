@@ -65,6 +65,7 @@ import {
   VM_EVENT_LABELS,
 } from '../lib/status'
 import { RESOURCE_ROLE_LABELS, type ResourceRole } from '../lib/labels'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { SshUsageGuide } from '../components/SshUsageGuide'
 import { VmDomainsSection } from '../components/vm-domains/VmDomainsSection'
 import { domainPollRate } from '../components/vm-domains/domain-status'
@@ -118,11 +119,14 @@ const VM_TABS: TabItem[] = [
 
 export function VmDetailPage() {
   const params = useParams()
-  const vmId = Number(params.vmId)
+  const vmId = params.vmId ?? ''
+  const idValid = isUuid(vmId)
   const [searchParams, setSearchParams] = useSearchParams()
   const vm = useQuery({
     queryKey: ['vms', vmId],
     queryFn: () => fetchVm(vmId),
+    // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
+    enabled: idValid,
     // 생성/삭제/재부팅 등 비동기 전이 중에는 서버 상태를 주기적으로 반영한다.
     refetchInterval: (query) => {
       const data = query.state.data
@@ -145,6 +149,9 @@ export function VmDetailPage() {
     },
   })
 
+  if (!idValid) {
+    return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+  }
   if (vm.isPending) {
     return (
       <div className="flex justify-center py-12">
@@ -263,12 +270,19 @@ export function VmDetailPage() {
                 )}
               </Field>
               <Field label="생성 신청">
-                <Link
-                  to={`/console/requests/${data.requestId}`}
-                  className="text-primary-700 hover:underline"
-                >
-                  신청 #{data.requestId}
-                </Link>
+                {/* 신청 행이 사라진 VM은 가리킬 곳이 없다. 링크 이름에 식별자를
+                    넣지 않는 것은 그것이 UUID여서 읽는 사람에게 알려주는 것이
+                    없기 때문이다. */}
+                {data.requestId == null ? (
+                  '—'
+                ) : (
+                  <Link
+                    to={`/console/requests/${data.requestId}`}
+                    className="text-primary-700 hover:underline"
+                  >
+                    신청 상세
+                  </Link>
+                )}
               </Field>
               <Field label="생성일">{formatDateTime(data.createdAt)}</Field>
               <Field label="마지막 갱신">{formatDateTime(data.updatedAt)}</Field>
@@ -333,7 +347,7 @@ interface PowerActionConfig {
   label: string
   /** 계약의 409 조건과 정합: 이 상태에서만 버튼을 노출한다. */
   allowed: (status: VmStatus) => boolean
-  run: (vmId: number) => Promise<MessageResponse>
+  run: (vmId: string) => Promise<MessageResponse>
   confirmTitle: string
   confirmBody: string
   /** 확인 모달에 danger Alert로 표시할 경고 (강제 종료 등). */
@@ -783,7 +797,7 @@ function VmSettingsCard({ vm }: { vm: VmDetail }) {
   )
 }
 
-function VmSettingRow({ vmId, setting }: { vmId: number; setting: VmSettingView }) {
+function VmSettingRow({ vmId, setting }: { vmId: string; setting: VmSettingView }) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [error, setError] = useState<string | null>(null)
@@ -1111,7 +1125,7 @@ function ProvisioningPanel({ task }: { task: ProvisioningTaskView }) {
 
 /* ─── 이벤트 이력 ─── */
 
-function VmEventsSection({ vmId }: { vmId: number }) {
+function VmEventsSection({ vmId }: { vmId: string }) {
   const [page, setPage] = useState(0)
   const events = useQuery({
     // ['vms'] 무효화(전원/삭제 뮤테이션 후)에 함께 걸리도록 vms 하위 키를 쓴다.
@@ -1152,7 +1166,7 @@ function VmEventsSection({ vmId }: { vmId: number }) {
                     <TD className="whitespace-nowrap">{formatDateTime(event.createdAt)}</TD>
                     <TD className="whitespace-nowrap">{VM_EVENT_LABELS[event.type]}</TD>
                     <TD className="whitespace-nowrap">
-                      {event.actorId == null ? '시스템' : `사용자 #${event.actorId}`}
+                      {event.actorId == null ? '시스템' : '사용자'}
                     </TD>
                     <TD>{event.detail ?? '—'}</TD>
                   </TR>

@@ -222,7 +222,7 @@ function ForwardingList({
   const [error, setError] = useState<string | null>(null)
 
   const remove = useMutation({
-    mutationFn: (portForwardingId: number) =>
+    mutationFn: (portForwardingId: string) =>
       deleteVmPortForwarding(vm.id, portForwardingId),
     onSuccess: async (data) => {
       setError(null)

@@ -36,7 +36,7 @@ import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
 
 /** 서버 생성 키의 개인키를 내려받아 파일로 저장한다 (매 다운로드 감사 기록). */
-async function savePrivateKey(keyId: number): Promise<void> {
+async function savePrivateKey(keyId: string): Promise<void> {
   const res = await downloadMySshKeyPrivateKey(keyId)
   const blob = new Blob([res.privateKey], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
@@ -217,7 +217,7 @@ function KeyTable({
 }
 
 /** 목록 행의 개인키 재다운로드 버튼 (서버 생성 키만 노출). */
-function DownloadKeyButton({ keyId }: { keyId: number }) {
+function DownloadKeyButton({ keyId }: { keyId: string }) {
   const toast = useToast()
   const download = useMutation({
     mutationFn: () => savePrivateKey(keyId),

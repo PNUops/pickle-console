@@ -5,6 +5,7 @@ import type { components } from '../api/schema'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { currentPath, renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 type Schemas = components['schemas']
 
@@ -25,7 +26,7 @@ describe('전체 리소스', () => {
   })
 
   test('워크스페이스 범위 주소는 그 워크스페이스의 리소스만 보여준다', async () => {
-    renderResources('/console/15/resources')
+    renderResources(`/console/${uuid(15)}/resources`)
 
     const row = (await screen.findByRole('link', { name: 'algo-judge' })).closest('tr')!
     expect(within(row).getByText('알고리즘 스터디')).toBeInTheDocument()
@@ -34,7 +35,7 @@ describe('전체 리소스', () => {
   })
 
   test('접근 권한이 없는 리소스는 VM 목록과 같은 제한 행으로 나온다', async () => {
-    renderResources('/console/15/resources')
+    renderResources(`/console/${uuid(15)}/resources`)
 
     const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
     expect(screen.queryByRole('link', { name: 'ml-notebook' })).not.toBeInTheDocument()
@@ -45,7 +46,7 @@ describe('전체 리소스', () => {
 
   test('내 워크스페이스가 아닌 범위는 범위 없는 화면으로 되돌린다', async () => {
     // 나간 워크스페이스로 돌아가는 뒤로가기, 남이 보낸 링크, 오래된 북마크.
-    renderResources('/console/999/resources')
+    renderResources(`/console/${uuid(999)}/resources`)
 
     // 주소가 범위 없는 같은 화면으로 바뀐다 — 남은 범위가 목록을 계속 거르지 못하게.
     await waitFor(() => expect(currentPath()).toBe('/console/resources'))
@@ -55,13 +56,13 @@ describe('전체 리소스', () => {
 
   test('이 빌드가 모르는 종류의 리소스도 행으로 남는다', async () => {
     const row = {
-      id: 900,
+      id: uuid(900),
       // 서버가 먼저 내보낸 종류 — 옛 번들이 받아도 화면이 비면 안 된다.
       type: 'LLM_API_KEY' as Schemas['ResourceType'],
       name: 'gpt-lab-key',
       displayName: null,
       status: 'ACTIVE',
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
       accessLimited: false,
       ownerNames: [],

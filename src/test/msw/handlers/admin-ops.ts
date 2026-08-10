@@ -2,6 +2,7 @@ import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type AdminTaskView = Schemas['AdminTaskResponse']
@@ -11,11 +12,11 @@ type AdminTaskView = Schemas['AdminTaskResponse']
 function initialTasks(): AdminTaskView[] {
   return [
     {
-      taskId: 77,
-      vmId: 58,
+      taskId: uuid(77),
+      vmId: uuid(58),
       vmName: 'stuck-vm',
       hostname: 'stuck-vm',
-      orgId: 1,
+      orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
       jobrunrJobId: '7f9b1a2c-3d4e-5f60-8123-456789abcdef',
       kind: 'PROVISION',
@@ -29,11 +30,11 @@ function initialTasks(): AdminTaskView[] {
       updatedAt: '2026-07-08T13:00:00+09:00',
     },
     {
-      taskId: 76,
-      vmId: 59,
+      taskId: uuid(76),
+      vmId: uuid(59),
       vmName: 'broken-vm',
       hostname: 'broken-vm',
-      orgId: 1,
+      orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
       jobrunrJobId: '11112222-3333-4444-5555-666677778888',
       kind: 'PROVISION',
@@ -47,11 +48,11 @@ function initialTasks(): AdminTaskView[] {
       updatedAt: '2026-07-07T13:00:00+09:00',
     },
     {
-      taskId: 75,
-      vmId: 55,
+      taskId: uuid(75),
+      vmId: uuid(55),
       vmName: 'capstone-team3-api',
       hostname: 'capstone-team3-api',
-      orgId: 1,
+      orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
       jobrunrJobId: 'aaaa1111-bbbb-2222-cccc-3333dddd4444',
       kind: 'PROVISION',
@@ -65,11 +66,11 @@ function initialTasks(): AdminTaskView[] {
       updatedAt: '2026-07-08T14:03:40+09:00',
     },
     {
-      taskId: 74,
-      vmId: 61,
+      taskId: uuid(74),
+      vmId: uuid(61),
       vmName: 'ai-train',
       hostname: 'ai-train',
-      orgId: 2,
+      orgId: uuid(2),
       orgName: '테스트 기관',
       jobrunrJobId: '9999aaaa-8888-bbbb-7777-cccc6666dddd',
       kind: 'REINSTALL',
@@ -92,9 +93,9 @@ type DriftFindingView = Schemas['DriftFindingResponse']
 function initialDriftFindings(): DriftFindingView[] {
   return [
     {
-      id: 9,
+      id: uuid(9),
       kind: 'MISSING_IN_PROXMOX',
-      vmId: 59,
+      vmId: uuid(59),
       proxmoxVmid: 100059,
       nodeName: 'pve1',
       summary: 'DB에 등록된 VM(broken-vm, vmid 100059)을 Proxmox에서 찾을 수 없습니다.',
@@ -108,7 +109,7 @@ function initialDriftFindings(): DriftFindingView[] {
       resolutionNote: null,
     },
     {
-      id: 8,
+      id: uuid(8),
       kind: 'UNMANAGED_GUEST',
       vmId: null,
       proxmoxVmid: 100901,
@@ -124,9 +125,9 @@ function initialDriftFindings(): DriftFindingView[] {
       resolutionNote: null,
     },
     {
-      id: 7,
+      id: uuid(7),
       kind: 'SPEC_MISMATCH',
-      vmId: 56,
+      vmId: uuid(56),
       proxmoxVmid: 100056,
       nodeName: 'pve1',
       summary: 'algo-judge의 메모리 설정이 DB(1024MiB)와 실제(2048MiB) 사이에 다릅니다.',
@@ -135,12 +136,12 @@ function initialDriftFindings(): DriftFindingView[] {
       firstSeenAt: '2026-07-08T03:00:00+09:00',
       lastSeenAt: '2026-07-09T03:00:00+09:00',
       resolvedAt: '2026-07-09T10:00:00+09:00',
-      resolvedById: 5,
+      resolvedById: uuid(5),
       resolvedByEmail: 'sysadmin.lee@pusan.ac.kr',
       resolutionNote: '실제 사양을 DB 기준으로 되돌렸습니다.',
     },
     {
-      id: 6,
+      id: uuid(6),
       kind: 'UNMANAGED_GUEST',
       vmId: null,
       proxmoxVmid: 100900,
@@ -166,11 +167,11 @@ type IpAllocationView = Schemas['IpAllocationResponse']
 function initialIpAllocations(): IpAllocationView[] {
   return [
     {
-      id: 205,
-      poolId: 1,
+      id: uuid(205),
+      poolId: uuid(1),
       poolName: 'pve1-pool',
       ip: '172.29.0.11',
-      vmId: 56,
+      vmId: uuid(56),
       vmName: 'algo-judge',
       hostname: 'algo-judge',
       status: 'ALLOCATED',
@@ -178,11 +179,11 @@ function initialIpAllocations(): IpAllocationView[] {
       releasedAt: null,
     },
     {
-      id: 204,
-      poolId: 1,
+      id: uuid(204),
+      poolId: uuid(1),
       poolName: 'pve1-pool',
       ip: '172.29.0.10',
-      vmId: 55,
+      vmId: uuid(55),
       vmName: 'capstone-team3-api',
       hostname: 'capstone-team3-api',
       status: 'ALLOCATED',
@@ -190,11 +191,11 @@ function initialIpAllocations(): IpAllocationView[] {
       releasedAt: null,
     },
     {
-      id: 201,
-      poolId: 1,
+      id: uuid(201),
+      poolId: uuid(1),
       poolName: 'pve1-pool',
       ip: '172.29.0.5',
-      vmId: 60,
+      vmId: uuid(60),
       vmName: 'retiring-vm',
       hostname: 'retiring-vm',
       status: 'RELEASED',
@@ -221,8 +222,8 @@ function initialOrgSummary(): Schemas['OrgDashboardSummaryResponse'] {
       guidance: '리소스에 여유가 있어 승인이 가능합니다.',
     },
     topWorkspacesByVmCount: [
-      { workspaceId: 12, name: '캡스톤 3조', vmCount: 3 },
-      { workspaceId: 15, name: '알고리즘 스터디', vmCount: 2 },
+      { workspaceId: uuid(12), name: '캡스톤 3조', vmCount: 3 },
+      { workspaceId: uuid(15), name: '알고리즘 스터디', vmCount: 2 },
     ],
     publishedServiceCount: 4,
     expiringVmCount30d: 3,
@@ -234,7 +235,7 @@ function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
   return {
     nodes: [
       {
-        id: 1,
+        id: uuid(1),
         name: 'pve1',
         status: 'ACTIVE',
         cpuOvercommitRatio: 0.35,
@@ -242,7 +243,7 @@ function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
         warn: false,
       },
       {
-        id: 2,
+        id: uuid(2),
         name: 'pve2',
         status: 'MAINTENANCE',
         cpuOvercommitRatio: 3.25,
@@ -253,7 +254,7 @@ function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
     // 하이퍼바이저 실측 — pve2는 응답하지 않아 수치가 모두 null이다.
     nodesLive: [
       {
-        nodeId: 1,
+        nodeId: uuid(1),
         name: 'pve1',
         reachable: true,
         cpu: 0.31,
@@ -264,7 +265,7 @@ function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
         checkedAt: '2026-08-10T12:00:00+09:00',
       },
       {
-        nodeId: 2,
+        nodeId: uuid(2),
         name: 'pve2',
         reachable: false,
         cpu: null,
@@ -284,8 +285,8 @@ function initialSystemSummary(): Schemas['SystemDashboardSummaryResponse'] {
     openDriftFindingCount: 2,
     sshPasswordEnabledVmCount: 2,
     ipPools: [
-      { id: 1, name: 'pve1-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
-      { id: 2, name: 'pve2-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
+      { id: uuid(1), name: 'pve1-pool', cidr: '172.29.0.0/16', allocatedCount: 6, freeCount: 65200 },
+      { id: uuid(2), name: 'pve2-pool', cidr: '172.30.0.0/24', allocatedCount: 240, freeCount: 12 },
     ],
   }
 }
@@ -324,8 +325,8 @@ export const adminOpsHandlers: RequestHandler[] = [
     const filtered = adminTaskStore
       .filter((t) => !status || t.status === status)
       .filter((t) => !kind || t.kind === kind)
-      .filter((t) => !vmId || t.vmId === Number(vmId))
-      .sort((a, b) => b.taskId - a.taskId)
+      .filter((t) => !vmId || t.vmId === vmId)
+      .sort((a, b) => b.taskId.localeCompare(a.taskId))
     const body: Schemas['PageResponseAdminTaskResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
@@ -337,7 +338,7 @@ export const adminOpsHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/admin/tasks/:taskId/retry', ({ params }) => {
-    const task = adminTaskStore.find((t) => t.taskId === Number(params.taskId))
+    const task = adminTaskStore.find((t) => t.taskId === String(params.taskId))
     if (!task) return notFound()
     if (task.status !== 'NEEDS_ADMIN') {
       return problemResponse({
@@ -370,7 +371,7 @@ export const adminOpsHandlers: RequestHandler[] = [
     const filtered = driftStore
       .filter((f) => f.status === status)
       .filter((f) => !kind || f.kind === kind)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseDriftFindingResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,
@@ -384,7 +385,7 @@ export const adminOpsHandlers: RequestHandler[] = [
   http.post(
     '*/api/v1/admin/drift-findings/:findingId/resolve',
     async ({ params, request }) => {
-      const finding = driftStore.find((f) => f.id === Number(params.findingId))
+      const finding = driftStore.find((f) => f.id === String(params.findingId))
       if (!finding) return notFound()
       if (finding.status !== 'OPEN') {
         return problemResponse({
@@ -399,7 +400,7 @@ export const adminOpsHandlers: RequestHandler[] = [
       const body = (await request.json().catch(() => ({}))) as { note?: string }
       finding.status = 'RESOLVED'
       finding.resolvedAt = new Date().toISOString()
-      finding.resolvedById = 5
+      finding.resolvedById = uuid(5)
       finding.resolvedByEmail = 'sysadmin.lee@pusan.ac.kr'
       finding.resolutionNote = body.note ?? null
       return HttpResponse.json(finding, { status: 200 })
@@ -418,7 +419,7 @@ export const adminOpsHandlers: RequestHandler[] = [
       orgId &&
       profile &&
       !isSysTier(profile.role) &&
-      Number(orgId) !== profile.orgId
+      orgId !== profile.orgId
     ) {
       return notFound()
     }
@@ -438,9 +439,9 @@ export const adminOpsHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = ipAllocationStore
-      .filter((a) => !poolId || a.poolId === Number(poolId))
+      .filter((a) => !poolId || a.poolId === poolId)
       .filter((a) => !status || a.status === status)
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseIpAllocationResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
       page,

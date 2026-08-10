@@ -76,12 +76,12 @@ export function AdminDomainsPage() {
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const selectDomain = (id: number) => {
+  const selectDomain = (id: string) => {
     if (id !== selectedId) setMessage(null) // 다른 도메인의 결과가 남아 오독되지 않게
     setSelectedId(id)
   }
@@ -489,7 +489,7 @@ function ApplyRouteButton({
   routeId,
   onResult,
 }: {
-  routeId: number
+  routeId: string
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()

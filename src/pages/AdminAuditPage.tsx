@@ -51,7 +51,7 @@ export function AdminAuditPage() {
   const [actorEmail, setActorEmail] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다

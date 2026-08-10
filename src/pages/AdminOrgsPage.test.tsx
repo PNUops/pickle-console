@@ -30,12 +30,13 @@ describe('기관 관리 — 접근 제어', () => {
 
     expect(await screen.findByRole('heading', { name: '기관 관리' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '기관 관리' })).toBeInTheDocument()
-    expect(await screen.findByText('cse-lab')).toBeInTheDocument()
-    expect(screen.getAllByText('테스트 기관').length).toBeGreaterThan(0)
-    const row = screen.getByText('cse-lab').closest('tr')!
+    expect(
+      await screen.findByText('정보컴퓨터공학부 실습지원센터'),
+    ).toBeInTheDocument()
+    const row = screen.getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
     expect(within(row).getByText('활성')).toBeInTheDocument()
     // hidden 기관에는 숨김 배지가 붙는다 (관리자 목록은 hidden 포함)
-    const hiddenRow = screen.getByText('test-org').closest('tr')!
+    const hiddenRow = screen.getByText('테스트 기관').closest('tr')!
     expect(within(hiddenRow).getByText('숨김')).toBeInTheDocument()
   })
 })
@@ -46,7 +47,7 @@ describe('기관 비활성화·숨김 토글', () => {
     renderAsSysAdmin()
 
     await screen.findByRole('heading', { name: '기관 관리' })
-    const row = (await screen.findByText('cse-lab')).closest('tr')!
+    const row = (await screen.findByText('정보컴퓨터공학부 실습지원센터')).closest('tr')!
     await user.click(within(row).getByRole('button', { name: '수정' }))
 
     const dialog = await screen.findByRole('dialog', { name: '기관 수정' })
@@ -59,7 +60,7 @@ describe('기관 비활성화·숨김 토글', () => {
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
     await waitFor(() => {
-      const updated = screen.getByText('cse-lab').closest('tr')!
+      const updated = screen.getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
       expect(within(updated).getByText('비활성')).toBeInTheDocument()
       expect(within(updated).getByText('숨김')).toBeInTheDocument()
     })
@@ -67,22 +68,6 @@ describe('기관 비활성화·숨김 토글', () => {
 })
 
 describe('기관 생성/수정', () => {
-  test('중복 slug로 만들면 slug 필드 오류를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAsSysAdmin()
-
-    await screen.findByRole('heading', { name: '기관 관리' })
-    await user.click(screen.getByRole('button', { name: '기관 만들기' }))
-    const dialog = await screen.findByRole('dialog', { name: '기관 만들기' })
-    await user.type(within(dialog).getByLabelText('기관 이름'), '중복 테스트 기관')
-    await user.type(within(dialog).getByLabelText('slug'), 'cse-lab')
-    await user.click(within(dialog).getByRole('button', { name: '만들기' }))
-
-    expect(
-      await within(dialog).findByText("'cse-lab'은(는) 이미 다른 기관이 사용 중입니다."),
-    ).toBeInTheDocument()
-  })
-
   test('새 기관을 만들면 목록에 추가된다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
@@ -91,12 +76,10 @@ describe('기관 생성/수정', () => {
     await user.click(screen.getByRole('button', { name: '기관 만들기' }))
     const dialog = await screen.findByRole('dialog', { name: '기관 만들기' })
     await user.type(within(dialog).getByLabelText('기관 이름'), 'AI융합교육원')
-    await user.type(within(dialog).getByLabelText('slug'), 'ai-edu')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
     // 목록 테이블에 새 기관이 나타난다. (역할 변경은 사용자 관리 상세로 이동)
     expect(await screen.findAllByText('AI융합교육원')).not.toHaveLength(0)
-    expect(screen.getByText('ai-edu')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

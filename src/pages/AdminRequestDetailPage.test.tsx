@@ -10,17 +10,18 @@ import {
 import { orgAdminUser, refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
-function renderDetail(requestId: number) {
+function renderDetail(requestId: string) {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
   renderApp(`/admin/requests/${requestId}`)
 }
 
 describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
   test('신청 내용과 참고 패널 5종, 안내문을 함께 보여준다', async () => {
-    renderDetail(201)
+    renderDetail(uuid(201))
 
-    await screen.findByRole('heading', { name: '신청 #201' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.getByText('캡스톤 프로젝트 백엔드 서버 운영')).toBeInTheDocument()
     expect(screen.getByText('capstone-team3.pusan.dev')).toBeInTheDocument()
     // OS·사양 프리셋은 각각의 축으로 표시된다.
@@ -46,7 +47,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     expect(within(panel).getByText('캡스톤 3조')).toBeInTheDocument()
     expect(within(panel).getByText('김철수')).toBeInTheDocument()
     // 4) 신청 이력
-    expect(within(panel).getByText('신청 #88')).toBeInTheDocument()
+    expect(within(panel).getByText('지난 신청')).toBeInTheDocument()
     expect(within(panel).getByText('소규모 개발용으로 승인')).toBeInTheDocument()
     // 5) 기관 리소스 여유
     expect(within(panel).getByText('34 vCPU / 40 스레드')).toBeInTheDocument()
@@ -54,7 +55,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
   })
 
   test('기관 리소스 경고가 있으면 경고 배지와 신중 안내문을 보여준다', async () => {
-    renderDetail(204)
+    renderDetail(uuid(204))
 
     const panel = await screen.findByRole('complementary', {
       name: '승인 판단 참고 정보',
@@ -85,7 +86,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
         ),
       ),
     )
-    renderDetail(201)
+    renderDetail(uuid(201))
 
     expect(
       await screen.findByText('승인 참고 정보를 불러오지 못했습니다'),
@@ -97,17 +98,17 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
 describe('승인 폼', () => {
   test('요청 사양으로 프리필되고, 확인 모달을 거쳐 계약 형식의 본문을 전송한다', async () => {
     const user = userEvent.setup()
-    renderDetail(201)
+    renderDetail(uuid(201))
 
-    await screen.findByRole('heading', { name: '신청 #201' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     // 프리필 검증
     expect(screen.getByLabelText('vCPU')).toHaveValue(2)
     expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
-    expect(screen.getByLabelText('OS 이미지')).toHaveValue('1')
+    expect(screen.getByLabelText('OS 이미지')).toHaveValue(uuid(1))
     expect(screen.getByLabelText('사용 시작일')).toHaveValue('2026-07-15')
     expect(screen.getByLabelText('사용 종료일')).toHaveValue('2026-12-20')
-    expect(screen.getByLabelText('배치 노드 ID')).toHaveValue(null)
+    expect(screen.getByLabelText('배치 노드 ID')).toHaveValue('')
     // 프리필 락: 희망 호스트명이 그대로 채워져 있어야 승인 시 자동 생성으로
     // 조용히 무시되지 않는다.
     expect(screen.getByLabelText('호스트명(슬러그) 확정')).toHaveValue('capstone-api')
@@ -126,7 +127,7 @@ describe('승인 폼', () => {
     expect(await screen.findByText('검토 결과')).toBeInTheDocument()
 
     expect(approveBodies).toHaveLength(1)
-    expect(approveBodies[0].requestId).toBe(201)
+    expect(approveBodies[0].requestId).toBe(uuid(201))
     expect(approveBodies[0].body).toEqual({
       grantedStartDate: '2026-07-15',
       grantedEndDate: '2026-12-20',
@@ -135,7 +136,7 @@ describe('승인 폼', () => {
         grantedVcpu: 2,
         grantedMemoryMb: 2048,
         grantedDiskGb: 20,
-        grantedImageId: 1,
+        grantedImageId: uuid(1),
         grantedSlug: 'capstone-api',
         nodeId: null,
       },
@@ -144,11 +145,11 @@ describe('승인 폼', () => {
 
   test('이미 처리된 신청이면 409 안내를 보여주고 최신 상태로 새로 고친다', async () => {
     const user = userEvent.setup()
-    renderDetail(201)
+    renderDetail(uuid(201))
 
-    await screen.findByRole('heading', { name: '신청 #201' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     // 상세를 보는 사이 다른 관리자가 먼저 처리한 상황을 재현한다.
-    const target = adminRequestStore.find((r) => r.id === 201)!
+    const target = adminRequestStore.find((r) => r.id === uuid(201))!
     target.status = 'APPROVED'
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
@@ -169,9 +170,9 @@ describe('결정 폼 — OS 이미지 조회 실패', () => {
         once: true,
       }),
     )
-    renderDetail(201)
+    renderDetail(uuid(201))
 
-    await screen.findByRole('heading', { name: '신청 #201' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     expect(
       await screen.findByText('OS 이미지 목록을 불러오지 못했습니다'),
     ).toBeInTheDocument()
@@ -185,9 +186,9 @@ describe('결정 폼 — OS 이미지 조회 실패', () => {
 describe('반려 폼', () => {
   test('반려 사유 없이 제출하면 검증 오류를 보여주고 전송하지 않는다', async () => {
     const user = userEvent.setup()
-    renderDetail(201)
+    renderDetail(uuid(201))
 
-    await screen.findByRole('heading', { name: '신청 #201' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     await user.click(screen.getByRole('button', { name: '반려' }))
     await user.click(screen.getByRole('button', { name: '반려하기' }))
 
@@ -200,9 +201,9 @@ describe('반려 폼', () => {
 
   test('사유를 입력하면 확인 모달을 거쳐 반려되고 사유가 전송된다', async () => {
     const user = userEvent.setup()
-    renderDetail(201)
+    renderDetail(uuid(201))
 
-    await screen.findByRole('heading', { name: '신청 #201' })
+    await screen.findByRole('heading', { name: '신청 상세' })
     await user.click(screen.getByRole('button', { name: '반려' }))
     await user.type(
       screen.getByLabelText('반려 사유'),
@@ -217,7 +218,7 @@ describe('반려 폼', () => {
     ).toBeInTheDocument()
     expect(rejectBodies).toEqual([
       {
-        requestId: 201,
+        requestId: uuid(201),
         body: { comment: '기관 여유 리소스를 초과합니다. 2GiB로 재신청해 주세요.' },
       },
     ])

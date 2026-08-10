@@ -8,6 +8,7 @@ import { createdRequestBodies } from '../test/msw/handlers/requests'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderWizard() {
   server.use(refreshSuccessHandler('access-user'))
@@ -22,8 +23,8 @@ async function passTypeStep(user: ReturnType<typeof userEvent.setup>) {
 
 async function passStep1(user: ReturnType<typeof userEvent.setup>) {
   await passTypeStep(user)
-  await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
-  await user.selectOptions(screen.getByLabelText('기관'), '1')
+  await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
+  await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 
@@ -162,10 +163,10 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
     sessionStorage.setItem(
       VM_REQUEST_DRAFT_KEY,
       JSON.stringify({
-        workspaceId: 12,
-        orgId: 1,
-        imageId: 1,
-        flavorId: 9,
+        workspaceId: uuid(12),
+        orgId: uuid(1),
+        imageId: uuid(1),
+        flavorId: uuid(9),
         reqVcpu: 1,
         reqMemoryMb: 512,
         reqDiskGb: 10,
@@ -244,8 +245,8 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     renderWizard()
     await screen.findByRole('heading', { name: '리소스 신청' })
     await passTypeStep(user)
-    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
-    await user.selectOptions(screen.getByLabelText('기관'), '1')
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
+    await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
     expect(screen.getByText(new RegExp(`@${requestOptions.sshHost}`))).toBeInTheDocument()
   })
 
@@ -254,8 +255,8 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     renderWizard()
     await screen.findByRole('heading', { name: '리소스 신청' })
     await passTypeStep(user)
-    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
-    await user.selectOptions(screen.getByLabelText('기관'), '1')
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
+    await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
 
     const slugInput = screen.getByLabelText('희망 호스트명(슬러그)')
     // 형식 위반
@@ -298,8 +299,8 @@ describe('VM 신청 위저드 — 제출', () => {
     await passTypeStep(user)
 
     // ② 워크스페이스·기관·이름
-    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), '12')
-    await user.selectOptions(screen.getByLabelText('기관'), '1')
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
+    await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
     await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
     await user.type(screen.getByLabelText('희망 호스트명(슬러그)'), 'capstone-api-server')
     await user.click(screen.getByRole('button', { name: '다음' }))
@@ -345,8 +346,8 @@ describe('VM 신청 위저드 — 제출', () => {
     expect(createdRequestBodies).toHaveLength(1)
     expect(createdRequestBodies[0]).toEqual({
       type: 'VM',
-      workspaceId: 12,
-      orgId: 1,
+      workspaceId: uuid(12),
+      orgId: uuid(1),
       purpose: '캡스톤 백엔드 API 서버 운영',
       courseOrProject: '2026-1 캡스톤디자인',
       extraNote: null,
@@ -354,8 +355,8 @@ describe('VM 신청 위저드 — 제출', () => {
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
       vm: {
-        imageId: 1,
-        flavorId: 2,
+        imageId: uuid(1),
+        flavorId: uuid(2),
         reqVcpu: 2,
         reqMemoryMb: 2048,
         reqDiskGb: 20,

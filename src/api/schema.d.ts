@@ -2095,8 +2095,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             detail?: unknown;
-            /** Format: int64 */
-            id: number;
+            /** @description 활동 행 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다. */
+            id: string;
             ip?: string | null;
             targetId?: string | null;
             targetType?: string | null;
@@ -2107,10 +2107,10 @@ export interface components {
             /** @description 부여할 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
             /**
-             * Format: int64
+             * Format: uuid
              * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 워크스페이스의 구성원이어야 합니다.
              */
-            userId?: number | null;
+            userId?: string | null;
         };
         AddWorkspaceMemberRequest: {
             /** Format: email */
@@ -2123,35 +2123,35 @@ export interface components {
             createdAt: string;
             /** @description 연결된 교내 IP 주소 (10.0.0.0/8) */
             grantedAddress?: string | null;
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId?: string | null;
             /** @description 사용할 포트 번호 목록 */
             ports: number[];
             /** Format: date-time */
             processedAt?: string | null;
-            /** Format: int64 */
-            processedBy?: number | null;
+            /** Format: uuid */
+            processedBy?: string | null;
             /** @description 신청 목적 */
             purpose: string;
-            /** Format: int64 */
-            requestedBy: number;
+            /** Format: uuid */
+            requestedBy: string;
             /** @description 신청자 이메일 */
             requesterEmail?: string | null;
             /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
             vmName?: string | null;
         };
         AdminCertificateView: {
             /** Format: int32 */
             daysUntilExpiry?: number | null;
-            /** Format: int64 */
-            domainId?: number | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            domainId?: string | null;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["CertificateKind"];
             lastError?: string | null;
             /** Format: date-time */
@@ -2164,11 +2164,11 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             fqdn: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["DomainKind"];
-            /** Format: int64 */
-            orgId: number;
+            /** Format: uuid */
+            orgId: string;
             orgName: string;
             /** Format: date-time */
             releasedAt?: string | null;
@@ -2181,11 +2181,11 @@ export interface components {
             updatedAt?: string | null;
             /** Format: date-time */
             verifiedAt?: string | null;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
             vmName: string;
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
             workspaceName: string;
         };
         AdminNotificationResponse: {
@@ -2196,8 +2196,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             event: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             importance: components["schemas"]["NotificationImportance"];
             lastError?: string | null;
             linkPath?: string | null;
@@ -2208,18 +2208,18 @@ export interface components {
             status: components["schemas"]["NotificationStatus"];
             title: string;
             userEmail: string;
-            /** Format: int64 */
-            userId: number;
+            /** Format: uuid */
+            userId: string;
         };
         AdminOsImageResponse: {
             displayName: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: int32 */
             minDiskGb: number;
             name: string;
-            /** Format: int64 */
-            nodeId: number;
+            /** Format: uuid */
+            nodeId: string;
             notes?: string | null;
             osFamily: string;
             osVersion: string;
@@ -2234,15 +2234,15 @@ export interface components {
             applyState: components["schemas"]["PortForwardApplyState"];
             /** Format: date-time */
             createdAt: string;
-            /** Format: int64 */
-            createdBy: number;
+            /** Format: uuid */
+            createdBy?: string | null;
             /**
              * Format: int32
              * @description 동시 연결 상한 오버라이드 (null = 에이전트 기본, 0 = 해제)
              */
             ctMax?: number | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /**
              * Format: int32
              * @description 신규 연결 버스트 오버라이드
@@ -2266,21 +2266,21 @@ export interface components {
             proto: components["schemas"]["PortMappingProto"];
             /** Format: int32 */
             publicPort: number;
-            /** Format: int64 */
-            relayId: number;
+            /** Format: uuid */
+            relayId: string;
             relayName: string;
             status: components["schemas"]["PortMappingStatus"];
             /**
-             * Format: int64
+             * Format: uuid
              * @description 정지한 관리자 id (자동 정지면 null)
              */
-            suspendedBy?: number | null;
+            suspendedBy?: string | null;
             /** @description 정지 사유 (SUSPENDED일 때) */
             suspendedReason?: string | null;
             /** Format: int32 */
             targetPort: number;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
             vmName?: string | null;
         };
         AdminRelayView: {
@@ -2308,8 +2308,8 @@ export interface components {
             /** @description 접촉 두절 여부 (마지막 동기화가 폴링 주기 3배를 초과) */
             contactLost: boolean;
             enabled: boolean;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: date-time */
             lastContactAt?: string | null;
             /** @description 에이전트가 보고한 마지막 적용 오류(JSON, 정화됨). 없으면 null */
@@ -2335,15 +2335,15 @@ export interface components {
             appliedAt?: string | null;
             /** Format: int64 */
             appliedGeneration?: number | null;
-            /** Format: int64 */
-            domainId: number;
+            /** Format: uuid */
+            domainId: string;
             domainKind: components["schemas"]["DomainKind"];
             fqdn: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             lastError?: string | null;
-            /** Format: int64 */
-            orgId: number;
+            /** Format: uuid */
+            orgId: string;
             orgName: string;
             protocol: string;
             status: components["schemas"]["RouteStatus"];
@@ -2351,11 +2351,11 @@ export interface components {
             targetPort: number;
             /** Format: date-time */
             updatedAt?: string | null;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
             vmName: string;
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
             workspaceName: string;
         };
         AdminTaskResponse: {
@@ -2369,19 +2369,19 @@ export interface components {
             jobrunrJobId?: string | null;
             kind: components["schemas"]["ProvisioningTaskKind"];
             lastError?: string | null;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            orgId?: string | null;
             orgName?: string | null;
             status: components["schemas"]["ProvisioningTaskStatus"];
             stepLabel: string;
-            /** Format: int64 */
-            taskId: number;
+            /** Format: uuid */
+            taskId: string;
             /** Format: int32 */
             totalSteps: number;
             /** Format: date-time */
             updatedAt: string;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
             vmName?: string | null;
             workspaceName?: string | null;
         };
@@ -2389,8 +2389,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             description?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["WorkspaceKind"];
             /** Format: int64 */
             memberCount: number;
@@ -2404,16 +2404,16 @@ export interface components {
             /** Format: date-time */
             joinedAt: string;
             name: string;
-            /** Format: int64 */
-            userId: number;
+            /** Format: uuid */
+            userId: string;
             userStatus: components["schemas"]["UserStatus"];
             workspaceRole: components["schemas"]["WorkspaceMemberRole"];
         };
         AdminWorkspaceOptionResponse: {
             /** Format: date-time */
             createdAt: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["WorkspaceKind"];
             /** Format: int64 */
             memberCount: number;
@@ -2423,35 +2423,35 @@ export interface components {
         AllocationStatus: "ALLOCATED" | "RELEASED";
         AnnouncementCreateRequest: {
             body: string;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            orgId?: string | null;
             scope: components["schemas"]["AnnouncementScope"];
             title: string;
-            /** Format: int64 */
-            workspaceId?: number | null;
+            /** Format: uuid */
+            workspaceId?: string | null;
         };
         /** @enum {string} */
         AnnouncementScope: "ALL" | "ORG" | "WORKSPACE";
         AnnouncementView: {
             /** Format: date-time */
             createdAt: string;
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId?: string | null;
             /** Format: int32 */
             recipientCount: number;
             scope: components["schemas"]["AnnouncementScope"];
             title: string;
-            /** Format: int64 */
-            workspaceId?: number | null;
+            /** Format: uuid */
+            workspaceId?: string | null;
         };
         Applicant: {
             /** Format: int64 */
             approvedCount: number;
             email: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
             /** Format: int64 */
             rejectedCount: number;
@@ -2477,15 +2477,15 @@ export interface components {
         ApproveVmRequestSpec: {
             /** Format: int32 */
             grantedDiskGb: number;
-            /** Format: int64 */
-            grantedImageId: number;
+            /** Format: uuid */
+            grantedImageId: string;
             /** Format: int32 */
             grantedMemoryMb: number;
             grantedSlug?: string | null;
             /** Format: int32 */
             grantedVcpu: number;
-            /** Format: int64 */
-            nodeId?: number | null;
+            /** Format: uuid */
+            nodeId?: string | null;
         };
         Attention: {
             /** Format: int64 */
@@ -2498,15 +2498,15 @@ export interface components {
         AuditLogViewResponse: {
             action: string;
             actorEmail?: string | null;
-            /** Format: int64 */
-            actorId?: number | null;
+            /** Format: uuid */
+            actorId?: string | null;
             actorName?: string | null;
             actorRole?: string | null;
             /** Format: date-time */
             createdAt: string;
             detail?: unknown;
-            /** Format: int64 */
-            id: number;
+            /** @description 감사 로그 행 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다. */
+            id: string;
             ip?: string | null;
             orgName?: string | null;
             targetId?: string | null;
@@ -2528,20 +2528,20 @@ export interface components {
             createdAt: string;
             /** @description 연결된 교내 IP 주소 (GRANTED 이후) */
             grantedAddress?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** @description 사용할 포트 번호 목록 (중복 제거·오름차순 정규화) */
             ports: number[];
             /** Format: date-time */
             processedAt?: string | null;
             /** @description 신청 목적 */
             purpose: string;
-            /** Format: int64 */
-            requestedBy: number;
+            /** Format: uuid */
+            requestedBy: string;
             /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
         };
         Capacity: {
             /** Format: int64 */
@@ -2624,7 +2624,6 @@ export interface components {
         CreateOrgRequest: {
             description?: string | null;
             name: string;
-            slug: string;
         };
         CreatePortForwardingRequest: {
             /** @description 프로토콜 (tcp | udp) */
@@ -2639,8 +2638,8 @@ export interface components {
             courseOrProject?: string | null;
             displayName?: string | null;
             extraNote?: string | null;
-            /** Format: int64 */
-            orgId: number;
+            /** Format: uuid */
+            orgId: string;
             purpose: string;
             /** Format: date */
             reqEndDate?: string | null;
@@ -2648,8 +2647,8 @@ export interface components {
             reqStartDate?: string | null;
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["CreateVmRequestSpec"] | null;
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
         };
         CreateVmDomainRequest: {
             customDomain?: string | null;
@@ -2671,10 +2670,10 @@ export interface components {
         };
         CreateVmRequestSpec: {
             desiredSlug?: string | null;
-            /** Format: int64 */
-            flavorId: number;
-            /** Format: int64 */
-            imageId: number;
+            /** Format: uuid */
+            flavorId: string;
+            /** Format: uuid */
+            imageId: string;
             /** Format: int32 */
             reqDiskGb: number;
             /** Format: int32 */
@@ -2704,8 +2703,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             fqdn: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["DomainKind"];
             /** Format: date-time */
             releasedAt?: string | null;
@@ -2716,8 +2715,8 @@ export interface components {
             verification?: components["schemas"]["DomainVerificationView"] | null;
             /** Format: date-time */
             verifiedAt?: string | null;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
         };
         /** @enum {string} */
         DomainKind: "AUTO" | "PLATFORM" | "CUSTOM";
@@ -2727,8 +2726,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             fqdn: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["DomainKind"];
             /** Format: date-time */
             releasedAt?: string | null;
@@ -2738,8 +2737,8 @@ export interface components {
             status: components["schemas"]["DomainStatus"];
             /** Format: date-time */
             verifiedAt?: string | null;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
         };
         DomainVerificationView: {
             aVerified: boolean;
@@ -2756,8 +2755,8 @@ export interface components {
             detail?: unknown;
             /** Format: date-time */
             firstSeenAt: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["DriftFindingKind"];
             /** Format: date-time */
             lastSeenAt: string;
@@ -2768,12 +2767,12 @@ export interface components {
             /** Format: date-time */
             resolvedAt?: string | null;
             resolvedByEmail?: string | null;
-            /** Format: int64 */
-            resolvedById?: number | null;
+            /** Format: uuid */
+            resolvedById?: string | null;
             status: components["schemas"]["DriftFindingStatus"];
             summary: string;
-            /** Format: int64 */
-            vmId?: number | null;
+            /** Format: uuid */
+            vmId?: string | null;
             vmName?: string | null;
         };
         /** @enum {string} */
@@ -2793,14 +2792,14 @@ export interface components {
         Grantee: {
             email: string;
             name: string;
-            /** Format: int64 */
-            userId: number;
+            /** Format: uuid */
+            userId: string;
         };
         HistoryEntry: {
             comment?: string | null;
             decision?: components["schemas"]["ReviewDecision"] | null;
-            /** Format: int64 */
-            requestId: number;
+            /** Format: uuid */
+            requestId: string;
             reviewerName?: string | null;
             status: components["schemas"]["RequestStatus"];
             /** Format: date-time */
@@ -2810,17 +2809,17 @@ export interface components {
             /** Format: date-time */
             allocatedAt: string;
             hostname?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             ip: string;
-            /** Format: int64 */
-            poolId: number;
+            /** Format: uuid */
+            poolId: string;
             poolName: string;
             /** Format: date-time */
             releasedAt?: string | null;
             status: components["schemas"]["AllocationStatus"];
-            /** Format: int64 */
-            vmId?: number | null;
+            /** Format: uuid */
+            vmId?: string | null;
             vmName?: string | null;
         };
         IpPoolSummaryResponse: {
@@ -2829,8 +2828,8 @@ export interface components {
             cidr: string;
             /** Format: int64 */
             freeCount: number;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
         };
         IpPoolUsage: {
@@ -2839,8 +2838,8 @@ export interface components {
             cidr: string;
             /** Format: int64 */
             freeCount: number;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
         };
         LiveCoverage: {
@@ -2867,13 +2866,13 @@ export interface components {
         MemberBrief: {
             name: string;
             role: components["schemas"]["WorkspaceMemberRole"];
-            /** Format: int64 */
-            userId: number;
+            /** Format: uuid */
+            userId: string;
         };
         Membership: {
             role: components["schemas"]["WorkspaceMemberRole"];
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
             workspaceKind: components["schemas"]["WorkspaceKind"];
             workspaceName: string;
         };
@@ -2906,8 +2905,8 @@ export interface components {
             /** Format: int64 */
             memUsedBytes?: number | null;
             name: string;
-            /** Format: int64 */
-            nodeId: number;
+            /** Format: uuid */
+            nodeId: string;
             /** @description true = 이 노드가 상태 조회에 응답함. false = 응답하지 않음이며 나머지 필드는 모두 null. true여도 스토리지 조회는 별도 권한이라 storage* 필드는 null일 수 있음 */
             reachable: boolean;
             /** Format: int64 */
@@ -2956,8 +2955,8 @@ export interface components {
         NodeRatio: {
             /** Format: double */
             cpuOvercommitRatio: number;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: double */
             memoryAllocRatio: number;
             name: string;
@@ -2982,8 +2981,8 @@ export interface components {
              * @description 게스트 디스크가 놓이는 thin pool 용량(GB) — 아직 측정되지 않았으면 null
              */
             diskCapacityGb?: number | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             ipPool: components["schemas"]["IpPoolSummaryResponse"];
             /** Format: double */
             memoryAllocRatio: number;
@@ -3009,8 +3008,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             event: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             importance: components["schemas"]["NotificationImportance"];
             linkPath?: string | null;
             /** Format: date-time */
@@ -3037,10 +3036,9 @@ export interface components {
             createdAt: string;
             description?: string | null;
             hidden: boolean;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
-            slug: string;
             status: components["schemas"]["OrgStatus"];
         };
         OrgHeadroom: {
@@ -3062,16 +3060,15 @@ export interface components {
         OrgSummaryResponse: {
             description?: string | null;
             hidden: boolean;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
-            slug: string;
             status: components["schemas"]["OrgStatus"];
         };
         OsImageResponse: {
             displayName: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: int32 */
             minDiskGb: number;
             name: string;
@@ -3306,8 +3303,8 @@ export interface components {
             applyState: components["schemas"]["PortForwardApplyState"];
             /** Format: date-time */
             createdAt: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** @description 프로토콜 (tcp | udp) */
             proto: components["schemas"]["PortMappingProto"];
             /** @description 접속에 사용할 공개 호스트. 아직 설정 전이면 null */
@@ -3391,8 +3388,8 @@ export interface components {
             comment: string;
         };
         RelayTokenResponse: {
-            /** Format: int64 */
-            relayId: number;
+            /** Format: uuid */
+            relayId: string;
             /** @description 새 동기화 토큰(64자 hex). 이 응답에서만 확인 가능하며 저장되지 않습니다 */
             token: string;
         };
@@ -3402,18 +3399,24 @@ export interface components {
             createdAt: string;
             displayName?: string | null;
             extraNote?: string | null;
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            orgId: number;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description 신청 대상 기관. 행이 사라진 경우에만 null입니다.
+             */
+            orgId?: string | null;
             orgName: string;
             purpose: string;
             /** Format: date */
             reqEndDate?: string | null;
             /** Format: date */
             reqStartDate?: string | null;
-            /** Format: int64 */
-            requesterId: number;
+            /**
+             * Format: uuid
+             * @description 신청자. 행이 사라진 경우에만 null입니다.
+             */
+            requesterId?: string | null;
             requesterName: string;
             review?: components["schemas"]["RequestReviewResponse"] | null;
             status: components["schemas"]["RequestStatus"];
@@ -3421,8 +3424,11 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             vm?: components["schemas"]["VmRequestSpecResponse"] | null;
-            /** Format: int64 */
-            workspaceId: number;
+            /**
+             * Format: uuid
+             * @description 신청 대상 워크스페이스. 행이 사라진 경우에만 null입니다.
+             */
+            workspaceId?: string | null;
             workspaceName: string;
         };
         RequestOptionsResponse: {
@@ -3439,8 +3445,11 @@ export interface components {
             grantedEndDate?: string | null;
             /** Format: date */
             grantedStartDate?: string | null;
-            /** Format: int64 */
-            reviewerId: number;
+            /**
+             * Format: uuid
+             * @description 결재자. 계정 행이 사라진 경우에만 null입니다.
+             */
+            reviewerId?: string | null;
             reviewerName: string;
         };
         /** @enum {string} */
@@ -3480,8 +3489,8 @@ export interface components {
             createdAt: string;
             /** @description 대상 종류 — USER는 지정된 사용자, WORKSPACE은 소유 워크스페이스 전체 */
             granteeType: components["schemas"]["AccessGranteeType"];
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** @description 이 대상이 이 VM에서 갖는 등급 */
             role: components["schemas"]["ResourceRole"];
             /** @description 대상 사용자. 워크스페이스 전체 항목이면 null입니다. */
@@ -3498,14 +3507,14 @@ export interface components {
         ResourceBrief: {
             /** @description 표시명. 지정되지 않았으면 null입니다. */
             displayName?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
             /** @description 리소스 종류의 상태값. 종류마다 어휘가 다릅니다. */
             status: string;
             type: components["schemas"]["ResourceType"];
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
             workspaceName: string;
         };
         /** @enum {string} */
@@ -3516,14 +3525,14 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             displayName?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
             ownerNames: string[];
             status: string;
             type: components["schemas"]["ResourceType"];
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
             workspaceName: string;
         };
         ResourceTotalsResponse: {
@@ -3606,8 +3615,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             fingerprint: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: date-time */
             lastUsedAt?: string | null;
             name: string;
@@ -3654,18 +3663,18 @@ export interface components {
         };
         TerminalSessionView: {
             clientIp: string;
-            /** Format: int64 */
-            orgId: number;
+            /** Format: uuid */
+            orgId: string;
             orgName: string;
             sessionId: string;
             /** Format: date-time */
             startedAt: string;
             userEmail: string;
-            /** Format: int64 */
-            userId: number;
+            /** Format: uuid */
+            userId: string;
             userName: string;
-            /** Format: int64 */
-            vmId: number;
+            /** Format: uuid */
+            vmId: string;
             vmName: string;
             workspaceName: string;
         };
@@ -3700,8 +3709,8 @@ export interface components {
             name: string;
             /** Format: int64 */
             vmCount: number;
-            /** Format: int64 */
-            workspaceId: number;
+            /** Format: uuid */
+            workspaceId: string;
         };
         UnreadCountResponse: {
             /** Format: int64 */
@@ -3765,8 +3774,8 @@ export interface components {
             role: components["schemas"]["ResourceRole"];
         };
         UpdateUserAdminRequest: {
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            orgId?: string | null;
             role?: components["schemas"]["UserRole"];
         };
         UpdateVmFlavorRequest: {
@@ -3797,13 +3806,13 @@ export interface components {
             disabledAt?: string | null;
             disabledReason?: string | null;
             email: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            orgId?: string | null;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
             statusChanges: components["schemas"]["UserStatusChangeResponse"][];
@@ -3814,24 +3823,24 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             email: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             mfaEnabled: boolean;
             name: string;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            orgId?: string | null;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
         };
         UserProfileResponse: {
             email: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
-            /** Format: int64 */
-            orgId?: number | null;
+            /** Format: uuid */
+            orgId?: string | null;
             pendingConsents: components["schemas"]["TermsVersionView"][];
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
@@ -3842,8 +3851,8 @@ export interface components {
         UserStatus: "PENDING_VERIFICATION" | "ACTIVE" | "DISABLED" | "WITHDRAWN";
         UserStatusChangeResponse: {
             actorEmail?: string | null;
-            /** Format: int64 */
-            actorId?: number | null;
+            /** Format: uuid */
+            actorId?: string | null;
             /** Format: date-time */
             changedAt: string;
             fromStatus: components["schemas"]["UserStatus"];
@@ -3852,8 +3861,8 @@ export interface components {
         };
         UserSummaryResponse: {
             email: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             name: string;
             role: components["schemas"]["UserRole"];
         };
@@ -3865,8 +3874,8 @@ export interface components {
             diskGb: number;
             /** Format: date */
             endDate?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: int32 */
             memoryMb: number;
             name: string;
@@ -3882,8 +3891,8 @@ export interface components {
             reason?: string | null;
             /** Format: date-time */
             requestedAt: string;
-            /** Format: int64 */
-            requestedById: number;
+            /** Format: uuid */
+            requestedById?: string | null;
             /** Format: date-time */
             scheduledFor: string;
         };
@@ -3905,17 +3914,23 @@ export interface components {
             /** Format: date-time */
             expiryStoppedAt?: string | null;
             hostname: string;
-            /** Format: int64 */
-            id: number;
-            /** Format: int64 */
-            imageId: number;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description 생성에 쓰인 OS 이미지. 행이 사라진 경우에만 null입니다.
+             */
+            imageId?: string | null;
             ipAddress?: string | null;
             /** Format: int32 */
             memoryMb: number;
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             name: string;
-            /** Format: int64 */
-            orgId: number;
+            /**
+             * Format: uuid
+             * @description 소속 기관. 행이 사라진 경우에만 null입니다.
+             */
+            orgId?: string | null;
             orgName?: string | null;
             passwordAvailable: boolean;
             passwordRevealAllowed: boolean;
@@ -3923,8 +3938,11 @@ export interface components {
             powerControlAllowed: boolean;
             provisioning?: components["schemas"]["ProvisioningTaskResponse"] | null;
             publications: components["schemas"]["PublicationView"][];
-            /** Format: int64 */
-            requestId: number;
+            /**
+             * Format: uuid
+             * @description 이 VM을 만든 신청. 행이 사라진 경우에만 null입니다.
+             */
+            requestId?: string | null;
             /** @description VM 설정을 볼·바꿀 수 있는지 */
             settingsEditAllowed: boolean;
             sshGatewayBlocked: boolean;
@@ -3938,18 +3956,21 @@ export interface components {
             updatedAt: string;
             /** Format: int32 */
             vcpu: number;
-            /** Format: int64 */
-            workspaceId: number;
+            /**
+             * Format: uuid
+             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             */
+            workspaceId?: string | null;
             workspaceName: string;
         };
         VmEventResponse: {
-            /** Format: int64 */
-            actorId?: number | null;
+            /** Format: uuid */
+            actorId?: string | null;
             /** Format: date-time */
             createdAt: string;
             detail?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             type: components["schemas"]["VmEventType"];
         };
         /** @enum {string} */
@@ -3958,8 +3979,8 @@ export interface components {
             /** Format: int32 */
             diskGb: number;
             displayName: string;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /** Format: int32 */
             memoryMb: number;
             name: string;
@@ -3977,14 +3998,14 @@ export interface components {
         VmGrantedSpecResponse: {
             /** Format: int32 */
             grantedDiskGb: number;
-            /** Format: int64 */
-            grantedImageId: number;
+            /** Format: uuid */
+            grantedImageId: string;
             /** Format: int32 */
             grantedMemoryMb: number;
             /** Format: int32 */
             grantedVcpu: number;
-            /** Format: int64 */
-            nodeId?: number | null;
+            /** Format: uuid */
+            nodeId?: string | null;
         };
         VmMetricPointResponse: {
             /**
@@ -4040,11 +4061,11 @@ export interface components {
         VmRequestSpecResponse: {
             desiredSlug?: string | null;
             desiredSubdomain?: string | null;
-            /** Format: int64 */
-            flavorId?: number | null;
+            /** Format: uuid */
+            flavorId?: string | null;
             granted?: components["schemas"]["VmGrantedSpecResponse"] | null;
-            /** Format: int64 */
-            imageId: number;
+            /** Format: uuid */
+            imageId: string;
             /** Format: int32 */
             reqDiskGb: number;
             /** Format: int32 */
@@ -4096,8 +4117,8 @@ export interface components {
             expiryStoppedAt?: string | null;
             /** @description SSH 슬러그. 접근 권한이 없으면 생략됩니다. */
             hostname?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             /**
              * Format: int32
              * @description 메모리(MiB). 접근 권한이 없으면 생략됩니다.
@@ -4108,8 +4129,8 @@ export interface components {
             orgName?: string | null;
             /** @description 이 VM의 소유자 이름. 접근을 요청할 상대입니다. */
             ownerNames: string[];
-            /** Format: int64 */
-            requestId?: number | null;
+            /** Format: uuid */
+            requestId?: string | null;
             sshGatewayBlocked?: boolean | null;
             status: components["schemas"]["VmStatus"];
             statusDetail?: string | null;
@@ -4118,8 +4139,11 @@ export interface components {
              * @description vCPU. 접근 권한이 없으면 생략됩니다.
              */
             vcpu?: number | null;
-            /** Format: int64 */
-            workspaceId: number;
+            /**
+             * Format: uuid
+             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             */
+            workspaceId?: string | null;
             workspaceName: string;
         };
         WithdrawRequest: {
@@ -4131,8 +4155,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             description?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["WorkspaceMemberResponse"][];
             myRole: components["schemas"]["WorkspaceMemberRole"];
@@ -4144,15 +4168,15 @@ export interface components {
             email: string;
             name: string;
             role: components["schemas"]["WorkspaceMemberRole"];
-            /** Format: int64 */
-            userId: number;
+            /** Format: uuid */
+            userId: string;
         };
         /** @enum {string} */
         WorkspaceMemberRole: "OWNER" | "MEMBER";
         WorkspacePanel: {
             activeVms: components["schemas"]["VmBriefResponse"][];
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["MemberBrief"][];
             name: string;
@@ -4160,8 +4184,8 @@ export interface components {
         };
         WorkspaceSummaryResponse: {
             description?: string | null;
-            /** Format: int64 */
-            id: number;
+            /** Format: uuid */
+            id: string;
             kind: components["schemas"]["WorkspaceKind"];
             /** Format: int64 */
             memberCount: number;
@@ -4251,7 +4275,7 @@ export interface operations {
                 targetId?: string;
                 from?: string;
                 to?: string;
-                orgId?: number;
+                orgId?: string;
                 page?: number;
                 size?: number;
             };
@@ -4285,7 +4309,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: components["schemas"]["CampusIpRequestStatus"];
-                vmId?: number;
+                vmId?: string;
                 page?: number;
                 size?: number;
             };
@@ -4320,7 +4344,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -4354,7 +4378,7 @@ export interface operations {
         parameters: {
             query?: {
                 days?: number;
-                orgId?: number;
+                orgId?: string;
             };
             header?: never;
             path?: never;
@@ -4385,7 +4409,7 @@ export interface operations {
     listAdminCertificates: {
         parameters: {
             query?: {
-                orgId?: number;
+                orgId?: string;
                 status?: components["schemas"]["CertificateStatus"];
                 expiringInDays?: number;
                 page?: number;
@@ -4420,7 +4444,7 @@ export interface operations {
     listAdminDomains: {
         parameters: {
             query?: {
-                orgId?: number;
+                orgId?: string;
                 kind?: components["schemas"]["DomainKind"];
                 status?: components["schemas"]["DomainStatus"];
                 page?: number;
@@ -4457,7 +4481,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: number;
+                domainId: string;
             };
             cookie?: never;
         };
@@ -4488,7 +4512,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: number;
+                domainId: string;
             };
             cookie?: never;
         };
@@ -4553,7 +4577,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                findingId: number;
+                findingId: string;
             };
             cookie?: never;
         };
@@ -4586,7 +4610,7 @@ export interface operations {
     listIpAllocations: {
         parameters: {
             query?: {
-                poolId?: number;
+                poolId?: string;
                 status?: components["schemas"]["AllocationStatus"];
                 page?: number;
                 size?: number;
@@ -4651,7 +4675,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                nodeId: number;
+                nodeId: string;
             };
             cookie?: never;
         };
@@ -4689,7 +4713,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                nodeId: number;
+                nodeId: string;
             };
             cookie?: never;
         };
@@ -4755,7 +4779,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                notificationId: number;
+                notificationId: string;
             };
             cookie?: never;
         };
@@ -4848,7 +4872,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orgId: number;
+                orgId: string;
             };
             cookie?: never;
         };
@@ -4912,7 +4936,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                imageId: number;
+                imageId: string;
             };
             cookie?: never;
         };
@@ -4945,8 +4969,8 @@ export interface operations {
     listAdminPortMappings: {
         parameters: {
             query?: {
-                relayId?: number;
-                vmId?: number;
+                relayId?: string;
+                vmId?: string;
                 status?: components["schemas"]["PortMappingStatus"];
                 page?: number;
                 size?: number;
@@ -4982,7 +5006,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                mappingId: number;
+                mappingId: string;
             };
             cookie?: never;
         };
@@ -5013,7 +5037,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                mappingId: number;
+                mappingId: string;
             };
             cookie?: never;
         };
@@ -5048,7 +5072,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                mappingId: number;
+                mappingId: string;
             };
             cookie?: never;
         };
@@ -5083,7 +5107,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                mappingId: number;
+                mappingId: string;
             };
             cookie?: never;
         };
@@ -5146,7 +5170,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                relayId: number;
+                relayId: string;
             };
             cookie?: never;
         };
@@ -5186,7 +5210,7 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["RequestStatus"];
                 type?: components["schemas"]["ResourceType"];
-                orgId?: number;
+                orgId?: string;
                 page?: number;
                 size?: number;
             };
@@ -5221,7 +5245,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -5252,7 +5276,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -5287,7 +5311,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -5318,7 +5342,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -5351,7 +5375,7 @@ export interface operations {
     listAdminRoutes: {
         parameters: {
             query?: {
-                orgId?: number;
+                orgId?: string;
                 status?: components["schemas"]["RouteStatus"];
                 page?: number;
                 size?: number;
@@ -5416,7 +5440,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                routeId: number;
+                routeId: string;
             };
             cookie?: never;
         };
@@ -5509,7 +5533,7 @@ export interface operations {
     getAdminSummary: {
         parameters: {
             query?: {
-                orgId?: number;
+                orgId?: string;
             };
             header?: never;
             path?: never;
@@ -5571,7 +5595,7 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["ProvisioningTaskStatus"][];
                 kind?: components["schemas"]["ProvisioningTaskKind"];
-                vmId?: number;
+                vmId?: string;
                 page?: number;
                 size?: number;
             };
@@ -5606,7 +5630,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                taskId: number;
+                taskId: string;
             };
             cookie?: never;
         };
@@ -5696,7 +5720,7 @@ export interface operations {
                 q?: string;
                 status?: components["schemas"]["UserStatus"];
                 role?: components["schemas"]["UserRole"];
-                orgId?: number;
+                orgId?: string;
                 sort?: "name" | "-name" | "email" | "-email" | "createdAt" | "-createdAt";
                 page?: number;
                 size?: number;
@@ -5732,7 +5756,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                userId: number;
+                userId: string;
             };
             cookie?: never;
         };
@@ -5763,7 +5787,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                userId: number;
+                userId: string;
             };
             cookie?: never;
         };
@@ -5798,7 +5822,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                userId: number;
+                userId: string;
             };
             cookie?: never;
         };
@@ -5833,7 +5857,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                userId: number;
+                userId: string;
             };
             cookie?: never;
         };
@@ -5864,7 +5888,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                userId: number;
+                userId: string;
             };
             cookie?: never;
         };
@@ -5957,7 +5981,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                flavorId: number;
+                flavorId: string;
             };
             cookie?: never;
         };
@@ -5990,8 +6014,8 @@ export interface operations {
     listAdminVms: {
         parameters: {
             query?: {
-                orgId?: number;
-                workspaceId?: number;
+                orgId?: string;
+                workspaceId?: string;
                 status?: components["schemas"]["VmStatus"];
                 expiringInDays?: number;
                 expired?: boolean;
@@ -6031,7 +6055,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6062,7 +6086,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6096,7 +6120,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6127,7 +6151,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6162,7 +6186,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6193,7 +6217,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6228,7 +6252,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6263,7 +6287,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6294,7 +6318,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6329,7 +6353,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6360,7 +6384,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -6389,7 +6413,7 @@ export interface operations {
     listAdminWorkspaces: {
         parameters: {
             query?: {
-                orgId?: number;
+                orgId?: string;
             };
             header?: never;
             path?: never;
@@ -6422,7 +6446,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                workspaceId: number;
+                workspaceId: string;
             };
             cookie?: never;
         };
@@ -6781,7 +6805,7 @@ export interface operations {
     listDomains: {
         parameters: {
             query?: {
-                vmId?: number;
+                vmId?: string;
                 status?: components["schemas"]["DomainStatus"];
                 page?: number;
                 size?: number;
@@ -6817,7 +6841,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: number;
+                domainId: string;
             };
             cookie?: never;
         };
@@ -6848,7 +6872,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: number;
+                domainId: string;
             };
             cookie?: never;
         };
@@ -6879,7 +6903,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: number;
+                domainId: string;
             };
             cookie?: never;
         };
@@ -6914,7 +6938,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: number;
+                domainId: string;
             };
             cookie?: never;
         };
@@ -7358,7 +7382,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                keyId: number;
+                keyId: string;
             };
             cookie?: never;
         };
@@ -7399,7 +7423,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                keyId: number;
+                keyId: string;
             };
             cookie?: never;
         };
@@ -7681,7 +7705,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                notificationId: number;
+                notificationId: string;
             };
             cookie?: never;
         };
@@ -7770,7 +7794,7 @@ export interface operations {
             query?: {
                 status?: components["schemas"]["RequestStatus"];
                 type?: components["schemas"]["ResourceType"];
-                workspaceId?: number;
+                workspaceId?: string;
                 page?: number;
                 size?: number;
             };
@@ -7838,7 +7862,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -7869,7 +7893,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                requestId: number;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -7899,7 +7923,7 @@ export interface operations {
         parameters: {
             query?: {
                 type?: components["schemas"]["ResourceType"];
-                workspaceId?: number;
+                workspaceId?: string;
                 page?: number;
                 size?: number;
             };
@@ -7961,7 +7985,7 @@ export interface operations {
     listVms: {
         parameters: {
             query?: {
-                workspaceId?: number;
+                workspaceId?: string;
                 page?: number;
                 size?: number;
             };
@@ -7996,7 +8020,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8030,7 +8054,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8070,7 +8094,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8104,7 +8128,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8151,8 +8175,8 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
-                grantId: number;
+                vmId: string;
+                grantId: string;
             };
             cookie?: never;
         };
@@ -8193,8 +8217,8 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
-                grantId: number;
+                vmId: string;
+                grantId: string;
             };
             cookie?: never;
         };
@@ -8238,7 +8262,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8269,7 +8293,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8304,8 +8328,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
-                requestId: number;
+                vmId: string;
+                requestId: string;
             };
             cookie?: never;
         };
@@ -8334,7 +8358,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8372,7 +8396,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8403,7 +8427,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8437,7 +8461,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8471,7 +8495,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8514,7 +8538,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8554,7 +8578,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8585,7 +8609,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8620,8 +8644,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
-                portForwardingId: number;
+                vmId: string;
+                portForwardingId: string;
             };
             cookie?: never;
         };
@@ -8652,7 +8676,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8683,7 +8707,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8717,7 +8741,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8761,7 +8785,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8792,7 +8816,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8823,7 +8847,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                vmId: number;
+                vmId: string;
             };
             cookie?: never;
         };
@@ -8916,7 +8940,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                workspaceId: number;
+                workspaceId: string;
             };
             cookie?: never;
         };
@@ -8947,7 +8971,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                workspaceId: number;
+                workspaceId: string;
             };
             cookie?: never;
         };
@@ -8976,7 +9000,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                workspaceId: number;
+                workspaceId: string;
             };
             cookie?: never;
         };
@@ -9014,7 +9038,7 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                workspaceId: number;
+                workspaceId: string;
             };
             cookie?: never;
         };
@@ -9061,8 +9085,8 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                workspaceId: number;
-                userId: number;
+                workspaceId: string;
+                userId: string;
             };
             cookie?: never;
         };
@@ -9103,8 +9127,8 @@ export interface operations {
                 "X-Reauth-Token"?: string;
             };
             path: {
-                workspaceId: number;
-                userId: number;
+                workspaceId: string;
+                userId: string;
             };
             cookie?: never;
         };

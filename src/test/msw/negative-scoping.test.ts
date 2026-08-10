@@ -7,6 +7,7 @@ import {
   fetchAuditLogs,
 } from '../../api/queries'
 import { setAccessToken } from '../../api/token'
+import { uuid } from './ids'
 
 /**
  * 계약 네거티브 스코핑 — ORG_ADMIN이 다른 기관(orgId=2)을 지정하면
@@ -18,33 +19,33 @@ describe('MSW 네거티브 스코핑 (ORG_ADMIN, 타 기관 orgId)', () => {
   })
 
   test('감사 로그: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAuditLogs({ orgId: 2 })).rejects.toMatchObject({
+    await expect(fetchAuditLogs({ orgId: uuid(2) })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('대시보드 요약: 다른 기관 orgId 드릴인은 404로 마스킹된다', async () => {
-    await expect(fetchAdminSummary({ orgId: 2 })).rejects.toMatchObject({
+    await expect(fetchAdminSummary({ orgId: uuid(2) })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('워크스페이스 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAdminWorkspaces({ orgId: 2 })).rejects.toMatchObject({
+    await expect(fetchAdminWorkspaces({ orgId: uuid(2) })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('사용자 상세: 스코프 밖(타 기관) 사용자는 404로 마스킹된다', async () => {
     // id 99(정외부)는 org2 파생 소속 — org1 관리자에게는 존재하지 않는 것으로 보인다.
-    await expect(fetchAdminUser(99)).rejects.toMatchObject({
+    await expect(fetchAdminUser(uuid(99))).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('공지 발송: ORG 범위에서 다른 기관 orgId를 지정하면 422', async () => {
     await expect(
-      createAnnouncement({ title: '테스트', body: '본문', scope: 'ORG', orgId: 2 }),
+      createAnnouncement({ title: '테스트', body: '본문', scope: 'ORG', orgId: uuid(2) }),
     ).rejects.toMatchObject({
       problem: {
         status: 422,
@@ -65,25 +66,25 @@ describe('MSW 네거티브 스코핑 (ORG_MANAGER, 타 기관 orgId)', () => {
   })
 
   test('감사 로그: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAuditLogs({ orgId: 2 })).rejects.toMatchObject({
+    await expect(fetchAuditLogs({ orgId: uuid(2) })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('대시보드 요약: 다른 기관 orgId 드릴인은 404로 마스킹된다', async () => {
-    await expect(fetchAdminSummary({ orgId: 2 })).rejects.toMatchObject({
+    await expect(fetchAdminSummary({ orgId: uuid(2) })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('워크스페이스 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAdminWorkspaces({ orgId: 2 })).rejects.toMatchObject({
+    await expect(fetchAdminWorkspaces({ orgId: uuid(2) })).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })
 
   test('사용자 상세: 스코프 밖(타 기관) 사용자는 404로 마스킹된다', async () => {
-    await expect(fetchAdminUser(99)).rejects.toMatchObject({
+    await expect(fetchAdminUser(uuid(99))).rejects.toMatchObject({
       problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
     })
   })

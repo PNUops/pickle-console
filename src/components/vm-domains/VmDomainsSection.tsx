@@ -25,7 +25,7 @@ interface PlatformModalState {
  */
 export function VmDomainsSection({ vm }: { vm: VmDetail }) {
   const canMutate = vm.settingsEditAllowed
-  const [drawerId, setDrawerId] = useState<number | null>(null)
+  const [drawerId, setDrawerId] = useState<string | null>(null)
   const [platformModal, setPlatformModal] = useState<PlatformModalState | null>(null)
   const [customOpen, setCustomOpen] = useState(false)
   // 도메인마다 포트가 다르다 — 직전에 쓴 값을 다음 추가 폼의 기본값으로 쓴다.

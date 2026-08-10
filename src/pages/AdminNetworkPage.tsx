@@ -335,7 +335,7 @@ const MAPPING_STATUS_TABS: { label: string; status: PortMappingStatus | undefine
 function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
   const [status, setStatus] = useState<PortMappingStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const mappings = useQuery({
@@ -408,7 +408,7 @@ function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
                         }}
                         className="cursor-pointer text-sm font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                       >
-                        {mapping.vmName ?? `VM #${mapping.vmId}`}
+                        {mapping.vmName ?? '이름 미상 VM'}
                       </button>
                     </TD>
                     <TD>{mapping.relayName}</TD>
@@ -509,7 +509,7 @@ function MappingDrawerContent({
         <div>
           <dt className="text-neutral-500">VM</dt>
           <dd className="font-medium text-neutral-900">
-            {mapping.vmName ?? `VM #${mapping.vmId}`}{' '}
+            {mapping.vmName ?? '이름 미상 VM'}{' '}
             <Link
               to={`/admin/vms/${mapping.vmId}`}
               className="text-sm font-normal text-primary-700 hover:underline"
@@ -520,7 +520,7 @@ function MappingDrawerContent({
         </div>
         <Field label="릴레이" value={mapping.relayName} />
         <Field label="생성일" value={formatDateTime(mapping.createdAt)} />
-        <Field label="생성자" value={`사용자 #${mapping.createdBy}`} />
+        <Field label="생성자" value="—" />
       </dl>
 
       {mapping.status === 'SUSPENDED' && (
@@ -825,7 +825,7 @@ const CAMPUS_STATUS_TABS: { label: string; status: CampusIpRequestStatus | undef
 function CampusTab({ isSysAdmin }: { isSysAdmin: boolean }) {
   const [status, setStatus] = useState<CampusIpRequestStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const requests = useQuery({
     queryKey: ['admin', 'campus-ip-requests', { status: status ?? null, page }],
@@ -891,7 +891,7 @@ function CampusTab({ isSysAdmin }: { isSysAdmin: boolean }) {
                         }}
                         className="cursor-pointer text-sm font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                       >
-                        {request.vmName ?? `VM #${request.vmId}`}
+                        {request.vmName ?? '이름 미상 VM'}
                       </button>
                     </TD>
                     <TD className="text-sm">{request.requesterEmail ?? '—'}</TD>
@@ -940,7 +940,7 @@ function CampusDrawerContent({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-neutral-900">
-          {request.vmName ?? `VM #${request.vmId}`}
+          {request.vmName ?? '이름 미상 VM'}
         </h3>
         <CampusIpStatusBadge status={request.status} />
       </div>
@@ -949,7 +949,7 @@ function CampusDrawerContent({
         <div>
           <dt className="text-neutral-500">VM</dt>
           <dd className="font-medium text-neutral-900">
-            {request.vmName ?? `VM #${request.vmId}`}{' '}
+            {request.vmName ?? '이름 미상 VM'}{' '}
             <Link
               to={`/admin/vms/${request.vmId}`}
               className="text-sm font-normal text-primary-700 hover:underline"
@@ -958,7 +958,7 @@ function CampusDrawerContent({
             </Link>
           </dd>
         </div>
-        <Field label="신청자" value={request.requesterEmail ?? `사용자 #${request.requestedBy}`} />
+        <Field label="신청자" value={request.requesterEmail ?? '—'} />
         <Field label="개방 포트" value={request.ports.join(', ')} />
         <Field label="신청일" value={formatDateTime(request.createdAt)} />
         {request.processedAt && (

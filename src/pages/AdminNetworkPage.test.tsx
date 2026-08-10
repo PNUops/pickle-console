@@ -13,6 +13,7 @@ import {
 import { RELAY_TOKEN_PLAINTEXT } from '../test/msw/handlers/network'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderNetwork(tab = '', token = 'access-sys-admin', user = sysAdminUser) {
   server.use(refreshSuccessHandler(token, user))
@@ -230,9 +231,9 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
   })
 
   test('목록 API는 계약의 vmId 필터를 지원한다', async () => {
-    const filtered = await fetchAdminCampusIpRequests({ vmId: 61 })
+    const filtered = await fetchAdminCampusIpRequests({ vmId: uuid(61) })
     expect(filtered.content).toHaveLength(1)
-    expect(filtered.content[0].vmId).toBe(61)
+    expect(filtered.content[0].vmId).toBe(uuid(61))
 
     const all = await fetchAdminCampusIpRequests()
     expect(all.content.length).toBeGreaterThan(1)

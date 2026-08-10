@@ -46,6 +46,7 @@ import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime, formatSpec, isShortNotice, minScheduleDate } from '../lib/format'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
+import { isUuid } from '../lib/validation'
 
 /** 정렬 가능한 컬럼 키 (계약 sort 화이트리스트의 축). */
 type SortKey = 'name' | 'endDate' | 'createdAt'
@@ -63,10 +64,9 @@ const STATUS_TABS: { label: string; status: VmStatus | undefined }[] = [
   { label: VM_STATUS_LABELS.ERROR, status: 'ERROR' },
 ]
 
-/** URL 쿼리의 양의 정수 파라미터. 그 외 값은 필터 미적용으로 취급한다. */
-function idParam(value: string | null): number | undefined {
-  const parsed = Number(value)
-  return value && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+/** URL 쿼리의 식별자 파라미터. UUID가 아닌 값은 필터 미적용으로 취급한다. */
+function idParam(value: string | null): string | undefined {
+  return isUuid(value) ? value : undefined
 }
 
 export function AdminVmsPage() {
@@ -82,20 +82,20 @@ export function AdminVmsPage() {
   // 되돌려 쓰지 않는다(의도된 절단).
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
-  const [orgId, setOrgId] = useState<number | undefined>(() => idParam(searchParams.get('orgId')))
-  const [workspaceId, setWorkspaceId] = useState<number | undefined>(() =>
+  const [orgId, setOrgId] = useState<string | undefined>(() => idParam(searchParams.get('orgId')))
+  const [workspaceId, setWorkspaceId] = useState<string | undefined>(() =>
     idParam(searchParams.get('workspaceId')),
   )
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   // 액션 결과는 (vmId, text)로 페이지가 소유한다: 그 VM의 드로어가 열려 있으면
   // 드로어 안에, 액션의 결과로 VM이 필터된 목록을 떠나 드로어가 닫히면(취소로
   // 상태 전환·강제 삭제 등) 페이지 알림으로 — 어느 경로에서도 유실되지 않는다.
-  const [feedback, setFeedback] = useState<{ vmId: number; text: string } | null>(null)
+  const [feedback, setFeedback] = useState<{ vmId: string; text: string } | null>(null)
 
-  const selectVm = (id: number) => {
+  const selectVm = (id: string) => {
     if (id !== selectedId) setFeedback(null) // 다른 VM의 결과가 남아 오독되지 않게
     setSelectedId(id)
   }
@@ -194,7 +194,7 @@ export function AdminVmsPage() {
                 className="w-56"
                 value={orgId ?? ''}
                 onChange={(event) => {
-                  setOrgId(event.target.value ? Number(event.target.value) : undefined)
+                  setOrgId(event.target.value || undefined)
                   setWorkspaceId(undefined) // 기관이 바뀌면 이전 기관의 워크스페이스 선택은 무효
                   setPage(0)
                 }}
@@ -215,7 +215,7 @@ export function AdminVmsPage() {
               className="w-56"
               value={workspaceId ?? ''}
               onChange={(event) => {
-                setWorkspaceId(event.target.value ? Number(event.target.value) : undefined)
+                setWorkspaceId(event.target.value || undefined)
                 setPage(0)
               }}
             >
@@ -373,7 +373,7 @@ function VmDrawerContent({
   notice: string | null
   onDone: (message: string) => void
   onForceDeleted: (message: string) => void
-  onFilterWorkspace: (workspaceId: number) => void
+  onFilterWorkspace: (workspaceId: string) => void
 }) {
   const [extendOpen, setExtendOpen] = useState(false)
   return (
@@ -399,13 +399,16 @@ function VmDrawerContent({
           <dt className="text-neutral-500">워크스페이스</dt>
           <dd className="font-medium text-neutral-900">
             {vm.workspaceName}{' '}
-            <button
-              type="button"
-              onClick={() => onFilterWorkspace(vm.workspaceId)}
-              className="cursor-pointer text-sm font-normal text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-            >
-              이 워크스페이스의 VM 보기
-            </button>
+            {/* 워크스페이스 행이 사라진 VM은 좁혀 볼 대상이 없다. */}
+            {vm.workspaceId != null && (
+              <button
+                type="button"
+                onClick={() => onFilterWorkspace(vm.workspaceId!)}
+                className="cursor-pointer text-sm font-normal text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+              >
+                이 워크스페이스의 VM 보기
+              </button>
+            )}
           </dd>
         </div>
         <Field label="기관" value={vm.orgName ?? '—'} />

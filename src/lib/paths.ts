@@ -1,4 +1,5 @@
 import type { Scope } from './scope-context'
+import { isUuid } from './validation'
 
 /**
  * Every console URL in one place.
@@ -20,12 +21,12 @@ export const consolePaths = {
   // Detail pages stay outside the scope: a resource belongs to exactly one
   // workspace, so the segment would carry no information, and every link that
   // already points here — a notification, a bookmark — keeps working.
-  vmDetail: (vmId: number | string) => `/console/vms/${vmId}`,
-  vmAccess: (vmId: number | string) => `/console/vms/${vmId}/access`,
-  vmTerminal: (vmId: number | string) => `/console/vms/${vmId}/terminal`,
-  requestDetail: (requestId: number | string) => `/console/requests/${requestId}`,
+  vmDetail: (vmId: string) => `/console/vms/${vmId}`,
+  vmAccess: (vmId: string) => `/console/vms/${vmId}/access`,
+  vmTerminal: (vmId: string) => `/console/vms/${vmId}/terminal`,
+  requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
-  workspaceDetail: (workspaceId: number | string) => `/console/workspaces/${workspaceId}`,
+  workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,
   sshKeys: '/console/ssh-keys',
   account: '/console/account',
   notifications: '/console/notifications',
@@ -44,7 +45,8 @@ const SCOPED_SECTIONS = ['resources', 'vms', 'requests', 'requests/new']
 function consoleSection(pathname: string): string {
   const rest = pathname.replace(/^\/console\/?/, '')
   const segments = rest.split('/').filter(Boolean)
-  const withoutScope = /^\d+$/.test(segments[0] ?? '') ? segments.slice(1) : segments
+  // The scope segment is a workspace UUID; a section name never looks like one.
+  const withoutScope = isUuid(segments[0]) ? segments.slice(1) : segments
   const section = withoutScope.join('/')
   return SCOPED_SECTIONS.includes(section) ? section : ''
 }

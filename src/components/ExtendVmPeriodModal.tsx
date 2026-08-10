@@ -15,7 +15,7 @@ export function ExtendVmPeriodModal({
   onClose,
   onDone,
 }: {
-  vm: { id: number; name: string; endDate?: string | null }
+  vm: { id: string; name: string; endDate?: string | null }
   onClose: () => void
   onDone: (message: string) => void
 }) {

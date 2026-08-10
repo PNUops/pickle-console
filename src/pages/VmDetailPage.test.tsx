@@ -7,10 +7,11 @@ import { vmMetricsFixture } from '../test/msw/handlers/metrics'
 import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { VM_METRICS_UNAVAILABLE_ID, VM_NOT_PROVISIONED_ID, uuid } from '../test/msw/ids'
 
 /** VM 상세를 연다. tab을 주면 해당 탭 딥링크(?tab=)로 진입한다. */
 function renderVm(
-  vmId: number,
+  vmId: string,
   tab?: 'publish' | 'settings' | 'activity' | 'monitoring',
 ) {
   server.use(refreshSuccessHandler('access-user'))
@@ -20,7 +21,7 @@ function renderVm(
 describe('VM 상세 — 전원 제어', () => {
   test('중지된 VM은 시작 버튼만 보이고, 확인 후 실행 중으로 갱신된다', async () => {
     const user = userEvent.setup()
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(screen.getByRole('button', { name: '시작' })).toBeInTheDocument()
@@ -39,7 +40,7 @@ describe('VM 상세 — 전원 제어', () => {
   })
 
   test('실행 중 VM은 종료·재부팅·강제 종료가 보이고 시작은 없다', async () => {
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('button', { name: '종료' })).toBeInTheDocument()
@@ -50,7 +51,7 @@ describe('VM 상세 — 전원 제어', () => {
 
   test('강제 종료 확인 모달은 데이터 손상 경고를 보여준다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: '강제 종료' }))
@@ -67,7 +68,7 @@ describe('VM 상세 — 전원 제어', () => {
   })
 
   test('NEEDS_ADMIN VM은 조작 버튼 없이 관리자 확인 안내만 보여준다', async () => {
-    renderVm(58)
+    renderVm(uuid(58))
 
     await screen.findByRole('heading', { name: 'stuck-vm' })
     expect(screen.getByText('관리자 확인 중입니다')).toBeInTheDocument()
@@ -80,7 +81,7 @@ describe('VM 상세 — 전원 제어', () => {
 
 describe('VM 상세 — 진행 패널', () => {
   test('NEEDS_ADMIN 태스크는 단계·시도·마지막 오류를 보여준다', async () => {
-    renderVm(58)
+    renderVm(uuid(58))
 
     await screen.findByRole('heading', { name: 'stuck-vm' })
     expect(screen.getByText('VM 생성 진행 상황')).toBeInTheDocument()
@@ -92,7 +93,7 @@ describe('VM 상세 — 진행 패널', () => {
   })
 
   test('생성 중에는 진행 패널이 보이고, 완료되면 폴링으로 사라진다', async () => {
-    renderVm(55)
+    renderVm(VM_NOT_PROVISIONED_ID)
 
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
     expect(screen.getByText(/OS 이미지 복제 중/)).toBeInTheDocument()
@@ -106,7 +107,7 @@ describe('VM 상세 — 진행 패널', () => {
 describe('VM 상세 — 이벤트 이력', () => {
   test('이벤트를 한국어 라벨·수행자와 함께 나열하고, 전원 조작 후 갱신된다', async () => {
     const user = userEvent.setup()
-    renderVm(56, 'activity')
+    renderVm(uuid(56), 'activity')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     const history = (await screen.findByText('이벤트 이력')).closest('div')!
@@ -114,7 +115,7 @@ describe('VM 상세 — 이벤트 이력', () => {
     expect(await within(history).findByText('생성')).toBeInTheDocument()
     expect(within(history).getByText('승인 신청 90에 따라 자동 생성')).toBeInTheDocument()
     expect(within(history).getByText('시스템')).toBeInTheDocument()
-    expect(within(history).getByText('사용자 #42')).toBeInTheDocument()
+    expect(within(history).getByText('사용자')).toBeInTheDocument()
 
     // 재부팅을 접수하면 무효화로 이벤트 이력에 REBOOT가 추가된다.
     await user.click(screen.getByRole('button', { name: '재부팅' }))
@@ -127,7 +128,7 @@ describe('VM 상세 — 이벤트 이력', () => {
 describe('VM 상세 — 삭제 흐름', () => {
   test('삭제 모달은 백업 고지를 보여주고 이름이 일치해야 접수할 수 있다', async () => {
     const user = userEvent.setup()
-    renderVm(56, 'settings')
+    renderVm(uuid(56), 'settings')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: 'VM 삭제' }))
@@ -159,7 +160,7 @@ describe('VM 상세 — 삭제 흐름', () => {
   })
 
   test('삭제 예정 VM은 배너에 취소 버튼 없이 관리자 문의 안내만 보여준다', async () => {
-    renderVm(60)
+    renderVm(uuid(60))
 
     await screen.findByRole('heading', { name: 'retiring-vm' })
     expect(screen.getByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
@@ -173,7 +174,7 @@ describe('VM 상세 — 삭제 흐름', () => {
 
   test('ERROR VM은 삭제만 가능하며 접수 즉시 삭제된다', async () => {
     const user = userEvent.setup()
-    renderVm(59, 'settings')
+    renderVm(VM_METRICS_UNAVAILABLE_ID, 'settings')
 
     await screen.findByRole('heading', { name: 'broken-vm' })
     expect(screen.getByText(/생성에 실패한 VM입니다/)).toBeInTheDocument()
@@ -197,7 +198,7 @@ describe('VM 상세 — 삭제 흐름', () => {
 describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
   test('비밀번호를 열람하고, 닫았다가 다시 열람할 수 있다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('button', { name: '비밀번호 보기' })).toBeInTheDocument()
@@ -228,8 +229,8 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
   })
 
   test('열람 권한이 없으면(passwordRevealAllowed=false) 버튼 대신 제한 안내를 보여준다', async () => {
-    server.use(vmDetailAs(56, 'MEMBER', { passwordRevealAllowed: false }))
-    renderVm(56)
+    server.use(vmDetailAs(uuid(56), 'MEMBER', { passwordRevealAllowed: false }))
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
@@ -242,7 +243,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
 
   test('편집자 이상은 비밀번호를 재생성하고 새 비밀번호를 확인할 수 있다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: '비밀번호 재생성' }))
@@ -271,7 +272,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
         }),
       ),
     )
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: '비밀번호 보기' }))
@@ -295,13 +296,13 @@ function localDate(offsetDays: number): string {
 
 describe('VM 상세 — 사용 기간 만료 표면화', () => {
   test('종료일이 7일 이내면 사용 기간 옆에 D-day 배지를 보여준다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
+    const base = vmStore.find((v) => v.id === uuid(56))!
     server.use(
-      http.get('*/api/v1/vms/56', () =>
+      http.get(`*/api/v1/vms/${uuid(56)}`, () =>
         HttpResponse.json({ ...base, endDate: localDate(3) }),
       ),
     )
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('D-3')).toBeInTheDocument()
@@ -309,9 +310,9 @@ describe('VM 상세 — 사용 기간 만료 표면화', () => {
   })
 
   test('만료로 자동 중지된 VM은 경고 안내와 D+n 배지를 보여준다', async () => {
-    const base = vmStore.find((v) => v.id === 57)!
+    const base = vmStore.find((v) => v.id === uuid(57))!
     server.use(
-      http.get('*/api/v1/vms/57', () =>
+      http.get(`*/api/v1/vms/${uuid(57)}`, () =>
         HttpResponse.json({
           ...base,
           status: 'STOPPED',
@@ -320,7 +321,7 @@ describe('VM 상세 — 사용 기간 만료 표면화', () => {
         }),
       ),
     )
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(
@@ -330,13 +331,13 @@ describe('VM 상세 — 사용 기간 만료 표면화', () => {
   })
 
   test('종료일이 충분히 남으면 D-day 배지를 노출하지 않는다', async () => {
-    const base = vmStore.find((v) => v.id === 56)!
+    const base = vmStore.find((v) => v.id === uuid(56))!
     server.use(
-      http.get('*/api/v1/vms/56', () =>
+      http.get(`*/api/v1/vms/${uuid(56)}`, () =>
         HttpResponse.json({ ...base, endDate: localDate(60) }),
       ),
     )
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.queryByText(/^D[-+]/)).not.toBeInTheDocument()
@@ -348,7 +349,7 @@ describe('VM 상세 — 만료 VM 시작 거부 (409 VM_EXPIRED)', () => {
     const user = userEvent.setup()
     // 픽스처 46(expired-lab): STOPPED + expiryStoppedAt 설정 — 시작 버튼은 보이지만
     // 계약상 기간 연장 전까지 409 VM_EXPIRED로 거부된다.
-    renderVm(46)
+    renderVm(uuid(46))
 
     await screen.findByRole('heading', { name: 'expired-lab' })
     await user.click(screen.getByRole('button', { name: '시작' }))
@@ -369,7 +370,7 @@ describe('VM 상세 — 만료 VM 시작 거부 (409 VM_EXPIRED)', () => {
 
 describe('VM 상세 — SSH 접속', () => {
   test('게이트웨이 접속 명령을 호스트명 기준으로 보여준다', async () => {
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('ssh algo-judge@ssh.pcl.kr')).toBeInTheDocument()
@@ -378,7 +379,7 @@ describe('VM 상세 — SSH 접속', () => {
 
   test('SSH 키가 하나도 없으면 접속 불가 경고와 등록 링크를 보여준다', async () => {
     server.use(http.get('*/api/v1/me/ssh-keys', () => HttpResponse.json([])))
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
@@ -392,15 +393,15 @@ describe('VM 상세 — SSH 접속', () => {
 
 describe('VM 상세 — 웹 터미널 열기', () => {
   test('RUNNING + 접속 권한이 있으면 웹 터미널 열기 버튼을 보여준다', async () => {
-    server.use(vmDetailAs(56, 'MEMBER', { status: 'RUNNING' }))
-    renderVm(56)
+    server.use(vmDetailAs(uuid(56), 'MEMBER', { status: 'RUNNING' }))
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(await screen.findByRole('button', { name: '웹 터미널 열기' })).toBeInTheDocument()
   })
 
   test('STOPPED VM에는 웹 터미널 열기 버튼이 없다', async () => {
-    renderVm(57) // web-lab, STOPPED, OWNER
+    renderVm(uuid(57)) // web-lab, STOPPED, OWNER
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(
@@ -410,8 +411,8 @@ describe('VM 상세 — 웹 터미널 열기', () => {
 
   test('접속 권한이 없으면(accessAllowed=false) 웹 터미널 열기 버튼이 없다', async () => {
     // 열람자는 상태만 볼 수 있다 — 안으로 들어가는 수단은 주어지지 않는다.
-    server.use(vmDetailAs(56, 'VIEWER', { status: 'RUNNING' }))
-    renderVm(56)
+    server.use(vmDetailAs(uuid(56), 'VIEWER', { status: 'RUNNING' }))
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
@@ -425,7 +426,7 @@ describe('VM 상세 — 웹 터미널 열기', () => {
 describe('VM 상세 — VM 설정', () => {
   test('편집자 이상은 설정을 보고, 비밀번호 SSH를 켜면 2차 경고 후 적용된다', async () => {
     const user = userEvent.setup()
-    renderVm(56, 'settings') // OWNER, RUNNING
+    renderVm(uuid(56), 'settings') // OWNER, RUNNING
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(await screen.findByText('VM 설정')).toBeInTheDocument()
@@ -454,7 +455,7 @@ describe('VM 상세 — VM 설정', () => {
 
   test('요청자 역할이 부족한 설정은 비활성 + 필요 역할 안내를 보여준다', async () => {
     server.use(
-      http.get('*/api/v1/vms/56/settings', () =>
+      http.get(`*/api/v1/vms/${uuid(56)}/settings`, () =>
         HttpResponse.json([
           {
             key: 'password_reveal_min_role',
@@ -472,7 +473,7 @@ describe('VM 상세 — VM 설정', () => {
         ]),
       ),
     )
-    renderVm(56, 'settings')
+    renderVm(uuid(56), 'settings')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
@@ -482,8 +483,8 @@ describe('VM 상세 — VM 설정', () => {
   })
 
   test('참여자(MEMBER)에게는 VM 설정 섹션이 노출되지 않는다', async () => {
-    server.use(vmDetailAs(56, 'MEMBER', { passwordRevealAllowed: true }))
-    renderVm(56)
+    server.use(vmDetailAs(uuid(56), 'MEMBER', { passwordRevealAllowed: true }))
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.queryByText('VM 설정')).not.toBeInTheDocument()
@@ -495,7 +496,7 @@ describe('VM 상세 — VM 설정', () => {
 describe('VM 상세 — 탭', () => {
   test('기본은 개요 탭이고, 탭 클릭으로 영역이 전환된다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '개요' })).toHaveAttribute('aria-selected', 'true')
@@ -508,8 +509,8 @@ describe('VM 상세 — 탭', () => {
   })
 
   test('참여자(MEMBER)에게는 설정 탭 자체가 노출되지 않는다', async () => {
-    server.use(vmDetailAs(56, 'MEMBER', { passwordRevealAllowed: true }))
-    renderVm(56)
+    server.use(vmDetailAs(uuid(56), 'MEMBER', { passwordRevealAllowed: true }))
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '개요' })).toBeInTheDocument()
@@ -521,7 +522,7 @@ describe('VM 상세 — 탭', () => {
 
 describe('VM 상세 — 모니터링', () => {
   test('모니터링 탭은 네 개의 사용량 차트와 갱신 시각을 보여준다', async () => {
-    renderVm(56, 'monitoring')
+    renderVm(uuid(56), 'monitoring')
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '모니터링' })).toHaveAttribute(
@@ -546,7 +547,7 @@ describe('VM 상세 — 모니터링', () => {
 
   test('캔버스를 못 쓰는 브라우저에서는 빈 판 대신 이유를 적는다', async () => {
     // jsdom에는 canvas 2d 컨텍스트가 없다 — 그리지 못하는 브라우저와 같은 경로다.
-    renderVm(56, 'monitoring')
+    renderVm(uuid(56), 'monitoring')
 
     const chart = await screen.findByRole('img', { name: 'CPU' })
     expect(chart).toHaveAccessibleDescription(
@@ -582,7 +583,7 @@ describe('VM 상세 — 모니터링', () => {
         )
       }),
     )
-    renderVm(56, 'monitoring')
+    renderVm(uuid(56), 'monitoring')
 
     expect(
       await screen.findByText('이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다.'),
@@ -593,7 +594,7 @@ describe('VM 상세 — 모니터링', () => {
 
   test('개요에서 모니터링 탭으로 전환하고 조회 구간을 바꿀 수 있다', async () => {
     const user = userEvent.setup()
-    renderVm(56)
+    renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('tab', { name: '모니터링' }))
@@ -614,7 +615,7 @@ describe('VM 상세 — 모니터링', () => {
   })
 
   test('아직 프로비저닝되지 않은 VM은 차분한 안내만 보여준다', async () => {
-    renderVm(55, 'monitoring')
+    renderVm(VM_NOT_PROVISIONED_ID, 'monitoring')
 
     expect(
       await screen.findByText('VM이 준비되면 사용량 데이터가 표시됩니다.'),
@@ -623,7 +624,7 @@ describe('VM 상세 — 모니터링', () => {
   })
 
   test('하이퍼바이저에 물어볼 수 없으면 오류가 아니라 차분한 안내로 알린다', async () => {
-    renderVm(59, 'monitoring')
+    renderVm(VM_METRICS_UNAVAILABLE_ID, 'monitoring')
 
     const notice = await screen.findByText(
       /하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/,
@@ -637,7 +638,7 @@ describe('VM 상세 — 모니터링', () => {
   test('삭제 중인 VM은 모니터링 탭을 아예 열지 않는다', async () => {
     // 삭제 중에도 하이퍼바이저 식별자는 남아 있어, 탭을 두면 사라지는 게스트를
     // 30초마다 조회해 실패한다.
-    renderVm(60, 'monitoring')
+    renderVm(uuid(60), 'monitoring')
 
     await screen.findByRole('heading', { name: 'retiring-vm' })
     expect(screen.queryByRole('tab', { name: '모니터링' })).not.toBeInTheDocument()
@@ -650,7 +651,7 @@ describe('VM 상세 — 모니터링', () => {
   })
 
   test('중지된 VM에는 모니터링 탭이 그대로 있다', async () => {
-    renderVm(57)
+    renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(screen.getByRole('tab', { name: '모니터링' })).toBeInTheDocument()

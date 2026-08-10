@@ -43,7 +43,7 @@ export function CertificatesSection() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [expiringSoon, setExpiringSoon] = useState(false)
   const [page, setPage] = useState(0)
 

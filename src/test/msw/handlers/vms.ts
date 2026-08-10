@@ -2,6 +2,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
 import { isMyWorkspace, workspaceMembersOf } from './workspaces'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type VmDetail = Schemas['VmDetailResponse']
@@ -58,19 +59,19 @@ export function localDateStr(offsetDays = 0): string {
 function initialVms(): VmDetail[] {
   return [
     {
-      id: 55,
+      id: uuid(55),
       name: 'capstone-team3-api',
       hostname: 'capstone-team3-api',
       status: 'CREATING',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 102,
+      requestId: uuid(102),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: null,
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -97,19 +98,19 @@ function initialVms(): VmDetail[] {
     },
     {
       // 서브도메인 선지정 + 미공개 RUNNING — "처음 공개" 흐름 대상.
-      id: 56,
+      id: uuid(56),
       name: 'algo-judge',
       hostname: 'algo-judge',
       status: 'RUNNING',
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      workspaceId: 15,
+      workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
-      requestId: 90,
+      requestId: uuid(90),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.56',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -128,19 +129,19 @@ function initialVms(): VmDetail[] {
     {
       // 서브도메인 선지정 없음 — 공개 폼에서 이름을 직접 입력해야 하는 흐름
       // (워크스페이스 12 OWNER라 공개 폼을 실제로 조작할 수 있다).
-      id: 57,
+      id: uuid(57),
       name: 'web-lab',
       hostname: 'web-lab',
       status: 'STOPPED',
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 91,
+      requestId: uuid(91),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.57',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -157,19 +158,19 @@ function initialVms(): VmDetail[] {
       updatedAt: '2026-07-01T09:00:00+09:00',
     },
     {
-      id: 58,
+      id: uuid(58),
       name: 'stuck-vm',
       hostname: 'stuck-vm',
       status: 'NEEDS_ADMIN',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 103,
+      requestId: uuid(103),
       statusDetail: '프로비저닝 재시도가 소진되어 관리자 확인이 필요합니다.',
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: null,
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -195,19 +196,19 @@ function initialVms(): VmDetail[] {
       updatedAt: '2026-07-08T13:00:00+09:00',
     },
     {
-      id: 59,
+      id: uuid(59),
       name: 'broken-vm',
       hostname: 'broken-vm',
       status: 'ERROR',
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 104,
+      requestId: uuid(104),
       statusDetail: '생성이 실패해 부분 리소스가 정리되었습니다.',
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: null,
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -224,19 +225,19 @@ function initialVms(): VmDetail[] {
       updatedAt: '2026-07-07T13:00:00+09:00',
     },
     {
-      id: 60,
+      id: uuid(60),
       name: 'retiring-vm',
       hostname: 'retiring-vm',
       status: 'DELETING',
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      workspaceId: 15,
+      workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
-      requestId: 92,
+      requestId: uuid(92),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.60',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -252,7 +253,7 @@ function initialVms(): VmDetail[] {
         kind: 'SELF',
         scheduledFor: '2026-07-15T14:10:00+09:00',
         requestedAt: '2026-07-08T14:10:00+09:00',
-        requestedById: 42,
+        requestedById: uuid(42),
         reason: null,
         cancelable: true,
       },
@@ -262,19 +263,19 @@ function initialVms(): VmDetail[] {
     {
       // 이미 공개됨 — 플랫폼 희망 서브도메인(PLATFORM), 라우트 APPLIED, 와일드카드 인증서.
       // 포트 변경·공개 해제 흐름 대상 (org 2).
-      id: 61,
+      id: uuid(61),
       name: 'ai-train',
       hostname: 'ai-train',
       status: 'RUNNING',
       vcpu: 4,
       memoryMb: 4096,
       diskGb: 40,
-      workspaceId: 21,
+      workspaceId: uuid(21),
       workspaceName: 'AI 동아리',
-      requestId: 105,
+      requestId: uuid(105),
       statusDetail: null,
-      orgId: 2,
-      imageId: 2,
+      orgId: uuid(2),
+      imageId: uuid(2),
       ipAddress: '10.10.0.61',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -287,8 +288,8 @@ function initialVms(): VmDetail[] {
       publications: [{
         fqdn: 'ai-team.pusan.dev',
         domain: {
-          id: 21,
-          vmId: 61,
+          id: uuid(21),
+          vmId: uuid(61),
           kind: 'PLATFORM',
           fqdn: 'ai-team.pusan.dev',
           rootDomain: 'pusan.dev',
@@ -318,19 +319,19 @@ function initialVms(): VmDetail[] {
     },
     {
       // 커스텀 도메인 검증 중(VERIFYING) — A는 확인, TXT 미확인. 검증 안내·재검증 대상.
-      id: 62,
+      id: uuid(62),
       name: 'demo-web',
       hostname: 'demo-web',
       status: 'RUNNING',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 106,
+      requestId: uuid(106),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.62',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -343,8 +344,8 @@ function initialVms(): VmDetail[] {
       publications: [{
         fqdn: 'demo.example.com',
         domain: {
-          id: 34,
-          vmId: 62,
+          id: uuid(34),
+          vmId: uuid(62),
           kind: 'CUSTOM',
           fqdn: 'demo.example.com',
           rootDomain: null,
@@ -384,19 +385,19 @@ function initialVms(): VmDetail[] {
     {
       // 도메인 2개 서빙 — 플랫폼 서브도메인(정상) + 커스텀(검증 완료지만 라우트
       // 적용 실패, nginx 오류 노출). 커스텀 인증서(LE)는 발급 완료, 만료 임박.
-      id: 63,
+      id: uuid(63),
       name: 'shop-app',
       hostname: 'shop-app',
       status: 'RUNNING',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 107,
+      requestId: uuid(107),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.63',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -409,8 +410,8 @@ function initialVms(): VmDetail[] {
       publications: [{
         fqdn: 'shop-app.pusan.dev',
         domain: {
-          id: 30,
-          vmId: 63,
+          id: uuid(30),
+          vmId: uuid(63),
           kind: 'PLATFORM',
           fqdn: 'shop-app.pusan.dev',
           rootDomain: 'pusan.dev',
@@ -435,8 +436,8 @@ function initialVms(): VmDetail[] {
       }, {
         fqdn: 'shop.example.com',
         domain: {
-          id: 35,
-          vmId: 63,
+          id: uuid(35),
+          vmId: uuid(63),
           kind: 'CUSTOM',
           fqdn: 'shop.example.com',
           rootDomain: null,
@@ -481,19 +482,19 @@ function initialVms(): VmDetail[] {
     {
       // 커스텀 도메인 ACTIVE + 라우트 APPLIED, 그러나 인증서(LE) 발급 실패(FAILED).
       // 재검증으로 인증서 재발급을 트리거하는 대상 (org 2).
-      id: 64,
+      id: uuid(64),
       name: 'api-svc',
       hostname: 'api-svc',
       status: 'RUNNING',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 21,
+      workspaceId: uuid(21),
       workspaceName: 'AI 동아리',
-      requestId: 108,
+      requestId: uuid(108),
       statusDetail: null,
-      orgId: 2,
-      imageId: 2,
+      orgId: uuid(2),
+      imageId: uuid(2),
       ipAddress: '10.10.0.64',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -506,8 +507,8 @@ function initialVms(): VmDetail[] {
       publications: [{
         fqdn: 'api.example.org',
         domain: {
-          id: 36,
-          vmId: 64,
+          id: uuid(36),
+          vmId: uuid(64),
           kind: 'CUSTOM',
           fqdn: 'api.example.org',
           rootDomain: null,
@@ -552,19 +553,19 @@ function initialVms(): VmDetail[] {
     {
       // 소속 워크스페이스의 VM이지만 접근 목록에 내가 없다 — 목록에서 제한 행으로 나오고
       // 상세는 404다. 워크스페이스 15에서 나는 구성원일 뿐이라 상시 권한도 없다.
-      id: 44,
+      id: uuid(44),
       name: 'ml-notebook',
       hostname: 'ml-notebook',
       status: 'RUNNING',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 15,
+      workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
-      requestId: 112,
+      requestId: uuid(112),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.44',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -583,19 +584,19 @@ function initialVms(): VmDetail[] {
     /* ─── 만료 큐 픽스처 — 날짜는 테스트 실행일 기준으로 동적 생성 ─── */
     {
       // 7일 이내 만료 임박 (D-3)
-      id: 45,
+      id: uuid(45),
       name: 'expiring-api',
       hostname: 'expiring-api',
       status: 'RUNNING',
       vcpu: 2,
       memoryMb: 2048,
       diskGb: 20,
-      workspaceId: 12,
+      workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
-      requestId: 109,
+      requestId: uuid(109),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.45',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -614,19 +615,19 @@ function initialVms(): VmDetail[] {
     },
     {
       // 이미 만료되어 스위퍼가 자동 중지 (D+2)
-      id: 46,
+      id: uuid(46),
       name: 'expired-lab',
       hostname: 'expired-lab',
       status: 'STOPPED',
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      workspaceId: 15,
+      workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
-      requestId: 110,
+      requestId: uuid(110),
       statusDetail: null,
-      orgId: 1,
-      imageId: 1,
+      orgId: uuid(1),
+      imageId: uuid(1),
       ipAddress: '10.10.0.46',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -645,19 +646,19 @@ function initialVms(): VmDetail[] {
     },
     {
       // 30일 이내 만료 예정 (D-20) — 7일 탭에는 나오지 않는다 (org 2)
-      id: 47,
+      id: uuid(47),
       name: 'semester-web',
       hostname: 'semester-web',
       status: 'RUNNING',
       vcpu: 1,
       memoryMb: 1024,
       diskGb: 10,
-      workspaceId: 21,
+      workspaceId: uuid(21),
       workspaceName: 'AI 동아리',
-      requestId: 111,
+      requestId: uuid(111),
       statusDetail: null,
-      orgId: 2,
-      imageId: 1,
+      orgId: uuid(2),
+      imageId: uuid(1),
       ipAddress: '10.10.0.47',
       sshUsername: 'ubuntu',
       sshHost: 'ssh.pcl.kr',
@@ -677,18 +678,18 @@ function initialVms(): VmDetail[] {
   ]
 }
 
-function initialVmEvents(): Record<number, VmEvent[]> {
+function initialVmEvents(): Record<string, VmEvent[]> {
   return {
-    56: [
+    [uuid(56)]: [
       {
-        id: 902,
+        id: uuid(902),
         type: 'START',
-        actorId: 42,
+        actorId: uuid(42),
         detail: null,
         createdAt: '2026-07-01T09:12:00+09:00',
       },
       {
-        id: 901,
+        id: uuid(901),
         type: 'CREATE',
         actorId: null,
         detail: '승인 신청 90에 따라 자동 생성',
@@ -699,7 +700,7 @@ function initialVmEvents(): Record<number, VmEvent[]> {
 }
 
 export let vmStore: VmDetail[] = initialVms()
-export let vmEventStore: Record<number, VmEvent[]> = initialVmEvents()
+export let vmEventStore: Record<string, VmEvent[]> = initialVmEvents()
 let nextEventId = 950
 
 /* ─── VM별 설정 레지스트리 — 계약 v0.8.0 카탈로그 ─── */
@@ -735,7 +736,7 @@ export const VM_SETTING_CATALOG: Record<string, VmSettingCatalogEntry> = {
 }
 
 /** VM별 설정 저장 오버라이드 ({vmId: {key: value}}) — 미저장 키는 기본값. */
-export let vmSettingStore: Record<number, Record<string, unknown>> = {}
+export let vmSettingStore: Record<string, Record<string, unknown>> = {}
 
 /** 레지스트리 + 저장 오버라이드를 병합해 VmSettingView[]를 만든다 (요청자 기준 editable 계산). */
 export function vmSettingsOf(vm: VmDetail): VmSettingView[] {
@@ -766,11 +767,11 @@ export function vmSettingsOf(vm: VmDetail): VmSettingView[] {
  * subsequent responses report it RUNNING (drives the polling test).
  */
 export const VM_RUNNING_AFTER_FETCHES = 2
-let detailFetchCounts: Record<number, number> = {}
+let detailFetchCounts: Record<string, number> = {}
 
 /** 라우트가 PENDING→APPLIED로 전이하기까지의 GET 횟수 — 도메인별 계수 (폴링 테스트). */
 export const ROUTE_APPLIED_AFTER_FETCHES = 2
-let routeFetchCounts: Record<number, number> = {}
+let routeFetchCounts: Record<string, number> = {}
 
 export function resetVmFixtures() {
   vmStore = initialVms()
@@ -788,15 +789,15 @@ export function resetVmFixtures() {
  * 그렇다. 상세는 여전히 막히고 목록 관리만 열리는, 서버와 같은 조합이다.
  * {@link resetVmFixtures}가 되돌린다.
  */
-export function asGrantManager(vmId: number) {
+export function asGrantManager(vmId: string) {
   const vm = vmStore.find((v) => v.id === vmId)
   if (vm) vm.accessManageAllowed = true
 }
 
 /** Prepend a lifecycle event for assertions on event history refreshes. */
-export function recordVmEvent(vmId: number, event: Omit<VmEvent, 'id'>) {
+export function recordVmEvent(vmId: string, event: Omit<VmEvent, 'id'>) {
   const list = (vmEventStore[vmId] ??= [])
-  list.unshift({ id: nextEventId++, ...event })
+  list.unshift({ id: uuid(nextEventId++), ...event })
 }
 
 export const invalidVmStateProblem = (instance: string, detail: string) =>
@@ -856,7 +857,7 @@ export function toResourceSummary(vm: VmDetail): Schemas['ResourceSummaryRespons
     name: vm.name,
     displayName: vm.displayName ?? null,
     status: vm.status,
-    workspaceId: vm.workspaceId,
+    workspaceId: vm.workspaceId!,
     workspaceName: vm.workspaceName,
     accessLimited: limited,
     ownerNames: limited ? grantOwnerNames(vm.id) : [],
@@ -868,32 +869,32 @@ export function toResourceSummary(vm: VmDetail): Schemas['ResourceSummaryRespons
 /* ─── VM 접근 목록 (계약 v0.33.0) ─── */
 
 /** 접근 목록의 소유자 이름 — 제한 행이 "누구에게 요청하라"고 말할 때 쓴다. */
-function grantOwnerNames(vmId: number): string[] {
+function grantOwnerNames(vmId: string): string[] {
   return (vmAccessStore[vmId] ?? [])
     .filter((grant) => grant.role === 'OWNER' && grant.user)
     .map((grant) => grant.user!.name)
 }
 
-function initialVmAccessGrants(): Record<number, VmAccessGrant[]> {
+function initialVmAccessGrants(): Record<string, VmAccessGrant[]> {
   return {
     // algo-judge — 나(42)는 소유자, 김철수(57)는 참여자, 워크스페이스 전체는 열람자.
-    56: [
+    [uuid(56)]: [
       {
-        id: 301,
+        id: uuid(301),
         granteeType: 'USER',
-        user: { userId: 42, name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
         role: 'OWNER',
         createdAt: '2026-06-20T10:00:00+09:00',
       },
       {
-        id: 302,
+        id: uuid(302),
         granteeType: 'USER',
-        user: { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        user: { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
         role: 'MEMBER',
         createdAt: '2026-06-21T10:00:00+09:00',
       },
       {
-        id: 303,
+        id: uuid(303),
         granteeType: 'WORKSPACE',
         user: null,
         role: 'VIEWER',
@@ -901,21 +902,21 @@ function initialVmAccessGrants(): Record<number, VmAccessGrant[]> {
       },
     ],
     // web-lab — 신청자였던 나만 소유자로 올라가 있는 갓 만들어진 상태.
-    57: [
+    [uuid(57)]: [
       {
-        id: 305,
+        id: uuid(305),
         granteeType: 'USER',
-        user: { userId: 42, name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
         role: 'OWNER',
         createdAt: '2026-06-21T10:00:00+09:00',
       },
     ],
     // ml-notebook — 나는 목록에 없다 (제한 행의 근거).
-    44: [
+    [uuid(44)]: [
       {
-        id: 311,
+        id: uuid(311),
         granteeType: 'USER',
-        user: { userId: 57, name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        user: { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
         role: 'OWNER',
         createdAt: '2026-07-01T10:00:00+09:00',
       },
@@ -923,7 +924,7 @@ function initialVmAccessGrants(): Record<number, VmAccessGrant[]> {
   }
 }
 
-export let vmAccessStore: Record<number, VmAccessGrant[]> = initialVmAccessGrants()
+export let vmAccessStore: Record<string, VmAccessGrant[]> = initialVmAccessGrants()
 let nextGrantId = 400
 
 export const vmHandlers: RequestHandler[] = [
@@ -936,8 +937,8 @@ export const vmHandlers: RequestHandler[] = [
       // 서버와 같은 조회 범위: 내가 구성원인 워크스페이스의 VM만 보인다.
       // (범위 질의는 그 위에 얹히는 필터일 뿐, 범위를 넓히지 못한다.)
       .filter((vm) => isMyWorkspace(vm.workspaceId))
-      .filter((vm) => !workspaceId || vm.workspaceId === Number(workspaceId))
-      .sort((a, b) => b.id - a.id)
+      .filter((vm) => !workspaceId || vm.workspaceId === workspaceId)
+      .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseVmSummaryResponse'] = {
       content: filtered
         .slice(page * size, (page + 1) * size)
@@ -956,7 +957,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/vms/:vmId', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) {
       return problemResponse({
         type: 'about:blank',
@@ -1005,7 +1006,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.delete('*/api/v1/vms/:vmId', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (
       vm.deletion != null ||
@@ -1022,7 +1023,7 @@ export const vmHandlers: RequestHandler[] = [
       kind: 'SELF',
       scheduledFor: immediate ? '2026-07-08T15:00:00+09:00' : '2026-07-15T15:00:00+09:00',
       requestedAt: '2026-07-08T15:00:00+09:00',
-      requestedById: 42,
+      requestedById: uuid(42),
       reason: null,
       cancelable: !immediate,
     }
@@ -1031,14 +1032,14 @@ export const vmHandlers: RequestHandler[] = [
     // 실서버: 접수 시 SELF_DELETE 이벤트, ERROR 즉시 삭제는 종결 DELETE 이벤트를 추가로 기록.
     recordVmEvent(vm.id, {
       type: 'SELF_DELETE',
-      actorId: 42,
+      actorId: uuid(42),
       detail: immediate ? '생성 실패 VM 즉시 삭제' : null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
     if (immediate) {
       recordVmEvent(vm.id, {
         type: 'DELETE',
-        actorId: 42,
+        actorId: uuid(42),
         detail: null,
         createdAt: '2026-07-08T15:00:00+09:00',
       })
@@ -1049,7 +1050,7 @@ export const vmHandlers: RequestHandler[] = [
   /* ─── power ops: 계약의 409 상태 조건을 그대로 강제한다 ─── */
 
   http.post('*/api/v1/vms/:vmId/start', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (vm.status !== 'STOPPED') {
       return invalidVmStateProblem(
@@ -1075,7 +1076,7 @@ export const vmHandlers: RequestHandler[] = [
     vm.status = 'RUNNING'
     recordVmEvent(vm.id, {
       type: 'START',
-      actorId: 42,
+      actorId: uuid(42),
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1086,7 +1087,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/vms/:vmId/shutdown', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (vm.status !== 'RUNNING') {
       return invalidVmStateProblem(
@@ -1097,7 +1098,7 @@ export const vmHandlers: RequestHandler[] = [
     vm.status = 'STOPPED'
     recordVmEvent(vm.id, {
       type: 'STOP',
-      actorId: 42,
+      actorId: uuid(42),
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1108,7 +1109,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/vms/:vmId/reboot', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (vm.status !== 'RUNNING') {
       return invalidVmStateProblem(
@@ -1119,7 +1120,7 @@ export const vmHandlers: RequestHandler[] = [
     vm.status = 'REBOOTING'
     recordVmEvent(vm.id, {
       type: 'REBOOT',
-      actorId: 42,
+      actorId: uuid(42),
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1130,7 +1131,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/vms/:vmId/force-stop', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (vm.status !== 'RUNNING' && vm.status !== 'REBOOTING') {
       return invalidVmStateProblem(
@@ -1141,7 +1142,7 @@ export const vmHandlers: RequestHandler[] = [
     vm.status = 'STOPPED'
     recordVmEvent(vm.id, {
       type: 'FORCE_STOP',
-      actorId: 42,
+      actorId: uuid(42),
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1153,7 +1154,7 @@ export const vmHandlers: RequestHandler[] = [
 
   // 계약 v0.8.0: 상시 재열람 (GET, 부수효과 없음). rename: initial-password → password.
   http.get('*/api/v1/vms/:vmId/password', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (!['RUNNING', 'STOPPED', 'REBOOTING'].includes(vm.status)) {
       return invalidVmStateProblem(
@@ -1193,7 +1194,7 @@ export const vmHandlers: RequestHandler[] = [
 
   // 비밀번호 재생성 (EDITOR 이상, RUNNING) — 새 비밀번호를 즉시 적용하고 반환.
   http.post('*/api/v1/vms/:vmId/password/regenerate', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (!vm.settingsEditAllowed) {
       return accessDeniedProblem(
@@ -1223,7 +1224,7 @@ export const vmHandlers: RequestHandler[] = [
 
   // VM별 설정 조회 (EDITOR 이상) — 레지스트리 기반 카탈로그.
   http.get('*/api/v1/vms/:vmId/settings', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (!vm.settingsEditAllowed) {
       return accessDeniedProblem(
@@ -1237,7 +1238,7 @@ export const vmHandlers: RequestHandler[] = [
 
   // VM별 설정 변경 (부분 맵, 원자적) — 갱신된 전체 목록 반환.
   http.patch('*/api/v1/vms/:vmId/settings', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     if (!vm.settingsEditAllowed) {
       return accessDeniedProblem(
@@ -1284,7 +1285,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/vms/:vmId/events', ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
@@ -1303,7 +1304,7 @@ export const vmHandlers: RequestHandler[] = [
   /* ─── VM 접근 목록 — 리소스 소유자와 워크스페이스 소유자만 읽고 쓴다 ─── */
 
   http.get('*/api/v1/vms/:vmId/access', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
@@ -1316,7 +1317,7 @@ export const vmHandlers: RequestHandler[] = [
         name: vm.name,
         displayName: vm.displayName ?? null,
         status: vm.status,
-        workspaceId: vm.workspaceId,
+        workspaceId: vm.workspaceId!,
         workspaceName: vm.workspaceName,
       },
       grants: vmAccessStore[vm.id] ?? [],
@@ -1324,7 +1325,7 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.post('*/api/v1/vms/:vmId/access', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
@@ -1337,7 +1338,7 @@ export const vmHandlers: RequestHandler[] = [
         return alreadyListedProblem()
       }
       const grant: VmAccessGrant = {
-        id: nextGrantId++,
+        id: uuid(nextGrantId++),
         granteeType: 'WORKSPACE',
         user: null,
         role: body.role,
@@ -1358,7 +1359,7 @@ export const vmHandlers: RequestHandler[] = [
       return alreadyListedProblem()
     }
     const grant: VmAccessGrant = {
-      id: nextGrantId++,
+      id: uuid(nextGrantId++),
       granteeType: 'USER',
       user: { userId: member.userId, name: member.name, email: member.email },
       role: body.role,
@@ -1369,11 +1370,11 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.patch('*/api/v1/vms/:vmId/access/:grantId', async ({ params, request }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
-    const grant = (vmAccessStore[vm.id] ?? []).find((g) => g.id === Number(params.grantId))
+    const grant = (vmAccessStore[vm.id] ?? []).find((g) => g.id === String(params.grantId))
     if (!grant) return notFoundProblem()
     const body = (await request.json()) as Schemas['UpdateResourceAccessGrantRequest']
     if (grant.granteeType === 'WORKSPACE') {
@@ -1385,12 +1386,12 @@ export const vmHandlers: RequestHandler[] = [
   }),
 
   http.delete('*/api/v1/vms/:vmId/access/:grantId', ({ params }) => {
-    const vm = vmStore.find((v) => v.id === Number(params.vmId))
+    const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFoundProblem()
     const denied = requireGrantManager(vm)
     if (denied) return denied
     const grants = vmAccessStore[vm.id] ?? []
-    const index = grants.findIndex((g) => g.id === Number(params.grantId))
+    const index = grants.findIndex((g) => g.id === String(params.grantId))
     if (index < 0) return notFoundProblem()
     grants.splice(index, 1)
     return new HttpResponse(null, { status: 204 })
@@ -1449,7 +1450,7 @@ const validationProblem = (instance: string, field: string, message: string) =>
 
 /** 접근 권한 분기 테스트용 — 이 VM 상세를 지정한 리소스 등급으로 내려주는 임시 핸들러. */
 export function vmDetailAs(
-  vmId: number,
+  vmId: string,
   role: ResourceRole | null,
   overrides: Partial<VmDetail> = {},
 ): RequestHandler {
@@ -1464,13 +1465,13 @@ export function vmDetailAs(
  * 등)을 그 행 하나로 재현하려고 쓴다 — 상세용 {@link vmDetailAs}의 목록판이다.
  */
 export function vmSummaryAs(
-  vmId: number,
+  vmId: string,
   patch: Partial<Schemas['VmSummaryResponse']>,
 ): RequestHandler {
   return http.get('*/api/v1/vms', () => {
     const rows = vmStore
       .filter((vm) => isMyWorkspace(vm.workspaceId))
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
       .map((vm) => {
         const row = vm.myResourceRole == null
           ? toRestrictedVmSummary(vm, grantOwnerNames(vm.id), vm.accessManageAllowed)

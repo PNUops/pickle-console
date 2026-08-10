@@ -31,17 +31,24 @@ import {
 } from '../components/ui'
 import { WORKSPACE_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 const ASSIGNABLE_ROLES: WorkspaceMemberRole[] = ['OWNER', 'MEMBER']
 
 export function WorkspaceDetailPage() {
   const params = useParams()
-  const workspaceId = Number(params.workspaceId)
+  const workspaceId = params.workspaceId ?? ''
+  const idValid = isUuid(workspaceId)
   const workspace = useQuery({
     queryKey: ['workspaces', workspaceId],
     queryFn: () => fetchWorkspace(workspaceId),
+    // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
+    enabled: idValid,
   })
 
+  if (!idValid) {
+    return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+  }
   if (workspace.isPending) {
     return (
       <div className="flex justify-center py-12">
@@ -476,7 +483,7 @@ function MembersSection({
 
 /* ─── add member (contract: OWNER only) ─── */
 
-function AddMemberForm({ workspaceId, onAdded }: { workspaceId: number; onAdded: () => void }) {
+function AddMemberForm({ workspaceId, onAdded }: { workspaceId: string; onAdded: () => void }) {
   const toast = useToast()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<WorkspaceMemberRole>('MEMBER')

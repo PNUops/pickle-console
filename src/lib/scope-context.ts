@@ -8,6 +8,6 @@ import { createContext } from 'react'
  * A class or club workspace with dozens of resources is the case the scope
  * exists for — there, an unscoped list is mostly other people's rows.
  */
-export type Scope = number | null
+export type Scope = string | null
 
 export const ScopeContext = createContext<Scope>(null)

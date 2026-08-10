@@ -1,5 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 
@@ -16,21 +17,21 @@ export function problemResponse(problem: Schemas['Problem']) {
 export const USER_PASSWORD = 'correct-horse-battery!'
 
 export const regularUser: Schemas['UserSummaryResponse'] = {
-  id: 42,
+  id: uuid(42),
   email: 'example@pusan.ac.kr',
   name: '홍길동',
   role: 'USER',
 }
 
 export const orgAdminUser: Schemas['UserSummaryResponse'] = {
-  id: 7,
+  id: uuid(7),
   email: 'admin.kim@pusan.ac.kr',
   name: '김관리',
   role: 'ORG_ADMIN',
 }
 
 export const sysAdminUser: Schemas['UserSummaryResponse'] = {
-  id: 5,
+  id: uuid(5),
   email: 'sysadmin.lee@pusan.ac.kr',
   name: '이시스템',
   role: 'SYS_ADMIN',
@@ -38,7 +39,7 @@ export const sysAdminUser: Schemas['UserSummaryResponse'] = {
 
 /** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프. */
 export const orgManagerUser: Schemas['UserSummaryResponse'] = {
-  id: 8,
+  id: uuid(8),
   email: 'manager.choi@pusan.ac.kr',
   name: '최운영',
   role: 'ORG_MANAGER',
@@ -46,7 +47,7 @@ export const orgManagerUser: Schemas['UserSummaryResponse'] = {
 
 /** 시스템 운영자 — SYS_ADMIN 하위, 전 기관 조회. */
 export const sysManagerUser: Schemas['UserSummaryResponse'] = {
-  id: 6,
+  id: uuid(6),
   email: 'sysmanager.jung@pusan.ac.kr',
   name: '정시스템운영',
   role: 'SYS_MANAGER',
@@ -54,7 +55,7 @@ export const sysManagerUser: Schemas['UserSummaryResponse'] = {
 
 /** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
 export const regularUserB: Schemas['UserSummaryResponse'] = {
-  id: 58,
+  id: uuid(58),
   email: 'younghee.park@pusan.ac.kr',
   name: '박영희',
   role: 'USER',
@@ -65,7 +66,7 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 7, workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -73,10 +74,10 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
 
 export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   ...orgAdminUser,
-  orgId: 1,
+  orgId: uuid(1),
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 9, workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -87,7 +88,7 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 5, workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -95,10 +96,10 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
 
 export const orgManagerProfile: Schemas['UserProfileResponse'] = {
   ...orgManagerUser,
-  orgId: 1,
+  orgId: uuid(1),
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 12, workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(12), workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -109,7 +110,7 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 13, workspaceName: '정시스템운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(13), workspaceName: '정시스템운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -120,7 +121,7 @@ export const regularProfileB: Schemas['UserProfileResponse'] = {
   orgId: null,
   status: 'ACTIVE',
   memberships: [
-    { workspaceId: 8, workspaceName: '박영희', workspaceKind: 'PERSONAL', role: 'OWNER' },
+    { workspaceId: uuid(8), workspaceName: '박영희', workspaceKind: 'PERSONAL', role: 'OWNER' },
   ],
   mfaEnabled: false,
   pendingConsents: [],
@@ -128,7 +129,7 @@ export const regularProfileB: Schemas['UserProfileResponse'] = {
 
 /** A 2FA-enrolled account: login returns a challenge, /auth/mfa completes it. */
 export const mfaUser: Schemas['UserSummaryResponse'] = {
-  id: 61,
+  id: uuid(61),
   email: 'twofactor@pusan.ac.kr',
   name: '이중인증',
   role: 'USER',
@@ -138,7 +139,7 @@ export const mfaProfile: Schemas['UserProfileResponse'] = {
   ...mfaUser,
   orgId: null,
   status: 'ACTIVE',
-  memberships: [{ workspaceId: 11, workspaceName: '이중인증', workspaceKind: 'PERSONAL', role: 'OWNER' }],
+  memberships: [{ workspaceId: uuid(11), workspaceName: '이중인증', workspaceKind: 'PERSONAL', role: 'OWNER' }],
   mfaEnabled: true,
   pendingConsents: [],
 }

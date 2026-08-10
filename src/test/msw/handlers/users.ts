@@ -2,6 +2,7 @@ import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
+import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type UserAdminDetail = Schemas['UserAdminDetailResponse']
@@ -12,13 +13,13 @@ type UserAdminDetail = Schemas['UserAdminDetailResponse']
  * visibleToOrg is N (derived members). SYS_ADMIN sees everything.
  */
 interface AdminUserRecord extends UserAdminDetail {
-  visibleToOrg: number | null
+  visibleToOrg: string | null
 }
 
 function initialUsers(): AdminUserRecord[] {
   return [
     {
-      id: 5,
+      id: uuid(5),
       email: 'sysadmin.lee@pusan.ac.kr',
       name: '이시스템',
       role: 'SYS_ADMIN',
@@ -29,30 +30,30 @@ function initialUsers(): AdminUserRecord[] {
       withdrawnAt: null,
       disabledAt: null,
       disabledReason: null,
-      memberships: [{ workspaceId: 5, workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' }],
+      memberships: [{ workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' }],
       activeVmCount: 0,
       statusChanges: [],
       visibleToOrg: null,
     },
     {
-      id: 7,
+      id: uuid(7),
       email: 'admin.kim@pusan.ac.kr',
       name: '김관리',
       role: 'ORG_ADMIN',
-      orgId: 1,
+      orgId: uuid(1),
       status: 'ACTIVE',
       mfaEnabled: false,
       createdAt: '2026-01-03T09:00:00+09:00',
       withdrawnAt: null,
       disabledAt: null,
       disabledReason: null,
-      memberships: [{ workspaceId: 9, workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' }],
+      memberships: [{ workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' }],
       activeVmCount: 0,
       statusChanges: [],
-      visibleToOrg: 1,
+      visibleToOrg: uuid(1),
     },
     {
-      id: 42,
+      id: uuid(42),
       email: 'example@pusan.ac.kr',
       name: '홍길동',
       role: 'USER',
@@ -64,15 +65,15 @@ function initialUsers(): AdminUserRecord[] {
       disabledAt: null,
       disabledReason: null,
       memberships: [
-        { workspaceId: 7, workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
-        { workspaceId: 11, workspaceName: '연구팀', workspaceKind: 'TEAM', role: 'MEMBER' },
+        { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
+        { workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'TEAM', role: 'MEMBER' },
       ],
       activeVmCount: 2,
       statusChanges: [],
-      visibleToOrg: 1,
+      visibleToOrg: uuid(1),
     },
     {
-      id: 58,
+      id: uuid(58),
       email: 'pending.choi@pusan.ac.kr',
       name: '최미인증',
       role: 'USER',
@@ -86,10 +87,10 @@ function initialUsers(): AdminUserRecord[] {
       memberships: [],
       activeVmCount: 0,
       statusChanges: [],
-      visibleToOrg: 1,
+      visibleToOrg: uuid(1),
     },
     {
-      id: 99,
+      id: uuid(99),
       email: 'outsider.jung@pusan.ac.kr',
       name: '정외부',
       role: 'USER',
@@ -103,7 +104,7 @@ function initialUsers(): AdminUserRecord[] {
       memberships: [],
       activeVmCount: 0,
       statusChanges: [],
-      visibleToOrg: 2,
+      visibleToOrg: uuid(2),
     },
   ]
 }
@@ -171,7 +172,7 @@ export const userHandlers: RequestHandler[] = [
       .filter((row) =>
         q ? row.email.toLowerCase().includes(q) || row.name.toLowerCase().includes(q) : true,
       )
-      .sort((a, b) => b.id - a.id)
+      .sort((a, b) => b.id.localeCompare(a.id))
 
     const body: Schemas['PageResponseUserAdminViewResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size).map(toView),
@@ -186,7 +187,7 @@ export const userHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/users/:userId', ({ request, params }) => {
     const actor = actorOf(request)
     if (!actor || actor.role === 'USER') return forbidden()
-    const row = adminUserStore.find((u) => u.id === Number(params.userId))
+    const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row || !inScope(actor, row)) return notFound(String(params.userId))
     return HttpResponse.json(toDetail(row), { status: 200 })
   }),
@@ -194,7 +195,7 @@ export const userHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/users/:userId/disable', async ({ request, params }) => {
     const actor = actorOf(request)
     if (!actor || actor.role !== 'SYS_ADMIN') return forbidden()
-    const row = adminUserStore.find((u) => u.id === Number(params.userId))
+    const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
     if (actor.id === row.id) {
       return problemResponse({
@@ -239,7 +240,7 @@ export const userHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/users/:userId/enable', ({ request, params }) => {
     const actor = actorOf(request)
     if (!actor || actor.role !== 'SYS_ADMIN') return forbidden()
-    const row = adminUserStore.find((u) => u.id === Number(params.userId))
+    const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
     if (row.status !== 'DISABLED') {
       return problemResponse({

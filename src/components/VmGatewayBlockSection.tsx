@@ -14,7 +14,7 @@ export function VmGatewayBlockSection({
   canManage,
   onDone,
 }: {
-  vm: { id: number; sshGatewayBlocked?: boolean | null }
+  vm: { id: string; sshGatewayBlocked?: boolean | null }
   canManage: boolean
   onDone: (message: string) => void
 }) {

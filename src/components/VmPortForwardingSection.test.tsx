@@ -7,10 +7,11 @@ import { RELAY_PUBLIC_HOST } from '../test/msw/handlers/network'
 import { vmDetailAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 /** VM 상세의 도메인·포트 탭을 연다 (기본: 일반 사용자 세션). */
 function renderPublishTab(
-  vmId: number,
+  vmId: string,
   token = 'access-user',
   user?: Parameters<typeof refreshSuccessHandler>[1],
 ) {
@@ -21,8 +22,8 @@ function renderPublishTab(
 describe('VM 도메인·포트 탭 — 포트포워딩', () => {
   test('참여자는 목록·상태 배지를 읽기 전용으로 본다', async () => {
     // 접근 목록에서 참여자면 설정을 바꿀 수 없다(settingsEditAllowed=false).
-    server.use(vmDetailAs(56, 'MEMBER'))
-    renderPublishTab(56)
+    server.use(vmDetailAs(uuid(56), 'MEMBER'))
+    renderPublishTab(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     // 활성 매핑 + 정지된 매핑이 함께 나열된다.
@@ -44,7 +45,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
 
   test('OWNER가 만들면 대기 → 폴링으로 활성에 수렴한다', async () => {
     const user = userEvent.setup()
-    renderPublishTab(45) // expiring-api: 워크스페이스 12 OWNER, RUNNING + IP
+    renderPublishTab(uuid(45)) // expiring-api: 워크스페이스 12 OWNER, RUNNING + IP
 
     await screen.findByRole('heading', { name: 'expiring-api' })
     const port = await screen.findByLabelText('대상 포트')
@@ -61,8 +62,8 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
   test('편집자도 생성 폼을 보고 매핑을 삭제할 수 있다', async () => {
     const user = userEvent.setup()
     // 소유자가 아니어도 편집자면 만들고 지울 수 있다 (settingsEditAllowed).
-    server.use(vmDetailAs(45, 'EDITOR'))
-    renderPublishTab(45)
+    server.use(vmDetailAs(uuid(45), 'EDITOR'))
+    renderPublishTab(uuid(45))
 
     await screen.findByRole('heading', { name: 'expiring-api' })
     expect(await screen.findByRole('button', { name: '포트포워딩 만들기' })).toBeInTheDocument()
@@ -77,7 +78,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
 
   test('대상 포트 범위 밖 입력은 왕복 없이 필드 오류로 막는다', async () => {
     const user = userEvent.setup()
-    renderPublishTab(45)
+    renderPublishTab(uuid(45))
 
     await screen.findByRole('heading', { name: 'expiring-api' })
     const port = await screen.findByLabelText('대상 포트')
@@ -91,11 +92,11 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     // 계속되어 관리자 개입 후 회복이 화면에 반영됨을 확인한다.
     let calls = 0
     server.use(
-      http.get('*/api/v1/vms/56/port-forwardings', () => {
+      http.get(`*/api/v1/vms/${uuid(56)}/port-forwardings`, () => {
         calls += 1
         return HttpResponse.json([
           {
-            id: 900,
+            id: uuid(900),
             proto: 'TCP',
             publicHost: RELAY_PUBLIC_HOST,
             publicPort: 16000,
@@ -107,7 +108,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
         ])
       }),
     )
-    renderPublishTab(56)
+    renderPublishTab(uuid(56))
 
     expect(await screen.findByText('실패')).toBeInTheDocument()
     // 느린 폴링 주기(테스트 250ms) 후 회복이 반영된다.
@@ -117,7 +118,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
   test('폼에 자리가 없는 서버 필드 오류도 요약 목록으로 노출된다', async () => {
     const user = userEvent.setup()
     server.use(
-      http.post('*/api/v1/vms/45/port-forwardings', () =>
+      http.post(`*/api/v1/vms/${uuid(45)}/port-forwardings`, () =>
         HttpResponse.json(
           {
             type: 'about:blank',
@@ -131,7 +132,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
         ),
       ),
     )
-    renderPublishTab(45)
+    renderPublishTab(uuid(45))
 
     await screen.findByRole('heading', { name: 'expiring-api' })
     await user.type(await screen.findByLabelText('대상 포트'), '8080')

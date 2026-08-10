@@ -42,7 +42,7 @@ export function AdminExpiryPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
   const [tab, setTab] = useState<ExpiryTab>('D7')
-  const [orgId, setOrgId] = useState<number | undefined>(undefined)
+  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [extendTarget, setExtendTarget] = useState<VmSummary | null>(null)
   const [message, setMessage] = useState<string | null>(null)

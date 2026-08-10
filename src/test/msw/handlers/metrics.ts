@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
+import { VM_METRICS_UNAVAILABLE_ID, VM_NOT_PROVISIONED_ID } from '../ids'
 
 type Schemas = components['schemas']
 
@@ -127,13 +128,16 @@ export function capacityTrendFixture(days: number): Schemas['CapacityTrendRespon
 
 export const metricsHandlers: RequestHandler[] = [
   http.get('*/api/v1/vms/:vmId/metrics', ({ params, request }) => {
-    const vmId = Number(params.vmId)
+    const vmId = String(params.vmId)
     const timeframe = timeframeOf(request)
-    // 생성 중 VM(55)은 아직 실체가 없고, 생성 실패 VM(59)은 하이퍼바이저 조회가 실패한다.
-    if (vmId === 55) {
+    // 생성 중 VM은 아직 실체가 없고, 생성 실패 VM은 하이퍼바이저 조회가 실패한다.
+    // 두 값은 VmDetailPage 테스트와 공유한다 — 한쪽만 옮기면 분기가 죽은 채로
+    // 테스트는 계속 통과한다.
+    if (vmId === VM_NOT_PROVISIONED_ID) {
       return HttpResponse.json(notProvisionedMetrics(timeframe), { status: 200 })
     }
-    if (vmId === 59) return metricsUnavailableProblem(`/api/v1/vms/${vmId}/metrics`)
+    if (vmId === VM_METRICS_UNAVAILABLE_ID)
+      return metricsUnavailableProblem(`/api/v1/vms/${vmId}/metrics`)
     return HttpResponse.json(vmMetricsFixture(timeframe), { status: 200 })
   }),
 
