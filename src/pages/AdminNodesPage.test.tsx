@@ -51,3 +51,55 @@ describe('노드/용량', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('노드/용량 — 사용량·용량 추이', () => {
+  test('노드 탭 아래에 노드별 실측 사용량 차트를 펼쳐 둔다', async () => {
+    renderNodes()
+
+    const usage = await screen.findByRole('heading', { name: 'pve1 사용량' })
+    const section = usage.closest('div')!.parentElement as HTMLElement
+    expect(
+      await within(section).findByRole('heading', { name: 'CPU' }),
+    ).toBeInTheDocument()
+    expect(within(section).getByRole('heading', { name: '메모리' })).toBeInTheDocument()
+    expect(within(section).getByRole('heading', { name: '네트워크' })).toBeInTheDocument()
+    expect(
+      within(section).getByRole('group', { name: 'pve1 조회 구간' }),
+    ).toBeInTheDocument()
+  })
+
+  test('노드 표는 게스트 디스크 풀 용량을 함께 보여준다', async () => {
+    renderNodes()
+
+    const row = (await screen.findByText('pve1')).closest('tr')!
+    expect(within(row).getByText('풀 용량 900 GiB')).toBeInTheDocument()
+    // 아직 측정되지 않은 노드는 수치 대신 미측정으로 남는다.
+    const other = (await screen.findByText('pve2')).closest('tr')!
+    expect(within(other).getByText('풀 용량 미측정')).toBeInTheDocument()
+  })
+
+  test('용량 추이 탭은 자원별 차트를 보여주고 기간을 바꿀 수 있다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/nodes?tab=trend')
+
+    expect(await screen.findByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '메모리 할당' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '디스크 할당' })).toBeInTheDocument()
+    // VM 대수는 단위가 달라 같은 축에 얹지 않고 별도 차트로 둔다.
+    expect(screen.getByRole('heading', { name: 'VM 수' })).toBeInTheDocument()
+
+    const period = screen.getByRole('group', { name: '조회 기간' })
+    expect(within(period).getByRole('button', { name: '90일' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.click(within(period).getByRole('button', { name: '30일' }))
+    expect(within(period).getByRole('button', { name: '30일' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    // 시스템 관리자는 기관을 좁혀 볼 수 있다.
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+  })
+})

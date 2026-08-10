@@ -68,6 +68,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/capacity-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminCapacityTrend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/certificates": {
         parameters: {
             query?: never;
@@ -210,6 +226,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateAdminNode"];
+        trace?: never;
+    };
+    "/admin/nodes/{nodeId}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminNodeMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/notifications": {
@@ -1825,6 +1857,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVmMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/password": {
         parameters: {
             query?: never;
@@ -2498,8 +2546,42 @@ export interface components {
         Capacity: {
             /** Format: int64 */
             cpuThreads: number;
+            /**
+             * Format: int64
+             * @description ACTIVE 노드의 thin pool 용량 합(GB) — 용량 미등록 노드가 있으면 null
+             */
+            diskGb?: number | null;
             /** Format: int64 */
             memoryMb: number;
+        };
+        CapacityTrendPointResponse: {
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            diskGb: number;
+            /** Format: int64 */
+            memoryMb: number;
+            /** Format: int64 */
+            vcpu: number;
+            /** Format: int64 */
+            vmCount: number;
+        };
+        CapacityTrendResponse: {
+            /** Format: int64 */
+            capacityCpuThreads: number;
+            /**
+             * Format: int64
+             * @description ACTIVE 노드의 thin pool 용량 합(GB) — 오버프로비저닝 전제의 조언용 분모, 용량 미등록 노드가 있으면 null
+             */
+            capacityDiskGb?: number | null;
+            /** Format: int64 */
+            capacityMemoryMb: number;
+            /** Format: date */
+            from: string;
+            /** @description 일 단위 스냅샷 — 해당 일 종료 시점에 살아 있던 VM의 할당 합 */
+            points: components["schemas"]["CapacityTrendPointResponse"][];
+            /** Format: date */
+            to: string;
         };
         /** @enum {string} */
         CatalogStatus: "ACTIVE" | "DISABLED";
@@ -2797,6 +2879,63 @@ export interface components {
             otpauthUri: string;
             secret: string;
         };
+        NodeLiveResponse: {
+            /** Format: date-time */
+            checkedAt?: string | null;
+            /** Format: double */
+            cpu?: number | null;
+            /** Format: int64 */
+            memTotalBytes?: number | null;
+            /** Format: int64 */
+            memUsedBytes?: number | null;
+            name: string;
+            /** Format: int64 */
+            nodeId: number;
+            /** @description false = 이 노드의 Proxmox API가 응답하지 않음 — 나머지 필드는 null */
+            reachable: boolean;
+            /** Format: int64 */
+            storageTotalBytes?: number | null;
+            /** Format: int64 */
+            storageUsedBytes?: number | null;
+        };
+        NodeMetricPointResponse: {
+            /**
+             * Format: double
+             * @description 노드 전체 스레드를 1.0으로 본 사용률 (0~1)
+             */
+            cpu?: number | null;
+            /** Format: double */
+            iowait?: number | null;
+            /** Format: double */
+            loadavg?: number | null;
+            /** Format: int64 */
+            memTotalBytes?: number | null;
+            /** Format: int64 */
+            memUsedBytes?: number | null;
+            /** Format: double */
+            netinBps?: number | null;
+            /** Format: double */
+            netoutBps?: number | null;
+            /** Format: int64 */
+            rootTotalBytes?: number | null;
+            /**
+             * Format: int64
+             * @description 노드 루트 파일시스템 사용량 — 게스트 디스크가 사는 thin pool은 스토리지 상태 값으로 따로 제공
+             */
+            rootUsedBytes?: number | null;
+            /** Format: int64 */
+            swapTotalBytes?: number | null;
+            /** Format: int64 */
+            swapUsedBytes?: number | null;
+            /** Format: date-time */
+            time: string;
+        };
+        NodeMetricsResponse: {
+            /** Format: date-time */
+            fetchedAt: string;
+            points: components["schemas"]["NodeMetricPointResponse"][];
+            timeframe: string;
+        };
         NodeRatio: {
             /** Format: double */
             cpuOvercommitRatio: number;
@@ -2821,6 +2960,11 @@ export interface components {
             cpuThreads: number;
             /** Format: double */
             cpuWarnThreshold: number;
+            /**
+             * Format: int64
+             * @description 게스트 디스크가 놓이는 thin pool 용량(GB) — 아직 측정되지 않았으면 null
+             */
+            diskCapacityGb?: number | null;
             /** Format: int64 */
             id: number;
             ipPool: components["schemas"]["IpPoolSummaryResponse"];
@@ -2885,6 +3029,11 @@ export interface components {
         OrgHeadroom: {
             allocated: components["schemas"]["ResourceTotalsResponse"];
             capacity: components["schemas"]["Capacity"];
+            /**
+             * Format: double
+             * @description 할당 디스크 / thin pool 용량 — 용량 미등록 노드가 있으면 null. 오버프로비저닝 전제라 1을 넘을 수 있고 경고 임계값은 없습니다.
+             */
+            diskUsageRatio?: number | null;
             /** Format: double */
             memoryUsageRatio: number;
             /** Format: double */
@@ -3297,6 +3446,11 @@ export interface components {
             allocatedMemoryMb: number;
             /** Format: int64 */
             allocatedVcpu: number;
+            /**
+             * Format: int64
+             * @description ACTIVE 노드의 thin pool 용량 합(GB) — 용량 미등록 노드가 있으면 null
+             */
+            capacityDiskGb?: number | null;
             /** Format: int64 */
             capacityMemoryMb?: number | null;
             /** Format: int64 */
@@ -3390,6 +3544,8 @@ export interface components {
             /** Format: int32 */
             targetPort: number;
         };
+        /** @enum {string} */
+        RrdTimeframe: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
         ScheduleVmDeletionRequest: {
             reason: string;
             /** Format: date-time */
@@ -3450,6 +3606,7 @@ export interface components {
             certExpiring30dCount: number;
             ipPools: components["schemas"]["IpPoolUsage"][];
             nodes: components["schemas"]["NodeRatio"][];
+            nodesLive: components["schemas"]["NodeLiveResponse"][];
             /** Format: int64 */
             notificationFailureCount: number;
             /** Format: int64 */
@@ -3811,6 +3968,44 @@ export interface components {
             /** Format: int64 */
             nodeId?: number | null;
         };
+        VmMetricPointResponse: {
+            /**
+             * Format: double
+             * @description 할당된 vCPU 전체를 1.0으로 본 사용률 (0~1)
+             */
+            cpu?: number | null;
+            /** Format: double */
+            diskReadBps?: number | null;
+            /** Format: double */
+            diskWriteBps?: number | null;
+            /** Format: int64 */
+            maxmemBytes?: number | null;
+            /**
+             * Format: int64
+             * @description 게스트 내부 기준 메모리 사용량(바이트). 게스트 에이전트가 보고하지 않으면 하이퍼바이저 관점 값으로 대체됩니다.
+             */
+            memBytes?: number | null;
+            /**
+             * Format: int64
+             * @description 하이퍼바이저 관점 메모리 사용량(바이트) — 게스트 페이지 캐시 포함.
+             */
+            memHostBytes?: number | null;
+            /** Format: double */
+            netinBps?: number | null;
+            /** Format: double */
+            netoutBps?: number | null;
+            /** Format: date-time */
+            time: string;
+        };
+        VmMetricsResponse: {
+            available: boolean;
+            /** Format: date-time */
+            fetchedAt: string;
+            points: components["schemas"]["VmMetricPointResponse"][];
+            timeframe: string;
+            /** @description NOT_PROVISIONED = 아직 프로비저닝되지 않았거나 삭제된 VM */
+            unavailableReason?: string | null;
+        };
         VmPasswordResponse: {
             password: string;
             sshHost: string;
@@ -4136,6 +4331,38 @@ export interface operations {
             };
         };
     };
+    getAdminCapacityTrend: {
+        parameters: {
+            query?: {
+                days?: number;
+                orgId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CapacityTrendResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminCertificates: {
         parameters: {
             query?: {
@@ -4422,6 +4649,40 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NodeSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminNodeMetrics: {
+        parameters: {
+            query?: {
+                /** @description 조회 구간 — HOUR/DAY/WEEK/MONTH/YEAR (해상도는 구간에 따라 거칠어짐) */
+                timeframe?: components["schemas"]["RrdTimeframe"];
+            };
+            header?: never;
+            path: {
+                nodeId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NodeMetricsResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -8136,6 +8397,40 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVmMetrics: {
+        parameters: {
+            query?: {
+                /** @description 조회 구간 — HOUR/DAY/WEEK/MONTH/YEAR (해상도는 구간에 따라 거칠어짐) */
+                timeframe?: components["schemas"]["RrdTimeframe"];
+            };
+            header?: never;
+            path: {
+                vmId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmMetricsResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

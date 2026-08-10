@@ -102,6 +102,40 @@ export function formatMemory(memoryMb: number): string {
   return `${memoryMb} MiB`
 }
 
+/** 이진 단위 계단 — 메모리 표기(formatMemory)의 GiB/MiB 관례를 그대로 잇는다. */
+const BINARY_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+
+function scaleBinary(value: number): { scaled: number; unit: string } {
+  let magnitude = Math.abs(value)
+  let step = 0
+  while (magnitude >= 1024 && step < BINARY_UNITS.length - 1) {
+    magnitude /= 1024
+    step += 1
+  }
+  return { scaled: value < 0 ? -magnitude : magnitude, unit: BINARY_UNITS[step] }
+}
+
+/**
+ * 바이트 → 사람이 읽는 이진 단위 라벨 (예 1536 → '1.5 KiB').
+ * 자릿수는 값의 크기에 맞춘다 — 큰 값에 소수점을 붙이면 축 라벨이 길어진다.
+ */
+export function formatBytes(bytes: number): string {
+  const { scaled, unit } = scaleBinary(bytes)
+  const magnitude = Math.abs(scaled)
+  const digits = unit === 'B' || magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : 2
+  return `${scaled.toFixed(digits)} ${unit}`
+}
+
+/** 초당 바이트 → 전송 속도 라벨 (예 1_572_864 → '1.50 MiB/s'). */
+export function formatByteRate(bytesPerSecond: number): string {
+  return `${formatBytes(bytesPerSecond)}/s`
+}
+
+/** 0~100 백분율 → 라벨 (예 42.35 → '42.4%', 7.2 → '7.2%'). */
+export function formatPercent(percent: number): string {
+  return `${percent.toFixed(Math.abs(percent) >= 100 ? 0 : 1)}%`
+}
+
 /** Compact spec summary: '2 vCPU · 2 GiB · 20 GiB'. */
 /**
  * 접근 권한이 없는 VM은 사양을 내려받지 못한다(서버가 지움). 그런 행에서는

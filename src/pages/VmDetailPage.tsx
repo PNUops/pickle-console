@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { Suspense, lazy, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   keepPreviousData,
@@ -71,6 +71,12 @@ import { VmAccessSection } from '../components/VmAccessSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
 
+// 사용량 차트는 uPlot을 끌어오므로, 모니터링 탭을 여는 사용자에게만 로드되도록
+// 코드 분할한다(상세 화면 진입 번들 경량 유지).
+const VmMonitoringSection = lazy(
+  () => import('../components/vm-monitoring/VmMonitoringSection'),
+)
+
 /** 진행 중 상태 폴링 주기 (테스트에서는 빠르게 돌려 mock 전이를 관찰한다). */
 const POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000
 /**
@@ -91,8 +97,7 @@ const ACTIVE_TASK_STATUSES: ProvisioningTaskView['status'][] = [
 const EVENTS_PAGE_SIZE = 10
 
 /**
- * VM 상세 탭 구성. 배열 순서가 렌더 순서 — 추후 '모니터링'(사용량 차트, 로드맵)
- * 탭은 여기 한 항목을 추가하는 것으로 확장한다.
+ * VM 상세 탭 구성. 배열 순서가 렌더 순서다.
  *
  * 도메인·포트는 이 VM을 바깥에서 닿게 하는 수단을 모은 탭이고(웹 주소를 붙이는
  * HTTP 공개, 웹이 아닌 포트를 그대로 여는 포트 포워딩), 네트워크는 이 VM이 어느
@@ -101,6 +106,7 @@ const EVENTS_PAGE_SIZE = 10
  */
 const VM_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
+  { id: 'monitoring', label: '모니터링' },
   { id: 'publish', label: '도메인·포트' },
   { id: 'network', label: '네트워크' },
   { id: 'access', label: '접근' },
@@ -164,9 +170,12 @@ export function VmDetailPage() {
   // 접근 탭은 이 VM의 접근 권한을 관리할 수 있는 사람에게만 — 리소스 소유자와
   // 워크스페이스 소유자다.
   const accessVisible = data.accessManageAllowed && data.status !== 'DELETED'
+  // 삭제된 VM은 하이퍼바이저에 물어볼 실체가 없으므로 사용량 탭을 감춘다.
+  const monitoringVisible = data.status !== 'DELETED'
   const tabs = VM_TABS.filter((tab) => {
     if (tab.id === 'settings') return settingsVisible
     if (tab.id === 'access') return accessVisible
+    if (tab.id === 'monitoring') return monitoringVisible
     return true
   })
   const rawTab = searchParams.get('tab')
@@ -263,6 +272,18 @@ export function VmDetailPage() {
             </dl>
           </CardContent>
         </Card>
+      </TabPanel>
+
+      <TabPanel id="monitoring" active={activeTab === 'monitoring'} className="space-y-6">
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <Spinner label="사용량 화면 불러오는 중" />
+            </div>
+          }
+        >
+          <VmMonitoringSection vmId={vmId} />
+        </Suspense>
       </TabPanel>
 
       <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">

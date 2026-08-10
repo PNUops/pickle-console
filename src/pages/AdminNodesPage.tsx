@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchAdminNodes, updateAdminNode, type NodeSummary } from '../api/queries'
@@ -27,9 +27,19 @@ import {
 } from '../components/ui'
 import { formatMemory } from '../lib/format'
 
+// 차트 화면은 uPlot을 끌어오므로 해당 탭·영역을 여는 사용자에게만 로드한다.
+const NodeMetricsSection = lazy(
+  () => import('../components/node-monitoring/NodeMetricsSection'),
+)
+const CapacityTrendSection = lazy(
+  () => import('../components/capacity-trend/CapacityTrendSection'),
+)
+
+/** 탭 id는 기존 `?tab=` 링크가 계속 열리도록 유지한다. */
 const SCREEN_TABS = [
   { id: 'nodes', label: '노드' },
   { id: 'ips', label: 'IP 할당' },
+  { id: 'trend', label: '용량 추이' },
 ]
 
 const NODE_STATUS_LABELS: Record<NodeSummary['status'], string> = {
@@ -73,6 +83,18 @@ export function AdminNodesPage() {
 
       <TabPanel id="ips" active={activeTab === 'ips'}>
         <IpAllocationsSection />
+      </TabPanel>
+
+      <TabPanel id="trend" active={activeTab === 'trend'}>
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <Spinner label="용량 추이 불러오는 중" />
+            </div>
+          }
+        >
+          <CapacityTrendSection isSysAdmin={isSysAdmin} />
+        </Suspense>
       </TabPanel>
 
       <TabPanel id="nodes" active={activeTab === 'nodes'} className="space-y-6">
@@ -138,6 +160,10 @@ export function AdminNodesPage() {
                   </TD>
                   <TD className="whitespace-nowrap text-xs text-neutral-500">
                     {node.vmBridge} / {node.storage}
+                    <span className="block">
+                      풀 용량{' '}
+                      {node.diskCapacityGb != null ? `${node.diskCapacityGb} GiB` : '미측정'}
+                    </span>
                   </TD>
                   <TD className="text-right">
                     <Button
@@ -155,6 +181,21 @@ export function AdminNodesPage() {
           </Table>
         </Card>
       )}
+
+      {/* 노드별 실측 사용량 — 노드가 하나뿐인 지금은 항상 펼쳐 둔다. */}
+      {nodes.isSuccess &&
+        nodes.data.map((node) => (
+          <Suspense
+            key={node.id}
+            fallback={
+              <div className="flex justify-center py-8">
+                <Spinner label="노드 사용량 불러오는 중" />
+              </div>
+            }
+          >
+            <NodeMetricsSection nodeId={node.id} nodeName={node.name} />
+          </Suspense>
+        ))}
 
       {statusTarget && (
         <NodeStatusModal

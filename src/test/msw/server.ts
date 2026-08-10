@@ -11,6 +11,7 @@ import { consentHandlers } from './handlers/consent'
 import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
 import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces'
+import { metricsHandlers } from './handlers/metrics'
 import { networkHandlers, resetNetworkFixtures } from './handlers/network'
 import { resourceHandlers } from './handlers/resources'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
@@ -41,6 +42,7 @@ export const handlers: RequestHandler[] = [
   ...campusIpHandlers,
   ...adminHandlers,
   ...adminOpsHandlers,
+  ...metricsHandlers,
   ...auditHandlers,
   ...settingHandlers,
   ...notificationHandlers,
