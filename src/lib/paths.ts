@@ -31,3 +31,29 @@ export const consolePaths = {
   notifications: '/console/notifications',
   activity: '/console/activity',
 } as const
+
+/** The listings that exist under a workspace as well as unscoped. */
+const SCOPED_SECTIONS = ['resources', 'vms', 'requests', 'requests/new']
+
+/**
+ * The part of a console path that survives a scope change: the list you are
+ * looking at, without the scope segment. Anything that is not a scoped list (a
+ * VM's detail, the account screen) belongs to one workspace already, so it
+ * drops back to that scope's dashboard.
+ */
+function consoleSection(pathname: string): string {
+  const rest = pathname.replace(/^\/console\/?/, '')
+  const segments = rest.split('/').filter(Boolean)
+  const withoutScope = /^\d+$/.test(segments[0] ?? '') ? segments.slice(1) : segments
+  const section = withoutScope.join('/')
+  return SCOPED_SECTIONS.includes(section) ? section : ''
+}
+
+/**
+ * The same screen read through another scope — where switching workspace lands,
+ * and where a scope that is not mine falls back to.
+ */
+export function consolePathInScope(scope: Scope, pathname: string): string {
+  const section = consoleSection(pathname)
+  return section === '' ? consolePaths.dashboard(scope) : scoped(scope, section)
+}
