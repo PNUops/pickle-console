@@ -8,6 +8,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 describe('감사 로그', () => {
   test('SYS_ADMIN은 전체 기록과 행위자 역할 배지를 본다', async () => {
@@ -78,6 +79,8 @@ describe('내 활동', () => {
     expect(loginRows.length).toBeGreaterThanOrEqual(2)
     expect(screen.getAllByText('127.0.0.1').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('127.0.0.2')).toBeInTheDocument()
-    expect(screen.getByText('vm:60')).toBeInTheDocument()
+    // 대상은 종류와 공개 식별자로 적힌다. 서버가 대상 이름을 함께 주지 않는 한
+    // 여기서 이름으로 바꿔 적을 방법은 없다.
+    expect(screen.getByText(`vm:${uuid(60)}`)).toBeInTheDocument()
   })
 })
