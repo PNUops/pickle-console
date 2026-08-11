@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { asLlmKeyGrantManager } from '../test/msw/handlers/llm-keys'
+import { asLlmKeyGrantManager, llmKeyStore } from '../test/msw/handlers/llm-keys'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -70,6 +71,43 @@ describe('내 LLM API 키 목록', () => {
 
     expect(await screen.findByRole('link', { name: 'algo-hint-writer' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'capstone-chatbot' })).not.toBeInTheDocument()
+  })
+})
+
+describe('유출된 키를 멈추는 길', () => {
+  test('부여 없는 워크스페이스 소유자도 폐기까지 갈 수 있다', async () => {
+    // 서버는 폐기를 상시권으로 열어 뒀다 — 유출된 키를 멈출 수 있는 사람이 그 키를
+    // 이미 볼 수 있는 사람뿐이면 안 되기 때문이다. 그런데 이 사람은 상세가 403이라
+    // 상세에만 폐기가 있으면 자기에게 권한을 자가 부여하는 길밖에 남지 않는다.
+    const user = userEvent.setup()
+    asLlmKeyGrantManager(uuid(72))
+    renderKeys()
+
+    const limitedRow = (await screen.findByText('db-lab-grader')).closest('tr')!
+    await user.click(within(limitedRow).getByRole('link', { name: '접근 권한 관리' }))
+
+    const revokeButton = await screen.findByRole('button', { name: '키 폐기' })
+    expect(revokeButton).toBeEnabled()
+    await user.click(revokeButton)
+
+    const modal = await screen.findByRole('dialog')
+    // 확인 문구가 키의 내용을 전제하지 않는다 — 이 사람은 안을 볼 권한이 없다.
+    expect(within(modal).getByText('되돌릴 수 없습니다')).toBeInTheDocument()
+    await user.type(within(modal).getByRole('textbox'), 'db-lab-grader')
+    await user.click(within(modal).getByRole('button', { name: '폐기' }))
+
+    await waitFor(() =>
+      expect(llmKeyStore.find((key) => key.id === uuid(72))!.status).toBe('REVOKED'),
+    )
+    // 폐기가 이 화면의 배지에도 닿는다.
+    expect(await screen.findByText('폐기됨')).toBeInTheDocument()
+  })
+
+  test('이미 폐기된 키에는 폐기를 다시 권하지 않는다', async () => {
+    renderKeys(`/console/llm-keys/${uuid(73)}/access`)
+
+    expect(await screen.findByRole('heading', { name: 'leaked-demo-key' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
   })
 })
 

@@ -30,7 +30,9 @@ function initialLlmKeys(): LlmKeyDetail[] {
       purpose: '캡스톤 챗봇 백엔드',
       status: 'ACTIVE',
       tokenPrefix: 'pk-llm-3f9a',
-      expiresAt: '2026-12-31T23:59:00+09:00',
+      // 아직 오지 않은 시각이어야 '활성'으로 남는다 — 화면이 만료를 시계로
+      // 판정하므로, 지난 날짜를 넣으면 이 픽스처가 만료 키가 된다.
+      expiresAt: '2027-12-31T23:59:00+09:00',
       lastUsedAt: '2026-08-10T18:22:00+09:00',
       rpm: 60,
       tpm: 40000,
@@ -123,6 +125,28 @@ function initialLlmKeys(): LlmKeyDetail[] {
       myResourceRole: 'MEMBER',
       accessManageAllowed: false,
     },
+    {
+      // 기간이 지난 키. 서버에는 EXPIRED로 옮기는 코드가 없어 상태 열은 계속
+      // ACTIVE이고, 실제 집행은 게이트웨이가 expiresAt으로 한다 — 화면이 상태
+      // 문자열만 믿으면 이미 거부되는 키를 '활성'이라 부르고 재발급까지 권한다.
+      id: uuid(75),
+      name: 'last-semester-key',
+      purpose: '지난 학기 실습',
+      status: 'ACTIVE',
+      tokenPrefix: 'pk-llm-20b4',
+      expiresAt: '2026-07-01T00:00:00+09:00',
+      lastUsedAt: '2026-06-30T22:10:00+09:00',
+      rpm: null,
+      tpm: null,
+      concurrency: null,
+      recordBodies: false,
+      revokedAt: null,
+      workspaceId: uuid(12),
+      workspaceName: '캡스톤 3조',
+      createdAt: '2026-06-05T10:00:00+09:00',
+      myResourceRole: 'OWNER',
+      accessManageAllowed: true,
+    },
   ]
 }
 
@@ -170,6 +194,15 @@ function initialLlmKeyAccessGrants(): Record<string, AccessGrant[]> {
         user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
         role: 'OWNER',
         createdAt: '2026-07-10T13:00:00+09:00',
+      },
+    ],
+    [uuid(75)]: [
+      {
+        id: uuid(352),
+        granteeType: 'USER',
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-06-05T10:00:00+09:00',
       },
     ],
     [uuid(74)]: [
@@ -446,11 +479,21 @@ export const llmKeyHandlers: RequestHandler[] = [
     const key = llmKeyStore.find((k) => k.id === String(params.keyId))
     if (!key) return notFoundProblem()
     // 사용량은 상세와 같은 문을 쓴다 — 부여가 있어야 열린다.
-    if (key.myResourceRole == null) return noGrantProblem(key.id)
-    const days = Math.min(
-      90,
-      Math.max(1, Number(new URL(request.url).searchParams.get('days') ?? '30')),
-    )
+    if (key.myResourceRole == null) {
+      return noGrantProblem(key.id, `/api/v1/llm-keys/${key.id}/usage`)
+    }
+    const raw = new URL(request.url).searchParams.get('days')
+    const days = raw == null ? 30 : Number(raw)
+    // 계약은 1..90을 요구한다. 서버는 범위를 잘라 주는 것이 아니라 거절하므로
+    // mock도 거절해야 한다 — 잘라 주면 잘못된 days를 보내는 화면이 테스트에서만
+    // 멀쩡해 보인다.
+    if (!Number.isInteger(days) || days < 1 || days > 90) {
+      return validationProblem(
+        `/api/v1/llm-keys/${key.id}/usage`,
+        'days',
+        '조회 일수는 1 이상 90 이하여야 합니다.',
+      )
+    }
     return HttpResponse.json(usageTrend(key.id, days), { status: 200 })
   }),
 
@@ -662,14 +705,14 @@ const validationProblem = (instance: string, field: string, message: string) =>
   })
 
 /** 접근 목록이 막는 403 — 계약상 코드는 WORKSPACE_ROLE_INSUFFICIENT 하나다. */
-const noGrantProblem = (keyId: string) =>
+const noGrantProblem = (keyId: string, instance = `/api/v1/llm-keys/${keyId}`) =>
   problemResponse({
     type: 'about:blank',
     title: '이 키에 접근할 권한이 없습니다',
     status: 403,
     detail:
       '이 LLM API 키의 접근 목록에 등록되어 있지 않습니다. 자원 소유자에게 접근 권한을 요청해 주세요.',
-    instance: `/api/v1/llm-keys/${keyId}`,
+    instance,
     code: 'WORKSPACE_ROLE_INSUFFICIENT',
   })
 

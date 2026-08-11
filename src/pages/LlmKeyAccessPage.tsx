@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchLlmKeyAccessGrants } from '../api/queries'
+import { RevokeKeyCard } from '../components/llm-key/RevokeKeyCard'
 import { ResourceAccessSection } from '../components/resource/ResourceAccessSection'
 import { Alert, LlmKeyStatusBadge, Spinner } from '../components/ui'
 import { consolePaths } from '../lib/paths'
@@ -54,6 +55,16 @@ export function LlmKeyAccessPage() {
             <p className="text-sm text-neutral-500">{llmKey?.workspaceName} 소유</p>
           </header>
           <ResourceAccessSection type="LLM_API_KEY" resourceId={keyId} />
+          {/* 폐기가 여기에도 있는 이유: 이 화면을 여는 사람은 상세가 막혀 있을 수
+              있고(부여 없는 워크스페이스 소유자), 그 사람이야말로 소유자가 떠난
+              키나 유출된 키를 멈춰야 하는 사람이다. 상세에만 두면 자기에게 권한을
+              자가 부여하는 것 말고는 길이 없다 — 서버가 폐기를 상시권으로 열어
+              두면서 피하려던 동선이 그것이다.
+              이 목록을 읽을 수 있다는 것 자체가 서버의 관리 권한 판정을 통과했다는
+              뜻이므로(아니면 403), 여기서는 언제나 열린다. */}
+          {llmKey != null && llmKey.status !== 'REVOKED' && (
+            <RevokeKeyCard keyId={keyId} name={llmKey.name} allowed />
+          )}
         </>
       )}
     </div>

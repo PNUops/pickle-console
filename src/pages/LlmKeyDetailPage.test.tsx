@@ -13,6 +13,8 @@ const PENDING_KEY = uuid(71)
 const RESTRICTED_KEY = uuid(72)
 const REVOKED_KEY = uuid(73)
 const MEMBER_KEY = uuid(74)
+/** 상태 열은 ACTIVE인데 expiresAt이 이미 지난 키 — 서버에 EXPIRED 전이가 없다. */
+const PAST_WINDOW_KEY = uuid(75)
 
 function renderKey(keyId: string) {
   server.use(refreshSuccessHandler('access-user'))
@@ -130,6 +132,31 @@ describe('권한이 화면에 미리 보인다', () => {
     expect(
       await screen.findByText(/이 LLM API 키의 접근 목록에 등록되어 있지 않습니다/),
     ).toBeInTheDocument()
+  })
+})
+
+describe('기간이 지난 키 — 상태 열은 아직 활성이다', () => {
+  test('시계를 근거로 만료로 그리고 재발급을 권하지 않는다', async () => {
+    // 서버에는 EXPIRED로 옮기는 코드가 없고 게이트웨이가 expiresAt으로 거부한다.
+    // 상태 문자열만 믿으면 이미 거부되는 키에 '활성' 배지를 달고, 눌러 봐야
+    // 그 평문도 똑같이 거부되는 재발급 버튼을 연다.
+    renderKey(PAST_WINDOW_KEY)
+
+    await screen.findByRole('heading', { name: 'last-semester-key' })
+    expect(screen.getByText('만료됨')).toBeInTheDocument()
+    expect(screen.queryByText('활성')).not.toBeInTheDocument()
+    expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
+    // 폐기는 여전히 열려 있다 — 기간이 지난 키도 정리할 수 있어야 한다.
+    expect(screen.getByRole('button', { name: '키 폐기' })).toBeEnabled()
+  })
+
+  test('목록도 같은 근거로 판정해 상세와 다른 말을 하지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/llm-keys')
+
+    const row = (await screen.findByRole('link', { name: 'last-semester-key' })).closest('tr')!
+    expect(within(row).getByText('만료됨')).toBeInTheDocument()
   })
 })
 

@@ -21,7 +21,9 @@ describe('사용량 탭', () => {
     renderUsage(USED_KEY)
 
     expect(await screen.findByRole('tab', { name: '사용량', selected: true })).toBeInTheDocument()
-    expect(await screen.findByText(/최근 30일 동안 요청 .*회, 토큰 .*개를 썼습니다/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/최근 30일 동안 요청 .*회, 토큰 .*개\(일부 추정\)를 썼습니다/),
+    ).toBeInTheDocument()
   })
 
   test('개요 탭에서 사용량 탭으로 넘어갈 수 있다', async () => {
@@ -57,13 +59,29 @@ describe('사용량 탭', () => {
     expect(screen.getByText(/마지막 날이 낮게 보이는 것은 정상입니다/)).toBeInTheDocument()
   })
 
-  test('한 번도 보고가 없으면 그 사실을 그대로 말한다', async () => {
+  test('한 번도 보고가 없으면 그 사실을 그대로 말하고 빈 차트를 그리지 않는다', async () => {
     renderUsage(NEVER_USED_KEY)
 
     expect(
       await screen.findByText(/아직 한 번도 보고하지 않았습니다/),
     ).toBeInTheDocument()
     expect(screen.getByText('최근 30일 동안 이 키로 들어온 요청이 없습니다.')).toBeInTheDocument()
+    // 0으로 눕는 선 세 개는 위 문장이 이미 말한 것을 되풀이할 뿐이다.
+    expect(screen.queryByRole('img', { name: '요청 수' })).not.toBeInTheDocument()
+  })
+
+  test('보고가 며칠째 끊긴 구간의 0을 요청이 없던 날로 단언하지 않는다', async () => {
+    // 마지막 보고가 구간 끝보다 앞서면 뒤쪽 0은 아직 모르는 값이다. 여기에
+    // "오늘 자 값은 채워지는 중"을 붙이면 화면이 사실을 뒤집는다.
+    renderUsage(REVOKED_KEY)
+
+    expect(
+      await screen.findByText(/2026-08-01부터는 아직 보고가 오지 않았습니다/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/마지막 날이 낮게 보이는 것은 정상입니다/)).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/그 날짜의 0은 요청이 없었다는 뜻이 아닐 수 있습니다/),
+    ).toBeInTheDocument()
   })
 
   test('한도 초과 거부는 다른 실패와 따로 세고, 할 수 있는 일을 알려 준다', async () => {
@@ -83,9 +101,10 @@ describe('사용량 탭', () => {
     renderUsage(USED_KEY)
 
     expect(await screen.findByRole('img', { name: '토큰 사용량 (일부 추정)' })).toBeInTheDocument()
-    expect(
-      screen.getByText(/게이트웨이가 토큰 수를 추정했습니다. 위 합계는 그만큼 추정값입니다/),
-    ).toBeInTheDocument()
+    // 분모는 전체 요청이 아니라 토큰을 만든 요청이다 — 거부에 가려 추정 비율이
+    // 낮아 보이면 실측인 척하는 것과 다르지 않다.
+    expect(screen.getByText(/토큰을 만든 요청 .*회 중/)).toBeInTheDocument()
+    expect(screen.getByText(/토큰 합은 그만큼 추정값입니다/)).toBeInTheDocument()
   })
 
   test('추정이 없는 구간은 실측이라고 말한다', async () => {
@@ -99,9 +118,12 @@ describe('사용량 탭', () => {
     const user = userEvent.setup()
     renderUsage(USED_KEY)
 
-    await screen.findByText(/최근 30일 동안 요청/)
+    // 응답이 준 구간으로 확인한다 — 화면이 고른 일수만 보면 요청이 나가지
+    // 않았어도 라벨은 바뀌므로 아무것도 증명하지 못한다.
+    expect(await screen.findByText('2026-07-13 ~ 2026-08-11')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '7일' }))
-    expect(await screen.findByText(/최근 7일 동안 요청/)).toBeInTheDocument()
+    expect(await screen.findByText('2026-08-05 ~ 2026-08-11')).toBeInTheDocument()
+    expect(screen.getByText(/최근 7일 동안 요청/)).toBeInTheDocument()
   })
 
   test('발급 전 키는 빈 차트 대신 왜 비었는지를 말한다', async () => {
