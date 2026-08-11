@@ -6,11 +6,7 @@ import { toApiError } from '../api/problem'
 import {
   fetchWorkspaces,
   fetchOrgs,
-  fetchRequestOptions,
-  fetchOsImages,
-  fetchVmFlavors,
   type CreateRequest,
-  type VmFlavor,
   type RequestDetail,
 } from '../api/queries'
 import {
@@ -31,89 +27,66 @@ import {
   TR,
   Textarea,
 } from '../components/ui'
+import {
+  KIND_PICKER_FOOTNOTE,
+  REQUEST_KINDS,
+  requestKind,
+} from '../components/request-kind'
+import type {
+  CommonWizardState,
+  FieldErrors,
+  RequestKindModule,
+  WizardStepId,
+} from '../components/request-kind/types'
 import { cn } from '../lib/cn'
-import { SSH_GATEWAY_HOST } from '../lib/hosts'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { formatMemory, formatSpec } from '../lib/format'
 import { VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
-import { SUBDOMAIN_RE, isUuid } from '../lib/validation'
+import { isUuid } from '../lib/validation'
 
-const STEPS = ['종류', '워크스페이스·기관·이름', 'OS·사양', '용도·기간', '확인·제출']
+/**
+ * 단계의 정체 — 검증·렌더링은 위치(index)가 아니라 이 id로 갈린다.
+ * 종류마다 다른 것은 'spec' 단계의 내용(과 제목)뿐이고, 단계 수는 같다.
+ */
+const STEP_IDS: WizardStepId[] = ['kind', 'target', 'spec', 'purpose', 'confirm']
 
-/** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용). */
-const FIELD_LABELS: Record<string, string> = {
+/** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용) — 종류 필드는 모듈이 보탠다. */
+const COMMON_FIELD_LABELS: Record<string, string> = {
   workspaceId: '워크스페이스',
   orgId: '기관',
-  imageId: 'OS',
-  flavorId: '사양 프리셋',
   purpose: '용도',
   courseOrProject: '수업/프로젝트',
-  specReason: '사양 사유',
   extraNote: '기타 참고',
-  reqVcpu: 'vCPU',
-  reqMemoryMb: '메모리',
-  reqDiskGb: '디스크',
   reqStartDate: '시작일',
   reqEndDate: '종료일',
   displayName: '표시명',
-  desiredSlug: '호스트명(슬러그)',
 }
 
-interface WizardState {
-  workspaceId: string | null
-  orgId: string | null
-  imageId: string | null
-  flavorId: string | null
-  reqVcpu: number
-  reqMemoryMb: number
-  reqDiskGb: number
-  specReason: string
-  purpose: string
-  courseOrProject: string
-  extraNote: string
-  reqStartDate: string
-  reqEndDate: string
-  displayName: string
-  desiredSlug: string
-}
-
-const INITIAL_STATE: WizardState = {
+const INITIAL_COMMON: CommonWizardState = {
   workspaceId: null,
   orgId: null,
-  imageId: null,
-  flavorId: null,
-  reqVcpu: 1,
-  reqMemoryMb: 1024,
-  reqDiskGb: 10,
-  specReason: '',
   purpose: '',
   courseOrProject: '',
   extraNote: '',
   reqStartDate: '',
   reqEndDate: '',
   displayName: '',
-  desiredSlug: '',
 }
-
-type FieldErrors = Partial<Record<string, string>>
 
 /** 새로고침/뒤로가기에도 작성 중인 신청서를 유지하기 위한 세션 저장 키. */
 const DRAFT_KEY = VM_REQUEST_DRAFT_KEY
 
-/** 초안에서 식별자를 담는 필드 — 값이 있다면 UUID 문자열이어야 한다. */
-const DRAFT_ID_FIELDS = ['workspaceId', 'orgId', 'imageId', 'flavorId'] as const
-/** 초안에서 수치를 담는 필드. */
-const DRAFT_NUMBER_FIELDS = ['reqVcpu', 'reqMemoryMb', 'reqDiskGb'] as const
+/** 초안 공통부에서 식별자를 담는 필드 — 값이 있다면 UUID 문자열이어야 한다. */
+const DRAFT_ID_FIELDS = ['workspaceId', 'orgId'] as const
 
 /**
- * 저장된 초안이 지금의 WizardState와 같은 모양인지.
+ * 저장된 초안의 공통부가 지금의 CommonWizardState와 같은 모양인지.
  *
  * 식별자가 숫자에서 UUID로 바뀌었으므로, 그 전에 저장된 초안은 신청 본문에
  * 숫자 id를 실어 보낸다 — 타입은 통과하고 서버에서야 틀어지는 종류의 값이다.
  * 필드 하나라도 모양이 다르면 초안 전체를 버린다: 일부만 살리면 사용자가
- * 고르지 않은 값이 남아 더 헷갈린다.
+ * 고르지 않은 값이 남아 더 헷갈린다. 종류별 스펙부의 판정은 그 종류 모듈이 한다.
  */
-function isCompatibleDraft(value: unknown): value is Partial<WizardState> {
+function isCompatibleCommonDraft(value: unknown): value is Partial<CommonWizardState> {
   if (typeof value !== 'object' || value == null) return false
   const draft = value as Record<string, unknown>
   for (const field of DRAFT_ID_FIELDS) {
@@ -121,82 +94,103 @@ function isCompatibleDraft(value: unknown): value is Partial<WizardState> {
     if (id === undefined || id === null) continue
     if (!isUuid(typeof id === 'string' ? id : null)) return false
   }
-  for (const field of DRAFT_NUMBER_FIELDS) {
-    const n = draft[field]
-    if (n !== undefined && typeof n !== 'number') return false
-  }
   return true
 }
 
-function loadDraft(): WizardState {
+interface LoadedDraft {
+  kindType: string
+  common: CommonWizardState
+  spec: unknown
+}
+
+function freshDraft(): LoadedDraft {
+  return { kindType: REQUEST_KINDS[0].type, common: INITIAL_COMMON, spec: null }
+}
+
+function discardDraft(): LoadedDraft {
+  // 남겨 두면 매 진입마다 같은 판정을 반복한다.
+  sessionStorage.removeItem(DRAFT_KEY)
+  return freshDraft()
+}
+
+function loadDraft(): LoadedDraft {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY)
-    if (!raw) return INITIAL_STATE
+    if (!raw) return freshDraft()
     const parsed: unknown = JSON.parse(raw)
-    if (!isCompatibleDraft(parsed)) {
-      // 남겨 두면 매 진입마다 같은 판정을 반복한다.
-      sessionStorage.removeItem(DRAFT_KEY)
-      return INITIAL_STATE
+    if (typeof parsed !== 'object' || parsed == null) return discardDraft()
+    const draft = parsed as { kind?: unknown; common?: unknown; spec?: unknown }
+    // 모르는 종류(스펙부가 종류별 하위 객체로 갈라지기 전의 평평한 초안 포함)는 버린다.
+    const kind = typeof draft.kind === 'string' ? requestKind(draft.kind) : undefined
+    if (!kind) return discardDraft()
+    if (!isCompatibleCommonDraft(draft.common)) return discardDraft()
+    if (!kind.isCompatibleSpecDraft(draft.spec)) return discardDraft()
+    return {
+      kindType: kind.type,
+      common: { ...INITIAL_COMMON, ...draft.common },
+      spec: draft.spec ?? null,
     }
-    return { ...INITIAL_STATE, ...parsed }
   } catch {
-    return INITIAL_STATE
+    return freshDraft()
   }
 }
 
 /** `?step=n`(1부터) → 내부 단계 인덱스(0부터). 잘못된 값은 첫 단계로. */
 function parseStepParam(value: string | null): number {
   const n = Number(value ?? '1')
-  return Number.isInteger(n) && n >= 1 && n <= STEPS.length ? n - 1 : 0
-}
-
-/** 선택한 사양 프리셋을 초과하는 요청인지 (초과 시 specReason 필수 — 서버와 동일 규칙). */
-function exceedsFlavor(state: WizardState, flavor: VmFlavor | undefined): boolean {
-  if (!flavor) return false
-  return (
-    state.reqVcpu > flavor.vcpu ||
-    state.reqMemoryMb > flavor.memoryMb ||
-    state.reqDiskGb > flavor.diskGb
-  )
+  return Number.isInteger(n) && n >= 1 && n <= STEP_IDS.length ? n - 1 : 0
 }
 
 export function NewRequestPage() {
+  // 초안이 정하는 초기 종류 — 이후 선택은 사용자 몫이다.
+  const [initialDraft] = useState(loadDraft)
+  const [kindType, setKindType] = useState(initialDraft.kindType)
+  const kind = requestKind(kindType) ?? REQUEST_KINDS[0]
+
+  // 종류가 바뀌면 위저드를 통째로 다시 마운트한다 — 스펙 상태·카탈로그 훅이
+  // 종류의 것이라, key 리마운트가 훅 순서와 상태 초기화를 함께 보장한다.
+  return <KindWizard key={kind.type} kind={kind} onSelectKind={setKindType} />
+}
+
+function KindWizard({
+  kind,
+  onSelectKind,
+}: {
+  kind: RequestKindModule
+  onSelectKind: (type: string) => void
+}) {
   const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: fetchWorkspaces })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
-  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
-  const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
-  const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
 
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [state, setState] = useState<WizardState>(loadDraft)
+  // 마운트 시점의 초안 — 종류를 전환해도 공통 입력은 이어받고, 스펙은 같은 종류일 때만.
+  const [draft] = useState(loadDraft)
+  const [state, setState] = useState<CommonWizardState>(draft.common)
+  const kindApi = kind.useWizard(draft.kindType === kind.type ? draft.spec : null)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState<RequestDetail | null>(null)
 
-  const update = (patch: Partial<WizardState>) => setState((prev) => ({ ...prev, ...patch }))
+  const update = (patch: Partial<CommonWizardState>) =>
+    setState((prev) => ({ ...prev, ...patch }))
 
-  const isLoading =
-    workspaces.isPending ||
-    orgs.isPending ||
-    osImages.isPending ||
-    flavors.isPending ||
-    options.isPending
-  const loadError =
-    workspaces.error ?? orgs.error ?? osImages.error ?? flavors.error ?? options.error
+  const steps = ['종류', '워크스페이스·기관·이름', kind.specStepTitle, '용도·기간', '확인·제출']
+  const fieldLabels = { ...COMMON_FIELD_LABELS, ...kind.fieldLabels }
+
+  const isLoading = workspaces.isPending || orgs.isPending || kindApi.isPending
+  const loadError = workspaces.error ?? orgs.error ?? kindApi.error
   const ready = !isLoading && !loadError
 
   // 신청은 구성원이면 누구나 할 수 있다 — 문턱은 승인이 잡는다.
   const eligibleWorkspaces = workspaces.data ?? []
   const selectedWorkspace = eligibleWorkspaces.find((g) => g.id === state.workspaceId)
   const selectedOrg = orgs.data?.find((o) => o.id === state.orgId)
-  const selectedImage = osImages.data?.find((t) => t.id === state.imageId)
-  const selectedFlavor = flavors.data?.find((f) => f.id === state.flavorId)
 
-  const validateStep = (index: number): FieldErrors => {
+  const validateStep = (stepId: WizardStepId): FieldErrors => {
     const next: FieldErrors = {}
-    if (index === 1) {
+    if (stepId === 'target') {
       // 목록에 없는 id(초안에 남은, 그새 나온 워크스페이스나 없어진 기관)는 선택되지
       // 않은 것으로 본다 — Select는 이미 비어 보이는데 상태에는 남아 있어, 그대로
       // 두면 요약이 원시 id를 보여주고 제출이 403·422로 튕긴다.
@@ -207,31 +201,8 @@ export function NewRequestPage() {
       if (!state.displayName.trim()) next.displayName = '리소스 이름을 입력해 주세요.'
       else if (state.displayName.length > 100)
         next.displayName = '리소스 이름은 100자 이하로 입력해 주세요.'
-      if (state.desiredSlug) {
-        if (!SUBDOMAIN_RE.test(state.desiredSlug)) {
-          next.desiredSlug =
-            '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
-        } else if (options.data?.reservedSubdomains.includes(state.desiredSlug)) {
-          next.desiredSlug = `'${state.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
-        }
-      }
     }
-    if (index === 2) {
-      // 목록에 없는 id(초안에 남은 은퇴 OS·프리셋, 직접 넣은 값)는 선택되지 않은
-      // 것으로 본다 — 그대로 두면 요약이 원시 id를 보여주고 제출이 422로 튕긴다.
-      if (state.imageId == null || !selectedImage) next.imageId = 'OS를 선택해 주세요.'
-      if (state.flavorId == null || !selectedFlavor)
-        next.flavorId = '사양 프리셋을 선택해 주세요.'
-      if (selectedImage && selectedFlavor) {
-        if (state.reqVcpu < 1) next.reqVcpu = 'vCPU는 1 이상이어야 합니다.'
-        if (state.reqMemoryMb < 256) next.reqMemoryMb = '메모리는 256 MiB 이상이어야 합니다.'
-        if (state.reqDiskGb < selectedImage.minDiskGb)
-          next.reqDiskGb = `디스크는 이 OS의 최소 크기(${selectedImage.minDiskGb} GiB) 이상이어야 합니다.`
-        if (exceedsFlavor(state, selectedFlavor) && !state.specReason.trim())
-          next.specReason = '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
-      }
-    }
-    if (index === 3) {
+    if (stepId === 'purpose') {
       if (!state.purpose.trim()) next.purpose = '사용 목적을 입력해 주세요.'
       else if (state.purpose.length > 2000)
         next.purpose = '사용 목적은 2000자 이하로 입력해 주세요.'
@@ -240,19 +211,21 @@ export function NewRequestPage() {
       if (state.reqStartDate && state.reqEndDate && state.reqEndDate < state.reqStartDate)
         next.reqEndDate = '종료일은 시작일 이후여야 합니다.'
     }
-    return next
+    // 종류가 그 단계에 얹은 자기 필드의 검증 (예: VM의 슬러그·OS·사양).
+    return { ...next, ...kindApi.validateStep(stepId) }
   }
 
   /** 현재 입력값으로 도달할 수 있는 최대 단계 (자기 검증이 실패하는 첫 단계). */
   const firstBlockedStep = (): number => {
-    for (let i = 0; i < STEPS.length - 1; i++) {
-      if (Object.keys(validateStep(i)).length > 0) return i
+    for (let i = 0; i < STEP_IDS.length - 1; i++) {
+      if (Object.keys(validateStep(STEP_IDS[i])).length > 0) return i
     }
-    return STEPS.length - 1
+    return STEP_IDS.length - 1
   }
 
   const requestedStep = parseStepParam(searchParams.get('step'))
   const step = ready ? Math.min(requestedStep, firstBlockedStep()) : requestedStep
+  const stepId = STEP_IDS[step]
 
   const goToStep = (index: number, opts?: { replace?: boolean }) => {
     setSearchParams({ step: String(index + 1) }, opts)
@@ -267,8 +240,11 @@ export function NewRequestPage() {
   // 작성 중인 신청서를 세션에 보관해 새로고침/뒤로가기에도 입력을 유지한다.
   useEffect(() => {
     if (submitted) return
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state))
-  }, [state, submitted])
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ kind: kind.type, common: state, spec: kindApi.spec }),
+    )
+  }, [kind.type, kindApi.spec, state, submitted])
 
   const submit = useMutation({
     mutationFn: async (body: CreateRequest) => {
@@ -304,10 +280,10 @@ export function NewRequestPage() {
   }
 
   const goNext = () => {
-    const stepErrors = validateStep(step)
+    const stepErrors = validateStep(stepId)
     setErrors(stepErrors)
     if (Object.keys(stepErrors).length > 0) return
-    goToStep(Math.min(step + 1, STEPS.length - 1))
+    goToStep(Math.min(step + 1, STEP_IDS.length - 1))
   }
 
   const goPrev = () => {
@@ -316,7 +292,6 @@ export function NewRequestPage() {
   }
 
   const buildPayload = (): CreateRequest => ({
-    type: 'VM',
     workspaceId: state.workspaceId!,
     orgId: state.orgId!,
     purpose: state.purpose.trim(),
@@ -325,21 +300,14 @@ export function NewRequestPage() {
     reqStartDate: state.reqStartDate || null,
     reqEndDate: state.reqEndDate || null,
     displayName: state.displayName.trim(),
-    vm: {
-      imageId: state.imageId!,
-      flavorId: state.flavorId!,
-      reqVcpu: state.reqVcpu,
-      reqMemoryMb: state.reqMemoryMb,
-      reqDiskGb: state.reqDiskGb,
-      specReason: state.specReason.trim() || null,
-      desiredSlug: state.desiredSlug || null,
-    },
+    // 종류 판별자(type)와 종류별 스펙 멤버는 종류 모듈이 채운다.
+    ...kindApi.payload(),
   })
 
   const onSubmit = () => {
     // 제출 전 전체 단계를 다시 검증한다 (뒤로 갔다가 값을 바꾼 경우 대비).
-    for (let i = 0; i < STEPS.length - 1; i++) {
-      const stepErrors = validateStep(i)
+    for (let i = 0; i < STEP_IDS.length - 1; i++) {
+      const stepErrors = validateStep(STEP_IDS[i])
       if (Object.keys(stepErrors).length > 0) {
         goToStep(i)
         setErrors(stepErrors)
@@ -360,37 +328,48 @@ export function NewRequestPage() {
         </p>
       </div>
 
-      <Stepper steps={STEPS} current={step} />
+      <Stepper steps={steps} current={step} />
 
       <Card>
         <CardContent className="space-y-5 py-6">
-          {step === 0 && (
+          {stepId === 'kind' && (
             <div className="space-y-4">
               <p className="text-sm text-neutral-600">무엇을 신청할지 고르세요.</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  aria-pressed="true"
-                  className="cursor-pointer rounded-xl border-2 border-primary-500 bg-primary-50/40 p-4 text-left"
-                >
-                  <span className="block font-medium text-neutral-900">가상 머신 (VM)</span>
-                  <span className="mt-1 block text-sm text-neutral-500">
-                    SSH로 접속해 쓰는 리눅스 서버입니다.
-                  </span>
-                </button>
+                {REQUEST_KINDS.map((entry) => {
+                  const selected = entry.type === kind.type
+                  return (
+                    <button
+                      key={entry.type}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onSelectKind(entry.type)}
+                      className={cn(
+                        'cursor-pointer rounded-xl border-2 p-4 text-left',
+                        selected
+                          ? 'border-primary-500 bg-primary-50/40'
+                          : 'border-neutral-200 bg-white hover:border-neutral-300',
+                      )}
+                    >
+                      <span className="block font-medium text-neutral-900">
+                        {entry.picker.title}
+                      </span>
+                      <span className="mt-1 block text-sm text-neutral-500">
+                        {entry.picker.description}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-              <p className="text-xs text-neutral-400">
-                컨테이너와 LLM API 키는 준비 중입니다.
-              </p>
+              <p className="text-xs text-neutral-400">{KIND_PICKER_FOOTNOTE}</p>
             </div>
           )}
 
-          {step === 1 && (
+          {stepId === 'target' && (
             <>
               {eligibleWorkspaces.length === 0 && (
                 <Alert variant="warning">
-                  VM을 신청할 수 있는 워크스페이스가 없습니다. 워크스페이스에 속해 있어야 신청할 수
-                  있습니다.{' '}
+                  {kind.copy.noWorkspaceNotice}{' '}
                   <Link to="/console/workspaces" className="font-medium underline">
                     내 워크스페이스에서 워크스페이스를 만들어 주세요.
                   </Link>
@@ -400,7 +379,7 @@ export function NewRequestPage() {
                 label="신청 워크스페이스"
                 required
                 error={errors.workspaceId}
-                description="VM은 워크스페이스 명의로 만들어집니다. 만들어진 VM은 신청한 사람만 접근할 수 있고, 접근 권한은 생성 후 VM 상세에서 부여합니다."
+                description={kind.copy.workspaceDescription}
               >
                 <Select
                   value={state.workspaceId ?? ''}
@@ -447,176 +426,14 @@ export function NewRequestPage() {
                     placeholder="예: 캡스톤 백엔드 서버"
                   />
                 </FormField>
-                <FormField
-                  label="희망 호스트명(슬러그)"
-                  error={errors.desiredSlug}
-                  description={`SSH 접속명으로 쓰입니다 — ssh ${state.desiredSlug || '<슬러그>'}@${
-                    options.data?.sshHost ?? SSH_GATEWAY_HOST
-                  } · 미입력 시 자동 생성됩니다.`}
-                >
-                  <Input
-                    value={state.desiredSlug}
-                    onChange={(event) => update({ desiredSlug: event.target.value })}
-                    placeholder="미입력 시 자동 생성"
-                    maxLength={40}
-                  />
-                </FormField>
+                {kindApi.targetFields?.(errors)}
               </div>
             </>
           )}
 
-          {step === 2 && (
-            <>
-              <fieldset>
-                <legend className="text-sm font-medium text-neutral-700">
-                  OS 선택 <span aria-hidden="true" className="text-danger-600">*</span>
-                </legend>
-                {errors.imageId && (
-                  <p role="alert" className="mt-1 text-sm text-danger-600">
-                    {errors.imageId}
-                  </p>
-                )}
-                {osImages.data?.length === 0 && (
-                  <Alert variant="warning" className="mt-2">
-                    신청할 수 있는 OS가 아직 없습니다. 관리자가 OS를 등록하면 신청할 수
-                    있습니다.
-                  </Alert>
-                )}
-                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {osImages.data?.map((image) => {
-                    const selected = image.id === state.imageId
-                    return (
-                      <button
-                        key={image.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() =>
-                          update({
-                            imageId: image.id,
-                            // 이미 고른 사양(또는 직접 입력값)이 이 OS의 최소 디스크보다
-                            // 작으면 끌어올린다 — 사양을 먼저 골랐거나 OS를 바꾼 경우.
-                            reqDiskGb: Math.max(state.reqDiskGb, image.minDiskGb),
-                          })
-                        }
-                        className={cn(
-                          'cursor-pointer rounded-card border p-4 text-left focus-visible:outline-2 focus-visible:outline-primary-600',
-                          selected
-                            ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500'
-                            : 'border-neutral-200 bg-white hover:border-neutral-300',
-                        )}
-                      >
-                        <p className="font-medium text-neutral-900">
-                          {image.displayName} <span className="text-neutral-400">v{image.version}</span>
-                        </p>
-                        <p className="mt-1 text-sm text-neutral-500">
-                          최소 디스크 {image.minDiskGb} GiB
-                        </p>
-                        {image.notes && (
-                          <p className="mt-1 text-xs text-neutral-500">{image.notes}</p>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </fieldset>
+          {stepId === 'spec' && kindApi.specStep(errors)}
 
-              <fieldset className="border-t border-neutral-100 pt-4">
-                <legend className="text-sm font-medium text-neutral-700">
-                  사양 선택 <span aria-hidden="true" className="text-danger-600">*</span>
-                </legend>
-                {errors.flavorId && (
-                  <p role="alert" className="mt-1 text-sm text-danger-600">
-                    {errors.flavorId}
-                  </p>
-                )}
-                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {flavors.data?.map((flavor) => {
-                    const selected = flavor.id === state.flavorId
-                    return (
-                      <button
-                        key={flavor.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() =>
-                          update({
-                            flavorId: flavor.id,
-                            reqVcpu: flavor.vcpu,
-                            reqMemoryMb: flavor.memoryMb,
-                            // 선택한 OS의 최소 디스크가 더 크면 그 값으로 올려 채운다 —
-                            // 프리셋 값 그대로 넣으면 곧바로 검증에 걸린다.
-                            reqDiskGb: Math.max(flavor.diskGb, selectedImage?.minDiskGb ?? 0),
-                          })
-                        }
-                        className={cn(
-                          'cursor-pointer rounded-card border p-4 text-left focus-visible:outline-2 focus-visible:outline-primary-600',
-                          selected
-                            ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500'
-                            : 'border-neutral-200 bg-white hover:border-neutral-300',
-                        )}
-                      >
-                        <p className="font-medium text-neutral-900">{flavor.displayName}</p>
-                        <p className="mt-1 text-sm text-neutral-500">
-                          {formatSpec(flavor.vcpu, flavor.memoryMb, flavor.diskGb)}
-                        </p>
-                        {flavor.notes && (
-                          <p className="mt-1 text-xs text-neutral-500">{flavor.notes}</p>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </fieldset>
-
-              {selectedImage && selectedFlavor && (
-                <>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <FormField label="vCPU" required error={errors.reqVcpu}>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={state.reqVcpu}
-                        onChange={(event) => update({ reqVcpu: Number(event.target.value) })}
-                      />
-                    </FormField>
-                    <FormField label="메모리 (MiB)" required error={errors.reqMemoryMb}>
-                      <Input
-                        type="number"
-                        min={256}
-                        step={256}
-                        value={state.reqMemoryMb}
-                        onChange={(event) => update({ reqMemoryMb: Number(event.target.value) })}
-                      />
-                    </FormField>
-                    <FormField label="디스크 (GiB)" required error={errors.reqDiskGb}>
-                      <Input
-                        type="number"
-                        min={selectedImage.minDiskGb}
-                        value={state.reqDiskGb}
-                        onChange={(event) => update({ reqDiskGb: Number(event.target.value) })}
-                      />
-                    </FormField>
-                  </div>
-                  {exceedsFlavor(state, selectedFlavor) && (
-                    <FormField
-                      label="사양 사유"
-                      required
-                      error={errors.specReason}
-                      description={`선택한 프리셋(${selectedFlavor.displayName})보다 높은 사양을 요청하는 이유를 적어 주세요. 관리자 검토에 사용됩니다.`}
-                    >
-                      <Textarea
-                        value={state.specReason}
-                        onChange={(event) => update({ specReason: event.target.value })}
-                        maxLength={2000}
-                        placeholder="예: Spring Boot + PostgreSQL 동시 구동을 위해 메모리 4GiB 필요"
-                      />
-                    </FormField>
-                  )}
-                </>
-              )}
-            </>
-          )}
-
-          {step === 3 && (
+          {stepId === 'purpose' && (
             <>
               <FormField label="사용 목적" required error={errors.purpose}>
                 <Textarea
@@ -661,7 +478,7 @@ export function NewRequestPage() {
             </>
           )}
 
-          {step === 4 && (
+          {stepId === 'confirm' && (
             <>
               {submitError && (
                 <Alert variant="danger" title={submitError}>
@@ -669,7 +486,7 @@ export function NewRequestPage() {
                     <ul className="list-disc space-y-0.5 pl-4">
                       {Object.entries(serverFieldErrors).map(([field, message]) => (
                         <li key={field}>
-                          {FIELD_LABELS[field] ?? field}: {message}
+                          {fieldLabels[field] ?? field}: {message}
                         </li>
                       ))}
                     </ul>
@@ -679,16 +496,12 @@ export function NewRequestPage() {
               {/* 고른 항목이 목록에서 사라진 드문 경우 이름 자리는 '—'로 둔다 —
                   식별자를 그대로 보여 봐야 UUID라 알려주는 것이 없다. */}
               <SummaryTable
-                state={state}
-                workspaceName={selectedWorkspace?.name ?? '—'}
-                orgName={selectedOrg?.name ?? '—'}
-                imageName={selectedImage?.displayName ?? '—'}
-                flavorName={selectedFlavor?.displayName ?? '—'}
+                rows={kindApi.summaryRows(state, {
+                  workspaceName: selectedWorkspace?.name ?? '—',
+                  orgName: selectedOrg?.name ?? '—',
+                })}
               />
-              <Alert variant="warning" title="백업 책임 안내">
-                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
-                책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
-              </Alert>
+              {kindApi.confirmNotice}
             </>
           )}
 
@@ -696,7 +509,7 @@ export function NewRequestPage() {
             <Button variant="secondary" onClick={goPrev} disabled={step === 0 || submit.isPending}>
               이전
             </Button>
-            {step < STEPS.length - 1 ? (
+            {step < STEP_IDS.length - 1 ? (
               <Button onClick={goNext}>다음</Button>
             ) : (
               <Button onClick={onSubmit} loading={submit.isPending}>
@@ -710,39 +523,7 @@ export function NewRequestPage() {
   )
 }
 
-function SummaryTable({
-  state,
-  workspaceName,
-  orgName,
-  imageName,
-  flavorName,
-}: {
-  state: WizardState
-  workspaceName: string
-  orgName: string
-  imageName: string
-  flavorName: string
-}) {
-  const rows: [string, string][] = [
-    ['워크스페이스', workspaceName],
-    ['기관', orgName],
-    ['OS', imageName],
-    ['사양 프리셋', flavorName],
-    ['요청 사양', `${state.reqVcpu} vCPU · ${formatMemory(state.reqMemoryMb)} · ${state.reqDiskGb} GiB`],
-    ['사양 사유', state.specReason.trim() || '—'],
-    ['사용 목적', state.purpose.trim()],
-    ['수업/프로젝트명', state.courseOrProject.trim() || '—'],
-    ['기타 참고', state.extraNote.trim() || '—'],
-    ['표시명', state.displayName.trim()],
-    ['호스트명(SSH 접속명)', state.desiredSlug || '자동 생성'],
-    [
-      '사용 기간',
-      state.reqStartDate || state.reqEndDate
-        ? `${state.reqStartDate || '미지정'} ~ ${state.reqEndDate || '미지정'}`
-        : '미지정',
-    ],
-  ]
-
+function SummaryTable({ rows }: { rows: [string, string][] }) {
   return (
     <div>
       <h2 className="mb-2 text-sm font-semibold text-neutral-800">신청 내용 확인</h2>

@@ -164,15 +164,20 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
     sessionStorage.setItem(
       VM_REQUEST_DRAFT_KEY,
       JSON.stringify({
-        workspaceId: uuid(12),
-        orgId: uuid(1),
-        imageId: uuid(1),
-        flavorId: uuid(9),
-        reqVcpu: 1,
-        reqMemoryMb: 512,
-        reqDiskGb: 10,
-        purpose: '실습 서버',
-        displayName: '실습 서버',
+        kind: 'VM',
+        common: {
+          workspaceId: uuid(12),
+          orgId: uuid(1),
+          purpose: '실습 서버',
+          displayName: '실습 서버',
+        },
+        spec: {
+          imageId: uuid(1),
+          flavorId: uuid(9),
+          reqVcpu: 1,
+          reqMemoryMb: 512,
+          reqDiskGb: 10,
+        },
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
