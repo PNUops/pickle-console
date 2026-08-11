@@ -17,6 +17,7 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
+import { effectiveLlmKeyStatus } from '../lib/status'
 import { useScope } from '../lib/use-scope'
 
 export function LlmKeysPage() {
@@ -103,7 +104,12 @@ export function LlmKeysPage() {
                       )}
                     </TD>
                     <TD>
-                      <LlmKeyStatusBadge status={key.status} />
+                      {/* 만료는 저장된 상태가 아니라 시각이 지배한다 — 상세와 같은
+                          근거로 판정해야 목록과 상세가 같은 키를 다르게 부르지 않는다.
+                          제한 행에는 만료 시각이 오지 않으므로 서버가 준 상태 그대로다. */}
+                      <LlmKeyStatusBadge
+                        status={effectiveLlmKeyStatus(key.status, key.expiresAt)}
+                      />
                     </TD>
                     {/* 아직 발급 전이거나(값이 없다) 접근 권한이 없어 서버가 필드를
                         빼고 내려준 경우다. 어느 쪽인지는 상태 배지와 이름 칸이 이미

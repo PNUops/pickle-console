@@ -33,6 +33,7 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
+import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 // 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
@@ -89,6 +90,9 @@ export function LlmKeyDetailPage() {
 
 function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   const revoked = llmKey.status === 'REVOKED'
+  // 만료는 저장된 상태가 아니라 시각이 지배한다 — 게이트웨이가 보는 것과 같은
+  // 근거를 화면도 본다. 배지·안내·발급 가능 판정이 모두 이 값을 쓴다.
+  const status = effectiveLlmKeyStatus(llmKey.status, llmKey.expiresAt)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = KEY_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
@@ -103,7 +107,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-neutral-900">{llmKey.name}</h1>
-            <LlmKeyStatusBadge status={llmKey.status} />
+            <LlmKeyStatusBadge status={status} />
           </div>
           <p className="mt-1 text-sm text-neutral-500">
             {llmKey.workspaceName} 소유
@@ -128,14 +132,14 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
               </div>
             }
           >
-            <LlmKeyUsageSection keyId={llmKey.id} status={llmKey.status} />
+            <LlmKeyUsageSection keyId={llmKey.id} status={status} />
           </Suspense>
         </ErrorBoundary>
       </TabPanel>
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
-      <StatusNotice llmKey={llmKey} />
-      <IssueSection llmKey={llmKey} />
+      <StatusNotice status={status} />
+      <IssueSection llmKey={llmKey} status={status} />
 
       <Card>
         <CardHeader>
@@ -234,8 +238,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
  *
  * 발급 전과 폐기는 서로 다른 이야기다 — 하나는 남은 한 걸음, 다른 하나는 끝.
  */
-function StatusNotice({ llmKey }: { llmKey: LlmKeyDetail }) {
-  if (llmKey.status === 'PENDING') {
+function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
+  if (status === 'PENDING') {
     return (
       <Alert variant="info" title="아직 발급되지 않은 키입니다">
         신청은 승인됐지만 비밀은 아직 만들어지지 않았습니다. 발급 전에는 이 키로 보낸 요청이
@@ -243,7 +247,7 @@ function StatusNotice({ llmKey }: { llmKey: LlmKeyDetail }) {
       </Alert>
     )
   }
-  if (llmKey.status === 'REVOKED') {
+  if (status === 'REVOKED') {
     return (
       <Alert variant="warning" title="폐기된 키입니다">
         이 키로 보낸 요청은 게이트웨이에서 거부됩니다. 폐기된 키는 다시 발급할 수 없으니
@@ -251,14 +255,14 @@ function StatusNotice({ llmKey }: { llmKey: LlmKeyDetail }) {
       </Alert>
     )
   }
-  if (llmKey.status === 'SUSPENDED') {
+  if (status === 'SUSPENDED') {
     return (
       <Alert variant="warning" title="정지된 키입니다">
         관리자가 이 키의 사용을 멈춰 두었습니다. 해제 전까지는 요청이 거부됩니다.
       </Alert>
     )
   }
-  if (llmKey.status === 'EXPIRED') {
+  if (status === 'EXPIRED') {
     return (
       <Alert variant="warning" title="만료된 키입니다">
         사용 기간이 끝나 더 이상 요청을 인증하지 않습니다. 계속 쓰려면 새로 신청해 주세요.
@@ -277,11 +281,11 @@ function StatusNotice({ llmKey }: { llmKey: LlmKeyDetail }) {
  * `reset()`으로 닫아 그 자리에서 버린다 (릴레이 토큰과 같은 규칙). 서버에는
  * 해시만 남아 다시 조회할 방법이 없으므로, 창을 닫으면 정말로 끝이다.
  */
-function IssueSection({ llmKey }: { llmKey: LlmKeyDetail }) {
+function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApiKeyStatus }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const rotation = llmKey.status !== 'PENDING'
+  const rotation = status !== 'PENDING'
   const actionLabel = rotation ? '키 재발급' : '키 발급'
   // 발급은 부여받은 권한이다 — 이 키의 접근 목록에서 소유자 등급을 받은 사람만
   // 한다. 워크스페이스 소유자의 상시 권한(폐기·목록 관리)은 여기에 닿지 않으므로
@@ -290,7 +294,7 @@ function IssueSection({ llmKey }: { llmKey: LlmKeyDetail }) {
   // 발급이 뜻을 갖는 상태는 둘뿐이다. 서버의 발급은 '발급 전'만 활성으로 올리므로
   // 정지·만료된 키에 발급을 걸면 쓰던 값만 죽고 새 값도 아무것도 인증하지 못한다 —
   // 다시 볼 수 없다는 경고와 함께 쓸모없는 평문을 쥐여 주는 셈이다. 폐기와 같이 뺀다.
-  const issuable = llmKey.status === 'PENDING' || llmKey.status === 'ACTIVE'
+  const issuable = status === 'PENDING' || status === 'ACTIVE'
 
   const issue = useMutation({
     // 평문이 캐시에 남지 않도록 모달을 닫는 즉시 GC 대상이 되게 한다.
