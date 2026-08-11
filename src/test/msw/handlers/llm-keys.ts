@@ -301,6 +301,120 @@ export function visibleLlmKeys(workspaceId?: string | null): LlmKeyDetail[] {
     .sort((a, b) => b.id.localeCompare(a.id))
 }
 
+/* ─── 일별 사용량 ─── */
+
+type UsagePoint = Schemas['LlmKeyUsagePointResponse']
+type UsageValues = Omit<UsagePoint, 'day'>
+
+/**
+ * 사용량 픽스처가 말하는 '오늘'. 실제 오늘을 쓰면 같은 테스트가 날마다 다른
+ * 자료를 받으므로 고정한다 — 화면이 읽는 것은 서버가 준 날짜 문자열뿐이다.
+ */
+export const USAGE_ANCHOR_DAY = '2026-08-11'
+
+const NO_USAGE: UsageValues = {
+  requests: 0,
+  succeeded: 0,
+  rateLimited: 0,
+  failed: 0,
+  inputTokens: 0,
+  outputTokens: 0,
+  estimatedRequests: 0,
+}
+
+function shiftDay(ymd: string, deltaDays: number): string {
+  return new Date(Date.parse(`${ymd}T00:00:00Z`) + deltaDays * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
+}
+
+interface UsageProfile {
+  /** 보고가 한 번도 없었으면 null — 계약이 그 경우를 그렇게 표현한다. */
+  reportedUntil: string | null
+  /** 오늘로부터 offset일 전의 값. */
+  at: (offset: number) => UsageValues
+}
+
+const USAGE_PROFILES: Record<string, UsageProfile> = {
+  // 실제로 쓰이는 키: 한도에 걸린 날도, 추정이 섞인 날도, 아예 호출이 없던 날도 있다.
+  [uuid(70)]: {
+    reportedUntil: '2026-08-11T09:20:00+09:00',
+    at: (offset) => {
+      // 오늘 자는 아직 채워지는 중이라 낮다 — 화면이 그 사실을 말하는지 보는 자료.
+      if (offset === 0) {
+        return {
+          requests: 12,
+          succeeded: 12,
+          rateLimited: 0,
+          failed: 0,
+          inputTokens: 7_400,
+          outputTokens: 2_600,
+          estimatedRequests: 3,
+        }
+      }
+      if (offset === 1) {
+        return {
+          requests: 140,
+          succeeded: 132,
+          rateLimited: 6,
+          failed: 2,
+          inputTokens: 92_000,
+          outputTokens: 33_500,
+          estimatedRequests: 18,
+        }
+      }
+      // 호출이 없던 날. 구멍이 아니라 0이며, 차트가 그 둘을 같게 그리면 안 된다.
+      if (offset === 2) return NO_USAGE
+      const wave = (offset * 13) % 47
+      const requests = 40 + wave
+      return {
+        requests,
+        succeeded: requests - 2,
+        rateLimited: 0,
+        failed: 2,
+        inputTokens: requests * 620,
+        outputTokens: requests * 210,
+        estimatedRequests: offset % 6 === 0 ? 4 : 0,
+      }
+    },
+  },
+  // 폐기된 키 — 폐기 전까지의 기록은 남고 그 뒤로는 0이다.
+  [uuid(73)]: {
+    reportedUntil: '2026-07-31T08:00:00+09:00',
+    at: (offset) =>
+      shiftDay(USAGE_ANCHOR_DAY, -offset) > '2026-07-30'
+        ? NO_USAGE
+        : {
+            requests: 25,
+            succeeded: 24,
+            rateLimited: 0,
+            failed: 1,
+            inputTokens: 15_000,
+            outputTokens: 5_000,
+            estimatedRequests: 0,
+          },
+  },
+  // 발급은 됐지만 한 번도 쓰이지 않은 키 — 게이트웨이 보고 자체가 없다.
+  [uuid(74)]: { reportedUntil: null, at: () => NO_USAGE },
+}
+
+const NEVER_USED: UsageProfile = { reportedUntil: null, at: () => NO_USAGE }
+
+function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendResponse'] {
+  const profile = USAGE_PROFILES[keyId] ?? NEVER_USED
+  const points: UsagePoint[] = []
+  // 오래된 날부터 — 계약이 그 순서를 약속한다. 호출이 없던 날도 빠지지 않는다.
+  for (let offset = days - 1; offset >= 0; offset -= 1) {
+    points.push({ day: shiftDay(USAGE_ANCHOR_DAY, -offset), ...profile.at(offset) })
+  }
+  return {
+    from: points[0].day,
+    to: points[points.length - 1].day,
+    reportedUntil: profile.reportedUntil,
+    points,
+  }
+}
+
 export const llmKeyHandlers: RequestHandler[] = [
   http.get('*/api/v1/llm-keys', ({ request }) => {
     const url = new URL(request.url)
@@ -326,6 +440,18 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 소속 워크스페이스의 키라도 접근 목록에 없으면 존재만 알고 안은 못 본다.
     if (key.myResourceRole == null) return noGrantProblem(key.id)
     return HttpResponse.json(key, { status: 200 })
+  }),
+
+  http.get('*/api/v1/llm-keys/:keyId/usage', ({ params, request }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 사용량은 상세와 같은 문을 쓴다 — 부여가 있어야 열린다.
+    if (key.myResourceRole == null) return noGrantProblem(key.id)
+    const days = Math.min(
+      90,
+      Math.max(1, Number(new URL(request.url).searchParams.get('days') ?? '30')),
+    )
+    return HttpResponse.json(usageTrend(key.id, days), { status: 200 })
   }),
 
   http.post('*/api/v1/llm-keys/:keyId/token', ({ params }) => {
