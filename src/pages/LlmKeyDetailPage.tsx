@@ -5,12 +5,12 @@ import {
   fetchLlmKey,
   invalidateResourceLists,
   issueLlmKeyToken,
-  revokeLlmKey,
   updateLlmKey,
   type LlmKeyDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { CopyButton } from '../components/CopyButton'
+import { RevokeKeyCard } from '../components/llm-key/RevokeKeyCard'
 import {
   Alert,
   Button,
@@ -19,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
-  ConfirmNameModal,
   ErrorBoundary,
   FormField,
   Input,
@@ -204,7 +203,13 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </CardContent>
       </Card>
 
-      {!revoked && <RevokeSection llmKey={llmKey} />}
+      {!revoked && (
+        <RevokeKeyCard
+          keyId={llmKey.id}
+          name={llmKey.name}
+          allowed={llmKey.accessManageAllowed}
+        />
+      )}
       </TabPanel>
     </>
   )
@@ -518,77 +523,6 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
             키 설정 변경은 편집자 이상 등급을 받은 사람만 할 수 있습니다.
           </PermissionNotice>
         )}
-      </CardContent>
-    </Card>
-  )
-}
-
-/* ─── 폐기 ─── */
-
-/**
- * 폐기 권한은 발급 권한과 다르다 — 워크스페이스 소유자와 관리자도 폐기할 수
- * 있어야 유출된 키를 죽일 수 있다. 그래서 여기서는 등급이 아니라 서버가 계산해
- * 준 accessManageAllowed를 그대로 읽는다.
- */
-function RevokeSection({ llmKey }: { llmKey: LlmKeyDetail }) {
-  const queryClient = useQueryClient()
-  const [confirming, setConfirming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const allowed = llmKey.accessManageAllowed
-
-  const revoke = useMutation({
-    mutationFn: () => revokeLlmKey(llmKey.id),
-    onSuccess: async () => {
-      setConfirming(false)
-      setError(null)
-      await queryClient.invalidateQueries({ queryKey: ['llm-keys', llmKey.id] })
-      await invalidateResourceLists(queryClient)
-    },
-    onError: (err) => {
-      setConfirming(false)
-      setError(toApiError(err, 'LLM API 키를 폐기하지 못했습니다.').message)
-    },
-  })
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>키 폐기</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-neutral-600">
-          키를 폐기하면 이후 이 키로 보낸 요청이 거부됩니다. 되돌릴 수 없고, 폐기한 키는 다시
-          발급할 수 없습니다.
-        </p>
-        {error && <Alert variant="danger">{error}</Alert>}
-        <Button variant="danger" disabled={!allowed} onClick={() => setConfirming(true)}>
-          키 폐기
-        </Button>
-        {!allowed && (
-          <PermissionNotice>
-            키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만 할 수 있습니다.
-          </PermissionNotice>
-        )}
-
-        <ConfirmNameModal
-          open={confirming}
-          onClose={() => setConfirming(false)}
-          title="LLM API 키 폐기"
-          expectedName={llmKey.name}
-          confirmLabel="폐기"
-          loading={revoke.isPending}
-          onConfirm={() => revoke.mutate()}
-        >
-          <div className="space-y-3 text-sm text-neutral-600">
-            <Alert variant="danger" title="되돌릴 수 없습니다">
-              폐기한 키는 다시 발급할 수 없습니다. 계속 쓰려면 새로 신청해야 합니다.
-            </Alert>
-            <p>
-              게이트웨이에는 폴링 주기 안에 반영되며, 이후 이 키로 보낸 요청은 폐기된 키로
-              거부됩니다. 지금까지의 사용 기록은 남습니다.
-            </p>
-          </div>
-        </ConfirmNameModal>
       </CardContent>
     </Card>
   )
