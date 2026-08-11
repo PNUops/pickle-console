@@ -78,7 +78,7 @@ export interface RequestKindModule {
   useWizard(draftSpec: unknown): KindWizard
 }
 
-/* ─── 관리자 승인 ─── */
+/* ─── 신청 하나를 그리는 화면들 ─── */
 
 /**
  * 결정에 필요한 종류별 카탈로그의 로딩 상태. blocked면 결정 카드 자리 전체에
@@ -101,8 +101,20 @@ export interface DecisionFormApi {
   successMessage: string
 }
 
-/** 관리자 화면(승인 대기 큐·신청 상세)에 등록되는 종류 모듈. */
-export interface RequestKindAdmin {
+/**
+ * 위저드 밖에서 신청 하나를 그리는 데 필요한 종류별 항목 전부.
+ *
+ * 읽기 항목(summaryCell·contentFields·resultFields)은 **신청자와 관리자가 함께
+ * 쓴다** — 내 신청 목록·신청 상세와 승인 대기 큐·관리자 신청 상세가 같은 함수를
+ * 부른다. 신청의 사실은 신청의 것이지 읽는 사람의 것이 아니고, 종류마다 같은
+ * 표를 두 벌 쓰면 한쪽만 갱신되는 날이 온다. 읽는 목적의 차이(결재냐 확인이냐)는
+ * 화면 골격이 무엇을 곁들이느냐로 갈린다 — 관리자 화면만 결정 폼과 참고 패널을
+ * 덧붙이고, 신청자 화면만 취소 버튼을 단다.
+ *
+ * 결정 항목(decisionPrefetchQueries·useDecisionData·useApproveForm)은 관리자
+ * 화면에서만 불린다.
+ */
+export interface RequestKindView {
   /**
    * 신청 상세 진입 즉시 미리 당겨 둘 결정용 카탈로그 쿼리.
    * 결정 폼은 신청 응답이 온 뒤에야 마운트되므로, 여기서 당겨 두지 않으면
@@ -112,9 +124,12 @@ export interface RequestKindAdmin {
     queryKey: readonly unknown[]
     queryFn: () => Promise<unknown>
   }>
-  /** 승인 대기 큐 표의 종류별 요약 셀. */
-  queueCell(request: RequestDetail): ReactNode
-  /** 신청 내용 카드 본문 — 공통·종류 항목이 섞이는 순서까지 종류가 정한다. */
+  /** 신청 표의 종류별 요약 셀 — 승인 대기 큐와 내 신청 목록이 함께 쓴다. */
+  summaryCell(request: RequestDetail): ReactNode
+  /**
+   * 신청 내용 카드 본문 — 공통·종류 항목이 섞이는 순서까지 종류가 정한다.
+   * 신청자를 적지 않는다: 두 상세 화면 모두 머리말이 이미 신청자를 밝힌다.
+   */
   contentFields(request: RequestDetail): ReactNode
   /** 검토 결과 카드의 승인 상세(부여 사양·기간 등) — 반려·해당 없음이면 null. */
   resultFields(request: RequestDetail): ReactNode

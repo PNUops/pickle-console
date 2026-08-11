@@ -23,8 +23,8 @@ import {
   TR,
 } from '../components/ui'
 import {
-  QUEUE_KIND_COLUMN_TITLE,
-  requestKindAdmin,
+  KIND_SUMMARY_COLUMN_TITLE,
+  requestKindView,
 } from '../components/request-kind'
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
@@ -140,7 +140,7 @@ export function AdminRequestsPage() {
                 <TR>
                   <TH>신청자</TH>
                   <TH>워크스페이스</TH>
-                  <TH>{QUEUE_KIND_COLUMN_TITLE}</TH>
+                  <TH>{KIND_SUMMARY_COLUMN_TITLE}</TH>
                   <TH>신청일</TH>
                   <TH>상태</TH>
                 </TR>
@@ -167,7 +167,7 @@ export function AdminRequestsPage() {
                     <TD>{request.workspaceName}</TD>
                     {/* 종류별 요약(OS·사양 등)은 그 종류의 모듈이 그린다. */}
                     <TD className="whitespace-nowrap">
-                      {requestKindAdmin(request.type).queueCell(request)}
+                      {requestKindView(request.type).summaryCell(request)}
                     </TD>
                     <TD className="whitespace-nowrap">{formatDateTime(request.createdAt)}</TD>
                     <TD>

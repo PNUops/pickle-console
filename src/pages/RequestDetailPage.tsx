@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
@@ -16,7 +16,9 @@ import {
   RequestStatusBadge,
   Spinner,
 } from '../components/ui'
-import { formatDateTime, formatSpec } from '../lib/format'
+import { requestKindView } from '../components/request-kind'
+import { Field } from '../components/request-kind/Field'
+import { formatDateTime } from '../lib/format'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 export function RequestDetailPage() {
@@ -75,46 +77,17 @@ export function RequestDetailPage() {
         <Alert variant="info">관리자 검토를 기다리고 있습니다. 처리되면 알려 드립니다.</Alert>
       )}
 
-      {data.review && (
-        <ReviewCard
-          review={data.review}
-          vmGranted={data.vm?.granted}
-          imageName={data.vm?.granted?.grantedImageName ?? '—'}
-        />
-      )}
+      {data.review && <ReviewCard request={data} review={data.review} />}
 
       <Card>
         <CardHeader>
           <CardTitle>신청 내용</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* 무엇을 신청했는지는 종류가 답한다 — 관리자 신청 상세와 같은 항목을
+              같은 함수로 그린다. 신청자와 관리자가 다른 표를 보면 한쪽만 낡는다. */}
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-            <Field label="워크스페이스">{data.workspaceName}</Field>
-            <Field label="기관">{data.orgName}</Field>
-            {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이 남으므로
-                공개 목록을 따로 뒤질 필요가 없다. '—'는 값 자체가 없을 때뿐이다. */}
-            <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
-            <Field label="사양 프리셋">{data.vm?.flavorName ?? '—'}</Field>
-            <Field label="요청 사양">
-              {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
-            </Field>
-            <Field label="용도">{data.purpose}</Field>
-            <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
-            <Field label="사양 사유">{data.vm?.specReason ?? '—'}</Field>
-            <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
-            <Field label="사용 기간">
-              {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
-            </Field>
-            <Field label="표시명">{data.displayName}</Field>
-            <Field label="호스트명(SSH 접속명)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
-            {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
-            {data.vm?.desiredSubdomain && (
-              <Field label="서브도메인 선지정">
-                {data.vm?.rootDomain
-                  ? `${data.vm?.desiredSubdomain}.${data.vm?.rootDomain}`
-                  : data.vm?.desiredSubdomain}
-              </Field>
-            )}
+            {requestKindView(data.type).contentFields(data)}
           </dl>
         </CardContent>
       </Card>
@@ -122,23 +95,12 @@ export function RequestDetailPage() {
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium text-neutral-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutral-800">{children}</dd>
-    </div>
-  )
-}
-
 function ReviewCard({
+  request,
   review,
-  vmGranted,
-  imageName,
 }: {
+  request: RequestDetail
   review: NonNullable<RequestDetail['review']>
-  vmGranted: NonNullable<RequestDetail['vm']>['granted']
-  imageName: string
 }) {
   const approved = review.decision === 'APPROVE'
   return (
@@ -152,20 +114,8 @@ function ReviewCard({
           <Field label="검토자">{review.reviewerName}</Field>
           <Field label="처리 시각">{formatDateTime(review.decidedAt)}</Field>
           {review.comment && <Field label="검토 의견">{review.comment}</Field>}
-          {approved &&
-            vmGranted?.grantedVcpu != null &&
-            vmGranted?.grantedMemoryMb != null &&
-            vmGranted?.grantedDiskGb != null && (
-              <Field label="부여 사양">
-                {formatSpec(vmGranted?.grantedVcpu, vmGranted?.grantedMemoryMb, vmGranted?.grantedDiskGb)}
-              </Field>
-            )}
-          {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
-          {approved && (
-            <Field label="부여 기간">
-              {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}
-            </Field>
-          )}
+          {/* 승인이 부여한 것(사양·한도·기간 등)은 종류 모듈이 그린다 — 반려면 null. */}
+          {requestKindView(request.type).resultFields(request)}
         </dl>
       </CardContent>
     </Card>

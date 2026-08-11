@@ -96,31 +96,40 @@ function useVmWizard(draftSpec: unknown): KindWizard {
   const selectedImage = osImages.data?.find((t) => t.id === spec.imageId)
   const selectedFlavor = flavors.data?.find((f) => f.id === spec.flavorId)
 
+  /**
+   * 오류 키는 서버가 422의 errors[]에 싣는 필드 경로와 같아야 한다.
+   * 이 종류의 스펙은 신청 본문의 vm 아래에 있으므로 서버가 보내는 이름도
+   * 'vm.imageId'처럼 중첩형이다 — 평평한 이름으로 받으면 서버가 되돌려준
+   * 오류가 어느 칸에도 붙지 못한다. 공통 필드(workspaceId·purpose·reqEndDate…)는
+   * 본문 최상위라 접두사가 붙지 않으며, 그쪽은 위저드 본체가 본다.
+   */
   const validateStep = (step: WizardStepId): FieldErrors => {
     const next: FieldErrors = {}
     if (step === 'target') {
       if (spec.desiredSlug) {
         if (!SUBDOMAIN_RE.test(spec.desiredSlug)) {
-          next.desiredSlug =
+          next['vm.desiredSlug'] =
             '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
         } else if (options.data?.reservedSubdomains.includes(spec.desiredSlug)) {
-          next.desiredSlug = `'${spec.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
+          next['vm.desiredSlug'] = `'${spec.desiredSlug}'은(는) 예약된 이름이라 사용할 수 없습니다.`
         }
       }
     }
     if (step === 'spec') {
       // 목록에 없는 id(초안에 남은 은퇴 OS·프리셋, 직접 넣은 값)는 선택되지 않은
       // 것으로 본다 — 그대로 두면 요약이 원시 id를 보여주고 제출이 422로 튕긴다.
-      if (spec.imageId == null || !selectedImage) next.imageId = 'OS를 선택해 주세요.'
+      if (spec.imageId == null || !selectedImage) next['vm.imageId'] = 'OS를 선택해 주세요.'
       if (spec.flavorId == null || !selectedFlavor)
-        next.flavorId = '사양 프리셋을 선택해 주세요.'
+        next['vm.flavorId'] = '사양 프리셋을 선택해 주세요.'
       if (selectedImage && selectedFlavor) {
-        if (spec.reqVcpu < 1) next.reqVcpu = 'vCPU는 1 이상이어야 합니다.'
-        if (spec.reqMemoryMb < 256) next.reqMemoryMb = '메모리는 256 MiB 이상이어야 합니다.'
+        if (spec.reqVcpu < 1) next['vm.reqVcpu'] = 'vCPU는 1 이상이어야 합니다.'
+        if (spec.reqMemoryMb < 256)
+          next['vm.reqMemoryMb'] = '메모리는 256 MiB 이상이어야 합니다.'
         if (spec.reqDiskGb < selectedImage.minDiskGb)
-          next.reqDiskGb = `디스크는 이 OS의 최소 크기(${selectedImage.minDiskGb} GiB) 이상이어야 합니다.`
+          next['vm.reqDiskGb'] = `디스크는 이 OS의 최소 크기(${selectedImage.minDiskGb} GiB) 이상이어야 합니다.`
         if (exceedsFlavor(spec, selectedFlavor) && !spec.specReason.trim())
-          next.specReason = '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
+          next['vm.specReason'] =
+            '선택한 사양 프리셋보다 높은 사양을 요청할 때는 사유를 입력해 주세요.'
       }
     }
     return next
@@ -135,7 +144,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
     targetFields: (errors) => (
       <FormField
         label="희망 호스트명(슬러그)"
-        error={errors.desiredSlug}
+        error={errors['vm.desiredSlug']}
         description={`SSH 접속명으로 쓰입니다 — ssh ${spec.desiredSlug || '<슬러그>'}@${
           options.data?.sshHost ?? SSH_GATEWAY_HOST
         } · 미입력 시 자동 생성됩니다.`}
@@ -155,9 +164,9 @@ function useVmWizard(draftSpec: unknown): KindWizard {
           <legend className="text-sm font-medium text-neutral-700">
             OS 선택 <span aria-hidden="true" className="text-danger-600">*</span>
           </legend>
-          {errors.imageId && (
+          {errors['vm.imageId'] && (
             <p role="alert" className="mt-1 text-sm text-danger-600">
-              {errors.imageId}
+              {errors['vm.imageId']}
             </p>
           )}
           {osImages.data?.length === 0 && (
@@ -208,9 +217,9 @@ function useVmWizard(draftSpec: unknown): KindWizard {
           <legend className="text-sm font-medium text-neutral-700">
             사양 선택 <span aria-hidden="true" className="text-danger-600">*</span>
           </legend>
-          {errors.flavorId && (
+          {errors['vm.flavorId'] && (
             <p role="alert" className="mt-1 text-sm text-danger-600">
-              {errors.flavorId}
+              {errors['vm.flavorId']}
             </p>
           )}
           <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -254,7 +263,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
         {selectedImage && selectedFlavor && (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <FormField label="vCPU" required error={errors.reqVcpu}>
+              <FormField label="vCPU" required error={errors['vm.reqVcpu']}>
                 <Input
                   type="number"
                   min={1}
@@ -262,7 +271,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
                   onChange={(event) => update({ reqVcpu: Number(event.target.value) })}
                 />
               </FormField>
-              <FormField label="메모리 (MiB)" required error={errors.reqMemoryMb}>
+              <FormField label="메모리 (MiB)" required error={errors['vm.reqMemoryMb']}>
                 <Input
                   type="number"
                   min={256}
@@ -271,7 +280,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
                   onChange={(event) => update({ reqMemoryMb: Number(event.target.value) })}
                 />
               </FormField>
-              <FormField label="디스크 (GiB)" required error={errors.reqDiskGb}>
+              <FormField label="디스크 (GiB)" required error={errors['vm.reqDiskGb']}>
                 <Input
                   type="number"
                   min={selectedImage.minDiskGb}
@@ -284,7 +293,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
               <FormField
                 label="사양 사유"
                 required
-                error={errors.specReason}
+                error={errors['vm.specReason']}
                 description={`선택한 프리셋(${selectedFlavor.displayName})보다 높은 사양을 요청하는 이유를 적어 주세요. 관리자 검토에 사용됩니다.`}
               >
                 <Textarea
@@ -358,14 +367,16 @@ export const vmRequestKind: RequestKindModule = {
     noWorkspaceNotice:
       'VM을 신청할 수 있는 워크스페이스가 없습니다. 워크스페이스에 속해 있어야 신청할 수 있습니다.',
   },
+  // 키는 서버가 422에 싣는 필드 경로 그대로다 (신청 본문의 vm 아래).
   fieldLabels: {
-    imageId: 'OS',
-    flavorId: '사양 프리셋',
-    specReason: '사양 사유',
-    reqVcpu: 'vCPU',
-    reqMemoryMb: '메모리',
-    reqDiskGb: '디스크',
-    desiredSlug: '호스트명(슬러그)',
+    vm: 'VM 신청 항목',
+    'vm.imageId': 'OS',
+    'vm.flavorId': '사양 프리셋',
+    'vm.specReason': '사양 사유',
+    'vm.reqVcpu': 'vCPU',
+    'vm.reqMemoryMb': '메모리',
+    'vm.reqDiskGb': '디스크',
+    'vm.desiredSlug': '호스트명(슬러그)',
   },
   isCompatibleSpecDraft,
   useWizard: useVmWizard,
