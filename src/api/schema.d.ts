@@ -3554,7 +3554,7 @@ export interface components {
             vcpu: number;
         };
         /** @enum {string} */
-        ResourceType: "VM";
+        ResourceType: "VM" | "LLM_API_KEY";
         Resources: {
             activeVms: components["schemas"]["VmBriefResponse"][];
             totals: components["schemas"]["ResourceTotalsResponse"];

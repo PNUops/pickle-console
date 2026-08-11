@@ -58,8 +58,11 @@ describe('전체 리소스', () => {
     const row = {
       id: uuid(900),
       // 서버가 먼저 내보낸 종류 — 옛 번들이 받아도 화면이 비면 안 된다.
-      type: 'LLM_API_KEY' as Schemas['ResourceType'],
-      name: 'gpt-lab-key',
+      // A type this build does not know. It must not name a registered one:
+      // the case is the row that arrives before the bundle does, and a
+      // registered type would exercise the opposite branch and still pass.
+      type: 'GPU_ALLOCATION' as Schemas['ResourceType'],
+      name: 'lab-gpu-slice',
       displayName: null,
       status: 'ACTIVE',
       workspaceId: uuid(12),
@@ -82,10 +85,10 @@ describe('전체 리소스', () => {
     )
     renderResources()
 
-    const unknownRow = (await screen.findByText('gpt-lab-key')).closest('tr')!
+    const unknownRow = (await screen.findByText('lab-gpu-slice')).closest('tr')!
     // 종류와 상태는 서버가 준 문자열 그대로, 상세로 가는 링크는 없다.
-    expect(within(unknownRow).getByText('LLM_API_KEY')).toBeInTheDocument()
+    expect(within(unknownRow).getByText('GPU_ALLOCATION')).toBeInTheDocument()
     expect(within(unknownRow).getByText('ACTIVE')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'gpt-lab-key' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'lab-gpu-slice' })).not.toBeInTheDocument()
   })
 })
