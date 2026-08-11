@@ -25,6 +25,7 @@ async function passStep1(user: ReturnType<typeof userEvent.setup>) {
   await passTypeStep(user)
   await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
   await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
+  await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 
@@ -171,6 +172,7 @@ describe('VM 신청 위저드 — 단계 URL·초안 유지', () => {
         reqMemoryMb: 512,
         reqDiskGb: 10,
         purpose: '실습 서버',
+        displayName: '실습 서버',
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
@@ -258,6 +260,8 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
     await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
 
+    await user.type(screen.getByLabelText('표시명'), '실습 서버')
+
     const slugInput = screen.getByLabelText('희망 호스트명(슬러그)')
     // 형식 위반
     await user.type(slugInput, 'My-Server')
@@ -283,9 +287,52 @@ describe('VM 신청 위저드 — 희망 호스트명(슬러그)', () => {
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
     expect(createdRequestBodies.at(-1)).toMatchObject({
-      displayName: null,
+      displayName: '실습 서버',
       vm: { desiredSlug: null },
     })
+  })
+})
+
+describe('VM 신청 위저드 — 리소스 이름', () => {
+  // 이름은 이제 신청이 가리키는 대상 그 자체다 — 식별자가 UUID가 된 뒤로 목록·상세·
+  // 알림이 모두 이 이름으로 신청을 부른다. 비워 두면 부를 말이 없다.
+  test('이름을 입력하기 전에는 다음으로 넘어갈 수 없다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passTypeStep(user)
+    await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
+    await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
+
+    // 공백만 채운 것은 이름이 아니다.
+    await user.type(screen.getByLabelText('표시명'), '   ')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('리소스 이름을 입력해 주세요.')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('표시명'))
+    await user.type(screen.getByLabelText('표시명'), '실습 서버')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.queryByText('리소스 이름을 입력해 주세요.')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Ubuntu 24\.04 LTS/ })).toBeInTheDocument()
+  })
+
+  test('완료 화면은 접수된 신청을 이름으로 부른다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passStep1(user)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    expect(screen.getByText('캡스톤 백엔드 서버')).toBeInTheDocument()
+    // 식별자는 UUID라 화면에 그대로 나오면 읽는 사람에게 알려주는 것이 없다.
+    expect(screen.queryByText(/신청 번호/)).not.toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/)
   })
 })
 
