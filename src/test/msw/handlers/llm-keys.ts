@@ -446,11 +446,21 @@ export const llmKeyHandlers: RequestHandler[] = [
     const key = llmKeyStore.find((k) => k.id === String(params.keyId))
     if (!key) return notFoundProblem()
     // 사용량은 상세와 같은 문을 쓴다 — 부여가 있어야 열린다.
-    if (key.myResourceRole == null) return noGrantProblem(key.id)
-    const days = Math.min(
-      90,
-      Math.max(1, Number(new URL(request.url).searchParams.get('days') ?? '30')),
-    )
+    if (key.myResourceRole == null) {
+      return noGrantProblem(key.id, `/api/v1/llm-keys/${key.id}/usage`)
+    }
+    const raw = new URL(request.url).searchParams.get('days')
+    const days = raw == null ? 30 : Number(raw)
+    // 계약은 1..90을 요구한다. 서버는 범위를 잘라 주는 것이 아니라 거절하므로
+    // mock도 거절해야 한다 — 잘라 주면 잘못된 days를 보내는 화면이 테스트에서만
+    // 멀쩡해 보인다.
+    if (!Number.isInteger(days) || days < 1 || days > 90) {
+      return validationProblem(
+        `/api/v1/llm-keys/${key.id}/usage`,
+        'days',
+        '조회 일수는 1 이상 90 이하여야 합니다.',
+      )
+    }
     return HttpResponse.json(usageTrend(key.id, days), { status: 200 })
   }),
 
@@ -662,14 +672,14 @@ const validationProblem = (instance: string, field: string, message: string) =>
   })
 
 /** 접근 목록이 막는 403 — 계약상 코드는 WORKSPACE_ROLE_INSUFFICIENT 하나다. */
-const noGrantProblem = (keyId: string) =>
+const noGrantProblem = (keyId: string, instance = `/api/v1/llm-keys/${keyId}`) =>
   problemResponse({
     type: 'about:blank',
     title: '이 키에 접근할 권한이 없습니다',
     status: 403,
     detail:
       '이 LLM API 키의 접근 목록에 등록되어 있지 않습니다. 자원 소유자에게 접근 권한을 요청해 주세요.',
-    instance: `/api/v1/llm-keys/${keyId}`,
+    instance,
     code: 'WORKSPACE_ROLE_INSUFFICIENT',
   })
 
