@@ -34,6 +34,17 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     expect(within(retired).getByRole('button', { name: '되살리기' })).toBeEnabled()
   })
 
+  // 노드 자리에는 노드 id가 그대로 찍혀 있었다. id는 UUID라 어느 호스트인지 알려주지
+  // 않는다 — 운영자가 아는 것은 노드 이름이다.
+  test('이미지가 올라간 노드를 id가 아닌 이름으로 보여준다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images')
+
+    const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
+    expect(await within(active).findByText(/^pve1 \//)).toBeInTheDocument()
+    expect(active.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/)
+  })
+
   test('마지막 ACTIVE OS 이미지 은퇴 시 경고를 띄우고 전환한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))

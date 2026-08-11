@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createAdminVmFlavor,
+  fetchAdminNodes,
   fetchAdminOsImages,
   fetchAdminVmFlavors,
   updateAdminOsImage,
@@ -51,6 +52,9 @@ export function AdminOsImagesPage() {
 
   const osImages = useQuery({ queryKey: ['admin', 'os-images'], queryFn: fetchAdminOsImages })
   const flavors = useQuery({ queryKey: ['admin', 'vm-flavors'], queryFn: fetchAdminVmFlavors })
+  // 이미지가 올라가 있는 노드는 id가 아니라 이름으로 읽는다 — 노드 id는 UUID다.
+  const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: fetchAdminNodes })
+  const nodeName = (nodeId: string) => nodes.data?.find((n) => n.id === nodeId)?.name ?? '—'
 
   const activeCount = osImages.data?.filter((t) => t.status === 'ACTIVE').length ?? 0
   const activeFlavorCount = flavors.data?.filter((f) => f.status === 'ACTIVE').length ?? 0
@@ -115,7 +119,7 @@ export function AdminOsImagesPage() {
                       </Badge>
                     </TD>
                     <TD className="whitespace-nowrap text-xs text-neutral-500">
-                      {image.nodeId} / {image.proxmoxVmid}
+                      {nodeName(image.nodeId)} / {image.proxmoxVmid}
                     </TD>
                     <TD className="whitespace-nowrap">{image.minDiskGb} GiB</TD>
                     <TD className="max-w-xs truncate text-xs text-neutral-500">
