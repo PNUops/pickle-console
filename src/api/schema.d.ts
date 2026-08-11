@@ -1381,6 +1381,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/llm-keys/{keyId}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * LLM API 키 사용량
+         * @description 이 키의 일별 사용량입니다. 하루는 한국 시간 기준이고, 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         */
+        get: operations["getLlmKeyUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -3204,6 +3224,58 @@ export interface components {
              */
             workspaceId?: string | null;
             workspaceName: string;
+        };
+        LlmKeyUsagePointResponse: {
+            /** Format: date */
+            day: string;
+            /**
+             * Format: int64
+             * @description 토큰 수가 실측이 아니라 추정인 요청 수. 스트리밍 응답에서 업스트림이 사용량을 주지 않으면 게이트웨이가 추정하므로, 이 값이 크면 위 토큰 합도 그만큼 추정입니다.
+             */
+            estimatedRequests: number;
+            /**
+             * Format: int64
+             * @description 그 밖의 사유로 실패한 요청 수 (업스트림 오류, 시간 초과, 잘못된 요청 등)
+             */
+            failed: number;
+            /**
+             * Format: int64
+             * @description 입력 토큰 합
+             */
+            inputTokens: number;
+            /**
+             * Format: int64
+             * @description 출력 토큰 합
+             */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 한도에 걸려 거부된 요청 수. 계속 0이 아니면 한도 상향을 신청할 때입니다.
+             */
+            rateLimited: number;
+            /**
+             * Format: int64
+             * @description 이 날 이 Key로 들어온 요청 수 — 거부된 것과 실패한 것을 포함합니다.
+             */
+            requests: number;
+            /**
+             * Format: int64
+             * @description 정상 응답한 요청 수
+             */
+            succeeded: number;
+        };
+        LlmKeyUsageTrendResponse: {
+            /** Format: date */
+            from: string;
+            /** @description 하루 한 점, 오래된 날부터 */
+            points: components["schemas"]["LlmKeyUsagePointResponse"][];
+            /**
+             * Format: date-time
+             * @description 게이트웨이가 이 Key의 사용량을 마지막으로 보고한 시각. 전송은 배치라 몇 분 늦을 수 있고, 오늘 자 값은 아직 채워지는 중입니다. 보고가 한 번도 없었으면 null입니다.
+             */
+            reportedUntil?: string | null;
+            /** Format: date */
+            to: string;
         };
         LoginRequest: {
             email: string;
@@ -7675,6 +7747,40 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getLlmKeyUsage: {
+        parameters: {
+            query?: {
+                /** @description 오늘을 포함해 거슬러 올라갈 일수 */
+                days?: number;
+            };
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LlmKeyUsageTrendResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
