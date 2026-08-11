@@ -1,0 +1,546 @@
+import { http, HttpResponse, type RequestHandler } from 'msw'
+import type { components } from '../../../api/schema'
+import { problemResponse } from './auth'
+import { isMyWorkspace, workspaceMembersOf } from './workspaces'
+import { uuid } from '../ids'
+
+type Schemas = components['schemas']
+type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
+type ResourceRole = Schemas['ResourceRole']
+type AccessGrant = Schemas['ResourceAccessGrantView']
+
+const RESOURCE_ROLE_RANK: Record<ResourceRole, number> = {
+  VIEWER: 0,
+  MEMBER: 1,
+  EDITOR: 2,
+  OWNER: 3,
+}
+
+/**
+ * 저장 행은 상세 응답의 모양 그대로다 — 요청자별로 갈리는 두 값
+ * (`myResourceRole`, `accessManageAllowed`)까지 행에 얹어 두고, 목록·인벤토리는
+ * 전부 여기서 파생시킨다. 같은 행을 두 화면이 다르게 말하면 권한 결함이
+ * 테스트에 걸리지 않고 지나간다.
+ */
+function initialLlmKeys(): LlmKeyDetail[] {
+  return [
+    {
+      id: uuid(70),
+      name: 'capstone-chatbot',
+      purpose: '캡스톤 챗봇 백엔드',
+      status: 'ACTIVE',
+      tokenPrefix: 'pk-llm-3f9a',
+      expiresAt: '2026-12-31T23:59:00+09:00',
+      lastUsedAt: '2026-08-10T18:22:00+09:00',
+      rpm: 60,
+      tpm: 40000,
+      concurrency: 4,
+      recordBodies: false,
+      revokedAt: null,
+      workspaceId: uuid(12),
+      workspaceName: '캡스톤 3조',
+      createdAt: '2026-07-20T11:00:00+09:00',
+      myResourceRole: 'OWNER',
+      accessManageAllowed: true,
+    },
+    {
+      // 승인은 났고 아직 비밀이 없다 — 발급 버튼이 거기 있는 이유.
+      id: uuid(71),
+      name: 'algo-hint-writer',
+      purpose: '문제 해설 초안 생성',
+      status: 'PENDING',
+      tokenPrefix: null,
+      expiresAt: null,
+      lastUsedAt: null,
+      rpm: null,
+      tpm: null,
+      concurrency: null,
+      recordBodies: false,
+      revokedAt: null,
+      workspaceId: uuid(15),
+      workspaceName: '알고리즘 스터디',
+      createdAt: '2026-08-05T09:30:00+09:00',
+      myResourceRole: 'OWNER',
+      accessManageAllowed: true,
+    },
+    {
+      // 접근 목록에 없다 — 제한 행의 근거.
+      id: uuid(72),
+      name: 'db-lab-grader',
+      purpose: null,
+      status: 'ACTIVE',
+      tokenPrefix: null,
+      expiresAt: null,
+      lastUsedAt: null,
+      rpm: null,
+      tpm: null,
+      concurrency: null,
+      recordBodies: false,
+      revokedAt: null,
+      workspaceId: uuid(14),
+      workspaceName: '데이터베이스 실습',
+      createdAt: '2026-07-02T15:00:00+09:00',
+      myResourceRole: null,
+      accessManageAllowed: false,
+    },
+    {
+      // 죽은 키. 발급 전과 달리 되살릴 길이 없다.
+      id: uuid(73),
+      name: 'leaked-demo-key',
+      purpose: '시연용 (유출로 폐기)',
+      status: 'REVOKED',
+      tokenPrefix: 'pk-llm-91cc',
+      expiresAt: null,
+      lastUsedAt: '2026-07-30T10:05:00+09:00',
+      rpm: null,
+      tpm: null,
+      concurrency: null,
+      recordBodies: true,
+      revokedAt: '2026-07-31T09:00:00+09:00',
+      workspaceId: uuid(12),
+      workspaceName: '캡스톤 3조',
+      createdAt: '2026-07-10T13:00:00+09:00',
+      myResourceRole: 'OWNER',
+      accessManageAllowed: true,
+    },
+    {
+      // 참여자 등급만 받은 키 — 안은 보이지만 발급도 수정도 폐기도 못 한다.
+      id: uuid(74),
+      name: 'study-shared-key',
+      purpose: '스터디 공용',
+      status: 'ACTIVE',
+      tokenPrefix: 'pk-llm-77de',
+      expiresAt: null,
+      lastUsedAt: null,
+      rpm: 30,
+      tpm: null,
+      concurrency: null,
+      recordBodies: false,
+      revokedAt: null,
+      workspaceId: uuid(15),
+      workspaceName: '알고리즘 스터디',
+      createdAt: '2026-07-15T16:40:00+09:00',
+      myResourceRole: 'MEMBER',
+      accessManageAllowed: false,
+    },
+  ]
+}
+
+function initialLlmKeyAccessGrants(): Record<string, AccessGrant[]> {
+  return {
+    [uuid(70)]: [
+      {
+        id: uuid(340),
+        granteeType: 'USER',
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-07-20T11:00:00+09:00',
+      },
+      {
+        id: uuid(341),
+        granteeType: 'USER',
+        user: { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        role: 'MEMBER',
+        createdAt: '2026-07-21T11:00:00+09:00',
+      },
+    ],
+    [uuid(71)]: [
+      {
+        id: uuid(343),
+        granteeType: 'USER',
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-08-05T09:30:00+09:00',
+      },
+    ],
+    // 내가 없는 목록 — 제한 행이 "누구에게 요청하라"고 말할 근거.
+    [uuid(72)]: [
+      {
+        id: uuid(345),
+        granteeType: 'USER',
+        user: { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-07-02T15:00:00+09:00',
+      },
+    ],
+    [uuid(73)]: [
+      {
+        id: uuid(347),
+        granteeType: 'USER',
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-07-10T13:00:00+09:00',
+      },
+    ],
+    [uuid(74)]: [
+      {
+        id: uuid(349),
+        granteeType: 'USER',
+        user: { userId: uuid(57), name: '김철수', email: 'cheolsu.kim@pusan.ac.kr' },
+        role: 'OWNER',
+        createdAt: '2026-07-15T16:40:00+09:00',
+      },
+      {
+        id: uuid(350),
+        granteeType: 'USER',
+        user: { userId: uuid(42), name: '홍길동', email: 'gildong.hong@pusan.ac.kr' },
+        role: 'MEMBER',
+        createdAt: '2026-07-16T16:40:00+09:00',
+      },
+    ],
+  }
+}
+
+export let llmKeyStore: LlmKeyDetail[] = initialLlmKeys()
+export let llmKeyAccessStore: Record<string, AccessGrant[]> = initialLlmKeyAccessGrants()
+let nextGrantId = 380
+let nextTokenSuffix = 0
+
+export function resetLlmKeyFixtures() {
+  llmKeyStore = initialLlmKeys()
+  llmKeyAccessStore = initialLlmKeyAccessGrants()
+  nextGrantId = 380
+  nextTokenSuffix = 0
+}
+
+/**
+ * 그 키의 접근 목록을 관리할 수 있는 사람으로 만든다 — 부여 없는 워크스페이스
+ * 소유자가 그렇다. 상세는 여전히 403이고 목록 관리만 열리는, 서버와 같은 조합이다.
+ * {@link resetLlmKeyFixtures}가 되돌린다.
+ */
+export function asLlmKeyGrantManager(keyId: string) {
+  const key = llmKeyStore.find((k) => k.id === keyId)
+  if (key) key.accessManageAllowed = true
+}
+
+/** 접근 목록의 소유자 이름 — 제한 행이 "누구에게 요청하라"고 말할 때 쓴다. */
+function grantOwnerNames(keyId: string): string[] {
+  return (llmKeyAccessStore[keyId] ?? [])
+    .filter((grant) => grant.role === 'OWNER' && grant.user)
+    .map((grant) => grant.user!.name)
+}
+
+function toSummary(key: LlmKeyDetail): Schemas['LlmKeySummaryResponse'] {
+  return {
+    id: key.id,
+    name: key.name,
+    purpose: key.purpose,
+    status: key.status,
+    tokenPrefix: key.tokenPrefix,
+    expiresAt: key.expiresAt,
+    lastUsedAt: key.lastUsedAt,
+    rpm: key.rpm,
+    tpm: key.tpm,
+    concurrency: key.concurrency,
+    recordBodies: key.recordBodies,
+    workspaceId: key.workspaceId,
+    workspaceName: key.workspaceName,
+    createdAt: key.createdAt,
+    accessLimited: false,
+    ownerNames: [],
+    accessManageAllowed: key.accessManageAllowed,
+  }
+}
+
+/**
+ * 접근 권한이 없는 사람이 보는 행 — 이름·상태·소유자뿐이다. 서버가 값을 비우는
+ * 것이 아니라 필드를 아예 빼므로 mock도 그렇게 한다 (콘솔이 null을 견디는지가
+ * 여기서 드러난다).
+ */
+function toRestrictedSummary(key: LlmKeyDetail): Schemas['LlmKeySummaryResponse'] {
+  return {
+    id: key.id,
+    name: key.name,
+    purpose: null,
+    status: key.status,
+    tokenPrefix: null,
+    expiresAt: null,
+    lastUsedAt: null,
+    rpm: null,
+    tpm: null,
+    concurrency: null,
+    recordBodies: null,
+    workspaceId: key.workspaceId,
+    workspaceName: key.workspaceName,
+    createdAt: key.createdAt,
+    accessLimited: true,
+    ownerNames: grantOwnerNames(key.id),
+    accessManageAllowed: key.accessManageAllowed,
+  }
+}
+
+/** 같은 행을 종류 무관 인벤토리 모양으로 옮긴다 — 제한 판단은 여기 한 곳에서만. */
+export function toLlmKeyResourceSummary(
+  key: LlmKeyDetail,
+): Schemas['ResourceSummaryResponse'] {
+  const limited = key.myResourceRole == null
+  return {
+    id: key.id,
+    type: 'LLM_API_KEY',
+    name: key.name,
+    // 키에는 표시명이 없다 — 서버 어댑터도 null을 넣는다.
+    displayName: null,
+    status: key.status,
+    workspaceId: key.workspaceId!,
+    workspaceName: key.workspaceName,
+    accessLimited: limited,
+    ownerNames: limited ? grantOwnerNames(key.id) : [],
+    accessManageAllowed: key.accessManageAllowed,
+    createdAt: key.createdAt,
+  }
+}
+
+/** 서버와 같은 조회 범위 + 같은 정렬(id 내림차순). */
+export function visibleLlmKeys(workspaceId?: string | null): LlmKeyDetail[] {
+  return llmKeyStore
+    .filter((key) => isMyWorkspace(key.workspaceId))
+    .filter((key) => !workspaceId || key.workspaceId === workspaceId)
+    .sort((a, b) => b.id.localeCompare(a.id))
+}
+
+export const llmKeyHandlers: RequestHandler[] = [
+  http.get('*/api/v1/llm-keys', ({ request }) => {
+    const url = new URL(request.url)
+    const workspaceId = url.searchParams.get('workspaceId')
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '20')
+    const filtered = visibleLlmKeys(workspaceId)
+    const body: Schemas['PageResponseLlmKeySummaryResponse'] = {
+      content: filtered
+        .slice(page * size, (page + 1) * size)
+        .map((key) => (key.myResourceRole == null ? toRestrictedSummary(key) : toSummary(key))),
+      page,
+      size,
+      totalElements: filtered.length,
+      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+    }
+    return HttpResponse.json(body, { status: 200 })
+  }),
+
+  http.get('*/api/v1/llm-keys/:keyId', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 소속 워크스페이스의 키라도 접근 목록에 없으면 존재만 알고 안은 못 본다.
+    if (key.myResourceRole == null) return noGrantProblem(key.id)
+    return HttpResponse.json(key, { status: 200 })
+  }),
+
+  http.post('*/api/v1/llm-keys/:keyId/token', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 발급은 부여받은 소유자 등급의 권한이다 — 워크스페이스 소유자의 상시
+    // 권한(폐기·목록 관리)은 여기에 닿지 않는다.
+    if (!atLeast(key, 'OWNER')) return noGrantProblem(key.id)
+    if (key.status === 'REVOKED') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '폐기된 키입니다',
+        status: 409,
+        detail: '폐기된 키는 다시 발급할 수 없습니다. 새로 신청해 주세요.',
+        instance: `/api/v1/llm-keys/${key.id}/token`,
+        code: 'LLM_KEY_REVOKED',
+      })
+    }
+    const token = `pk-llm-live-${String(nextTokenSuffix++).padStart(4, '0')}-secret`
+    key.tokenPrefix = token.slice(0, 12)
+    key.status = 'ACTIVE'
+    return HttpResponse.json(
+      {
+        id: key.id,
+        name: key.name,
+        token,
+        expiresAt: key.expiresAt,
+      } satisfies Schemas['IssuedLlmKeyResponse'],
+      { status: 200 },
+    )
+  }),
+
+  http.post('*/api/v1/llm-keys/:keyId/revoke', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 폐기는 상시 권한이다 — 유출된 키는 워크스페이스 소유자도 죽일 수 있어야 한다.
+    if (!key.accessManageAllowed) return notGrantManagerProblem(key.id)
+    if (key.status !== 'REVOKED') {
+      key.status = 'REVOKED'
+      key.revokedAt = '2026-08-11T10:00:00+09:00'
+    }
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.patch('*/api/v1/llm-keys/:keyId', async ({ params, request }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    if (!atLeast(key, 'EDITOR')) return noGrantProblem(key.id)
+    const body = (await request.json()) as Schemas['UpdateLlmKeyRequest']
+    // 생략한 항목은 그대로 둔다 — 서버와 같은 규칙.
+    if (body.name != null) key.name = body.name.trim()
+    if (body.purpose != null) key.purpose = body.purpose.trim() === '' ? null : body.purpose
+    if (body.recordBodies != null) key.recordBodies = body.recordBodies
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  /* ─── 접근 목록 — 키 소유자와 워크스페이스 소유자만 읽고 쓴다 ─── */
+
+  http.get('*/api/v1/llm-keys/:keyId/access', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    if (!key.accessManageAllowed) return notGrantManagerProblem(key.id)
+    return HttpResponse.json(
+      {
+        resource: {
+          id: key.id,
+          type: 'LLM_API_KEY',
+          name: key.name,
+          displayName: null,
+          status: key.status,
+          workspaceId: key.workspaceId!,
+          workspaceName: key.workspaceName,
+        },
+        grants: llmKeyAccessStore[key.id] ?? [],
+      } satisfies Schemas['ResourceAccessListResponse'],
+      { status: 200 },
+    )
+  }),
+
+  http.post('*/api/v1/llm-keys/:keyId/access', async ({ params, request }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    if (!key.accessManageAllowed) return notGrantManagerProblem(key.id)
+    const body = (await request.json()) as Schemas['AddResourceAccessGrantRequest']
+    const grants = (llmKeyAccessStore[key.id] ??= [])
+    if (body.granteeType === 'WORKSPACE') {
+      const capped = workspaceWideRoleProblem(body.role)
+      if (capped) return capped
+      if (grants.some((grant) => grant.granteeType === 'WORKSPACE')) {
+        return alreadyListedProblem()
+      }
+      const grant: AccessGrant = {
+        id: uuid(nextGrantId++),
+        granteeType: 'WORKSPACE',
+        user: null,
+        role: body.role,
+        createdAt: '2026-08-11T10:00:00+09:00',
+      }
+      grants.push(grant)
+      return HttpResponse.json(grant, { status: 201 })
+    }
+    const member = workspaceMembersOf(key.workspaceId).find((m) => m.userId === body.userId)
+    if (!member) {
+      return validationProblem(
+        `/api/v1/llm-keys/${key.id}/access`,
+        'userId',
+        '이 키를 소유한 워크스페이스의 구성원만 접근 권한을 받을 수 있습니다. 먼저 워크스페이스에 추가해 주세요.',
+      )
+    }
+    if (grants.some((grant) => grant.user?.userId === member.userId)) {
+      return alreadyListedProblem()
+    }
+    const grant: AccessGrant = {
+      id: uuid(nextGrantId++),
+      granteeType: 'USER',
+      user: { userId: member.userId, name: member.name, email: member.email },
+      role: body.role,
+      createdAt: '2026-08-11T10:00:00+09:00',
+    }
+    grants.push(grant)
+    return HttpResponse.json(grant, { status: 201 })
+  }),
+
+  http.patch('*/api/v1/llm-keys/:keyId/access/:grantId', async ({ params, request }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    if (!key.accessManageAllowed) return notGrantManagerProblem(key.id)
+    const grant = (llmKeyAccessStore[key.id] ?? []).find((g) => g.id === String(params.grantId))
+    if (!grant) return notFoundProblem()
+    const body = (await request.json()) as Schemas['UpdateResourceAccessGrantRequest']
+    if (grant.granteeType === 'WORKSPACE') {
+      const capped = workspaceWideRoleProblem(body.role)
+      if (capped) return capped
+    }
+    grant.role = body.role
+    return HttpResponse.json(grant, { status: 200 })
+  }),
+
+  http.delete('*/api/v1/llm-keys/:keyId/access/:grantId', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    if (!key.accessManageAllowed) return notGrantManagerProblem(key.id)
+    const grants = llmKeyAccessStore[key.id] ?? []
+    const index = grants.findIndex((g) => g.id === String(params.grantId))
+    if (index < 0) return notFoundProblem()
+    grants.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+]
+
+function atLeast(key: LlmKeyDetail, minimum: ResourceRole): boolean {
+  return (
+    key.myResourceRole != null &&
+    RESOURCE_ROLE_RANK[key.myResourceRole] >= RESOURCE_ROLE_RANK[minimum]
+  )
+}
+
+/** 워크스페이스 전체 항목은 참여자·열람자까지만 — 서버와 같은 상한. */
+function workspaceWideRoleProblem(role: ResourceRole) {
+  if (role !== 'OWNER' && role !== 'EDITOR') return null
+  return problemResponse({
+    type: 'about:blank',
+    title: '입력값이 올바르지 않습니다',
+    status: 422,
+    detail: '워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.',
+    code: 'VALIDATION_FAILED',
+    errors: [{ field: 'role', message: '워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.' }],
+  })
+}
+
+const alreadyListedProblem = () =>
+  problemResponse({
+    type: 'about:blank',
+    title: '이미 접근 권한이 있습니다',
+    status: 409,
+    detail:
+      '이 대상은 이미 이 LLM API 키의 접근 목록에 있습니다. 등급을 바꾸려면 기존 항목을 수정해 주세요.',
+    code: 'LLM_KEY_ACCESS_GRANT_EXISTS',
+  })
+
+const validationProblem = (instance: string, field: string, message: string) =>
+  problemResponse({
+    type: 'about:blank',
+    title: '입력값이 올바르지 않습니다',
+    status: 422,
+    detail: message,
+    instance,
+    code: 'VALIDATION_FAILED',
+    errors: [{ field, message }],
+  })
+
+/** 접근 목록이 막는 403 — 계약상 코드는 WORKSPACE_ROLE_INSUFFICIENT 하나다. */
+const noGrantProblem = (keyId: string) =>
+  problemResponse({
+    type: 'about:blank',
+    title: '이 키에 접근할 권한이 없습니다',
+    status: 403,
+    detail:
+      '이 LLM API 키의 접근 목록에 등록되어 있지 않습니다. 자원 소유자에게 접근 권한을 요청해 주세요.',
+    instance: `/api/v1/llm-keys/${keyId}`,
+    code: 'WORKSPACE_ROLE_INSUFFICIENT',
+  })
+
+const notGrantManagerProblem = (keyId: string) =>
+  problemResponse({
+    type: 'about:blank',
+    title: '접근 권한을 관리할 권한이 없습니다',
+    status: 403,
+    detail: '이 LLM API 키의 소유자 또는 워크스페이스 소유자만 접근 권한을 관리할 수 있습니다.',
+    instance: `/api/v1/llm-keys/${keyId}/access`,
+    code: 'WORKSPACE_ROLE_INSUFFICIENT',
+  })
+
+const notFoundProblem = () =>
+  problemResponse({
+    type: 'about:blank',
+    title: '리소스를 찾을 수 없습니다',
+    status: 404,
+    detail: '해당 LLM API 키가 존재하지 않습니다.',
+    code: 'RESOURCE_NOT_FOUND',
+  })
