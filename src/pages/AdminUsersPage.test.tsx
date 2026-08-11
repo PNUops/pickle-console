@@ -71,6 +71,24 @@ describe('관리자 사용자 목록', () => {
     expect(await screen.findByRole('button', { name: '계정 비활성화' })).toBeInTheDocument()
   })
 
+  // 상태를 바꾼 사람은 이메일로만 적혀 있었다. 이름이 오는 지금은 이름으로 읽는다 —
+  // 둘 다 붙이면 한 사람을 두 번 부르는 셈이라 이름만 남긴다.
+  test('상태 변경 이력은 수행자를 이름으로 적는다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    const panel = (await screen.findByText('계정 상태 관리')).closest('section')!
+    await user.click(within(panel).getByRole('button', { name: '계정 비활성화' }))
+    await user.type(screen.getByPlaceholderText(/비활성화 사유를 입력/), '리소스 남용 신고 확인')
+    await user.click(screen.getByRole('button', { name: '비활성화' }))
+
+    const history = (await screen.findByText('상태 변경 이력')).closest('section')!
+    const entry = (await within(history).findByText(/리소스 남용 신고 확인/)).closest('li')!
+    expect(entry.textContent).toContain(sysAdminUser.name)
+    expect(entry.textContent).not.toContain(sysAdminUser.email)
+  })
+
   test('SYS_ADMIN은 상세에서 2단계 인증을 초기화할 수 있다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
