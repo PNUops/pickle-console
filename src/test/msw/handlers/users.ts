@@ -228,7 +228,7 @@ export const userHandlers: RequestHandler[] = [
     }
     const from = row.status
     row.statusChanges = [
-      { fromStatus: from, toStatus: 'DISABLED', actorId: actor.id, actorEmail: actor.email, reason, changedAt: new Date().toISOString() },
+      { fromStatus: from, toStatus: 'DISABLED', actorId: actor.id, actorEmail: actor.email, actorName: actor.name, reason, changedAt: new Date().toISOString() },
       ...row.statusChanges,
     ]
     row.status = 'DISABLED'
@@ -254,7 +254,7 @@ export const userHandlers: RequestHandler[] = [
     const lastDisable = row.statusChanges.find((c) => c.toStatus === 'DISABLED')
     const restored = lastDisable?.fromStatus ?? 'ACTIVE'
     row.statusChanges = [
-      { fromStatus: 'DISABLED', toStatus: restored, actorId: actor.id, actorEmail: actor.email, reason: null, changedAt: new Date().toISOString() },
+      { fromStatus: 'DISABLED', toStatus: restored, actorId: actor.id, actorEmail: actor.email, actorName: actor.name, reason: null, changedAt: new Date().toISOString() },
       ...row.statusChanges,
     ]
     row.status = restored

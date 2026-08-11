@@ -215,10 +215,26 @@ function toAdminView(record: ForwardingRecord): AdminPortMappingView {
     applyState: applyState(record),
     suspendedReason: record.suspendedReason,
     suspendedBy: record.suspendedBy,
+    suspendedByName: adminName(record.suspendedBy),
     ...record.guards,
     createdBy: record.createdBy,
+    createdByName: adminName(record.createdBy),
     createdAt: record.createdAt,
   }
+}
+
+/**
+ * 매핑을 만들거나 정지한 사람의 이름 — 서버는 사용자 행에서 읽어 응답에 실어 준다.
+ * 자동 정지(수행자 없음)면 null이다.
+ */
+const ADMIN_NAMES: Record<string, string> = {
+  [uuid(5)]: '이시스템',
+  [uuid(42)]: '홍길동',
+  [uuid(57)]: '김철수',
+}
+
+function adminName(userId: string | null): string | null {
+  return userId == null ? null : (ADMIN_NAMES[userId] ?? null)
 }
 
 /** PENDING 매핑의 폴링 전이 — 목록 GET마다 카운터를 올려 임계에서 ACTIVE로. */
