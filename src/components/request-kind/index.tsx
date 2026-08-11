@@ -5,6 +5,7 @@ import type { RequestKindAdmin, RequestKindModule } from './types'
 import { vmRequestKind } from './vm-wizard'
 import { vmRequestAdmin } from './vm-admin'
 import { llmKeyRequestKind } from './llm-wizard'
+import { llmKeyRequestAdmin } from './llm-admin'
 
 /**
  * 신청 위저드가 아는 리소스 종류 — 선택 화면에 이 순서로 나온다.
@@ -19,11 +20,15 @@ export function requestKind(type: string): RequestKindModule | undefined {
 /** 종류 선택 화면 하단 안내 — 종류가 준비되면 여기서 지워진다. */
 export const KIND_PICKER_FOOTNOTE = '컨테이너는 준비 중입니다.'
 
-/** 관리자 승인 대기 큐의 종류별 요약 열 제목 — 셀 내용은 종류 모듈이 그린다. */
-export const QUEUE_KIND_COLUMN_TITLE = 'OS 이미지 / 요청 사양'
+/**
+ * 관리자 승인 대기 큐의 종류별 요약 열 제목 — 셀 내용은 종류 모듈이 그린다.
+ * 한 표에 여러 종류가 섞이므로 제목은 어느 종류의 말도 쓰지 않는다.
+ */
+export const QUEUE_KIND_COLUMN_TITLE = '요청 내용'
 
 const REQUEST_KIND_ADMINS: Record<string, RequestKindAdmin> = {
   VM: vmRequestAdmin,
+  LLM_API_KEY: llmKeyRequestAdmin,
 }
 
 /**
