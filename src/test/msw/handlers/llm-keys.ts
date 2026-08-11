@@ -238,14 +238,16 @@ function toSummary(key: LlmKeyDetail): Schemas['LlmKeySummaryResponse'] {
     createdAt: key.createdAt,
     accessLimited: false,
     ownerNames: [],
-    accessManageAllowed: key.accessManageAllowed,
+    // 서버는 제한되지 않은 행에 이 플래그를 늘 false로 넣는다 — 목록 관리 여부는
+    // 제한 행에서만 뜻이 있고, 열린 행은 상세가 자기 값을 따로 준다.
+    accessManageAllowed: false,
   }
 }
 
 /**
- * 접근 권한이 없는 사람이 보는 행 — 이름·상태·소유자뿐이다. 서버가 값을 비우는
- * 것이 아니라 필드를 아예 빼므로 mock도 그렇게 한다 (콘솔이 null을 견디는지가
- * 여기서 드러난다).
+ * 접근 권한이 없는 사람이 보는 행 — 이름·상태·소유자뿐이다. 나머지는 서버가
+ * null로 내려보내지 값을 0이나 빈 문자열로 채우지 않으므로 mock도 그렇게 한다
+ * (콘솔이 그 null을 견디는지가 여기서 드러난다).
  */
 function toRestrictedSummary(key: LlmKeyDetail): Schemas['LlmKeySummaryResponse'] {
   return {
@@ -285,7 +287,8 @@ export function toLlmKeyResourceSummary(
     workspaceName: key.workspaceName,
     accessLimited: limited,
     ownerNames: limited ? grantOwnerNames(key.id) : [],
-    accessManageAllowed: key.accessManageAllowed,
+    // 인벤토리 행은 키 목록 행을 그대로 옮긴 것이라 같은 규칙을 따른다.
+    accessManageAllowed: limited && key.accessManageAllowed,
     createdAt: key.createdAt,
   }
 }
@@ -372,9 +375,27 @@ export const llmKeyHandlers: RequestHandler[] = [
     if (!key) return notFoundProblem()
     if (!atLeast(key, 'EDITOR')) return noGrantProblem(key.id)
     const body = (await request.json()) as Schemas['UpdateLlmKeyRequest']
-    // 생략한 항목은 그대로 둔다 — 서버와 같은 규칙.
+    // 계약의 크기 제약을 mock도 건다 — 서버가 422로 막는 입력이 여기서 조용히
+    // 통과하면, 그 입력을 보내는 화면이 테스트에서는 멀쩡해 보인다.
+    if (body.name != null && (body.name.length < 1 || body.name.length > 100)) {
+      return validationProblem(
+        `/api/v1/llm-keys/${key.id}`,
+        'name',
+        '키 이름은 1자 이상 100자 이하여야 합니다.',
+      )
+    }
+    if (body.purpose != null && body.purpose.length > 2000) {
+      return validationProblem(
+        `/api/v1/llm-keys/${key.id}`,
+        'purpose',
+        '사용 목적은 2000자 이하여야 합니다.',
+      )
+    }
+    // 생략한 항목은 그대로 둔다. 보낸 항목은 서버처럼 다듬어 저장한다 — 공백만
+    // 남은 용도는 지우는 것이고, 그 정규화가 mock에 없으면 화면이 "저장했는데
+    // 값이 그대로"인 상태에 갇히는 결함을 테스트가 못 잡는다.
     if (body.name != null) key.name = body.name.trim()
-    if (body.purpose != null) key.purpose = body.purpose.trim() === '' ? null : body.purpose
+    if (body.purpose != null) key.purpose = body.purpose.trim() === '' ? null : body.purpose.trim()
     if (body.recordBodies != null) key.recordBodies = body.recordBodies
     return new HttpResponse(null, { status: 204 })
   }),
