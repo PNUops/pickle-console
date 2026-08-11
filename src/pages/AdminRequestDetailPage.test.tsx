@@ -162,6 +162,43 @@ describe('승인 폼', () => {
   })
 })
 
+describe('승인 폼 — 서버 검증 오류', () => {
+  // 서버는 부여 사양을 승인 본문의 하위 객체 경로로 되돌려준다(vm.grantedSlug).
+  // 콘솔이 평평한 이름으로 받던 동안에는 그 오류가 어느 칸에도 붙지 못하고
+  // 요약 알림에만 남았다.
+  test('422가 가리키는 부여 항목의 오류가 그 입력 칸에 붙는다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/v1/admin/requests/:requestId/approve', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값이 올바르지 않습니다',
+            status: 422,
+            detail: '입력값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [
+              { field: 'vm.grantedSlug', message: '이미 사용 중인 호스트명입니다.' },
+            ],
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    renderDetail(uuid(201))
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    const slugField = (await screen.findByLabelText('호스트명(슬러그) 확정')).closest('div')!
+    expect(
+      await within(slugField).findByText('이미 사용 중인 호스트명입니다.'),
+    ).toBeInTheDocument()
+  })
+})
+
 describe('결정 폼 — OS 이미지 조회 실패', () => {
   test('OS 이미지 조회가 실패하면 결정 폼이 조용히 사라지지 않고 오류·재시도를 보여준다', async () => {
     const user = userEvent.setup()

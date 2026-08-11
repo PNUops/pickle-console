@@ -46,6 +46,32 @@ function baseRequest(): Omit<
   }
 }
 
+/**
+ * LLM API 키 신청 — 신청자 화면이 VM 아닌 종류를 설명할 수 있는지 태우는 자리.
+ * 희망 한도를 하나만 적은 신청이다(비우는 것이 정상 경로라서).
+ */
+function llmKeyRequest(): Omit<
+  RequestDetail,
+  'id' | 'purpose' | 'status' | 'review' | 'createdAt' | 'updatedAt'
+> {
+  return {
+    ...baseRequest(),
+    type: 'LLM_API_KEY',
+    displayName: '캡스톤 챗봇 키',
+    vm: null,
+    llmKey: {
+      usagePlan: '문서 요약 배치 작업',
+      reqRpm: 600,
+      reqTpm: null,
+      reqDailyTokens: null,
+      grantedRpm: null,
+      grantedTpm: null,
+      grantedConcurrency: null,
+      grantedDailyTokens: null,
+    },
+  }
+}
+
 function initialRequests(): RequestDetail[] {
   return [
     {
@@ -102,6 +128,39 @@ function initialRequests(): RequestDetail[] {
       },
       createdAt: '2026-07-05T13:00:00+09:00',
       updatedAt: '2026-07-06T16:20:00+09:00',
+    },
+    {
+      ...llmKeyRequest(),
+      id: uuid(104),
+      purpose: '캡스톤 챗봇 문서 요약',
+      status: 'SUBMITTED',
+      review: null,
+      createdAt: '2026-07-09T10:00:00+09:00',
+      updatedAt: '2026-07-09T10:00:00+09:00',
+    },
+    {
+      ...llmKeyRequest(),
+      id: uuid(105),
+      purpose: '알고리즘 힌트 생성기',
+      displayName: '알고리즘 힌트 키',
+      status: 'APPROVED',
+      review: {
+        reviewerId: uuid(3),
+        reviewerName: '관리자김',
+        decision: 'APPROVE',
+        comment: '분당 요청 수만 조정해 승인합니다.',
+        grantedStartDate: '2026-07-15',
+        grantedEndDate: '2026-12-20',
+        decidedAt: '2026-07-09T14:00:00+09:00',
+      },
+      // 승인자가 정한 것만 값이 있다 — 나머지는 서비스 기본값이다.
+      llmKey: {
+        ...llmKeyRequest().llmKey!,
+        grantedRpm: 300,
+        grantedConcurrency: 4,
+      },
+      createdAt: '2026-07-09T09:00:00+09:00',
+      updatedAt: '2026-07-09T14:00:00+09:00',
     },
   ]
 }
@@ -164,7 +223,21 @@ export const requestHandlers: RequestHandler[] = [
       reqStartDate: body.reqStartDate ?? null,
       reqEndDate: body.reqEndDate ?? null,
       displayName: body.displayName,
-      vm: {
+      // 서버는 신청한 종류의 항목만 채워 돌려준다 — 종류가 다른 멤버는 null이다.
+      llmKey:
+        body.type === 'LLM_API_KEY'
+          ? {
+              usagePlan: body.llmKey?.usagePlan ?? null,
+              reqRpm: body.llmKey?.reqRpm ?? null,
+              reqTpm: body.llmKey?.reqTpm ?? null,
+              reqDailyTokens: body.llmKey?.reqDailyTokens ?? null,
+              grantedRpm: null,
+              grantedTpm: null,
+              grantedConcurrency: null,
+              grantedDailyTokens: null,
+            }
+          : null,
+      vm: body.type !== 'VM' ? null : {
         imageId: body.vm?.imageId ?? uuid(1),
         // 서버는 카탈로그 행에서 이름을 읽어 응답에 실어 준다 — 은퇴한 행도 이름은 남는다.
         imageName: nameOf(osImages, body.vm?.imageId) ?? 'Ubuntu 24.04 LTS',

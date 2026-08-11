@@ -29,11 +29,11 @@ import {
   VmStatusBadge,
 } from '../components/ui'
 import {
-  requestKindAdmin,
+  requestKindView,
   useDecisionCatalogPrefetch,
 } from '../components/request-kind'
 import { Field } from '../components/request-kind/Field'
-import type { RequestKindAdmin } from '../components/request-kind/types'
+import type { RequestKindView } from '../components/request-kind/types'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -78,7 +78,7 @@ export function AdminRequestDetailPage() {
 
   const data = request.data
   // 신청 내용·검토 결과·결정 폼의 종류별 부분은 전부 이 모듈이 답한다.
-  const kind = requestKindAdmin(data.type)
+  const kind = requestKindView(data.type)
 
   return (
     <div className="space-y-6">
@@ -153,7 +153,7 @@ function DecisionResultCard({
           <Field label="처리 시각">{formatDateTime(review.decidedAt)}</Field>
           {review.comment && <Field label="검토 의견">{review.comment}</Field>}
           {/* 승인이 부여한 것(사양·기간·배치 등)은 종류 모듈이 그린다. */}
-          {requestKindAdmin(request.type).resultFields(request)}
+          {requestKindView(request.type).resultFields(request)}
         </dl>
       </CardContent>
     </Card>
@@ -175,7 +175,7 @@ function DecisionArea({
   request: RequestDetail
   onNotice: (notice: Notice | null) => void
 }) {
-  const kind = requestKindAdmin(request.type)
+  const kind = requestKindView(request.type)
   const decision = kind.useDecisionData()
   if (decision.status === 'blocked') return decision.gate
   return (
@@ -195,7 +195,7 @@ function DecisionSection({
   onNotice,
 }: {
   request: RequestDetail
-  kind: RequestKindAdmin
+  kind: RequestKindView
   decisionValue: unknown
   onNotice: (notice: Notice | null) => void
 }) {
