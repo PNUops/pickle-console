@@ -27,12 +27,12 @@ describe('LLM API 키 상세', () => {
     expect(screen.getAllByText('게이트웨이 기본값')).toHaveLength(3)
   })
 
-  test('사용량 통계가 없는 이유를 화면이 말하고, 마지막 사용은 보여 준다', async () => {
+  test('마지막 사용 시각이 늦게 반영될 수 있다는 것을 말한다', async () => {
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     expect(screen.getByText('2026-08-10 18:22')).toBeInTheDocument()
-    expect(screen.getByText(/사용량 통계는 아직 제공하지 않습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/최근 호출이 늦게 반영될 수 있습니다/)).toBeInTheDocument()
   })
 })
 

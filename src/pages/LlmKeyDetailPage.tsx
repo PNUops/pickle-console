@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
+import { Suspense, lazy, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchLlmKey,
@@ -20,17 +20,31 @@ import {
   CardTitle,
   Checkbox,
   ConfirmNameModal,
+  ErrorBoundary,
   FormField,
   Input,
   LlmKeyStatusBadge,
   Modal,
   PermissionNotice,
   Spinner,
+  TabPanel,
+  Tabs,
   Textarea,
+  type TabItem,
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+
+// 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
+// (할당 추이·VM 모니터링과 같은 규칙).
+const LlmKeyUsageSection = lazy(() => import('../components/llm-usage/LlmKeyUsageSection'))
+
+/** 상세 탭 구성. 배열 순서가 렌더 순서이고, 탭 id는 `?tab=` 링크가 쓴다. */
+const KEY_TABS: TabItem[] = [
+  { id: 'overview', label: '개요' },
+  { id: 'usage', label: '사용량' },
+]
 
 /**
  * LLM API 키 하나의 상세 — 드로어가 아니라 라우트다.
@@ -76,6 +90,14 @@ export function LlmKeyDetailPage() {
 
 function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   const revoked = llmKey.status === 'REVOKED'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab = KEY_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
+  const selectTab = (id: string) => {
+    // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
+    setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -91,6 +113,28 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </div>
       </div>
 
+      <Tabs
+        tabs={KEY_TABS}
+        value={activeTab}
+        onChange={selectTab}
+        aria-label="LLM API 키 상세 영역"
+      />
+
+      <TabPanel id="usage" active={activeTab === 'usage'}>
+        <ErrorBoundary label="사용량">
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <Spinner label="사용량 화면 불러오는 중" />
+              </div>
+            }
+          >
+            <LlmKeyUsageSection keyId={llmKey.id} status={llmKey.status} />
+          </Suspense>
+        </ErrorBoundary>
+      </TabPanel>
+
+      <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
       <StatusNotice llmKey={llmKey} />
       <IssueSection llmKey={llmKey} />
 
@@ -127,11 +171,9 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>
             )}
           </dl>
-          {/* 사용량 화면은 아직 없다 — api에 조회 엔드포인트가 없어서지 빠뜨린 것이
-              아니므로, 있는 것(마지막 사용)만 말하고 없는 탭은 만들지 않는다. */}
           <p className="mt-4 text-xs text-neutral-500">
-            사용량 통계는 아직 제공하지 않습니다. 지금은 마지막 사용 시각만 확인할 수 있고,
-            게이트웨이가 배치로 보고하므로 최근 호출이 늦게 반영될 수 있습니다.
+            마지막 사용 시각은 게이트웨이가 배치로 보고하므로 최근 호출이 늦게 반영될 수
+            있습니다. 일별 사용량은 사용량 탭에서 볼 수 있습니다.
           </p>
         </CardContent>
       </Card>
@@ -163,6 +205,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       </Card>
 
       {!revoked && <RevokeSection llmKey={llmKey} />}
+      </TabPanel>
     </>
   )
 }
