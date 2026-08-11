@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import type { ResourceSummary } from '../../api/queries'
 import { consolePaths } from '../../lib/paths'
-import { VmStatusBadge } from '../ui'
-import type { VmStatus } from '../../lib/status'
+import { LlmKeyStatusBadge, VmStatusBadge } from '../ui'
+import type { LlmApiKeyStatus, VmStatus } from '../../lib/status'
 
 /**
  * What the type-agnostic screens need to know about each kind of resource.
@@ -17,6 +17,13 @@ export type ResourceTypeEntry = {
   label: string
   /** Absent when this build has no screen for the type — the row stays text. */
   detailPath?: (id: string) => string
+  /**
+   * Where a workspace owner with no grant goes to hand one out. Separate from
+   * the detail path because the two answer different questions: this one opens
+   * for exactly the people the detail refuses, which is why a restricted row
+   * can offer it.
+   */
+  accessPath?: (id: string) => string
   statusBadge: (resource: ResourceSummary) => ReactNode
   /**
    * Whether this row still counts as something the person has. Each type owns
@@ -32,6 +39,7 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
   VM: {
     label: 'VM',
     detailPath: (id) => consolePaths.vmDetail(id),
+    accessPath: (id) => consolePaths.vmAccess(id),
     statusBadge: (resource) => <VmStatusBadge status={resource.status as VmStatus} />,
     isActive: (resource) => resource.status !== 'DELETED' && resource.status !== 'DELETING',
     rowAction: (resource) =>
@@ -44,15 +52,17 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
         </Link>
       ) : null,
   },
-  // The type exists server-side before its screens do. This entry keeps the
-  // inventory naming it correctly in the meantime; the badge and the detail
-  // path arrive with the key screens, and until then a row degrades exactly
-  // the way an unknown type does — deliberately, rather than by inventing a
-  // status vocabulary the contract has not published yet.
   LLM_API_KEY: {
     label: 'LLM API 키',
-    statusBadge: (resource) => resource.status,
-    isActive: () => true,
+    detailPath: (id) => consolePaths.llmKeyDetail(id),
+    accessPath: (id) => consolePaths.llmKeyAccess(id),
+    statusBadge: (resource) => (
+      <LlmKeyStatusBadge status={resource.status as LlmApiKeyStatus} />
+    ),
+    // 폐기만이 "없어짐"이다. 만료·정지는 다시 살아날 수 있는 상태이고, 발급 전
+    // 키는 아직 비밀이 없을 뿐 이미 승인받아 가지고 있는 것이다 — 서버가
+    // 워크스페이스에 남은 것을 셀 때 쓰는 기준과 같다.
+    isActive: (resource) => resource.status !== 'REVOKED',
   },
 }
 

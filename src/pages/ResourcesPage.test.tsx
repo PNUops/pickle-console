@@ -25,6 +25,21 @@ describe('전체 리소스', () => {
     expect(screen.queryByText('ai-train')).not.toBeInTheDocument()
   })
 
+  test('LLM API 키도 같은 표에 종류·상태·상세 링크와 함께 선다', async () => {
+    renderResources()
+
+    const keyRow = (await screen.findByRole('link', { name: 'capstone-chatbot' })).closest('tr')!
+    expect(within(keyRow).getByText('LLM API 키')).toBeInTheDocument()
+    expect(within(keyRow).getByText('활성')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'capstone-chatbot' })).toHaveAttribute(
+      'href',
+      `/console/llm-keys/${uuid(70)}`,
+    )
+    // 발급 전도 인벤토리에 남는다 — 승인은 났고 비밀만 아직 없다.
+    expect(within(screen.getByText('발급 전').closest('tr')!).getByText('LLM API 키'))
+      .toBeInTheDocument()
+  })
+
   test('워크스페이스 범위 주소는 그 워크스페이스의 리소스만 보여준다', async () => {
     renderResources(`/console/${uuid(15)}/resources`)
 

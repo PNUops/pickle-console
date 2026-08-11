@@ -37,6 +37,18 @@ describe('리소스 종류 레지스트리', () => {
     expect(entry.isActive(resource({ status: 'DELETED' }))).toBe(false)
   })
 
+  test('LLM API 키는 상세·접근 경로를 주고 폐기만 없어진 것으로 센다', () => {
+    const entry = resourceTypeEntry('LLM_API_KEY')
+
+    expect(entry.label).toBe('LLM API 키')
+    expect(entry.detailPath?.(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}`)
+    // 상세가 막힌 워크스페이스 소유자가 갈 수 있는 곳 — 제한 행이 이 경로를 건다.
+    expect(entry.accessPath?.(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}/access`)
+    // 발급 전은 아직 비밀이 없을 뿐 이미 가지고 있는 것이다.
+    expect(entry.isActive(resource({ type: 'LLM_API_KEY', status: 'PENDING' }))).toBe(true)
+    expect(entry.isActive(resource({ type: 'LLM_API_KEY', status: 'REVOKED' }))).toBe(false)
+  })
+
   test('모르는 종류는 화면을 비우지 않고 행 하나로 물러난다', () => {
     // api와 콘솔은 따로 배포된다 — 서버가 먼저 내보낸 종류가 옛 번들에 닿는다.
     const entry = resourceTypeEntry(UNKNOWN_TYPE)
