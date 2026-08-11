@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
@@ -8,11 +8,8 @@ import { canDecideRequest } from '../auth/permissions'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
-  fetchOsImages,
   type ApprovalContext,
-  type ApproveRequest,
   type RequestDetail,
-  type OsImage,
 } from '../api/queries'
 import {
   Alert,
@@ -25,17 +22,21 @@ import {
   FormField,
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
-  Input,
   Modal,
   RequestStatusBadge,
-  Select,
   Spinner,
   Textarea,
   VmStatusBadge,
 } from '../components/ui'
+import {
+  requestKindAdmin,
+  useDecisionCatalogPrefetch,
+} from '../components/request-kind'
+import { Field } from '../components/request-kind/Field'
+import type { DecisionForm } from '../components/request-kind/types'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { INVALID_ID_MESSAGE, SUBDOMAIN_RE, isUuid } from '../lib/validation'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
 
 interface Notice {
@@ -58,7 +59,8 @@ export function AdminRequestDetailPage() {
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
   })
-  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
+  // 결정 폼이 열릴 때 종류별 카탈로그가 이미 와 있도록 진입 즉시 당겨 둔다.
+  useDecisionCatalogPrefetch()
 
   if (!idValid) {
     return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
@@ -75,6 +77,8 @@ export function AdminRequestDetailPage() {
   }
 
   const data = request.data
+  // 신청 내용·검토 결과·결정 폼의 종류별 부분은 전부 이 모듈이 답한다.
+  const kind = requestKindAdmin(data.type)
 
   return (
     <div className="space-y-6">
@@ -99,13 +103,7 @@ export function AdminRequestDetailPage() {
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-6">
-          {data.review && (
-            <DecisionResultCard
-              review={data.review}
-              vmGranted={data.vm?.granted}
-              imageName={data.vm?.granted?.grantedImageName ?? '—'}
-            />
-          )}
+          {data.review && <DecisionResultCard request={data} review={data.review} />}
 
           <Card>
             <CardHeader>
@@ -113,69 +111,20 @@ export function AdminRequestDetailPage() {
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-                <Field label="신청자">{data.requesterName}</Field>
-                <Field label="워크스페이스">{data.workspaceName}</Field>
-                <Field label="기관">{data.orgName}</Field>
-                {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이
-                    남으므로 공개 목록을 따로 뒤질 필요가 없다. */}
-                <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
-                <Field label="사양 프리셋">{data.vm?.flavorName ?? '—'}</Field>
-                <Field label="요청 사양">
-                  {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
-                </Field>
-                <Field label="사용 기간">
-                  {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
-                </Field>
-                <Field label="용도">{data.purpose}</Field>
-                <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
-                <Field label="사양 사유">{data.vm?.specReason ?? '—'}</Field>
-                <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
-                <Field label="표시명">{data.displayName}</Field>
-                <Field label="희망 호스트명(슬러그)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
-                {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
-                {data.vm?.desiredSubdomain && (
-                  <Field label="서브도메인 선지정">
-                    {data.vm?.rootDomain
-                      ? `${data.vm?.desiredSubdomain}.${data.vm?.rootDomain}`
-                      : data.vm?.desiredSubdomain}
-                  </Field>
-                )}
+                {kind.contentFields(data)}
               </dl>
             </CardContent>
           </Card>
 
-          {/* OS 이미지 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
-              명시하고 재시도 경로를 제공한다 (무음 실종 방지). */}
-          {data.status === 'SUBMITTED' &&
-            canDecide &&
-            (osImages.isError ? (
-              <Alert variant="danger" title="OS 이미지 목록을 불러오지 못했습니다">
-                <div className="space-y-2">
-                  <p>승인·반려를 결정하려면 OS 이미지 목록이 필요합니다.</p>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={osImages.isFetching}
-                    onClick={() => void osImages.refetch()}
-                  >
-                    다시 시도
-                  </Button>
-                </div>
-              </Alert>
-            ) : osImages.data ? (
-              <DecisionSection
-                // 같은 라우트 패턴 간 이동(A→B) 시 재마운트를 강제해 이전 신청의
-                // 프리필(슬러그·사양)이 남지 않게 한다.
-                key={data.id}
-                request={data}
-                osImages={osImages.data}
-                onNotice={setNotice}
-              />
-            ) : (
-              <div className="flex justify-center py-6">
-                <Spinner label="OS 이미지 목록 불러오는 중" />
-              </div>
-            ))}
+          {data.status === 'SUBMITTED' && canDecide && (
+            <DecisionArea
+              // 같은 라우트 패턴 간 이동(A→B) 시 재마운트를 강제해 이전 신청의
+              // 프리필(슬러그·사양)이 남지 않게 한다.
+              key={data.id}
+              request={data}
+              onNotice={setNotice}
+            />
+          )}
         </div>
 
         <ApprovalContextPanel requestId={requestId} />
@@ -184,23 +133,12 @@ export function AdminRequestDetailPage() {
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium text-neutral-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutral-800">{children}</dd>
-    </div>
-  )
-}
-
 function DecisionResultCard({
+  request,
   review,
-  vmGranted,
-  imageName,
 }: {
+  request: RequestDetail
   review: NonNullable<RequestDetail['review']>
-  vmGranted: NonNullable<RequestDetail['vm']>['granted']
-  imageName: string
 }) {
   const approved = review.decision === 'APPROVE'
   return (
@@ -214,25 +152,8 @@ function DecisionResultCard({
           <Field label="검토자">{review.reviewerName}</Field>
           <Field label="처리 시각">{formatDateTime(review.decidedAt)}</Field>
           {review.comment && <Field label="검토 의견">{review.comment}</Field>}
-          {approved &&
-            vmGranted?.grantedVcpu != null &&
-            vmGranted?.grantedMemoryMb != null &&
-            vmGranted?.grantedDiskGb != null && (
-              <Field label="부여 사양">
-                {formatSpec(vmGranted?.grantedVcpu, vmGranted?.grantedMemoryMb, vmGranted?.grantedDiskGb)}
-              </Field>
-            )}
-          {approved && <Field label="부여 OS 이미지">{imageName}</Field>}
-          {approved && (
-            <Field label="부여 기간">
-              {review.grantedStartDate ?? '미지정'} ~ {review.grantedEndDate ?? '미지정'}
-            </Field>
-          )}
-          {approved && (
-            <Field label="배치 노드">
-              {vmGranted?.nodeName ?? (vmGranted?.nodeId == null ? '자동 배치' : '노드 지정 배치')}
-            </Field>
-          )}
+          {/* 승인이 부여한 것(사양·기간·배치 등)은 종류 모듈이 그린다. */}
+          {requestKindAdmin(request.type).resultFields(request)}
         </dl>
       </CardContent>
     </Card>
@@ -241,28 +162,35 @@ function DecisionResultCard({
 
 /* ─── 승인/반려 결정 폼 ─── */
 
-function DecisionSection({
+/**
+ * 결정 영역의 종류별 준비(카탈로그 로딩·오류)를 폼 앞단에서 거른다.
+ * blocked면 결정 카드 자리 전체에 gate를 그린다 — 반려 폼만 남은 절반짜리
+ * 결정 화면을 만들지 않기 위해서다.
+ */
+function DecisionArea({
   request,
-  osImages,
   onNotice,
 }: {
   request: RequestDetail
-  osImages: OsImage[]
+  onNotice: (notice: Notice | null) => void
+}) {
+  const kind = requestKindAdmin(request.type)
+  const form = kind.useDecisionForm(request)
+  if (form.status === 'blocked') return form.gate
+  return <DecisionSection request={request} form={form} onNotice={onNotice} />
+}
+
+function DecisionSection({
+  request,
+  form,
+  onNotice,
+}: {
+  request: RequestDetail
+  form: Extract<DecisionForm, { status: 'ready' }>
   onNotice: (notice: Notice | null) => void
 }) {
   const queryClient = useQueryClient()
   const [mode, setMode] = useState<'approve' | 'reject'>('approve')
-
-  // 승인 폼 — 요청 사양으로 프리필
-  const [vcpu, setVcpu] = useState(String(request.vm?.reqVcpu))
-  const [memoryMb, setMemoryMb] = useState(String(request.vm?.reqMemoryMb))
-  const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
-  const [imageId, setImageId] = useState(String(request.vm?.imageId))
-  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
-  const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
-  const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
-  const [nodeId, setNodeId] = useState('')
-  const [approveComment, setApproveComment] = useState('')
 
   // 반려 폼
   const [rejectComment, setRejectComment] = useState('')
@@ -297,20 +225,17 @@ function DecisionSection({
   }
 
   const approve = useMutation({
-    mutationFn: async (body: ApproveRequest) => {
+    mutationFn: async () => {
       const { data, error } = await api.POST('/admin/requests/{requestId}/approve', {
         params: { path: { requestId: request.id } },
-        body,
+        body: form.body(),
       })
       if (!data) throw toApiError(error, '신청을 승인하지 못했습니다.')
       return data
     },
     onSuccess: async () => {
       setConfirm(null)
-      onNotice({
-        variant: 'success',
-        message: '신청을 승인했습니다. VM 생성이 시작되었습니다.',
-      })
+      onNotice({ variant: 'success', message: form.successMessage })
       await refresh()
     },
     onError: (error) => handleError(error, '신청을 승인하지 못했습니다.'),
@@ -336,38 +261,10 @@ function DecisionSection({
     onError: (error) => handleError(error, '신청을 반려하지 못했습니다.'),
   })
 
-  const approveBody = (): ApproveRequest => ({
-    grantedStartDate: startDate || null,
-    grantedEndDate: endDate || null,
-    comment: approveComment.trim() ? approveComment.trim() : null,
-    vm: {
-      grantedVcpu: Number(vcpu),
-      grantedMemoryMb: Number(memoryMb),
-      grantedDiskGb: Number(diskGb),
-      grantedImageId: imageId,
-      grantedSlug: grantedSlug.trim() || null,
-      nodeId: nodeId.trim() || null,
-    },
-  })
-
   const submitApprove = (event: FormEvent) => {
     event.preventDefault()
     onNotice(null)
-    const errors: Record<string, string> = {}
-    const image = osImages.find((t) => t.id === imageId)
-    if (!Number.isInteger(Number(vcpu)) || Number(vcpu) < 1)
-      errors.grantedVcpu = 'vCPU는 1 이상의 정수로 입력해 주세요.'
-    if (!Number.isInteger(Number(memoryMb)) || Number(memoryMb) < 256)
-      errors.grantedMemoryMb = '메모리는 256 MiB 이상으로 입력해 주세요.'
-    if (!Number.isInteger(Number(diskGb)) || Number(diskGb) < 1)
-      errors.grantedDiskGb = '디스크는 1 GiB 이상으로 입력해 주세요.'
-    else if (image && Number(diskGb) < image.minDiskGb)
-      errors.grantedDiskGb = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
-    if (nodeId.trim() && !isUuid(nodeId.trim()))
-      errors.nodeId = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
-    if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
-      errors.grantedSlug =
-        '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
+    const errors = form.validate()
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     setConfirm('approve')
@@ -423,95 +320,7 @@ function DecisionSection({
       <CardContent>
         {mode === 'approve' ? (
           <form onSubmit={submitApprove} className="space-y-4" noValidate>
-            <p className="text-sm text-neutral-500">
-              요청 사양으로 미리 채워져 있습니다. 필요하면 조정한 뒤 승인해 주세요.
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <FormField label="vCPU" required error={fieldErrors.grantedVcpu}>
-                <Input
-                  type="number"
-                  min={1}
-                  value={vcpu}
-                  onChange={(event) => setVcpu(event.target.value)}
-                />
-              </FormField>
-              <FormField label="메모리 (MiB)" required error={fieldErrors.grantedMemoryMb}>
-                <Input
-                  type="number"
-                  min={256}
-                  step={256}
-                  value={memoryMb}
-                  onChange={(event) => setMemoryMb(event.target.value)}
-                />
-              </FormField>
-              <FormField label="디스크 (GiB)" required error={fieldErrors.grantedDiskGb}>
-                <Input
-                  type="number"
-                  min={1}
-                  value={diskGb}
-                  onChange={(event) => setDiskGb(event.target.value)}
-                />
-              </FormField>
-            </div>
-            <FormField label="OS 이미지" required error={fieldErrors.grantedImageId}>
-              <Select
-                value={imageId}
-                onChange={(event) => setImageId(event.target.value)}
-              >
-                {osImages.map((image) => (
-                  <option key={image.id} value={image.id}>
-                    {image.displayName}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label="사용 시작일" error={fieldErrors.grantedStartDate}>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
-                />
-              </FormField>
-              <FormField label="사용 종료일" error={fieldErrors.grantedEndDate}>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
-                />
-              </FormField>
-            </div>
-            <FormField
-              label="호스트명(슬러그) 확정"
-              error={fieldErrors.grantedSlug}
-              description="SSH 접속명·VM 이름으로 쓰입니다. 신청자의 희망값이 채워져 있으며, 비우면 자동 생성됩니다."
-            >
-              <Input
-                value={grantedSlug}
-                onChange={(event) => setGrantedSlug(event.target.value)}
-                placeholder="비우면 자동 생성"
-                maxLength={40}
-              />
-            </FormField>
-            <FormField
-              label="배치 노드 ID"
-              error={fieldErrors.nodeId}
-              description="비워 두면 자동 배치됩니다."
-            >
-              <Input
-                value={nodeId}
-                onChange={(event) => setNodeId(event.target.value)}
-                placeholder="자동 배치"
-              />
-            </FormField>
-            <FormField label="승인 의견" description="신청자에게 전달됩니다. (선택)">
-              <Textarea
-                value={approveComment}
-                onChange={(event) => setApproveComment(event.target.value)}
-                maxLength={2000}
-                placeholder="요청 사양 그대로 승인합니다."
-              />
-            </FormField>
+            {form.fields(fieldErrors)}
             <div className="flex justify-end">
               <Button type="submit">승인하기</Button>
             </div>
@@ -548,23 +357,13 @@ function DecisionSection({
               <Button variant="secondary" onClick={() => setConfirm(null)}>
                 돌아가기
               </Button>
-              <Button
-                loading={approve.isPending}
-                onClick={() => approve.mutate(approveBody())}
-              >
+              <Button loading={approve.isPending} onClick={() => approve.mutate()}>
                 승인 확정
               </Button>
             </>
           }
         >
-          <div className="space-y-2 text-sm text-neutral-600">
-            <p>아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.</p>
-            <p className="font-medium text-neutral-800">
-              {formatSpec(Number(vcpu), Number(memoryMb), Number(diskGb))} ·{' '}
-              {osImages.find((t) => t.id === imageId)?.displayName}
-            </p>
-            <p>{nodeId.trim() ? `지정한 노드에 배치` : '자동 배치'}</p>
-          </div>
+          {form.confirmBody}
         </Modal>
 
         <Modal

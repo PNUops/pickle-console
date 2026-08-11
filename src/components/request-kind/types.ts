@@ -100,6 +100,15 @@ export type DecisionForm =
 
 /** 관리자 화면(승인 대기 큐·신청 상세)에 등록되는 종류 모듈. */
 export interface RequestKindAdmin {
+  /**
+   * 신청 상세 진입 즉시 미리 당겨 둘 결정용 카탈로그 쿼리.
+   * 결정 폼은 신청 응답이 온 뒤에야 마운트되므로, 여기서 당겨 두지 않으면
+   * 폼 자리가 그만큼 늦게 채워진다 (원래는 페이지가 직접 함께 조회했다).
+   */
+  decisionPrefetchQueries: Array<{
+    queryKey: readonly unknown[]
+    queryFn: () => Promise<unknown>
+  }>
   /** 승인 대기 큐 표의 종류별 요약 셀. */
   queueCell(request: RequestDetail): ReactNode
   /** 신청 내용 카드 본문 — 공통·종류 항목이 섞이는 순서까지 종류가 정한다. */
