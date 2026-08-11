@@ -204,8 +204,9 @@ export function NewRequestPage() {
         next.workspaceId = '신청할 워크스페이스를 선택해 주세요.'
       if (state.orgId == null || !selectedOrg)
         next.orgId = '리소스를 제공할 기관을 선택해 주세요.'
-      if (state.displayName.length > 100)
-        next.displayName = '표시명은 100자 이하로 입력해 주세요.'
+      if (!state.displayName.trim()) next.displayName = '리소스 이름을 입력해 주세요.'
+      else if (state.displayName.length > 100)
+        next.displayName = '리소스 이름은 100자 이하로 입력해 주세요.'
       if (state.desiredSlug) {
         if (!SUBDOMAIN_RE.test(state.desiredSlug)) {
           next.desiredSlug =
@@ -323,7 +324,7 @@ export function NewRequestPage() {
     extraNote: state.extraNote.trim() || null,
     reqStartDate: state.reqStartDate || null,
     reqEndDate: state.reqEndDate || null,
-    displayName: state.displayName.trim() || null,
+    displayName: state.displayName.trim(),
     vm: {
       imageId: state.imageId!,
       flavorId: state.flavorId!,
@@ -432,11 +433,12 @@ export function NewRequestPage() {
               </FormField>
 
               <div className="space-y-4 border-t border-neutral-100 pt-4">
-                <h2 className="text-sm font-semibold text-neutral-800">VM 이름</h2>
+                <h2 className="text-sm font-semibold text-neutral-800">리소스 이름</h2>
                 <FormField
                   label="표시명"
+                  required
                   error={errors.displayName}
-                  description="콘솔 목록에 보이는 이름입니다. 비워 두면 호스트명이 그대로 쓰이며, VM 설정에서 언제든 바꿀 수 있습니다."
+                  description="신청 목록과 콘솔 목록에서 이 리소스를 가리키는 이름입니다. 만들어진 뒤에도 설정에서 바꿀 수 있습니다."
                 >
                   <Input
                     value={state.displayName}
@@ -731,7 +733,7 @@ function SummaryTable({
     ['사용 목적', state.purpose.trim()],
     ['수업/프로젝트명', state.courseOrProject.trim() || '—'],
     ['기타 참고', state.extraNote.trim() || '—'],
-    ['표시명', state.displayName.trim() || '호스트명 사용'],
+    ['표시명', state.displayName.trim()],
     ['호스트명(SSH 접속명)', state.desiredSlug || '자동 생성'],
     [
       '사용 기간',
@@ -780,8 +782,10 @@ function SubmitSuccess({ request }: { request: RequestDetail }) {
         </svg>
       </div>
       <h1 className="mt-4 text-2xl font-bold text-neutral-900">신청이 접수되었습니다</h1>
+      {/* 신청을 가리키는 것은 이름이다 — 식별자는 UUID라 읽는 사람에게 알려주는 것이 없다. */}
       <p className="mt-2 text-sm text-neutral-600">
-        신청 번호 {request.id} — 관리자 검토 후 결과를 확인할 수 있습니다.
+        <span className="font-medium text-neutral-900">{request.displayName}</span> — 관리자
+        검토 후 결과를 확인할 수 있습니다.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Link to={`/console/requests/${request.id}`}>

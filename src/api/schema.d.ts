@@ -2095,7 +2095,10 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             detail?: unknown;
-            /** @description 활동 행 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다. */
+            /**
+             * Format: uuid
+             * @description 활동 행의 공개 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다.
+             */
             id: string;
             ip?: string | null;
             targetId?: string | null;
@@ -2236,6 +2239,8 @@ export interface components {
             createdAt: string;
             /** Format: uuid */
             createdBy?: string | null;
+            /** @description 매핑을 만든 관리자 이름 */
+            createdByName?: string | null;
             /**
              * Format: int32
              * @description 동시 연결 상한 오버라이드 (null = 에이전트 기본, 0 = 해제)
@@ -2275,6 +2280,8 @@ export interface components {
              * @description 정지한 관리자 id (자동 정지면 null)
              */
             suspendedBy?: string | null;
+            /** @description 정지한 관리자 이름 (자동 정지면 null) */
+            suspendedByName?: string | null;
             /** @description 정지 사유 (SUSPENDED일 때) */
             suspendedReason?: string | null;
             /** Format: int32 */
@@ -2505,7 +2512,10 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             detail?: unknown;
-            /** @description 감사 로그 행 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다. */
+            /**
+             * Format: uuid
+             * @description 감사 로그 행의 공개 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다.
+             */
             id: string;
             ip?: string | null;
             orgName?: string | null;
@@ -2636,7 +2646,7 @@ export interface components {
         };
         CreateRequestRequest: {
             courseOrProject?: string | null;
-            displayName?: string | null;
+            displayName: string;
             extraNote?: string | null;
             /** Format: uuid */
             orgId: string;
@@ -3397,7 +3407,7 @@ export interface components {
             courseOrProject?: string | null;
             /** Format: date-time */
             createdAt: string;
-            displayName?: string | null;
+            displayName: string;
             extraNote?: string | null;
             /** Format: uuid */
             id: string;
@@ -3853,6 +3863,7 @@ export interface components {
             actorEmail?: string | null;
             /** Format: uuid */
             actorId?: string | null;
+            actorName?: string | null;
             /** Format: date-time */
             changedAt: string;
             fromStatus: components["schemas"]["UserStatus"];
@@ -4000,12 +4011,16 @@ export interface components {
             grantedDiskGb: number;
             /** Format: uuid */
             grantedImageId: string;
+            /** @description 승인된 OS 이미지의 표시 이름. 카탈로그에서 내려간 이미지도 이름이 남습니다. */
+            grantedImageName: string;
             /** Format: int32 */
             grantedMemoryMb: number;
             /** Format: int32 */
             grantedVcpu: number;
             /** Format: uuid */
             nodeId?: string | null;
+            /** @description 배치된 노드의 이름. nodeId가 있을 때 함께 있습니다. */
+            nodeName?: string | null;
         };
         VmMetricPointResponse: {
             /**
@@ -4063,9 +4078,13 @@ export interface components {
             desiredSubdomain?: string | null;
             /** Format: uuid */
             flavorId?: string | null;
+            /** @description 요청한 사양 프리셋의 표시 이름. flavorId가 있을 때 함께 있습니다. */
+            flavorName?: string | null;
             granted?: components["schemas"]["VmGrantedSpecResponse"] | null;
             /** Format: uuid */
             imageId: string;
+            /** @description 요청한 OS 이미지의 표시 이름. 카탈로그에서 내려간 이미지도 이름이 남습니다. */
+            imageName: string;
             /** Format: int32 */
             reqDiskGb: number;
             /** Format: int32 */

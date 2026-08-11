@@ -36,10 +36,12 @@ export function submittedAdminRequest(n: number): RequestDetail {
     extraNote: null,
     reqStartDate: null,
     reqEndDate: null,
-    displayName: null,
+    displayName: `추가 실습 서버 ${n}`,
     vm: {
       imageId: uuid(1),
+      imageName: 'Ubuntu 24.04 LTS',
       flavorId: uuid(2),
+      flavorName: '기본형',
       reqVcpu: 2,
       reqMemoryMb: 2048,
       reqDiskGb: 20,

@@ -3,12 +3,7 @@ import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
-import {
-  fetchOsImages,
-  fetchVmFlavors,
-  fetchRequest,
-  type RequestDetail,
-} from '../api/queries'
+import { fetchRequest, type RequestDetail } from '../api/queries'
 import {
   Alert,
   Badge,
@@ -35,9 +30,6 @@ export function RequestDetailPage() {
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
   })
-  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
-  const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
-
   if (!idValid) {
     return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
   }
@@ -53,16 +45,6 @@ export function RequestDetailPage() {
   }
 
   const data = request.data
-  // 목록에 없는 id는 지워진 이미지·프리셋이다. 식별자가 UUID가 된 뒤로는
-  // 화면에 그대로 붙여도 읽는 사람에게 알려주는 것이 없어 종류만 밝힌다.
-  const imageName = (imageId: string | null | undefined) => {
-    if (imageId == null) return '—'
-    return osImages.data?.find((t) => t.id === imageId)?.displayName ?? '알 수 없는 OS 이미지'
-  }
-  const flavorName = (flavorId: string | null | undefined) => {
-    if (flavorId == null) return '—'
-    return flavors.data?.find((f) => f.id === flavorId)?.displayName ?? '알 수 없는 프리셋'
-  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +76,11 @@ export function RequestDetailPage() {
       )}
 
       {data.review && (
-        <ReviewCard review={data.review} vmGranted={data.vm?.granted} imageName={imageName(data.vm?.granted?.grantedImageId)} />
+        <ReviewCard
+          review={data.review}
+          vmGranted={data.vm?.granted}
+          imageName={data.vm?.granted?.grantedImageName ?? '—'}
+        />
       )}
 
       <Card>
@@ -105,8 +91,10 @@ export function RequestDetailPage() {
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
             <Field label="워크스페이스">{data.workspaceName}</Field>
             <Field label="기관">{data.orgName}</Field>
-            <Field label="OS">{imageName(data.vm?.imageId)}</Field>
-            <Field label="사양 프리셋">{flavorName(data.vm?.flavorId)}</Field>
+            {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이 남으므로
+                공개 목록을 따로 뒤질 필요가 없다. '—'는 값 자체가 없을 때뿐이다. */}
+            <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
+            <Field label="사양 프리셋">{data.vm?.flavorName ?? '—'}</Field>
             <Field label="요청 사양">
               {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
             </Field>
@@ -117,7 +105,7 @@ export function RequestDetailPage() {
             <Field label="사용 기간">
               {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
             </Field>
-            <Field label="표시명">{data.displayName ?? '—'}</Field>
+            <Field label="표시명">{data.displayName}</Field>
             <Field label="호스트명(SSH 접속명)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
             {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
             {data.vm?.desiredSubdomain && (

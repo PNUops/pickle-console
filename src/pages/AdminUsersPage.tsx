@@ -363,7 +363,13 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
               <li key={i}>
                 {formatDateTime(change.changedAt)} · {USER_STATUS_LABELS[change.fromStatus]} →{' '}
                 {USER_STATUS_LABELS[change.toStatus]}
-                {change.actorEmail && <span className="text-neutral-400"> ({change.actorEmail})</span>}
+                {/* 누가 바꿨는지는 이름으로 읽힌다 — 이름이 없는 행만 이메일로 되돌아간다. */}
+                {(change.actorName ?? change.actorEmail) && (
+                  <span className="text-neutral-400">
+                    {' '}
+                    ({change.actorName ?? change.actorEmail})
+                  </span>
+                )}
                 {change.reason && <span className="text-neutral-400"> — {change.reason}</span>}
               </li>
             ))}

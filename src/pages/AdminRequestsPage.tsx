@@ -4,7 +4,6 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
   fetchOrgs,
-  fetchOsImages,
   type RequestStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
@@ -57,11 +56,8 @@ export function AdminRequestsPage() {
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
-  const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
 
-  const imageName = (imageId: string | undefined) =>
-    osImages.data?.find((t) => t.id === imageId)?.displayName ?? '알 수 없는 OS 이미지'
 
   return (
     <div className="space-y-6">
@@ -166,7 +162,7 @@ export function AdminRequestsPage() {
                     </TD>
                     <TD>{request.workspaceName}</TD>
                     <TD className="whitespace-nowrap">
-                      <span className="block">{imageName(request.vm?.imageId)}</span>
+                      <span className="block">{request.vm?.imageName ?? '—'}</span>
                       <span className="block text-xs text-neutral-500">
                         {formatSpec(request.vm?.reqVcpu, request.vm?.reqMemoryMb, request.vm?.reqDiskGb)}
                       </span>

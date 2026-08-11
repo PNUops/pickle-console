@@ -1,10 +1,17 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { problemResponse, regularUser } from './auth'
+import { flavorStore, osImages } from './reference'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
 type RequestDetail = Schemas['RequestDetailResponse']
+
+/** 카탈로그 행의 표시 이름 — 서버가 응답에 이름을 실어 주는 경로를 그대로 흉내낸다. */
+function nameOf(catalogue: { id: string; displayName: string }[], id: string | null | undefined) {
+  if (id == null) return null
+  return catalogue.find((row) => row.id === id)?.displayName ?? null
+}
 
 function baseRequest(): Omit<
   RequestDetail,
@@ -25,7 +32,9 @@ function baseRequest(): Omit<
     displayName: '캡스톤 백엔드 서버',
     vm: {
       imageId: uuid(1),
+      imageName: 'Ubuntu 24.04 LTS',
       flavorId: uuid(2),
+      flavorName: '기본형',
       reqVcpu: 2,
       reqMemoryMb: 2048,
       reqDiskGb: 20,
@@ -69,7 +78,9 @@ function initialRequests(): RequestDetail[] {
           grantedMemoryMb: 2048,
           grantedDiskGb: 20,
           grantedImageId: uuid(1),
+          grantedImageName: 'Ubuntu 24.04 LTS',
           nodeId: null,
+          nodeName: null,
         },
       },
       createdAt: '2026-07-07T09:00:00+09:00',
@@ -152,10 +163,13 @@ export const requestHandlers: RequestHandler[] = [
       extraNote: body.extraNote ?? null,
       reqStartDate: body.reqStartDate ?? null,
       reqEndDate: body.reqEndDate ?? null,
-      displayName: body.displayName ?? null,
+      displayName: body.displayName,
       vm: {
         imageId: body.vm?.imageId ?? uuid(1),
+        // 서버는 카탈로그 행에서 이름을 읽어 응답에 실어 준다 — 은퇴한 행도 이름은 남는다.
+        imageName: nameOf(osImages, body.vm?.imageId) ?? 'Ubuntu 24.04 LTS',
         flavorId: body.vm?.flavorId ?? null,
+        flavorName: nameOf(flavorStore, body.vm?.flavorId),
         reqVcpu: body.vm?.reqVcpu ?? 1,
         reqMemoryMb: body.vm?.reqMemoryMb ?? 1024,
         reqDiskGb: body.vm?.reqDiskGb ?? 10,
