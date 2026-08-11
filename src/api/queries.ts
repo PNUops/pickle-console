@@ -594,6 +594,23 @@ export function updateLlmKey(keyId: string, body: UpdateLlmKey): Promise<void> {
   })
 }
 
+export type LlmKeyUsageTrend = Schemas['LlmKeyUsageTrendResponse']
+export type LlmKeyUsagePoint = Schemas['LlmKeyUsagePointResponse']
+
+/**
+ * 일별 사용량. 하루는 KST 기준이고, 호출이 없던 날도 0으로 채워 온다 — 빠진 날이
+ * 아니라 0인 날이므로 화면도 그 둘을 다르게 그려야 한다.
+ */
+export function fetchLlmKeyUsage(keyId: string, days: number): Promise<LlmKeyUsageTrend> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys/{keyId}/usage', {
+      params: { path: { keyId }, query: { days } },
+    })
+    if (!data) throw toApiError(error, '사용량을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 /* ─── LLM API 키 접근 권한 (VM과 같은 목록·같은 규칙, 경로만 다르다) ─── */
 
 export function fetchLlmKeyAccessGrants(keyId: string): Promise<VmAccessList> {

@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { llmKeyStore } from '../test/msw/handlers/llm-keys'
@@ -26,12 +27,12 @@ describe('LLM API 키 상세', () => {
     expect(screen.getAllByText('게이트웨이 기본값')).toHaveLength(3)
   })
 
-  test('사용량 통계가 없는 이유를 화면이 말하고, 마지막 사용은 보여 준다', async () => {
+  test('마지막 사용 시각이 늦게 반영될 수 있다는 것을 말한다', async () => {
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     expect(screen.getByText('2026-08-10 18:22')).toBeInTheDocument()
-    expect(screen.getByText(/사용량 통계는 아직 제공하지 않습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/최근 호출이 늦게 반영될 수 있습니다/)).toBeInTheDocument()
   })
 })
 
@@ -132,6 +133,30 @@ describe('권한이 화면에 미리 보인다', () => {
   })
 })
 
+describe('정지·만료된 키', () => {
+  test('발급을 제안하지 않는다 — 새 값도 아무것도 인증하지 못한다', async () => {
+    // 서버의 발급은 '발급 전'만 활성으로 올린다. 정지·만료 상태에서 누르면 쓰던
+    // 값만 죽고 새 값은 여전히 거부되므로, 그 버튼은 애초에 없어야 한다.
+    server.use(
+      http.get(`*/api/v1/llm-keys/${MEMBER_KEY}`, () =>
+        HttpResponse.json({
+          ...llmKeyStore.find((key) => key.id === MEMBER_KEY),
+          status: 'EXPIRED',
+          myResourceRole: 'OWNER',
+          accessManageAllowed: true,
+        }),
+      ),
+    )
+    renderKey(MEMBER_KEY)
+
+    await screen.findByRole('heading', { name: 'study-shared-key' })
+    expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
+    // 폐기는 여전히 열려 있다 — 만료된 키도 정리할 수 있어야 한다.
+    expect(screen.getByRole('button', { name: '키 폐기' })).toBeEnabled()
+  })
+})
+
 describe('키 설정 수정', () => {
   test('바꾼 항목만 보낸다 — 건드리지 않은 용도는 그대로 남는다', async () => {
     const user = userEvent.setup()
@@ -148,6 +173,28 @@ describe('키 설정 수정', () => {
     expect(stored.name).toBe('capstone-chatbot-v2')
     // 생략한 항목은 서버가 그대로 둔다는 계약이 화면 쪽에서도 지켜져야 한다.
     expect(stored.purpose).toBe('캡스톤 챗봇 백엔드')
+  })
+
+  test('공백만 덧붙인 편집은 변경으로 세지 않는다', async () => {
+    const user = userEvent.setup()
+    renderKey(ISSUED_KEY)
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    // 서버는 다듬어 저장하므로 돌아오는 값이 그대로다 — 이걸 변경으로 보면 폼이
+    // 영원히 미저장 상태에 갇힌다.
+    await user.type(screen.getByDisplayValue('캡스톤 챗봇 백엔드'), '   ')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+  })
+
+  test('이름은 비울 수 없다고 누르기 전에 말한다', async () => {
+    const user = userEvent.setup()
+    renderKey(ISSUED_KEY)
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    await user.clear(screen.getByDisplayValue('capstone-chatbot'))
+
+    expect(await screen.findByText('키 이름은 비워 둘 수 없습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 })
 

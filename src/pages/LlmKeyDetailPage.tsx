@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router'
+import { Suspense, lazy, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchLlmKey,
@@ -20,17 +20,31 @@ import {
   CardTitle,
   Checkbox,
   ConfirmNameModal,
+  ErrorBoundary,
   FormField,
   Input,
   LlmKeyStatusBadge,
   Modal,
   PermissionNotice,
   Spinner,
+  TabPanel,
+  Tabs,
   Textarea,
+  type TabItem,
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+
+// 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
+// (할당 추이·VM 모니터링과 같은 규칙).
+const LlmKeyUsageSection = lazy(() => import('../components/llm-usage/LlmKeyUsageSection'))
+
+/** 상세 탭 구성. 배열 순서가 렌더 순서이고, 탭 id는 `?tab=` 링크가 쓴다. */
+const KEY_TABS: TabItem[] = [
+  { id: 'overview', label: '개요' },
+  { id: 'usage', label: '사용량' },
+]
 
 /**
  * LLM API 키 하나의 상세 — 드로어가 아니라 라우트다.
@@ -66,7 +80,9 @@ export function LlmKeyDetailPage() {
       ) : key.isError ? (
         <Alert variant="danger">{key.error.message}</Alert>
       ) : (
-        <KeyDetail llmKey={key.data} />
+        // 다른 키로 옮겨 갈 때(뒤로/앞으로) 이 라우트는 다시 마운트되지 않는다 —
+        // key를 주지 않으면 앞 키의 저장 성공 알림·오류가 다음 키 화면에 남는다.
+        <KeyDetail key={key.data.id} llmKey={key.data} />
       )}
     </div>
   )
@@ -74,6 +90,14 @@ export function LlmKeyDetailPage() {
 
 function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   const revoked = llmKey.status === 'REVOKED'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab = KEY_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
+  const selectTab = (id: string) => {
+    // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
+    setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -89,6 +113,28 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </div>
       </div>
 
+      <Tabs
+        tabs={KEY_TABS}
+        value={activeTab}
+        onChange={selectTab}
+        aria-label="LLM API 키 상세 영역"
+      />
+
+      <TabPanel id="usage" active={activeTab === 'usage'}>
+        <ErrorBoundary label="사용량">
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <Spinner label="사용량 화면 불러오는 중" />
+              </div>
+            }
+          >
+            <LlmKeyUsageSection keyId={llmKey.id} status={llmKey.status} />
+          </Suspense>
+        </ErrorBoundary>
+      </TabPanel>
+
+      <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
       <StatusNotice llmKey={llmKey} />
       <IssueSection llmKey={llmKey} />
 
@@ -125,11 +171,9 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>
             )}
           </dl>
-          {/* 사용량 화면은 아직 없다 — api에 조회 엔드포인트가 없어서지 빠뜨린 것이
-              아니므로, 있는 것(마지막 사용)만 말하고 없는 탭은 만들지 않는다. */}
           <p className="mt-4 text-xs text-neutral-500">
-            사용량 통계는 아직 제공하지 않습니다. 지금은 마지막 사용 시각만 확인할 수 있고,
-            게이트웨이가 배치로 보고하므로 최근 호출이 늦게 반영될 수 있습니다.
+            마지막 사용 시각은 게이트웨이가 배치로 보고하므로 최근 호출이 늦게 반영될 수
+            있습니다. 일별 사용량은 사용량 탭에서 볼 수 있습니다.
           </p>
         </CardContent>
       </Card>
@@ -161,6 +205,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       </Card>
 
       {!revoked && <RevokeSection llmKey={llmKey} />}
+      </TabPanel>
     </>
   )
 }
@@ -237,7 +282,10 @@ function IssueSection({ llmKey }: { llmKey: LlmKeyDetail }) {
   // 한다. 워크스페이스 소유자의 상시 권한(폐기·목록 관리)은 여기에 닿지 않으므로
   // accessManageAllowed로 판단하면 눌러야만 아는 403이 된다.
   const allowed = llmKey.myResourceRole === 'OWNER'
-  const revoked = llmKey.status === 'REVOKED'
+  // 발급이 뜻을 갖는 상태는 둘뿐이다. 서버의 발급은 '발급 전'만 활성으로 올리므로
+  // 정지·만료된 키에 발급을 걸면 쓰던 값만 죽고 새 값도 아무것도 인증하지 못한다 —
+  // 다시 볼 수 없다는 경고와 함께 쓸모없는 평문을 쥐여 주는 셈이다. 폐기와 같이 뺀다.
+  const issuable = llmKey.status === 'PENDING' || llmKey.status === 'ACTIVE'
 
   const issue = useMutation({
     // 평문이 캐시에 남지 않도록 모달을 닫는 즉시 GC 대상이 되게 한다.
@@ -255,7 +303,7 @@ function IssueSection({ llmKey }: { llmKey: LlmKeyDetail }) {
     },
   })
 
-  if (revoked) return null
+  if (!issuable) return null
 
   return (
     <Card>
@@ -376,13 +424,20 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
     setRecordBodies(llmKey.recordBodies)
   }, [llmKey.name, llmKey.purpose, llmKey.recordBodies])
 
+  // 서버는 두 문자열을 모두 다듬어 저장한다. 화면도 같은 값으로 비교해야
+  // "바뀐 것"의 정의가 양쪽에서 같아진다 — 공백만 덧붙인 편집을 변경으로 보면
+  // 저장 후 돌아온 값이 그대로라 폼이 영원히 미저장 상태에 갇힌다.
+  const trimmedName = name.trim()
+  const trimmedPurpose = purpose.trim()
+
   const save = useMutation({
     // 바뀐 항목만 보낸다 — 생략한 항목을 서버가 그대로 두는 것이 계약이라,
     // 전부 보내면 다른 사람이 방금 바꾼 값을 되돌리게 된다.
     mutationFn: () =>
       updateLlmKey(llmKey.id, {
-        ...(name.trim() === llmKey.name ? {} : { name: name.trim() }),
-        ...(purpose === (llmKey.purpose ?? '') ? {} : { purpose }),
+        ...(trimmedName === llmKey.name ? {} : { name: trimmedName }),
+        // 빈 문자열은 용도를 지우는 방법이고, 항목을 빼는 것은 그대로 두는 방법이다.
+        ...(trimmedPurpose === (llmKey.purpose ?? '') ? {} : { purpose: trimmedPurpose }),
         ...(recordBodies === llmKey.recordBodies ? {} : { recordBodies }),
       }),
     onSuccess: async () => {
@@ -398,13 +453,16 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
   })
 
   const dirty =
-    name.trim() !== llmKey.name ||
-    purpose !== (llmKey.purpose ?? '') ||
+    trimmedName !== llmKey.name ||
+    trimmedPurpose !== (llmKey.purpose ?? '') ||
     recordBodies !== llmKey.recordBodies
+  // 이름은 지울 수 없다 (계약이 1자 이상을 요구한다). 서버가 422로 막기 전에
+  // 여기서 말해 준다 — 눌러야만 아는 거절을 만들지 않는다.
+  const nameError = trimmedName === '' ? '키 이름은 비워 둘 수 없습니다.' : undefined
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!dirty) return
+    if (!dirty || nameError) return
     setSaved(false)
     save.mutate()
   }
@@ -418,9 +476,10 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
         {error && <Alert variant="danger">{error}</Alert>}
         {saved && !dirty && <Alert variant="success">설정을 저장했습니다.</Alert>}
         <form onSubmit={submit} className="space-y-4">
-          <FormField label="이름" className="max-w-md">
+          <FormField label="이름" className="max-w-md" error={nameError}>
             <Input
               value={name}
+              maxLength={100}
               disabled={!allowed}
               onChange={(event) => setName(event.target.value)}
             />
@@ -433,6 +492,7 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
             <Textarea
               rows={2}
               value={purpose}
+              maxLength={2000}
               disabled={!allowed}
               onChange={(event) => setPurpose(event.target.value)}
             />
@@ -445,7 +505,11 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
             disabled={!allowed}
             onChange={(event) => setRecordBodies(event.target.checked)}
           />
-          <Button type="submit" loading={save.isPending} disabled={!allowed || !dirty}>
+          <Button
+            type="submit"
+            loading={save.isPending}
+            disabled={!allowed || !dirty || Boolean(nameError)}
+          >
             저장
           </Button>
         </form>
