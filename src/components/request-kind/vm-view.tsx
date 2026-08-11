@@ -18,7 +18,7 @@ import {
 import { formatSpec } from '../../lib/format'
 import { SUBDOMAIN_RE, isUuid } from '../../lib/validation'
 import { Field } from './Field'
-import type { DecisionData, DecisionFormApi, RequestKindAdmin } from './types'
+import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
 function useVmDecisionData(): DecisionData {
   const osImages = useQuery({
@@ -224,12 +224,12 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   }
 }
 
-export const vmRequestAdmin: RequestKindAdmin = {
+export const vmRequestView: RequestKindView = {
   decisionPrefetchQueries: [{ queryKey: ['os-images'], queryFn: fetchOsImages }],
   useDecisionData: useVmDecisionData,
   useApproveForm: useVmApproveForm,
 
-  queueCell: (request) => (
+  summaryCell: (request) => (
     <>
       <span className="block">{request.vm?.imageName ?? '—'}</span>
       <span className="block text-xs text-neutral-500">
@@ -240,7 +240,6 @@ export const vmRequestAdmin: RequestKindAdmin = {
 
   contentFields: (data) => (
     <>
-      <Field label="신청자">{data.requesterName}</Field>
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
       {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이

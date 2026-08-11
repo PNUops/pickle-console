@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
 import { FormField, Input, Textarea } from '../ui'
 import { Field } from './Field'
-import type { DecisionData, DecisionFormApi, RequestKindAdmin } from './types'
+import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
 /** 계약이 정한 상한 — 정책이 아니라 수의 폭이다. */
 const MAX_RPM = 10_000
@@ -210,7 +210,7 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
   }
 }
 
-export const llmKeyRequestAdmin: RequestKindAdmin = {
+export const llmKeyRequestView: RequestKindView = {
   // 결정에 필요한 카탈로그가 없으므로 미리 당겨 둘 것도 없다.
   decisionPrefetchQueries: [],
   useDecisionData: useLlmKeyDecisionData,
@@ -218,7 +218,7 @@ export const llmKeyRequestAdmin: RequestKindAdmin = {
   // 이 종류에 없으므로 인자로 받지도 않는다.
   useApproveForm: useLlmKeyApproveForm,
 
-  queueCell: (request) => {
+  summaryCell: (request) => {
     const spec = request.llmKey
     // 화면 다른 곳과 같은 말을 쓴다 — 큐에서만 줄임말을 쓰면 같은 수가 두 이름을 갖는다.
     const asked = [
@@ -241,7 +241,6 @@ export const llmKeyRequestAdmin: RequestKindAdmin = {
 
   contentFields: (data) => (
     <>
-      <Field label="신청자">{data.requesterName}</Field>
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
       <Field label="사용 기간">
