@@ -301,6 +301,7 @@ export function fetchVms(params: {
 export function invalidateResourceLists(queryClient: QueryClient): Promise<unknown> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ['vms'] }),
+    queryClient.invalidateQueries({ queryKey: ['llm-keys'] }),
     queryClient.invalidateQueries({ queryKey: ['resources'] }),
   ])
 }
@@ -520,6 +521,124 @@ export function removeVmAccessGrant(vmId: string, grantId: string): Promise<void
   return guardNetwork(async () => {
     const { error } = await api.DELETE('/vms/{vmId}/access/{grantId}', {
       params: { path: { vmId, grantId } },
+    })
+    if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
+  })
+}
+
+/* ─── LLM API 키 ─── */
+
+export type LlmKeySummary = Schemas['LlmKeySummaryResponse']
+export type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
+export type LlmKeyPage = Schemas['PageResponseLlmKeySummaryResponse']
+export type LlmApiKeyStatus = Schemas['LlmApiKeyStatus']
+export type IssuedLlmKey = Schemas['IssuedLlmKeyResponse']
+export type UpdateLlmKey = Schemas['UpdateLlmKeyRequest']
+
+export function fetchLlmKeys(params: {
+  page?: number
+  size?: number
+  workspaceId?: string
+}): Promise<LlmKeyPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys', { params: { query: params } })
+    if (!data) throw toApiError(error, 'LLM API 키 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchLlmKey(keyId: string): Promise<LlmKeyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys/{keyId}', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, 'LLM API 키 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 키 평문을 만든다 — 이 응답이 평문이 존재하는 유일한 자리다.
+ *
+ * 서버에는 해시만 남아 다시 조회할 수 없고, 이미 발급된 키에 다시 부르면 이전
+ * 값은 그 자리에서 무효가 된다. 호출부는 받은 값을 컴포넌트 상태로 옮기지 말고
+ * 뮤테이션 상태에만 두었다가 `reset()`으로 버려야 한다 (릴레이 토큰과 같은 규칙).
+ */
+export function issueLlmKeyToken(keyId: string): Promise<IssuedLlmKey> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/llm-keys/{keyId}/token', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, 'LLM API 키를 발급하지 못했습니다.')
+    return data
+  })
+}
+
+export function revokeLlmKey(keyId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.POST('/llm-keys/{keyId}/revoke', {
+      params: { path: { keyId } },
+    })
+    if (error) throw toApiError(error, 'LLM API 키를 폐기하지 못했습니다.')
+  })
+}
+
+/** 생략한 항목은 서버가 그대로 둔다 — 보내지 않은 필드는 지워지지 않는다. */
+export function updateLlmKey(keyId: string, body: UpdateLlmKey): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.PATCH('/llm-keys/{keyId}', {
+      params: { path: { keyId } },
+      body,
+    })
+    if (error) throw toApiError(error, 'LLM API 키를 수정하지 못했습니다.')
+  })
+}
+
+/* ─── LLM API 키 접근 권한 (VM과 같은 목록·같은 규칙, 경로만 다르다) ─── */
+
+export function fetchLlmKeyAccessGrants(keyId: string): Promise<VmAccessList> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys/{keyId}/access', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function addLlmKeyAccessGrant(
+  keyId: string,
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
+): Promise<VmAccessGrant> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/llm-keys/{keyId}/access', {
+      params: { path: { keyId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateLlmKeyAccessGrant(
+  keyId: string,
+  grantId: string,
+  role: ResourceRole,
+): Promise<VmAccessGrant> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/llm-keys/{keyId}/access/{grantId}', {
+      params: { path: { keyId, grantId } },
+      body: { role },
+    })
+    if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function removeLlmKeyAccessGrant(keyId: string, grantId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/llm-keys/{keyId}/access/{grantId}', {
+      params: { path: { keyId, grantId } },
     })
     if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
   })
