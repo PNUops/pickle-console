@@ -16,7 +16,6 @@ import {
   TR,
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
-import { consolePaths } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
 
 /**
@@ -98,11 +97,11 @@ export function ResourcesPage() {
                             접근 권한이 없습니다
                             {resource.ownerNames.length > 0 &&
                               ` — ${resource.ownerNames.join(', ')} 님에게 요청하세요`}
-                            {resource.accessManageAllowed && resource.type === 'VM' && (
+                            {resource.accessManageAllowed && entry.accessPath && (
                               <>
                                 {' '}
                                 <Link
-                                  to={consolePaths.vmAccess(resource.id)}
+                                  to={entry.accessPath(resource.id)}
                                   className="font-medium text-primary-700 hover:underline"
                                 >
                                   접근 권한 관리

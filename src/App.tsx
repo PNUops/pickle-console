@@ -32,6 +32,9 @@ import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { DocsPage } from './pages/DocsPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { LlmKeyAccessPage } from './pages/LlmKeyAccessPage'
+import { LlmKeyDetailPage } from './pages/LlmKeyDetailPage'
+import { LlmKeysPage } from './pages/LlmKeysPage'
 import { WorkspaceDetailPage } from './pages/WorkspaceDetailPage'
 import { WorkspacesPage } from './pages/WorkspacesPage'
 import { LoginPage } from './pages/LoginPage'
@@ -142,6 +145,10 @@ function App() {
             </ErrorBoundary>
           }
         />
+        <Route path="llm-keys" element={<LlmKeysPage />} />
+        <Route path="llm-keys/:keyId" element={<LlmKeyDetailPage />} />
+        {/* 상세와 별개 라우트 — 상세가 막힌 사람도 접근 권한은 관리할 수 있다. */}
+        <Route path="llm-keys/:keyId/access" element={<LlmKeyAccessPage />} />
         <Route path="ssh-keys" element={<SshKeysPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
@@ -151,6 +158,7 @@ function App() {
         <Route path=":workspaceId" element={<ConsoleDashboardPage />} />
         <Route path=":workspaceId/resources" element={<ResourcesPage />} />
         <Route path=":workspaceId/vms" element={<VmsPage />} />
+        <Route path=":workspaceId/llm-keys" element={<LlmKeysPage />} />
         <Route path=":workspaceId/requests" element={<RequestsPage />} />
         <Route path=":workspaceId/requests/new" element={<NewRequestPage />} />
         <Route path="*" element={<NotFoundPage />} />

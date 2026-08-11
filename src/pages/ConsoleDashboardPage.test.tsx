@@ -61,8 +61,10 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     renderDashboard()
 
     await screen.findByRole('heading', { name: '대시보드' })
-    // 실행 중 VM은 웹 터미널 바로가기가 함께 보인다.
-    expect(await screen.findByRole('link', { name: 'algo-judge' })).toBeInTheDocument()
+    // 인벤토리는 종류를 섞어 최신순으로 내려오고, 카드는 그 순서를 그대로 그린다.
+    expect(await screen.findByRole('link', { name: 'algo-hint-writer' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'demo-web' })).toBeInTheDocument()
+    // 바로가기는 종류가 정한다 — 실행 중 VM은 웹 터미널을 달고, 키는 달지 않는다.
     expect(screen.getAllByRole('link', { name: '웹 터미널' }).length).toBeGreaterThanOrEqual(1)
     // "모두 보기"는 리소스·진행 중 신청 카드에 각각 있다 — 리소스 목록 링크만 확인.
     expect(

@@ -21,6 +21,10 @@ describe('consolePathInScope — 범위 세그먼트 인식', () => {
     expect(consolePathInScope(OTHER, `/console/${SCOPE}/requests/new`)).toBe(
       `/console/${OTHER}/requests/new`,
     )
+    // 등재를 빠뜨리면 워크스페이스를 바꿀 때 조용히 대시보드로 떨어진다.
+    expect(consolePathInScope(OTHER, `/console/${SCOPE}/llm-keys`)).toBe(
+      `/console/${OTHER}/llm-keys`,
+    )
   })
 
   test('범위 없는 목록에서 범위를 걸면 그 목록의 범위판으로 간다', () => {
@@ -38,6 +42,9 @@ describe('consolePathInScope — 범위 세그먼트 인식', () => {
       `/console/${SCOPE}`,
     )
     expect(consolePathInScope(SCOPE, '/console/account')).toBe(`/console/${SCOPE}`)
+    expect(consolePathInScope(SCOPE, `/console/llm-keys/${uuid(70)}`)).toBe(
+      `/console/${SCOPE}`,
+    )
   })
 
   test('목록 이름을 범위로 착각하지 않는다', () => {
@@ -51,5 +58,7 @@ describe('consolePaths — 상세 주소', () => {
     expect(consolePaths.vmDetail(uuid(56))).toBe(`/console/vms/${uuid(56)}`)
     expect(consolePaths.vmTerminal(uuid(56))).toBe(`/console/vms/${uuid(56)}/terminal`)
     expect(consolePaths.requestDetail(uuid(201))).toBe(`/console/requests/${uuid(201)}`)
+    expect(consolePaths.llmKeyDetail(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}`)
+    expect(consolePaths.llmKeyAccess(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}/access`)
   })
 })

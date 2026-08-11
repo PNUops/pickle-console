@@ -45,6 +45,23 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   GATEWAY_UNBLOCK: 'SSH·터미널 차단 해제',
 }
 
+/* ─── LLM API 키 ─── */
+
+export type LlmApiKeyStatus = components['schemas']['LlmApiKeyStatus']
+
+/**
+ * 키의 다섯 상태. 발급 전과 폐기됨은 서로 다른 이야기다 — 발급 전은 승인은 났고
+ * 소유자가 아직 비밀을 만들지 않은 상태(그 키로는 아무것도 인증되지 않는다),
+ * 폐기됨은 비밀이 죽은 상태다. 라벨이 그 차이를 먼저 말한다.
+ */
+export const LLM_KEY_STATUS_LABELS: Record<LlmApiKeyStatus, string> = {
+  PENDING: '발급 전',
+  ACTIVE: '활성',
+  SUSPENDED: '정지됨',
+  REVOKED: '폐기됨',
+  EXPIRED: '만료됨',
+}
+
 /* ─── HTTP 공개·도메인·인증서 ─── */
 
 export type DomainKind = components['schemas']['DomainKind']

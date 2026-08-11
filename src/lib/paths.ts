@@ -15,6 +15,7 @@ export const consolePaths = {
   dashboard: (scope: Scope) => (scope == null ? '/console' : `/console/${scope}`),
   resources: (scope: Scope) => scoped(scope, 'resources'),
   vms: (scope: Scope) => scoped(scope, 'vms'),
+  llmKeys: (scope: Scope) => scoped(scope, 'llm-keys'),
   requests: (scope: Scope) => scoped(scope, 'requests'),
   newRequest: (scope: Scope) => scoped(scope, 'requests/new'),
 
@@ -24,6 +25,8 @@ export const consolePaths = {
   vmDetail: (vmId: string) => `/console/vms/${vmId}`,
   vmAccess: (vmId: string) => `/console/vms/${vmId}/access`,
   vmTerminal: (vmId: string) => `/console/vms/${vmId}/terminal`,
+  llmKeyDetail: (keyId: string) => `/console/llm-keys/${keyId}`,
+  llmKeyAccess: (keyId: string) => `/console/llm-keys/${keyId}/access`,
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
   workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,
@@ -34,7 +37,7 @@ export const consolePaths = {
 } as const
 
 /** The listings that exist under a workspace as well as unscoped. */
-const SCOPED_SECTIONS = ['resources', 'vms', 'requests', 'requests/new']
+const SCOPED_SECTIONS = ['resources', 'vms', 'llm-keys', 'requests', 'requests/new']
 
 /**
  * The part of a console path that survives a scope change: the list you are

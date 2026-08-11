@@ -14,6 +14,7 @@ export {
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
   IpAllocationStatusBadge,
+  LlmKeyStatusBadge,
   PortForwardApplyStateBadge,
   PortMappingStatusBadge,
   RequestStatusBadge,

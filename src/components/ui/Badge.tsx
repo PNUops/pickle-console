@@ -19,6 +19,7 @@ import {
   DRIFT_KIND_LABELS,
   DRIFT_STATUS_LABELS,
   IP_ALLOCATION_STATUS_LABELS,
+  LLM_KEY_STATUS_LABELS,
   PORT_FORWARD_APPLY_STATE_LABELS,
   PORT_MAPPING_STATUS_LABELS,
   REQUEST_STATUS_LABELS,
@@ -33,6 +34,7 @@ import {
   type DriftFindingKind,
   type DriftFindingStatus,
   type IpAllocationStatus,
+  type LlmApiKeyStatus,
   type NotificationDeliveryStatus,
   type PortForwardApplyState,
   type PortMappingStatus,
@@ -411,6 +413,30 @@ export function CampusIpStatusBadge({
   return (
     <Badge variant={CAMPUS_IP_STATUS_VARIANTS[status]} className={className}>
       {CAMPUS_IP_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const LLM_KEY_STATUS_VARIANTS: Record<LlmApiKeyStatus, BadgeVariant> = {
+  // 발급 전은 고장이 아니라 남은 한 걸음이다 — 승인은 났고 소유자가 발급을
+  // 눌러야 비밀이 생긴다. 경고 톤을 주면 잘못된 상태로 읽힌다.
+  PENDING: 'info',
+  ACTIVE: 'success',
+  SUSPENDED: 'warning',
+  REVOKED: 'neutral',
+  EXPIRED: 'neutral',
+}
+
+export function LlmKeyStatusBadge({
+  status,
+  className,
+}: {
+  status: LlmApiKeyStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={LLM_KEY_STATUS_VARIANTS[status]} className={className}>
+      {LLM_KEY_STATUS_LABELS[status]}
     </Badge>
   )
 }
