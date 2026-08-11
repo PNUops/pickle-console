@@ -1252,6 +1252,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/llm-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * LLM API 키 목록
+         * @description 내가 속한 워크스페이스의 키를 보여 줍니다. 접근 권한이 없는 키는 이름·상태·소유자만 담긴 제한된 행으로 표시됩니다.
+         */
+        get: operations["listLlmKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm-keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * LLM API 키 상세
+         * @description 접근 권한이 있는 키의 상세입니다. 키 평문과 그 해시는 어떤 응답에도 담기지 않습니다.
+         */
+        get: operations["getLlmKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * LLM API 키 수정
+         * @description 키 이름과 사용 목적, 본문 기록 여부를 바꿉니다. 생략한 항목은 그대로 둡니다.
+         */
+        patch: operations["updateLlmKey"];
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 접근 권한 목록
+         * @description 이 키의 접근 권한 전체와, 그 목록이 어느 키의 것인지 알려 주는 최소 정보입니다. 키 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         */
+        get: operations["listLlmKeyAccessGrants"];
+        put?: never;
+        /**
+         * 접근 권한 부여
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 키의 접근 권한을 부여합니다. 사용자는 이 키를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         */
+        post: operations["addLlmKeyAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/access/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 접근 권한 회수
+         * @description 회수해도 발급 시 이미 확인한 키 평문은 회수되지 않습니다. 필요하면 키를 재발급해 주세요.
+         */
+        delete: operations["removeLlmKeyAccessGrant"];
+        options?: never;
+        head?: never;
+        /** 접근 권한 등급 변경 */
+        patch: operations["updateLlmKeyAccessGrant"];
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * LLM API 키 폐기
+         * @description 이 키를 폐기합니다. 게이트웨이에는 폴링 주기 안에 반영되고, 이후 이 키로 보낸 요청은 '폐기된 키'로 거부됩니다. 사용 기록은 남습니다.
+         */
+        post: operations["revokeLlmKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * LLM API 키 발급
+         * @description 이 키의 평문을 만들어 **한 번만** 돌려줍니다. 서버에는 해시만 남으므로 다시 조회할 수 없고, 분실하면 이 호출을 다시 해서 재발급해야 합니다. 재발급하면 이전 값은 곧바로 쓸 수 없게 됩니다.
+         */
+        post: operations["issueLlmKeyToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -2473,12 +2602,35 @@ export interface components {
             orgHeadroom: components["schemas"]["OrgHeadroom"];
             workspace: components["schemas"]["WorkspacePanel"];
         };
+        ApproveLlmKeyRequestSpec: {
+            /**
+             * Format: int32
+             * @description 부여 동시 요청 수. 비우면 서비스 기본값이 적용됩니다.
+             */
+            grantedConcurrency?: number | null;
+            /**
+             * Format: int64
+             * @description 부여 일일 토큰 수. 비우면 서비스 기본값이 적용됩니다.
+             */
+            grantedDailyTokens?: number | null;
+            /**
+             * Format: int32
+             * @description 부여 분당 요청 수. 비우면 서비스 기본값이 적용됩니다.
+             */
+            grantedRpm?: number | null;
+            /**
+             * Format: int32
+             * @description 부여 분당 토큰 수. 비우면 서비스 기본값이 적용됩니다.
+             */
+            grantedTpm?: number | null;
+        };
         ApproveRequestRequest: {
             comment?: string | null;
             /** Format: date */
             grantedEndDate?: string | null;
             /** Format: date */
             grantedStartDate?: string | null;
+            llmKey?: components["schemas"]["ApproveLlmKeyRequestSpec"] | null;
             vm?: components["schemas"]["ApproveVmRequestSpec"] | null;
         };
         ApproveVmRequestSpec: {
@@ -2631,6 +2783,25 @@ export interface components {
             /** @description 신청 목적 (관리자 검토 자료) */
             purpose: string;
         };
+        CreateLlmKeyRequestSpec: {
+            /**
+             * Format: int64
+             * @description 희망 일일 토큰 수. 비우면 서비스 기본값을 받습니다.
+             */
+            reqDailyTokens?: number | null;
+            /**
+             * Format: int32
+             * @description 희망 분당 요청 수. 비우면 서비스 기본값을 받습니다.
+             */
+            reqRpm?: number | null;
+            /**
+             * Format: int32
+             * @description 희망 분당 토큰 수. 비우면 서비스 기본값을 받습니다.
+             */
+            reqTpm?: number | null;
+            /** @description 이 Key를 어디에 쓸지. 기본 한도로 충분하면 비워 두어도 됩니다. */
+            usagePlan?: string | null;
+        };
         CreateOrgRequest: {
             description?: string | null;
             name: string;
@@ -2648,6 +2819,7 @@ export interface components {
             courseOrProject?: string | null;
             displayName: string;
             extraNote?: string | null;
+            llmKey?: components["schemas"]["CreateLlmKeyRequestSpec"] | null;
             /** Format: uuid */
             orgId: string;
             purpose: string;
@@ -2852,6 +3024,22 @@ export interface components {
             id: string;
             name: string;
         };
+        IssuedLlmKeyResponse: {
+            /**
+             * Format: date-time
+             * @description 만료 시각. 없으면 만료되지 않습니다.
+             */
+            expiresAt?: string | null;
+            /**
+             * Format: uuid
+             * @description 키 식별자
+             */
+            id: string;
+            /** @description 키 이름 */
+            name: string;
+            /** @description 발급된 API Key 평문. **이 응답에서만 볼 수 있습니다** — 서버에는 해시만 저장되며 다시 조회할 수 없습니다. 분실하면 재발급해야 합니다. */
+            token: string;
+        };
         LiveCoverage: {
             /**
              * Format: int32
@@ -2868,6 +3056,154 @@ export interface components {
              * @description 스토리지 측정값이 있는 노드 수 — nodeCount보다 작으면 스토리지 합계는 부분 측정
              */
             storageMeasuredNodeCount: number;
+        };
+        /** @enum {string} */
+        LlmApiKeyStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
+        LlmKeyDetailResponse: {
+            /** @description 접근 권한 목록을 관리할 수 있는지 */
+            accessManageAllowed: boolean;
+            /**
+             * Format: int32
+             * @description 동시 요청 한도. null이면 게이트웨이 기본값을 따릅니다.
+             */
+            concurrency?: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 만료 시각. null이면 만료가 없습니다.
+             */
+            expiresAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description 마지막 사용 시각. 게이트웨이가 배치로 보고하므로 지연될 수 있습니다.
+             */
+            lastUsedAt?: string | null;
+            /** @description 요청자가 이 키의 접근 목록에서 받은 등급 */
+            myResourceRole?: components["schemas"]["ResourceRole"] | null;
+            /** @description 키 이름 */
+            name: string;
+            /** @description 용도 */
+            purpose?: string | null;
+            /** @description 프롬프트·응답 본문 기록 여부 */
+            recordBodies: boolean;
+            /**
+             * Format: date-time
+             * @description 회수된 시각. 회수되지 않았으면 null입니다.
+             */
+            revokedAt?: string | null;
+            /**
+             * Format: int32
+             * @description 분당 요청 한도. null이면 게이트웨이 기본값을 따릅니다.
+             */
+            rpm?: number | null;
+            status: components["schemas"]["LlmApiKeyStatus"];
+            /** @description 평문 앞부분 — 두 키를 구별하기 위한 값입니다. 아직 발급 전이면 null입니다. */
+            tokenPrefix?: string | null;
+            /**
+             * Format: int32
+             * @description 분당 토큰 한도. null이면 게이트웨이 기본값을 따릅니다.
+             */
+            tpm?: number | null;
+            /**
+             * Format: uuid
+             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             */
+            workspaceId?: string | null;
+            workspaceName: string;
+        };
+        LlmKeyRequestSpecResponse: {
+            /**
+             * Format: int32
+             * @description 부여 동시 요청 수. 비어 있으면 서비스 기본값입니다.
+             */
+            grantedConcurrency?: number | null;
+            /**
+             * Format: int64
+             * @description 부여 일일 토큰 수. 비어 있으면 서비스 기본값입니다.
+             */
+            grantedDailyTokens?: number | null;
+            /**
+             * Format: int32
+             * @description 부여 분당 요청 수. 비어 있으면 서비스 기본값입니다.
+             */
+            grantedRpm?: number | null;
+            /**
+             * Format: int32
+             * @description 부여 분당 토큰 수. 비어 있으면 서비스 기본값입니다.
+             */
+            grantedTpm?: number | null;
+            /**
+             * Format: int64
+             * @description 희망 일일 토큰 수
+             */
+            reqDailyTokens?: number | null;
+            /**
+             * Format: int32
+             * @description 희망 분당 요청 수
+             */
+            reqRpm?: number | null;
+            /**
+             * Format: int32
+             * @description 희망 분당 토큰 수
+             */
+            reqTpm?: number | null;
+            /** @description 사용 계획 */
+            usagePlan?: string | null;
+        };
+        LlmKeySummaryResponse: {
+            /** @description true면 이 키의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
+            accessLimited: boolean;
+            /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 워크스페이스 소유자가 참입니다. */
+            accessManageAllowed: boolean;
+            /**
+             * Format: int32
+             * @description 동시 요청 한도. null이면 게이트웨이 기본값을 따릅니다. 접근 권한이 없으면 생략됩니다.
+             */
+            concurrency?: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 만료 시각. null이면 만료가 없습니다. 접근 권한이 없으면 생략됩니다.
+             */
+            expiresAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description 마지막 사용 시각. 게이트웨이가 배치로 보고하므로 지연될 수 있습니다. 접근 권한이 없으면 생략됩니다.
+             */
+            lastUsedAt?: string | null;
+            /** @description 키 이름 */
+            name: string;
+            /** @description 이 키의 소유자 이름. 접근을 요청할 상대입니다. */
+            ownerNames: string[];
+            /** @description 용도. 접근 권한이 없으면 생략됩니다. */
+            purpose?: string | null;
+            /** @description 프롬프트·응답 본문 기록 여부. 접근 권한이 없으면 생략됩니다. */
+            recordBodies?: boolean | null;
+            /**
+             * Format: int32
+             * @description 분당 요청 한도. null이면 게이트웨이 기본값을 따릅니다. 접근 권한이 없으면 생략됩니다.
+             */
+            rpm?: number | null;
+            status: components["schemas"]["LlmApiKeyStatus"];
+            /** @description 평문 앞부분 — 목록에서 두 키를 구별하기 위한 값입니다. 접근 권한이 없거나 아직 발급 전이면 생략됩니다. */
+            tokenPrefix?: string | null;
+            /**
+             * Format: int32
+             * @description 분당 토큰 한도. null이면 게이트웨이 기본값을 따릅니다. 접근 권한이 없으면 생략됩니다.
+             */
+            tpm?: number | null;
+            /**
+             * Format: uuid
+             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             */
+            workspaceId?: string | null;
+            workspaceName: string;
         };
         LoginRequest: {
             email: string;
@@ -3233,6 +3569,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseLlmKeySummaryResponse: {
+            content: components["schemas"]["LlmKeySummaryResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseNotificationView: {
             content: components["schemas"]["NotificationView"][];
             /** Format: int32 */
@@ -3411,6 +3758,7 @@ export interface components {
             extraNote?: string | null;
             /** Format: uuid */
             id: string;
+            llmKey?: components["schemas"]["LlmKeyRequestSpecResponse"] | null;
             /**
              * Format: uuid
              * @description 신청 대상 기관. 행이 사라진 경우에만 null입니다.
@@ -3554,7 +3902,7 @@ export interface components {
             vcpu: number;
         };
         /** @enum {string} */
-        ResourceType: "VM";
+        ResourceType: "VM" | "LLM_API_KEY";
         Resources: {
             activeVms: components["schemas"]["VmBriefResponse"][];
             totals: components["schemas"]["ResourceTotalsResponse"];
@@ -3737,6 +4085,14 @@ export interface components {
         UpdateDomainRequest: {
             /** Format: int32 */
             port?: number;
+        };
+        UpdateLlmKeyRequest: {
+            /** @description 키 이름. 생략하면 그대로 둡니다. */
+            name?: string | null;
+            /** @description 사용 목적. 생략하면 그대로 둡니다. */
+            purpose?: string | null;
+            /** @description 요청·응답 본문 기록 여부. 기본값은 꺼짐이며, 켜면 이 키로 보낸 프롬프트와 응답이 수집됩니다. 생략하면 그대로 둡니다. */
+            recordBodies?: boolean | null;
         };
         UpdateNodeStatusRequest: {
             /** @description ACTIVE만 신규 VM 배치 대상 — MAINTENANCE/OFFLINE은 배치 제외 (기존 게스트 무영향) */
@@ -6970,6 +7326,355 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DomainDetailView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listLlmKeys: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseLlmKeySummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getLlmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateLlmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLlmKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listLlmKeyAccessGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessListResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addLlmKeyAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeLlmKeyAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                keyId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateLlmKeyAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                keyId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revokeLlmKey: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    issueLlmKeyToken: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IssuedLlmKeyResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

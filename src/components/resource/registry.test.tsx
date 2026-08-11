@@ -22,7 +22,10 @@ function resource(overrides: Partial<ResourceSummary> = {}): ResourceSummary {
 }
 
 /** 서버가 먼저 내보낸, 이 빌드가 아직 모르는 종류. */
-const UNKNOWN_TYPE = 'LLM_API_KEY' as ResourceSummary['type']
+// A type the server might add next. It must not be a value this build knows:
+// the point of the case is the row that arrives before the bundle does, and a
+// registered type would test the opposite branch while still passing.
+const UNKNOWN_TYPE = 'GPU_ALLOCATION' as ResourceSummary['type']
 
 describe('리소스 종류 레지스트리', () => {
   test('아는 종류는 라벨·상세 경로·상태 배지를 준다', () => {
@@ -38,7 +41,7 @@ describe('리소스 종류 레지스트리', () => {
     // api와 콘솔은 따로 배포된다 — 서버가 먼저 내보낸 종류가 옛 번들에 닿는다.
     const entry = resourceTypeEntry(UNKNOWN_TYPE)
 
-    expect(entry.label).toBe('LLM_API_KEY')
+    expect(entry.label).toBe('GPU_ALLOCATION')
     // 갈 수 있는 상세 화면이 없으므로 링크를 만들지 않는다.
     expect(entry.detailPath).toBeUndefined()
     expect(entry.rowAction).toBeUndefined()

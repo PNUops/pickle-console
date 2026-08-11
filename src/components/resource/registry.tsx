@@ -44,6 +44,16 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
         </Link>
       ) : null,
   },
+  // The type exists server-side before its screens do. This entry keeps the
+  // inventory naming it correctly in the meantime; the badge and the detail
+  // path arrive with the key screens, and until then a row degrades exactly
+  // the way an unknown type does — deliberately, rather than by inventing a
+  // status vocabulary the contract has not published yet.
+  LLM_API_KEY: {
+    label: 'LLM API 키',
+    statusBadge: (resource) => resource.status,
+    isActive: () => true,
+  },
 }
 
 /**
