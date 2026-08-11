@@ -45,6 +45,45 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   GATEWAY_UNBLOCK: 'SSH·터미널 차단 해제',
 }
 
+/* ─── LLM API 키 ─── */
+
+export type LlmApiKeyStatus = components['schemas']['LlmApiKeyStatus']
+
+/**
+ * 키의 다섯 상태. 발급 전과 폐기됨은 서로 다른 이야기다 — 발급 전은 승인은 났고
+ * 소유자가 아직 비밀을 만들지 않은 상태(그 키로는 아무것도 인증되지 않는다),
+ * 폐기됨은 비밀이 죽은 상태다. 라벨이 그 차이를 먼저 말한다.
+ */
+export const LLM_KEY_STATUS_LABELS: Record<LlmApiKeyStatus, string> = {
+  PENDING: '발급 전',
+  ACTIVE: '활성',
+  SUSPENDED: '정지됨',
+  REVOKED: '폐기됨',
+  EXPIRED: '만료됨',
+}
+
+/**
+ * 화면이 믿어야 할 상태 — 저장된 문자열이 아니라 만료 시각을 함께 본다.
+ *
+ * 만료를 집행하는 것은 게이트웨이이고, 그 판단 근거는 `expires_at` 타임스탬프다.
+ * 상태 열을 `EXPIRED`로 옮기는 코드는 서버 어디에도 없어서, 기간이 지난 키도
+ * 저장된 값은 계속 `ACTIVE`다. 그 문자열만 믿으면 콘솔은 이미 거부되고 있는 키를
+ * '활성'이라 부르고 재발급까지 권하게 된다 — 새로 받은 평문도 똑같이 거부되는데.
+ * 두 곳이 같은 근거를 보게 하는 것이 이 함수의 전부다.
+ *
+ * 폐기는 시간을 이긴다(죽은 것은 죽은 것이고, 되살릴 수도 없다). 그 밖의 상태는
+ * 만료가 이긴다 — 정지된 데다 만료까지 됐다면 '해제하면 된다'는 말이 거짓이다.
+ */
+export function effectiveLlmKeyStatus(
+  status: LlmApiKeyStatus,
+  expiresAt?: string | null,
+  now: number = Date.now(),
+): LlmApiKeyStatus {
+  if (status === 'REVOKED') return 'REVOKED'
+  if (expiresAt != null && Date.parse(expiresAt) <= now) return 'EXPIRED'
+  return status
+}
+
 /* ─── HTTP 공개·도메인·인증서 ─── */
 
 export type DomainKind = components['schemas']['DomainKind']

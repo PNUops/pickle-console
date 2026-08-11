@@ -20,7 +20,7 @@ import {
   Spinner,
   StatTile,
 } from '../components/ui'
-import { formatDateTime, formatDday, formatSpec } from '../lib/format'
+import { formatDateTime, formatDday } from '../lib/format'
 
 
 /** 만료 임박으로 취급하는 잔여 일수 상한. */
@@ -228,8 +228,10 @@ export function ConsoleDashboardPage() {
                   className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-neutral-50"
                 >
                   <span className="min-w-0">
+                    {/* 신청을 가리키는 것은 이름이다 — 종류를 가리지 않고 모든
+                        신청이 갖는 값이라, VM 사양 한 줄보다 이것이 맞다. */}
                     <span className="block truncate text-sm font-medium text-neutral-900">
-                      {request.workspaceName} · {formatSpec(request.vm?.reqVcpu, request.vm?.reqMemoryMb, request.vm?.reqDiskGb)}
+                      {request.workspaceName} · {request.displayName}
                     </span>
                     <span className="mt-0.5 block text-xs text-neutral-500">
                       {formatDateTime(request.createdAt)} 제출

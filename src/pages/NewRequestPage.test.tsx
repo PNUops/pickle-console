@@ -341,6 +341,47 @@ describe('VM 신청 위저드 — 리소스 이름', () => {
   })
 })
 
+describe('VM 신청 위저드 — 서버 검증 오류', () => {
+  // 서버는 스펙 필드를 신청 본문의 하위 객체 경로로 되돌려준다(vm.desiredSlug).
+  // 콘솔이 평평한 이름으로 받던 동안에는 어떤 라벨과도 맞지 않아, 사용자는 원시
+  // 필드 경로를 읽어야 했다.
+  test('422가 가리키는 스펙 필드를 그 칸의 한국어 이름으로 알려 준다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/v1/requests', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값이 올바르지 않습니다',
+            status: 422,
+            detail: '입력값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [
+              { field: 'vm.desiredSlug', message: '이미 사용 중인 호스트명입니다.' },
+            ],
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    renderWizard()
+    await screen.findByRole('heading', { name: '리소스 신청' })
+    await passStep1(user)
+    await user.click(screen.getByRole('button', { name: /Ubuntu 24\.04 LTS/ }))
+    await user.click(screen.getByRole('button', { name: /기본형/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+
+    expect(
+      await screen.findByText('호스트명(슬러그): 이미 사용 중인 호스트명입니다.'),
+    ).toBeInTheDocument()
+    // 원시 경로가 그대로 새지 않는다.
+    expect(screen.queryByText(/vm\.desiredSlug/)).not.toBeInTheDocument()
+  })
+})
+
 describe('VM 신청 위저드 — 제출', () => {
   test('전체 단계를 통과하면 계약에 맞는 페이로드로 제출하고 완료 화면을 보여준다', async () => {
     const user = userEvent.setup()

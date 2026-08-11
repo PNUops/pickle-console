@@ -24,6 +24,7 @@ export function ConsoleLayout() {
       items: [
         { to: consolePaths.resources(scope), label: '전체 리소스', icon: navIcons.dashboard },
         { to: consolePaths.vms(scope), label: 'VM', icon: navIcons.server },
+        { to: consolePaths.llmKeys(scope), label: 'LLM API 키', icon: navIcons.chip },
       ],
     },
     {
