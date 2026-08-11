@@ -108,6 +108,16 @@ export function AdminNetworkPage() {
   )
 }
 
+/**
+ * 정지 사유 뒤에 붙는 수행자 표시. 사람이 정지했으면 그 사람을 이름으로 밝히고,
+ * 수행자가 없으면 자동 정지다. 이름 없이 id만 남은 행은 아무 말도 덧붙이지 않는다 —
+ * UUID는 읽는 사람에게 알려주는 것이 없다.
+ */
+function suspendedNote(mapping: AdminPortMappingView): string {
+  if (mapping.suspendedByName) return ` (정지: ${mapping.suspendedByName})`
+  return mapping.suspendedBy == null ? ' (자동 정지)' : ''
+}
+
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
@@ -520,13 +530,13 @@ function MappingDrawerContent({
         </div>
         <Field label="릴레이" value={mapping.relayName} />
         <Field label="생성일" value={formatDateTime(mapping.createdAt)} />
-        <Field label="생성자" value="—" />
+        <Field label="생성자" value={mapping.createdByName ?? '—'} />
       </dl>
 
       {mapping.status === 'SUSPENDED' && (
         <Alert variant="warning" title="정지된 매핑입니다">
           {mapping.suspendedReason ?? '사유가 기록되지 않았습니다.'}
-          {mapping.suspendedBy == null && ' (자동 정지)'}
+          {suspendedNote(mapping)}
         </Alert>
       )}
 

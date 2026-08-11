@@ -126,6 +126,24 @@ describe('네트워크 — 포트포워딩 탭', () => {
     expect(within(drawer).getByRole('button', { name: '재개' })).toBeInTheDocument()
   })
 
+  // 매핑을 만든 사람도 정지한 사람도 예전에는 id만 있었다. 관리자 화면에서 id는 UUID라
+  // 아무것도 알려주지 않아 생성자 자리가 '—'로 비어 있었고, 정지는 사람이 했는지조차
+  // 구분되지 않았다. 이제 응답이 이름을 실어 준다.
+  test('드로어는 매핑을 만든 사람과 정지한 사람을 이름으로 밝힌다', async () => {
+    const user = userEvent.setup()
+    renderNetwork('forwardings')
+
+    // 정지된 매핑만 남겨 같은 VM의 활성 매핑과 행이 겹치지 않게 한다.
+    await user.click(await screen.findByRole('button', { name: '정지됨' }))
+    await user.click(await screen.findByRole('button', { name: 'algo-judge' }))
+    const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
+
+    const creator = within(drawer).getByText('생성자').closest('div')!
+    expect(within(creator).getByText('김철수')).toBeInTheDocument()
+    expect(within(drawer).getByText(/과도한 트래픽 발생 \(정지: 이시스템\)/)).toBeInTheDocument()
+    expect(within(drawer).queryByText(/자동 정지/)).not.toBeInTheDocument()
+  })
+
   test('가드 조정은 SYS_ADMIN 전용 — SYS_MANAGER는 비활성 + 안내', async () => {
     const user = userEvent.setup()
     renderNetwork('forwardings', 'access-sys-manager', sysManagerUser)
