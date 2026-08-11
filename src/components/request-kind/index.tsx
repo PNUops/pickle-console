@@ -50,7 +50,7 @@ const unknownKindAdmin: RequestKindAdmin = {
     </>
   ),
   resultFields: () => null,
-  useDecisionForm: () => ({
+  useDecisionData: () => ({
     status: 'blocked',
     gate: (
       <Alert variant="warning" title="결정할 수 없는 신청입니다">
@@ -59,6 +59,10 @@ const unknownKindAdmin: RequestKindAdmin = {
       </Alert>
     ),
   }),
+  useApproveForm: () => {
+    // useDecisionData가 항상 blocked라 승인 폼은 마운트되지 않는다.
+    throw new Error('unknown request kind cannot be approved')
+  },
 }
 
 export function requestKindAdmin(type: string): RequestKindAdmin {

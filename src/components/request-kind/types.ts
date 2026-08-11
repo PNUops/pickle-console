@@ -81,22 +81,25 @@ export interface RequestKindModule {
 /* ─── 관리자 승인 ─── */
 
 /**
- * 검토 결정 폼의 종류별 동작. blocked면 결정 카드 자리 전체에 gate를 그린다
- * (카탈로그 로딩·오류 — 반려 폼까지 함께 숨겨 절반짜리 결정을 막는다).
+ * 결정에 필요한 종류별 카탈로그의 로딩 상태. blocked면 결정 카드 자리 전체에
+ * gate를 그린다 (로딩·오류 — 반려 폼까지 함께 숨겨 절반짜리 결정을 막는다).
+ * ready의 value는 그 종류의 useApproveForm이 돌려받아 쓰는 자기 데이터다.
  */
-export type DecisionForm =
+export type DecisionData =
   | { status: 'blocked'; gate: ReactNode }
-  | {
-      status: 'ready'
-      /** 승인 폼 본문 — 안내문·입력 전부. 제출 버튼·모달은 공통 골격 몫이다. */
-      fields(errors: Record<string, string>): ReactNode
-      validate(): Record<string, string>
-      body(): ApproveRequest
-      /** 승인 확인 모달 본문. */
-      confirmBody: ReactNode
-      /** 승인 성공 알림 문구. */
-      successMessage: string
-    }
+  | { status: 'ready'; value: unknown }
+
+/** 승인 폼의 종류별 동작 — 제출 버튼·확인 모달·오류 매핑은 공통 골격 몫이다. */
+export interface DecisionFormApi {
+  /** 승인 폼 본문 — 안내문·입력 전부. */
+  fields(errors: Record<string, string>): ReactNode
+  validate(): Record<string, string>
+  body(): ApproveRequest
+  /** 승인 확인 모달 본문. */
+  confirmBody: ReactNode
+  /** 승인 성공 알림 문구. */
+  successMessage: string
+}
 
 /** 관리자 화면(승인 대기 큐·신청 상세)에 등록되는 종류 모듈. */
 export interface RequestKindAdmin {
@@ -115,5 +118,11 @@ export interface RequestKindAdmin {
   contentFields(request: RequestDetail): ReactNode
   /** 검토 결과 카드의 승인 상세(부여 사양·기간 등) — 반려·해당 없음이면 null. */
   resultFields(request: RequestDetail): ReactNode
-  useDecisionForm(request: RequestDetail): DecisionForm
+  /** 결정용 카탈로그 로딩 — 결정 폼보다 바깥에서 불려 폼 상태와 분리된다. */
+  useDecisionData(): DecisionData
+  /**
+   * 승인 폼 상태·검증·본문. ready일 때만 마운트되는 컴포넌트에서 불리므로,
+   * 카탈로그 오류로 gate가 열리면 폼 상태는 이전처럼 통째로 초기화된다.
+   */
+  useApproveForm(request: RequestDetail, value: unknown): DecisionFormApi
 }

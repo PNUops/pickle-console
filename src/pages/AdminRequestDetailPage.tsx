@@ -33,7 +33,7 @@ import {
   useDecisionCatalogPrefetch,
 } from '../components/request-kind'
 import { Field } from '../components/request-kind/Field'
-import type { DecisionForm } from '../components/request-kind/types'
+import type { RequestKindAdmin } from '../components/request-kind/types'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -165,7 +165,8 @@ function DecisionResultCard({
 /**
  * 결정 영역의 종류별 준비(카탈로그 로딩·오류)를 폼 앞단에서 거른다.
  * blocked면 결정 카드 자리 전체에 gate를 그린다 — 반려 폼만 남은 절반짜리
- * 결정 화면을 만들지 않기 위해서다.
+ * 결정 화면을 만들지 않기 위해서다. 폼 상태는 ready일 때만 마운트되는
+ * DecisionSection이 들고 있어, 오류로 gate가 열리면 통째로 초기화된다.
  */
 function DecisionArea({
   request,
@@ -175,21 +176,31 @@ function DecisionArea({
   onNotice: (notice: Notice | null) => void
 }) {
   const kind = requestKindAdmin(request.type)
-  const form = kind.useDecisionForm(request)
-  if (form.status === 'blocked') return form.gate
-  return <DecisionSection request={request} form={form} onNotice={onNotice} />
+  const decision = kind.useDecisionData()
+  if (decision.status === 'blocked') return decision.gate
+  return (
+    <DecisionSection
+      request={request}
+      kind={kind}
+      decisionValue={decision.value}
+      onNotice={onNotice}
+    />
+  )
 }
 
 function DecisionSection({
   request,
-  form,
+  kind,
+  decisionValue,
   onNotice,
 }: {
   request: RequestDetail
-  form: Extract<DecisionForm, { status: 'ready' }>
+  kind: RequestKindAdmin
+  decisionValue: unknown
   onNotice: (notice: Notice | null) => void
 }) {
   const queryClient = useQueryClient()
+  const form = kind.useApproveForm(request, decisionValue)
   const [mode, setMode] = useState<'approve' | 'reject'>('approve')
 
   // 반려 폼

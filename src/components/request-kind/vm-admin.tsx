@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   fetchOsImages,
   type ApproveRequest,
+  type OsImage,
   type RequestDetail,
 } from '../../api/queries'
 import {
@@ -17,27 +18,18 @@ import {
 import { formatSpec } from '../../lib/format'
 import { SUBDOMAIN_RE, isUuid } from '../../lib/validation'
 import { Field } from './Field'
-import type { DecisionForm, RequestKindAdmin } from './types'
+import type { DecisionData, DecisionFormApi, RequestKindAdmin } from './types'
 
-function useVmDecisionForm(request: RequestDetail): DecisionForm {
+function useVmDecisionData(): DecisionData {
   const osImages = useQuery({
     queryKey: ['os-images'],
     queryFn: fetchOsImages,
-    // 페이지 진입 시의 프리페치가 이미 한 번 시도했다 — 폼 마운트가 실패를
-    // 조용히 재시도해 오류 안내(재시도 버튼)를 건너뛰지 않게 한다.
+    // 페이지 진입 시의 프리페치 옵저버가 조회를 소유한다 — 이 옵저버의 마운트가
+    // 같은 조회를 한 번 더 쏘거나(성공 후 재조회), 실패를 조용히 재시도해
+    // 오류 안내(재시도 버튼)를 건너뛰지 않게 한다.
+    refetchOnMount: false,
     retryOnMount: false,
   })
-
-  // 승인 폼 — 요청 사양으로 프리필
-  const [vcpu, setVcpu] = useState(String(request.vm?.reqVcpu))
-  const [memoryMb, setMemoryMb] = useState(String(request.vm?.reqMemoryMb))
-  const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
-  const [imageId, setImageId] = useState(String(request.vm?.imageId))
-  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
-  const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
-  const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
-  const [nodeId, setNodeId] = useState('')
-  const [approveComment, setApproveComment] = useState('')
 
   // OS 이미지 조회가 실패해도 결정 폼 자리를 비워 두지 않는다 — 실패를
   // 명시하고 재시도 경로를 제공한다 (무음 실종 방지).
@@ -71,11 +63,25 @@ function useVmDecisionForm(request: RequestDetail): DecisionForm {
       ),
     }
   }
-  const images = osImages.data
+  return { status: 'ready', value: osImages.data }
+}
+
+function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormApi {
+  // useVmDecisionData가 ready로 돌려준 그 값 — 이 모듈이 넣고 이 모듈이 꺼낸다.
+  const images = value as OsImage[]
+
+  // 승인 폼 — 요청 사양으로 프리필
+  const [vcpu, setVcpu] = useState(String(request.vm?.reqVcpu))
+  const [memoryMb, setMemoryMb] = useState(String(request.vm?.reqMemoryMb))
+  const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
+  const [imageId, setImageId] = useState(String(request.vm?.imageId))
+  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
+  const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
+  const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
+  const [nodeId, setNodeId] = useState('')
+  const [approveComment, setApproveComment] = useState('')
 
   return {
-    status: 'ready',
-
     validate: () => {
       const errors: Record<string, string> = {}
       const image = images.find((t) => t.id === imageId)
@@ -220,6 +226,8 @@ function useVmDecisionForm(request: RequestDetail): DecisionForm {
 
 export const vmRequestAdmin: RequestKindAdmin = {
   decisionPrefetchQueries: [{ queryKey: ['os-images'], queryFn: fetchOsImages }],
+  useDecisionData: useVmDecisionData,
+  useApproveForm: useVmApproveForm,
 
   queueCell: (request) => (
     <>
@@ -261,7 +269,6 @@ export const vmRequestAdmin: RequestKindAdmin = {
       )}
     </>
   ),
-
   resultFields: (data) => {
     if (data.review?.decision !== 'APPROVE') return null
     const granted = data.vm?.granted
@@ -284,6 +291,4 @@ export const vmRequestAdmin: RequestKindAdmin = {
       </>
     )
   },
-
-  useDecisionForm: useVmDecisionForm,
 }
