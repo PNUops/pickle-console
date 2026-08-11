@@ -49,8 +49,13 @@ import { isUuid } from '../lib/validation'
  */
 const STEP_IDS: WizardStepId[] = ['kind', 'target', 'spec', 'purpose', 'confirm']
 
-/** 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용) — 종류 필드는 모듈이 보탠다. */
+/**
+ * 422 errors[] 필드명 → 한국어 라벨 (요약 알림 표시용) — 종류 필드는 모듈이 보탠다.
+ * 여기 있는 것은 신청 본문 최상위 필드뿐이다: 종류별 스펙은 본문의 하위 객체라
+ * 서버가 'vm.imageId'처럼 중첩 경로로 보내고, 그 라벨은 종류 모듈이 든다.
+ */
 const COMMON_FIELD_LABELS: Record<string, string> = {
+  type: '리소스 종류',
   workspaceId: '워크스페이스',
   orgId: '기관',
   purpose: '용도',

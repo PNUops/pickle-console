@@ -82,21 +82,28 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const [approveComment, setApproveComment] = useState('')
 
   return {
+    /**
+     * 오류 키는 서버가 422의 errors[]에 싣는 필드 경로와 같아야 한다.
+     * 부여 사양은 승인 본문의 vm 아래에 있으므로 서버가 보내는 이름도
+     * 'vm.grantedVcpu'처럼 중첩형이다 — 평평한 이름으로 받으면 서버가
+     * 되돌려준 오류가 어느 칸에도 붙지 못한다. 기간(grantedStartDate·
+     * grantedEndDate)과 승인 의견은 본문 최상위라 접두사가 없다.
+     */
     validate: () => {
       const errors: Record<string, string> = {}
       const image = images.find((t) => t.id === imageId)
       if (!Number.isInteger(Number(vcpu)) || Number(vcpu) < 1)
-        errors.grantedVcpu = 'vCPU는 1 이상의 정수로 입력해 주세요.'
+        errors['vm.grantedVcpu'] = 'vCPU는 1 이상의 정수로 입력해 주세요.'
       if (!Number.isInteger(Number(memoryMb)) || Number(memoryMb) < 256)
-        errors.grantedMemoryMb = '메모리는 256 MiB 이상으로 입력해 주세요.'
+        errors['vm.grantedMemoryMb'] = '메모리는 256 MiB 이상으로 입력해 주세요.'
       if (!Number.isInteger(Number(diskGb)) || Number(diskGb) < 1)
-        errors.grantedDiskGb = '디스크는 1 GiB 이상으로 입력해 주세요.'
+        errors['vm.grantedDiskGb'] = '디스크는 1 GiB 이상으로 입력해 주세요.'
       else if (image && Number(diskGb) < image.minDiskGb)
-        errors.grantedDiskGb = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
+        errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
       if (nodeId.trim() && !isUuid(nodeId.trim()))
-        errors.nodeId = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
+        errors['vm.nodeId'] = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
       if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
-        errors.grantedSlug =
+        errors['vm.grantedSlug'] =
           '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
       return errors
     },
@@ -121,7 +128,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
           요청 사양으로 미리 채워져 있습니다. 필요하면 조정한 뒤 승인해 주세요.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField label="vCPU" required error={fieldErrors.grantedVcpu}>
+          <FormField label="vCPU" required error={fieldErrors['vm.grantedVcpu']}>
             <Input
               type="number"
               min={1}
@@ -129,7 +136,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
               onChange={(event) => setVcpu(event.target.value)}
             />
           </FormField>
-          <FormField label="메모리 (MiB)" required error={fieldErrors.grantedMemoryMb}>
+          <FormField label="메모리 (MiB)" required error={fieldErrors['vm.grantedMemoryMb']}>
             <Input
               type="number"
               min={256}
@@ -138,7 +145,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
               onChange={(event) => setMemoryMb(event.target.value)}
             />
           </FormField>
-          <FormField label="디스크 (GiB)" required error={fieldErrors.grantedDiskGb}>
+          <FormField label="디스크 (GiB)" required error={fieldErrors['vm.grantedDiskGb']}>
             <Input
               type="number"
               min={1}
@@ -147,7 +154,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             />
           </FormField>
         </div>
-        <FormField label="OS 이미지" required error={fieldErrors.grantedImageId}>
+        <FormField label="OS 이미지" required error={fieldErrors['vm.grantedImageId']}>
           <Select
             value={imageId}
             onChange={(event) => setImageId(event.target.value)}
@@ -177,7 +184,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         </div>
         <FormField
           label="호스트명(슬러그) 확정"
-          error={fieldErrors.grantedSlug}
+          error={fieldErrors['vm.grantedSlug']}
           description="SSH 접속명·VM 이름으로 쓰입니다. 신청자의 희망값이 채워져 있으며, 비우면 자동 생성됩니다."
         >
           <Input
@@ -189,7 +196,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         </FormField>
         <FormField
           label="배치 노드 ID"
-          error={fieldErrors.nodeId}
+          error={fieldErrors['vm.nodeId']}
           description="비워 두면 자동 배치됩니다."
         >
           <Input
