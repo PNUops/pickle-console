@@ -58,13 +58,6 @@ export function UserMenu() {
             </button>
             <button
               type="button"
-              onClick={() => go('/console/ssh-keys')}
-              className={itemClass}
-            >
-              SSH 키
-            </button>
-            <button
-              type="button"
               onClick={() => go('/console/activity')}
               className={itemClass}
             >

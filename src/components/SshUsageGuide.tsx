@@ -10,8 +10,6 @@ const TABS: { id: OsTab; label: string }[] = [
   { id: 'linux', label: 'Linux' },
 ]
 
-const KEY_FILE = 'id_ed25519_pickle'
-
 /** 코드 한 줄 — 터미널 명령·설정을 mono로 표시한다. */
 function Code({ children }: { children: string }) {
   return (
@@ -35,6 +33,8 @@ export interface SshUsageGuideProps {
   hostname?: string
   /** SSH 게이트웨이 호스트. 없으면 자리표시자. */
   sshHost?: string
+  /** 이 VM의 개인키 파일 이름. 키는 VM마다 발급되므로 이름도 VM마다 다르다. */
+  keyFile?: string
   className?: string
 }
 
@@ -42,7 +42,7 @@ export interface SshUsageGuideProps {
  * OS별 SSH 접속 안내 — 키 파일 이동·권한 설정, `ssh -i` 접속 명령, ~/.ssh/config 예시.
  * 게이트웨이는 사용자명으로 대상 VM을 라우팅하므로 로그인 계정은 VM 호스트명이다.
  */
-export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuideProps) {
+export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsageGuideProps) {
   // 페이지 카드와 키 발급 모달에 동시에 마운트될 수 있어 탭 id를 인스턴스별로 구분한다.
   const uid = useId()
   const [tab, setTab] = useState<OsTab>('macos')
@@ -52,10 +52,11 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
   // here would put a possibly-wrong host into copy-pasteable command text and
   // make it look authoritative. A visible placeholder is the honest fallback.
   const gateway = sshHost ?? '<SSH 게이트웨이>'
+  const file = keyFile ?? '<개인키 파일>'
   const isWindows = tab === 'windows'
   const keyPath = isWindows
-    ? `%USERPROFILE%\\.ssh\\${KEY_FILE}`
-    : `~/.ssh/${KEY_FILE}`
+    ? `%USERPROFILE%\\.ssh\\${file}`
+    : `~/.ssh/${file}`
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -71,9 +72,9 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
       <TabPanel id={tab} active idPrefix={uid} className="space-y-4">
         <Step title="1. 개인키 파일을 안전한 위치로 옮깁니다">
           {isWindows ? (
-            <Code>{`move %USERPROFILE%\\Downloads\\${KEY_FILE} %USERPROFILE%\\.ssh\\`}</Code>
+            <Code>{`move %USERPROFILE%\\Downloads\\${file} %USERPROFILE%\\.ssh\\`}</Code>
           ) : (
-            <Code>{`mv ~/Downloads/${KEY_FILE} ~/.ssh/`}</Code>
+            <Code>{`mv ~/Downloads/${file} ~/.ssh/`}</Code>
           )}
         </Step>
 
@@ -86,13 +87,18 @@ export function SshUsageGuide({ hostname, sshHost, className }: SshUsageGuidePro
         </Step>
 
         <Step title="3. SSH로 접속합니다">
-          <Code>{`ssh -i ${keyPath} ${host}@${gateway}`}</Code>
+          <Code>{`ssh -i ${keyPath} -o IdentitiesOnly=yes ${host}@${gateway}`}</Code>
         </Step>
 
         <Step title="자주 접속한다면 ~/.ssh/config에 등록하세요">
-          <Code>{`Host ${host}\n  HostName ${gateway}\n  User ${host}\n  IdentityFile ${keyPath}`}</Code>
+          <Code>{`Host ${host}\n  HostName ${gateway}\n  User ${host}\n  IdentityFile ${keyPath}\n  IdentitiesOnly yes`}</Code>
           <p className="text-xs text-neutral-500">
             등록 후에는 <span className="font-mono">ssh {host}</span> 만으로 접속할 수 있습니다.
+          </p>
+          <p className="text-xs text-neutral-500">
+            <span className="font-mono">IdentitiesOnly yes</span> 는 꼭 넣어 주세요. 키는 VM마다
+            따로 발급되므로 VM이 여러 대면 개인키도 여러 개가 되는데, 이 줄이 없으면 SSH가 가진 키를
+            전부 차례로 제시해 접속이 거부될 수 있습니다.
           </p>
         </Step>
       </TabPanel>

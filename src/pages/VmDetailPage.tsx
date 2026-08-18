@@ -8,7 +8,12 @@ import {
 } from '@tanstack/react-query'
 import {
   deleteVm,
-  fetchMySshKeys,
+  fetchVmSshKey,
+  issueVmSshKey,
+  reissueVmSshKey,
+  downloadVmSshKey,
+  deleteVmSshKey,
+  type VmSshKeyIssueResponse,
   fetchVm,
   fetchVmEvents,
   fetchVmSettings,
@@ -73,6 +78,7 @@ import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
+import { savePem } from '../lib/download'
 import { useOpenTerminalWindow } from '../terminal/useOpenTerminalWindow'
 
 // 사용량 차트는 uPlot을 끌어오므로, 모니터링 탭을 여는 사용자에게만 로드되도록
@@ -484,61 +490,256 @@ function canUseTerminal(vm: VmDetail): boolean {
   return vm.status === 'RUNNING' && vm.accessAllowed
 }
 
-/** SSH 접속 명령·사용법 안내. 키가 하나도 없으면 접속 불가 경고 + 등록 유도. */
+/**
+ * 접속 카드 — 웹 터미널과 SSH 클라이언트, 두 경로를 나란히 놓는다.
+ *
+ * 둘의 자격은 같은 선(리소스 MEMBER 이상)에서 갈리고, 이제는 SSH 키까지 VM
+ * 단위라 "접속 자격은 전부 VM 단위"가 한 문장으로 성립한다. 사용자가 가장 많이
+ * 헷갈리는 지점은 "웹 터미널에도 .pem이 필요한가"이므로 그 줄에 아니라고 적는다.
+ */
 function SshAccessSection({ vm }: { vm: VmDetail }) {
+  const queryClient = useQueryClient()
   const openTerminal = useOpenTerminalWindow()
-  const keys = useQuery({ queryKey: ['me', 'ssh-keys'], queryFn: fetchMySshKeys })
-  const command = `ssh ${vm.hostname}@${vm.sshHost}`
-  const noKeys = keys.isSuccess && keys.data.length === 0
+  const toast = useToast()
+  const [confirmReissue, setConfirmReissue] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const keyQuery = useQuery({
+    queryKey: ['vms', vm.id, 'ssh-key'],
+    queryFn: () => fetchVmSshKey(vm.id),
+    enabled: vm.accessAllowed,
+  })
+  const key = keyQuery.data?.key ?? null
+  const keyFile = key?.fileName ?? `pickle-${vm.hostname}.pem`
+  // IdentitiesOnly belongs on the one-liner too, not only in the config block:
+  // -i adds a key, it does not stop the agent's keys being offered first, and a
+  // person with several VMs has several keys.
+  const command =
+    `ssh -i ~/.ssh/${keyFile} -o IdentitiesOnly=yes ${vm.hostname}@${vm.sshHost}`
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['vms', vm.id, 'ssh-key'] })
+
+  // 개인키는 응답에서 곧바로 파일로 흘려보내고 상태에 담지 않는다.
+  const saveFrom = (res: VmSshKeyIssueResponse, message: string) => {
+    savePem(res.privateKey, res.fileName)
+    toast.success(message)
+  }
+
+
+  const issue = useMutation({
+    gcTime: 0,
+    mutationFn: () => issueVmSshKey(vm.id),
+    onSuccess: async (res) => {
+      setError(null)
+      saveFrom(res, '개인키를 내려받았습니다. 안전한 곳에 보관해 주세요.')
+      // The plaintext sits in the mutation result until it is reset; once it is
+      // a file on disk there is no reason to keep a copy in memory.
+      issue.reset()
+      await refresh()
+    },
+    onError: (err) => setError(toApiError(err, 'SSH 키를 발급하지 못했습니다.').message),
+  })
+
+  const download = useMutation({
+    gcTime: 0,
+    mutationFn: () => downloadVmSshKey(vm.id),
+    onSuccess: (res) => {
+      setError(null)
+      saveFrom(res, '개인키를 다시 내려받았습니다. 다운로드는 기록에 남습니다.')
+      download.reset()
+    },
+    onError: (err) => setError(toApiError(err, '개인키를 다운로드하지 못했습니다.').message),
+  })
+
+  const reissue = useMutation({
+    gcTime: 0,
+    mutationFn: () => reissueVmSshKey(vm.id),
+    onSuccess: async (res) => {
+      setError(null)
+      setConfirmReissue(false)
+      saveFrom(res, '새 개인키를 내려받았습니다. 이전 키로는 접속할 수 없습니다.')
+      reissue.reset()
+      await refresh()
+    },
+    onError: (err) => {
+      setConfirmReissue(false)
+      setError(toApiError(err, 'SSH 키를 재발급하지 못했습니다.').message)
+    },
+  })
+
+  const remove = useMutation({
+    mutationFn: () => deleteVmSshKey(vm.id),
+    onSuccess: async () => {
+      setError(null)
+      setConfirmDelete(false)
+      await refresh()
+    },
+    onError: (err) => {
+      setConfirmDelete(false)
+      setError(toApiError(err, 'SSH 키를 삭제하지 못했습니다.').message)
+    },
+  })
+
+  const busy = issue.isPending || download.isPending || reissue.isPending || remove.isPending
+
+  // 서버가 접속 불가로 판정한 사람에게 접속 방법을 보여줄 이유가 없다.
+  if (!vm.accessAllowed) return null
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
-        <CardTitle>SSH 접속</CardTitle>
-        {canUseTerminal(vm) && (
+      <CardHeader>
+        <CardTitle>접속</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {error && <Alert variant="danger">{error}</Alert>}
+
+        {/* ① 브라우저 */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-900">웹 터미널</p>
+            <p className="mt-0.5 text-sm text-neutral-500">
+              {canUseTerminal(vm)
+                ? '키 파일 없이 브라우저에서 바로 셸을 엽니다. 별도 창으로 열립니다.'
+                : '가상머신이 실행 중일 때만 열 수 있습니다.'}
+            </p>
+          </div>
           <Button
             size="sm"
+            disabled={!canUseTerminal(vm)}
             onClick={() =>
-              openTerminal({
-                vmId: vm.id,
-                label: vm.displayName || vm.name,
-                name: vm.name,
-              })
+              openTerminal({ vmId: vm.id, label: vm.displayName || vm.name, name: vm.name })
             }
           >
             웹 터미널 열기
           </Button>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {noKeys && (
-          <Alert variant="warning" title="SSH 키가 등록되어 있지 않습니다">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p>SSH 키가 등록되어 있지 않아 접속할 수 없습니다.</p>
-              <Link
-                to="/console/ssh-keys"
-                className="font-medium text-primary-700 hover:underline"
-              >
-                SSH 키 등록하기 →
-              </Link>
-            </div>
-          </Alert>
-        )}
-        <div className="flex items-center justify-between gap-3">
-          <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
-            {command}
-          </code>
-          <CopyButton value={command} label="복사" />
         </div>
-        <details className="workspace">
-          <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
-            접속 방법 보기
-          </summary>
-          <div className="mt-3">
-            <SshUsageGuide hostname={vm.hostname} sshHost={vm.sshHost} />
+
+        <hr className="border-neutral-200" />
+
+        {/* ② SSH 클라이언트 */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-neutral-900">SSH 클라이언트</p>
+            <p className="mt-0.5 text-sm text-neutral-500">
+              이 가상머신 전용 개인키로 접속합니다. 키는 가상머신마다 따로 발급되므로
+              다른 가상머신에는 쓸 수 없습니다.
+            </p>
           </div>
-        </details>
+
+          {keyQuery.isPending ? (
+            <p className="text-sm text-neutral-500">키 정보를 불러오는 중…</p>
+          ) : key ? (
+            <>
+              <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+                <dt className="text-neutral-500">지문</dt>
+                <dd className="flex items-center gap-2">
+                  <span className="font-mono text-xs break-all">{key.fingerprint}</span>
+                  <CopyButton value={key.fingerprint} label="복사" />
+                </dd>
+                <dt className="text-neutral-500">발급</dt>
+                <dd>{formatDateTime(key.createdAt)}</dd>
+                <dt className="text-neutral-500">마지막 사용</dt>
+                <dd>{key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음'}</dd>
+              </dl>
+
+              <div className="flex items-center justify-between gap-3">
+                <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
+                  {command}
+                </code>
+                <CopyButton value={command} label="복사" />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" disabled={busy}
+                        onClick={() => download.mutate()}>
+                  개인키 다시 받기
+                </Button>
+                <Button size="sm" variant="secondary" disabled={busy}
+                        onClick={() => setConfirmReissue(true)}>
+                  키 재발급
+                </Button>
+                <Button size="sm" variant="ghost" disabled={busy}
+                        onClick={() => setConfirmDelete(true)}>
+                  키 삭제
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-neutral-600">
+                아직 이 가상머신의 SSH 키를 발급받지 않았습니다.
+              </p>
+              <Button size="sm" disabled={busy} onClick={() => issue.mutate()}>
+                SSH 키 발급 및 다운로드
+              </Button>
+            </div>
+          )}
+
+          <details className="workspace">
+            <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
+              접속 방법 보기
+            </summary>
+            <div className="mt-3">
+              <SshUsageGuide hostname={vm.hostname} sshHost={vm.sshHost} keyFile={keyFile} />
+            </div>
+          </details>
+        </div>
       </CardContent>
+
+      <Modal
+        open={confirmReissue}
+        onClose={() => setConfirmReissue(false)}
+        title="SSH 키를 재발급할까요?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmReissue(false)}>
+              돌아가기
+            </Button>
+            <Button variant="danger" loading={reissue.isPending}
+                    onClick={() => reissue.mutate()}>
+              재발급하고 내려받기
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-neutral-600">
+            새 키쌍을 만들고 개인키를 내려받습니다.
+          </p>
+          <Alert variant="danger">
+            기존 키는 즉시 무효화되어 그 키 파일로는 더 이상 접속할 수 없습니다. 이미
+            열려 있는 SSH 세션은 끊기지 않습니다.
+          </Alert>
+        </div>
+      </Modal>
+
+      <Modal
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="SSH 키를 삭제할까요?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
+              돌아가기
+            </Button>
+            <Button variant="danger" loading={remove.isPending}
+                    onClick={() => remove.mutate()}>
+              삭제
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-neutral-600">
+            삭제하면 이 키로는 접속할 수 없습니다. 필요하면 언제든 다시 발급받을 수
+            있습니다.
+          </p>
+          <Alert variant="warning">
+            내려받아 둔 개인키 파일도 함께 지워 주세요.
+          </Alert>
+        </div>
+      </Modal>
     </Card>
   )
 }

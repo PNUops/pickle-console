@@ -368,7 +368,7 @@ export const authHandlers: RequestHandler[] = [
  * 헤더가 있으면 undefined를 반환해 원래(기본) 핸들러로 넘어간다.
  *
  * spec 형식: `'<METHOD> <path>'` — path는 `/api/v1` 아래의 계약 경로(MSW 패턴,
- * 예: `/me/ssh-keys/:keyId`).
+ * 예: `/vms/:vmId/ssh-key/private-key`).
  */
 export function reauthGateHandlers(...specs: string[]): RequestHandler[] {
   return specs.map((spec) => {

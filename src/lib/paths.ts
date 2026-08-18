@@ -32,7 +32,6 @@ export const consolePaths = {
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
   workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,
-  sshKeys: '/console/ssh-keys',
   account: '/console/account',
   notifications: '/console/notifications',
   activity: '/console/activity',
