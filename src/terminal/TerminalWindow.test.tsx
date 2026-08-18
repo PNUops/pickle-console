@@ -225,6 +225,29 @@ describe('TerminalWindow — opener 없음 / 종료 통지', () => {
   })
 })
 
+describe('TerminalWindow — 답하지 않는 opener', () => {
+  test('티켓 요청이 시간 초과하면 재시도 대신 안내로 마감한다', async () => {
+    // 콘솔 탭이 새로고침되면 그쪽 리스너와 창 기록이 옛 문서와 함께 사라진다.
+    // opener 자체는 살아 있으므로 요청은 나가지만 아무도 답하지 않고, 다시
+    // 눌러 봐야 같은 결과다 — 유일한 복구는 콘솔에서 다시 여는 것이다.
+    vi.useFakeTimers()
+    try {
+      render(<TerminalWindow vmId={VM_ID} />)
+      await vi.waitFor(() => expect(postSpy).toHaveBeenCalledTimes(1))
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(9000)
+      })
+
+      expect(screen.getByText('콘솔에서 열어 주세요')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '다시 연결' })).not.toBeInTheDocument()
+      expect(StubWebSocket.instances).toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 describe('TerminalWindow — 입출력과 크기', () => {
   test('바이너리 프레임은 터미널에 쓰이고, 입력은 바이너리로 나간다', async () => {
     render(<TerminalWindow vmId={VM_ID} />)

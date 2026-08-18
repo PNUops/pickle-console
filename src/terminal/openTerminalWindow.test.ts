@@ -1,4 +1,4 @@
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { setAccessToken } from '../api/token'
 import { problemResponse } from '../test/msw/handlers/auth'
@@ -159,6 +159,41 @@ describe('openTerminalWindow — 티켓 중계', () => {
     requestTicket(win, OTHER_VM_ID)
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(win.postMessage).not.toHaveBeenCalled()
+  })
+})
+
+describe('openTerminalWindow — mint 중복 제거', () => {
+  test('같은 창의 동시 요청은 티켓 하나를 나눠 쓴다', async () => {
+    // 개발 모드 이중 마운트와 재연결 연타가 같은 창에서 두 번 물어 온다. 티켓은
+    // 상환 여부와 무관하게 60초 동안 세션 상한을 차지하므로, 하나를 나눠 준다.
+    const win = fakeWindow()
+    openSpy.mockReturnValue(win as unknown as Window)
+    openTerminalWindow(target())
+
+    let mints = 0
+    server.use(
+      http.post('*/api/v1/vms/:vmId/terminal-sessions', () => {
+        mints += 1
+        return HttpResponse.json(
+          {
+            sessionId: '3f1c9a2e-8d4b-4f6a-9c27-5e8b1a0d4c33',
+            ticket: 'test-ticket-abc',
+            wsPath: '/terminal/ws',
+            subprotocol: 'pickle.terminal.v1',
+            expiresAt: '2026-08-18T03:15:30Z',
+          },
+          { status: 201 },
+        )
+      }),
+    )
+
+    requestTicket(win, VM_ID, 'req-1')
+    requestTicket(win, VM_ID, 'req-2')
+    await vi.waitFor(() => expect(win.postMessage).toHaveBeenCalledTimes(2))
+
+    expect(mints).toBe(1)
+    const ids = win.postMessage.mock.calls.map((c) => (c[0] as { requestId: string }).requestId)
+    expect(ids).toEqual(['req-1', 'req-2'])
   })
 })
 

@@ -12,7 +12,8 @@ const TICKET_TIMEOUT_MS = 8000
 
 const DETACHED_MESSAGE =
   '콘솔 탭과 연결되어 있지 않아 접속 티켓을 받을 수 없습니다. 콘솔에서 다시 열어 주세요.'
-const TIMEOUT_MESSAGE = '콘솔 탭이 응답하지 않아 접속 티켓을 받지 못했습니다.'
+const TIMEOUT_MESSAGE =
+  '콘솔 탭이 응답하지 않아 접속 티켓을 받지 못했습니다. 콘솔에서 다시 열어 주세요.'
 
 export interface OpenerTicketSource {
   /** 티켓을 받아올 수 있는 콘솔 탭이 살아 있는가. */
@@ -107,6 +108,12 @@ export function useOpenerTicket(vmId: string): OpenerTicketSource {
     return new Promise<TerminalSessionTicket>((resolve, reject) => {
       const timer = setTimeout(() => {
         pendingRef.current.delete(requestId)
+        // A living window that never answers is a console tab that reloaded
+        // since it opened us: its listener and its record of this window went
+        // with the old document, so retrying can only time out again. Treat it
+        // as detached so the screen says the one thing that does work — open
+        // the terminal from the console again, which re-adopts this window.
+        setAttached(false)
         reject(new Error(TIMEOUT_MESSAGE))
       }, TICKET_TIMEOUT_MS)
       pendingRef.current.set(requestId, { resolve, reject, timer })

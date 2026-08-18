@@ -13,7 +13,11 @@ export function TerminalRowAction({ resource }: { resource: ResourceSummary }) {
     <button
       type="button"
       onClick={() =>
-        openTerminal({ vmId: resource.id, label: resource.name, name: resource.name })
+        openTerminal({
+          vmId: resource.id,
+          label: resource.displayName || resource.name,
+          name: resource.name,
+        })
       }
       className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
     >

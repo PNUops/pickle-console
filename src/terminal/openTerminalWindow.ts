@@ -1,5 +1,5 @@
 import { toApiError } from '../api/problem'
-import { createTerminalSession } from '../api/queries'
+import { createTerminalSession, type TerminalSessionTicket } from '../api/queries'
 import { onSessionExpired } from '../api/token'
 import { terminalWindowName, terminalWindowPath } from '../lib/paths'
 import {
@@ -21,6 +21,8 @@ interface OpenWindow {
   vmId: string
   label: string
   name: string
+  /** A mint already on the wire for this window, shared by concurrent requests. */
+  pendingMint?: Promise<TerminalSessionTicket>
 }
 
 export interface TerminalWindowTarget {
@@ -71,7 +73,14 @@ function pruneClosed(): void {
 
 async function mintAndReply(entry: OpenWindow, requestId: string): Promise<void> {
   try {
-    const ticket = await createTerminalSession(entry.vmId)
+    // React's development double-mount asks twice for one window, and a user
+    // mashing "다시 연결" can too. Every mint counts against the session cap for
+    // its full 60s life whether or not it is redeemed, so concurrent requests
+    // share one ticket rather than stranding the extras.
+    entry.pendingMint ??= createTerminalSession(entry.vmId).finally(() => {
+      entry.pendingMint = undefined
+    })
+    const ticket = await entry.pendingMint
     post(entry.win, {
       source: CONSOLE_SOURCE,
       v: TERMINAL_MESSAGE_VERSION,
