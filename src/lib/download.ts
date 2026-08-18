@@ -9,14 +9,18 @@
 export function savePem(privateKey: string, fileName: string): void {
   const blob = new Blob([privateKey], { type: 'application/octet-stream' })
   const url = URL.createObjectURL(blob)
-  try {
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = fileName
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-  } finally {
-    URL.revokeObjectURL(url)
-  }
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  // Revoking in the same tick is a known way to lose the download: some
+  // browsers have not started reading the blob when the click returns, and the
+  // failure is silent — an empty file, or nothing at all, under a success
+  // message. The URL is dropped a moment later instead.
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS)
 }
+
+/** Long enough for the browser to have started the download, short enough not to matter. */
+const REVOKE_DELAY_MS = 10_000
