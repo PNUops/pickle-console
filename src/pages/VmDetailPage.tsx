@@ -601,7 +601,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
             <p className="mt-0.5 text-sm text-neutral-500">
               {canUseTerminal(vm)
                 ? '키 파일 없이 브라우저에서 바로 셸을 엽니다. 별도 창으로 열립니다.'
-                : 'VM이 실행 중일 때만 열 수 있습니다.'}
+                : '가상머신이 실행 중일 때만 열 수 있습니다.'}
             </p>
           </div>
           <Button
@@ -622,8 +622,8 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
           <div>
             <p className="text-sm font-medium text-neutral-900">SSH 클라이언트</p>
             <p className="mt-0.5 text-sm text-neutral-500">
-              이 VM 전용 개인키로 접속합니다. 키는 VM마다 따로 발급되므로 다른 VM에는
-              쓸 수 없습니다.
+              이 가상머신 전용 개인키로 접속합니다. 키는 가상머신마다 따로 발급되므로
+              다른 가상머신에는 쓸 수 없습니다.
             </p>
           </div>
 
@@ -668,7 +668,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-neutral-600">
-                아직 이 VM의 SSH 키를 발급받지 않았습니다.
+                아직 이 가상머신의 SSH 키를 발급받지 않았습니다.
               </p>
               <Button size="sm" disabled={busy} onClick={() => issue.mutate()}>
                 SSH 키 발급 및 다운로드

@@ -376,7 +376,7 @@ describe('VM 상세 — 접속', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText('아직 이 VM의 SSH 키를 발급받지 않았습니다.'),
+      await screen.findByText('아직 이 가상머신의 SSH 키를 발급받지 않았습니다.'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'SSH 키 발급 및 다운로드' }),
@@ -473,7 +473,7 @@ describe('VM 상세 — 웹 터미널 열기', () => {
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(await screen.findByRole('button', { name: '웹 터미널 열기' })).toBeDisabled()
-    expect(screen.getByText('VM이 실행 중일 때만 열 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('가상머신이 실행 중일 때만 열 수 있습니다.')).toBeInTheDocument()
   })
 
   test('버튼을 누르면 팝업 창을 연다 (콘솔 라우트 이동이 아니다)', async () => {
