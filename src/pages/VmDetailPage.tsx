@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import {
   keepPreviousData,
   useMutation,
@@ -73,6 +73,7 @@ import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
+import { useOpenTerminalWindow } from '../terminal/useOpenTerminalWindow'
 
 // 사용량 차트는 uPlot을 끌어오므로, 모니터링 탭을 여는 사용자에게만 로드되도록
 // 코드 분할한다(상세 화면 진입 번들 경량 유지).
@@ -485,7 +486,7 @@ function canUseTerminal(vm: VmDetail): boolean {
 
 /** SSH 접속 명령·사용법 안내. 키가 하나도 없으면 접속 불가 경고 + 등록 유도. */
 function SshAccessSection({ vm }: { vm: VmDetail }) {
-  const navigate = useNavigate()
+  const openTerminal = useOpenTerminalWindow()
   const keys = useQuery({ queryKey: ['me', 'ssh-keys'], queryFn: fetchMySshKeys })
   const command = `ssh ${vm.hostname}@${vm.sshHost}`
   const noKeys = keys.isSuccess && keys.data.length === 0
@@ -497,7 +498,13 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
         {canUseTerminal(vm) && (
           <Button
             size="sm"
-            onClick={() => navigate(`/console/vms/${vm.id}/terminal`)}
+            onClick={() =>
+              openTerminal({
+                vmId: vm.id,
+                label: vm.displayName || vm.name,
+                name: vm.name,
+              })
+            }
           >
             웹 터미널 열기
           </Button>

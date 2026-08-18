@@ -24,7 +24,6 @@ export const consolePaths = {
   // already points here — a notification, a bookmark — keeps working.
   vmDetail: (vmId: string) => `/console/vms/${vmId}`,
   vmAccess: (vmId: string) => `/console/vms/${vmId}/access`,
-  vmTerminal: (vmId: string) => `/console/vms/${vmId}/terminal`,
   llmKeyDetail: (keyId: string) => `/console/llm-keys/${keyId}`,
   llmKeyAccess: (keyId: string) => `/console/llm-keys/${keyId}/access`,
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
@@ -61,4 +60,22 @@ function consoleSection(pathname: string): string {
 export function consolePathInScope(scope: Scope, pathname: string): string {
   const section = consoleSection(pathname)
   return section === '' ? consolePaths.dashboard(scope) : scoped(scope, section)
+}
+
+/**
+ * 웹 터미널 팝업 창의 주소. `/console` 밖에 있는 것은 의도다 — 이 문서는 콘솔
+ * 레이아웃도 인증 스택도 마운트하지 않는 별도 문서이고, 라우터를 타지 않는다.
+ *
+ * 브리지가 소유한 경로는 정확히 `/terminal/ws` 하나뿐이며(nginx `location =`),
+ * 아래 파서가 UUID만 인정하므로 그 경로가 팝업 분기에 걸리는 일은 없다.
+ */
+export const terminalWindowPath = (vmId: string) => `/terminal/${vmId}`
+
+/** VM마다 고정된 창 이름 — 같은 VM을 다시 열면 새 창 대신 기존 창이 뜬다. */
+export const terminalWindowName = (vmId: string) => `pickle-terminal-${vmId}`
+
+/** 이 주소가 터미널 팝업이면 대상 VM id, 아니면 null. */
+export function parseTerminalWindowVmId(pathname: string): string | null {
+  const id = /^\/terminal\/([^/]+)\/?$/.exec(pathname)?.[1]
+  return isUuid(id) ? id : null
 }

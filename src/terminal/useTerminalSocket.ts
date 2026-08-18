@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toApiError } from '../api/problem'
-import { createTerminalSession } from '../api/queries'
+import type { TerminalSessionTicket } from '../api/queries'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 /**
  * 웹 터미널 WebSocket 연결 훅.
  *
- * 흐름: ① mint (`POST /vms/{vmId}/terminal-sessions`) → ② 반환된 티켓으로
+ * 흐름: ① mint (`mintTicket` — 팝업 창은 콘솔 탭에 요청해서 받아 온다) → ② 받은 티켓으로
  * `wss://<host>/terminal/ws`에 2요소 서브프로토콜(`[subprotocol, "ticket.<t>"]`)로
  * 접속 → ③ 브리지(LXC 102)가 종단. **자동 재연결은 하지 않는다** — 종료 사유만
  * 상태로 노출하고, 재연결은 사용자가 `reconnect()`로 mint부터 다시 시작한다.
@@ -84,24 +84,32 @@ function isExitFrame(value: unknown): value is ExitFrame {
   )
 }
 
+export interface TerminalSocketOptions {
+  /** false면 연결을 시도하지 않는다 — 티켓을 받아올 상대가 없을 때. */
+  enabled?: boolean
+}
+
 /**
  * @param vmId  접속 대상 VM
  * @param onData  수신 바이너리 프레임(터미널 출력) 콜백 — term.write에 연결한다.
- * @param onOpen  WS open 콜백(선택) — 포커스·초기 fit 등.
+ * @param mintTicket  1회용 접속 티켓을 받아 오는 함수. 이 훅은 티켓을 직접
+ *   발급하지 않는다 — 팝업 창에는 액세스 토큰이 없고, 있어서도 안 된다.
  */
 export function useTerminalSocket(
   vmId: string,
   onData: (bytes: Uint8Array) => void,
-  onOpen?: () => void,
+  mintTicket: () => Promise<TerminalSessionTicket>,
+  options?: TerminalSocketOptions,
 ): TerminalConnection {
+  const enabled = options?.enabled ?? true
   const [phase, setPhase] = useState<TerminalPhase>({ status: 'connecting' })
   const [nonce, setNonce] = useState(0)
 
   // 콜백은 ref에 담아 연결 effect의 의존성에서 제외한다(재연결 churn 방지).
   const onDataRef = useRef(onData)
-  const onOpenRef = useRef(onOpen)
+  const mintTicketRef = useRef(mintTicket)
   onDataRef.current = onData
-  onOpenRef.current = onOpen
+  mintTicketRef.current = mintTicket
 
   const wsRef = useRef<WebSocket | null>(null)
 
@@ -132,6 +140,7 @@ export function useTerminalSocket(
     let pendingExit: ExitFrame | null = null
 
     async function connect() {
+      if (!enabled) return
       // 형식부터 틀린 주소로는 티켓을 받을 수 없다 — mint를 건너뛰고 사유를
       // 바로 보여준다. 재연결해도 주소가 그대로이므로 버튼은 감춘다.
       if (!isUuid(vmId)) {
@@ -145,7 +154,7 @@ export function useTerminalSocket(
       }
       let ticket
       try {
-        ticket = await createTerminalSession(vmId)
+        ticket = await mintTicketRef.current()
       } catch (err) {
         if (disposed) return
         const apiError = toApiError(err, MINT_FALLBACK_MESSAGE)
@@ -167,7 +176,6 @@ export function useTerminalSocket(
       ws.onopen = () => {
         if (disposed) return
         setPhase({ status: 'open' })
-        onOpenRef.current?.()
       }
 
       ws.onmessage = (event: MessageEvent) => {
@@ -217,7 +225,7 @@ export function useTerminalSocket(
       }
       if (wsRef.current === ws) wsRef.current = null
     }
-  }, [vmId, nonce])
+  }, [vmId, nonce, enabled])
 
   return { phase, sendInput, sendResize, reconnect }
 }

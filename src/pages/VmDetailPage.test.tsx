@@ -1,12 +1,13 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { vmMetricsFixture } from '../test/msw/handlers/metrics'
 import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { closeTerminalWindows } from '../terminal/openTerminalWindow'
 import { VM_METRICS_UNAVAILABLE_ID, VM_NOT_PROVISIONED_ID, uuid } from '../test/msw/ids'
 
 /** VM 상세를 연다. tab을 주면 해당 탭 딥링크(?tab=)로 진입한다. */
@@ -407,6 +408,43 @@ describe('VM 상세 — 웹 터미널 열기', () => {
     expect(
       screen.queryByRole('button', { name: '웹 터미널 열기' }),
     ).not.toBeInTheDocument()
+  })
+
+  test('버튼을 누르면 팝업 창을 연다 (콘솔 라우트 이동이 아니다)', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue({
+      closed: false,
+      focus: vi.fn(),
+      postMessage: vi.fn(),
+    } as unknown as Window)
+    try {
+      server.use(vmDetailAs(uuid(56), 'MEMBER', { status: 'RUNNING' }))
+      renderVm(uuid(56))
+
+      const button = await screen.findByRole('button', { name: '웹 터미널 열기' })
+      await userEvent.click(button)
+      expect(open).toHaveBeenCalledWith(
+        `/terminal/${uuid(56)}`,
+        `pickle-terminal-${uuid(56)}`,
+        expect.any(String),
+      )
+    } finally {
+      open.mockRestore()
+      closeTerminalWindows()
+    }
+  })
+
+  test('팝업이 차단되면 해제 안내를 띄운다', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    try {
+      server.use(vmDetailAs(uuid(56), 'MEMBER', { status: 'RUNNING' }))
+      renderVm(uuid(56))
+
+      await userEvent.click(await screen.findByRole('button', { name: '웹 터미널 열기' }))
+      expect(await screen.findByText(/팝업 차단을 해제/)).toBeInTheDocument()
+    } finally {
+      open.mockRestore()
+      closeTerminalWindows()
+    }
   })
 
   test('접속 권한이 없으면(accessAllowed=false) 웹 터미널 열기 버튼이 없다', async () => {
