@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 function renderConsole() {
   server.use(refreshSuccessHandler('access-user'))
@@ -26,9 +27,9 @@ describe('모바일 드로어 내비게이션', () => {
       'true',
     )
 
-    await user.click(within(drawer).getByRole('link', { name: '내 워크스페이스' }))
+    await user.click(within(drawer).getByRole('link', { name: '가상머신' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: '내 워크스페이스' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '내 가상머신' })).toBeInTheDocument()
   })
 
   test('ESC와 닫기 버튼으로 드로어를 닫을 수 있다', async () => {
@@ -45,6 +46,35 @@ describe('모바일 드로어 내비게이션', () => {
     const drawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
     await user.click(within(drawer).getByRole('button', { name: '메뉴 닫기' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+  })
+})
+
+describe('사이드바 리소스 목록', () => {
+  test('아직 없는 종류는 링크가 아니라 준비 중 항목으로 선다', async () => {
+    renderConsole()
+    const nav = await screen.findByRole('navigation', { name: '콘솔 메뉴' })
+
+    expect(within(nav).getByRole('link', { name: '가상머신' })).toHaveAttribute(
+      'href',
+      '/console/vms',
+    )
+    for (const label of ['컨테이너', '레지스트리', '데이터베이스', '도메인']) {
+      expect(within(nav).queryByRole('link', { name: label })).not.toBeInTheDocument()
+      expect(within(nav).getByText(label)).toHaveAttribute('aria-disabled', 'true')
+    }
+    expect(within(nav).getAllByText('준비 중')).toHaveLength(4)
+  })
+
+  test('범위를 좁혀 두면 워크스페이스 항목이 그 워크스페이스 관리로 바뀐다', async () => {
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp(`/console/${uuid(15)}`)
+
+    const nav = await screen.findByRole('navigation', { name: '콘솔 메뉴' })
+    expect(await within(nav).findByRole('link', { name: '워크스페이스 관리' })).toHaveAttribute(
+      'href',
+      `/console/workspaces/${uuid(15)}`,
+    )
+    expect(within(nav).queryByRole('link', { name: '내 워크스페이스' })).not.toBeInTheDocument()
   })
 })
 

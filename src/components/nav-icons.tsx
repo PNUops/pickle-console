@@ -69,6 +69,35 @@ export const navIcons = {
       <path d="M2 9.5h4M2 14.5h4M18 9.5h4M18 14.5h4" />
     </>,
   ),
+  container: icon(
+    <>
+      <path d="M12 2.5 20.5 7v10L12 21.5 3.5 17V7Z" />
+      <path d="M3.5 7 12 11.5 20.5 7" />
+      <path d="M12 11.5v10" />
+    </>,
+  ),
+  registry: icon(
+    <>
+      <rect x="3" y="3" width="8" height="8" rx="1.5" />
+      <rect x="13" y="3" width="8" height="8" rx="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="1.5" />
+      <rect x="13" y="13" width="8" height="8" rx="1.5" />
+    </>,
+  ),
+  database: icon(
+    <>
+      <ellipse cx="12" cy="5.5" rx="8" ry="3" />
+      <path d="M4 5.5v13c0 1.66 3.58 3 8 3s8-1.34 8-3v-13" />
+      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+    </>,
+  ),
+  globe: icon(
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z" />
+    </>,
+  ),
   book: icon(
     <>
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

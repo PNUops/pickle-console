@@ -17,7 +17,10 @@ export const consolePaths = {
   vms: (scope: Scope) => scoped(scope, 'vms'),
   llmKeys: (scope: Scope) => scoped(scope, 'llm-keys'),
   requests: (scope: Scope) => scoped(scope, 'requests'),
-  newRequest: (scope: Scope) => scoped(scope, 'requests/new'),
+  // 종류를 알고 들어오는 자리가 있다 — 가상머신 목록의 신청 버튼은 무엇을
+  // 신청할지 이미 말하고 있으므로, 위저드가 그 종류로 열린다.
+  newRequest: (scope: Scope, kind?: string) =>
+    scoped(scope, kind ? `requests/new?kind=${kind}` : 'requests/new'),
 
   // Detail pages stay outside the scope: a resource belongs to exactly one
   // workspace, so the segment would carry no information, and every link that

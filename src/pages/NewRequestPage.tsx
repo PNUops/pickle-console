@@ -147,9 +147,13 @@ function parseStepParam(value: string | null): number {
 }
 
 export function NewRequestPage() {
-  // 초안이 정하는 초기 종류 — 이후 선택은 사용자 몫이다.
+  // 초안이 정하는 초기 종류 — 이후 선택은 사용자 몫이다. 단 `?kind=`로 들어왔다면
+  // 방금 그 종류의 목록에서 신청을 누른 것이므로 남은 초안보다 그 뜻이 앞선다.
+  const [searchParams] = useSearchParams()
   const [initialDraft] = useState(loadDraft)
-  const [kindType, setKindType] = useState(initialDraft.kindType)
+  const [kindType, setKindType] = useState(
+    () => requestKind(searchParams.get('kind') ?? '')?.type ?? initialDraft.kindType,
+  )
   const kind = requestKind(kindType) ?? REQUEST_KINDS[0]
 
   // 종류가 바뀌면 위저드를 통째로 다시 마운트한다 — 스펙 상태·카탈로그 훅이

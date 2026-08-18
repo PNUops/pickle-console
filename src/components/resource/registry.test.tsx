@@ -31,7 +31,7 @@ describe('리소스 종류 레지스트리', () => {
   test('아는 종류는 라벨·상세 경로·상태 배지를 준다', () => {
     const entry = resourceTypeEntry('VM')
 
-    expect(entry.label).toBe('VM')
+    expect(entry.label).toBe('가상머신')
     expect(entry.detailPath?.(uuid(55))).toBe(`/console/vms/${uuid(55)}`)
     expect(entry.isActive(resource())).toBe(true)
     expect(entry.isActive(resource({ status: 'DELETED' }))).toBe(false)

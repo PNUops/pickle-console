@@ -5,6 +5,7 @@ import { fetchLlmKeys } from '../api/queries'
 import {
   Alert,
   Card,
+  LinkButton,
   LlmKeyStatusBadge,
   Pagination,
   Spinner,
@@ -31,12 +32,15 @@ export function LlmKeysPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">내 LLM API 키</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          내가 속한 워크스페이스의 LLM API 키 목록입니다. 승인된 신청의 키는 소유자가 직접
-          발급해야 쓸 수 있습니다.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">내 LLM API 키</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            내가 속한 워크스페이스의 LLM API 키 목록입니다. 승인된 신청의 키는 소유자가 직접
+            발급해야 쓸 수 있습니다.
+          </p>
+        </div>
+        <LinkButton to={consolePaths.newRequest(scope, 'LLM_API_KEY')}>LLM API 키 신청</LinkButton>
       </div>
 
       {keys.isPending && (
@@ -46,8 +50,11 @@ export function LlmKeysPage() {
       )}
       {keys.isError && <Alert variant="danger">{keys.error.message}</Alert>}
       {keys.isSuccess && keys.data.content.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">
-          아직 LLM API 키가 없습니다. 신청이 승인되면 이곳에 표시됩니다.
+        <Card className="space-y-4 p-8 text-center text-sm text-neutral-500">
+          <p>아직 LLM API 키가 없습니다. 신청이 승인되면 이곳에 표시됩니다.</p>
+          <LinkButton to={consolePaths.newRequest(scope, 'LLM_API_KEY')}>
+            LLM API 키 신청
+          </LinkButton>
         </Card>
       )}
       {keys.isSuccess && keys.data.content.length > 0 && (

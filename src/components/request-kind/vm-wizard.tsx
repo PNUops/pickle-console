@@ -357,7 +357,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
 export const vmRequestKind: RequestKindModule = {
   type: 'VM',
   picker: {
-    title: '가상 머신 (VM)',
+    title: '가상머신',
     description: 'SSH로 접속해 쓰는 리눅스 서버입니다.',
   },
   specStepTitle: 'OS·사양',

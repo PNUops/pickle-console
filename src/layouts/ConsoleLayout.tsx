@@ -9,7 +9,12 @@ import { AppShell, type NavSection } from './AppShell'
  * 작업 공간(리소스·신청·워크스페이스) 중심으로 유지한다. 라우트 자체는 그대로 살아 있다.
  *
  * 리소스 섹션의 항목은 선택한 워크스페이스를 따라간다. 종류가 늘면 이 섹션에
- * 항목이 하나 늘 뿐, 구조는 그대로다.
+ * 항목이 하나 늘 뿐, 구조는 그대로다. 아직 없는 종류도 회색 '준비 중' 항목으로
+ * 같은 목록에 세운다 — 지금 되는 것만 세우면 이 플랫폼이 무엇을 주는 곳인지
+ * 사이드바에서 읽히지 않는다. 서비스 중인 것이 위, 준비 중이 아래다.
+ *
+ * '컨테이너 레지스트리'만 여기서 '레지스트리'로 줄인다 — 배지까지 한 줄에 들어가지
+ * 않고, 바로 위가 '컨테이너'라 문맥으로 읽힌다.
  */
 export function ConsoleLayout() {
   const scope = useScope()
@@ -23,8 +28,12 @@ export function ConsoleLayout() {
       heading: '리소스',
       items: [
         { to: consolePaths.resources(scope), label: '전체 리소스', icon: navIcons.dashboard },
-        { to: consolePaths.vms(scope), label: 'VM', icon: navIcons.server },
-        { to: consolePaths.llmKeys(scope), label: 'LLM API 키', icon: navIcons.chip },
+        { to: consolePaths.vms(scope), label: '가상머신', icon: navIcons.server },
+        { to: consolePaths.llmKeys(scope), label: 'LLM API', icon: navIcons.chip },
+        { label: '컨테이너', icon: navIcons.container, disabled: true },
+        { label: '레지스트리', icon: navIcons.registry, disabled: true },
+        { label: '데이터베이스', icon: navIcons.database, disabled: true },
+        { label: '도메인', icon: navIcons.globe, disabled: true },
       ],
     },
     {
@@ -35,9 +44,16 @@ export function ConsoleLayout() {
       ],
     },
     {
+      // 범위를 좁혀 둔 사람에게 '내 워크스페이스' 목록은 지금 보고 있는 곳이 아니다
+      // — 그 상태에서 이 자리는 그 워크스페이스를 관리하러 가는 문이 된다.
       items: [
-        { to: consolePaths.workspaces, label: '내 워크스페이스', icon: navIcons.users },
-        { to: consolePaths.sshKeys, label: 'SSH 키', icon: navIcons.key },
+        scope == null
+          ? { to: consolePaths.workspaces, label: '내 워크스페이스', icon: navIcons.users }
+          : {
+              to: consolePaths.workspaceDetail(scope),
+              label: '워크스페이스 관리',
+              icon: navIcons.users,
+            },
       ],
     },
   ]
