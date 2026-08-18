@@ -9,6 +9,7 @@ import { Logo } from '../components/Logo'
 import { navIcons } from '../components/nav-icons'
 import { MaintenanceScreen } from '../components/MaintenanceScreen'
 import { NotificationBell } from '../components/NotificationBell'
+import { Badge } from '../components/ui'
 import { PostLoginOverlay } from '../components/PostLoginOverlay'
 import { CONTACT_URL, DOCS_PATH, FEEDBACK_URL } from '../lib/brand'
 import { cn } from '../lib/cn'
@@ -19,11 +20,18 @@ import { UserMenu } from './UserMenu'
 const BANNER_DISMISS_KEY = 'pickle_banner_dismissed'
 
 export interface NavItem {
-  to: string
+  /** 갈 곳. 준비 중 항목은 아직 화면이 없으므로 비운다. */
+  to?: string
   label: string
   end?: boolean
   /** 항목 앞 스트로크 아이콘(선택) — src/components/nav-icons.tsx 참조. */
   icon?: ReactNode
+  /**
+   * 자리만 잡아 둔 항목 — 링크가 아니라 '준비 중' 배지를 단 회색 글자로 그린다.
+   * 지금 되는 것만 세우면 이 플랫폼이 무엇을 주는 곳인지 사이드바에서 읽히지
+   * 않아, 예정된 종류도 같은 목록에 세우되 누를 수 없다는 사실을 배지로 말한다.
+   */
+  disabled?: boolean
 }
 
 /** 사이드바 내비게이션 섹션 — 소제목(선택) 아래 항목 묶음. */
@@ -112,25 +120,37 @@ function ShellNav({
               {section.heading}
             </h3>
           )}
-          {section.items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                cn(
-                  NAV_LINK_BASE,
-                  isActive
-                    ? 'bg-primary-50 text-primary-800'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
-                )
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
+          {section.items.map((item) =>
+            item.disabled || item.to == null ? (
+              <span
+                key={item.label}
+                aria-disabled="true"
+                className={cn(NAV_LINK_BASE, 'cursor-not-allowed text-neutral-400')}
+              >
+                {item.icon}
+                {item.label}
+                <Badge variant="neutral" className="ml-auto">준비 중</Badge>
+              </span>
+            ) : (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                end={item.end}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    NAV_LINK_BASE,
+                    isActive
+                      ? 'bg-primary-50 text-primary-800'
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
+                  )
+                }
+              >
+                {item.icon}
+                {item.label}
+              </NavLink>
+            ),
+          )}
         </div>
       ))}
     </nav>
