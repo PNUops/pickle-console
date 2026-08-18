@@ -6,6 +6,7 @@ import { guardNetwork } from '../api/queries'
 import { clearReauthToken } from '../api/reauth'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { LEGACY_CONSOLE_SCOPE_KEY, VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
+import { closeTerminalWindows } from '../terminal/openTerminalWindow'
 import { AuthContext, type AuthStatus, type LoginResult, type UserProfile } from './auth-context'
 
 interface AuthState {
@@ -122,6 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearAccessToken()
       clearReauthToken()
       queryClient.clear()
+      // 터미널 팝업은 별도 문서라 이 탭이 로그아웃해도 저절로 닫히지 않는다.
+      closeTerminalWindows()
       // 같은 탭에서 다음 사용자가 이전 사용자의 신청서 초안을 물려받지 않게 지운다.
       sessionStorage.removeItem(VM_REQUEST_DRAFT_KEY)
       // 예전 버전이 남긴 워크스페이스 범위도 같은 이유로 정리한다.

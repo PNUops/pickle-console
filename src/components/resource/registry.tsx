@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
 import type { ResourceSummary } from '../../api/queries'
 import { consolePaths } from '../../lib/paths'
+import { TerminalRowAction } from './TerminalRowAction'
 import { LlmKeyStatusBadge, VmStatusBadge } from '../ui'
 import type { LlmApiKeyStatus, VmStatus } from '../../lib/status'
 
@@ -43,14 +43,7 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
     statusBadge: (resource) => <VmStatusBadge status={resource.status as VmStatus} />,
     isActive: (resource) => resource.status !== 'DELETED' && resource.status !== 'DELETING',
     rowAction: (resource) =>
-      resource.status === 'RUNNING' ? (
-        <Link
-          to={consolePaths.vmTerminal(resource.id)}
-          className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-        >
-          웹 터미널
-        </Link>
-      ) : null,
+      resource.status === 'RUNNING' ? <TerminalRowAction resource={resource} /> : null,
   },
   LLM_API_KEY: {
     label: 'LLM API 키',

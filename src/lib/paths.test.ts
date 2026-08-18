@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { consolePathInScope, consolePaths } from './paths'
+import {
+  consolePathInScope,
+  consolePaths,
+  parseTerminalWindowVmId,
+  terminalWindowName,
+  terminalWindowPath,
+} from './paths'
 import { uuid } from '../test/msw/ids'
 
 const SCOPE = uuid(15)
@@ -56,9 +62,28 @@ describe('consolePathInScope — 범위 세그먼트 인식', () => {
 describe('consolePaths — 상세 주소', () => {
   test('상세 주소는 범위 밖에 그대로 만들어진다', () => {
     expect(consolePaths.vmDetail(uuid(56))).toBe(`/console/vms/${uuid(56)}`)
-    expect(consolePaths.vmTerminal(uuid(56))).toBe(`/console/vms/${uuid(56)}/terminal`)
     expect(consolePaths.requestDetail(uuid(201))).toBe(`/console/requests/${uuid(201)}`)
     expect(consolePaths.llmKeyDetail(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}`)
     expect(consolePaths.llmKeyAccess(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}/access`)
+  })
+})
+
+describe('터미널 팝업 주소', () => {
+  test('팝업 주소와 창 이름은 VM마다 고정된다', () => {
+    expect(terminalWindowPath(uuid(56))).toBe(`/terminal/${uuid(56)}`)
+    expect(terminalWindowName(uuid(56))).toBe(`pickle-terminal-${uuid(56)}`)
+  })
+
+  test('UUID 경로만 팝업으로 인정한다', () => {
+    expect(parseTerminalWindowVmId(`/terminal/${uuid(56)}`)).toBe(uuid(56))
+    expect(parseTerminalWindowVmId(`/terminal/${uuid(56)}/`)).toBe(uuid(56))
+  })
+
+  test('브리지가 소유한 /terminal/ws 는 팝업 주소가 아니다', () => {
+    // nginx가 이 경로를 정확 일치로 브리지에 넘긴다 — SPA 분기에 걸리면 안 된다.
+    expect(parseTerminalWindowVmId('/terminal/ws')).toBeNull()
+    expect(parseTerminalWindowVmId('/terminal')).toBeNull()
+    expect(parseTerminalWindowVmId('/console/vms')).toBeNull()
+    expect(parseTerminalWindowVmId(`/terminal/${uuid(56)}/extra`)).toBeNull()
   })
 })

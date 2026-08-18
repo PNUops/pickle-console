@@ -14,6 +14,8 @@ import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider.tsx'
 import { ReauthProvider } from './auth/ReauthProvider.tsx'
 import { ToastProvider } from './components/ui'
+import { parseTerminalWindowVmId } from './lib/paths'
+import { TerminalWindowRoot } from './terminal/TerminalWindowRoot'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +26,18 @@ const queryClient = new QueryClient({
   },
 })
 
+// 터미널 팝업은 콘솔과 다른 문서다. 라우터 안이 아니라 여기서 갈라야
+// AuthProvider가 아예 마운트되지 않고, 그래야 팝업이 `/auth/refresh`를 칠 수
+// 없다 — 리프레시 토큰이 회전+재사용 탐지 방식이라 부모 탭과 겹치면 체인 전체가
+// 폐기되어 모든 탭이 로그아웃된다. 완화하는 대신 레이스를 만들지 않는다.
+const terminalVmId = parseTerminalWindowVmId(window.location.pathname)
+
 createRoot(document.getElementById('root')!).render(
+  terminalVmId !== null ? (
+    <StrictMode>
+      <TerminalWindowRoot vmId={terminalVmId} />
+    </StrictMode>
+  ) : (
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
@@ -37,5 +50,6 @@ createRoot(document.getElementById('root')!).render(
         </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
-  </StrictMode>,
+  </StrictMode>
+  ),
 )

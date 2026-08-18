@@ -40,6 +40,7 @@ VM 신청서(4스텝), 승인 대기, 대시보드, SSH 키 등록, 웹 터미�
 - **워크스페이스 스코프**: 사이드바 선택기로 워크스페이스 하나를 고르면 목록과 신청이 그
   범위로 좁혀지고, '전체'를 고르면 참여 중인 모든 워크스페이스를 한 번에 봅니다.
 - **웹 터미널**: SSH 클라이언트나 키가 없어도 브라우저에서 바로 VM 셸을 엽니다.
+  별도 창으로 열려 화면 전체를 쓰고, 창 크기를 조절하면 터미널 크기도 따라갑니다.
 - **접속 수단 관리**: SSH 공개키를 등록하거나 콘솔에서 발급받고, VM 초기 비밀번호를
   다시 열람하거나 재발급합니다.
 - **도메인 공개**: 서브도메인을 직접 정해 VM의 웹 서비스를 공개하고, 필요하면 다시
@@ -66,6 +67,11 @@ TypeScript 타입은 백엔드가 생성한 OpenAPI 스펙에서 만들어 레�
 웹 터미널의 WebSocket은 `/api` 밖의 `/terminal/ws`로 나갑니다. OpenAPI 표면과 API
 런타임을 1:1로 유지하기 위해서이고, WS 종단은
 [pickle-sshgw](https://github.com/PNUops/pickle-sshgw)의 터미널 브리지가 맡습니다.
+바로 옆의 `/terminal/<vm uuid>`는 터미널 창 화면으로 이 앱이 가집니다 — 라우터가
+아니라 `src/main.tsx`가 주소를 보고 문서를 가르며, UUID인 경로만 창으로 인정하므로
+브리지가 쓰는 `/terminal/ws`와 겹치지 않습니다. 이 창은 콘솔의 인증 스택을 얹지
+않고 접속 티켓을 콘솔 탭에서 `postMessage`로 받습니다. 창이 스스로 세션을 복원하면
+리프레시 토큰 회전 검사가 콘솔 탭과 충돌해 모든 탭이 로그아웃되기 때문입니다.
 
 ## 스택
 
@@ -119,8 +125,8 @@ npm run gen:api   # ../api/contract/openapi.yaml → src/api/schema.d.ts
 ```
 src/api/         생성된 타입(schema.d.ts)과 쿼리 래퍼
 src/auth/        권한과 역할 판정
-src/pages/       화면 (랜딩·사용자·관리자·터미널)
-src/terminal/    웹 터미널 소켓 훅
+src/pages/       화면 (랜딩·사용자·관리자)
+src/terminal/    웹 터미널 창 — 화면·소켓 훅·콘솔 탭과의 티켓 중계
 src/components/  src/layouts/   공용 UI
 src/lib/         상태·라벨 매핑, 포맷, 검증 유틸
 src/test/        vitest 설정과 MSW 목

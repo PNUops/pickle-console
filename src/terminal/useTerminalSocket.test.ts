@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { http } from 'msw'
 import { describe, expect, test, vi } from 'vitest'
+import { createTerminalSession } from '../api/queries'
 import { setAccessToken } from '../api/token'
 import { problemResponse } from '../test/msw/handlers/auth'
 import { StubWebSocket } from '../test/StubWebSocket'
@@ -10,7 +11,9 @@ import { uuid } from '../test/msw/ids'
 
 function render(vmId = uuid(56), onData: (b: Uint8Array) => void = () => {}) {
   setAccessToken('access-user')
-  return renderHook(() => useTerminalSocket(vmId, onData))
+  // 훅은 더 이상 스스로 티켓을 발급하지 않는다 — 실 사용에서는 콘솔 탭이
+  // 건네주고, 여기서는 실제 mint 쿼리를 그대로 주입해 Problem 매핑까지 덮는다.
+  return renderHook(() => useTerminalSocket(vmId, onData, () => createTerminalSession(vmId)))
 }
 
 /** mint 성공 후 WS가 생성되고 open까지 진행된 상태를 만든다. */
@@ -149,5 +152,32 @@ describe('useTerminalSocket — 재연결·정리', () => {
     const { hook, ws } = await connectAndOpen()
     hook.unmount()
     expect(ws.closedByClient?.code).toBe(1000)
+  })
+})
+
+describe('useTerminalSocket — enabled', () => {
+  test('enabled=false면 mint도 WS 연결도 하지 않는다', async () => {
+    setAccessToken('access-user')
+    const mint = vi.fn()
+    const { result } = renderHook(() =>
+      useTerminalSocket(uuid(56), () => {}, mint, { enabled: false }),
+    )
+    await waitFor(() => expect(result.current.phase.status).toBe('connecting'))
+    expect(mint).not.toHaveBeenCalled()
+    expect(StubWebSocket.instances).toHaveLength(0)
+  })
+})
+
+describe('useTerminalSocket — 잘못된 주소', () => {
+  test('UUID가 아닌 vmId는 티켓을 요청하지 않고 사유만 남긴다', async () => {
+    // main.tsx의 파서가 이미 UUID만 통과시키므로 지금은 도달하지 않는 방어층이다.
+    // 훅이 단독으로도 안전하다는 것을 이 테스트가 붙들어 둔다.
+    setAccessToken('access-user')
+    const mint = vi.fn()
+    const { result } = renderHook(() => useTerminalSocket('not-a-uuid', () => {}, mint))
+    await waitFor(() => expect(result.current.phase.status).toBe('closed'))
+    expect(result.current.phase).toMatchObject({ canReconnect: false })
+    expect(mint).not.toHaveBeenCalled()
+    expect(StubWebSocket.instances).toHaveLength(0)
   })
 })

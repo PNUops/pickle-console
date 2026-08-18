@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
-import { ErrorBoundary, Spinner } from './components/ui'
+import { ErrorBoundary } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ResourcesPage } from './pages/ResourcesPage'
 import { ScopeProvider } from './lib/scope'
@@ -52,12 +52,6 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmAccessPage } from './pages/VmAccessPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
-
-// 웹 터미널은 xterm.js(~250kB)를 끌어오므로, 터미널을 여는 사용자에게만
-// 로드되도록 코드 분할한다(메인 번들 경량 유지).
-const TerminalPage = lazy(() =>
-  import('./pages/TerminalPage').then((m) => ({ default: m.TerminalPage })),
-)
 
 // 랜딩은 motion(+lazy 3D)을 끌어오므로 통째로 코드 분할한다 — 콘솔만 쓰는
 // 사용자의 진입 번들을 키우지 않는다. 폴백은 히어로와 같은 다크 배경(플래시 방지).
@@ -129,22 +123,6 @@ function App() {
         <Route path="vms/:vmId" element={<VmDetailPage />} />
         {/* 상세와 별개 라우트 — 상세가 막힌 사람도 접근 권한은 관리할 수 있다. */}
         <Route path="vms/:vmId/access" element={<VmAccessPage />} />
-        <Route
-          path="vms/:vmId/terminal"
-          element={
-            <ErrorBoundary label="터미널">
-              <Suspense
-                fallback={
-                  <div className="flex justify-center py-12">
-                    <Spinner label="터미널 불러오는 중" />
-                  </div>
-                }
-              >
-                <TerminalPage />
-              </Suspense>
-            </ErrorBoundary>
-          }
-        />
         <Route path="llm-keys" element={<LlmKeysPage />} />
         <Route path="llm-keys/:keyId" element={<LlmKeyDetailPage />} />
         {/* 상세와 별개 라우트 — 상세가 막힌 사람도 접근 권한은 관리할 수 있다. */}
