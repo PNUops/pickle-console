@@ -18,7 +18,8 @@ export function requestKind(type: string): RequestKindModule | undefined {
 }
 
 /** 종류 선택 화면 하단 안내 — 종류가 준비되면 여기서 지워진다. */
-export const KIND_PICKER_FOOTNOTE = '컨테이너는 준비 중입니다.'
+export const KIND_PICKER_FOOTNOTE =
+  '컨테이너·컨테이너 레지스트리·데이터베이스·도메인은 준비 중입니다.'
 
 /**
  * 신청 표의 종류별 요약 열 제목 — 승인 대기 큐와 내 신청 목록이 함께 쓴다.

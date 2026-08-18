@@ -37,7 +37,7 @@ export type ResourceTypeEntry = {
 
 export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> = {
   VM: {
-    label: 'VM',
+    label: '가상머신',
     detailPath: (id) => consolePaths.vmDetail(id),
     accessPath: (id) => consolePaths.vmAccess(id),
     statusBadge: (resource) => <VmStatusBadge status={resource.status as VmStatus} />,
