@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TerminalSessionTicket } from '../api/queries'
 import {
+  SESSION_CHANNEL,
   TERMINAL_MESSAGE_VERSION,
   WINDOW_SOURCE,
   isConsoleMessage,
+  isSessionEnded,
   ticketErrorToApiError,
 } from './terminalWindowMessages'
 
@@ -53,6 +55,15 @@ export function useOpenerTicket(vmId: string): OpenerTicketSource {
   useEffect(() => {
     const pending = pendingRef.current
 
+    function endSession() {
+      setShutdown(true)
+      for (const [id, entry] of pending) {
+        clearTimeout(entry.timer)
+        entry.reject(new Error(DETACHED_MESSAGE))
+        pending.delete(id)
+      }
+    }
+
     function handle(event: MessageEvent) {
       // ① 오리진 ② 보낸 창이 우리 opener인가 ③ 형태.
       if (event.origin !== window.location.origin) return
@@ -61,12 +72,7 @@ export function useOpenerTicket(vmId: string): OpenerTicketSource {
       const message = event.data
 
       if (message.type === 'shutdown') {
-        setShutdown(true)
-        for (const [id, entry] of pending) {
-          clearTimeout(entry.timer)
-          entry.reject(new Error(DETACHED_MESSAGE))
-          pending.delete(id)
-        }
+        endSession()
         return
       }
 
@@ -83,9 +89,22 @@ export function useOpenerTicket(vmId: string): OpenerTicketSource {
       }
     }
 
+    // The console broadcasts the end of the session rather than only telling the
+    // windows it opened: a console tab that reloaded, or a second tab doing the
+    // logging out, has no record of this window and its postMessage would go
+    // nowhere — leaving a live shell open after logout.
+    const channel =
+      typeof BroadcastChannel === 'function' ? new BroadcastChannel(SESSION_CHANNEL) : null
+    const onBroadcast = (event: MessageEvent) => {
+      if (isSessionEnded(event.data)) endSession()
+    }
+    channel?.addEventListener('message', onBroadcast)
+
     window.addEventListener('message', handle)
     return () => {
       window.removeEventListener('message', handle)
+      channel?.removeEventListener('message', onBroadcast)
+      channel?.close()
       for (const [id, entry] of pending) {
         clearTimeout(entry.timer)
         pending.delete(id)

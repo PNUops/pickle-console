@@ -68,7 +68,7 @@ describe('openTerminalWindow — 창 열기', () => {
     expect(win.focus).toHaveBeenCalled()
   })
 
-  test('같은 VM을 다시 열면 새 창 대신 기존 창을 앞으로 가져온다', () => {
+  test('이 문서가 연 창이면 다시 열기가 새 창 대신 포커스만 한다', () => {
     const win = fakeWindow()
     openSpy.mockReturnValue(win as unknown as Window)
     openTerminalWindow(target())

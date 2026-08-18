@@ -4,6 +4,7 @@ import { onSessionExpired } from '../api/token'
 import { terminalWindowName, terminalWindowPath } from '../lib/paths'
 import {
   CONSOLE_SOURCE,
+  SESSION_CHANNEL,
   TERMINAL_MESSAGE_VERSION,
   isTicketRequest,
   type ConsoleMessage,
@@ -131,12 +132,19 @@ export function openTerminalWindow(target: TerminalWindowTarget): boolean {
 
   const existing = windows.get(target.vmId)
   if (existing) {
-    // 같은 VM을 다시 열면 재로드 없이 기존 창을 띄운다(진행 중 세션 보존).
+    // 이 문서가 연 창이면 재로드 없이 앞으로 가져온다(진행 중 세션 보존).
     existing.label = target.label
     existing.name = target.name
     existing.win.focus()
     return true
   }
+
+  // 여기서부터는 이 문서가 모르는 창이다. 콘솔 탭이 새로고침됐다면 그 VM의
+  // 팝업이 아직 살아 있어도 이 Map에는 없고, 아래 window.open은 같은 이름의
+  // 창을 찾아 **그 URL로 내비게이트**한다 — 즉 리로드이고 진행 중 셸이 끊긴다.
+  // BroadcastChannel로 살아 있는지 물어볼 수는 있지만 응답을 기다리는 순간
+  // window.open이 사용자 제스처를 잃어 팝업 차단에 걸린다. 끊기더라도 창이
+  // 열리는 쪽을 택했다.
 
   const win = window.open(
     terminalWindowPath(target.vmId),
@@ -153,11 +161,17 @@ export function openTerminalWindow(target: TerminalWindowTarget): boolean {
 /**
  * 열린 터미널 창에 종료를 통지한다 — 로그아웃·세션 만료 시.
  *
- * 이것은 클라이언트측 best-effort다. 브리지의 재검증은 tokenVersion·멤버십·킬
- * 스위치만 보고 로그아웃은 tokenVersion을 올리지 않으므로, 통지가 닿지 않으면
- * 서버측 세션은 유휴 타임아웃까지 남는다.
+ * **브로드캐스트가 주 경로다.** 아래 Map은 지금 이 문서가 연 창만 담으므로,
+ * 콘솔 탭이 한 번이라도 새로고침됐거나 로그아웃이 다른 탭에서 일어나면 Map은
+ * 비어 있고 통지가 증발한다 — 그러면 팝업은 로그아웃 뒤에도 조작 가능한 셸로
+ * 남는다. 공용 PC에서 흔한 경로라 edge로 둘 수 없다.
+ *
+ * 그래도 이것은 클라이언트측 best-effort다. 브리지의 재검증은 tokenVersion·
+ * 멤버십·킬 스위치만 보고 로그아웃은 tokenVersion을 올리지 않으므로, 브라우저가
+ * 이미 닫혔다면 서버측 세션은 유휴 타임아웃까지 남는다.
  */
 export function closeTerminalWindows(): void {
+  broadcastSessionEnded()
   for (const entry of windows.values()) {
     post(entry.win, {
       source: CONSOLE_SOURCE,
@@ -166,4 +180,18 @@ export function closeTerminalWindows(): void {
     })
   }
   windows.clear()
+}
+
+function broadcastSessionEnded(): void {
+  if (typeof BroadcastChannel !== 'function') return
+  const channel = new BroadcastChannel(SESSION_CHANNEL)
+  try {
+    channel.postMessage({
+      source: CONSOLE_SOURCE,
+      v: TERMINAL_MESSAGE_VERSION,
+      type: 'session-ended',
+    })
+  } finally {
+    channel.close()
+  }
 }

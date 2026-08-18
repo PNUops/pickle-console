@@ -4,7 +4,12 @@ import { MockFitAddon, MockTerminal, mockTerminals, resetXtermMock } from '../te
 import { StubWebSocket } from '../test/StubWebSocket'
 import { uuid } from '../test/msw/ids'
 import { MINT_TICKET } from '../test/msw/handlers/terminal'
-import { CONSOLE_SOURCE, TERMINAL_MESSAGE_VERSION, WINDOW_SOURCE } from './terminalWindowMessages'
+import {
+  CONSOLE_SOURCE,
+  SESSION_CHANNEL,
+  TERMINAL_MESSAGE_VERSION,
+  WINDOW_SOURCE,
+} from './terminalWindowMessages'
 import { TerminalWindow } from './TerminalWindow'
 
 vi.mock('@xterm/xterm', () => ({ Terminal: MockTerminal }))
@@ -222,6 +227,33 @@ describe('TerminalWindow — opener 없음 / 종료 통지', () => {
     expect(await screen.findByText('세션이 종료되었습니다')).toBeInTheDocument()
     expect(ws.closedByClient?.code).toBe(1000)
     expect(screen.queryByRole('button', { name: '다시 연결' })).not.toBeInTheDocument()
+  })
+})
+
+describe('TerminalWindow — 세션 종료 브로드캐스트', () => {
+  test('콘솔이 세션 종료를 방송하면 opener가 아무 말 없어도 창이 닫힌다', async () => {
+    // 콘솔 탭이 새로고침됐거나 다른 탭에서 로그아웃하면 그 문서는 이 창을
+    // 알지 못한다. 그때도 셸이 살아 있으면 공용 PC에서 다음 사람이 쓴다.
+    render(<TerminalWindow vmId={VM_ID} />)
+    await waitFor(() => expect(postSpy).toHaveBeenCalledTimes(1))
+    sendTicket()
+    await waitFor(() => expect(StubWebSocket.instances).toHaveLength(1))
+    const ws = StubWebSocket.last()
+    act(() => ws.simulateOpen())
+
+    const channel = new BroadcastChannel(SESSION_CHANNEL)
+    await act(async () => {
+      channel.postMessage({
+        source: CONSOLE_SOURCE,
+        v: TERMINAL_MESSAGE_VERSION,
+        type: 'session-ended',
+      })
+      await Promise.resolve()
+    })
+    channel.close()
+
+    expect(await screen.findByText('세션이 종료되었습니다')).toBeInTheDocument()
+    expect(ws.closedByClient?.code).toBe(1000)
   })
 })
 

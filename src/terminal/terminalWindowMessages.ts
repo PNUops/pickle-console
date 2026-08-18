@@ -17,6 +17,37 @@ import type { TerminalSessionTicket } from '../api/queries'
 
 export const TERMINAL_MESSAGE_VERSION = 1
 
+/**
+ * Where the console announces that the session ended.
+ *
+ * The `postMessage` registry above only reaches windows the *current* console
+ * document opened, so a console tab that reloaded — or a second tab doing the
+ * logging out — could not tell an open terminal anything, and the window stayed
+ * a usable shell. A broadcast reaches every same-origin context regardless of
+ * who opened whom.
+ *
+ * This carries no credential and needs no coordination, which is why it is
+ * acceptable here while a broadcast-based *session refresh* is not: that would
+ * mean electing a leader and putting an access token on the channel.
+ */
+export const SESSION_CHANNEL = 'pickle-session'
+
+export interface SessionEndedBroadcast {
+  source: typeof CONSOLE_SOURCE
+  v: typeof TERMINAL_MESSAGE_VERSION
+  type: 'session-ended'
+}
+
+export function isSessionEnded(value: unknown): value is SessionEndedBroadcast {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { source?: unknown }).source === CONSOLE_SOURCE &&
+    (value as { v?: unknown }).v === TERMINAL_MESSAGE_VERSION &&
+    (value as { type?: unknown }).type === 'session-ended'
+  )
+}
+
 /** 팝업 → 콘솔 탭. */
 export const WINDOW_SOURCE = 'pickle-terminal-window'
 /** 콘솔 탭 → 팝업. */

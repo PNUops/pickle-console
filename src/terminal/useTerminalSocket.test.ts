@@ -167,3 +167,17 @@ describe('useTerminalSocket — enabled', () => {
     expect(StubWebSocket.instances).toHaveLength(0)
   })
 })
+
+describe('useTerminalSocket — 잘못된 주소', () => {
+  test('UUID가 아닌 vmId는 티켓을 요청하지 않고 사유만 남긴다', async () => {
+    // main.tsx의 파서가 이미 UUID만 통과시키므로 지금은 도달하지 않는 방어층이다.
+    // 훅이 단독으로도 안전하다는 것을 이 테스트가 붙들어 둔다.
+    setAccessToken('access-user')
+    const mint = vi.fn()
+    const { result } = renderHook(() => useTerminalSocket('not-a-uuid', () => {}, mint))
+    await waitFor(() => expect(result.current.phase.status).toBe('closed'))
+    expect(result.current.phase).toMatchObject({ canReconnect: false })
+    expect(mint).not.toHaveBeenCalled()
+    expect(StubWebSocket.instances).toHaveLength(0)
+  })
+})
