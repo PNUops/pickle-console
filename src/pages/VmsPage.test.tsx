@@ -11,7 +11,16 @@ function renderVms(path = '/console/vms') {
   renderApp(path)
 }
 
-describe('내 VM 목록', () => {
+describe('내 가상머신 목록', () => {
+  test('목록에서 바로 가상머신을 신청할 수 있다', async () => {
+    renderVms()
+
+    expect(await screen.findByRole('link', { name: '가상머신 신청' })).toHaveAttribute(
+      'href',
+      '/console/requests/new?kind=VM',
+    )
+  })
+
   test('VM을 상태·사양·워크스페이스와 함께 나열한다', async () => {
     renderVms()
 

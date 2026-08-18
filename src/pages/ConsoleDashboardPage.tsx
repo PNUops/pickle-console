@@ -16,6 +16,7 @@ import { useAuth } from '../auth/auth-context'
 import {
   Alert,
   Card,
+  LinkButton,
   RequestStatusBadge,
   Spinner,
   StatTile,
@@ -88,18 +89,10 @@ export function ConsoleDashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link
-            to={consolePaths.newRequest(scope)}
-            className="inline-flex h-9 items-center rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-          >
-            VM 신청
-          </Link>
-          <Link
-            to={consolePaths.workspaces}
-            className="inline-flex h-9 items-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-          >
+          <LinkButton to={consolePaths.newRequest(scope, 'VM')}>가상머신 신청</LinkButton>
+          <LinkButton to={consolePaths.workspaces} variant="secondary">
             워크스페이스 만들기
-          </Link>
+          </LinkButton>
         </div>
       </div>
 

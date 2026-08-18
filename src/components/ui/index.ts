@@ -25,6 +25,8 @@ export {
   type BadgeVariant,
 } from './Badge'
 export { Button, type ButtonProps } from './Button'
+export { buttonClass, type ButtonSize, type ButtonVariant } from './button-style'
+export { LinkButton } from './LinkButton'
 export { Card, CardContent, CardFooter, CardHeader, CardTitle } from './Card'
 export { Checkbox } from './Checkbox'
 export { ConfirmNameModal } from './ConfirmNameModal'

@@ -15,9 +15,9 @@ function renderWizard() {
   renderApp('/console/requests/new')
 }
 
-/** 종류 선택 단계 — 지금은 VM 하나뿐이라 넘어가기만 하면 된다. */
+/** 종류 선택 단계 — 가상머신이 기본 선택이라 넘어가기만 하면 된다. */
 async function passTypeStep(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole('button', { name: /가상 머신/ })
+  await screen.findByRole('button', { name: /가상머신/ })
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 
@@ -28,6 +28,22 @@ async function passStep1(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('표시명'), '캡스톤 백엔드 서버')
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
+
+describe('신청 위저드 — 종류를 알고 들어온 경우', () => {
+  test('?kind=로 들어오면 그 종류가 골라진 채로 열린다', async () => {
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/requests/new?kind=LLM_API_KEY')
+
+    expect(await screen.findByRole('button', { name: /LLM API 키/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /가상머신/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+})
 
 describe('VM 신청 위저드 — 단계 검증', () => {
   test('워크스페이스·기관을 선택하기 전에는 다음으로 넘어갈 수 없고, 속한 워크스페이스가 모두 보인다', async () => {
