@@ -19,10 +19,10 @@ import { notificationHandlers, resetNotificationFixtures } from './handlers/noti
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
 import { resetSettingFixtures, settingHandlers } from './handlers/settings'
-import { resetSshKeyFixtures, sshKeyHandlers } from './handlers/ssh-keys'
 import { resetRequestFixtures, requestHandlers } from './handlers/requests'
 import { resetVmFixtures, vmHandlers } from './handlers/vms'
 import { resetTerminalFixtures, terminalHandlers } from './handlers/terminal'
+import { resetVmSshKeyFixtures, vmSshKeyHandlers } from './handlers/vm-ssh-key'
 
 /** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
@@ -38,7 +38,7 @@ export const handlers: RequestHandler[] = [
   ...llmKeyHandlers,
   ...resourceHandlers,
   ...terminalHandlers,
-  ...sshKeyHandlers,
+  ...vmSshKeyHandlers,
   ...publishingHandlers,
   ...networkHandlers,
   ...campusIpHandlers,
@@ -62,7 +62,7 @@ export function resetFixtures() {
   resetVmFixtures()
   resetLlmKeyFixtures()
   resetTerminalFixtures()
-  resetSshKeyFixtures()
+  resetVmSshKeyFixtures()
   resetPublishingFixtures()
   resetNetworkFixtures()
   resetCampusIpFixtures()

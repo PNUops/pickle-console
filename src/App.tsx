@@ -46,7 +46,6 @@ import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SignupPage } from './pages/SignupPage'
-import { SshKeysPage } from './pages/SshKeysPage'
 import { TermsPage } from './pages/TermsPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmAccessPage } from './pages/VmAccessPage'
@@ -127,7 +126,6 @@ function App() {
         <Route path="llm-keys/:keyId" element={<LlmKeyDetailPage />} />
         {/* 상세와 별개 라우트 — 상세가 막힌 사람도 접근 권한은 관리할 수 있다. */}
         <Route path="llm-keys/:keyId/access" element={<LlmKeyAccessPage />} />
-        <Route path="ssh-keys" element={<SshKeysPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />

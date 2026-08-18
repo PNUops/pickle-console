@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test, vi } from 'vitest'
@@ -7,6 +7,7 @@ import { vmMetricsFixture } from '../test/msw/handlers/metrics'
 import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { seedVmSshKey } from '../test/msw/handlers/vm-ssh-key'
 import { closeTerminalWindows } from '../terminal/openTerminalWindow'
 import { VM_METRICS_UNAVAILABLE_ID, VM_NOT_PROVISIONED_ID, uuid } from '../test/msw/ids'
 
@@ -367,26 +368,90 @@ describe('VM 상세 — 만료 VM 시작 거부 (409 VM_EXPIRED)', () => {
   })
 })
 
-/* ─── SSH 접속 안내 ─── */
+/* ─── 접속 카드 (웹 터미널 + VM별 SSH 키) ─── */
 
-describe('VM 상세 — SSH 접속', () => {
-  test('게이트웨이 접속 명령을 호스트명 기준으로 보여준다', async () => {
-    renderVm(uuid(56))
-
-    await screen.findByRole('heading', { name: 'algo-judge' })
-    expect(screen.getByText('ssh algo-judge@ssh.pcl.kr')).toBeInTheDocument()
-    expect(screen.getByText('접속 방법 보기')).toBeInTheDocument()
-  })
-
-  test('SSH 키가 하나도 없으면 접속 불가 경고와 등록 링크를 보여준다', async () => {
-    server.use(http.get('*/api/v1/me/ssh-keys', () => HttpResponse.json([])))
+describe('VM 상세 — 접속', () => {
+  test('키를 발급받기 전에는 발급 버튼을 보여준다', async () => {
     renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText(/SSH 키가 등록되어 있지 않아 접속할 수 없습니다/),
+      await screen.findByText('아직 이 VM의 SSH 키를 발급받지 않았습니다.'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /SSH 키 등록하기/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'SSH 키 발급 및 다운로드' }),
+    ).toBeInTheDocument()
+  })
+
+  test('발급하면 개인키를 내려주고 지문과 접속 명령이 나타난다', async () => {
+    const click = vi.fn()
+    const createElement = document.createElement.bind(document)
+    const spy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = createElement(tag)
+      if (tag === 'a') el.click = click
+      return el
+    })
+    try {
+      renderVm(uuid(56))
+      await screen.findByRole('heading', { name: 'algo-judge' })
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'SSH 키 발급 및 다운로드' }),
+      )
+
+      // 다운로드가 실제로 트리거됐다 (개인키는 화면에 남지 않는다).
+      await waitFor(() => expect(click).toHaveBeenCalled())
+      expect(
+        await screen.findByText('SHA256:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU'),
+      ).toBeInTheDocument()
+      // 같은 명령이 카드와 (접힌) 안내 3단계에 함께 나온다.
+      expect(
+        screen.getAllByText('ssh -i ~/.ssh/pickle-algo-judge.pem algo-judge@ssh.pcl.kr'),
+      ).not.toHaveLength(0)
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  test('재발급은 경고 모달을 거치고 지문을 교체한다', async () => {
+    seedVmSshKey(uuid(56))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    const before = await screen.findByText(
+      'SHA256:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU',
+    )
+    expect(before).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: '키 재발급' }))
+    expect(
+      await screen.findByText(/기존 키는 즉시 무효화되어/),
+    ).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '재발급하고 내려받기' }))
+
+    expect(
+      await screen.findByText('SHA256:hZ9Kk3nQ2wErTyUiOpAsDfGhJkLzXcVbNmQwErTyUiO'),
+    ).toBeInTheDocument()
+  })
+
+  test('삭제하면 발급 버튼으로 돌아온다', async () => {
+    seedVmSshKey(uuid(56))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await userEvent.click(await screen.findByRole('button', { name: '키 삭제' }))
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'SSH 키 발급 및 다운로드' }),
+    ).toBeInTheDocument()
+  })
+
+  test('접속 권한이 없으면 접속 카드 자체가 없다', async () => {
+    server.use(vmDetailAs(uuid(56), 'VIEWER', { status: 'RUNNING' }))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.queryByText('접속')).not.toBeInTheDocument()
   })
 })
 
@@ -401,13 +466,12 @@ describe('VM 상세 — 웹 터미널 열기', () => {
     expect(await screen.findByRole('button', { name: '웹 터미널 열기' })).toBeInTheDocument()
   })
 
-  test('STOPPED VM에는 웹 터미널 열기 버튼이 없다', async () => {
+  test('STOPPED VM에서는 버튼이 사유와 함께 비활성이다', async () => {
     renderVm(uuid(57)) // web-lab, STOPPED, OWNER
 
     await screen.findByRole('heading', { name: 'web-lab' })
-    expect(
-      screen.queryByRole('button', { name: '웹 터미널 열기' }),
-    ).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '웹 터미널 열기' })).toBeDisabled()
+    expect(screen.getByText('VM이 실행 중일 때만 열 수 있습니다.')).toBeInTheDocument()
   })
 
   test('버튼을 누르면 팝업 창을 연다 (콘솔 라우트 이동이 아니다)', async () => {
@@ -447,7 +511,7 @@ describe('VM 상세 — 웹 터미널 열기', () => {
     }
   })
 
-  test('접속 권한이 없으면(accessAllowed=false) 웹 터미널 열기 버튼이 없다', async () => {
+  test('접속 권한이 없으면(accessAllowed=false) 접속 카드가 통째로 없다', async () => {
     // 열람자는 상태만 볼 수 있다 — 안으로 들어가는 수단은 주어지지 않는다.
     server.use(vmDetailAs(uuid(56), 'VIEWER', { status: 'RUNNING' }))
     renderVm(uuid(56))
@@ -538,7 +602,7 @@ describe('VM 상세 — 탭', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '개요' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText('SSH 접속')).toBeInTheDocument()
+    expect(screen.getByText('접속')).toBeInTheDocument()
     expect(screen.queryByText('이벤트 이력')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: '활동' }))
