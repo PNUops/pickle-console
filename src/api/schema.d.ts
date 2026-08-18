@@ -4516,7 +4516,7 @@ export interface components {
         /** @description 이 VM에 대한 내 SSH 키 발급 여부 */
         VmSshKeyStatus: {
             /** @description 발급된 키. 아직 발급받지 않았으면 null */
-            key: components["schemas"]["VmSshKeyView"];
+            key?: components["schemas"]["VmSshKeyView"] | null;
         };
         /** @description VM에 발급된 SSH 키 정보 (개인키는 포함하지 않는다) */
         VmSshKeyView: {
@@ -4544,7 +4544,7 @@ export interface components {
              * Format: date-time
              * @description 이 키로 마지막에 접속한 시각 (없으면 null)
              */
-            lastUsedAt: string | null;
+            lastUsedAt?: string | null;
         };
         /** @enum {string} */
         VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";

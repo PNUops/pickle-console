@@ -87,7 +87,7 @@ export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsag
         </Step>
 
         <Step title="3. SSH로 접속합니다">
-          <Code>{`ssh -i ${keyPath} ${host}@${gateway}`}</Code>
+          <Code>{`ssh -i ${keyPath} -o IdentitiesOnly=yes ${host}@${gateway}`}</Code>
         </Step>
 
         <Step title="자주 접속한다면 ~/.ssh/config에 등록하세요">

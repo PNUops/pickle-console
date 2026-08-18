@@ -512,7 +512,11 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
   })
   const key = keyQuery.data?.key ?? null
   const keyFile = key?.fileName ?? `pickle-${vm.hostname}.pem`
-  const command = `ssh -i ~/.ssh/${keyFile} ${vm.hostname}@${vm.sshHost}`
+  // IdentitiesOnly belongs on the one-liner too, not only in the config block:
+  // -i adds a key, it does not stop the agent's keys being offered first, and a
+  // person with several VMs has several keys.
+  const command =
+    `ssh -i ~/.ssh/${keyFile} -o IdentitiesOnly=yes ${vm.hostname}@${vm.sshHost}`
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['vms', vm.id, 'ssh-key'] })
 
@@ -522,12 +526,16 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
     toast.success(message)
   }
 
+
   const issue = useMutation({
     gcTime: 0,
     mutationFn: () => issueVmSshKey(vm.id),
     onSuccess: async (res) => {
       setError(null)
       saveFrom(res, '개인키를 내려받았습니다. 안전한 곳에 보관해 주세요.')
+      // The plaintext sits in the mutation result until it is reset; once it is
+      // a file on disk there is no reason to keep a copy in memory.
+      issue.reset()
       await refresh()
     },
     onError: (err) => setError(toApiError(err, 'SSH 키를 발급하지 못했습니다.').message),
@@ -539,6 +547,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
     onSuccess: (res) => {
       setError(null)
       saveFrom(res, '개인키를 다시 내려받았습니다. 다운로드는 기록에 남습니다.')
+      download.reset()
     },
     onError: (err) => setError(toApiError(err, '개인키를 다운로드하지 못했습니다.').message),
   })
@@ -550,6 +559,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
       setError(null)
       setConfirmReissue(false)
       saveFrom(res, '새 개인키를 내려받았습니다. 이전 키로는 접속할 수 없습니다.')
+      reissue.reset()
       await refresh()
     },
     onError: (err) => {

@@ -405,7 +405,9 @@ describe('VM 상세 — 접속', () => {
       ).toBeInTheDocument()
       // 같은 명령이 카드와 (접힌) 안내 3단계에 함께 나온다.
       expect(
-        screen.getAllByText('ssh -i ~/.ssh/pickle-algo-judge.pem algo-judge@ssh.pcl.kr'),
+        screen.getAllByText(
+          'ssh -i ~/.ssh/pickle-algo-judge.pem -o IdentitiesOnly=yes algo-judge@ssh.pcl.kr',
+        ),
       ).not.toHaveLength(0)
     } finally {
       spy.mockRestore()
