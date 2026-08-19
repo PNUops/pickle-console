@@ -58,11 +58,11 @@ describe('사이드바 리소스 목록', () => {
       'href',
       '/console/vms',
     )
-    for (const label of ['컨테이너', '레지스트리', '데이터베이스', '도메인']) {
+    for (const label of ['컨테이너', '레지스트리', '데이터베이스', 'GPU', '도메인']) {
       expect(within(nav).queryByRole('link', { name: label })).not.toBeInTheDocument()
       expect(within(nav).getByText(label)).toHaveAttribute('aria-disabled', 'true')
     }
-    expect(within(nav).getAllByText('준비 중')).toHaveLength(4)
+    expect(within(nav).getAllByText('준비 중')).toHaveLength(5)
   })
 
   test('범위를 좁혀 두면 워크스페이스 항목이 그 워크스페이스 관리로 바뀐다', async () => {
