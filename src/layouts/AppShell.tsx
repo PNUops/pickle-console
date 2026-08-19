@@ -32,6 +32,11 @@ export interface NavItem {
    * 않아, 예정된 종류도 같은 목록에 세우되 누를 수 없다는 사실을 배지로 말한다.
    */
   disabled?: boolean
+  /**
+   * 라벨 오른쪽 배지 — 항목의 상태를 한 단어로 말한다(`Beta` 등). 준비 중 항목은
+   * 적지 않아도 '준비 중'이 붙는다.
+   */
+  badge?: string
 }
 
 /** 사이드바 내비게이션 섹션 — 소제목(선택) 아래 항목 묶음. */
@@ -129,7 +134,9 @@ function ShellNav({
               >
                 {item.icon}
                 {item.label}
-                <Badge variant="neutral" className="ml-auto">준비 중</Badge>
+                <Badge variant="neutral" className="ml-auto">
+                  {item.badge ?? '준비 중'}
+                </Badge>
               </span>
             ) : (
               <NavLink
@@ -148,6 +155,11 @@ function ShellNav({
               >
                 {item.icon}
                 {item.label}
+                {item.badge && (
+                  <Badge variant="info" className="ml-auto">
+                    {item.badge}
+                  </Badge>
+                )}
               </NavLink>
             ),
           )}
