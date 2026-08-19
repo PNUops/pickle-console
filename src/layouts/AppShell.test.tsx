@@ -65,6 +65,15 @@ describe('사이드바 리소스 목록', () => {
     expect(within(nav).getAllByText('준비 중')).toHaveLength(5)
   })
 
+  test('LLM API는 열려 있되 Beta 배지를 단다', async () => {
+    renderConsole()
+    const nav = await screen.findByRole('navigation', { name: '콘솔 메뉴' })
+
+    const llm = within(nav).getByRole('link', { name: /LLM API/ })
+    expect(llm).toHaveAttribute('href', '/console/llm-keys')
+    expect(within(llm).getByText('Beta')).toBeInTheDocument()
+  })
+
   test('범위를 좁혀 두면 워크스페이스 항목이 그 워크스페이스 관리로 바뀐다', async () => {
     server.use(refreshSuccessHandler('access-user'))
     renderApp(`/console/${uuid(15)}`)

@@ -29,7 +29,7 @@ export function ConsoleLayout() {
       items: [
         { to: consolePaths.resources(scope), label: '전체 리소스', icon: navIcons.dashboard },
         { to: consolePaths.vms(scope), label: '가상머신', icon: navIcons.server },
-        { to: consolePaths.llmKeys(scope), label: 'LLM API', icon: navIcons.chip },
+        { to: consolePaths.llmKeys(scope), label: 'LLM API', icon: navIcons.chip, badge: 'Beta' },
         { label: '컨테이너', icon: navIcons.container, disabled: true },
         { label: '레지스트리', icon: navIcons.registry, disabled: true },
         { label: '데이터베이스', icon: navIcons.database, disabled: true },
