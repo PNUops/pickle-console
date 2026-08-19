@@ -91,6 +91,14 @@ export const navIcons = {
       <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
     </>,
   ),
+  gpu: icon(
+    <>
+      <rect x="2" y="6.5" width="20" height="11" rx="2" />
+      <circle cx="8" cy="12" r="2.5" />
+      <path d="M13.5 10h5M13.5 14h5" />
+      <path d="M6 17.5v3M18 17.5v3" />
+    </>,
+  ),
   globe: icon(
     <>
       <circle cx="12" cy="12" r="9" />

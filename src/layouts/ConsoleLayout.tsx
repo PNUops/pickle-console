@@ -33,6 +33,7 @@ export function ConsoleLayout() {
         { label: '컨테이너', icon: navIcons.container, disabled: true },
         { label: '레지스트리', icon: navIcons.registry, disabled: true },
         { label: '데이터베이스', icon: navIcons.database, disabled: true },
+        { label: 'GPU', icon: navIcons.gpu, disabled: true },
         { label: '도메인', icon: navIcons.globe, disabled: true },
       ],
     },
