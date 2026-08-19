@@ -45,6 +45,14 @@ export interface NavSection {
   items: NavItem[]
 }
 
+/**
+ * 항목 오른쪽 배지가 놓이는 자리 — 폭을 고정하고 그 안에서 배지를 가운데 둔다.
+ * '준비 중'과 'Beta'는 글자 수가 달라서, 오른쪽 끝만 맞추면 배지들이 한 열로
+ * 읽히지 않는다. 폭을 갖는 것은 자리이고 배지는 제 크기 그대로다 — 배지 자체를
+ * 늘리면 글자 옆 여백만 넓어진다.
+ */
+const NAV_BADGE_SLOT = 'ml-auto flex w-[4.5rem] justify-center'
+
 const NAV_LINK_BASE =
   'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600'
 
@@ -134,9 +142,9 @@ function ShellNav({
               >
                 {item.icon}
                 {item.label}
-                <Badge variant="neutral" className="ml-auto">
-                  {item.badge ?? '준비 중'}
-                </Badge>
+                <span className={NAV_BADGE_SLOT}>
+                  <Badge variant="neutral">{item.badge ?? '준비 중'}</Badge>
+                </span>
               </span>
             ) : (
               <NavLink
@@ -156,9 +164,9 @@ function ShellNav({
                 {item.icon}
                 {item.label}
                 {item.badge && (
-                  <Badge variant="info" className="ml-auto">
-                    {item.badge}
-                  </Badge>
+                  <span className={NAV_BADGE_SLOT}>
+                    <Badge variant="info">{item.badge}</Badge>
+                  </span>
                 )}
               </NavLink>
             ),
