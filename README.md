@@ -88,7 +88,7 @@ Node.js 24(LTS)가 필요합니다. `package.json`의 `engines`에 적혀 있습
 ```bash
 npm install
 npm run dev              # /api·/terminal/ws 를 로컬 pickle-api :8080 으로 프록시
-scripts/verify.sh        # lint → typecheck → test → build → 취약점 감사 → 공개 위생 검사
+scripts/verify.sh        # lint → typecheck → test → build → 취약점 감사
 ```
 
 | 명령 | 내용 |
@@ -98,9 +98,8 @@ scripts/verify.sh        # lint → typecheck → test → build → 취약점 �
 | `npm run build` / `npm run preview` | 프로덕션 빌드 / 미리보기 |
 | `npm run gen:api` | API 타입 재생성 |
 
-`verify.sh` 안의 `npm audit --omit=dev --audit-level=high`와 공개 위생 검사는 차단
-게이트입니다. 런타임 의존성에 high 이상 취약점이 있거나 내부 참조가 섞이면 검증이
-실패합니다.
+`verify.sh` 안의 `npm audit --omit=dev --audit-level=high`는 차단 게이트입니다. 런타임
+의존성에 high 이상 취약점이 있으면 검증이 실패합니다.
 
 ### 로그인 계정
 
