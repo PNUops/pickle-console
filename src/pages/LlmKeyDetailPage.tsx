@@ -169,6 +169,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             <Field label="분당 요청 한도">{limitLabel(llmKey.rpm, '회')}</Field>
             <Field label="분당 토큰 한도">{limitLabel(llmKey.tpm, '토큰')}</Field>
             <Field label="동시 요청 한도">{limitLabel(llmKey.concurrency, '건')}</Field>
+            <Field label="상용 모델 (금액 축)">{creditAxisLabel(llmKey)}</Field>
             <Field label="생성일">{formatDateTime(llmKey.createdAt)}</Field>
             {llmKey.revokedAt && (
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>
@@ -222,6 +223,27 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
 /** null 한도는 "무제한"이 아니라 "게이트웨이 기본값"이다 — 계약이 그렇게 말한다. */
 function limitLabel(value: number | null | undefined, unit: string): string {
   return value == null ? '게이트웨이 기본값' : `${value}${unit}`
+}
+
+/**
+ * 금액 축의 세 상태를 한 줄로 말한다. 한도가 부여됐는데 아직 연결 전인 상태는
+ * 사용자가 보게 되는 실제 상태다 — 키는 있고 자체 서빙은 되는데 상용만 안 되는
+ * 이유를 화면이 말해 줘야 한다.
+ */
+function creditAxisLabel(llmKey: {
+  creditLimit: number
+  creditLimitReset?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null
+  creditAxisConnected: boolean
+}): string {
+  if (!llmKey.creditLimit) return '사용 불가 — 금액 한도가 부여되지 않았습니다'
+  const window =
+    llmKey.creditLimitReset == null
+      ? '총액'
+      : { DAILY: '일일', WEEKLY: '주간', MONTHLY: '월간' }[llmKey.creditLimitReset]
+  const amount = `$${llmKey.creditLimit.toLocaleString('ko-KR')} (${window})`
+  return llmKey.creditAxisConnected
+    ? amount
+    : `${amount} — 연결 준비 중입니다. 준비되면 자동으로 사용 가능해집니다`
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
