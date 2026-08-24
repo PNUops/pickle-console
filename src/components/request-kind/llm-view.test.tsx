@@ -168,9 +168,45 @@ describe('LLM API 키 신청 — 승인 폼', () => {
           grantedTpm: null,
           grantedConcurrency: null,
           grantedDailyTokens: null,
+          grantedCreditLimit: null,
+          grantedCreditLimitReset: null,
         },
       },
     ])
+  })
+
+  test('금액 한도를 적으면 리셋 창과 함께 부여값으로 나간다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('금액 한도 리셋 창'), 'MONTHLY')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByText('금액 한도 $5')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditLimit: 5,
+      grantedCreditLimitReset: 'MONTHLY',
+    })
+  })
+
+  test('금액 없이 리셋 창만 고르면 확인 모달 앞에서 걸린다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.selectOptions(screen.getByLabelText('금액 한도 리셋 창'), 'DAILY')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    expect(
+      await screen.findByText('리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'),
+    ).toBeInTheDocument()
+    expect(approved).toHaveLength(0)
   })
 
   test('승인자가 적은 한도만 부여값으로 나가고, 결과 카드에 그대로 남는다', async () => {
@@ -194,6 +230,8 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedTpm: null,
       grantedConcurrency: 4,
       grantedDailyTokens: null,
+      grantedCreditLimit: null,
+      grantedCreditLimitReset: null,
     })
 
     const granted = screen.getByText('부여 분당 요청 수').closest('div')!

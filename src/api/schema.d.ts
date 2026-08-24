@@ -2612,9 +2612,13 @@ export interface components {
              * @description 부여 동시 요청 수. 비우면 서비스 기본값이 적용됩니다.
              */
             grantedConcurrency?: number | null;
+            /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
+            grantedCreditLimit?: number | null;
+            /** @description 금액 한도 리셋 창. 비우면 리셋 없는 총액 상한입니다. 창은 UTC 자정에 초기화됩니다. */
+            grantedCreditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 부여 일일 토큰 수. 비우면 서비스 기본값이 적용됩니다.
+             * @description 부여 일일 토큰 수. 비우면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
             /**
@@ -2877,6 +2881,8 @@ export interface components {
             kind: components["schemas"]["WorkspaceKind"];
             name: string;
         };
+        /** @enum {string} */
+        CreditLimitReset: "DAILY" | "WEEKLY" | "MONTHLY";
         DisableMfaRequest: {
             code?: string;
             password: string;
@@ -2936,7 +2942,7 @@ export interface components {
             txtVerified: boolean;
         };
         /** @enum {string} */
-        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH";
+        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH" | "OPENROUTER_ORPHAN" | "OPENROUTER_STALE";
         DriftFindingResponse: {
             detail?: unknown;
             /** Format: date-time */
@@ -3073,6 +3079,12 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
+            /** @description 상용 축 사용 가능 여부. 금액 한도가 부여됐지만 아직 연결 전이면 false입니다. */
+            creditAxisConnected: boolean;
+            /** @description 상용(금액) 축 한도, USD 크레딧. 0이면 상용 모델을 쓸 수 없습니다. */
+            creditLimit: number;
+            /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. 창은 UTC 자정 기준입니다. */
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: date-time
              * @description 만료 시각. null이면 만료가 없습니다.
@@ -3124,9 +3136,13 @@ export interface components {
              * @description 부여 동시 요청 수. 비어 있으면 서비스 기본값입니다.
              */
             grantedConcurrency?: number | null;
+            /** @description 부여 금액 한도(USD 크레딧). 비어 있거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
+            grantedCreditLimit?: number | null;
+            /** @description 금액 한도 리셋 창. 비어 있으면 리셋 없는 총액 상한입니다. */
+            grantedCreditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 부여 일일 토큰 수. 비어 있으면 서비스 기본값입니다.
+             * @description 부여 일일 토큰 수. 비어 있으면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
             /**

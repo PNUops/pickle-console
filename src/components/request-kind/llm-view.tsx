@@ -1,8 +1,39 @@
 import { useState } from 'react'
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
-import { FormField, Input, Textarea } from '../ui'
+import { FormField, Input, Select, Textarea } from '../ui'
 import { Field } from './Field'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
+
+/** 금액 한도 리셋 창의 표시 이름 — 값은 계약의 CreditLimitReset. */
+const CREDIT_RESET_LABELS: Record<string, string> = {
+  DAILY: '일일 (UTC 자정 초기화)',
+  WEEKLY: '주간 (UTC 자정 초기화)',
+  MONTHLY: '월간 (UTC 자정 초기화)',
+}
+
+function creditResetText(value: string | null | undefined): string {
+  return value ? (CREDIT_RESET_LABELS[value] ?? value) : '총액 상한 (리셋 없음)'
+}
+
+/** 금액은 다른 한도와 달리 비움이 기본값이 아니라 0(상용 축 미사용)이다. */
+function creditText(value: number | null | undefined): string {
+  return value == null || value === 0
+    ? '미부여 — 상용 모델 사용 불가'
+    : `$${value.toLocaleString('ko-KR')}`
+}
+
+function creditError(raw: string): string | undefined {
+  const value = raw.trim()
+  if (!value) return undefined
+  if (!/^\d+(\.\d{1,2})?$/.test(value))
+    return '금액 한도는 소수점 둘째 자리까지의 0 이상 숫자로 입력하거나 비워 두세요.'
+  return undefined
+}
+
+function creditValue(raw: string): number | null {
+  const value = raw.trim()
+  return value ? Number(value) : null
+}
 
 /** 계약이 정한 상한 — 정책이 아니라 수의 폭이다. */
 const MAX_RPM = 10_000
@@ -59,6 +90,10 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
   const [tpm, setTpm] = useState('')
   const [concurrency, setConcurrency] = useState('')
   const [dailyTokens, setDailyTokens] = useState('')
+  // 금액 축은 비움이 기본값 부여가 아니라 미부여(0)다 — 상용 모델을 열려면
+  // 승인자가 의도적으로 금액을 적어야 한다.
+  const [creditLimit, setCreditLimit] = useState('')
+  const [creditReset, setCreditReset] = useState('')
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
@@ -77,6 +112,12 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
       if (concurrencyError) errors['llmKey.grantedConcurrency'] = concurrencyError
       const dailyError = limitError(dailyTokens, '일일 토큰 수', MAX_SAFE)
       if (dailyError) errors['llmKey.grantedDailyTokens'] = dailyError
+      const creditLimitError = creditError(creditLimit)
+      if (creditLimitError) errors['llmKey.grantedCreditLimit'] = creditLimitError
+      // 리셋 창은 0보다 큰 금액 위에서만 뜻이 있다 — 서버가 같은 규칙으로 막는다.
+      if (!creditLimitError && creditReset && !(Number(creditLimit) > 0)) {
+        errors['llmKey.grantedCreditLimit'] = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
+      }
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
       if (!rpmError && !tpmError && rpm.trim() && tpm.trim()) {
         if (Number(tpm) < Number(rpm))
@@ -96,6 +137,10 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
         grantedTpm: limitValue(tpm),
         grantedConcurrency: limitValue(concurrency),
         grantedDailyTokens: limitValue(dailyTokens),
+        grantedCreditLimit: creditValue(creditLimit),
+        grantedCreditLimitReset: creditReset
+          ? (creditReset as 'DAILY' | 'WEEKLY' | 'MONTHLY')
+          : null,
       },
     }),
 
@@ -164,6 +209,36 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
           </FormField>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            label="부여 금액 한도 (USD)"
+            error={fieldErrors['llmKey.grantedCreditLimit']}
+            description="상용 모델(OpenRouter 경유)에 쓸 수 있는 금액입니다. 비우거나 0이면 상용 모델을 쓸 수 없습니다."
+          >
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={creditLimit}
+              onChange={(event) => setCreditLimit(event.target.value)}
+              placeholder="0 (상용 축 미사용)"
+            />
+          </FormField>
+          <FormField
+            label="금액 한도 리셋 창"
+            description="비우면 리셋 없는 총액 상한입니다. 리셋 창은 UTC 자정에 초기화됩니다."
+          >
+            <Select
+              value={creditReset}
+              onChange={(event) => setCreditReset(event.target.value)}
+            >
+              <option value="">총액 상한 (리셋 없음)</option>
+              <option value="DAILY">{CREDIT_RESET_LABELS.DAILY}</option>
+              <option value="WEEKLY">{CREDIT_RESET_LABELS.WEEKLY}</option>
+              <option value="MONTHLY">{CREDIT_RESET_LABELS.MONTHLY}</option>
+            </Select>
+          </FormField>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="사용 시작일" error={fieldErrors.grantedStartDate}>
             <Input
               type="date"
@@ -198,6 +273,8 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
           <li>분당 토큰 수 {limitText(limitValue(tpm))}</li>
           <li>일일 토큰 수 {limitText(limitValue(dailyTokens))}</li>
           <li>동시 요청 수 {limitText(limitValue(concurrency))}</li>
+          <li>금액 한도 {creditText(creditValue(creditLimit))}</li>
+          {creditValue(creditLimit) ? <li>리셋 창 {creditResetText(creditReset || null)}</li> : null}
         </ul>
         <p>
           승인하면 키가 만들어지지만 아직 쓸 수 없습니다. 평문 키는 신청자가 직접
@@ -267,6 +344,10 @@ export const llmKeyRequestView: RequestKindView = {
         <Field label="부여 분당 토큰 수">{limitText(spec?.grantedTpm)}</Field>
         <Field label="부여 일일 토큰 수">{limitText(spec?.grantedDailyTokens)}</Field>
         <Field label="부여 동시 요청 수">{limitText(spec?.grantedConcurrency)}</Field>
+        <Field label="부여 금액 한도">{creditText(spec?.grantedCreditLimit)}</Field>
+        {spec?.grantedCreditLimit ? (
+          <Field label="금액 리셋 창">{creditResetText(spec?.grantedCreditLimitReset)}</Field>
+        ) : null}
         <Field label="부여 기간">
           {data.review.grantedStartDate ?? '미지정'} ~{' '}
           {data.review.grantedEndDate ?? '미지정'}
