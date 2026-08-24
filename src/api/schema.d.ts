@@ -2942,7 +2942,7 @@ export interface components {
             txtVerified: boolean;
         };
         /** @enum {string} */
-        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH";
+        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH" | "OPENROUTER_ORPHAN" | "OPENROUTER_STALE";
         DriftFindingResponse: {
             detail?: unknown;
             /** Format: date-time */
