@@ -257,6 +257,10 @@ const DRIFT_KIND_VARIANTS: Record<DriftFindingKind, BadgeVariant> = {
   MISSING_IN_PROXMOX: 'danger',
   UNMANAGED_GUEST: 'warning',
   SPEC_MISMATCH: 'info',
+  // OpenRouter 축 — 고아는 아무도 설명 못 하는 과금이라 위험, 상태 불일치는
+  // 조정자가 비활성화까지 해 두므로 경고 수준이다.
+  OPENROUTER_ORPHAN: 'danger',
+  OPENROUTER_STALE: 'warning',
 }
 
 export function DriftKindBadge({

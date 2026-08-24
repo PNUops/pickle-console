@@ -203,6 +203,8 @@ export const DRIFT_KIND_LABELS: Record<DriftFindingKind, string> = {
   MISSING_IN_PROXMOX: 'Proxmox에 없음',
   UNMANAGED_GUEST: '미등록 VM',
   SPEC_MISMATCH: '사양 불일치',
+  OPENROUTER_ORPHAN: 'OpenRouter 미등록 키',
+  OPENROUTER_STALE: 'OpenRouter 키 상태 불일치',
 }
 
 export const DRIFT_STATUS_LABELS: Record<DriftFindingStatus, string> = {
