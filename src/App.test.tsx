@@ -8,9 +8,10 @@ vi.mock('./pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
 test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async () => {
   renderApp('/')
 
-  // 히어로 (랜딩 청크는 lazy — findBy로 로드를 기다린다)
+  // 히어로 (랜딩 청크는 lazy — findBy로 로드를 기다린다. 전체 스위트 병렬 부하에서
+  // 기본 1초를 넘겨 플레이크가 났으므로 상한만 늘린다)
   expect(
-    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }),
+    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 5000 }),
   ).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /서비스 소개/ })).toBeInTheDocument()
 

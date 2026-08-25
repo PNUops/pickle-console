@@ -21,7 +21,7 @@ export function ApiSnippetMock() {
           <span className="text-primary-300">{LLM_GATEWAY_HOST}</span>/v1/chat/completions \
         </p>
         <p className="pl-6">
-          -H <span className="text-success-400">&quot;Authorization: Bearer sk-...&quot;</span> \
+          -H <span className="text-success-400">&quot;Authorization: Bearer pickle-...&quot;</span> \
         </p>
         <p className="pl-6">
           -d{' '}

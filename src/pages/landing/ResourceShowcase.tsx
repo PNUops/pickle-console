@@ -30,7 +30,7 @@ export function ResourceShowcase() {
           <p className="mt-4 text-lg leading-relaxed text-neutral-400">
             가상머신과 LLM API 키는 지금 신청할 수 있습니다.{' '}
             <br className="hidden sm:block" />
-            나머지도 같은 콘솔, 같은 절차로 차례로 열립니다.
+            나머지도 같은 콘솔, 같은 절차로 준비하고 있습니다.
           </p>
         </Reveal>
 

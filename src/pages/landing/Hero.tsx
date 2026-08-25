@@ -125,7 +125,7 @@ export function Hero() {
 
         {/* 스크롤 힌트 */}
         <a
-          href="#how-it-works"
+          href="#resources"
           aria-label="아래로 스크롤"
           className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full p-2 text-neutral-500 transition-colors hover:text-neutral-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
         >
