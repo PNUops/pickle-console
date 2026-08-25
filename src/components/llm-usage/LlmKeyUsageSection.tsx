@@ -9,7 +9,7 @@ import {
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { formatDateTime } from '../../lib/format'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
-import { CHART_SERIES_1, CHART_SERIES_2 } from '../metrics/chart-colors'
+import { CHART_CATEGORICAL, CHART_SERIES_1, CHART_SERIES_2 } from '../metrics/chart-colors'
 import { formatKstDay } from '../metrics/timeframe'
 import { BudgetGauge } from './BudgetGauge'
 import { DonutChart, type DonutSlice } from './DonutChart'
@@ -452,9 +452,18 @@ function topSlices(
     .map((model) => ({ label: modelLabel(model.modelName), value: pick(model) }))
     .filter((slice) => slice.value > 0)
     .sort((a, b) => b.value - a.value)
-  if (sorted.length <= 5) return sorted
-  const rest = sorted.slice(4).reduce((sum, slice) => sum + slice.value, 0)
-  return [...sorted.slice(0, 4), { label: `기타 ${sorted.length - 4}종`, value: rest, residual: true }]
+  if (sorted.length <= CHART_CATEGORICAL.length) return sorted
+  const rest = sorted
+    .slice(CHART_CATEGORICAL.length)
+    .reduce((sum, slice) => sum + slice.value, 0)
+  return [
+    ...sorted.slice(0, CHART_CATEGORICAL.length),
+    {
+      label: `기타 ${sorted.length - CHART_CATEGORICAL.length}종`,
+      value: rest,
+      residual: true,
+    },
+  ]
 }
 
 function modelLabel(name: string | null | undefined): string {

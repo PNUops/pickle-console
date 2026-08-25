@@ -50,9 +50,13 @@ export function DonutChart({ title, slices, format, size = 176 }: DonutChartProp
     // 벌어진 것처럼 보인다.
     const length = Math.max(share * circumference - (slices.length > 1 ? gap : 0), 0)
     const arc = {
-      color: slice.residual
-        ? CHART_RESIDUAL
-        : CHART_CATEGORICAL[index % CHART_CATEGORICAL.length],
+      // 팔레트를 넘어서면 순환시키지 않는다 — 검증된 색이 네 개뿐이라 다섯째
+      // 조각이 첫째 색을 다시 쓰면 원 위에서 두 조각이 같은 색으로 붙는다.
+      // 부르는 쪽이 상위 넷 + 기타로 잘라 주지만, 그 규칙이 여기서도 지켜진다.
+      color:
+        slice.residual || index >= CHART_CATEGORICAL.length
+          ? CHART_RESIDUAL
+          : CHART_CATEGORICAL[index],
       dash: `${length} ${circumference - length}`,
       rotation: (offset / circumference) * 360 - 90,
       share,
