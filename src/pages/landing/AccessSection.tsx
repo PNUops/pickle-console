@@ -1,61 +1,62 @@
 import { SSH_GATEWAY_HOST } from '../../lib/hosts'
+import { ApiSnippetMock } from './ApiSnippetMock'
 import { icons } from './landing-data'
 import { Reveal } from './Reveal'
 import { SectionHeading } from './SectionHeading'
 import { TerminalMock } from './TerminalMock'
 
-const accessMethods = [
+const usageColumns = [
   {
     icon: 'key',
-    title: 'SSH 게이트웨이',
+    title: '가상머신 접속',
     description:
-      '콘솔에 등록한 SSH 키로 접속합니다. 교내망 밖에서도 VPN 없이 연결됩니다.',
+      '콘솔에 등록한 SSH 키로 접속합니다. 교내망 밖에서도 VPN 없이 연결되고, SSH 클라이언트가 없는 실습실 PC에서는 브라우저 웹 터미널로 바로 셸을 엽니다.',
     meta: `ssh <vm-slug>@${SSH_GATEWAY_HOST}`,
+    mock: <TerminalMock />,
   },
   {
-    icon: 'terminal',
-    title: '웹 터미널',
+    icon: 'chip',
+    title: 'LLM API 호출',
     description:
-      '브라우저에서 바로 셸을 엽니다. SSH 클라이언트나 키가 없는 실습실 PC에서도 쓸 수 있습니다.',
-    meta: '콘솔 → 내 VM → 터미널 열기',
+      '발급한 키를 Authorization 헤더에 넣으면 됩니다. OpenAI 호환이라 쓰던 SDK의 base URL만 바꾸면 그대로 동작합니다.',
+    meta: '콘솔 → LLM API 키 → 키 발급',
+    mock: <ApiSnippetMock />,
   },
 ] as const
 
-/** 접속 방식 — 좌측 터미널 목업 + 우측 두 가지 접속 경로. */
+/** 사용 방식 — 가상머신은 터미널 목업, LLM API 키는 요청 목업으로 나란히 보여 준다. */
 export function AccessSection() {
   return (
     <section id="access" aria-labelledby="access-title" className="scroll-mt-16 bg-white">
       <div className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6">
         <SectionHeading
-          eyebrow="접속 방식"
-          title="터미널이 있어도, 없어도"
+          eyebrow="사용 방식"
+          title="익숙한 도구 그대로"
           titleId="access-title"
-          description="익숙한 SSH와 브라우저 웹 터미널, 두 가지 길을 모두 제공합니다."
+          description="가상머신은 SSH와 웹 터미널로 접속하고, LLM API 키는 OpenAI 호환 API로 호출합니다."
         />
-        <div className="mt-14 grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <Reveal>
-            <TerminalMock />
-          </Reveal>
-          <div className="flex flex-col gap-6">
-            {accessMethods.map((method, index) => (
-              <Reveal key={method.title} delay={0.1 + index * 0.08}>
+        <div className="mt-14 grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
+          {usageColumns.map((column, index) => (
+            <Reveal key={column.title} delay={index * 0.08}>
+              <div className="flex flex-col gap-6">
+                {column.mock}
                 <div className="rounded-card border border-neutral-200 bg-neutral-50 p-6">
                   <div className="flex items-center gap-3">
                     <span className="flex size-10 items-center justify-center rounded-xl bg-primary-600 text-white">
-                      {icons[method.icon]}
+                      {icons[column.icon]}
                     </span>
-                    <h3 className="text-lg font-bold text-neutral-900">{method.title}</h3>
+                    <h3 className="text-lg font-bold text-neutral-900">{column.title}</h3>
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-neutral-600">
-                    {method.description}
+                    {column.description}
                   </p>
                   <p className="mt-3 inline-block rounded-lg bg-neutral-900 px-3 py-1.5 font-mono text-xs text-primary-300">
-                    {method.meta}
+                    {column.meta}
                   </p>
                 </div>
-              </Reveal>
-            ))}
-          </div>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

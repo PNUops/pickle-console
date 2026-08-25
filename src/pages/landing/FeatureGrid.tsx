@@ -9,13 +9,13 @@ export function FeatureGrid() {
       <div className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="주요 기능"
-          title="서버만 주고 끝나지 않습니다"
+          title="리소스만 주고 끝나지 않습니다"
           titleId="features-title"
           description={
             <>
               서브도메인을 무료로 할당받아 웹 서비스를 바로 공개하고,{' '}
               <br className="hidden sm:block" />
-              접속·권한·수명 관리까지 콘솔에서 함께 해결합니다.
+              접속과 권한, 수명 관리까지 콘솔에서 함께 해결합니다.
             </>
           }
         />

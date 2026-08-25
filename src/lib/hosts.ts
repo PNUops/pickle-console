@@ -10,3 +10,6 @@
  * 그대로 표시하고 있었다) 한 곳에 모아 둔다.
  */
 export const SSH_GATEWAY_HOST = 'ssh.pcl.kr'
+
+/** LLM 게이트웨이 공개 호스트 — OpenAI 호환 API의 base URL(`https://<host>/v1`)에 쓰인다. */
+export const LLM_GATEWAY_HOST = 'llm.pcl.kr'
