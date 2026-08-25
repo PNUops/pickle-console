@@ -7,9 +7,12 @@ import {
   changeMyPassword,
   disableMfa,
   regenerateRecoveryCodes,
-  withdrawMyAccount,
+  requestPasswordReset,
+  type LinkedIdentity,
   type MfaRecoveryCodesResponse,
   type MfaSetupResponse,
+  unlinkIdentity,
+  withdrawMyAccount,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { setAccessToken } from '../api/token'
@@ -42,14 +45,23 @@ export function AccountPage() {
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
         <p className="mt-1 text-sm text-neutral-500">비밀번호 변경과 회원 탈퇴를 관리합니다.</p>
       </div>
-      <PasswordChangeSection />
+      <PasswordChangeSection hasPassword={user.hasPassword} email={user.email} />
+      <LinkedAccountsSection
+        identities={user.identities}
+        hasPassword={user.hasPassword}
+      />
       <TwoFactorSection enabled={user.mfaEnabled} />
       <WithdrawSection email={user.email} mfaEnabled={user.mfaEnabled} />
     </div>
   )
 }
 
-function PasswordChangeSection() {
+/**
+ * 비밀번호가 없는 계정에는 "변경" 화면을 띄우지 않는다. 현재 비밀번호를 묻는 폼은
+ * 그 계정에게 채울 수 없는 칸이고, 서버도 409 로 답한다. 대신 재설정 메일로 처음
+ * 설정하는 길을 안내한다.
+ */
+function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; email: string }) {
   const toast = useToast()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -93,6 +105,10 @@ function PasswordChangeSection() {
       return
     }
     change.mutate()
+  }
+
+  if (!hasPassword) {
+    return <PasswordSetupSection email={email} />
   }
 
   return (
@@ -182,6 +198,109 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * 비밀번호가 없는 계정에 처음 설정하는 길.
+ *
+ * 재설정 메일이 이 계정의 유일한 설정 경로다. 새 엔드포인트가 아니라 기존 재설정
+ * 확정 경로가 null 을 값으로 바꾸는 동작을 그대로 한다.
+ */
+function PasswordSetupSection({ email }: { email: string }) {
+  const toast = useToast()
+  const send = useMutation({
+    mutationFn: () => requestPasswordReset(email),
+    onSuccess: () => toast.success('비밀번호 설정 메일을 보냈습니다. 메일함을 확인해 주세요.'),
+    onError: (err) => toast.error(toApiError(err, '메일을 보내지 못했습니다.').message),
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>비밀번호 설정</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-neutral-600">
+          이 계정에는 비밀번호가 없습니다. 구글 계정으로만 로그인할 수 있고, 비밀번호로도
+          로그인하려면 아래에서 설정 메일을 받아 새로 정하면 됩니다.
+        </p>
+        <Button variant="secondary" loading={send.isPending} onClick={() => send.mutate()}>
+          비밀번호 설정 메일 받기
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * 연동된 외부 로그인 관리.
+ *
+ * 해제는 재인증 대상이다. 로그인 수단을 없애는 일이고 붙이는 일의 반대편이라, 탈취된
+ * 세션이 진짜 소유자의 제공자를 조용히 뗄 수 있으면 소유자가 잠긴다.
+ *
+ * 마지막 수단은 버튼을 숨기지 않고 비활성으로 두고 사유를 적는다. 숨기면 왜 못 하는지
+ * 알 길이 없다. 판단은 서버가 하고(409) 여기는 그 답을 미리 보여줄 뿐이다.
+ */
+function LinkedAccountsSection({
+  identities,
+  hasPassword,
+}: {
+  identities: LinkedIdentity[]
+  hasPassword: boolean
+}) {
+  const toast = useToast()
+  const { refreshProfile } = useAuth()
+  const lastMethod = !hasPassword && identities.length <= 1
+
+  const unlink = useMutation({
+    mutationFn: (provider: LinkedIdentity['provider']) => unlinkIdentity(provider),
+    onSuccess: async () => {
+      toast.success('연동을 해제했습니다.')
+      await refreshProfile()
+    },
+    onError: (err) => toast.error(toApiError(err, '연동을 해제하지 못했습니다.').message),
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>연동된 계정</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {identities.length === 0 ? (
+          <p className="text-sm text-neutral-600">연동된 외부 계정이 없습니다.</p>
+        ) : (
+          <ul className="space-y-3">
+            {identities.map((identity) => (
+              <li
+                key={identity.provider}
+                className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900">구글</p>
+                  <p className="truncate text-sm text-neutral-500">{identity.email}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={lastMethod}
+                  loading={unlink.isPending}
+                  onClick={() => unlink.mutate(identity.provider)}
+                >
+                  해제
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {lastMethod && (
+          <p className="text-sm text-neutral-500">
+            유일한 로그인 수단이라 해제할 수 없습니다. 먼저 비밀번호를 설정해 주세요.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
