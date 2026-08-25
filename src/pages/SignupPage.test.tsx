@@ -90,21 +90,18 @@ describe('회원가입 폼 검증', () => {
     await user.type(screen.getByLabelText('비밀번호'), 'g')
     expect(lengthRule()).toHaveTextContent('성공')
 
-    // 이메일을 아직 입력하지 않았으면 이메일 의존 규칙은 통과로 단정하지 않는다.
-    expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
-      '서버에서 확인',
-    )
-
-    // 이메일 아이디를 포함하면 해당 규칙이 미충족으로 바뀐다.
-    await user.type(screen.getByLabelText('이메일'), 'example@pusan.ac.kr')
-    expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
-      '성공',
-    )
+    // 연속 규칙은 같은 입력으로 미충족이 된다 — 판정이 실시간으로 갱신되는지.
+    const sequenceRule = () =>
+      screen.getByText('연속된 문자·숫자로만 이루어지지 않기').closest('li')
+    expect(sequenceRule()).toHaveTextContent('성공')
     await user.clear(screen.getByLabelText('비밀번호'))
-    await user.type(screen.getByLabelText('비밀번호'), 'example-4321!')
-    expect(screen.getByText('이메일 주소를 포함하지 않기').closest('li')).toHaveTextContent(
-      '미충족',
-    )
+    await user.type(screen.getByLabelText('비밀번호'), 'abcdefgh')
+    expect(sequenceRule()).toHaveTextContent('미충족')
+
+    // 이메일을 입력해도 체크리스트는 달라지지 않는다 — 이메일 의존 규칙은 없다.
+    await user.type(screen.getByLabelText('이메일'), 'example@pusan.ac.kr')
+    expect(screen.queryByText('이메일 주소를 포함하지 않기')).not.toBeInTheDocument()
+    expect(screen.queryByText(/서버에서 확인/)).not.toBeInTheDocument()
   })
 
   test('비밀번호 확인이 다르면 거부한다', async () => {

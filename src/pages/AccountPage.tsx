@@ -42,14 +42,14 @@ export function AccountPage() {
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
         <p className="mt-1 text-sm text-neutral-500">비밀번호 변경과 회원 탈퇴를 관리합니다.</p>
       </div>
-      <PasswordChangeSection email={user.email} />
+      <PasswordChangeSection />
       <TwoFactorSection enabled={user.mfaEnabled} />
       <WithdrawSection email={user.email} mfaEnabled={user.mfaEnabled} />
     </div>
   )
 }
 
-function PasswordChangeSection({ email }: { email: string }) {
+function PasswordChangeSection() {
   const toast = useToast()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -82,8 +82,8 @@ function PasswordChangeSection({ email }: { email: string }) {
     event.preventDefault()
     setError(null)
     setFieldErrors({})
-    // 구조 규칙은 제출 전에 막고(같은 문구), 유출 차단목록 판정은 서버가 한다.
-    const ruleError = passwordRuleError(newPassword, email)
+    // 서버와 같은 규칙·같은 문구로 제출 전에 막는다.
+    const ruleError = passwordRuleError(newPassword)
     if (ruleError) {
       setFieldErrors({ newPassword: ruleError })
       return
@@ -123,12 +123,7 @@ function PasswordChangeSection({ email }: { email: string }) {
               onChange={(event) => setNewPassword(event.target.value)}
               aria-describedby={GUIDANCE_ID}
             />
-            <PasswordGuidance
-              password={newPassword}
-              email={email}
-              id={GUIDANCE_ID}
-              className="mt-1"
-            />
+            <PasswordGuidance password={newPassword} id={GUIDANCE_ID} className="mt-1" />
           </FormField>
           <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
             <Input

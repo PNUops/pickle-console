@@ -34,9 +34,8 @@ function validate(values: {
   if (!PUSAN_EMAIL_RE.test(values.email)) {
     errors.email = '@pusan.ac.kr 이메일만 가입할 수 있습니다.'
   }
-  // 구조 규칙(길이·바이트·반복·연속·이메일 포함)은 미리 막고, 유출 차단목록
-  // 판정은 서버가 한다.
-  const passwordError = passwordRuleError(values.password, values.email)
+  // 서버와 같은 규칙(길이·바이트·반복·연속)으로 제출 전에 막는다.
+  const passwordError = passwordRuleError(values.password)
   if (passwordError) {
     errors.password = passwordError
   }
@@ -184,12 +183,7 @@ export function SignupPage() {
                 aria-describedby={GUIDANCE_ID}
                 required
               />
-              <PasswordGuidance
-                password={password}
-                email={email}
-                id={GUIDANCE_ID}
-                className="mt-1"
-              />
+              <PasswordGuidance password={password} id={GUIDANCE_ID} className="mt-1" />
             </FormField>
             <FormField label="비밀번호 확인" required error={fieldErrors.passwordConfirm}>
               <Input
