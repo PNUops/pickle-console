@@ -8,8 +8,12 @@ vi.mock('./pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
 test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async () => {
   renderApp('/')
 
-  // 히어로 (랜딩 청크는 lazy — findBy로 로드를 기다린다. 전체 스위트 병렬 부하에서
-  // 기본 1초를 넘겨 플레이크가 났으므로 상한만 늘린다)
+  // 히어로 (랜딩 청크는 lazy — findBy로 로드를 기다린다).
+  //
+  // 기본 1초는 이 대기에 맞지 않는다. 기다리는 것이 렌더가 아니라 **동적 import** 이고,
+  // 병렬 워커가 CPU를 나눠 쓰는 동안에는 1초를 넘긴다(두 라운드가 각자 실측으로 같은
+  // 결론에 닿았다). 시간을 늘리는 것이 증상 덮기가 아닌 이유는 이 단언이 재는 것이
+  // 속도가 아니라 "청크가 결국 렌더된다" 이기 때문이다.
   expect(
     await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 5000 }),
   ).toBeInTheDocument()

@@ -1545,6 +1545,53 @@ export function resetUserMfa(userId: string): Promise<MessageResponse> {
   })
 }
 
+/* ─── 프로필 카탈로그 ─── */
+
+export type ProfileOptionsResponse = Schemas['ProfileOptionsResponse']
+export type PositionView = Schemas['PositionView']
+export type DepartmentView = Schemas['DepartmentView']
+
+/**
+ * 직책과 소속 카탈로그. 계정이 생기기 전에도 읽으므로 무인증이다.
+ * 직책마다 `requiresStudentNo`가 함께 오므로 학번 필드를 띄울지는 그 값만 보면 된다.
+ * 여기서 코드로 다시 유도하면 서버가 집행하는 규칙의 두 번째 사본이 생긴다.
+ */
+export function fetchProfileOptions(): Promise<ProfileOptionsResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/meta/profile-options')
+    if (!data) throw toApiError(error, '직책·소속 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateMyProfile(
+  body: Schemas['UpdateProfileRequest'],
+): Promise<Schemas['UserProfileResponse']> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/me/profile', { body })
+    if (!data) throw toApiError(error, '프로필을 저장하지 못했습니다.')
+    return data
+  })
+}
+
+/* ─── 연동 계정 ─── */
+
+export type LinkedIdentity = Schemas['LinkedIdentity']
+
+/**
+ * 외부 로그인 연동 해제. 재인증 대상이라 fetch 래퍼가 sudo 모달을 태운다.
+ * `/auth/*` 가 아니라 `/me/*` 아래인 이유가 여기에 있다 — 래퍼는 `/api/v1/auth/*`
+ * 경로에 재인증 토큰을 붙이지 않으므로 거기 있으면 재인증을 걸 수 없다.
+ */
+export function unlinkIdentity(provider: Schemas['IdentityProvider']): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/me/identities/{provider}', {
+      params: { path: { provider } },
+    })
+    if (error) throw toApiError(error, '연동을 해제하지 못했습니다.')
+  })
+}
+
 /* ─── 약관·동의 ─── */
 
 export function fetchCurrentTerms(): Promise<TermsVersionView[]> {
@@ -1864,6 +1911,22 @@ export function enableUser(userId: string): Promise<UserAdminDetail> {
       params: { path: { userId } },
     })
     if (!data) throw toApiError(error, '사용자를 활성화하지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 구글 인가 왕복을 연다.
+ *
+ * 주소 파라미터를 받지 않는다. 서버가 `login_hint` 를 거절하므로 여기서 실을 것도 없고,
+ * 없는 편이 이 경로가 주소 존재 여부를 답하지 않는다는 사실을 코드로 남긴다.
+ */
+export function startGoogleOauth(
+  body: components['schemas']['OauthStartRequest'],
+): Promise<components['schemas']['OauthStartResponse']> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/auth/oauth/google/start', { body })
+    if (!data) throw toApiError(error, '구글 로그인을 시작하지 못했습니다.')
     return data
   })
 }

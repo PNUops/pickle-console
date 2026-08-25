@@ -7,7 +7,7 @@ import {
   PASSWORD_MIN_LENGTH,
 } from './validation'
 
-describe('passwordRuleStatus — 서버 구조 규칙 미러', () => {
+describe('passwordRuleStatus — 서버 규칙 미러', () => {
   test('길이 경계: 7자는 미충족, 8자는 충족', () => {
     expect(PASSWORD_MIN_LENGTH).toBe(8)
     expect(passwordRuleStatus('ab3d5f7').length).toBe(false)
@@ -44,30 +44,34 @@ describe('passwordRuleStatus — 서버 구조 규칙 미러', () => {
     expect(passwordRuleStatus('abcdeg').noSequence).toBe(true)
   })
 
-  test('이메일 로컬 파트가 4자 이상이고 포함되면 미충족', () => {
-    expect(passwordRuleStatus('Example-4321!', 'example@pusan.ac.kr').noEmail).toBe(false)
-    expect(passwordRuleStatus('other-4321!', 'example@pusan.ac.kr').noEmail).toBe(true)
-    // 3자 로컬 파트는 검사하지 않는다.
-    expect(passwordRuleStatus('abc-12345!', 'abc@pusan.ac.kr').noEmail).toBe(true)
-    // 이메일을 넘기지 않으면 항상 충족.
-    expect(passwordRuleStatus('example-4321!').noEmail).toBe(true)
+  test('규칙은 이 네 가지가 전부다', () => {
+    // 차단목록과 이메일 포함 검사가 폐기되면서 미러할 규칙이 줄었다. 목록이
+    // 다시 늘어나면 서버와 어긋난 것이므로 여기서 먼저 걸린다.
+    expect(Object.keys(passwordRuleStatus('bright-otter-42')).sort()).toEqual([
+      'byteLimit',
+      'length',
+      'noRepetition',
+      'noSequence',
+    ])
   })
 })
 
 describe('passwordRuleError', () => {
   test('규칙을 모두 만족하면 null', () => {
-    expect(passwordRuleError('bright-otter-42', 'example@pusan.ac.kr')).toBeNull()
+    expect(passwordRuleError('bright-otter-42')).toBeNull()
   })
 
-  test('길이 → 바이트 → 반복 → 연속 → 이메일 순으로 첫 위반을 알린다', () => {
+  test('이메일을 포함해도, 유출 코퍼스에 있어도 더는 막지 않는다', () => {
+    expect(passwordRuleError('example-4321!')).toBeNull()
+    expect(passwordRuleError('qwerty1234')).toBeNull()
+  })
+
+  test('길이 → 바이트 → 반복 → 연속 순으로 첫 위반을 알린다', () => {
     expect(passwordRuleError('short')).toBe('비밀번호는 8자 이상 72자 이하여야 합니다.')
     expect(passwordRuleError('가'.repeat(25))).toContain('72바이트')
     expect(passwordRuleError('ababababab')).toBe('같은 문자가 반복되는 비밀번호는 사용할 수 없습니다.')
     expect(passwordRuleError('abcdefgh')).toBe(
       '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없습니다.',
-    )
-    expect(passwordRuleError('example-4321!', 'example@pusan.ac.kr')).toBe(
-      '이메일 주소가 포함된 비밀번호는 사용할 수 없습니다.',
     )
   })
 })
@@ -79,9 +83,18 @@ describe('passwordStrength', () => {
     expect(passwordStrength('abcdefgh')).toBe(0)
   })
 
-  test('길이와 문자 종류가 늘수록 점수가 오른다', () => {
-    expect(passwordStrength('otterlamp')).toBe(0) // 9자, 소문자 1종
-    expect(passwordStrength('otterlamp429')).toBe(2) // 12자 + 2종
+  test('길이가 점수를 끌고 문자 종류는 거들기만 한다', () => {
+    expect(passwordStrength('otterlamp')).toBe(0) // 9자 — 길이 점수 없음
+    expect(passwordStrength('otterlamp429')).toBe(1) // 12자, 2종
     expect(passwordStrength('Otter-Lamp-429-fig')).toBe(3) // 16자 이상 + 4종
+  })
+
+  test('12자 미만은 문자 종류가 아무리 많아도 강함이 될 수 없다', () => {
+    expect(passwordStrength('Ab3!Cd5?')).toBe(1) // 8자, 4종
+  })
+
+  test('서로 다른 문자가 6종 미만이면 약함에 묶인다', () => {
+    // 12자에 4종이라 예전 공식으로는 '강함'이었지만 실제로 쓰인 문자는 4개다.
+    expect(passwordStrength('aaaAAA111!!!')).toBe(1)
   })
 })

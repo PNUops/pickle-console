@@ -37,17 +37,14 @@ describe('비밀번호 재설정 흐름 (공개 페이지)', () => {
     expect(screen.getByRole('link', { name: '재설정을 다시 요청하기' })).toBeInTheDocument()
   })
 
-  test('확정 페이지: 이메일을 모르는 규칙은 성공이 아니라 미확인으로 보여준다', async () => {
+  test('확정 페이지: 계정 이메일이 없어도 모든 규칙을 판정한다', async () => {
     const user = userEvent.setup()
     renderApp('/reset-password?token=valid-reset-token')
 
-    // 이 화면에는 계정 이메일이 없으므로 "이메일 주소 포함" 규칙을 판정할 수 없다 —
-    // 통과(성공)로 표시하면 거짓 안내가 된다.
+    // 이 화면에는 계정 이메일이 없다. 이메일을 알아야 판정할 수 있는 규칙이
+    // 사라졌으므로 "서버에서 확인"으로 남는 항목도 더는 없다.
     await user.type(await screen.findByLabelText('새 비밀번호'), 'brand-new-pass-9!')
-    const emailRule = screen.getByText(/이메일 주소를 포함하지 않기/).closest('li')!
-    expect(emailRule).toHaveTextContent('서버에서 확인')
-    expect(emailRule).not.toHaveTextContent('성공')
-    // 판정 가능한 규칙은 그대로 성공/미충족을 보여준다.
+    expect(screen.queryByText(/서버에서 확인/)).not.toBeInTheDocument()
     expect(screen.getByText('8자 이상 72자 이하').closest('li')).toHaveTextContent('성공')
   })
 

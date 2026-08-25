@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
 import {
   activateMfa,
@@ -7,9 +7,13 @@ import {
   changeMyPassword,
   disableMfa,
   regenerateRecoveryCodes,
-  withdrawMyAccount,
+  requestPasswordReset,
+  startGoogleOauth,
+  type LinkedIdentity,
   type MfaRecoveryCodesResponse,
   type MfaSetupResponse,
+  unlinkIdentity,
+  withdrawMyAccount,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { setAccessToken } from '../api/token'
@@ -27,6 +31,8 @@ import {
   Modal,
   useToast,
 } from '../components/ui'
+import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
+import { navigateExternal } from '../lib/google-oauth'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passwordRuleError } from '../lib/validation'
 
@@ -35,21 +41,48 @@ const GUIDANCE_ID = 'account-password-guidance'
 
 export function AccountPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const toast = useToast()
+  const linked = searchParams.get('linked')
+
+  // 구글에서 돌아온 직후. 확인을 말하고 표식은 주소에서 지운다 — 새로고침마다 같은
+  // 토스트가 뜨면 방금 일어난 일인지 지난번 일인지 알 수 없다.
+  useEffect(() => {
+    if (!linked) return
+    toast.success('구글 계정을 연동했습니다.')
+    setSearchParams({}, { replace: true })
+  }, [linked, toast, setSearchParams])
+
   if (!user) return null
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
-        <p className="mt-1 text-sm text-neutral-500">비밀번호 변경과 회원 탈퇴를 관리합니다.</p>
+        <p className="mt-1 text-sm text-neutral-500">
+          로그인 수단과 회원 탈퇴를 관리합니다.
+        </p>
       </div>
-      <PasswordChangeSection email={user.email} />
-      <TwoFactorSection enabled={user.mfaEnabled} />
-      <WithdrawSection email={user.email} mfaEnabled={user.mfaEnabled} />
+      <PasswordChangeSection hasPassword={user.hasPassword} email={user.email} />
+      <LinkedAccountsSection
+        identities={user.identities}
+        hasPassword={user.hasPassword}
+      />
+      <TwoFactorSection enabled={user.mfaEnabled} hasPassword={user.hasPassword} />
+      <WithdrawSection
+        email={user.email}
+        mfaEnabled={user.mfaEnabled}
+        hasPassword={user.hasPassword}
+      />
     </div>
   )
 }
 
-function PasswordChangeSection({ email }: { email: string }) {
+/**
+ * 비밀번호가 없는 계정에는 "변경" 화면을 띄우지 않는다. 현재 비밀번호를 묻는 폼은
+ * 그 계정에게 채울 수 없는 칸이고, 서버도 409 로 답한다. 대신 재설정 메일로 처음
+ * 설정하는 길을 안내한다.
+ */
+function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; email: string }) {
   const toast = useToast()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -82,8 +115,8 @@ function PasswordChangeSection({ email }: { email: string }) {
     event.preventDefault()
     setError(null)
     setFieldErrors({})
-    // 구조 규칙은 제출 전에 막고(같은 문구), 유출 차단목록 판정은 서버가 한다.
-    const ruleError = passwordRuleError(newPassword, email)
+    // 서버와 같은 규칙·같은 문구로 제출 전에 막는다.
+    const ruleError = passwordRuleError(newPassword)
     if (ruleError) {
       setFieldErrors({ newPassword: ruleError })
       return
@@ -93,6 +126,10 @@ function PasswordChangeSection({ email }: { email: string }) {
       return
     }
     change.mutate()
+  }
+
+  if (!hasPassword) {
+    return <PasswordSetupSection email={email} />
   }
 
   return (
@@ -123,12 +160,7 @@ function PasswordChangeSection({ email }: { email: string }) {
               onChange={(event) => setNewPassword(event.target.value)}
               aria-describedby={GUIDANCE_ID}
             />
-            <PasswordGuidance
-              password={newPassword}
-              email={email}
-              id={GUIDANCE_ID}
-              className="mt-1"
-            />
+            <PasswordGuidance password={newPassword} id={GUIDANCE_ID} className="mt-1" />
           </FormField>
           <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
             <Input
@@ -190,7 +222,136 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
   )
 }
 
-function TwoFactorSection({ enabled }: { enabled: boolean }) {
+/**
+ * 비밀번호가 없는 계정에 처음 설정하는 길.
+ *
+ * 재설정 메일이 이 계정의 유일한 설정 경로다. 새 엔드포인트가 아니라 기존 재설정
+ * 확정 경로가 null 을 값으로 바꾸는 동작을 그대로 한다.
+ */
+function PasswordSetupSection({ email }: { email: string }) {
+  const toast = useToast()
+  const send = useMutation({
+    mutationFn: () => requestPasswordReset(email),
+    onSuccess: () => toast.success('비밀번호 설정 메일을 보냈습니다. 메일함을 확인해 주세요.'),
+    onError: (err) => toast.error(toApiError(err, '메일을 보내지 못했습니다.').message),
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>비밀번호 설정</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-neutral-600">
+          이 계정에는 비밀번호가 없습니다. 구글 계정으로만 로그인할 수 있고, 비밀번호로도
+          로그인하려면 아래에서 설정 메일을 받아 새로 정하면 됩니다.
+        </p>
+        <Button variant="secondary" loading={send.isPending} onClick={() => send.mutate()}>
+          비밀번호 설정 메일 받기
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * 연동된 외부 로그인 관리.
+ *
+ * 해제는 재인증 대상이다. 로그인 수단을 없애는 일이고 붙이는 일의 반대편이라, 탈취된
+ * 세션이 진짜 소유자의 제공자를 조용히 뗄 수 있으면 소유자가 잠긴다.
+ *
+ * 마지막 수단은 버튼을 숨기지 않고 비활성으로 두고 사유를 적는다. 숨기면 왜 못 하는지
+ * 알 길이 없다. 판단은 서버가 하고(409) 여기는 그 답을 미리 보여줄 뿐이다.
+ */
+function LinkedAccountsSection({
+  identities,
+  hasPassword,
+}: {
+  identities: LinkedIdentity[]
+  hasPassword: boolean
+}) {
+  const toast = useToast()
+  const { refreshProfile } = useAuth()
+  // `<= 1` 이 아니라 `=== 1` 이다. 0이면 해제할 행이 없으므로 사유를 띄울 자리도 없고,
+  // 띄우면 "연동된 계정이 없습니다"와 "유일한 로그인 수단입니다"가 같이 나온다.
+  const lastMethod = !hasPassword && identities.length === 1
+
+  // 연동은 전체 페이지 이동이라 재인증(sudo) 승인이 살아남지 못한다. 서버가 연동에
+  // 재인증을 요구하지 않는 이유가 그것이다 — 왕복 자체가 구글 계정의 소유를 증명하고,
+  // 어느 계정에 붙일지는 세션이 flow 행에 박혀 결정된다.
+  const link = useMutation({
+    mutationFn: () => startGoogleOauth({ purpose: 'LINK' }),
+    onSuccess: (started) => navigateExternal(started.authorizationUrl),
+    onError: (err) => toast.error(toApiError(err, '연동을 시작하지 못했습니다.').message),
+  })
+
+  const unlink = useMutation({
+    mutationFn: (provider: LinkedIdentity['provider']) => unlinkIdentity(provider),
+    onSuccess: async () => {
+      toast.success('연동을 해제했습니다.')
+      await refreshProfile()
+    },
+    onError: (err) => toast.error(toApiError(err, '연동을 해제하지 못했습니다.').message),
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>연동된 계정</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {identities.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-600">
+              연동된 외부 계정이 없습니다. 구글 계정을 붙이면 비밀번호 없이도 로그인할 수
+              있습니다.
+            </p>
+            <GoogleAuthButton
+              label="continue"
+              loading={link.isPending}
+              onClick={() => link.mutate()}
+              className="max-w-sm"
+            />
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {identities.map((identity) => (
+              <li
+                key={identity.provider}
+                className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-900">구글</p>
+                  <p className="truncate text-sm text-neutral-500">{identity.email}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={lastMethod}
+                  loading={unlink.isPending}
+                  onClick={() => unlink.mutate(identity.provider)}
+                >
+                  해제
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {lastMethod && (
+          <p className="text-sm text-neutral-500">
+            유일한 로그인 수단이라 해제할 수 없습니다. 먼저 비밀번호를 설정해 주세요.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * 등록도 해제도 비밀번호를 요구한다(`MfaService`). 비밀번호가 없는 계정은 그 칸을 채울 수
+ * 없으므로 등록 버튼 대신 이유를 보여 준다. 서버 완화는 아직 없다.
+ */
+function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassword: boolean }) {
   const { refreshProfile } = useAuth()
   // Enrollment wizard: idle → password → activate → recovery (shown once).
   const [step, setStep] = useState<'idle' | 'password' | 'activate' | 'recovery'>('idle')
@@ -250,7 +411,14 @@ function TwoFactorSection({ enabled }: { enabled: boolean }) {
             <p className="text-sm text-neutral-600">
               인증 앱(TOTP)으로 로그인 시 2단계 인증을 추가합니다. 계정 보안을 위해 등록을 권장합니다.
             </p>
-            <Button onClick={() => setStep('password')}>2단계 인증 등록</Button>
+            {hasPassword ? (
+              <Button onClick={() => setStep('password')}>2단계 인증 등록</Button>
+            ) : (
+              <p className="text-sm text-neutral-500">
+                등록은 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 위의{' '}
+                <strong>비밀번호 설정</strong>을 먼저 마쳐 주세요.
+              </p>
+            )}
           </div>
         ) : step === 'password' ? (
           <form
@@ -511,7 +679,15 @@ function EnrolledPanel() {
   )
 }
 
-function WithdrawSection({ email, mfaEnabled }: { email: string; mfaEnabled: boolean }) {
+function WithdrawSection({
+  email,
+  mfaEnabled,
+  hasPassword,
+}: {
+  email: string
+  mfaEnabled: boolean
+  hasPassword: boolean
+}) {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
@@ -558,9 +734,16 @@ function WithdrawSection({ email, mfaEnabled }: { email: string; mfaEnabled: boo
           삭제되지 않은 VM을 보유한 워크스페이스의 유일한 소유자이거나 개인 워크스페이스에 VM이 남아 있으면 먼저
           정리해야 탈퇴할 수 있습니다.
         </p>
-        <Button variant="danger" onClick={() => setOpen(true)}>
-          회원 탈퇴
-        </Button>
+        {hasPassword ? (
+          <Button variant="danger" onClick={() => setOpen(true)}>
+            회원 탈퇴
+          </Button>
+        ) : (
+          <p className="text-sm text-neutral-500">
+            탈퇴는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 위의{' '}
+            <strong>비밀번호 설정</strong>을 먼저 마친 뒤 다시 시도해 주세요.
+          </p>
+        )}
       </CardContent>
 
       <Modal

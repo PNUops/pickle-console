@@ -36,6 +36,10 @@ export function ForgotPasswordPage() {
       </p>
       <AuthCard className="mt-8">
         <AuthCardContent>
+          <p className="mb-4 text-sm text-neutral-400">
+            구글 계정으로 가입하셨다면 비밀번호가 없습니다. 로그인 화면에서 Google 계정으로
+            로그인해 주세요.
+          </p>
           {sent ? (
             <Alert variant="success" title="메일을 확인해 주세요">
               해당 주소가 등록되어 있다면 비밀번호 재설정 메일을 발송했습니다. 링크는 30분 동안만

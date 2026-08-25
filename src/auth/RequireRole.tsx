@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router'
 import { Spinner } from '../components/ui'
 import { homePathFor, useAuth, type UserRole } from './auth-context'
 import { ConsentGate } from './ConsentGate'
+import { ProfileGate } from './ProfileGate'
 
 /**
  * Route guard: requires an authenticated user whose role is in `roles`.
@@ -30,6 +31,11 @@ export function RequireRole({ roles, children }: { roles: UserRole[]; children: 
   // Lazy consent enforcement: a post-signup revision surfaces here (API not blocked).
   if (user.pendingConsents.length > 0) {
     return <ConsentGate pending={user.pendingConsents} />
+  }
+  // 약관 다음에 프로필. 개인정보처리방침에 동의하기 전에 개인정보를 받는 것은 순서가
+  // 거꾸로다. 판단은 서버가 내려보내는 플래그 하나로만 한다.
+  if (!user.profileComplete) {
+    return <ProfileGate />
   }
   return <>{children}</>
 }

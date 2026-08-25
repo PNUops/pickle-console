@@ -8,8 +8,8 @@ export const PASSWORD_MAX_LENGTH = 72
 export const PASSWORD_MAX_BYTES = 72
 
 /**
- * 서버 비밀번호 정책 중 **구조 규칙**을 그대로 옮긴 클라이언트 미리보기 결과.
- * 유출 비밀번호 차단목록(약 4.7만 건)은 서버에만 있으므로 여기서 판정하지 않는다.
+ * 서버 비밀번호 정책을 그대로 옮긴 클라이언트 미리보기 결과. 서버도 이 네 가지
+ * 외에는 검사하지 않는다 — 유출 코퍼스 차단목록과 이메일 포함 검사는 폐기됐다.
  */
 export interface PasswordRuleStatus {
   /** 8자 이상 72자 이하. */
@@ -20,8 +20,6 @@ export interface PasswordRuleStatus {
   noRepetition: boolean
   /** 연속된 문자·숫자로만 이루어지지 않음. */
   noSequence: boolean
-  /** 이메일 아이디(로컬 파트)를 포함하지 않음. */
-  noEmail: boolean
 }
 
 /** UTF-8 바이트 길이(서버의 getBytes(UTF_8).length와 같은 값). */
@@ -49,19 +47,17 @@ function isSequential(stripped: string): boolean {
 }
 
 /**
- * 서버 정책의 구조 규칙을 미리 계산한다(제출 전 안내용).
- * 판정 권한은 서버에 있고, 차단목록·플랫폼 단어 검사는 제출 시 서버가 수행한다.
+ * 서버 정책을 미리 계산한다(제출 전 안내용). 판정 권한은 여전히 서버에 있지만,
+ * 서버가 보는 규칙이 이제 이 네 가지뿐이라 결과가 갈리지 않는다.
  */
-export function passwordRuleStatus(password: string, email?: string): PasswordRuleStatus {
+export function passwordRuleStatus(password: string): PasswordRuleStatus {
   const lower = password.toLowerCase()
   const stripped = strip(lower)
-  const localPart = (email ?? '').toLowerCase().split('@', 1)[0]
   return {
     length: password.length >= PASSWORD_MIN_LENGTH && password.length <= PASSWORD_MAX_LENGTH,
     byteLimit: passwordByteLength(password) <= PASSWORD_MAX_BYTES,
     noRepetition: new Set(lower).size > 2,
     noSequence: !isSequential(stripped),
-    noEmail: !(localPart.length >= 4 && lower.includes(localPart)),
   }
 }
 
@@ -71,14 +67,7 @@ export const PASSWORD_RULE_LABELS: Record<keyof PasswordRuleStatus, string> = {
   byteLimit: `UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하 (한글은 한 글자가 3바이트)`,
   noRepetition: '같은 문자만 반복하지 않기',
   noSequence: '연속된 문자·숫자로만 이루어지지 않기',
-  noEmail: '이메일 주소를 포함하지 않기',
 }
-
-/**
- * 이메일을 알아야만 판정할 수 있는 규칙 — 이메일이 없는 화면(예: 재설정 링크)에서는
- * 통과로 표시하지 않고 "서버에서 확인"으로 남긴다.
- */
-export const EMAIL_DEPENDENT_RULES: readonly (keyof PasswordRuleStatus)[] = ['noEmail']
 
 /** 규칙 순서(체크리스트 표시 순서 = 서버 검사 순서에 맞춘 순서). */
 export const PASSWORD_RULE_ORDER: (keyof PasswordRuleStatus)[] = [
@@ -86,12 +75,11 @@ export const PASSWORD_RULE_ORDER: (keyof PasswordRuleStatus)[] = [
   'byteLimit',
   'noRepetition',
   'noSequence',
-  'noEmail',
 ]
 
-/** 구조 규칙 위반 시 폼에 표시할 첫 번째 오류 문구(없으면 null). */
-export function passwordRuleError(password: string, email?: string): string | null {
-  const status = passwordRuleStatus(password, email)
+/** 규칙 위반 시 폼에 표시할 첫 번째 오류 문구(없으면 null). */
+export function passwordRuleError(password: string): string | null {
+  const status = passwordRuleStatus(password)
   if (!status.length) {
     return `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상 ${PASSWORD_MAX_LENGTH}자 이하여야 합니다.`
   }
@@ -100,14 +88,17 @@ export function passwordRuleError(password: string, email?: string): string | nu
   }
   if (!status.noRepetition) return '같은 문자가 반복되는 비밀번호는 사용할 수 없습니다.'
   if (!status.noSequence) return '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없습니다.'
-  if (!status.noEmail) return '이메일 주소가 포함된 비밀번호는 사용할 수 없습니다.'
   return null
 }
 
 /**
- * 아주 단순한 강도 추정치(0~3). 길이와 문자 종류 수만 본다 — 사전 공격
- * 내성을 계산하지 않으므로 정밀한 점수가 아니라 대략적인 힌트로만 쓴다.
- * 흔한 비밀번호 여부는 서버 차단목록이 판정한다.
+ * 아주 단순한 강도 추정치(0~3). 사전 공격 내성을 계산하지 않으므로 정밀한 점수가
+ * 아니라 대략적인 힌트로만 쓴다.
+ *
+ * 서버 차단목록이 사라진 뒤로 이 막대가 "흔한 비밀번호"에 대해 사용자가 받는
+ * 유일한 신호이므로, 길이를 문자 종류보다 무겁게 본다. 종류 수만 높은 짧은
+ * 비밀번호(`aaaAAA111!!!` 같은)가 "강함"을 받던 것을 서로 다른 문자 수 상한으로
+ * 막는다.
  */
 export function passwordStrength(password: string): 0 | 1 | 2 | 3 {
   if (password.length < PASSWORD_MIN_LENGTH) return 0
@@ -117,10 +108,11 @@ export function passwordStrength(password: string): 0 | 1 | 2 | 3 {
   const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) =>
     re.test(password),
   ).length
-  const lengthPoints = password.length >= 16 ? 2 : password.length >= 12 ? 1 : 0
-  const varietyPoints = classes >= 3 ? 2 : classes === 2 ? 1 : 0
+  const lengthPoints = password.length >= 20 ? 3 : password.length >= 16 ? 2 : password.length >= 12 ? 1 : 0
+  const varietyPoints = classes >= 3 ? 1 : 0
   const score = Math.min(3, lengthPoints + varietyPoints)
-  return score as 0 | 1 | 2 | 3
+  // 서로 다른 문자가 적으면 길이·종류와 무관하게 '약함' 이상으로 올리지 않는다.
+  return (new Set(password).size < 6 ? Math.min(1, score) : score) as 0 | 1 | 2 | 3
 }
 
 /** 강도 점수 표시 문구. */

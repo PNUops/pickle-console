@@ -20,3 +20,18 @@ export const LEGACY_CONSOLE_SCOPE_KEY = 'pickle.console-scope'
  * sessionStorage 플래그. LoginPage가 설정하고 AppShell이 읽은 즉시 제거한다.
  */
 export const POST_LOGIN_OVERLAY_KEY = 'pickle.post-login'
+
+/**
+ * 환영 오버레이를 예약한다.
+ *
+ * 저장소가 막힌 브라우저에서 `setItem` 은 던진다. 이 호출은 **토큰을 세우고 프로필을
+ * 받아온 뒤**에 오므로, 여기서 던지면 로그인은 이미 됐는데 화면은 실패를 말하고 이동은
+ * 일어나지 않는다. 연출 하나가 세션을 삼키게 두지 않는다.
+ */
+export function schedulePostLoginOverlay(): void {
+  try {
+    sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
+  } catch {
+    // 연출만 건너뛴다.
+  }
+}

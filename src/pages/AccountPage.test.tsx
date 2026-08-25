@@ -1,7 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import { BLOCKLISTED_PASSWORD } from '../test/msw/handlers/account'
 import {
   MFA_VALID_CODE,
   mfaUser,
@@ -59,23 +58,6 @@ describe('계정 설정 — 비밀번호 변경', () => {
 
     expect(
       await screen.findByText('비밀번호는 8자 이상 72자 이하여야 합니다.'),
-    ).toBeInTheDocument()
-    expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
-  })
-
-  test('차단목록에 걸린 비밀번호는 서버 메시지를 새 비밀번호 입력 옆에 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAccount()
-
-    // 구조 규칙은 통과하지만 유출 차단목록에 걸리는 값 — 서버만 판정할 수 있다.
-    await user.type(await screen.findByLabelText('현재 비밀번호'), USER_PASSWORD)
-    await user.type(screen.getByLabelText('새 비밀번호'), BLOCKLISTED_PASSWORD)
-    await user.type(screen.getByLabelText('새 비밀번호 확인'), BLOCKLISTED_PASSWORD)
-    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
-
-    // 서버가 필드명을 password로 주더라도 새 비밀번호 입력에 붙는다.
-    expect(
-      await screen.findByText('너무 흔한 비밀번호입니다. 다른 비밀번호를 사용해 주세요.'),
     ).toBeInTheDocument()
     expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
   })

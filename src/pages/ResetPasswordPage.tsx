@@ -30,7 +30,7 @@ export function ResetPasswordPage() {
     event.preventDefault()
     setError(null)
     setFieldErrors({})
-    // 구조 규칙은 제출 전에 막고(같은 문구), 유출 차단목록 판정은 서버가 한다.
+    // 서버와 같은 규칙·같은 문구로 제출 전에 막는다.
     const ruleError = passwordRuleError(newPassword)
     if (ruleError) {
       setFieldErrors({ newPassword: ruleError })

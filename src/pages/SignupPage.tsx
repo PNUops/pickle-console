@@ -1,15 +1,33 @@
 import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import {} from 'react-router'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
-import { isProblem } from '../api/problem'
-import { fetchCurrentTerms } from '../api/queries'
+import type { components } from '../api/schema'
+import { isProblem, toApiError } from '../api/problem'
+import { fetchCurrentTerms, startGoogleOauth } from '../api/queries'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, Checkbox, FormField, Input } from '../components/ui'
 import { PasswordGuidance } from '../components/PasswordGuidance'
+import { AuthDivider } from '../components/auth/AuthDivider'
+import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
+import { navigateExternal } from '../lib/google-oauth'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
+import type { ProfileValues } from '../components/profile/profile-values'
+import { ProfileFields } from '../components/profile/ProfileFields'
+import { EMPTY_PROFILE } from '../components/profile/profile-values'
+import { fieldErrorsOf } from '../lib/field-errors'
 import { passwordRuleError, PUSAN_EMAIL_RE } from '../lib/validation'
+
+/** 서버 필드 오류를 붙일 수 있는 슬롯. 여기 없는 필드는 상단 알림으로 간다. */
+const SIGNUP_FIELDS = [
+  'name',
+  'email',
+  'password',
+  'passwordConfirm',
+  'position',
+  'studentNo',
+  'departmentCode',
+] as const
 
 /** 체크리스트를 비밀번호 입력의 설명으로 연결하기 위한 고정 id. */
 const GUIDANCE_ID = 'signup-password-guidance'
@@ -19,6 +37,9 @@ interface FieldErrors {
   email?: string
   password?: string
   passwordConfirm?: string
+  position?: string
+  studentNo?: string
+  departmentCode?: string
 }
 
 function validate(values: {
@@ -26,6 +47,7 @@ function validate(values: {
   email: string
   password: string
   passwordConfirm: string
+  profile: ProfileValues
 }): FieldErrors {
   const errors: FieldErrors = {}
   if (!values.name.trim()) {
@@ -34,14 +56,21 @@ function validate(values: {
   if (!PUSAN_EMAIL_RE.test(values.email)) {
     errors.email = '@pusan.ac.kr 이메일만 가입할 수 있습니다.'
   }
-  // 구조 규칙(길이·바이트·반복·연속·이메일 포함)은 미리 막고, 유출 차단목록
-  // 판정은 서버가 한다.
-  const passwordError = passwordRuleError(values.password, values.email)
+  // 서버와 같은 규칙(길이·바이트·반복·연속)으로 제출 전에 막는다.
+  const passwordError = passwordRuleError(values.password)
   if (passwordError) {
     errors.password = passwordError
   }
   if (values.passwordConfirm !== values.password) {
     errors.passwordConfirm = '비밀번호가 일치하지 않습니다.'
+  }
+  // 학번 필수 여부는 서버가 직책마다 내려보내므로 여기서 판단하지 않는다.
+  // 비어 있는 두 값만 막고 나머지는 서버가 422로 답한다.
+  if (!values.profile.position) {
+    errors.position = '직책을 선택해 주세요.'
+  }
+  if (!values.profile.departmentCode) {
+    errors.departmentCode = '소속을 선택해 주세요.'
   }
   return errors
 }
@@ -53,10 +82,16 @@ export function SignupPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [agreed, setAgreed] = useState<Record<string, boolean>>({})
   const [consentError, setConsentError] = useState<string | null>(null)
+  const [profile, setProfile] = useState<ProfileValues>(EMPTY_PROFILE)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [completed, setCompleted] = useState(false)
+
+  const googleStart = useMutation({
+    mutationFn: () => startGoogleOauth({}),
+    onSuccess: (started) => navigateExternal(started.authorizationUrl),
+  })
 
   const terms = useQuery({ queryKey: ['terms'], queryFn: fetchCurrentTerms })
   const currentTerms = terms.data ?? []
@@ -66,7 +101,7 @@ export function SignupPage() {
     event.preventDefault()
     setFormError(null)
     setConsentError(null)
-    const errors = validate({ name, email, password, passwordConfirm })
+    const errors = validate({ name, email, password, passwordConfirm, profile })
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (!allAgreed) {
@@ -81,6 +116,9 @@ export function SignupPage() {
           name: name.trim(),
           email,
           password,
+          position: profile.position as components['schemas']['UserPosition'],
+          studentNo: profile.studentNo.trim() || undefined,
+          departmentCode: profile.departmentCode,
           consents: currentTerms.map((doc) => ({ docType: doc.docType, version: doc.version })),
         },
       })
@@ -89,11 +127,12 @@ export function SignupPage() {
         return
       }
       if (isProblem(error) && error.code === 'VALIDATION_FAILED' && error.errors) {
+        // fieldErrorsOf 로 전부 받은 뒤 이 폼이 가진 슬롯만 고른다. 예전에는 이름을
+        // 하나씩 나열했는데, 그러면 필드가 늘 때 서버가 보낸 오류가 조용히 사라진다.
+        const mapped = fieldErrorsOf(error)
         const serverErrors: FieldErrors = {}
-        for (const item of error.errors) {
-          if (item.field === 'name' || item.field === 'email' || item.field === 'password') {
-            serverErrors[item.field] = item.message
-          }
+        for (const key of SIGNUP_FIELDS) {
+          if (mapped[key]) serverErrors[key] = mapped[key]
         }
         setFieldErrors(serverErrors)
         if (Object.keys(serverErrors).length === 0) {
@@ -153,7 +192,23 @@ export function SignupPage() {
       </p>
       <AuthCard className="mt-8">
         <AuthCardContent>
-          <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
+          <div className="space-y-4">
+            <GoogleAuthButton
+              label="signup"
+              loading={googleStart.isPending}
+              onClick={() => googleStart.mutate()}
+            />
+            {googleStart.isError && (
+              <Alert variant="danger">
+                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했습니다.').message}
+              </Alert>
+            )}
+            <p className="text-center text-xs text-neutral-400">
+              @pusan.ac.kr 계정만 가입할 수 있습니다.
+            </p>
+            <AuthDivider />
+          </div>
+          <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4" noValidate>
             {formError && <Alert variant="danger">{formError}</Alert>}
             <FormField label="이름" required error={fieldErrors.name}>
               <Input
@@ -184,12 +239,7 @@ export function SignupPage() {
                 aria-describedby={GUIDANCE_ID}
                 required
               />
-              <PasswordGuidance
-                password={password}
-                email={email}
-                id={GUIDANCE_ID}
-                className="mt-1"
-              />
+              <PasswordGuidance password={password} id={GUIDANCE_ID} className="mt-1" />
             </FormField>
             <FormField label="비밀번호 확인" required error={fieldErrors.passwordConfirm}>
               <Input
@@ -200,6 +250,20 @@ export function SignupPage() {
                 required
               />
             </FormField>
+
+            <div className="space-y-4 border-t border-white/10 pt-5">
+              <p className="text-sm font-medium text-neutral-300">소속 정보</p>
+              <ProfileFields
+                values={profile}
+                onChange={setProfile}
+                errors={{
+                  position: fieldErrors.position,
+                  studentNo: fieldErrors.studentNo,
+                  departmentCode: fieldErrors.departmentCode,
+                }}
+                disabled={submitting}
+              />
+            </div>
 
             <div className="space-y-2">
               {consentError && <Alert variant="danger">{consentError}</Alert>}

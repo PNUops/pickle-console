@@ -13,7 +13,7 @@ import { useAuth } from './auth-context'
  * the profile, which clears the gate.
  */
 export function ConsentGate({ pending }: { pending: TermsVersionView[] }) {
-  const { refreshProfile } = useAuth()
+  const { refreshProfile, logout } = useAuth()
   const [agreed, setAgreed] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -84,6 +84,19 @@ export function ConsentGate({ pending }: { pending: TermsVersionView[] }) {
           >
             동의하고 계속하기
           </Button>
+          {/*
+            이 게이트는 인증된 셸 전체를 대신하므로 나갈 길이 없으면 동의하지 않기로
+            한 사람이 갇힌다. 공용 PC 에서 남의 계정으로 열린 경우도 마찬가지다.
+          */}
+          <p className="text-center text-sm">
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="font-medium text-neutral-500 hover:underline"
+            >
+              로그아웃
+            </button>
+          </p>
         </CardContent>
       </Card>
     </div>
