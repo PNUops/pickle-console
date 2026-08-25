@@ -36,7 +36,7 @@ export function FinalCta() {
                 id="final-cta-title"
                 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl"
               >
-                첫 서버를 신청해 보세요
+                첫 리소스를 신청해 보세요
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-neutral-400">
                 부산대학교 구성원이라면 지금 바로 시작할 수 있습니다.

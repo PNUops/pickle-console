@@ -15,6 +15,9 @@ import { AppShell, type NavSection } from './AppShell'
  *
  * '컨테이너 레지스트리'만 여기서 '레지스트리'로 줄인다 — 배지까지 한 줄에 들어가지
  * 않고, 바로 위가 '컨테이너'라 문맥으로 읽힌다.
+ *
+ * 리소스 라인업은 랜딩의 쇼케이스(pages/landing/landing-data.tsx resourceTypes)와
+ * 같게 유지한다 — 항목이 열리거나 늘면 그쪽도 같이 고친다(테스트가 7종을 고정 단언).
  */
 export function ConsoleLayout() {
   const scope = useScope()

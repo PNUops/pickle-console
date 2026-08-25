@@ -6,8 +6,9 @@ import { Logo } from '../../components/Logo'
 import { cn } from '../../lib/cn'
 
 const navItems = [
+  { href: '#resources', label: '리소스' },
   { href: '#how-it-works', label: '이용 절차' },
-  { href: '#access', label: '접속 방식' },
+  { href: '#access', label: '사용 방식' },
   { href: '#features', label: '주요 기능' },
 ]
 

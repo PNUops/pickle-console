@@ -2,14 +2,14 @@ import { steps } from './landing-data'
 import { Reveal } from './Reveal'
 import { SectionHeading } from './SectionHeading'
 
-/** 이용 절차 — 신청 → 검토 → 승인 → 접속 4단계 타임라인. */
+/** 이용 절차 — 신청 → 검토 → 승인 → 사용 4단계 타임라인. */
 export function HowItWorks() {
   return (
     <section id="how-it-works" aria-labelledby="how-it-works-title" className="scroll-mt-16 bg-neutral-50">
       <div className="mx-auto w-full max-w-7xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="이용 절차"
-          title="네 단계면 서버가 준비됩니다"
+          title="네 단계면 리소스가 준비됩니다"
           titleId="how-it-works-title"
           description={
             <>
