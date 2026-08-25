@@ -1,17 +1,17 @@
 import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {} from 'react-router'
 import { api } from '../api/client'
 import type { components } from '../api/schema'
-import { isProblem } from '../api/problem'
-import { fetchCurrentTerms } from '../api/queries'
+import { isProblem, toApiError } from '../api/problem'
+import { fetchCurrentTerms, startGoogleOauth } from '../api/queries'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, Checkbox, FormField, Input } from '../components/ui'
 import { PasswordGuidance } from '../components/PasswordGuidance'
 import { AuthDivider } from '../components/auth/AuthDivider'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
-import { googleStartHref } from '../lib/google-oauth'
+import { navigateExternal } from '../lib/google-oauth'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import type { ProfileValues } from '../components/profile/profile-values'
 import { ProfileFields } from '../components/profile/ProfileFields'
@@ -88,6 +88,11 @@ export function SignupPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [completed, setCompleted] = useState(false)
+
+  const googleStart = useMutation({
+    mutationFn: () => startGoogleOauth({}),
+    onSuccess: (started) => navigateExternal(started.authorizationUrl),
+  })
 
   const terms = useQuery({ queryKey: ['terms'], queryFn: fetchCurrentTerms })
   const currentTerms = terms.data ?? []
@@ -190,9 +195,15 @@ export function SignupPage() {
         <AuthCardContent>
           <div className="space-y-4">
             <GoogleAuthButton
-              href={googleStartHref('/auth/oauth/google/start')}
               label="signup"
+              loading={googleStart.isPending}
+              onClick={() => googleStart.mutate()}
             />
+            {googleStart.isError && (
+              <Alert variant="danger">
+                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했습니다.').message}
+              </Alert>
+            )}
             <p className="text-center text-xs text-neutral-400">
               @pusan.ac.kr 계정만 가입할 수 있습니다.
             </p>

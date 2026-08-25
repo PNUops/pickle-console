@@ -1,9 +1,9 @@
 import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
-import { fetchSystemStatus } from '../api/queries'
-import { ApiError } from '../api/problem'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { fetchSystemStatus, startGoogleOauth } from '../api/queries'
+import { ApiError, toApiError } from '../api/problem'
 import { homePathFor, useAuth, type UserProfile } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
 import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
@@ -11,7 +11,7 @@ import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, FormField, Input } from '../components/ui'
 import { AuthDivider } from '../components/auth/AuthDivider'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
-import { googleStartHref, rememberReturnTo } from '../lib/google-oauth'
+import { navigateExternal, rememberReturnTo } from '../lib/google-oauth'
 import { safeInternalPath } from '../lib/redirect'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
@@ -43,6 +43,15 @@ export function LoginPage() {
     () => searchParams.get('method') === 'password',
   )
   const [code, setCode] = useState('')
+
+  // 돌아갈 곳은 떠나기 직전에 저장한다. 실패하면 이동 자체가 없으므로 남길 것도 없다.
+  const googleStart = useMutation({
+    mutationFn: () => startGoogleOauth({}),
+    onSuccess: (started) => {
+      rememberReturnTo(safeInternalPath(from))
+      navigateExternal(started.authorizationUrl)
+    },
+  })
 
   if (status === 'authenticated' && user) {
     return <Navigate to={homePathFor(user.role)} replace />
@@ -176,9 +185,14 @@ export function LoginPage() {
         <AuthCardContent>
           <div className="space-y-4">
             <GoogleAuthButton
-              href={googleStartHref('/auth/oauth/google/start')}
-              onBeforeNavigate={() => rememberReturnTo(safeInternalPath(from))}
+              loading={googleStart.isPending}
+              onClick={() => googleStart.mutate()}
             />
+            {googleStart.isError && (
+              <Alert variant="danger">
+                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했습니다.').message}
+              </Alert>
+            )}
             <p className="text-center text-xs text-neutral-400">
               @pusan.ac.kr 계정만 사용할 수 있습니다.
             </p>

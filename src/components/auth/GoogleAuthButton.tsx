@@ -8,11 +8,10 @@ const LABELS = {
 } as const
 
 interface GoogleAuthButtonProps {
-  href: string
+  onClick: () => void
   label?: keyof typeof LABELS
   className?: string
-  /** 떠나기 직전에 돌아올 곳을 저장하는 자리. 이동은 브라우저가 한다. */
-  onBeforeNavigate?: () => void
+  loading?: boolean
 }
 
 /**
@@ -25,31 +24,33 @@ interface GoogleAuthButtonProps {
  * 버튼 안에서 `.text-neutral-500` 같은 토큰 클래스를 쓰면 안 된다. `.auth-dark` 스코프
  * CSS가 그 토큰들을 밝은 톤으로 승격시켜 브랜드 색이 조용히 바뀐다. 임의값 hex 만 쓴다.
  *
- * `<button onClick>`이 아니라 `<a href>`인 이유는 전체 페이지 이동이기 때문이다. 가운데
- * 클릭과 새 탭이 공짜로 따라오고, jsdom 에서 `window.location.assign`이 no-op 이라
- * 테스트가 `href` 단언만으로 끝난다.
+ * `<a href>`가 아니라 `<button>`이다. 인가 주소는 서버가 state 와 nonce 를 저장한 뒤에야
+ * 정해지므로 누르기 전에는 링크 대상이 없다. 가운데 클릭과 새 탭을 잃지만, 링크로 만들려면
+ * 화면을 여는 사람마다 단회 소비 행을 하나씩 만들어 두어야 한다.
  */
 export function GoogleAuthButton({
-  href,
+  onClick,
   label = 'signin',
   className,
-  onBeforeNavigate,
+  loading = false,
 }: GoogleAuthButtonProps) {
   return (
-    <a
-      href={href}
-      onClick={onBeforeNavigate}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
       className={cn(
         'flex h-11 w-full items-center justify-center gap-3 rounded-lg border',
         'border-[#747775] bg-white text-sm font-medium text-[#1f1f1f]',
         'transition-colors hover:bg-[#f7f8f8] active:bg-[#eef0f1]',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500',
+        'disabled:cursor-not-allowed disabled:opacity-60',
         className,
       )}
     >
       <GoogleMark />
       {LABELS[label]}
-    </a>
+    </button>
   )
 }
 

@@ -1,16 +1,20 @@
-import { API_BASE } from '../api/client'
 
 /** 로그인 후 돌아갈 내부 경로를 담아 두는 자리. */
 export const OAUTH_RETURN_TO_KEY = 'pickle.oauth.returnTo'
 
 /**
- * 구글 인가를 시작하는 주소.
+ * 구글 인가 화면으로 브라우저를 보낸다.
  *
- * 전체 페이지 이동이라 `fetch`가 아니라 `<a href>`로 간다. 구글 동의 화면은 CORS 도
- * iframe 도 받지 않으므로 다른 방법이 없다.
+ * 주소를 미리 알 수 없어 `<a href>` 로는 못 간다. 서버가 state 와 nonce 와 PKCE
+ * verifier 를 만들어 저장한 **뒤에야** 인가 주소가 정해지고, 그 행은 단회 소비라 미리
+ * 받아 두면 화면을 열어만 두고 안 누른 사람마다 죽은 행이 쌓인다. 그래서 누른 시점에
+ * POST 하고 받은 주소로 이동한다.
+ *
+ * 이동을 별도 함수로 둔 것은 jsdom 이 `location.assign` 을 구현하지 않기 때문이다.
+ * 테스트는 이 함수를 감시한다.
  */
-export function googleStartHref(path: string): string {
-  return `${API_BASE}${path}`
+export function navigateExternal(url: string): void {
+  window.location.assign(url)
 }
 
 /**
