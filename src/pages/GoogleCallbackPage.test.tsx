@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
 import {
   EXISTING_ACCOUNT_CODE,
+  MFA_ACCOUNT_CODE,
   NEW_ACCOUNT_CODE,
   OUTSIDE_DOMAIN_CODE,
 } from '../test/msw/handlers/google-oauth'
@@ -15,6 +16,13 @@ describe('구글 콜백 착지', () => {
   test('계정이 있으면 콘솔로 들어간다', async () => {
     renderApp(callback(EXISTING_ACCOUNT_CODE))
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+  })
+
+  test('2FA 를 켠 계정은 인증 코드 화면으로 이어진다', async () => {
+    // 구글 로그인은 첫 번째 요소다. 여기서 챌린지를 떨어뜨리면 2FA 를 켠 사람만
+    // 구글로 로그인할 수 없게 되고, 아무 말 없이 로그인 화면에 떨어진다.
+    renderApp(callback(MFA_ACCOUNT_CODE))
+    expect(await screen.findByLabelText(/인증 코드/)).toBeInTheDocument()
   })
 
   test('계정이 없으면 온보딩 폼으로 보낸다', async () => {

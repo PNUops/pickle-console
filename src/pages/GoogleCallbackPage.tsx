@@ -10,7 +10,7 @@ import { Alert, Spinner } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { takeReturnTo } from '../lib/google-oauth'
 import { safeInternalPath } from '../lib/redirect'
-import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
+import { schedulePostLoginOverlay } from '../lib/storage-keys'
 
 /** 구글이 코드 대신 오류를 돌려줄 때 사용자가 읽을 수 있는 문장으로 바꾼다. */
 const GOOGLE_ERRORS: Record<string, string> = {
@@ -81,7 +81,7 @@ export function GoogleCallbackPage() {
           await refreshProfile()
           // 다크 인증에서 라이트 콘솔로 넘어가는 1회 연출. 비밀번호 로그인만 이걸
           // 예약하면 구글 로그인에서만 화면이 툭 바뀐다.
-          sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
+          schedulePostLoginOverlay()
           const role = (outcome.user as { role?: UserRole } | undefined)?.role ?? 'USER'
           navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(role), { replace: true })
           return

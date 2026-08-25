@@ -1921,10 +1921,9 @@ export function enableUser(userId: string): Promise<UserAdminDetail> {
  * 주소 파라미터를 받지 않는다. 서버가 `login_hint` 를 거절하므로 여기서 실을 것도 없고,
  * 없는 편이 이 경로가 주소 존재 여부를 답하지 않는다는 사실을 코드로 남긴다.
  */
-export function startGoogleOauth(body: {
-  purpose?: components['schemas']['OauthStartRequest']['purpose']
-  redirectTo?: string
-}): Promise<components['schemas']['OauthStartResponse']> {
+export function startGoogleOauth(
+  body: components['schemas']['OauthStartRequest'],
+): Promise<components['schemas']['OauthStartResponse']> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/auth/oauth/google/start', { body })
     if (!data) throw toApiError(error, '구글 로그인을 시작하지 못했습니다.')

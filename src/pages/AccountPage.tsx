@@ -50,8 +50,12 @@ export function AccountPage() {
         identities={user.identities}
         hasPassword={user.hasPassword}
       />
-      <TwoFactorSection enabled={user.mfaEnabled} />
-      <WithdrawSection email={user.email} mfaEnabled={user.mfaEnabled} />
+      <TwoFactorSection enabled={user.mfaEnabled} hasPassword={user.hasPassword} />
+      <WithdrawSection
+        email={user.email}
+        mfaEnabled={user.mfaEnabled}
+        hasPassword={user.hasPassword}
+      />
     </div>
   )
 }
@@ -251,7 +255,9 @@ function LinkedAccountsSection({
 }) {
   const toast = useToast()
   const { refreshProfile } = useAuth()
-  const lastMethod = !hasPassword && identities.length <= 1
+  // `<= 1` 이 아니라 `=== 1` 이다. 0이면 해제할 행이 없으므로 사유를 띄울 자리도 없고,
+  // 띄우면 "연동된 계정이 없습니다"와 "유일한 로그인 수단입니다"가 같이 나온다.
+  const lastMethod = !hasPassword && identities.length === 1
 
   const unlink = useMutation({
     mutationFn: (provider: LinkedIdentity['provider']) => unlinkIdentity(provider),
@@ -269,7 +275,13 @@ function LinkedAccountsSection({
       </CardHeader>
       <CardContent className="space-y-4">
         {identities.length === 0 ? (
-          <p className="text-sm text-neutral-600">연동된 외부 계정이 없습니다.</p>
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-600">연동된 외부 계정이 없습니다.</p>
+            <p className="text-sm text-neutral-500">
+              로그인 화면에서 같은 주소의 구글 계정으로 한 번 로그인하면 이 계정에 자동으로
+              연동됩니다.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {identities.map((identity) => (
@@ -304,7 +316,11 @@ function LinkedAccountsSection({
   )
 }
 
-function TwoFactorSection({ enabled }: { enabled: boolean }) {
+/**
+ * 등록도 해제도 비밀번호를 요구한다(`MfaService`). 비밀번호가 없는 계정은 그 칸을 채울 수
+ * 없으므로 등록 버튼 대신 이유를 보여 준다. 서버 완화는 아직 없다.
+ */
+function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassword: boolean }) {
   const { refreshProfile } = useAuth()
   // Enrollment wizard: idle → password → activate → recovery (shown once).
   const [step, setStep] = useState<'idle' | 'password' | 'activate' | 'recovery'>('idle')
@@ -364,7 +380,14 @@ function TwoFactorSection({ enabled }: { enabled: boolean }) {
             <p className="text-sm text-neutral-600">
               인증 앱(TOTP)으로 로그인 시 2단계 인증을 추가합니다. 계정 보안을 위해 등록을 권장합니다.
             </p>
-            <Button onClick={() => setStep('password')}>2단계 인증 등록</Button>
+            {hasPassword ? (
+              <Button onClick={() => setStep('password')}>2단계 인증 등록</Button>
+            ) : (
+              <p className="text-sm text-neutral-500">
+                등록은 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 위의{' '}
+                <strong>비밀번호 설정</strong>을 먼저 마쳐 주세요.
+              </p>
+            )}
           </div>
         ) : step === 'password' ? (
           <form
@@ -625,7 +648,15 @@ function EnrolledPanel() {
   )
 }
 
-function WithdrawSection({ email, mfaEnabled }: { email: string; mfaEnabled: boolean }) {
+function WithdrawSection({
+  email,
+  mfaEnabled,
+  hasPassword,
+}: {
+  email: string
+  mfaEnabled: boolean
+  hasPassword: boolean
+}) {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
@@ -672,9 +703,16 @@ function WithdrawSection({ email, mfaEnabled }: { email: string; mfaEnabled: boo
           삭제되지 않은 VM을 보유한 워크스페이스의 유일한 소유자이거나 개인 워크스페이스에 VM이 남아 있으면 먼저
           정리해야 탈퇴할 수 있습니다.
         </p>
-        <Button variant="danger" onClick={() => setOpen(true)}>
-          회원 탈퇴
-        </Button>
+        {hasPassword ? (
+          <Button variant="danger" onClick={() => setOpen(true)}>
+            회원 탈퇴
+          </Button>
+        ) : (
+          <p className="text-sm text-neutral-500">
+            탈퇴는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 위의{' '}
+            <strong>비밀번호 설정</strong>을 먼저 마친 뒤 다시 시도해 주세요.
+          </p>
+        )}
       </CardContent>
 
       <Modal

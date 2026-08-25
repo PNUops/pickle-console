@@ -6,12 +6,12 @@ import { fetchSystemStatus, startGoogleOauth } from '../api/queries'
 import { ApiError, toApiError } from '../api/problem'
 import { homePathFor, useAuth, type UserProfile } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
-import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
+import { schedulePostLoginOverlay } from '../lib/storage-keys'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, FormField, Input } from '../components/ui'
 import { AuthDivider } from '../components/auth/AuthDivider'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
-import { navigateExternal, rememberReturnTo } from '../lib/google-oauth'
+import { navigateExternal, rememberReturnTo, takeReturnTo } from '../lib/google-oauth'
 import { safeInternalPath } from '../lib/redirect'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
@@ -33,7 +33,11 @@ export function LoginPage() {
   })
 
   // 2FA step-up: non-null once /auth/login returns a challenge.
-  const [mfaToken, setMfaToken] = useState<string | null>(null)
+  // 구글 콜백이 2FA 챌린지를 들고 이 화면으로 넘긴다. 여기서 안 읽으면 2FA 를 켠 계정은
+  // 구글로 로그인할 수 없다 — 아무 말 없이 로그인 화면에 떨어지고 토큰은 버려진다.
+  const [mfaToken, setMfaToken] = useState<string | null>(
+    () => (location.state as { mfaToken?: string } | null)?.mfaToken ?? null,
+  )
   const [useRecovery, setUseRecovery] = useState(false)
   // ?method=password 로 들어오면 펼친 채로 연다. 로그인 안내 메일이나 북마크가
   // 비밀번호 경로를 바로 가리킬 수 있게 하는 용도다.
@@ -61,8 +65,13 @@ export function LoginPage() {
 
   const goHome = (profile: UserProfile) => {
     // 다크 인증 → 라이트 콘솔 톤 전환을 잇는 1회 환영 오버레이(AppShell) 예약.
-    sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
-    navigate(safeInternalPath(from) ?? homePathFor(profile.role), { replace: true })
+    schedulePostLoginOverlay()
+    // 구글 왕복으로 온 경우 돌아갈 곳은 `location.state` 가 아니라 세션 저장소에 있다.
+    // 항상 소비한다 — 남겨 두면 다음 로그인이 지난번 목적지로 간다.
+    const stored = takeReturnTo()
+    navigate(safeInternalPath(from) ?? safeInternalPath(stored) ?? homePathFor(profile.role), {
+      replace: true,
+    })
   }
 
   const asApiError = (err: unknown) =>

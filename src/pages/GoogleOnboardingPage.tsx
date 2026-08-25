@@ -17,7 +17,7 @@ import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { takeReturnTo } from '../lib/google-oauth'
 import { safeInternalPath } from '../lib/redirect'
-import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
+import { schedulePostLoginOverlay } from '../lib/storage-keys'
 
 interface RegistrationState {
   registrationToken: string
@@ -45,7 +45,7 @@ export function GoogleOnboardingPage() {
   const registration = (location.state as { registration?: RegistrationState } | null)?.registration
 
   const { data: currentTerms = [] } = useQuery({
-    queryKey: ['meta', 'terms'],
+    queryKey: ['terms'],
     queryFn: fetchCurrentTerms,
   })
 
@@ -92,7 +92,7 @@ export function GoogleOnboardingPage() {
       if (data) {
         setAccessToken(data.accessToken)
         await refreshProfile()
-        sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
+          schedulePostLoginOverlay()
         navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(data.user.role), { replace: true })
         return
       }
@@ -108,6 +108,10 @@ export function GoogleOnboardingPage() {
         (isProblem(error) ? (error.detail ?? error.title) : null) ??
           '가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.',
       )
+    } catch {
+      // 네트워크가 끊기면 여기로 온다. catch 가 없으면 스피너만 멈추고 화면은 아무
+      // 말도 하지 않아, 방금 쓴 가입 토큰이 살아 있는지 죽었는지 알 수 없게 된다.
+      setFormError('가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
       setSubmitting(false)
     }

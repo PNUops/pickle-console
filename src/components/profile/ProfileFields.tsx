@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { fetchProfileOptions } from '../../api/queries'
 import type { ProfileFieldErrors, ProfileValues } from './profile-values'
 import { requiresStudentNo } from './profile-values'
-import { FormField, Input, Select } from '../ui'
+import { Alert, FormField, Input, Select } from '../ui'
 
 interface ProfileFieldsProps {
   values: ProfileValues
@@ -30,16 +30,34 @@ export function ProfileFields({ values, onChange, errors, disabled }: ProfileFie
 
   // 학생이 아닌 직책으로 바꾸면 학번을 비운다. 남겨 두면 교수 계정에 학번이 딸려 가고,
   // 그 값이 형식에 안 맞으면 화면에 없는 필드에 대한 422를 받게 된다.
+  //
+  // 카탈로그가 오기 전에는 아무것도 지우지 않는다. `requiresStudentNo` 는 목록을 못
+  // 받으면 false 를 답하므로, 그 사이에 지우면 **채워진 값을 들고 들어온 화면**의 학번이
+  // 조용히 사라진다. 지금 세 호출처는 전부 빈 값으로 시작해 발화하지 않지만, 값을
+  // 미리 채우는 화면이 처음 생기는 날 데이터가 없어진다.
   useEffect(() => {
+    if (!positions) return
     if (!needsStudentNo && values.studentNo !== '') {
       onChange({ ...values, studentNo: '' })
     }
-  }, [needsStudentNo, values, onChange])
+  }, [positions, needsStudentNo, values, onChange])
 
   const colleges = groupByCollege(options.data?.departments ?? [])
 
   return (
     <>
+      {options.isError && (
+        <Alert variant="danger">
+          직책과 소속 목록을 불러오지 못했습니다.{' '}
+          <button
+            type="button"
+            className="underline underline-offset-2"
+            onClick={() => void options.refetch()}
+          >
+            다시 시도
+          </button>
+        </Alert>
+      )}
       <FormField label="직책" required error={errors?.position}>
         <Select
           value={values.position}

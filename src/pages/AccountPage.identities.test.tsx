@@ -47,8 +47,9 @@ describe('계정 화면의 연동 관리', () => {
     meReturns({ hasPassword: false, identities: [GOOGLE] })
     renderApp('/console/account')
 
-    // 현재 비밀번호를 묻는 폼은 이 계정이 채울 수 없는 칸이다.
-    expect(await screen.findByText('비밀번호 설정')).toBeInTheDocument()
+    // 현재 비밀번호를 묻는 폼은 이 계정이 채울 수 없는 칸이다. 카드 제목으로 찾는다 —
+    // 같은 낱말이 2FA·탈퇴 카드의 안내 문장에도 나오므로 본문 검색은 여러 개를 잡는다.
+    expect(await screen.findByRole('heading', { name: '비밀번호 설정' })).toBeInTheDocument()
     expect(screen.queryByLabelText('현재 비밀번호')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: '비밀번호 설정 메일 받기' }),
