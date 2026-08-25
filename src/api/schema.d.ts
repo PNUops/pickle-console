@@ -1092,6 +1092,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/oauth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeGoogleOauthCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/oauth/google/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeGoogleOauthRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/oauth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startGoogleOauth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password-reset": {
         parameters: {
             query?: never;
@@ -1449,6 +1497,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/identities/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unlinkIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/mfa/disable": {
         parameters: {
             query?: never;
@@ -1529,6 +1593,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMyProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/withdraw": {
         parameters: {
             query?: never;
@@ -1539,6 +1619,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["withdraw"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/profile-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profileOptions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2883,6 +2979,11 @@ export interface components {
         };
         /** @enum {string} */
         CreditLimitReset: "DAILY" | "WEEKLY" | "MONTHLY";
+        DepartmentView: {
+            code: string;
+            college: string;
+            name: string;
+        };
         DisableMfaRequest: {
             code?: string;
             password: string;
@@ -2997,6 +3098,8 @@ export interface components {
             /** Format: date-time */
             submittedAt: string;
         };
+        /** @enum {string} */
+        IdentityProvider: "GOOGLE";
         IpAllocationResponse: {
             /** Format: date-time */
             allocatedAt: string;
@@ -3049,6 +3152,12 @@ export interface components {
             name: string;
             /** @description 발급된 API Key 평문. **이 응답에서만 볼 수 있습니다** — 서버에는 해시만 저장되며 다시 조회할 수 없습니다. 분실하면 재발급해야 합니다. */
             token: string;
+        };
+        LinkedIdentity: {
+            email: string;
+            /** Format: date-time */
+            linkedAt: string;
+            provider: components["schemas"]["IdentityProvider"];
         };
         LiveCoverage: {
             /**
@@ -3434,6 +3543,38 @@ export interface components {
             readAt?: string | null;
             title: string;
         };
+        OauthCallbackRequest: {
+            code: string;
+            state: string;
+        };
+        OauthCompleteRequest: {
+            consents: components["schemas"]["ConsentInput"][];
+            departmentCode: string;
+            name: string;
+            position: components["schemas"]["UserPosition"];
+            registrationToken: string;
+            studentNo?: string | null;
+        };
+        /** @enum {string} */
+        OauthPurpose: "LOGIN" | "REVERIFY" | "LINK";
+        OauthRegistrationResponse: {
+            email: string;
+            /** Format: date-time */
+            expiresAt: string;
+            kind: string;
+            name: string;
+            registrationToken: string;
+        };
+        OauthStartRequest: {
+            purpose?: components["schemas"]["OauthPurpose"] | null;
+            redirectTo?: string | null;
+        };
+        OauthStartResponse: {
+            authorizationUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            state: string;
+        };
         OrgDashboardSummaryResponse: {
             attention: components["schemas"]["Attention"];
             /** Format: int64 */
@@ -3755,6 +3896,11 @@ export interface components {
         PortMappingProto: "TCP" | "UDP";
         /** @enum {string} */
         PortMappingStatus: "ACTIVE" | "SUSPENDED";
+        PositionView: {
+            code: string;
+            label: string;
+            requiresStudentNo: boolean;
+        };
         /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환됩니다. */
         Problem: {
             /** @description 기계 판독용 안정 오류 코드 (클라이언트 분기 기준) */
@@ -3774,6 +3920,10 @@ export interface components {
             title: string;
             /** @description 문제 유형 URI (기본 about:blank) */
             type?: string;
+        };
+        ProfileOptionsResponse: {
+            departments: components["schemas"]["DepartmentView"][];
+            positions: components["schemas"]["PositionView"][];
         };
         /** @enum {string} */
         ProvisioningTaskKind: "PROVISION" | "DELETE" | "REINSTALL";
@@ -4023,9 +4173,12 @@ export interface components {
         };
         SignupRequest: {
             consents: components["schemas"]["ConsentInput"][];
+            departmentCode: string;
             email: string;
             name: string;
             password: string;
+            position: components["schemas"]["UserPosition"];
+            studentNo?: string | null;
         };
         SuspendPortMappingRequest: {
             /** @description 정지 사유 (소유 워크스페이스에 알림으로 전달) */
@@ -4181,6 +4334,11 @@ export interface components {
              */
             perSourceRate?: number | null;
         };
+        UpdateProfileRequest: {
+            departmentCode: string;
+            position: components["schemas"]["UserPosition"];
+            studentNo?: string | null;
+        };
         UpdateResourceAccessGrantRequest: {
             /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
@@ -4244,18 +4402,27 @@ export interface components {
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
         };
+        /** @enum {string} */
+        UserPosition: "STUDENT_UNDERGRAD" | "STUDENT_GRADUATE" | "RESEARCHER" | "PROFESSOR" | "STAFF" | "OTHER";
         UserProfileResponse: {
+            departmentCode?: string | null;
+            departmentName?: string | null;
             email: string;
+            hasPassword: boolean;
             /** Format: uuid */
             id: string;
+            identities: components["schemas"]["LinkedIdentity"][];
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
             /** Format: uuid */
             orgId?: string | null;
             pendingConsents: components["schemas"]["TermsVersionView"][];
+            position?: components["schemas"]["UserPosition"] | null;
+            profileComplete: boolean;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
+            studentNo?: string | null;
         };
         /** @enum {string} */
         UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
@@ -7036,6 +7203,105 @@ export interface operations {
             };
         };
     };
+    completeGoogleOauthCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OauthCallbackRequest"];
+            };
+        };
+        responses: {
+            /** @description 토큰 발급 / 2FA 챌린지 / 가입 필요 / 재인증 토큰 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["ReverifyResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    completeGoogleOauthRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OauthCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    startGoogleOauth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OauthStartRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OauthStartResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     requestPasswordReset: {
         parameters: {
             query?: never;
@@ -7939,6 +8205,47 @@ export interface operations {
             };
         };
     };
+    unlinkIdentity: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                provider: components["schemas"]["IdentityProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     disable: {
         parameters: {
             query?: never;
@@ -8104,6 +8411,39 @@ export interface operations {
             };
         };
     };
+    updateMyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     withdraw: {
         parameters: {
             query?: never;
@@ -8124,6 +8464,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    profileOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProfileOptionsResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

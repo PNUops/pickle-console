@@ -45,6 +45,7 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { GoogleCallbackPage } from './pages/GoogleCallbackPage'
 import { SignupPage } from './pages/SignupPage'
 import { TermsPage } from './pages/TermsPage'
 import { VerifyEmailPage } from './pages/VerifyEmailPage'
@@ -94,6 +95,8 @@ function App() {
         <Route path="verify-email" element={<VerifyEmailPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+        {/* 구글이 돌아오는 자리. 등록한 redirect_uri 와 바이트 단위로 같아야 한다. */}
+        <Route path="auth/google/callback" element={<GoogleCallbackPage />} />
       </Route>
       <Route element={<PublicLayout />}>
         <Route path="terms/:docType" element={<TermsPage />} />

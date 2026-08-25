@@ -8,6 +8,7 @@ import { auditHandlers, resetAuditFixtures } from './handlers/audit'
 import { authHandlers } from './handlers/auth'
 import { campusIpHandlers, resetCampusIpFixtures } from './handlers/campusip'
 import { consentHandlers } from './handlers/consent'
+import { profileOptionsHandlers } from './handlers/profile-options'
 import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
 import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces'
@@ -30,6 +31,7 @@ export const handlers: RequestHandler[] = [
   ...accountHandlers,
   ...mfaHandlers,
   ...consentHandlers,
+  ...profileOptionsHandlers,
   ...userHandlers,
   ...referenceHandlers,
   ...workspaceHandlers,

@@ -61,7 +61,23 @@ export const regularUserB: Schemas['UserSummaryResponse'] = {
   role: 'USER',
 }
 
+/**
+ * 프로필 응답이 계정마다 다르지 않게 들고 다니는 부분. 계약에 필수 필드가 늘 때마다
+ * 픽스처 여섯 곳을 고치지 않도록 한 곳에 모았다. 기본값은 "프로필을 채운 비밀번호 계정"
+ * 이며, 그와 다른 상태를 보고 싶은 테스트가 개별로 덮는다.
+ */
+const filledProfile = {
+  position: 'STUDENT_UNDERGRAD',
+  studentNo: '202012345',
+  departmentCode: 'COMPUTER_SCIENCE',
+  departmentName: '정보컴퓨터공학부',
+  profileComplete: true,
+  hasPassword: true,
+  identities: [],
+} satisfies Partial<Schemas['UserProfileResponse']>
+
 export const regularProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...regularUser,
   orgId: null,
   status: 'ACTIVE',
@@ -73,6 +89,7 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
 }
 
 export const orgAdminProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...orgAdminUser,
   orgId: uuid(1),
   status: 'ACTIVE',
@@ -84,6 +101,7 @@ export const orgAdminProfile: Schemas['UserProfileResponse'] = {
 }
 
 export const sysAdminProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...sysAdminUser,
   orgId: null,
   status: 'ACTIVE',
@@ -95,6 +113,7 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
 }
 
 export const orgManagerProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...orgManagerUser,
   orgId: uuid(1),
   status: 'ACTIVE',
@@ -106,6 +125,7 @@ export const orgManagerProfile: Schemas['UserProfileResponse'] = {
 }
 
 export const sysManagerProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...sysManagerUser,
   orgId: null,
   status: 'ACTIVE',
@@ -117,6 +137,7 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
 }
 
 export const regularProfileB: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...regularUserB,
   orgId: null,
   status: 'ACTIVE',
@@ -136,6 +157,7 @@ export const mfaUser: Schemas['UserSummaryResponse'] = {
 }
 
 export const mfaProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
   ...mfaUser,
   orgId: null,
   status: 'ACTIVE',

@@ -1545,6 +1545,35 @@ export function resetUserMfa(userId: string): Promise<MessageResponse> {
   })
 }
 
+/* ─── 프로필 카탈로그 ─── */
+
+export type ProfileOptionsResponse = Schemas['ProfileOptionsResponse']
+export type PositionView = Schemas['PositionView']
+export type DepartmentView = Schemas['DepartmentView']
+
+/**
+ * 직책과 소속 카탈로그. 계정이 생기기 전에도 읽으므로 무인증이다.
+ * 직책마다 `requiresStudentNo`가 함께 오므로 학번 필드를 띄울지는 그 값만 보면 된다.
+ * 여기서 코드로 다시 유도하면 서버가 집행하는 규칙의 두 번째 사본이 생긴다.
+ */
+export function fetchProfileOptions(): Promise<ProfileOptionsResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/meta/profile-options')
+    if (!data) throw toApiError(error, '직책·소속 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateMyProfile(
+  body: Schemas['UpdateProfileRequest'],
+): Promise<Schemas['UserProfileResponse']> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/me/profile', { body })
+    if (!data) throw toApiError(error, '프로필을 저장하지 못했습니다.')
+    return data
+  })
+}
+
 /* ─── 약관·동의 ─── */
 
 export function fetchCurrentTerms(): Promise<TermsVersionView[]> {
