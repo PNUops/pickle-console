@@ -6,11 +6,13 @@ import { Hero } from './Hero'
 import { HowItWorks } from './HowItWorks'
 import { LandingFooter } from './LandingFooter'
 import { LandingHeader } from './LandingHeader'
+import { ResourceShowcase } from './ResourceShowcase'
 import { TrustStrip } from './TrustStrip'
 
 /**
- * 랜딩 페이지(/). PublicLayout 밖에서 렌더되는 full-bleed 페이지 — 다크 히어로 위에
- * 자체 헤더가 떠 있고, 라이트 본문(절차/접속/기능/로드맵)과 다크 CTA·푸터로 이어진다.
+ * 랜딩 페이지(/). PublicLayout 밖에서 렌더되는 full-bleed 페이지 — 다크 히어로와
+ * 리소스 쇼케이스 위에 자체 헤더가 떠 있고, 라이트 본문(절차/사용/기능)과
+ * 다크 CTA·푸터로 이어진다.
  */
 export function LandingPage() {
   // 앵커 이동을 부드럽게(reduced-motion이면 브라우저 기본 즉시 이동 유지).
@@ -28,6 +30,7 @@ export function LandingPage() {
       <main>
         <Hero />
         <TrustStrip />
+        <ResourceShowcase />
         <HowItWorks />
         <AccessSection />
         <FeatureGrid />

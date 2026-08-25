@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import pnuEmblem from '../assets/pnu-emblem.png'
 import { SERVICE_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
@@ -23,17 +24,13 @@ export function Logo({
         className,
       )}
     >
-      <span
+      {/* 부산대 엠블럼 원본이 흰 바탕 정사각형이라 rounded-full 클리핑으로 원형만 남긴다 */}
+      <img
+        src={pnuEmblem}
+        alt=""
         aria-hidden="true"
-        className={cn(
-          'flex size-7 items-center justify-center rounded-lg text-white',
-          tone === 'inverse' ? 'bg-primary-500' : 'bg-primary-600',
-        )}
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" className="size-4">
-          <path d="M17.5 19a4.5 4.5 0 0 0 .38-8.984 6.002 6.002 0 0 0-11.65 1.087A4 4 0 0 0 7 19h10.5z" />
-        </svg>
-      </span>
+        className="size-7 shrink-0 rounded-full"
+      />
       <span
         className={cn(
           'text-lg font-bold tracking-tight',

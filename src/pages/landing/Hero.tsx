@@ -73,9 +73,9 @@ export function Hero() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-400">
-                신청서를 제출하고 승인되면 서버가 자동으로 만들어집니다.{' '}
+                가상머신부터 LLM API 키까지, 신청서 하나로 받습니다.{' '}
                 <br className="hidden sm:block" />
-                SSH와 웹 터미널로 바로 접속할 수 있습니다.
+                승인되면 자동으로 준비되고, 콘솔에서 바로 사용합니다.
               </p>
             </Reveal>
             <Reveal delay={0.24}>
@@ -93,13 +93,16 @@ export function Hero() {
                   </TransitionLink>
                 ) : (
                   <>
-                    <TransitionLink
-                      to="/signup"
+                    {/* 소개 페이지(노션)는 외부 문서라 라우터를 타지 않는다 */}
+                    <a
+                      href="https://pnuops.notion.site/pickle-intro"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-6 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                     >
-                      지금 시작하기
+                      서비스 소개
                       <span aria-hidden="true">→</span>
-                    </TransitionLink>
+                    </a>
                     <TransitionLink
                       to="/login"
                       className="inline-flex h-12 items-center rounded-xl border border-white/15 bg-white/5 px-6 text-base font-medium text-neutral-200 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
@@ -122,7 +125,7 @@ export function Hero() {
 
         {/* 스크롤 힌트 */}
         <a
-          href="#how-it-works"
+          href="#resources"
           aria-label="아래로 스크롤"
           className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full p-2 text-neutral-500 transition-colors hover:text-neutral-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
         >

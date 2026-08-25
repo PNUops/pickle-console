@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import { HeroFallback } from './HeroFallback'
 
 /**
- * 히어로 3D 씬 — 중앙 코어(호스트)와 궤도를 도는 VM 노드들.
+ * 히어로 3D 씬 — 중앙 코어(플랫폼)와 궤도를 도는 리소스 노드들.
  * "하나의 인프라에서 각자의 서버가 만들어진다"는 모티프.
  *
  * - React.lazy로만 로드되므로(three ~160KB gzip) 콘솔 진입 번들에 영향 없음.
@@ -137,7 +137,7 @@ function OrbitalScene({
                 opacity={0.18}
                 lineWidth={1}
               />
-              {/* VM 노드 */}
+              {/* 리소스 노드 */}
               <RoundedBox position={position} args={[ring.size, ring.size, ring.size]} radius={0.03} smoothness={2}>
                 <meshStandardMaterial
                   color="#2e8b9e"
