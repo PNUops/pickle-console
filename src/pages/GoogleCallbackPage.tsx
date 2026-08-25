@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
 import { setAccessToken } from '../api/token'
+import type { UserRole } from '../auth/auth-context'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { TransitionLink } from '../components/TransitionLink'
 import { Alert, Spinner } from '../components/ui'
@@ -78,13 +79,11 @@ export function GoogleCallbackPage() {
         if (typeof outcome.accessToken === 'string') {
           setAccessToken(outcome.accessToken)
           await refreshProfile()
+          // 다크 인증에서 라이트 콘솔로 넘어가는 1회 연출. 비밀번호 로그인만 이걸
+          // 예약하면 구글 로그인에서만 화면이 툭 바뀐다.
           sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
-          const user = outcome.user as { role?: string } | undefined
-          navigate(
-            safeInternalPath(takeReturnTo()) ??
-              homePathFor((user?.role ?? 'USER') as Parameters<typeof homePathFor>[0]),
-            { replace: true },
-          )
+          const role = (outcome.user as { role?: UserRole } | undefined)?.role ?? 'USER'
+          navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(role), { replace: true })
           return
         }
         setError('구글 로그인 응답을 이해하지 못했습니다.')

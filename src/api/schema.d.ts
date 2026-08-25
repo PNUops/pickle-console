@@ -7249,13 +7249,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 계정 생성과 토큰 발급 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": Record<string, never>;
+                    "*/*": components["schemas"]["AuthTokenResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

@@ -1574,6 +1574,24 @@ export function updateMyProfile(
   })
 }
 
+/* ─── 연동 계정 ─── */
+
+export type LinkedIdentity = Schemas['LinkedIdentity']
+
+/**
+ * 외부 로그인 연동 해제. 재인증 대상이라 fetch 래퍼가 sudo 모달을 태운다.
+ * `/auth/*` 가 아니라 `/me/*` 아래인 이유가 여기에 있다 — 래퍼는 `/api/v1/auth/*`
+ * 경로에 재인증 토큰을 붙이지 않으므로 거기 있으면 재인증을 걸 수 없다.
+ */
+export function unlinkIdentity(provider: Schemas['IdentityProvider']): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/me/identities/{provider}', {
+      params: { path: { provider } },
+    })
+    if (error) throw toApiError(error, '연동을 해제하지 못했습니다.')
+  })
+}
+
 /* ─── 약관·동의 ─── */
 
 export function fetchCurrentTerms(): Promise<TermsVersionView[]> {
