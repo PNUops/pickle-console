@@ -3556,7 +3556,8 @@ export interface components {
             studentNo?: string | null;
         };
         OauthLinkedResponse: {
-            kind: string;
+            /** @enum {string} */
+            kind: "LINKED";
         };
         /** @enum {string} */
         OauthPurpose: "LOGIN" | "REVERIFY" | "LINK";
@@ -3564,7 +3565,8 @@ export interface components {
             email: string;
             /** Format: date-time */
             expiresAt: string;
-            kind: string;
+            /** @enum {string} */
+            kind: "REGISTRATION_REQUIRED";
             name: string;
             registrationToken: string;
         };
