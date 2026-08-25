@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { AccessSection } from './AccessSection'
+import { FamilySites } from './FamilySites'
 import { FeatureGrid } from './FeatureGrid'
 import { FinalCta } from './FinalCta'
 import { Hero } from './Hero'
@@ -35,6 +36,7 @@ export function LandingPage() {
         <AccessSection />
         <FeatureGrid />
         <FinalCta />
+        <FamilySites />
       </main>
       <LandingFooter />
     </div>
