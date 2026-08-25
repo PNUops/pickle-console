@@ -44,25 +44,31 @@ export function LandingFooter() {
                 사용 방식
               </a>
             </div>
-            <div className="flex flex-col gap-2">
-              <span className="font-semibold text-neutral-200">패밀리 사이트</span>
-              {familySites.map((site) => (
-                <a
-                  key={site.href}
-                  href={site.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-neutral-400 transition-colors hover:text-white"
-                >
-                  {site.label}
-                </a>
-              ))}
-            </div>
           </nav>
         </div>
         <p className="mt-10 border-t border-white/10 pt-6 text-xs text-neutral-400">
           {SERVICE_TAGLINE}
         </p>
+      </div>
+      {/* 페이지 제일 밑의 별개 영역 — 푸터 내비가 아니라 독립 스트립으로 둔다(기관 요청) */}
+      <div className="border-t border-white/10">
+        <nav
+          aria-label="패밀리 사이트"
+          className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-xs sm:px-6"
+        >
+          <span className="font-semibold text-neutral-400">패밀리 사이트</span>
+          {familySites.map((site) => (
+            <a
+              key={site.href}
+              href={site.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-neutral-500 transition-colors hover:text-neutral-300"
+            >
+              {site.label}
+            </a>
+          ))}
+        </nav>
       </div>
     </footer>
   )
