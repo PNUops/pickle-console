@@ -73,7 +73,7 @@ export function Hero() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-400">
-                가상머신부터 LLM API 키까지, 신청서 하나로 받습니다.{' '}
+                필요한 컴퓨팅 리소스를 하나의 플랫폼에서 관리합니다.{' '}
                 <br className="hidden sm:block" />
                 승인되면 자동으로 준비되고, 콘솔에서 바로 사용합니다.
               </p>
