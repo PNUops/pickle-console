@@ -146,4 +146,45 @@ describe('사용량 탭', () => {
     ).toBeInTheDocument()
     expect(await screen.findByRole('img', { name: '요청 수' })).toBeInTheDocument()
   })
+
+  test('합계가 문장 옆에 숫자로도 선다', async () => {
+    // 문장은 남는다 — '일부 추정' 같은 단서를 담는 것은 문장뿐이다.
+    renderUsage(USED_KEY)
+
+    const totals = await screen.findByText('총 요청')
+    expect(totals.parentElement).toHaveTextContent(/[0-9,]+회/)
+    expect(screen.getByText('합계 토큰')).toBeInTheDocument()
+    expect(screen.getByText(/가 추정값/)).toBeInTheDocument()
+  })
+
+  test('모델별 비중이 원형과 표로 함께 나온다', async () => {
+    // 원형은 색으로만 말하므로 이름과 값이 범례에, 전체 요약이 그림 이름에 있다.
+    renderUsage(USED_KEY)
+
+    const donut = await screen.findByRole('img', { name: /모델별 요청 비중/ })
+    expect(donut).toHaveAccessibleName(/pickle-general \d+%/)
+    expect(screen.getByRole('columnheader', { name: '실패율' })).toBeInTheDocument()
+    expect(screen.getAllByText('openai/gpt-4o-mini').length).toBeGreaterThan(0)
+  })
+
+  test('예산 게이지 둘이 서로 다른 신선도를 밝힌다', async () => {
+    // 하나는 우리가 세고 하나는 OpenRouter가 집행한다. 같은 시점의 값으로
+    // 읽히면 안 된다.
+    renderUsage(USED_KEY)
+
+    expect(await screen.findByRole('progressbar', { name: '오늘 토큰 사용 소진율' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: '금액 사용 소진율' })).toBeInTheDocument()
+    expect(screen.getByText(/OpenRouter 기준 .*에 읽은 값입니다/)).toBeInTheDocument()
+    expect(screen.getByText(/이 속도면 2026-09-12에 한도에 도달합니다/)).toBeInTheDocument()
+  })
+
+  test('쓰인 적 없는 키는 분해가 비어도 화면이 선다', async () => {
+    renderUsage(NEVER_USED_KEY)
+
+    expect(await screen.findByText(/요청이 없습니다/)).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /모델별 요청 비중/ })).not.toBeInTheDocument()
+    // 예산은 사용과 무관하게 현재 상태이므로 그대로 서 있어야 한다.
+    expect(screen.getByRole('progressbar', { name: '오늘 토큰 사용 소진율' })).toBeInTheDocument()
+  })
 })

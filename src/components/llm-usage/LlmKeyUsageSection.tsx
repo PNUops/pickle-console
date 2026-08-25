@@ -1,11 +1,19 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchLlmKeyUsage, type LlmApiKeyStatus } from '../../api/queries'
+import {
+  fetchLlmKeyUsage,
+  type LlmApiKeyStatus,
+  type LlmKeyBudget,
+  type LlmKeyModelUsage,
+} from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { formatDateTime } from '../../lib/format'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
 import { CHART_SERIES_1, CHART_SERIES_2 } from '../metrics/chart-colors'
 import { formatKstDay } from '../metrics/timeframe'
+import { BudgetGauge } from './BudgetGauge'
+import { DonutChart, type DonutSlice } from './DonutChart'
+import { UsageHeatmap } from './UsageHeatmap'
 import {
   DEFAULT_USAGE_DAYS,
   USAGE_DAY_OPTIONS,
@@ -126,6 +134,37 @@ export default function LlmKeyUsageSection({
                   {data.from} ~ {data.to}
                 </p>
 
+                {/* 문장은 남긴다 — 카드는 숫자를 빨리 읽게 하지만 '일부 추정'
+                    같은 단서는 문장만이 담는다. */}
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                  <StatTile label="총 요청" value={formatRequests(totals.requests)} />
+                  <StatTile label="정상 응답" value={formatRequests(totals.succeeded)} />
+                  <StatTile
+                    label="한도 거부"
+                    value={formatRequests(totals.rateLimited)}
+                    tone={totals.rateLimited > 0 ? 'danger' : 'normal'}
+                  />
+                  <StatTile label="실패" value={formatRequests(totals.failed)} />
+                  <StatTile label="입력 토큰" value={formatTokens(totals.inputTokens)} />
+                  <StatTile label="출력 토큰" value={formatTokens(totals.outputTokens)} />
+                  <StatTile
+                    label="합계 토큰"
+                    value={formatTokens(totals.inputTokens + totals.outputTokens)}
+                    hint={
+                      totals.estimatedRequests > 0
+                        ? `${formatShare(estimated)}가 추정값`
+                        : undefined
+                    }
+                  />
+                  <StatTile
+                    label="응답 시간 중앙값"
+                    value={data.latency ? `${formatMs(data.latency.p50Ms)}` : '—'}
+                    hint={data.latency ? `p99 ${formatMs(data.latency.p99Ms)}` : '정상 응답 없음'}
+                  />
+                </div>
+
+                <BudgetSection budget={data.budget} />
+
                 <ReportingNotice state={reporting} />
 
                 {/* 한도에 걸린 요청만은 사용자가 할 수 있는 일이 있는 실패다 —
@@ -212,6 +251,53 @@ export default function LlmKeyUsageSection({
                     />
                   </div>
                 )}
+
+                {data.models.length > 0 && (
+                  <section className="space-y-4" aria-label="모델별 사용">
+                    <h3 className="text-sm font-semibold text-neutral-700">모델별 사용</h3>
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                      <DonutChart
+                        title="모델별 요청 비중"
+                        slices={topSlices(data.models, (model) => model.requests)}
+                        format={formatRequests}
+                      />
+                      <DonutChart
+                        title="모델별 토큰 비중"
+                        slices={topSlices(
+                          data.models,
+                          (model) => model.inputTokens + model.outputTokens,
+                        )}
+                        format={formatTokens}
+                      />
+                    </div>
+                    <ModelTable models={data.models} />
+                  </section>
+                )}
+
+                {data.errorTypes.length > 0 && (
+                  <section className="space-y-2" aria-label="오류 종류">
+                    <h3 className="text-sm font-semibold text-neutral-700">실패한 요청</h3>
+                    <ul className="space-y-1 text-sm text-neutral-700">
+                      {data.errorTypes.map((error) => (
+                        <li key={error.errorType ?? 'unknown'} className="flex justify-between">
+                          <span>{errorLabel(error.errorType)}</span>
+                          <span className="text-neutral-500">
+                            {formatRequests(error.requests)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {data.hourly.length > 0 && (
+                  <section className="space-y-2" aria-label="시간대별 사용">
+                    <h3 className="text-sm font-semibold text-neutral-700">
+                      언제 많이 쓰는가 (KST)
+                    </h3>
+                    <UsageHeatmap cells={data.hourly} />
+                  </section>
+                )}
               </>
             )}
           </>
@@ -219,6 +305,173 @@ export default function LlmKeyUsageSection({
       </CardContent>
     </Card>
   )
+}
+
+/** 숫자 하나를 크게 — 문장으로만 있던 합계를 눈이 먼저 잡도록. */
+function StatTile({
+  label,
+  value,
+  hint,
+  tone = 'normal',
+}: {
+  label: string
+  value: string
+  hint?: string
+  tone?: 'normal' | 'danger'
+}) {
+  return (
+    <div className="rounded-lg border border-neutral-200 p-3">
+      <p className="text-xs text-neutral-500">{label}</p>
+      <p
+        className={
+          'mt-1 text-lg font-semibold ' +
+          (tone === 'danger' ? 'text-danger-600' : 'text-neutral-900')
+        }
+      >
+        {value}
+      </p>
+      {hint && <p className="mt-0.5 text-xs text-neutral-500">{hint}</p>}
+    </div>
+  )
+}
+
+/**
+ * 두 예산 축.
+ *
+ * 한 축은 우리가 세고 다른 축은 OpenRouter가 집행한다. 신선도가 다르므로 그
+ * 사실을 각 게이지가 스스로 말한다 — 두 숫자를 나란히 놓고 아무 말도 하지 않으면
+ * 같은 시점의 값으로 읽힌다.
+ */
+function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
+  const tokenLimit = budget.dailyTokens
+  const creditLimit = Number(budget.creditLimit)
+  const creditUsage = budget.creditUsage == null ? null : Number(budget.creditUsage)
+  return (
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-label="예산 소진율">
+      <BudgetGauge
+        label="오늘 토큰 사용"
+        usedLabel={formatTokens(budget.todayTokens)}
+        limitLabel={tokenLimit != null && tokenLimit > 0 ? formatTokens(tokenLimit) : null}
+        ratio={tokenLimit != null && tokenLimit > 0 ? budget.todayTokens / tokenLimit : null}
+        note={
+          tokenLimit == null
+            ? '일일 토큰 한도가 없습니다.'
+            : tokenLimit === 0
+              ? '토큰 한도가 0이라 자체 서빙 모델을 쓸 수 없습니다.'
+              : budget.quotaExhausted
+                ? '오늘 한도에 도달해 자체 서빙 모델 요청이 거절되고 있습니다. 자정(KST)에 초기화됩니다.'
+                : undefined
+        }
+        freshness="사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다."
+      />
+      <BudgetGauge
+        label="금액 사용"
+        usedLabel={creditUsage == null ? null : formatUsd(creditUsage)}
+        limitLabel={creditLimit > 0 ? formatUsd(creditLimit) : null}
+        ratio={creditUsage != null && creditLimit > 0 ? creditUsage / creditLimit : null}
+        note={
+          creditLimit === 0
+            ? '금액 한도가 없어 상용 모델을 쓸 수 없습니다.'
+            : budget.creditDepletionForecast
+              ? `이 속도면 ${budget.creditDepletionForecast}에 한도에 도달합니다.`
+              : creditUsage == null
+                ? undefined
+                : '소진 예상을 내기에는 아직 사용 이력이 짧습니다.'
+        }
+        freshness={
+          budget.creditUsageAt
+            ? `OpenRouter 기준 ${formatDateTime(budget.creditUsageAt)}에 읽은 값입니다.`
+            : undefined
+        }
+      />
+    </section>
+  )
+}
+
+/** 모델 x (요청·토큰·평균 지연·실패율). */
+function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+            <th scope="col" className="py-2 pr-3 font-normal">
+              모델
+            </th>
+            <th scope="col" className="py-2 pr-3 text-right font-normal">
+              요청
+            </th>
+            <th scope="col" className="py-2 pr-3 text-right font-normal">
+              토큰
+            </th>
+            <th scope="col" className="py-2 pr-3 text-right font-normal">
+              평균 응답
+            </th>
+            <th scope="col" className="py-2 text-right font-normal">
+              실패율
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {models.map((model) => (
+            <tr key={model.modelName ?? 'unknown'} className="border-b border-neutral-100">
+              <td className="py-2 pr-3 text-neutral-700">{modelLabel(model.modelName)}</td>
+              <td className="py-2 pr-3 text-right text-neutral-600">
+                {formatRequests(model.requests)}
+              </td>
+              <td className="py-2 pr-3 text-right text-neutral-600">
+                {formatTokens(model.inputTokens + model.outputTokens)}
+              </td>
+              <td className="py-2 pr-3 text-right text-neutral-600">
+                {model.avgLatencyMs == null ? '—' : formatMs(model.avgLatencyMs)}
+              </td>
+              <td className="py-2 text-right text-neutral-600">
+                {model.requests === 0
+                  ? '—'
+                  : formatShare((model.failed / model.requests) * 100)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/**
+ * 도넛에 올릴 조각 — 상위 넷과 나머지를 묶은 '기타'.
+ *
+ * 검증을 통과한 범주 색이 넷이라 조각도 넷에서 끊는다. 색을 더 만들면 사람 눈에
+ * 같은 색 둘이 생기고, 그러면 비중을 잘못 읽는다.
+ */
+function topSlices(
+  models: LlmKeyModelUsage[],
+  pick: (model: LlmKeyModelUsage) => number,
+): DonutSlice[] {
+  const sorted = models
+    .map((model) => ({ label: modelLabel(model.modelName), value: pick(model) }))
+    .filter((slice) => slice.value > 0)
+    .sort((a, b) => b.value - a.value)
+  if (sorted.length <= 5) return sorted
+  const rest = sorted.slice(4).reduce((sum, slice) => sum + slice.value, 0)
+  return [...sorted.slice(0, 4), { label: `기타 ${sorted.length - 4}종`, value: rest, residual: true }]
+}
+
+function modelLabel(name: string | null | undefined): string {
+  return name ?? '모델 미상'
+}
+
+function errorLabel(errorType: string | null | undefined): string {
+  return errorType ?? '기타'
+}
+
+function formatMs(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}초`
+  return `${Math.round(ms)}ms`
+}
+
+function formatUsd(amount: number): string {
+  return `$${amount.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 /**

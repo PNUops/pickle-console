@@ -1092,6 +1092,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/oauth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeGoogleOauthCallback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/oauth/google/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["completeGoogleOauthRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/oauth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startGoogleOauth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/password-reset": {
         parameters: {
             query?: never;
@@ -1449,6 +1497,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/identities/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["unlinkIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/mfa/disable": {
         parameters: {
             query?: never;
@@ -1529,6 +1593,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateMyProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/withdraw": {
         parameters: {
             query?: never;
@@ -1539,6 +1619,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["withdraw"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta/profile-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profileOptions"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2883,6 +2979,11 @@ export interface components {
         };
         /** @enum {string} */
         CreditLimitReset: "DAILY" | "WEEKLY" | "MONTHLY";
+        DepartmentView: {
+            code: string;
+            college: string;
+            name: string;
+        };
         DisableMfaRequest: {
             code?: string;
             password: string;
@@ -2997,6 +3098,8 @@ export interface components {
             /** Format: date-time */
             submittedAt: string;
         };
+        /** @enum {string} */
+        IdentityProvider: "GOOGLE";
         IpAllocationResponse: {
             /** Format: date-time */
             allocatedAt: string;
@@ -3050,6 +3153,12 @@ export interface components {
             /** @description 발급된 API Key 평문. **이 응답에서만 볼 수 있습니다** — 서버에는 해시만 저장되며 다시 조회할 수 없습니다. 분실하면 재발급해야 합니다. */
             token: string;
         };
+        LinkedIdentity: {
+            email: string;
+            /** Format: date-time */
+            linkedAt: string;
+            provider: components["schemas"]["IdentityProvider"];
+        };
         LiveCoverage: {
             /**
              * Format: int32
@@ -3069,6 +3178,34 @@ export interface components {
         };
         /** @enum {string} */
         LlmApiKeyStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
+        LlmKeyBudgetResponse: {
+            /**
+             * Format: date
+             * @description 최근 소비 속도로 금액 한도에 도달할 것으로 보이는 날짜. 이력이 부족하거나 최근에 쓴 적이 없으면 null입니다 — 그때는 화면이 예상 대신 이유를 말합니다.
+             */
+            creditDepletionForecast?: string | null;
+            /** @description 상용 모델에 쓸 수 있는 금액 한도(USD). 0이면 상용 모델을 쓸 수 없습니다. */
+            creditLimit: number;
+            /** @description OpenRouter가 보고한 누적 사용액(USD). 아직 보고된 적이 없으면 null이며, 0으로 표시하지 않습니다. */
+            creditUsage?: number | null;
+            /**
+             * Format: date-time
+             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             */
+            creditUsageAt?: string | null;
+            /**
+             * Format: int64
+             * @description 하루에 쓸 수 있는 토큰 수. null이면 한도가 없고, 0이면 자체 서빙 모델을 쓸 수 없습니다.
+             */
+            dailyTokens?: number | null;
+            /** @description 한도에 도달해 자체 서빙 모델 요청이 거절되고 있는 상태. */
+            quotaExhausted: boolean;
+            /**
+             * Format: int64
+             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 상용 모델 사용은 금액 축에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             */
+            todayTokens: number;
+        };
         LlmKeyDetailResponse: {
             /** @description 접근 권한 목록을 관리할 수 있는지 */
             accessManageAllowed: boolean;
@@ -3129,6 +3266,65 @@ export interface components {
              */
             workspaceId?: string | null;
             workspaceName: string;
+        };
+        LlmKeyErrorTypeResponse: {
+            /** @description 오류 종류. 게이트웨이가 종류를 남기지 않은 실패는 null이며, 화면에서는 '기타'로 묶입니다. */
+            errorType?: string | null;
+            /** Format: int64 */
+            requests: number;
+        };
+        LlmKeyHourlyUsageResponse: {
+            /**
+             * Format: int32
+             * @description 시각. 0~23, KST 기준.
+             */
+            hour: number;
+            /** Format: int64 */
+            requests: number;
+            /**
+             * Format: int32
+             * @description 요일. 1=월요일 … 7=일요일(ISO), KST 기준.
+             */
+            weekday: number;
+        };
+        LlmKeyLatencyResponse: {
+            /**
+             * Format: int64
+             * @description 정상 응답 요청의 중앙값 응답 시간(ms).
+             */
+            p50Ms: number;
+            /** Format: int64 */
+            p90Ms: number;
+            /** Format: int64 */
+            p99Ms: number;
+            /**
+             * Format: int64
+             * @description 백분위를 낸 요청 수. 표본이 적을수록 p99는 흔들립니다.
+             */
+            samples: number;
+        };
+        LlmKeyModelUsageResponse: {
+            /**
+             * Format: int64
+             * @description 이 모델 요청의 평균 응답 시간(ms). 요청이 없으면 null입니다.
+             */
+            avgLatencyMs?: number | null;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며, 화면에서는 '모델 미상'으로 묶입니다. */
+            modelName?: string | null;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: int64 */
+            rateLimited: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            succeeded: number;
         };
         LlmKeyRequestSpecResponse: {
             /**
@@ -3265,8 +3461,18 @@ export interface components {
             succeeded: number;
         };
         LlmKeyUsageTrendResponse: {
+            /** @description 기간이 아니라 현재 시점의 두 예산 축 상태 */
+            budget: components["schemas"]["LlmKeyBudgetResponse"];
+            /** @description 이 기간의 실패를 종류별로, 많은 순 */
+            errorTypes: components["schemas"]["LlmKeyErrorTypeResponse"][];
             /** Format: date */
             from: string;
+            /** @description 요일 x 시각(KST) 요청 분포. 요청이 있는 칸만 담깁니다. */
+            hourly: components["schemas"]["LlmKeyHourlyUsageResponse"][];
+            /** @description 정상 응답 요청의 응답 시간 백분위. 정상 응답이 없으면 null입니다. */
+            latency?: components["schemas"]["LlmKeyLatencyResponse"] | null;
+            /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
+            models: components["schemas"]["LlmKeyModelUsageResponse"][];
             /** @description 하루 한 점, 오래된 날부터 */
             points: components["schemas"]["LlmKeyUsagePointResponse"][];
             /**
@@ -3433,6 +3639,38 @@ export interface components {
             /** Format: date-time */
             readAt?: string | null;
             title: string;
+        };
+        OauthCallbackRequest: {
+            code: string;
+            state: string;
+        };
+        OauthCompleteRequest: {
+            consents: components["schemas"]["ConsentInput"][];
+            departmentCode: string;
+            name: string;
+            position: components["schemas"]["UserPosition"];
+            registrationToken: string;
+            studentNo?: string | null;
+        };
+        /** @enum {string} */
+        OauthPurpose: "LOGIN" | "REVERIFY" | "LINK";
+        OauthRegistrationResponse: {
+            email: string;
+            /** Format: date-time */
+            expiresAt: string;
+            kind: string;
+            name: string;
+            registrationToken: string;
+        };
+        OauthStartRequest: {
+            purpose?: components["schemas"]["OauthPurpose"] | null;
+            redirectTo?: string | null;
+        };
+        OauthStartResponse: {
+            authorizationUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            state: string;
         };
         OrgDashboardSummaryResponse: {
             attention: components["schemas"]["Attention"];
@@ -3755,6 +3993,11 @@ export interface components {
         PortMappingProto: "TCP" | "UDP";
         /** @enum {string} */
         PortMappingStatus: "ACTIVE" | "SUSPENDED";
+        PositionView: {
+            code: string;
+            label: string;
+            requiresStudentNo: boolean;
+        };
         /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환됩니다. */
         Problem: {
             /** @description 기계 판독용 안정 오류 코드 (클라이언트 분기 기준) */
@@ -3774,6 +4017,10 @@ export interface components {
             title: string;
             /** @description 문제 유형 URI (기본 about:blank) */
             type?: string;
+        };
+        ProfileOptionsResponse: {
+            departments: components["schemas"]["DepartmentView"][];
+            positions: components["schemas"]["PositionView"][];
         };
         /** @enum {string} */
         ProvisioningTaskKind: "PROVISION" | "DELETE" | "REINSTALL";
@@ -4023,9 +4270,12 @@ export interface components {
         };
         SignupRequest: {
             consents: components["schemas"]["ConsentInput"][];
+            departmentCode: string;
             email: string;
             name: string;
             password: string;
+            position: components["schemas"]["UserPosition"];
+            studentNo?: string | null;
         };
         SuspendPortMappingRequest: {
             /** @description 정지 사유 (소유 워크스페이스에 알림으로 전달) */
@@ -4181,6 +4431,11 @@ export interface components {
              */
             perSourceRate?: number | null;
         };
+        UpdateProfileRequest: {
+            departmentCode: string;
+            position: components["schemas"]["UserPosition"];
+            studentNo?: string | null;
+        };
         UpdateResourceAccessGrantRequest: {
             /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
@@ -4244,18 +4499,27 @@ export interface components {
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
         };
+        /** @enum {string} */
+        UserPosition: "STUDENT_UNDERGRAD" | "STUDENT_GRADUATE" | "RESEARCHER" | "PROFESSOR" | "STAFF" | "OTHER";
         UserProfileResponse: {
+            departmentCode?: string | null;
+            departmentName?: string | null;
             email: string;
+            hasPassword: boolean;
             /** Format: uuid */
             id: string;
+            identities: components["schemas"]["LinkedIdentity"][];
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
             /** Format: uuid */
             orgId?: string | null;
             pendingConsents: components["schemas"]["TermsVersionView"][];
+            position?: components["schemas"]["UserPosition"] | null;
+            profileComplete: boolean;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
+            studentNo?: string | null;
         };
         /** @enum {string} */
         UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
@@ -7036,6 +7300,105 @@ export interface operations {
             };
         };
     };
+    completeGoogleOauthCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OauthCallbackRequest"];
+            };
+        };
+        responses: {
+            /** @description 토큰 발급 / 2FA 챌린지 / 가입 필요 / 재인증 토큰 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["ReverifyResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    completeGoogleOauthRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OauthCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    startGoogleOauth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OauthStartRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OauthStartResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     requestPasswordReset: {
         parameters: {
             query?: never;
@@ -7939,6 +8302,47 @@ export interface operations {
             };
         };
     };
+    unlinkIdentity: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                provider: components["schemas"]["IdentityProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     disable: {
         parameters: {
             query?: never;
@@ -8104,6 +8508,39 @@ export interface operations {
             };
         };
     };
+    updateMyProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     withdraw: {
         parameters: {
             query?: never;
@@ -8124,6 +8561,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    profileOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProfileOptionsResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
