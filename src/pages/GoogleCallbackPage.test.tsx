@@ -4,10 +4,13 @@ import { describe, expect, test } from 'vitest'
 import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
 import {
   EXISTING_ACCOUNT_CODE,
+  LINK_CODE,
   MFA_ACCOUNT_CODE,
   NEW_ACCOUNT_CODE,
   OUTSIDE_DOMAIN_CODE,
 } from '../test/msw/handlers/google-oauth'
+import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 const callback = (code: string) => `/auth/google/callback?code=${code}&state=state-1`
@@ -16,6 +19,15 @@ describe('구글 콜백 착지', () => {
   test('계정이 있으면 콘솔로 들어간다', async () => {
     renderApp(callback(EXISTING_ACCOUNT_CODE))
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+  })
+
+  test('연동 왕복은 토큰 없이 계정 화면으로 돌아온다', async () => {
+    // 이 왕복이 증명한 것은 구글 계정의 소유이지 이 계정의 소유가 아니다. 세션은 떠나기
+    // 전부터 있었고, 액세스 토큰은 메모리에만 살아 전체 페이지 이동에서 사라지므로
+    // 돌아온 콘솔은 리프레시 쿠키로 스스로를 복구한다 — 그 상태를 그대로 재현한다.
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp(callback(LINK_CODE))
+    expect(await screen.findByRole('heading', { name: '계정 설정' })).toBeInTheDocument()
   })
 
   test('2FA 를 켠 계정은 인증 코드 화면으로 이어진다', async () => {

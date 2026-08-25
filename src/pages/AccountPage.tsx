@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
 import {
   activateMfa,
@@ -8,6 +8,7 @@ import {
   disableMfa,
   regenerateRecoveryCodes,
   requestPasswordReset,
+  startGoogleOauth,
   type LinkedIdentity,
   type MfaRecoveryCodesResponse,
   type MfaSetupResponse,
@@ -30,6 +31,8 @@ import {
   Modal,
   useToast,
 } from '../components/ui'
+import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
+import { navigateExternal } from '../lib/google-oauth'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passwordRuleError } from '../lib/validation'
 
@@ -38,12 +41,26 @@ const GUIDANCE_ID = 'account-password-guidance'
 
 export function AccountPage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const toast = useToast()
+  const linked = searchParams.get('linked')
+
+  // 구글에서 돌아온 직후. 확인을 말하고 표식은 주소에서 지운다 — 새로고침마다 같은
+  // 토스트가 뜨면 방금 일어난 일인지 지난번 일인지 알 수 없다.
+  useEffect(() => {
+    if (!linked) return
+    toast.success('구글 계정을 연동했습니다.')
+    setSearchParams({}, { replace: true })
+  }, [linked, toast, setSearchParams])
+
   if (!user) return null
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
-        <p className="mt-1 text-sm text-neutral-500">비밀번호 변경과 회원 탈퇴를 관리합니다.</p>
+        <p className="mt-1 text-sm text-neutral-500">
+          로그인 수단과 회원 탈퇴를 관리합니다.
+        </p>
       </div>
       <PasswordChangeSection hasPassword={user.hasPassword} email={user.email} />
       <LinkedAccountsSection
@@ -259,6 +276,15 @@ function LinkedAccountsSection({
   // 띄우면 "연동된 계정이 없습니다"와 "유일한 로그인 수단입니다"가 같이 나온다.
   const lastMethod = !hasPassword && identities.length === 1
 
+  // 연동은 전체 페이지 이동이라 재인증(sudo) 승인이 살아남지 못한다. 서버가 연동에
+  // 재인증을 요구하지 않는 이유가 그것이다 — 왕복 자체가 구글 계정의 소유를 증명하고,
+  // 어느 계정에 붙일지는 세션이 flow 행에 박혀 결정된다.
+  const link = useMutation({
+    mutationFn: () => startGoogleOauth({ purpose: 'LINK' }),
+    onSuccess: (started) => navigateExternal(started.authorizationUrl),
+    onError: (err) => toast.error(toApiError(err, '연동을 시작하지 못했습니다.').message),
+  })
+
   const unlink = useMutation({
     mutationFn: (provider: LinkedIdentity['provider']) => unlinkIdentity(provider),
     onSuccess: async () => {
@@ -275,12 +301,17 @@ function LinkedAccountsSection({
       </CardHeader>
       <CardContent className="space-y-4">
         {identities.length === 0 ? (
-          <div className="space-y-2">
-            <p className="text-sm text-neutral-600">연동된 외부 계정이 없습니다.</p>
-            <p className="text-sm text-neutral-500">
-              로그인 화면에서 같은 주소의 구글 계정으로 한 번 로그인하면 이 계정에 자동으로
-              연동됩니다.
+          <div className="space-y-3">
+            <p className="text-sm text-neutral-600">
+              연동된 외부 계정이 없습니다. 구글 계정을 붙이면 비밀번호 없이도 로그인할 수
+              있습니다.
             </p>
+            <GoogleAuthButton
+              label="continue"
+              loading={link.isPending}
+              onClick={() => link.mutate()}
+              className="max-w-sm"
+            />
           </div>
         ) : (
           <ul className="space-y-3">

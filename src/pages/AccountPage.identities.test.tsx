@@ -20,7 +20,11 @@ describe('계정 화면의 연동 관리', () => {
   test('연동이 없으면 그렇게 말한다', async () => {
     meReturns({ identities: [] })
     renderApp('/console/account')
-    expect(await screen.findByText('연동된 외부 계정이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText(/연동된 외부 계정이 없습니다/)).toBeInTheDocument()
+    // 붙일 방법이 함께 있어야 한다. 없으면 이 카드는 상태만 알리고 끝난다.
+    expect(
+      screen.getByRole('button', { name: 'Google 계정으로 계속하기' }),
+    ).toBeInTheDocument()
   })
 
   test('연동된 구글 계정을 해제할 수 있다', async () => {

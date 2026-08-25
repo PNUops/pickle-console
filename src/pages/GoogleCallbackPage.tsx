@@ -67,6 +67,12 @@ export function GoogleCallbackPage() {
         }
         const outcome = data as Record<string, unknown>
 
+        if (outcome.kind === 'LINKED') {
+          // 계정 화면에서 시작한 연동. 토큰은 안 나온다 — 이 왕복이 증명한 것은 구글
+          // 계정의 소유이지 이 계정의 소유가 아니고, 호출자는 이미 로그인되어 있다.
+          navigate('/console/account?linked=google', { replace: true })
+          return
+        }
         if (typeof outcome.registrationToken === 'string') {
           // 계정이 없는 검증된 신원. 온보딩 폼이 약관 동의와 프로필을 받는다.
           navigate('/google-onboarding', { replace: true, state: { registration: outcome } })
