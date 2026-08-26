@@ -83,7 +83,7 @@ export function NotificationsPage() {
           setUnreadOnly(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}

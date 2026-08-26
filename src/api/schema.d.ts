@@ -788,6 +788,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{userId}/org-roles/{orgId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["grantOrgRole"];
+        post?: never;
+        delete: operations["revokeOrgRole"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/vm-flavors": {
         parameters: {
             query?: never;
@@ -3081,6 +3097,10 @@ export interface components {
             confirmName: string;
             overrideProtection?: boolean;
         };
+        GrantOrgRoleRequest: {
+            /** @description 이 기관에서 부여할 역할 (ORG_ADMIN, ORG_MANAGER, ORG_VIEWER) */
+            role: components["schemas"]["UserRole"];
+        };
         /** @description 접근 권한을 가진 사용자 */
         Grantee: {
             email: string;
@@ -3389,6 +3409,17 @@ export interface components {
         LoginRequest: {
             email: string;
             password: string;
+        };
+        ManagedOrgResponse: {
+            /**
+             * Format: uuid
+             * @description 기관 ID
+             */
+            orgId: string;
+            /** @description 기관 이름 */
+            orgName: string;
+            /** @description 이 기관에서의 역할 */
+            role: components["schemas"]["UserRole"];
         };
         MemberBrief: {
             name: string;
@@ -4387,11 +4418,10 @@ export interface components {
             email: string;
             /** Format: uuid */
             id: string;
+            managedOrgs: components["schemas"]["ManagedOrgResponse"][];
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
-            /** Format: uuid */
-            orgId?: string | null;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
             statusChanges: components["schemas"]["UserStatusChangeResponse"][];
@@ -4404,10 +4434,9 @@ export interface components {
             email: string;
             /** Format: uuid */
             id: string;
+            managedOrgs: components["schemas"]["ManagedOrgResponse"][];
             mfaEnabled: boolean;
             name: string;
-            /** Format: uuid */
-            orgId?: string | null;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
         };
@@ -4421,11 +4450,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             identities: components["schemas"]["LinkedIdentity"][];
+            managedOrgs: components["schemas"]["ManagedOrgResponse"][];
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
-            /** Format: uuid */
-            orgId?: string | null;
             pendingConsents: components["schemas"]["TermsVersionView"][];
             position?: components["schemas"]["UserPosition"] | null;
             profileComplete: boolean;
@@ -4434,7 +4462,7 @@ export interface components {
             studentNo?: string | null;
         };
         /** @enum {string} */
-        UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
+        UserRole: "USER" | "ORG_VIEWER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_VIEWER" | "SYS_MANAGER" | "SYS_ADMIN";
         /** @enum {string} */
         UserStatus: "PENDING_VERIFICATION" | "ACTIVE" | "DISABLED" | "WITHDRAWN";
         UserStatusChangeResponse: {
@@ -6543,6 +6571,74 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    grantOrgRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantOrgRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revokeOrgRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserSummaryResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

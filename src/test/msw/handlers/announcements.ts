@@ -2,6 +2,7 @@ import { isOrgTier, isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
+import { adminReadScope } from './org-scope'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
@@ -137,23 +138,23 @@ export const announcementHandlers: RequestHandler[] = [
     if (!profile) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
-    if (isOrgTier(profile.role)) {
-      // 계약: orgId 필터는 SYS_ADMIN 전용 — 다른 기관 지정 시 404 (존재 비공개)
-      if (orgId && orgId !== profile.orgId) {
-        return problemResponse({
-          type: 'about:blank',
-          title: '리소스를 찾을 수 없습니다',
-          status: 404,
-          detail: '요청한 리소스가 존재하지 않습니다.',
-          instance: '/api/v1/admin/workspaces',
-          code: 'RESOURCE_NOT_FOUND',
-        })
-      }
-      return HttpResponse.json(workspaceOptionsByOrg[profile.orgId ?? 0] ?? [], { status: 200 })
+    // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다. 보유하지 않은
+    // 기관이나 없는 기관을 지정하면 404 (존재 비공개).
+    const scope = adminReadScope(profile, orgId, '/api/v1/admin/workspaces')
+    if (scope.notFound) return scope.notFound
+    if (orgId && !(orgId in workspaceOptionsByOrg)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '요청한 리소스가 존재하지 않습니다.',
+        instance: '/api/v1/admin/workspaces',
+        code: 'RESOURCE_NOT_FOUND',
+      })
     }
-    const options = orgId
-      ? (workspaceOptionsByOrg[orgId] ?? [])
-      : Object.values(workspaceOptionsByOrg).flat()
+    const options = Object.entries(workspaceOptionsByOrg)
+      .filter(([optionOrgId]) => scope.matches(optionOrgId))
+      .flatMap(([, list]) => list)
     return HttpResponse.json(options, { status: 200 })
   }),
 
@@ -163,13 +164,13 @@ export const announcementHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    // 계약: ORG_ADMIN은 자기 기관 발송분 + ALL 공지
+    // 계약: 기관 계층은 관리 기관 발송분 + ALL 공지
     const visible = announcementStore
       .filter(
         (a) =>
           isSysTier(profile.role) ||
           a.scope === 'ALL' ||
-          a.senderOrgId === profile.orgId,
+          profile.managedOrgs.some((org) => org.orgId === a.senderOrgId),
       )
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseAnnouncementView'] = {
@@ -197,22 +198,32 @@ export const announcementHandlers: RequestHandler[] = [
         code: 'ACCESS_DENIED',
       })
     }
-    // 계약: ORG 범위에서 ORG_ADMIN의 orgId는 생략 가능하나, 지정 시 자기 기관과 일치해야 한다 (불일치 422)
-    if (
-      body.scope === 'ORG' &&
-      isOrgTier(profile.role) &&
-      body.orgId != null &&
-      body.orgId !== profile.orgId
-    ) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '입력값이 올바르지 않습니다',
-        status: 422,
-        detail: '요청 값을 확인해 주세요.',
-        instance: '/api/v1/admin/announcements',
-        code: 'VALIDATION_FAILED',
-        errors: [{ field: 'orgId', message: '자기 기관으로만 발송할 수 있습니다.' }],
-      })
+    // 계약 v0.46.0: ORG 범위에서 ORG_ADMIN은 자신이 관리하는 기관에만 발송할 수 있고,
+    // 두 기관 이상을 관리하면 대상 기관을 지정해야 한다 (모두 422).
+    const administered = profile.managedOrgs.filter((org) => org.role === 'ORG_ADMIN')
+    if (body.scope === 'ORG' && isOrgTier(profile.role)) {
+      if (body.orgId != null && !administered.some((org) => org.orgId === body.orgId)) {
+        return problemResponse({
+          type: 'about:blank',
+          title: '입력값이 올바르지 않습니다',
+          status: 422,
+          detail: '요청 값을 확인해 주세요.',
+          instance: '/api/v1/admin/announcements',
+          code: 'VALIDATION_FAILED',
+          errors: [{ field: 'orgId', message: '자기 기관에만 기관 공지를 발송할 수 있습니다.' }],
+        })
+      }
+      if (body.orgId == null && administered.length !== 1) {
+        return problemResponse({
+          type: 'about:blank',
+          title: '입력값이 올바르지 않습니다',
+          status: 422,
+          detail: '요청 값을 확인해 주세요.',
+          instance: '/api/v1/admin/announcements',
+          code: 'VALIDATION_FAILED',
+          errors: [{ field: 'orgId', message: '기관 공지에는 대상 기관이 필요합니다.' }],
+        })
+      }
     }
     if (body.scope === 'WORKSPACE' && body.workspaceId == null) {
       return problemResponse({
@@ -234,12 +245,13 @@ export const announcementHandlers: RequestHandler[] = [
           : (Object.values(workspaceOptionsByOrg)
               .flat()
               .find((g) => g.id === body.workspaceId)?.memberCount ?? 0)
+    const resolvedOrgId = body.orgId ?? administered[0]?.orgId ?? null
     const created: StoredAnnouncement = {
       id: uuid(nextAnnouncementId++),
-      senderOrgId: isSysTier(profile.role) ? null : (profile.orgId ?? null),
+      senderOrgId: isSysTier(profile.role) ? null : resolvedOrgId,
       title: body.title,
       scope: body.scope,
-      orgId: body.scope === 'ORG' ? (body.orgId ?? profile.orgId ?? null) : null,
+      orgId: body.scope === 'ORG' ? resolvedOrgId : null,
       workspaceId: body.scope === 'WORKSPACE' ? (body.workspaceId ?? null) : null,
       recipientCount,
       createdAt: new Date().toISOString(),

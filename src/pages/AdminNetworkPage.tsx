@@ -21,7 +21,7 @@ import {
 import { toApiError } from '../api/problem'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { useAuth } from '../auth/auth-context'
-import { isSysAdminOnly } from '../auth/permissions'
+import { canRunSysRoutine, isSysAdminOnly } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import { CopyButton } from '../components/CopyButton'
 import {
@@ -74,6 +74,8 @@ const SCREEN_TABS = [
 export function AdminNetworkPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
+  // 매핑 정지·재개·삭제는 시스템 운영자 이상 — 시스템 열람자는 조회만.
+  const canOperate = !!user && canRunSysRoutine(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'relays'
@@ -99,7 +101,7 @@ export function AdminNetworkPage() {
         <RelaysTab isSysAdmin={isSysAdmin} />
       </TabPanel>
       <TabPanel id="forwardings" active={activeTab === 'forwardings'} className="space-y-6">
-        <ForwardingsTab isSysAdmin={isSysAdmin} />
+        <ForwardingsTab isSysAdmin={isSysAdmin} canOperate={canOperate} />
       </TabPanel>
       <TabPanel id="campus" active={activeTab === 'campus'} className="space-y-6">
         <CampusTab isSysAdmin={isSysAdmin} />
@@ -342,7 +344,13 @@ const MAPPING_STATUS_TABS: { label: string; status: PortMappingStatus | undefine
   { label: PORT_MAPPING_STATUS_LABELS.SUSPENDED, status: 'SUSPENDED' },
 ]
 
-function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
+function ForwardingsTab({
+  isSysAdmin,
+  canOperate,
+}: {
+  isSysAdmin: boolean
+  canOperate: boolean
+}) {
   const [status, setStatus] = useState<PortMappingStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -365,7 +373,7 @@ function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}
@@ -453,6 +461,7 @@ function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
             key={selected.id}
             mapping={selected}
             isSysAdmin={isSysAdmin}
+            canOperate={canOperate}
             onDone={(text) => {
               setMessage(text)
               setSelectedId(null)
@@ -469,10 +478,12 @@ type DrawerNotice = { variant: 'info' | 'danger'; text: string }
 function MappingDrawerContent({
   mapping,
   isSysAdmin,
+  canOperate,
   onDone,
 }: {
   mapping: AdminPortMappingView
   isSysAdmin: boolean
+  canOperate: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -548,23 +559,39 @@ function MappingDrawerContent({
         </p>
         <div className="flex flex-wrap gap-2">
           {mapping.status === 'ACTIVE' ? (
-            <Button variant="secondary" size="sm" onClick={() => setSuspendOpen(true)}>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!canOperate}
+              onClick={() => setSuspendOpen(true)}
+            >
               정지
             </Button>
           ) : (
             <Button
               variant="secondary"
               size="sm"
+              disabled={!canOperate}
               loading={unsuspend.isPending}
               onClick={() => unsuspend.mutate()}
             >
               재개
             </Button>
           )}
-          <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={!canOperate}
+            onClick={() => setDeleteOpen(true)}
+          >
             삭제
           </Button>
         </div>
+        {!canOperate && (
+          <PermissionNotice>
+            정지와 재개, 삭제는 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
+          </PermissionNotice>
+        )}
       </section>
 
       <GuardsSection mapping={mapping} isSysAdmin={isSysAdmin} onNotice={setNotice} />
@@ -854,7 +881,7 @@ function CampusTab({ isSysAdmin }: { isSysAdmin: boolean }) {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}

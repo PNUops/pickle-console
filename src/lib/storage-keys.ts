@@ -22,6 +22,13 @@ export const LEGACY_CONSOLE_SCOPE_KEY = 'pickle.console-scope'
 export const POST_LOGIN_OVERLAY_KEY = 'pickle.post-login'
 
 /**
+ * 기관 계층 2FA 권유 배너를 세션 동안 닫아둔 상태로 기억하는 sessionStorage
+ * 플래그. 로그아웃 시 함께 지워, 같은 탭의 다음 사용자가 이전 사용자의 닫음을
+ * 물려받아 권유를 못 보는 일이 없게 한다.
+ */
+export const MFA_NUDGE_DISMISS_KEY = 'pickle.mfa-nudge-dismissed'
+
+/**
  * 환영 오버레이를 예약한다.
  *
  * 저장소가 막힌 브라우저에서 `setItem` 은 던진다. 이 호출은 **토큰을 세우고 프로필을

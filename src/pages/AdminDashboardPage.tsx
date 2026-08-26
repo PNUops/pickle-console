@@ -52,7 +52,10 @@ function sumLivePair(
 }
 
 /**
- * 관리자 홈 — 기관 요약 타일 + 리소스 현황 + (SYS_ADMIN) 시스템 요약 + 승인 대기 미리보기.
+ * 관리자 홈 — 기관 요약 타일 + 리소스 현황 + (시스템 계층) 시스템 요약 + 승인 대기 미리보기.
+ *
+ * 요약의 범위는 계정을 따른다: 시스템 계층은 전 기관 집계, 기관 계층은 역할을
+ * 보유한 기관의 집계다 (계약 v0.46.0).
  */
 export function AdminDashboardPage() {
   const { user } = useAuth()

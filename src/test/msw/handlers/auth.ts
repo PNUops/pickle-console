@@ -37,7 +37,7 @@ export const sysAdminUser: Schemas['UserSummaryResponse'] = {
   role: 'SYS_ADMIN',
 }
 
-/** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프. */
+/** 기관 운영자, ORG_ADMIN 하위. 기관 1을 운영하며 쓰기는 그 안으로 한정된다. */
 export const orgManagerUser: Schemas['UserSummaryResponse'] = {
   id: uuid(8),
   email: 'manager.choi@pusan.ac.kr',
@@ -51,6 +51,22 @@ export const sysManagerUser: Schemas['UserSummaryResponse'] = {
   email: 'sysmanager.jung@pusan.ac.kr',
   name: '정시스템운영',
   role: 'SYS_MANAGER',
+}
+
+/** 기관 열람자 — 기관 1이 열람 역할만 부여한 계정. 조회 화면만 닿는다. */
+export const orgViewerUser: Schemas['UserSummaryResponse'] = {
+  id: uuid(63),
+  email: 'viewer.song@pusan.ac.kr',
+  name: '송열람',
+  role: 'ORG_VIEWER',
+}
+
+/** 시스템 열람자 — SYS_MANAGER의 조회만 가진 계정. 감사 로그는 유지한다. */
+export const sysViewerUser: Schemas['UserSummaryResponse'] = {
+  id: uuid(64),
+  email: 'sysviewer.han@pusan.ac.kr',
+  name: '한시스템열람',
+  role: 'SYS_VIEWER',
 }
 
 /** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
@@ -79,7 +95,7 @@ const filledProfile = {
 export const regularProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...regularUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -91,7 +107,7 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
 export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgAdminUser,
-  orgId: uuid(1),
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -103,7 +119,7 @@ export const orgAdminProfile: Schemas['UserProfileResponse'] = {
 export const sysAdminProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...sysAdminUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -115,7 +131,7 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
 export const orgManagerProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgManagerUser,
-  orgId: uuid(1),
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_MANAGER' as const }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(12), workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -127,7 +143,7 @@ export const orgManagerProfile: Schemas['UserProfileResponse'] = {
 export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...sysManagerUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(13), workspaceName: '정시스템운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -136,10 +152,34 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   pendingConsents: [],
 }
 
+export const orgViewerProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
+  ...orgViewerUser,
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_VIEWER' as const }],
+  status: 'ACTIVE',
+  memberships: [
+    { workspaceId: uuid(14), workspaceName: '송열람', workspaceKind: 'PERSONAL', role: 'OWNER' },
+  ],
+  mfaEnabled: false,
+  pendingConsents: [],
+}
+
+export const sysViewerProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
+  ...sysViewerUser,
+  managedOrgs: [],
+  status: 'ACTIVE',
+  memberships: [
+    { workspaceId: uuid(16), workspaceName: '한시스템열람', workspaceKind: 'PERSONAL', role: 'OWNER' },
+  ],
+  mfaEnabled: false,
+  pendingConsents: [],
+}
+
 export const regularProfileB: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...regularUserB,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(8), workspaceName: '박영희', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -159,7 +199,7 @@ export const mfaUser: Schemas['UserSummaryResponse'] = {
 export const mfaProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...mfaUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [{ workspaceId: uuid(11), workspaceName: '이중인증', workspaceKind: 'PERSONAL', role: 'OWNER' }],
   mfaEnabled: true,
@@ -173,8 +213,10 @@ export const MFA_VALID_RECOVERY_CODE = 'abcd-efgh-ijkl'
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfileResponse']> = {
   'access-user': regularProfile,
+  'access-org-viewer': orgViewerProfile,
   'access-org-admin': orgAdminProfile,
   'access-org-manager': orgManagerProfile,
+  'access-sys-viewer': sysViewerProfile,
   'access-sys-admin': sysAdminProfile,
   'access-sys-manager': sysManagerProfile,
   'access-user-b': regularProfileB,

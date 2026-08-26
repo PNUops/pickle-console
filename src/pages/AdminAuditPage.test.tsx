@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  orgViewerUser,
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
@@ -82,5 +83,16 @@ describe('내 활동', () => {
     // 대상은 종류와 공개 식별자로 적힌다. 서버가 대상 이름을 함께 주지 않는 한
     // 여기서 이름으로 바꿔 적을 방법은 없다.
     expect(screen.getByText(`vm:${uuid(60)}`)).toBeInTheDocument()
+  })
+})
+
+describe('열람 역할과 감사 로그', () => {
+  test('ORG_VIEWER는 감사 로그 메뉴가 없고 라우트는 홈으로 돌려보낸다', async () => {
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    renderApp('/admin/audit')
+
+    // 감사 로그는 기관에서 행위할 수 있는 역할만 — 열람 역할은 홈으로.
+    await screen.findByRole('heading', { name: '관리자 대시보드' })
+    expect(screen.queryByRole('link', { name: '감사 로그' })).not.toBeInTheDocument()
   })
 })

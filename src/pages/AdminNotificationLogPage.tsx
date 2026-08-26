@@ -7,6 +7,8 @@ import {
   type NotificationDeliveryStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { useAuth } from '../auth/auth-context'
+import { canRunSysRoutine } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -15,6 +17,7 @@ import {
   DeliveryStatusBadge,
   Modal,
   Pagination,
+  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -37,6 +40,9 @@ const TABS: { label: string; status: NotificationDeliveryStatus | undefined }[] 
 
 /** 알림 발송 이력 — 이메일 채널 발송 로그와 실패 건 재발송 (SYS_ADMIN). */
 export function AdminNotificationLogPage() {
+  const { user } = useAuth()
+  // 재발송은 시스템 운영자 이상 — 시스템 열람자는 조회만.
+  const canResend = !!user && canRunSysRoutine(user.role)
   const [status, setStatus] = useState<NotificationDeliveryStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [resendTarget, setResendTarget] = useState<AdminNotificationView | null>(null)
@@ -56,6 +62,11 @@ export function AdminNotificationLogPage() {
           이메일 알림 발송 로그입니다. 발송에 실패한 알림은 원인 확인 후 재발송할 수
           있습니다.
         </p>
+        {!canResend && (
+          <PermissionNotice>
+            재발송은 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
+          </PermissionNotice>
+        )}
       </div>
 
       <FilterBar
@@ -65,7 +76,7 @@ export function AdminNotificationLogPage() {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}
@@ -133,6 +144,7 @@ export function AdminNotificationLogPage() {
                         <Button
                           variant="secondary"
                           size="sm"
+                          disabled={!canResend}
                           onClick={() => setResendTarget(notification)}
                         >
                           재발송

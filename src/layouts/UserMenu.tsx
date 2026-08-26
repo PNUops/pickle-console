@@ -47,7 +47,7 @@ export function UserMenu() {
         <p className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
           {user.email}
         </p>
-        {user.role === 'USER' && (
+        {user.role === 'USER' ? (
           <>
             <button
               type="button"
@@ -64,6 +64,15 @@ export function UserMenu() {
               내 활동
             </button>
           </>
+        ) : (
+          // 관리자는 /console 에 닿지 못하므로 같은 화면을 관리자 셸 라우트로 연다.
+          <button
+            type="button"
+            onClick={() => go('/admin/account')}
+            className={itemClass}
+          >
+            계정 설정
+          </button>
         )}
         <button
           type="button"

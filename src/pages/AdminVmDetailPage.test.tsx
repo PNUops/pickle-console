@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  orgViewerUser,
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
@@ -76,6 +77,22 @@ describe('관리자 VM 상세', () => {
     expect(screen.getByRole('button', { name: '접속 차단' })).toBeDisabled()
     expect(
       screen.getByText('차단 토글은 시스템 관리자만 수행할 수 있습니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('ORG_VIEWER에게는 전원 제어와 기간 연장이 비활성+사유로 보인다', async () => {
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    renderApp(`/admin/vms/${uuid(56)}`)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    // RUNNING이라도 열람 역할에는 모든 전원 버튼이 닫혀 있고 사유가 붙는다.
+    expect(screen.getByRole('button', { name: '종료' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '기간 연장' })).toBeDisabled()
+    expect(
+      screen.getByText(/전원 제어는 이 VM의 기관에서 운영자 이상 역할을 가진/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/기간 연장은 이 VM의 기관에서 운영자 이상 역할을 가진/),
     ).toBeInTheDocument()
   })
 })

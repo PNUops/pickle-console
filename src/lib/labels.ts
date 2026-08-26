@@ -51,8 +51,10 @@ export const LLM_KEY_RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   USER: '사용자',
+  ORG_VIEWER: '기관 열람자',
   ORG_MANAGER: '기관 운영자',
   ORG_ADMIN: '기관 관리자',
+  SYS_VIEWER: '시스템 열람자',
   SYS_MANAGER: '시스템 운영자',
   SYS_ADMIN: '시스템 관리자',
 }

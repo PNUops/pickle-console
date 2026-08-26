@@ -1,11 +1,13 @@
 import { useAuth } from '../auth/auth-context'
-import { isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { canViewAudit, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
 import { AppShell, type NavSection } from './AppShell'
 
 export function AdminLayout() {
   const { user } = useAuth()
   const sysTier = !!user && isSysTier(user.role)
   const sysAdmin = !!user && isSysAdminOnly(user.role)
+  const auditAllowed = !!user && canViewAudit(user.role)
 
   const sections: NavSection[] = [
     {
@@ -29,12 +31,14 @@ export function AdminLayout() {
       heading: '소통',
       items: [
         { to: '/admin/announcements', label: '공지 보내기' },
-        { to: '/admin/audit', label: '감사 로그' },
+        // 감사 로그는 기관에서 행위할 수 있는 역할만 — ORG_VIEWER는 조회 화면
+        // 중 유일하게 제외된다 (로그인 IP는 운영 데이터가 아니라 증거다).
+        ...(auditAllowed ? [{ to: '/admin/audit', label: '감사 로그' }] : []),
         // 알림함은 상단 바 알림 팝오버("전체 보기")로 진입 — 사이드바에서 제외.
       ],
     },
-    // 시스템 섹션은 시스템 계층(SYS_MANAGER·SYS_ADMIN) 전용 — 각 라우트에서도
-    // 한 번 더 가드한다. 기관 관리(org 생성/수정)만 SYS_ADMIN 전용(§4).
+    // 시스템 섹션은 시스템 계층 전용 — 각 라우트에서도 한 번 더 가드한다.
+    // SYS_VIEWER도 조회 화면은 모두 본다. 기관 관리(org 생성/수정)만 SYS_ADMIN 전용(§4).
     ...(sysTier
       ? [
           {
@@ -60,6 +64,8 @@ export function AdminLayout() {
       navLabel="관리자 메뉴"
       sections={sections}
       notificationsTo="/admin/notifications"
+      // 기관 계층 2FA 권유 — 시스템 계층은 로그인에서 강제되므로 배너의 대상이 아니다.
+      banner={<MfaNudgeBanner />}
     />
   )
 }
