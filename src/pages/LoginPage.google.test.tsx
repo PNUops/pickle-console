@@ -73,26 +73,52 @@ describe('로그인 화면의 구글 1차 동선', () => {
     expect(navigateExternal).not.toHaveBeenCalled()
   })
 
-  test('비밀번호 폼은 접힌 채로 시작하고 토글로 열린다', async () => {
+  test('이메일을 넣으면 비밀번호 칸이 나타난다', async () => {
     const user = userEvent.setup()
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    const toggle = screen.getByRole('button', { name: /이메일로 로그인/ })
-    expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    // 폼은 DOM 에 남아 있어야 비밀번호 관리자가 붙고, hidden 이라 보이지는 않는다.
-    // getByLabelText 는 hidden 을 보지 않으므로 존재가 아니라 가시성을 단언한다.
-    expect(screen.getByLabelText('이메일')).not.toBeVisible()
+    // 이메일 칸은 처음부터 보인다. 비밀번호 칸은 DOM 에 있지만 hidden 이다.
+    // DOM 에 없는 칸에는 비밀번호 관리자가 붙지 않으므로 존재가 아니라 가시성을
+    // 단언한다.
+    expect(screen.getByLabelText('이메일')).toBeVisible()
+    expect(screen.getByLabelText('비밀번호')).not.toBeVisible()
 
-    await user.click(toggle)
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await user.type(screen.getByLabelText('이메일'), 'someone@pusan.ac.kr')
+    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
+
+    expect(screen.getByLabelText('비밀번호')).toBeVisible()
+    // 주소는 계속 보이고 고칠 수 있다.
     expect(screen.getByLabelText('이메일')).toBeVisible()
   })
 
-  test('?method=password 로 들어오면 펼친 채로 연다', async () => {
-    renderApp('/login?method=password')
+  test('빈 이메일로는 다음 단계로 가지 않는다', async () => {
+    const user = userEvent.setup()
+    renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
-    expect(screen.getByLabelText('이메일')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
+    expect(screen.getByLabelText('비밀번호')).not.toBeVisible()
+  })
+
+  test('2단계에 재설정과 회원가입 경로가 주소를 달고 나온다', async () => {
+    const user = userEvent.setup()
+    renderApp('/login')
+    await screen.findByRole('heading', { name: '로그인' })
+
+    await user.type(screen.getByLabelText('이메일'), 'someone@pusan.ac.kr')
+    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
+
+    expect(screen.getByRole('link', { name: '비밀번호를 잊으셨나요?' })).toHaveAttribute(
+      'href',
+      '/forgot-password?email=someone%40pusan.ac.kr',
+    )
+    expect(screen.getByRole('link', { name: '이 이메일로 회원가입' })).toHaveAttribute(
+      'href',
+      '/signup?email=someone%40pusan.ac.kr',
+    )
+    // 주소를 보고 판단하지 않는다는 것이 이 문구가 정적인 이유다.
+    expect(screen.getByText(/구글 계정으로 가입했다면 비밀번호가 없습니다/)).toBeInTheDocument()
   })
 
   test('가입 화면도 구글이 1차다', async () => {

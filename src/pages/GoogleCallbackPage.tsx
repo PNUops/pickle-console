@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
+import { setReauthToken } from '../api/reauth'
 import { setAccessToken } from '../api/token'
 import type { UserRole } from '../auth/auth-context'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { TransitionLink } from '../components/TransitionLink'
-import { Alert, Spinner } from '../components/ui'
+import { Alert, Spinner, useToast } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { takeReturnTo } from '../lib/google-oauth'
 import { safeInternalPath } from '../lib/redirect'
@@ -32,6 +33,7 @@ export function GoogleCallbackPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { refreshProfile } = useAuth()
+  const toast = useToast()
   const [error, setError] = useState<string | null>(null)
   // StrictMode 의 이중 실행에서 코드를 두 번 쓰지 않게 한다. state 는 단회 소비라
   // 두 번째 호출은 410 을 받는다.
@@ -82,6 +84,18 @@ export function GoogleCallbackPage() {
           navigate('/login', { replace: true, state: { mfaToken: outcome.mfaToken } })
           return
         }
+        if (typeof outcome.reauthToken === 'string') {
+          // 민감한 동작 앞에서 시작한 본인 확인. 토큰을 심고 원래 있던 자리로
+          // 돌려보낸다.
+          //
+          // 동작이 저절로 이어지지는 않는다. 대기 중이던 요청은 이 페이지를
+          // 떠나는 순간 취소로 마감됐으므로 사용자가 다시 눌러야 하고, 그 사실을
+          // 말하지 않으면 확인을 마쳤는데 아무 일도 없는 것처럼 보인다.
+          setReauthToken(outcome.reauthToken, String(outcome.expiresAt ?? ''))
+          toast.success('본인 확인이 끝났습니다. 하려던 작업을 다시 시도해 주세요.')
+          navigate(safeInternalPath(takeReturnTo()) ?? '/console', { replace: true })
+          return
+        }
         if (typeof outcome.accessToken === 'string') {
           setAccessToken(outcome.accessToken)
           await refreshProfile()
@@ -97,7 +111,7 @@ export function GoogleCallbackPage() {
         setError('구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
       }
     })()
-  }, [params, navigate, refreshProfile])
+  }, [params, navigate, refreshProfile, toast])
 
   return (
     <div className="w-full">

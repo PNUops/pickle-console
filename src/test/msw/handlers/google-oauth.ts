@@ -16,6 +16,10 @@ export const REGISTRATION_TOKEN = 'registration-token-1'
 /** 계정 화면에서 시작한 연동. 콜백이 토큰 없이 연동 완료만 답한다. */
 export const LINK_CODE = 'code-link'
 
+/** 민감 작업 앞에서 시작한 본인 확인. 콜백이 재인증 토큰을 답한다. */
+export const REVERIFY_CODE = 'code-reverify'
+export const REVERIFY_TOKEN = 'reauth-token-google-1'
+
 /** 2FA 를 켠 계정. 콜백이 토큰이 아니라 챌린지를 답한다. */
 export const MFA_ACCOUNT_CODE = 'code-mfa-account'
 export const MFA_TOKEN = 'mfa-token-google-1'
@@ -47,6 +51,15 @@ export const googleOauthHandlers: RequestHandler[] = [
     if (body.code === LINK_CODE) {
       return HttpResponse.json(
         { kind: 'LINKED' } satisfies Schemas['OauthLinkedResponse'],
+        { status: 200 },
+      )
+    }
+    if (body.code === REVERIFY_CODE) {
+      return HttpResponse.json(
+        {
+          reauthToken: REVERIFY_TOKEN,
+          expiresAt: '2099-01-01T00:00:00Z',
+        } satisfies Schemas['ReverifyResponse'],
         { status: 200 },
       )
     }

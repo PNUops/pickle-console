@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -28,16 +29,20 @@ function Harness() {
     setResults((prev) => [...prev, data ? `ok:${data.fileName}` : `err:${error?.code ?? 'unknown'}`])
   }
   return (
-    <ReauthProvider>
-      <button type="button" onClick={() => void call()}>
-        개인키 내려받기
-      </button>
-      <ul aria-label="호출 결과">
-        {results.map((result, index) => (
-          <li key={index}>{result}</li>
-        ))}
-      </ul>
-    </ReauthProvider>
+    // 앱에서도 ReauthProvider 는 QueryClientProvider 안에 있다(main.tsx). 구글
+    // 확인을 시작하는 뮤테이션이 그것을 읽는다.
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ReauthProvider>
+        <button type="button" onClick={() => void call()}>
+          개인키 내려받기
+        </button>
+        <ul aria-label="호출 결과">
+          {results.map((result, index) => (
+            <li key={index}>{result}</li>
+          ))}
+        </ul>
+      </ReauthProvider>
+    </QueryClientProvider>
   )
 }
 
@@ -63,9 +68,9 @@ describe('재인증(sudo-mode) 흐름', () => {
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
 
-    expect(await screen.findByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: '본인 확인' })).toBeInTheDocument()
     expect(
-      screen.getByText(/민감한 작업입니다\. 계속하려면 비밀번호를 입력해 주세요\./),
+      screen.getByText(/민감한 작업입니다\. 계속하려면 본인 확인이 필요합니다\./),
     ).toBeInTheDocument()
 
     await user.type(passwordField(), USER_PASSWORD)
@@ -82,13 +87,13 @@ describe('재인증(sudo-mode) 흐름', () => {
     const user = renderHarness()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
 
     await user.type(passwordField(), 'wrong-password')
     await user.click(screen.getByRole('button', { name: '확인' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('비밀번호가 일치하지 않습니다.')
-    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '본인 확인' })).toBeInTheDocument()
     expect(getReauthToken()).toBeNull()
 
     await user.type(passwordField(), USER_PASSWORD)
@@ -101,7 +106,7 @@ describe('재인증(sudo-mode) 흐름', () => {
     const user = renderHarness()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
 
     await user.type(passwordField(), RATE_LIMITED_PASSWORD)
     await user.click(screen.getByRole('button', { name: '확인' }))
@@ -109,14 +114,14 @@ describe('재인증(sudo-mode) 흐름', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '비밀번호 확인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
     )
-    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '본인 확인' })).toBeInTheDocument()
   })
 
   test('취소하면 호출부가 원래 403을 받고(멈추지 않고) 토큰도 남지 않는다', async () => {
     const user = renderHarness()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
 
     await user.click(screen.getByRole('button', { name: '취소' }))
 
@@ -143,7 +148,7 @@ describe('재인증(sudo-mode) 흐름', () => {
     )
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(passwordField(), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '확인' }))
     await user.click(screen.getByRole('button', { name: '닫기' }))
@@ -153,7 +158,7 @@ describe('재인증(sudo-mode) 흐름', () => {
 
     // 응답이 도착해도 grant는 적립되지 않는다 — 다음 민감 작업은 다시 모달을 띄운다.
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    expect(await screen.findByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: '본인 확인' })).toBeInTheDocument()
     expect(getReauthToken()).toBeNull()
   })
 
@@ -175,7 +180,7 @@ describe('재인증(sudo-mode) 흐름', () => {
 
     // 첫 확인 요청: 응답을 붙잡아 둔 채 취소한다.
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(passwordField(), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '확인' }))
     // 전송 중에는 취소 버튼이 잠기므로 닫기(X)로 마감한다 — Esc·배경 클릭과 같은 경로.
@@ -184,12 +189,12 @@ describe('재인증(sudo-mode) 흐름', () => {
 
     // 이전 응답이 도착하기 전에 새 확인 요청이 시작된다.
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     release()
 
     // 뒤늦은 grant는 적립되지도, 새 모달을 닫지도 않는다 (입력도 그대로 유지).
     await user.type(passwordField(), USER_PASSWORD)
-    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '본인 확인' })).toBeInTheDocument()
     expect(passwordField()).toHaveValue(USER_PASSWORD)
     expect(getReauthToken()).toBeNull()
 
@@ -220,7 +225,7 @@ describe('재인증(sudo-mode) 흐름', () => {
     )
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(passwordField(), 'wrong-password')
     await user.click(screen.getByRole('button', { name: '확인' }))
     // 전송 중에는 취소 버튼이 잠기므로 닫기(X)로 마감한다 — Esc·배경 클릭과 같은 경로.
@@ -228,20 +233,20 @@ describe('재인증(sudo-mode) 흐름', () => {
     expect(await screen.findByText('err:REAUTH_REQUIRED')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     release()
 
     // 새 모달은 오류 없이 처음 상태 그대로다.
     await user.type(passwordField(), USER_PASSWORD)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByRole('dialog', { name: '비밀번호 확인' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '본인 확인' })).toBeInTheDocument()
   })
 
   test('보유한 grant는 /auth/* 요청에는 붙지 않는다', async () => {
     const user = renderHarness()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(passwordField(), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '확인' }))
     expect(await screen.findByText('ok:pickle-algo-judge.pem')).toBeInTheDocument()
@@ -262,7 +267,7 @@ describe('재인증(sudo-mode) 흐름', () => {
     const user = renderHarness()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
 
     act(() => notifySessionExpired())
 
@@ -276,10 +281,13 @@ describe('재인증(sudo-mode) 흐름', () => {
     const user = userEvent.setup()
     const outcome: string[] = []
     render(
-      <ReauthProvider>
-        <button
-          type="button"
-          onClick={() =>
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <ReauthProvider>
+          <button
+            type="button"
+            onClick={() =>
             void api
               .PATCH('/vms/{vmId}/settings', {
                 params: { path: { vmId: uuid(56) } },
@@ -290,13 +298,14 @@ describe('재인증(sudo-mode) 흐름', () => {
               )
           }
         >
-          설정 변경
-        </button>
-      </ReauthProvider>,
+            설정 변경
+          </button>
+        </ReauthProvider>
+      </QueryClientProvider>,
     )
 
     await user.click(screen.getByRole('button', { name: '설정 변경' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(passwordField(), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '확인' }))
 
@@ -308,7 +317,7 @@ describe('재인증(sudo-mode) 흐름', () => {
     const user = renderHarness()
 
     await user.click(screen.getByRole('button', { name: '개인키 내려받기' }))
-    await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(passwordField(), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '확인' }))
     expect(await screen.findByText('ok:pickle-algo-judge.pem')).toBeInTheDocument()

@@ -1487,6 +1487,21 @@ export function changeMyPassword(body: {
   })
 }
 
+/**
+ * 비밀번호가 없는 계정의 최초 설정. 현재 비밀번호를 묻지 않는다.
+ *
+ * 그 자리를 재인증이 대신하므로 서버는 `X-Reauth-Token` 없이 403 으로 답하고,
+ * fetch 래퍼가 확인 모달을 띄운 뒤 이 요청을 다시 보낸다. 대상 계정은 비밀번호가
+ * 없으므로 그 모달은 구글로 통과한다.
+ */
+export function setMyPassword(body: { newPassword: string }): Promise<AuthTokenResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/me/password', { body })
+    if (!data) throw toApiError(error, '비밀번호를 설정하지 못했습니다.')
+    return data
+  })
+}
+
 export function withdrawMyAccount(body: {
   password: string
   totpCode?: string

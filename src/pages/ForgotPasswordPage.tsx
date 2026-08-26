@@ -1,13 +1,16 @@
 import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
-import {} from 'react-router'
+import { useSearchParams } from 'react-router'
 import { requestPasswordReset } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { Alert, Button, FormField, Input } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
+  // 로그인 화면이 주소를 들고 온다. 사용자가 방금 친 값이므로 서버에는 아무것도
+  // 묻지 않는다.
+  const [searchParams] = useSearchParams()
+  const [email, setEmail] = useState(() => searchParams.get('email') ?? '')
   const [submitting, setSubmitting] = useState(false)
   // 계정 존재 여부를 노출하지 않기 위해 성공/실패와 무관하게 동일한 안내를 보여준다.
   const [sent, setSent] = useState(false)

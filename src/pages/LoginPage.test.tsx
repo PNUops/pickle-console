@@ -12,18 +12,13 @@ import {
 import { renderApp } from '../test/render'
 
 /**
- * 비밀번호 폼은 접힌 채로 시작한다. 구글이 1차 동선이 되면서 이메일 경로가 토글 뒤로
- * 갔으므로, 폼을 쓰는 케이스는 먼저 펼쳐야 한다.
+ * 진입은 하나이고 단계만 바뀐다. 주소를 넣고 「이메일로 계속하기」를 누르면 비밀번호
+ * 칸이 나타나고, 그때부터 제출 버튼이 「로그인」이 된다.
  */
-async function openPasswordForm(user: ReturnType<typeof userEvent.setup>) {
-  const toggle = screen.queryByRole('button', { name: /이메일로 로그인/ })
-  if (toggle) await user.click(toggle)
-}
-
 async function submitLogin(email: string, password: string) {
   const user = userEvent.setup()
-  await openPasswordForm(user)
   await user.type(screen.getByLabelText('이메일'), email)
+  await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
   await user.type(screen.getByLabelText('비밀번호'), password)
   await user.click(screen.getByRole('button', { name: '로그인' }))
   return user

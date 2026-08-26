@@ -16,6 +16,17 @@ function renderAccount() {
   renderApp('/console/account')
 }
 
+/**
+ * 값은 한 줄로 보이고 폼은 모달 안에 있다. 자주 쓰지 않는 폼이 첫 화면을 차지하면
+ * 그 아래가 안 보인다는 것이 이 구조의 이유이므로, 폼을 쓰는 케이스는 먼저 연다.
+ */
+async function openSection(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await screen.findByRole('heading', { name: '계정 설정' })
+  const row = screen.getByText(name).closest('div')?.parentElement
+  const button = within(row as HTMLElement).getByRole('button')
+  await user.click(button)
+}
+
 function renderEnrolledAccount() {
   server.use(refreshSuccessHandler('access-mfa', mfaUser))
   renderApp('/console/account')
@@ -26,7 +37,7 @@ describe('계정 설정 — 비밀번호 변경', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await screen.findByRole('heading', { name: '계정 설정' })
+    await openSection(user, '비밀번호')
     await user.type(screen.getByLabelText('현재 비밀번호'), USER_PASSWORD)
     await user.type(screen.getByLabelText('새 비밀번호'), 'brand-new-pass-9!')
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'brand-new-pass-9!')
@@ -39,7 +50,8 @@ describe('계정 설정 — 비밀번호 변경', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await user.type(await screen.findByLabelText('현재 비밀번호'), USER_PASSWORD)
+    await openSection(user, '비밀번호')
+    await user.type(screen.getByLabelText('현재 비밀번호'), USER_PASSWORD)
     await user.type(screen.getByLabelText('새 비밀번호'), 'brand-new-pass-9!')
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'different-pass-9!')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
@@ -51,7 +63,8 @@ describe('계정 설정 — 비밀번호 변경', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await user.type(await screen.findByLabelText('현재 비밀번호'), USER_PASSWORD)
+    await openSection(user, '비밀번호')
+    await user.type(screen.getByLabelText('현재 비밀번호'), USER_PASSWORD)
     await user.type(screen.getByLabelText('새 비밀번호'), 'short')
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'short')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
@@ -66,7 +79,8 @@ describe('계정 설정 — 비밀번호 변경', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await user.type(await screen.findByLabelText('현재 비밀번호'), 'wrong-password!')
+    await openSection(user, '비밀번호')
+    await user.type(screen.getByLabelText('현재 비밀번호'), 'wrong-password!')
     await user.type(screen.getByLabelText('새 비밀번호'), 'brand-new-pass-9!')
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'brand-new-pass-9!')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
@@ -80,7 +94,7 @@ describe('계정 설정 — 회원 탈퇴', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await user.click(await screen.findByRole('button', { name: '회원 탈퇴' }))
+    await openSection(user, '계정 삭제')
     const dialog = within(screen.getByRole('dialog'))
     const confirmBtn = dialog.getByRole('button', { name: '탈퇴하기' })
     expect(confirmBtn).toBeDisabled()
@@ -100,7 +114,7 @@ describe('계정 설정 — 회원 탈퇴', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await user.click(await screen.findByRole('button', { name: '회원 탈퇴' }))
+    await openSection(user, '계정 삭제')
     const dialog = within(screen.getByRole('dialog'))
     await user.type(dialog.getByLabelText(/계속하려면 이메일/), regularUser.email)
     await user.type(dialog.getByLabelText('비밀번호 확인'), 'wrong-password!')
@@ -115,7 +129,7 @@ describe('계정 설정 — 2단계 인증', () => {
     const user = userEvent.setup()
     renderAccount()
 
-    await user.click(await screen.findByRole('button', { name: '2단계 인증 등록' }))
+    await openSection(user, '2단계 인증')
     await user.type(await screen.findByLabelText('비밀번호 확인'), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
@@ -132,8 +146,10 @@ describe('계정 설정 — 2단계 인증', () => {
     const user = userEvent.setup()
     renderEnrolledAccount()
 
-    expect(await screen.findByText('2단계 인증이 설정되어 있습니다.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '2단계 인증 해제' }))
+    // 등록된 상태는 행 자체가 두 동작을 들고 있다. 모달 안에 또 모달을 세우지
+    // 않기 위해서다.
+    expect(await screen.findByText('사용 중')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '해제' }))
 
     const dialog = within(screen.getByRole('dialog'))
     await user.type(dialog.getByLabelText('비밀번호'), USER_PASSWORD)
