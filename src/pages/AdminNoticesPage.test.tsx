@@ -127,6 +127,36 @@ describe('공지사항 관리', () => {
     expect(within(row).getByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
   })
 
+  test('선택기가 없는 화면에서도 대상 기관 거절은 눈에 보인다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    // 관리 기관이 하나뿐이면 대상 기관 선택기가 없다. 화면을 연 뒤에 그 권한이
+    // 회수되면 서버는 `orgId` 필드 오류로 답하는데, 붙을 필드가 없으므로 필드에만
+    // 맡기면 아무 데도 남지 않는다 — 등록 버튼이 조용히 죽은 것처럼 보인다.
+    server.use(
+      http.post('*/api/v1/admin/notices', () =>
+        problemResponse({
+          type: 'about:blank',
+          title: '입력값이 올바르지 않습니다',
+          status: 422,
+          detail: '요청 값을 확인해 주세요.',
+          code: 'VALIDATION_FAILED',
+          errors: [{ field: 'orgId', message: '자기 기관의 공지만 등록할 수 있습니다.' }],
+        }),
+      ),
+    )
+    renderApp('/admin/notices')
+
+    await user.click(await screen.findByRole('button', { name: '공지 등록' }))
+    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    expect(within(drawer).queryByLabelText('대상 기관')).not.toBeInTheDocument()
+    await user.type(within(drawer).getByLabelText('제목'), '권한이 회수된 뒤의 등록')
+    await user.type(within(drawer).getByLabelText('본문'), '거절이 보여야 한다.')
+    await user.click(within(drawer).getByRole('button', { name: '등록' }))
+
+    expect(await within(drawer).findByText('자기 기관의 공지만 등록할 수 있습니다.')).toBeInTheDocument()
+  })
+
   test('겸직 관리자는 대상 기관을 직접 고르고, 후보는 관리 기관뿐이다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))

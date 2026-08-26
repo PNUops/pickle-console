@@ -325,11 +325,33 @@ function NoticeDetailBody({
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'notices'] })
 
+  /**
+   * 서버가 지적한 필드 중 이 폼이 실제로 그리는 것. 대상 기관은 고를 때만 뜨므로,
+   * 관리 기관이 하나뿐이라 선택기가 없는 화면에서 `orgId` 오류가 오면 붙을 자리가
+   * 없다 — 권한이 페이지를 연 뒤에 회수되면 실제로 그렇게 온다.
+   */
+  const shownFields = [
+    'title',
+    'body',
+    'scope',
+    'startsAt',
+    'endsAt',
+    ...(needsOrgPick ? ['orgId'] : []),
+  ]
+
   const onMutationError = (fallback: string) => (err: unknown) => {
     const apiError = toApiError(err, fallback)
     const mapped = fieldErrorsOf(apiError.problem)
     setFieldErrors(mapped)
-    setError(Object.keys(mapped).length > 0 ? null : apiError.message)
+    // 그려지지 않는 필드의 오류를 필드에 맡기면 아무 데도 남지 않는다 — 등록 버튼이
+    // 조용히 죽은 것처럼 보인다. 그때는 알림으로 올리되 problem의 detail이 아니라
+    // 그 필드의 메시지를 싣는다: '요청 값을 확인해 주세요'는 어느 값인지 말해 주지
+    // 않고, 여기서 알아야 하는 것이 바로 그것이다.
+    const stranded = Object.entries(mapped)
+      .filter(([field]) => !shownFields.includes(field))
+      .map(([, message]) => message)
+    if (stranded.length > 0) setError(stranded.join(' '))
+    else setError(Object.keys(mapped).length > 0 ? null : apiError.message)
   }
 
   const create = useMutation({
