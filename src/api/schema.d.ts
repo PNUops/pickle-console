@@ -1586,7 +1586,7 @@ export interface paths {
         };
         get?: never;
         put: operations["changePassword"];
-        post?: never;
+        post: operations["setPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3549,9 +3549,9 @@ export interface components {
         };
         OauthCompleteRequest: {
             consents: components["schemas"]["ConsentInput"][];
-            departmentCode: string;
+            departmentCode?: string | null;
             name: string;
-            position: components["schemas"]["UserPosition"];
+            position?: components["schemas"]["UserPosition"] | null;
             registrationToken: string;
             studentNo?: string | null;
         };
@@ -4162,6 +4162,9 @@ export interface components {
             /** Format: date-time */
             scheduledFor: string;
         };
+        SetPasswordRequest: {
+            newPassword: string;
+        };
         SettingUpdateRequest: {
             value: unknown;
         };
@@ -4178,11 +4181,11 @@ export interface components {
         };
         SignupRequest: {
             consents: components["schemas"]["ConsentInput"][];
-            departmentCode: string;
+            departmentCode?: string | null;
             email: string;
             name: string;
             password: string;
-            position: components["schemas"]["UserPosition"];
+            position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
         };
         SuspendPortMappingRequest: {
@@ -4340,8 +4343,9 @@ export interface components {
             perSourceRate?: number | null;
         };
         UpdateProfileRequest: {
-            departmentCode: string;
-            position: components["schemas"]["UserPosition"];
+            departmentCode?: string | null;
+            name?: string;
+            position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
         };
         UpdateResourceAccessGrantRequest: {
@@ -8403,6 +8407,51 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setPassword: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthTokenResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

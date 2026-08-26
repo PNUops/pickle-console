@@ -1,8 +1,8 @@
 import { TransitionLink } from '../components/TransitionLink'
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
-import type { components } from '../api/schema'
 import { isProblem, toApiError } from '../api/problem'
 import { fetchCurrentTerms, startGoogleOauth } from '../api/queries'
 import { ResendVerification } from '../components/ResendVerification'
@@ -12,22 +12,11 @@ import { AuthDivider } from '../components/auth/AuthDivider'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
 import { navigateExternal } from '../lib/google-oauth'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
-import type { ProfileValues } from '../components/profile/profile-values'
-import { ProfileFields } from '../components/profile/ProfileFields'
-import { EMPTY_PROFILE } from '../components/profile/profile-values'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passwordRuleError, PUSAN_EMAIL_RE } from '../lib/validation'
 
 /** 서버 필드 오류를 붙일 수 있는 슬롯. 여기 없는 필드는 상단 알림으로 간다. */
-const SIGNUP_FIELDS = [
-  'name',
-  'email',
-  'password',
-  'passwordConfirm',
-  'position',
-  'studentNo',
-  'departmentCode',
-] as const
+const SIGNUP_FIELDS = ['name', 'email', 'password', 'passwordConfirm'] as const
 
 /** 체크리스트를 비밀번호 입력의 설명으로 연결하기 위한 고정 id. */
 const GUIDANCE_ID = 'signup-password-guidance'
@@ -37,9 +26,6 @@ interface FieldErrors {
   email?: string
   password?: string
   passwordConfirm?: string
-  position?: string
-  studentNo?: string
-  departmentCode?: string
 }
 
 function validate(values: {
@@ -47,7 +33,6 @@ function validate(values: {
   email: string
   password: string
   passwordConfirm: string
-  profile: ProfileValues
 }): FieldErrors {
   const errors: FieldErrors = {}
   if (!values.name.trim()) {
@@ -64,25 +49,19 @@ function validate(values: {
   if (values.passwordConfirm !== values.password) {
     errors.passwordConfirm = '비밀번호가 일치하지 않습니다.'
   }
-  // 학번 필수 여부는 서버가 직책마다 내려보내므로 여기서 판단하지 않는다.
-  // 비어 있는 두 값만 막고 나머지는 서버가 422로 답한다.
-  if (!values.profile.position) {
-    errors.position = '직책을 선택해 주세요.'
-  }
-  if (!values.profile.departmentCode) {
-    errors.departmentCode = '소속을 선택해 주세요.'
-  }
   return errors
 }
 
 export function SignupPage() {
+  // 로그인 화면의 「이 이메일로 회원가입」이 주소를 들고 온다. 사용자가 방금 친
+  // 값이라 서버에 아무것도 묻지 않는다.
+  const [searchParams] = useSearchParams()
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [agreed, setAgreed] = useState<Record<string, boolean>>({})
   const [consentError, setConsentError] = useState<string | null>(null)
-  const [profile, setProfile] = useState<ProfileValues>(EMPTY_PROFILE)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -101,7 +80,7 @@ export function SignupPage() {
     event.preventDefault()
     setFormError(null)
     setConsentError(null)
-    const errors = validate({ name, email, password, passwordConfirm, profile })
+    const errors = validate({ name, email, password, passwordConfirm })
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (!allAgreed) {
@@ -116,9 +95,6 @@ export function SignupPage() {
           name: name.trim(),
           email,
           password,
-          position: profile.position as components['schemas']['UserPosition'],
-          studentNo: profile.studentNo.trim() || undefined,
-          departmentCode: profile.departmentCode,
           consents: currentTerms.map((doc) => ({ docType: doc.docType, version: doc.version })),
         },
       })
@@ -251,21 +227,24 @@ export function SignupPage() {
               />
             </FormField>
 
-            <div className="space-y-4 border-t border-white/10 pt-5">
-              <p className="text-sm font-medium text-neutral-300">소속 정보</p>
-              <ProfileFields
-                values={profile}
-                onChange={setProfile}
-                errors={{
-                  position: fieldErrors.position,
-                  studentNo: fieldErrors.studentNo,
-                  departmentCode: fieldErrors.departmentCode,
-                }}
-                disabled={submitting}
-              />
-            </div>
-
             <div className="space-y-2">
+              {/*
+                약관을 못 받아 오면 체크박스가 0개로 렌더되고 제출 버튼이 영원히
+                비활성인데 화면에는 아무 말도 없었다. 재시도가 자동으로 돌지도
+                않으므로(retry 1, 포커스 재조회 없음) 새로고침 말고는 길이 없다.
+              */}
+              {terms.isError && (
+                <Alert variant="danger">
+                  약관을 불러오지 못했습니다.{' '}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2"
+                    onClick={() => void terms.refetch()}
+                  >
+                    다시 시도
+                  </button>
+                </Alert>
+              )}
               {consentError && <Alert variant="danger">{consentError}</Alert>}
               {currentTerms.map((doc) => (
                 <Checkbox
