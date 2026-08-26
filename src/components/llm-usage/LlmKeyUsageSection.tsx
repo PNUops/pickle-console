@@ -423,7 +423,7 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
                 {formatTokens(model.inputTokens + model.outputTokens)}
               </td>
               <td className="py-2 pr-3 text-right text-neutral-600">
-                {model.avgLatencyMs == null ? '—' : formatMs(model.avgLatencyMs)}
+                {formatMs(model.avgLatencyMs)}
               </td>
               <td className="py-2 text-right text-neutral-600">
                 {model.requests === 0
