@@ -11,8 +11,18 @@ import {
 } from '../test/msw/handlers/auth'
 import { renderApp } from '../test/render'
 
+/**
+ * 비밀번호 폼은 접힌 채로 시작한다. 구글이 1차 동선이 되면서 이메일 경로가 토글 뒤로
+ * 갔으므로, 폼을 쓰는 케이스는 먼저 펼쳐야 한다.
+ */
+async function openPasswordForm(user: ReturnType<typeof userEvent.setup>) {
+  const toggle = screen.queryByRole('button', { name: /이메일로 로그인/ })
+  if (toggle) await user.click(toggle)
+}
+
 async function submitLogin(email: string, password: string) {
   const user = userEvent.setup()
+  await openPasswordForm(user)
   await user.type(screen.getByLabelText('이메일'), email)
   await user.type(screen.getByLabelText('비밀번호'), password)
   await user.click(screen.getByRole('button', { name: '로그인' }))

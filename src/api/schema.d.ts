@@ -3652,13 +3652,18 @@ export interface components {
             registrationToken: string;
             studentNo?: string | null;
         };
+        OauthLinkedResponse: {
+            /** @enum {string} */
+            kind: "LINKED";
+        };
         /** @enum {string} */
         OauthPurpose: "LOGIN" | "REVERIFY" | "LINK";
         OauthRegistrationResponse: {
             email: string;
             /** Format: date-time */
             expiresAt: string;
-            kind: string;
+            /** @enum {string} */
+            kind: "REGISTRATION_REQUIRED";
             name: string;
             registrationToken: string;
         };
@@ -7313,13 +7318,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 토큰 발급 / 2FA 챌린지 / 가입 필요 / 재인증 토큰 */
+            /** @description 토큰 발급 / 2FA 챌린지 / 가입 필요 / 재인증 토큰 / 연동 완료 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["ReverifyResponse"];
+                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["ReverifyResponse"] | components["schemas"]["OauthLinkedResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7346,13 +7351,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 계정 생성과 토큰 발급 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": Record<string, never>;
+                    "*/*": components["schemas"]["AuthTokenResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7379,7 +7384,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 인가 URL 발급 */
             200: {
                 headers: {
                     [name: string]: unknown;
