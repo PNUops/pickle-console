@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
@@ -66,10 +66,9 @@ describe('계정 화면의 연동 관리', () => {
     renderApp('/console/account')
 
     // 현재 비밀번호를 묻는 폼은 이 계정이 채울 수 없는 칸이다. 그 행은 값 대신
-    // 「설정되지 않음」을 말하고 메일 경로만 준다.
+    // 「설정되지 않음」을 말한다.
     expect(await screen.findByText('설정되지 않음')).toBeInTheDocument()
     expect(screen.queryByLabelText('현재 비밀번호')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '설정 메일 받기' })).toBeInTheDocument()
   })
 
   test('비밀번호가 있으면 변경 폼이 뜬다', async () => {
@@ -78,5 +77,36 @@ describe('계정 화면의 연동 관리', () => {
     renderApp('/console/account')
     await openSection(user, '비밀번호')
     expect(await screen.findByLabelText('현재 비밀번호')).toBeInTheDocument()
+  })
+
+  test('비밀번호 없는 계정이 직접 설정한다', async () => {
+    const user = userEvent.setup()
+    let sent: unknown = null
+    meReturns({ hasPassword: false, identities: [GOOGLE] })
+    server.use(
+      http.post('*/api/v1/me/password', async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json(
+          { accessToken: 'access-user', user: regularProfile },
+          { status: 200 },
+        )
+      }),
+    )
+    renderApp('/console/account')
+    await openSection(user, '비밀번호')
+
+    // 현재 비밀번호를 묻지 않는다. 물을 것이 없기 때문이고, 그 자리는 저장할 때의
+    // 본인 확인이 대신한다.
+    expect(await screen.findByRole('heading', { name: '비밀번호 설정' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('현재 비밀번호')).not.toBeInTheDocument()
+
+    const dialog = within(screen.getByRole('dialog'))
+    await user.type(screen.getByLabelText('새 비밀번호'), 'brand-new-pass-9!')
+    await user.type(screen.getByLabelText('새 비밀번호 확인'), 'brand-new-pass-9!')
+    // 구글 연동이 풀린 사람에게 남는 유일한 길이라 메일 경로도 함께 둔다.
+    expect(dialog.getByRole('button', { name: '메일로 받기' })).toBeInTheDocument()
+    await user.click(dialog.getByRole('button', { name: '설정' }))
+
+    await waitFor(() => expect(sent).toEqual({ newPassword: 'brand-new-pass-9!' }))
   })
 })

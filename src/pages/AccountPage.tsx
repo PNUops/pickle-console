@@ -9,6 +9,7 @@ import {
   fetchProfileOptions,
   regenerateRecoveryCodes,
   requestPasswordReset,
+  setMyPassword,
   startGoogleOauth,
   type LinkedIdentity,
   type MfaRecoveryCodesResponse,
@@ -390,35 +391,133 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
 }
 
 /**
- * 비밀번호가 없는 계정에 처음 설정하는 길.
+ * 비밀번호가 없는 계정이 처음 설정하는 길.
  *
- * 재설정 메일이 이 계정의 유일한 설정 경로다. 새 엔드포인트가 아니라 기존 재설정
- * 확정 경로가 null 을 값으로 바꾸는 동작을 그대로 한다.
+ * 현재 비밀번호를 묻지 않는다. 물을 것이 없기 때문이고, 그 자리를 재인증이 대신한다.
+ * 재인증은 구글로 통과할 수 있으므로 이 계정이 실제로 도달한다.
+ *
+ * 메일 경로도 남는다. 구글 연동이 풀렸거나 구글 계정을 잃은 사람에게는 그것이 유일한
+ * 길이고, 그 사람은 여기까지 오지도 못하므로 화면에 두는 것으로 족하지 않지만 최소한
+ * 길이 있다는 것은 말해 준다.
  */
 function PasswordSetupSection({ email }: { email: string }) {
   const toast = useToast()
-  const send = useMutation({
+  const { refreshProfile } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const close = () => {
+    setOpen(false)
+    setNewPassword('')
+    setConfirmPassword('')
+    setError(null)
+    setFieldErrors({})
+  }
+
+  const save = useMutation({
+    mutationFn: () => setMyPassword({ newPassword }),
+    onSuccess: async (data) => {
+      // 다른 기기의 세션은 서버가 끊는다. 이 세션은 응답이 준 토큰으로 이어진다.
+      setAccessToken(data.accessToken)
+      close()
+      toast.success('비밀번호를 설정했습니다. 다른 기기의 세션은 로그아웃됩니다.')
+      await refreshProfile()
+    },
+    onError: (err) => {
+      const apiError = toApiError(err, '비밀번호를 설정하지 못했습니다.')
+      const fields = fieldErrorsOf(apiError.problem)
+      setFieldErrors(fields)
+      setError(Object.keys(fields).length > 0 ? null : apiError.message)
+    },
+  })
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    setError(null)
+    setFieldErrors({})
+    const ruleError = passwordRuleError(newPassword)
+    if (ruleError) {
+      setFieldErrors({ newPassword: ruleError })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setFieldErrors({ confirmPassword: '비밀번호가 일치하지 않습니다.' })
+      return
+    }
+    save.mutate()
+  }
+
+  const mail = useMutation({
     mutationFn: () => requestPasswordReset(email),
     onSuccess: () => toast.success('비밀번호 설정 메일을 보냈습니다. 메일함을 확인해 주세요.'),
     onError: (err) => toast.error(toApiError(err, '메일을 보내지 못했습니다.').message),
   })
 
   return (
-    <SettingRow
-      label="비밀번호"
-      description="설정되지 않음"
-      note="구글 계정으로만 로그인할 수 있습니다. 비밀번호로도 로그인하려면 설정 메일을 받아 새로 정하면 됩니다."
-      action={
-        <Button
-          size="sm"
-          variant="secondary"
-          loading={send.isPending}
-          onClick={() => send.mutate()}
-        >
-          설정 메일 받기
-        </Button>
-      }
-    />
+    <>
+      <SettingRow
+        label="비밀번호"
+        description="설정되지 않음"
+        note="구글 계정으로만 로그인할 수 있습니다. 비밀번호를 설정하면 두 가지 모두로 로그인합니다."
+        action={
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            설정
+          </Button>
+        }
+      />
+      <Modal open={open} onClose={close} title="비밀번호 설정">
+        {error && (
+          <Alert variant="danger" className="mb-4">
+            {error}
+          </Alert>
+        )}
+        <form onSubmit={submit} className="space-y-4" noValidate>
+          <p className="text-sm text-neutral-600">
+            현재 비밀번호는 묻지 않습니다. 대신 저장할 때 본인 확인을 한 번 거칩니다.
+          </p>
+          <FormField label="새 비밀번호" required error={fieldErrors.newPassword}>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              aria-describedby={GUIDANCE_ID}
+              required
+            />
+            <PasswordGuidance password={newPassword} id={GUIDANCE_ID} className="mt-1" />
+          </FormField>
+          <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              required
+            />
+          </FormField>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              className="text-sm text-neutral-500 underline underline-offset-2"
+              onClick={() => mail.mutate()}
+            >
+              메일로 받기
+            </button>
+            <div className="flex gap-2">
+              <Button type="button" variant="secondary" onClick={close}>
+                취소
+              </Button>
+              <Button type="submit" loading={save.isPending}>
+                설정
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+    </>
   )
 }
 
