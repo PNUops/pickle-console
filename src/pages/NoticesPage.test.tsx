@@ -2,8 +2,9 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
+import { HttpResponse } from 'msw'
 import { orgAdminUser, problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { makeNotice, seedNotices } from '../test/msw/handlers/notices'
+import { makeNotice, noticeImage, seedNotices } from '../test/msw/handlers/notices'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -70,6 +71,54 @@ describe('공지사항 상세', () => {
       'src',
       expect.stringContaining(`/notices/${uuid(201)}/images/${uuid(211)}`),
     )
+  })
+
+  test('익명 방문자는 공개 이미지를 주소 그대로 받는다', async () => {
+    renderApp(`/notices/${uuid(201)}`)
+
+    const image = await screen.findByRole('img', { name: 'maintenance.png' })
+    expect(image).toHaveAttribute('src', `/api/v1/notices/${uuid(201)}/images/${uuid(211)}`)
+  })
+
+  test('로그인해야 보이는 공지의 이미지는 자격을 실어 받아 온다', async () => {
+    // 이 API는 순수 Bearer다 — <img src>는 헤더를 싣지 않으므로 서버는 익명으로
+    // 읽고 404를 준다. blob: 주소가 나온다는 것은 인증된 경로로 받아 왔다는 뜻이고,
+    // 맨 <img src>로 되돌아가면 이 단언이 깨진다.
+    seedNotices([
+      makeNotice({
+        id: uuid(341),
+        title: '로그인 사용자 공지',
+        audience: 'USERS',
+        images: [noticeImage(uuid(341), 342, 'members-only.png')],
+      }),
+    ])
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp(`/notices/${uuid(341)}`)
+
+    const image = await screen.findByRole('img', { name: 'members-only.png' })
+    expect(image.getAttribute('src')).toMatch(/^blob:/)
+  })
+
+  test('이미지를 받지 못해도 본문은 그대로 남는다', async () => {
+    seedNotices([
+      makeNotice({
+        id: uuid(343),
+        title: '이미지가 깨진 공지',
+        body: '본문은 읽을 수 있어야 한다.',
+        audience: 'USERS',
+        images: [noticeImage(uuid(343), 344, 'gone.png')],
+      }),
+    ])
+    server.use(refreshSuccessHandler('access-user'))
+    server.use(
+      http.get('*/api/v1/notices/:noticeId/images/:imageId', () =>
+        HttpResponse.json(null, { status: 404 }),
+      ),
+    )
+    renderApp(`/notices/${uuid(343)}`)
+
+    expect(await screen.findByText('이미지를 불러오지 못했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('본문은 읽을 수 있어야 한다.')).toBeInTheDocument()
   })
 
   test('없는 공지는 오류를 알린다', async () => {

@@ -95,6 +95,7 @@ function initialNotices(): StoredNotice[] {
       body: '이미 끝난 점검입니다.',
       startsAt: PAST,
       endsAt: EXPIRED,
+      images: [noticeImage(uuid(204), 214, 'past.png')],
     }),
   ]
 }
@@ -163,12 +164,30 @@ function paged<T>(rows: T[], url: URL) {
 export const noticeHandlers: RequestHandler[] = [
   /* ─── 공개 ─── */
 
-  http.get('*/api/v1/notices/:noticeId/images/:imageId', ({ params }) => {
+  /**
+   * 이미지 바이트. **인증 헤더를 실제로 따진다** — 그래야 하는 이유가 있다.
+   *
+   * 이 API는 순수 Bearer이고 `<img src>`가 거는 요청에는 헤더가 실리지 않는다.
+   * 그래서 화면이 주소만 넘기면 서버는 그것을 익명 호출로 읽고, 로그인해야 보이는
+   * 공지의 이미지는 자격이 있는 사람에게도 404가 된다. 목이 무엇이든 내주면 두
+   * 레포가 서로 어긋난 채 양쪽 다 초록이 되므로, 여기서 같은 규칙을 세운다:
+   * 자격 없는 요청에는 게시 중인 전역 공개 공지의 이미지만 내준다.
+   */
+  http.get('*/api/v1/notices/:noticeId/images/:imageId', ({ params, request }) => {
+    const instance = `/api/v1/notices/${String(params.noticeId)}/images`
     const notice = noticeStore.find((row) => row.id === String(params.noticeId))
     const image = notice?.images.find((row) => row.id === String(params.imageId))
-    if (!image) return notFound(`/api/v1/notices/${String(params.noticeId)}/images`)
+    if (!notice || !image) return notFound(instance)
+    const anonymous = profileOf(request) == null
+    const publiclyReadable =
+      notice.scope === 'PLATFORM' && notice.audience === 'PUBLIC' && isActive(notice)
+    // 존재를 알리지 않는다 — 권한 없는 요청과 없는 이미지가 같은 답을 받는다.
+    if (anonymous && !publiclyReadable) return notFound(instance)
     return HttpResponse.arrayBuffer(PIXEL_PNG.buffer as ArrayBuffer, {
-      headers: { 'Content-Type': image.contentType, 'Cache-Control': 'public, immutable' },
+      headers: {
+        'Content-Type': image.contentType,
+        'Cache-Control': publiclyReadable ? 'public, immutable' : 'private, immutable',
+      },
     })
   }),
 

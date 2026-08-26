@@ -17,6 +17,7 @@ import {
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { canManageNotice, isSysTier } from '../auth/permissions'
+import { NoticeImage } from '../components/NoticeImage'
 import {
   Alert,
   Badge,
@@ -640,10 +641,8 @@ function NoticeImageSection({
             <ul className="flex flex-wrap gap-3">
               {images.map((image) => (
                 <li key={image.id} className="w-32 space-y-1">
-                  <img
-                    src={image.url}
-                    alt={image.fileName ?? '공지 이미지'}
-                    loading="lazy"
+                  <NoticeImage
+                    image={image}
                     className="h-24 w-32 rounded border border-neutral-200 object-cover"
                   />
                   <Button

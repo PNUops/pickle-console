@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
+import { NoticeImage } from './NoticeImage'
 import { Button, Modal } from './ui'
 
 /** 한 세션에 띄우는 팝업의 상한 — 넘치면 나머지는 공지사항 목록에서 읽는다. */
@@ -114,12 +115,7 @@ export function NoticePopupHost() {
     >
       <div className="space-y-4">
         {firstImage && (
-          <img
-            src={firstImage.url}
-            alt={firstImage.fileName ?? '공지 이미지'}
-            loading="lazy"
-            className="h-auto w-full rounded-lg"
-          />
+          <NoticeImage image={firstImage} className="h-auto w-full rounded-lg" />
         )}
         <p className="text-sm/6 whitespace-pre-line text-neutral-700">
           {current.body}

@@ -123,6 +123,18 @@ describe('공지사항 관리', () => {
     expect(within(row).getByText('정보컴퓨터공학부')).toBeInTheDocument()
   })
 
+  test('게시 창 밖 공지의 미리보기도 자격을 실어 받아 온다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/notices')
+
+    // 만료된 공지의 이미지는 공개 경로로는 404다 — 관리자가 보려면 자격이 실려야 한다.
+    await user.click(await screen.findByRole('button', { name: '지난 점검 공지' }))
+    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const image = await within(drawer).findByRole('img', { name: 'past.png' })
+    expect(image.getAttribute('src')).toMatch(/^blob:/)
+  })
+
   test('서버가 크기를 이유로 413으로 거절하면 그 사유를 그대로 보여준다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
