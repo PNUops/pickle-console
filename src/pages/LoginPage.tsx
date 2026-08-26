@@ -12,20 +12,22 @@ import { Alert, Button, FormField, Input } from '../components/ui'
 import { AuthDivider } from '../components/auth/AuthDivider'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
 import { navigateExternal, rememberReturnTo, takeReturnTo } from '../lib/google-oauth'
+import { cn } from '../lib/cn'
 import { safeInternalPath } from '../lib/redirect'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 
 /**
- * 진입은 하나이고 단계만 바뀐다. 주소를 받은 뒤 비밀번호 칸이 나타나는 것이지
- * 다른 화면으로 가는 것이 아니다.
+ * 주소를 알아볼 만하면 비밀번호 칸이 아래로 자라난다. 누를 것이 없다.
  *
- * 이메일 칸은 두 단계 모두 보인다. 비밀번호 관리자는 이메일과 비밀번호를 짝으로
- * 채우므로 둘 다 같은 폼에 있어야 하고, 채울 대상을 숨기면 그 경로가 얇아진다.
- * 오타를 고치는 데 클릭이 하나 덜 드는 것도 같은 방향이다.
+ * 형식을 좁게 보지 않는 이유가 있다. 이것은 검증이 아니라 **펼침 조건**이고,
+ * `@pusan.ac.kr` 로 좁히면 오타 하나에 비밀번호 칸이 영영 안 나와 왜 못 쓰는지
+ * 알 수 없게 된다. 주소의 옳고 그름은 서버가 균일한 401 로 답한다.
  */
-type Step = 'email' | 'password'
+function looksLikeAddress(value: string): boolean {
+  return /^[^@\s]+@[^@\s]+$/.test(value.trim())
+}
 
-/** 단계 전환으로만 감추는 비밀번호 블록의 고정 id. */
+/** 펼침 애니메이션이 감싸는 비밀번호 블록의 고정 id. */
 const PASSWORD_BLOCK_ID = 'login-password-block'
 
 export function LoginPage() {
@@ -49,7 +51,8 @@ export function LoginPage() {
     () => (location.state as { mfaToken?: string } | null)?.mfaToken ?? null,
   )
   const [useRecovery, setUseRecovery] = useState(false)
-  const [step, setStep] = useState<Step>('email')
+  // 한 번 펼쳐지면 도메인을 고치는 동안 접히지 않는다. 주소를 비우면 되돌아간다.
+  const [revealed, setRevealed] = useState(false)
   const [code, setCode] = useState('')
   const passwordRef = useRef<HTMLInputElement>(null)
 
@@ -81,24 +84,30 @@ export function LoginPage() {
     })
   }
 
+  const showPassword = revealed || looksLikeAddress(email)
+
+  const onEmailChange = (value: string) => {
+    setEmail(value)
+    // 펼치기만 하고 접지는 않는다. 도메인을 고치는 사이에 칸이 사라졌다 나타나면
+    // 화면이 흔들린다. 주소를 통째로 지웠을 때만 처음으로 돌아간다.
+    if (looksLikeAddress(value)) setRevealed(true)
+    else if (value.trim().length === 0) setRevealed(false)
+  }
+
   const asApiError = (err: unknown) =>
     err instanceof ApiError
       ? err
       : new ApiError(null, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
 
   /**
-   * 하나의 폼이 두 단계를 모두 처리한다. 이메일 칸에서 Enter 를 쳐도 로그인이
-   * 날아가지 않는 이유가 이 분기다.
+   * 이메일 칸에서 Enter 를 쳐도 빈 비밀번호로 로그인이 날아가지 않는다. 대신
+   * 비밀번호 칸으로 옮겨 준다 — 그 시점에 화면에는 이미 그 칸이 있다.
    */
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (step === 'email') {
-      if (email.trim().length === 0) return
-      setError(null)
-      setStep('password')
-      // 다음 칸으로 옮겨 준다. 단계가 바뀌었는데 포커스가 제자리면 키보드만 쓰는
-      // 사람에게는 아무 일도 일어나지 않은 것과 같다.
-      requestAnimationFrame(() => passwordRef.current?.focus())
+    if (!showPassword) return
+    if (password.length === 0) {
+      passwordRef.current?.focus()
       return
     }
     setError(null)
@@ -253,73 +262,72 @@ export function LoginPage() {
               <Input
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => onEmailChange(event.target.value)}
                 placeholder="example@pusan.ac.kr"
                 autoComplete="email"
                 required
               />
             </FormField>
             {/*
-              비밀번호 칸은 1단계에서도 DOM 에 남기고 hidden 으로만 감춘다. DOM 에
-              없는 칸에는 비밀번호 관리자가 붙지 않고, hidden 은 접근성 트리와 탭
-              순서에서도 빠지므로 숨기는 목적이 한 번에 해결된다.
+              칸은 늘 DOM 에 있고 감싼 격자가 0fr 에서 1fr 로 자란다. `hidden` 을
+              쓰면 높이가 순간이동하고, 조건부 렌더로 빼면 비밀번호 관리자가 폼을
+              보지 못해 자동완성이 죽는다.
+
+              접혔을 때는 `inert` 로 접근성 트리와 탭 순서에서 뺀다. 보이지도 않는
+              칸에 탭이 멈추면 키보드만 쓰는 사람에게는 없는 칸에 갇히는 것이다.
+              움직임을 줄이도록 설정한 사람에게는 전환을 끈다.
             */}
             <div
               id={PASSWORD_BLOCK_ID}
-              className="space-y-4"
-              {...(step === 'password' ? {} : { hidden: true })}
+              inert={!showPassword}
+              className={cn(
+                'grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none',
+                showPassword ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+              )}
             >
-              <FormField label="비밀번호" required>
-                <Input
-                  ref={passwordRef}
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-              </FormField>
-            </div>
-            <Button type="submit" className="w-full" loading={submitting}>
-              {step === 'email' ? '이메일로 계속하기' : '로그인'}
-            </Button>
-            {step === 'password' && (
-              <div className="space-y-3 text-center text-sm">
-                <p>
-                  <TransitionLink
-                    to={`/forgot-password?email=${encodeURIComponent(email)}`}
-                    className="font-medium text-primary-300 hover:underline"
-                  >
-                    비밀번호를 잊으셨나요?
-                  </TransitionLink>
-                </p>
-                <p className="text-neutral-400">
-                  계정이 없으신가요?{' '}
-                  <TransitionLink
-                    to={`/signup?email=${encodeURIComponent(email)}`}
-                    className="font-medium text-primary-300 hover:underline"
-                  >
-                    이 이메일로 회원가입
-                  </TransitionLink>
-                </p>
-                {/*
-                  주소를 보고 판단하지 않는다. 이 계정이 구글인지 말해 주는 순간
-                  그 주소가 가입돼 있는지도 말하게 된다. 비밀번호 재설정 화면이
-                  같은 이유로 같은 선택을 했다.
-                */}
-                <p className="text-xs text-neutral-500">
-                  구글 계정으로 가입했다면 비밀번호가 없습니다. 위의 Google 버튼을 이용해 주세요.
-                </p>
+              <div className="space-y-4 overflow-hidden">
+                <FormField label="비밀번호" required>
+                  <Input
+                    ref={passwordRef}
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </FormField>
+                <Button type="submit" className="w-full" loading={submitting}>
+                  로그인
+                </Button>
+                <div className="space-y-3 text-center text-sm">
+                  <p>
+                    <TransitionLink
+                      to={`/forgot-password?email=${encodeURIComponent(email)}`}
+                      className="font-medium text-primary-300 hover:underline"
+                    >
+                      비밀번호를 잊으셨나요?
+                    </TransitionLink>
+                  </p>
+                  <p className="text-neutral-400">
+                    계정이 없으신가요?{' '}
+                    <TransitionLink
+                      to={`/signup?email=${encodeURIComponent(email)}`}
+                      className="font-medium text-primary-300 hover:underline"
+                    >
+                      이 이메일로 회원가입
+                    </TransitionLink>
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
           </form>
         </AuthCardContent>
       </AuthCard>
       {/*
-        2단계에는 주소를 달고 가는 「이 이메일로 회원가입」이 카드 안에 있다. 둘을
+        펼쳐지면 주소를 달고 가는 「이 이메일로 회원가입」이 카드 안에 있다. 둘을
         같이 두면 같은 말이 두 줄 겹치고, 바깥 것은 방금 친 주소를 버린다.
       */}
-      {step === 'email' && (
+      {!showPassword && (
         <p className="mt-6 text-center text-sm text-neutral-400">
           아직 계정이 없으신가요?{' '}
           <TransitionLink to="/signup" className="font-medium text-primary-300 hover:underline">

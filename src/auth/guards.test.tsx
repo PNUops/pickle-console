@@ -72,9 +72,8 @@ describe('계정 전환 시 캐시 격리', () => {
     // 로그아웃 사이 서버 데이터가 바뀐 상황을 재현 (B에게는 신청이 없다).
     requestStore.splice(0, requestStore.length)
 
-    // B(박영희)로 로그인. 주소를 먼저 넣어야 비밀번호 칸이 나타난다.
+    // B(박영희)로 로그인. 주소를 넣으면 비밀번호 칸이 따라 나온다.
     await user.type(screen.getByLabelText('이메일'), regularUserB.email)
-    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
     await user.type(screen.getByLabelText('비밀번호'), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '로그인' }))
     await screen.findByRole('heading', { name: '대시보드' })

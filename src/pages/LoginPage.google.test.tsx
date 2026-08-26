@@ -73,41 +73,56 @@ describe('로그인 화면의 구글 1차 동선', () => {
     expect(navigateExternal).not.toHaveBeenCalled()
   })
 
-  test('이메일을 넣으면 비밀번호 칸이 나타난다', async () => {
+  /**
+   * 펼침은 `display:none` 이 아니라 격자 높이라 가시성으로는 잡히지 않는다.
+   * 실제로 접근을 막는 것은 `inert` 이고 — 접근성 트리와 탭 순서에서 빠진다 —
+   * 칸이 DOM 에 남아 비밀번호 관리자가 붙는다는 성질도 그 속성이 지킨다.
+   */
+  const passwordBlock = () => document.getElementById('login-password-block')!
+
+  test('주소를 알아볼 만해지면 비밀번호 칸이 자라난다', async () => {
     const user = userEvent.setup()
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
-    // 이메일 칸은 처음부터 보인다. 비밀번호 칸은 DOM 에 있지만 hidden 이다.
-    // DOM 에 없는 칸에는 비밀번호 관리자가 붙지 않으므로 존재가 아니라 가시성을
-    // 단언한다.
     expect(screen.getByLabelText('이메일')).toBeVisible()
-    expect(screen.getByLabelText('비밀번호')).not.toBeVisible()
+    // 칸은 처음부터 DOM 에 있다. 없으면 자동완성이 붙지 않는다.
+    expect(screen.getByLabelText('비밀번호')).toBeInTheDocument()
+    expect(passwordBlock()).toHaveAttribute('inert')
 
     await user.type(screen.getByLabelText('이메일'), 'someone@pusan.ac.kr')
-    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
 
-    expect(screen.getByLabelText('비밀번호')).toBeVisible()
+    // 누를 것이 없다. 주소가 조건을 만족하는 순간 펼쳐진다.
+    expect(passwordBlock()).not.toHaveAttribute('inert')
+    expect(screen.getByRole('button', { name: '로그인' })).toBeInTheDocument()
     // 주소는 계속 보이고 고칠 수 있다.
     expect(screen.getByLabelText('이메일')).toBeVisible()
   })
 
-  test('빈 이메일로는 다음 단계로 가지 않는다', async () => {
-    const user = userEvent.setup()
-    renderApp('/login')
-    await screen.findByRole('heading', { name: '로그인' })
-
-    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
-    expect(screen.getByLabelText('비밀번호')).not.toBeVisible()
-  })
-
-  test('2단계에 재설정과 회원가입 경로가 주소를 달고 나온다', async () => {
+  test('한 번 펼쳐지면 도메인을 고치는 동안 접히지 않는다', async () => {
     const user = userEvent.setup()
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
     await user.type(screen.getByLabelText('이메일'), 'someone@pusan.ac.kr')
-    await user.click(screen.getByRole('button', { name: '이메일로 계속하기' }))
+    expect(passwordBlock()).not.toHaveAttribute('inert')
+
+    // 도메인 끝을 지우면 조건은 깨지지만 접히지 않는다. 고치는 사이에 칸이
+    // 사라졌다 나타나면 화면이 흔들린다.
+    await user.type(screen.getByLabelText('이메일'), '{Backspace}{Backspace}')
+    expect(passwordBlock()).not.toHaveAttribute('inert')
+
+    // 통째로 지우면 처음으로 돌아간다.
+    await user.clear(screen.getByLabelText('이메일'))
+    expect(passwordBlock()).toHaveAttribute('inert')
+  })
+
+  test('펼쳐지면 재설정과 회원가입 경로가 주소를 달고 나온다', async () => {
+    const user = userEvent.setup()
+    renderApp('/login')
+    await screen.findByRole('heading', { name: '로그인' })
+
+    await user.type(screen.getByLabelText('이메일'), 'someone@pusan.ac.kr')
 
     expect(screen.getByRole('link', { name: '비밀번호를 잊으셨나요?' })).toHaveAttribute(
       'href',
@@ -117,8 +132,6 @@ describe('로그인 화면의 구글 1차 동선', () => {
       'href',
       '/signup?email=someone%40pusan.ac.kr',
     )
-    // 주소를 보고 판단하지 않는다는 것이 이 문구가 정적인 이유다.
-    expect(screen.getByText(/구글 계정으로 가입했다면 비밀번호가 없습니다/)).toBeInTheDocument()
 
     // 카드 아래의 안내는 사라진다. 주소를 달고 가는 카드 안 링크와 같은 말을 두 줄
     // 겹치는 데다, 그쪽은 방금 친 주소를 버린다. (헤더의 CTA 는 성격이 달라 남는다.)
