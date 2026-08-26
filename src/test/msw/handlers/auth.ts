@@ -37,7 +37,7 @@ export const sysAdminUser: Schemas['UserSummaryResponse'] = {
   role: 'SYS_ADMIN',
 }
 
-/** 기관 운영자 — ORG_ADMIN 하위, 같은 기관(orgId=1) 스코프. */
+/** 기관 운영자, ORG_ADMIN 하위. 기관 1을 운영하며 쓰기는 그 안으로 한정된다. */
 export const orgManagerUser: Schemas['UserSummaryResponse'] = {
   id: uuid(8),
   email: 'manager.choi@pusan.ac.kr',
@@ -79,7 +79,7 @@ const filledProfile = {
 export const regularProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...regularUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -91,7 +91,7 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
 export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgAdminUser,
-  orgId: uuid(1),
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -103,7 +103,7 @@ export const orgAdminProfile: Schemas['UserProfileResponse'] = {
 export const sysAdminProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...sysAdminUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -115,7 +115,7 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
 export const orgManagerProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgManagerUser,
-  orgId: uuid(1),
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_MANAGER' as const }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(12), workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -127,7 +127,7 @@ export const orgManagerProfile: Schemas['UserProfileResponse'] = {
 export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...sysManagerUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(13), workspaceName: '정시스템운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -139,7 +139,7 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
 export const regularProfileB: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...regularUserB,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(8), workspaceName: '박영희', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -159,7 +159,7 @@ export const mfaUser: Schemas['UserSummaryResponse'] = {
 export const mfaProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...mfaUser,
-  orgId: null,
+  managedOrgs: [],
   status: 'ACTIVE',
   memberships: [{ workspaceId: uuid(11), workspaceName: '이중인증', workspaceKind: 'PERSONAL', role: 'OWNER' }],
   mfaEnabled: true,

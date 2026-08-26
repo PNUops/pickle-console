@@ -1,4 +1,4 @@
-import type { UserRole } from './auth-context'
+import type { ManagedOrg, UserRole } from './auth-context'
 
 /**
  * Role-tier + action capability predicates, mirroring the operator-confirmed
@@ -6,9 +6,18 @@ import type { UserRole } from './auth-context'
  * sole enforcement point; these gate the console UI so an operator is never shown
  * an action the API would reject. Kept as an explicit allow-list per role — no
  * inheritance.
+ *
+ * An account may hold an org-tier role in several organisations (contract
+ * v0.46.0, `managedOrgs`); `role` on the profile is the highest role across
+ * them. Tier predicates answer what the account may ever do; the per-org
+ * helpers below answer what it may do in one particular organisation.
  */
 
-/** ORG_ADMIN or ORG_MANAGER — pinned to their own org (derived membership). */
+/**
+ * ORG_ADMIN or ORG_MANAGER. Reads reach every organisation (the audit log is
+ * the one exception — it stays inside the managed organisations); writes stay
+ * inside the organisations the account administers or manages.
+ */
 export function isOrgTier(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'ORG_MANAGER'
 }
@@ -21,6 +30,28 @@ export function isSysTier(role: UserRole): boolean {
 /** Any admin-area tier (everything above the plain USER). */
 export function isAdminTier(role: UserRole): boolean {
   return role !== 'USER'
+}
+
+// ── per-organisation scope ──────────────────────────────────────────────────
+
+/**
+ * The organisations this account administers (role ORG_ADMIN there). Staffing,
+ * announcement sending and every other ORG_ADMIN-only write is confined to
+ * these — administering one organisation raises the effective role everywhere,
+ * so pages must ask this instead of `role` when the question is one org.
+ */
+export function administeredOrgs(managedOrgs: readonly ManagedOrg[]): ManagedOrg[] {
+  return managedOrgs.filter((org) => org.role === 'ORG_ADMIN')
+}
+
+/** Does this account administer organisation `orgId` (role ORG_ADMIN there)? */
+export function administersOrg(managedOrgs: readonly ManagedOrg[], orgId: string): boolean {
+  return managedOrgs.some((org) => org.orgId === orgId && org.role === 'ORG_ADMIN')
+}
+
+/** Does this account hold any org-tier role in organisation `orgId`? */
+export function managesOrg(managedOrgs: readonly ManagedOrg[], orgId: string): boolean {
+  return managedOrgs.some((org) => org.orgId === orgId)
 }
 
 // ── action capabilities ────────────────────────────────────────────────────
