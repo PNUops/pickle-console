@@ -101,6 +101,23 @@ describe('공지사항 관리', () => {
     expect(await screen.findByLabelText('이미지 추가')).toBeEnabled()
   })
 
+  test('기관 관리자가 등록하면 자기 기관이 대상으로 실린다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp('/admin/notices')
+
+    await user.click(await screen.findByRole('button', { name: '공지 등록' }))
+    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    await user.type(within(drawer).getByLabelText('제목'), '학부 서버실 이전 안내')
+    await user.type(within(drawer).getByLabelText('본문'), '9월 첫째 주에 이전합니다.')
+    await user.click(within(drawer).getByRole('button', { name: '등록' }))
+
+    // 대상 기관을 싣지 않았다면 서버가 422로 되돌린다 — 목록에 서면 실려 간 것이다.
+    expect(await screen.findByRole('button', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
+    const row = screen.getByRole('button', { name: '학부 서버실 이전 안내' }).closest('tr')!
+    expect(within(row).getByText('정보컴퓨터공학부')).toBeInTheDocument()
+  })
+
   test('삭제는 확인을 거친 뒤 목록에서 사라진다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))

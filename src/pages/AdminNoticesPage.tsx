@@ -83,6 +83,7 @@ export function AdminNoticesPage() {
   const canManage = !!role && canManageNotice(role)
   // 전역 공지는 시스템 계층의 것 — 기관 관리자는 자기 기관 공지만 쓴다.
   const canChoosePlatform = !!role && isSysTier(role)
+  const viewerOrgId = user?.orgId ?? null
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -181,7 +182,12 @@ export function AdminNoticesPage() {
                         {notice.popup && <Badge variant="info">팝업</Badge>}
                       </span>
                     </TD>
-                    <TD>{SCOPE_LABELS[notice.scope]}</TD>
+                    <TD>
+                      {SCOPE_LABELS[notice.scope]}
+                      {notice.scope === 'ORG' && notice.orgName && (
+                        <span className="block text-xs text-neutral-500">{notice.orgName}</span>
+                      )}
+                    </TD>
                     <TD>{AUDIENCE_LABELS[notice.audience]}</TD>
                     <TD>
                       <Badge variant={notice.active ? 'success' : 'neutral'}>
@@ -213,6 +219,7 @@ export function AdminNoticesPage() {
             notice={selected}
             canManage={canManage}
             canChoosePlatform={canChoosePlatform}
+            viewerOrgId={viewerOrgId}
             onCreated={(created) => {
               setCreating(false)
               setSelectedId(created.id)
@@ -231,6 +238,7 @@ function NoticeDetailBody({
   notice,
   canManage,
   canChoosePlatform,
+  viewerOrgId,
   onCreated,
   onDeleted,
 }: {
@@ -238,6 +246,8 @@ function NoticeDetailBody({
   notice: AdminNoticeView | null
   canManage: boolean
   canChoosePlatform: boolean
+  /** 보고 있는 사람의 소속 기관 — 기관 공지를 쓸 때 대상이 되는 곳. */
+  viewerOrgId: string | null
   onCreated: (created: AdminNoticeView) => void
   onDeleted: () => void
 }) {
@@ -249,7 +259,7 @@ function NoticeDetailBody({
   const [scope, setScope] = useState<NoticeScope>(
     notice?.scope ?? (canChoosePlatform ? 'PLATFORM' : 'ORG'),
   )
-  const [orgId, setOrgId] = useState(notice?.org?.id ?? '')
+  const [orgId, setOrgId] = useState(notice?.orgId ?? '')
   const [audience, setAudience] = useState<NoticeAudience>(notice?.audience ?? 'USERS')
   const [pinned, setPinned] = useState(notice?.pinned ?? false)
   const [popup, setPopup] = useState(notice?.popup ?? false)
@@ -270,6 +280,22 @@ function NoticeDetailBody({
   const needsOrgPick = canChoosePlatform && orgScoped
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: needsOrgPick })
 
+  /**
+   * 등록·수정이 함께 보내는 본문. 기관 공지의 `orgId`는 계약상 필수다 — 고를 수
+   * 없는 기관 관리자는 자기 기관을 실어 보내고, 서버가 다시 자기 기관으로 못박는다.
+   */
+  const bodyOf = () => ({
+    title: title.trim(),
+    body,
+    scope,
+    orgId: orgScoped ? ((needsOrgPick ? orgId : viewerOrgId) ?? undefined) : undefined,
+    audience: effectiveAudience,
+    pinned,
+    popup,
+    startsAt: fromDateTimeInput(startsAt)!,
+    endsAt: fromDateTimeInput(endsAt),
+  })
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'notices'] })
 
   const onMutationError = (fallback: string) => (err: unknown) => {
@@ -280,18 +306,7 @@ function NoticeDetailBody({
   }
 
   const create = useMutation({
-    mutationFn: () =>
-      createAdminNotice({
-        title: title.trim(),
-        body,
-        scope,
-        orgId: needsOrgPick ? orgId : undefined,
-        audience: effectiveAudience,
-        pinned,
-        popup,
-        startsAt: fromDateTimeInput(startsAt)!,
-        endsAt: fromDateTimeInput(endsAt),
-      }),
+    mutationFn: () => createAdminNotice(bodyOf()),
     onSuccess: async (created) => {
       setError(null)
       setFieldErrors({})
@@ -303,18 +318,7 @@ function NoticeDetailBody({
   })
 
   const update = useMutation({
-    mutationFn: () =>
-      updateAdminNotice(notice!.id, {
-        title: title.trim(),
-        body,
-        scope,
-        orgId: needsOrgPick ? orgId : undefined,
-        audience: effectiveAudience,
-        pinned,
-        popup,
-        startsAt: fromDateTimeInput(startsAt)!,
-        endsAt: fromDateTimeInput(endsAt),
-      }),
+    mutationFn: () => updateAdminNotice(notice!.id, bodyOf()),
     onSuccess: async () => {
       setError(null)
       setFieldErrors({})
@@ -361,6 +365,11 @@ function NoticeDetailBody({
         <PermissionNotice>
           공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.
         </PermissionNotice>
+      )}
+      {notice && (
+        <p className="text-sm text-neutral-500">
+          작성자 {notice.createdByName} · 등록 {formatDateTime(notice.createdAt)}
+        </p>
       )}
       {error && <Alert variant="danger">{error}</Alert>}
 

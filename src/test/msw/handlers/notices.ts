@@ -23,7 +23,7 @@ const EXPIRED = '2026-07-20T09:00:00+09:00'
 const FUTURE = '2099-01-01T00:00:00+09:00'
 
 export function noticeImage(n: number, fileName: string): NoticeImageView {
-  return { id: uuid(n), fileName, contentType: 'image/png', size: 1024 }
+  return { id: uuid(n), fileName, contentType: 'image/png', byteSize: 1024 }
 }
 
 /**
@@ -39,13 +39,15 @@ export function makeNotice(notice: Partial<StoredNotice> & { id: string }): Stor
     title: '공지',
     body: '본문',
     scope: 'PLATFORM',
-    org: null,
+    orgId: null,
+    orgName: null,
     audience: 'PUBLIC',
     pinned: false,
     popup: false,
     startsAt: PAST,
     endsAt: null,
     images: [],
+    createdByName: '이시스템',
     createdAt: PAST,
     updatedAt: PAST,
     ...notice,
@@ -71,7 +73,8 @@ function initialNotices(): StoredNotice[] {
       title: '기관 전용 안내',
       body: '기관 소속 사용자에게만 보이는 공지입니다.',
       scope: 'ORG',
-      org: { id: uuid(1), name: '정보컴퓨터공학부' },
+      orgId: uuid(1),
+      orgName: '정보컴퓨터공학부',
       audience: 'USERS',
     }),
     makeNotice({
@@ -113,9 +116,9 @@ function inFeedOrder(a: StoredNotice, b: StoredNotice): number {
   return Date.parse(b.startsAt) - Date.parse(a.startsAt)
 }
 
-/** 공개 뷰는 관리 뷰에서 게시 여부(active)만 빠진 것이다. */
-function toPublicView(notice: StoredNotice): NoticeView {
-  return notice
+/** 공개 뷰는 관리 뷰에서 운영자만 볼 것(게시 여부·작성자)을 뺀 것이다. */
+function toPublicView({ createdByName: _createdByName, ...view }: StoredNotice): NoticeView {
+  return view
 }
 
 function toAdminView(notice: StoredNotice): AdminNoticeView {
@@ -172,7 +175,7 @@ export const noticeHandlers: RequestHandler[] = [
           isActive(notice) &&
           (profile == null
             ? notice.scope === 'PLATFORM' && notice.audience === 'PUBLIC'
-            : notice.scope === 'PLATFORM' || notice.org?.id === profile.orgId),
+            : notice.scope === 'PLATFORM' || notice.orgId === profile.orgId),
       )
       .sort(inFeedOrder)
     return HttpResponse.json(paged(visible.map(toPublicView), new URL(request.url)), {
@@ -186,7 +189,7 @@ export const noticeHandlers: RequestHandler[] = [
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
     const visible = noticeStore
-      .filter((notice) => isSysTier(profile.role) || notice.org?.id === profile.orgId)
+      .filter((notice) => isSysTier(profile.role) || notice.orgId === profile.orgId)
       .sort(inFeedOrder)
     return HttpResponse.json(paged(visible.map(toAdminView), new URL(request.url)), {
       status: 200,
@@ -197,6 +200,18 @@ export const noticeHandlers: RequestHandler[] = [
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
     const body = (await request.json()) as Schemas['NoticeCreateRequest']
+    // 계약: 기관 공지는 대상 기관을 반드시 실어야 한다(기관 관리자는 자기 기관).
+    if (body.scope === 'ORG' && body.orgId == null) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        instance: '/api/v1/admin/notices',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'orgId', message: '대상 기관을 선택해 주세요.' }],
+      })
+    }
     if (body.scope === 'ORG' && body.audience === 'PUBLIC') {
       return problemResponse({
         type: 'about:blank',
@@ -211,10 +226,8 @@ export const noticeHandlers: RequestHandler[] = [
     const created = makeNotice({
       ...body,
       id: uuid(nextNoticeId++),
-      org:
-        body.scope === 'ORG'
-          ? { id: body.orgId ?? profile.orgId ?? '', name: '정보컴퓨터공학부' }
-          : null,
+      orgId: body.scope === 'ORG' ? (body.orgId ?? null) : null,
+      orgName: body.scope === 'ORG' ? '정보컴퓨터공학부' : null,
       images: [],
     })
     noticeStore = [created, ...noticeStore]
@@ -231,10 +244,8 @@ export const noticeHandlers: RequestHandler[] = [
     const updated: StoredNotice = {
       ...existing,
       ...body,
-      org:
-        body.scope === 'ORG'
-          ? { id: body.orgId ?? profile.orgId ?? '', name: '정보컴퓨터공학부' }
-          : null,
+      orgId: body.scope === 'ORG' ? (body.orgId ?? profile.orgId ?? null) : null,
+      orgName: body.scope === 'ORG' ? '정보컴퓨터공학부' : null,
       updatedAt: new Date().toISOString(),
     }
     noticeStore = noticeStore.map((row) => (row.id === noticeId ? updated : row))
@@ -275,7 +286,7 @@ export const noticeHandlers: RequestHandler[] = [
       id: uuid(nextNoticeId++),
       fileName: file.name,
       contentType: file.type,
-      size: file.size,
+      byteSize: file.size,
     }
     noticeStore = noticeStore.map((row) =>
       row.id === noticeId ? { ...row, images: [...row.images, image] } : row,
