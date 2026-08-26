@@ -29,8 +29,10 @@ const PAGE_SIZE = 20
 
 const ROLE_VARIANTS: Record<UserRole, BadgeVariant> = {
   USER: 'neutral',
+  ORG_VIEWER: 'info',
   ORG_MANAGER: 'info',
   ORG_ADMIN: 'info',
+  SYS_VIEWER: 'primary',
   SYS_MANAGER: 'primary',
   SYS_ADMIN: 'primary',
 }

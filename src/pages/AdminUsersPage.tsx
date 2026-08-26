@@ -62,7 +62,15 @@ const STATUS_TABS: { label: string; status: UserStatus | undefined }[] = [
   { label: USER_STATUS_LABELS.WITHDRAWN, status: 'WITHDRAWN' },
 ]
 
-const ROLE_OPTIONS: UserRole[] = ['USER', 'ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']
+const ROLE_OPTIONS: UserRole[] = [
+  'USER',
+  'ORG_VIEWER',
+  'ORG_MANAGER',
+  'ORG_ADMIN',
+  'SYS_VIEWER',
+  'SYS_MANAGER',
+  'SYS_ADMIN',
+]
 
 const STATUS_VARIANT: Record<UserStatus, BadgeVariant> = {
   ACTIVE: 'success',

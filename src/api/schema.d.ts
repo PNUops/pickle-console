@@ -3098,7 +3098,7 @@ export interface components {
             overrideProtection?: boolean;
         };
         GrantOrgRoleRequest: {
-            /** @description 이 기관에서 부여할 역할 (ORG_ADMIN 또는 ORG_MANAGER) */
+            /** @description 이 기관에서 부여할 역할 (ORG_ADMIN, ORG_MANAGER, ORG_VIEWER) */
             role: components["schemas"]["UserRole"];
         };
         /** @description 접근 권한을 가진 사용자 */
@@ -4458,7 +4458,7 @@ export interface components {
             studentNo?: string | null;
         };
         /** @enum {string} */
-        UserRole: "USER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_MANAGER" | "SYS_ADMIN";
+        UserRole: "USER" | "ORG_VIEWER" | "ORG_MANAGER" | "ORG_ADMIN" | "SYS_VIEWER" | "SYS_MANAGER" | "SYS_ADMIN";
         /** @enum {string} */
         UserStatus: "PENDING_VERIFICATION" | "ACTIVE" | "DISABLED" | "WITHDRAWN";
         UserStatusChangeResponse: {

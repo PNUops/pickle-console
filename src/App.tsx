@@ -147,7 +147,16 @@ function App() {
       <Route
         path="admin"
         element={
-          <RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}>
+          <RequireRole
+            roles={[
+              'ORG_VIEWER',
+              'ORG_MANAGER',
+              'ORG_ADMIN',
+              'SYS_VIEWER',
+              'SYS_MANAGER',
+              'SYS_ADMIN',
+            ]}
+          >
             <AdminLayout />
           </RequireRole>
         }
@@ -162,13 +171,23 @@ function App() {
         <Route path="workspaces" element={<AdminWorkspacesPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="audit" element={<AdminAuditPage />} />
+        {/* 감사 로그는 조직에서 행위할 수 있는 역할만 — ORG_VIEWER는 유일하게 제외 (§3.14). */}
+        <Route
+          path="audit"
+          element={
+            <RequireRole
+              roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}
+            >
+              <AdminAuditPage />
+            </RequireRole>
+          }
+        />
         <Route path="announcements" element={<AdminAnnouncementsPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route
           path="notification-log"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNotificationLogPage />
             </RequireRole>
           }
@@ -176,7 +195,7 @@ function App() {
         <Route
           path="drift"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminDriftPage />
             </RequireRole>
           }
@@ -184,7 +203,7 @@ function App() {
         <Route
           path="settings"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminSettingsPage />
             </RequireRole>
           }
@@ -192,7 +211,7 @@ function App() {
         <Route
           path="tasks"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminTasksPage />
             </RequireRole>
           }
@@ -200,7 +219,7 @@ function App() {
         <Route
           path="nodes"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNodesPage />
             </RequireRole>
           }
@@ -208,7 +227,7 @@ function App() {
         <Route
           path="network"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminNetworkPage />
             </RequireRole>
           }
@@ -216,7 +235,7 @@ function App() {
         <Route
           path="os-images"
           element={
-            <RequireRole roles={['SYS_MANAGER', 'SYS_ADMIN']}>
+            <RequireRole roles={['SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']}>
               <AdminOsImagesPage />
             </RequireRole>
           }
