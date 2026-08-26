@@ -134,8 +134,9 @@ export default function LlmKeyUsageSection({
                   {data.from} ~ {data.to}
                 </p>
 
-                {/* 문장은 남긴다 — 카드는 숫자를 빨리 읽게 하지만 '일부 추정'
-                    같은 단서는 문장만이 담는다. */}
+                {/* 문장은 남긴다 — 카드가 숫자를 빨리 읽게 하는 대신 문장은
+                    구간과 가장 많이 쓴 날을 함께 말한다. 추정 비율은 합계 카드에도
+                    붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                   <StatTile label="총 요청" value={formatRequests(totals.requests)} />
                   <StatTile label="정상 응답" value={formatRequests(totals.succeeded)} />
