@@ -68,6 +68,7 @@ import {
   DELETION_BANNER_TITLES,
   PROVISIONING_KIND_LABELS,
   VM_EVENT_LABELS,
+  vmEventActorLabel,
 } from '../lib/status'
 import { RESOURCE_ROLE_LABELS, type ResourceRole } from '../lib/labels'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -1373,9 +1374,7 @@ function VmEventsSection({ vmId }: { vmId: string }) {
                   <TR key={event.id}>
                     <TD className="whitespace-nowrap">{formatDateTime(event.createdAt)}</TD>
                     <TD className="whitespace-nowrap">{VM_EVENT_LABELS[event.type]}</TD>
-                    <TD className="whitespace-nowrap">
-                      {event.actorId == null ? '시스템' : '사용자'}
-                    </TD>
+                    <TD className="whitespace-nowrap">{vmEventActorLabel(event)}</TD>
                     <TD>{event.detail ?? '—'}</TD>
                   </TR>
                 ))}

@@ -64,8 +64,13 @@ describe('관리자 VM 상세', () => {
 
     expect(await screen.findByText('승인 신청 90에 따라 자동 생성')).toBeInTheDocument()
     const rows = screen.getAllByRole('row')
-    // 헤더 다음 첫 행이 최신 이벤트(START)
-    expect(within(rows[1]).getByText('시작')).toBeInTheDocument()
+    // 헤더 다음 첫 행이 최신 이벤트(관리자 차단), 그다음이 START.
+    // 사용자 화면과 달리 개입한 관리자의 이름이 배지와 함께 보인다.
+    expect(within(rows[1]).getByText('SSH·터미널 차단')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('운영 담당자')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('관리자')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('시작')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('홍길동')).toBeInTheDocument()
   })
 
   test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보이고 전원 제어는 열려 있다', async () => {

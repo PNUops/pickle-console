@@ -45,6 +45,25 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   GATEWAY_UNBLOCK: 'SSH·터미널 차단 해제',
 }
 
+export type VmActorKind = components['schemas']['VmActorKind']
+
+/**
+ * 이벤트 한 행의 수행자 표기. 관리자 개입은 개인 신원 없이 "관리자"로만 적고,
+ * 사용자 화면용 응답은 그 행의 actorId와 actorName을 이미 비워서 내려온다
+ * (가리는 일을 클라이언트에 맡기면 응답에는 실려 나간다). 이름이 없는 계정은
+ * "사용자"로 떨어진다.
+ *
+ * 관리자 화면은 같은 행에 이름이 채워져 오므로 이 함수 대신 이름을 직접 쓴다.
+ */
+export function vmEventActorLabel(event: {
+  actorKind: VmActorKind
+  actorName?: string | null
+}): string {
+  if (event.actorKind === 'SYSTEM') return '시스템'
+  if (event.actorKind === 'ADMIN') return '관리자'
+  return event.actorName ?? '사용자'
+}
+
 /* ─── LLM API 키 ─── */
 
 export type LlmApiKeyStatus = components['schemas']['LlmApiKeyStatus']

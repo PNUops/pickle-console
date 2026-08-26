@@ -10,6 +10,7 @@ import {
   fetchAdminVmEvents,
   type MessageResponse,
   type VmDetail,
+  type VmEvent,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -333,6 +334,21 @@ function PeriodSection({
 
 const EVENTS_PAGE_SIZE = 20
 
+/**
+ * 관리자 화면의 수행자 한 칸. 사용자 화면과 달리 관리자 개입도 이름이 채워져
+ * 오므로(누가 개입했는지는 관리자가 알아야 한다) 이름을 그대로 쓰고, 개입임을
+ * 배지로 구분한다. 이름이 없는 계정은 종류만 남는다.
+ */
+function AdminEventActor({ event }: { event: VmEvent }) {
+  if (event.actorKind === 'SYSTEM') return <span className="text-neutral-500">시스템</span>
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {event.actorName ?? '사용자'}
+      {event.actorKind === 'ADMIN' && <Badge variant="warning">관리자</Badge>}
+    </span>
+  )
+}
+
 function EventsSection({ vmId }: { vmId: string }) {
   const [page, setPage] = useState(0)
   const events = useQuery({
@@ -361,6 +377,7 @@ function EventsSection({ vmId }: { vmId: string }) {
           <THead>
             <TR>
               <TH>종류</TH>
+              <TH>수행자</TH>
               <TH>내용</TH>
               <TH>시각</TH>
             </TR>
@@ -370,6 +387,9 @@ function EventsSection({ vmId }: { vmId: string }) {
               <TR key={event.id}>
                 <TD className="whitespace-nowrap">
                   {VM_EVENT_LABELS[event.type as VmEventType] ?? event.type}
+                </TD>
+                <TD className="whitespace-nowrap">
+                  <AdminEventActor event={event} />
                 </TD>
                 <TD className="text-neutral-600">{event.detail ?? '—'}</TD>
                 <TD className="whitespace-nowrap">{formatDateTime(event.createdAt)}</TD>

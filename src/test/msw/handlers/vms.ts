@@ -682,9 +682,22 @@ function initialVmEvents(): Record<string, VmEvent[]> {
   return {
     [uuid(56)]: [
       {
+        id: uuid(903),
+        type: 'GATEWAY_BLOCK',
+        // 관리자 개입: 서버가 신원을 비워서 내려보내므로 목록 핸들러가 같은
+        // 모양으로 만든다(여기에 이름이 있어도 사용자 화면에는 안 나간다).
+        actorId: uuid(7),
+        actorKind: 'ADMIN',
+        actorName: '운영 담당자',
+        detail: '관리자 차단',
+        createdAt: '2026-07-02T11:00:00+09:00',
+      },
+      {
         id: uuid(902),
         type: 'START',
         actorId: uuid(42),
+        actorKind: 'MEMBER',
+        actorName: '홍길동',
         detail: null,
         createdAt: '2026-07-01T09:12:00+09:00',
       },
@@ -692,6 +705,7 @@ function initialVmEvents(): Record<string, VmEvent[]> {
         id: uuid(901),
         type: 'CREATE',
         actorId: null,
+        actorKind: 'SYSTEM',
         detail: '승인 신청 90에 따라 자동 생성',
         createdAt: '2026-06-20T10:00:00+09:00',
       },
@@ -1033,6 +1047,7 @@ export const vmHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'SELF_DELETE',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: immediate ? '생성 실패 VM 즉시 삭제' : null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1040,6 +1055,7 @@ export const vmHandlers: RequestHandler[] = [
       recordVmEvent(vm.id, {
         type: 'DELETE',
         actorId: uuid(42),
+        actorKind: 'MEMBER',
         detail: null,
         createdAt: '2026-07-08T15:00:00+09:00',
       })
@@ -1077,6 +1093,7 @@ export const vmHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'START',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1099,6 +1116,7 @@ export const vmHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'STOP',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1121,6 +1139,7 @@ export const vmHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'REBOOT',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1143,6 +1162,7 @@ export const vmHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'FORCE_STOP',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: null,
       createdAt: '2026-07-08T15:00:00+09:00',
     })
@@ -1290,7 +1310,13 @@ export const vmHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const events = vmEventStore[vm.id] ?? []
+    // 서버와 같은 모양: 관리자 개입 행은 사용자 화면용 응답에서 신원이 비워져
+    // 나간다(가리는 일을 클라이언트에 맡기지 않는다).
+    const events = (vmEventStore[vm.id] ?? []).map((event) =>
+      event.actorKind === 'ADMIN'
+        ? { ...event, actorId: null, actorName: null }
+        : event,
+    )
     const body: Schemas['PageResponseVmEventResponse'] = {
       content: events.slice(page * size, (page + 1) * size),
       page,

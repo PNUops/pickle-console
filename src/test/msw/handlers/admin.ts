@@ -772,6 +772,7 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'SCHEDULE_DELETE',
       actorId: orgAdminUser.id,
+      actorKind: 'ADMIN',
       detail: body.reason,
       createdAt: '2026-07-08T16:00:00+09:00',
     })
@@ -793,6 +794,7 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'CANCEL_SCHEDULED_DELETE',
       actorId: orgAdminUser.id,
+      actorKind: 'ADMIN',
       detail: null,
       createdAt: '2026-07-08T16:30:00+09:00',
     })
@@ -932,6 +934,7 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'PERIOD_UPDATE',
       actorId: orgAdminUser.id,
+      actorKind: 'ADMIN',
       detail: `사용 종료일 변경 → ${body.endDate}`,
       createdAt: new Date().toISOString(),
     })
@@ -965,6 +968,7 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'FORCE_DELETE',
       actorId: uuid(5),
+      actorKind: 'ADMIN',
       detail: null,
       createdAt: '2026-07-08T17:00:00+09:00',
     })

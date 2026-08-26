@@ -4583,6 +4583,8 @@ export interface components {
         VerifyEmailRequest: {
             token: string;
         };
+        /** @enum {string} */
+        VmActorKind: "SYSTEM" | "MEMBER" | "ADMIN";
         VmBriefResponse: {
             /** Format: int32 */
             diskGb: number;
@@ -4680,6 +4682,8 @@ export interface components {
         VmEventResponse: {
             /** Format: uuid */
             actorId?: string | null;
+            actorKind: components["schemas"]["VmActorKind"];
+            actorName?: string | null;
             /** Format: date-time */
             createdAt: string;
             detail?: string | null;
