@@ -407,6 +407,9 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
  * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 통째로 덮어쓰는
  * 위 역할 관리와 별개로 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
  * 있는 기관의 행만 건드릴 수 있고, 그 밖의 기관은 API가 404로 답한다.
+ *
+ * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
+ * 기관을 보게 하되 손대지 못하게 하는 통로다.
  */
 function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const { user: viewer } = useAuth()
@@ -540,6 +543,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
               disabled={blockedReason != null}
               onChange={(event) => setAddRole(event.target.value as UserRole)}
             >
+              <option value="ORG_VIEWER">{USER_ROLE_LABELS.ORG_VIEWER}</option>
               <option value="ORG_MANAGER">{USER_ROLE_LABELS.ORG_MANAGER}</option>
               <option value="ORG_ADMIN">{USER_ROLE_LABELS.ORG_ADMIN}</option>
             </Select>
@@ -622,7 +626,7 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
     event.preventDefault()
     setError(null)
     if (isOrgTier(role) && !orgId) {
-      setFieldErrors({ orgId: '기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.' })
+      setFieldErrors({ orgId: '기관 계층 역할은 관리할 기관을 선택해야 합니다.' })
       return
     }
     setFieldErrors({})
@@ -658,7 +662,7 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
           label="관리 기관"
           required={isOrgTier(role)}
           error={fieldErrors.orgId}
-          description="기관 관리자·기관 운영자 역할일 때만 지정합니다."
+          description="기관 계층 역할일 때만 지정합니다."
         >
           <Select
             value={orgId}

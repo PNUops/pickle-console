@@ -1,3 +1,4 @@
+import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
@@ -171,10 +172,11 @@ const ORG_NAMES: Record<string, string> = {
 
 const orgNameOf = (orgId: string) => ORG_NAMES[orgId] ?? '알 수 없는 기관'
 
-/** 실효 역할 — 관리 기관들 중 가장 높은 역할, 하나도 없으면 일반 사용자. */
+/** 실효 역할 — 보유 기관들 중 가장 높은 역할, 하나도 없으면 일반 사용자. */
 function effectiveRole(managedOrgs: { role: Schemas['UserRole'] }[]): Schemas['UserRole'] {
   if (managedOrgs.some((org) => org.role === 'ORG_ADMIN')) return 'ORG_ADMIN'
   if (managedOrgs.some((org) => org.role === 'ORG_MANAGER')) return 'ORG_MANAGER'
+  if (managedOrgs.some((org) => org.role === 'ORG_VIEWER')) return 'ORG_VIEWER'
   return 'USER'
 }
 
@@ -242,7 +244,8 @@ export const userHandlers: RequestHandler[] = [
     }
     const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
-    if (row.id === actor.id || row.role === 'SYS_ADMIN' || row.role === 'SYS_MANAGER') {
+    // 시스템 계층 계정(열람자 포함)의 기관 역할은 손댈 수 없다.
+    if (row.id === actor.id || isSysTier(row.role)) {
       return forbidden()
     }
     const body = (await request.json()) as { role: Schemas['UserRole'] }
@@ -264,7 +267,8 @@ export const userHandlers: RequestHandler[] = [
     }
     const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
-    if (row.id === actor.id || row.role === 'SYS_ADMIN' || row.role === 'SYS_MANAGER') {
+    // 시스템 계층 계정(열람자 포함)의 기관 역할은 손댈 수 없다.
+    if (row.id === actor.id || isSysTier(row.role)) {
       return forbidden()
     }
     row.managedOrgs = row.managedOrgs.filter((org) => org.orgId !== orgId)

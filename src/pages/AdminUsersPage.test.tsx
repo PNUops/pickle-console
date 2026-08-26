@@ -139,7 +139,7 @@ describe('관리자 사용자 목록', () => {
     await user.selectOptions(drawer.getByLabelText('역할'), 'ORG_ADMIN')
     await user.click(drawer.getByRole('button', { name: '역할 변경' }))
     expect(
-      drawer.getByText('기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.'),
+      drawer.getByText('기관 계층 역할은 관리할 기관을 선택해야 합니다.'),
     ).toBeInTheDocument()
     expect(userPatchBodies).toHaveLength(0)
 
@@ -192,7 +192,12 @@ describe('관리자 사용자 목록', () => {
       within(orgSelect as HTMLSelectElement).queryByRole('option', { name: '전자공학과' }),
     ).not.toBeInTheDocument()
     await user.selectOptions(orgSelect, uuid(1))
-    await user.selectOptions(drawer.getByLabelText('부여할 역할'), 'ORG_MANAGER')
+    // 역할 선택지에는 열람 역할도 있다 — 기관끼리 서로 보게 하는 부여 통로다.
+    const roleSelect = drawer.getByLabelText('부여할 역할')
+    expect(
+      within(roleSelect as HTMLSelectElement).getByRole('option', { name: '기관 열람자' }),
+    ).toBeInTheDocument()
+    await user.selectOptions(roleSelect, 'ORG_MANAGER')
     await user.click(drawer.getByRole('button', { name: '부여' }))
 
     // 부여되면 목록 항목이 생기고 '관리하는 기관이 없습니다'가 사라진다.
