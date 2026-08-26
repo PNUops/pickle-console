@@ -1,5 +1,6 @@
 import { useAuth } from '../auth/auth-context'
 import { canViewAudit, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
 import { AppShell, type NavSection } from './AppShell'
 
 export function AdminLayout() {
@@ -63,6 +64,8 @@ export function AdminLayout() {
       navLabel="관리자 메뉴"
       sections={sections}
       notificationsTo="/admin/notifications"
+      // 기관 계층 2FA 권유 — 시스템 계층은 로그인에서 강제되므로 배너의 대상이 아니다.
+      banner={<MfaNudgeBanner />}
     />
   )
 }

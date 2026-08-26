@@ -162,7 +162,7 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-/* ─── 전원 개입 (관리자 4역할, 정지 보호 우회 — 서버 정책) ─── */
+/* ─── 전원 개입 (운영 역할만, 정지 보호 우회 — 서버 정책) ─── */
 
 type PowerActionKey = 'start' | 'shutdown' | 'reboot' | 'forceStop'
 

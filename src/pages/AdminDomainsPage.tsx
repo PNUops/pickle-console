@@ -480,7 +480,7 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-/* ─── 사후 개입 액션 (관리자 4역할 — 기관 계층은 자기 기관, 서버 강제) ─── */
+/* ─── 사후 개입 액션 (운영 역할만 — 기관 계층은 자기가 운영하는 기관, 서버 강제) ─── */
 
 type DrawerNotice = { variant: 'info' | 'danger'; text: string }
 

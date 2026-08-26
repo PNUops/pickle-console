@@ -5,7 +5,11 @@ import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
 import { clearReauthToken } from '../api/reauth'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
-import { LEGACY_CONSOLE_SCOPE_KEY, VM_REQUEST_DRAFT_KEY } from '../lib/storage-keys'
+import {
+  LEGACY_CONSOLE_SCOPE_KEY,
+  MFA_NUDGE_DISMISS_KEY,
+  VM_REQUEST_DRAFT_KEY,
+} from '../lib/storage-keys'
 import { closeTerminalWindows } from '../terminal/openTerminalWindow'
 import { AuthContext, type AuthStatus, type LoginResult, type UserProfile } from './auth-context'
 
@@ -127,6 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       closeTerminalWindows()
       // 같은 탭에서 다음 사용자가 이전 사용자의 신청서 초안을 물려받지 않게 지운다.
       sessionStorage.removeItem(VM_REQUEST_DRAFT_KEY)
+      // 2FA 권유 배너의 닫음도 같은 이유로 — 다음 사용자는 권유를 다시 봐야 한다.
+      sessionStorage.removeItem(MFA_NUDGE_DISMISS_KEY)
       // 예전 버전이 남긴 워크스페이스 범위도 같은 이유로 정리한다.
       localStorage.removeItem(LEGACY_CONSOLE_SCOPE_KEY)
       setState({ status: 'unauthenticated', user: null })
