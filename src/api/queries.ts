@@ -594,6 +594,11 @@ export function updateLlmKey(keyId: string, body: UpdateLlmKey): Promise<void> {
 
 export type LlmKeyUsageTrend = Schemas['LlmKeyUsageTrendResponse']
 export type LlmKeyUsagePoint = Schemas['LlmKeyUsagePointResponse']
+export type LlmKeyModelUsage = Schemas['LlmKeyModelUsageResponse']
+export type LlmKeyErrorType = Schemas['LlmKeyErrorTypeResponse']
+export type LlmKeyLatency = Schemas['LlmKeyLatencyResponse']
+export type LlmKeyHourlyUsage = Schemas['LlmKeyHourlyUsageResponse']
+export type LlmKeyBudget = Schemas['LlmKeyBudgetResponse']
 
 /**
  * 일별 사용량. 하루는 KST 기준이고, 호출이 없던 날도 0으로 채워 온다 — 빠진 날이

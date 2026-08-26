@@ -454,11 +454,68 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
   for (let offset = days - 1; offset >= 0; offset -= 1) {
     points.push({ day: shiftDay(USAGE_ANCHOR_DAY, -offset), ...profile.at(offset) })
   }
+  const totals = points.reduce(
+    (sum, point) => ({
+      requests: sum.requests + point.requests,
+      failed: sum.failed + point.failed,
+      rateLimited: sum.rateLimited + point.rateLimited,
+      succeeded: sum.succeeded + point.succeeded,
+      inputTokens: sum.inputTokens + point.inputTokens,
+      outputTokens: sum.outputTokens + point.outputTokens,
+    }),
+    { requests: 0, failed: 0, rateLimited: 0, succeeded: 0, inputTokens: 0, outputTokens: 0 },
+  )
+  // 분해는 실제로 일어난 것만 담는다 — 쓰인 적 없는 키는 빈 배열이고, 화면이
+  // 그 상태에서도 서야 한다.
+  const used = totals.requests > 0
   return {
     from: points[0].day,
     to: points[points.length - 1].day,
     reportedUntil: profile.reportedUntil,
     points,
+    models: used
+      ? [
+          {
+            modelName: 'pickle-general',
+            requests: Math.round(totals.requests * 0.7),
+            succeeded: Math.round(totals.succeeded * 0.7),
+            rateLimited: totals.rateLimited,
+            failed: totals.failed,
+            inputTokens: Math.round(totals.inputTokens * 0.7),
+            outputTokens: Math.round(totals.outputTokens * 0.7),
+            estimatedRequests: 0,
+            avgLatencyMs: 820,
+          },
+          {
+            modelName: 'openai/gpt-4o-mini',
+            requests: totals.requests - Math.round(totals.requests * 0.7),
+            succeeded: totals.succeeded - Math.round(totals.succeeded * 0.7),
+            rateLimited: 0,
+            failed: 0,
+            inputTokens: totals.inputTokens - Math.round(totals.inputTokens * 0.7),
+            outputTokens: totals.outputTokens - Math.round(totals.outputTokens * 0.7),
+            estimatedRequests: 0,
+            avgLatencyMs: 1_450,
+          },
+        ]
+      : [],
+    errorTypes: totals.failed > 0 ? [{ errorType: 'upstream_error', requests: totals.failed }] : [],
+    latency: used ? { p50Ms: 780, p90Ms: 1_900, p99Ms: 4_200, samples: totals.succeeded } : null,
+    hourly: used
+      ? [
+          { weekday: 2, hour: 14, requests: Math.round(totals.requests * 0.4) },
+          { weekday: 4, hour: 10, requests: Math.round(totals.requests * 0.6) },
+        ]
+      : [],
+    budget: {
+      dailyTokens: 1_000_000,
+      todayTokens: used ? 240_000 : 0,
+      quotaExhausted: false,
+      creditLimit: 10,
+      creditUsage: used ? 2.5 : null,
+      creditUsageAt: used ? '2026-07-31T08:30:00+09:00' : null,
+      creditDepletionForecast: used ? '2026-09-12' : null,
+    },
   }
 }
 

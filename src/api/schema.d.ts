@@ -3198,6 +3198,34 @@ export interface components {
         };
         /** @enum {string} */
         LlmApiKeyStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
+        LlmKeyBudgetResponse: {
+            /**
+             * Format: date
+             * @description 최근 소비 속도로 금액 한도에 도달할 것으로 보이는 날짜. 이력이 부족하거나 최근에 쓴 적이 없으면 null입니다 — 그때는 화면이 예상 대신 이유를 말합니다.
+             */
+            creditDepletionForecast?: string | null;
+            /** @description 상용 모델에 쓸 수 있는 금액 한도(USD). 0이면 상용 모델을 쓸 수 없습니다. */
+            creditLimit: number;
+            /** @description OpenRouter가 보고한 누적 사용액(USD). 아직 보고된 적이 없으면 null이며, 0으로 표시하지 않습니다. */
+            creditUsage?: number | null;
+            /**
+             * Format: date-time
+             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             */
+            creditUsageAt?: string | null;
+            /**
+             * Format: int64
+             * @description 하루에 쓸 수 있는 토큰 수. null이면 한도가 없고, 0이면 자체 서빙 모델을 쓸 수 없습니다.
+             */
+            dailyTokens?: number | null;
+            /** @description 한도에 도달해 자체 서빙 모델 요청이 거절되고 있는 상태. */
+            quotaExhausted: boolean;
+            /**
+             * Format: int64
+             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 상용 모델 사용은 금액 축에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             */
+            todayTokens: number;
+        };
         LlmKeyDetailResponse: {
             /** @description 접근 권한 목록을 관리할 수 있는지 */
             accessManageAllowed: boolean;
@@ -3258,6 +3286,65 @@ export interface components {
              */
             workspaceId?: string | null;
             workspaceName: string;
+        };
+        LlmKeyErrorTypeResponse: {
+            /** @description 오류 종류. 게이트웨이가 종류를 남기지 않은 실패는 null이며, 화면에서는 '기타'로 묶입니다. */
+            errorType?: string | null;
+            /** Format: int64 */
+            requests: number;
+        };
+        LlmKeyHourlyUsageResponse: {
+            /**
+             * Format: int32
+             * @description 시각. 0~23, KST 기준.
+             */
+            hour: number;
+            /** Format: int64 */
+            requests: number;
+            /**
+             * Format: int32
+             * @description 요일. 1=월요일 … 7=일요일(ISO), KST 기준.
+             */
+            weekday: number;
+        };
+        LlmKeyLatencyResponse: {
+            /**
+             * Format: int64
+             * @description 정상 응답 요청의 중앙값 응답 시간(ms).
+             */
+            p50Ms: number;
+            /** Format: int64 */
+            p90Ms: number;
+            /** Format: int64 */
+            p99Ms: number;
+            /**
+             * Format: int64
+             * @description 백분위를 낸 요청 수. 표본이 적을수록 p99는 흔들립니다.
+             */
+            samples: number;
+        };
+        LlmKeyModelUsageResponse: {
+            /**
+             * Format: int64
+             * @description 이 모델 요청의 평균 응답 시간(ms). 실패와 거부까지 포함한 평균이라 정상 응답만 재는 백분위와는 다른 값입니다.
+             */
+            avgLatencyMs: number;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며, 화면에서는 '모델 미상'으로 묶입니다. */
+            modelName?: string | null;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: int64 */
+            rateLimited: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            succeeded: number;
         };
         LlmKeyRequestSpecResponse: {
             /**
@@ -3394,8 +3481,18 @@ export interface components {
             succeeded: number;
         };
         LlmKeyUsageTrendResponse: {
+            /** @description 기간이 아니라 현재 시점의 두 예산 축 상태 */
+            budget: components["schemas"]["LlmKeyBudgetResponse"];
+            /** @description 이 기간의 실패를 종류별로, 많은 순 */
+            errorTypes: components["schemas"]["LlmKeyErrorTypeResponse"][];
             /** Format: date */
             from: string;
+            /** @description 요일 x 시각(KST) 요청 분포. 요청이 있는 칸만 담깁니다. */
+            hourly: components["schemas"]["LlmKeyHourlyUsageResponse"][];
+            /** @description 정상 응답 요청의 응답 시간 백분위. 정상 응답이 없으면 null입니다. */
+            latency?: components["schemas"]["LlmKeyLatencyResponse"] | null;
+            /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
+            models: components["schemas"]["LlmKeyModelUsageResponse"][];
             /** @description 하루 한 점, 오래된 날부터 */
             points: components["schemas"]["LlmKeyUsagePointResponse"][];
             /**
