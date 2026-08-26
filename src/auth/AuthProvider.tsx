@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api, getCsrfToken, refreshSession } from '../api/client'
 import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
+import { resetMfaEnrollmentRequired } from '../api/mfa-enrollment'
 import { clearReauthToken } from '../api/reauth'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () =>
       onSessionExpired(() => {
         clearReauthToken()
+        resetMfaEnrollmentRequired()
         queryClient.clear()
         setState({ status: 'unauthenticated', user: null })
       }),
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 직전 세션(다른 계정)의 캐시가 새 세션 화면에 렌더링되지 않도록 비운다.
     // 재인증 토큰도 세션에 매인 값이므로 계정이 바뀌면 반드시 버린다.
     clearReauthToken()
+    resetMfaEnrollmentRequired()
     queryClient.clear()
     setState({ status: 'authenticated', user: me.data })
     return me.data
@@ -128,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       clearAccessToken()
       clearReauthToken()
+      resetMfaEnrollmentRequired()
       queryClient.clear()
       // 터미널 팝업은 별도 문서라 이 탭이 로그아웃해도 저절로 닫히지 않는다.
       closeTerminalWindows()
