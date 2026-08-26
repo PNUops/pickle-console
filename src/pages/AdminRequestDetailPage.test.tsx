@@ -7,7 +7,12 @@ import {
   approveBodies,
   rejectBodies,
 } from '../test/msw/handlers/admin'
-import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import {
+  orgAdminUser,
+  orgViewerUser,
+  refreshSuccessHandler,
+  sysAdminUser,
+} from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -266,5 +271,20 @@ describe('반려 폼', () => {
       },
     ])
     expect(await screen.findAllByText('반려됨')).not.toHaveLength(0)
+  })
+})
+
+describe('열람 역할', () => {
+  test('ORG_VIEWER에게는 결정 폼 대신 사유가 보인다', async () => {
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    renderApp(`/admin/requests/${uuid(201)}`)
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        '승인과 반려는 기관 운영자, 기관 관리자, 시스템 관리자만 수행할 수 있습니다.',
+      ),
+    ).toBeInTheDocument()
   })
 })

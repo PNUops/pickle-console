@@ -53,6 +53,22 @@ export const sysManagerUser: Schemas['UserSummaryResponse'] = {
   role: 'SYS_MANAGER',
 }
 
+/** 기관 열람자 — 기관 1이 열람 역할만 부여한 계정. 조회 화면만 닿는다. */
+export const orgViewerUser: Schemas['UserSummaryResponse'] = {
+  id: uuid(63),
+  email: 'viewer.song@pusan.ac.kr',
+  name: '송열람',
+  role: 'ORG_VIEWER',
+}
+
+/** 시스템 열람자 — SYS_MANAGER의 조회만 가진 계정. 감사 로그는 유지한다. */
+export const sysViewerUser: Schemas['UserSummaryResponse'] = {
+  id: uuid(64),
+  email: 'sysviewer.han@pusan.ac.kr',
+  name: '한시스템열람',
+  role: 'SYS_VIEWER',
+}
+
 /** 두 번째 사용자 계정 — 계정 전환(캐시 격리) 테스트용. */
 export const regularUserB: Schemas['UserSummaryResponse'] = {
   id: uuid(58),
@@ -136,6 +152,30 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
   pendingConsents: [],
 }
 
+export const orgViewerProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
+  ...orgViewerUser,
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_VIEWER' as const }],
+  status: 'ACTIVE',
+  memberships: [
+    { workspaceId: uuid(14), workspaceName: '송열람', workspaceKind: 'PERSONAL', role: 'OWNER' },
+  ],
+  mfaEnabled: false,
+  pendingConsents: [],
+}
+
+export const sysViewerProfile: Schemas['UserProfileResponse'] = {
+  ...filledProfile,
+  ...sysViewerUser,
+  managedOrgs: [],
+  status: 'ACTIVE',
+  memberships: [
+    { workspaceId: uuid(16), workspaceName: '한시스템열람', workspaceKind: 'PERSONAL', role: 'OWNER' },
+  ],
+  mfaEnabled: false,
+  pendingConsents: [],
+}
+
 export const regularProfileB: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...regularUserB,
@@ -173,8 +213,10 @@ export const MFA_VALID_RECOVERY_CODE = 'abcd-efgh-ijkl'
 /** Access tokens the mock /me endpoint accepts, mapped to profiles. */
 export const ACCESS_TOKENS: Record<string, Schemas['UserProfileResponse']> = {
   'access-user': regularProfile,
+  'access-org-viewer': orgViewerProfile,
   'access-org-admin': orgAdminProfile,
   'access-org-manager': orgManagerProfile,
+  'access-sys-viewer': sysViewerProfile,
   'access-sys-admin': sysAdminProfile,
   'access-sys-manager': sysManagerProfile,
   'access-user-b': regularProfileB,

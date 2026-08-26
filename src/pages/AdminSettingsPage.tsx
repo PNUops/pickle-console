@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchSettings, updateSetting, type SettingView } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { useAuth } from '../auth/auth-context'
+import { isSysAdminOnly } from '../auth/permissions'
 import {
   SettingValueEditor,
 } from '../components/SettingValueEditor'
@@ -13,6 +15,7 @@ import {
   Card,
   FormField,
   Modal,
+  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -53,6 +56,9 @@ function SettingValue({ setting }: { setting: SettingView }) {
 
 /** 플랫폼 설정 — SYS_ADMIN이 운영 설정 값을 조회·수정한다. */
 export function AdminSettingsPage() {
+  const { user } = useAuth()
+  // 설정 수정은 SYS_ADMIN 전용(§4) — 시스템 운영자와 열람자는 조회만.
+  const canEdit = !!user && isSysAdminOnly(user.role)
   const [editTarget, setEditTarget] = useState<SettingView | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -68,6 +74,11 @@ export function AdminSettingsPage() {
         <p className="mt-1 text-sm text-neutral-500">
           플랫폼 운영 설정입니다. 모든 변경은 감사 로그에 기록됩니다.
         </p>
+        {!canEdit && (
+          <PermissionNotice>
+            설정 수정은 시스템 관리자만 수행할 수 있습니다.
+          </PermissionNotice>
+        )}
       </div>
 
       {message && <Alert variant="info">{message}</Alert>}
@@ -111,6 +122,7 @@ export function AdminSettingsPage() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        disabled={!canEdit}
                         onClick={() => setEditTarget(setting)}
                       >
                         수정

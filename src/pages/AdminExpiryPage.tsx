@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchAdminVms, type VmSummary } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
+import { canOperateVm, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { FilterBar } from '../components/FilterBar'
 import { useOrgOptions } from '../lib/use-org-options'
@@ -13,6 +13,7 @@ import {
   Card,
   DdayBadge,
   Pagination,
+  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -42,6 +43,9 @@ function queryParamsOf(tab: ExpiryTab) {
 export function AdminExpiryPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
+  // 기간 연장은 운영 역할만 — 열람 역할은 조회만이며, 기관 계층의 연장은 자기가
+  // 운영하는 기관의 VM에 한한다 (서버 강제).
+  const canExtend = !!user && canOperateVm(user.role)
   const [tab, setTab] = useState<ExpiryTab>('D7')
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -94,6 +98,12 @@ export function AdminExpiryPage() {
       />
 
       {message && <Alert variant="info">{message}</Alert>}
+      {!canExtend && (
+        <PermissionNotice>
+          기간 연장은 기관 운영자 이상과 시스템 운영자, 시스템 관리자만 수행할 수
+          있습니다.
+        </PermissionNotice>
+      )}
 
       {vms.isPending && (
         <div className="flex justify-center py-12">
@@ -143,6 +153,7 @@ export function AdminExpiryPage() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        disabled={!canExtend}
                         onClick={() => setExtendTarget(vm)}
                       >
                         기간 연장
