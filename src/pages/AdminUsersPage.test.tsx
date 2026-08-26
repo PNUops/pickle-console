@@ -36,17 +36,15 @@ describe('관리자 사용자 목록', () => {
     expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument()
   })
 
-  test('ORG_ADMIN은 파생 소속 사용자만 보고, 타 기관 사용자는 검색되지 않는다', async () => {
+  test('ORG_ADMIN도 다른 기관 사용자를 보고 검색한다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
-    // 파생 소속(org1) 사용자는 보인다
     expect(await screen.findByText('example@pusan.ac.kr')).toBeInTheDocument()
-    // 타 기관(org2) 사용자는 목록·검색에서 제외
+    // 계약 v0.46.0: 사용자 조회가 전 기관에 닿는다. 리소스를 한 번도 신청하지
+    // 않아 어느 기관에도 파생 소속되지 않은 계정이 보이지 않던 것이 이유다.
     await user.type(screen.getByLabelText('사용자 검색'), 'outsider')
-    await waitFor(() =>
-      expect(screen.getByText('표시할 사용자가 없습니다.')).toBeInTheDocument(),
-    )
+    expect(await screen.findByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 상세에서 계정을 비활성화하고 해제할 수 있다', async () => {
@@ -177,5 +175,55 @@ describe('관리자 사용자 목록', () => {
       screen.getByText('계정 상태 변경과 2단계 인증 초기화는 시스템 관리자만 수행할 수 있습니다.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '계정 비활성화' })).toBeDisabled()
+  })
+
+  test('ORG_ADMIN이 자기 관리 기관의 역할을 부여하고 회수한다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관 역할')
+    expect(drawer.getByText('관리하는 기관이 없습니다.')).toBeInTheDocument()
+
+    // 부여할 수 있는 기관은 행위자가 관리자로 있는 기관뿐이다.
+    const orgSelect = drawer.getByLabelText('부여할 기관')
+    expect(
+      within(orgSelect as HTMLSelectElement).queryByRole('option', { name: '전자공학과' }),
+    ).not.toBeInTheDocument()
+    await user.selectOptions(orgSelect, uuid(1))
+    await user.selectOptions(drawer.getByLabelText('부여할 역할'), 'ORG_MANAGER')
+    await user.click(drawer.getByRole('button', { name: '부여' }))
+
+    // 부여되면 목록 항목이 생기고 '관리하는 기관이 없습니다'가 사라진다.
+    await waitFor(() =>
+      expect(drawer.queryByText('관리하는 기관이 없습니다.')).not.toBeInTheDocument(),
+    )
+    expect(drawer.getByRole('button', { name: '회수' })).toBeEnabled()
+
+    // 마지막 관리 기관을 회수하면 일반 사용자가 된다고 확인 모달이 말한다.
+    await user.click(drawer.getByRole('button', { name: '회수' }))
+    const modal = within(await screen.findByRole('dialog', { name: '기관 역할 회수' }))
+    expect(
+      modal.getByText(/마지막 관리 기관이므로 이 계정은 일반 사용자가 되고/),
+    ).toBeInTheDocument()
+    await user.click(modal.getByRole('button', { name: '회수' }))
+
+    await waitFor(() =>
+      expect(drawer.getByText('관리하는 기관이 없습니다.')).toBeInTheDocument(),
+    )
+  })
+
+  test('시스템 계층 계정에는 기관 역할 부여가 사유와 함께 막힌다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await openDetail(user, '이시스템')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관 역할')
+    expect(
+      drawer.getByText('시스템 관리자 계정의 기관 역할은 변경할 수 없습니다.'),
+    ).toBeInTheDocument()
+    expect(drawer.getByRole('button', { name: '부여' })).toBeDisabled()
   })
 })
