@@ -1,5 +1,6 @@
 import createClient from 'openapi-fetch'
 import { notifyMaintenanceDetected } from './maintenance'
+import { notifyMfaEnrollmentRequired } from './mfa-enrollment'
 import { isProblem } from './problem'
 import { clearReauthToken, getReauthToken, requestReauth } from './reauth'
 import type { components, paths } from './schema'
@@ -142,12 +143,37 @@ async function fetchWithAuth(input: Request): Promise<Response> {
     if (await requestReauth()) {
       const retryResponse = await sendWithRefresh(reauthCopy)
       signalMaintenance(retryResponse)
+      signalMfaEnrollment(retryResponse)
       return retryResponse
     }
   }
 
   signalMaintenance(response)
+  signalMfaEnrollment(response)
   return response
+}
+
+/**
+ * A 403 MFA_ENROLLMENT_REQUIRED (admin 2FA enforcement, sys tier only) notifies
+ * the shell so the account is taken to the enrollment screen instead of being
+ * left on a page of errors. Read off a clone so the caller's body stays intact;
+ * fire-and-forget so it never blocks the call.
+ *
+ * <p>This fires repeatedly while the account stays unenrolled — every polling
+ * query keeps hitting it — so the subscriber, not this function, is where the
+ * repeat is absorbed.
+ */
+function signalMfaEnrollment(response: Response): void {
+  if (response.status !== 403) return
+  void response
+    .clone()
+    .json()
+    .then((body: unknown) => {
+      if (isProblem(body) && body.code === 'MFA_ENROLLMENT_REQUIRED') {
+        notifyMfaEnrollmentRequired()
+      }
+    })
+    .catch(() => {})
 }
 
 /**

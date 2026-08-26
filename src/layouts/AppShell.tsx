@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { onMaintenanceDetected } from '../api/maintenance'
+import { isMfaEnrollmentRequired, onMfaEnrollmentRequired } from '../api/mfa-enrollment'
 import { fetchSystemStatus } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
@@ -15,6 +16,12 @@ import { CONTACT_URL, DOCS_PATH, FEEDBACK_URL } from '../lib/brand'
 import { cn } from '../lib/cn'
 import { useFocusTrap } from '../lib/use-focus-trap'
 import { UserMenu } from './UserMenu'
+
+/**
+ * 2FA 등록 화면의 경로. 관리자 셸 안에 있고, 서버의 2FA 강제 필터가 면제하는
+ * `/me`와 `/me/mfa/**`만으로 동작하므로 강제가 켜진 상태에서도 열린다.
+ */
+const MFA_ENROLL_PATH = '/admin/account'
 
 /** 공지 배너를 세션 동안 닫아둔 상태로 기억하는 sessionStorage 키. */
 const BANNER_DISMISS_KEY = 'pickle_banner_dismissed'
@@ -233,6 +240,37 @@ export function AppShell({
     [queryClient],
   )
 
+  // 관리자 2FA 강제가 켜져 있고 아직 등록하지 않은 시스템 계층 계정은, 서버가
+  // 면제한 몇 개(/me, /me/mfa/**, /auth/**, /meta/**) 밖의 모든 요청에서 403
+  // MFA_ENROLLMENT_REQUIRED를 받는다. 로그인이 막힌 것이 아니라 범위가 좁혀진
+  // 것이고, 등록 화면은 그 면제 안에 있어 언제나 열려 있다. 없는 것은 거기로
+  // 가라는 안내뿐이라, 화면마다 오류 상자를 띄우는 대신 여기서 한 번 받아
+  // 등록 화면으로 데려다 놓는다.
+  //
+  // 이 신호는 계정이 등록을 마칠 때까지 계속 온다 — 알림 개수처럼 주기적으로
+  // 도는 조회가 매번 같은 403을 받기 때문이다. 그래서 이미 그 화면에 있으면
+  // 아무것도 하지 않는다. 이 검사가 없으면 등록 화면 위에서 같은 곳으로
+  // 이동하는 내비게이션이 폴링 주기마다 반복된다.
+  //
+  // 현재 위치는 라우터에게 묻는다. `window.location` 은 이 앱에서 두 번 틀린다 —
+  // 테스트가 MemoryRouter 로 돌아 주소창이 움직이지 않고, 실제로도 라우터가
+  // 옮긴 위치가 반영되기 전 시점이 있다. 둘 다 가드가 조용히 열려 반복 이동이
+  // 되살아나는 방향으로 틀린다.
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const atEnrollScreen = pathname === MFA_ENROLL_PATH
+  useEffect(() => {
+    const goEnroll = () => {
+      if (atEnrollScreen) return
+      void navigate(`${MFA_ENROLL_PATH}?enroll=2fa`, { replace: true })
+    }
+    // 이미 걸린 뒤에 이 셸이 붙었을 수 있다 — 첫 요청이 구독보다 먼저 답하는
+    // 창이 있고, 거기서 신호만 기다리면 그 한 번을 통째로 놓친다. 걸려 있으면
+    // 지금 옮기고, 이후 것은 구독이 받는다.
+    if (isMfaEnrollmentRequired()) goEnroll()
+    return onMfaEnrollmentRequired(goEnroll)
+  }, [navigate, atEnrollScreen])
+
   const [dismissedBanner, setDismissedBanner] = useState<string | null>(() =>
     typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BANNER_DISMISS_KEY) : null,
   )
@@ -243,7 +281,6 @@ export function AppShell({
   }
 
   // NavLink onClick이 기본 닫힘 경로지만, UserMenu 등 다른 경로 이동도 덮는 안전망.
-  const { pathname } = useLocation()
   useEffect(() => {
     setDrawerOpen(false)
   }, [pathname])
