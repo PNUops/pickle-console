@@ -163,8 +163,13 @@ export const auditHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
 
-    // 계약: orgId 필터는 SYS_ADMIN 전용 — ORG_ADMIN이 다른 기관을 지정하면 404 (존재 비공개)
-    if (orgId && !isSysTier(profile.role) && orgId !== profile.orgId) {
+    // 계약 v0.46.0: 감사 로그는 전역 조회의 예외로 관리 기관 안에 머문다.
+    // 기관 계층이 관리하지 않는 기관을 지정하면 404 (존재 비공개).
+    if (
+      orgId &&
+      !isSysTier(profile.role) &&
+      !profile.managedOrgs.some((org) => org.orgId === orgId)
+    ) {
       return problemResponse({
         type: 'about:blank',
         title: '리소스를 찾을 수 없습니다',
@@ -176,8 +181,12 @@ export const auditHandlers: RequestHandler[] = [
     }
 
     const filtered = auditStore
-      // ORG_ADMIN은 행위자가 자기 기관 소속인 행만 (계약)
-      .filter((row) => isSysTier(profile.role) || row.actorOrgId === profile.orgId)
+      // 기관 계층은 행위자가 관리 기관 소속인 행만 (계약)
+      .filter(
+        (row) =>
+          isSysTier(profile.role) ||
+          profile.managedOrgs.some((org) => org.orgId === row.actorOrgId),
+      )
       .filter((row) => !orgId || row.actorOrgId === orgId)
       .filter((row) => !action || row.action === action)
       .filter((row) => !actorEmail || (row.actorEmail ?? '').includes(actorEmail))

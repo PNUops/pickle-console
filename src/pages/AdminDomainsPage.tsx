@@ -95,7 +95,7 @@ export function AdminDomainsPage() {
     queryFn: () => fetchAdminDomains({ status, kind, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
 
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
 
@@ -105,8 +105,9 @@ export function AdminDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용·인증서 상태입니다.
-            행을 선택하면 라우트·인증서 상세와 개입 작업이 열립니다.
+            전 기관 VM의 도메인과 라우트 적용, 인증서 상태입니다. 행을 선택하면
+            라우트와 인증서 상세, 개입 작업이 열립니다. 강제 해제와 재검증은
+            자기가 관리하는 기관의 도메인에만 적용됩니다.
           </p>
         </div>
         {isSysAdmin && <ResyncButton />}
@@ -127,7 +128,7 @@ export function AdminDomainsPage() {
             setStatus(next)
             setPage(0)
           }}
-          isSysAdmin={isSysAdmin}
+          showOrgFilter
           orgId={orgId}
           onOrg={(next) => {
             setOrgId(next)
@@ -177,7 +178,7 @@ export function AdminDomainsPage() {
                   <TR>
                     <TH>도메인</TH>
                     <TH>VM / 워크스페이스</TH>
-                    {isSysAdmin && <TH>기관</TH>}
+                    <TH>기관</TH>
                     <TH>상태</TH>
                     <TH>라우트</TH>
                     <TH>인증서</TH>
@@ -213,7 +214,7 @@ export function AdminDomainsPage() {
                         {domain.vmName}
                         <span className="block text-xs text-neutral-500">{domain.workspaceName}</span>
                       </TD>
-                      {isSysAdmin && <TD>{domain.orgName}</TD>}
+                      <TD>{domain.orgName}</TD>
                       <TD>
                         <DomainStatusBadge status={domain.status} />
                         {/* 예약 판별은 status가 아니라 releasedAt이다 — 해제된

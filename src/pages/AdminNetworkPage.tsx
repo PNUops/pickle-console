@@ -365,7 +365,7 @@ function ForwardingsTab({ isSysAdmin }: { isSysAdmin: boolean }) {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}
@@ -854,7 +854,7 @@ function CampusTab({ isSysAdmin }: { isSysAdmin: boolean }) {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}

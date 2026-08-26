@@ -108,12 +108,13 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 비활성+사유로 보인다', async () => {
+  test('ORG_ADMIN도 기관 필터를 쓰고 강제 삭제는 비활성+사유로 보인다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await screen.findByRole('heading', { name: 'VM 관리' })
-    expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
+    // 계약 v0.46.0: 조회가 전 기관에 닿으므로 기관 필터가 기관 계층에도 열린다.
+    expect(await screen.findByLabelText('기관 필터')).toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
     expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeEnabled()

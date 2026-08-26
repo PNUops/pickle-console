@@ -82,11 +82,13 @@ describe('승인 대기 큐', () => {
     expect(screen.getAllByRole('link', { name: '홍길동' }).length).toBeGreaterThan(1)
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 보이지 않는다', async () => {
+  test('ORG_ADMIN에게도 기관 필터가 보인다', async () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
+    // 계약 v0.46.0: 신청 조회가 전 기관에 닿는다. 승인과 반려는 그대로 관리
+    // 기관 안이며, 그쪽은 API가 404로 막는다.
+    expect(await screen.findByLabelText('기관 필터')).toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 기관 필터로 특정 기관의 신청만 볼 수 있다', async () => {

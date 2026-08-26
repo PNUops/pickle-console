@@ -5,8 +5,6 @@ import {
   fetchOrgs,
   type CertificateStatus,
 } from '../api/queries'
-import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -40,8 +38,6 @@ const STATUS_TABS: { label: string; status: CertificateStatus | undefined }[] = 
 
 /** 인증서 만료·발급 상태 — 공개 서비스 화면의 인증서 탭 (만료 임박 일괄 점검 축). */
 export function CertificatesSection() {
-  const { user } = useAuth()
-  const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [expiringSoon, setExpiringSoon] = useState(false)
@@ -58,7 +54,7 @@ export function CertificatesSection() {
     queryFn: () => fetchAdminCertificates({ status, orgId, expiringInDays, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
 
   return (
     <div className="space-y-6">
@@ -69,7 +65,7 @@ export function CertificatesSection() {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={isSysAdmin}
+        showOrgFilter
         orgId={orgId}
         onOrg={(next) => {
           setOrgId(next)

@@ -76,7 +76,7 @@ export function AdminDriftPage() {
           setStatus(next ?? 'OPEN')
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}

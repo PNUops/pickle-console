@@ -2,14 +2,18 @@ import type { ReactNode } from 'react'
 import { Select } from './ui'
 
 /**
- * 관리자 목록 화면 공통 필터 바 — 상태 탭 + (SYS_ADMIN) 기관 선택 + 추가 필터 슬롯.
+ * 관리자 목록 화면 공통 필터 바 — 상태 탭 + 기관 선택 + 추가 필터 슬롯.
  * `tabs`가 비어 있으면 탭 영역을 렌더링하지 않는다 (추가 필터 전용 바).
+ *
+ * 기관 선택은 계약 v0.46.0부터 관리자 계층 전체에 열린다. 기관 계층의 조회가
+ * 전 기관에 닿으므로 `orgId`는 범위를 고정하는 값이 아니라 좁히는 필터다.
+ * 감사 화면만 예외이며, 거기서는 호출부가 `orgs`를 관리 기관으로 좁혀 넘긴다.
  */
 export function FilterBar<S>({
   tabs,
   status,
   onStatus,
-  isSysAdmin,
+  showOrgFilter,
   orgId,
   onOrg,
   orgs,
@@ -18,7 +22,7 @@ export function FilterBar<S>({
   tabs: { label: string; status: S | undefined }[]
   status: S | undefined
   onStatus: (status: S | undefined) => void
-  isSysAdmin: boolean
+  showOrgFilter: boolean
   orgId: string | undefined
   onOrg: (orgId: string | undefined) => void
   orgs: { id: string; name: string }[]
@@ -54,7 +58,7 @@ export function FilterBar<S>({
       )}
       <div className="flex flex-wrap items-center gap-3">
         {children}
-        {isSysAdmin && (
+        {showOrgFilter && (
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             기관
             <Select
