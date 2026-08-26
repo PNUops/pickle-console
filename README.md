@@ -78,7 +78,7 @@ TypeScript 타입은 백엔드가 생성한 OpenAPI 스펙에서 만들어 레�
 React 19, TypeScript, Vite 8, Tailwind 4, TanStack Query 5, react-router 8,
 openapi-fetch. 웹 터미널은 xterm.js, 랜딩의 3D 히어로는 react-three-fiber, 사용량·용량
 추이 차트는 uPlot을 사용합니다. 무거운 세 가지는 모두 해당 화면을 열 때만 내려받도록
-코드 분할해 두었습니다.
+코드 분할해 두었습니다. 2단계 인증 등록 화면의 QR 코드는 qrcode.react가 SVG로 그립니다.
 테스트는 vitest와 MSW 조합이고, 린트는 oxlint로 경고까지 실패로 취급합니다.
 
 Node.js 24(LTS)가 필요합니다. `package.json`의 `engines`에 적혀 있습니다.
