@@ -13,9 +13,10 @@ test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async 
   // 기본 1초는 이 대기에 맞지 않는다. 기다리는 것이 렌더가 아니라 **동적 import** 이고,
   // 병렬 워커가 CPU를 나눠 쓰는 동안에는 1초를 넘긴다(두 라운드가 각자 실측으로 같은
   // 결론에 닿았다). 시간을 늘리는 것이 증상 덮기가 아닌 이유는 이 단언이 재는 것이
-  // 속도가 아니라 "청크가 결국 렌더된다" 이기 때문이다.
+  // 속도가 아니라 "청크가 결국 렌더된다" 이기 때문이다. 다른 작업과 머신을 나눠
+  // 쓰는 전체 실행에서 5초도 두 번 모자랐다 — 같은 근거로 한 번 더 늘린다.
   expect(
-    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 5000 }),
+    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 15_000 }),
   ).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /서비스 소개/ })).toBeInTheDocument()
 
