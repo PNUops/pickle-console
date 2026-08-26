@@ -76,30 +76,13 @@ describe('구글 온보딩 폼', () => {
     const submit = screen.getByRole('button', { name: '가입 완료' })
     expect(submit).toBeDisabled()
 
-    await screen.findByRole('option', { name: '학부생' })
-    await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
-    await user.type(screen.getByLabelText('학번'), '202012345')
-    await user.selectOptions(screen.getByLabelText('소속'), 'COMPUTER_SCIENCE')
+    // 직책과 소속 학과는 여기서 묻지 않는다. 남는 것은 이름과 약관뿐이다.
+    expect(screen.queryByLabelText('직책')).not.toBeInTheDocument()
     for (const box of await screen.findAllByRole('checkbox')) await user.click(box)
 
     expect(submit).toBeEnabled()
     await user.click(submit)
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
-  })
-
-  test('직책을 비학생으로 바꾸면 학번 입력이 사라진다', async () => {
-    const user = userEvent.setup()
-    renderApp(callback(NEW_ACCOUNT_CODE))
-    await screen.findByRole('heading', { name: '가입 정보 입력' })
-    await screen.findByRole('option', { name: '학부생' })
-
-    await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
-    expect(screen.getByLabelText('학번')).toBeInTheDocument()
-
-    // 남겨 두면 교수 계정에 학번이 딸려 가고, 값이 형식에 안 맞으면 화면에 없는
-    // 필드에 대한 422를 받게 된다.
-    await user.selectOptions(screen.getByLabelText('직책'), 'PROFESSOR')
-    expect(screen.queryByLabelText('학번')).not.toBeInTheDocument()
   })
 
   test('토큰 없이 직접 들어오면 로그인 화면으로 돌린다', async () => {

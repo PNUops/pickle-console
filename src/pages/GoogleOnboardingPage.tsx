@@ -4,13 +4,10 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 import { api } from '../api/client'
 import { isProblem } from '../api/problem'
 import { fetchCurrentTerms } from '../api/queries'
-import type { components } from '../api/schema'
 import { setAccessToken } from '../api/token'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { ConsentCheckboxes } from '../components/auth/ConsentCheckboxes'
 import { allConsented } from '../components/auth/consent-values'
-import { ProfileFields } from '../components/profile/ProfileFields'
-import { EMPTY_PROFILE, type ProfileValues } from '../components/profile/profile-values'
 import { TransitionLink } from '../components/TransitionLink'
 import { Alert, Button, FormField, Input } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
@@ -25,7 +22,7 @@ interface RegistrationState {
   name?: string
 }
 
-const FIELDS = ['name', 'position', 'studentNo', 'departmentCode'] as const
+const FIELDS = ['name'] as const
 
 /**
  * 구글로 처음 들어온 사람의 가입 폼.
@@ -36,7 +33,8 @@ const FIELDS = ['name', 'position', 'studentNo', 'departmentCode'] as const
  * 채 남는다.
  *
  * 주소와 비밀번호는 받지 않는다. 주소는 토큰이 대신하는 검증된 신원의 것이고, 구글로
- * 만든 계정에는 비밀번호가 없다.
+ * 만든 계정에는 비밀번호가 없다. 직책과 소속 학과도 받지 않는다 — 선택 입력이라
+ * 계정이 생긴 뒤 콘솔 안에서 묻는다. 남는 것은 이름과 약관 동의뿐이다.
  */
 export function GoogleOnboardingPage() {
   const location = useLocation()
@@ -44,13 +42,10 @@ export function GoogleOnboardingPage() {
   const { refreshProfile } = useAuth()
   const registration = (location.state as { registration?: RegistrationState } | null)?.registration
 
-  const { data: currentTerms = [] } = useQuery({
-    queryKey: ['terms'],
-    queryFn: fetchCurrentTerms,
-  })
+  const terms = useQuery({ queryKey: ['terms'], queryFn: fetchCurrentTerms })
+  const currentTerms = terms.data ?? []
 
   const [name, setName] = useState(registration?.name ?? '')
-  const [profile, setProfile] = useState<ProfileValues>(EMPTY_PROFILE)
   const [agreed, setAgreed] = useState<Record<string, boolean>>({})
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<(typeof FIELDS)[number], string>>>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -68,8 +63,6 @@ export function GoogleOnboardingPage() {
 
     const errors: typeof fieldErrors = {}
     if (!name.trim()) errors.name = '이름을 입력해 주세요.'
-    if (!profile.position) errors.position = '직책을 선택해 주세요.'
-    if (!profile.departmentCode) errors.departmentCode = '소속을 선택해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (!allConsented(currentTerms, agreed)) {
@@ -83,16 +76,13 @@ export function GoogleOnboardingPage() {
         body: {
           registrationToken: registration.registrationToken,
           name: name.trim(),
-          position: profile.position as components['schemas']['UserPosition'],
-          studentNo: profile.studentNo.trim() || undefined,
-          departmentCode: profile.departmentCode,
           consents: currentTerms.map((doc) => ({ docType: doc.docType, version: doc.version })),
         },
       })
       if (data) {
         setAccessToken(data.accessToken)
         await refreshProfile()
-          schedulePostLoginOverlay()
+        schedulePostLoginOverlay()
         navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(data.user.role), { replace: true })
         return
       }
@@ -137,17 +127,24 @@ export function GoogleOnboardingPage() {
               />
             </FormField>
 
-            <div className="space-y-4 border-t border-white/10 pt-5">
-              <p className="text-sm font-medium text-neutral-300">소속 정보</p>
-              <ProfileFields
-                values={profile}
-                onChange={setProfile}
-                errors={fieldErrors}
-                disabled={submitting}
-              />
-            </div>
-
             <div className="space-y-2 border-t border-white/10 pt-5">
+              {/*
+                여기서 약관을 못 받아 오면 새로고침도 답이 아니다. 가입 토큰이
+                라우터 상태에만 있어서 새로고침하면 구글 동의 화면부터 다시
+                해야 한다. 제자리에서 다시 시도할 수 있어야 한다.
+              */}
+              {terms.isError && (
+                <Alert variant="danger">
+                  약관을 불러오지 못했습니다.{' '}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2"
+                    onClick={() => void terms.refetch()}
+                  >
+                    다시 시도
+                  </button>
+                </Alert>
+              )}
               <ConsentCheckboxes
                 documents={currentTerms}
                 agreed={agreed}

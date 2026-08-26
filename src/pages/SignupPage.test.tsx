@@ -9,12 +9,6 @@ async function fillSignupForm(values: {
   password?: string
   passwordConfirm?: string
   agree?: boolean
-  /** 기본은 학부생이라 학번까지 채운다. 비학생 경로를 보려면 코드를 넘긴다. */
-  position?: string
-  studentNo?: string
-  departmentCode?: string
-  /** 프로필을 일부러 비운 채 제출하고 싶을 때. */
-  fillProfile?: boolean
 }) {
   const user = userEvent.setup()
   if (values.name) await user.type(screen.getByLabelText('이름'), values.name)
@@ -22,17 +16,6 @@ async function fillSignupForm(values: {
   if (values.password) await user.type(screen.getByLabelText('비밀번호'), values.password)
   if (values.passwordConfirm) {
     await user.type(screen.getByLabelText('비밀번호 확인'), values.passwordConfirm)
-  }
-  if (values.fillProfile !== false) {
-    // 카탈로그가 도착해야 옵션이 생긴다.
-    await screen.findByRole('option', { name: '학부생' })
-    await user.selectOptions(screen.getByLabelText('직책'), values.position ?? 'STUDENT_UNDERGRAD')
-    const studentNo = screen.queryByLabelText('학번')
-    if (studentNo) await user.type(studentNo, values.studentNo ?? '202012345')
-    await user.selectOptions(
-      screen.getByLabelText('소속'),
-      values.departmentCode ?? 'COMPUTER_SCIENCE',
-    )
   }
   if (values.agree !== false) {
     // consent checkboxes appear once /meta/terms loads

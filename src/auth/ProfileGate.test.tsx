@@ -59,6 +59,21 @@ describe('프로필 게이트', () => {
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 
+  test('직책을 비학생으로 바꾸면 학번 입력이 사라진다', async () => {
+    const user = userEvent.setup()
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '소속 정보를 입력해 주세요' })
+    await screen.findByRole('option', { name: '학부생' })
+
+    await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
+    expect(screen.getByLabelText('학번')).toBeInTheDocument()
+
+    // 남겨 두면 교수 계정에 학번이 딸려 가고, 값이 형식에 안 맞으면 화면에 없는
+    // 필드에 대한 422를 받게 된다.
+    await user.selectOptions(screen.getByLabelText('직책'), 'PROFESSOR')
+    expect(screen.queryByLabelText('학번')).not.toBeInTheDocument()
+  })
+
   test('갇히지 않도록 로그아웃 길이 있다', async () => {
     renderApp('/console')
     await screen.findByRole('heading', { name: '소속 정보를 입력해 주세요' })
