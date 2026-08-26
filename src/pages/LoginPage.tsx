@@ -203,7 +203,7 @@ export function LoginPage() {
     <div className="w-full">
       <h1 className="text-center text-2xl font-bold text-white">로그인</h1>
       <p className="mt-2 text-center text-sm text-neutral-400">
-        부산대학교 구글 계정으로 로그인해 주세요.
+        부산대학교 계정으로 로그인해 주세요.
       </p>
       {systemStatus?.maintenance ? (
         // 점검 중에는 평소 공지를 누르고 점검을 말한다. 셸이 같은 우선순위를 쓰고,
@@ -315,12 +315,18 @@ export function LoginPage() {
           </form>
         </AuthCardContent>
       </AuthCard>
-      <p className="mt-6 text-center text-sm text-neutral-400">
-        아직 계정이 없으신가요?{' '}
-        <TransitionLink to="/signup" className="font-medium text-primary-300 hover:underline">
-          회원가입
-        </TransitionLink>
-      </p>
+      {/*
+        2단계에는 주소를 달고 가는 「이 이메일로 회원가입」이 카드 안에 있다. 둘을
+        같이 두면 같은 말이 두 줄 겹치고, 바깥 것은 방금 친 주소를 버린다.
+      */}
+      {step === 'email' && (
+        <p className="mt-6 text-center text-sm text-neutral-400">
+          아직 계정이 없으신가요?{' '}
+          <TransitionLink to="/signup" className="font-medium text-primary-300 hover:underline">
+            회원가입
+          </TransitionLink>
+        </p>
+      )}
       {systemStatus?.contactEmail && (
         <p className="mt-8 text-center text-xs text-neutral-400">
           문의: <ContactEmail email={systemStatus.contactEmail} className="text-neutral-400" />
