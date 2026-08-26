@@ -1,15 +1,18 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   MFA_VALID_CODE,
   mfaUser,
+  orgAdminUser,
   refreshSuccessHandler,
+  regularProfile,
   regularUser,
   USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 
 function renderAccount() {
   server.use(refreshSuccessHandler('access-user', regularUser))
@@ -140,6 +143,36 @@ describe('계정 설정 — 2단계 인증', () => {
 
     expect(await screen.findByText(/복구 코드는 지금 한 번만 표시됩니다/)).toBeInTheDocument()
     expect(screen.getByText('aaaa-bbbb-cccc')).toBeInTheDocument()
+  })
+
+  test('배너 딥링크로 들어오면 클릭 없이 등록 마법사가 서고 표식은 지워진다', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp('/admin/account?enroll=2fa')
+
+    // 관리자가 배너에서 누르고 도착한 지점. 여기서 다시 "로그인 수단"을 찾아
+    // 내려가야 한다면 딥링크가 한 일이 없다.
+    expect(await screen.findByRole('dialog')).toHaveTextContent('2단계 인증 등록')
+    expect(screen.getByLabelText('비밀번호 확인')).toBeInTheDocument()
+
+    // 표식이 남으면 새로고침마다 모달이 다시 선다.
+    await waitFor(() => expect(currentPath()).toBe('/admin/account'))
+  })
+
+  test('비밀번호 없는 계정은 딥링크로도 마법사가 서지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-user'))
+    server.use(
+      http.get('*/api/v1/me', () =>
+        HttpResponse.json({ ...regularProfile, hasPassword: false }, { status: 200 }),
+      ),
+    )
+    renderApp('/console/account?enroll=2fa')
+
+    // 등록은 비밀번호 확인을 거치므로(MfaService) 채울 수 없는 폼을 열어 봐야
+    // 막다른 길이다. 행의 안내가 이유를 말하는 쪽이 맞다.
+    // 탈퇴 행도 같은 문장을 쓰므로 2단계 인증 쪽만 집는다.
+    await screen.findByText(/등록은 비밀번호 확인을 거칩니다/)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(currentPath()).toBe('/console/account'))
   })
 
   test('등록 계정은 비밀번호+코드로 해제한다', async () => {

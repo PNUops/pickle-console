@@ -631,6 +631,7 @@ function LinkedAccountsSection({
  */
 function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassword: boolean }) {
   const { refreshProfile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   // Enrollment wizard: idle → password → activate → recovery (shown once).
   const [step, setStep] = useState<'idle' | 'password' | 'activate' | 'recovery'>('idle')
   const [password, setPassword] = useState('')
@@ -647,6 +648,26 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
     setRecoveryCodes(null)
     setError(null)
   }
+
+  // 관리자 셸의 2FA 권유 배너가 `?enroll=2fa`로 보낸다. 배너가 가리키는 것은 화면이
+  // 아니라 동작이므로, 도착과 동시에 마법사를 연다. 등록할 수 없는 계정(이미 등록됐거나
+  // 비밀번호가 없는 계정)에서는 열지 않는다 — 행에 이미 그 이유가 적혀 있다.
+  const enrollRequested = searchParams.get('enroll') === '2fa'
+  const canEnroll = !enabled && hasPassword
+  useEffect(() => {
+    if (!enrollRequested) return
+    if (canEnroll) setStep('password')
+    // 표식은 곧바로 지운다. 남겨 두면 새로고침마다 모달이 다시 선다. 구글 연동 복귀
+    // 표식과 달리 이 키만 지운다 — 두 효과가 같은 주소를 두고 다투면 안 된다.
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('enroll')
+        return next
+      },
+      { replace: true },
+    )
+  }, [enrollRequested, canEnroll, setSearchParams])
 
   const begin = useMutation({
     mutationFn: () => beginMfaSetup(password),
