@@ -1,4 +1,4 @@
-import pnuEmblem from '../../assets/pnu-emblem.png'
+import pnuLogo from '../../assets/pnu-logo.png'
 
 // 교내 유관 사이트(기관 요청으로 랜딩에만 노출). 라벨은 각 사이트의 공식 명칭이고,
 // 순서는 상위 기관 → 학부 → 교육원 → 시스템.
@@ -32,7 +32,7 @@ export function FamilySites() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600 transition-colors hover:border-neutral-300 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
             >
-              <img src={pnuEmblem} alt="" aria-hidden="true" className="size-5 shrink-0 rounded-full" />
+              <img src={pnuLogo} alt="" aria-hidden="true" className="h-5 w-auto shrink-0" />
               {site.label}
             </a>
           ))}

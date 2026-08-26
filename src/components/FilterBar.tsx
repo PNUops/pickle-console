@@ -2,14 +2,19 @@ import type { ReactNode } from 'react'
 import { Select } from './ui'
 
 /**
- * 관리자 목록 화면 공통 필터 바 — 상태 탭 + (SYS_ADMIN) 기관 선택 + 추가 필터 슬롯.
+ * 관리자 목록 화면 공통 필터 바 — 상태 탭 + 기관 선택 + 추가 필터 슬롯.
  * `tabs`가 비어 있으면 탭 영역을 렌더링하지 않는다 (추가 필터 전용 바).
+ *
+ * 기관 선택지는 호출부가 계정이 지정할 수 있는 기관으로 좁혀 넘긴다 — 시스템
+ * 계층은 전 기관, 기관 계층은 역할을 보유한 기관만 (계약 v0.46.0: 보유하지 않은
+ * 기관을 지정하면 404). 고를 것이 하나뿐이면 선택기를 보이지 않는 것이 관례라
+ * `showOrgFilter`는 보통 `orgOptions.length > 1`이다.
  */
 export function FilterBar<S>({
   tabs,
   status,
   onStatus,
-  isSysAdmin,
+  showOrgFilter,
   orgId,
   onOrg,
   orgs,
@@ -18,7 +23,7 @@ export function FilterBar<S>({
   tabs: { label: string; status: S | undefined }[]
   status: S | undefined
   onStatus: (status: S | undefined) => void
-  isSysAdmin: boolean
+  showOrgFilter: boolean
   orgId: string | undefined
   onOrg: (orgId: string | undefined) => void
   orgs: { id: string; name: string }[]
@@ -54,7 +59,7 @@ export function FilterBar<S>({
       )}
       <div className="flex flex-wrap items-center gap-3">
         {children}
-        {isSysAdmin && (
+        {showOrgFilter && (
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             기관
             <Select

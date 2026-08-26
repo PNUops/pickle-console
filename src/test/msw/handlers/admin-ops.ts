@@ -1,7 +1,7 @@
-import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
+import { adminReadScope } from './org-scope'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
@@ -409,19 +409,16 @@ export const adminOpsHandlers: RequestHandler[] = [
 
   /* ─── 대시보드 요약 ─── */
 
+  // 계약 v0.46.0: 시스템 계층은 전 기관을 보고 orgId로 드릴인한다. 기관 계층은
+  // 역할을 보유한 기관 안이며 그 밖의 기관을 지정하면 404 (존재 비공개).
   http.get('*/api/v1/admin/summary', ({ request }) => {
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
     const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
     const profile = ACCESS_TOKENS[token]
-    // 계약: orgId는 SYS_ADMIN 드릴인 전용 — ORG_ADMIN이 다른 기관을 지정하면 404 (존재 비공개)
-    if (
-      orgId &&
-      profile &&
-      !isSysTier(profile.role) &&
-      orgId !== profile.orgId
-    ) {
-      return notFound()
+    if (profile) {
+      const scope = adminReadScope(profile, orgId, '/api/v1/admin/summary')
+      if (scope.notFound) return scope.notFound
     }
     return HttpResponse.json(orgSummaryFixture, { status: 200 })
   }),

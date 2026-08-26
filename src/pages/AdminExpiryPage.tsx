@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchAdminVms, fetchOrgs, type VmSummary } from '../api/queries'
+import { fetchAdminVms, type VmSummary } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
+import { canOperateVm, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { FilterBar } from '../components/FilterBar'
+import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
@@ -12,6 +13,7 @@ import {
   Card,
   DdayBadge,
   Pagination,
+  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -41,6 +43,9 @@ function queryParamsOf(tab: ExpiryTab) {
 export function AdminExpiryPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
+  // 기간 연장은 운영 역할만 — 열람 역할은 조회만이며, 기관 계층의 연장은 자기가
+  // 운영하는 기관의 VM에 한한다 (서버 강제).
+  const canExtend = !!user && canOperateVm(user.role)
   const [tab, setTab] = useState<ExpiryTab>('D7')
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -63,15 +68,16 @@ export function AdminExpiryPage() {
     queryFn: () => fetchAdminVms({ ...params, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">만료 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM의 사용 기간 만료 현황입니다. 만료된 VM은
-          자동으로 중지되며, 기간을 연장하면 다시 시작할 수 있습니다.
+          {isSysAdmin ? '전체' : '우리 기관'} VM의 사용 기간 만료 현황입니다. 만료된
+          VM은 자동으로 중지되며, 기간을 연장하면 다시 시작할 수 있습니다.
         </p>
       </div>
 
@@ -82,16 +88,22 @@ export function AdminExpiryPage() {
           setTab(next ?? 'D7')
           setPage(0)
         }}
-        isSysAdmin={isSysAdmin}
+        showOrgFilter={orgOptions.length > 1}
         orgId={orgId}
         onOrg={(next) => {
           setOrgId(next)
           setPage(0)
         }}
-        orgs={orgs.data ?? []}
+        orgs={orgOptions}
       />
 
       {message && <Alert variant="info">{message}</Alert>}
+      {!canExtend && (
+        <PermissionNotice>
+          기간 연장은 기관 운영자 이상과 시스템 운영자, 시스템 관리자만 수행할 수
+          있습니다.
+        </PermissionNotice>
+      )}
 
       {vms.isPending && (
         <div className="flex justify-center py-12">
@@ -141,6 +153,7 @@ export function AdminExpiryPage() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        disabled={!canExtend}
                         onClick={() => setExtendTarget(vm)}
                       >
                         기간 연장

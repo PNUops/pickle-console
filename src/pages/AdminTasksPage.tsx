@@ -7,6 +7,8 @@ import {
   type ProvisioningTaskStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { useAuth } from '../auth/auth-context'
+import { canRunSysRoutine } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -14,6 +16,7 @@ import {
   Card,
   Modal,
   Pagination,
+  PermissionNotice,
   Spinner,
   Table,
   TaskStatusBadge,
@@ -40,6 +43,9 @@ const STATUS_TABS: { label: string; status: ProvisioningTaskStatus | undefined }
 
 /** 작업(태스크) 큐 — SYS_ADMIN이 NEEDS_ADMIN 작업의 원인을 확인하고 재시도한다. */
 export function AdminTasksPage() {
+  const { user } = useAuth()
+  // 재시도는 시스템 운영자 이상 — 시스템 열람자는 조회만.
+  const canRetry = !!user && canRunSysRoutine(user.role)
   const [status, setStatus] = useState<ProvisioningTaskStatus | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [retryTarget, setRetryTarget] = useState<AdminTaskView | null>(null)
@@ -66,6 +72,11 @@ export function AdminTasksPage() {
           VM 비동기 작업(생성·삭제·재설치) 현황입니다. 재시도가 소진된 작업(관리자 확인
           필요)은 원인 해결 후 재시도할 수 있습니다.
         </p>
+        {!canRetry && (
+          <PermissionNotice>
+            작업 재시도는 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
+          </PermissionNotice>
+        )}
       </div>
 
       <FilterBar
@@ -75,7 +86,7 @@ export function AdminTasksPage() {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}
@@ -153,6 +164,7 @@ export function AdminTasksPage() {
                         <Button
                           variant="secondary"
                           size="sm"
+                          disabled={!canRetry}
                           onClick={() => setRetryTarget(task)}
                         >
                           재시도

@@ -47,17 +47,21 @@ describe('알림 발송 이력', () => {
 })
 
 describe('공지 보내기', () => {
-  test('ORG_ADMIN에게는 전체 대상이 없고 자기 기관 워크스페이스만 고를 수 있다', async () => {
+  test('ORG_ADMIN에게는 전체 대상이 없고 관리 기관 워크스페이스만 고를 수 있다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin/announcements')
 
     await screen.findByRole('heading', { name: '공지 보내기' })
     expect(screen.queryByRole('radio', { name: '전체' })).not.toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: '우리 기관 전체' })).toBeInTheDocument()
+    // 관리 기관이 하나뿐이므로 대상은 고를 것 없이 그 기관이고, 라디오가 이름을 말한다.
+    expect(
+      screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터 전체' }),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: '특정 워크스페이스' }))
-    // 자기 기관(org 1) 워크스페이스만 로드된다.
+    // 조회는 전 기관에 닿지만 발송 대상은 관리 기관으로 좁힌다 — 계약 v0.46.0에서
+    // 목록 자체가 넓어졌으므로 이 좁힘을 화면이 해야 한다.
     expect(await screen.findByRole('option', { name: '캡스톤 3조 (4명)' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'AI 동아리 (5명)' })).not.toBeInTheDocument()
   })

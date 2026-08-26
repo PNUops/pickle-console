@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canDecideRequest } from '../auth/permissions'
+import { canDecideRequest, isSysTier, operatesOrg } from '../auth/permissions'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
@@ -23,6 +23,7 @@ import {
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
   Modal,
+  PermissionNotice,
   RequestStatusBadge,
   Spinner,
   Textarea,
@@ -50,8 +51,10 @@ export function AdminRequestDetailPage() {
   const idValid = isUuid(requestId)
   const [notice, setNotice] = useState<Notice | null>(null)
   const { user } = useAuth()
-  // 승인·반려는 org 계층 + SYS_ADMIN만 — SYS_MANAGER는 조회만(§3.9 †15).
-  const canDecide = !!user && canDecideRequest(user.role)
+  // 승인과 반려는 기관 운영 역할 + SYS_ADMIN만 — SYS_MANAGER와 열람 역할은
+  // 조회만(§3.9 †15). 역할이 닿아도 이 신청의 기관에서 행위할 수 있어야 한다:
+  // 열람 역할로만 보이는 기관의 신청에 승인을 시도하면 API가 404로 거부한다.
+  const roleCanDecide = !!user && canDecideRequest(user.role)
 
   const request = useQuery({
     queryKey: ['admin', 'requests', requestId],
@@ -79,6 +82,11 @@ export function AdminRequestDetailPage() {
   const data = request.data
   // 신청 내용·검토 결과·결정 폼의 종류별 부분은 전부 이 모듈이 답한다.
   const kind = requestKindView(data.type)
+  const canDecide =
+    roleCanDecide &&
+    !!user &&
+    (isSysTier(user.role) ||
+      (data.orgId != null && operatesOrg(user.managedOrgs, data.orgId)))
 
   return (
     <div className="space-y-6">
@@ -124,6 +132,13 @@ export function AdminRequestDetailPage() {
               request={data}
               onNotice={setNotice}
             />
+          )}
+          {data.status === 'SUBMITTED' && !canDecide && (
+            <PermissionNotice>
+              {roleCanDecide
+                ? '이 기관에서는 열람 역할이므로 승인과 반려를 수행할 수 없습니다.'
+                : '승인과 반려는 기관 운영자, 기관 관리자, 시스템 관리자만 수행할 수 있습니다.'}
+            </PermissionNotice>
           )}
         </div>
 

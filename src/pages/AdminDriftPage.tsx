@@ -7,6 +7,8 @@ import {
   type DriftFindingView,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { useAuth } from '../auth/auth-context'
+import { canRunSysRoutine } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -16,6 +18,7 @@ import {
   DriftStatusBadge,
   Modal,
   Pagination,
+  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -48,6 +51,9 @@ function targetOf(finding: DriftFindingView): string {
 
 /** 드리프트 리포트 — DB↔Proxmox 불일치 발견을 확인·해결 처리한다 (SYS_ADMIN). */
 export function AdminDriftPage() {
+  const { user } = useAuth()
+  // 해결 처리는 시스템 운영자 이상 — 시스템 열람자는 조회만.
+  const canResolve = !!user && canRunSysRoutine(user.role)
   const [status, setStatus] = useState<DriftFindingStatus>('OPEN')
   const [page, setPage] = useState(0)
   const [resolveTarget, setResolveTarget] = useState<DriftFindingView | null>(null)
@@ -67,6 +73,11 @@ export function AdminDriftPage() {
           조정자(reconciler)가 감지한 DB와 Proxmox 사이의 불일치입니다. 원인을 정리한 뒤
           해결 처리하세요. 더 이상 관측되지 않으면 자동으로 해소됩니다.
         </p>
+        {!canResolve && (
+          <PermissionNotice>
+            해결 처리는 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
+          </PermissionNotice>
+        )}
       </div>
 
       <FilterBar
@@ -76,7 +87,7 @@ export function AdminDriftPage() {
           setStatus(next ?? 'OPEN')
           setPage(0)
         }}
-        isSysAdmin={false}
+        showOrgFilter={false}
         orgId={undefined}
         onOrg={() => {}}
         orgs={[]}
@@ -143,6 +154,7 @@ export function AdminDriftPage() {
                         <Button
                           variant="secondary"
                           size="sm"
+                          disabled={!canResolve}
                           onClick={() => setResolveTarget(finding)}
                         >
                           해결 처리

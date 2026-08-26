@@ -5,7 +5,6 @@ import {
   applyAdminRoute,
   fetchAdminDomains,
   fetchAdminRoutes,
-  fetchOrgs,
   forceReleaseDomain,
   resyncRoutes,
   verifyAdminDomain,
@@ -15,7 +14,12 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
+import {
+  canInterveneDomain,
+  canRunSysRoutine,
+  isSysTier,
+  operatesOrg,
+} from '../auth/permissions'
 import { CertificatesSection } from '../components/CertificatesSection'
 import { FilterBar } from '../components/FilterBar'
 import {
@@ -30,6 +34,7 @@ import {
   DomainStatusBadge,
   Drawer,
   Pagination,
+  PermissionNotice,
   RouteStatusBadge,
   Select,
   Spinner,
@@ -45,6 +50,7 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
+import { useOrgOptions } from '../lib/use-org-options'
 
 const PAGE_SIZE = 20
 
@@ -71,6 +77,8 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM']
 export function AdminDomainsPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
+  // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
+  const canResync = !!user && canRunSysRoutine(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
@@ -95,7 +103,8 @@ export function AdminDomainsPage() {
     queryFn: () => fetchAdminDomains({ status, kind, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
 
@@ -105,11 +114,11 @@ export function AdminDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용·인증서 상태입니다.
-            행을 선택하면 라우트·인증서 상세와 개입 작업이 열립니다.
+            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용, 인증서
+            상태입니다. 행을 선택하면 라우트와 인증서 상세, 개입 작업이 열립니다.
           </p>
         </div>
-        {isSysAdmin && <ResyncButton />}
+        {canResync && <ResyncButton />}
       </div>
 
       <Tabs
@@ -127,13 +136,13 @@ export function AdminDomainsPage() {
             setStatus(next)
             setPage(0)
           }}
-          isSysAdmin={isSysAdmin}
+          showOrgFilter={orgOptions.length > 1}
           orgId={orgId}
           onOrg={(next) => {
             setOrgId(next)
             setPage(0)
           }}
-          orgs={orgs.data ?? []}
+          orgs={orgOptions}
         >
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             종류
@@ -177,7 +186,7 @@ export function AdminDomainsPage() {
                   <TR>
                     <TH>도메인</TH>
                     <TH>VM / 워크스페이스</TH>
-                    {isSysAdmin && <TH>기관</TH>}
+                    <TH>기관</TH>
                     <TH>상태</TH>
                     <TH>라우트</TH>
                     <TH>인증서</TH>
@@ -213,7 +222,7 @@ export function AdminDomainsPage() {
                         {domain.vmName}
                         <span className="block text-xs text-neutral-500">{domain.workspaceName}</span>
                       </TD>
-                      {isSysAdmin && <TD>{domain.orgName}</TD>}
+                      <TD>{domain.orgName}</TD>
                       <TD>
                         <DomainStatusBadge status={domain.status} />
                         {/* 예약 판별은 status가 아니라 releasedAt이다 — 해제된
@@ -292,6 +301,13 @@ function DomainDrawerContent({
   domain: AdminDomainView
   onDone: (message: string) => void
 }) {
+  const { user } = useAuth()
+  // 역할이 닿아도 이 도메인의 기관에서 행위할 수 있어야 한다: 열람 역할로만
+  // 보이는 기관의 도메인에 개입하면 API가 404로 거부한다.
+  const canIntervene =
+    !!user &&
+    canInterveneDomain(user.role) &&
+    (isSysTier(user.role) || operatesOrg(user.managedOrgs, domain.orgId))
   const [releaseOpen, setReleaseOpen] = useState(false)
   // 드로어 안에서 실행하는 액션(재검증·재적용)의 결과는 드로어 안에 보여야
   // 한다 — 페이지 레벨 알림은 열린 드로어의 배경에 가려 보이지 않는다.
@@ -379,7 +395,11 @@ function DomainDrawerContent({
           <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
             <div className="flex items-center justify-between">
               <RouteStatusBadge status={route.status} />
-              <ApplyRouteButton routeId={route.id} onResult={setNotice} />
+              <ApplyRouteButton
+                routeId={route.id}
+                disabled={!canIntervene}
+                onResult={setNotice}
+              />
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
               <Field label="대상 포트" value={String(route.targetPort)} />
@@ -413,16 +433,28 @@ function DomainDrawerContent({
         <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
         <p className="text-sm text-neutral-500">
           커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
-          즉시 회수)를 수행합니다. 기관 계층은 자기 기관 VM의 도메인에만 적용됩니다.
+          즉시 회수)를 수행합니다. 기관 계층은 자기가 운영하는 기관의 도메인에만
+          적용됩니다.
         </p>
         <div className="flex flex-wrap gap-2">
           {domain.kind === 'CUSTOM' && (
-            <ReverifyButton domain={domain} onResult={setNotice} />
+            <ReverifyButton domain={domain} disabled={!canIntervene} onResult={setNotice} />
           )}
-          <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={!canIntervene}
+            onClick={() => setReleaseOpen(true)}
+          >
             강제 해제
           </Button>
         </div>
+        {!canIntervene && (
+          <PermissionNotice>
+            사후 개입은 이 도메인의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
+            운영자, 시스템 관리자만 수행할 수 있습니다.
+          </PermissionNotice>
+        )}
       </section>
 
       {releaseOpen && (
@@ -448,15 +480,17 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-/* ─── 사후 개입 액션 (관리자 4역할 — 기관 계층은 자기 기관, 서버 강제) ─── */
+/* ─── 사후 개입 액션 (운영 역할만 — 기관 계층은 자기가 운영하는 기관, 서버 강제) ─── */
 
 type DrawerNotice = { variant: 'info' | 'danger'; text: string }
 
 function ReverifyButton({
   domain,
+  disabled,
   onResult,
 }: {
   domain: AdminDomainView
+  disabled: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -476,6 +510,7 @@ function ReverifyButton({
     <Button
       variant="secondary"
       size="sm"
+      disabled={disabled}
       loading={reverify.isPending}
       onClick={() => reverify.mutate()}
     >
@@ -487,9 +522,11 @@ function ReverifyButton({
 /** 개별 라우트 재적용 — 전역 sync-all 없이 이 도메인의 라우트만 재전파. */
 function ApplyRouteButton({
   routeId,
+  disabled,
   onResult,
 }: {
   routeId: string
+  disabled: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -507,7 +544,13 @@ function ApplyRouteButton({
       }),
   })
   return (
-    <Button variant="secondary" size="sm" loading={apply.isPending} onClick={() => apply.mutate()}>
+    <Button
+      variant="secondary"
+      size="sm"
+      disabled={disabled}
+      loading={apply.isPending}
+      onClick={() => apply.mutate()}
+    >
       재적용
     </Button>
   )

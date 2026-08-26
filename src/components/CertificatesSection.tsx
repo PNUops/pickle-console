@@ -2,11 +2,8 @@ import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminCertificates,
-  fetchOrgs,
   type CertificateStatus,
 } from '../api/queries'
-import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -24,6 +21,7 @@ import {
 } from './ui'
 import { formatDateTime } from '../lib/format'
 import { CERTIFICATE_KIND_LABELS, CERTIFICATE_STATUS_LABELS } from '../lib/status'
+import { useOrgOptions } from '../lib/use-org-options'
 import { FilterBar } from './FilterBar'
 
 const PAGE_SIZE = 20
@@ -40,8 +38,6 @@ const STATUS_TABS: { label: string; status: CertificateStatus | undefined }[] = 
 
 /** 인증서 만료·발급 상태 — 공개 서비스 화면의 인증서 탭 (만료 임박 일괄 점검 축). */
 export function CertificatesSection() {
-  const { user } = useAuth()
-  const isSysAdmin = !!user && isSysTier(user.role)
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [expiringSoon, setExpiringSoon] = useState(false)
@@ -58,7 +54,8 @@ export function CertificatesSection() {
     queryFn: () => fetchAdminCertificates({ status, orgId, expiringInDays, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   return (
     <div className="space-y-6">
@@ -69,13 +66,13 @@ export function CertificatesSection() {
           setStatus(next)
           setPage(0)
         }}
-        isSysAdmin={isSysAdmin}
+        showOrgFilter={orgOptions.length > 1}
         orgId={orgId}
         onOrg={(next) => {
           setOrgId(next)
           setPage(0)
         }}
-        orgs={orgs.data ?? []}
+        orgs={orgOptions}
       >
         <Checkbox
           label={`${EXPIRY_SOON_DAYS}일 이내 만료만`}

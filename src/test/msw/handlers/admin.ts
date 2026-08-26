@@ -1,7 +1,8 @@
 import { isOrgTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { orgAdminUser, problemResponse, regularUser } from './auth'
+import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './auth'
+import { adminReadScope } from './org-scope'
 import { flavorStore, orgs, resetFlavorStore } from './reference'
 import { uuid } from '../ids'
 import {
@@ -396,6 +397,12 @@ function adminVmComparator(sort: string | null) {
   }
 }
 
+/** 목 스코프용 행위자 조회 — 토큰이 없거나 모르는 값이면 null (스코프 미적용). */
+function actorProfileOf(request: Request) {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+  return ACCESS_TOKENS[token] ?? null
+}
+
 export const adminHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/requests', ({ request }) => {
     const url = new URL(request.url)
@@ -404,9 +411,13 @@ export const adminHandlers: RequestHandler[] = [
     const orgId = url.searchParams.get('orgId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
+    // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다 (밖은 404 마스킹).
+    const profile = actorProfileOf(request)
+    const scope = profile ? adminReadScope(profile, orgId, '/api/v1/admin/requests') : null
+    if (scope?.notFound) return scope.notFound
     const filtered = adminRequestStore
+      .filter((r) => (scope ? scope.matches(r.orgId) : !orgId || r.orgId === orgId))
       .filter((r) => !status || r.status === status)
-      .filter((r) => !orgId || r.orgId === orgId)
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
@@ -418,9 +429,15 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json(body, { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/requests/:requestId', ({ params }) => {
+  http.get('*/api/v1/admin/requests/:requestId', ({ request, params }) => {
     const found = adminRequestStore.find((r) => r.id === String(params.requestId))
     if (!found) return notFound()
+    // 계약 v0.46.0: 보유 기관 밖의 신청은 존재를 감추는 404다.
+    const profile = actorProfileOf(request)
+    const scope = profile
+      ? adminReadScope(profile, null, `/api/v1/admin/requests/${String(params.requestId)}`)
+      : null
+    if (scope && !scope.matches(found.orgId)) return notFound()
     return HttpResponse.json(found, { status: 200 })
   }),
 
@@ -666,8 +683,12 @@ export const adminHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const today = localDateStr(0)
+    // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다 (밖은 404 마스킹).
+    const profile = actorProfileOf(request)
+    const scope = profile ? adminReadScope(profile, orgId, '/api/v1/admin/vms') : null
+    if (scope?.notFound) return scope.notFound
     const filtered = vmStore
-      .filter((vm) => !orgId || vm.orgId === orgId)
+      .filter((vm) => (scope ? scope.matches(vm.orgId) : !orgId || vm.orgId === orgId))
       .filter((vm) => !workspaceId || vm.workspaceId === workspaceId)
       .filter((vm) => !status || vm.status === status)
       // 계약 v0.6.1: q = 이름/호스트네임 부분일치 (대소문자 무시)

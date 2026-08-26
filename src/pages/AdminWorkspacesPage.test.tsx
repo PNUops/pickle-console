@@ -38,11 +38,13 @@ describe('관리자 워크스페이스 관리', () => {
     )
   })
 
-  test('ORG_ADMIN은 자기 기관 워크스페이스만 보고 기관 필터가 없다', async () => {
+  test('ORG_ADMIN은 보유 기관 워크스페이스만 보고 기관 필터가 없다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin/workspaces')
 
     await screen.findByRole('heading', { name: '워크스페이스 관리' })
+    // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
+    // 고를 것이 없으므로 기관 필터도 보이지 않는다.
     expect(await screen.findByText('캡스톤 3조')).toBeInTheDocument()
     expect(screen.queryByText('AI 동아리')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()

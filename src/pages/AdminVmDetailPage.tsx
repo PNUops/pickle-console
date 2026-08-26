@@ -13,7 +13,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { isSysAdminOnly } from '../auth/permissions'
+import { canOperateVm, isSysAdminOnly, isSysTier, operatesOrg } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import {
@@ -23,6 +23,7 @@ import {
   Card,
   Modal,
   Pagination,
+  PermissionNotice,
   Spinner,
   Table,
   TabPanel,
@@ -45,8 +46,8 @@ const TABS = [
 
 /**
  * 관리자 VM 상세 — 다탭(개요·이벤트) 상세라 드로어 대신 별도 라우트.
- * 조회·전원 개입은 관리자 4역할 전부(기관 계층은 자기 기관 VM 한정 — 서버
- * 강제), 차단 토글만 SYS_ADMIN.
+ * 전원 개입과 기간 연장은 운영 역할만(기관 계층은 자기가 운영하는 기관의 VM
+ * 한정 — 서버 강제), 열람 역할은 조회만, 차단 토글은 SYS_ADMIN.
  */
 export function AdminVmDetailPage() {
   const { vmId: vmIdParam } = useParams()
@@ -54,6 +55,7 @@ export function AdminVmDetailPage() {
   const idValid = isUuid(vmId)
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
+  const roleCanOperate = !!user && canOperateVm(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
@@ -80,6 +82,12 @@ export function AdminVmDetailPage() {
   }
 
   const vm = detail.data
+  // 역할이 닿아도 이 VM의 기관에서 행위할 수 있어야 한다: 열람 역할로만 보이는
+  // 기관의 VM에 전원이나 기간을 건드리면 API가 404로 거부한다.
+  const canOperate =
+    roleCanOperate &&
+    !!user &&
+    (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
   return (
     <div className="space-y-6">
       <div>
@@ -133,8 +141,8 @@ export function AdminVmDetailPage() {
           </dl>
         </Card>
 
-        <PowerSection vm={vm} onDone={setMessage} />
-        <PeriodSection vm={vm} onDone={setMessage} />
+        <PowerSection vm={vm} canOperate={canOperate} onDone={setMessage} />
+        <PeriodSection vm={vm} canOperate={canOperate} onDone={setMessage} />
         <VmGatewayBlockSection vm={vm} canManage={isSysAdmin} onDone={setMessage} />
       </TabPanel>
 
@@ -154,7 +162,7 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-/* ─── 전원 개입 (관리자 4역할, 정지 보호 우회 — 서버 정책) ─── */
+/* ─── 전원 개입 (운영 역할만, 정지 보호 우회 — 서버 정책) ─── */
 
 type PowerActionKey = 'start' | 'shutdown' | 'reboot' | 'forceStop'
 
@@ -200,7 +208,15 @@ const POWER_ACTIONS: {
   },
 ]
 
-function PowerSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string) => void }) {
+function PowerSection({
+  vm,
+  canOperate,
+  onDone,
+}: {
+  vm: VmDetail
+  canOperate: boolean
+  onDone: (message: string) => void
+}) {
   const queryClient = useQueryClient()
   const [confirmTarget, setConfirmTarget] = useState<(typeof POWER_ACTIONS)[number] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -234,13 +250,19 @@ function PowerSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string) 
           <Button
             key={action.key}
             variant={action.variant}
-            disabled={!action.enabledFor(vm.status)}
+            disabled={!canOperate || !action.enabledFor(vm.status)}
             onClick={() => setConfirmTarget(action)}
           >
             {action.label}
           </Button>
         ))}
       </div>
+      {!canOperate && (
+        <PermissionNotice>
+          전원 제어는 이 VM의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
+          운영자, 시스템 관리자만 수행할 수 있습니다.
+        </PermissionNotice>
+      )}
       <Modal
         open={confirmTarget !== null}
         onClose={() => setConfirmTarget(null)}
@@ -268,7 +290,15 @@ function PowerSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string) 
 
 /* ─── 기간 연장 ─── */
 
-function PeriodSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string) => void }) {
+function PeriodSection({
+  vm,
+  canOperate,
+  onDone,
+}: {
+  vm: VmDetail
+  canOperate: boolean
+  onDone: (message: string) => void
+}) {
   const [open, setOpen] = useState(false)
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
@@ -276,9 +306,15 @@ function PeriodSection({ vm, onDone }: { vm: VmDetail; onDone: (message: string)
       <p className="text-sm text-neutral-500">
         사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
       </p>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
+      <Button variant="secondary" disabled={!canOperate} onClick={() => setOpen(true)}>
         기간 연장
       </Button>
+      {!canOperate && (
+        <PermissionNotice>
+          기간 연장은 이 VM의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
+          운영자, 시스템 관리자만 수행할 수 있습니다.
+        </PermissionNotice>
+      )}
       {open && (
         <ExtendVmPeriodModal
           vm={vm}

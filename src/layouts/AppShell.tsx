@@ -185,6 +185,7 @@ export function AppShell({
   sections,
   sidebarTop,
   notificationsTo,
+  banner,
 }: {
   home: string
   navLabel: string
@@ -196,6 +197,8 @@ export function AppShell({
   sidebarTop?: ReactNode
   /** 알림함 경로 — 지정하면 상단 바에 알림 종을 노출한다. */
   notificationsTo?: string
+  /** 시스템 공지 배너 아래, 본문 위에 놓이는 셸 배너 (2FA 권유 등). */
+  banner?: ReactNode
 }) {
   const navSections: NavSection[] = sections ?? [{ items: items ?? [] }]
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -369,6 +372,7 @@ export function AppShell({
           </div>
         </header>
         {bannerEl}
+        {banner}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
           <Outlet />
         </main>

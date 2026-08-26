@@ -1914,6 +1914,33 @@ export function updateUserRole(
   })
 }
 
+/** 한 기관에서의 역할 부여 또는 변경. 다른 기관에서 가진 역할은 건드리지 않는다. */
+export function grantOrgRole(
+  userId: string,
+  orgId: string,
+  role: UserRole,
+): Promise<UserSummary> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/users/{userId}/org-roles/{orgId}', {
+      params: { path: { userId, orgId } },
+      body: { role },
+    })
+    if (!data) throw toApiError(error, '기관 역할을 부여하지 못했습니다.')
+    return data
+  })
+}
+
+/** 한 기관에서의 역할 회수. 마지막 기관이었다면 계정은 일반 사용자가 된다. */
+export function revokeOrgRole(userId: string, orgId: string): Promise<UserSummary> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.DELETE('/admin/users/{userId}/org-roles/{orgId}', {
+      params: { path: { userId, orgId } },
+    })
+    if (!data) throw toApiError(error, '기관 역할을 회수하지 못했습니다.')
+    return data
+  })
+}
+
 export function disableUser(userId: string, reason: string): Promise<UserAdminDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/users/{userId}/disable', {

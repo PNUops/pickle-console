@@ -7,7 +7,9 @@ import {
   fetchAdminUser,
   fetchAdminUsers,
   fetchOrgs,
+  grantOrgRole,
   resetUserMfa,
+  revokeOrgRole,
   updateUserRole,
   type AdminUserSort,
   type UserAdminDetail,
@@ -16,8 +18,8 @@ import {
   type UserStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { useAuth } from '../auth/auth-context'
-import { isOrgTier, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { useAuth, type ManagedOrg } from '../auth/auth-context'
+import { administeredOrgs, isOrgTier, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -60,7 +62,15 @@ const STATUS_TABS: { label: string; status: UserStatus | undefined }[] = [
   { label: USER_STATUS_LABELS.WITHDRAWN, status: 'WITHDRAWN' },
 ]
 
-const ROLE_OPTIONS: UserRole[] = ['USER', 'ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']
+const ROLE_OPTIONS: UserRole[] = [
+  'USER',
+  'ORG_VIEWER',
+  'ORG_MANAGER',
+  'ORG_ADMIN',
+  'SYS_VIEWER',
+  'SYS_MANAGER',
+  'SYS_ADMIN',
+]
 
 const STATUS_VARIANT: Record<UserStatus, BadgeVariant> = {
   ACTIVE: 'success',
@@ -76,8 +86,10 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 export function AdminUsersPage() {
   const { user } = useAuth()
   const viewerRole = user?.role
-  // 전체/우리 기관 조회 범위는 시스템 계층. 계정 비활성화·해제·MFA 초기화는
-  // SYS_ADMIN 전용(§4).
+  // 사용자 조회는 관리자 조회 중 유일하게 전 기관이다 — 파생 소속은 리소스에서
+  // 나오므로, 아무것도 신청하지 않은 계정은 어느 기관에도 속하지 않아 범위를
+  // 좁히면 누구에게도 보이지 않는다 (계약 v0.46.0). 계정 비활성화, 해제, MFA
+  // 초기화는 SYS_ADMIN 전용(§4).
   const isSysAdmin = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)
@@ -109,7 +121,7 @@ export function AdminUsersPage() {
     placeholderData: keepPreviousData,
   })
 
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
 
   const sortDirection = (key: SortKey) =>
     sort === key ? ('asc' as const) : sort === `-${key}` ? ('desc' as const) : null
@@ -123,8 +135,8 @@ export function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">사용자 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관에 소속된'} 사용자를 조회하고
-          {isSysAdmin ? ' 계정 비활성화·해제를 관리합니다.' : ' 상세 정보를 확인합니다.'}
+          전체 사용자를 조회하고
+          {isSysAdmin ? ' 계정 비활성화와 해제를 관리합니다.' : ' 상세 정보를 확인합니다.'}
         </p>
       </div>
 
@@ -185,27 +197,25 @@ export function AdminUsersPage() {
               ))}
             </Select>
           </label>
-          {isSysAdmin && (
-            <label className="flex items-center gap-2 text-sm text-neutral-600">
-              기관
-              <Select
-                aria-label="기관 필터"
-                className="w-56"
-                value={orgId ?? ''}
-                onChange={(event) => {
-                  setOrgId(event.target.value || undefined)
-                  setPage(0)
-                }}
-              >
-                <option value="">전체 기관</option>
-                {orgs.data?.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          )}
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            기관
+            <Select
+              aria-label="기관 필터"
+              className="w-56"
+              value={orgId ?? ''}
+              onChange={(event) => {
+                setOrgId(event.target.value || undefined)
+                setPage(0)
+              }}
+            >
+              <option value="">전체 기관</option>
+              {orgs.data?.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          </label>
         </div>
       </div>
 
@@ -377,6 +387,8 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
         )}
       </section>
 
+      <UserOrgRolesSection user={user} />
+
       <UserRoleSection user={user} canManage={canManage} />
 
       <UserStatusActions
@@ -389,13 +401,204 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
   )
 }
 
+/* ─── 기관 역할 (계약 v0.46.0 — 기관마다 하나씩 주고 뺀다) ─── */
+
+/**
+ * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 통째로 덮어쓰는
+ * 위 역할 관리와 별개로 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
+ * 있는 기관의 행만 건드릴 수 있고, 그 밖의 기관은 API가 404로 답한다.
+ *
+ * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
+ * 기관을 보게 하되 손대지 못하게 하는 통로다.
+ */
+function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
+  const { user: viewer } = useAuth()
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [error, setError] = useState<string | null>(null)
+  const [addOrgId, setAddOrgId] = useState('')
+  const [addRole, setAddRole] = useState<UserRole>('ORG_MANAGER')
+  const [confirmRevoke, setConfirmRevoke] = useState<ManagedOrg | null>(null)
+
+  const isSysAdmin = viewer?.role === 'SYS_ADMIN'
+  const canStaff = isSysAdmin || viewer?.role === 'ORG_ADMIN'
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  // 시스템 관리자는 전 기관에, 기관 관리자는 자기가 관리자로 있는 기관에만 부여한다.
+  const grantable = isSysAdmin
+    ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
+    : administeredOrgs(viewer?.managedOrgs ?? []).map((org) => ({
+        id: org.orgId,
+        name: org.orgName,
+      }))
+  // 자기 자신과 시스템 계층 계정은 API가 403으로 거부한다. 버튼을 숨기지 않고
+  // 비활성화하고 사유를 적는다(드로어 3분할 규약).
+  const isSelf = viewer?.id === user.id
+  const targetIsSysTier = isSysTier(user.role)
+  const blockedReason = isSelf
+    ? '자신의 기관 역할은 변경할 수 없습니다.'
+    : targetIsSysTier
+      ? '시스템 관리자 계정의 기관 역할은 변경할 수 없습니다.'
+      : null
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+
+  const grant = useMutation({
+    mutationFn: () => grantOrgRole(user.id, addOrgId, addRole),
+    onSuccess: async (updated) => {
+      setError(null)
+      setAddOrgId('')
+      toast.success(`${updated.name}님에게 기관 역할을 부여했습니다.`)
+      await invalidate()
+    },
+    onError: (err) => setError(toApiError(err, '기관 역할을 부여하지 못했습니다.').message),
+  })
+
+  const revoke = useMutation({
+    mutationFn: (orgId: string) => revokeOrgRole(user.id, orgId),
+    onSuccess: async (updated) => {
+      setError(null)
+      setConfirmRevoke(null)
+      toast.success(
+        updated.role === 'USER'
+          ? `${updated.name}님의 마지막 관리 기관을 회수했습니다. 이제 일반 사용자입니다.`
+          : `${updated.name}님의 기관 역할을 회수했습니다.`,
+      )
+      await invalidate()
+    },
+    onError: (err) => {
+      setConfirmRevoke(null)
+      setError(toApiError(err, '기관 역할을 회수하지 못했습니다.').message)
+    },
+  })
+
+  const alreadyHeld = new Set(user.managedOrgs.map((org) => org.orgId))
+  const addable = grantable.filter((org) => !alreadyHeld.has(org.id))
+
+  return (
+    <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+      <h3 className="text-sm font-semibold text-neutral-800">기관 역할</h3>
+      {!canStaff && (
+        <PermissionNotice>
+          기관 역할 부여와 회수는 기관 관리자와 시스템 관리자만 수행할 수 있습니다.
+        </PermissionNotice>
+      )}
+      {canStaff && blockedReason && <PermissionNotice>{blockedReason}</PermissionNotice>}
+      <p className="text-sm text-neutral-500">
+        한 계정이 여러 기관의 관리자를 겸할 수 있습니다. 기관 관리자는 자기가 관리자로 있는
+        기관만 더하고 뺄 수 있습니다.
+      </p>
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      {user.managedOrgs.length === 0 ? (
+        <p className="text-sm text-neutral-500">관리하는 기관이 없습니다.</p>
+      ) : (
+        <ul className="space-y-2">
+          {user.managedOrgs.map((org) => {
+            const mine = grantable.some((option) => option.id === org.orgId)
+            return (
+              <li
+                key={org.orgId}
+                className="flex items-center justify-between gap-3 rounded-md bg-neutral-50 px-3 py-2 text-sm"
+              >
+                <span>
+                  <span className="font-medium text-neutral-900">{org.orgName}</span>{' '}
+                  <Badge variant="neutral">{USER_ROLE_LABELS[org.role]}</Badge>
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!canStaff || !mine || blockedReason != null}
+                  onClick={() => setConfirmRevoke(org)}
+                >
+                  회수
+                </Button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {canStaff && (
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField label="부여할 기관">
+            <Select
+              className="w-56"
+              value={addOrgId}
+              disabled={blockedReason != null || addable.length === 0}
+              onChange={(event) => setAddOrgId(event.target.value)}
+            >
+              <option value="">기관 선택</option>
+              {addable.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="부여할 역할">
+            <Select
+              className="w-40"
+              value={addRole}
+              disabled={blockedReason != null}
+              onChange={(event) => setAddRole(event.target.value as UserRole)}
+            >
+              <option value="ORG_VIEWER">{USER_ROLE_LABELS.ORG_VIEWER}</option>
+              <option value="ORG_MANAGER">{USER_ROLE_LABELS.ORG_MANAGER}</option>
+              <option value="ORG_ADMIN">{USER_ROLE_LABELS.ORG_ADMIN}</option>
+            </Select>
+          </FormField>
+          <Button
+            disabled={blockedReason != null || !addOrgId}
+            loading={grant.isPending}
+            onClick={() => grant.mutate()}
+          >
+            부여
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        open={confirmRevoke != null}
+        onClose={() => setConfirmRevoke(null)}
+        title="기관 역할 회수"
+      >
+        <p className="text-sm text-neutral-600">
+          {confirmRevoke?.orgName} 기관에서 {user.name}님의 역할을 회수합니다.
+          {user.managedOrgs.length === 1 && (
+            <>
+              {' '}
+              <strong className="text-neutral-900">
+                마지막 관리 기관이므로 이 계정은 일반 사용자가 되고 기존 로그인 세션이
+                무효화됩니다.
+              </strong>
+            </>
+          )}
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setConfirmRevoke(null)}>
+            취소
+          </Button>
+          <Button
+            variant="danger"
+            loading={revoke.isPending}
+            onClick={() => confirmRevoke && revoke.mutate(confirmRevoke.orgId)}
+          >
+            회수
+          </Button>
+        </div>
+      </Modal>
+    </section>
+  )
+}
+
 /* ─── 역할 관리 (수행은 SYS_ADMIN 전용, 표시는 전 관리자) ─── */
 
 function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage: boolean }) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [role, setRole] = useState<UserRole>(user.role)
-  const [orgId, setOrgId] = useState(user.orgId != null ? String(user.orgId) : '')
+  const [orgId, setOrgId] = useState(user.managedOrgs[0]?.orgId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: canManage })
@@ -423,7 +626,7 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
     event.preventDefault()
     setError(null)
     if (isOrgTier(role) && !orgId) {
-      setFieldErrors({ orgId: '기관 관리자·기관 운영자는 관리할 기관을 선택해야 합니다.' })
+      setFieldErrors({ orgId: '기관 계층 역할은 관리할 기관을 선택해야 합니다.' })
       return
     }
     setFieldErrors({})
@@ -459,7 +662,7 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
           label="관리 기관"
           required={isOrgTier(role)}
           error={fieldErrors.orgId}
-          description="기관 관리자·기관 운영자 역할일 때만 지정합니다."
+          description="기관 계층 역할일 때만 지정합니다."
         >
           <Select
             value={orgId}
