@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router'
 import { Spinner } from '../components/ui'
 import { homePathFor, useAuth, type UserRole } from './auth-context'
 import { ConsentGate } from './ConsentGate'
-import { ProfileGate } from './ProfileGate'
+import { ProfilePrompt } from './ProfilePrompt'
 
 /**
  * Route guard: requires an authenticated user whose role is in `roles`.
@@ -11,7 +11,7 @@ import { ProfileGate } from './ProfileGate'
  * authenticated users with a different role go to their own home area.
  */
 export function RequireRole({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
-  const { status, user } = useAuth()
+  const { status, user, refreshProfile } = useAuth()
   const location = useLocation()
 
   if (status === 'loading') {
@@ -33,9 +33,12 @@ export function RequireRole({ roles, children }: { roles: UserRole[]; children: 
     return <ConsentGate pending={user.pendingConsents} />
   }
   // 약관 다음에 프로필. 개인정보처리방침에 동의하기 전에 개인정보를 받는 것은 순서가
-  // 거꾸로다. 판단은 서버가 내려보내는 플래그 하나로만 한다.
-  if (!user.profileComplete) {
-    return <ProfileGate />
-  }
-  return <>{children}</>
+  // 거꾸로다. 약관은 법적 선행 조건이라 게이트로 남고, 프로필은 선택 입력이라 셸
+  // 위에 뜨는 안내다. 판단은 서버가 내려보내는 플래그 하나로만 한다.
+  return (
+    <>
+      {children}
+      {!user.profileComplete && <ProfilePrompt onSaved={refreshProfile} />}
+    </>
+  )
 }

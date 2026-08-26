@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event'
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { server } from '../test/msw/server'
 import { http, HttpResponse } from 'msw'
@@ -25,26 +25,56 @@ function withEmptyProfile() {
   )
 }
 
-describe('프로필 게이트', () => {
+describe('프로필 안내', () => {
   beforeEach(() => {
     // 세션 복원으로 로그인 상태를 만든다. withEmptyProfile 이 /me 를 덮으므로
     // 순서가 중요하다.
     server.use(refreshSuccessHandler('access-user'))
     withEmptyProfile()
+    sessionStorage.clear()
   })
 
-  test('프로필이 비어 있으면 콘솔 대신 입력 화면이 뜬다', async () => {
+  test('프로필이 비어 있으면 콘솔 위에 안내가 뜬다', async () => {
     renderApp('/console')
     expect(
-      await screen.findByRole('heading', { name: '소속 정보를 입력해 주세요' }),
+      await screen.findByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' }),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '대시보드' })).not.toBeInTheDocument()
+    // 게이트가 아니다. 셸은 뒤에 그대로 있다.
+    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 
-  test('저장하면 게이트가 풀린다', async () => {
+  test('닫으면 콘솔을 그대로 쓸 수 있다', async () => {
     const user = userEvent.setup()
     renderApp('/console')
-    await screen.findByRole('heading', { name: '소속 정보를 입력해 주세요' })
+    await screen.findByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' })
+
+    await user.click(screen.getByRole('button', { name: '나중에 입력' }))
+
+    expect(
+      screen.queryByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' }),
+    ).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+  })
+
+  test('한 번 닫으면 이 세션에서 다시 뜨지 않는다', async () => {
+    const user = userEvent.setup()
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' })
+    await user.click(screen.getByRole('button', { name: '나중에 입력' }))
+
+    // 다른 화면으로 갔다 와도 마찬가지다. 라우팅마다 다시 물으면 닫기가 닫기가
+    // 아니다.
+    await user.click(screen.getByRole('link', { name: '내 신청' }))
+    await screen.findByRole('heading', { name: '내 신청' })
+    expect(
+      screen.queryByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' }),
+    ).not.toBeInTheDocument()
+  })
+
+  test('저장하면 안내가 사라진다', async () => {
+    const user = userEvent.setup()
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' })
 
     await screen.findByRole('option', { name: '학부생' })
     await user.selectOptions(screen.getByLabelText('직책'), 'PROFESSOR')
@@ -56,13 +86,17 @@ describe('프로필 게이트', () => {
       http.put('*/api/v1/me/profile', () => HttpResponse.json(regularProfile, { status: 200 })),
     )
     await user.click(screen.getByRole('button', { name: '저장' }))
-    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' }),
+      ).not.toBeInTheDocument(),
+    )
   })
 
   test('직책을 비학생으로 바꾸면 학번 입력이 사라진다', async () => {
     const user = userEvent.setup()
     renderApp('/console')
-    await screen.findByRole('heading', { name: '소속 정보를 입력해 주세요' })
+    await screen.findByRole('heading', { name: '직책과 소속 학과를 입력해 주세요' })
     await screen.findByRole('option', { name: '학부생' })
 
     await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
@@ -72,13 +106,5 @@ describe('프로필 게이트', () => {
     // 필드에 대한 422를 받게 된다.
     await user.selectOptions(screen.getByLabelText('직책'), 'PROFESSOR')
     expect(screen.queryByLabelText('학번')).not.toBeInTheDocument()
-  })
-
-  test('갇히지 않도록 로그아웃 길이 있다', async () => {
-    renderApp('/console')
-    await screen.findByRole('heading', { name: '소속 정보를 입력해 주세요' })
-    // 게이트가 셸 전체를 대신하므로 여기서 나갈 수 없으면 폼을 완료할 수 없는 사람이
-    // 갇힌다.
-    expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
   })
 })
