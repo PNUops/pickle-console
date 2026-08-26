@@ -35,3 +35,35 @@ export function schedulePostLoginOverlay(): void {
     // 연출만 건너뛴다.
   }
 }
+
+/**
+ * 프로필 안내를 이 세션에서 닫았다는 sessionStorage 표식.
+ *
+ * 프로필은 선택 입력이라 안내는 막지 않고 닫힌다. localStorage 가 아닌 이유는
+ * 한 번 닫으면 영원히 안 뜨는 것과 선택 입력 사이의 거리다 — 다음 로그인에 한 번
+ * 더 묻고, 채우면 그때부터 안 뜬다.
+ */
+export const PROFILE_PROMPT_DISMISSED_KEY = 'pickle.profile-prompt-dismissed'
+
+/** 안내를 닫았는지. 저장소가 막혀 있으면 닫지 않은 것으로 본다. */
+export function profilePromptDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(PROFILE_PROMPT_DISMISSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 안내를 닫았다고 기록한다.
+ *
+ * 저장에 실패해도 삼킨다. 저장소가 막힌 브라우저에서 던지면 닫기 버튼이 아무것도
+ * 하지 않는 것처럼 보이고, 그때는 안내가 진짜로 막는 장치가 된다.
+ */
+export function dismissProfilePrompt(): void {
+  try {
+    sessionStorage.setItem(PROFILE_PROMPT_DISMISSED_KEY, '1')
+  } catch {
+    // 이 세션 동안만 닫힌다.
+  }
+}

@@ -1,23 +1,27 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   activateMfa,
   beginMfaSetup,
   changeMyPassword,
   disableMfa,
+  fetchProfileOptions,
   regenerateRecoveryCodes,
   requestPasswordReset,
+  setMyPassword,
   startGoogleOauth,
   type LinkedIdentity,
   type MfaRecoveryCodesResponse,
   type MfaSetupResponse,
   unlinkIdentity,
+  updateMyProfile,
   withdrawMyAccount,
 } from '../api/queries'
+import type { components } from '../api/schema'
 import { toApiError } from '../api/problem'
 import { setAccessToken } from '../api/token'
-import { useAuth } from '../auth/auth-context'
+import { useAuth, type UserProfile } from '../auth/auth-context'
 import { PasswordGuidance } from '../components/PasswordGuidance'
 import {
   Alert,
@@ -29,9 +33,12 @@ import {
   FormField,
   Input,
   Modal,
+  SettingRow,
   useToast,
 } from '../components/ui'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
+import { ProfileFields } from '../components/profile/ProfileFields'
+import { EMPTY_PROFILE, type ProfileValues } from '../components/profile/profile-values'
 import { navigateExternal } from '../lib/google-oauth'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passwordRuleError } from '../lib/validation'
@@ -59,21 +66,158 @@ export function AccountPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          로그인 수단과 회원 탈퇴를 관리합니다.
+          프로필과 로그인 수단, 회원 탈퇴를 관리합니다.
         </p>
       </div>
-      <PasswordChangeSection hasPassword={user.hasPassword} email={user.email} />
-      <LinkedAccountsSection
-        identities={user.identities}
-        hasPassword={user.hasPassword}
-      />
-      <TwoFactorSection enabled={user.mfaEnabled} hasPassword={user.hasPassword} />
+      {/*
+        값은 한 줄로 보이고 고치는 일은 모달이 맡는다. 종전에는 비밀번호 입력 칸
+        셋이 첫 화면을 차지해서 2단계 인증과 회원 탈퇴가 접힘선 밖에 있었다.
+      */}
+      <Card>
+        <CardHeader>
+          <CardTitle>프로필</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y divide-neutral-100">
+          <ProfileSection user={user} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>로그인 수단</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y divide-neutral-100">
+          <PasswordChangeSection hasPassword={user.hasPassword} email={user.email} />
+          <LinkedAccountsSection identities={user.identities} hasPassword={user.hasPassword} />
+          <TwoFactorSection enabled={user.mfaEnabled} hasPassword={user.hasPassword} />
+        </CardContent>
+      </Card>
       <WithdrawSection
         email={user.email}
         mfaEnabled={user.mfaEnabled}
         hasPassword={user.hasPassword}
       />
     </div>
+  )
+}
+
+/**
+ * 이름과 직책과 소속 학과.
+ *
+ * 프로필은 선택 입력이라 비어 있는 것이 정상이고, 그래서 값이 없는 행도 숨기지 않고
+ * 「입력하지 않음」으로 남긴다. 없는 줄은 고칠 수 있다는 사실도 함께 감춘다.
+ *
+ * 표시 이름을 여기서 바꾼다. v0.46.0 이전에는 가입 때 정한 이름을 바꿀 경로가
+ * 어디에도 없었다.
+ */
+function ProfileSection({ user }: { user: UserProfile }) {
+  const toast = useToast()
+  const { refreshProfile } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState(user.name)
+  const [profile, setProfile] = useState<ProfileValues>(EMPTY_PROFILE)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  // ProfileFields 와 같은 캐시 키라 카탈로그는 한 번만 받는다. 직책은 코드만
+  // 저장되므로 라벨을 여기서 푼다. 소속 학과는 서버가 이미 풀어서 보낸다.
+  const options = useQuery({
+    queryKey: ['meta', 'profile-options'],
+    queryFn: fetchProfileOptions,
+    staleTime: 60 * 60 * 1000,
+  })
+  const positionLabel = options.data?.positions.find((item) => item.code === user.position)?.label
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateMyProfile({
+        name: name.trim(),
+        position: (profile.position || null) as components['schemas']['UserPosition'] | null,
+        studentNo: profile.studentNo.trim() || null,
+        departmentCode: profile.departmentCode || null,
+      }),
+    onSuccess: async () => {
+      setOpen(false)
+      setError(null)
+      setFieldErrors({})
+      toast.success('프로필을 저장했습니다.')
+      await refreshProfile()
+    },
+    onError: (err) => {
+      const apiError = toApiError(err, '프로필을 저장하지 못했습니다.')
+      const mapped = fieldErrorsOf(apiError.problem)
+      setFieldErrors(mapped)
+      setError(Object.keys(mapped).length > 0 ? null : apiError.message)
+    },
+  })
+
+  // 열 때마다 저장된 값에서 시작한다. 지난번에 쓰다 만 값이 남아 있으면 지금
+  // 저장된 것이 무엇인지 화면이 말해 주지 못한다.
+  const openEditor = () => {
+    setName(user.name)
+    setProfile({
+      position: user.position ?? '',
+      studentNo: user.studentNo ?? '',
+      departmentCode: user.departmentCode ?? '',
+    })
+    setFieldErrors({})
+    setError(null)
+    setOpen(true)
+  }
+
+  return (
+    <>
+      <SettingRow
+        label="이름"
+        description={user.name}
+        action={
+          <Button size="sm" variant="secondary" onClick={openEditor}>
+            변경
+          </Button>
+        }
+      />
+      <SettingRow label="직책" description={positionLabel ?? '입력하지 않음'} />
+      <SettingRow label="소속 학과" description={user.departmentName ?? '입력하지 않음'} />
+      {user.studentNo && <SettingRow label="학번" description={user.studentNo} />}
+      <Modal open={open} onClose={() => setOpen(false)} title="프로필 변경">
+        {error && (
+          <Alert variant="danger" className="mb-4">
+            {error}
+          </Alert>
+        )}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            setError(null)
+            save.mutate()
+          }}
+          className="space-y-4"
+          noValidate
+        >
+          <FormField label="이름" required error={fieldErrors.name}>
+            <Input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={50}
+              required
+            />
+          </FormField>
+          <ProfileFields
+            values={profile}
+            onChange={setProfile}
+            errors={fieldErrors}
+            disabled={save.isPending}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              취소
+            </Button>
+            <Button type="submit" loading={save.isPending}>
+              저장
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   )
 }
 
@@ -89,6 +233,7 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [open, setOpen] = useState(false)
 
   const change = useMutation({
     mutationFn: () => changeMyPassword({ currentPassword, newPassword }),
@@ -100,6 +245,7 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
       setConfirmPassword('')
       setError(null)
       setFieldErrors({})
+      setOpen(false)
       toast.success('비밀번호를 변경했습니다. 다른 기기의 세션은 로그아웃됩니다.')
     },
     onError: (err) => {
@@ -132,12 +278,27 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
     return <PasswordSetupSection email={email} />
   }
 
+  const close = () => {
+    setOpen(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setError(null)
+    setFieldErrors({})
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>비밀번호 변경</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <>
+      <SettingRow
+        label="비밀번호"
+        description="설정됨"
+        action={
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            변경
+          </Button>
+        }
+      />
+      <Modal open={open} onClose={close} title="비밀번호 변경">
         {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
         <form onSubmit={submit} className="space-y-4" noValidate>
           <FormField label="현재 비밀번호" required error={fieldErrors.currentPassword}>
@@ -146,6 +307,7 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
               autoComplete="current-password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
+              required
             />
           </FormField>
           <FormField
@@ -159,6 +321,7 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               aria-describedby={GUIDANCE_ID}
+              required
             />
             <PasswordGuidance password={newPassword} id={GUIDANCE_ID} className="mt-1" />
           </FormField>
@@ -168,18 +331,23 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
+              required
             />
           </FormField>
-          <Button type="submit" loading={change.isPending}>
-            비밀번호 변경
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={close}>
+              취소
+            </Button>
+            <Button type="submit" loading={change.isPending}>
+              비밀번호 변경
+            </Button>
+          </div>
         </form>
-      </CardContent>
-    </Card>
+      </Modal>
+    </>
   )
 }
 
-/** Shows the 10 one-time recovery codes with copy/download (shown only once). */
 function RecoveryCodes({ codes }: { codes: string[] }) {
   const toast = useToast()
   const copy = () => {
@@ -223,34 +391,133 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
 }
 
 /**
- * 비밀번호가 없는 계정에 처음 설정하는 길.
+ * 비밀번호가 없는 계정이 처음 설정하는 길.
  *
- * 재설정 메일이 이 계정의 유일한 설정 경로다. 새 엔드포인트가 아니라 기존 재설정
- * 확정 경로가 null 을 값으로 바꾸는 동작을 그대로 한다.
+ * 현재 비밀번호를 묻지 않는다. 물을 것이 없기 때문이고, 그 자리를 재인증이 대신한다.
+ * 재인증은 구글로 통과할 수 있으므로 이 계정이 실제로 도달한다.
+ *
+ * 메일 경로도 남는다. 구글 연동이 풀렸거나 구글 계정을 잃은 사람에게는 그것이 유일한
+ * 길이고, 그 사람은 여기까지 오지도 못하므로 화면에 두는 것으로 족하지 않지만 최소한
+ * 길이 있다는 것은 말해 준다.
  */
 function PasswordSetupSection({ email }: { email: string }) {
   const toast = useToast()
-  const send = useMutation({
+  const { refreshProfile } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const close = () => {
+    setOpen(false)
+    setNewPassword('')
+    setConfirmPassword('')
+    setError(null)
+    setFieldErrors({})
+  }
+
+  const save = useMutation({
+    mutationFn: () => setMyPassword({ newPassword }),
+    onSuccess: async (data) => {
+      // 다른 기기의 세션은 서버가 끊는다. 이 세션은 응답이 준 토큰으로 이어진다.
+      setAccessToken(data.accessToken)
+      close()
+      toast.success('비밀번호를 설정했습니다. 다른 기기의 세션은 로그아웃됩니다.')
+      await refreshProfile()
+    },
+    onError: (err) => {
+      const apiError = toApiError(err, '비밀번호를 설정하지 못했습니다.')
+      const fields = fieldErrorsOf(apiError.problem)
+      setFieldErrors(fields)
+      setError(Object.keys(fields).length > 0 ? null : apiError.message)
+    },
+  })
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    setError(null)
+    setFieldErrors({})
+    const ruleError = passwordRuleError(newPassword)
+    if (ruleError) {
+      setFieldErrors({ newPassword: ruleError })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setFieldErrors({ confirmPassword: '비밀번호가 일치하지 않습니다.' })
+      return
+    }
+    save.mutate()
+  }
+
+  const mail = useMutation({
     mutationFn: () => requestPasswordReset(email),
     onSuccess: () => toast.success('비밀번호 설정 메일을 보냈습니다. 메일함을 확인해 주세요.'),
     onError: (err) => toast.error(toApiError(err, '메일을 보내지 못했습니다.').message),
   })
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>비밀번호 설정</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-neutral-600">
-          이 계정에는 비밀번호가 없습니다. 구글 계정으로만 로그인할 수 있고, 비밀번호로도
-          로그인하려면 아래에서 설정 메일을 받아 새로 정하면 됩니다.
-        </p>
-        <Button variant="secondary" loading={send.isPending} onClick={() => send.mutate()}>
-          비밀번호 설정 메일 받기
-        </Button>
-      </CardContent>
-    </Card>
+    <>
+      <SettingRow
+        label="비밀번호"
+        description="설정되지 않음"
+        note="구글 계정으로만 로그인할 수 있습니다. 비밀번호를 설정하면 두 가지 모두로 로그인합니다."
+        action={
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            설정
+          </Button>
+        }
+      />
+      <Modal open={open} onClose={close} title="비밀번호 설정">
+        {error && (
+          <Alert variant="danger" className="mb-4">
+            {error}
+          </Alert>
+        )}
+        <form onSubmit={submit} className="space-y-4" noValidate>
+          <p className="text-sm text-neutral-600">
+            현재 비밀번호는 묻지 않습니다. 대신 저장할 때 본인 확인을 한 번 거칩니다.
+          </p>
+          <FormField label="새 비밀번호" required error={fieldErrors.newPassword}>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              aria-describedby={GUIDANCE_ID}
+              required
+            />
+            <PasswordGuidance password={newPassword} id={GUIDANCE_ID} className="mt-1" />
+          </FormField>
+          <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              required
+            />
+          </FormField>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              className="text-sm text-neutral-500 underline underline-offset-2"
+              onClick={() => mail.mutate()}
+            >
+              메일로 받기
+            </button>
+            <div className="flex gap-2">
+              <Button type="button" variant="secondary" onClick={close}>
+                취소
+              </Button>
+              <Button type="submit" loading={save.isPending}>
+                설정
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+    </>
   )
 }
 
@@ -294,12 +561,24 @@ function LinkedAccountsSection({
     onError: (err) => toast.error(toApiError(err, '연동을 해제하지 못했습니다.').message),
   })
 
+  const [open, setOpen] = useState(false)
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>연동된 계정</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <>
+      <SettingRow
+        label="연동된 계정"
+        description={
+          identities.length === 0
+            ? '없음'
+            : identities.map((identity) => `구글 ${identity.email}`).join(', ')
+        }
+        action={
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            관리
+          </Button>
+        }
+      />
+      <Modal open={open} onClose={() => setOpen(false)} title="연동된 계정">
         {identities.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-neutral-600">
@@ -310,7 +589,6 @@ function LinkedAccountsSection({
               label="continue"
               loading={link.isPending}
               onClick={() => link.mutate()}
-              className="max-w-sm"
             />
           </div>
         ) : (
@@ -338,12 +616,12 @@ function LinkedAccountsSection({
           </ul>
         )}
         {lastMethod && (
-          <p className="text-sm text-neutral-500">
+          <p className="mt-3 text-sm text-neutral-500">
             유일한 로그인 수단이라 해제할 수 없습니다. 먼저 비밀번호를 설정해 주세요.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </Modal>
+    </>
   )
 }
 
@@ -392,33 +670,52 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
     onError: (err) => setError(toApiError(err, '인증 코드를 확인하지 못했습니다.').message),
   })
 
+  if (enabled) {
+    // 등록된 상태의 두 동작은 EnrolledPanel 이 이미 자기 모달로 가지고 있다. 그것을
+    // 다시 모달 안에 넣으면 모달 위에 모달이 서고 포커스 트랩이 둘이 된다.
+    return (
+      <SettingRow label="2단계 인증" description="사용 중" action={<EnrolledPanel />} />
+    )
+  }
+
+  const close = () => {
+    // 복구 코드를 띄운 상태에서는 닫히지 않는다(dismissible=false). 여기 오는 길은
+    // 「저장했습니다」뿐이다.
+    resetWizard()
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>2단계 인증 (2FA)</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {enabled && step !== 'recovery' ? (
-          <EnrolledPanel />
-        ) : step === 'recovery' && recoveryCodes ? (
+    <>
+      <SettingRow
+        label="2단계 인증"
+        description="사용 안 함"
+        note={
+          hasPassword
+            ? '인증 앱(TOTP)으로 로그인에 한 단계를 더합니다.'
+            : '등록은 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 비밀번호를 먼저 설정해 주세요.'
+        }
+        action={
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={!hasPassword}
+            onClick={() => setStep('password')}
+          >
+            등록
+          </Button>
+        }
+      />
+      <Modal
+        open={step !== 'idle'}
+        onClose={close}
+        title="2단계 인증 등록"
+        dismissible={step !== 'recovery'}
+      >
+        {step === 'recovery' && recoveryCodes ? (
           <div className="space-y-4">
             <p className="text-sm text-neutral-700">2단계 인증이 활성화되었습니다.</p>
             <RecoveryCodes codes={recoveryCodes} />
-            <Button onClick={resetWizard}>완료</Button>
-          </div>
-        ) : step === 'idle' ? (
-          <div className="space-y-3">
-            <p className="text-sm text-neutral-600">
-              인증 앱(TOTP)으로 로그인 시 2단계 인증을 추가합니다. 계정 보안을 위해 등록을 권장합니다.
-            </p>
-            {hasPassword ? (
-              <Button onClick={() => setStep('password')}>2단계 인증 등록</Button>
-            ) : (
-              <p className="text-sm text-neutral-500">
-                등록은 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 위의{' '}
-                <strong>비밀번호 설정</strong>을 먼저 마쳐 주세요.
-              </p>
-            )}
+            <Button onClick={resetWizard}>저장했습니다</Button>
           </div>
         ) : step === 'password' ? (
           <form
@@ -494,8 +791,8 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
             </div>
           </form>
         )}
-      </CardContent>
-    </Card>
+      </Modal>
+    </>
   )
 }
 
@@ -545,16 +842,13 @@ function EnrolledPanel() {
   })
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-neutral-700">2단계 인증이 설정되어 있습니다.</p>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => setRegenOpen(true)}>
-          복구 코드 재발급
-        </Button>
-        <Button variant="danger" onClick={() => setDisableOpen(true)}>
-          2단계 인증 해제
-        </Button>
-      </div>
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" variant="secondary" onClick={() => setRegenOpen(true)}>
+        복구 코드 재발급
+      </Button>
+      <Button size="sm" variant="danger" onClick={() => setDisableOpen(true)}>
+        해제
+      </Button>
 
       <Modal
         open={regenOpen}
@@ -725,25 +1019,26 @@ function WithdrawSection({
       <CardHeader>
         <CardTitle className="text-danger-700">회원 탈퇴</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-neutral-600">
-          탈퇴하면 로그인·SSH 접속이 즉시 차단되고 모든 세션이 종료됩니다. 계정 정보는 관련 법령과
-          개인정보처리방침에 따라 영구 보존되며, <strong>같은 이메일로는 다시 가입할 수 없습니다.</strong>
-        </p>
-        <p className="text-sm text-neutral-500">
-          삭제되지 않은 VM을 보유한 워크스페이스의 유일한 소유자이거나 개인 워크스페이스에 VM이 남아 있으면 먼저
-          정리해야 탈퇴할 수 있습니다.
-        </p>
-        {hasPassword ? (
-          <Button variant="danger" onClick={() => setOpen(true)}>
-            회원 탈퇴
-          </Button>
-        ) : (
-          <p className="text-sm text-neutral-500">
-            탈퇴는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 위의{' '}
-            <strong>비밀번호 설정</strong>을 먼저 마친 뒤 다시 시도해 주세요.
-          </p>
-        )}
+      <CardContent>
+        <SettingRow
+          label="계정 삭제"
+          description="로그인과 SSH 접속이 즉시 차단되고 같은 이메일로는 다시 가입할 수 없습니다."
+          note={
+            hasPassword
+              ? '삭제되지 않은 VM을 보유한 워크스페이스의 유일한 소유자이거나 개인 워크스페이스에 VM이 남아 있으면 먼저 정리해야 합니다.'
+              : '탈퇴는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 비밀번호를 먼저 설정해 주세요.'
+          }
+          action={
+            <Button
+              size="sm"
+              variant="danger"
+              disabled={!hasPassword}
+              onClick={() => setOpen(true)}
+            >
+              탈퇴
+            </Button>
+          }
+        />
       </CardContent>
 
       <Modal

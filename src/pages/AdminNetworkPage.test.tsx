@@ -80,7 +80,7 @@ describe('네트워크 — 릴레이 탭', () => {
     )
   })
 
-  test('발급이 재인증을 요구하면 비밀번호 확인 모달을 거쳐 재시도된다', async () => {
+  test('발급이 재인증을 요구하면 본인 확인 모달을 거쳐 재시도된다', async () => {
     const user = userEvent.setup()
     // 서버가 X-Reauth-Token 없는 발급을 403 REAUTH_REQUIRED로 거절하는 상황.
     server.use(...reauthGateHandlers('POST /admin/relays/:relayId/token'))
@@ -92,7 +92,7 @@ describe('네트워크 — 릴레이 탭', () => {
     await user.click(within(confirm).getByRole('button', { name: '토큰 재발급' }))
 
     // fetch 계층이 403을 가로채 재인증 모달을 띄운다.
-    const reauth = await screen.findByRole('dialog', { name: '비밀번호 확인' })
+    const reauth = await screen.findByRole('dialog', { name: '본인 확인' })
     await user.type(within(reauth).getByLabelText('비밀번호'), USER_PASSWORD)
     await user.click(within(reauth).getByRole('button', { name: '확인' }))
 

@@ -8,10 +8,13 @@ import {
   MFA_ACCOUNT_CODE,
   NEW_ACCOUNT_CODE,
   OUTSIDE_DOMAIN_CODE,
+  REVERIFY_CODE,
+  REVERIFY_TOKEN,
 } from '../test/msw/handlers/google-oauth'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { getReauthToken } from '../api/reauth'
 
 const callback = (code: string) => `/auth/google/callback?code=${code}&state=state-1`
 
@@ -88,5 +91,22 @@ describe('구글 온보딩 폼', () => {
   test('토큰 없이 직접 들어오면 로그인 화면으로 돌린다', async () => {
     renderApp('/google-onboarding')
     expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument()
+  })
+
+  test('본인 확인 왕복은 토큰을 심고 원래 있던 자리로 돌려보낸다', async () => {
+    // 확인이 필요한 동작 앞에서 시작하므로 이미 로그인해 있다. 액세스 토큰은
+    // 메모리에만 살아 전체 이동에서 사라지고, 돌아온 콘솔이 리프레시 쿠키로
+    // 스스로를 복구한다.
+    server.use(refreshSuccessHandler('access-user'))
+    sessionStorage.setItem(OAUTH_RETURN_TO_KEY, '/console/account')
+    renderApp(callback(REVERIFY_CODE))
+
+    // 콜백이 이 갈래를 몰랐을 때는 「응답을 이해하지 못했습니다」로 끝났다. 서버는
+    // v0.44.0 부터 이 응답을 돌려주고 있었다.
+    expect(await screen.findByRole('heading', { name: '계정 설정' })).toBeInTheDocument()
+    expect(getReauthToken()).toBe(REVERIFY_TOKEN)
+    // 동작은 저절로 이어지지 않는다. 대기 중이던 요청은 페이지를 떠나는 순간
+    // 취소로 마감됐으므로 사용자가 다시 눌러야 하고, 그 사실을 말해야 한다.
+    expect(await screen.findByText(/다시 시도해 주세요/)).toBeInTheDocument()
   })
 })
