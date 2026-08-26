@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { HttpResponse } from 'msw'
-import { orgAdminUser, problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
+import {
+  orgAdminUser,
+  orgViewerUser,
+  problemResponse,
+  refreshSuccessHandler,
+} from '../test/msw/handlers/auth'
 import { makeNotice, noticeImage, seedNotices } from '../test/msw/handlers/notices'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
@@ -26,6 +31,17 @@ describe('공지사항 공개 목록', () => {
 
     expect(await screen.findByRole('link', { name: /기관 전용 안내/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /콘솔 기능 업데이트/ })).toBeInTheDocument()
+  })
+
+  test('열람 역할만 가진 기관의 공지는 게시판에 서지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    renderApp('/notices')
+
+    // 기관 공지는 그 기관 사람에게 보내는 글이고, 열람 역할은 들여다보도록 허락받은
+    // 바깥 사람이다. 감추는 것이 아니라 — 같은 공지를 관리 목록에서 읽는다 — 게시판이
+    // 말하는 '이 기관 사람'을 한 가지 뜻으로 두는 것이다.
+    expect(await screen.findByRole('link', { name: /콘솔 기능 업데이트/ })).toBeInTheDocument()
+    expect(screen.queryByText('기관 전용 안내')).not.toBeInTheDocument()
   })
 
   test('공지가 없으면 빈 상태를 안내한다', async () => {

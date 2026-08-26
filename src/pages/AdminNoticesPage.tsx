@@ -15,8 +15,8 @@ import {
   type NoticeUpdateRequest,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { useAuth } from '../auth/auth-context'
-import { canManageNotice, isSysTier } from '../auth/permissions'
+import { useAuth, type ManagedOrg } from '../auth/auth-context'
+import { administeredOrgs, canManageNotice, isSysTier } from '../auth/permissions'
 import { NoticeImage } from '../components/NoticeImage'
 import {
   Alert,
@@ -85,7 +85,9 @@ export function AdminNoticesPage() {
   const canManage = !!role && canManageNotice(role)
   // 전역 공지는 시스템 계층의 것 — 기관 관리자는 자기 기관 공지만 쓴다.
   const canChoosePlatform = !!role && isSysTier(role)
-  const viewerOrgId = user?.orgId ?? null
+  // 겸직 계정은 관리 기관이 여럿이라 '자기 기관'이 하나로 정해지지 않는다. 쓸 수
+  // 있는 곳은 열람 역할만 가진 기관을 뺀 '관리자인 기관'뿐이다 (계약 v0.46.0).
+  const administered = administeredOrgs(user?.managedOrgs ?? [])
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -221,7 +223,7 @@ export function AdminNoticesPage() {
             notice={selected}
             canManage={canManage}
             canChoosePlatform={canChoosePlatform}
-            viewerOrgId={viewerOrgId}
+            administered={administered}
             onCreated={(created) => {
               setCreating(false)
               setSelectedId(created.id)
@@ -240,7 +242,7 @@ function NoticeDetailBody({
   notice,
   canManage,
   canChoosePlatform,
-  viewerOrgId,
+  administered,
   onCreated,
   onDeleted,
 }: {
@@ -248,8 +250,8 @@ function NoticeDetailBody({
   notice: AdminNoticeView | null
   canManage: boolean
   canChoosePlatform: boolean
-  /** 보고 있는 사람의 소속 기관 — 기관 공지를 쓸 때 대상이 되는 곳. */
-  viewerOrgId: string | null
+  /** 보고 있는 사람이 관리자인 기관들 — 기관 공지를 쓸 수 있는 곳 전부. */
+  administered: ManagedOrg[]
   onCreated: (created: AdminNoticeView) => void
   onDeleted: () => void
 }) {
@@ -278,10 +280,23 @@ function NoticeDetailBody({
   const orgScoped = scope === 'ORG'
   const effectiveAudience: NoticeAudience = orgScoped ? 'USERS' : audience
 
-  // 시스템 계층이 기관 공지를 *새로* 쓸 때만 대상 기관을 고른다 — 기관 관리자는
-  // 자기 기관 고정이고, 이미 등록된 공지는 범위도 기관도 바뀌지 않는다.
-  const needsOrgPick = canChoosePlatform && orgScoped && notice == null
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: needsOrgPick })
+  // 기관 공지를 *새로* 쓸 때만 대상 기관을 고른다 — 이미 등록된 공지는 범위도
+  // 기관도 바뀌지 않는다. 시스템 계층은 언제나 고르고, 기관 관리자는 관리 기관이
+  // 둘 이상일 때만 고른다: 하나뿐이면 답이 하나라 서버가 알아서 채운다.
+  const needsOrgPick =
+    orgScoped && notice == null && (canChoosePlatform || administered.length > 1)
+  // 전 기관 목록은 시스템 계층만 부른다 — 기관 관리자가 고르는 후보는 자기 관리 기관이다.
+  const orgs = useQuery({
+    queryKey: ['orgs'],
+    queryFn: fetchOrgs,
+    enabled: needsOrgPick && canChoosePlatform,
+  })
+  const orgOptions = canChoosePlatform
+    ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
+    : administered.map((org) => ({ id: org.orgId, name: org.orgName }))
+  // 관리 기관이 하나뿐인 기관 관리자는 고를 것이 없으므로 그 기관이 곧 대상이다.
+  const soleOrgId =
+    !canChoosePlatform && administered.length === 1 ? administered[0].orgId : undefined
 
   /** 등록과 수정이 함께 보내는 부분 — 계약의 수정 요청이 받는 필드 전부다. */
   const editableBody = () => ({
@@ -305,7 +320,7 @@ function NoticeDetailBody({
   const createBody = (): NoticeCreateRequest => ({
     ...editableBody(),
     scope,
-    orgId: orgScoped ? ((needsOrgPick ? orgId : viewerOrgId) ?? undefined) : undefined,
+    orgId: orgScoped ? ((needsOrgPick ? orgId : soleOrgId) ?? undefined) : undefined,
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'notices'] })
@@ -440,7 +455,7 @@ function NoticeDetailBody({
               onChange={(event) => setOrgId(event.target.value)}
             >
               <option value="">기관 선택</option>
-              {(orgs.data ?? []).map((org) => (
+              {orgOptions.map((org) => (
                 <option key={org.id} value={org.id}>
                   {org.name}
                 </option>
@@ -453,7 +468,7 @@ function NoticeDetailBody({
         )}
         {!canChoosePlatform && (
           <p className="text-sm text-neutral-500">
-            기관 관리자는 자기 기관 공지만 등록할 수 있습니다.
+            기관 관리자는 자기가 관리하는 기관의 공지만 등록할 수 있습니다.
           </p>
         )}
 
