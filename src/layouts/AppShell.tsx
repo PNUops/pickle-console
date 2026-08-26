@@ -9,6 +9,7 @@ import { ContactEmail } from '../components/ContactEmail'
 import { Logo } from '../components/Logo'
 import { navIcons } from '../components/nav-icons'
 import { MaintenanceScreen } from '../components/MaintenanceScreen'
+import { NoticePopupHost } from '../components/NoticePopupHost'
 import { NotificationBell } from '../components/NotificationBell'
 import { Badge } from '../components/ui'
 import { PostLoginOverlay } from '../components/PostLoginOverlay'
@@ -333,6 +334,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen">
       <PostLoginOverlay />
+      <NoticePopupHost />
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
         <div className="flex h-16 items-center border-b border-neutral-100 px-5">
           <Logo to={home} />
