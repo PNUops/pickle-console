@@ -130,6 +130,32 @@ describe('팝업 공지', () => {
     expect(await screen.findByRole('dialog', { name: '점검 팝업' })).toBeInTheDocument()
   })
 
+  test('본문의 태그는 마크업이 아니라 글자로 나온다', async () => {
+    // 서버는 본문을 손대지 않고 저장한다(그쪽이 맞다). 그래서 이 화면이 본문을
+    // 마크업으로 그리는 순간 기관 관리자가 자기 기관 사람들에게 저장형 XSS를
+    // 심을 수 있고, 팝업은 인증 셸에 달려 모든 세션에서 열린다. 지금 안전한 것은
+    // 본문이 JSX 텍스트 자식이라 React가 이스케이프하기 때문이고, 줄바꿈은
+    // whitespace-pre-line이 CSS로 살린다 — \n을 <br>로 바꾸지 않는다.
+    // 이 테스트는 누군가 마크다운 렌더러를 끼울 때 울리라고 있다.
+    seedNotices([
+      makeNotice({
+        id: uuid(316),
+        title: '태그 섞인 공지',
+        body: '<img src=x onerror="alert(1)">첫 줄\n<b>둘째 줄</b>',
+        popup: true,
+      }),
+    ])
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    const dialog = await screen.findByRole('dialog', { name: '태그 섞인 공지' })
+    expect(dialog).toHaveTextContent('<img src=x onerror="alert(1)">첫 줄')
+    expect(dialog).toHaveTextContent('<b>둘째 줄</b>')
+    // 태그로 해석됐다면 이 요소들이 생긴다.
+    expect(dialog.querySelector('img')).toBeNull()
+    expect(dialog.querySelector('b')).toBeNull()
+  })
+
   test('조회가 실패해도 아무 말 없이 넘어간다', async () => {
     server.use(refreshSuccessHandler('access-user'))
     server.use(http.get('*/api/v1/notices', () => HttpResponse.error()))

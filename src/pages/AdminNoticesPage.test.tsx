@@ -9,6 +9,7 @@ import {
   refreshSuccessHandler,
   sysAdminUser,
   sysManagerUser,
+  sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -150,18 +151,43 @@ describe('공지사항 관리', () => {
     expect(within(created).getByText('테스트 기관')).toBeInTheDocument()
   })
 
-  test('열람 역할은 관리 목록에서 그 기관 공지를 읽되 쓰기는 막힌다', async () => {
+  test('기관 열람자는 관리 목록에 닿고, 쓰기는 사유와 함께 막힌다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
     renderApp('/admin/notices')
 
     // 관리 목록은 '들여다보라고 준' 역할이 닿는 유일한 공지 표면이다 — 게시판에서
-    // 빠지는 그 공지가 여기에는 있다.
+    // 빠지는 그 공지가 여기에는 있다. 메뉴도 함께 서야 닿을 방법이 있다.
+    expect(await screen.findByRole('link', { name: '공지사항 관리' })).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: '기관 전용 안내' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
     expect(within(drawer).getByRole('button', { name: '저장' })).toBeDisabled()
     expect(within(drawer).getByRole('button', { name: '삭제' })).toBeDisabled()
+    // 비활성만으로는 부족하다 — 왜 못 하는지가 함께 있어야 한다.
+    expect(
+      within(drawer).getByText(
+        '공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test('시스템 열람자는 시스템 운영자와 같이 전 기관을 읽고 쓰지는 못한다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
+    renderApp('/admin/notices')
+
+    // 시스템 계층은 소속과 무관하게 전부 본다 — 남의 기관 공지도 목록에 선다.
+    expect(await screen.findByRole('button', { name: '기관 전용 안내' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '데이터센터 정기 점검 안내' }))
+
+    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    expect(within(drawer).getByRole('button', { name: '저장' })).toBeDisabled()
+    expect(
+      within(drawer).getByText(
+        '공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.',
+      ),
+    ).toBeInTheDocument()
   })
 
   test('게시 창 밖 공지의 미리보기도 자격을 실어 받아 온다', async () => {
