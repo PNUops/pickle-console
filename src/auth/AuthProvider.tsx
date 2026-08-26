@@ -23,6 +23,11 @@ interface AuthState {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
+  // 'unauthenticated'로 가는 전환은 예외 없이 상태를 뒤집기 전에 액세스 토큰을
+  // 버린다 — 세션 만료 경로는 client.ts의 expireSession이 그 순서를 지킨다.
+  // 이 status를 '자격 없음'과 같은 뜻으로 읽는 소비자가 있어서다: NoticeImage는
+  // 비로그인일 때만 인증 헤더 없는 <img>로 되돌아가므로, 토큰을 쥔 채 상태만
+  // 먼저 뒤집히면 볼 자격이 있는 이미지가 404로 돌아온다.
   const [state, setState] = useState<AuthState>({ status: 'loading', user: null })
 
   // Session restore on app load: refresh-cookie → access token → /me.
