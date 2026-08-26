@@ -119,6 +119,10 @@ describe('로그인 화면의 구글 1차 동선', () => {
     )
     // 주소를 보고 판단하지 않는다는 것이 이 문구가 정적인 이유다.
     expect(screen.getByText(/구글 계정으로 가입했다면 비밀번호가 없습니다/)).toBeInTheDocument()
+
+    // 카드 아래의 안내는 사라진다. 주소를 달고 가는 카드 안 링크와 같은 말을 두 줄
+    // 겹치는 데다, 그쪽은 방금 친 주소를 버린다. (헤더의 CTA 는 성격이 달라 남는다.)
+    expect(screen.queryByText(/아직 계정이 없으신가요/)).not.toBeInTheDocument()
   })
 
   test('가입 화면도 구글이 1차다', async () => {
