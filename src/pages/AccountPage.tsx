@@ -854,9 +854,13 @@ function EnrolledPanel() {
         open={regenOpen}
         onClose={closeAll}
         title="복구 코드 재발급"
+        // 새 코드가 떠 있는 동안은 배경 클릭과 Escape 로 닫히지 않는다. 등록
+        // 흐름의 같은 단계와 같은 이유다 — 여기서 닫히면 방금 발급한 코드를
+        // 다시 볼 수 없고, 옛 코드는 이미 무효다.
+        dismissible={newCodes === null}
         footer={
           newCodes ? (
-            <Button onClick={closeAll}>완료</Button>
+            <Button onClick={closeAll}>저장했습니다</Button>
           ) : (
             <>
               <Button variant="secondary" onClick={closeAll}>
