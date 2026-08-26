@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchAuditLogs, fetchOrgs } from '../api/queries'
+import { fetchAuditLogs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
+import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
@@ -49,9 +50,9 @@ function isKnownRole(role: string): role is UserRole {
 export function AdminAuditPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysTier(user.role)
-  // 감사 로그는 조회가 넓어진 뒤에도 관리 기관 안에 남는 유일한 화면이다
-  // (로그인 IP는 운영 데이터가 아니라 증거다). 그래서 기관 선택기도 시스템
-  // 계층에는 전 기관을, 기관 계층에는 자기 관리 기관만 담는다.
+  // 감사 로그의 범위는 조회 화면 중 가장 좁다: 역할을 보유한 기관이 아니라
+  // 행위할 수 있는(관리자나 운영자인) 기관만이다 — 로그인 IP는 운영 데이터가
+  // 아니라 증거다. 기관 선택기도 그 기관들만 담는다.
   const [action, setAction] = useState<string | undefined>(undefined)
   const [actorEmail, setActorEmail] = useState('')
   const [from, setFrom] = useState('')
@@ -88,11 +89,7 @@ export function AdminAuditPage() {
       }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
-  const managedOrgs = user?.managedOrgs ?? []
-  const orgOptions = isSysAdmin
-    ? (orgs.data ?? [])
-    : managedOrgs.map((org) => ({ id: org.orgId, name: org.orgName }))
+  const orgOptions = useOrgOptions('operated')
 
   return (
     <div className="space-y-6">
@@ -100,8 +97,8 @@ export function AdminAuditPage() {
         <h1 className="text-2xl font-bold text-neutral-900">감사 로그</h1>
         <p className="mt-1 text-sm text-neutral-500">
           {isSysAdmin ? '전체' : '관리 기관'} 관리자와 사용자의 활동 기록입니다. 로그인,
-          설정 변경, VM 작업 등 주요 동작이 남습니다. 다른 화면과 달리 이 기록은
-          관리 기관 안으로 한정됩니다.
+          설정 변경, VM 작업 등 주요 동작이 남습니다. 열람 역할만 보유한 기관의
+          기록은 여기 보이지 않습니다.
         </p>
       </div>
 

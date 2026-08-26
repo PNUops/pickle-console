@@ -6,7 +6,6 @@ import {
   fetchAdminWorkspaces,
   forceDeleteVm,
   fetchAdminVms,
-  fetchOrgs,
   scheduleVmDeletion,
   type AdminVmSort,
   type VmStatus,
@@ -15,9 +14,10 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, isSysAdminOnly } from '../auth/permissions'
+import { canManageVmDeletion, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
+import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
@@ -72,9 +72,10 @@ function idParam(value: string | null): string | undefined {
 export function AdminVmsPage() {
   const { user } = useAuth()
   const role = user?.role
-  // 조회는 계약 v0.46.0부터 관리자 계층 전체가 전 기관에 닿는다. 삭제
-  // 라이프사이클(예약·취소)은 대상 VM 기관의 ORG_ADMIN과 SYS_ADMIN만, 강제
-  // 삭제는 SYS_ADMIN만이며 이 둘은 넓어지지 않았다(§3.11/§4).
+  // 조회 범위: 시스템 계층은 전 기관, 기관 계층은 역할을 보유한 기관(계약
+  // v0.46.0). 삭제 라이프사이클(예약과 취소)은 대상 VM 기관의 ORG_ADMIN과
+  // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
+  const isSysAdmin = !!role && isSysTier(role)
   const canDelete = !!role && canManageVmDeletion(role)
   const canForceDelete = !!role && isSysAdminOnly(role)
   // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
@@ -129,8 +130,9 @@ export function AdminVmsPage() {
     setSort(next === null ? undefined : next === 'asc' ? key : (`-${key}` as AdminVmSort))
     setPage(0)
   }
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
-  // 기관을 고르지 않으면 전 기관, 고르면 그 기관의 워크스페이스로 좁혀진다.
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
+  // 기관을 고르지 않으면 조회 범위 전체, 고르면 그 기관의 워크스페이스로 좁혀진다.
   const workspaces = useQuery({
     queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
     queryFn: () => fetchAdminWorkspaces(orgId !== undefined ? { orgId } : {}),
@@ -143,8 +145,8 @@ export function AdminVmsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          전 기관의 VM을 조회하고 일반 삭제 접수와 취소 등 관리 작업을 수행합니다.
-          삭제는 자기가 관리자로 있는 기관의 VM에만 접수할 수 있습니다.
+          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 일반 삭제 접수와 취소 등
+          관리 작업을 수행합니다.
         </p>
       </div>
 
@@ -186,26 +188,28 @@ export function AdminVmsPage() {
               setPage(0)
             }}
           />
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            기관
-            <Select
-              aria-label="기관 필터"
-              className="w-56"
-              value={orgId ?? ''}
-              onChange={(event) => {
-                setOrgId(event.target.value || undefined)
-                setWorkspaceId(undefined) // 기관이 바뀌면 이전 기관의 워크스페이스 선택은 무효
-                setPage(0)
-              }}
-            >
-              <option value="">전체 기관</option>
-              {orgs.data?.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-          </label>
+          {orgOptions.length > 1 && (
+            <label className="flex items-center gap-2 text-sm text-neutral-600">
+              기관
+              <Select
+                aria-label="기관 필터"
+                className="w-56"
+                value={orgId ?? ''}
+                onChange={(event) => {
+                  setOrgId(event.target.value || undefined)
+                  setWorkspaceId(undefined) // 기관이 바뀌면 이전 기관의 워크스페이스 선택은 무효
+                  setPage(0)
+                }}
+              >
+                <option value="">전체 기관</option>
+                {orgOptions.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+          )}
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             워크스페이스
             <Select

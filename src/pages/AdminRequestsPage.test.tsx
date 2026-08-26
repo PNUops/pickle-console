@@ -41,7 +41,8 @@ describe('관리자 대시보드 요약', () => {
 
 describe('승인 대기 큐', () => {
   test('기본 탭은 승인 대기이고 SUBMITTED 신청만 보여준다', async () => {
-    renderAsOrgAdmin('/admin/requests')
+    // 전 기관이 보이는 시스템 계층으로 확인한다 — 기관 계층은 보유 기관 것만 본다.
+    renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('heading', { name: '승인 대기' })
     expect(screen.getByRole('button', { name: '승인 대기' })).toHaveAttribute(
@@ -71,7 +72,7 @@ describe('승인 대기 큐', () => {
 
   test('전체 탭은 모든 상태의 신청을 보여준다 (status 미지정)', async () => {
     const user = userEvent.setup()
-    renderAsOrgAdmin('/admin/requests')
+    renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
     await user.click(screen.getByRole('button', { name: '전체' }))
@@ -82,13 +83,14 @@ describe('승인 대기 큐', () => {
     expect(screen.getAllByRole('link', { name: '홍길동' }).length).toBeGreaterThan(1)
   })
 
-  test('ORG_ADMIN에게도 기관 필터가 보인다', async () => {
+  test('ORG_ADMIN에게는 기관 필터가 보이지 않고 타 기관 신청도 없다', async () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    // 계약 v0.46.0: 신청 조회가 전 기관에 닿는다. 승인과 반려는 그대로 관리
-    // 기관 안이며, 그쪽은 API가 404로 막는다.
-    expect(await screen.findByLabelText('기관 필터')).toBeInTheDocument()
+    // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
+    // 고를 것이 없으므로 기관 필터를 보이지 않는다.
+    expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '박영희' })).not.toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 기관 필터로 특정 기관의 신청만 볼 수 있다', async () => {
@@ -105,7 +107,8 @@ describe('승인 대기 큐', () => {
   })
 
   test('10건이 넘으면 페이지네이션으로 나눠 보여준다', async () => {
-    for (let id = 300; id < 309; id++) {
+    // 시딩분은 전부 org1이라 보유 기관 스코프 안에서도 그대로 보인다.
+    for (let id = 300; id < 310; id++) {
       adminRequestStore.push(submittedAdminRequest(id))
     }
     const user = userEvent.setup()
@@ -115,8 +118,8 @@ describe('승인 대기 큐', () => {
       'aria-current',
       'page',
     )
-    // 1페이지: 최신 순 → 시딩분 + 204. 201은 2페이지로 밀린다.
-    expect(screen.getByText('추가 실습 서버 308')).toBeInTheDocument()
+    // 1페이지: 최신 순 → 시딩분. 201은 2페이지로 밀린다.
+    expect(screen.getByText('추가 실습 서버 309')).toBeInTheDocument()
     expect(screen.queryByText('캡스톤 프로젝트 백엔드 서버 운영')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '다음' }))

@@ -86,8 +86,10 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 export function AdminUsersPage() {
   const { user } = useAuth()
   const viewerRole = user?.role
-  // 전체/우리 기관 조회 범위는 시스템 계층. 계정 비활성화·해제·MFA 초기화는
-  // SYS_ADMIN 전용(§4).
+  // 사용자 조회는 관리자 조회 중 유일하게 전 기관이다 — 파생 소속은 리소스에서
+  // 나오므로, 아무것도 신청하지 않은 계정은 어느 기관에도 속하지 않아 범위를
+  // 좁히면 누구에게도 보이지 않는다 (계약 v0.46.0). 계정 비활성화, 해제, MFA
+  // 초기화는 SYS_ADMIN 전용(§4).
   const isSysAdmin = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)

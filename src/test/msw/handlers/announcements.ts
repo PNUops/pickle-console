@@ -2,6 +2,7 @@ import { isOrgTier, isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
+import { adminReadScope } from './org-scope'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
@@ -137,8 +138,10 @@ export const announcementHandlers: RequestHandler[] = [
     if (!profile) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
-    // 계약 v0.46.0: 조회는 전 계층이 전 기관을 본다. orgId는 좁히는 보통 필터이며
-    // 어느 기관에도 없는 id만 404 (존재 비공개).
+    // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다. 보유하지 않은
+    // 기관이나 없는 기관을 지정하면 404 (존재 비공개).
+    const scope = adminReadScope(profile, orgId, '/api/v1/admin/workspaces')
+    if (scope.notFound) return scope.notFound
     if (orgId && !(orgId in workspaceOptionsByOrg)) {
       return problemResponse({
         type: 'about:blank',
@@ -149,9 +152,9 @@ export const announcementHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     }
-    const options = orgId
-      ? workspaceOptionsByOrg[orgId]
-      : Object.values(workspaceOptionsByOrg).flat()
+    const options = Object.entries(workspaceOptionsByOrg)
+      .filter(([optionOrgId]) => scope.matches(optionOrgId))
+      .flatMap(([, list]) => list)
     return HttpResponse.json(options, { status: 200 })
   }),
 

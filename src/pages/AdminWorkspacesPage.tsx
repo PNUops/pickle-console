@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { fetchAdminWorkspace, fetchAdminWorkspaces, fetchOrgs } from '../api/queries'
+import { fetchAdminWorkspace, fetchAdminWorkspaces } from '../api/queries'
+import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -19,6 +21,7 @@ import {
 } from '../components/ui'
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
+import { useOrgOptions } from '../lib/use-org-options'
 import {
   WORKSPACE_ROLE_LABELS,
   USER_STATUS_LABELS,
@@ -30,6 +33,8 @@ import {
  * 워크스페이스 변경(생성·역할 조정·삭제)은 다음 단계.
  */
 export function AdminWorkspacesPage() {
+  const { user } = useAuth()
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -37,36 +42,39 @@ export function AdminWorkspacesPage() {
     queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
     queryFn: () => fetchAdminWorkspaces(orgId !== undefined ? { orgId } : {}),
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">워크스페이스 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          전 기관의 워크스페이스와 구성원을 조회합니다. 구성원 변경은
-          워크스페이스 소유자가 수행합니다.
+          {isSysAdmin ? '전체' : '우리 기관에 연결된'} 워크스페이스와 구성원을 조회합니다.
+          구성원 변경은 워크스페이스 소유자가 수행합니다.
         </p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-neutral-600">
-        기관
-        <Select
-          aria-label="기관 필터"
-          className="w-56"
-          value={orgId ?? ''}
-          onChange={(event) => {
-            setOrgId(event.target.value || undefined)
-          }}
-        >
-          <option value="">전체 기관</option>
-          {orgs.data?.map((org) => (
-            <option key={org.id} value={org.id}>
-              {org.name}
-            </option>
-          ))}
-        </Select>
-      </label>
+      {orgOptions.length > 1 && (
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
+          기관
+          <Select
+            aria-label="기관 필터"
+            className="w-56"
+            value={orgId ?? ''}
+            onChange={(event) => {
+              setOrgId(event.target.value || undefined)
+            }}
+          >
+            <option value="">전체 기관</option>
+            {orgOptions.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+      )}
 
       {workspaces.isPending && (
         <div className="flex justify-center py-12">

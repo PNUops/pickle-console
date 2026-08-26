@@ -38,15 +38,15 @@ describe('관리자 워크스페이스 관리', () => {
     )
   })
 
-  test('ORG_ADMIN도 전 기관 워크스페이스를 보고 기관 필터를 쓴다', async () => {
+  test('ORG_ADMIN은 보유 기관 워크스페이스만 보고 기관 필터가 없다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin/workspaces')
 
     await screen.findByRole('heading', { name: '워크스페이스 관리' })
-    // 계약 v0.46.0: 워크스페이스 조회가 전 기관에 닿는다. 공지 발송 대상은
-    // 이보다 좁고, 그 좁힘은 공지 화면이 관리 기관으로 한다.
+    // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
+    // 고를 것이 없으므로 기관 필터도 보이지 않는다.
     expect(await screen.findByText('캡스톤 3조')).toBeInTheDocument()
-    expect(await screen.findByText('AI 동아리')).toBeInTheDocument()
-    expect(await screen.findByLabelText('기관 필터')).toBeInTheDocument()
+    expect(screen.queryByText('AI 동아리')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
   })
 })

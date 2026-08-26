@@ -5,7 +5,6 @@ import {
   applyAdminRoute,
   fetchAdminDomains,
   fetchAdminRoutes,
-  fetchOrgs,
   forceReleaseDomain,
   resyncRoutes,
   verifyAdminDomain,
@@ -45,6 +44,7 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
+import { useOrgOptions } from '../lib/use-org-options'
 
 const PAGE_SIZE = 20
 
@@ -95,7 +95,8 @@ export function AdminDomainsPage() {
     queryFn: () => fetchAdminDomains({ status, kind, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
 
@@ -105,9 +106,8 @@ export function AdminDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            전 기관 VM의 도메인과 라우트 적용, 인증서 상태입니다. 행을 선택하면
-            라우트와 인증서 상세, 개입 작업이 열립니다. 강제 해제와 재검증은
-            자기가 관리하는 기관의 도메인에만 적용됩니다.
+            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용, 인증서
+            상태입니다. 행을 선택하면 라우트와 인증서 상세, 개입 작업이 열립니다.
           </p>
         </div>
         {isSysAdmin && <ResyncButton />}
@@ -128,13 +128,13 @@ export function AdminDomainsPage() {
             setStatus(next)
             setPage(0)
           }}
-          showOrgFilter
+          showOrgFilter={orgOptions.length > 1}
           orgId={orgId}
           onOrg={(next) => {
             setOrgId(next)
             setPage(0)
           }}
-          orgs={orgs.data ?? []}
+          orgs={orgOptions}
         >
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             종류

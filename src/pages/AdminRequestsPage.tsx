@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
-  fetchOrgs,
   type RequestStatus,
 } from '../api/queries'
 import {
@@ -27,6 +26,7 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
 import { REQUEST_STATUS_LABELS } from '../lib/status'
+import { useOrgOptions } from '../lib/use-org-options'
 
 const PAGE_SIZE = 10
 
@@ -56,8 +56,8 @@ export function AdminRequestsPage() {
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
-
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   return (
     <div className="space-y-6">
@@ -94,25 +94,27 @@ export function AdminRequestsPage() {
             )
           })}
         </div>
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          기관
-          <Select
-            aria-label="기관 필터"
-            className="w-56"
-            value={orgId ?? ''}
-            onChange={(event) => {
-              setOrgId(event.target.value || undefined)
-              setPage(0)
-            }}
-          >
-            <option value="">전체 기관</option>
-            {orgs.data?.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </Select>
-        </label>
+        {orgOptions.length > 1 && (
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            기관
+            <Select
+              aria-label="기관 필터"
+              className="w-56"
+              value={orgId ?? ''}
+              onChange={(event) => {
+                setOrgId(event.target.value || undefined)
+                setPage(0)
+              }}
+            >
+              <option value="">전체 기관</option>
+              {orgOptions.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+        )}
       </div>
 
       {requests.isPending && (

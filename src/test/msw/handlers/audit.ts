@@ -1,7 +1,7 @@
-import { isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
+import { adminOperatedScope } from './org-scope'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
@@ -163,31 +163,15 @@ export const auditHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
 
-    // 계약 v0.46.0: 감사 로그는 전역 조회의 예외로 관리 기관 안에 머문다.
-    // 기관 계층이 관리하지 않는 기관을 지정하면 404 (존재 비공개).
-    if (
-      orgId &&
-      !isSysTier(profile.role) &&
-      !profile.managedOrgs.some((org) => org.orgId === orgId)
-    ) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '리소스를 찾을 수 없습니다',
-        status: 404,
-        detail: '요청한 리소스가 존재하지 않습니다.',
-        instance: '/api/v1/admin/audit',
-        code: 'RESOURCE_NOT_FOUND',
-      })
-    }
+    // 계약 v0.46.0: 감사 로그는 조회 중 가장 좁다 — 역할을 보유한 기관이 아니라
+    // 행위할 수 있는(관리자나 운영자인) 기관만이며, 그 밖을 지정하면 404
+    // (존재 비공개). 열람 역할(ORG_VIEWER)은 이 표면 자체가 403이지만, 여기서는
+    // 스코프만 재현한다.
+    const scope = adminOperatedScope(profile, orgId, '/api/v1/admin/audit')
+    if (scope.notFound) return scope.notFound
 
     const filtered = auditStore
-      // 기관 계층은 행위자가 관리 기관 소속인 행만 (계약)
-      .filter(
-        (row) =>
-          isSysTier(profile.role) ||
-          profile.managedOrgs.some((org) => org.orgId === row.actorOrgId),
-      )
-      .filter((row) => !orgId || row.actorOrgId === orgId)
+      .filter((row) => scope.matches(row.actorOrgId))
       .filter((row) => !action || row.action === action)
       .filter((row) => !actorEmail || (row.actorEmail ?? '').includes(actorEmail))
       .filter((row) => !from || row.createdAt.slice(0, 10) >= from)

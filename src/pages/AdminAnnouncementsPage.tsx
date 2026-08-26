@@ -37,10 +37,10 @@ export function AdminAnnouncementsPage() {
   const isSysAdmin = user?.role === 'SYS_ADMIN'
   // 공지 발송은 기관 관리자와 시스템 관리자만 — 운영자는 최근 공지 조회만(§3.13).
   const canSend = !!user && canBroadcast(user.role)
-  // 발송 대상은 계약 v0.46.0에서도 넓어지지 않았다. 기관 관리자는 자기가
-  // 관리자로 있는 기관에만 보낼 수 있고, 워크스페이스 대상도 그 기관에 연결된
-  // 것으로 제한된다. 조회 쪽이 전 기관으로 열렸으므로 선택기를 좁히지 않으면
-  // 보낼 수 없는 대상이 목록에 뜬다.
+  // 발송 대상은 자기가 관리자로 있는 기관뿐이고, 워크스페이스 대상도 그 기관에
+  // 연결된 것으로 제한된다. 조회는 역할을 보유한 기관 전체에 닿으므로(열람이나
+  // 운영 역할까지) 선택기를 관리 기관으로 좁히지 않으면 보낼 수 없는 대상이
+  // 목록에 뜬다 (계약 v0.46.0).
   const administered = administeredOrgs(user?.managedOrgs ?? [])
   const defaultTarget: TargetKind = isSysAdmin
     ? 'ALL'

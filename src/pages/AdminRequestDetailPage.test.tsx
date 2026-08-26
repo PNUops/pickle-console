@@ -7,13 +7,19 @@ import {
   approveBodies,
   rejectBodies,
 } from '../test/msw/handlers/admin'
-import { orgAdminUser, refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 
 function renderDetail(requestId: string) {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+  renderApp(`/admin/requests/${requestId}`)
+}
+
+/** 타 기관(org2) 신청은 기관 관리자에게 404이므로 시스템 관리자로 연다. */
+function renderDetailAsSysAdmin(requestId: string) {
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
   renderApp(`/admin/requests/${requestId}`)
 }
 
@@ -55,7 +61,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
   })
 
   test('기관 리소스 경고가 있으면 경고 배지와 신중 안내문을 보여준다', async () => {
-    renderDetail(uuid(204))
+    renderDetailAsSysAdmin(uuid(204))
 
     const panel = await screen.findByRole('complementary', {
       name: '승인 판단 참고 정보',

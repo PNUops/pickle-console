@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchAdminVms, fetchOrgs, type VmSummary } from '../api/queries'
+import { fetchAdminVms, type VmSummary } from '../api/queries'
+import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { FilterBar } from '../components/FilterBar'
+import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
@@ -37,6 +40,8 @@ function queryParamsOf(tab: ExpiryTab) {
 
 /** 만료 관리 — 만료 임박·만료된 VM을 모아 보고 사용 기간을 연장한다. */
 export function AdminExpiryPage() {
+  const { user } = useAuth()
+  const isSysAdmin = !!user && isSysTier(user.role)
   const [tab, setTab] = useState<ExpiryTab>('D7')
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -59,16 +64,16 @@ export function AdminExpiryPage() {
     queryFn: () => fetchAdminVms({ ...params, orgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
+  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
+  const orgOptions = useOrgOptions()
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">만료 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          전 기관 VM의 사용 기간 만료 현황입니다. 만료된 VM은 자동으로 중지되며,
-          기간을 연장하면 다시 시작할 수 있습니다. 연장은 자기가 관리하는 기관의
-          VM에만 적용됩니다.
+          {isSysAdmin ? '전체' : '우리 기관'} VM의 사용 기간 만료 현황입니다. 만료된
+          VM은 자동으로 중지되며, 기간을 연장하면 다시 시작할 수 있습니다.
         </p>
       </div>
 
@@ -79,13 +84,13 @@ export function AdminExpiryPage() {
           setTab(next ?? 'D7')
           setPage(0)
         }}
-        showOrgFilter
+        showOrgFilter={orgOptions.length > 1}
         orgId={orgId}
         onOrg={(next) => {
           setOrgId(next)
           setPage(0)
         }}
-        orgs={orgs.data ?? []}
+        orgs={orgOptions}
       />
 
       {message && <Alert variant="info">{message}</Alert>}
