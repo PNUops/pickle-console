@@ -16,6 +16,7 @@ import { AdminDriftPage } from './pages/AdminDriftPage'
 import { AdminExpiryPage } from './pages/AdminExpiryPage'
 import { AdminNetworkPage } from './pages/AdminNetworkPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
+import { AdminNoticesPage } from './pages/AdminNoticesPage'
 import { AdminNotificationLogPage } from './pages/AdminNotificationLogPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
 import { AdminSettingsPage } from './pages/AdminSettingsPage'
@@ -41,6 +42,8 @@ import { LoginPage } from './pages/LoginPage'
 import { MyActivityPage } from './pages/MyActivityPage'
 import { NewRequestPage } from './pages/NewRequestPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { NoticeDetailPage } from './pages/NoticeDetailPage'
+import { NoticesPage } from './pages/NoticesPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { RequestDetailPage } from './pages/RequestDetailPage'
 import { RequestsPage } from './pages/RequestsPage'
@@ -102,6 +105,9 @@ function App() {
       </Route>
       <Route element={<PublicLayout />}>
         <Route path="terms/:docType" element={<TermsPage />} />
+        {/* 공지는 로그인 없이 열려야 한다 — 장애 공지는 주소째로 공유된다. */}
+        <Route path="notices" element={<NoticesPage />} />
+        <Route path="notices/:noticeId" element={<NoticeDetailPage />} />
         {/* 사용자 문서 — 본문은 준비 중이고, 사이드바 링크가 가리킬 경로만 먼저 둔다. */}
         <Route path="docs" element={<DocsPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -187,6 +193,7 @@ function App() {
           }
         />
         <Route path="announcements" element={<AdminAnnouncementsPage />} />
+        <Route path="notices" element={<AdminNoticesPage />} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route
           path="notification-log"
