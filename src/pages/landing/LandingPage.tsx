@@ -7,6 +7,7 @@ import { Hero } from './Hero'
 import { HowItWorks } from './HowItWorks'
 import { LandingFooter } from './LandingFooter'
 import { LandingHeader } from './LandingHeader'
+import { NoticeStrip } from './NoticeStrip'
 import { ResourceShowcase } from './ResourceShowcase'
 import { TrustStrip } from './TrustStrip'
 
@@ -29,6 +30,9 @@ export function LandingPage() {
     <div className="break-keep bg-neutral-950">
       <LandingHeader />
       <main>
+        {/* 고정 헤더(h-16) 아래에서 시작하도록 자기 안에 여백을 갖는다 — 띄울
+            공지가 없으면 요소째 사라지므로 히어로 위에 빈 자리가 남지 않는다. */}
+        <NoticeStrip className="pt-16" />
         <Hero />
         <TrustStrip />
         <ResourceShowcase />
