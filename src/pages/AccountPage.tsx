@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   activateMfa,
   beginMfaSetup,
@@ -631,6 +632,7 @@ function LinkedAccountsSection({
  */
 function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassword: boolean }) {
   const { refreshProfile } = useAuth()
+  const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   // Enrollment wizard: idle → password → activate → recovery (shown once).
   const [step, setStep] = useState<'idle' | 'password' | 'activate' | 'recovery'>('idle')
@@ -647,6 +649,15 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
     setSetup(null)
     setRecoveryCodes(null)
     setError(null)
+  }
+
+  // 손으로 옮겨 적을 값이라 복사가 있어야 한다. 복구 코드 쪽과 같은 방식이다.
+  const copySecret = (secret: string | undefined) => {
+    if (!secret) return
+    void navigator.clipboard?.writeText(secret).then(
+      () => toast.success('설정 키를 클립보드에 복사했습니다.'),
+      () => toast.error('복사에 실패했습니다. 키를 직접 입력해 주세요.'),
+    )
   }
 
   // 관리자 셸의 2FA 권유 배너가 `?enroll=2fa`로 보낸다. 배너가 가리키는 것은 화면이
@@ -777,20 +788,40 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
             noValidate
           >
             {error && <Alert variant="danger">{error}</Alert>}
-            <div className="space-y-2 text-sm text-neutral-700">
-              <p>인증 앱에 아래 키를 등록한 뒤, 표시되는 6자리 코드를 입력해 주세요.</p>
+            <div className="space-y-3 text-sm text-neutral-700">
+              <p>인증 앱으로 QR 코드를 스캔한 뒤, 표시되는 6자리 코드를 입력해 주세요.</p>
+              {setup && (
+                // 흰 배경과 여백은 QR 자신의 것이어야 한다. 카드 배경색에 기대면 테마가
+                // 바뀌는 순간 대비가 무너지고 스캔이 안 된다. marginSize 기본값은 0이라
+                // 정숙 영역이 없다 — 규격이 요구하는 4모듈을 그림 안에 넣어 CSS 여백에
+                // 기대지 않게 한다. 그림 자체는 읽을 것이 없으므로 스크린리더에서 감추고,
+                // 설명은 옆의 문단이 맡는다.
+                <div className="flex justify-center">
+                  <div
+                    className="rounded-md border border-neutral-200 bg-white p-3"
+                    aria-hidden="true"
+                  >
+                    <QRCodeSVG value={setup.otpauthUri} size={200} level="M" marginSize={4} />
+                  </div>
+                </div>
+              )}
               <p className="text-neutral-500">
-                QR 코드 대신 아래 설정 키 또는 otpauth 링크를 인증 앱에 직접 입력합니다.
+                스캔할 수 없으면 아래 설정 키를 인증 앱에 직접 입력합니다. 앱이 물어보면
+                알고리즘 SHA-1, 6자리, 30초를 고릅니다.
               </p>
-              <div className="rounded-md bg-neutral-50 p-3 font-mono text-xs break-all">
-                <div>
+              <div className="flex items-center gap-2 rounded-md bg-neutral-50 p-3">
+                <div className="min-w-0 flex-1 font-mono text-xs break-all">
                   <span className="text-neutral-500">설정 키: </span>
                   {setup?.secret}
                 </div>
-                <div className="mt-1">
-                  <span className="text-neutral-500">otpauth: </span>
-                  {setup?.otpauthUri}
-                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => copySecret(setup?.secret)}
+                >
+                  복사
+                </Button>
               </div>
             </div>
             <FormField label="인증 코드 (6자리)" required>

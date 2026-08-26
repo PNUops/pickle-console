@@ -136,8 +136,13 @@ describe('계정 설정 — 2단계 인증', () => {
     await user.type(await screen.findByLabelText('비밀번호 확인'), USER_PASSWORD)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    // 설정 키가 표시되고, 코드 입력 후 활성화하면 복구 코드가 뜬다
+    // QR이 주 경로이고 설정 키는 스캔이 안 될 때의 폴백이다. 둘 다 있어야 한다.
     expect(await screen.findByText(/설정 키:/)).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.querySelector('svg')).not.toBeNull()
+    // otpauth 원문은 QR이 담고 있다. 시크릿이 걸린 표면을 두 번 열어 둘 이유가 없다.
+    expect(screen.queryByText(/otpauth:\/\//)).not.toBeInTheDocument()
+
     await user.type(screen.getByLabelText('인증 코드 (6자리)'), MFA_VALID_CODE)
     await user.click(screen.getByRole('button', { name: '활성화' }))
 
