@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { fetchNotices, noticeImageUrl, type NoticeView } from '../api/queries'
+import { fetchNotices, type NoticeView } from '../api/queries'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
 import { Button, Modal } from './ui'
 
@@ -115,8 +115,8 @@ export function NoticePopupHost() {
       <div className="space-y-4">
         {firstImage && (
           <img
-            src={noticeImageUrl(current.id, firstImage.id)}
-            alt={firstImage.fileName}
+            src={firstImage.url}
+            alt={firstImage.fileName ?? '공지 이미지'}
             loading="lazy"
             className="h-auto w-full rounded-lg"
           />

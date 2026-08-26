@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { fetchNotice, noticeImageUrl } from '../api/queries'
+import { fetchNotice } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { Alert, Badge, Card, Spinner } from '../components/ui'
 import { formatDateTime } from '../lib/format'
@@ -62,8 +62,8 @@ export function NoticeDetailPage() {
               {notice.data.images.map((image) => (
                 <Card key={image.id} className="overflow-hidden p-2">
                   <img
-                    src={noticeImageUrl(notice.data.id, image.id)}
-                    alt={image.fileName}
+                    src={image.url}
+                    alt={image.fileName ?? '공지 이미지'}
                     loading="lazy"
                     className="mx-auto h-auto w-full max-w-xl rounded"
                   />

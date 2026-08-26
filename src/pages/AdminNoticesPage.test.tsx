@@ -1,8 +1,10 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  problemResponse,
   refreshSuccessHandler,
   sysAdminUser,
   sysManagerUser,
@@ -23,6 +25,9 @@ describe('공지사항 관리', () => {
     expect(within(drawer).getByRole('option', { name: '기관' })).toBeInTheDocument()
     expect(within(drawer).getByRole('radio', { name: '익명까지 공개' })).toBeDisabled()
     expect(within(drawer).getByRole('radio', { name: '로그인 사용자' })).toBeChecked()
+    // 계약의 수정 요청은 범위를 받지 않는다 — 등록된 공지의 범위는 잠겨 있다.
+    expect(within(drawer).getByLabelText(/게시 범위/)).toBeDisabled()
+    expect(within(drawer).getByText('등록 후에는 범위를 바꿀 수 없습니다.')).toBeInTheDocument()
   })
 
   test('운영자에게도 드로어는 열리되 쓰기 액션은 사유와 함께 비활성이다', async () => {
@@ -116,6 +121,33 @@ describe('공지사항 관리', () => {
     expect(await screen.findByRole('button', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
     const row = screen.getByRole('button', { name: '학부 서버실 이전 안내' }).closest('tr')!
     expect(within(row).getByText('정보컴퓨터공학부')).toBeInTheDocument()
+  })
+
+  test('서버가 크기를 이유로 413으로 거절하면 그 사유를 그대로 보여준다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    // 화면의 사전 확인을 통과한 파일도 서버가 되돌릴 수 있다(멀티파트 상한 등).
+    server.use(
+      http.post('*/api/v1/admin/notices/:noticeId/images', () =>
+        problemResponse({
+          type: 'about:blank',
+          title: '요청 본문이 너무 큽니다',
+          status: 413,
+          detail: '이미지 한 장은 2 MiB까지 첨부할 수 있습니다.',
+          code: 'NOTICE_IMAGE_TOO_LARGE',
+        }),
+      ),
+    )
+    renderApp('/admin/notices')
+
+    await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
+    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const small = new File([new Uint8Array(64)], 'small.png', { type: 'image/png' })
+    await user.upload(within(drawer).getByLabelText('이미지 추가'), small)
+
+    expect(
+      await screen.findByText('이미지 한 장은 2 MiB까지 첨부할 수 있습니다.'),
+    ).toBeInTheDocument()
   })
 
   test('삭제는 확인을 거친 뒤 목록에서 사라진다', async () => {

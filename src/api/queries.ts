@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 
-import { api, API_BASE } from './client'
+import { api } from './client'
 import { ApiError, toApiError } from './problem'
 import type { components, operations } from './schema'
 
@@ -2012,16 +2012,6 @@ export function fetchNotice(noticeId: string): Promise<NoticeView> {
     if (!data) throw toApiError(error, '공지사항을 불러오지 못했습니다.')
     return data
   })
-}
-
-/**
- * 첨부 이미지의 주소 — `<img src>`가 직접 받아 온다.
- *
- * 이 엔드포인트는 공개이고 응답은 불변 캐시라, 토큰을 실을 이유도 fetch를 거칠
- * 이유도 없다. 그래서 이것만 쿼리 함수가 아니라 경로를 만드는 순수 함수다.
- */
-export function noticeImageUrl(noticeId: string, imageId: string): string {
-  return `${API_BASE}/notices/${noticeId}/images/${imageId}`
 }
 
 /** 관리 목록 — 게시 전·만료분까지 포함하고, 각 행이 지금 게시 중인지(active)를 함께 싣는다. */

@@ -18,12 +18,24 @@ const PIXEL_PNG = Uint8Array.from(
   (character) => character.charCodeAt(0),
 )
 
+/** 계약이 나눠 둔 이미지 첨부 거절 — 형식(422)·크기(413)·장수(409). */
+const MAX_IMAGES = 5
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+
 const PAST = '2026-07-01T09:00:00+09:00'
 const EXPIRED = '2026-07-20T09:00:00+09:00'
 const FUTURE = '2099-01-01T00:00:00+09:00'
 
-export function noticeImage(n: number, fileName: string): NoticeImageView {
-  return { id: uuid(n), fileName, contentType: 'image/png', byteSize: 1024 }
+/** 서버가 싣는 것과 같은 모양의 이미지 — `url`은 서버가 만들어 준 경로다. */
+export function noticeImage(noticeId: string, n: number, fileName: string): NoticeImageView {
+  return {
+    id: uuid(n),
+    fileName,
+    contentType: 'image/png',
+    byteSize: 1024,
+    url: `/api/v1/notices/${noticeId}/images/${uuid(n)}`,
+  }
 }
 
 /**
@@ -60,7 +72,7 @@ function initialNotices(): StoredNotice[] {
       id: uuid(201),
       title: '데이터센터 정기 점검 안내',
       body: '8월 20일 02:00~04:00 사이 일부 서비스가 중단됩니다.\n작업 중에는 콘솔 접속이 제한됩니다.',
-      images: [noticeImage(211, 'maintenance.png')],
+      images: [noticeImage(uuid(201), 211, 'maintenance.png')],
     }),
     makeNotice({
       id: uuid(202),
@@ -226,6 +238,8 @@ export const noticeHandlers: RequestHandler[] = [
     const created = makeNotice({
       ...body,
       id: uuid(nextNoticeId++),
+      // 계약: 게시 시작을 생략하면 즉시 게시한다.
+      startsAt: body.startsAt ?? new Date().toISOString(),
       orgId: body.scope === 'ORG' ? (body.orgId ?? null) : null,
       orgName: body.scope === 'ORG' ? '정보컴퓨터공학부' : null,
       images: [],
@@ -240,12 +254,11 @@ export const noticeHandlers: RequestHandler[] = [
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
+    // 계약의 수정 요청은 scope도 orgId도 받지 않는다 — 범위는 등록 때 정해진다.
     const body = (await request.json()) as Schemas['NoticeUpdateRequest']
     const updated: StoredNotice = {
       ...existing,
       ...body,
-      orgId: body.scope === 'ORG' ? (body.orgId ?? profile.orgId ?? null) : null,
-      orgName: body.scope === 'ORG' ? '정보컴퓨터공학부' : null,
       updatedAt: new Date().toISOString(),
     }
     noticeStore = noticeStore.map((row) => (row.id === noticeId ? updated : row))
@@ -269,24 +282,59 @@ export const noticeHandlers: RequestHandler[] = [
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}/images`)
+    const instance = `/api/v1/admin/notices/${noticeId}/images`
     const form = await request.formData()
     const file = form.get('file')
+    // 계약이 multipart 본문을 required로 적지 않는 것은 의도다 — 파일이 없는
+    // 요청도 프레임워크의 500이 아니라 이 422로 답한다.
     if (!(file instanceof File)) {
       return problemResponse({
         type: 'about:blank',
         title: '입력값이 올바르지 않습니다',
         status: 422,
         detail: '요청 값을 확인해 주세요.',
-        instance: `/api/v1/admin/notices/${noticeId}/images`,
+        instance,
         code: 'VALIDATION_FAILED',
         errors: [{ field: 'file', message: '이미지 파일을 첨부해 주세요.' }],
       })
     }
+    if (existing.images.length >= MAX_IMAGES) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '요청을 처리할 수 없습니다',
+        status: 409,
+        detail: `이미지는 공지 하나에 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`,
+        instance,
+        code: 'NOTICE_IMAGE_LIMIT_EXCEEDED',
+      })
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '요청 본문이 너무 큽니다',
+        status: 413,
+        detail: '이미지 한 장은 2 MiB까지 첨부할 수 있습니다.',
+        instance,
+        code: 'NOTICE_IMAGE_TOO_LARGE',
+      })
+    }
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '지원하지 않는 이미지 형식입니다.',
+        instance,
+        code: 'NOTICE_IMAGE_TYPE_UNSUPPORTED',
+      })
+    }
+    const imageId = uuid(nextNoticeId++)
     const image: NoticeImageView = {
-      id: uuid(nextNoticeId++),
+      id: imageId,
       fileName: file.name,
       contentType: file.type,
       byteSize: file.size,
+      url: `/api/v1/notices/${noticeId}/images/${imageId}`,
     }
     noticeStore = noticeStore.map((row) =>
       row.id === noticeId ? { ...row, images: [...row.images, image] } : row,

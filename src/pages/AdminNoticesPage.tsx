@@ -6,12 +6,13 @@ import {
   deleteAdminNoticeImage,
   fetchAdminNotices,
   fetchOrgs,
-  noticeImageUrl,
   updateAdminNotice,
   uploadAdminNoticeImage,
   type AdminNoticeView,
   type NoticeAudience,
+  type NoticeCreateRequest,
   type NoticeScope,
+  type NoticeUpdateRequest,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -276,24 +277,34 @@ function NoticeDetailBody({
   const orgScoped = scope === 'ORG'
   const effectiveAudience: NoticeAudience = orgScoped ? 'USERS' : audience
 
-  // 시스템 계층이 기관 공지를 쓸 때만 대상 기관을 고른다 — 기관 관리자는 자기 기관 고정.
-  const needsOrgPick = canChoosePlatform && orgScoped
+  // 시스템 계층이 기관 공지를 *새로* 쓸 때만 대상 기관을 고른다 — 기관 관리자는
+  // 자기 기관 고정이고, 이미 등록된 공지는 범위도 기관도 바뀌지 않는다.
+  const needsOrgPick = canChoosePlatform && orgScoped && notice == null
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: needsOrgPick })
 
-  /**
-   * 등록·수정이 함께 보내는 본문. 기관 공지의 `orgId`는 계약상 필수다 — 고를 수
-   * 없는 기관 관리자는 자기 기관을 실어 보내고, 서버가 다시 자기 기관으로 못박는다.
-   */
-  const bodyOf = () => ({
+  /** 등록과 수정이 함께 보내는 부분 — 계약의 수정 요청이 받는 필드 전부다. */
+  const editableBody = () => ({
     title: title.trim(),
     body,
-    scope,
-    orgId: orgScoped ? ((needsOrgPick ? orgId : viewerOrgId) ?? undefined) : undefined,
     audience: effectiveAudience,
     pinned,
     popup,
     startsAt: fromDateTimeInput(startsAt)!,
     endsAt: fromDateTimeInput(endsAt),
+  })
+
+  const updateBody = (): NoticeUpdateRequest => editableBody()
+
+  /**
+   * 등록 본문. 게시 범위와 대상 기관은 등록에만 있다 — 계약의 수정 요청은 둘 다
+   * 받지 않으므로, 한번 정해진 범위는 바뀌지 않는다. 기관 공지에는 `orgId`가
+   * 반드시 있어야 하고(고를 수 없는 기관 관리자는 자기 기관을 싣는다) 전역
+   * 공지에는 실을 수 없다.
+   */
+  const createBody = (): NoticeCreateRequest => ({
+    ...editableBody(),
+    scope,
+    orgId: orgScoped ? ((needsOrgPick ? orgId : viewerOrgId) ?? undefined) : undefined,
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'notices'] })
@@ -306,7 +317,7 @@ function NoticeDetailBody({
   }
 
   const create = useMutation({
-    mutationFn: () => createAdminNotice(bodyOf()),
+    mutationFn: () => createAdminNotice(createBody()),
     onSuccess: async (created) => {
       setError(null)
       setFieldErrors({})
@@ -318,7 +329,7 @@ function NoticeDetailBody({
   })
 
   const update = useMutation({
-    mutationFn: () => updateAdminNotice(notice!.id, bodyOf()),
+    mutationFn: () => updateAdminNotice(notice!.id, updateBody()),
     onSuccess: async () => {
       setError(null)
       setFieldErrors({})
@@ -397,11 +408,16 @@ function NoticeDetailBody({
           />
         </FormField>
 
-        <FormField label="게시 범위" required error={fieldErrors.scope}>
+        <FormField
+          label="게시 범위"
+          required
+          error={fieldErrors.scope}
+          description={notice ? '등록 후에는 범위를 바꿀 수 없습니다.' : undefined}
+        >
           <Select
             className="w-40"
             value={scope}
-            disabled={!canManage || !canChoosePlatform}
+            disabled={!canManage || !canChoosePlatform || notice != null}
             onChange={(event) => {
               const next = event.target.value as NoticeScope
               setScope(next)
@@ -430,6 +446,9 @@ function NoticeDetailBody({
               ))}
             </Select>
           </FormField>
+        )}
+        {orgScoped && notice != null && (
+          <p className="text-sm text-neutral-500">대상 기관 {notice.orgName ?? '-'}</p>
         )}
         {!canChoosePlatform && (
           <p className="text-sm text-neutral-500">
@@ -622,8 +641,8 @@ function NoticeImageSection({
               {images.map((image) => (
                 <li key={image.id} className="w-32 space-y-1">
                   <img
-                    src={noticeImageUrl(notice.id, image.id)}
-                    alt={image.fileName}
+                    src={image.url}
+                    alt={image.fileName ?? '공지 이미지'}
                     loading="lazy"
                     className="h-24 w-32 rounded border border-neutral-200 object-cover"
                   />
