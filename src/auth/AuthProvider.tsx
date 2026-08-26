@@ -5,9 +5,11 @@ import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
 import { clearReauthToken } from '../api/reauth'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
+import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
 import {
   LEGACY_CONSOLE_SCOPE_KEY,
   MFA_NUDGE_DISMISS_KEY,
+  POST_LOGIN_OVERLAY_KEY,
   VM_REQUEST_DRAFT_KEY,
 } from '../lib/storage-keys'
 import { closeTerminalWindows } from '../terminal/openTerminalWindow'
@@ -135,6 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(MFA_NUDGE_DISMISS_KEY)
       // 예전 버전이 남긴 워크스페이스 범위도 같은 이유로 정리한다.
       localStorage.removeItem(LEGACY_CONSOLE_SCOPE_KEY)
+      // 구글 왕복용 복귀 경로가 남으면 다음 사용자가 그 경로로 간다. 내부 경로라
+      // 오픈 리다이렉트 가드도 통과하므로, 이전 사용자의 VM 상세 주소를 그대로
+      // 물려받는다.
+      sessionStorage.removeItem(OAUTH_RETURN_TO_KEY)
+      sessionStorage.removeItem(POST_LOGIN_OVERLAY_KEY)
       setState({ status: 'unauthenticated', user: null })
     }
   }, [queryClient])

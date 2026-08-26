@@ -1,10 +1,24 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { guardNetwork } from '../api/queries'
 import { clearReauthToken, onReauthRequired, setReauthToken } from '../api/reauth'
 import { onSessionExpired } from '../api/token'
-import { Button, FormField, Input, Modal } from '../components/ui'
+import { useMutation } from '@tanstack/react-query'
+import { Alert, Button, FormField, Input, Modal } from '../components/ui'
+import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
+import { AuthDivider } from '../components/auth/AuthDivider'
+import { startGoogleOauth } from '../api/queries'
+import { navigateExternal, rememberReturnTo } from '../lib/google-oauth'
+import { AuthContext } from './auth-context'
 
 /**
  * 민감 작업(재인증, sudo-mode)용 비밀번호 확인 모달의 호스트.
@@ -15,6 +29,13 @@ import { Button, FormField, Input, Modal } from '../components/ui'
  * 호출부는 원래의 403을 그대로 받는다(요청이 매달려 있지 않게 항상 resolve).
  */
 export function ReauthProvider({ children }: { children: ReactNode }) {
+  // 컨텍스트를 직접 읽는다. useAuth 는 없으면 던지는데, 이 provider 는 인증 셸보다
+  // 바깥에서도 마운트될 수 있고 그때는 비밀번호 칸을 감출 근거가 없을 뿐이다.
+  const auth = useContext(AuthContext)
+  // 비밀번호가 없는 계정은 이 칸을 채울 수 없다. 그 계정에게 비밀번호 칸만 있는
+  // 모달은 확인 버튼이 영원히 비활성인 화면이고, 재인증이 걸린 동작 스물둘이
+  // 전부 그 화면에서 끝난다.
+  const passwordless = auth?.user != null && !auth.user.hasPassword
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -108,40 +129,90 @@ export function ReauthProvider({ children }: { children: ReactNode }) {
     [settle],
   )
 
+  // 구글 재인증. prompt=login 이 붙는 것은 서버 쪽이고, 없으면 살아 있는 구글
+  // 세션이 그냥 통과해 확인이 아무것도 증명하지 않는다.
+  const googleStart = useMutation({
+    mutationFn: () => startGoogleOauth({ purpose: 'REVERIFY' }),
+    onSuccess: (started) => {
+      // 돌아올 자리를 남긴다. 대기 중인 요청은 페이지를 떠나는 순간 취소로
+      // 마감되므로, 돌아와서 같은 동작을 다시 누르는 것이 이 흐름이다.
+      rememberReturnTo(window.location.pathname + window.location.search)
+      settle(false)
+      navigateExternal(started.authorizationUrl)
+    },
+  })
+
   return (
     <>
       {children}
       <Modal
         open={open}
         onClose={() => settle(false)}
-        title="비밀번호 확인"
+        title="본인 확인"
         footer={
-          <>
-            <Button variant="secondary" onClick={() => settle(false)} disabled={submitting}>
+          passwordless ? (
+            <Button variant="secondary" onClick={() => settle(false)}>
               취소
             </Button>
-            <Button loading={submitting} disabled={password.length === 0} onClick={() => void submit()}>
-              확인
-            </Button>
-          </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => settle(false)} disabled={submitting}>
+                취소
+              </Button>
+              <Button
+                loading={submitting}
+                disabled={password.length === 0}
+                onClick={() => void submit()}
+              >
+                확인
+              </Button>
+            </>
+          )
         }
       >
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+        <div className="space-y-4">
           <p className="text-sm text-neutral-600">
-            민감한 작업입니다. 계속하려면 비밀번호를 입력해 주세요. (확인 후 10분간 재입력 없이
+            민감한 작업입니다. 계속하려면 본인 확인이 필요합니다. (확인 후 10분간 재입력 없이
             진행)
           </p>
-          <FormField label="비밀번호" required error={error ?? undefined}>
-            <Input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </FormField>
-          {/* Enter 제출용 — 실제 버튼은 푸터에 있다. */}
-          <button type="submit" className="hidden" tabIndex={-1} aria-hidden="true" />
-        </form>
+          {/*
+            구글 왕복은 이 페이지를 떠난다. 대기 중이던 요청은 그 순간 취소로
+            마감되므로 돌아와서 다시 눌러야 하고, 그 사실을 콜백 화면이 말한다.
+            자동으로 이어지지 않는 것을 문구로 알리지 않으면 눌렀는데 아무 일도
+            없는 것처럼 보인다.
+          */}
+          <GoogleAuthButton
+            label="continue"
+            loading={googleStart.isPending}
+            onClick={() => googleStart.mutate()}
+          />
+          {googleStart.isError && (
+            <Alert variant="danger">
+              {toApiError(googleStart.error, '구글 확인을 시작하지 못했습니다.').message}
+            </Alert>
+          )}
+          {passwordless ? (
+            <p className="text-xs text-neutral-500">
+              이 계정에는 비밀번호가 없습니다. 구글 계정으로 확인해 주세요.
+            </p>
+          ) : (
+            <>
+              <AuthDivider />
+              <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+                <FormField label="비밀번호" required error={error ?? undefined}>
+                  <Input
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </FormField>
+                {/* Enter 제출용 — 실제 버튼은 푸터에 있다. */}
+                <button type="submit" className="hidden" tabIndex={-1} aria-hidden="true" />
+              </form>
+            </>
+          )}
+        </div>
       </Modal>
     </>
   )

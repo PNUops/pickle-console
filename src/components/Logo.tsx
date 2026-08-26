@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
-import pnuEmblem from '../assets/pnu-emblem.png'
+import pnuLogo from '../assets/pnu-logo.png'
+import pnuLogoWhite from '../assets/pnu-logo-white.png'
 import { SERVICE_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
@@ -24,12 +25,12 @@ export function Logo({
         className,
       )}
     >
-      {/* 부산대 엠블럼 원본이 흰 바탕 정사각형이라 rounded-full 클리핑으로 원형만 남긴다 */}
+      {/* 엠블럼은 배경이 투명하므로 클리핑이 필요 없고, 다크 배경에서는 흰 단색 버전을 쓴다 */}
       <img
-        src={pnuEmblem}
+        src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
         alt=""
         aria-hidden="true"
-        className="size-7 shrink-0 rounded-full"
+        className="h-7 w-auto shrink-0"
       />
       <span
         className={cn(
