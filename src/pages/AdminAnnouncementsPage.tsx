@@ -9,7 +9,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canBroadcast } from '../auth/permissions'
+import { administeredOrgs, canBroadcast } from '../auth/permissions'
 import {
   Alert,
   AnnouncementScopeBadge,
@@ -35,13 +35,23 @@ type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'WORKSPACE'
 export function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const isSysAdmin = user?.role === 'SYS_ADMIN'
-  // 공지 발송은 기관 관리자·시스템 관리자만 — 운영자는 최근 공지 조회만(§3.13).
+  // 공지 발송은 기관 관리자와 시스템 관리자만 — 운영자는 최근 공지 조회만(§3.13).
   const canSend = !!user && canBroadcast(user.role)
+  // 발송 대상은 계약 v0.46.0에서도 넓어지지 않았다. 기관 관리자는 자기가
+  // 관리자로 있는 기관에만 보낼 수 있고, 워크스페이스 대상도 그 기관에 연결된
+  // 것으로 제한된다. 조회 쪽이 전 기관으로 열렸으므로 선택기를 좁히지 않으면
+  // 보낼 수 없는 대상이 목록에 뜬다.
+  const administered = administeredOrgs(user?.managedOrgs ?? [])
+  const defaultTarget: TargetKind = isSysAdmin
+    ? 'ALL'
+    : administered.length === 1
+      ? 'ORG_ALL'
+      : 'ORG_PICK'
   const queryClient = useQueryClient()
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [target, setTarget] = useState<TargetKind>(isSysAdmin ? 'ALL' : 'ORG_ALL')
+  const [target, setTarget] = useState<TargetKind>(defaultTarget)
   const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [workspaceId, setWorkspaceId] = useState<string | undefined>(undefined)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -50,11 +60,17 @@ export function AdminAnnouncementsPage() {
   const [confirming, setConfirming] = useState(false)
 
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
-  // SYS_ADMIN 워크스페이스 대상: 기관을 먼저 고른 뒤 그 기관 워크스페이스를 불러온다.
-  const workspacesEnabled = target === 'WORKSPACE' && (!isSysAdmin || orgId != null)
+  const orgOptions = isSysAdmin
+    ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
+    : administered.map((org) => ({ id: org.orgId, name: org.orgName }))
+  // 관리 기관이 하나뿐인 기관 관리자는 고를 것이 없으므로 그 기관이 곧 대상이다.
+  const soleOrgId = !isSysAdmin && orgOptions.length === 1 ? orgOptions[0].id : undefined
+  // 워크스페이스 대상: 기관을 먼저 정한 뒤 그 기관 워크스페이스를 불러온다.
+  const workspaceOrgId = orgId ?? soleOrgId
+  const workspacesEnabled = target === 'WORKSPACE' && workspaceOrgId != null
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: (isSysAdmin ? orgId : null) ?? null }],
-    queryFn: () => fetchAdminWorkspaces(isSysAdmin ? { orgId } : {}),
+    queryKey: ['admin', 'workspaces', { orgId: workspaceOrgId ?? null }],
+    queryFn: () => fetchAdminWorkspaces({ orgId: workspaceOrgId }),
     enabled: workspacesEnabled,
   })
   const recent = useQuery({
@@ -71,7 +87,7 @@ export function AdminAnnouncementsPage() {
       )
       setTitle('')
       setBody('')
-      setTarget(isSysAdmin ? 'ALL' : 'ORG_ALL')
+      setTarget(defaultTarget)
       setOrgId(undefined)
       setWorkspaceId(undefined)
       setFieldErrors({})
@@ -96,9 +112,9 @@ export function AdminAnnouncementsPage() {
   /** 확인 모달에 다시 보여줄 대상 설명. */
   function targetLabel(): string {
     if (target === 'ALL') return '전체 사용자'
-    if (target === 'ORG_ALL') return '우리 기관 전체 사용자'
+    if (target === 'ORG_ALL') return `기관 '${orgOptions[0]?.name ?? ''}' 소속 사용자`
     if (target === 'ORG_PICK') {
-      const org = (orgs.data ?? []).find((o) => o.id === orgId)
+      const org = orgOptions.find((o) => o.id === orgId)
       return `기관 '${org?.name ?? ''}' 소속 사용자`
     }
     const workspace = (workspaces.data ?? []).find((g) => g.id === workspaceId)
@@ -125,10 +141,15 @@ export function AdminAnnouncementsPage() {
         { kind: 'ORG_PICK', label: '특정 기관' },
         { kind: 'WORKSPACE', label: '특정 워크스페이스' },
       ]
-    : [
-        { kind: 'ORG_ALL', label: '우리 기관 전체' },
-        { kind: 'WORKSPACE', label: '특정 워크스페이스' },
-      ]
+    : soleOrgId != null
+      ? [
+          { kind: 'ORG_ALL', label: `${orgOptions[0].name} 전체` },
+          { kind: 'WORKSPACE', label: '특정 워크스페이스' },
+        ]
+      : [
+          { kind: 'ORG_PICK', label: '특정 기관' },
+          { kind: 'WORKSPACE', label: '특정 워크스페이스' },
+        ]
 
   return (
     <div className="space-y-6">
@@ -204,7 +225,7 @@ export function AdminAnnouncementsPage() {
                   }}
                 >
                   <option value="">기관 선택</option>
-                  {(orgs.data ?? []).map((org) => (
+                  {orgOptions.map((org) => (
                     <option key={org.id} value={org.id}>
                       {org.name}
                     </option>
@@ -215,7 +236,7 @@ export function AdminAnnouncementsPage() {
 
             {target === 'WORKSPACE' && (
               <div className="flex flex-wrap gap-4">
-                {isSysAdmin && (
+                {orgOptions.length > 1 && (
                   <FormField label="워크스페이스의 기관" required>
                     <Select
                       className="w-64"
@@ -226,7 +247,7 @@ export function AdminAnnouncementsPage() {
                       }}
                     >
                       <option value="">기관 선택</option>
-                      {(orgs.data ?? []).map((org) => (
+                      {orgOptions.map((org) => (
                         <option key={org.id} value={org.id}>
                           {org.name}
                         </option>
