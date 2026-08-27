@@ -627,8 +627,10 @@ function LinkedAccountsSection({
 }
 
 /**
- * 등록도 해제도 비밀번호를 요구한다(`MfaService`). 비밀번호가 없는 계정은 그 칸을 채울 수
- * 없으므로 등록 버튼 대신 이유를 보여 준다. 서버 완화는 아직 없다.
+ * 등록도 해제도 복구 코드 재발급도 비밀번호를 요구한다(`MfaService`). 비밀번호가 없는
+ * 계정은 그 칸을 채울 수 없으므로 세 동작 모두 버튼 대신 이유를 보여 준다 — 등록되지
+ * 않은 갈래는 이 행이, 등록된 갈래는 `EnrolledPanel` 을 담은 행이 적는다. 서버 완화는
+ * 아직 없다.
  */
 function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassword: boolean }) {
   const { refreshProfile } = useAuth()
@@ -705,8 +707,20 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
   if (enabled) {
     // 등록된 상태의 두 동작은 EnrolledPanel 이 이미 자기 모달로 가지고 있다. 그것을
     // 다시 모달 안에 넣으면 모달 위에 모달이 서고 포커스 트랩이 둘이 된다.
+    //
+    // 등록된 상태의 두 동작도 비밀번호를 요구한다. 등록 버튼에만 가드를 두면 이 갈래는
+    // 비밀번호 없는 계정에게 채울 수 없는 칸 둘을 내주고, 서버는 409 로 답한다.
     return (
-      <SettingRow label="2단계 인증" description="사용 중" action={<EnrolledPanel />} />
+      <SettingRow
+        label="2단계 인증"
+        description="사용 중"
+        note={
+          hasPassword
+            ? undefined
+            : '복구 코드 재발급과 해제는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 비밀번호를 먼저 설정해 주세요.'
+        }
+        action={<EnrolledPanel hasPassword={hasPassword} />}
+      />
     )
   }
 
@@ -848,8 +862,14 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
   )
 }
 
-/** Enrolled state: regenerate recovery codes + disable 2FA. */
-function EnrolledPanel() {
+/**
+ * Enrolled state: regenerate recovery codes + disable 2FA.
+ *
+ * 두 동작 모두 `MfaService` 가 비밀번호를 먼저 확인한다. 비밀번호가 없는 계정에게는
+ * 열어 줄 모달이 없으므로 버튼을 비활성으로 두고, 사유는 이 패널을 담은 행이 적는다 —
+ * 숨기면 왜 못 하는지 알 길이 없고, 열어 주면 확인 버튼이 영원히 비활성인 화면이 된다.
+ */
+function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
   const { refreshProfile } = useAuth()
   const toast = useToast()
   const [disableOpen, setDisableOpen] = useState(false)
@@ -895,10 +915,20 @@ function EnrolledPanel() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" variant="secondary" onClick={() => setRegenOpen(true)}>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={!hasPassword}
+        onClick={() => setRegenOpen(true)}
+      >
         복구 코드 재발급
       </Button>
-      <Button size="sm" variant="danger" onClick={() => setDisableOpen(true)}>
+      <Button
+        size="sm"
+        variant="danger"
+        disabled={!hasPassword}
+        onClick={() => setDisableOpen(true)}
+      >
         해제
       </Button>
 
