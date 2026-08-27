@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   MFA_VALID_CODE,
+  mfaProfile,
   mfaUser,
   orgAdminUser,
   refreshSuccessHandler,
@@ -178,6 +179,31 @@ describe('계정 설정 — 2단계 인증', () => {
     await screen.findByText(/등록은 비밀번호 확인을 거칩니다/)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await waitFor(() => expect(currentPath()).toBe('/console/account'))
+  })
+
+  test('비밀번호 없는 등록 계정은 해제도 재발급도 사유와 함께 잠긴다', async () => {
+    server.use(refreshSuccessHandler('access-mfa', mfaUser))
+    server.use(
+      http.get('*/api/v1/me', () =>
+        HttpResponse.json({ ...mfaProfile, hasPassword: false }, { status: 200 }),
+      ),
+    )
+    renderApp('/console/account')
+
+    // 등록된 갈래의 두 동작도 비밀번호를 먼저 확인한다(MfaService). 등록 버튼에만
+    // 가드를 두면 이 계정은 채울 수 없는 칸 둘을 받고 서버가 409로 답한다.
+    expect(await screen.findByText('사용 중')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '해제' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '복구 코드 재발급' })).toBeDisabled()
+
+    // 숨기지 않고 비활성으로 두고 사유를 적는다. 숨기면 왜 못 하는지 알 길이 없다.
+    expect(
+      screen.getByText(/복구 코드 재발급과 해제는 비밀번호 확인을 거칩니다/),
+    ).toBeInTheDocument()
+
+    // 잠긴 버튼이 모달을 열지 않는다는 것까지 봐야 한다 — 사유만 적고 모달이 열리면
+    // 고친 것이 없다.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   test('등록 계정은 비밀번호+코드로 해제한다', async () => {
