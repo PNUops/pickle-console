@@ -125,6 +125,20 @@ export function resetUserFixtures() {
   adminProfilePatches.length = 0
 }
 
+/** 학번을 요구하는 직책. 서버 enum 과 같은 집합이다. */
+const STUDENT_POSITIONS = ['STUDENT_UNDERGRAD', 'STUDENT_GRADUATE']
+
+/** 카탈로그가 푸는 학과명. 실서버는 모든 코드를 풀고 미지 코드만 코드를 돌려준다. */
+const DEPARTMENT_NAMES: Record<string, string> = {
+  COMPUTER_SCIENCE: '정보컴퓨터공학부',
+  OTHER: '기타',
+}
+
+function departmentNameOf(code: string | null | undefined): string | null {
+  if (!code) return null
+  return DEPARTMENT_NAMES[code] ?? code
+}
+
 function actorOf(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
   return ACCESS_TOKENS[token] ?? null
@@ -283,13 +297,30 @@ export const userHandlers: RequestHandler[] = [
         ],
       })
     }
-    row.position = body.position ?? null
-    // 학번은 요구하지 않는 직책에서 버려진다. 본인 경로와 같은 정규화다.
-    const keepsStudentNo = row.position != null && row.position.startsWith('STUDENT_')
-    row.studentNo = keepsStudentNo ? (body.studentNo ?? null) : null
-    row.departmentCode = code
-    row.departmentName = code === 'COMPUTER_SCIENCE' ? '정보컴퓨터공학부' : code
-    row.departmentOther = other
+    // 실서버는 presence-tracked 다. 보내지 않은 필드는 그대로 두고, 명시적 null 만
+    // 비운다. 여기서 `?? null` 로 덮으면 absent 를 비우기로 읽어 실서버와 정반대가
+    // 되고, 화면이 부분 전송으로 바뀌는 날 테스트 세계가 거짓을 가르친다.
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key)
+    if (has('position')) row.position = body.position ?? null
+    if (has('studentNo')) row.studentNo = body.studentNo ?? null
+    if (has('departmentCode')) row.departmentCode = code
+    if (has('departmentOther')) row.departmentOther = other
+
+    // 병합 결과에 값 규칙을 돌린다. 학생 직책은 학번을 요구하고, 요구하지 않는 직책은
+    // 학번을 버린다 — 관리자가 학생의 학번만 비우는 정정은 실서버에서 422 다.
+    const isStudent = STUDENT_POSITIONS.includes(row.position ?? '')
+    if (isStudent && !row.studentNo) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '학번을 입력해 주세요.',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'studentNo', message: '학번을 입력해 주세요.' }],
+      })
+    }
+    if (!isStudent) row.studentNo = null
+    row.departmentName = departmentNameOf(row.departmentCode)
     return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
   }),
 

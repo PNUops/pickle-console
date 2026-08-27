@@ -19,7 +19,6 @@ import {
   updateMyProfile,
   withdrawMyAccount,
 } from '../api/queries'
-import type { components } from '../api/schema'
 import { toApiError } from '../api/problem'
 import { setAccessToken } from '../api/token'
 import { useAuth, type UserProfile } from '../auth/auth-context'
@@ -38,8 +37,14 @@ import {
   useToast,
 } from '../components/ui'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
-import { type LockedProfileFields, ProfileFields } from '../components/profile/ProfileFields'
-import { EMPTY_PROFILE, type ProfileValues } from '../components/profile/profile-values'
+import { ProfileFields } from '../components/profile/ProfileFields'
+import {
+  EMPTY_PROFILE,
+  lockedProfileFields,
+  profilePatch,
+  studentNoApplies,
+  type ProfileValues,
+} from '../components/profile/profile-values'
 import { navigateExternal } from '../lib/google-oauth'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passwordRuleError } from '../lib/validation'
@@ -113,49 +118,6 @@ export function AccountPage() {
 }
 
 /**
- * 저장된 값이 있는 필드. 서버가 `PUT /me/profile`에서 422로 거절하는 것과 같은 조건이다.
- *
- * 소속은 두 모양이 한 축이다. 코드든 자유 입력이든 하나가 채워지면 소속이 답해진 것이고
- * 서버는 양쪽 다 잠근다.
- */
-function lockedProfileFields(user: UserProfile): LockedProfileFields {
-  return {
-    position: user.position != null,
-    studentNo: user.studentNo != null,
-    department: user.departmentCode != null || user.departmentOther != null,
-  }
-}
-
-/** 학번을 요구하는 직책인지. 직책이 비어 있으면 아직 알 수 없으므로 해당으로 본다. */
-function studentNoApplies(user: UserProfile): boolean {
-  return user.position == null || user.position.startsWith('STUDENT_')
-}
-
-/**
- * 보낼 것만 담은 부분 갱신 본문.
- *
- * 잠긴 필드는 **아예 보내지 않는다.** 저장된 값을 그대로 다시 보내도 서버는 통과시키지만,
- * 보내지 않는 것이 잠금 규칙과 한 번 덜 부딪힌다. 특히 v0.46.0 이전에 프로필을 채운
- * 비학생 계정은 학과 코드를 들고 있는데(라이브에 실존한다) 새 모델대로 `departmentCode`를
- * null 로 보내면 잠금과 조합 규칙에 이중으로 걸려 이름만 바꾸는 저장까지 422가 된다.
- */
-function profilePatch(user: UserProfile, name: string, values: ProfileValues) {
-  const locked = lockedProfileFields(user)
-  const patch: Record<string, unknown> = { name: name.trim() }
-  if (!locked.position) {
-    patch.position = (values.position || null) as components['schemas']['UserPosition'] | null
-  }
-  if (!locked.studentNo && values.studentNo.trim() !== '') {
-    patch.studentNo = values.studentNo.trim()
-  }
-  if (!locked.department) {
-    if (values.departmentCode !== '') patch.departmentCode = values.departmentCode
-    if (values.departmentOther.trim() !== '') patch.departmentOther = values.departmentOther.trim()
-  }
-  return patch as Parameters<typeof updateMyProfile>[0]
-}
-
-/**
  * 이름과 직책과 학번과 소속.
  *
  * 프로필은 선택 입력이라 비어 있는 것이 정상이고, 그래서 값이 없는 행도 숨기지 않고
@@ -185,7 +147,7 @@ function ProfileSection({ user }: { user: UserProfile }) {
 
   const save = useMutation({
     mutationFn: () =>
-      updateMyProfile(profilePatch(user, name, profile)),
+      updateMyProfile(profilePatch(user, profile, name)),
     onSuccess: async () => {
       setOpen(false)
       setError(null)
@@ -248,7 +210,9 @@ function ProfileSection({ user }: { user: UserProfile }) {
       */}
       <SettingRow
         label="학번"
-        description={user.studentNo ?? (studentNoApplies(user) ? '입력하지 않음' : '해당 없음')}
+        description={
+          user.studentNo ?? (studentNoApplies(options.data?.positions, user) ? '입력하지 않음' : '해당 없음')
+        }
         note={locked.studentNo ? inquiryNote : undefined}
       />
       <Modal open={open} onClose={() => setOpen(false)} title="프로필 변경">

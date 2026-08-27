@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { type PositionView, fetchProfileOptions } from '../../api/queries'
 import type { ProfileFieldErrors, ProfileValues } from './profile-values'
-import { OTHER_DEPARTMENT, picksFromCatalog, requiresStudentNo } from './profile-values'
+import {
+  OTHER_DEPARTMENT,
+  picksFromCatalog,
+  requiresStudentNo,
+  type LockedProfileFields,
+} from './profile-values'
 import { Alert, FormField, Input, Select } from '../ui'
 
 interface ProfileFieldsProps {
@@ -17,13 +22,6 @@ interface ProfileFieldsProps {
    * 저장값이 있느냐이고, 그것이 곧 `PUT /me/profile`이 422로 거절하는 조건이다.
    */
   locked?: LockedProfileFields
-}
-
-/** 잠긴 필드 집합. true 인 필드는 입력칸이 아니라 저장된 값을 보여 준다. */
-export interface LockedProfileFields {
-  position?: boolean
-  studentNo?: boolean
-  department?: boolean
 }
 
 /**
@@ -65,9 +63,10 @@ export function ProfileFields({
   // 조용히 사라진다. 지금 세 호출처는 전부 빈 값으로 시작해 발화하지 않지만, 값을
   // 미리 채우는 화면이 처음 생기는 날 데이터가 없어진다.
   //
-  // 잠긴 학번도 지우지 않는다. 저장된 학번이 있다는 것은 그것을 요구하는 직책도 저장돼
-  // 함께 잠겼다는 뜻이라 이 갈래에 닿지 않지만, 이 효과가 조용히 값을 지우는 종류라
-  // 조건을 명시해 둔다.
+  // 잠긴 학번은 지우지 않는다. 보통은 학번이 저장돼 있으면 그것을 요구하는 직책도
+  // 저장돼 함께 잠겨 있어 이 갈래에 닿지 않지만, 직책 없이 학번만 있는 행은 과거
+  // 검증 갭으로 만들어질 수 있었고(서버 쪽 주석이 그 역사를 인정한다) 그런 행에서는
+  // 직책이 잠기지 않는다. 이 효과가 조용히 값을 지우는 종류라 조건을 명시해 둔다.
   useEffect(() => {
     if (!positions) return
     if (locked?.studentNo) return
@@ -75,6 +74,28 @@ export function ProfileFields({
       onChange({ ...values, studentNo: '' })
     }
   }, [positions, needsStudentNo, values, onChange, locked?.studentNo])
+
+  // 직책이 소속의 모양을 정하므로, 직책을 바꾸면 다른 모양의 값은 뜻을 잃는다.
+  // 지우지 않으면 화면에서 사라진 값이 상태에 남아 그대로 전송되고, 잠금이 그것을
+  // 영구화한다 — 학부생으로 학과를 고른 뒤 교수로 바꾸면 보이는 소속은 빈 칸인데
+  // 학과 코드가 저장되고, 그 뒤 진짜 소속을 자유 입력으로 넣으려 하면 조합 규칙에
+  // 걸려 관리자 정정 없이는 벗어날 수 없다.
+  //
+  // 학번과 같은 이유로 카탈로그가 오기 전에는 아무것도 지우지 않고, 잠긴 값도
+  // 건드리지 않는다.
+  useEffect(() => {
+    if (!positions) return
+    if (departmentLocked) return
+    if (values.position === '') return
+    if (departmentFromCatalog) {
+      // 학생인데 코드 없이 자유 입력만 남은 경우. `OTHER` 를 고르면 그 칸이 다시 나온다.
+      if (values.departmentCode === '' && values.departmentOther !== '') {
+        onChange({ ...values, departmentOther: '' })
+      }
+    } else if (values.departmentCode !== '') {
+      onChange({ ...values, departmentCode: '' })
+    }
+  }, [positions, departmentFromCatalog, departmentLocked, values, onChange])
 
   const colleges = groupByCollege(options.data?.departments ?? [])
 
@@ -213,13 +234,15 @@ export function ProfileFields({
  */
 function LockedField({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="mb-1 text-sm font-medium text-neutral-700">{label}</p>
-      <p className="text-sm text-neutral-900">{value || '입력하지 않음'}</p>
-      <p className="mt-1 text-xs text-neutral-500">
+    // dl/dt/dd 로 그린다. 입력칸이 아니라 값이므로 폼 라벨이 없고, 그냥 문단 셋으로
+    // 두면 스크린리더가 라벨과 값을 잇지 못한다.
+    <dl>
+      <dt className="mb-1 text-sm font-medium text-neutral-700">{label}</dt>
+      <dd className="text-sm text-neutral-900">{value || '입력하지 않음'}</dd>
+      <dd className="mt-1 text-xs text-neutral-500">
         한 번 입력한 뒤에는 직접 바꿀 수 없습니다. 변경이 필요하면 문의해 주세요.
-      </p>
-    </div>
+      </dd>
+    </dl>
   )
 }
 

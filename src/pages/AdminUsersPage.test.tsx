@@ -277,6 +277,61 @@ describe('관리자 사용자 목록', () => {
     expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
   })
 
+  test('무변경 저장은 요청을 보내지 않는다', async () => {
+    // 서버는 저장값 재전송을 no-op 으로 흡수하지만 감사와 알림은 남는다. 실수로 눌러도
+    // 본인에게 「관리자가 프로필을 정정했습니다」가 간다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: '프로필 정정' })).not.toBeInTheDocument(),
+    )
+    expect(adminProfilePatches).toHaveLength(0)
+  })
+
+  test('한 필드만 고쳐도 본문은 저장값 전체를 담는다', async () => {
+    // 프리필이 깨지는 회귀의 유일한 방어선이다. 열 때 값을 못 채우면 본문에
+    // null 이 실려 전면 비우기가 되는데, 부분 검사로는 통과한다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+    await user.clear(screen.getByLabelText('학번'))
+    await user.type(screen.getByLabelText('학번'), '202054321')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
+    expect(adminProfilePatches[0].body).toEqual({
+      position: 'STUDENT_UNDERGRAD',
+      studentNo: '202054321',
+      departmentCode: 'COMPUTER_SCIENCE',
+      departmentOther: null,
+      reason: null,
+    })
+  })
+
+  test('학생의 학번만 비우면 서버가 거절한다', async () => {
+    // 이 엔드포인트의 존재 이유가 「잘못 들어간 값 제거」인데, 학생 직책은 학번을
+    // 요구하므로 학번만 비우는 정정은 성립하지 않는다. 직책도 함께 옮겨야 한다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+    await user.clear(screen.getByLabelText('학번'))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('학번을 입력해 주세요.')).toBeInTheDocument()
+  })
+
   test('시스템 열람자는 프로필을 읽지만 정정하지 못한다', async () => {
     // 경계가 둘이다. 조회는 시스템 계층 전체이고 정정은 SYS_ADMIN 하나다. 기관 계층은
     // 절 자체가 보이지 않으므로 이 갈래가 없으면 두 번째 경계가 검사되지 않는다.

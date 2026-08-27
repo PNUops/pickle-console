@@ -144,6 +144,95 @@ describe('프로필 안내', () => {
     expect(screen.getByLabelText('소속 학과 직접 입력')).toBeInTheDocument()
   })
 
+  test('직책을 바꾸면 다른 모양의 소속이 전송 본문에서 사라진다', async () => {
+    // 화면에서 사라진 값이 상태에 남으면 그대로 저장되고 잠금이 그것을 영구화한다.
+    // 학부생으로 학과를 고른 뒤 교수로 바꾸면 보이는 소속은 빈 칸인데 학과 코드가
+    // 저장되고, 그 뒤 진짜 소속을 자유 입력으로 넣으려 하면 조합 규칙에 걸린다.
+    const user = userEvent.setup()
+    let sent: Record<string, unknown> | null = null
+    server.use(
+      http.put('*/api/v1/me/profile', async ({ request }) => {
+        sent = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(regularProfile, { status: 200 })
+      }),
+    )
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
+    await screen.findByRole('option', { name: '학부생' })
+
+    await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
+    await user.selectOptions(screen.getByLabelText('소속 학과'), 'COMPUTER_SCIENCE')
+    await user.selectOptions(screen.getByLabelText('직책'), 'PROFESSOR')
+
+    // 저장 버튼이 열려 있으면 안 된다. 소속이 비었으니까.
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    await user.type(screen.getByLabelText('소속'), '부설연구소')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(sent).toMatchObject({ departmentOther: '부설연구소' }))
+    expect(sent).not.toHaveProperty('departmentCode')
+  })
+
+  test('기타를 고르고 직접 입력을 비우면 저장할 수 없다', async () => {
+    // 카탈로그의 OTHER 는 「목록에 없다」는 표시일 뿐 소속이 아니다. 서버에는 이 규칙이
+    // 없어서(V94 의 CHECK 도 자유 입력이 비는 것을 허용한다) 통과하고, 잠금 때문에
+    // 소속이 「기타」라는 무의미한 값으로 굳는다.
+    const user = userEvent.setup()
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
+    await screen.findByRole('option', { name: '학부생' })
+
+    await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
+    await user.type(screen.getByLabelText('학번'), '202012345')
+    await user.selectOptions(screen.getByLabelText('소속 학과'), 'OTHER')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+
+    await user.type(screen.getByLabelText('소속 학과 직접 입력'), '융합학부')
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+  })
+
+  test('반쯤 채운 계정에는 저장된 값이 채워져 있고 잠긴 칸은 입력칸이 아니다', async () => {
+    // 안내가 빈 폼으로 시작하면 손대지 않은 칸이 비우기로 전송되어 잠금 422가 나고,
+    // 그 오류는 사용자가 건드리지도 않은 필드를 가리킨다.
+    const halfFilled = {
+      ...regularProfile,
+      position: 'STUDENT_UNDERGRAD' as const,
+      studentNo: '202012345',
+      departmentCode: null,
+      departmentName: null,
+      departmentOther: null,
+      profileComplete: false,
+    }
+    const user = userEvent.setup()
+    let sent: Record<string, unknown> | null = null
+    server.use(
+      http.get('*/api/v1/me', () => HttpResponse.json(halfFilled, { status: 200 })),
+      http.put('*/api/v1/me/profile', async ({ request }) => {
+        sent = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(regularProfile, { status: 200 })
+      }),
+    )
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
+    // 직책이 잠겨 Select 가 없으므로 카탈로그 도착은 소속 쪽에서 기다린다.
+    await screen.findByRole('option', { name: '정보컴퓨터공학부' })
+
+    // 직책과 학번은 잠겼다. 입력칸이 아니라 값과 사유가 보인다.
+    expect(screen.queryByLabelText('직책')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('학번')).not.toBeInTheDocument()
+    expect(screen.getByText('202012345')).toBeInTheDocument()
+
+    // 남은 것은 소속뿐이고, 학생이므로 카탈로그에서 고른다.
+    await user.selectOptions(screen.getByLabelText('소속 학과'), 'COMPUTER_SCIENCE')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(sent).toMatchObject({ departmentCode: 'COMPUTER_SCIENCE' }))
+    // 잠긴 값을 실으면 서버가 잠금 규칙으로 판정한다. 보내지 않는 것이 옳다.
+    expect(sent).not.toHaveProperty('position')
+    expect(sent).not.toHaveProperty('studentNo')
+  })
+
   test('저장 뒤에는 못 바꾼다는 것을 먼저 말한다', async () => {
     renderApp('/console')
     await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })

@@ -38,7 +38,7 @@ export function RequireRole({ roles, children }: { roles: UserRole[]; children: 
   return (
     <>
       {children}
-      {!user.profileComplete && <ProfilePrompt onSaved={refreshProfile} />}
+      {!user.profileComplete && <ProfilePrompt user={user} onSaved={refreshProfile} />}
     </>
   )
 }

@@ -2,9 +2,14 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toApiError } from '../api/problem'
 import { updateMyProfile } from '../api/queries'
-import type { components } from '../api/schema'
+import type { UserProfile } from './auth-context'
 import { ProfileFields } from '../components/profile/ProfileFields'
-import { EMPTY_PROFILE, type ProfileValues } from '../components/profile/profile-values'
+import {
+  departmentAnswered,
+  lockedProfileFields,
+  profilePatch,
+  type ProfileValues,
+} from '../components/profile/profile-values'
 import { Alert, Button, Modal } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
 import {
@@ -31,24 +36,29 @@ function overlayPending(): boolean {
  * 종전에는 이것이 셸 전체를 대신해서 나갈 길이 로그아웃뿐이었다. 그래서 그때는
  * 로그아웃 버튼이 필요했고, 지금은 닫기가 그 자리를 대신하므로 없다.
  */
-export function ProfilePrompt({ onSaved }: { onSaved: () => Promise<void> | void }) {
+export function ProfilePrompt({
+  user,
+  onSaved,
+}: {
+  user: UserProfile
+  onSaved: () => Promise<void> | void
+}) {
   const [closed, setClosed] = useState(() => profilePromptDismissed() || overlayPending())
-  const [profile, setProfile] = useState<ProfileValues>(EMPTY_PROFILE)
+  // 저장된 값에서 시작한다. 프로필이 미완성인 계정은 절반만 채워진 경우가 많고, 그
+  // 절반은 이미 잠겨 있다. 빈 폼으로 시작하면 손대지 않은 칸이 비우기로 전송되어
+  // 잠금 422가 나는데, 그 오류는 사용자가 건드리지도 않은 필드를 가리킨다.
+  const [profile, setProfile] = useState<ProfileValues>(() => ({
+    position: user.position ?? '',
+    studentNo: user.studentNo ?? '',
+    departmentCode: user.departmentCode ?? '',
+    departmentOther: user.departmentOther ?? '',
+  }))
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
+  const locked = lockedProfileFields(user)
 
   const save = useMutation({
-    mutationFn: () =>
-      updateMyProfile({
-        position: profile.position as components['schemas']['UserPosition'],
-        studentNo: profile.studentNo.trim() || null,
-        // 소속은 두 모양 중 채워진 쪽만 보낸다. 둘 다 보내면 목록에 없는 학과의 학생을
-        // 뺀 모든 경우에서 422다.
-        ...(profile.departmentCode !== '' ? { departmentCode: profile.departmentCode } : {}),
-        ...(profile.departmentOther.trim() !== ''
-          ? { departmentOther: profile.departmentOther.trim() }
-          : {}),
-      }),
+    mutationFn: () => updateMyProfile(profilePatch(user, profile)),
     onSuccess: async () => {
       setError(null)
       setFieldErrors({})
@@ -68,9 +78,8 @@ export function ProfilePrompt({ onSaved }: { onSaved: () => Promise<void> | void
   }
 
   // 소속은 두 모양 중 하나면 된다. 코드를 요구하면 자유 입력만 쓰는 직책은 저장 버튼이
-  // 영원히 비활성이다.
-  const departmentGiven = profile.departmentCode !== '' || profile.departmentOther.trim() !== ''
-  const ready = profile.position !== '' && departmentGiven
+  // 영원히 비활성이고, 「기타」만으로 통과시키면 소속이 그 무의미한 값으로 잠긴다.
+  const ready = profile.position !== '' && departmentAnswered(profile)
 
   return (
     <Modal
@@ -107,6 +116,7 @@ export function ProfilePrompt({ onSaved }: { onSaved: () => Promise<void> | void
           onChange={setProfile}
           errors={fieldErrors}
           disabled={save.isPending}
+          locked={locked}
         />
       </div>
     </Modal>

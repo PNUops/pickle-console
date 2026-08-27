@@ -406,16 +406,8 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
   )
 }
 
-/* ─── 기관 역할 (계약 v0.46.0 — 기관마다 하나씩 주고 뺀다) ─── */
+/* ─── 프로필 (조회는 시스템 계층, 정정은 SYS_ADMIN) ─── */
 
-/**
- * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 통째로 덮어쓰는
- * 위 역할 관리와 별개로 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
- * 있는 기관의 행만 건드릴 수 있고, 그 밖의 기관은 API가 404로 답한다.
- *
- * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
- * 기관을 보게 하되 손대지 못하게 하는 통로다.
- */
 /**
  * 직책·학번·소속의 표시와 정정.
  *
@@ -500,9 +492,14 @@ function UserProfileSection({
 /**
  * 정정 폼. 본인 경로와 달리 값을 비울 수 있다.
  *
- * 보내지 않은 필드는 그대로 두므로, 빈 칸은 「비우기」가 아니라 「건드리지 않기」다.
- * 비우려면 그 필드의 비우기를 명시적으로 골라야 한다 — 오타로 빈 칸을 남긴 것과
- * 지우겠다는 뜻을 구분할 방법이 그것뿐이다.
+ * 열 때 저장된 값을 채우고 **네 필드를 항상 보낸다.** 그러므로 빈 칸은 비우기이고,
+ * 텍스트를 지우는 것이 비우겠다는 표현이다. 부분 전송으로 바꾸면 「건드리지 않기」와
+ * 「비우기」를 구분할 수 있지만, 그때는 서버가 absent 를 유지로 읽는다는 사실에 화면이
+ * 의존하게 되므로 모의 핸들러도 같은 의미론이어야 한다.
+ *
+ * 무변경 저장은 저장값 재전송이라 값은 그대로지만 **감사 기록과 본인 알림은 발생한다**
+ * (서버가 변경 여부를 따지지 않는다). 실수로 눌러도 「관리자가 프로필을 정정했습니다」가
+ * 가므로 아래에서 바뀐 것이 없으면 아예 보내지 않는다.
  */
 function UserProfileCorrectionModal({
   user,
@@ -525,6 +522,14 @@ function UserProfileCorrectionModal({
     queryFn: fetchProfileOptions,
     staleTime: 60 * 60 * 1000,
   })
+
+  // 저장값과 같으면 요청 자체를 보내지 않는다. 서버는 no-op 으로 흡수하지만 감사와
+  // 알림은 남으므로, 실수 클릭이 본인에게 「관리자가 정정했습니다」로 가게 된다.
+  const unchanged =
+    (position || null) === (user.position ?? null) &&
+    (studentNo.trim() || null) === (user.studentNo ?? null) &&
+    (departmentCode || null) === (user.departmentCode ?? null) &&
+    (departmentOther.trim() || null) === (user.departmentOther ?? null)
 
   const save = useMutation({
     mutationFn: () =>
@@ -553,9 +558,13 @@ function UserProfileCorrectionModal({
   return (
     <Modal open onClose={onClose} title="프로필 정정">
       <form
-        onSubmit={(event) => {
+          onSubmit={(event) => {
           event.preventDefault()
           setError(null)
+          if (unchanged) {
+            onClose()
+            return
+          }
           save.mutate()
         }}
         className="space-y-4"
@@ -634,6 +643,16 @@ function UserProfileCorrectionModal({
   )
 }
 
+/* ─── 기관 역할 (계약 v0.46.0 — 기관마다 하나씩 주고 뺀다) ─── */
+
+/**
+ * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 통째로 덮어쓰는
+ * 위 역할 관리와 별개로 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
+ * 있는 기관의 행만 건드릴 수 있고, 그 밖의 기관은 API가 404로 답한다.
+ *
+ * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
+ * 기관을 보게 하되 손대지 못하게 하는 통로다.
+ */
 function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const { user: viewer } = useAuth()
   const queryClient = useQueryClient()
