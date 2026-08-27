@@ -17,6 +17,7 @@ import { llmKeyHandlers, resetLlmKeyFixtures } from './handlers/llm-keys'
 import { metricsHandlers } from './handlers/metrics'
 import { networkHandlers, resetNetworkFixtures } from './handlers/network'
 import { resourceHandlers } from './handlers/resources'
+import { noticeHandlers, resetNoticeFixtures } from './handlers/notices'
 import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
 import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
 import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
@@ -52,6 +53,7 @@ export const handlers: RequestHandler[] = [
   ...auditHandlers,
   ...settingHandlers,
   ...notificationHandlers,
+  ...noticeHandlers,
   ...announcementHandlers,
 ]
 
@@ -75,5 +77,6 @@ export function resetFixtures() {
   resetAuditFixtures()
   resetSettingFixtures()
   resetNotificationFixtures()
+  resetNoticeFixtures()
   resetAnnouncementFixtures()
 }

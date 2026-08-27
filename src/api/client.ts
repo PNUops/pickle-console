@@ -193,3 +193,16 @@ function signalMaintenance(response: Response): void {
 }
 
 export const api = createClient<paths>({ baseUrl: API_BASE, fetch: fetchWithAuth })
+
+/**
+ * 인증 헤더를 실어 경로 하나를 그대로 받아 온다 — 계약 클라이언트를 거치지 않는
+ * 바이트 응답(공지 첨부 이미지)용.
+ *
+ * 이 API는 순수 Bearer이고 `<img src>`는 헤더를 싣지 않는다. 그러니 브라우저에게
+ * 주소만 넘기면 서버는 그 요청을 익명 호출로 읽고, 로그인해야 보이는 공지의
+ * 이미지는 자격이 있는 사람에게도 404가 된다. 바이트를 여기로 받아 와야 하는
+ * 이유가 그것이다. 401 갱신과 재시도는 일반 호출과 같은 길을 탄다.
+ */
+export function fetchAuthedBytes(path: string): Promise<Response> {
+  return fetchWithAuth(new Request(new URL(path, origin)))
+}

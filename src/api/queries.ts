@@ -1977,3 +1977,115 @@ export function startGoogleOauth(
     return data
   })
 }
+
+/* ─── 공지사항 ─── */
+
+/** 게시 범위 — PLATFORM(전역) / ORG(기관). ORG는 언제나 대상이 USERS다. */
+export type NoticeScope = Schemas['NoticeScope']
+/** 노출 대상 — PUBLIC(익명까지) / USERS(로그인 사용자). */
+export type NoticeAudience = Schemas['NoticeAudience']
+export type NoticeView = Schemas['NoticeView']
+export type NoticeImageView = Schemas['NoticeImageView']
+export type NoticePage = Schemas['PageResponseNoticeView']
+export type AdminNoticeView = Schemas['AdminNoticeView']
+export type AdminNoticePage = Schemas['PageResponseAdminNoticeView']
+export type NoticeCreateRequest = Schemas['NoticeCreateRequest']
+export type NoticeUpdateRequest = Schemas['NoticeUpdateRequest']
+
+/**
+ * 공개 목록 — 게시 기간 안에 있는 공지만, 고정 먼저 최신순으로 온다. 대상
+ * (PUBLIC/USERS) 판정은 서버가 호출자의 인증 상태를 보고 하므로 화면은 거르지 않는다.
+ */
+export function fetchNotices(params: { page?: number; size?: number }): Promise<NoticePage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/notices', { params: { query: params } })
+    if (!data) throw toApiError(error, '공지사항을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchNotice(noticeId: string): Promise<NoticeView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/notices/{noticeId}', {
+      params: { path: { noticeId } },
+    })
+    if (!data) throw toApiError(error, '공지사항을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** 관리 목록 — 게시 전·만료분까지 포함하고, 각 행이 지금 게시 중인지(active)를 함께 싣는다. */
+export function fetchAdminNotices(params: {
+  page?: number
+  size?: number
+}): Promise<AdminNoticePage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/notices', { params: { query: params } })
+    if (!data) throw toApiError(error, '공지사항 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createAdminNotice(body: NoticeCreateRequest): Promise<AdminNoticeView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/notices', { body })
+    if (!data) throw toApiError(error, '공지사항을 등록하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminNotice(
+  noticeId: string,
+  body: NoticeUpdateRequest,
+): Promise<AdminNoticeView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/notices/{noticeId}', {
+      params: { path: { noticeId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '공지사항을 수정하지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteAdminNotice(noticeId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/admin/notices/{noticeId}', {
+      params: { path: { noticeId } },
+    })
+    if (error) throw toApiError(error, '공지사항을 삭제하지 못했습니다.')
+  })
+}
+
+/**
+ * 첨부 이미지 업로드 — 콘솔에서 유일한 multipart 호출.
+ *
+ * 생성 타입은 multipart 본문을 필드 객체로 적지만(binary는 문자열로 내려온다)
+ * 실제로 보내야 하는 것은 `FormData`다. 본문을 그대로 통과시키는 직렬화기를 주면
+ * openapi-fetch가 Content-Type을 비워 두고, 브라우저가 boundary와 함께 붙인다.
+ */
+export function uploadAdminNoticeImage(
+  noticeId: string,
+  file: File,
+): Promise<NoticeImageView> {
+  return guardNetwork(async () => {
+    const form = new FormData()
+    form.append('file', file)
+    const { data, error } = await api.POST('/admin/notices/{noticeId}/images', {
+      params: { path: { noticeId } },
+      body: form as never,
+      bodySerializer: (body: unknown) => body as FormData,
+    })
+    if (!data) throw toApiError(error, '이미지를 업로드하지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteAdminNoticeImage(noticeId: string, imageId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/admin/notices/{noticeId}/images/{imageId}', {
+      params: { path: { noticeId, imageId } },
+    })
+    if (error) throw toApiError(error, '이미지를 삭제하지 못했습니다.')
+  })
+}

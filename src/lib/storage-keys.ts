@@ -74,3 +74,22 @@ export function dismissProfilePrompt(): void {
     // 이 세션 동안만 닫힌다.
   }
 }
+
+/**
+ * 이번 세션에 이미 띄운 팝업 공지를 기억하는 sessionStorage 키. 값은
+ * `공지 id → updatedAt` JSON 맵이다. 그냥 닫기(X·배경·Esc)가 여기에 기록되며,
+ * 세션이 끝나면 함께 사라져 다음 로그인 때 같은 공지가 다시 뜬다.
+ */
+export const NOTICE_POPUP_SEEN_KEY = 'pickle.notice-popup-seen'
+
+/**
+ * '다시 보지 않기'로 눌러 둔 팝업 공지의 localStorage 키. 같은 모양의
+ * `공지 id → updatedAt` 맵이고, 공지 본문이 수정되면 updatedAt이 달라져 다시
+ * 뜬다. 로그아웃 시 지우지 않는다 — 이 억제는 계정이 아니라 브라우저의 것이다.
+ */
+export const NOTICE_POPUP_DISMISSED_KEY = 'pickle.notice-popup-dismissed'
+
+/**
+ * 랜딩·로그인 화면 상단의 공지 한 줄을 이번 세션 동안 닫아 두는 sessionStorage 키.
+ */
+export const LANDING_NOTICE_DISMISS_KEY = 'pickle.landing-notice-dismissed'

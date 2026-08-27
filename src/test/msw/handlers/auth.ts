@@ -116,6 +116,18 @@ export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   pendingConsents: [],
 }
 
+/**
+ * 두 기관을 함께 맡은 기관 관리자 (겸직, V90 이후 가능해졌다). '자기 기관'이 하나로
+ * 정해지지 않는 계정이라, 대상 기관을 서버가 채워 줄 수 없는 쪽을 세운다.
+ */
+export const orgAdminDualProfile: Schemas['UserProfileResponse'] = {
+  ...orgAdminProfile,
+  managedOrgs: [
+    { orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const },
+    { orgId: uuid(2), orgName: '테스트 기관', role: 'ORG_ADMIN' as const },
+  ],
+}
+
 export const sysAdminProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...sysAdminUser,
@@ -215,6 +227,7 @@ export const ACCESS_TOKENS: Record<string, Schemas['UserProfileResponse']> = {
   'access-user': regularProfile,
   'access-org-viewer': orgViewerProfile,
   'access-org-admin': orgAdminProfile,
+  'access-org-admin-dual': orgAdminDualProfile,
   'access-org-manager': orgManagerProfile,
   'access-sys-viewer': sysViewerProfile,
   'access-sys-admin': sysAdminProfile,

@@ -50,6 +50,9 @@ export function ConsoleLayout() {
     {
       // 범위를 좁혀 둔 사람에게 '내 워크스페이스' 목록은 지금 보고 있는 곳이 아니다
       // — 그 상태에서 이 자리는 그 워크스페이스를 관리하러 가는 문이 된다.
+      items: [{ to: '/notices', label: '공지사항', icon: navIcons.megaphone }],
+    },
+    {
       items: [
         scope == null
           ? { to: consolePaths.workspaces, label: '내 워크스페이스', icon: navIcons.users }

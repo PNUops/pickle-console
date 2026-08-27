@@ -122,6 +122,14 @@ export function canViewAudit(role: UserRole): boolean {
   )
 }
 
+/**
+ * 공지사항 등록·수정·삭제. 발송(§3.13)과 같은 계층 — 기관 관리자·시스템 관리자만
+ * 쓰고, 운영자 역할은 목록과 상세를 읽기만 한다.
+ */
+export function canManageNotice(role: UserRole): boolean {
+  return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+}
+
 /** Enumerated SYS routine recovery — task retry / notification resend / drift
  *  resolve / route resync (§3.12/§3.18/§3.20/§3.21). SYS_MANAGER + SYS_ADMIN;
  *  SYS_VIEWER reads the same screens but runs nothing. */
