@@ -20,6 +20,7 @@ import {
   type UserStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { OTHER_DEPARTMENT } from '../components/profile/profile-values'
 import type { components } from '../api/schema'
 import { useAuth, type ManagedOrg } from '../auth/auth-context'
 import { administeredOrgs, isOrgTier, isSysAdminOnly, isSysTier } from '../auth/permissions'
@@ -523,6 +524,13 @@ function UserProfileCorrectionModal({
     staleTime: 60 * 60 * 1000,
   })
 
+  // 「기타」는 「목록에 없다」는 표시일 뿐 소속이 아니다. 직접 입력 없이 그 코드만 저장하면
+  // 소속이 무의미한 값으로 굳고, 본인은 잠금 때문에 되돌릴 수 없다. 서버에 이 규칙이 없고
+  // CHECK 도 허용하므로 막을 곳이 화면뿐인데, **정정 경로에도 서 있어야 한다** — 여기가
+  // 그 상태를 고치러 오는 화면이면서 같은 상태를 다시 만들 수 있는 화면이다.
+  const departmentIncomplete =
+    departmentCode === OTHER_DEPARTMENT && departmentOther.trim() === ''
+
   // 저장값과 같으면 요청 자체를 보내지 않는다. 서버는 no-op 으로 흡수하지만 감사와
   // 알림은 남으므로, 실수 클릭이 본인에게 「관리자가 정정했습니다」로 가게 된다.
   const unchanged =
@@ -613,6 +621,12 @@ function UserProfileCorrectionModal({
             autoComplete="off"
             onChange={(event) => setDepartmentOther(event.target.value)}
           />
+          {departmentIncomplete && (
+            <p className="mt-1 text-xs text-danger-700">
+              소속 학과 코드를 「기타」로 두려면 실제 소속을 직접 입력해 주세요. 코드만으로는
+              소속이 「기타」라는 값으로 굳습니다.
+            </p>
+          )}
         </FormField>
         {/*
           감사 기록은 학번을 값이 아니라 있음/없음으로만 남긴다. 사유에 값을 적으면
@@ -634,7 +648,7 @@ function UserProfileCorrectionModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" loading={save.isPending}>
+          <Button type="submit" loading={save.isPending} disabled={departmentIncomplete}>
             저장
           </Button>
         </div>
