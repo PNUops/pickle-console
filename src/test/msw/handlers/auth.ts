@@ -87,6 +87,24 @@ const filledProfile = {
   studentNo: '202012345',
   departmentCode: 'COMPUTER_SCIENCE',
   departmentName: '정보컴퓨터공학부',
+  departmentOther: null,
+  profileComplete: true,
+  hasPassword: true,
+  identities: [],
+} satisfies Partial<Schemas['UserProfileResponse']>
+
+/**
+ * v0.46.0 이전에 프로필을 채운 계정의 모양. 그때는 소속이 전원 필수였으므로
+ * **교직원도 학과 코드를 들고 있다** — 라이브에 실존하는 행이다. 새 모델대로 이 계정에
+ * `departmentCode: null` 을 보내면 잠금과 조합 규칙에 이중으로 걸려 이름만 바꾸는
+ * 저장까지 422가 되므로, 그것을 막는 테스트가 이 픽스처를 쓴다.
+ */
+export const legacyStaffProfile = {
+  position: 'RESEARCHER',
+  studentNo: null,
+  departmentCode: 'COMPUTER_SCIENCE',
+  departmentName: '정보컴퓨터공학부',
+  departmentOther: null,
   profileComplete: true,
   hasPassword: true,
   identities: [],

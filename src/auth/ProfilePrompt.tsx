@@ -42,7 +42,12 @@ export function ProfilePrompt({ onSaved }: { onSaved: () => Promise<void> | void
       updateMyProfile({
         position: profile.position as components['schemas']['UserPosition'],
         studentNo: profile.studentNo.trim() || null,
-        departmentCode: profile.departmentCode,
+        // 소속은 두 모양 중 채워진 쪽만 보낸다. 둘 다 보내면 목록에 없는 학과의 학생을
+        // 뺀 모든 경우에서 422다.
+        ...(profile.departmentCode !== '' ? { departmentCode: profile.departmentCode } : {}),
+        ...(profile.departmentOther.trim() !== ''
+          ? { departmentOther: profile.departmentOther.trim() }
+          : {}),
       }),
     onSuccess: async () => {
       setError(null)
@@ -62,13 +67,16 @@ export function ProfilePrompt({ onSaved }: { onSaved: () => Promise<void> | void
     setClosed(true)
   }
 
-  const ready = profile.position !== '' && profile.departmentCode !== ''
+  // 소속은 두 모양 중 하나면 된다. 코드를 요구하면 자유 입력만 쓰는 직책은 저장 버튼이
+  // 영원히 비활성이다.
+  const departmentGiven = profile.departmentCode !== '' || profile.departmentOther.trim() !== ''
+  const ready = profile.position !== '' && departmentGiven
 
   return (
     <Modal
       open={!closed}
       onClose={close}
-      title="직책과 소속 학과를 입력해 주세요"
+      title="직책과 소속을 입력해 주세요"
       footer={
         <>
           <Button variant="secondary" onClick={close}>
@@ -82,9 +90,17 @@ export function ProfilePrompt({ onSaved }: { onSaved: () => Promise<void> | void
     >
       <div className="space-y-4">
         <p className="text-sm text-neutral-600">
-          입력하지 않아도 모든 기능을 사용할 수 있습니다. 다만 수업에 초대받으려면 학번이
-          있어야 합니다.
+          입력하지 않아도 모든 기능을 사용할 수 있습니다. 다만 학번으로 사람을 찾는 자리에서는
+          학번이 있어야 합니다.
         </p>
+        {/*
+          잠금을 말하지 않으면 이 화면 자체가 함정이다. 여기서 고른 값은 본인이 되돌릴 수
+          없고, 되돌리는 데 사람이 필요하다는 것을 고르기 전에 알아야 한다.
+        */}
+        <Alert variant="info">
+          직책과 학번과 소속은 저장한 뒤에는 직접 바꿀 수 없습니다. 변경이 필요하면 문의를
+          거쳐 관리자가 처리합니다.
+        </Alert>
         {error && <Alert variant="danger">{error}</Alert>}
         <ProfileFields
           values={profile}

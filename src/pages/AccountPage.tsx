@@ -38,7 +38,7 @@ import {
   useToast,
 } from '../components/ui'
 import { GoogleAuthButton } from '../components/auth/GoogleAuthButton'
-import { ProfileFields } from '../components/profile/ProfileFields'
+import { type LockedProfileFields, ProfileFields } from '../components/profile/ProfileFields'
 import { EMPTY_PROFILE, type ProfileValues } from '../components/profile/profile-values'
 import { navigateExternal } from '../lib/google-oauth'
 import { fieldErrorsOf } from '../lib/field-errors'
@@ -113,13 +113,57 @@ export function AccountPage() {
 }
 
 /**
- * 이름과 직책과 소속 학과.
+ * 저장된 값이 있는 필드. 서버가 `PUT /me/profile`에서 422로 거절하는 것과 같은 조건이다.
+ *
+ * 소속은 두 모양이 한 축이다. 코드든 자유 입력이든 하나가 채워지면 소속이 답해진 것이고
+ * 서버는 양쪽 다 잠근다.
+ */
+function lockedProfileFields(user: UserProfile): LockedProfileFields {
+  return {
+    position: user.position != null,
+    studentNo: user.studentNo != null,
+    department: user.departmentCode != null || user.departmentOther != null,
+  }
+}
+
+/** 학번을 요구하는 직책인지. 직책이 비어 있으면 아직 알 수 없으므로 해당으로 본다. */
+function studentNoApplies(user: UserProfile): boolean {
+  return user.position == null || user.position.startsWith('STUDENT_')
+}
+
+/**
+ * 보낼 것만 담은 부분 갱신 본문.
+ *
+ * 잠긴 필드는 **아예 보내지 않는다.** 저장된 값을 그대로 다시 보내도 서버는 통과시키지만,
+ * 보내지 않는 것이 잠금 규칙과 한 번 덜 부딪힌다. 특히 v0.46.0 이전에 프로필을 채운
+ * 비학생 계정은 학과 코드를 들고 있는데(라이브에 실존한다) 새 모델대로 `departmentCode`를
+ * null 로 보내면 잠금과 조합 규칙에 이중으로 걸려 이름만 바꾸는 저장까지 422가 된다.
+ */
+function profilePatch(user: UserProfile, name: string, values: ProfileValues) {
+  const locked = lockedProfileFields(user)
+  const patch: Record<string, unknown> = { name: name.trim() }
+  if (!locked.position) {
+    patch.position = (values.position || null) as components['schemas']['UserPosition'] | null
+  }
+  if (!locked.studentNo && values.studentNo.trim() !== '') {
+    patch.studentNo = values.studentNo.trim()
+  }
+  if (!locked.department) {
+    if (values.departmentCode !== '') patch.departmentCode = values.departmentCode
+    if (values.departmentOther.trim() !== '') patch.departmentOther = values.departmentOther.trim()
+  }
+  return patch as Parameters<typeof updateMyProfile>[0]
+}
+
+/**
+ * 이름과 직책과 학번과 소속.
  *
  * 프로필은 선택 입력이라 비어 있는 것이 정상이고, 그래서 값이 없는 행도 숨기지 않고
- * 「입력하지 않음」으로 남긴다. 없는 줄은 고칠 수 있다는 사실도 함께 감춘다.
+ * 「입력하지 않음」으로 남긴다. 없는 줄은 채울 수 있다는 사실도 함께 감춘다.
  *
- * 표시 이름을 여기서 바꾼다. v0.46.0 이전에는 가입 때 정한 이름을 바꿀 경로가
- * 어디에도 없었다.
+ * 직책과 학번과 소속은 한 번 입력하면 잠긴다(v0.51.0). 그래서 이 카드의 「변경」은
+ * **이름과 아직 비어 있는 필드**를 위한 것이고, 잠긴 행은 값과 함께 문의 안내를
+ * 보여 준다. 이름은 잠기지 않는다 — 누구도 식별하지 않는 표시용 문자열이다.
  */
 function ProfileSection({ user }: { user: UserProfile }) {
   const toast = useToast()
@@ -141,12 +185,7 @@ function ProfileSection({ user }: { user: UserProfile }) {
 
   const save = useMutation({
     mutationFn: () =>
-      updateMyProfile({
-        name: name.trim(),
-        position: (profile.position || null) as components['schemas']['UserPosition'] | null,
-        studentNo: profile.studentNo.trim() || null,
-        departmentCode: profile.departmentCode || null,
-      }),
+      updateMyProfile(profilePatch(user, name, profile)),
     onSuccess: async () => {
       setOpen(false)
       setError(null)
@@ -170,11 +209,17 @@ function ProfileSection({ user }: { user: UserProfile }) {
       position: user.position ?? '',
       studentNo: user.studentNo ?? '',
       departmentCode: user.departmentCode ?? '',
+      departmentOther: user.departmentOther ?? '',
     })
     setFieldErrors({})
     setError(null)
     setOpen(true)
   }
+
+  const locked = lockedProfileFields(user)
+  const departmentValue = user.departmentOther ?? user.departmentName
+  // 잠금이 필드 단위이므로, 아직 비어 있는 것이 하나라도 있으면 모달에 넣을 것이 있다.
+  const inquiryNote = '변경이 필요하면 문의해 주세요.'
 
   return (
     <>
@@ -187,9 +232,25 @@ function ProfileSection({ user }: { user: UserProfile }) {
           </Button>
         }
       />
-      <SettingRow label="직책" description={positionLabel ?? '입력하지 않음'} />
-      <SettingRow label="소속 학과" description={user.departmentName ?? '입력하지 않음'} />
-      {user.studentNo && <SettingRow label="학번" description={user.studentNo} />}
+      <SettingRow
+        label="직책"
+        description={positionLabel ?? '입력하지 않음'}
+        note={locked.position ? inquiryNote : undefined}
+      />
+      <SettingRow
+        label="소속"
+        description={departmentValue ?? '입력하지 않음'}
+        note={locked.department ? inquiryNote : undefined}
+      />
+      {/*
+        학번 행은 값이 없어도 보여 준다. 숨기면 왜 못 넣는지도, 넣을 수 있다는 것도
+        알 길이 없다. 학생 직책이 아닌 계정에는 애초에 해당이 없으므로 그렇게 적는다.
+      */}
+      <SettingRow
+        label="학번"
+        description={user.studentNo ?? (studentNoApplies(user) ? '입력하지 않음' : '해당 없음')}
+        note={locked.studentNo ? inquiryNote : undefined}
+      />
       <Modal open={open} onClose={() => setOpen(false)} title="프로필 변경">
         {error && (
           <Alert variant="danger" className="mb-4">
@@ -217,6 +278,7 @@ function ProfileSection({ user }: { user: UserProfile }) {
             values={profile}
             onChange={setProfile}
             errors={fieldErrors}
+            locked={locked}
             disabled={save.isPending}
           />
           <div className="flex justify-end gap-2">

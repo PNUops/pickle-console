@@ -868,6 +868,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{userId}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateUserProfile"];
+        trace?: never;
+    };
     "/admin/vm-flavors": {
         parameters: {
             query?: never;
@@ -2782,6 +2798,13 @@ export interface components {
             vmName?: string | null;
             workspaceName?: string | null;
         };
+        AdminUpdateProfileRequest: {
+            departmentCode?: string | null;
+            departmentOther?: string | null;
+            position?: components["schemas"]["UserPosition"] | null;
+            reason?: string | null;
+            studentNo?: string | null;
+        };
         AdminWorkspaceDetailResponse: {
             /** Format: date-time */
             createdAt: string;
@@ -3909,6 +3932,7 @@ export interface components {
         OauthCompleteRequest: {
             consents: components["schemas"]["ConsentInput"][];
             departmentCode?: string | null;
+            departmentOther?: string | null;
             name: string;
             position?: components["schemas"]["UserPosition"] | null;
             registrationToken: string;
@@ -4563,6 +4587,7 @@ export interface components {
         SignupRequest: {
             consents: components["schemas"]["ConsentInput"][];
             departmentCode?: string | null;
+            departmentOther?: string | null;
             email: string;
             name: string;
             password: string;
@@ -4725,6 +4750,7 @@ export interface components {
         };
         UpdateProfileRequest: {
             departmentCode?: string | null;
+            departmentOther?: string | null;
             name?: string;
             position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
@@ -4762,6 +4788,9 @@ export interface components {
             activeVmCount: number;
             /** Format: date-time */
             createdAt: string;
+            departmentCode?: string | null;
+            departmentName?: string | null;
+            departmentOther?: string | null;
             /** Format: date-time */
             disabledAt?: string | null;
             disabledReason?: string | null;
@@ -4772,9 +4801,11 @@ export interface components {
             memberships: components["schemas"]["Membership"][];
             mfaEnabled: boolean;
             name: string;
+            position?: components["schemas"]["UserPosition"] | null;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
             statusChanges: components["schemas"]["UserStatusChangeResponse"][];
+            studentNo?: string | null;
             /** Format: date-time */
             withdrawnAt?: string | null;
         };
@@ -4795,6 +4826,7 @@ export interface components {
         UserProfileResponse: {
             departmentCode?: string | null;
             departmentName?: string | null;
+            departmentOther?: string | null;
             email: string;
             hasPassword: boolean;
             /** Format: uuid */
@@ -7190,6 +7222,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateUserProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserAdminDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
