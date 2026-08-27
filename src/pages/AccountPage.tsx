@@ -55,10 +55,21 @@ export function AccountPage() {
 
   // 구글에서 돌아온 직후. 확인을 말하고 표식은 주소에서 지운다 — 새로고침마다 같은
   // 토스트가 뜨면 방금 일어난 일인지 지난번 일인지 알 수 없다.
+  //
+  // 지우는 것은 자기 키 하나뿐이다. 주소 전체를 비우면 같은 주소에 실려 온 남의 표식
+  // (`?enroll=2fa`)까지 함께 날아가고, 그 키를 읽는 효과와 어느 쪽이 먼저 도느냐에
+  // 결과가 달라진다.
   useEffect(() => {
     if (!linked) return
     toast.success('구글 계정을 연동했습니다.')
-    setSearchParams({}, { replace: true })
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('linked')
+        return next
+      },
+      { replace: true },
+    )
   }, [linked, toast, setSearchParams])
 
   if (!user) return null
@@ -671,7 +682,7 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
     if (!enrollRequested) return
     if (canEnroll) setStep('password')
     // 표식은 곧바로 지운다. 남겨 두면 새로고침마다 모달이 다시 선다. 구글 연동 복귀
-    // 표식과 달리 이 키만 지운다 — 두 효과가 같은 주소를 두고 다투면 안 된다.
+    // 표식과 마찬가지로 이 키만 지운다 — 두 효과가 같은 주소를 두고 다투면 안 된다.
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)

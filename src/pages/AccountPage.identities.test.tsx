@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler, regularProfile } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 
 const GOOGLE = { provider: 'GOOGLE' as const, email: 'hong@pusan.ac.kr', linkedAt: '2026-08-25T00:00:00Z' }
 
@@ -44,6 +44,15 @@ describe('계정 화면의 연동 관리', () => {
     await openSection(user, '연동된 계정')
     await screen.findByText('hong@pusan.ac.kr')
     expect(screen.getByRole('button', { name: '해제' })).toBeEnabled()
+  })
+
+  test('연동 복귀 표식은 자기 키만 지운다', async () => {
+    // 표식을 지우려고 주소를 통째로 비우면 같은 주소에 실려 온 남의 키까지 날아가고,
+    // 그 키를 읽는 효과와 어느 쪽이 먼저 도느냐에 결과가 달라진다.
+    meReturns({ identities: [GOOGLE], hasPassword: true })
+    renderApp('/console/account?linked=google&sort=name')
+    expect(await screen.findByText('구글 계정을 연동했습니다.')).toBeInTheDocument()
+    await waitFor(() => expect(currentPath()).toBe('/console/account?sort=name'))
   })
 
   test('유일한 로그인 수단이면 해제 버튼이 사유와 함께 잠긴다', async () => {
