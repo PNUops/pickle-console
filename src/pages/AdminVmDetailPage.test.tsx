@@ -73,6 +73,41 @@ describe('관리자 VM 상세', () => {
     expect(within(rows[2]).getByText('홍길동')).toBeInTheDocument()
   })
 
+  test('감사 로그가 닫힌 역할에게는 이벤트 이력의 관리자 이름이 가려진다', async () => {
+    // 서버가 이 역할에게만 관리자 행의 신원을 비운다. 목이 그 규칙을 모르면
+    // 이름이 비어 오는 화면 자체를 테스트가 한 번도 지나가지 못한다.
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    const user = userEvent.setup()
+    renderApp(`/admin/vms/${uuid(56)}`)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('tab', { name: '이벤트' }))
+
+    await screen.findByText('승인 신청 90에 따라 자동 생성')
+    const rows = screen.getAllByRole('row')
+    expect(within(rows[1]).getByText('SSH·터미널 차단')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('관리자')).toBeInTheDocument()
+    expect(within(rows[1]).queryByText('운영 담당자')).not.toBeInTheDocument()
+    // 동료 행은 그대로 이름이 보인다 — 가리는 것은 개입한 관리자뿐이다.
+    expect(within(rows[2]).getByText('홍길동')).toBeInTheDocument()
+  })
+
+  test('수행 화면을 모르는 행은 이름과 함께 미기록으로 구분된다', async () => {
+    // 관리자에게는 이름이 오지만, 동료가 한 일과 같은 모양으로 그리면 서버가
+    // 거부한 추측을 화면이 대신하게 된다.
+    const user = userEvent.setup()
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}`)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('tab', { name: '이벤트' }))
+
+    await screen.findByText('승인 신청 90에 따라 자동 생성')
+    const rows = screen.getAllByRole('row')
+    const unknownRow = rows[rows.length - 1]
+    expect(within(unknownRow).getByText('홍길동')).toBeInTheDocument()
+    expect(within(unknownRow).getByText('화면 미기록')).toBeInTheDocument()
+  })
+
   test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보이고 전원 제어는 열려 있다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp(`/admin/vms/${uuid(56)}`)

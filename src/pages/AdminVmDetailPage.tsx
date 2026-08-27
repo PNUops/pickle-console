@@ -353,6 +353,10 @@ function AdminEventActor({ event }: { event: VmEvent }) {
     <span className="inline-flex items-center gap-1.5">
       {event.actorName}
       {event.actorKind === 'ADMIN' && <Badge variant="warning">관리자</Badge>}
+      {/* 이름은 알지만 어느 화면인지 모르는 행. 배지 없이 이름만 두면 동료가
+          한 일과 화면상 구별이 안 되고, 그러면 서버가 거부한 추측을 화면이
+          대신하게 된다. */}
+      {event.actorKind === 'UNKNOWN' && <Badge variant="neutral">화면 미기록</Badge>}
     </span>
   )
 }
