@@ -121,6 +121,8 @@ describe('VM 상세 — 이벤트 이력', () => {
     expect(within(history).getByText('홍길동')).toBeInTheDocument()
     expect(within(history).getByText('관리자')).toBeInTheDocument()
     expect(within(history).queryByText('운영 담당자')).not.toBeInTheDocument()
+    // 수행 화면이 기록되기 전 행은 이름 없이 "사용자". 서버가 이름을 비워 보낸다.
+    expect(within(history).getByText('사용자')).toBeInTheDocument()
 
     // 재부팅을 접수하면 무효화로 이벤트 이력에 REBOOT가 추가된다.
     await user.click(screen.getByRole('button', { name: '재부팅' }))

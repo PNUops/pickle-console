@@ -709,6 +709,16 @@ function initialVmEvents(): Record<string, VmEvent[]> {
         detail: '승인 신청 90에 따라 자동 생성',
         createdAt: '2026-06-20T10:00:00+09:00',
       },
+      {
+        // 수행 화면이 기록되기 전에 쌓인 행. 사람이 했다는 것만 안다.
+        id: uuid(900),
+        type: 'STOP',
+        actorId: uuid(42),
+        actorKind: 'UNKNOWN',
+        actorName: '홍길동',
+        detail: null,
+        createdAt: '2026-06-19T10:00:00+09:00',
+      },
     ],
   }
 }
@@ -1313,7 +1323,7 @@ export const vmHandlers: RequestHandler[] = [
     // 서버와 같은 모양: 관리자 개입 행은 사용자 화면용 응답에서 신원이 비워져
     // 나간다(가리는 일을 클라이언트에 맡기지 않는다).
     const events = (vmEventStore[vm.id] ?? []).map((event) =>
-      event.actorKind === 'ADMIN'
+      event.actorKind === 'ADMIN' || event.actorKind === 'UNKNOWN'
         ? { ...event, actorId: null, actorName: null }
         : event,
     )

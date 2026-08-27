@@ -244,6 +244,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminNotices"];
+        put?: never;
+        post: operations["createAdminNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notices/{noticeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteAdminNotice"];
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminNotice"];
+        trace?: never;
+    };
+    "/admin/notices/{noticeId}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadAdminNoticeImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notices/{noticeId}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteAdminNoticeImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/notifications": {
         parameters: {
             query?: never;
@@ -1721,6 +1785,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listNotices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notices/{noticeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notices/{noticeId}/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNoticeImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications": {
         parameters: {
             query?: never;
@@ -2435,6 +2547,39 @@ export interface components {
             /** Format: uuid */
             workspaceId: string;
             workspaceName: string;
+        };
+        AdminNoticeView: {
+            /** @description 지금 게시 창 안에 있는지. 예정·만료된 공지도 이 목록에는 함께 나옵니다. */
+            active: boolean;
+            audience: components["schemas"]["NoticeAudience"];
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 공지를 등록한 사람의 이름. 계정이 지워졌으면 비어 있습니다. */
+            createdByName?: string | null;
+            /**
+             * Format: date-time
+             * @description 게시 종료 시각. 비어 있으면 만료되지 않습니다.
+             */
+            endsAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            images: components["schemas"]["NoticeImageView"][];
+            /**
+             * Format: uuid
+             * @description 기관 공지가 속한 기관. 전역 공지에서는 비어 있습니다.
+             */
+            orgId?: string | null;
+            /** @description 그 기관의 이름. 전역 공지에서는 비어 있습니다. */
+            orgName?: string | null;
+            pinned: boolean;
+            popup: boolean;
+            scope: components["schemas"]["NoticeScope"];
+            /** Format: date-time */
+            startsAt: string;
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         AdminNotificationResponse: {
             /** Format: int32 */
@@ -3653,6 +3798,92 @@ export interface components {
             vmBridge: string;
         };
         /** @enum {string} */
+        NoticeAudience: "PUBLIC" | "USERS";
+        NoticeCreateRequest: {
+            audience: components["schemas"]["NoticeAudience"];
+            body: string;
+            /**
+             * Format: date-time
+             * @description 게시 종료 시각. 생략하면 만료되지 않습니다.
+             */
+            endsAt?: string | null;
+            /**
+             * Format: uuid
+             * @description 기관 공지의 대상 기관이며, 전역 공지에는 넣을 수 없습니다. 관리하는 기관이 하나뿐인 기관 관리자는 생략할 수 있고 그 기관으로 지정됩니다. 관리하는 기관이 둘 이상이거나 시스템 관리자라면 반드시 지정해야 합니다. 기관 관리자는 자신이 관리하는 기관만 지정할 수 있습니다.
+             */
+            orgId?: string | null;
+            /** @description 목록 상단 고정 여부. 생략하면 고정하지 않습니다. */
+            pinned?: boolean;
+            /** @description 콘솔이 모달로 띄울지. 생략하면 띄우지 않습니다. */
+            popup?: boolean;
+            scope: components["schemas"]["NoticeScope"];
+            /**
+             * Format: date-time
+             * @description 게시 시작 시각. 생략하면 즉시 게시합니다.
+             */
+            startsAt?: string | null;
+            title: string;
+        };
+        NoticeImageView: {
+            /** Format: int32 */
+            byteSize: number;
+            /** @description 저장된 실제 형식. 업로드 시 파일 선두 바이트로 판별한 값입니다. */
+            contentType: string;
+            /** @description 업로드 당시의 파일 이름. 클라이언트가 보내지 않았으면 비어 있습니다. */
+            fileName?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description 이미지를 내려받는 경로. 인증 없이 열 수 있는지는 공지의 공개 범위를 따릅니다. */
+            url: string;
+        };
+        /** @enum {string} */
+        NoticeScope: "PLATFORM" | "ORG";
+        NoticeUpdateRequest: {
+            audience?: components["schemas"]["NoticeAudience"];
+            body?: string;
+            /**
+             * Format: date-time
+             * @description 게시 종료 시각. null을 명시하면 만료 없음으로 바꿉니다.
+             */
+            endsAt?: string | null;
+            pinned?: boolean;
+            popup?: boolean;
+            /** Format: date-time */
+            startsAt?: string;
+            title?: string;
+        };
+        NoticeView: {
+            audience: components["schemas"]["NoticeAudience"];
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 게시 종료 시각. 비어 있으면 만료되지 않습니다.
+             */
+            endsAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            images: components["schemas"]["NoticeImageView"][];
+            /**
+             * Format: uuid
+             * @description 기관 공지가 속한 기관. 전역 공지에서는 비어 있습니다.
+             */
+            orgId?: string | null;
+            /** @description 그 기관의 이름. 전역 공지에서는 비어 있습니다. */
+            orgName?: string | null;
+            /** @description 목록 상단 고정 여부 */
+            pinned: boolean;
+            /** @description 콘솔이 모달로 띄울 공지인지 */
+            popup: boolean;
+            scope: components["schemas"]["NoticeScope"];
+            /** Format: date-time */
+            startsAt: string;
+            title: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @enum {string} */
         NotificationChannel: "EMAIL";
         /** @enum {string} */
         NotificationImportance: "NORMAL" | "HIGH";
@@ -3816,6 +4047,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseAdminNoticeView: {
+            content: components["schemas"]["AdminNoticeView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseAdminNotificationResponse: {
             content: components["schemas"]["AdminNotificationResponse"][];
             /** Format: int32 */
@@ -3917,6 +4159,17 @@ export interface components {
         };
         PageResponseLlmKeySummaryResponse: {
             content: components["schemas"]["LlmKeySummaryResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseNoticeView: {
+            content: components["schemas"]["NoticeView"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -4584,7 +4837,7 @@ export interface components {
             token: string;
         };
         /** @enum {string} */
-        VmActorKind: "SYSTEM" | "MEMBER" | "ADMIN";
+        VmActorKind: "SYSTEM" | "MEMBER" | "ADMIN" | "UNKNOWN";
         VmBriefResponse: {
             /** Format: int32 */
             diskGb: number;
@@ -5498,6 +5751,203 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["NodeMetricsResponse"];
                 };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminNotices: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminNoticeView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createAdminNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminNoticeView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteAdminNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminNoticeView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    uploadAdminNoticeImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NoticeImageView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteAdminNoticeImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
@@ -8862,6 +9312,101 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TermsDocumentView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listNotices: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseNoticeView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NoticeView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getNoticeImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+                imageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
