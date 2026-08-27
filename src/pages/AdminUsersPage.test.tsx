@@ -2,7 +2,13 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { userPatchBodies } from '../test/msw/handlers/admin'
-import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import { adminProfilePatches } from '../test/msw/handlers/users'
+import {
+  orgAdminUser,
+  refreshSuccessHandler,
+  sysAdminUser,
+  sysViewerUser,
+} from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -230,5 +236,133 @@ describe('관리자 사용자 목록', () => {
       drawer.getByText('시스템 관리자 계정의 기관 역할은 변경할 수 없습니다.'),
     ).toBeInTheDocument()
     expect(drawer.getByRole('button', { name: '부여' })).toBeDisabled()
+  })
+
+  test('SYS_ADMIN은 상세에서 프로필을 읽고 정정한다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    // 잠긴 값이라 본인은 못 바꾼다. 관리자가 읽을 수 있어야 정정이 성립한다.
+    expect(await screen.findByText('202012345')).toBeInTheDocument()
+    expect(await screen.findByText('학부생')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+
+    await user.clear(screen.getByLabelText('학번'))
+    await user.type(screen.getByLabelText('학번'), '202054321')
+    await user.type(screen.getByLabelText('사유'), '본인 확인 후 정정')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
+    expect(adminProfilePatches[0].body).toMatchObject({
+      studentNo: '202054321',
+      reason: '본인 확인 후 정정',
+    })
+  })
+
+  test('기관 계층에는 프로필이 오지 않고 그 사실을 적는다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await openDetail(user, '홍길동')
+    // 이 엔드포인트는 다른 기관 직원이 받는 ORG_VIEWER 까지 받고 기관 범위로 좁히지도
+    // 않으므로 서버가 비워서 보낸다. 화면은 값이 없는 것과 볼 권한이 없는 것을 구분해
+    // 적어야 한다 — 「입력하지 않음」으로 찍으면 거짓말이 된다.
+    expect(
+      await screen.findByText('직책과 학번과 소속은 시스템 계층에서만 조회할 수 있습니다.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('202012345')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
+  })
+
+  test('무변경 저장은 요청을 보내지 않는다', async () => {
+    // 서버는 저장값 재전송을 no-op 으로 흡수하지만 감사와 알림은 남는다. 실수로 눌러도
+    // 본인에게 「관리자가 프로필을 정정했습니다」가 간다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: '프로필 정정' })).not.toBeInTheDocument(),
+    )
+    expect(adminProfilePatches).toHaveLength(0)
+  })
+
+  test('한 필드만 고쳐도 본문은 저장값 전체를 담는다', async () => {
+    // 프리필이 깨지는 회귀의 유일한 방어선이다. 열 때 값을 못 채우면 본문에
+    // null 이 실려 전면 비우기가 되는데, 부분 검사로는 통과한다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+    await user.clear(screen.getByLabelText('학번'))
+    await user.type(screen.getByLabelText('학번'), '202054321')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
+    expect(adminProfilePatches[0].body).toEqual({
+      position: 'STUDENT_UNDERGRAD',
+      studentNo: '202054321',
+      departmentCode: 'COMPUTER_SCIENCE',
+      departmentOther: null,
+      reason: null,
+    })
+  })
+
+  test('학생의 학번만 비우면 서버가 거절한다', async () => {
+    // 이 엔드포인트의 존재 이유가 「잘못 들어간 값 제거」인데, 학생 직책은 학번을
+    // 요구하므로 학번만 비우는 정정은 성립하지 않는다. 직책도 함께 옮겨야 한다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+    await user.clear(screen.getByLabelText('학번'))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('학번을 입력해 주세요.')).toBeInTheDocument()
+  })
+
+  test('시스템 열람자는 프로필을 읽지만 정정하지 못한다', async () => {
+    // 경계가 둘이다. 조회는 시스템 계층 전체이고 정정은 SYS_ADMIN 하나다. 기관 계층은
+    // 절 자체가 보이지 않으므로 이 갈래가 없으면 두 번째 경계가 검사되지 않는다.
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
+    renderApp('/admin/users')
+
+    await openDetail(user, '홍길동')
+    expect(await screen.findByText('202012345')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
+    expect(
+      screen.getByText('정정은 시스템 관리자만 할 수 있습니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('코드와 직접 입력을 함께 보내면 필드 오류로 돌아온다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+
+    // 소속의 두 모양은 대안이다. 목록에 없는 학과의 학생만 둘을 함께 쓴다.
+    await user.type(screen.getByLabelText('소속 직접 입력'), '부설연구소')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+
+    expect(
+      await screen.findByText(
+        '목록에서 고른 소속과 직접 입력한 소속 중 하나만 보낼 수 있습니다.',
+      ),
+    ).toBeInTheDocument()
   })
 })

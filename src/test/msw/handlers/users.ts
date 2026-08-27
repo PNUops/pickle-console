@@ -70,6 +70,12 @@ function initialUsers(): AdminUserRecord[] {
       ],
       activeVmCount: 2,
       statusChanges: [],
+      // 잠긴 프로필. 본인은 못 바꾸고 SYS_ADMIN 만 정정한다.
+      position: 'STUDENT_UNDERGRAD',
+      studentNo: '202012345',
+      departmentCode: 'COMPUTER_SCIENCE',
+      departmentName: '정보컴퓨터공학부',
+      departmentOther: null,
       visibleToOrg: uuid(1),
     },
     {
@@ -111,8 +117,26 @@ function initialUsers(): AdminUserRecord[] {
 
 export let adminUserStore: AdminUserRecord[] = initialUsers()
 
+/** 관리자 프로필 정정 요청 본문. 무엇을 보냈는지 검사하는 테스트가 읽는다. */
+export const adminProfilePatches: { userId: string; body: Schemas['AdminUpdateProfileRequest'] }[] = []
+
 export function resetUserFixtures() {
   adminUserStore = initialUsers()
+  adminProfilePatches.length = 0
+}
+
+/** 학번을 요구하는 직책. 서버 enum 과 같은 집합이다. */
+const STUDENT_POSITIONS = ['STUDENT_UNDERGRAD', 'STUDENT_GRADUATE']
+
+/** 카탈로그가 푸는 학과명. 실서버는 모든 코드를 풀고 미지 코드만 코드를 돌려준다. */
+const DEPARTMENT_NAMES: Record<string, string> = {
+  COMPUTER_SCIENCE: '정보컴퓨터공학부',
+  OTHER: '기타',
+}
+
+function departmentNameOf(code: string | null | undefined): string | null {
+  if (!code) return null
+  return DEPARTMENT_NAMES[code] ?? code
 }
 
 function actorOf(request: Request) {
@@ -131,9 +155,25 @@ function toView(row: AdminUserRecord): Schemas['UserAdminViewResponse'] {
   return view
 }
 
-function toDetail(row: AdminUserRecord): UserAdminDetail {
+/**
+ * 상세 응답. **프로필 다섯 필드는 시스템 계층에만 실린다.**
+ *
+ * 이 엔드포인트는 기관이 다른 기관 직원에게 주는 ORG_VIEWER 까지 받고 기관 범위로
+ * 좁히지도 않으므로, 채워 보내면 모든 기관의 직원이 모든 계정의 학번을 읽는다. 서버가
+ * 그렇게 하므로 모의도 그렇게 한다 — 여기서 채워 보내면 콘솔이 경계를 지키는지 이 테스트
+ * 세계에서는 확인할 수 없다.
+ */
+function toDetail(row: AdminUserRecord, actorRole: Schemas['UserRole']): UserAdminDetail {
   const { visibleToOrg: _drop, ...detail } = row
-  return detail
+  if (isSysTier(actorRole)) return detail
+  return {
+    ...detail,
+    position: null,
+    studentNo: null,
+    departmentCode: null,
+    departmentName: null,
+    departmentOther: null,
+  }
 }
 
 const notFound = (userId: string) =>
@@ -223,7 +263,65 @@ export const userHandlers: RequestHandler[] = [
     if (!actor || actor.role === 'USER') return forbidden()
     const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
-    return HttpResponse.json(toDetail(row), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
+  }),
+
+  /**
+   * 계약 v0.51.0 — 다른 계정의 프로필 정정. SYS_ADMIN 전용.
+   *
+   * 본인 경로와 달리 명시적 null 로 값을 비운다. 값 규칙은 그대로여서, 비OTHER 코드
+   * 옆에 자유 입력을 함께 보내면 422다.
+   */
+  http.patch('*/api/v1/admin/users/:userId/profile', async ({ request, params }) => {
+    const actor = actorOf(request)
+    if (!actor || actor.role !== 'SYS_ADMIN') return forbidden()
+    const row = adminUserStore.find((u) => u.id === String(params.userId))
+    if (!row) return notFound(String(params.userId))
+    const body = (await request.json()) as Schemas['AdminUpdateProfileRequest']
+    adminProfilePatches.push({ userId: String(params.userId), body })
+
+    const code = body.departmentCode ?? null
+    const other = body.departmentOther ?? null
+    if (other && code && code !== 'OTHER') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '소속은 한 가지 방식으로만 보낼 수 있습니다.',
+        code: 'VALIDATION_FAILED',
+        errors: [
+          {
+            field: 'departmentOther',
+            message: '목록에서 고른 소속과 직접 입력한 소속 중 하나만 보낼 수 있습니다.',
+          },
+        ],
+      })
+    }
+    // 실서버는 presence-tracked 다. 보내지 않은 필드는 그대로 두고, 명시적 null 만
+    // 비운다. 여기서 `?? null` 로 덮으면 absent 를 비우기로 읽어 실서버와 정반대가
+    // 되고, 화면이 부분 전송으로 바뀌는 날 테스트 세계가 거짓을 가르친다.
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key)
+    if (has('position')) row.position = body.position ?? null
+    if (has('studentNo')) row.studentNo = body.studentNo ?? null
+    if (has('departmentCode')) row.departmentCode = code
+    if (has('departmentOther')) row.departmentOther = other
+
+    // 병합 결과에 값 규칙을 돌린다. 학생 직책은 학번을 요구하고, 요구하지 않는 직책은
+    // 학번을 버린다 — 관리자가 학생의 학번만 비우는 정정은 실서버에서 422 다.
+    const isStudent = STUDENT_POSITIONS.includes(row.position ?? '')
+    if (isStudent && !row.studentNo) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '학번을 입력해 주세요.',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'studentNo', message: '학번을 입력해 주세요.' }],
+      })
+    }
+    if (!isStudent) row.studentNo = null
+    row.departmentName = departmentNameOf(row.departmentCode)
+    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
   }),
 
   /**
@@ -318,7 +416,7 @@ export const userHandlers: RequestHandler[] = [
     row.status = 'DISABLED'
     row.disabledAt = new Date().toISOString()
     row.disabledReason = reason
-    return HttpResponse.json(toDetail(row), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/users/:userId/enable', ({ request, params }) => {
@@ -344,6 +442,6 @@ export const userHandlers: RequestHandler[] = [
     row.status = restored
     row.disabledAt = null
     row.disabledReason = null
-    return HttpResponse.json(toDetail(row), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
   }),
 ]
