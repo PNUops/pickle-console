@@ -39,11 +39,24 @@ describe('계정 화면의 연동 관리', () => {
 
   test('연동된 구글 계정을 해제할 수 있다', async () => {
     const user = userEvent.setup()
+    let unlinked: string | null = null
     meReturns({ identities: [GOOGLE], hasPassword: true })
+    server.use(
+      http.delete('*/api/v1/me/identities/:provider', ({ params }) => {
+        unlinked = String(params.provider)
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
     renderApp('/console/account')
     await openSection(user, '연동된 계정')
     await screen.findByText('hong@pusan.ac.kr')
     expect(screen.getByRole('button', { name: '해제' })).toBeEnabled()
+
+    // 버튼이 활성인 것과 버튼이 일을 하는 것은 다르다. 눌러서 그 제공자로 요청이
+    // 나가는 데까지 봐야 "해제할 수 있다"가 참이 된다.
+    await user.click(screen.getByRole('button', { name: '해제' }))
+    await waitFor(() => expect(unlinked).toBe('GOOGLE'))
+    expect(await screen.findByText('연동을 해제했습니다.')).toBeInTheDocument()
   })
 
   test('연동 복귀 표식은 자기 키만 지운다', async () => {
