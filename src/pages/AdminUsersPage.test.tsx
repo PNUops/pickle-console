@@ -332,6 +332,45 @@ describe('관리자 사용자 목록', () => {
     expect(await screen.findByText('학번을 입력해 주세요.')).toBeInTheDocument()
   })
 
+  test('정정 폼도 기타 코드만으로는 저장할 수 없다', async () => {
+    // 이 화면은 소속이 「기타」로 굳은 계정을 고치러 오는 곳이면서, 차단이 없으면 같은
+    // 상태를 다시 만들 수 있는 곳이다. 서버에 이 규칙이 없고 CHECK 도 허용한다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    await user.click(screen.getByRole('button', { name: '정정' }))
+    await screen.findByRole('heading', { name: '프로필 정정' })
+
+    await user.selectOptions(screen.getByLabelText('소속 학과 코드'), 'OTHER')
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    expect(screen.getByText(/소속이 「기타」라는 값으로 굳습니다/)).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('소속 직접 입력'), '융합학부')
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+  })
+
+  test('정정이 두 번이면 알림도 두 번이다', async () => {
+    // dedup 키가 시각 기준으로 되돌아가면 같은 밀리초의 두 정정이 한 건으로 합쳐진다.
+    // 키가 갈라 놓아야 하는 유일한 경우다.
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+
+    await openDetail(user, '홍길동')
+    for (const value of ['202054321', '202099999']) {
+      await user.click(screen.getByRole('button', { name: '정정' }))
+      await screen.findByRole('heading', { name: '프로필 정정' })
+      await user.clear(screen.getByLabelText('학번'))
+      await user.type(screen.getByLabelText('학번'), value)
+      await user.click(screen.getByRole('button', { name: '저장' }))
+      await waitFor(() =>
+        expect(screen.queryByRole('heading', { name: '프로필 정정' })).not.toBeInTheDocument(),
+      )
+    }
+    expect(adminProfilePatches).toHaveLength(2)
+    expect(adminProfilePatches.map((p) => p.body.studentNo)).toEqual(['202054321', '202099999'])
+  })
+
   test('시스템 열람자는 프로필을 읽지만 정정하지 못한다', async () => {
     // 경계가 둘이다. 조회는 시스템 계층 전체이고 정정은 SYS_ADMIN 하나다. 기관 계층은
     // 절 자체가 보이지 않으므로 이 갈래가 없으면 두 번째 경계가 검사되지 않는다.
