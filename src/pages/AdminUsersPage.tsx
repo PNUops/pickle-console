@@ -7,9 +7,11 @@ import {
   fetchAdminUser,
   fetchAdminUsers,
   fetchOrgs,
+  fetchProfileOptions,
   grantOrgRole,
   resetUserMfa,
   revokeOrgRole,
+  updateUserProfile,
   updateUserRole,
   type AdminUserSort,
   type UserAdminDetail,
@@ -18,6 +20,7 @@ import {
   type UserStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import type { components } from '../api/schema'
 import { useAuth, type ManagedOrg } from '../auth/auth-context'
 import { administeredOrgs, isOrgTier, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
@@ -339,6 +342,8 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
         {user.disabledReason && <Field label="비활성화 사유" value={user.disabledReason} />}
       </dl>
 
+      <UserProfileSection user={user} canManage={canManage} />
+
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">워크스페이스 멤버십</h3>
         {user.memberships.length === 0 ? (
@@ -411,6 +416,224 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
  * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
  * 기관을 보게 하되 손대지 못하게 하는 통로다.
  */
+/**
+ * 직책·학번·소속의 표시와 정정.
+ *
+ * 본인은 이 세 값을 한 번만 쓸 수 있으므로(v0.51.0) 그 뒤의 변경은 여기가 유일한
+ * 경로다. 잠금과 이 폼은 한 쌍이다 — 처음 입력한 값이 오타여도 되돌릴 사람이 없으면
+ * 잠금은 함정이다.
+ *
+ * **값은 시스템 계층에만 온다.** 이 엔드포인트는 기관이 다른 기관 직원에게 주는
+ * ORG_VIEWER 까지 받고 기관 범위로 좁히지도 않으므로, 학번을 기관 계층에 채워 보내면
+ * 모든 기관의 직원이 모든 계정의 식별자를 읽는다. 그래서 서버가 비워서 보내고, 화면은
+ * **값이 없는 것과 볼 권한이 없는 것을 구분해서** 적는다. 「입력하지 않음」으로 찍으면
+ * 거짓말이 된다.
+ */
+function UserProfileSection({
+  user,
+  canManage,
+}: {
+  user: UserAdminDetail
+  canManage: boolean
+}) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const viewer = useAuth().user
+  const visible = !!viewer && isSysTier(viewer.role)
+  const options = useQuery({
+    queryKey: ['meta', 'profile-options'],
+    queryFn: fetchProfileOptions,
+    staleTime: 60 * 60 * 1000,
+    enabled: visible,
+  })
+
+  if (!visible) {
+    return (
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">프로필</h3>
+        <p className="text-sm text-neutral-500">
+          직책과 학번과 소속은 시스템 계층에서만 조회할 수 있습니다.
+        </p>
+      </section>
+    )
+  }
+
+  // 직책 라벨은 서버가 카탈로그와 함께 내려보낸다. 여기서 상수 표를 두면 직책이 하나
+  // 늘 때마다 콘솔 배포가 있어야 서버와 일치한다.
+  const positionLabel = options.data?.positions.find((item) => item.code === user.position)?.label
+  const department = user.departmentOther ?? user.departmentName
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-neutral-800">프로필</h3>
+        {canManage && (
+          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+            정정
+          </Button>
+        )}
+      </div>
+      <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+        <Field label="직책" value={positionLabel ?? '입력하지 않음'} />
+        <Field label="학번" value={user.studentNo ?? '입력하지 않음'} />
+        <Field label="소속" value={department ?? '입력하지 않음'} />
+      </dl>
+      {!canManage && (
+        <p className="text-xs text-neutral-500">정정은 시스템 관리자만 할 수 있습니다.</p>
+      )}
+      {open && (
+        <UserProfileCorrectionModal
+          user={user}
+          onClose={() => setOpen(false)}
+          onSaved={async (updated) => {
+            toast.success(`${updated.name}님의 프로필을 정정했습니다.`)
+            await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+            setOpen(false)
+          }}
+        />
+      )}
+    </section>
+  )
+}
+
+/**
+ * 정정 폼. 본인 경로와 달리 값을 비울 수 있다.
+ *
+ * 보내지 않은 필드는 그대로 두므로, 빈 칸은 「비우기」가 아니라 「건드리지 않기」다.
+ * 비우려면 그 필드의 비우기를 명시적으로 골라야 한다 — 오타로 빈 칸을 남긴 것과
+ * 지우겠다는 뜻을 구분할 방법이 그것뿐이다.
+ */
+function UserProfileCorrectionModal({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: UserAdminDetail
+  onClose: () => void
+  onSaved: (updated: UserAdminDetail) => Promise<void> | void
+}) {
+  const [position, setPosition] = useState(user.position ?? '')
+  const [studentNo, setStudentNo] = useState(user.studentNo ?? '')
+  const [departmentCode, setDepartmentCode] = useState(user.departmentCode ?? '')
+  const [departmentOther, setDepartmentOther] = useState(user.departmentOther ?? '')
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const options = useQuery({
+    queryKey: ['meta', 'profile-options'],
+    queryFn: fetchProfileOptions,
+    staleTime: 60 * 60 * 1000,
+  })
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateUserProfile(user.id, {
+        // 빈 문자열은 null 로 보낸다. 관리자 경로에서 비우기는 허용되고, 애초에
+        // 들어가면 안 됐던 값은 교체가 아니라 제거가 필요하다.
+        position: (position || null) as components['schemas']['UserPosition'] | null,
+        studentNo: studentNo.trim() || null,
+        departmentCode: departmentCode || null,
+        departmentOther: departmentOther.trim() || null,
+        reason: reason.trim() || null,
+      }),
+    onSuccess: async (updated) => {
+      setError(null)
+      setFieldErrors({})
+      await onSaved(updated)
+    },
+    onError: (err) => {
+      const apiError = toApiError(err, '프로필을 정정하지 못했습니다.')
+      const mapped = fieldErrorsOf(apiError.problem)
+      setFieldErrors(mapped)
+      setError(Object.keys(mapped).length > 0 ? null : apiError.message)
+    },
+  })
+
+  return (
+    <Modal open onClose={onClose} title="프로필 정정">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          setError(null)
+          save.mutate()
+        }}
+        className="space-y-4"
+        noValidate
+      >
+        {error && <Alert variant="danger">{error}</Alert>}
+        <p className="text-sm text-neutral-600">
+          본인은 이 값을 바꿀 수 없습니다. 문의로 접수된 내용을 확인한 뒤 정정해 주세요.
+          변경 사실은 본인에게 알림으로 갑니다.
+        </p>
+        <FormField label="직책" error={fieldErrors.position}>
+          <Select value={position} onChange={(event) => setPosition(event.target.value)}>
+            <option value="">비움</option>
+            {options.data?.positions.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label="학번" error={fieldErrors.studentNo}>
+          <Input
+            value={studentNo}
+            maxLength={20}
+            autoComplete="off"
+            onChange={(event) => setStudentNo(event.target.value)}
+          />
+        </FormField>
+        <FormField label="소속 학과 코드" error={fieldErrors.departmentCode}>
+          <Select
+            value={departmentCode}
+            onChange={(event) => setDepartmentCode(event.target.value)}
+          >
+            <option value="">비움</option>
+            {options.data?.departments.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <FormField label="소속 직접 입력" error={fieldErrors.departmentOther}>
+          <Input
+            value={departmentOther}
+            maxLength={100}
+            autoComplete="off"
+            onChange={(event) => setDepartmentOther(event.target.value)}
+          />
+        </FormField>
+        {/*
+          감사 기록은 학번을 값이 아니라 있음/없음으로만 남긴다. 사유에 값을 적으면
+          그 보장이 습관 하나로 깨진다.
+        */}
+        <FormField label="사유" error={fieldErrors.reason}>
+          <Input
+            value={reason}
+            maxLength={200}
+            autoComplete="off"
+            placeholder="예: 본인 확인 후 학번 정정"
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <p className="mt-1 text-xs text-neutral-500">
+            감사 기록에 남습니다. 학번이나 그 밖의 값 자체는 적지 마세요.
+          </p>
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            취소
+          </Button>
+          <Button type="submit" loading={save.isPending}>
+            저장
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const { user: viewer } = useAuth()
   const queryClient = useQueryClient()

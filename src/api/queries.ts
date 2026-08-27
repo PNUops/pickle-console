@@ -1914,6 +1914,27 @@ export function updateUserRole(
   })
 }
 
+/**
+ * 다른 계정의 직책·학번·소속 정정. SYS_ADMIN 전용이다.
+ *
+ * 본인은 이 세 값을 한 번만 쓸 수 있으므로(`PUT /me/profile`이 422로 거절), 그 뒤의
+ * 변경은 이 경로가 맡는다. 본인 경로와 달리 **명시적 null 로 값을 비울 수 있다** —
+ * 애초에 들어가면 안 됐던 값은 교체가 아니라 제거가 필요하다.
+ */
+export function updateUserProfile(
+  userId: string,
+  body: Schemas['AdminUpdateProfileRequest'],
+): Promise<UserAdminDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/users/{userId}/profile', {
+      params: { path: { userId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '프로필을 정정하지 못했습니다.')
+    return data
+  })
+}
+
 /** 한 기관에서의 역할 부여 또는 변경. 다른 기관에서 가진 역할은 건드리지 않는다. */
 export function grantOrgRole(
   userId: string,
