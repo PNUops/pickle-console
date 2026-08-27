@@ -45,6 +45,34 @@ export const VM_EVENT_LABELS: Record<VmEventType, string> = {
   GATEWAY_UNBLOCK: 'SSH·터미널 차단 해제',
 }
 
+export type VmActorKind = components['schemas']['VmActorKind']
+
+/**
+ * 이벤트 한 행의 수행자 표기. 관리자 개입은 개인 신원 없이 "관리자"로만 적고,
+ * 사용자 화면용 응답은 그 행의 actorId와 actorName을 이미 비워서 내려온다
+ * (가리는 일을 클라이언트에 맡기면 응답에는 실려 나간다).
+ *
+ * UNKNOWN은 이 컬럼이 생기기 전에 쌓인 행이다. 사람이 했다는 것만 알고 어느
+ * 화면인지는 모르므로, 이 컬럼이 생기기 전과 같이 이름 없이 "사용자"로 적는다.
+ * 이름이 없는 계정도 같은 자리로 떨어진다.
+ *
+ * 관리자 화면은 같은 행에 이름이 채워져 오므로 이 함수 대신 이름을 직접 쓴다.
+ */
+export function vmEventActorLabel(event: {
+  actorKind?: VmActorKind
+  actorId?: string | null
+  actorName?: string | null
+}): string {
+  if (event.actorKind === 'SYSTEM') return '시스템'
+  if (event.actorKind === 'ADMIN') return '관리자'
+  if (event.actorKind === 'UNKNOWN') return '사용자'
+  if (event.actorKind === 'MEMBER') return event.actorName ?? '사용자'
+  // 종류가 아예 없거나(api가 아직 이 필드를 안 내려주는 배포 순간) 이 빌드가
+  // 모르는 값이면, 이 필드가 생기기 전과 같은 규칙으로 떨어진다. 남은 분기로
+  // 흘려보내면 프로비저너가 남긴 행이 "사용자"로 보인다.
+  return event.actorId == null ? '시스템' : '사용자'
+}
+
 /* ─── LLM API 키 ─── */
 
 export type LlmApiKeyStatus = components['schemas']['LlmApiKeyStatus']

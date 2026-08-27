@@ -451,6 +451,7 @@ export const publishingHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'PUBLISH',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: pub.fqdn,
       createdAt: '2026-07-12T09:00:00+09:00',
     })
@@ -533,6 +534,7 @@ export const publishingHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'UNPUBLISH',
       actorId: uuid(42),
+      actorKind: 'MEMBER',
       detail: pub.fqdn,
       createdAt: '2026-07-12T09:20:00+09:00',
     })

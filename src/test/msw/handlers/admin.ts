@@ -772,6 +772,8 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'SCHEDULE_DELETE',
       actorId: orgAdminUser.id,
+      actorKind: 'ADMIN',
+      actorName: '운영 담당자',
       detail: body.reason,
       createdAt: '2026-07-08T16:00:00+09:00',
     })
@@ -793,6 +795,8 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'CANCEL_SCHEDULED_DELETE',
       actorId: orgAdminUser.id,
+      actorKind: 'ADMIN',
+      actorName: '운영 담당자',
       detail: null,
       createdAt: '2026-07-08T16:30:00+09:00',
     })
@@ -822,7 +826,26 @@ export const adminHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    const all = [...(vmEventStore[vm.id] ?? [])].sort((a, b) => b.id.localeCompare(a.id))
+    // 서버와 같은 축: 개입한 관리자의 신원은 감사 로그가 열리는 독자에게만
+    // 보인다. 기관 계층은 그 VM의 기관에서 관리자나 운영자일 때만이고,
+    // 시스템 계층은 언제나다. 목이 이 규칙을 모르면 그 분기를 지나는 테스트를
+    // 쓸 수 없다.
+    const profile = actorProfileOf(request)
+    const auditVisible =
+      profile == null ||
+      profile.role === 'SYS_ADMIN' ||
+      profile.role === 'SYS_MANAGER' ||
+      profile.role === 'SYS_VIEWER' ||
+      profile.managedOrgs.some(
+        (org) =>
+          org.orgId === vm.orgId && (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER'),
+      )
+    const stored = (vmEventStore[vm.id] ?? []).map((event) =>
+      !auditVisible && (event.actorKind === 'ADMIN' || event.actorKind === 'UNKNOWN')
+        ? { ...event, actorId: null, actorName: null }
+        : event,
+    )
+    const all = [...stored].sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(
       {
         content: all.slice(page * size, (page + 1) * size),
@@ -888,6 +911,16 @@ export const adminHandlers: RequestHandler[] = [
     if (!vm) return notFound()
     const body = (await request.json()) as Schemas['VmGatewayBlockUpdateRequest']
     vm.sshGatewayBlocked = body.blocked
+    // 서버는 이 조작을 관리자 개입으로 이력에 남긴다. 목이 남기지 않으면
+    // "관리자가 차단 → 이력에 관리자 행" 왕복이 한 번도 지나가지 않는다.
+    recordVmEvent(vm.id, {
+      type: body.blocked ? 'GATEWAY_BLOCK' : 'GATEWAY_UNBLOCK',
+      actorId: uuid(7),
+      actorKind: 'ADMIN',
+      actorName: '운영 담당자',
+      detail: body.reason ?? null,
+      createdAt: '2026-07-09T10:00:00+09:00',
+    })
     return HttpResponse.json(vm, { status: 200 })
   }),
 
@@ -932,6 +965,8 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'PERIOD_UPDATE',
       actorId: orgAdminUser.id,
+      actorKind: 'ADMIN',
+      actorName: '운영 담당자',
       detail: `사용 종료일 변경 → ${body.endDate}`,
       createdAt: new Date().toISOString(),
     })
@@ -965,6 +1000,8 @@ export const adminHandlers: RequestHandler[] = [
     recordVmEvent(vm.id, {
       type: 'FORCE_DELETE',
       actorId: uuid(5),
+      actorKind: 'ADMIN',
+      actorName: '운영 담당자',
       detail: null,
       createdAt: '2026-07-08T17:00:00+09:00',
     })

@@ -117,6 +117,11 @@ describe('VM 상세 — 이벤트 이력', () => {
     expect(await within(history).findByText('생성')).toBeInTheDocument()
     expect(within(history).getByText('승인 신청 90에 따라 자동 생성')).toBeInTheDocument()
     expect(within(history).getByText('시스템')).toBeInTheDocument()
+    // 동료가 한 일은 이름으로, 관리자 개입은 개인 신원 없이 "관리자"로.
+    expect(within(history).getByText('홍길동')).toBeInTheDocument()
+    expect(within(history).getByText('관리자')).toBeInTheDocument()
+    expect(within(history).queryByText('운영 담당자')).not.toBeInTheDocument()
+    // 수행 화면이 기록되기 전 행은 이름 없이 "사용자". 서버가 이름을 비워 보낸다.
     expect(within(history).getByText('사용자')).toBeInTheDocument()
 
     // 재부팅을 접수하면 무효화로 이벤트 이력에 REBOOT가 추가된다.

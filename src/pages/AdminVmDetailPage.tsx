@@ -10,6 +10,7 @@ import {
   fetchAdminVmEvents,
   type MessageResponse,
   type VmDetail,
+  type VmEvent,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -37,7 +38,7 @@ import {
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
 import { isUuid } from '../lib/validation'
-import { VM_EVENT_LABELS, type VmEventType } from '../lib/status'
+import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/status'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -333,6 +334,33 @@ function PeriodSection({
 
 const EVENTS_PAGE_SIZE = 20
 
+/**
+ * 관리자 화면의 수행자 한 칸. 사용자 화면과 달리 관리자 개입도 이름이 채워져
+ * 오므로(누가 개입했는지는 관리자가 알아야 한다) 이름을 그대로 쓰고, 개입임을
+ * 배지로 구분한다.
+ *
+ * 이름이 비어서 오는 경우가 있다. 감사 로그가 열리지 않는 역할(기관 열람자)에는
+ * 서버가 관리자 행의 신원을 비우고, 수행 화면이 기록되기 전 행도 마찬가지다.
+ * 그때는 사용자 화면과 같은 표기만 쓴다 — 이름 자리에 "사용자"를 채우고 배지를
+ * 붙이면 "사용자 [관리자]"라는 없는 사람이 생긴다.
+ */
+function AdminEventActor({ event }: { event: VmEvent }) {
+  if (event.actorKind === 'SYSTEM') return <span className="text-neutral-500">시스템</span>
+  if (event.actorName == null) {
+    return <span className="text-neutral-500">{vmEventActorLabel(event)}</span>
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {event.actorName}
+      {event.actorKind === 'ADMIN' && <Badge variant="warning">관리자</Badge>}
+      {/* 이름은 알지만 어느 화면인지 모르는 행. 배지 없이 이름만 두면 동료가
+          한 일과 화면상 구별이 안 되고, 그러면 서버가 거부한 추측을 화면이
+          대신하게 된다. */}
+      {event.actorKind === 'UNKNOWN' && <Badge variant="neutral">화면 미기록</Badge>}
+    </span>
+  )
+}
+
 function EventsSection({ vmId }: { vmId: string }) {
   const [page, setPage] = useState(0)
   const events = useQuery({
@@ -361,6 +389,7 @@ function EventsSection({ vmId }: { vmId: string }) {
           <THead>
             <TR>
               <TH>종류</TH>
+              <TH>수행자</TH>
               <TH>내용</TH>
               <TH>시각</TH>
             </TR>
@@ -370,6 +399,9 @@ function EventsSection({ vmId }: { vmId: string }) {
               <TR key={event.id}>
                 <TD className="whitespace-nowrap">
                   {VM_EVENT_LABELS[event.type as VmEventType] ?? event.type}
+                </TD>
+                <TD className="whitespace-nowrap">
+                  <AdminEventActor event={event} />
                 </TD>
                 <TD className="text-neutral-600">{event.detail ?? '—'}</TD>
                 <TD className="whitespace-nowrap">{formatDateTime(event.createdAt)}</TD>
