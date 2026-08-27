@@ -819,9 +819,19 @@ export function asGrantManager(vmId: string) {
 }
 
 /** Prepend a lifecycle event for assertions on event history refreshes. */
+/**
+ * 서버 불변식을 목에서도 지킨다 — 수행자가 있는 행은 이름도 함께 온다
+ * (`users.name`은 NOT NULL이고, 응답은 둘을 같이 채우거나 같이 비운다).
+ * 이름 없이 기록하면 화면이 전부 "사용자" 폴백으로 지나가면서, 이름을 보여
+ * 준다는 이 표의 핵심 동작이 테스트를 통과한 적 없는 상태가 된다.
+ */
 export function recordVmEvent(vmId: string, event: Omit<VmEvent, 'id'>) {
   const list = (vmEventStore[vmId] ??= [])
-  list.unshift({ id: uuid(nextEventId++), ...event })
+  const named =
+    event.actorId != null && event.actorName == null
+      ? { ...event, actorName: '홍길동' }
+      : event
+  list.unshift({ id: uuid(nextEventId++), ...named })
 }
 
 export const invalidVmStateProblem = (instance: string, detail: string) =>

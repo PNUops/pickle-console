@@ -59,12 +59,18 @@ export type VmActorKind = components['schemas']['VmActorKind']
  * 관리자 화면은 같은 행에 이름이 채워져 오므로 이 함수 대신 이름을 직접 쓴다.
  */
 export function vmEventActorLabel(event: {
-  actorKind: VmActorKind
+  actorKind?: VmActorKind
+  actorId?: string | null
   actorName?: string | null
 }): string {
   if (event.actorKind === 'SYSTEM') return '시스템'
   if (event.actorKind === 'ADMIN') return '관리자'
-  return event.actorName ?? '사용자'
+  if (event.actorKind === 'UNKNOWN') return '사용자'
+  if (event.actorKind === 'MEMBER') return event.actorName ?? '사용자'
+  // 종류가 아예 없거나(api가 아직 이 필드를 안 내려주는 배포 순간) 이 빌드가
+  // 모르는 값이면, 이 필드가 생기기 전과 같은 규칙으로 떨어진다. 남은 분기로
+  // 흘려보내면 프로비저너가 남긴 행이 "사용자"로 보인다.
+  return event.actorId == null ? '시스템' : '사용자'
 }
 
 /* ─── LLM API 키 ─── */

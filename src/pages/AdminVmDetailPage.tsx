@@ -38,7 +38,7 @@ import {
 } from '../components/ui'
 import { formatDateTime, formatSpec } from '../lib/format'
 import { isUuid } from '../lib/validation'
-import { VM_EVENT_LABELS, type VmEventType } from '../lib/status'
+import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/status'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -339,15 +339,19 @@ const EVENTS_PAGE_SIZE = 20
  * 오므로(누가 개입했는지는 관리자가 알아야 한다) 이름을 그대로 쓰고, 개입임을
  * 배지로 구분한다.
  *
- * 이름이 비는 경우가 둘이다. 감사 로그가 열리지 않는 역할(기관 열람자)로 보면
- * 서버가 관리자 행의 신원을 비우고, 이름이 없는 계정도 비어서 온다. 어느 쪽이든
- * 종류만 남는다.
+ * 이름이 비어서 오는 경우가 있다. 감사 로그가 열리지 않는 역할(기관 열람자)에는
+ * 서버가 관리자 행의 신원을 비우고, 수행 화면이 기록되기 전 행도 마찬가지다.
+ * 그때는 사용자 화면과 같은 표기만 쓴다 — 이름 자리에 "사용자"를 채우고 배지를
+ * 붙이면 "사용자 [관리자]"라는 없는 사람이 생긴다.
  */
 function AdminEventActor({ event }: { event: VmEvent }) {
   if (event.actorKind === 'SYSTEM') return <span className="text-neutral-500">시스템</span>
+  if (event.actorName == null) {
+    return <span className="text-neutral-500">{vmEventActorLabel(event)}</span>
+  }
   return (
     <span className="inline-flex items-center gap-1.5">
-      {event.actorName ?? '사용자'}
+      {event.actorName}
       {event.actorKind === 'ADMIN' && <Badge variant="warning">관리자</Badge>}
     </span>
   )

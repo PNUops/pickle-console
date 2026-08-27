@@ -890,6 +890,16 @@ export const adminHandlers: RequestHandler[] = [
     if (!vm) return notFound()
     const body = (await request.json()) as Schemas['VmGatewayBlockUpdateRequest']
     vm.sshGatewayBlocked = body.blocked
+    // 서버는 이 조작을 관리자 개입으로 이력에 남긴다. 목이 남기지 않으면
+    // "관리자가 차단 → 이력에 관리자 행" 왕복이 한 번도 지나가지 않는다.
+    recordVmEvent(vm.id, {
+      type: body.blocked ? 'GATEWAY_BLOCK' : 'GATEWAY_UNBLOCK',
+      actorId: uuid(7),
+      actorKind: 'ADMIN',
+      actorName: '운영 담당자',
+      detail: body.reason ?? null,
+      createdAt: '2026-07-09T10:00:00+09:00',
+    })
     return HttpResponse.json(vm, { status: 200 })
   }),
 
