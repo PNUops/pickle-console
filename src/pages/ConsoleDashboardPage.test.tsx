@@ -1,6 +1,8 @@
 import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { seedNotices } from '../test/msw/handlers/notices'
+import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -41,6 +43,29 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
         .getAllByRole('link', { name: '모두 보기 →' })
         .some((el) => el.getAttribute('href') === '/console/resources'),
     ).toBe(true)
+  })
+
+  test('공지사항 카드가 상위 공지와 게시판 링크를 보여준다', async () => {
+    renderDashboard()
+
+    await screen.findByRole('heading', { name: '대시보드' })
+    expect(await screen.findByRole('heading', { name: '공지사항' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /데이터센터 정기 점검 안내/ }),
+    ).toHaveAttribute('href', `/console/notices/${uuid(201)}`)
+    expect(
+      screen
+        .getAllByRole('link', { name: '모두 보기 →' })
+        .some((el) => el.getAttribute('href') === '/console/notices'),
+    ).toBe(true)
+  })
+
+  test('공지가 없으면 카드째 나오지 않는다', async () => {
+    seedNotices([])
+    renderDashboard()
+
+    await screen.findByRole('heading', { name: '최근 알림' })
+    expect(screen.queryByRole('heading', { name: '공지사항' })).not.toBeInTheDocument()
   })
 
   test('최근 알림 카드가 알림 제목을 보여준다', async () => {

@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
+  fetchNotices,
   fetchNotifications,
   fetchUnreadCount,
   fetchRequests,
@@ -12,6 +13,7 @@ import { consolePaths } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
 import { useAuth } from '../auth/auth-context'
 import {
+  Badge,
   Card,
   LinkButton,
   RequestStatusBadge,
@@ -23,6 +25,9 @@ import { formatDateTime, formatDday } from '../lib/format'
 
 /** 만료 임박으로 취급하는 잔여 일수 상한. */
 const EXPIRY_SOON_DAYS = 14
+
+/** 대시보드에 세우는 공지 수. */
+const NOTICE_PREVIEW_SIZE = 3
 
 /**
  * 사용자 대시보드 — 별도 집계 API 없이 목록 API를 클라이언트에서 합성한다
@@ -57,6 +62,12 @@ export function ConsoleDashboardPage() {
   const recentNotifications = useQuery({
     queryKey: ['notifications', { page: 0, size: 5 }],
     queryFn: () => fetchNotifications({ page: 0, size: 5 }),
+  })
+  // 게시판과 같은 첫 페이지지만 크기가 다르다 — 키를 나누지 않으면 목록으로
+  // 넘어간 사람이 세 건짜리 캐시를 한 페이지로 받아 본다.
+  const notices = useQuery({
+    queryKey: ['notices', 'dashboard'],
+    queryFn: () => fetchNotices({ page: 0, size: NOTICE_PREVIEW_SIZE }),
   })
 
   const activeVms = (vms.data?.content ?? []).filter(
@@ -125,6 +136,42 @@ export function ConsoleDashboardPage() {
           to={expiring ? consolePaths.vmDetail(expiring.vm.id) : undefined}
         />
       </div>
+
+      {/* 공지사항 — 있을 때만. 없는 것이 정상이라 빈 카드를 상시로 두지 않는다.
+          리소스 목록보다 먼저 오는 것은 장애 공지가 먼저 눈에 들어와야 해서다. */}
+      {notices.isSuccess && notices.data.content.length > 0 && (
+        <Card>
+          <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3.5">
+            <h2 className="font-semibold text-neutral-900">공지사항</h2>
+            <Link
+              to={consolePaths.notices}
+              className="text-sm font-medium text-primary-700 hover:text-primary-800"
+            >
+              모두 보기 →
+            </Link>
+          </div>
+          <ul className="divide-y divide-neutral-100">
+            {notices.data.content.map((notice) => (
+              <li key={notice.id}>
+                <Link
+                  to={consolePaths.noticeDetail(notice.id)}
+                  className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-neutral-50"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {notice.pinned && <Badge variant="warning">고정</Badge>}
+                    <span className="truncate text-sm font-medium text-neutral-900">
+                      {notice.title}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs whitespace-nowrap text-neutral-400">
+                    {formatDateTime(notice.startsAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* 내 리소스 */}
       <Card>
