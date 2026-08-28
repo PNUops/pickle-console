@@ -1,9 +1,9 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
-import { makeNotice, seedNotices } from '../test/msw/handlers/notices'
+import { makeNotice, noticeImage, seedNotices } from '../test/msw/handlers/notices'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -11,6 +11,14 @@ import {
   NOTICE_POPUP_DISMISSED_KEY,
   NOTICE_POPUP_SEEN_KEY,
 } from '../lib/storage-keys'
+
+// jsdom에는 WebGL이 없고 three 청크 로드는 무의미하게 느리다 — 정적 목업으로 대체.
+vi.mock('../pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
+
+/** 조회가 끝나고도 아무것도 뜨지 않는다는 것을 확인하기 위한 짧은 유예. */
+function settle() {
+  return new Promise((resolve) => setTimeout(resolve, 50))
+}
 
 /** 줄을 세울 팝업 넷 — 기대 순서는 고정 먼저, 그 안에서 게시 시작 최신순. */
 function seedPopupQueue() {
@@ -128,6 +136,97 @@ describe('팝업 공지', () => {
     renderApp('/admin')
 
     expect(await screen.findByRole('dialog', { name: '점검 팝업' })).toBeInTheDocument()
+  })
+
+  test('익명 방문자에게도 랜딩에서 뜨고, 공개 이미지는 주소 그대로 받는다', async () => {
+    // 장애 공지가 가장 필요한 사람은 아직 로그인하지 못한 사람이다. 세션이 없으면
+    // 이미지는 맨 <img src>로 남는다 — 익명이 보는 것은 공개 공지뿐이라 자격이
+    // 필요 없고, 그 편이 브라우저의 평범한 캐시를 그대로 쓴다.
+    seedNotices([
+      makeNotice({
+        id: uuid(321),
+        title: '전면 점검 안내',
+        popup: true,
+        images: [noticeImage(uuid(321), 322, 'outage.png')],
+      }),
+    ])
+    // 랜딩 청크는 lazy — 병렬 워커가 CPU를 나눠 쓰는 동안 기본 대기로는 모자란다.
+    renderApp('/')
+
+    expect(
+      await screen.findByRole('dialog', { name: '전면 점검 안내' }, { timeout: 15_000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'outage.png' })).toHaveAttribute(
+      'src',
+      `/api/v1/notices/${uuid(321)}/images/${uuid(322)}`,
+    )
+  })
+
+  test('로그인 화면에서도 익명 방문자에게 뜬다', async () => {
+    seedNotices([makeNotice({ id: uuid(323), title: '로그인 불가 안내', popup: true })])
+    renderApp('/login')
+
+    expect(await screen.findByRole('dialog', { name: '로그인 불가 안내' })).toBeInTheDocument()
+  })
+
+  test('회원가입 화면에도 뜬다', async () => {
+    seedNotices([makeNotice({ id: uuid(325), title: '가입 중단 안내', popup: true })])
+    renderApp('/signup')
+
+    expect(await screen.findByRole('dialog', { name: '가입 중단 안내' })).toBeInTheDocument()
+  })
+
+  test('통과만 하는 인증 화면에서는 끼어들지 않는다', async () => {
+    // 비밀번호 재설정·구글 콜백 같은 화면은 머무는 자리가 아니라 지나는 자리다.
+    // 모달은 포커스를 가두고 body 스크롤을 잠그므로 진행 중인 흐름을 막는다.
+    //
+    // 「모달이 없다」만 재면 응답이 늦어도 통과하는, 물지 않는 단언이 된다 —
+    // 호스트가 아예 안 달렸으면 조회 자체가 나가지 않으므로 그것을 함께 잰다.
+    let asked = false
+    server.use(
+      http.get('*/api/v1/notices', () => {
+        asked = true
+        return HttpResponse.json(
+          { content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 },
+          { status: 200 },
+        )
+      }),
+    )
+    renderApp('/reset-password?token=reset-token')
+
+    await screen.findByRole('heading', { name: '새 비밀번호 설정' })
+    await settle()
+    expect(asked).toBe(false)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('이미 로그인한 사람이 랜딩을 열면 익명으로 묻지 않는다', async () => {
+    // 랜딩과 인증 화면은 인증 셸 밖이라 세션 복원이 끝나기 전에 마운트된다. 복원은
+    // 로그인과 달리 캐시를 비우지 않으므로, 여기서 익명으로 물으면 그 답이 콘솔의
+    // 팝업까지 staleTime 동안 물들인다.
+    //
+    // 「무엇이 보이나」가 아니라 「자격을 싣고 물었나」를 잰다. 보이는 것으로 재려면
+    // 로그인해야만 보이는 공지가 있어야 하는데, 그 조합은 노출 축이 달라지면
+    // 사라진다. 나가는 요청의 헤더는 그 축과 무관하게 같은 것을 고정한다.
+    //
+    // 게시판·대시보드로는 이 핀을 대신할 수 없다 — RequireRole이 복원 중에는
+    // 스피너를 그려 그 화면들이 아예 마운트되지 않으므로, 함정이 닿지 않는다.
+    const authorizations: (string | null)[] = []
+    server.use(
+      http.get('*/api/v1/notices', ({ request }) => {
+        authorizations.push(request.headers.get('Authorization'))
+        return HttpResponse.json(
+          { content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 },
+          { status: 200 },
+        )
+      }),
+    )
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/')
+
+    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 15_000 })
+    await waitFor(() => expect(authorizations.length).toBeGreaterThan(0))
+    expect(authorizations.every((header) => header?.startsWith('Bearer '))).toBe(true)
   })
 
   test('본문의 태그는 마크업이 아니라 글자로 나온다', async () => {

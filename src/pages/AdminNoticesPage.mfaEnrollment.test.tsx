@@ -51,7 +51,7 @@ describe('공지 관리와 2FA 등록 가로채기', () => {
           type: 'about:blank',
           title: '접근 권한이 없습니다',
           status: 403,
-          detail: '관리 기관이 지정되지 않은 계정입니다.',
+          detail: '이 작업을 수행할 권한이 없습니다.',
           code: 'ACCESS_DENIED',
         }),
       ),
@@ -66,7 +66,7 @@ describe('공지 관리와 2FA 등록 가로채기', () => {
 
     // 거부는 화면에 남아야 한다 — 튀어 버리면 관리자는 이유를 못 본다.
     expect(
-      await screen.findByText('관리 기관이 지정되지 않은 계정입니다.'),
+      await screen.findByText('이 작업을 수행할 권한이 없습니다.'),
     ).toBeInTheDocument()
     await waitFor(() => {
       expect(navigations.filter((to) => to.includes('enroll=2fa'))).toEqual([])

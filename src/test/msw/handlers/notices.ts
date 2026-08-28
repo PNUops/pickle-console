@@ -1,8 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { isSysTier } from '../../../auth/permissions'
+import { isOrgTier, isSysTier } from '../../../auth/permissions'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
-import { orgs } from './reference'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
@@ -40,21 +39,18 @@ export function noticeImage(noticeId: string, n: number, fileName: string): Noti
 }
 
 /**
- * 공지 하나를 만든다. 기본값은 "지금 게시 중인 전역 공개 공지, 고정도 팝업도 아님".
+ * 공지 하나를 만든다. 기본값은 "지금 게시 중, 고정도 팝업도 아님" — 즉 로그인한
+ * 사람만 게시판에서 읽는 공지다.
  *
- * 기본 픽스처에 **뜨는 것이 아무것도 없는 것은 의도다** — 팝업과 랜딩 한 줄은
- * 인증 셸과 랜딩에 그대로 달리므로, 기본값에 하나라도 활성 팝업/고정 공개 공지를
- * 두면 이 기능과 무관한 화면 테스트 전부가 모달과 배너를 마주하게 된다.
- * 그 둘을 보고 싶은 테스트가 `seedNotices`로 직접 세운다.
+ * 기본 픽스처에 **뜨는 것이 아무것도 없는 것은 의도다** — 팝업 호스트가 인증 셸과
+ * 랜딩·로그인·회원가입 화면에 달리므로, 기본값에 활성 팝업을 하나라도 두면 이
+ * 기능과 무관한 화면 테스트 전부가 모달을 마주하게 된다. 팝업을 보고 싶은
+ * 테스트가 `seedNotices`로 직접 세운다.
  */
 export function makeNotice(notice: Partial<StoredNotice> & { id: string }): StoredNotice {
   return {
     title: '공지',
     body: '본문',
-    scope: 'PLATFORM',
-    orgId: null,
-    orgName: null,
-    audience: 'PUBLIC',
     pinned: false,
     popup: false,
     startsAt: PAST,
@@ -79,16 +75,17 @@ function initialNotices(): StoredNotice[] {
       id: uuid(202),
       title: '콘솔 기능 업데이트',
       body: '워크스페이스 화면이 개편되었습니다.',
-      audience: 'USERS',
     }),
     makeNotice({
       id: uuid(203),
-      title: '기관 전용 안내',
-      body: '기관 소속 사용자에게만 보이는 공지입니다.',
-      scope: 'ORG',
-      orgId: uuid(1),
-      orgName: '정보컴퓨터공학부',
-      audience: 'USERS',
+      title: '서비스 점검 팝업',
+      body: '팝업으로 띄우는 공지는 로그인하지 않은 방문자에게도 보입니다.',
+      popup: true,
+      // 아직 시작하지 않은 팝업 — 게시 창이 가시성의 절반이라는 것을 세우는
+      // 픽스처다. 이미지가 붙어 있는 것은 관리 미리보기가 게시 전에도 열려야
+      // 하기 때문이고, 그 이미지는 익명에게는 아직 없는 것과 같아야 한다.
+      startsAt: FUTURE,
+      images: [noticeImage(uuid(203), 213, 'scheduled.png')],
     }),
     makeNotice({
       id: uuid(204),
@@ -121,85 +118,29 @@ function profileOf(request: Request) {
 
 type Profile = Schemas['UserProfileResponse']
 
-function orgIdsWhere(profile: Profile, roles: readonly string[]): string[] {
-  return profile.managedOrgs.filter((org) => roles.includes(org.role)).map((org) => org.orgId)
-}
-
 /**
- * 게시판이 말하는 '이 기관 사람' — 운영 권한(ORG_ADMIN·ORG_MANAGER)이 있는 기관.
- * 열람 역할은 **들어가지 않는다**: 기관 공지는 그 기관 사람에게 보내는 글이고,
- * 열람자는 들여다보도록 허락받은 바깥 사람이라 관리 목록으로 같은 공지를 읽는다.
- * 공지를 감추는 것이 아니라 '이 기관 사람'의 정의를 하나로 두는 것이다.
+ * 공개 표면(게시판·상세)에서 이 공지가 이 읽는이에게 보이는가 — 서버
+ * `NoticeQueryService.visibleTo`의 거울이다.
  *
- * 서버는 여기에 파생 소속(사용자의 실제 소속 기관)을 합집합으로 얹지만, 프로필
- * 응답에는 그 값이 없다 — 목이 재현할 수 있는 것은 권한으로 정해지는 절반뿐이다.
+ * **두 반쪽이 다 필요하다.** 게시 기간 밖이면 아무도 못 보고, 기간 안이면 로그인한
+ * 사람은 팝업이든 아니든 보고 익명은 팝업만 본다. 기간을 빼고 `popup`만 보면
+ * 예약된 팝업 공지가 게시 전부터 익명에게 열린다 — 이미지 캐시 지시자가 이 함수의
+ * 답에서 유도되므로, 그 실수는 「주소를 아는 누구나」로 곧장 이어진다.
  */
-function boardOrgIds(profile: Profile): string[] {
-  return orgIdsWhere(profile, ['ORG_ADMIN', 'ORG_MANAGER'])
-}
-
-/** 관리 목록의 범위 — 역할을 보유한 기관 전부. 열람 역할이 닿는 곳이 여기다. */
-function readableOrgIds(profile: Profile): string[] {
-  return orgIdsWhere(profile, ['ORG_ADMIN', 'ORG_MANAGER', 'ORG_VIEWER'])
-}
-
-/** 쓰기가 닿는 범위 — 관리자인 기관만. 운영·열람 역할은 쓰지 못한다. */
-function administeredOrgIds(profile: Profile): string[] {
-  return orgIdsWhere(profile, ['ORG_ADMIN'])
-}
-
-/** 공개 표면(게시판·상세)에서 이 공지가 이 읽는이에게 보이는가. */
 function visibleOnBoard(notice: StoredNotice, profile: Profile | null): boolean {
-  if (!isActive(notice)) return false
-  if (profile == null) return notice.scope === 'PLATFORM' && notice.audience === 'PUBLIC'
-  if (notice.scope === 'PLATFORM') return true
-  return notice.orgId != null && boardOrgIds(profile).includes(notice.orgId)
+  return isActive(notice) && (profile != null || notice.popup)
 }
 
 /**
- * 이 공지를 고칠 수 있는가. 못 고치는 이유마다 답이 다르다:
+ * 관리 표면에 닿는 사람인가 — 서버 `NoticeQueryService.manageableBy`의 거울이고,
+ * 그쪽이 컨트롤러 클래스 게이트를 다시 적어 둔 이유와 같다: 이미지 바이트는 인증
+ * 없이도 열리는 경로라 애노테이션이 먼저 역할을 좁혀 주지 않는다.
  *
- * - 전역 공지를 기관 관리자가 → 403. 목록에 보이는 공지이므로 감출 것이 없다.
- * - 남의 기관 공지 → 404. 경로의 id로 지목한 것이라, 존재 자체를 감추는 쪽이 맞다.
- *
- * 관리자인 기관만 통과한다 — 운영·열람 역할로 보이는 기관도 쓰기는 닿지 않는다.
+ * 공지에 대해서는 아무것도 묻지 않는다. 물을 것이 없어서다 — 관리 목록에 닿는
+ * 계정은 그 목록의 모든 행에 닿는다.
  */
-function writeRefusal(
-  profile: Profile,
-  notice: StoredNotice,
-  instance: string,
-): Response | null {
-  if (isSysTier(profile.role)) return null
-  if (notice.scope === 'PLATFORM') {
-    return forbidden(instance, '전역 공지는 시스템 관리자만 수정할 수 있습니다.')
-  }
-  if (notice.orgId == null || !administeredOrgIds(profile).includes(notice.orgId)) {
-    return notFound(instance)
-  }
-  return null
-}
-
-function forbidden(instance: string, detail: string) {
-  return problemResponse({
-    type: 'about:blank',
-    title: '접근 권한이 없습니다',
-    status: 403,
-    detail,
-    instance,
-    code: 'ACCESS_DENIED',
-  })
-}
-
-function orgFieldError(instance: string, message: string) {
-  return problemResponse({
-    type: 'about:blank',
-    title: '입력값이 올바르지 않습니다',
-    status: 422,
-    detail: '요청 값을 확인해 주세요.',
-    instance,
-    code: 'VALIDATION_FAILED',
-    errors: [{ field: 'orgId', message }],
-  })
+function manageableBy(profile: Profile | null): boolean {
+  return profile != null && (isSysTier(profile.role) || isOrgTier(profile.role))
 }
 
 function isActive(notice: StoredNotice, now = Date.now()): boolean {
@@ -262,11 +203,16 @@ export const noticeHandlers: RequestHandler[] = [
     const notice = noticeStore.find((row) => row.id === String(params.noticeId))
     const image = notice?.images.find((row) => row.id === String(params.imageId))
     if (!notice || !image) return notFound(instance)
-    const anonymous = profileOf(request) == null
-    const publiclyReadable =
-      notice.scope === 'PLATFORM' && notice.audience === 'PUBLIC' && isActive(notice)
+    const profile = profileOf(request)
+    // 공유 캐시에 남겨도 되는 것은 **지금 익명 요청이 성공할 이미지뿐**이다. 그
+    // 판정을 다시 적지 않고 가시성 함수에 읽는이 없이 물어 유도한다 — 서버가
+    // 같은 자리에서 `visibleTo(notice, null, now)`를 부르므로, 목이 이 형태를
+    // 잃으면 두 레포가 서로 다른 세계를 각자 초록으로 고정한다.
+    const publiclyReadable = visibleOnBoard(notice, null)
+    // 관리자는 게시 창 밖의 이미지도 받는다 — 관리 목록 행이 이미지 주소를 싣고
+    // 있어서, 없으면 예약 공지를 게시 직전에 확인할 방법이 없다.
     // 존재를 알리지 않는다 — 권한 없는 요청과 없는 이미지가 같은 답을 받는다.
-    if (anonymous && !publiclyReadable) return notFound(instance)
+    if (!visibleOnBoard(notice, profile) && !manageableBy(profile)) return notFound(instance)
     return HttpResponse.arrayBuffer(PIXEL_PNG.buffer as ArrayBuffer, {
       headers: {
         'Content-Type': image.contentType,
@@ -299,25 +245,16 @@ export const noticeHandlers: RequestHandler[] = [
   /* ─── 관리 ─── */
 
   /**
-   * 관리 목록의 범위는 **역할을 보유한 기관 전부**다 — 열람 역할이 포함되는 유일한
-   * 공지 표면이고, 들여다보라고 준 역할이 닿는 곳이 여기라서다. 기관 계층은 전역
-   * 공지도 함께 본다(읽되 고치지는 못한다).
+   * 관리 목록에는 **범위가 없다** — 공지가 기관에 속하지 않으므로, 컨트롤러 게이트를
+   * 통과한 역할은 모두 같은 목록을 읽는다. 역할을 가르는 것은 쓰기뿐이다.
+   *
+   * 기관을 하나도 부여받지 않은 기관 계층 계정도 포함된다. 종전에는 그것을
+   * 거절했는데, 그 거절이 바로 「기관으로 기능을 제한하는 것」이었다.
    */
   http.get('*/api/v1/admin/notices', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    const readable = readableOrgIds(profile)
-    if (!isSysTier(profile.role) && readable.length === 0) {
-      return forbidden('/api/v1/admin/notices', '관리 기관이 지정되지 않은 계정입니다.')
-    }
-    const visible = noticeStore
-      .filter(
-        (notice) =>
-          isSysTier(profile.role) ||
-          notice.scope === 'PLATFORM' ||
-          (notice.orgId != null && readable.includes(notice.orgId)),
-      )
-      .sort(inFeedOrder)
+    const visible = [...noticeStore].sort(inFeedOrder)
     return HttpResponse.json(paged(visible.map(toAdminView), new URL(request.url)), {
       status: 200,
     })
@@ -327,77 +264,13 @@ export const noticeHandlers: RequestHandler[] = [
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
     const body = (await request.json()) as Schemas['NoticeCreateRequest']
-    const instance = '/api/v1/admin/notices'
-    const sysTier = isSysTier(profile.role)
-
-    /**
-     * 새 공지가 속할 기관, 또는 그 자리에서 끝나는 거절.
-     *
-     * 거절의 모양이 갈리는 자리다: 본문이 고른 `orgId`는 **필드 오류(422)**이고
-     * 경로로 지목한 공지는 404다. 본문 값은 클라이언트가 보낸 것이라 틀렸다고
-     * 답해도 아무 존재를 알리지 않지만, 경로의 id는 그 자체가 남의 것의 존재를
-     * 묻는 질문이기 때문이다. 겸직 계정은 '자기 기관'이 하나가 아니므로 관리
-     * 기관이 둘 이상이면 지정이 필수가 되고, 하나뿐이면 서버가 채운다.
-     */
-    let targetOrgId: string | null = null
-    if (body.scope === 'PLATFORM') {
-      if (!sysTier) {
-        return forbidden(instance, '전역 공지는 시스템 관리자만 등록할 수 있습니다.')
-      }
-      if (body.orgId != null) {
-        return orgFieldError(instance, '전역 공지에는 기관을 지정할 수 없습니다.')
-      }
-    } else if (sysTier) {
-      if (body.orgId == null) {
-        return orgFieldError(instance, '기관 공지에는 대상 기관이 필요합니다.')
-      }
-      // 시스템 계층에는 기관의 존재를 감출 이유가 없다 — 없는 기관은 404다.
-      if (!orgs.some((org) => org.id === body.orgId)) {
-        return problemResponse({
-          type: 'about:blank',
-          title: '리소스를 찾을 수 없습니다',
-          status: 404,
-          detail: '해당 기관이 존재하지 않습니다.',
-          instance,
-          code: 'RESOURCE_NOT_FOUND',
-        })
-      }
-      targetOrgId = body.orgId
-    } else {
-      const administered = administeredOrgIds(profile)
-      if (administered.length === 0) {
-        return forbidden(instance, '관리 기관이 지정되지 않은 계정입니다.')
-      }
-      if (body.orgId != null) {
-        // 없는 기관도 같은 답이다 — 어떤 기관이 존재하는지는 기관 계층에게 비밀이다.
-        if (!administered.includes(body.orgId)) {
-          return orgFieldError(instance, '자기 기관의 공지만 등록할 수 있습니다.')
-        }
-        targetOrgId = body.orgId
-      } else if (administered.length === 1) {
-        targetOrgId = administered[0]
-      } else {
-        return orgFieldError(instance, '기관 공지에는 대상 기관이 필요합니다.')
-      }
-    }
-    if (body.scope === 'ORG' && body.audience === 'PUBLIC') {
-      return problemResponse({
-        type: 'about:blank',
-        title: '입력값이 올바르지 않습니다',
-        status: 422,
-        detail: '요청 값을 확인해 주세요.',
-        instance: '/api/v1/admin/notices',
-        code: 'VALIDATION_FAILED',
-        errors: [{ field: 'audience', message: '기관 공지는 익명에게 공개할 수 없습니다.' }],
-      })
-    }
+    // 정할 것이 남지 않았다 — 공지는 어느 기관에도 속하지 않고, 노출은 popup 하나가
+    // 정한다. 게이트를 통과한 사람이 보낸 것을 그대로 세운다.
     const created = makeNotice({
       ...body,
       id: uuid(nextNoticeId++),
       // 계약: 게시 시작을 생략하면 즉시 게시한다.
       startsAt: body.startsAt ?? new Date().toISOString(),
-      orgId: targetOrgId,
-      orgName: orgs.find((org) => org.id === targetOrgId)?.name ?? null,
       images: [],
     })
     noticeStore = [created, ...noticeStore]
@@ -410,8 +283,6 @@ export const noticeHandlers: RequestHandler[] = [
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
-    const refused = writeRefusal(profile, existing, `/api/v1/admin/notices/${noticeId}`)
-    if (refused) return refused
     // 계약의 수정 요청은 scope도 orgId도 받지 않는다 — 범위는 등록 때 정해진다.
     const body = (await request.json()) as Schemas['NoticeUpdateRequest']
     const updated: StoredNotice = {
@@ -429,8 +300,6 @@ export const noticeHandlers: RequestHandler[] = [
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
-    const refused = writeRefusal(profile, existing, `/api/v1/admin/notices/${noticeId}`)
-    if (refused) return refused
     noticeStore = noticeStore.filter((row) => row.id !== noticeId)
     return new HttpResponse(null, { status: 204 })
   }),
@@ -442,8 +311,6 @@ export const noticeHandlers: RequestHandler[] = [
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}/images`)
     const instance = `/api/v1/admin/notices/${noticeId}/images`
-    const refused = writeRefusal(profile, existing, instance)
-    if (refused) return refused
     const form = await request.formData()
     const file = form.get('file')
     // 계약이 multipart 본문을 required로 적지 않는 것은 의도다 — 파일이 없는
@@ -512,12 +379,6 @@ export const noticeHandlers: RequestHandler[] = [
     if (!existing?.images.some((image) => image.id === imageId)) {
       return notFound(`/api/v1/admin/notices/${noticeId}/images/${imageId}`)
     }
-    const refused = writeRefusal(
-      profile,
-      existing,
-      `/api/v1/admin/notices/${noticeId}/images/${imageId}`,
-    )
-    if (refused) return refused
     noticeStore = noticeStore.map((row) =>
       row.id === noticeId
         ? { ...row, images: row.images.filter((image) => image.id !== imageId) }

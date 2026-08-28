@@ -54,7 +54,7 @@ describe('MSW 네거티브 스코핑 (ORG_ADMIN, 타 기관 orgId)', () => {
     await expect(fetchAdminUser(uuid(99))).resolves.toMatchObject({ id: uuid(99) })
   })
 
-  test('공지 발송: 관리하지 않는 기관 orgId를 지정하면 422', async () => {
+  test('알림 발송: 관리하지 않는 기관 orgId를 지정하면 422', async () => {
     await expect(
       createAnnouncement({ title: '테스트', body: '본문', scope: 'ORG', orgId: uuid(2) }),
     ).rejects.toMatchObject({

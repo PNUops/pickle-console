@@ -2567,7 +2567,6 @@ export interface components {
         AdminNoticeView: {
             /** @description 지금 게시 창 안에 있는지. 예정·만료된 공지도 이 목록에는 함께 나옵니다. */
             active: boolean;
-            audience: components["schemas"]["NoticeAudience"];
             body: string;
             /** Format: date-time */
             createdAt: string;
@@ -2581,16 +2580,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             images: components["schemas"]["NoticeImageView"][];
-            /**
-             * Format: uuid
-             * @description 기관 공지가 속한 기관. 전역 공지에서는 비어 있습니다.
-             */
-            orgId?: string | null;
-            /** @description 그 기관의 이름. 전역 공지에서는 비어 있습니다. */
-            orgName?: string | null;
+            /** @description 목록 상단 고정 여부 */
             pinned: boolean;
+            /** @description 콘솔이 모달로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
             popup: boolean;
-            scope: components["schemas"]["NoticeScope"];
             /** Format: date-time */
             startsAt: string;
             title: string;
@@ -3820,26 +3813,17 @@ export interface components {
             storage: string;
             vmBridge: string;
         };
-        /** @enum {string} */
-        NoticeAudience: "PUBLIC" | "USERS";
         NoticeCreateRequest: {
-            audience: components["schemas"]["NoticeAudience"];
             body: string;
             /**
              * Format: date-time
              * @description 게시 종료 시각. 생략하면 만료되지 않습니다.
              */
             endsAt?: string | null;
-            /**
-             * Format: uuid
-             * @description 기관 공지의 대상 기관이며, 전역 공지에는 넣을 수 없습니다. 관리하는 기관이 하나뿐인 기관 관리자는 생략할 수 있고 그 기관으로 지정됩니다. 관리하는 기관이 둘 이상이거나 시스템 관리자라면 반드시 지정해야 합니다. 기관 관리자는 자신이 관리하는 기관만 지정할 수 있습니다.
-             */
-            orgId?: string | null;
             /** @description 목록 상단 고정 여부. 생략하면 고정하지 않습니다. */
             pinned?: boolean;
-            /** @description 콘솔이 모달로 띄울지. 생략하면 띄우지 않습니다. */
+            /** @description 콘솔이 모달로 띄울지. 켜면 로그인하지 않은 방문자에게도 보입니다. 생략하면 둘 다 하지 않습니다. */
             popup?: boolean;
-            scope: components["schemas"]["NoticeScope"];
             /**
              * Format: date-time
              * @description 게시 시작 시각. 생략하면 즉시 게시합니다.
@@ -3859,10 +3843,7 @@ export interface components {
             /** @description 이미지를 내려받는 경로. 인증 없이 열 수 있는지는 공지의 공개 범위를 따릅니다. */
             url: string;
         };
-        /** @enum {string} */
-        NoticeScope: "PLATFORM" | "ORG";
         NoticeUpdateRequest: {
-            audience?: components["schemas"]["NoticeAudience"];
             body?: string;
             /**
              * Format: date-time
@@ -3876,7 +3857,6 @@ export interface components {
             title?: string;
         };
         NoticeView: {
-            audience: components["schemas"]["NoticeAudience"];
             body: string;
             /** Format: date-time */
             createdAt: string;
@@ -3888,18 +3868,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             images: components["schemas"]["NoticeImageView"][];
-            /**
-             * Format: uuid
-             * @description 기관 공지가 속한 기관. 전역 공지에서는 비어 있습니다.
-             */
-            orgId?: string | null;
-            /** @description 그 기관의 이름. 전역 공지에서는 비어 있습니다. */
-            orgName?: string | null;
             /** @description 목록 상단 고정 여부 */
             pinned: boolean;
-            /** @description 콘솔이 모달로 띄울 공지인지 */
+            /** @description 콘솔이 모달로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
             popup: boolean;
-            scope: components["schemas"]["NoticeScope"];
             /** Format: date-time */
             startsAt: string;
             title: string;

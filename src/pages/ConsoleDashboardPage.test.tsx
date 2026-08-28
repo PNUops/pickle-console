@@ -1,6 +1,8 @@
 import { screen, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -41,6 +43,39 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
         .getAllByRole('link', { name: '모두 보기 →' })
         .some((el) => el.getAttribute('href') === '/console/resources'),
     ).toBe(true)
+  })
+
+  test('공지사항 카드가 상위 공지와 게시판 링크를 보여준다', async () => {
+    renderDashboard()
+
+    await screen.findByRole('heading', { name: '대시보드' })
+    expect(await screen.findByRole('heading', { name: '공지사항' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /데이터센터 정기 점검 안내/ }),
+    ).toHaveAttribute('href', `/console/notices/${uuid(201)}`)
+    expect(
+      screen
+        .getAllByRole('link', { name: '모두 보기 →' })
+        .some((el) => el.getAttribute('href') === '/console/notices'),
+    ).toBe(true)
+  })
+
+  test('공지가 없으면 카드째 나오지 않는다', async () => {
+    // 카드가 없다는 단언은 답이 도착한 뒤라야 뜻이 있다 — 도착 전에 재면 빈 상태를
+    // 숨기는 조건을 지워도 통과하는, 물지 않는 테스트가 된다.
+    let answered = false
+    server.use(
+      http.get('*/api/v1/notices', ({ request }) => {
+        const size = new URL(request.url).searchParams.get('size')
+        const empty = { content: [], page: 0, size: Number(size ?? 20), totalElements: 0, totalPages: 1 }
+        if (size === '3') answered = true
+        return HttpResponse.json(empty, { status: 200 })
+      }),
+    )
+    renderDashboard()
+
+    await waitFor(() => expect(answered).toBe(true))
+    expect(screen.queryByRole('heading', { name: '공지사항' })).not.toBeInTheDocument()
   })
 
   test('최근 알림 카드가 알림 제목을 보여준다', async () => {

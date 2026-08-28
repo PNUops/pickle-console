@@ -3,50 +3,38 @@ import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { HttpResponse } from 'msw'
-import {
-  orgAdminUser,
-  orgViewerUser,
-  problemResponse,
-  refreshSuccessHandler,
-} from '../test/msw/handlers/auth'
+import { problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { makeNotice, noticeImage, seedNotices } from '../test/msw/handlers/notices'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 
-describe('공지사항 공개 목록', () => {
-  test('익명 방문자에게는 게시 중인 전역 공개 공지만 보인다', async () => {
-    renderApp('/notices')
+describe('공지사항 게시판', () => {
+  test('로그인하지 않으면 로그인 화면으로 보낸다', async () => {
+    // 게시판은 콘솔 안에 있다 — 익명 방문자가 공지를 만나는 자리는 랜딩·로그인
+    // 화면의 팝업이지 이 목록이 아니다.
+    renderApp('/console/notices')
 
-    expect(await screen.findByRole('link', { name: /데이터센터 정기 점검 안내/ })).toBeInTheDocument()
-    // 로그인 사용자 대상·기관 공지·게시 종료분은 서버가 걸러 준다.
-    expect(screen.queryByText('콘솔 기능 업데이트')).not.toBeInTheDocument()
-    expect(screen.queryByText('기관 전용 안내')).not.toBeInTheDocument()
-    expect(screen.queryByText('지난 점검 공지')).not.toBeInTheDocument()
+    await screen.findByRole('heading', { name: '로그인' })
+    expect(currentPath()).toBe('/login')
   })
 
-  test('로그인한 기관 사용자에게는 자기 기관 공지까지 보인다', async () => {
-    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
-    renderApp('/notices')
+  test('게시 중인 공지를 목록에 세운다', async () => {
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/notices')
 
-    expect(await screen.findByRole('link', { name: /기관 전용 안내/ })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('link', { name: /데이터센터 정기 점검 안내/ }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /콘솔 기능 업데이트/ })).toBeInTheDocument()
-  })
-
-  test('열람 역할만 가진 기관의 공지는 게시판에 서지 않는다', async () => {
-    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
-    renderApp('/notices')
-
-    // 기관 공지는 그 기관 사람에게 보내는 글이고, 열람 역할은 들여다보도록 허락받은
-    // 바깥 사람이다. 감추는 것이 아니라 — 같은 공지를 관리 목록에서 읽는다 — 게시판이
-    // 말하는 '이 기관 사람'을 한 가지 뜻으로 두는 것이다.
-    expect(await screen.findByRole('link', { name: /콘솔 기능 업데이트/ })).toBeInTheDocument()
-    expect(screen.queryByText('기관 전용 안내')).not.toBeInTheDocument()
+    // 게시 기간이 끝난 것은 서버가 걸러 준다.
+    expect(screen.queryByText('지난 점검 공지')).not.toBeInTheDocument()
   })
 
   test('공지가 없으면 빈 상태를 안내한다', async () => {
     seedNotices([])
-    renderApp('/notices')
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/notices')
 
     expect(await screen.findByText('등록된 공지사항이 없습니다.')).toBeInTheDocument()
   })
@@ -61,10 +49,12 @@ describe('공지사항 공개 목록', () => {
         startsAt: '2026-08-01T09:00:00+09:00',
       }),
     ])
-    renderApp('/notices')
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/notices')
 
-    await screen.findByRole('link', { name: /고정 공지/ })
-    const rows = within(screen.getByRole('list')).getAllByRole('listitem')
+    const pinned = await screen.findByRole('link', { name: /고정 공지/ })
+    // 콘솔 셸의 내비게이션도 목록이므로 공지 목록을 그 링크에서 거슬러 잡는다.
+    const rows = within(pinned.closest('ul')!).getAllByRole('listitem')
     expect(rows[0]).toHaveTextContent('고정 공지')
     expect(rows[1]).toHaveTextContent('최신 일반 공지')
   })
@@ -73,7 +63,8 @@ describe('공지사항 공개 목록', () => {
 describe('공지사항 상세', () => {
   test('본문과 첨부 이미지를 보여주고 목록으로 돌아갈 수 있다', async () => {
     const user = userEvent.setup()
-    renderApp('/notices')
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/notices')
 
     await user.click(await screen.findByRole('link', { name: /데이터센터 정기 점검 안내/ }))
 
@@ -83,17 +74,9 @@ describe('공지사항 상세', () => {
     expect(screen.getByText(/작업 중에는 콘솔 접속이 제한됩니다/)).toBeInTheDocument()
     const image = screen.getByRole('img', { name: 'maintenance.png' })
     expect(image).toHaveAttribute('loading', 'lazy')
-    expect(image).toHaveAttribute(
-      'src',
-      expect.stringContaining(`/notices/${uuid(201)}/images/${uuid(211)}`),
-    )
-  })
 
-  test('익명 방문자는 공개 이미지를 주소 그대로 받는다', async () => {
-    renderApp(`/notices/${uuid(201)}`)
-
-    const image = await screen.findByRole('img', { name: 'maintenance.png' })
-    expect(image).toHaveAttribute('src', `/api/v1/notices/${uuid(201)}/images/${uuid(211)}`)
+    await user.click(screen.getByRole('link', { name: '← 공지사항 목록' }))
+    expect(currentPath()).toBe('/console/notices')
   })
 
   test('로그인해야 보이는 공지의 이미지는 자격을 실어 받아 온다', async () => {
@@ -104,12 +87,11 @@ describe('공지사항 상세', () => {
       makeNotice({
         id: uuid(341),
         title: '로그인 사용자 공지',
-        audience: 'USERS',
         images: [noticeImage(uuid(341), 342, 'members-only.png')],
       }),
     ])
     server.use(refreshSuccessHandler('access-user'))
-    renderApp(`/notices/${uuid(341)}`)
+    renderApp(`/console/notices/${uuid(341)}`)
 
     const image = await screen.findByRole('img', { name: 'members-only.png' })
     expect(image.getAttribute('src')).toMatch(/^blob:/)
@@ -121,7 +103,6 @@ describe('공지사항 상세', () => {
         id: uuid(343),
         title: '이미지가 깨진 공지',
         body: '본문은 읽을 수 있어야 한다.',
-        audience: 'USERS',
         images: [noticeImage(uuid(343), 344, 'gone.png')],
       }),
     ])
@@ -131,13 +112,14 @@ describe('공지사항 상세', () => {
         HttpResponse.json(null, { status: 404 }),
       ),
     )
-    renderApp(`/notices/${uuid(343)}`)
+    renderApp(`/console/notices/${uuid(343)}`)
 
     expect(await screen.findByText('이미지를 불러오지 못했습니다.')).toBeInTheDocument()
     expect(screen.getByText('본문은 읽을 수 있어야 한다.')).toBeInTheDocument()
   })
 
   test('없는 공지는 오류를 알린다', async () => {
+    server.use(refreshSuccessHandler('access-user'))
     server.use(
       http.get('*/api/v1/notices/:noticeId', () =>
         problemResponse({
@@ -149,7 +131,7 @@ describe('공지사항 상세', () => {
         }),
       ),
     )
-    renderApp(`/notices/${uuid(999)}`)
+    renderApp(`/console/notices/${uuid(999)}`)
 
     expect(await screen.findByText('해당 공지가 존재하지 않습니다.')).toBeInTheDocument()
   })

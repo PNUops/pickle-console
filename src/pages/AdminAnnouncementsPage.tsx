@@ -31,11 +31,15 @@ import { formatDateTime } from '../lib/format'
 /** 대상 선택 옵션 — 역할에 따라 노출이 다르다. */
 type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'WORKSPACE'
 
-/** 공지 보내기 — 범위(전체/기관/워크스페이스)를 골라 발송하고 최근 공지를 확인한다. */
+/**
+ * 알림 보내기 — 범위(전체/기관/워크스페이스)를 골라 발송하고 최근 발송 내역을
+ * 확인한다. 상시 게시되는 공지사항 게시판과는 다른 기능이라 이름을 나눠 둔다:
+ * 이쪽은 한 번 나가고 끝나는 팬아웃이다.
+ */
 export function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const isSysAdmin = user?.role === 'SYS_ADMIN'
-  // 공지 발송은 기관 관리자와 시스템 관리자만 — 운영자는 최근 공지 조회만(§3.13).
+  // 알림 발송은 기관 관리자와 시스템 관리자만 — 운영자는 발송 내역 조회만(§3.13).
   const canSend = !!user && canBroadcast(user.role)
   // 발송 대상은 자기가 관리자로 있는 기관뿐이고, 워크스페이스 대상도 그 기관에
   // 연결된 것으로 제한된다. 조회는 역할을 보유한 기관 전체에 닿으므로(열람이나
@@ -83,7 +87,7 @@ export function AdminAnnouncementsPage() {
     onSuccess: async (created) => {
       setConfirming(false)
       setSuccess(
-        `공지를 발송했습니다. ${created.recipientCount}명에게 인앱 알림이 전달되고 이메일은 순차 발송됩니다.`,
+        `알림을 발송했습니다. ${created.recipientCount}명에게 인앱 알림이 전달되고 이메일은 순차 발송됩니다.`,
       )
       setTitle('')
       setBody('')
@@ -96,7 +100,7 @@ export function AdminAnnouncementsPage() {
     },
     onError: (err) => {
       setConfirming(false)
-      const apiError = toApiError(err, '공지를 발송하지 못했습니다.')
+      const apiError = toApiError(err, '알림을 발송하지 못했습니다.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -154,9 +158,9 @@ export function AdminAnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">공지 보내기</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">알림 보내기</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          공지는 대상 사용자에게 인앱 알림으로 즉시 전달되고, 이메일로도 발송됩니다.
+          알림은 대상 사용자에게 인앱 알림으로 즉시 전달되고, 이메일로도 발송됩니다.
         </p>
       </div>
 
@@ -167,8 +171,8 @@ export function AdminAnnouncementsPage() {
 
       {!canSend && (
         <Alert variant="info">
-          공지 발송은 기관 관리자·시스템 관리자만 할 수 있습니다. 최근 공지는 아래에서
-          확인할 수 있습니다.
+          알림 발송은 기관 관리자·시스템 관리자만 할 수 있습니다. 최근 발송 내역은
+          아래에서 확인할 수 있습니다.
         </Alert>
       )}
       {canSend && (
@@ -276,7 +280,7 @@ export function AdminAnnouncementsPage() {
             )}
 
             <div className="flex justify-end">
-              <Button type="submit">공지 발송</Button>
+              <Button type="submit">알림 발송</Button>
             </div>
           </form>
         </CardContent>
@@ -285,18 +289,18 @@ export function AdminAnnouncementsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>최근 공지</CardTitle>
+          <CardTitle>최근 발송</CardTitle>
         </CardHeader>
         <CardContent>
           {recent.isPending && (
             <div className="flex justify-center py-6">
-              <Spinner label="최근 공지 불러오는 중" />
+              <Spinner label="최근 발송 내역 불러오는 중" />
             </div>
           )}
           {recent.isError && <Alert variant="danger">{recent.error.message}</Alert>}
           {recent.isSuccess && recent.data.content.length === 0 && (
             <p className="py-4 text-center text-sm text-neutral-500">
-              발송한 공지가 없습니다.
+              발송한 알림이 없습니다.
             </p>
           )}
           {recent.isSuccess && recent.data.content.length > 0 && (
@@ -328,7 +332,7 @@ export function AdminAnnouncementsPage() {
       <Modal
         open={confirming}
         onClose={() => setConfirming(false)}
-        title="공지 발송 확인"
+        title="알림 발송 확인"
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirming(false)}>
@@ -341,7 +345,7 @@ export function AdminAnnouncementsPage() {
         }
       >
         <p className="text-sm text-neutral-700">
-          <strong>{targetLabel()}</strong>에게 공지 <strong>{title}</strong>을(를)
+          <strong>{targetLabel()}</strong>에게 알림 <strong>{title}</strong>을(를)
           발송합니다. 발송 후에는 취소할 수 없습니다. 계속할까요?
         </p>
       </Modal>

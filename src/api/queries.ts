@@ -1285,7 +1285,7 @@ export function fetchCapacityTrend(
   })
 }
 
-/* ─── 알림 발송 로그·공지 ─── */
+/* ─── 알림 발송 로그·알림 보내기 ─── */
 
 export function fetchAdminNotifications(params: {
   status?: NotificationDeliveryStatus
@@ -1339,7 +1339,7 @@ export function fetchAnnouncements(params: {
     const { data, error } = await api.GET('/admin/announcements', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '공지 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '발송한 알림 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -1349,7 +1349,7 @@ export function createAnnouncement(
 ): Promise<AnnouncementView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/announcements', { body })
-    if (!data) throw toApiError(error, '공지를 발송하지 못했습니다.')
+    if (!data) throw toApiError(error, '알림을 발송하지 못했습니다.')
     return data
   })
 }
@@ -2001,10 +2001,6 @@ export function startGoogleOauth(
 
 /* ─── 공지사항 ─── */
 
-/** 게시 범위 — PLATFORM(전역) / ORG(기관). ORG는 언제나 대상이 USERS다. */
-export type NoticeScope = Schemas['NoticeScope']
-/** 노출 대상 — PUBLIC(익명까지) / USERS(로그인 사용자). */
-export type NoticeAudience = Schemas['NoticeAudience']
 export type NoticeView = Schemas['NoticeView']
 export type NoticeImageView = Schemas['NoticeImageView']
 export type NoticePage = Schemas['PageResponseNoticeView']

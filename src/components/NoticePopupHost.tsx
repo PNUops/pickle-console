@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
+import { useAuth } from '../auth/auth-context'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
 import { NoticeImage } from './NoticeImage'
 import { Button, Modal } from './ui'
@@ -45,8 +45,10 @@ function isActive(notice: NoticeView, now: number): boolean {
 }
 
 /**
- * 팝업 공지 호스트. 인증 셸(AppShell)에 달리므로 사용자 콘솔과 관리자 콘솔
- * 양쪽에 뜬다 — 장애 공지는 기관 관리자에게도 닿아야 하므로 의도한 것이다.
+ * 팝업 공지 호스트. 인증 셸(AppShell)에 달려 사용자 콘솔과 관리자 콘솔 양쪽에
+ * 뜨고 — 장애 공지는 기관 관리자에게도 닿아야 한다 — 랜딩과 인증 화면에도 같은
+ * 호스트가 선다. 인증에 기대는 것이 하나도 없어서 그럴 수 있다: 대상 판정은
+ * 서버가 호출자의 인증 상태로 하므로 익명 방문자는 공개 공지만 받는다.
  *
  * 한 번에 하나씩, 고정 먼저 최신순으로 줄을 세워 띄운다. 닫는 방법이 둘이고
  * 되돌아오는 시점이 다르다:
@@ -58,9 +60,16 @@ function isActive(notice: NoticeView, now: number): boolean {
  * 조회가 실패해도 아무 말도 하지 않는다 — 공지 하나 때문에 콘솔에 오류가 뜨지 않는다.
  */
 export function NoticePopupHost() {
+  // 세션 복원이 끝나기 전에 물으면 익명으로 물은 답이 캐시에 남는다. 인증 셸
+  // 안에서는 판정이 이미 서 있지만 랜딩과 인증 화면에서는 그렇지 않고, 복원은
+  // 로그아웃과 달리 캐시를 비우지 않는다 — 이미 로그인한 사람이 랜딩을 새 탭에
+  // 열면 익명 답이 캐시에 앉고, 콘솔로 넘어간 뒤에도 staleTime 동안 그것을 쓴다.
+  // 그래서 판정을 기다리고, 키에도 실어 두 상태의 답이 섞이지 않게 한다.
+  const { status } = useAuth()
   const notices = useQuery({
-    queryKey: ['notices', 'popup'],
+    queryKey: ['notices', 'popup', status === 'authenticated'],
     queryFn: () => fetchNotices({ page: 0, size: POPUP_SCAN_SIZE }),
+    enabled: status !== 'loading',
     staleTime: 5 * 60_000,
   })
 
@@ -120,15 +129,6 @@ export function NoticePopupHost() {
         <p className="text-sm/6 whitespace-pre-line text-neutral-700">
           {current.body}
         </p>
-        <Link
-          to={`/notices/${current.id}`}
-          /* 목록으로 떠나면 이 호스트는 통째로 언마운트된다 — 읽으러 간 것도
-             본 것이므로, 나가기 전에 이번 세션의 기록만 남긴다. */
-          onClick={() => recordSuppression(sessionStorage, NOTICE_POPUP_SEEN_KEY, current)}
-          className="inline-block text-sm font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-        >
-          공지사항 자세히 보기
-        </Link>
       </div>
     </Modal>
   )

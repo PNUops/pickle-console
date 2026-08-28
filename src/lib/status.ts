@@ -302,7 +302,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'sshgw.route': 'SSH 접속 라우팅',
   'sshgw.route_denied': 'SSH 접속 거부',
   'setting.update': '설정 변경',
-  'announcement.create': '공지 발송',
+  'announcement.create': '알림 발송',
 }
 
 /** 감사 동작 코드 → 라벨 (카탈로그에 없으면 코드 원문). */

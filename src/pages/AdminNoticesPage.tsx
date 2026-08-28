@@ -5,18 +5,15 @@ import {
   deleteAdminNotice,
   deleteAdminNoticeImage,
   fetchAdminNotices,
-  fetchOrgs,
   updateAdminNotice,
   uploadAdminNoticeImage,
   type AdminNoticeView,
-  type NoticeAudience,
   type NoticeCreateRequest,
-  type NoticeScope,
   type NoticeUpdateRequest,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { useAuth, type ManagedOrg } from '../auth/auth-context'
-import { administeredOrgs, canManageNotice, isSysTier } from '../auth/permissions'
+import { useAuth } from '../auth/auth-context'
+import { canManageNotice } from '../auth/permissions'
 import { NoticeImage } from '../components/NoticeImage'
 import {
   Alert,
@@ -30,7 +27,6 @@ import {
   Modal,
   Pagination,
   PermissionNotice,
-  Select,
   Spinner,
   Table,
   TBody,
@@ -55,16 +51,6 @@ const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 
-const SCOPE_LABELS: Record<NoticeScope, string> = {
-  PLATFORM: '전역',
-  ORG: '기관',
-}
-
-const AUDIENCE_LABELS: Record<NoticeAudience, string> = {
-  PUBLIC: '익명까지 공개',
-  USERS: '로그인 사용자',
-}
-
 /** ISO 시각 → `datetime-local` 입력값. 콘솔의 시각 표기는 KST 고정이다. */
 function toDateTimeInput(iso: string | null | undefined): string {
   return iso == null ? '' : formatDateTime(iso).replace(' ', 'T')
@@ -83,11 +69,6 @@ export function AdminNoticesPage() {
   const { user } = useAuth()
   const role = user?.role
   const canManage = !!role && canManageNotice(role)
-  // 전역 공지는 시스템 계층의 것 — 기관 관리자는 자기 기관 공지만 쓴다.
-  const canChoosePlatform = !!role && isSysTier(role)
-  // 겸직 계정은 관리 기관이 여럿이라 '자기 기관'이 하나로 정해지지 않는다. 쓸 수
-  // 있는 곳은 열람 역할만 가진 기관을 뺀 '관리자인 기관'뿐이다 (계약 v0.46.0).
-  const administered = administeredOrgs(user?.managedOrgs ?? [])
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -114,7 +95,7 @@ export function AdminNoticesPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공지사항 관리</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            콘솔과 랜딩에 게시되는 공지를 등록하고 게시 기간을 관리합니다.
+            콘솔 공지사항에 게시되는 공지를 등록하고 게시 기간을 관리합니다.
           </p>
         </div>
         <Button
@@ -150,8 +131,6 @@ export function AdminNoticesPage() {
               <THead>
                 <TR>
                   <TH>제목</TH>
-                  <TH>범위</TH>
-                  <TH>대상</TH>
                   <TH>게시 상태</TH>
                   <TH>게시 시작</TH>
                 </TR>
@@ -187,13 +166,6 @@ export function AdminNoticesPage() {
                       </span>
                     </TD>
                     <TD>
-                      {SCOPE_LABELS[notice.scope]}
-                      {notice.scope === 'ORG' && notice.orgName && (
-                        <span className="block text-xs text-neutral-500">{notice.orgName}</span>
-                      )}
-                    </TD>
-                    <TD>{AUDIENCE_LABELS[notice.audience]}</TD>
-                    <TD>
                       <Badge variant={notice.active ? 'success' : 'neutral'}>
                         {notice.active ? '게시 중' : '게시 안 함'}
                       </Badge>
@@ -222,8 +194,6 @@ export function AdminNoticesPage() {
             key={selectedId ?? 'new'}
             notice={selected}
             canManage={canManage}
-            canChoosePlatform={canChoosePlatform}
-            administered={administered}
             onCreated={(created) => {
               setCreating(false)
               setSelectedId(created.id)
@@ -241,17 +211,13 @@ export function AdminNoticesPage() {
 function NoticeDetailBody({
   notice,
   canManage,
-  canChoosePlatform,
-  administered,
   onCreated,
   onDeleted,
 }: {
   /** null이면 등록 모드. */
   notice: AdminNoticeView | null
   canManage: boolean
-  canChoosePlatform: boolean
   /** 보고 있는 사람이 관리자인 기관들 — 기관 공지를 쓸 수 있는 곳 전부. */
-  administered: ManagedOrg[]
   onCreated: (created: AdminNoticeView) => void
   onDeleted: () => void
 }) {
@@ -260,11 +226,6 @@ function NoticeDetailBody({
 
   const [title, setTitle] = useState(notice?.title ?? '')
   const [body, setBody] = useState(notice?.body ?? '')
-  const [scope, setScope] = useState<NoticeScope>(
-    notice?.scope ?? (canChoosePlatform ? 'PLATFORM' : 'ORG'),
-  )
-  const [orgId, setOrgId] = useState(notice?.orgId ?? '')
-  const [audience, setAudience] = useState<NoticeAudience>(notice?.audience ?? 'USERS')
   const [pinned, setPinned] = useState(notice?.pinned ?? false)
   const [popup, setPopup] = useState(notice?.popup ?? false)
   const [startsAt, setStartsAt] = useState(
@@ -275,34 +236,11 @@ function NoticeDetailBody({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [deleting, setDeleting] = useState(false)
 
-  // 기관 공지는 서버가 익명 공개를 거절한다 — 화면에서 같은 규칙을 먼저 세워
-  // 사용자가 422를 맞고 나서야 알게 되는 일이 없게 한다.
-  const orgScoped = scope === 'ORG'
-  const effectiveAudience: NoticeAudience = orgScoped ? 'USERS' : audience
-
-  // 기관 공지를 *새로* 쓸 때만 대상 기관을 고른다 — 이미 등록된 공지는 범위도
-  // 기관도 바뀌지 않는다. 시스템 계층은 언제나 고르고, 기관 관리자는 관리 기관이
-  // 둘 이상일 때만 고른다: 하나뿐이면 답이 하나라 서버가 알아서 채운다.
-  const needsOrgPick =
-    orgScoped && notice == null && (canChoosePlatform || administered.length > 1)
-  // 전 기관 목록은 시스템 계층만 부른다 — 기관 관리자가 고르는 후보는 자기 관리 기관이다.
-  const orgs = useQuery({
-    queryKey: ['orgs'],
-    queryFn: fetchOrgs,
-    enabled: needsOrgPick && canChoosePlatform,
-  })
-  const orgOptions = canChoosePlatform
-    ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
-    : administered.map((org) => ({ id: org.orgId, name: org.orgName }))
-  // 관리 기관이 하나뿐인 기관 관리자는 고를 것이 없으므로 그 기관이 곧 대상이다.
-  const soleOrgId =
-    !canChoosePlatform && administered.length === 1 ? administered[0].orgId : undefined
 
   /** 등록과 수정이 함께 보내는 부분 — 계약의 수정 요청이 받는 필드 전부다. */
   const editableBody = () => ({
     title: title.trim(),
     body,
-    audience: effectiveAudience,
     pinned,
     popup,
     startsAt: fromDateTimeInput(startsAt)!,
@@ -311,33 +249,13 @@ function NoticeDetailBody({
 
   const updateBody = (): NoticeUpdateRequest => editableBody()
 
-  /**
-   * 등록 본문. 게시 범위와 대상 기관은 등록에만 있다 — 계약의 수정 요청은 둘 다
-   * 받지 않으므로, 한번 정해진 범위는 바뀌지 않는다. 기관 공지에는 `orgId`가
-   * 반드시 있어야 하고(고를 수 없는 기관 관리자는 자기 기관을 싣는다) 전역
-   * 공지에는 실을 수 없다.
-   */
-  const createBody = (): NoticeCreateRequest => ({
-    ...editableBody(),
-    scope,
-    orgId: orgScoped ? ((needsOrgPick ? orgId : soleOrgId) ?? undefined) : undefined,
-  })
+  /** 등록 본문. 등록에만 있는 필드는 남아 있지 않다 — 수정과 같은 몸이다. */
+  const createBody = (): NoticeCreateRequest => editableBody()
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'notices'] })
 
-  /**
-   * 서버가 지적한 필드 중 이 폼이 실제로 그리는 것. 대상 기관은 고를 때만 뜨므로,
-   * 관리 기관이 하나뿐이라 선택기가 없는 화면에서 `orgId` 오류가 오면 붙을 자리가
-   * 없다 — 권한이 페이지를 연 뒤에 회수되면 실제로 그렇게 온다.
-   */
-  const shownFields = [
-    'title',
-    'body',
-    'scope',
-    'startsAt',
-    'endsAt',
-    ...(needsOrgPick ? ['orgId'] : []),
-  ]
+  /** 서버가 지적한 필드 중 이 폼이 실제로 그리는 것. */
+  const shownFields = ['title', 'body', 'startsAt', 'endsAt']
 
   const onMutationError = (fallback: string) => (err: unknown) => {
     const apiError = toApiError(err, fallback)
@@ -397,7 +315,6 @@ function NoticeDetailBody({
     const errors: Record<string, string> = {}
     if (!title.trim()) errors.title = '제목을 입력해 주세요.'
     if (!body.trim()) errors.body = '본문을 입력해 주세요.'
-    if (needsOrgPick && !orgId) errors.orgId = '대상 기관을 선택해 주세요.'
     if (!startsAt) errors.startsAt = '게시 시작 시각을 입력해 주세요.'
     if (startsAt && endsAt && endsAt <= startsAt) {
       errors.endsAt = '게시 종료는 시작보다 뒤여야 합니다.'
@@ -446,97 +363,17 @@ function NoticeDetailBody({
           />
         </FormField>
 
-        <FormField
-          label="게시 범위"
-          required
-          error={fieldErrors.scope}
-          description={notice ? '등록 후에는 범위를 바꿀 수 없습니다.' : undefined}
-        >
-          <Select
-            className="w-40"
-            value={scope}
-            disabled={!canManage || !canChoosePlatform || notice != null}
-            onChange={(event) => {
-              const next = event.target.value as NoticeScope
-              setScope(next)
-              // 기관 공지는 언제나 로그인 사용자 대상이다.
-              if (next === 'ORG') setAudience('USERS')
-            }}
-          >
-            {canChoosePlatform && <option value="PLATFORM">{SCOPE_LABELS.PLATFORM}</option>}
-            <option value="ORG">{SCOPE_LABELS.ORG}</option>
-          </Select>
-        </FormField>
-
-        {needsOrgPick && (
-          <FormField label="대상 기관" required error={fieldErrors.orgId}>
-            <Select
-              className="w-56"
-              value={orgId}
-              disabled={!canManage}
-              onChange={(event) => setOrgId(event.target.value)}
-            >
-              <option value="">기관 선택</option>
-              {orgOptions.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        )}
-        {orgScoped && notice != null && (
-          <p className="text-sm text-neutral-500">대상 기관 {notice.orgName ?? '-'}</p>
-        )}
-        {!canChoosePlatform && (
-          <p className="text-sm text-neutral-500">
-            기관 관리자는 자기가 관리하는 기관의 공지만 등록할 수 있습니다.
-          </p>
-        )}
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-neutral-700">노출 대상</legend>
-          <div className="flex flex-wrap gap-4">
-            {(Object.keys(AUDIENCE_LABELS) as NoticeAudience[]).map((value) => (
-              <label
-                key={value}
-                className={cn(
-                  'flex items-center gap-2 text-sm text-neutral-700',
-                  orgScoped && value === 'PUBLIC'
-                    ? 'cursor-not-allowed text-neutral-400'
-                    : 'cursor-pointer',
-                )}
-              >
-                <input
-                  type="radio"
-                  name="notice-audience"
-                  className="size-4 accent-primary-600"
-                  checked={effectiveAudience === value}
-                  disabled={!canManage || (orgScoped && value === 'PUBLIC')}
-                  onChange={() => setAudience(value)}
-                />
-                {AUDIENCE_LABELS[value]}
-              </label>
-            ))}
-          </div>
-          {orgScoped && (
-            <p className="text-xs text-neutral-500">
-              기관 공지는 해당 기관 사용자만 볼 수 있어 익명 공개를 고를 수 없습니다.
-            </p>
-          )}
-        </fieldset>
-
         <div className="grid gap-3 sm:grid-cols-2">
           <Checkbox
             label="목록 상단 고정"
-            description="공지사항 목록과 랜딩 한 줄에서 먼저 보입니다."
+            description="공지사항 목록과 대시보드에서 먼저 보입니다."
             checked={pinned}
             disabled={!canManage}
             onChange={(event) => setPinned(event.target.checked)}
           />
           <Checkbox
-            label="로그인 후 팝업"
-            description="콘솔에 들어온 사용자에게 모달로 한 번 띄웁니다."
+            label="팝업으로 표시"
+            description="콘솔·랜딩·로그인 화면에 모달로 한 번 띄웁니다. 로그인하지 않은 방문자에게도 보입니다."
             checked={popup}
             disabled={!canManage}
             onChange={(event) => setPopup(event.target.checked)}
