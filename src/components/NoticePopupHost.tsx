@@ -1,16 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
 import { NoticeImage } from './NoticeImage'
-import { Button, Modal } from './ui'
-
-/** 한 세션에 띄우는 팝업의 상한 — 넘치면 나머지는 공지사항 목록에서 읽는다. */
-const MAX_POPUPS_PER_SESSION = 3
+import { NoticePopupCard } from './NoticePopupCard'
+import { Button } from './ui'
 
 /** 팝업 후보를 찾기 위해 훑는 공개 목록의 크기(고정 먼저 최신순 첫 페이지). */
 const POPUP_SCAN_SIZE = 20
+
+/**
+ * 배치 상수. 카드 폭은 `NoticePopupCard` 의 `w-80` 과 같아야 하고, 위 여백은
+ * 랜딩의 고정 헤더(h-16)와 콘솔 헤더를 둘 다 비킬 만큼이어야 한다.
+ */
+const CARD_WIDTH = 320
+const GAP = 12
+const MARGIN = 16
+const TOP_INSET = 80
+/** 계단 한 칸. 카드 제목 줄보다 낮아야 뒤엣것의 제목이 보인다. */
+const CASCADE_STEP = 28
+/** 계단이 아무리 길어져도 카드가 이만큼은 화면 안에 남는다. */
+const MIN_VISIBLE_HEIGHT = 120
 
 /**
  * 억제 맵 읽기 — `공지 id → updatedAt`. 저장소가 막혀 있거나 값이 깨졌으면
@@ -44,16 +56,56 @@ function isActive(notice: NoticeView, now: number): boolean {
   return notice.endsAt == null || Date.parse(notice.endsAt) > now
 }
 
+/** 한 줄에 들어가는 카드 수. 좁은 화면에서는 1이 되고 둘째부터 전부 계단이 된다. */
+function cardsPerRow(viewportWidth: number): number {
+  const usable = viewportWidth - MARGIN * 2 + GAP
+  return Math.max(1, Math.floor(usable / (CARD_WIDTH + GAP)))
+}
+
+/**
+ * i 번째 카드의 자리. 한 줄을 채울 때까지는 가로로 이어 붙이고, 그 뒤로는
+ * 계단식으로 포갠다 — 줄바꿈이 아니라 겹침이다.
+ *
+ * **좌표는 뷰포트 안으로 clamp 한다.** 팝업 수에 상한이 없으므로 계단이
+ * 길어지면 오른쪽·아래로 끝없이 나가고, clamp 가 없으면 그 공지는 화면 밖에서
+ * 아무도 못 본다. clamp 에 걸린 카드들은 마지막 자리에 겹쳐 쌓이고, 맨 위를
+ * 닫으면 다음이 드러나므로 전부 도달 가능하다.
+ */
+function slotOf(
+  index: number,
+  perRow: number,
+  viewport: { width: number; height: number },
+): CSSProperties {
+  const inRow = index < perRow
+  const step = inRow ? 0 : index - perRow + 1
+  const rowLeft = MARGIN + (inRow ? index : perRow - 1) * (CARD_WIDTH + GAP)
+
+  const maxLeft = Math.max(MARGIN, viewport.width - CARD_WIDTH - MARGIN)
+  const maxTop = Math.max(0, viewport.height - TOP_INSET - MIN_VISIBLE_HEIGHT)
+
+  return {
+    left: Math.min(rowLeft + step * CASCADE_STEP, maxLeft),
+    top: Math.min(step * CASCADE_STEP, maxTop),
+  }
+}
+
+function readViewport() {
+  return { width: window.innerWidth, height: window.innerHeight }
+}
+
 /**
  * 팝업 공지 호스트. 인증 셸(AppShell)에 달려 사용자 콘솔과 관리자 콘솔 양쪽에
  * 뜨고 — 장애 공지는 기관 관리자에게도 닿아야 한다 — 랜딩과 인증 화면에도 같은
  * 호스트가 선다. 인증에 기대는 것이 하나도 없어서 그럴 수 있다: 대상 판정은
  * 서버가 호출자의 인증 상태로 하므로 익명 방문자는 공개 공지만 받는다.
  *
- * 한 번에 하나씩, 고정 먼저 최신순으로 줄을 세워 띄운다. 닫는 방법이 둘이고
- * 되돌아오는 시점이 다르다:
+ * **뜬 것은 전부 동시에 보인다.** 좌상단부터 가로로 이어 붙이고 한 줄이 차면
+ * 계단식으로 포갠다. 뒤 화면은 그대로 살아 있다 — 컨테이너가 이벤트를 받지
+ * 않고 카드만 받으므로, 공지를 읽는 동안에도 하던 일을 계속할 수 있다.
  *
- * - 그냥 닫기(X·배경·Esc) → sessionStorage. 이 세션에만 조용하고 다음 접속에 다시 뜬다.
+ * 닫는 방법이 둘이고 되돌아오는 시점이 다르다:
+ *
+ * - 그냥 닫기(X·Esc·확인) → sessionStorage. 이 세션에만 조용하고 다음 접속에 다시 뜬다.
  * - 다시 보지 않기 → localStorage. 이 브라우저에서 계속 조용하되, 공지를 고치면
  *   updatedAt이 달라져 다시 뜬다.
  *
@@ -79,7 +131,16 @@ export function NoticePopupHost() {
     ...readSuppressionMap(localStorage, NOTICE_POPUP_DISMISSED_KEY),
     ...readSuppressionMap(sessionStorage, NOTICE_POPUP_SEEN_KEY),
   }))
-  const [index, setIndex] = useState(0)
+  // 이번 화면에서 닫은 것들. 억제 저장소와 별개로 두는 것은, 저장소가 막힌
+  // 브라우저에서도 닫기가 동작해야 하기 때문이다.
+  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set())
+
+  const [viewport, setViewport] = useState(readViewport)
+  useEffect(() => {
+    const onResize = () => setViewport(readViewport())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const content = notices.data?.content
   const queue = useMemo(() => {
@@ -87,49 +148,65 @@ export function NoticePopupHost() {
     return (content ?? [])
       .filter((notice) => notice.popup && isActive(notice, now))
       .filter((notice) => suppressed[notice.id] !== notice.updatedAt)
-      .slice(0, MAX_POPUPS_PER_SESSION)
   }, [content, suppressed])
 
-  const current = queue[index]
-  if (!current) return null
+  const visible = queue.filter((notice) => !closed.has(notice.id))
+  if (visible.length === 0) return null
 
-  const advance = (storage: Storage, key: string) => {
-    recordSuppression(storage, key, current)
-    setIndex((previous) => previous + 1)
+  const dismiss = (notice: NoticeView, storage: Storage, key: string) => {
+    recordSuppression(storage, key, notice)
+    setClosed((previous) => new Set(previous).add(notice.id))
   }
 
-  const firstImage = current.images[0]
+  const perRow = cardsPerRow(viewport.width)
 
-  return (
-    <Modal
-      open
-      onClose={() => advance(sessionStorage, NOTICE_POPUP_SEEN_KEY)}
-      title={current.title}
-      /* Modal 의 max-w-md 가 클래스에 그대로 남는다 — cn 은 tailwind-merge 가
-         아니라 단순 연결이다. Tailwind 는 같은 유틸리티를 접미사 알파벳순으로
-         깔아 md 가 lg 보다 뒤에 오므로, ! 로 눌러야 lg 가 이긴다. 공지는
-         제목·본문·이미지를 한 화면에 실으므로 md 는 좁다. */
-      className="max-w-lg!"
-      footer={
-        <>
-          <Button
-            variant="ghost"
-            onClick={() => advance(localStorage, NOTICE_POPUP_DISMISSED_KEY)}
-          >
-            다시 보지 않기
-          </Button>
-          <Button onClick={() => advance(sessionStorage, NOTICE_POPUP_SEEN_KEY)}>확인</Button>
-        </>
-      }
+  return createPortal(
+    // 컨테이너는 뷰포트를 덮되 이벤트를 받지 않는다 — 이 한 줄이 「뒤를 막지
+    // 않는다」의 전부다. 받는 것은 카드뿐이라 카드 사각형 밖은 그대로 눌린다.
+    // z-40: 팝오버(z-30) 위, 모달·드로어(z-50) 아래. 공지가 떠 있어도 모달을
+    // 열 수 있고 그때 모달이 위에 온다.
+    <div
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40"
+      style={{ top: TOP_INSET }}
     >
-      <div className="space-y-4">
-        {firstImage && (
-          <NoticeImage image={firstImage} className="h-auto w-full rounded-lg" />
-        )}
-        <p className="text-sm/6 whitespace-pre-line text-neutral-700">
-          {current.body}
-        </p>
-      </div>
-    </Modal>
+      {visible.map((notice, index) => {
+        const firstImage = notice.images[0]
+        return (
+          // 뒤에 오는 카드가 위에 포개진다 — DOM 순서 그대로다. 위를 닫으면
+          // 아래가 드러나므로 앞으로 가져오는 조작이 따로 필요하지 않다.
+          <NoticePopupCard
+            key={notice.id}
+            title={notice.title}
+            onClose={() => dismiss(notice, sessionStorage, NOTICE_POPUP_SEEN_KEY)}
+            style={slotOf(index, perRow, viewport)}
+            className="pointer-events-auto absolute"
+            footer={
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => dismiss(notice, localStorage, NOTICE_POPUP_DISMISSED_KEY)}
+                >
+                  다시 보지 않기
+                </Button>
+                <Button onClick={() => dismiss(notice, sessionStorage, NOTICE_POPUP_SEEN_KEY)}>
+                  확인
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-3">
+              {firstImage && (
+                <NoticeImage
+                  image={firstImage}
+                  className="max-h-40 w-full rounded-lg object-cover"
+                />
+              )}
+              <p className="text-sm/6 whitespace-pre-line text-neutral-700">{notice.body}</p>
+            </div>
+          </NoticePopupCard>
+        )
+      })}
+    </div>,
+    document.body,
   )
 }
