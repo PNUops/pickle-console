@@ -13,11 +13,11 @@ import { AppShell, type NavSection } from './AppShell'
  * 같은 목록에 세운다 — 지금 되는 것만 세우면 이 플랫폼이 무엇을 주는 곳인지
  * 사이드바에서 읽히지 않는다. 서비스 중인 것이 위, 준비 중이 아래다.
  *
- * '컨테이너 레지스트리'만 여기서 '레지스트리'로 줄인다 — 배지까지 한 줄에 들어가지
- * 않고, 바로 위가 '컨테이너'라 문맥으로 읽힌다.
+ * 이름은 랜딩과 같은 정식 명칭을 쓴다. 준비 중 배지가 흐름에서 빠져 라벨이 사이드바
+ * 폭을 그대로 쓰므로(AppShell.tsx NAV_PLANNED_BADGE) 줄여 쓸 이유가 없다.
  *
  * 리소스 라인업은 랜딩의 쇼케이스(pages/landing/landing-data.tsx resourceTypes)와
- * 같게 유지한다 — 항목이 열리거나 늘면 그쪽도 같이 고친다(테스트가 7종을 고정 단언).
+ * 같게 유지한다 — 항목이 열리거나 늘면 그쪽도 같이 고친다(테스트가 9종을 고정 단언).
  */
 export function ConsoleLayout() {
   const scope = useScope()
@@ -34,10 +34,12 @@ export function ConsoleLayout() {
         { to: consolePaths.vms(scope), label: '가상머신', icon: navIcons.server },
         { to: consolePaths.llmKeys(scope), label: 'LLM API', icon: navIcons.chip, badge: 'Beta' },
         { label: '컨테이너', icon: navIcons.container, disabled: true },
-        { label: '레지스트리', icon: navIcons.registry, disabled: true },
+        { label: '컨테이너 레지스트리', icon: navIcons.registry, disabled: true },
         { label: '데이터베이스', icon: navIcons.database, disabled: true },
+        { label: '오브젝트 스토리지', icon: navIcons.storage, disabled: true },
         { label: 'GPU', icon: navIcons.gpu, disabled: true },
         { label: '도메인', icon: navIcons.globe, disabled: true },
+        { label: '단축 링크', icon: navIcons.link, disabled: true },
       ],
     },
     {

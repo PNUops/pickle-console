@@ -5,7 +5,7 @@ const live = resourceTypes.filter((r) => r.status === 'live')
 const planned = resourceTypes.filter((r) => r.status === 'planned')
 
 /**
- * 리소스 종류 — 서비스 중인 카드 2장과 준비 중 카드 한 줄. 히어로의 다크 블록을
+ * 리소스 종류 — 서비스 중인 카드 2장과 준비 중 카드 묶음. 히어로의 다크 블록을
  * 이어받아 "이 플랫폼이 무엇을 주는 곳인지"를 스크롤 첫 화면에서 답한다.
  * 준비 중 카드는 감쇠된 톤 + '준비 중' 배지 — 콘솔 사이드바의 회색 비활성 항목과
  * 같은 관행이고, 라인업도 사이드바와 같게 유지한다(landing-data.tsx 주석 참조).
@@ -73,7 +73,7 @@ export function ResourceShowcase() {
           ))}
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {planned.map((resource, index) => (
             <Reveal key={resource.title} delay={0.12 + index * 0.05}>
               <div className="flex h-full flex-col rounded-card border border-white/[0.07] bg-white/[0.03] p-5">

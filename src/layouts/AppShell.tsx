@@ -55,11 +55,26 @@ export interface NavSection {
 
 /**
  * 항목 오른쪽 배지가 놓이는 자리 — 폭을 고정하고 그 안에서 배지를 가운데 둔다.
- * '준비 중'과 'Beta'는 글자 수가 달라서, 오른쪽 끝만 맞추면 배지들이 한 열로
- * 읽히지 않는다. 폭을 갖는 것은 자리이고 배지는 제 크기 그대로다 — 배지 자체를
- * 늘리면 글자 옆 여백만 넓어진다.
+ * 폭을 갖는 것은 자리이고 배지는 제 크기 그대로다 — 배지 자체를 늘리면 글자 옆
+ * 여백만 넓어진다. '준비 중'은 이 자리를 쓰지 않는다(NAV_PLANNED_BADGE 참조).
  */
 const NAV_BADGE_SLOT = 'ml-auto flex w-[4.5rem] justify-center'
+
+/**
+ * 준비 중 항목의 '준비 중' 표시 — 흐름에서 빠져나와 행 오른쪽에 얹힌다.
+ *
+ * 배지를 흐름 안에 두면 자리 폭(72px)과 간격만큼 라벨 예산이 줄어 240px 사이드바
+ * 에서 82px밖에 남지 않는다. 한글은 전각이라 여덟 글자짜리 이름이 그 폭에서 두
+ * 줄로 접히고, 그래서 한동안 '컨테이너 레지스트리'를 '레지스트리'로 줄여 랜딩과
+ * 이름이 달랐다. 얹어 두면 라벨은 164px을 그대로 쓰므로 이름을 줄일 이유가 없다.
+ *
+ * 대신 긴 이름은 끝 한두 글자가 배지에 겹친다. 반투명이라 밑의 글자가 비치고,
+ * 행에 마우스를 올리면 배지가 사라져 이름이 끝까지 읽힌다 — 누를 수 없는 항목
+ * 이라 hover에 다른 쓸모가 없어 비어 있던 자리다. opacity가 0이어도 요소는 그대로
+ * 있어 포인터를 계속 받으므로 사라졌다 나타나기를 반복하지 않는다.
+ */
+const NAV_PLANNED_BADGE =
+  'absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-neutral-100/80 px-2.5 py-0.5 text-xs font-medium text-neutral-500 transition-opacity duration-150 group-hover:opacity-0'
 
 const NAV_LINK_BASE =
   'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600'
@@ -146,13 +161,14 @@ function ShellNav({
               <span
                 key={item.label}
                 aria-disabled="true"
-                className={cn(NAV_LINK_BASE, 'cursor-not-allowed text-neutral-400')}
+                className={cn(
+                  NAV_LINK_BASE,
+                  'group relative cursor-not-allowed whitespace-nowrap text-neutral-400',
+                )}
               >
                 {item.icon}
                 {item.label}
-                <span className={NAV_BADGE_SLOT}>
-                  <Badge variant="neutral">{item.badge ?? '준비 중'}</Badge>
-                </span>
+                <span className={NAV_PLANNED_BADGE}>{item.badge ?? '준비 중'}</span>
               </span>
             ) : (
               <NavLink
