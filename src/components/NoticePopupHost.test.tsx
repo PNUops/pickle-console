@@ -15,6 +15,11 @@ import {
 // jsdom에는 WebGL이 없고 three 청크 로드는 무의미하게 느리다 — 정적 목업으로 대체.
 vi.mock('../pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
 
+/** 조회가 끝나고도 아무것도 뜨지 않는다는 것을 확인하기 위한 짧은 유예. */
+function settle() {
+  return new Promise((resolve) => setTimeout(resolve, 50))
+}
+
 /** 줄을 세울 팝업 넷 — 기대 순서는 고정 먼저, 그 안에서 게시 시작 최신순. */
 function seedPopupQueue() {
   seedNotices([
@@ -162,6 +167,37 @@ describe('팝업 공지', () => {
     renderApp('/login')
 
     expect(await screen.findByRole('dialog', { name: '로그인 불가 안내' })).toBeInTheDocument()
+  })
+
+  test('회원가입 화면에도 뜬다', async () => {
+    seedNotices([makeNotice({ id: uuid(325), title: '가입 중단 안내', popup: true })])
+    renderApp('/signup')
+
+    expect(await screen.findByRole('dialog', { name: '가입 중단 안내' })).toBeInTheDocument()
+  })
+
+  test('통과만 하는 인증 화면에서는 끼어들지 않는다', async () => {
+    // 비밀번호 재설정·구글 콜백 같은 화면은 머무는 자리가 아니라 지나는 자리다.
+    // 모달은 포커스를 가두고 body 스크롤을 잠그므로 진행 중인 흐름을 막는다.
+    //
+    // 「모달이 없다」만 재면 응답이 늦어도 통과하는, 물지 않는 단언이 된다 —
+    // 호스트가 아예 안 달렸으면 조회 자체가 나가지 않으므로 그것을 함께 잰다.
+    let asked = false
+    server.use(
+      http.get('*/api/v1/notices', () => {
+        asked = true
+        return HttpResponse.json(
+          { content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 },
+          { status: 200 },
+        )
+      }),
+    )
+    renderApp('/reset-password?token=reset-token')
+
+    await screen.findByRole('heading', { name: '새 비밀번호 설정' })
+    await settle()
+    expect(asked).toBe(false)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   test('이미 로그인한 사람이 랜딩을 열면 익명으로 묻지 않는다', async () => {

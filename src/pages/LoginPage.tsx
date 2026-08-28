@@ -6,6 +6,7 @@ import { fetchSystemStatus, startGoogleOauth } from '../api/queries'
 import { ApiError, toApiError } from '../api/problem'
 import { homePathFor, useAuth, type UserProfile } from '../auth/auth-context'
 import { ContactEmail } from '../components/ContactEmail'
+import { NoticePopupHost } from '../components/NoticePopupHost'
 import { schedulePostLoginOverlay } from '../lib/storage-keys'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, FormField, Input } from '../components/ui'
@@ -210,6 +211,11 @@ export function LoginPage() {
 
   return (
     <div className="w-full">
+      {/* 장애 공지가 가장 필요한 자리는 로그인 문 앞이다. 레이아웃이 아니라 이
+          화면이 다는 것은, 구글 콜백·비밀번호 재설정처럼 통과만 하는 화면에서는
+          끼어들 이유가 없어서다. 2단계 인증 단계에도 달지 않는다 — 자격을 이미
+          낸 사람의 흐름 한가운데다. */}
+      <NoticePopupHost />
       <h1 className="text-center text-2xl font-bold text-white">로그인</h1>
       <p className="mt-2 text-center text-sm text-neutral-400">
         부산대학교 계정으로 로그인해 주세요.

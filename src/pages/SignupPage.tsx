@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { isProblem, toApiError } from '../api/problem'
 import { fetchCurrentTerms, startGoogleOauth } from '../api/queries'
+import { NoticePopupHost } from '../components/NoticePopupHost'
 import { ResendVerification } from '../components/ResendVerification'
 import { Alert, Button, Checkbox, FormField, Input } from '../components/ui'
 import { PasswordGuidance } from '../components/PasswordGuidance'
@@ -162,6 +163,9 @@ export function SignupPage() {
 
   return (
     <div className="w-full">
+      {/* 로그인 화면과 같은 이유로 여기까지만 — 가입을 마친 뒤의 안내 화면은
+          통과하는 자리라 끼어들지 않는다. */}
+      <NoticePopupHost />
       <h1 className="text-center text-2xl font-bold text-white">회원가입</h1>
       <p className="mt-2 text-center text-sm text-neutral-400">
         부산대학교 이메일(@pusan.ac.kr)로만 가입할 수 있습니다.
