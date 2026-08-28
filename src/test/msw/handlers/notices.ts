@@ -81,7 +81,11 @@ function initialNotices(): StoredNotice[] {
       title: '서비스 점검 팝업',
       body: '팝업으로 띄우는 공지는 로그인하지 않은 방문자에게도 보입니다.',
       popup: true,
+      // 아직 시작하지 않은 팝업 — 게시 창이 가시성의 절반이라는 것을 세우는
+      // 픽스처다. 이미지가 붙어 있는 것은 관리 미리보기가 게시 전에도 열려야
+      // 하기 때문이고, 그 이미지는 익명에게는 아직 없는 것과 같아야 한다.
       startsAt: FUTURE,
+      images: [noticeImage(uuid(203), 213, 'scheduled.png')],
     }),
     makeNotice({
       id: uuid(204),

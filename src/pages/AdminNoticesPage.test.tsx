@@ -12,7 +12,7 @@ import {
   sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 
 describe('공지사항 관리', () => {
   test('운영자에게도 드로어는 열리되 쓰기 액션은 사유와 함께 비활성이다', async () => {
@@ -106,11 +106,54 @@ describe('공지사항 관리', () => {
     expect(await screen.findByRole('button', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
     admin.unmount()
 
+    // **세션을 실제로 끊는다.** 앞의 refresh 핸들러는 테스트가 끝날 때까지 살아
+    // 있으므로, 그대로 두면 두 번째 렌더가 다시 기관 관리자로 복원된다 — 팝업이
+    // 뜨는 것은 맞지만 그것은 익명이라서가 아니라 로그인해서다. 그러면 이름이
+    // 말하는 것을 재지 않는 테스트가 된다.
+    server.use(
+      http.post('*/api/v1/auth/refresh', () =>
+        problemResponse({
+          type: 'about:blank',
+          title: '세션이 만료되었습니다',
+          status: 401,
+          detail: '다시 로그인해 주세요.',
+          code: 'AUTH_REFRESH_TOKEN_INVALID',
+        }),
+      ),
+    )
+
     // 종전에는 기관 관리자가 익명에게 닿는 글을 올릴 방법이 없었다 — 기관 공지의
     // 익명 공개는 422였고 전역 공지는 403이었다. 축이 하나로 합쳐지면서 체크박스
     // 하나가 그 문을 연다. 이 테스트는 그 사실을 기록해 둔다.
     renderApp('/login')
     expect(await screen.findByRole('dialog', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
+    // 여전히 로그인 화면이라는 것이 곧 세션이 없다는 뜻이다. 세션이 복원됐다면
+    // LoginPage가 역할별 홈으로 즉시 보내므로 경로가 /admin이 된다. 로그인 제목만
+    // 재면 그 리다이렉트 직전의 한 프레임에 걸려 통과한다.
+    expect(currentPath()).toBe('/login')
+  })
+
+  test('기관 관리자의 공지가 기관 관계가 전혀 없는 사용자에게 닿는다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    const admin = renderApp('/admin/notices')
+
+    await user.click(await screen.findByRole('button', { name: '공지 등록' }))
+    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    await user.type(within(drawer).getByLabelText('제목'), '실습실 이용 안내')
+    await user.type(within(drawer).getByLabelText('본문'), '기관과 무관하게 모두에게 갑니다.')
+    await user.click(within(drawer).getByRole('button', { name: '등록' }))
+
+    expect(await screen.findByRole('button', { name: '실습실 이용 안내' })).toBeInTheDocument()
+    admin.unmount()
+
+    // 읽는이는 `managedOrgs`가 비어 있고 어느 기관에도 걸리지 않은 계정이다.
+    // 종전 모델이라면 이 글은 작성자의 기관 사람에게만 갔다. 남은 경계가 인증
+    // 하나뿐이고 기관 모양이 아니라는 것을 이 테스트가 고정한다.
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/notices')
+
+    expect(await screen.findByRole('link', { name: /실습실 이용 안내/ })).toBeInTheDocument()
   })
 
   test('폼이 슬롯을 두지 않은 필드의 거절도 눈에 보인다', async () => {
@@ -188,9 +231,20 @@ describe('공지사항 관리', () => {
 
     // 만료된 공지의 이미지는 공개 경로로는 404다 — 관리자가 보려면 자격이 실려야 한다.
     await user.click(await screen.findByRole('button', { name: '지난 점검 공지' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
-    const image = await within(drawer).findByRole('img', { name: 'past.png' })
-    expect(image.getAttribute('src')).toMatch(/^blob:/)
+    const expired = await screen.findByRole('dialog', { name: '공지 상세' })
+    expect(
+      (await within(expired).findByRole('img', { name: 'past.png' })).getAttribute('src'),
+    ).toMatch(/^blob:/)
+    await user.click(within(expired).getByRole('button', { name: '닫기' }))
+
+    // 창 밖은 양쪽이다. 아직 시작하지 않은 공지가 더 중요한 쪽인데, 게시 직전에
+    // 무엇을 내보내는지 확인할 방법이 그 미리보기뿐이기 때문이다. 팝업이라
+    // 게시되면 익명에게도 보일 글이라는 점이 확인을 더 값지게 만든다.
+    await user.click(await screen.findByRole('button', { name: '서비스 점검 팝업' }))
+    const scheduled = await screen.findByRole('dialog', { name: '공지 상세' })
+    expect(
+      (await within(scheduled).findByRole('img', { name: 'scheduled.png' })).getAttribute('src'),
+    ).toMatch(/^blob:/)
   })
 
   test('서버가 크기를 이유로 413으로 거절하면 그 사유를 그대로 보여준다', async () => {
@@ -218,6 +272,23 @@ describe('공지사항 관리', () => {
     expect(
       await screen.findByText('이미지 한 장은 2 MiB까지 첨부할 수 있습니다.'),
     ).toBeInTheDocument()
+  })
+
+  test('기관 관리자가 시스템 관리자의 공지를 고친다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp('/admin/notices')
+
+    // 픽스처의 공지는 전부 '이시스템'이 쓴 것이다. 공지가 어느 기관에도 속하지
+    // 않으므로 작성자와 고치는 사람의 역할을 맞춰 볼 것이 없다 — 게이트를 통과한
+    // 사람은 모든 행에 쓴다. 종전에는 이것이 403이었다.
+    await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
+    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    await user.clear(within(drawer).getByLabelText('제목'))
+    await user.type(within(drawer).getByLabelText('제목'), '점검 일정이 바뀌었습니다')
+    await user.click(within(drawer).getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByRole('button', { name: '점검 일정이 바뀌었습니다' })).toBeInTheDocument()
   })
 
   test('삭제는 확인을 거친 뒤 목록에서 사라진다', async () => {
