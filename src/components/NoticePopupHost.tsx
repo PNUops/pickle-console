@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
+import { useAuth } from '../auth/auth-context'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
 import { NoticeImage } from './NoticeImage'
 import { Button, Modal } from './ui'
@@ -59,9 +60,16 @@ function isActive(notice: NoticeView, now: number): boolean {
  * 조회가 실패해도 아무 말도 하지 않는다 — 공지 하나 때문에 콘솔에 오류가 뜨지 않는다.
  */
 export function NoticePopupHost() {
+  // 세션 복원이 끝나기 전에 물으면 익명으로 물은 답이 캐시에 남는다. 인증 셸
+  // 안에서는 판정이 이미 서 있지만 랜딩과 인증 화면에서는 그렇지 않고, 복원은
+  // 로그아웃과 달리 캐시를 비우지 않는다 — 이미 로그인한 사람이 랜딩을 새 탭에
+  // 열면 익명 답이 캐시에 앉고, 콘솔로 넘어간 뒤에도 staleTime 동안 그것을 쓴다.
+  // 그래서 판정을 기다리고, 키에도 실어 두 상태의 답이 섞이지 않게 한다.
+  const { status } = useAuth()
   const notices = useQuery({
-    queryKey: ['notices', 'popup'],
+    queryKey: ['notices', 'popup', status === 'authenticated'],
     queryFn: () => fetchNotices({ page: 0, size: POPUP_SCAN_SIZE }),
+    enabled: status !== 'loading',
     staleTime: 5 * 60_000,
   })
 

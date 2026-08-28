@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { seedNotices } from '../test/msw/handlers/notices'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -61,10 +61,20 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
   })
 
   test('공지가 없으면 카드째 나오지 않는다', async () => {
-    seedNotices([])
+    // 카드가 없다는 단언은 답이 도착한 뒤라야 뜻이 있다 — 도착 전에 재면 빈 상태를
+    // 숨기는 조건을 지워도 통과하는, 물지 않는 테스트가 된다.
+    let answered = false
+    server.use(
+      http.get('*/api/v1/notices', ({ request }) => {
+        const size = new URL(request.url).searchParams.get('size')
+        const empty = { content: [], page: 0, size: Number(size ?? 20), totalElements: 0, totalPages: 1 }
+        if (size === '3') answered = true
+        return HttpResponse.json(empty, { status: 200 })
+      }),
+    )
     renderDashboard()
 
-    await screen.findByRole('heading', { name: '최근 알림' })
+    await waitFor(() => expect(answered).toBe(true))
     expect(screen.queryByRole('heading', { name: '공지사항' })).not.toBeInTheDocument()
   })
 

@@ -164,6 +164,27 @@ describe('팝업 공지', () => {
     expect(await screen.findByRole('dialog', { name: '로그인 불가 안내' })).toBeInTheDocument()
   })
 
+  test('이미 로그인한 사람이 랜딩을 열면 익명으로 묻지 않는다', async () => {
+    // 랜딩과 인증 화면은 인증 셸 밖이라 세션 복원이 아직 끝나지 않은 채 마운트된다.
+    // 복원은 로그인과 달리 캐시를 비우지 않으므로, 여기서 익명으로 물으면 그 답이
+    // 콘솔의 팝업까지 staleTime 동안 조용하게 만든다. 로그인해야 보이는 공지가
+    // 랜딩에서 뜬다는 것은 복원을 기다렸다는 뜻이다 — 익명이면 서버가 걸러 낸다.
+    seedNotices([
+      makeNotice({
+        id: uuid(324),
+        title: '로그인 사용자 전용 팝업',
+        audience: 'USERS',
+        popup: true,
+      }),
+    ])
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/')
+
+    expect(
+      await screen.findByRole('dialog', { name: '로그인 사용자 전용 팝업' }, { timeout: 15_000 }),
+    ).toBeInTheDocument()
+  })
+
   test('본문의 태그는 마크업이 아니라 글자로 나온다', async () => {
     // 서버는 본문을 손대지 않고 저장한다(그쪽이 맞다). 그래서 이 화면이 본문을
     // 마크업으로 그리는 순간 기관 관리자가 자기 기관 사람들에게 저장형 XSS를

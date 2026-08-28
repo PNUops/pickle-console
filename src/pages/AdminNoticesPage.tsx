@@ -114,7 +114,7 @@ export function AdminNoticesPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공지사항 관리</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            콘솔과 랜딩에 게시되는 공지를 등록하고 게시 기간을 관리합니다.
+            콘솔 공지사항에 게시되는 공지를 등록하고 게시 기간을 관리합니다.
           </p>
         </div>
         <Button
@@ -529,14 +529,14 @@ function NoticeDetailBody({
         <div className="grid gap-3 sm:grid-cols-2">
           <Checkbox
             label="목록 상단 고정"
-            description="공지사항 목록과 랜딩 한 줄에서 먼저 보입니다."
+            description="공지사항 목록과 대시보드에서 먼저 보입니다."
             checked={pinned}
             disabled={!canManage}
             onChange={(event) => setPinned(event.target.checked)}
           />
           <Checkbox
-            label="로그인 후 팝업"
-            description="콘솔에 들어온 사용자에게 모달로 한 번 띄웁니다."
+            label="팝업으로 표시"
+            description="콘솔에서 모달로 한 번 띄웁니다. 익명까지 공개한 공지는 랜딩·로그인 화면에도 뜹니다."
             checked={popup}
             disabled={!canManage}
             onChange={(event) => setPopup(event.target.checked)}
