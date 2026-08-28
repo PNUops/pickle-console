@@ -17,9 +17,12 @@ export function requestKind(type: string): RequestKindModule | undefined {
   return REQUEST_KINDS.find((kind) => kind.type === type)
 }
 
-/** 종류 선택 화면 하단 안내 — 종류가 준비되면 여기서 지워진다. */
+/**
+ * 종류 선택 화면 하단 안내 — 종류가 준비되면 여기서 지워진다.
+ * 준비 중 라인업은 사이드바(layouts/ConsoleLayout.tsx)·랜딩 쇼케이스와 같아야 한다.
+ */
 export const KIND_PICKER_FOOTNOTE =
-  '컨테이너·컨테이너 레지스트리·데이터베이스·GPU·도메인은 준비 중입니다.'
+  '컨테이너, 컨테이너 레지스트리, 데이터베이스, 오브젝트 스토리지, GPU, 도메인, 단축 링크는 준비 중입니다.'
 
 /**
  * 신청 표의 종류별 요약 열 제목 — 승인 대기 큐와 내 신청 목록이 함께 쓴다.

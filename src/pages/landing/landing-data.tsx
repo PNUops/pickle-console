@@ -122,6 +122,13 @@ export const icons = {
       <path d="M6 17.5v3M18 17.5v3" />
     </>)
   ),
+  storage: (
+    icon(<>
+      <rect x="2.5" y="3.5" width="19" height="5" rx="1.5" />
+      <path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10" />
+      <path d="M10 12.5h4" />
+    </>)
+  ),
 } satisfies Record<string, ReactNode>
 
 /* ─── 리소스 종류 (서비스 중 + 준비 중) ─── */
@@ -137,9 +144,8 @@ export interface ResourceType {
 
 /**
  * 라인업은 콘솔 사이드바(layouts/ConsoleLayout.tsx)와 같게 유지한다 — 사이드바의
- * 준비 중 항목이 바뀌면 여기도 같이 바뀐다(ResourceShowcase.test.tsx가 7종을 고정
- * 단언한다). 사이드바는 폭 때문에 '컨테이너 레지스트리'를 '레지스트리'로 줄이지만
- * 여기는 정식 명칭을 쓴다.
+ * 준비 중 항목이 바뀌면 여기도 같이 바뀐다(ResourceShowcase.test.tsx가 9종을 고정
+ * 단언한다). 이름도 양쪽이 같다.
  */
 export const resourceTypes: ResourceType[] = [
   {
@@ -162,8 +168,10 @@ export const resourceTypes: ResourceType[] = [
   { icon: 'container', title: '컨테이너', status: 'planned' },
   { icon: 'registry', title: '컨테이너 레지스트리', status: 'planned' },
   { icon: 'database', title: '데이터베이스', status: 'planned' },
+  { icon: 'storage', title: '오브젝트 스토리지', status: 'planned' },
   { icon: 'gpu', title: 'GPU', status: 'planned' },
   { icon: 'globe', title: '도메인', status: 'planned' },
+  { icon: 'link', title: '단축 링크', status: 'planned' },
 ]
 
 /* ─── 이용 절차 (신청 → 검토 → 승인 → 사용) ─── */

@@ -58,11 +58,20 @@ describe('사이드바 리소스 목록', () => {
       'href',
       '/console/vms',
     )
-    for (const label of ['컨테이너', '레지스트리', '데이터베이스', 'GPU', '도메인']) {
+    const planned = [
+      '컨테이너',
+      '컨테이너 레지스트리',
+      '데이터베이스',
+      '오브젝트 스토리지',
+      'GPU',
+      '도메인',
+      '단축 링크',
+    ]
+    for (const label of planned) {
       expect(within(nav).queryByRole('link', { name: label })).not.toBeInTheDocument()
       expect(within(nav).getByText(label)).toHaveAttribute('aria-disabled', 'true')
     }
-    expect(within(nav).getAllByText('준비 중')).toHaveLength(5)
+    expect(within(nav).getAllByText('준비 중')).toHaveLength(7)
   })
 
   test('LLM API는 열려 있되 Beta 배지를 단다', async () => {

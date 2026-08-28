@@ -99,6 +99,19 @@ export const navIcons = {
       <path d="M6 17.5v3M18 17.5v3" />
     </>,
   ),
+  storage: icon(
+    <>
+      <rect x="2.5" y="3.5" width="19" height="5" rx="1.5" />
+      <path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10" />
+      <path d="M10 12.5h4" />
+    </>,
+  ),
+  link: icon(
+    <>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </>,
+  ),
   globe: icon(
     <>
       <circle cx="12" cy="12" r="9" />
