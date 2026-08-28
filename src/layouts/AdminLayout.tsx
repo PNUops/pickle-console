@@ -30,7 +30,7 @@ export function AdminLayout() {
     {
       heading: '소통',
       items: [
-        { to: '/admin/announcements', label: '공지 보내기' },
+        { to: '/admin/announcements', label: '알림 보내기' },
         { to: '/admin/notices', label: '공지사항 관리' },
         // 감사 로그는 기관에서 행위할 수 있는 역할만 — ORG_VIEWER는 조회 화면
         // 중 유일하게 제외된다 (로그인 IP는 운영 데이터가 아니라 증거다).

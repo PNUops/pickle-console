@@ -46,13 +46,13 @@ describe('알림 발송 이력', () => {
   })
 })
 
-describe('공지 보내기', () => {
+describe('알림 보내기', () => {
   test('ORG_ADMIN에게는 전체 대상이 없고 관리 기관 워크스페이스만 고를 수 있다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin/announcements')
 
-    await screen.findByRole('heading', { name: '공지 보내기' })
+    await screen.findByRole('heading', { name: '알림 보내기' })
     expect(screen.queryByRole('radio', { name: '전체' })).not.toBeInTheDocument()
     // 관리 기관이 하나뿐이므로 대상은 고를 것 없이 그 기관이고, 라디오가 이름을 말한다.
     expect(
@@ -84,11 +84,11 @@ describe('공지 보내기', () => {
     )
     renderApp('/admin/announcements')
 
-    await screen.findByRole('heading', { name: '공지 보내기' })
+    await screen.findByRole('heading', { name: '알림 보내기' })
     await user.type(screen.getByLabelText(/제목/), '한도 초과 테스트')
     await user.type(screen.getByLabelText(/내용/), '본문')
-    await user.click(screen.getByRole('button', { name: '공지 발송' }))
-    const dialog = await screen.findByRole('dialog', { name: '공지 발송 확인' })
+    await user.click(screen.getByRole('button', { name: '알림 발송' }))
+    const dialog = await screen.findByRole('dialog', { name: '알림 발송 확인' })
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
 
     expect(
@@ -96,24 +96,24 @@ describe('공지 보내기', () => {
     ).toBeInTheDocument()
   })
 
-  test('SYS_ADMIN 전체 공지는 확인 모달을 거쳐 발송되고 최근 목록에 나타난다', async () => {
+  test('SYS_ADMIN 전체 알림은 확인 모달을 거쳐 발송되고 최근 목록에 나타난다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/announcements')
 
-    await screen.findByRole('heading', { name: '공지 보내기' })
+    await screen.findByRole('heading', { name: '알림 보내기' })
     await user.type(screen.getByLabelText(/제목/), '8월 서비스 업데이트')
     await user.type(screen.getByLabelText(/내용/), '새 기능이 추가되었습니다.')
     // 기본 대상이 '전체'다.
     expect(screen.getByRole('radio', { name: '전체' })).toBeChecked()
-    await user.click(screen.getByRole('button', { name: '공지 발송' }))
+    await user.click(screen.getByRole('button', { name: '알림 발송' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '공지 발송 확인' })
+    const dialog = await screen.findByRole('dialog', { name: '알림 발송 확인' })
     expect(within(dialog).getByText('전체 사용자')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
 
-    expect(await screen.findByText(/공지를 발송했습니다\. 480명에게/)).toBeInTheDocument()
-    // 폼이 초기화되고 최근 공지에 추가된다.
+    expect(await screen.findByText(/알림을 발송했습니다\. 480명에게/)).toBeInTheDocument()
+    // 폼이 초기화되고 최근 발송 목록에 추가된다.
     await waitFor(() =>
       expect(screen.getByText('8월 서비스 업데이트')).toBeInTheDocument(),
     )
