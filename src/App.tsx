@@ -105,9 +105,6 @@ function App() {
       </Route>
       <Route element={<PublicLayout />}>
         <Route path="terms/:docType" element={<TermsPage />} />
-        {/* 공지는 로그인 없이 열려야 한다 — 장애 공지는 주소째로 공유된다. */}
-        <Route path="notices" element={<NoticesPage />} />
-        <Route path="notices/:noticeId" element={<NoticeDetailPage />} />
         {/* 사용자 문서 — 본문은 준비 중이고, 사이드바 링크가 가리킬 경로만 먼저 둔다. */}
         <Route path="docs" element={<DocsPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -140,6 +137,11 @@ function App() {
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
+        {/* 공지는 주소째로 공유되므로 라우트여야 한다. 그렇다고 콘솔 밖일 이유는
+            없다 — 로그인한 사람이 읽는 자리이므로 콘솔 껍데기 안에 둔다.
+            워크스페이스와 무관하므로 범위 붙은 짝은 만들지 않는다. */}
+        <Route path="notices" element={<NoticesPage />} />
+        <Route path="notices/:noticeId" element={<NoticeDetailPage />} />
         {/* Workspace-scoped views of the same lists. Declared after the fixed
             paths above so `/console/vms` is never read as a workspace id. */}
         <Route path=":workspaceId" element={<ConsoleDashboardPage />} />

@@ -1,46 +1,44 @@
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotice } from '../api/queries'
-import { useAuth } from '../auth/auth-context'
 import { NoticeImage } from '../components/NoticeImage'
 import { Alert, Badge, Card, Spinner } from '../components/ui'
 import { formatDateTime } from '../lib/format'
+import { consolePaths } from '../lib/paths'
 
 /**
- * 공지 상세 — 공개 라우트. 본문은 서식 없는 평문이므로 마크다운을 거치지 않고
- * 줄바꿈만 살려 그린다(whitespace-pre-line).
+ * 공지 상세. 본문은 서식 없는 평문이므로 마크다운을 거치지 않고 줄바꿈만 살려
+ * 그린다(whitespace-pre-line).
  */
 export function NoticeDetailPage() {
   const { noticeId } = useParams()
-  // 목록과 같은 이유로 세션 복원을 기다린다 — 기관 공지는 로그인해야 보인다.
-  const { status } = useAuth()
   const notice = useQuery({
     queryKey: ['notices', 'detail', noticeId],
     queryFn: () => fetchNotice(noticeId!),
-    enabled: noticeId != null && status !== 'loading',
+    enabled: noticeId != null,
   })
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
+    <div className="space-y-6">
       <Link
-        to="/notices"
+        to={consolePaths.notices}
         className="text-sm font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
       >
         ← 공지사항 목록
       </Link>
 
-      {(notice.isPending || status === 'loading') && (
+      {notice.isPending && (
         <div className="flex justify-center py-12">
           <Spinner label="공지사항 불러오는 중" />
         </div>
       )}
       {notice.isError && (
-        <Alert variant="danger" className="mt-6">
+        <Alert variant="danger">
           {notice.error.message}
         </Alert>
       )}
       {notice.isSuccess && (
-        <article className="mt-4">
+        <article>
           <header className="border-b border-neutral-200 pb-4">
             <div className="flex flex-wrap items-center gap-2">
               {notice.data.pinned && <Badge variant="warning">고정</Badge>}

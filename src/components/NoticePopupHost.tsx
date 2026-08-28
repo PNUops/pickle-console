@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
@@ -120,15 +119,6 @@ export function NoticePopupHost() {
         <p className="text-sm/6 whitespace-pre-line text-neutral-700">
           {current.body}
         </p>
-        <Link
-          to={`/notices/${current.id}`}
-          /* 목록으로 떠나면 이 호스트는 통째로 언마운트된다 — 읽으러 간 것도
-             본 것이므로, 나가기 전에 이번 세션의 기록만 남긴다. */
-          onClick={() => recordSuppression(sessionStorage, NOTICE_POPUP_SEEN_KEY, current)}
-          className="inline-block text-sm font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-        >
-          공지사항 자세히 보기
-        </Link>
       </div>
     </Modal>
   )

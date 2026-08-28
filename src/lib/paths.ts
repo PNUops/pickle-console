@@ -35,6 +35,8 @@ export const consolePaths = {
   account: '/console/account',
   notifications: '/console/notifications',
   activity: '/console/activity',
+  notices: '/console/notices',
+  noticeDetail: (noticeId: string) => `/console/notices/${noticeId}`,
 } as const
 
 /** The listings that exist under a workspace as well as unscoped. */
