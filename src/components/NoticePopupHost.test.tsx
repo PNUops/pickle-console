@@ -20,7 +20,7 @@ function settle() {
   return new Promise((resolve) => setTimeout(resolve, 50))
 }
 
-/** 줄을 세울 팝업 넷 — 기대 순서는 고정 먼저, 그 안에서 게시 시작 최신순. */
+/** 팝업 넷. 목록이 고정 먼저 최신순으로 주므로 화면에는 그 반대로 놓인다. */
 function seedPopupQueue() {
   seedNotices([
     makeNotice({
@@ -70,17 +70,18 @@ describe('팝업 공지', () => {
     localStorage.removeItem(NOTICE_POPUP_DISMISSED_KEY)
   })
 
-  test('팝업이 전부 동시에 뜨고, 고정 먼저 최신순으로 놓인다', async () => {
+  test('팝업이 전부 동시에 뜨고, 오래된 것부터 놓인다', async () => {
     seedPopupQueue()
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     await screen.findByRole('dialog', { name: '고정 팝업' })
-    // 상한이 없으므로 넷째까지 전부 선다. 순서는 서버가 정하고(고정 먼저,
-    // 그 안에서 게시 시작 최신순) 호스트는 받은 차례대로 놓는다.
+    // 상한이 없으므로 넷째까지 전부 선다. 목록은 고정 먼저 최신순으로 오는데
+    // 호스트가 그것을 뒤집으므로, 고정 아닌 것들이 오래된 순으로 앞에 놓이고
+    // 고정 공지가 마지막 자리를 받는다 — 마지막이 곧 맨 위에 포개지는 자리다.
     expect(
       screen.getAllByRole('dialog').map((dialog) => dialog.getAttribute('aria-label')),
-    ).toEqual(['고정 팝업', '최신 팝업', '중간 팝업', '넷째 팝업'])
+    ).toEqual(['넷째 팝업', '중간 팝업', '최신 팝업', '고정 팝업'])
   })
 
   test('하나를 닫아도 나머지는 그대로 남는다', async () => {
@@ -97,7 +98,7 @@ describe('팝업 공지', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(3)
   })
 
-  test('한 줄을 채우면 계단식으로 포개고, 좌표는 화면 안에 머문다', async () => {
+  test('줄이 차면 다음 줄로 접고 그 줄을 들여쓴다, 좌표는 화면 안에 머문다', async () => {
     seedPopupQueue()
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
@@ -111,11 +112,13 @@ describe('팝업 공지', () => {
       }))
 
     // jsdom 기본 폭 1024에서는 한 줄에 셋이 들어간다. 셋은 같은 높이에
-    // 가로로 이어 붙고, 넷째부터 아래로 어긋나며 포개진다.
+    // 가로로 이어 붙고, 넷째는 다음 줄로 접히며 그 줄이 오른쪽으로 들여쓰인다.
     expect(slots.slice(0, 3).map((slot) => slot.top)).toEqual([0, 0, 0])
     expect(slots[0].left).toBeLessThan(slots[1].left)
     expect(slots[1].left).toBeLessThan(slots[2].left)
     expect(slots[3].top).toBeGreaterThan(0)
+    // 다음 줄은 첫 줄보다 들여쓰인다. 이게 빠지면 그냥 격자다.
+    expect(slots[3].left).toBeGreaterThan(slots[0].left)
 
     // clamp 가 빠지면 넷째가 오른쪽 밖으로 나가 아무도 못 본다.
     const maxLeft = window.innerWidth - 320 - 16
