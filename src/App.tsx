@@ -137,8 +137,8 @@ function App() {
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
-        {/* 공지는 주소째로 공유되므로 라우트여야 한다. 그렇다고 콘솔 밖일 이유는
-            없다 — 로그인한 사람이 읽는 자리이므로 콘솔 껍데기 안에 둔다.
+        {/* 목록과 상세는 한 쌍의 라우트이고, 대시보드 카드와 사이드바가 이 주소를
+            가리킨다. 읽는 사람이 로그인한 사람이므로 콘솔 껍데기 안이다.
             워크스페이스와 무관하므로 범위 붙은 짝은 만들지 않는다. */}
         <Route path="notices" element={<NoticesPage />} />
         <Route path="notices/:noticeId" element={<NoticeDetailPage />} />
