@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
@@ -12,17 +20,18 @@ import { Button } from './ui'
 const POPUP_SCAN_SIZE = 20
 
 /**
- * 배치 상수. `CARD_WIDTH` 는 `NoticePopupCard` 의 `w-80` 과, `ROW_STEP` 은 그
- * 카드의 `max-h` 와 짝이다(줄 간격이 카드보다 좁으면 위 줄 버튼이 가린다).
- * `TOP_INSET` 은 랜딩과 콘솔의 헤더(h-16)를 비킨다.
+ * 배치 상수. `CARD_WIDTH` 는 `NoticePopupCard` 의 `w-80` 과 같아야 하고,
+ * `TOP_INSET` 은 랜딩과 콘솔의 헤더(h-16)를 비킨다. 줄 높이는 상수가 아니라
+ * 그 줄에서 가장 높은 카드를 재서 정한다.
  */
 const CARD_WIDTH = 320
 const GAP = 12
 const MARGIN = 16
 const TOP_INSET = 80
 const CASCADE_STEP = 28
-const ROW_STEP = 300
 const MIN_VISIBLE_HEIGHT = 120
+/** 아직 재기 전 한 프레임 동안 쓰는 줄 높이. */
+const ASSUMED_CARD_HEIGHT = 200
 
 /**
  * 억제 맵 읽기 — `공지 id → updatedAt`. 저장소가 막혀 있거나 값이 깨졌으면
@@ -63,7 +72,7 @@ function cardsPerRow(viewportWidth: number): number {
 }
 
 /**
- * i 번째 카드의 자리. 줄을 채우면 다음 줄로 접고, 줄마다 오른쪽으로 들여쓴다.
+ * i 번째 자리. 줄을 채우면 다음 줄로 접고, 줄마다 오른쪽으로 들여쓴다.
  *
  * ```
  *   1  2  3  4
@@ -71,14 +80,16 @@ function cardsPerRow(viewportWidth: number): number {
  *       9 10 11 12
  * ```
  *
- * 팝업 수에 상한이 없으므로 좌표를 뷰포트 안으로 clamp 한다. 넘치는 줄은
- * 마지막 줄 자리에 겹쳐 쌓이고, 맨 위를 닫으면 다음이 드러난다.
+ * 줄의 세로 위치는 `rowTops` 가 준다 — 실제로 잰 카드 높이에서 나온 값이라
+ * 짧은 카드만 있는 줄은 바짝 붙는다. 팝업 수에 상한이 없으므로 좌표는 뷰포트
+ * 안으로 clamp 한다.
  */
 function slotOf(
   index: number,
   perRow: number,
+  rowTops: readonly number[],
   viewport: { width: number; height: number },
-): CSSProperties {
+): { left: number; top: number } {
   const row = Math.floor(index / perRow)
   const column = index % perRow
 
@@ -87,7 +98,7 @@ function slotOf(
 
   return {
     left: Math.min(MARGIN + column * (CARD_WIDTH + GAP) + row * CASCADE_STEP, maxLeft),
-    top: Math.min(row * ROW_STEP, maxTop),
+    top: Math.min(rowTops[row] ?? row * (ASSUMED_CARD_HEIGHT + GAP), maxTop),
   }
 }
 
@@ -126,6 +137,45 @@ export function NoticePopupHost() {
   // 저장소와 별개로 둔다 — 저장소가 막힌 브라우저에서도 닫기는 동작해야 한다.
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set())
 
+  const cardRefs = useRef(new Map<string, HTMLDivElement>())
+  const [rowTops, setRowTops] = useState<readonly number[]>([])
+  // 사용자가 끌어 옮긴 만큼. 자리에 더해진다. 끌기 중에는 리렌더보다 자주
+  // 읽어야 해서 ref 로도 들고 있는다.
+  const [moved, setMoved] = useState<Record<string, { x: number; y: number }>>({})
+  const movedRef = useRef(moved)
+  movedRef.current = moved
+  // 마지막으로 만진 카드가 위로 온다. 끌어서 다른 카드 밑으로 들어가면
+  // 내려놓고 나서 손댈 수 없다.
+  const [raised, setRaised] = useState<Record<string, number>>({})
+  const raiseCounter = useRef(0)
+
+  const startDrag = useCallback(
+    (id: string) => (event: PointerEvent<HTMLDivElement>) => {
+      const origin = { x: event.clientX, y: event.clientY }
+      setRaised((previous) => {
+        raiseCounter.current += 1
+        return { ...previous, [id]: raiseCounter.current }
+      })
+      const base = movedRef.current[id] ?? { x: 0, y: 0 }
+      const onMove = (moveEvent: globalThis.PointerEvent) => {
+        setMoved((previous) => ({
+          ...previous,
+          [id]: {
+            x: base.x + moveEvent.clientX - origin.x,
+            y: base.y + moveEvent.clientY - origin.y,
+          },
+        }))
+      }
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+    },
+    [],
+  )
+
   const [viewport, setViewport] = useState(readViewport)
   useEffect(() => {
     const onResize = () => setViewport(readViewport())
@@ -143,15 +193,39 @@ export function NoticePopupHost() {
 
   // 목록은 고정 먼저 최신순이다. 뒤집어 놓아 왼쪽 위가 가장 오래된 것이 되고,
   // 뒤에 오는 것이 위에 포개지므로 최신과 고정 공지가 맨 위에 온다.
-  const visible = queue.filter((notice) => !closed.has(notice.id)).reverse()
+  const ordered = useMemo(() => queue.slice().reverse(), [queue])
+  const perRow = cardsPerRow(viewport.width)
+
+  // 자리는 닫힌 것을 뺀 목록이 아니라 `ordered` 의 색인으로 정한다. 남은
+  // 카드를 당기면 사용자가 방금 읽던 카드가 손 밑에서 움직인다.
+  useLayoutEffect(() => {
+    const tops: number[] = []
+    let y = 0
+    for (let row = 0; row * perRow < ordered.length; row += 1) {
+      tops.push(y)
+      let tallest = 0
+      for (let column = 0; column < perRow; column += 1) {
+        const notice = ordered[row * perRow + column]
+        const element = notice && cardRefs.current.get(notice.id)
+        if (element) tallest = Math.max(tallest, element.offsetHeight)
+      }
+      y += (tallest || ASSUMED_CARD_HEIGHT) + GAP
+    }
+    setRowTops((previous) =>
+      previous.length === tops.length && previous.every((value, i) => value === tops[i])
+        ? previous
+        : tops,
+    )
+  }, [ordered, perRow])
+
+  const slotIndex = new Map(ordered.map((notice, index) => [notice.id, index]))
+  const visible = ordered.filter((notice) => !closed.has(notice.id))
   if (visible.length === 0) return null
 
   const dismiss = (notice: NoticeView, storage: Storage, key: string) => {
     recordSuppression(storage, key, notice)
     setClosed((previous) => new Set(previous).add(notice.id))
   }
-
-  const perRow = cardsPerRow(viewport.width)
 
   return createPortal(
     // pointer-events-none 이 「뒤를 막지 않는다」의 전부다 — 받는 것은 카드뿐.
@@ -160,14 +234,25 @@ export function NoticePopupHost() {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40"
       style={{ top: TOP_INSET }}
     >
-      {visible.map((notice, index) => {
+      {visible.map((notice) => {
         const firstImage = notice.images[0]
+        const slot = slotOf(slotIndex.get(notice.id) ?? 0, perRow, rowTops, viewport)
+        const offset = moved[notice.id]
         return (
           <NoticePopupCard
             key={notice.id}
+            ref={(element) => {
+              if (element) cardRefs.current.set(notice.id, element)
+              else cardRefs.current.delete(notice.id)
+            }}
             title={notice.title}
             onClose={() => dismiss(notice, sessionStorage, NOTICE_POPUP_SEEN_KEY)}
-            style={slotOf(index, perRow, viewport)}
+            onHandlePointerDown={startDrag(notice.id)}
+            style={{
+              left: slot.left + (offset?.x ?? 0),
+              top: slot.top + (offset?.y ?? 0),
+              zIndex: raised[notice.id],
+            }}
             className="pointer-events-auto absolute"
             footer={
               <>
