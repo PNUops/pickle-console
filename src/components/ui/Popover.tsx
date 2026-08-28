@@ -23,7 +23,8 @@ export function PopoverPanel({
       role={role}
       aria-label={ariaLabel}
       className={cn(
-        // z-30: 페이지 콘텐츠 위, 모바일 드로어/모달(z-50)·토스트(z-60) 아래
+        // z-30: 페이지 콘텐츠 위, 공지 팝업(z-40)·모바일 드로어/모달(z-50)·
+        // 토스트(z-60) 아래
         'absolute z-30 mt-1 rounded-lg border border-neutral-200 bg-white shadow-overlay',
         align === 'end' ? 'right-0' : 'left-0',
         className,

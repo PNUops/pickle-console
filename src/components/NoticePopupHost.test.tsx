@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -70,23 +70,72 @@ describe('팝업 공지', () => {
     localStorage.removeItem(NOTICE_POPUP_DISMISSED_KEY)
   })
 
-  test('고정 먼저 최신순으로 하나씩 띄우고, 한 세션에 세 개까지만 보여준다', async () => {
-    const user = userEvent.setup()
+  test('팝업이 전부 동시에 뜨고, 고정 먼저 최신순으로 놓인다', async () => {
     seedPopupQueue()
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/console')
 
     await screen.findByRole('dialog', { name: '고정 팝업' })
-    await user.click(screen.getByRole('button', { name: '확인' }))
+    // 상한이 없으므로 넷째까지 전부 선다. 순서는 서버가 정하고(고정 먼저,
+    // 그 안에서 게시 시작 최신순) 호스트는 받은 차례대로 놓는다.
+    expect(
+      screen.getAllByRole('dialog').map((dialog) => dialog.getAttribute('aria-label')),
+    ).toEqual(['고정 팝업', '최신 팝업', '중간 팝업', '넷째 팝업'])
+  })
 
-    await screen.findByRole('dialog', { name: '최신 팝업' })
-    await user.click(screen.getByRole('button', { name: '확인' }))
+  test('하나를 닫아도 나머지는 그대로 남는다', async () => {
+    const user = userEvent.setup()
+    seedPopupQueue()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
 
-    await screen.findByRole('dialog', { name: '중간 팝업' })
-    await user.click(screen.getByRole('button', { name: '확인' }))
+    const pinned = await screen.findByRole('dialog', { name: '고정 팝업' })
+    await user.click(within(pinned).getByRole('button', { name: '확인' }))
 
-    // 넷째는 상한에 걸려 이 세션에서는 뜨지 않는다.
-    expect(screen.queryByRole('dialog', { name: '넷째 팝업' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '고정 팝업' })).not.toBeInTheDocument()
+    // 순차 표시로 되돌아가면 여기서 운다 — 그때는 남는 것이 하나뿐이다.
+    expect(screen.getAllByRole('dialog')).toHaveLength(3)
+  })
+
+  test('한 줄을 채우면 계단식으로 포개고, 좌표는 화면 안에 머문다', async () => {
+    seedPopupQueue()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    await screen.findByRole('dialog', { name: '고정 팝업' })
+    const slots = screen
+      .getAllByRole('dialog')
+      .map((dialog) => ({
+        left: Number.parseInt((dialog as HTMLElement).style.left, 10),
+        top: Number.parseInt((dialog as HTMLElement).style.top, 10),
+      }))
+
+    // jsdom 기본 폭 1024에서는 한 줄에 셋이 들어간다. 셋은 같은 높이에
+    // 가로로 이어 붙고, 넷째부터 아래로 어긋나며 포개진다.
+    expect(slots.slice(0, 3).map((slot) => slot.top)).toEqual([0, 0, 0])
+    expect(slots[0].left).toBeLessThan(slots[1].left)
+    expect(slots[1].left).toBeLessThan(slots[2].left)
+    expect(slots[3].top).toBeGreaterThan(0)
+
+    // clamp 가 빠지면 넷째가 오른쪽 밖으로 나가 아무도 못 본다.
+    const maxLeft = window.innerWidth - 320 - 16
+    for (const slot of slots) expect(slot.left).toBeLessThanOrEqual(maxLeft)
+  })
+
+  test('모달이 아니다 — 뒤를 덮지도 잠그지도 않는다', async () => {
+    seedPopupQueue()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    const pinned = await screen.findByRole('dialog', { name: '고정 팝업' })
+
+    // jsdom 에는 레이아웃이 없어 「뒤 버튼이 실제로 눌리는가」는 잴 수 없다 —
+    // 오버레이가 있어도 클릭은 통과한다. 그래서 차단을 만드는 것들이 없다는
+    // 것을 직접 잰다. 셋 중 하나라도 되살아나면 뒤가 다시 막힌다.
+    expect(document.querySelector('[aria-modal="true"]')).toBeNull()
+    expect(document.body.style.overflow).not.toBe('hidden')
+    expect(pinned.parentElement).toHaveClass('pointer-events-none')
+    expect(pinned).toHaveClass('pointer-events-auto')
   })
 
   test('그냥 닫으면 이번 세션에만 기록한다', async () => {
