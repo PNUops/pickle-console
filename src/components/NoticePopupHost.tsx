@@ -12,16 +12,16 @@ import { Button } from './ui'
 const POPUP_SCAN_SIZE = 20
 
 /**
- * 배치 상수. 카드 폭은 `NoticePopupCard` 의 `w-80` 과 같아야 하고, 위 여백은
- * 랜딩의 고정 헤더(h-16)와 콘솔 헤더를 둘 다 비킬 만큼이어야 한다.
+ * 배치 상수. `CARD_WIDTH` 는 `NoticePopupCard` 의 `w-80` 과, `ROW_STEP` 은 그
+ * 카드의 `max-h` 와 짝이다(줄 간격이 카드보다 좁으면 위 줄 버튼이 가린다).
+ * `TOP_INSET` 은 랜딩과 콘솔의 헤더(h-16)를 비킨다.
  */
 const CARD_WIDTH = 320
 const GAP = 12
 const MARGIN = 16
 const TOP_INSET = 80
-/** 계단 한 칸. 카드 제목 줄보다 낮아야 뒤엣것의 제목이 보인다. */
 const CASCADE_STEP = 28
-/** 계단이 아무리 길어져도 카드가 이만큼은 화면 안에 남는다. */
+const ROW_STEP = 300
 const MIN_VISIBLE_HEIGHT = 120
 
 /**
@@ -56,36 +56,38 @@ function isActive(notice: NoticeView, now: number): boolean {
   return notice.endsAt == null || Date.parse(notice.endsAt) > now
 }
 
-/** 한 줄에 들어가는 카드 수. 좁은 화면에서는 1이 되고 둘째부터 전부 계단이 된다. */
+/** 한 줄에 들어가는 카드 수. 좁은 화면에서는 1이 되어 전부 세로로 쌓인다. */
 function cardsPerRow(viewportWidth: number): number {
   const usable = viewportWidth - MARGIN * 2 + GAP
   return Math.max(1, Math.floor(usable / (CARD_WIDTH + GAP)))
 }
 
 /**
- * i 번째 카드의 자리. 한 줄을 채울 때까지는 가로로 이어 붙이고, 그 뒤로는
- * 계단식으로 포갠다 — 줄바꿈이 아니라 겹침이다.
+ * i 번째 카드의 자리. 줄을 채우면 다음 줄로 접고, 줄마다 오른쪽으로 들여쓴다.
  *
- * **좌표는 뷰포트 안으로 clamp 한다.** 팝업 수에 상한이 없으므로 계단이
- * 길어지면 오른쪽·아래로 끝없이 나가고, clamp 가 없으면 그 공지는 화면 밖에서
- * 아무도 못 본다. clamp 에 걸린 카드들은 마지막 자리에 겹쳐 쌓이고, 맨 위를
- * 닫으면 다음이 드러나므로 전부 도달 가능하다.
+ * ```
+ *   1  2  3  4
+ *     5  6  7  8
+ *       9 10 11 12
+ * ```
+ *
+ * 팝업 수에 상한이 없으므로 좌표를 뷰포트 안으로 clamp 한다. 넘치는 줄은
+ * 마지막 줄 자리에 겹쳐 쌓이고, 맨 위를 닫으면 다음이 드러난다.
  */
 function slotOf(
   index: number,
   perRow: number,
   viewport: { width: number; height: number },
 ): CSSProperties {
-  const inRow = index < perRow
-  const step = inRow ? 0 : index - perRow + 1
-  const rowLeft = MARGIN + (inRow ? index : perRow - 1) * (CARD_WIDTH + GAP)
+  const row = Math.floor(index / perRow)
+  const column = index % perRow
 
   const maxLeft = Math.max(MARGIN, viewport.width - CARD_WIDTH - MARGIN)
   const maxTop = Math.max(0, viewport.height - TOP_INSET - MIN_VISIBLE_HEIGHT)
 
   return {
-    left: Math.min(rowLeft + step * CASCADE_STEP, maxLeft),
-    top: Math.min(step * CASCADE_STEP, maxTop),
+    left: Math.min(MARGIN + column * (CARD_WIDTH + GAP) + row * CASCADE_STEP, maxLeft),
+    top: Math.min(row * ROW_STEP, maxTop),
   }
 }
 
@@ -94,27 +96,12 @@ function readViewport() {
 }
 
 /**
- * 팝업 공지 호스트. 인증 셸(AppShell)에 달려 사용자 콘솔과 관리자 콘솔 양쪽에
- * 뜨고 — 장애 공지는 기관 관리자에게도 닿아야 한다 — 랜딩과 인증 화면에도 같은
- * 호스트가 선다. **로그인한 독자를 요구하지 않아서** 그럴 수 있다: 대상 판정은
- * 서버가 호출자의 인증 상태로 하므로 익명 방문자는 공개 공지만 받는다.
+ * 팝업 공지 호스트. 인증 셸과 랜딩·로그인·가입 화면에 각각 선다 — 로그인한
+ * 독자를 요구하지 않고, 대상 판정은 서버가 호출자의 인증 상태로 한다.
  *
- * 「인증에 기대는 것이 하나도 없다」고 적었던 적이 있으나 그것은 거짓이다.
- * 아래 조회는 세션 복원이 끝나기를 기다리고 그 결과를 질의 키에 싣는다 —
- * 이유는 인가가 아니라 캐시이고, 그 설명은 조회 바로 위에 있다. 참인 절반
- * (로그인을 요구하지 않는다)이 거짓인 절반(의존하지 않는다)을 가리고 있었다.
- *
- * **뜬 것은 전부 동시에 보인다.** 좌상단부터 가로로 이어 붙이고 한 줄이 차면
- * 계단식으로 포갠다. 뒤 화면은 그대로 살아 있다 — 컨테이너가 이벤트를 받지
- * 않고 카드만 받으므로, 공지를 읽는 동안에도 하던 일을 계속할 수 있다.
- *
- * 닫는 방법이 둘이고 되돌아오는 시점이 다르다:
- *
- * - 그냥 닫기(X·Esc·확인) → sessionStorage. 이 세션에만 조용하고 다음 접속에 다시 뜬다.
- * - 다시 보지 않기 → localStorage. 이 브라우저에서 계속 조용하되, 공지를 고치면
- *   updatedAt이 달라져 다시 뜬다.
- *
- * 조회가 실패해도 아무 말도 하지 않는다 — 공지 하나 때문에 콘솔에 오류가 뜨지 않는다.
+ * 뜬 것은 전부 동시에 보이고 배치는 {@link slotOf} 가 정한다. 닫는 방법 둘의
+ * 수명이 다르다: 그냥 닫기는 sessionStorage, 다시 보지 않기는 localStorage 라
+ * 공지를 고쳐 `updatedAt` 이 달라질 때까지 조용하다. 조회 실패는 침묵한다.
  */
 export function NoticePopupHost() {
   // 세션 복원이 끝나기 전에 물으면 익명으로 물은 답이 캐시에 남는다. 인증 셸
@@ -136,8 +123,7 @@ export function NoticePopupHost() {
     ...readSuppressionMap(localStorage, NOTICE_POPUP_DISMISSED_KEY),
     ...readSuppressionMap(sessionStorage, NOTICE_POPUP_SEEN_KEY),
   }))
-  // 이번 화면에서 닫은 것들. 억제 저장소와 별개로 두는 것은, 저장소가 막힌
-  // 브라우저에서도 닫기가 동작해야 하기 때문이다.
+  // 저장소와 별개로 둔다 — 저장소가 막힌 브라우저에서도 닫기는 동작해야 한다.
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set())
 
   const [viewport, setViewport] = useState(readViewport)
@@ -155,7 +141,9 @@ export function NoticePopupHost() {
       .filter((notice) => suppressed[notice.id] !== notice.updatedAt)
   }, [content, suppressed])
 
-  const visible = queue.filter((notice) => !closed.has(notice.id))
+  // 목록은 고정 먼저 최신순이다. 뒤집어 놓아 왼쪽 위가 가장 오래된 것이 되고,
+  // 뒤에 오는 것이 위에 포개지므로 최신과 고정 공지가 맨 위에 온다.
+  const visible = queue.filter((notice) => !closed.has(notice.id)).reverse()
   if (visible.length === 0) return null
 
   const dismiss = (notice: NoticeView, storage: Storage, key: string) => {
@@ -166,10 +154,8 @@ export function NoticePopupHost() {
   const perRow = cardsPerRow(viewport.width)
 
   return createPortal(
-    // 컨테이너는 뷰포트를 덮되 이벤트를 받지 않는다 — 이 한 줄이 「뒤를 막지
-    // 않는다」의 전부다. 받는 것은 카드뿐이라 카드 사각형 밖은 그대로 눌린다.
-    // z-40: 팝오버(z-30) 위, 모달·드로어(z-50) 아래. 공지가 떠 있어도 모달을
-    // 열 수 있고 그때 모달이 위에 온다.
+    // pointer-events-none 이 「뒤를 막지 않는다」의 전부다 — 받는 것은 카드뿐.
+    // z-40 은 팝오버 위, 모달·드로어 아래(Popover.tsx 의 서열 주석).
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40"
       style={{ top: TOP_INSET }}
@@ -177,8 +163,6 @@ export function NoticePopupHost() {
       {visible.map((notice, index) => {
         const firstImage = notice.images[0]
         return (
-          // 뒤에 오는 카드가 위에 포개진다 — DOM 순서 그대로다. 위를 닫으면
-          // 아래가 드러나므로 앞으로 가져오는 조작이 따로 필요하지 않다.
           <NoticePopupCard
             key={notice.id}
             title={notice.title}

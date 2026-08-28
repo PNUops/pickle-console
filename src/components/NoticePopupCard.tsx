@@ -13,21 +13,9 @@ export interface NoticePopupCardProps {
 }
 
 /**
- * 공지 팝업 한 장.
- *
- * `Modal` 의 3단 마크업(제목 줄, 넘치면 스크롤되는 본문, 동작 줄)을 그대로
- * 가져오되 **막는 부분을 전부 뺀 것**이다. 뺀 것이 셋이고 셋 다 의도된 것이다:
- *
- * - **전체 화면 덮개가 없다.** `Modal` 은 `fixed inset-0` 두 겹으로 뷰포트를
- *   덮어 뒤를 클릭할 수 없게 한다. 공지는 읽는 동안에도 하던 일을 계속할 수
- *   있어야 하므로 카드 자신의 사각형 밖에서는 아무 이벤트도 받지 않는다.
- * - **포커스 트랩이 없다.** `useFocusTrap` 은 `document.body` 의 overflow 를
- *   hidden 으로 바꾼다. 그것을 쓰는 순간 페이지 스크롤이 잠겨 다시 차단이 된다.
- * - **`aria-modal` 을 붙이지 않는다.** 뒤가 살아 있으므로 붙이면 거짓말이고,
- *   보조기술이 나머지 화면을 없는 것으로 취급하게 만든다.
- *
- * Escape 는 전역이 아니라 **이 카드 안에 포커스가 있을 때만** 듣는다. 전역
- * 리스너를 걸면 공지가 떠 있는 동안 열린 모달의 Escape 를 가로챈다.
+ * 공지 팝업 한 장. `Modal` 의 3단 마크업에서 막는 것을 뺀 형태다 — 전체 화면
+ * 덮개도, `useFocusTrap`(body 스크롤을 잠근다)도, `aria-modal` 도 쓰지 않는다.
+ * 셋 중 하나라도 되살아나면 뒤 화면이 다시 막힌다.
  */
 export function NoticePopupCard({
   title,
@@ -37,10 +25,10 @@ export function NoticePopupCard({
   style,
   className,
 }: NoticePopupCardProps) {
+  // 전역이 아니라 카드 안의 Escape 만 듣는다. 전역이면 위에 열린 모달의
+  // Escape 를 가로챈다.
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Escape') return
-    // 카드 안에서 눌린 Escape 만 여기서 끝낸다. 밖으로 흘려보내면 뒤에 있는
-    // 다른 것이 함께 닫힌다.
     event.stopPropagation()
     onClose()
   }
@@ -52,11 +40,10 @@ export function NoticePopupCard({
       onKeyDown={handleKeyDown}
       style={style}
       className={cn(
-        // 높이 상한은 dvh 로 잰다 — 모바일 브라우저 크롬이 계산에 들어간다.
+        // 높이 상한은 호스트의 ROW_STEP 과 짝이다 — 늘리면 아래 줄이 위 줄의
+        // 버튼을 가린다. 본문이 길면 카드가 아니라 본문이 스크롤된다.
         'flex w-80 max-w-[calc(100vw-2rem)] flex-col',
-        'max-h-[calc(100dvh-7rem)] rounded-card bg-white shadow-overlay',
-        // 계단식으로 포개지므로 테두리가 있어야 어디까지가 한 장인지 보인다.
-        'border border-neutral-200',
+        'max-h-72 rounded-card border border-neutral-200 bg-white shadow-overlay',
         className,
       )}
     >
