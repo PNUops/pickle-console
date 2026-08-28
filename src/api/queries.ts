@@ -2001,10 +2001,6 @@ export function startGoogleOauth(
 
 /* ─── 공지사항 ─── */
 
-/** 게시 범위 — PLATFORM(전역) / ORG(기관). ORG는 언제나 대상이 USERS다. */
-export type NoticeScope = Schemas['NoticeScope']
-/** 노출 대상 — PUBLIC(익명까지) / USERS(로그인 사용자). */
-export type NoticeAudience = Schemas['NoticeAudience']
 export type NoticeView = Schemas['NoticeView']
 export type NoticeImageView = Schemas['NoticeImageView']
 export type NoticePage = Schemas['PageResponseNoticeView']

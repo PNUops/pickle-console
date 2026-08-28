@@ -15,23 +15,6 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
 describe('공지사항 관리', () => {
-  test('기관 관리자는 전역 범위를 고를 수 없고, 기관 공지에는 익명 공개가 막힌다', async () => {
-    const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
-    renderApp('/admin/notices')
-
-    await user.click(await screen.findByRole('button', { name: '기관 전용 안내' }))
-
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
-    expect(within(drawer).queryByRole('option', { name: '전역' })).not.toBeInTheDocument()
-    expect(within(drawer).getByRole('option', { name: '기관' })).toBeInTheDocument()
-    expect(within(drawer).getByRole('radio', { name: '익명까지 공개' })).toBeDisabled()
-    expect(within(drawer).getByRole('radio', { name: '로그인 사용자' })).toBeChecked()
-    // 계약의 수정 요청은 범위를 받지 않는다 — 등록된 공지의 범위는 잠겨 있다.
-    expect(within(drawer).getByLabelText(/게시 범위/)).toBeDisabled()
-    expect(within(drawer).getByText('등록 후에는 범위를 바꿀 수 없습니다.')).toBeInTheDocument()
-  })
-
   test('운영자에게도 드로어는 열리되 쓰기 액션은 사유와 함께 비활성이다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
@@ -108,31 +91,34 @@ describe('공지사항 관리', () => {
     expect(await screen.findByLabelText('이미지 추가')).toBeEnabled()
   })
 
-  test('기관 관리자가 등록하면 자기 기관이 대상으로 실린다', async () => {
+  test('기관 관리자가 올린 팝업 공지를 익명 방문자가 본다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
-    renderApp('/admin/notices')
+    const admin = renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
     const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
     await user.type(within(drawer).getByLabelText('제목'), '학부 서버실 이전 안내')
     await user.type(within(drawer).getByLabelText('본문'), '9월 첫째 주에 이전합니다.')
+    await user.click(within(drawer).getByRole('checkbox', { name: /팝업으로 표시/ }))
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
 
-    // 관리 기관이 하나뿐이면 고를 것이 없다 — 서버가 그 기관을 채운다.
-    expect(within(drawer).queryByLabelText('대상 기관')).not.toBeInTheDocument()
-    // 대상 기관을 싣지 않았다면 서버가 422로 되돌린다 — 목록에 서면 실려 간 것이다.
     expect(await screen.findByRole('button', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
-    const row = screen.getByRole('button', { name: '학부 서버실 이전 안내' }).closest('tr')!
-    expect(within(row).getByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
+    admin.unmount()
+
+    // 종전에는 기관 관리자가 익명에게 닿는 글을 올릴 방법이 없었다 — 기관 공지의
+    // 익명 공개는 422였고 전역 공지는 403이었다. 축이 하나로 합쳐지면서 체크박스
+    // 하나가 그 문을 연다. 이 테스트는 그 사실을 기록해 둔다.
+    renderApp('/login')
+    expect(await screen.findByRole('dialog', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
   })
 
-  test('선택기가 없는 화면에서도 대상 기관 거절은 눈에 보인다', async () => {
+  test('폼이 슬롯을 두지 않은 필드의 거절도 눈에 보인다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
-    // 관리 기관이 하나뿐이면 대상 기관 선택기가 없다. 화면을 연 뒤에 그 권한이
-    // 회수되면 서버는 `orgId` 필드 오류로 답하는데, 붙을 필드가 없으므로 필드에만
-    // 맡기면 아무 데도 남지 않는다 — 등록 버튼이 조용히 죽은 것처럼 보인다.
+    // 이 폼이 서버 필드 오류를 붙여 주는 자리는 제목·본문·기간뿐이다. 체크박스로
+    // 그리는 필드를 서버가 지적하면 붙을 곳이 없으므로, 필드에만 맡기면 거절이
+    // 아무 데도 남지 않는다 — 등록 버튼이 조용히 죽은 것처럼 보인다.
     server.use(
       http.post('*/api/v1/admin/notices', () =>
         problemResponse({
@@ -141,7 +127,7 @@ describe('공지사항 관리', () => {
           status: 422,
           detail: '요청 값을 확인해 주세요.',
           code: 'VALIDATION_FAILED',
-          errors: [{ field: 'orgId', message: '자기 기관의 공지만 등록할 수 있습니다.' }],
+          errors: [{ field: 'popup', message: '팝업 공지는 게시 기간이 필요합니다.' }],
         }),
       ),
     )
@@ -149,36 +135,11 @@ describe('공지사항 관리', () => {
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
     const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
-    expect(within(drawer).queryByLabelText('대상 기관')).not.toBeInTheDocument()
-    await user.type(within(drawer).getByLabelText('제목'), '권한이 회수된 뒤의 등록')
+    await user.type(within(drawer).getByLabelText('제목'), '슬롯 없는 거절')
     await user.type(within(drawer).getByLabelText('본문'), '거절이 보여야 한다.')
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
 
-    expect(await within(drawer).findByText('자기 기관의 공지만 등록할 수 있습니다.')).toBeInTheDocument()
-  })
-
-  test('겸직 관리자는 대상 기관을 직접 고르고, 후보는 관리 기관뿐이다', async () => {
-    const user = userEvent.setup()
-    server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
-    renderApp('/admin/notices')
-
-    await user.click(await screen.findByRole('button', { name: '공지 등록' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
-
-    // 관리 기관이 둘이면 '자기 기관'이 하나로 정해지지 않는다 — 서버가 채워 줄 수
-    // 없으므로 화면이 묻는다. 후보는 전 기관 목록이 아니라 관리 기관이다.
-    const picker = within(drawer).getByLabelText('대상 기관')
-    expect(within(picker).getByRole('option', { name: '정보컴퓨터공학부 실습지원센터' })).toBeInTheDocument()
-    expect(within(picker).getByRole('option', { name: '테스트 기관' })).toBeInTheDocument()
-
-    await user.type(within(drawer).getByLabelText('제목'), '겸직 기관 공지')
-    await user.type(within(drawer).getByLabelText('본문'), '두 기관 중 한 곳에 올립니다.')
-    await user.selectOptions(picker, '테스트 기관')
-    await user.click(within(drawer).getByRole('button', { name: '등록' }))
-
-    expect(await screen.findByRole('button', { name: '겸직 기관 공지' })).toBeInTheDocument()
-    const created = screen.getByRole('button', { name: '겸직 기관 공지' }).closest('tr')!
-    expect(within(created).getByText('테스트 기관')).toBeInTheDocument()
+    expect(await within(drawer).findByText('팝업 공지는 게시 기간이 필요합니다.')).toBeInTheDocument()
   })
 
   test('기관 열람자는 관리 목록에 닿고, 쓰기는 사유와 함께 막힌다', async () => {
@@ -186,10 +147,10 @@ describe('공지사항 관리', () => {
     server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
     renderApp('/admin/notices')
 
-    // 관리 목록은 '들여다보라고 준' 역할이 닿는 유일한 공지 표면이다 — 게시판에서
-    // 빠지는 그 공지가 여기에는 있다. 메뉴도 함께 서야 닿을 방법이 있다.
+    // 관리 목록이 게시판과 다른 점은 이제 범위가 아니라 창이다 — 아직 시작하지
+    // 않은 공지가 여기에는 선다. 메뉴도 함께 서야 닿을 방법이 있다.
     expect(await screen.findByRole('link', { name: '공지사항 관리' })).toBeInTheDocument()
-    await user.click(await screen.findByRole('button', { name: '기관 전용 안내' }))
+    await user.click(await screen.findByRole('button', { name: '서비스 점검 팝업' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
     expect(within(drawer).getByRole('button', { name: '저장' })).toBeDisabled()
@@ -202,13 +163,13 @@ describe('공지사항 관리', () => {
     ).toBeInTheDocument()
   })
 
-  test('시스템 열람자는 시스템 운영자와 같이 전 기관을 읽고 쓰지는 못한다', async () => {
+  test('시스템 열람자도 관리 목록을 전부 읽고 쓰지는 못한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
     renderApp('/admin/notices')
 
-    // 시스템 계층은 소속과 무관하게 전부 본다 — 남의 기관 공지도 목록에 선다.
-    expect(await screen.findByRole('button', { name: '기관 전용 안내' })).toBeInTheDocument()
+    // 관리 목록에는 걸러 낼 것이 없다 — 게이트를 통과한 역할은 모든 행을 읽는다.
+    expect(await screen.findByRole('button', { name: '서비스 점검 팝업' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '데이터센터 정기 점검 안내' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })

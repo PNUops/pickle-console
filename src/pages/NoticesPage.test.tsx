@@ -87,7 +87,6 @@ describe('공지사항 상세', () => {
       makeNotice({
         id: uuid(341),
         title: '로그인 사용자 공지',
-        audience: 'USERS',
         images: [noticeImage(uuid(341), 342, 'members-only.png')],
       }),
     ])
@@ -104,7 +103,6 @@ describe('공지사항 상세', () => {
         id: uuid(343),
         title: '이미지가 깨진 공지',
         body: '본문은 읽을 수 있어야 한다.',
-        audience: 'USERS',
         images: [noticeImage(uuid(343), 344, 'gone.png')],
       }),
     ])

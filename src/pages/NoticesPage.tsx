@@ -77,7 +77,6 @@ function NoticeRow({ notice }: { notice: NoticeView }) {
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-2">
           {notice.pinned && <Badge variant="warning">고정</Badge>}
-          {notice.scope === 'ORG' && <Badge variant="neutral">기관</Badge>}
           <span className="font-medium text-neutral-900">{notice.title}</span>
         </span>
         <span className="mt-1 block truncate text-sm text-neutral-500">{notice.body}</span>

@@ -42,7 +42,6 @@ export function NoticeDetailPage() {
           <header className="border-b border-neutral-200 pb-4">
             <div className="flex flex-wrap items-center gap-2">
               {notice.data.pinned && <Badge variant="warning">고정</Badge>}
-              {notice.data.scope === 'ORG' && <Badge variant="neutral">기관</Badge>}
             </div>
             <h1 className="mt-2 text-2xl font-bold text-neutral-900">{notice.data.title}</h1>
             <p className="mt-2 text-sm text-neutral-500">
