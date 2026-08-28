@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import {Outlet} from 'react-router'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { Logo } from '../components/Logo'
-import { NoticeStrip } from '../pages/landing/NoticeStrip'
+import { NoticePopupHost } from '../components/NoticePopupHost'
 import { SERVICE_TAGLINE } from '../lib/brand'
 import { cn } from '../lib/cn'
 
@@ -70,7 +70,7 @@ export function AuthLayout() {
       </header>
 
       {/* 장애 공지가 가장 필요한 자리는 로그인 문 앞이다. */}
-      <NoticeStrip />
+      <NoticePopupHost />
 
       <main className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12">
         <Outlet />

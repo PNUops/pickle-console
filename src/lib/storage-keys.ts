@@ -88,8 +88,3 @@ export const NOTICE_POPUP_SEEN_KEY = 'pickle.notice-popup-seen'
  * 뜬다. 로그아웃 시 지우지 않는다 — 이 억제는 계정이 아니라 브라우저의 것이다.
  */
 export const NOTICE_POPUP_DISMISSED_KEY = 'pickle.notice-popup-dismissed'
-
-/**
- * 랜딩·로그인 화면 상단의 공지 한 줄을 이번 세션 동안 닫아 두는 sessionStorage 키.
- */
-export const LANDING_NOTICE_DISMISS_KEY = 'pickle.landing-notice-dismissed'

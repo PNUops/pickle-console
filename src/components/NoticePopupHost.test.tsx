@@ -1,9 +1,9 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
-import { makeNotice, seedNotices } from '../test/msw/handlers/notices'
+import { makeNotice, noticeImage, seedNotices } from '../test/msw/handlers/notices'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -11,6 +11,9 @@ import {
   NOTICE_POPUP_DISMISSED_KEY,
   NOTICE_POPUP_SEEN_KEY,
 } from '../lib/storage-keys'
+
+// jsdom에는 WebGL이 없고 three 청크 로드는 무의미하게 느리다 — 정적 목업으로 대체.
+vi.mock('../pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
 
 /** 줄을 세울 팝업 넷 — 기대 순서는 고정 먼저, 그 안에서 게시 시작 최신순. */
 function seedPopupQueue() {
@@ -128,6 +131,37 @@ describe('팝업 공지', () => {
     renderApp('/admin')
 
     expect(await screen.findByRole('dialog', { name: '점검 팝업' })).toBeInTheDocument()
+  })
+
+  test('익명 방문자에게도 랜딩에서 뜨고, 공개 이미지는 주소 그대로 받는다', async () => {
+    // 장애 공지가 가장 필요한 사람은 아직 로그인하지 못한 사람이다. 세션이 없으면
+    // 이미지는 맨 <img src>로 남는다 — 익명이 보는 것은 공개 공지뿐이라 자격이
+    // 필요 없고, 그 편이 브라우저의 평범한 캐시를 그대로 쓴다.
+    seedNotices([
+      makeNotice({
+        id: uuid(321),
+        title: '전면 점검 안내',
+        popup: true,
+        images: [noticeImage(uuid(321), 322, 'outage.png')],
+      }),
+    ])
+    // 랜딩 청크는 lazy — 병렬 워커가 CPU를 나눠 쓰는 동안 기본 대기로는 모자란다.
+    renderApp('/')
+
+    expect(
+      await screen.findByRole('dialog', { name: '전면 점검 안내' }, { timeout: 15_000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'outage.png' })).toHaveAttribute(
+      'src',
+      `/api/v1/notices/${uuid(321)}/images/${uuid(322)}`,
+    )
+  })
+
+  test('로그인 화면에서도 익명 방문자에게 뜬다', async () => {
+    seedNotices([makeNotice({ id: uuid(323), title: '로그인 불가 안내', popup: true })])
+    renderApp('/login')
+
+    expect(await screen.findByRole('dialog', { name: '로그인 불가 안내' })).toBeInTheDocument()
   })
 
   test('본문의 태그는 마크업이 아니라 글자로 나온다', async () => {

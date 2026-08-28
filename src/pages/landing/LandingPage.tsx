@@ -7,7 +7,7 @@ import { Hero } from './Hero'
 import { HowItWorks } from './HowItWorks'
 import { LandingFooter } from './LandingFooter'
 import { LandingHeader } from './LandingHeader'
-import { NoticeStrip } from './NoticeStrip'
+import { NoticePopupHost } from '../../components/NoticePopupHost'
 import { ResourceShowcase } from './ResourceShowcase'
 import { TrustStrip } from './TrustStrip'
 
@@ -28,11 +28,12 @@ export function LandingPage() {
   return (
     // break-keep: 한국어 헤드라인/문장이 단어 중간에서 끊기지 않게 전체 상속
     <div className="break-keep bg-neutral-950">
+      {/* 장애 공지가 가장 필요한 사람은 아직 로그인하지 못한 사람이다. 호스트는
+          인증에 기대지 않고, 서버가 대상을 호출자의 인증 상태로 거르므로 익명
+          방문자에게는 공개 공지만 뜬다. */}
+      <NoticePopupHost />
       <LandingHeader />
       <main>
-        {/* 고정 헤더(h-16) 아래에서 시작하도록 자기 안에 여백을 갖는다 — 띄울
-            공지가 없으면 요소째 사라지므로 히어로 위에 빈 자리가 남지 않는다. */}
-        <NoticeStrip className="pt-16" />
         <Hero />
         <TrustStrip />
         <ResourceShowcase />
