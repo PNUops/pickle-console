@@ -1,4 +1,10 @@
-import { type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+  type Ref,
+} from 'react'
 import { cn } from '../lib/cn'
 
 export interface NoticePopupCardProps {
@@ -10,6 +16,10 @@ export interface NoticePopupCardProps {
   /** 호스트가 계산한 좌표. 카드는 자기 자리를 정하지 않는다. */
   style?: CSSProperties
   className?: string
+  /** 호스트가 줄 높이를 재려고 잡는다. */
+  ref?: Ref<HTMLDivElement>
+  /** 제목 줄을 눌렀을 때. 호스트가 끌기를 시작한다. */
+  onHandlePointerDown?: (event: PointerEvent<HTMLDivElement>) => void
 }
 
 /**
@@ -24,6 +34,8 @@ export function NoticePopupCard({
   footer,
   style,
   className,
+  ref,
+  onHandlePointerDown,
 }: NoticePopupCardProps) {
   // 전역이 아니라 카드 안의 Escape 만 듣는다. 전역이면 위에 열린 모달의
   // Escape 를 가로챈다.
@@ -35,23 +47,31 @@ export function NoticePopupCard({
 
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-label={title}
       onKeyDown={handleKeyDown}
       style={style}
       className={cn(
-        // 높이 상한은 호스트의 ROW_STEP 과 짝이다 — 늘리면 아래 줄이 위 줄의
-        // 버튼을 가린다. 본문이 길면 카드가 아니라 본문이 스크롤된다.
         'flex w-80 max-w-[calc(100vw-2rem)] flex-col',
         'max-h-72 rounded-card border border-neutral-200 bg-white shadow-overlay',
         className,
       )}
     >
-      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 px-4 py-3">
+      <div
+        onPointerDown={onHandlePointerDown}
+        className={cn(
+          'flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 px-4 py-3',
+          // touch-none 이 없으면 손가락으로 끌 때 브라우저가 스크롤로 가져간다.
+          onHandlePointerDown && 'cursor-move touch-none select-none',
+        )}
+      >
         <h2 className="text-sm font-semibold text-neutral-900">{title}</h2>
         <button
           type="button"
           onClick={onClose}
+          // 닫기 버튼에서 시작한 눌림이 끌기로 번지지 않게 한다.
+          onPointerDown={(event) => event.stopPropagation()}
           aria-label="닫기"
           className="cursor-pointer rounded p-0.5 text-neutral-400 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-600"
         >

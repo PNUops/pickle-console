@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -123,6 +123,48 @@ describe('팝업 공지', () => {
     // clamp 가 빠지면 넷째가 오른쪽 밖으로 나가 아무도 못 본다.
     const maxLeft = window.innerWidth - 320 - 16
     for (const slot of slots) expect(slot.left).toBeLessThanOrEqual(maxLeft)
+  })
+
+  test('하나를 닫아도 남은 카드의 자리가 그대로다', async () => {
+    const user = userEvent.setup()
+    seedPopupQueue()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    await screen.findByRole('dialog', { name: '고정 팝업' })
+    const slotOf = (name: string) => {
+      const card = screen.getByRole('dialog', { name }) as HTMLElement
+      return `${card.style.left}|${card.style.top}`
+    }
+    const before = ['중간 팝업', '최신 팝업', '고정 팝업'].map(slotOf)
+
+    const first = screen.getByRole('dialog', { name: '넷째 팝업' })
+    await user.click(within(first).getByRole('button', { name: '확인' }))
+
+    // 자리를 남은 목록의 색인으로 정하면 여기서 전부 한 칸씩 당겨진다 —
+    // 읽고 있던 카드가 손 밑에서 움직인다.
+    expect(['중간 팝업', '최신 팝업', '고정 팝업'].map(slotOf)).toEqual(before)
+  })
+
+  test('제목 줄을 끌면 그 카드만 따라온다', async () => {
+    seedPopupQueue()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    const card = (await screen.findByRole('dialog', { name: '고정 팝업' })) as HTMLElement
+    const other = screen.getByRole('dialog', { name: '최신 팝업' }) as HTMLElement
+    const startLeft = Number.parseInt(card.style.left, 10)
+    const startTop = Number.parseInt(card.style.top, 10)
+    const otherBefore = other.style.left
+
+    const handle = screen.getByRole('heading', { name: '고정 팝업' }).parentElement!
+    fireEvent.pointerDown(handle, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 160, clientY: 140 })
+    fireEvent.pointerUp(window)
+
+    expect(Number.parseInt(card.style.left, 10)).toBe(startLeft + 60)
+    expect(Number.parseInt(card.style.top, 10)).toBe(startTop + 40)
+    expect(other.style.left).toBe(otherBefore)
   })
 
   test('모달이 아니다 — 뒤를 덮지도 잠그지도 않는다', async () => {
