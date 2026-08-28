@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -201,24 +201,32 @@ describe('팝업 공지', () => {
   })
 
   test('이미 로그인한 사람이 랜딩을 열면 익명으로 묻지 않는다', async () => {
-    // 랜딩과 인증 화면은 인증 셸 밖이라 세션 복원이 아직 끝나지 않은 채 마운트된다.
-    // 복원은 로그인과 달리 캐시를 비우지 않으므로, 여기서 익명으로 물으면 그 답이
-    // 콘솔의 팝업까지 staleTime 동안 조용하게 만든다. 로그인해야 보이는 공지가
-    // 랜딩에서 뜬다는 것은 복원을 기다렸다는 뜻이다 — 익명이면 서버가 걸러 낸다.
-    seedNotices([
-      makeNotice({
-        id: uuid(324),
-        title: '로그인 사용자 전용 팝업',
-        audience: 'USERS',
-        popup: true,
+    // 랜딩과 인증 화면은 인증 셸 밖이라 세션 복원이 끝나기 전에 마운트된다. 복원은
+    // 로그인과 달리 캐시를 비우지 않으므로, 여기서 익명으로 물으면 그 답이 콘솔의
+    // 팝업까지 staleTime 동안 물들인다.
+    //
+    // 「무엇이 보이나」가 아니라 「자격을 싣고 물었나」를 잰다. 보이는 것으로 재려면
+    // 로그인해야만 보이는 공지가 있어야 하는데, 그 조합은 노출 축이 달라지면
+    // 사라진다. 나가는 요청의 헤더는 그 축과 무관하게 같은 것을 고정한다.
+    //
+    // 게시판·대시보드로는 이 핀을 대신할 수 없다 — RequireRole이 복원 중에는
+    // 스피너를 그려 그 화면들이 아예 마운트되지 않으므로, 함정이 닿지 않는다.
+    const authorizations: (string | null)[] = []
+    server.use(
+      http.get('*/api/v1/notices', ({ request }) => {
+        authorizations.push(request.headers.get('Authorization'))
+        return HttpResponse.json(
+          { content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 },
+          { status: 200 },
+        )
       }),
-    ])
+    )
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/')
 
-    expect(
-      await screen.findByRole('dialog', { name: '로그인 사용자 전용 팝업' }, { timeout: 15_000 }),
-    ).toBeInTheDocument()
+    await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 15_000 })
+    await waitFor(() => expect(authorizations.length).toBeGreaterThan(0))
+    expect(authorizations.every((header) => header?.startsWith('Bearer '))).toBe(true)
   })
 
   test('본문의 태그는 마크업이 아니라 글자로 나온다', async () => {
