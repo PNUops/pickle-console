@@ -17,14 +17,17 @@ describe('Logo', () => {
     expect(container.querySelector('svg')).not.toBeInTheDocument()
   })
 
-  test('lockup은 PNU Cloud를 병기하지 않고 endorsement만 공식 명칭을 덧붙인다', () => {
+  test('대표 lockup은 공식 명칭을 2단으로 표시하고 PNU Cloud를 병기하지 않는다', () => {
     const { container, rerender } = render(
       <MemoryRouter>
         <Logo variant="lockup" />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: 'Pickle' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Pickle, 부산대학교 클라우드 플랫폼' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('부산대학교 클라우드 플랫폼')).toBeInTheDocument()
     expect(screen.queryByText('PNU Cloud')).not.toBeInTheDocument()
     expect(container.querySelector('img')).toBeInTheDocument()
 

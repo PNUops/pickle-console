@@ -54,7 +54,7 @@ export interface LogoProps {
   size?: 'sm' | 'md'
 }
 
-/** 일반 surface는 부산대학교 엠블럼과 Pickle wordmark를 한 lockup으로 쓴다. */
+/** 일반 console은 단일 행, 대표 surface는 공식 명칭을 둔 2단 lockup을 쓴다. */
 export function Logo({
   to = '/',
   className,
@@ -65,9 +65,10 @@ export function Logo({
   const showEmblem = variant === 'brand' || variant === 'lockup' || variant === 'endorsement'
   const showSymbol = variant === 'symbol'
   const showWordmark = variant !== 'symbol'
-  const showDescriptor = variant === 'endorsement'
+  const showStackedDescriptor = variant === 'lockup'
+  const showInlineDescriptor = variant === 'endorsement'
   const accessibleName =
-    variant === 'endorsement'
+    showStackedDescriptor || showInlineDescriptor
       ? `${BRAND_NAME}, ${OFFICIAL_SERVICE_NAME}`
       : BRAND_NAME
 
@@ -76,49 +77,63 @@ export function Logo({
       to={to}
       aria-label={accessibleName}
       className={cn(
-        'inline-flex min-w-0 items-center gap-2 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
+        'inline-flex min-w-0 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
+        showStackedDescriptor ? 'flex-col items-start gap-1.5' : 'items-center gap-2',
         tone === 'inverse' ? 'focus-visible:outline-primary-300' : 'focus-visible:outline-focus-ring',
         className,
       )}
     >
-      {showEmblem && (
-        <img
-          src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
-          alt=""
-          aria-hidden="true"
-          className={size === 'sm' ? 'h-4 w-auto shrink-0' : 'h-7 w-auto shrink-0'}
-        />
-      )}
-      {showSymbol && (
-        <PickleSymbol
-          decorative
-          tone={tone}
-          className={size === 'sm' ? 'size-4' : 'size-7'}
-        />
-      )}
-      {showWordmark && (
-        <span className="inline-flex min-w-0 items-center gap-2">
+      <span className={cn('inline-flex min-w-0 items-center', showStackedDescriptor ? 'gap-3' : 'gap-2')}>
+        {showEmblem && (
+          <img
+            src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
+            alt=""
+            aria-hidden="true"
+            className={cn(
+              'w-auto shrink-0',
+              size === 'sm' ? 'h-4' : showStackedDescriptor ? 'h-8' : 'h-7',
+            )}
+          />
+        )}
+        {showSymbol && (
+          <PickleSymbol
+            decorative
+            tone={tone}
+            className={size === 'sm' ? 'size-4' : 'size-7'}
+          />
+        )}
+        {showWordmark && (
           <span
             className={cn(
-              'font-bold tracking-tight',
-              size === 'sm' ? 'text-base' : 'text-lg',
+              'font-bold tracking-[-0.035em]',
+              size === 'sm' ? 'text-base' : showStackedDescriptor ? 'text-3xl leading-none' : 'text-lg',
               tone === 'inverse' ? 'text-white' : 'text-foreground-primary',
             )}
           >
             {BRAND_NAME}
           </span>
-          {showDescriptor && (
-            <span
-              className={cn(
-                'hidden border-l pl-2 text-[0.6875rem] leading-tight font-medium sm:inline',
-                tone === 'inverse'
-                  ? 'border-white/30 text-neutral-300'
-                  : 'border-stroke-default text-foreground-muted',
-              )}
-            >
-              {OFFICIAL_SERVICE_NAME}
-            </span>
+        )}
+        {showInlineDescriptor && (
+          <span
+            className={cn(
+              'hidden border-l pl-2 text-[0.6875rem] leading-tight font-medium sm:inline',
+              tone === 'inverse'
+                ? 'border-white/30 text-neutral-300'
+                : 'border-stroke-default text-foreground-muted',
+            )}
+          >
+            {OFFICIAL_SERVICE_NAME}
+          </span>
+        )}
+      </span>
+      {showStackedDescriptor && (
+        <span
+          className={cn(
+            'hidden whitespace-nowrap text-sm leading-none font-medium sm:block',
+            tone === 'inverse' ? 'text-neutral-300' : 'text-foreground-muted',
           )}
+        >
+          {OFFICIAL_SERVICE_NAME}
         </span>
       )}
     </Link>
