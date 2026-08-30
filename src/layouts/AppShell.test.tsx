@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -111,6 +111,50 @@ describe('셸 정보 밀도', () => {
     renderApp('/admin')
     const adminNav = await screen.findByRole('navigation', { name: '관리자 메뉴' })
     expect(adminNav.closest('[data-density]')).toHaveAttribute('data-density', 'compact')
+  })
+
+  test('데스크톱 사이드바를 접고 다시 펼칠 수 있다', async () => {
+    renderConsole()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('button', { name: '사이드바 접기' }))
+    expect(screen.queryByRole('navigation', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '사이드바 펼치기' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '사이드바 펼치기' }))
+    expect(await screen.findByRole('navigation', { name: '콘솔 메뉴' })).toBeInTheDocument()
+  })
+
+  test('상단바는 이름만 한 줄로 보이고 역할은 계정 메뉴 안에서 확인한다', async () => {
+    renderConsole()
+    const user = userEvent.setup()
+
+    const accountButton = await screen.findByRole('button', { name: /계정 메뉴/ })
+    expect(within(accountButton).queryByText('사용자')).not.toBeInTheDocument()
+
+    await user.click(accountButton)
+    expect(
+      within(screen.getByRole('dialog', { name: '내 계정' })).getByText('사용자'),
+    ).toBeInTheDocument()
+  })
+
+  test('Web Storage가 차단돼도 기본 펼침 상태로 console을 렌더한다', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+      setItem: () => {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+    })
+
+    try {
+      renderConsole()
+      expect(await screen.findByRole('navigation', { name: '콘솔 메뉴' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '사이드바 접기' })).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 

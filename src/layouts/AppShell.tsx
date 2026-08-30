@@ -28,6 +28,25 @@ const MFA_ENROLL_PATH = '/admin/account'
 /** 공지 배너를 세션 동안 닫아둔 상태로 기억하는 sessionStorage 키. */
 const BANNER_DISMISS_KEY = 'pickle_banner_dismissed'
 
+/** 데스크톱 사이드바 접힘 상태를 브라우저에 유지한다. */
+const SIDEBAR_COLLAPSED_KEY = 'pickle_sidebar_collapsed'
+
+function loadSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function storeSidebarCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed))
+  } catch {
+    // Web Storage가 차단돼도 선택적 UI 설정 때문에 console을 중단하지 않는다.
+  }
+}
+
 export interface NavItem {
   /** 갈 곳. 준비 중 항목은 아직 화면이 없으므로 비운다. */
   to?: string
@@ -220,6 +239,7 @@ export function AppShell({
 }) {
   const navSections: NavSection[] = sections ?? [{ items: items ?? [] }]
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed)
   const drawerId = useId()
   const drawerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(drawerRef, { active: drawerOpen, onEscape: () => setDrawerOpen(false) })
@@ -310,6 +330,10 @@ export function AppShell({
     return () => query.removeEventListener('change', onChange)
   }, [])
 
+  useEffect(() => {
+    storeSidebarCollapsed(sidebarCollapsed)
+  }, [sidebarCollapsed])
+
   // 비관리자는 점검 중 콘솔 전체를 차단한다(점검 해제 시 폴링이 자동 복구).
   if (maintenance && !isAdminTier) {
     return (
@@ -348,14 +372,34 @@ export function AppShell({
     <div data-density={density} className="flex min-h-screen">
       <PostLoginOverlay />
       <NoticePopupHost />
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
-        <div className="flex h-16 items-center border-b border-neutral-100 px-5">
-          <Logo to={home} variant="brand" />
-        </div>
-        {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
-        <ShellNav navLabel={navLabel} navSections={navSections} />
-        <ShellFooterNav />
-      </aside>
+      {!sidebarCollapsed && (
+        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
+          <div className="flex h-14 items-center justify-between gap-2 border-b border-neutral-100 px-4">
+            <Logo to={home} variant="brand" />
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(true)}
+              aria-label="사이드바 접기"
+              className="shrink-0 cursor-pointer rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="size-5"
+                aria-hidden="true"
+              >
+                <rect x="2.75" y="3.25" width="14.5" height="13.5" rx="1.5" />
+                <path d="M7 3.5v13M13 7l-3 3 3 3" />
+              </svg>
+            </button>
+          </div>
+          {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
+          <ShellNav navLabel={navLabel} navSections={navSections} />
+          <ShellFooterNav />
+        </aside>
+      )}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
@@ -372,7 +416,7 @@ export function AppShell({
             tabIndex={-1}
             className="absolute inset-y-0 left-0 flex w-60 flex-col bg-white shadow-overlay outline-none"
           >
-            <div className="flex h-16 items-center justify-between border-b border-neutral-100 px-5">
+            <div className="flex h-14 items-center justify-between border-b border-neutral-100 px-4">
               <Logo to={home} variant="brand" />
               <button
                 type="button"
@@ -396,7 +440,7 @@ export function AppShell({
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6">
+        <header className="flex h-14 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6">
           <div className="flex items-center gap-2 md:hidden">
             <button
               type="button"
@@ -417,7 +461,31 @@ export function AppShell({
             </button>
             <Logo to={home} />
           </div>
-          <div className="hidden md:block" />
+          {sidebarCollapsed ? (
+            <div className="hidden items-center gap-2 md:flex">
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(false)}
+                aria-label="사이드바 펼치기"
+                className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="size-5"
+                  aria-hidden="true"
+                >
+                  <rect x="2.75" y="3.25" width="14.5" height="13.5" rx="1.5" />
+                  <path d="M7 3.5v13M10 7l3 3-3 3" />
+                </svg>
+              </button>
+              <Logo to={home} variant="brand" />
+            </div>
+          ) : (
+            <div className="hidden md:block" />
+          )}
           <div className="flex items-center gap-2">
             {notificationsTo && <NotificationBell to={notificationsTo} />}
             <UserMenu />

@@ -31,6 +31,7 @@ export function UserMenu() {
         ref={triggerRef}
         type="button"
         onClick={toggle}
+        aria-label={`${user.name} 계정 메뉴`}
         aria-haspopup="dialog"
         aria-expanded={open}
         className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary-600"
@@ -38,17 +39,15 @@ export function UserMenu() {
         <span className="flex size-8 items-center justify-center rounded-full bg-primary-100 font-semibold text-primary-800">
           {user.name.slice(0, 1)}
         </span>
-        <span className="hidden text-left sm:block">
-          <span className="block leading-tight font-medium text-neutral-900">{user.name}</span>
-          <span className="block text-xs leading-tight text-neutral-500">
-            {USER_ROLE_LABELS[user.role]}
-          </span>
+        <span className="hidden max-w-44 truncate text-left leading-tight font-medium text-neutral-900 sm:block">
+          {user.name}
         </span>
       </button>
       <PopoverPanel open={open} aria-label="내 계정" className="w-48 py-1">
-        <p className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
-          {user.email}
-        </p>
+        <div className="border-b border-neutral-100 px-3 py-2 text-xs text-neutral-500">
+          <p className="truncate">{user.email}</p>
+          <p className="mt-0.5">{USER_ROLE_LABELS[user.role]}</p>
+        </div>
         {user.role === 'USER' ? (
           <>
             <button
