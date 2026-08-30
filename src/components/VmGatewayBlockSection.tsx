@@ -5,9 +5,8 @@ import { toApiError } from '../api/problem'
 import { Alert, Button, Modal, Textarea } from './ui'
 
 /**
- * VM별 SSH·웹 터미널 차단 토글 섹션. VM 관리 드로어와 관리자 VM 상세가
- * 공유한다. 수행은 SYS_ADMIN 전용이며, 비권한 관리자에게는 섹션 자체를
- * 렌더하지 않는다.
+ * 관리자 VM 상세의 SSH·웹 터미널 차단 토글 섹션. 수행은 SYS_ADMIN 전용이며,
+ * 비권한 관리자에게는 섹션 자체를 렌더하지 않는다.
  */
 export function VmGatewayBlockSection({
   vm,
