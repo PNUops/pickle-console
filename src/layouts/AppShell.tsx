@@ -54,30 +54,15 @@ export interface NavSection {
   items: NavItem[]
 }
 
-/**
- * 항목 오른쪽 배지가 놓이는 자리. 폭을 고정하지 않고 오른쪽 끝에 붙인다 — 흐름 안에
- * 남은 배지는 'Beta' 하나뿐이라 여러 배지를 한 열로 세우려고 자리 폭을 고정할 이유가
- * 없어졌고, 고정하면 가운데 정렬 때문에 바로 아래 '준비 중'(NAV_PLANNED_BADGE)과
- * 오른쪽 끝이 어긋난다. 둘 다 행 오른쪽에서 12px 안쪽에 선다.
- */
-const NAV_BADGE_SLOT = 'ml-auto flex'
+/** 항목 오른쪽 배지. 라벨을 덮지 않도록 정상 flex 흐름에서 폭을 보존한다. */
+const NAV_BADGE_SLOT = 'ml-auto flex shrink-0'
 
 /**
- * 준비 중 항목의 '준비 중' 표시 — 흐름에서 빠져나와 행 오른쪽에 얹힌다.
- *
- * 배지를 흐름 안에 두면 자리 폭(72px)과 간격만큼 라벨 예산이 줄어 240px 사이드바
- * 에서 82px밖에 남지 않는다. 한글은 전각이라 여덟 글자짜리 이름이 그 폭에서 두
- * 줄로 접히고, 그래서 한동안 '컨테이너 레지스트리'를 '레지스트리'로 줄여 랜딩과
- * 이름이 달랐다. 얹어 두면 라벨은 164px을 그대로 쓰므로 이름을 줄일 이유가 없다.
- *
- * 대신 긴 이름은 끝 한두 글자가 배지에 겹친다. 반투명이라 밑의 글자 윤곽이 남지만
- * 또렷하지는 않고, 이름을 끝까지 읽는 수단은 hover다 — 행에 마우스를 올리면 배지가
- * 사라진다. 누를 수 없는 항목이라 hover에 다른 쓸모가 없어 비어 있던 자리다.
- * opacity가 0이어도 요소는 그대로 있어 포인터를 계속 받으므로 사라졌다 나타나기를
- * 반복하지 않는다. 터치 화면(모바일 드로어)에는 hover가 없어 겹침이 남는다.
+ * 준비 중 항목은 label과 badge를 모두 정상 흐름에 둔다. 긴 한글 이름은 두 줄이 될 수
+ * 있지만 hover가 없는 touch·400% zoom에서도 전부 읽을 수 있고 badge와 겹치지 않는다.
  */
 const NAV_PLANNED_BADGE =
-  'absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-neutral-100/70 px-2.5 py-0.5 text-xs font-medium text-neutral-500 transition-opacity duration-150 group-hover:opacity-0'
+  'ml-auto shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-xs leading-4 font-medium text-neutral-500'
 
 const NAV_LINK_BASE =
   'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600'
@@ -166,11 +151,11 @@ function ShellNav({
                 aria-disabled="true"
                 className={cn(
                   NAV_LINK_BASE,
-                  'group relative cursor-not-allowed whitespace-nowrap text-neutral-400',
+                  'cursor-not-allowed items-start text-neutral-400',
                 )}
               >
                 {item.icon}
-                {item.label}
+                <span className="min-w-0 flex-1 leading-5">{item.label}</span>
                 <span className={NAV_PLANNED_BADGE}>{item.badge ?? '준비 중'}</span>
               </span>
             ) : (
@@ -189,7 +174,7 @@ function ShellNav({
                 }
               >
                 {item.icon}
-                {item.label}
+                <span className="min-w-0 flex-1 leading-5">{item.label}</span>
                 {item.badge && (
                   <span className={NAV_BADGE_SLOT}>
                     <Badge variant="info">{item.badge}</Badge>

@@ -69,7 +69,12 @@ describe('사이드바 리소스 목록', () => {
     ]
     for (const label of planned) {
       expect(within(nav).queryByRole('link', { name: label })).not.toBeInTheDocument()
-      expect(within(nav).getByText(label)).toHaveAttribute('aria-disabled', 'true')
+      const text = within(nav).getByText(label)
+      const item = text.closest('[aria-disabled="true"]')
+      expect(item).not.toBeNull()
+      expect(item).not.toHaveClass('whitespace-nowrap')
+      expect(text).toHaveClass('min-w-0', 'flex-1')
+      expect(within(item as HTMLElement).getByText('준비 중')).toHaveClass('shrink-0')
     }
     expect(within(nav).getAllByText('준비 중')).toHaveLength(7)
   })
