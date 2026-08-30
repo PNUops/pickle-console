@@ -76,6 +76,9 @@ describe('adminPaths — 기관 query scope', () => {
       `/admin/nodes?tab=ips&org=${SCOPE}`,
     )
     expect(adminPaths.vmDetail(OTHER, SCOPE)).toBe(`/admin/vms/${OTHER}?org=${SCOPE}`)
+    expect(adminPaths.llmKeyDetail(OTHER, SCOPE)).toBe(
+      `/admin/llm/keys/${OTHER}?org=${SCOPE}`,
+    )
     expect(adminPaths.vms(SCOPE, OTHER)).toBe(
       `/admin/vms?workspaceId=${OTHER}&org=${SCOPE}`,
     )

@@ -132,6 +132,37 @@ function initialAdminRequests(): RequestDetail[] {
       createdAt: '2026-07-08T09:10:00+09:00',
       updatedAt: '2026-07-08T09:10:00+09:00',
     },
+    {
+      ...submittedAdminRequest(205),
+      type: 'LLM_API_KEY',
+      vm: null,
+      llmKey: {
+        reqRpm: 60,
+        reqTpm: 40_000,
+        reqDailyTokens: 1_000_000,
+        usagePlan: '캡스톤 챗봇 응답 생성',
+        grantedRpm: 60,
+        grantedTpm: 40_000,
+        grantedDailyTokens: 1_000_000,
+        grantedConcurrency: 4,
+        grantedCreditLimit: 5,
+        grantedCreditLimitReset: 'MONTHLY',
+      },
+      purpose: '캡스톤 챗봇 LLM API 호출',
+      displayName: 'capstone-chatbot-admin',
+      status: 'APPROVED',
+      review: {
+        reviewerId: orgAdminUser.id,
+        reviewerName: orgAdminUser.name,
+        decision: 'APPROVE',
+        comment: '승인합니다.',
+        grantedStartDate: null,
+        grantedEndDate: null,
+        decidedAt: '2026-08-01T09:00:00+09:00',
+      },
+      createdAt: '2026-07-31T09:00:00+09:00',
+      updatedAt: '2026-08-01T09:00:00+09:00',
+    },
   ]
 }
 
@@ -289,6 +320,86 @@ function initialContexts(): Record<string, ApprovalContext> {
         guidance: '메모리 여유가 부족해 신중한 승인이 필요합니다.',
       },
       llmKey: null,
+    },
+    [uuid(205)]: {
+      type: 'LLM_API_KEY',
+      applicant: {
+        id: regularUser.id,
+        name: regularUser.name,
+        email: regularUser.email,
+        signupAt: '2026-03-02T09:00:00+09:00',
+        approvedCount: 3,
+        rejectedCount: 0,
+      },
+      applicantResources: { activeVms: [], totals: { vcpu: 0, memoryMb: 0, diskGb: 0 } },
+      workspace: {
+        id: uuid(12),
+        name: '캡스톤 3조',
+        kind: 'PROJECT',
+        members: [
+          { userId: uuid(42), name: '홍길동', role: 'OWNER' },
+          { userId: uuid(57), name: '김철수', role: 'MEMBER' },
+        ],
+        activeVms: [],
+        totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
+      },
+      history: [
+        {
+          requestId: uuid(90),
+          type: 'LLM_API_KEY',
+          resourceName: 'previous-chatbot-key',
+          submittedAt: '2026-06-01T09:00:00+09:00',
+          status: 'APPROVED',
+          decision: 'APPROVE',
+          reviewerName: '김관리',
+          comment: '기존 키 승인',
+        },
+      ],
+      orgHeadroom: {
+        allocated: { vcpu: 999, memoryMb: 999999, diskGb: 9999 },
+        capacity: { cpuThreads: 1, memoryMb: 1 },
+        vcpuOvercommitRatio: 999,
+        memoryUsageRatio: 999,
+        warnings: ['LLM 화면에 노출되면 안 되는 물리 용량 경고'],
+      },
+      guidance: 'LLM 화면에 노출되면 안 되는 VM 판단 안내',
+      vm: null,
+      llmKey: {
+        applicantKeys: [
+          {
+            id: uuid(171),
+            name: 'active-admin-key',
+            status: 'ACTIVE',
+            workspaceId: uuid(12),
+            workspaceName: '캡스톤 3조',
+            rpm: 60,
+            tpm: 40_000,
+            dailyTokens: 1_000_000,
+            concurrency: 4,
+            creditLimit: 5,
+            creditLimitReset: 'MONTHLY',
+            creditAxisConnected: true,
+            expiresAt: null,
+          },
+        ],
+        workspaceKeys: [
+          {
+            id: uuid(170),
+            name: 'pending-admin-key',
+            status: 'PENDING',
+            workspaceId: uuid(12),
+            workspaceName: '캡스톤 3조',
+            rpm: null,
+            tpm: null,
+            dailyTokens: null,
+            concurrency: null,
+            creditLimit: 0,
+            creditLimitReset: null,
+            creditAxisConnected: false,
+            expiresAt: null,
+          },
+        ],
+      },
     },
   }
 }
@@ -464,6 +575,7 @@ export const adminHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     // 계약(v0.2.3): status 미지정 시 모든 상태를 반환한다.
     const status = url.searchParams.get('status')
+    const type = url.searchParams.get('type')
     const orgId = url.searchParams.get('orgId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
@@ -474,6 +586,7 @@ export const adminHandlers: RequestHandler[] = [
     const filtered = adminRequestStore
       .filter((r) => (scope ? scope.matches(r.orgId) : !orgId || r.orgId === orgId))
       .filter((r) => !status || r.status === status)
+      .filter((r) => !type || r.type === type)
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),

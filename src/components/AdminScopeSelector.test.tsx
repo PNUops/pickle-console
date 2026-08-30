@@ -53,7 +53,10 @@ describe('관리 기관 scope selector', () => {
         uuid(1),
       )
     }
-    expect(within(nav).queryByRole('link', { name: /LLM API/ })).not.toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: 'LLM API 키' })).toHaveAttribute(
+      'href',
+      `/admin/llm/keys?org=${uuid(1)}`,
+    )
   })
 
   test('다기관 ORG는 선택 전 route page를 마운트하지 않고 선택 뒤에만 호출한다', async () => {

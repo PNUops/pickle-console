@@ -6,6 +6,7 @@ export type ResourceRole = components['schemas']['ResourceRole']
 export type UserRole = components['schemas']['UserRole']
 export type UserStatus = components['schemas']['UserStatus']
 export type OrgStatus = components['schemas']['OrgStatus']
+export type CreditLimitReset = components['schemas']['CreditLimitReset']
 
 export const WORKSPACE_KIND_LABELS: Record<WorkspaceKind, string> = {
   PERSONAL: '개인',
@@ -69,4 +70,10 @@ export const USER_STATUS_LABELS: Record<UserStatus, string> = {
 export const ORG_STATUS_LABELS: Record<OrgStatus, string> = {
   ACTIVE: '활성',
   DISABLED: '비활성',
+}
+
+export const CREDIT_LIMIT_RESET_LABELS: Record<CreditLimitReset, string> = {
+  DAILY: '일일 (UTC 자정)',
+  WEEKLY: '주간 (UTC 자정)',
+  MONTHLY: '월간 (UTC 자정)',
 }

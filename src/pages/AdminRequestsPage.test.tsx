@@ -106,6 +106,16 @@ describe('승인 대기 큐', () => {
     )
   })
 
+  test('리소스 종류 필터로 LLM API 키 신청만 좁힌다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin('/admin/requests')
+
+    await user.click(await screen.findByRole('button', { name: '승인됨' }))
+    await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), 'LLM_API_KEY')
+    expect(await screen.findByText('캡스톤 챗봇 LLM API 호출')).toBeInTheDocument()
+    expect(screen.queryByText('알고리즘 스터디 채점 서버')).not.toBeInTheDocument()
+  })
+
   test('10건이 넘으면 페이지네이션으로 나눠 보여준다', async () => {
     // 시딩분은 전부 org1이라 보유 기관 스코프 안에서도 그대로 보인다.
     for (let id = 300; id < 310; id++) {

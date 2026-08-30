@@ -20,6 +20,7 @@ export type CreateRequest = Schemas['CreateRequestRequest']
 export type RequestDetail = Schemas['RequestDetailResponse']
 export type RequestPage = Schemas['PageResponseRequestDetailResponse']
 export type RequestStatus = Schemas['RequestStatus']
+export type ResourceType = Schemas['ResourceType']
 export type VmSummary = Schemas['VmSummaryResponse']
 export type VmDetail = Schemas['VmDetailResponse']
 export type VmPage = Schemas['PageResponseVmSummaryResponse']
@@ -334,6 +335,7 @@ export function fetchVm(vmId: string): Promise<VmDetail> {
 
 export function fetchAdminRequests(params: {
   status?: RequestStatus
+  type?: ResourceType
   orgId?: string
   page?: number
   size?: number
@@ -533,6 +535,74 @@ export type LlmKeyPage = Schemas['PageResponseLlmKeySummaryResponse']
 export type LlmApiKeyStatus = Schemas['LlmApiKeyStatus']
 export type IssuedLlmKey = Schemas['IssuedLlmKeyResponse']
 export type UpdateLlmKey = Schemas['UpdateLlmKeyRequest']
+export type AdminLlmKeySummary = Schemas['AdminLlmKeySummaryResponse']
+export type AdminLlmKeyDetail = Schemas['AdminLlmKeyDetailResponse']
+export type AdminLlmKeyPage = Schemas['PageResponseAdminLlmKeySummaryResponse']
+export type AdminLlmKeyLimits = Schemas['AdminLlmKeyLimitsRequest']
+export type LlmKeyBrief = Schemas['LlmKeyBrief']
+
+export function fetchAdminLlmKeys(params: {
+  orgId?: string
+  workspaceId?: string
+  status?: LlmApiKeyStatus
+  query?: string
+  page?: number
+  size?: number
+}): Promise<AdminLlmKeyPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/keys', { params: { query: params } })
+    if (!data) throw toApiError(error, '관리자 LLM API 키 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/keys/{keyId}', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, '관리자 LLM API 키 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function replaceAdminLlmKeyLimits(
+  keyId: string,
+  body: AdminLlmKeyLimits,
+): Promise<AdminLlmKeyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/llm/keys/{keyId}/limits', {
+      params: { path: { keyId } },
+      body,
+    })
+    if (!data) throw toApiError(error, 'LLM API 키 한도를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function suspendAdminLlmKey(
+  keyId: string,
+  reason: string,
+): Promise<AdminLlmKeyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/llm/keys/{keyId}/suspend', {
+      params: { path: { keyId } },
+      body: { reason },
+    })
+    if (!data) throw toApiError(error, 'LLM API 키를 정지하지 못했습니다.')
+    return data
+  })
+}
+
+export function resumeAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/llm/keys/{keyId}/resume', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, 'LLM API 키 정지를 해제하지 못했습니다.')
+    return data
+  })
+}
 
 export function fetchLlmKeys(params: {
   page?: number

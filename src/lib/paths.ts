@@ -58,6 +58,9 @@ export const adminPaths = {
       orgId,
     ),
   vmDetail: (vmId: string, orgId?: string) => adminPath(`/admin/vms/${vmId}`, orgId),
+  llmKeys: (orgId?: string) => adminPath('/admin/llm/keys', orgId),
+  llmKeyDetail: (keyId: string, orgId?: string) =>
+    adminPath(`/admin/llm/keys/${keyId}`, orgId),
   workspaces: (orgId?: string) => adminPath('/admin/workspaces', orgId),
   account: (orgId?: string) => adminPath('/admin/account', orgId),
   notifications: (orgId?: string) => adminPath('/admin/notifications', orgId),

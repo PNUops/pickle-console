@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
+  type ResourceType,
   type RequestStatus,
 } from '../api/queries'
 import {
@@ -10,6 +11,7 @@ import {
   Card,
   Pagination,
   RequestStatusBadge,
+  Select,
   Spinner,
   Table,
   TBody,
@@ -43,15 +45,16 @@ export function AdminRequestsPage() {
   const navigate = useNavigate()
   const { activeOrgId } = useAdminScope()
   const [status, setStatus] = useState<RequestStatus | undefined>('SUBMITTED')
+  const [type, setType] = useState<ResourceType | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   const requests = useQuery({
     queryKey: [
       'admin',
       'requests',
-      { status: status ?? null, orgId: activeOrgId ?? null, page, size: PAGE_SIZE },
+      { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, page, size: PAGE_SIZE },
     ],
-    queryFn: () => fetchAdminRequests({ status, orgId: activeOrgId, page, size: PAGE_SIZE }),
+    queryFn: () => fetchAdminRequests({ status, type, orgId: activeOrgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
@@ -61,7 +64,7 @@ export function AdminRequestsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          제출된 VM 신청을 검토하고 승인 또는 반려합니다.
+          제출된 리소스 신청을 종류별 참고 정보와 함께 검토하고 승인 또는 반려합니다.
         </p>
       </div>
 
@@ -91,6 +94,19 @@ export function AdminRequestsPage() {
             )
           })}
         </div>
+        <Select
+          aria-label="리소스 종류 필터"
+          className="w-full sm:w-44"
+          value={type ?? ''}
+          onChange={(event) => {
+            setType((event.target.value || undefined) as ResourceType | undefined)
+            setPage(0)
+          }}
+        >
+          <option value="">전체 리소스</option>
+          <option value="VM">가상머신</option>
+          <option value="LLM_API_KEY">LLM API 키</option>
+        </Select>
       </div>
 
       {requests.isPending && (
