@@ -296,6 +296,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM upstream 지표
+         * @description raw usage event에서 마지막 처리 upstream별 최종 결과와 지연, token, attempt coverage를 집계합니다. 중간 retry 경로나 uptime을 뜻하지 않습니다.
+         */
+        get: operations["getAdminLlmMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM 서비스 상태
+         * @description 게이트웨이 자기보고와 upstream별 passive·active·catalog 현재 상태를 조회합니다. 조회 과정에서 gateway나 upstream을 직접 호출하지 않으며 변경 작업도 제공하지 않습니다.
+         */
+        get: operations["getAdminLlmStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/nodes": {
         parameters: {
             query?: never;
@@ -3562,8 +3602,181 @@ export interface components {
              */
             storageMeasuredNodeCount: number;
         };
+        /** @description gateway의 out-of-band /models probe 최신 결과. routing과 cooldown을 바꾸지 않으며 마지막 시도가 intervalSeconds의 3배보다 오래되면 availability에는 UNKNOWN으로 반영됩니다. */
+        LlmActiveObservationResponse: {
+            /**
+             * Format: int32
+             * @description 연속 probe 실패 수. 보고되지 않았으면 null
+             */
+            consecutiveFailures?: number | null;
+            /** @description 최신 probe 실패 분류. 실패가 아니면 null */
+            failureType?: string | null;
+            /**
+             * Format: int32
+             * @description 이 upstream의 probe 주기(초). 마지막 시도 freshness 판정의 기준
+             */
+            intervalSeconds?: number | null;
+            /**
+             * Format: date-time
+             * @description 마지막 probe 시도 시각. 아직 시도하지 않았으면 null
+             */
+            lastAttemptAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 probe 실패 시각. 실패 이력이 없으면 null
+             */
+            lastFailureAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 probe 성공 시각. 성공 이력이 없으면 null
+             */
+            lastSuccessAt?: string | null;
+            /**
+             * Format: int64
+             * @description 최신 probe 응답 시간(ms). 측정값이 없으면 null
+             */
+            latencyMs?: number | null;
+            /**
+             * Format: int32
+             * @description 성공한 /models 응답의 모델 수. 성공했고 빈 목록이면 0, 성공 이력이 없으면 null
+             */
+            modelCount?: number | null;
+            /** @description 마지막 probe 시도가 intervalSeconds의 3배보다 오래됐는지 서버가 계산한 값. 미관측 UNKNOWN은 false */
+            stale: boolean;
+            /** @description 마지막으로 보고된 raw probe 결과. freshness가 만료돼도 값 자체는 OK로 남을 수 있으며, 현재 상태는 lastAttemptAt·intervalSeconds를 직접 재해석하지 말고 top-level availability를 사용. AUTH_UNVERIFIED는 도달했지만 인증 여부를 확인하지 못한 상태 */
+            status: components["schemas"]["LlmActiveProbeStatus"];
+        };
+        /** @enum {string} */
+        LlmActiveProbeStatus: "OK" | "AUTH_UNVERIFIED" | "FAILED" | "UNKNOWN";
         /** @enum {string} */
         LlmApiKeyStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
+        /** @description 설정 catalog와 성공한 /models 응답의 비교. 오래된 비교 결과는 availability를 낮추지 않습니다. */
+        LlmCatalogObservationResponse: {
+            /**
+             * Format: int32
+             * @description 비교한 기대 모델 수. 비교하지 않았으면 null
+             */
+            expectedModelCount?: number | null;
+            /**
+             * Format: int32
+             * @description 기대했지만 /models 응답에 없던 모델 수. MATCH/MISMATCH에서 없으면 0, 비교하지 않았으면 null
+             */
+            missingModelCount?: number | null;
+            /** @description 누락된 public model 이름 표본(최대 20개). SYS 계층에만 반환하며 ORG에서는 항상 빈 배열 */
+            missingPublicModels: string[];
+            /** @description catalog 비교 상태. expected set이 없는 passthrough upstream은 NOT_APPLICABLE */
+            status: components["schemas"]["LlmCatalogStatus"];
+            /**
+             * Format: int32
+             * @description /models 응답에만 있던 예상 밖 모델 수. curated non-passthrough 비교에서 없으면 0, passthrough subset 비교·미비교 상태에서는 null
+             */
+            unexpectedModelCount?: number | null;
+        };
+        /** @enum {string} */
+        LlmCatalogStatus: "MATCH" | "MISMATCH" | "NOT_APPLICABLE" | "UNKNOWN";
+        /** @enum {string} */
+        LlmGatewayReportState: "NOT_REPORTED" | "FRESH" | "STALE";
+        /** @description LLM gateway heartbeat와 usage 전송 상태. reportState, usageQueueReportState와 lastContactAt은 모든 관리자에게 보입니다. Queue 수치와 loss counter를 포함한 나머지 진단 필드는 SYS 계층에만 값이 있고 ORG 계층에서는 null입니다. */
+        LlmGatewayStatusResponse: {
+            /** @description gateway binary 버전. SYS 전용이며 구 gateway·ORG에서는 null */
+            agentVersion?: string | null;
+            /**
+             * Format: int64
+             * @description gateway가 적용했다고 보고한 세대. SYS 전용이며 미보고·ORG에서는 null
+             */
+            appliedGeneration?: number | null;
+            /**
+             * Format: int64
+             * @description 본문 전달 포기 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             */
+            bodiesDropped?: number | null;
+            /**
+             * Format: int64
+             * @description API가 제공하려는 authorization document 세대. SYS 전용이며 ORG에서는 null
+             */
+            desiredGeneration?: number | null;
+            /**
+             * Format: int32
+             * @description gateway가 보고한 처리 중 요청 수. SYS 전용이며 ORG에서는 null
+             */
+            inFlight?: number | null;
+            /**
+             * Format: date-time
+             * @description API가 마지막 sync 요청을 받은 시각. 한 번도 접촉하지 않았으면 null
+             */
+            lastContactAt?: string | null;
+            /** @description gateway가 보고한 마지막 오류 요약. SYS 전용이며 없거나 ORG이면 null */
+            lastError?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 usage 전송 성공 시각. SYS 전용이며 성공 이력 없음·ORG에서는 null
+             */
+            lastUsageShipSuccessAt?: string | null;
+            /**
+             * Format: int32
+             * @description gateway 동시 처리 상한. SYS 전용이며 미보고·ORG에서는 null
+             */
+            maxInFlight?: number | null;
+            /**
+             * Format: date-time
+             * @description 미전송 queue에서 가장 오래된 event 시각. SYS 전용이며 빈 queue·미관측·ORG에서는 null
+             */
+            oldestUnshippedEventAt?: string | null;
+            /**
+             * Format: int64
+             * @description usage queue byte 수. SYS 전용이며 관측 시각이 있으면 빈 queue는 0, 미관측·ORG에서는 null
+             */
+            queuedUsageBytes?: number | null;
+            /**
+             * Format: int64
+             * @description usage queue event 수. SYS 전용이며 관측 시각이 있으면 빈 queue는 0, 미관측·ORG에서는 null
+             */
+            queuedUsageEvents?: number | null;
+            /**
+             * Format: int32
+             * @description authorization 문서에서 거절한 항목의 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             */
+            rejectedEntries?: number | null;
+            /**
+             * Format: int64
+             * @description authorization reload 실패 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             */
+            reloadFailures?: number | null;
+            /** @description 5초 sync heartbeat의 보고 신선도 */
+            reportState: components["schemas"]["LlmGatewayReportState"];
+            /**
+             * Format: int64
+             * @description usage event spool 기록 실패 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             */
+            spoolWriteFailures?: number | null;
+            /**
+             * Format: date-time
+             * @description gateway 프로세스 시작 시각. SYS 전용이며 미보고·ORG에서는 null
+             */
+            startedAt?: string | null;
+            /**
+             * Format: int32
+             * @description gateway가 지원하는 authorization document 형식. SYS 전용이며 미보고·ORG에서는 null
+             */
+            supportedFormat?: number | null;
+            /**
+             * Format: date-time
+             * @description usage queue를 마지막으로 온전히 조사한 시각. SYS 전용이며 구 gateway·ORG에서는 null
+             */
+            usageQueueObservedAt?: string | null;
+            /** @description usage queue 관측 신선도. 관측 시각 없음은 NOT_REPORTED, 10분 초과는 STALE, 그 이하는 FRESH */
+            usageQueueReportState: components["schemas"]["LlmGatewayReportState"];
+            /**
+             * Format: int64
+             * @description usage queue 조사 실패 누적 수. SYS 전용이며 관측 시각이 있으면 실패 없음은 0, 미관측·ORG에서는 null
+             */
+            usageQueueScanFailures?: number | null;
+            /**
+             * Format: int64
+             * @description usage batch 전송 실패 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             */
+            usageShipFailures?: number | null;
+        };
         LlmKeyBrief: {
             /** Format: int32 */
             concurrency?: number | null;
@@ -3894,6 +4107,167 @@ export interface components {
             reportedUntil?: string | null;
             /** Format: date */
             to: string;
+        };
+        LlmLocalRejectionMetricResponse: {
+            errorType: string;
+            /** Format: int64 */
+            requests: number;
+        };
+        LlmMetricsResponse: {
+            /**
+             * Format: double
+             * @description attempts가 기록된 event 비율(0..1)
+             */
+            attemptCoverage: number;
+            /** Format: int64 */
+            attemptsKnownEvents: number;
+            /** Format: int64 */
+            attributedEvents: number;
+            /**
+             * Format: double
+             * @description upstreamRef가 기록된 event 비율(0..1)
+             */
+            attributionCoverage: number;
+            /**
+             * Format: double
+             * @description 토큰 수가 추정치인 event 비율(0..1)
+             */
+            estimatedCoverage: number;
+            /** Format: int64 */
+            estimatedEvents: number;
+            /** Format: date-time */
+            from: string;
+            localRejections: components["schemas"]["LlmLocalRejectionMetricResponse"][];
+            /** Format: date-time */
+            to: string;
+            /** Format: int64 */
+            totalEvents: number;
+            upstreams: components["schemas"]["LlmUpstreamMetricResponse"][];
+        };
+        /** @description 실제 사용자 요청에서 얻은 passive 관측. lastAttemptAt은 표시용이며, 가용성 판정은 최근 15분 안의 lastSuccessAt·lastFailureAt만 사용합니다. */
+        LlmPassiveObservationResponse: {
+            /**
+             * Format: int32
+             * @description 연속 health-impacting 실패 수. 보고되지 않았으면 null
+             */
+            consecutiveFailures?: number | null;
+            /**
+             * Format: date-time
+             * @description 실제 요청 실패로 생긴 routing cooldown 종료 시각. cooldown이 없으면 null
+             */
+            cooldownUntil?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 실제 요청 시도 시각. key-local 거절·취소도 포함하므로 상태 판정에는 사용하지 않음
+             */
+            lastAttemptAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 health-impacting upstream 실패 시각. 15분이 지나면 현재 health 근거로 사용하지 않음
+             */
+            lastFailureAt?: string | null;
+            /** @description 마지막 health-impacting 실패 분류. 실패 이력이 없으면 null */
+            lastFailureType?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 upstream 성공 시각. 15분이 지나면 현재 health 근거로 사용하지 않음
+             */
+            lastSuccessAt?: string | null;
+        };
+        LlmStatusResponse: {
+            gateway: components["schemas"]["LlmGatewayStatusResponse"];
+            /** Format: date-time */
+            observedAt: string;
+            upstreams: components["schemas"]["LlmUpstreamStatusResponse"][];
+        };
+        /** @enum {string} */
+        LlmUpstreamAvailability: "UNKNOWN" | "HEALTHY" | "DEGRADED" | "UNAVAILABLE";
+        /** @enum {string} */
+        LlmUpstreamKind: "ON_PREM" | "EXTERNAL_API";
+        LlmUpstreamMetricResponse: {
+            /**
+             * Format: double
+             * @description attempts가 기록된 결과의 평균 시도 횟수(배수)
+             */
+            attemptAmplification: number;
+            /** Format: int64 */
+            attemptsKnown: number;
+            /** Format: int64 */
+            finalOutcomes: number;
+            /**
+             * Format: uuid
+             * @description 등록된 upstream 공개 ID. 미등록 ref면 null; ORG에는 허용된 upstream 행만 반환
+             */
+            id?: string | null;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            latencyP50Ms?: number | null;
+            /** Format: int64 */
+            latencyP95Ms?: number | null;
+            /** Format: int64 */
+            latencyP99Ms?: number | null;
+            /** Format: int64 */
+            latencySamples: number;
+            /**
+             * Format: double
+             * @description attempts가 기록된 결과 중 attempts > 1 비율(0..1)
+             */
+            multiAttemptRate: number;
+            /** Format: int64 */
+            multiAttemptRequests: number;
+            name: string;
+            /** Format: int64 */
+            outputTokens: number;
+            /** @description gateway 내부 ref. SYS 계층에만 반환하며 ORG에서는 null */
+            ref?: string | null;
+            /** Format: int64 */
+            succeeded: number;
+            /** Format: int64 */
+            timeoutOrError: number;
+            /**
+             * Format: double
+             * @description 최종 결과 중 TIMEOUT 또는 UPSTREAM_ERROR 비율(0..1)
+             */
+            timeoutOrErrorRate: number;
+        };
+        /** @enum {string} */
+        LlmUpstreamReportState: "OK" | "NOT_REPORTED" | "MISSING" | "STALE" | "DECONFIGURED" | "UNREGISTERED";
+        /** @description upstream 등록 정보와 gateway의 최신 현재 상태. ORG 응답은 허용 범위의 upstream만 포함하며 내부 ref·소유 기관 ID를 숨깁니다. */
+        LlmUpstreamStatusResponse: {
+            active: components["schemas"]["LlmActiveObservationResponse"];
+            /** @description 신선한 active·passive·catalog 관측을 합성한 현재 가용성 */
+            availability: components["schemas"]["LlmUpstreamAvailability"];
+            catalog: components["schemas"]["LlmCatalogObservationResponse"];
+            /** @description format 1 최신 gateway 목록에 포함됐는지. 구 gateway 보고에는 기존 값을 보존 */
+            configured: boolean;
+            /** @description 기관 전용 여부. 미등록 ref면 null */
+            dedicated?: boolean | null;
+            /** @description 등록부의 운영 활성 여부. 미등록 ref면 null */
+            enabled?: boolean | null;
+            /**
+             * Format: uuid
+             * @description upstream 등록 공개 ID. gateway에만 있고 등록되지 않은 ref면 null
+             */
+            id?: string | null;
+            /** @description 등록된 upstream 종류. 미등록 ref면 null */
+            kind?: components["schemas"]["LlmUpstreamKind"] | null;
+            /**
+             * Format: date-time
+             * @description 이 upstream 관측 행을 마지막으로 받은 시각. 아직 보고되지 않았으면 null
+             */
+            lastReportedAt?: string | null;
+            name: string;
+            /**
+             * Format: uuid
+             * @description 소유 기관 공개 ID. SYS 계층의 기관 소유 upstream에만 있고 shared·미등록·ORG에서는 null
+             */
+            orgId?: string | null;
+            passive: components["schemas"]["LlmPassiveObservationResponse"];
+            /** @description gateway 내부 ref. SYS 계층에만 반환하며 ORG에서는 null */
+            ref?: string | null;
+            /** @description 등록부와 versioned gateway 보고의 관계 및 신선도 */
+            reportState: components["schemas"]["LlmUpstreamReportState"];
         };
         LoginRequest: {
             email: string;
@@ -6092,6 +6466,72 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmMetrics: {
+        parameters: {
+            query?: {
+                /** @description 조회할 기관. 기관 계층은 맡은 기관만 지정할 수 있습니다. */
+                orgId?: string;
+                /** @description 진단 기간(일), 최대 31일 */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LlmMetricsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmStatus: {
+        parameters: {
+            query?: {
+                /** @description 조회할 기관. 기관 계층은 맡은 기관만 지정할 수 있습니다. */
+                orgId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LlmStatusResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

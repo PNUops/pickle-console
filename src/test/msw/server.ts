@@ -14,6 +14,7 @@ import { mfaHandlers } from './handlers/mfa'
 import { resetUserFixtures, userHandlers } from './handlers/users'
 import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces'
 import { llmKeyHandlers, resetLlmKeyFixtures } from './handlers/llm-keys'
+import { llmObservabilityHandlers } from './handlers/llm-observability'
 import { metricsHandlers } from './handlers/metrics'
 import { networkHandlers, resetNetworkFixtures } from './handlers/network'
 import { resourceHandlers } from './handlers/resources'
@@ -41,6 +42,7 @@ export const handlers: RequestHandler[] = [
   ...requestHandlers,
   ...vmHandlers,
   ...llmKeyHandlers,
+  ...llmObservabilityHandlers,
   ...resourceHandlers,
   ...terminalHandlers,
   ...vmSshKeyHandlers,

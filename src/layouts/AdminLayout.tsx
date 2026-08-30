@@ -80,6 +80,11 @@ export function AdminLayout() {
     {
       heading: '운영',
       items: [
+        {
+          to: path('/admin/llm/status'),
+          label: 'LLM 서비스',
+          icon: <Server24Regular className={iconClass} />,
+        },
         { to: path('/admin/expiry'), label: '만료 관리', icon: <Clock24Regular className={iconClass} /> },
         {
           to: path('/admin/terminal-sessions'),

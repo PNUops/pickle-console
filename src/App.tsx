@@ -31,6 +31,7 @@ import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AdminLlmKeyDetailPage } from './pages/AdminLlmKeyDetailPage'
 import { AdminLlmKeysPage } from './pages/AdminLlmKeysPage'
+import { AdminLlmStatusPage } from './pages/AdminLlmStatusPage'
 import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { DocsPage } from './pages/DocsPage'
@@ -200,6 +201,7 @@ function App() {
         <Route path="vms/:vmId" element={<AdminVmDetailPage />} />
         <Route path="llm/keys" element={<AdminLlmKeysPage />} />
         <Route path="llm/keys/:keyId" element={<AdminLlmKeyDetailPage />} />
+        <Route path="llm/status" element={<AdminLlmStatusPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="workspaces" element={<AdminWorkspacesPage />} />

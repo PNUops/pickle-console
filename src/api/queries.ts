@@ -540,6 +540,17 @@ export type AdminLlmKeyDetail = Schemas['AdminLlmKeyDetailResponse']
 export type AdminLlmKeyPage = Schemas['PageResponseAdminLlmKeySummaryResponse']
 export type AdminLlmKeyLimits = Schemas['AdminLlmKeyLimitsRequest']
 export type LlmKeyBrief = Schemas['LlmKeyBrief']
+export type AdminLlmStatus = Schemas['LlmStatusResponse']
+export type LlmGatewayStatus = Schemas['LlmGatewayStatusResponse']
+export type LlmUpstreamStatus = Schemas['LlmUpstreamStatusResponse']
+export type GatewayReportState = Schemas['LlmGatewayReportState']
+export type UpstreamReportState = Schemas['LlmUpstreamReportState']
+export type UpstreamAvailability = Schemas['LlmUpstreamAvailability']
+export type ActiveProbeStatus = Schemas['LlmActiveProbeStatus']
+export type LlmCatalogStatus = Schemas['LlmCatalogStatus']
+export type AdminLlmMetrics = Schemas['LlmMetricsResponse']
+export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
+export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']
 
 export function fetchAdminLlmKeys(params: {
   orgId?: string
@@ -553,6 +564,26 @@ export function fetchAdminLlmKeys(params: {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys', { params: { query: params } })
     if (!data) throw toApiError(error, '관리자 LLM API 키 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminLlmStatus(orgId?: string): Promise<AdminLlmStatus> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/status', {
+      params: { query: { orgId } },
+    })
+    if (!data) throw toApiError(error, 'LLM 서비스 상태를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminLlmMetrics(orgId?: string, days = 7): Promise<AdminLlmMetrics> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/metrics', {
+      params: { query: { orgId, days } },
+    })
+    if (!data) throw toApiError(error, 'LLM 서비스 지표를 불러오지 못했습니다.')
     return data
   })
 }
