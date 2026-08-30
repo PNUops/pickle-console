@@ -139,6 +139,7 @@ function initialAdminRequests(): RequestDetail[] {
 function initialContexts(): Record<string, ApprovalContext> {
   return {
     [uuid(201)]: {
+      type: 'VM',
       applicant: {
         id: regularUser.id,
         name: regularUser.name,
@@ -175,6 +176,8 @@ function initialContexts(): Record<string, ApprovalContext> {
       history: [
         {
           requestId: uuid(88),
+          type: 'VM',
+          resourceName: '이전 개발 VM',
           submittedAt: '2026-04-10T13:00:00+09:00',
           status: 'APPROVED',
           decision: 'APPROVE',
@@ -190,8 +193,38 @@ function initialContexts(): Record<string, ApprovalContext> {
         warnings: [],
       },
       guidance: '리소스에 여유가 있어 승인이 가능합니다.',
+      vm: {
+        applicantResources: {
+          activeVms: [
+            {
+              id: uuid(31),
+              name: 'example-dev',
+              status: 'RUNNING',
+              vcpu: 1,
+              memoryMb: 1024,
+              diskGb: 10,
+              endDate: '2026-08-31',
+            },
+          ],
+          totals: { vcpu: 1, memoryMb: 1024, diskGb: 10 },
+        },
+        workspaceResources: {
+          activeVms: [],
+          totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
+        },
+        orgHeadroom: {
+          allocated: { vcpu: 34, memoryMb: 51200, diskGb: 460 },
+          capacity: { cpuThreads: 40, memoryMb: 79872 },
+          vcpuOvercommitRatio: 0.85,
+          memoryUsageRatio: 0.64,
+          warnings: [],
+        },
+        guidance: '리소스에 여유가 있어 승인이 가능합니다.',
+      },
+      llmKey: null,
     },
     [uuid(204)]: {
+      type: 'VM',
       applicant: {
         id: uuid(58),
         name: '박영희',
@@ -215,6 +248,8 @@ function initialContexts(): Record<string, ApprovalContext> {
       history: [
         {
           requestId: uuid(95),
+          type: 'VM',
+          resourceName: '이전 학습 VM',
           submittedAt: '2026-06-01T10:00:00+09:00',
           status: 'REJECTED',
           decision: 'REJECT',
@@ -233,6 +268,28 @@ function initialContexts(): Record<string, ApprovalContext> {
         ],
       },
       guidance: '메모리 여유가 부족해 신중한 승인이 필요합니다.',
+      vm: {
+        applicantResources: {
+          activeVms: [],
+          totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
+        },
+        workspaceResources: {
+          activeVms: [],
+          totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },
+        },
+        orgHeadroom: {
+          allocated: { vcpu: 58, memoryMb: 114688, diskGb: 800 },
+          capacity: { cpuThreads: 32, memoryMb: 131072 },
+          vcpuOvercommitRatio: 1.81,
+          memoryUsageRatio: 0.88,
+          warnings: [
+            'vCPU 오버커밋 비율이 임계값(1.5)을 초과했습니다',
+            '메모리 사용률이 임계값(85%)을 초과했습니다',
+          ],
+        },
+        guidance: '메모리 여유가 부족해 신중한 승인이 필요합니다.',
+      },
+      llmKey: null,
     },
   }
 }

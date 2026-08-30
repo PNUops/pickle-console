@@ -196,6 +196,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM API 키 목록
+         * @description 기관과 워크스페이스, 상태, 검색어로 키를 조회합니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
+         */
+        get: operations["listAdminLlmKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM API 키 상세
+         * @description 기관 범위 안의 키 운영 상태와 한도를 조회합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
+         */
+        get: operations["getAdminLlmKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/keys/{keyId}/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 관리자 LLM API 키 한도 교체
+         * @description 여섯 한도 값을 한 번에 교체합니다. 시스템 운영자는 금액과 리셋 창을 바꿀 수 없습니다.
+         */
+        put: operations["replaceAdminLlmKeyLimits"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/keys/{keyId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 관리자 LLM API 키 재개
+         * @description 정지된 키를 다시 활성화합니다.
+         */
+        post: operations["resumeAdminLlmKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/keys/{keyId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 관리자 LLM API 키 정지
+         * @description 활성 키를 정지합니다. 사유는 감사 기록에 남고 평문 요청 본문은 기록하지 않습니다.
+         */
+        post: operations["suspendAdminLlmKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/nodes": {
         parameters: {
             query?: never;
@@ -2564,6 +2664,103 @@ export interface components {
             workspaceId: string;
             workspaceName: string;
         };
+        /** @enum {string} */
+        AdminGlobalRole: "USER" | "SYS_VIEWER" | "SYS_MANAGER" | "SYS_ADMIN";
+        AdminLlmKeyDetailResponse: {
+            /** Format: int32 */
+            concurrency?: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 금액 축이 발급되어 현재 연결되어 있는지 */
+            creditAxisConnected: boolean;
+            creditLimit: number;
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            /** Format: int64 */
+            dailyTokens?: number | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            lastUsedAt?: string | null;
+            name: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName: string;
+            purpose?: string | null;
+            quotaExhausted: boolean;
+            /** Format: uuid */
+            requestId?: string | null;
+            /** Format: date-time */
+            revokedAt?: string | null;
+            /** Format: int32 */
+            rpm?: number | null;
+            status: components["schemas"]["LlmApiKeyStatus"];
+            /** Format: int32 */
+            tpm?: number | null;
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName: string;
+        };
+        AdminLlmKeyLimitsRequest: {
+            /**
+             * Format: int32
+             * @description 동시 요청 한도. null이면 서비스 기본값을 따릅니다.
+             */
+            concurrency: number | null;
+            /** @description 금액 한도(USD 크레딧). 0이면 금액 축을 닫습니다. */
+            creditLimit: number;
+            /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. */
+            creditLimitReset: components["schemas"]["CreditLimitReset"] | null;
+            /**
+             * Format: int64
+             * @description 일일 토큰 한도. null이면 무제한이고 0이면 토큰 축을 닫습니다.
+             */
+            dailyTokens: number | null;
+            /**
+             * Format: int32
+             * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
+             */
+            rpm: number | null;
+            /**
+             * Format: int32
+             * @description 분당 토큰 한도. null이면 서비스 기본값을 따릅니다.
+             */
+            tpm: number | null;
+        };
+        AdminLlmKeySummaryResponse: {
+            /** Format: int32 */
+            concurrency?: number | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** @description 금액 축이 발급되어 현재 연결되어 있는지 */
+            creditAxisConnected: boolean;
+            creditLimit: number;
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            /** Format: int64 */
+            dailyTokens?: number | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            lastUsedAt?: string | null;
+            name: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName: string;
+            purpose?: string | null;
+            /** Format: uuid */
+            requestId?: string | null;
+            /** Format: int32 */
+            rpm?: number | null;
+            status: components["schemas"]["LlmApiKeyStatus"];
+            /** Format: int32 */
+            tpm?: number | null;
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName: string;
+        };
         AdminNoticeView: {
             /** @description 지금 게시 창 안에 있는지. 예정·만료된 공지도 이 목록에는 함께 나옵니다. */
             active: boolean;
@@ -2873,10 +3070,16 @@ export interface components {
         };
         ApprovalContextResponse: {
             applicant: components["schemas"]["Applicant"];
+            /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
+            /** @deprecated */
             guidance: string;
             history: components["schemas"]["HistoryEntry"][];
+            llmKey?: components["schemas"]["LlmKeyContext"] | null;
+            /** @deprecated */
             orgHeadroom: components["schemas"]["OrgHeadroom"];
+            type: components["schemas"]["ResourceType"];
+            vm?: components["schemas"]["VmContext"] | null;
             workspace: components["schemas"]["WorkspacePanel"];
         };
         ApproveLlmKeyRequestSpec: {
@@ -3274,10 +3477,12 @@ export interface components {
             decision?: components["schemas"]["ReviewDecision"] | null;
             /** Format: uuid */
             requestId: string;
+            resourceName: string;
             reviewerName?: string | null;
             status: components["schemas"]["RequestStatus"];
             /** Format: date-time */
             submittedAt: string;
+            type: components["schemas"]["ResourceType"];
         };
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
@@ -3359,6 +3564,28 @@ export interface components {
         };
         /** @enum {string} */
         LlmApiKeyStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
+        LlmKeyBrief: {
+            /** Format: int32 */
+            concurrency?: number | null;
+            creditAxisConnected: boolean;
+            creditLimit: number;
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            /** Format: int64 */
+            dailyTokens?: number | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int32 */
+            rpm?: number | null;
+            status: components["schemas"]["LlmApiKeyStatus"];
+            /** Format: int32 */
+            tpm?: number | null;
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName: string;
+        };
         LlmKeyBudgetResponse: {
             /**
              * Format: date
@@ -3386,6 +3613,10 @@ export interface components {
              * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 상용 모델 사용은 금액 축에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
              */
             todayTokens: number;
+        };
+        LlmKeyContext: {
+            applicantKeys: components["schemas"]["LlmKeyBrief"][];
+            workspaceKeys: components["schemas"]["LlmKeyBrief"][];
         };
         LlmKeyDetailResponse: {
             /** @description 접근 권한 목록을 관리할 수 있는지 */
@@ -4043,6 +4274,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseAdminLlmKeySummaryResponse: {
+            content: components["schemas"]["AdminLlmKeySummaryResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseAdminNoticeView: {
             content: components["schemas"]["AdminNoticeView"][];
             /** Format: int32 */
@@ -4566,6 +4808,9 @@ export interface components {
             position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
         };
+        SuspendAdminLlmKeyRequest: {
+            reason: string;
+        };
         SuspendPortMappingRequest: {
             /** @description 정지 사유 (소유 워크스페이스에 알림으로 전달) */
             reason: string;
@@ -4732,9 +4977,7 @@ export interface components {
             role: components["schemas"]["ResourceRole"];
         };
         UpdateUserAdminRequest: {
-            /** Format: uuid */
-            orgId?: string | null;
-            role?: components["schemas"]["UserRole"];
+            role?: components["schemas"]["AdminGlobalRole"];
         };
         UpdateVmFlavorRequest: {
             /** Format: int32 */
@@ -4855,6 +5098,14 @@ export interface components {
             status: components["schemas"]["VmStatus"];
             /** Format: int32 */
             vcpu: number;
+        };
+        VmContext: {
+            /** @deprecated */
+            applicantResources: components["schemas"]["Resources"];
+            guidance: string;
+            /** @deprecated */
+            orgHeadroom: components["schemas"]["OrgHeadroom"];
+            workspaceResources: components["schemas"]["Resources"];
         };
         /** @enum {string} */
         VmDeleteKind: "SELF" | "ADMIN" | "FORCE";
@@ -5133,6 +5384,8 @@ export interface components {
             accessManageAllowed: boolean;
             /** Format: date-time */
             createdAt: string;
+            /** @description 예약된 삭제. 예약이 없거나 접근 제한 행이면 null입니다. */
+            deletion?: components["schemas"]["VmDeletionResponse"] | null;
             /**
              * Format: int32
              * @description 디스크(GiB). 접근 권한이 없으면 생략됩니다.
@@ -5154,6 +5407,11 @@ export interface components {
             memoryMb?: number | null;
             /** @description SSH 슬러그. 접근 권한이 없으면 대신 표시 이름이 들어갑니다. */
             name: string;
+            /**
+             * Format: uuid
+             * @description 소유 기관. 접근 권한이 없거나 기관 행이 사라진 경우 null입니다.
+             */
+            orgId?: string | null;
             orgName?: string | null;
             /** @description 이 VM의 소유자 이름. 접근을 요청할 상대입니다. */
             ownerNames: string[];
@@ -5202,12 +5460,20 @@ export interface components {
         /** @enum {string} */
         WorkspaceMemberRole: "OWNER" | "MEMBER";
         WorkspacePanel: {
+            /**
+             * @deprecated
+             * @description 호환용 VM 목록. 새 클라이언트는 vm.workspaceResources.activeVms를 사용합니다.
+             */
             activeVms: components["schemas"]["VmBriefResponse"][];
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["MemberBrief"][];
             name: string;
+            /**
+             * @deprecated
+             * @description 호환용 VM 합계. 새 클라이언트는 vm.workspaceResources.totals를 사용합니다.
+             */
             totals: components["schemas"]["ResourceTotalsResponse"];
         };
         WorkspaceSummaryResponse: {
@@ -5656,6 +5922,174 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseIpAllocationResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminLlmKeys: {
+        parameters: {
+            query?: {
+                orgId?: string;
+                workspaceId?: string;
+                status?: components["schemas"]["LlmApiKeyStatus"];
+                query?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminLlmKeySummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replaceAdminLlmKeyLimits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminLlmKeyLimitsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resumeAdminLlmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    suspendAdminLlmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuspendAdminLlmKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
