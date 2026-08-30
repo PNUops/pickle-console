@@ -61,6 +61,8 @@ export const adminPaths = {
   llmKeys: (orgId?: string) => adminPath('/admin/llm/keys', orgId),
   llmKeyDetail: (keyId: string, orgId?: string) =>
     adminPath(`/admin/llm/keys/${keyId}`, orgId),
+  llmStatus: (orgId?: string, tab?: 'status' | 'metrics') =>
+    adminPath(tab === 'metrics' ? '/admin/llm/status?tab=metrics' : '/admin/llm/status', orgId),
   workspaces: (orgId?: string) => adminPath('/admin/workspaces', orgId),
   account: (orgId?: string) => adminPath('/admin/account', orgId),
   notifications: (orgId?: string) => adminPath('/admin/notifications', orgId),

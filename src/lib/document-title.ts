@@ -58,7 +58,10 @@ export function documentTitleForPath(pathname: string): string {
 
   const [surface, section] = segments
   if (surface === 'admin') {
-    if (section === 'llm' && segments[2] === 'keys') return withBrand('LLM API 키')
+    if (section === 'llm') {
+      if (segments[2] === 'keys') return withBrand('LLM API 키')
+      if (segments[2] === 'status') return withBrand('LLM 서비스')
+    }
     return withBrand(section ? (ADMIN_TITLES[section] ?? '관리자 콘솔') : '관리자 개요')
   }
 
