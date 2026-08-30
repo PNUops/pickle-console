@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelScheduledVmDeletion,
   fetchAdminWorkspaces,
@@ -130,7 +130,6 @@ export function AdminVmsPage() {
     ],
     queryFn: () =>
       fetchAdminVms({ status, orgId: activeOrgId, workspaceId, q, sort, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
   })
 
   const sortDirection = (key: SortKey) =>

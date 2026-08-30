@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminCertificates,
   type CertificateStatus,
@@ -50,7 +50,6 @@ export function CertificatesSection({ orgId }: { orgId?: string }) {
       { status: status ?? null, orgId: orgId ?? null, expiringInDays: expiringInDays ?? null, page },
     ],
     queryFn: () => fetchAdminCertificates({ status, orgId, expiringInDays, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
   })
   return (
     <div className="space-y-6">

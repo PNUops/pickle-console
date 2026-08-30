@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   disableUser,
   enableUser,
@@ -126,7 +126,6 @@ export function AdminUsersPage() {
     ],
     queryFn: () =>
       fetchAdminUsers({ status, role, orgId: activeOrgId, q, sort, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
   })
 
   const sortDirection = (key: SortKey) =>

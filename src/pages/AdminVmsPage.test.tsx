@@ -54,6 +54,41 @@ describe('관리자 VM 목록', () => {
     expect(screen.getByText(/테스트 기관 가상머신을 조회하고/)).toBeInTheDocument()
   })
 
+  test('기관 scope 응답 대기 중 이전 기관 행과 drawer action을 숨긴다', async () => {
+    const user = userEvent.setup()
+    let releaseOrgResponse!: () => void
+    const orgResponsePending = new Promise<void>((resolve) => {
+      releaseOrgResponse = resolve
+    })
+    server.use(
+      http.get('*/api/v1/admin/vms', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('orgId') !== uuid(2)) return
+        await orgResponsePending
+        const scopedVm = vmStore.find((vm) => vm.orgId === uuid(2))!
+        return HttpResponse.json({
+          content: [toVmSummary(scopedVm)],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+    renderAsSysAdmin()
+
+    const drawer = await selectVm(user, 'algo-judge')
+    expect(within(drawer).getByRole('button', { name: '삭제 예약' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
+
+    expect(screen.queryByText('algo-judge')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+
+    releaseOrgResponse()
+    expect(await screen.findByText('ai-train')).toBeInTheDocument()
+  })
+
   test('이름 검색과 정렬 헤더가 서버 파라미터로 동작한다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
@@ -64,7 +99,7 @@ describe('관리자 VM 목록', () => {
     await waitFor(() =>
       expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument(),
     )
-    expect(screen.getByText('algo-judge')).toBeInTheDocument()
+    expect(await screen.findByText('algo-judge')).toBeInTheDocument()
     await user.clear(screen.getByLabelText('VM 검색'))
     await screen.findByText('capstone-team3-api')
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import {
   fetchAdminLlmKeys,
@@ -73,7 +73,6 @@ export function AdminLlmKeysPage() {
         page,
         size: PAGE_SIZE,
       }),
-    placeholderData: keepPreviousData,
   })
   const workspaces = useQuery({
     queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, for: 'llm-key-filter' }],

@@ -35,7 +35,7 @@ describe('관리자 LLM API 키 목록', () => {
     await user.selectOptions(screen.getByLabelText('LLM API 키 상태 필터'), '')
     await user.type(screen.getByLabelText('LLM API 키 검색'), 'other-org')
     await waitFor(() => expect(screen.queryByText('active-admin-key')).not.toBeInTheDocument())
-    expect(screen.getByText('other-org-key')).toBeInTheDocument()
+    expect(await screen.findByText('other-org-key')).toBeInTheDocument()
 
     await user.clear(screen.getByLabelText('LLM API 키 검색'))
     await user.selectOptions(screen.getByLabelText('LLM API 키 워크스페이스 필터'), uuid(12))

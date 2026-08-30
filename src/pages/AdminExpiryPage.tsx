@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { fetchAdminVms, type VmSummary } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { canOperateVm } from '../auth/permissions'
@@ -65,7 +65,6 @@ export function AdminExpiryPage() {
       },
     ],
     queryFn: () => fetchAdminVms({ ...params, orgId: activeOrgId, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
   })
   return (
     <div className="space-y-6">

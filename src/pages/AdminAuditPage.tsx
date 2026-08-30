@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { fetchAuditLogs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { canViewAudit } from '../auth/permissions'
@@ -88,7 +88,6 @@ export function AdminAuditPage() {
         page,
         size: PAGE_SIZE,
       }),
-    placeholderData: keepPreviousData,
     enabled: canReadActive,
   })
 

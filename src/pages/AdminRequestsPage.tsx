@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
   type ResourceType,
@@ -55,7 +55,6 @@ export function AdminRequestsPage() {
       { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, page, size: PAGE_SIZE },
     ],
     queryFn: () => fetchAdminRequests({ status, type, orgId: activeOrgId, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
