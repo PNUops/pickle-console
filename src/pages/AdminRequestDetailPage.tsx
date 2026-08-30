@@ -26,6 +26,7 @@ import {
   WorkspaceRoleBadge,
   Modal,
   LlmKeyStatusBadge,
+  PageHeader,
   RequestStatusBadge,
   Spinner,
   Textarea,
@@ -63,7 +64,7 @@ export function AdminRequestDetailPage() {
   const roleCanDecide = !!user && canDecideRequest(user.role)
 
   const request = useQuery({
-    queryKey: ['admin', 'requests', requestId],
+    queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null }],
     queryFn: () => fetchAdminRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
@@ -86,6 +87,16 @@ export function AdminRequestDetailPage() {
   }
 
   const data = request.data
+  if (activeOrgId != null && data.orgId !== activeOrgId) {
+    return (
+      <Alert variant="danger" title="선택한 관리 범위의 신청이 아닙니다">
+        현재 기관 범위에서는 이 신청을 볼 수 없습니다.{' '}
+        <Link to={adminPaths.requests(activeOrgId)} className="font-medium underline">
+          신청 목록으로 돌아가기
+        </Link>
+      </Alert>
+    )
+  }
   // 신청 내용·검토 결과·결정 폼의 종류별 부분은 전부 이 모듈이 답한다.
   const kind = requestKindView(data.type)
   const canDecide =
@@ -102,16 +113,12 @@ export function AdminRequestDetailPage() {
         </Link>
       </nav>
 
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-neutral-900">신청 상세</h1>
-          <RequestStatusBadge status={data.status} />
-        </div>
-        <p className="mt-1 text-sm text-neutral-500">
-          {formatDateTime(data.createdAt)} 제출 · 신청자 {data.requesterName} ·{' '}
-          {data.orgName}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="신청 검토"
+        title="신청 상세"
+        description={`${formatDateTime(data.createdAt)} 제출 · 신청자 ${data.requesterName} · ${data.orgName}`}
+        actions={<RequestStatusBadge status={data.status} />}
+      />
 
       {notice && <Alert variant={notice.variant}>{notice.message}</Alert>}
       {data.type === 'LLM_API_KEY' && data.status === 'APPROVED' && (
@@ -449,7 +456,7 @@ function DecisionSection({
 function ApprovalContextPanel({ requestId }: { requestId: string }) {
   const { activeOrgId } = useAdminScope()
   const context = useQuery({
-    queryKey: ['admin', 'requests', requestId, 'context'],
+    queryKey: ['admin', 'requests', requestId, 'context', { orgId: activeOrgId ?? null }],
     queryFn: () => fetchApprovalContext(requestId),
   })
 

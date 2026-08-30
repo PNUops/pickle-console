@@ -85,6 +85,20 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     ).toBeInTheDocument()
   })
 
+  test('SYS scope deep link도 선택한 기관 밖의 신청을 렌더하지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/requests/${uuid(204)}?org=${uuid(1)}`)
+
+    expect(
+      await screen.findByText('선택한 관리 범위의 신청이 아닙니다'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '신청 상세' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '신청 목록으로 돌아가기' })).toHaveAttribute(
+      'href',
+      `/admin/requests?org=${uuid(1)}`,
+    )
+  })
+
   test('LLM context는 공통 정보와 기존 키만 표시하고 물리 headroom은 표시하지 않는다', async () => {
     renderDetail(uuid(205))
 

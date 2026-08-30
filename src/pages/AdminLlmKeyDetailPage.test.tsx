@@ -162,6 +162,6 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
 
     invalid.unmount()
     renderDetail('access-sys-admin', sysAdminUser, uuid(999))
-    expect(await screen.findByRole('alert')).toHaveTextContent('찾을 수 없습니다')
+    expect(await screen.findByRole('alert')).toHaveTextContent('해당 LLM API 키가 존재하지 않습니다.')
   })
 })
