@@ -8,6 +8,10 @@ export type LogoTone = 'default' | 'inverse'
 export type PickleSymbolTone = LogoTone | 'monochrome'
 export type LogoVariant = 'brand' | 'lockup' | 'symbol' | 'wordmark' | 'endorsement'
 
+// Measured mail lockup invariant: top 130px, subtitle 131px, rows separated by 7px.
+const MAIL_LOCKUP_FONT =
+  "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+
 export interface PickleSymbolProps {
   className?: string
   decorative?: boolean
@@ -78,12 +82,18 @@ export function Logo({
       aria-label={accessibleName}
       className={cn(
         'inline-flex min-w-0 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
-        showStackedDescriptor ? 'flex-col items-start gap-1.5' : 'items-center gap-2',
+        showStackedDescriptor ? 'w-[131px] flex-col items-center gap-[7px]' : 'items-center gap-2',
         tone === 'inverse' ? 'focus-visible:outline-primary-300' : 'focus-visible:outline-focus-ring',
         className,
       )}
+      style={showStackedDescriptor ? { fontFamily: MAIL_LOCKUP_FONT } : undefined}
     >
-      <span className={cn('inline-flex min-w-0 items-center', showStackedDescriptor ? 'gap-3' : 'gap-2')}>
+      <span
+        className={cn(
+          'inline-flex min-w-0 items-center',
+          showStackedDescriptor ? 'w-[130px] gap-3' : 'gap-2',
+        )}
+      >
         {showEmblem && (
           <img
             src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
@@ -91,7 +101,11 @@ export function Logo({
             aria-hidden="true"
             className={cn(
               'w-auto shrink-0',
-              size === 'sm' ? 'h-4' : showStackedDescriptor ? 'h-8' : 'h-7',
+              showStackedDescriptor
+                ? 'h-[30px] w-[31px]'
+                : size === 'sm'
+                  ? 'h-4'
+                  : 'h-7',
             )}
           />
         )}
@@ -106,7 +120,11 @@ export function Logo({
           <span
             className={cn(
               'font-bold tracking-[-0.035em]',
-              size === 'sm' ? 'text-base' : showStackedDescriptor ? 'text-3xl leading-none' : 'text-lg',
+              showStackedDescriptor
+                ? 'text-[30px] leading-[1.1] tracking-[0.5px]'
+                : size === 'sm'
+                  ? 'text-base'
+                  : 'text-lg',
               tone === 'inverse' ? 'text-white' : 'text-foreground-primary',
             )}
           >
@@ -129,7 +147,7 @@ export function Logo({
       {showStackedDescriptor && (
         <span
           className={cn(
-            'hidden whitespace-nowrap text-sm leading-none font-medium sm:block',
+            'w-[131px] whitespace-nowrap text-center text-[12px] leading-[1.4]',
             tone === 'inverse' ? 'text-neutral-300' : 'text-foreground-muted',
           )}
         >

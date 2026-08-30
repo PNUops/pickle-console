@@ -17,19 +17,31 @@ describe('Logo', () => {
     expect(container.querySelector('svg')).not.toBeInTheDocument()
   })
 
-  test('대표 lockup은 공식 명칭을 2단으로 표시하고 PNU Cloud를 병기하지 않는다', () => {
+  test('대표 lockup은 mail 원본의 130px·131px 측정값으로 두 줄을 맞춘다', () => {
     const { container, rerender } = render(
       <MemoryRouter>
-        <Logo variant="lockup" />
+        <Logo variant="lockup" size="sm" />
       </MemoryRouter>,
     )
 
-    expect(
-      screen.getByRole('link', { name: 'Pickle, 부산대학교 클라우드 플랫폼' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('부산대학교 클라우드 플랫폼')).toBeInTheDocument()
+    const lockup = screen.getByRole('link', {
+      name: 'Pickle, 부산대학교 클라우드 플랫폼',
+    })
+    const topRow = container.querySelector('a > span')
+    const emblem = container.querySelector('img')
+    const wordmark = screen.getByText('Pickle')
+    const subtitle = screen.getByText('부산대학교 클라우드 플랫폼')
+
+    expect(lockup).toHaveClass('w-[131px]', 'gap-[7px]')
+    expect(lockup).toHaveStyle({
+      fontFamily:
+        "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+    })
+    expect(topRow).toHaveClass('w-[130px]', 'gap-3')
+    expect(emblem).toHaveClass('h-[30px]', 'w-[31px]')
+    expect(wordmark).toHaveClass('text-[30px]', 'leading-[1.1]', 'tracking-[0.5px]')
+    expect(subtitle).toHaveClass('w-[131px]', 'text-[12px]', 'leading-[1.4]')
     expect(screen.queryByText('PNU Cloud')).not.toBeInTheDocument()
-    expect(container.querySelector('img')).toBeInTheDocument()
 
     rerender(
       <MemoryRouter>
