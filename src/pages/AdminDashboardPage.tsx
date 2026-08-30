@@ -62,7 +62,7 @@ function sumLivePair(
  */
 export function AdminDashboardPage() {
   const { user } = useAuth()
-  const { activeOrgId, path } = useAdminScope()
+  const { activeOrgId, activeOrg, path } = useAdminScope()
   const isSysAdmin = !!user && isSysTier(user.role)
 
   const summary = useQuery({
@@ -89,7 +89,7 @@ export function AdminDashboardPage() {
       <PageHeader
         eyebrow="개요"
         title="관리자 대시보드"
-        description={`${user?.name}님, 환영합니다. ${isSysAdmin ? '플랫폼 전체' : '우리 기관'} 운영 현황입니다.`}
+        description={`${user?.name}님, 환영합니다. ${activeOrg?.name ?? '플랫폼 전체'} 운영 현황입니다.`}
       />
 
       {summary.isPending && (

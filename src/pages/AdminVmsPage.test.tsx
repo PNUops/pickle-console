@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
@@ -12,6 +12,7 @@ import {
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { toVmSummary, vmStore } from '../test/msw/handlers/vms'
 
 function renderAsOrgAdmin() {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -36,6 +37,7 @@ describe('관리자 VM 목록', () => {
     renderAsSysAdmin()
 
     await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(await screen.findByText('관리자 가상머신 목록')).toBeInTheDocument()
     const row = (await screen.findByText('capstone-team3-api')).closest('tr')!
     expect(within(row).getByText('캡스톤 3조')).toBeInTheDocument()
 
@@ -49,6 +51,7 @@ describe('관리자 VM 목록', () => {
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
+    expect(screen.getByText(/테스트 기관 가상머신을 조회하고/)).toBeInTheDocument()
   })
 
   test('이름 검색과 정렬 헤더가 서버 파라미터로 동작한다', async () => {
@@ -170,6 +173,10 @@ describe('관리자 VM 삭제 예약', () => {
         '삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
       ),
     ).toBeInTheDocument()
+    expect(await screen.findByText('삭제 예약됨')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기간 연장' })).not.toBeInTheDocument()
   })
 
   test('사유 없이 제출하면 필드 에러를 보여준다', async () => {
@@ -254,6 +261,41 @@ describe('VM 드로어 기간 연장', () => {
 })
 
 describe('관리자 삭제 취소', () => {
+  test('취소 불가 deletion은 상태만 보이고 취소 action이 없다', async () => {
+    const user = userEvent.setup()
+    const vm = vmStore.find((item) => item.id === uuid(56))!
+    server.use(
+      http.get('*/api/v1/admin/vms', () =>
+        HttpResponse.json({
+          content: [
+            {
+              ...toVmSummary(vm),
+              deletion: {
+                kind: 'FORCE',
+                scheduledFor: '2026-08-30T14:00:00+09:00',
+                requestedAt: '2026-08-30T14:00:00+09:00',
+                requestedById: sysAdminUser.id,
+                reason: '보안 사고 대응',
+                cancelable: false,
+              },
+            },
+          ],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+    )
+    renderAsOrgAdmin()
+
+    await selectVm(user, 'algo-judge')
+    expect(screen.getByText('삭제가 진행 중입니다')).toBeInTheDocument()
+    expect(screen.getByText(/취소할 수 없습니다/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+  })
+
   test('본인 삭제 유예 중 VM을 취소하면 중지됨으로 남는다는 안내를 보여준다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()

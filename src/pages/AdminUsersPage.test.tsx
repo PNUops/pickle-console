@@ -33,6 +33,7 @@ describe('관리자 사용자 목록', () => {
     renderAsSysAdmin()
 
     await screen.findByRole('heading', { name: '사용자 관리' })
+    expect(await screen.findByText('관리자 사용자 목록')).toBeInTheDocument()
     expect(await screen.findByText('example@pusan.ac.kr')).toBeInTheDocument()
     expect(screen.getByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
 

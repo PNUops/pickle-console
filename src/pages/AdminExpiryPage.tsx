@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchAdminVms, type VmSummary } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { canOperateVm, isSysTier } from '../auth/permissions'
+import { canOperateVm } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { FilterBar } from '../components/FilterBar'
 import { useAdminScope } from '../lib/use-admin-scope'
@@ -41,8 +41,7 @@ function queryParamsOf(tab: ExpiryTab) {
 /** 만료 관리 — 만료 임박·만료된 VM을 모아 보고 사용 기간을 연장한다. */
 export function AdminExpiryPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrgRole, tier } = useAdminScope()
-  const isSysAdmin = !!user && isSysTier(user.role)
+  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   // 기간 연장은 운영 역할만 — 열람 역할은 조회만이며, 기관 계층의 연장은 자기가
   // 운영하는 기관의 VM에 한한다 (서버 강제).
   const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
@@ -73,7 +72,7 @@ export function AdminExpiryPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">만료 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM의 사용 기간 만료 현황입니다. 만료된
+          {activeOrg?.name ?? '플랫폼 전체'} 가상머신의 사용 기간 만료 현황입니다. 만료된
           VM은 자동으로 중지되며, 기간을 연장하면 다시 시작할 수 있습니다.
         </p>
       </div>

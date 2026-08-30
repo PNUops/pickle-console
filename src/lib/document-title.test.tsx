@@ -10,7 +10,7 @@ describe('documentTitleForPath', () => {
     ['/console/00000000-0000-0000-0000-000000000000/llm-keys', 'LLM API 키 · Pickle'],
     ['/admin', '관리자 개요 · Pickle'],
     ['/admin/requests/00000000-0000-0000-0000-000000000000', '신청 · Pickle'],
-    ['/admin/llm-keys/00000000-0000-0000-0000-000000000000', 'LLM API 키 · Pickle'],
+    ['/admin/llm/keys/00000000-0000-0000-0000-000000000000', 'LLM API 키 · Pickle'],
     ['/auth/google/callback', 'Google 로그인 · Pickle'],
     ['/no-such-page', '페이지를 찾을 수 없음 · Pickle'],
   ])('%s', (pathname, expected) => {

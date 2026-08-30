@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import {
@@ -289,6 +289,13 @@ function LimitsModal({
   const [creditLimitReset, setCreditLimitReset] = useState(llmKey.creditLimitReset ?? '')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return
+    const firstInvalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+    firstInvalid?.focus()
+  }, [fieldErrors])
 
   const save = useMutation({
     mutationFn: (body: AdminLlmKeyLimits) => replaceAdminLlmKeyLimits(llmKey.id, body),
@@ -299,6 +306,7 @@ function LimitsModal({
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    setError(null)
     const parsed = {
       rpm: valueOf(rpm),
       tpm: valueOf(tpm),
@@ -324,7 +332,7 @@ function LimitsModal({
     if (canEditCredit && (!Number.isFinite(credit) || credit < 0)) {
       errors.creditLimit = '금액 한도는 0 이상의 숫자여야 합니다.'
     }
-    if (canEditCredit && creditLimitReset && !(credit > 0)) {
+    if (canEditCredit && !errors.creditLimit && creditLimitReset && !(credit > 0)) {
       errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
     setFieldErrors(errors)
@@ -343,8 +351,17 @@ function LimitsModal({
 
   return (
     <Modal open onClose={onClose} title="LLM API 키 한도 변경">
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form ref={formRef} onSubmit={submit} className="space-y-4" noValidate>
         {error && <MessageBar variant="danger">{error}</MessageBar>}
+        {Object.keys(fieldErrors).length > 0 && (
+          <MessageBar variant="danger" title="입력값을 확인해 주세요">
+            <ul className="list-disc space-y-1 pl-5">
+              {Object.values(fieldErrors).map((message, index) => (
+                <li key={`${message}-${index}`}>{message}</li>
+              ))}
+            </ul>
+          </MessageBar>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LimitField label="RPM" min={1} value={rpm} onChange={setRpm} error={fieldErrors.rpm} />
           <LimitField label="TPM" min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
@@ -370,6 +387,7 @@ function LimitsModal({
                 type="number"
                 min={0}
                 step="0.01"
+                aria-invalid={fieldErrors.creditLimit != null}
                 value={creditLimit}
                 onChange={(event) => setCreditLimit(event.target.value)}
               />
@@ -424,6 +442,7 @@ function LimitField({
       <Input
         type="number"
         min={min}
+        aria-invalid={error != null}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />

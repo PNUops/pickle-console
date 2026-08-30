@@ -6,7 +6,6 @@ const ROOT_TITLE = 'PNU Cloud, Pickle'
 const ADMIN_TITLES: Record<string, string> = {
   requests: '신청',
   vms: '가상머신',
-  'llm-keys': 'LLM API 키',
   'terminal-sessions': '터미널 세션',
   users: '사용자',
   workspaces: '워크스페이스',
@@ -59,6 +58,7 @@ export function documentTitleForPath(pathname: string): string {
 
   const [surface, section] = segments
   if (surface === 'admin') {
+    if (section === 'llm' && segments[2] === 'keys') return withBrand('LLM API 키')
     return withBrand(section ? (ADMIN_TITLES[section] ?? '관리자 콘솔') : '관리자 개요')
   }
 

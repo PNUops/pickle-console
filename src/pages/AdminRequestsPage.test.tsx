@@ -45,6 +45,7 @@ describe('승인 대기 큐', () => {
     renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('heading', { name: '승인 대기' })
+    expect(await screen.findByText('관리자 신청 목록')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '승인 대기' })).toHaveAttribute(
       'aria-pressed',
       'true',

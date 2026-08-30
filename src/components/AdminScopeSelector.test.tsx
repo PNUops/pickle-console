@@ -13,6 +13,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
+import { orgs } from '../test/msw/handlers/reference'
 
 const emptyRequests = {
   content: [],
@@ -137,5 +138,32 @@ describe('관리 기관 scope selector', () => {
     await waitFor(() => expect(currentPath()).toBe('/admin/requests'))
     expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
     expect(scopes).toEqual([null])
+  })
+
+  test('SYS 기관 목록 오류는 loading에 갇히지 않고 재시도 뒤 scope를 복구한다', async () => {
+    const user = userEvent.setup()
+    let calls = 0
+    server.use(
+      refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/orgs', () => {
+        calls += 1
+        return calls === 1
+          ? HttpResponse.json(
+              { title: '오류', status: 500, detail: '기관 목록 오류', code: 'INTERNAL_ERROR' },
+              { status: 500 },
+            )
+          : HttpResponse.json(orgs)
+      }),
+    )
+    renderApp(`/admin/requests?org=${uuid(1)}`)
+
+    expect(
+      await screen.findByRole('heading', { name: '관리 범위를 불러오지 못했습니다' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('관리 범위 확인 중')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '관리 범위 다시 시도' }))
+
+    expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
+    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(1))
   })
 })

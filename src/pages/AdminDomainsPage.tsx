@@ -76,8 +76,7 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
-  const { activeOrgId } = useAdminScope()
-  const isSysAdmin = !!user && isSysTier(user.role)
+  const { activeOrgId, activeOrg } = useAdminScope()
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -112,7 +111,7 @@ export function AdminDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용, 인증서
+            {activeOrg?.name ?? '플랫폼 전체'} 가상머신의 도메인과 라우트 적용, 인증서
             상태입니다. 행을 선택하면 라우트와 인증서 상세, 개입 작업이 열립니다.
           </p>
         </div>

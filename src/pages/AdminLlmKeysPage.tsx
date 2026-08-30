@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import {
@@ -49,6 +49,14 @@ export function AdminLlmKeysPage() {
   const [queryInput, setQueryInput] = useState('')
   const [page, setPage] = useState(0)
   const query = useDebouncedValue(queryInput).trim() || undefined
+  const previousOrgId = useRef(activeOrgId)
+
+  useEffect(() => {
+    if (previousOrgId.current === activeOrgId) return
+    previousOrgId.current = activeOrgId
+    setWorkspaceId(undefined)
+    setPage(0)
+  }, [activeOrgId])
 
   const keys = useQuery({
     queryKey: [

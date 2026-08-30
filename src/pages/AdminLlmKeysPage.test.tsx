@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
@@ -41,6 +41,22 @@ describe('관리자 LLM API 키 목록', () => {
     await user.selectOptions(screen.getByLabelText('LLM API 키 워크스페이스 필터'), uuid(12))
     expect(await screen.findByText('active-admin-key')).toBeInTheDocument()
     expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
+  })
+
+  test('기관 scope 변경 시 이전 기관 workspace 필터를 초기화한다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/llm/keys')
+
+    const workspace = await screen.findByLabelText('LLM API 키 워크스페이스 필터')
+    await within(workspace).findByRole('option', { name: '캡스톤 3조' })
+    await user.selectOptions(workspace, uuid(12))
+    expect(workspace).toHaveValue(uuid(12))
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
+
+    await waitFor(() => expect(workspace).toHaveValue(''))
+    expect(await screen.findByText('other-org-key')).toBeInTheDocument()
+    expect(screen.queryByText('active-admin-key')).not.toBeInTheDocument()
   })
 
   test('빈 목록과 서버 오류를 명시한다', async () => {

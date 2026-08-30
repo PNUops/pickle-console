@@ -14,7 +14,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, canOperateVm, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { canManageVmDeletion, canOperateVm, isSysAdminOnly } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import {
@@ -30,7 +30,7 @@ import {
   Select,
   SortableTH,
   Spinner,
-  Table,
+  DataTable,
   TBody,
   TD,
   Textarea,
@@ -71,13 +71,12 @@ function idParam(value: string | null): string | undefined {
 
 export function AdminVmsPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrgRole, tier } = useAdminScope()
+  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   const role = user?.role
   const effectiveRole = tier === 'org' ? activeOrgRole : role
   // 조회 범위: 시스템 계층은 전 기관, 기관 계층은 역할을 보유한 기관(계약
   // v0.46.0). 삭제 라이프사이클(예약과 취소)은 대상 VM 기관의 ORG_ADMIN과
   // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
-  const isSysAdmin = !!role && isSysTier(role)
   const canDelete = !!effectiveRole && canManageVmDeletion(effectiveRole)
   const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
   const canForceDelete = !!effectiveRole && isSysAdminOnly(effectiveRole)
@@ -154,7 +153,7 @@ export function AdminVmsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 삭제 예약과 취소 등
+          {activeOrg?.name ?? '플랫폼 전체'} 가상머신을 조회하고 삭제 예약과 취소 등
           관리 작업을 수행합니다.
         </p>
       </div>
@@ -234,8 +233,7 @@ export function AdminVmsPage() {
       )}
       {vms.isSuccess && vms.data.content.length > 0 && (
         <>
-          <Card>
-            <Table>
+          <DataTable caption="관리자 가상머신 목록">
               <THead>
                 <TR>
                   <SortableTH direction={sortDirection('name')} onSort={onSort('name')}>
@@ -305,8 +303,7 @@ export function AdminVmsPage() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
-          </Card>
+          </DataTable>
           <Pagination
             page={vms.data.page}
             totalPages={vms.data.totalPages}
@@ -410,7 +407,7 @@ function VmDrawerContent({
         <Field label="생성일" value={formatDateTime(vm.createdAt)} />
         {vm.statusDetail && <Field label="상태 상세" value={vm.statusDetail} />}
       </dl>
-      {canOperate && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
+      {canOperate && vm.deletion == null && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
           <p className="text-sm text-neutral-500">
@@ -434,16 +431,30 @@ function VmDrawerContent({
       {canForceDelete && vm.status !== 'DELETED' && (
         <VmGatewayBlockSection vm={vm} canManage onDone={onDone} />
       )}
-      {canDelete && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
+      {vm.deletion && <DeletionStatus deletion={vm.deletion} />}
+      {canDelete && vm.deletion == null && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
         <ScheduleDeleteForm vm={vm} onDone={onDone} />
       )}
-      {canDelete && vm.status === 'DELETING' && (
+      {canDelete && vm.deletion?.cancelable === true && (
         <CancelDeleteAction vm={vm} onDone={onDone} />
       )}
       {canForceDelete && vm.status !== 'DELETED' && (
         <ForceDeleteAction vm={vm} onDone={onForceDeleted} />
       )}
     </div>
+  )
+}
+
+function DeletionStatus({ deletion }: { deletion: NonNullable<VmSummary['deletion']> }) {
+  return (
+    <Alert
+      variant={deletion.cancelable ? 'warning' : 'danger'}
+      title={deletion.cancelable ? '삭제 예약됨' : '삭제가 진행 중입니다'}
+    >
+      <p>{formatDateTime(deletion.scheduledFor)} 파기 예정</p>
+      {deletion.reason && <p>사유: {deletion.reason}</p>}
+      {!deletion.cancelable && <p>이미 파기가 시작됐거나 강제 삭제라 취소할 수 없습니다.</p>}
+    </Alert>
   )
 }
 

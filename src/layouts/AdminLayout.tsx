@@ -19,7 +19,7 @@ import { useAuth } from '../auth/auth-context'
 import { canViewAudit, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { AdminScopeSelector } from '../components/AdminScopeSelector'
 import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
-import { EmptyState, LoadingBlock } from '../components/ui'
+import { Button, EmptyState, LoadingBlock } from '../components/ui'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { AppShell, type NavSection } from './AppShell'
 
@@ -145,7 +145,15 @@ export function AdminLayout() {
   ].filter((section) => section.items.length > 0)
 
   const scopeBlock = !scope.ready
-    ? scope.resolving
+    ? scope.error
+      ? (
+          <EmptyState
+            title="관리 범위를 불러오지 못했습니다"
+            description="기관 목록을 다시 불러온 뒤 선택한 관리 범위를 확인합니다."
+            action={<Button onClick={scope.retry}>관리 범위 다시 시도</Button>}
+          />
+        )
+      : scope.resolving
       ? <LoadingBlock label="관리 범위 확인 중" />
       : (
           <EmptyState

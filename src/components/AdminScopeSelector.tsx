@@ -37,6 +37,18 @@ export function AdminScopeSelector() {
           </option>
         ))}
       </Select>
+      {scope.error && (
+        <div role="alert" className="space-y-1 text-xs text-danger-700">
+          <p>기관 목록을 불러오지 못했습니다.</p>
+          <button
+            type="button"
+            onClick={scope.retry}
+            className="cursor-pointer font-semibold underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-focus-ring"
+          >
+            기관 목록 다시 시도
+          </button>
+        </div>
+      )}
     </div>
   )
 }

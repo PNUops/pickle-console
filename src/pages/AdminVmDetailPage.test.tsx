@@ -55,6 +55,20 @@ describe('관리자 VM 상세', () => {
     expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
   })
 
+  test('SYS 기관 scope 밖의 VM deep link는 작업 action을 렌더하지 않는다', async () => {
+    renderAsSysAdmin(`/admin/vms/${uuid(61)}?org=${uuid(1)}`)
+
+    expect(
+      await screen.findByText('선택한 관리 범위의 가상머신이 아닙니다'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'ai-train' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '가상머신 목록으로 돌아가기' })).toHaveAttribute(
+      'href',
+      `/admin/vms?org=${uuid(1)}`,
+    )
+  })
+
   test('이벤트 탭은 이력을 최신순으로 보여준다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin(`/admin/vms/${uuid(56)}`)

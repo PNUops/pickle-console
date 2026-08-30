@@ -37,7 +37,7 @@ import {
   Pagination,
   Select,
   Spinner,
-  Table,
+  DataTable,
   TBody,
   TD,
   Textarea,
@@ -93,7 +93,7 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 
 export function AdminUsersPage() {
   const { user } = useAuth()
-  const { activeOrgId } = useAdminScope()
+  const { activeOrgId, activeOrg } = useAdminScope()
   const viewerRole = user?.role
   // 사용자 목록도 전역 관리 범위를 따른다. 시스템 계층의 전체 플랫폼에서는 전원을,
   // 기관 scope에서는 그 기관과 연결된 계정을 본다. 계정 비활성화, 해제, MFA
@@ -141,7 +141,7 @@ export function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">사용자 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          전체 사용자를 조회하고
+          {activeOrg?.name ?? '플랫폼 전체'} 사용자를 조회하고
           {isSysAdmin ? ' 계정 비활성화와 해제를 관리합니다.' : ' 상세 정보를 확인합니다.'}
         </p>
       </div>
@@ -217,8 +217,7 @@ export function AdminUsersPage() {
       )}
       {users.isSuccess && users.data.content.length > 0 && (
         <>
-          <Card>
-            <Table>
+          <DataTable caption="관리자 사용자 목록">
               <THead>
                 <TR>
                   <SortableTH direction={sortDirection('name')} onSort={onSort('name')}>
@@ -268,8 +267,7 @@ export function AdminUsersPage() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
-          </Card>
+          </DataTable>
           <Pagination
             page={users.data.page}
             totalPages={users.data.totalPages}

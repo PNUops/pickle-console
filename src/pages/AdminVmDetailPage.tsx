@@ -65,7 +65,7 @@ export function AdminVmDetailPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const detail = useQuery({
-    queryKey: ['admin', 'vms', 'detail', vmId],
+    queryKey: ['admin', 'vms', 'detail', vmId, { orgId: activeOrgId ?? null }],
     queryFn: () => fetchAdminVm(vmId),
     enabled: idValid,
   })
@@ -85,6 +85,16 @@ export function AdminVmDetailPage() {
   }
 
   const vm = detail.data
+  if (activeOrgId != null && vm.orgId !== activeOrgId) {
+    return (
+      <Alert variant="danger" title="선택한 관리 범위의 가상머신이 아닙니다">
+        현재 기관 범위에서는 이 가상머신을 볼 수 없습니다.{' '}
+        <Link to={adminPaths.vms(activeOrgId)} className="font-medium underline">
+          가상머신 목록으로 돌아가기
+        </Link>
+      </Alert>
+    )
+  }
   // 역할이 닿아도 이 VM의 기관에서 행위할 수 있어야 한다: 열람 역할로만 보이는
   // 기관의 VM에 전원이나 기간을 건드리면 API가 404로 거부한다.
   const canOperate =

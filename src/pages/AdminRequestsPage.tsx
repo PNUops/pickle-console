@@ -13,7 +13,7 @@ import {
   RequestStatusBadge,
   Select,
   Spinner,
-  Table,
+  DataTable,
   TBody,
   TD,
   TH,
@@ -122,8 +122,7 @@ export function AdminRequestsPage() {
       )}
       {requests.isSuccess && requests.data.content.length > 0 && (
         <>
-          <Card>
-            <Table>
+          <DataTable caption="관리자 신청 목록">
               <THead>
                 <TR>
                   <TH>신청자</TH>
@@ -164,8 +163,7 @@ export function AdminRequestsPage() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
-          </Card>
+          </DataTable>
           <Pagination
             page={requests.data.page}
             totalPages={requests.data.totalPages}

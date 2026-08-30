@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAdminWorkspace, fetchAdminWorkspaces } from '../api/queries'
-import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -33,9 +31,7 @@ import {
  * 워크스페이스 변경(생성·역할 조정·삭제)은 다음 단계.
  */
 export function AdminWorkspacesPage() {
-  const { user } = useAuth()
-  const { activeOrgId } = useAdminScope()
-  const isSysAdmin = !!user && isSysTier(user.role)
+  const { activeOrgId, activeOrg } = useAdminScope()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const workspaces = useQuery({
@@ -48,7 +44,7 @@ export function AdminWorkspacesPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">워크스페이스 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관에 연결된'} 워크스페이스와 구성원을 조회합니다.
+          {activeOrg?.name ?? '플랫폼 전체'} 워크스페이스와 구성원을 조회합니다.
           구성원 변경은 워크스페이스 소유자가 수행합니다.
         </p>
       </div>

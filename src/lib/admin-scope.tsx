@@ -59,7 +59,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
 
   const invalidSystemScope =
     systemTier && requestedOrgId != null && orgs.isSuccess && activeOrg == null
-  const resolving = systemTier && requestedOrgId != null && !orgs.isSuccess
+  const resolving = systemTier && requestedOrgId != null && orgs.isPending
+  const scopeError = systemTier && orgs.isError
   const requiresSelection = orgTier && activeOrg == null
   const ready = systemTier
     ? requestedOrgId == null || (orgs.isSuccess && activeOrg != null)
@@ -101,6 +102,10 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     [options, orgTier, replaceScope, systemTier],
   )
 
+  const retry = useCallback(() => {
+    void orgs.refetch()
+  }, [orgs])
+
   const value = useMemo<AdminScopeValue>(
     () => ({
       tier: orgTier ? 'org' : 'system',
@@ -110,11 +115,13 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       options,
       requiresSelection,
       resolving,
+      error: scopeError,
       ready,
+      retry,
       setActiveOrgId,
       path: (path) => adminPath(path, activeOrg?.id),
     }),
-    [activeOrg, options, orgTier, ready, requiresSelection, resolving, setActiveOrgId],
+    [activeOrg, options, orgTier, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId],
   )
 
   return <AdminScopeContext.Provider value={value}>{children}</AdminScopeContext.Provider>

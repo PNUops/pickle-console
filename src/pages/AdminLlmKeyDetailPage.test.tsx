@@ -96,6 +96,25 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     })
   })
 
+  test('6축 form은 오류 summary를 표시하고 첫 오류 입력으로 focus를 옮긴다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    const rpm = dialog.getByLabelText('RPM')
+    await user.clear(rpm)
+    await user.type(rpm, '0')
+    const credit = dialog.getByLabelText('금액 한도 (USD)')
+    await user.clear(credit)
+    await user.type(credit, '-1')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    expect(dialog.getByText('입력값을 확인해 주세요')).toBeInTheDocument()
+    expect(dialog.getAllByText('1 이상의 올바른 정수를 입력하거나 비워 주세요.')).toHaveLength(2)
+    expect(dialog.getAllByText('금액 한도는 0 이상의 숫자여야 합니다.')).toHaveLength(2)
+    await waitFor(() => expect(rpm).toHaveFocus())
+  })
+
   test('EXPIRED와 REVOKED는 SYS_ADMIN에게도 읽기 전용이다', async () => {
     const expired = renderDetail('access-sys-admin', sysAdminUser, uuid(173))
     await screen.findByRole('heading', { name: 'expired-admin-key' })
