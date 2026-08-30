@@ -106,6 +106,16 @@ const externalMark = (
   </svg>
 )
 
+const navigationMenuIcon = (
+  <svg viewBox="0 0 20 20" fill="currentColor" className="size-5" aria-hidden="true">
+    <path
+      fillRule="evenodd"
+      d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
+      clipRule="evenodd"
+    />
+  </svg>
+)
+
 /** 사이드바 하단 고정 링크 — 가이드·문의·의견. */
 function ShellFooterNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
@@ -241,6 +251,7 @@ export function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed)
   const drawerId = useId()
+  const desktopSidebarId = useId()
   const drawerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(drawerRef, { active: drawerOpen, onEscape: () => setDrawerOpen(false) })
 
@@ -368,38 +379,43 @@ export function AppShell({
       </div>
     ) : null
 
+  const desktopSidebarLabel = sidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'
+
   return (
-    <div data-density={density} className="flex min-h-screen">
+    <div data-density={density} className="flex min-h-screen flex-col">
       <PostLoginOverlay />
       <NoticePopupHost />
-      {!sidebarCollapsed && (
-        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
-          <div className="flex h-14 items-center justify-between gap-2 border-b border-neutral-100 px-4">
-            <Logo to={home} variant="brand" />
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed(true)}
-              aria-label="사이드바 접기"
-              className="shrink-0 cursor-pointer rounded p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
-            >
-              <svg
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                className="size-5"
-                aria-hidden="true"
-              >
-                <rect x="2.75" y="3.25" width="14.5" height="13.5" rx="1.5" />
-                <path d="M7 3.5v13M13 7l-3 3 3 3" />
-              </svg>
-            </button>
-          </div>
-          {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
-          <ShellNav navLabel={navLabel} navSections={navSections} />
-          <ShellFooterNav />
-        </aside>
-      )}
+      <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            aria-label={desktopSidebarLabel}
+            title={desktopSidebarLabel}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls={desktopSidebarId}
+            className="hidden cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600 md:inline-flex"
+          >
+            {navigationMenuIcon}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="메뉴 열기"
+            aria-expanded={drawerOpen}
+            /* 드로어는 열려 있을 때만 마운트 — 닫힌 상태에서 없는 id를 참조하지 않는다 */
+            aria-controls={drawerOpen ? drawerId : undefined}
+            className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600 md:hidden"
+          >
+            {navigationMenuIcon}
+          </button>
+          <Logo to={home} variant="brand" />
+        </div>
+        <div className="flex items-center gap-2">
+          {notificationsTo && <NotificationBell to={notificationsTo} />}
+          <UserMenu />
+        </div>
+      </header>
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
@@ -439,68 +455,39 @@ export function AppShell({
           </div>
         </div>
       )}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6">
-          <div className="flex items-center gap-2 md:hidden">
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="메뉴 열기"
-              aria-expanded={drawerOpen}
-              /* 드로어는 열려 있을 때만 마운트 — 닫힌 상태에서 없는 id를 참조하지 않는다 */
-              aria-controls={drawerOpen ? drawerId : undefined}
-              className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="size-5" aria-hidden="true">
-                <path
-                  fillRule="evenodd"
-                  d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-            <Logo to={home} />
-          </div>
-          {sidebarCollapsed ? (
-            <div className="hidden items-center gap-2 md:flex">
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(false)}
-                aria-label="사이드바 펼치기"
-                className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
-              >
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="size-5"
-                  aria-hidden="true"
-                >
-                  <rect x="2.75" y="3.25" width="14.5" height="13.5" rx="1.5" />
-                  <path d="M7 3.5v13M10 7l3 3-3 3" />
-                </svg>
-              </button>
-              <Logo to={home} variant="brand" />
-            </div>
-          ) : (
-            <div className="hidden md:block" />
+      <div className="flex min-h-[calc(100vh-3.5rem)] flex-1">
+        <aside
+          id={desktopSidebarId}
+          aria-hidden={sidebarCollapsed || undefined}
+          inert={sidebarCollapsed}
+          className={cn(
+            'sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 overflow-hidden border-r bg-white transition-[width,border-color] duration-[var(--duration-normal)] ease-standard motion-reduce:transition-none md:flex',
+            sidebarCollapsed ? 'w-0 border-transparent' : 'w-60 border-neutral-200',
           )}
-          <div className="flex items-center gap-2">
-            {notificationsTo && <NotificationBell to={notificationsTo} />}
-            <UserMenu />
+        >
+          <div
+            className={cn(
+              'flex h-full w-60 shrink-0 flex-col transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none',
+              sidebarCollapsed ? 'opacity-0' : 'opacity-100',
+            )}
+          >
+            {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
+            <ShellNav navLabel={navLabel} navSections={navSections} />
+            <ShellFooterNav />
           </div>
-        </header>
-        {bannerEl}
-        {banner}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-          {content === undefined ? <Outlet /> : content}
-        </main>
-        {contactEmail && (
-          <footer className="border-t border-neutral-100 px-4 py-3 text-center text-xs text-neutral-400 sm:px-6">
-            문의: <ContactEmail email={contactEmail} className="text-neutral-500" />
-          </footer>
-        )}
+        </aside>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {bannerEl}
+          {banner}
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+            {content === undefined ? <Outlet /> : content}
+          </main>
+          {contactEmail && (
+            <footer className="border-t border-neutral-100 px-4 py-3 text-center text-xs text-neutral-400 sm:px-6">
+              문의: <ContactEmail email={contactEmail} className="text-neutral-500" />
+            </footer>
+          )}
+        </div>
       </div>
     </div>
   )
