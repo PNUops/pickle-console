@@ -14,7 +14,14 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canOperateVm, isSysAdminOnly, isSysTier, operatesOrg } from '../auth/permissions'
+import {
+  canManageVmDeletion,
+  canOperateVm,
+  isSysAdminOnly,
+  isSysTier,
+  operatesOrg,
+} from '../auth/permissions'
+import { AdminVmDeletionSections } from '../components/admin-vm/AdminVmDeletionSections'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import {
@@ -52,13 +59,15 @@ const TABS = [
  * 한정 — 서버 강제), 열람 역할은 조회만, 차단 토글은 SYS_ADMIN.
  */
 export function AdminVmDetailPage() {
-  const { activeOrgId } = useAdminScope()
+  const { activeOrgId, activeOrgRole, tier } = useAdminScope()
   const { vmId: vmIdParam } = useParams()
   const vmId = vmIdParam ?? ''
   const idValid = isUuid(vmId)
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
-  const roleCanOperate = !!user && canOperateVm(user.role)
+  const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
+  const roleCanOperate = !!effectiveRole && canOperateVm(effectiveRole)
+  const roleCanScheduleDelete = !!effectiveRole && canManageVmDeletion(effectiveRole)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
@@ -99,6 +108,10 @@ export function AdminVmDetailPage() {
   // 기관의 VM에 전원이나 기간을 건드리면 API가 404로 거부한다.
   const canOperate =
     roleCanOperate &&
+    !!user &&
+    (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
+  const canScheduleDelete =
+    roleCanScheduleDelete &&
     !!user &&
     (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
   return (
@@ -167,6 +180,12 @@ export function AdminVmDetailPage() {
         {isSysAdmin && vm.status !== 'DELETED' && (
           <VmGatewayBlockSection vm={vm} canManage onDone={setMessage} />
         )}
+        <AdminVmDeletionSections
+          vm={vm}
+          canSchedule={canScheduleDelete}
+          canForceDelete={isSysAdmin}
+          onDone={setMessage}
+        />
       </TabPanel>
 
       <TabPanel id="events" active={activeTab === 'events'} className="space-y-4">
