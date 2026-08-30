@@ -84,7 +84,12 @@ export function AdminNodesPage() {
         aria-label="노드/IP 탭"
         tabs={SCREEN_TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'nodes' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'nodes') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="ips" active={activeTab === 'ips'}>

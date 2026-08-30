@@ -39,6 +39,30 @@ export const consolePaths = {
   noticeDetail: (noticeId: string) => `/console/notices/${noticeId}`,
 } as const
 
+/** 기존 query/hash를 보존하면서 관리자 URL에 전역 기관 scope를 적용한다. */
+export function adminPath(path: string, orgId: string | undefined): string {
+  const url = new URL(path, 'https://pickle.invalid')
+  if (orgId == null) url.searchParams.delete('org')
+  else url.searchParams.set('org', orgId)
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+export const adminPaths = {
+  dashboard: (orgId?: string) => adminPath('/admin', orgId),
+  requests: (orgId?: string) => adminPath('/admin/requests', orgId),
+  requestDetail: (requestId: string, orgId?: string) =>
+    adminPath(`/admin/requests/${requestId}`, orgId),
+  vms: (orgId?: string, workspaceId?: string | null) =>
+    adminPath(
+      workspaceId == null ? '/admin/vms' : `/admin/vms?workspaceId=${workspaceId}`,
+      orgId,
+    ),
+  vmDetail: (vmId: string, orgId?: string) => adminPath(`/admin/vms/${vmId}`, orgId),
+  workspaces: (orgId?: string) => adminPath('/admin/workspaces', orgId),
+  account: (orgId?: string) => adminPath('/admin/account', orgId),
+  notifications: (orgId?: string) => adminPath('/admin/notifications', orgId),
+} as const
+
 /** The listings that exist under a workspace as well as unscoped. */
 const SCOPED_SECTIONS = ['resources', 'vms', 'llm-keys', 'requests', 'requests/new']
 

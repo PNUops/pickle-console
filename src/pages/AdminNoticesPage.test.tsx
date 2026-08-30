@@ -190,7 +190,7 @@ describe('공지사항 관리', () => {
 
     // 관리 목록이 게시판과 다른 점은 이제 범위가 아니라 창이다 — 아직 시작하지
     // 않은 공지가 여기에는 선다. 메뉴도 함께 서야 닿을 방법이 있다.
-    expect(await screen.findByRole('link', { name: '공지사항 관리' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: '공지사항' })).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: '서비스 점검 팝업' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })

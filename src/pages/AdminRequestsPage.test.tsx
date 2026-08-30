@@ -34,7 +34,7 @@ describe('관리자 대시보드 요약', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '전체 보기 →' })).toHaveAttribute(
       'href',
-      '/admin/requests',
+      `/admin/requests?org=${uuid(1)}`,
     )
   })
 })
@@ -93,12 +93,12 @@ describe('승인 대기 큐', () => {
     expect(screen.queryByRole('link', { name: '박영희' })).not.toBeInTheDocument()
   })
 
-  test('SYS_ADMIN은 기관 필터로 특정 기관의 신청만 볼 수 있다', async () => {
+  test('SYS_ADMIN은 전역 관리 범위로 특정 기관의 신청만 볼 수 있다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    await user.selectOptions(await screen.findByLabelText('기관 필터'), uuid(2))
+    await user.selectOptions(await screen.findByLabelText('관리 기관 선택'), uuid(2))
 
     expect(await screen.findByRole('link', { name: '박영희' })).toBeInTheDocument()
     await waitFor(() =>

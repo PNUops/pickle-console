@@ -8,7 +8,7 @@ import {
   sysAdminUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 
 describe('감사 로그', () => {
@@ -24,8 +24,8 @@ describe('감사 로그', () => {
     expect(within(row).getByText('시스템 관리자')).toBeInTheDocument()
     // 타 기관(org 2) 행도 보인다.
     expect(screen.getByText('박영희')).toBeInTheDocument()
-    // SYS_ADMIN에게는 기관 필터가 있다.
-    expect(screen.getByLabelText('기관 필터')).toBeInTheDocument()
+    // SYS_ADMIN은 전역 관리 범위에서 기관을 좁힌다.
+    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue('')
   })
 
   test('UserRole 밖의 열린 actorRole(sshgw 등)은 원문 그대로 배지로 보여준다', async () => {
@@ -92,7 +92,7 @@ describe('열람 역할과 감사 로그', () => {
     renderApp('/admin/audit')
 
     // 감사 로그는 기관에서 행위할 수 있는 역할만 — 열람 역할은 홈으로.
-    await screen.findByRole('heading', { name: '관리자 대시보드' })
+    await waitFor(() => expect(currentPath()).toBe(`/admin?org=${uuid(1)}`))
     expect(screen.queryByRole('link', { name: '감사 로그' })).not.toBeInTheDocument()
   })
 })

@@ -15,6 +15,9 @@ export const VM_REQUEST_DRAFT_KEY = 'pickle.vm-request-draft'
  */
 export const LEGACY_CONSOLE_SCOPE_KEY = 'pickle.console-scope'
 
+/** ORG 계층 관리자가 마지막으로 선택한 유효 기관. URL `org`가 항상 우선한다. */
+export const ADMIN_ORG_SCOPE_KEY = 'pickle.admin-org-scope'
+
 /**
  * 로그인 직후 1회 환영 오버레이(다크 인증 → 라이트 콘솔 브릿지)를 띄우기 위한
  * sessionStorage 플래그. LoginPage가 설정하고 AppShell이 읽은 즉시 제거한다.

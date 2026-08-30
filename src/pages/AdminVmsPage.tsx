@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -17,7 +17,6 @@ import { useAuth } from '../auth/auth-context'
 import { canManageVmDeletion, canOperateVm, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
-import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
@@ -46,6 +45,8 @@ import { formatDateTime, formatSpec, isShortNotice, minScheduleDate } from '../l
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
 import { isUuid } from '../lib/validation'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 /** 정렬 가능한 컬럼 키 (계약 sort 화이트리스트의 축). */
 type SortKey = 'name' | 'endDate' | 'createdAt'
@@ -70,20 +71,21 @@ function idParam(value: string | null): string | undefined {
 
 export function AdminVmsPage() {
   const { user } = useAuth()
+  const { activeOrgId, activeOrgRole, tier } = useAdminScope()
   const role = user?.role
+  const effectiveRole = tier === 'org' ? activeOrgRole : role
   // 조회 범위: 시스템 계층은 전 기관, 기관 계층은 역할을 보유한 기관(계약
   // v0.46.0). 삭제 라이프사이클(예약과 취소)은 대상 VM 기관의 ORG_ADMIN과
   // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
   const isSysAdmin = !!role && isSysTier(role)
-  const canDelete = !!role && canManageVmDeletion(role)
-  const canOperate = !!role && canOperateVm(role)
-  const canForceDelete = !!role && isSysAdminOnly(role)
+  const canDelete = !!effectiveRole && canManageVmDeletion(effectiveRole)
+  const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
+  const canForceDelete = !!effectiveRole && isSysAdminOnly(effectiveRole)
   // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
   // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
   // 되돌려 쓰지 않는다(의도된 절단).
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
-  const [orgId, setOrgId] = useState<string | undefined>(() => idParam(searchParams.get('orgId')))
   const [workspaceId, setWorkspaceId] = useState<string | undefined>(() =>
     idParam(searchParams.get('workspaceId')),
   )
@@ -91,6 +93,13 @@ export function AdminVmsPage() {
   const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const previousOrgId = useRef(activeOrgId)
+  useEffect(() => {
+    if (previousOrgId.current === activeOrgId) return
+    previousOrgId.current = activeOrgId
+    setWorkspaceId(undefined)
+    setPage(0)
+  }, [activeOrgId])
   // 액션 결과는 (vmId, text)로 페이지가 소유한다: 그 VM의 드로어가 열려 있으면
   // 드로어 안에, 액션의 결과로 VM이 필터된 목록을 떠나 드로어가 닫히면(취소로
   // 상태 전환·강제 삭제 등) 페이지 알림으로 — 어느 경로에서도 유실되지 않는다.
@@ -112,7 +121,7 @@ export function AdminVmsPage() {
       'vms',
       {
         status: status ?? null,
-        orgId: orgId ?? null,
+        orgId: activeOrgId ?? null,
         workspaceId: workspaceId ?? null,
         q: q ?? null,
         sort: sort ?? null,
@@ -120,7 +129,8 @@ export function AdminVmsPage() {
         size: PAGE_SIZE,
       },
     ],
-    queryFn: () => fetchAdminVms({ status, orgId, workspaceId, q, sort, page, size: PAGE_SIZE }),
+    queryFn: () =>
+      fetchAdminVms({ status, orgId: activeOrgId, workspaceId, q, sort, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
 
@@ -130,12 +140,11 @@ export function AdminVmsPage() {
     setSort(next === null ? undefined : next === 'asc' ? key : (`-${key}` as AdminVmSort))
     setPage(0)
   }
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-  // 기관을 고르지 않으면 조회 범위 전체, 고르면 그 기관의 워크스페이스로 좁혀진다.
+  // active scope가 있으면 해당 기관의 워크스페이스만 2차 필터로 제공한다.
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
-    queryFn: () => fetchAdminWorkspaces(orgId !== undefined ? { orgId } : {}),
+    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null }],
+    queryFn: () =>
+      fetchAdminWorkspaces(activeOrgId !== undefined ? { orgId: activeOrgId } : {}),
   })
 
   const selected = vms.data?.content.find((vm) => vm.id === selectedId) ?? null
@@ -188,28 +197,6 @@ export function AdminVmsPage() {
               setPage(0)
             }}
           />
-          {orgOptions.length > 1 && (
-            <label className="flex items-center gap-2 text-sm text-neutral-600">
-              기관
-              <Select
-                aria-label="기관 필터"
-                className="w-56"
-                value={orgId ?? ''}
-                onChange={(event) => {
-                  setOrgId(event.target.value || undefined)
-                  setWorkspaceId(undefined) // 기관이 바뀌면 이전 기관의 워크스페이스 선택은 무효
-                  setPage(0)
-                }}
-              >
-                <option value="">전체 기관</option>
-                {orgOptions.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          )}
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             워크스페이스
             <Select
@@ -380,6 +367,7 @@ function VmDrawerContent({
   onForceDeleted: (message: string) => void
   onFilterWorkspace: (workspaceId: string) => void
 }) {
+  const { activeOrgId } = useAdminScope()
   const [extendOpen, setExtendOpen] = useState(false)
   return (
     <div className="space-y-6">
@@ -392,7 +380,7 @@ function VmDrawerContent({
       </div>
       {notice && <Alert variant="success">{notice}</Alert>}
       <Link
-        to={`/admin/vms/${vm.id}`}
+        to={adminPaths.vmDetail(vm.id, activeOrgId)}
         className="inline-block text-sm text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
       >
         상세 페이지로 (이벤트·전원 제어)

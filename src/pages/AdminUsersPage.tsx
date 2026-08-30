@@ -52,6 +52,8 @@ import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
 import { WORKSPACE_KIND_LABELS, USER_ROLE_LABELS, USER_STATUS_LABELS } from '../lib/labels'
 import { useDebouncedValue } from '../lib/use-debounced-value'
+import { useAdminScope } from '../lib/use-admin-scope'
+import { adminPaths } from '../lib/paths'
 
 type SortKey = 'name' | 'email' | 'createdAt'
 
@@ -88,16 +90,15 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 
 export function AdminUsersPage() {
   const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
   const viewerRole = user?.role
-  // 사용자 조회는 관리자 조회 중 유일하게 전 기관이다 — 파생 소속은 리소스에서
-  // 나오므로, 아무것도 신청하지 않은 계정은 어느 기관에도 속하지 않아 범위를
-  // 좁히면 누구에게도 보이지 않는다 (계약 v0.46.0). 계정 비활성화, 해제, MFA
+  // 사용자 목록도 전역 관리 범위를 따른다. 시스템 계층의 전체 플랫폼에서는 전원을,
+  // 기관 scope에서는 그 기관과 연결된 계정을 본다. 계정 비활성화, 해제, MFA
   // 초기화는 SYS_ADMIN 전용(§4).
   const isSysAdmin = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)
   const [role, setRole] = useState<UserRole | undefined>(undefined)
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminUserSort | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -113,18 +114,17 @@ export function AdminUsersPage() {
       {
         status: status ?? null,
         role: role ?? null,
-        orgId: orgId ?? null,
+        orgId: activeOrgId ?? null,
         q: q ?? null,
         sort: sort ?? null,
         page,
         size: PAGE_SIZE,
       },
     ],
-    queryFn: () => fetchAdminUsers({ status, role, orgId, q, sort, page, size: PAGE_SIZE }),
+    queryFn: () =>
+      fetchAdminUsers({ status, role, orgId: activeOrgId, q, sort, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
 
   const sortDirection = (key: SortKey) =>
     sort === key ? ('asc' as const) : sort === `-${key}` ? ('desc' as const) : null
@@ -196,25 +196,6 @@ export function AdminUsersPage() {
               {ROLE_OPTIONS.map((r) => (
                 <option key={r} value={r}>
                   {USER_ROLE_LABELS[r]}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            기관
-            <Select
-              aria-label="기관 필터"
-              className="w-56"
-              value={orgId ?? ''}
-              onChange={(event) => {
-                setOrgId(event.target.value || undefined)
-                setPage(0)
-              }}
-            >
-              <option value="">전체 기관</option>
-              {orgs.data?.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
                 </option>
               ))}
             </Select>
@@ -310,6 +291,7 @@ export function AdminUsersPage() {
 /* ─── 상세 드로어 본문 (행 선택 시) ─── */
 
 function UserDetailBody({ userId, canManage }: { userId: string; canManage: boolean }) {
+  const { activeOrgId } = useAdminScope()
   const detail = useQuery({
     queryKey: ['admin', 'users', 'detail', userId],
     queryFn: () => fetchAdminUser(userId),
@@ -357,7 +339,7 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
                   ({WORKSPACE_KIND_LABELS[m.workspaceKind]} · {m.role})
                 </span>{' '}
                 <Link
-                  to={`/admin/vms?workspaceId=${m.workspaceId}`}
+                  to={adminPaths.vms(activeOrgId, m.workspaceId)}
                   className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                 >
                   VM 보기
@@ -662,6 +644,7 @@ function UserProfileCorrectionModal({
  */
 function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const { user: viewer } = useAuth()
+  const scope = useAdminScope()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [error, setError] = useState<string | null>(null)
@@ -670,12 +653,14 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const [confirmRevoke, setConfirmRevoke] = useState<ManagedOrg | null>(null)
 
   const isSysAdmin = viewer?.role === 'SYS_ADMIN'
-  const canStaff = isSysAdmin || viewer?.role === 'ORG_ADMIN'
+  const canStaff = isSysAdmin || scope.activeOrgRole === 'ORG_ADMIN'
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
   // 시스템 관리자는 전 기관에, 기관 관리자는 자기가 관리자로 있는 기관에만 부여한다.
   const grantable = isSysAdmin
     ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
-    : administeredOrgs(viewer?.managedOrgs ?? []).map((org) => ({
+    : administeredOrgs(viewer?.managedOrgs ?? [])
+      .filter((org) => org.orgId === scope.activeOrgId)
+      .map((org) => ({
         id: org.orgId,
         name: org.orgName,
       }))

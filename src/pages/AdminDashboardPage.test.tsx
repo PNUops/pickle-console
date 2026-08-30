@@ -20,15 +20,15 @@ describe('관리자 대시보드', () => {
     const tiles = await screen.findByRole('region', { name: '기관 요약' })
     expect(within(tiles).getByRole('link', { name: '승인 대기' })).toHaveAttribute(
       'href',
-      '/admin/requests',
+      `/admin/requests?org=${uuid(1)}`,
     )
     expect(within(tiles).getByRole('link', { name: 'VM 현황' })).toHaveAttribute(
       'href',
-      '/admin/vms',
+      `/admin/vms?org=${uuid(1)}`,
     )
     expect(within(tiles).getByRole('link', { name: '만료 예정 (30일)' })).toHaveAttribute(
       'href',
-      '/admin/expiry',
+      `/admin/expiry?org=${uuid(1)}`,
     )
     expect(within(tiles).getByRole('link', { name: '확인 필요' })).toBeInTheDocument()
     // 리소스 현황 바 + 안내 문구

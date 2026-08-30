@@ -147,7 +147,7 @@ describe('노드/용량 — 사용량·할당 추이', () => {
       'true',
     )
     // 시스템 관리자는 기관을 좁혀 볼 수 있다.
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(screen.getByLabelText('할당 추이 기관 필터')).toBeInTheDocument()
   })
 
   test('SYS_MANAGER도 할당 추이에서 기관을 좁혀 볼 수 있다', async () => {
@@ -157,7 +157,7 @@ describe('노드/용량 — 사용량·할당 추이', () => {
     renderApp('/admin/nodes?tab=trend')
 
     expect(await screen.findByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(screen.getByLabelText('할당 추이 기관 필터')).toBeInTheDocument()
   })
 })
 

@@ -39,6 +39,7 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 const PAGE_SIZE = 10
 
@@ -66,7 +67,8 @@ function fromDateTimeInput(value: string): string | null {
  */
 export function AdminNoticesPage() {
   const { user } = useAuth()
-  const role = user?.role
+  const scope = useAdminScope()
+  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
   const canManage = !!role && canManageNotice(role)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)

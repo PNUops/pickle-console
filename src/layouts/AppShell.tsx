@@ -15,6 +15,7 @@ import { Badge } from '../components/ui'
 import { PostLoginOverlay } from '../components/PostLoginOverlay'
 import { CONTACT_URL, DOCS_PATH, FEEDBACK_URL } from '../lib/brand'
 import { cn } from '../lib/cn'
+import { adminPath } from '../lib/paths'
 import { useFocusTrap } from '../lib/use-focus-trap'
 import { UserMenu } from './UserMenu'
 
@@ -213,6 +214,7 @@ export function AppShell({
   notificationsTo,
   banner,
   density = 'comfortable',
+  content,
 }: {
   home: string
   navLabel: string
@@ -228,6 +230,8 @@ export function AppShell({
   banner?: ReactNode
   /** 운영 셸은 compact, 사용자 셸은 comfortable density를 사용한다. */
   density?: 'comfortable' | 'compact'
+  /** scope 결정 전처럼 route page를 마운트하면 안 될 때 Outlet 대신 렌더한다. */
+  content?: ReactNode
 }) {
   const navSections: NavSection[] = sections ?? [{ items: items ?? [] }]
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -279,19 +283,22 @@ export function AppShell({
   // 옮긴 위치가 반영되기 전 시점이 있다. 둘 다 가드가 조용히 열려 반복 이동이
   // 되살아나는 방향으로 틀린다.
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const atEnrollScreen = pathname === MFA_ENROLL_PATH
+  const currentAdminOrg = new URLSearchParams(search).get('org') ?? undefined
   useEffect(() => {
     const goEnroll = () => {
       if (atEnrollScreen) return
-      void navigate(`${MFA_ENROLL_PATH}?enroll=2fa`, { replace: true })
+      void navigate(adminPath(`${MFA_ENROLL_PATH}?enroll=2fa`, currentAdminOrg), {
+        replace: true,
+      })
     }
     // 이미 걸린 뒤에 이 셸이 붙었을 수 있다 — 첫 요청이 구독보다 먼저 답하는
     // 창이 있고, 거기서 신호만 기다리면 그 한 번을 통째로 놓친다. 걸려 있으면
     // 지금 옮기고, 이후 것은 구독이 받는다.
     if (isMfaEnrollmentRequired()) goEnroll()
     return onMfaEnrollmentRequired(goEnroll)
-  }, [navigate, atEnrollScreen])
+  }, [navigate, atEnrollScreen, currentAdminOrg])
 
   const [dismissedBanner, setDismissedBanner] = useState<string | null>(() =>
     typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(BANNER_DISMISS_KEY) : null,
@@ -434,7 +441,7 @@ export function AppShell({
         {bannerEl}
         {banner}
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-          <Outlet />
+          {content === undefined ? <Outlet /> : content}
         </main>
         {contactEmail && (
           <footer className="border-t border-neutral-100 px-4 py-3 text-center text-xs text-neutral-400 sm:px-6">

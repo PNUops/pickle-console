@@ -10,6 +10,7 @@ import type { components } from '../api/schema'
 import { PopoverPanel, Spinner, usePopover } from './ui'
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
+import { adminPath } from '../lib/paths'
 
 type NotificationView = components['schemas']['NotificationView']
 
@@ -21,6 +22,7 @@ export function NotificationBell({ to }: { to: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { open, toggle, close, rootRef, triggerRef } = usePopover()
+  const adminOrgId = new URL(to, 'https://pickle.invalid').searchParams.get('org') ?? undefined
 
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -51,7 +53,13 @@ export function NotificationBell({ to }: { to: string }) {
     // 같은 pathname으로의 이동(이미 그 화면)에서는 라우트 변경 안전망이 발동하지
     // 않으므로 명시적으로 닫는다.
     close()
-    if (notification.linkPath) navigate(notification.linkPath)
+    if (notification.linkPath) {
+      navigate(
+        notification.linkPath.startsWith('/admin')
+          ? adminPath(notification.linkPath, adminOrgId)
+          : notification.linkPath,
+      )
+    }
   }
 
   return (

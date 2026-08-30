@@ -31,7 +31,7 @@ async function selectVm(user: ReturnType<typeof userEvent.setup>, name: string) 
 }
 
 describe('관리자 VM 목록', () => {
-  test('VM을 워크스페이스 이름과 함께 나열하고 상태 탭·기관 필터가 동작한다', async () => {
+  test('VM을 워크스페이스 이름과 함께 나열하고 상태 탭·관리 범위가 동작한다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
@@ -44,9 +44,9 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('web-lab')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
 
-    // 기관 필터 (SYS_ADMIN 전용): org 2 → ai-train만
+    // 전역 관리 범위: org 2 → ai-train만
     await user.click(screen.getByRole('button', { name: '전체' }))
-    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(2))
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
   })
@@ -103,7 +103,7 @@ describe('관리자 VM 목록', () => {
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
 
     // 기관을 바꾸면 이전 기관의 워크스페이스 선택은 무효 → 전체 워크스페이스로 초기화
-    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(2))
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
     expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('')
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })

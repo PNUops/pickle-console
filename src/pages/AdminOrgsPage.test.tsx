@@ -30,13 +30,11 @@ describe('기관 관리 — 접근 제어', () => {
 
     expect(await screen.findByRole('heading', { name: '기관 관리' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '기관 관리' })).toBeInTheDocument()
-    expect(
-      await screen.findByText('정보컴퓨터공학부 실습지원센터'),
-    ).toBeInTheDocument()
-    const row = screen.getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
+    const table = await screen.findByRole('table')
+    const row = within(table).getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
     expect(within(row).getByText('활성')).toBeInTheDocument()
     // hidden 기관에는 숨김 배지가 붙는다 (관리자 목록은 hidden 포함)
-    const hiddenRow = screen.getByText('테스트 기관').closest('tr')!
+    const hiddenRow = within(table).getByText('테스트 기관').closest('tr')!
     expect(within(hiddenRow).getByText('숨김')).toBeInTheDocument()
   })
 })
@@ -47,7 +45,8 @@ describe('기관 비활성화·숨김 토글', () => {
     renderAsSysAdmin()
 
     await screen.findByRole('heading', { name: '기관 관리' })
-    const row = (await screen.findByText('정보컴퓨터공학부 실습지원센터')).closest('tr')!
+    const table = await screen.findByRole('table')
+    const row = within(table).getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
     await user.click(within(row).getByRole('button', { name: '수정' }))
 
     const dialog = await screen.findByRole('dialog', { name: '기관 수정' })
@@ -60,7 +59,7 @@ describe('기관 비활성화·숨김 토글', () => {
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
     await waitFor(() => {
-      const updated = screen.getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
+      const updated = within(table).getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
       expect(within(updated).getByText('비활성')).toBeInTheDocument()
       expect(within(updated).getByText('숨김')).toBeInTheDocument()
     })

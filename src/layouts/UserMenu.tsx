@@ -1,11 +1,13 @@
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
 import { PopoverPanel, usePopover } from '../components/ui'
 import { USER_ROLE_LABELS } from '../lib/labels'
+import { adminPath } from '../lib/paths'
 
 export function UserMenu() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const { open, toggle, close, rootRef, triggerRef } = usePopover()
 
   if (!user) return null
@@ -68,7 +70,9 @@ export function UserMenu() {
           // 관리자는 /console 에 닿지 못하므로 같은 화면을 관리자 셸 라우트로 연다.
           <button
             type="button"
-            onClick={() => go('/admin/account')}
+            onClick={() =>
+              go(adminPath('/admin/account', new URLSearchParams(location.search).get('org') ?? undefined))
+            }
             className={itemClass}
           >
             계정 설정

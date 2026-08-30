@@ -42,15 +42,17 @@ describe('관리자 사용자 목록', () => {
     expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument()
   })
 
-  test('ORG_ADMIN도 다른 기관 사용자를 보고 검색한다', async () => {
+  test('ORG_ADMIN은 active 기관 사용자만 보고 검색한다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     expect(await screen.findByText('example@pusan.ac.kr')).toBeInTheDocument()
-    // 계약 v0.46.0: 사용자 조회가 전 기관에 닿는다. 리소스를 한 번도 신청하지
-    // 않아 어느 기관에도 파생 소속되지 않은 계정이 보이지 않던 것이 이유다.
+    // 전역 selector의 active 기관이 사용자 목록 API 기본 scope가 된다.
     await user.type(screen.getByLabelText('사용자 검색'), 'outsider')
-    expect(await screen.findByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument(),
+    )
+    expect(screen.queryByText('outsider.jung@pusan.ac.kr')).not.toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 상세에서 계정을 비활성화하고 해제할 수 있다', async () => {
@@ -219,15 +221,11 @@ describe('관리자 사용자 목록', () => {
     )
   })
 
-  test('시스템 계층 계정에는 기관 역할 변경 액션이 보이지 않는다', async () => {
-    const user = userEvent.setup()
+  test('ORG active scope에서는 기관 소속이 없는 시스템 계정을 노출하지 않는다', async () => {
     renderAsOrgAdmin()
 
-    await openDetail(user, '이시스템')
-    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
-    await drawer.findByText('기관 역할')
-    expect(drawer.queryByLabelText('부여할 기관')).not.toBeInTheDocument()
-    expect(drawer.queryByRole('button', { name: '부여' })).not.toBeInTheDocument()
+    await screen.findByRole('heading', { name: '사용자 관리' })
+    expect(screen.queryByRole('button', { name: '이시스템' })).not.toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 상세에서 프로필을 읽고 정정한다', async () => {

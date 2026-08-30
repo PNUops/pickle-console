@@ -57,6 +57,7 @@ import { VmAccessPage } from './pages/VmAccessPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
 import { COMPONENT_GALLERY_ROUTE } from './dev/gallery'
+import { AdminScopeProvider } from './lib/admin-scope'
 
 // 랜딩은 motion(+lazy 3D)을 끌어오므로 통째로 코드 분할한다 — 콘솔만 쓰는
 // 사용자의 진입 번들을 키우지 않는다. 폴백은 히어로와 같은 다크 배경(플래시 방지).
@@ -182,7 +183,9 @@ function App() {
               'SYS_ADMIN',
             ]}
           >
-            <AdminLayout />
+            <AdminScopeProvider>
+              <AdminLayout />
+            </AdminScopeProvider>
           </RequireRole>
         }
       >

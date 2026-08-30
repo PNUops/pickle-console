@@ -5,7 +5,7 @@ import { useAuth } from '../auth/auth-context'
 import { canOperateVm, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { FilterBar } from '../components/FilterBar'
-import { useOrgOptions } from '../lib/use-org-options'
+import { useAdminScope } from '../lib/use-admin-scope'
 import {
   Alert,
   Badge,
@@ -41,12 +41,13 @@ function queryParamsOf(tab: ExpiryTab) {
 /** 만료 관리 — 만료 임박·만료된 VM을 모아 보고 사용 기간을 연장한다. */
 export function AdminExpiryPage() {
   const { user } = useAuth()
+  const { activeOrgId, activeOrgRole, tier } = useAdminScope()
   const isSysAdmin = !!user && isSysTier(user.role)
   // 기간 연장은 운영 역할만 — 열람 역할은 조회만이며, 기관 계층의 연장은 자기가
   // 운영하는 기관의 VM에 한한다 (서버 강제).
-  const canExtend = !!user && canOperateVm(user.role)
+  const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
+  const canExtend = !!effectiveRole && canOperateVm(effectiveRole)
   const [tab, setTab] = useState<ExpiryTab>('D7')
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [extendTarget, setExtendTarget] = useState<VmSummary | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -59,17 +60,14 @@ export function AdminExpiryPage() {
       {
         expiringInDays: 'expiringInDays' in params ? params.expiringInDays : null,
         expired: 'expired' in params ? params.expired : null,
-        orgId: orgId ?? null,
+        orgId: activeOrgId ?? null,
         page,
         size: PAGE_SIZE,
       },
     ],
-    queryFn: () => fetchAdminVms({ ...params, orgId, page, size: PAGE_SIZE }),
+    queryFn: () => fetchAdminVms({ ...params, orgId: activeOrgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-
   return (
     <div className="space-y-6">
       <div>
@@ -87,13 +85,10 @@ export function AdminExpiryPage() {
           setTab(next ?? 'D7')
           setPage(0)
         }}
-        showOrgFilter={orgOptions.length > 1}
-        orgId={orgId}
-        onOrg={(next) => {
-          setOrgId(next)
-          setPage(0)
-        }}
-        orgs={orgOptions}
+        showOrgFilter={false}
+        orgId={activeOrgId}
+        onOrg={() => {}}
+        orgs={[]}
       />
 
       {message && <Alert variant="info">{message}</Alert>}

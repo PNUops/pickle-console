@@ -49,7 +49,8 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
-import { useOrgOptions } from '../lib/use-org-options'
+import { useAdminScope } from '../lib/use-admin-scope'
+import { adminPaths } from '../lib/paths'
 
 const PAGE_SIZE = 20
 
@@ -75,6 +76,7 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
   const isSysAdmin = !!user && isSysTier(user.role)
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
@@ -83,7 +85,6 @@ export function AdminDomainsPage() {
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -97,14 +98,12 @@ export function AdminDomainsPage() {
     queryKey: [
       'admin',
       'domains',
-      { status: status ?? null, kind: kind ?? null, orgId: orgId ?? null, page },
+      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, page },
     ],
-    queryFn: () => fetchAdminDomains({ status, kind, orgId, page, size: PAGE_SIZE }),
+    queryFn: () =>
+      fetchAdminDomains({ status, kind, orgId: activeOrgId, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
 
   return (
@@ -124,7 +123,12 @@ export function AdminDomainsPage() {
         aria-label="공개 서비스 탭"
         tabs={SCREEN_TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'domains' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'domains') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="domains" active={activeTab === 'domains'} className="space-y-6">
@@ -135,13 +139,10 @@ export function AdminDomainsPage() {
             setStatus(next)
             setPage(0)
           }}
-          showOrgFilter={orgOptions.length > 1}
-          orgId={orgId}
-          onOrg={(next) => {
-            setOrgId(next)
-            setPage(0)
-          }}
-          orgs={orgOptions}
+          showOrgFilter={false}
+          orgId={activeOrgId}
+          onOrg={() => {}}
+          orgs={[]}
         >
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             종류
@@ -285,7 +286,7 @@ export function AdminDomainsPage() {
       </TabPanel>
 
       <TabPanel id="certificates" active={activeTab === 'certificates'}>
-        <CertificatesSection />
+        <CertificatesSection orgId={activeOrgId} />
       </TabPanel>
     </div>
   )
@@ -300,6 +301,7 @@ function DomainDrawerContent({
   domain: AdminDomainView
   onDone: (message: string) => void
 }) {
+  const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
   // 역할이 닿아도 이 도메인의 기관에서 행위할 수 있어야 한다: 열람 역할로만
   // 보이는 기관의 도메인에 개입하면 API가 404로 거부한다.
@@ -315,8 +317,8 @@ function DomainDrawerContent({
   // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
   // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
   const routes = useQuery({
-    queryKey: ['admin', 'routes', { forDomainJoin: true }],
-    queryFn: () => fetchAdminRoutes({ page: 0, size: 100 }),
+    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: activeOrgId ?? null }],
+    queryFn: () => fetchAdminRoutes({ orgId: activeOrgId, page: 0, size: 100 }),
   })
   const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
   const routesTruncated =
@@ -338,7 +340,7 @@ function DomainDrawerContent({
             {domain.vmName ?? '—'}{' '}
             {domain.vmId != null && (
               <Link
-                to={`/admin/vms/${domain.vmId}`}
+                to={adminPaths.vmDetail(domain.vmId, activeOrgId)}
                 className="text-sm font-normal text-primary-700 hover:underline"
               >
                 상세

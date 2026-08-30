@@ -17,10 +17,10 @@ import {
  * 기관 할당 추이 카드 — 평문 요약 + 자원별 작은 차트.
  * uPlot을 끌어오므로 대시보드에서 지연 로드한다(기본 내보내기).
  */
-export default function OrgAllocationTrendCard() {
+export default function OrgAllocationTrendCard({ orgId }: { orgId?: string }) {
   const trend = useQuery({
-    queryKey: ['admin', 'capacity-trend', { days: TREND_DAYS, orgId: null }],
-    queryFn: () => fetchCapacityTrend({ days: TREND_DAYS }),
+    queryKey: ['admin', 'capacity-trend', { days: TREND_DAYS, orgId: orgId ?? null }],
+    queryFn: () => fetchCapacityTrend({ days: TREND_DAYS, orgId }),
   })
 
   const points = trend.data?.points ?? []

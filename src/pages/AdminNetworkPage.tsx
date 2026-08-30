@@ -20,6 +20,8 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { fieldErrorsOf } from '../lib/field-errors'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 import { useAuth } from '../auth/auth-context'
 import { canRunSysRoutine, isSysAdminOnly } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
@@ -93,7 +95,12 @@ export function AdminNetworkPage() {
         aria-label="네트워크 탭"
         tabs={SCREEN_TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'relays' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'relays') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="relays" active={activeTab === 'relays'} className="space-y-6">
@@ -475,6 +482,7 @@ function MappingDrawerContent({
   canOperate: boolean
   onDone: (message: string) => void
 }) {
+  const { activeOrgId } = useAdminScope()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [notice, setNotice] = useState<DrawerNotice | null>(null)
@@ -521,7 +529,7 @@ function MappingDrawerContent({
           <dd className="font-medium text-neutral-900">
             {mapping.vmName ?? '이름 미상 VM'}{' '}
             <Link
-              to={`/admin/vms/${mapping.vmId}`}
+              to={adminPaths.vmDetail(mapping.vmId, activeOrgId)}
               className="text-sm font-normal text-primary-700 hover:underline"
             >
               상세
@@ -941,6 +949,7 @@ function CampusDrawerContent({
   request: AdminCampusIpRequestView
   isSysAdmin: boolean
 }) {
+  const { activeOrgId } = useAdminScope()
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -956,7 +965,7 @@ function CampusDrawerContent({
           <dd className="font-medium text-neutral-900">
             {request.vmName ?? '이름 미상 VM'}{' '}
             <Link
-              to={`/admin/vms/${request.vmId}`}
+              to={adminPaths.vmDetail(request.vmId, activeOrgId)}
               className="text-sm font-normal text-primary-700 hover:underline"
             >
               상세

@@ -38,6 +38,8 @@ import {
 import { formatDateTime, formatSpec } from '../lib/format'
 import { isUuid } from '../lib/validation'
 import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/status'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -50,6 +52,7 @@ const TABS = [
  * 한정 — 서버 강제), 열람 역할은 조회만, 차단 토글은 SYS_ADMIN.
  */
 export function AdminVmDetailPage() {
+  const { activeOrgId } = useAdminScope()
   const { vmId: vmIdParam } = useParams()
   const vmId = vmIdParam ?? ''
   const idValid = isUuid(vmId)
@@ -91,7 +94,7 @@ export function AdminVmDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/admin/vms" className="text-sm text-primary-700 hover:underline">
+        <Link to={adminPaths.vms(activeOrgId)} className="text-sm text-primary-700 hover:underline">
           ← VM 관리
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -108,7 +111,12 @@ export function AdminVmDetailPage() {
         aria-label="VM 상세 탭"
         tabs={TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'overview') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
@@ -121,7 +129,7 @@ export function AdminVmDetailPage() {
               <dd className="font-medium text-neutral-900">
                 {vm.workspaceName}{' '}
                 <Link
-                  to={`/admin/vms?workspaceId=${vm.workspaceId}`}
+                  to={adminPaths.vms(activeOrgId, vm.workspaceId)}
                   className="text-sm font-normal text-primary-700 hover:underline"
                 >
                   VM 보기

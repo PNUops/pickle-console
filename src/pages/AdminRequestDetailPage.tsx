@@ -38,6 +38,8 @@ import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 interface Notice {
   variant: 'success' | 'warning' | 'danger'
@@ -45,6 +47,7 @@ interface Notice {
 }
 
 export function AdminRequestDetailPage() {
+  const { activeOrgId } = useAdminScope()
   const params = useParams()
   const requestId = params.requestId ?? ''
   const idValid = isUuid(requestId)
@@ -90,7 +93,7 @@ export function AdminRequestDetailPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
-        <Link to="/admin/requests" className="text-primary-700 hover:underline">
+        <Link to={adminPaths.requests(activeOrgId)} className="text-primary-700 hover:underline">
           ← 승인 대기
         </Link>
       </nav>
