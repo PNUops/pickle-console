@@ -1,4 +1,3 @@
-import { isOrgTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './auth'
@@ -303,7 +302,7 @@ export let approveBodies: { requestId: string; body: Schemas['ApproveRequestRequ
 export let rejectBodies: { requestId: string; body: { comment: string } }[] = []
 export let userPatchBodies: {
   userId: string
-  body: { role?: Schemas['UserRole']; orgId?: string | null }
+  body: { role?: Schemas['AdminGlobalRole'] }
 }[] = []
 
 export function resetAdminFixtures() {
@@ -633,18 +632,7 @@ export const adminHandlers: RequestHandler[] = [
       })
     }
     const body = (await request.json()) as {
-      role?: Schemas['UserRole']
-      orgId?: string | null
-    }
-    if (body.role && isOrgTier(body.role) && body.orgId == null) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '입력값이 올바르지 않습니다',
-        status: 422,
-        detail: '기관 관리자는 관리할 기관을 지정해야 합니다.',
-        code: 'VALIDATION_FAILED',
-        errors: [{ field: 'orgId', message: '관리할 기관을 선택해 주세요.' }],
-      })
+      role?: Schemas['AdminGlobalRole']
     }
     userPatchBodies.push({ userId: String(params.userId), body })
     const updated: Schemas['UserSummaryResponse'] = { ...user, role: body.role ?? user.role }

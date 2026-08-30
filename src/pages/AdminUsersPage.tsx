@@ -13,6 +13,7 @@ import {
   revokeOrgRole,
   updateUserProfile,
   updateUserRole,
+  type AdminGlobalRole,
   type AdminUserSort,
   type UserAdminDetail,
   type UserAdminView,
@@ -23,7 +24,7 @@ import { toApiError } from '../api/problem'
 import { OTHER_DEPARTMENT } from '../components/profile/profile-values'
 import type { components } from '../api/schema'
 import { useAuth, type ManagedOrg } from '../auth/auth-context'
-import { administeredOrgs, isOrgTier, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { administeredOrgs, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
   Alert,
   Badge,
@@ -76,6 +77,8 @@ const ROLE_OPTIONS: UserRole[] = [
   'SYS_MANAGER',
   'SYS_ADMIN',
 ]
+
+const GLOBAL_ROLE_OPTIONS: AdminGlobalRole[] = ['USER', 'SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN']
 
 const STATUS_VARIANT: Record<UserStatus, BadgeVariant> = {
   ACTIVE: 'success',
@@ -374,9 +377,7 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
         )}
       </section>
 
-      <UserOrgRolesSection user={user} />
-
-      {canManage && <UserRoleSection user={user} />}
+      <UserPermissionsSection user={user} canManageGlobal={canManage} />
 
       {canManage && (
         <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} />
@@ -632,11 +633,39 @@ function UserProfileCorrectionModal({
   )
 }
 
-/* ─── 기관 역할 (계약 v0.46.0 — 기관마다 하나씩 주고 뺀다) ─── */
+/* ─── 권한 — 기관별 역할과 전역 역할은 한 section에서 서로의 경계를 설명한다 ─── */
+
+function UserPermissionsSection({
+  user,
+  canManageGlobal,
+}: {
+  user: UserAdminDetail
+  canManageGlobal: boolean
+}) {
+  return (
+    <section className="space-y-5 rounded-lg border border-neutral-200 p-4">
+      <div>
+        <h3 className="text-sm font-semibold text-neutral-800">권한 관리</h3>
+        <p className="mt-1 text-sm text-neutral-500">
+          기관 권한은 기관별로 부여·회수하고, 전역 역할은 기관 권한이 하나도 없을 때만
+          변경합니다.
+        </p>
+      </div>
+      <UserOrgRolesSection user={user} />
+      {canManageGlobal && (
+        <div className="border-t border-neutral-200 pt-5">
+          <UserGlobalRoleSection user={user} />
+        </div>
+      )}
+    </section>
+  )
+}
+
+/* 기관 역할 (계약 v0.46.0 — 기관마다 하나씩 주고 뺀다). */
 
 /**
- * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 통째로 덮어쓰는
- * 위 역할 관리와 별개로 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
+ * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 전역 역할 변경과
+ * 분리해 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
  * 있는 기관의 행만 건드릴 수 있고, 그 밖의 기관은 API가 404로 답한다.
  *
  * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
@@ -710,8 +739,8 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const addable = grantable.filter((org) => !alreadyHeld.has(org.id))
 
   return (
-    <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-      <h3 className="text-sm font-semibold text-neutral-800">기관 역할</h3>
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold text-neutral-800">기관별 역할</h4>
       <p className="text-sm text-neutral-500">
         한 계정이 여러 기관의 관리자를 겸할 수 있습니다. 기관 관리자는 자기가 관리자로 있는
         기관만 더하고 뺄 수 있습니다.
@@ -812,24 +841,25 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
           </Button>
         </div>
       </Modal>
-    </section>
+    </div>
   )
 }
 
-/* ─── 역할 관리 (수행은 SYS_ADMIN 전용, 표시는 전 관리자) ─── */
+/* 전역 역할 관리 (SYS_ADMIN 전용). */
 
-function UserRoleSection({ user }: { user: UserAdminDetail }) {
+function UserGlobalRoleSection({ user }: { user: UserAdminDetail }) {
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [role, setRole] = useState<UserRole>(user.role)
-  const [orgId, setOrgId] = useState(user.managedOrgs[0]?.orgId ?? '')
+  const initialRole: AdminGlobalRole =
+    user.role === 'SYS_VIEWER' || user.role === 'SYS_MANAGER' || user.role === 'SYS_ADMIN'
+      ? user.role
+      : 'USER'
+  const [role, setRole] = useState<AdminGlobalRole>(initialRole)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
 
   const update = useMutation({
-    mutationFn: () =>
-      updateUserRole(user.id, { role, orgId: isOrgTier(role) ? orgId : null }),
+    mutationFn: () => updateUserRole(user.id, { role }),
     onSuccess: async (updated) => {
       setError(null)
       setFieldErrors({})
@@ -849,51 +879,40 @@ function UserRoleSection({ user }: { user: UserAdminDetail }) {
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setError(null)
-    if (isOrgTier(role) && !orgId) {
-      setFieldErrors({ orgId: '기관 계층 역할은 관리할 기관을 선택해야 합니다.' })
-      return
-    }
     setFieldErrors({})
     update.mutate()
   }
 
+  if (user.managedOrgs.length > 0) {
+    return (
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold text-neutral-800">전역 역할</h4>
+        <Alert variant="info">
+          전역 역할을 변경하려면 위 기관별 역할을 하나씩 모두 회수해 주세요. 마지막 기관을
+          회수하면 일반 사용자로 전환되고 전역 역할 변경 폼이 열립니다.
+        </Alert>
+      </div>
+    )
+  }
+
   return (
-    <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-      <h3 className="text-sm font-semibold text-neutral-800">역할 관리</h3>
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold text-neutral-800">전역 역할</h4>
       <p className="text-sm text-neutral-500">
-        전역 역할을 변경합니다. 역할이 바뀌면 이 사용자의 기존 로그인 세션은 무효화됩니다.
+        일반 사용자와 시스템 계층 역할만 관리합니다. 역할이 바뀌면 기존 로그인 세션은
+        무효화됩니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <form onSubmit={submit} className="flex flex-wrap items-start gap-4" noValidate>
         <FormField label="역할" required error={fieldErrors.role}>
           <Select
             value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
+            onChange={(event) => setRole(event.target.value as AdminGlobalRole)}
             className="w-40"
           >
-            {(Object.keys(USER_ROLE_LABELS) as UserRole[]).map((value) => (
+            {GLOBAL_ROLE_OPTIONS.map((value) => (
               <option key={value} value={value}>
                 {USER_ROLE_LABELS[value]}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        <FormField
-          label="관리 기관"
-          required={isOrgTier(role)}
-          error={fieldErrors.orgId}
-          description="기관 계층 역할일 때만 지정합니다."
-        >
-          <Select
-            value={orgId}
-            disabled={!isOrgTier(role)}
-            onChange={(event) => setOrgId(event.target.value)}
-            className="w-56"
-          >
-            <option value="">선택 안 함</option>
-            {orgs.data?.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
               </option>
             ))}
           </Select>
@@ -906,7 +925,7 @@ function UserRoleSection({ user }: { user: UserAdminDetail }) {
           역할 변경
         </Button>
       </form>
-    </section>
+    </div>
   )
 }
 

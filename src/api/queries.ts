@@ -33,6 +33,7 @@ export type OrgDetail = Schemas['OrgDetailResponse']
 export type OrgStatus = Schemas['OrgStatus']
 export type UserSummary = Schemas['UserSummaryResponse']
 export type UserRole = Schemas['UserRole']
+export type AdminGlobalRole = Schemas['AdminGlobalRole']
 export type UserStatus = Schemas['UserStatus']
 export type AuthTokenResponse = Schemas['AuthTokenResponse']
 /* ─── 계정 수명주기 ─── */
@@ -1902,7 +1903,7 @@ export function updateVmGatewayBlock(
 
 export function updateUserRole(
   userId: string,
-  body: { role: UserRole; orgId: string | null },
+  body: { role: AdminGlobalRole },
 ): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.PATCH('/admin/users/{userId}', {
