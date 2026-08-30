@@ -28,7 +28,7 @@ export function WorkspacesPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">내 워크스페이스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            내가 속한 워크스페이스 목록입니다. VM은 워크스페이스 명의로 신청합니다.
+            내가 속한 워크스페이스 목록입니다. 리소스는 워크스페이스 명의로 신청합니다.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>새 워크스페이스 만들기</Button>

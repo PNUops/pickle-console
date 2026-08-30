@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { fetchResources } from '../api/queries'
+import { fetchResources, type ResourceSummary } from '../api/queries'
 import { resourceTypeEntry } from '../components/resource/registry'
 import {
   Alert,
   Card,
   LinkButton,
   Pagination,
+  Select,
   Spinner,
   Table,
   TBody,
@@ -29,10 +30,11 @@ import { useScope } from '../lib/use-scope'
  */
 export function ResourcesPage() {
   const scope = useScope()
+  const [type, setType] = useState<ResourceSummary['type'] | undefined>(undefined)
   const [page, setPage] = useState(0)
   const resources = useQuery({
-    queryKey: ['resources', { page, workspaceId: scope }],
-    queryFn: () => fetchResources({ page, workspaceId: scope ?? undefined }),
+    queryKey: ['resources', { type: type ?? null, page, workspaceId: scope }],
+    queryFn: () => fetchResources({ type, page, workspaceId: scope ?? undefined }),
     placeholderData: keepPreviousData,
   })
 
@@ -48,6 +50,25 @@ export function ResourcesPage() {
           </p>
         </div>
         <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
+      </div>
+
+      <div className="flex justify-end">
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
+          리소스 종류
+          <Select
+            aria-label="리소스 종류 필터"
+            className="w-44"
+            value={type ?? ''}
+            onChange={(event) => {
+              setType((event.target.value || undefined) as ResourceSummary['type'] | undefined)
+              setPage(0)
+            }}
+          >
+            <option value="">전체</option>
+            <option value="VM">가상머신</option>
+            <option value="LLM_API_KEY">LLM API 키</option>
+          </Select>
+        </label>
       </div>
 
       {resources.isPending && (

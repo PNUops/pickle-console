@@ -16,6 +16,9 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     renderWorkspace(uuid(12))
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
+    expect(await screen.findByRole('heading', { name: '리소스', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'capstone-team3-api' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'capstone-chatbot' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '정보 수정' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '구성원 추가' })).toBeInTheDocument()
     expect(screen.getByLabelText('김철수 역할 변경')).toBeInTheDocument()
