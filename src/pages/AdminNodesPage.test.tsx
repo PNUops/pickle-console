@@ -118,19 +118,19 @@ describe('노드/용량 — 사용량·할당 추이', () => {
     expect(within(other).getByText('풀 용량 미측정')).toBeInTheDocument()
   })
 
-  test('할당 추이 탭은 자원별 차트를 보여주고 기간을 바꿀 수 있다', async () => {
+  test('가상머신 할당 추이 탭은 자원별 차트를 보여주고 기간을 바꿀 수 있다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    // 라벨은 '할당 추이'로 통일하되, 기존 링크가 계속 열리도록 tab id는 그대로다.
+    // VM 전용 수치임을 라벨에 밝히되, 기존 링크가 계속 열리도록 tab id는 그대로다.
     renderApp('/admin/nodes?tab=trend')
 
-    expect(await screen.findByRole('tab', { name: '할당 추이' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: '가상머신 할당 추이' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
     expect(await screen.findByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
     // 섹션 제목도 같은 용어를 쓴다.
-    expect(screen.getByRole('heading', { name: '할당 추이', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '가상머신 할당 추이', level: 2 })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '메모리 할당' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '디스크 할당' })).toBeInTheDocument()
     // VM 대수는 단위가 달라 같은 축에 얹지 않고 별도 차트로 둔다.

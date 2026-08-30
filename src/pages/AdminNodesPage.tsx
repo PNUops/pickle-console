@@ -16,6 +16,7 @@ import {
   CardTitle,
   ErrorBoundary,
   Modal,
+  PageHeader,
   Select,
   Spinner,
   Table,
@@ -42,7 +43,7 @@ const CapacityTrendSection = lazy(
 const SCREEN_TABS = [
   { id: 'nodes', label: '노드' },
   { id: 'ips', label: 'IP 할당' },
-  { id: 'trend', label: '할당 추이' },
+  { id: 'trend', label: '가상머신 할당 추이' },
 ]
 
 const NODE_STATUS_LABELS: Record<NodeSummary['status'], string> = {
@@ -72,13 +73,11 @@ export function AdminNodesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">노드/IP</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Proxmox 노드별 물리 용량·할당 합계와 IP 풀 할당 현황입니다. 수치는 30초
-          주기 상태 폴러가 갱신합니다.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="운영"
+        title="노드/IP"
+        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다. 수치는 30초 주기 상태 폴러가 갱신합니다."
+      />
 
       <Tabs
         aria-label="노드/IP 탭"

@@ -51,7 +51,7 @@ export default function CapacityTrendSection({
   return (
     <Card>
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-        <CardTitle>할당 추이</CardTitle>
+        <CardTitle>가상머신 할당 추이</CardTitle>
         <div className="flex flex-wrap items-center gap-3">
           <div role="group" aria-label="조회 기간" className="flex flex-wrap gap-1">
             {DAY_OPTIONS.map((option) => {

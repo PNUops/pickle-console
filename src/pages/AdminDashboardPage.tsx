@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
   ErrorBoundary,
+  PageHeader,
   Spinner,
   StatTile,
 } from '../components/ui'
@@ -85,13 +86,11 @@ export function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">관리자 대시보드</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {user?.name}님, 환영합니다. {isSysAdmin ? '플랫폼 전체' : '우리 기관'} 운영
-          현황입니다.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="개요"
+        title="관리자 대시보드"
+        description={`${user?.name}님, 환영합니다. ${isSysAdmin ? '플랫폼 전체' : '우리 기관'} 운영 현황입니다.`}
+      />
 
       {summary.isPending && (
         <div className="flex justify-center py-8">
@@ -427,7 +426,7 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>리소스 현황</CardTitle>
+        <CardTitle>가상머신 할당 현황</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <ResourceBar

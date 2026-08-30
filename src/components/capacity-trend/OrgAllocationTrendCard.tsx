@@ -29,7 +29,7 @@ export default function OrgAllocationTrendCard({ orgId }: { orgId?: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>할당 추이 (최근 {TREND_DAYS}일)</CardTitle>
+        <CardTitle>가상머신 할당 추이 (최근 {TREND_DAYS}일)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {trend.isPending && (
