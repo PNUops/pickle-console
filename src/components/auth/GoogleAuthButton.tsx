@@ -21,7 +21,7 @@ interface GoogleAuthButtonProps {
  * 강제하는데, 틸 버튼에 구글 로고를 얹는 것은 브랜드 가이드 위반이다. 표면색은 승인된
  * light 조합(`#FFFFFF` 배경, `#1F1F1F` 텍스트, `#747775` 테두리)만 쓴다.
  *
- * 버튼 안에서 `.text-neutral-500` 같은 토큰 클래스를 쓰면 안 된다. `.auth-dark` 스코프
+ * 버튼 안에서 `.text-neutral-500` 같은 토큰 클래스를 쓰면 안 된다. `auth-dark` theme
  * CSS가 그 토큰들을 밝은 톤으로 승격시켜 브랜드 색이 조용히 바뀐다. 임의값 hex 만 쓴다.
  *
  * `<a href>`가 아니라 `<button>`이다. 인가 주소는 서버가 state 와 nonce 를 저장한 뒤에야

@@ -19,12 +19,12 @@ export function Select({ invalid, className, children, ...rest }: SelectProps) {
         aria-invalid={isInvalid || undefined}
         aria-describedby={describedBy}
         className={cn(
-          'h-10 w-full cursor-pointer appearance-none rounded-lg border bg-white pr-9 pl-3 text-sm text-neutral-900',
+          'control-height w-full cursor-pointer appearance-none rounded-control border bg-surface-card pr-9 pl-3 text-sm text-foreground-primary',
           'focus-visible:outline-2 focus-visible:outline-offset-1',
-          'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
+          'disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-foreground-disabled',
           isInvalid
             ? 'border-danger-400 focus-visible:outline-danger-600'
-            : 'border-neutral-300 focus-visible:outline-primary-600',
+            : 'border-stroke-default focus-visible:outline-focus-ring',
           className,
         )}
         {...rest}
@@ -35,7 +35,7 @@ export function Select({ invalid, className, children, ...rest }: SelectProps) {
         aria-hidden="true"
         viewBox="0 0 20 20"
         fill="currentColor"
-        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-neutral-400"
+        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-foreground-muted"
       >
         <path
           fillRule="evenodd"

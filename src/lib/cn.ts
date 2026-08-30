@@ -1,4 +1,6 @@
-/** Join class names, skipping falsy values. */
+import { twMerge } from 'tailwind-merge'
+
+/** Join class names and let the caller's Tailwind utilities override defaults. */
 export function cn(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(' ')
+  return twMerge(parts.filter(Boolean).join(' '))
 }

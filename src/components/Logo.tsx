@@ -1,45 +1,133 @@
 import { Link } from 'react-router'
 import pnuLogo from '../assets/pnu-logo.png'
 import pnuLogoWhite from '../assets/pnu-logo-white.png'
-import { SERVICE_NAME } from '../lib/brand'
+import { BRAND_NAME, OFFICIAL_SERVICE_NAME, PLATFORM_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
+export type LogoTone = 'default' | 'inverse' | 'monochrome'
+export type LogoVariant = 'brand' | 'lockup' | 'symbol' | 'wordmark' | 'endorsement'
+
+export interface PickleSymbolProps {
+  className?: string
+  decorative?: boolean
+  tone?: LogoTone
+}
+
+/** 16px와 단색 출력에서도 형태가 남는 code-native Pickle P symbol. */
+export function PickleSymbol({
+  className,
+  decorative = false,
+  tone = 'default',
+}: PickleSymbolProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      role={decorative ? undefined : 'img'}
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : BRAND_NAME}
+      className={cn(
+        'shrink-0',
+        tone === 'inverse'
+          ? 'text-white'
+          : tone === 'monochrome'
+            ? 'text-current'
+            : 'text-brand-fill',
+        className,
+      )}
+    >
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M5 2h7.4a6.6 6.6 0 0 1 0 13.2H9.4V22H5V2Zm4.4 4.2V11h2.7a2.4 2.4 0 1 0 0-4.8H9.4Z"
+      />
+    </svg>
+  )
+}
+
+export interface LogoProps {
+  to?: string
+  className?: string
+  tone?: LogoTone
+  variant?: LogoVariant
+  size?: 'sm' | 'md'
+}
+
+/**
+ * Pickle-first surface lockup. 부산대학교 엠블럼은 institutional endorsement가
+ * 필요한 `endorsement` variant에서만 렌더한다.
+ */
 export function Logo({
   to = '/',
   className,
   tone = 'default',
-}: {
-  to?: string
-  className?: string
-  /** default: 라이트 배경용(어두운 워드마크) / inverse: 다크 배경용(흰 워드마크) */
-  tone?: 'default' | 'inverse'
-}) {
+  variant = 'brand',
+  size = 'md',
+}: LogoProps) {
+  const showSymbol = variant !== 'wordmark'
+  const showWordmark = variant !== 'symbol'
+  const showDescriptor = variant === 'lockup' || variant === 'endorsement'
+  const accessibleName =
+    variant === 'endorsement'
+      ? `${BRAND_NAME}, ${OFFICIAL_SERVICE_NAME}`
+      : showDescriptor
+        ? `${BRAND_NAME}, ${PLATFORM_NAME}`
+        : BRAND_NAME
+
   return (
     <Link
       to={to}
+      aria-label={accessibleName}
       className={cn(
-        'inline-flex items-center gap-2 rounded focus-visible:outline-2 focus-visible:outline-offset-2',
-        tone === 'inverse'
-          ? 'focus-visible:outline-primary-300'
-          : 'focus-visible:outline-primary-600',
+        'inline-flex min-w-0 items-center gap-2 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
+        tone === 'inverse' ? 'focus-visible:outline-primary-300' : 'focus-visible:outline-focus-ring',
         className,
       )}
     >
-      {/* 엠블럼은 배경이 투명하므로 클리핑이 필요 없고, 다크 배경에서는 흰 단색 버전을 쓴다 */}
-      <img
-        src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
-        alt=""
-        aria-hidden="true"
-        className="h-7 w-auto shrink-0"
-      />
-      <span
-        className={cn(
-          'text-lg font-bold tracking-tight',
-          tone === 'inverse' ? 'text-white' : 'text-neutral-900',
-        )}
-      >
-        {SERVICE_NAME}
-      </span>
+      {showSymbol && (
+        <PickleSymbol
+          decorative
+          tone={tone}
+          className={size === 'sm' ? 'size-4' : 'size-7'}
+        />
+      )}
+      {showWordmark && (
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              'font-bold tracking-tight',
+              size === 'sm' ? 'text-base' : 'text-lg',
+              tone === 'inverse'
+                ? 'text-white'
+                : tone === 'monochrome'
+                  ? 'text-current'
+                  : 'text-foreground-primary',
+            )}
+          >
+            {BRAND_NAME}
+          </span>
+          {showDescriptor && (
+            <span
+              className={cn(
+                'hidden border-l pl-2 text-[0.6875rem] leading-tight font-medium sm:inline',
+                tone === 'inverse'
+                  ? 'border-white/30 text-neutral-300'
+                  : 'border-stroke-default text-foreground-muted',
+              )}
+            >
+              {variant === 'endorsement' ? OFFICIAL_SERVICE_NAME : PLATFORM_NAME}
+            </span>
+          )}
+        </span>
+      )}
+      {variant === 'endorsement' && (
+        <img
+          src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
+          alt=""
+          aria-hidden="true"
+          className={size === 'sm' ? 'h-4 w-auto shrink-0' : 'h-6 w-auto shrink-0'}
+        />
+      )}
     </Link>
   )
 }

@@ -4,18 +4,18 @@ import { cn } from '../../lib/cn'
 export function Card({ className, ...rest }: ComponentPropsWithRef<'div'>) {
   return (
     <div
-      className={cn('rounded-card border border-neutral-200 bg-white shadow-card', className)}
+      className={cn('rounded-card border border-stroke-subtle bg-surface-card shadow-elevation-1', className)}
       {...rest}
     />
   )
 }
 
 export function CardHeader({ className, ...rest }: ComponentPropsWithRef<'div'>) {
-  return <div className={cn('border-b border-neutral-100 px-5 py-4', className)} {...rest} />
+  return <div className={cn('border-b border-stroke-subtle px-5 py-4', className)} {...rest} />
 }
 
 export function CardTitle({ className, ...rest }: ComponentPropsWithRef<'h2'>) {
-  return <h2 className={cn('text-base font-semibold text-neutral-900', className)} {...rest} />
+  return <h2 className={cn('type-section-title text-foreground-primary', className)} {...rest} />
 }
 
 export function CardContent({ className, ...rest }: ComponentPropsWithRef<'div'>) {
@@ -25,7 +25,7 @@ export function CardContent({ className, ...rest }: ComponentPropsWithRef<'div'>
 export function CardFooter({ className, ...rest }: ComponentPropsWithRef<'div'>) {
   return (
     <div
-      className={cn('flex items-center justify-end gap-2 border-t border-neutral-100 px-5 py-3', className)}
+      className={cn('flex items-center justify-end gap-2 border-t border-stroke-subtle px-5 py-3', className)}
       {...rest}
     />
   )

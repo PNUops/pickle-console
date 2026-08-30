@@ -21,7 +21,7 @@ export function FormField({ label, error, description, required, className, chil
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <div className="flex items-center gap-0.5">
-        <label htmlFor={id} className="text-sm font-medium text-neutral-700">
+        <label htmlFor={id} className="text-sm font-medium text-foreground-secondary">
           {label}
         </label>
         {required && (
@@ -31,7 +31,7 @@ export function FormField({ label, error, description, required, className, chil
         )}
       </div>
       {description && (
-        <p id={descriptionId} className="text-xs text-neutral-500">
+        <p id={descriptionId} className="text-xs text-foreground-muted">
           {description}
         </p>
       )}

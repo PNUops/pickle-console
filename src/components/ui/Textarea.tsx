@@ -20,13 +20,13 @@ export function Textarea({ invalid, className, ...rest }: TextareaProps) {
       aria-describedby={describedBy}
       rows={3}
       className={cn(
-        'w-full rounded-lg border bg-white px-3 py-2 text-sm text-neutral-900',
-        'placeholder:text-neutral-400',
+        'w-full rounded-control border bg-surface-card px-3 py-2 text-sm text-foreground-primary',
+        'placeholder:text-foreground-disabled',
         'focus-visible:outline-2 focus-visible:outline-offset-1',
-        'disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500',
+        'disabled:cursor-not-allowed disabled:bg-surface-subtle disabled:text-foreground-disabled',
         isInvalid
           ? 'border-danger-400 focus-visible:outline-danger-600'
-          : 'border-neutral-300 focus-visible:outline-primary-600',
+          : 'border-stroke-default focus-visible:outline-focus-ring',
         className,
       )}
       {...rest}

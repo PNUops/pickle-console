@@ -10,15 +10,15 @@ export function Table({ className, ...rest }: ComponentPropsWithRef<'table'>) {
 }
 
 export function THead({ className, ...rest }: ComponentPropsWithRef<'thead'>) {
-  return <thead className={cn('bg-neutral-50', className)} {...rest} />
+  return <thead className={cn('bg-surface-subtle', className)} {...rest} />
 }
 
 export function TBody({ className, ...rest }: ComponentPropsWithRef<'tbody'>) {
-  return <tbody className={cn('divide-y divide-neutral-100', className)} {...rest} />
+  return <tbody className={cn('divide-y divide-stroke-subtle', className)} {...rest} />
 }
 
 export function TR({ className, ...rest }: ComponentPropsWithRef<'tr'>) {
-  return <tr className={cn('hover:bg-neutral-50', className)} {...rest} />
+  return <tr className={cn('hover:bg-surface-subtle', className)} {...rest} />
 }
 
 export function TH({ className, ...rest }: ComponentPropsWithRef<'th'>) {
@@ -26,7 +26,7 @@ export function TH({ className, ...rest }: ComponentPropsWithRef<'th'>) {
     <th
       scope="col"
       className={cn(
-        'border-b border-neutral-200 px-4 py-2.5 text-left font-medium whitespace-nowrap text-neutral-500',
+        'border-b border-stroke-subtle px-[var(--density-row-inline-padding)] py-[var(--density-row-block-padding)] text-left font-medium whitespace-nowrap text-foreground-muted',
         className,
       )}
       {...rest}
@@ -35,7 +35,15 @@ export function TH({ className, ...rest }: ComponentPropsWithRef<'th'>) {
 }
 
 export function TD({ className, ...rest }: ComponentPropsWithRef<'td'>) {
-  return <td className={cn('px-4 py-3 text-neutral-700', className)} {...rest} />
+  return (
+    <td
+      className={cn(
+        'px-[var(--density-row-inline-padding)] py-[var(--density-row-block-padding)] text-foreground-secondary',
+        className,
+      )}
+      {...rest}
+    />
+  )
 }
 
 /**
@@ -61,14 +69,14 @@ export function SortableTH({
       scope="col"
       aria-sort={direction === null ? undefined : direction === 'asc' ? 'ascending' : 'descending'}
       className={cn(
-        'border-b border-neutral-200 px-4 py-2.5 text-left font-medium whitespace-nowrap text-neutral-500',
+        'border-b border-stroke-subtle px-[var(--density-row-inline-padding)] py-[var(--density-row-block-padding)] text-left font-medium whitespace-nowrap text-foreground-muted',
         className,
       )}
     >
       <button
         type="button"
         onClick={() => onSort(next)}
-        className="inline-flex cursor-pointer items-center gap-1 hover:text-neutral-800 focus-visible:outline-2 focus-visible:outline-primary-600"
+        className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground-primary focus-visible:outline-2 focus-visible:outline-focus-ring"
       >
         {children}
         <span aria-hidden="true" className="text-xs">

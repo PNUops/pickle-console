@@ -212,6 +212,7 @@ export function AppShell({
   sidebarTop,
   notificationsTo,
   banner,
+  density = 'comfortable',
 }: {
   home: string
   navLabel: string
@@ -225,6 +226,8 @@ export function AppShell({
   notificationsTo?: string
   /** 시스템 공지 배너 아래, 본문 위에 놓이는 셸 배너 (2FA 권유 등). */
   banner?: ReactNode
+  /** 운영 셸은 compact, 사용자 셸은 comfortable density를 사용한다. */
+  density?: 'comfortable' | 'compact'
 }) {
   const navSections: NavSection[] = sections ?? [{ items: items ?? [] }]
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -350,7 +353,7 @@ export function AppShell({
     ) : null
 
   return (
-    <div className="flex min-h-screen">
+    <div data-density={density} className="flex min-h-screen">
       <PostLoginOverlay />
       <NoticePopupHost />
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">

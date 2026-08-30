@@ -63,6 +63,7 @@ export function AdminLayout() {
     <AppShell
       home="/admin"
       navLabel="관리자 메뉴"
+      density="compact"
       sections={sections}
       notificationsTo="/admin/notifications"
       // 기관 계층 2FA 권유 — 시스템 계층은 로그인에서 강제되므로 배너의 대상이 아니다.

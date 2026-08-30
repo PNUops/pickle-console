@@ -96,6 +96,19 @@ describe('사이드바 리소스 목록', () => {
   })
 })
 
+describe('셸 정보 밀도', () => {
+  test('사용자 console은 comfortable, 관리자 console은 compact density를 쓴다', async () => {
+    renderConsole()
+    const consoleNav = await screen.findByRole('navigation', { name: '콘솔 메뉴' })
+    expect(consoleNav.closest('[data-density]')).toHaveAttribute('data-density', 'comfortable')
+
+    server.use(refreshSuccessHandler('access-sys-admin'))
+    renderApp('/admin')
+    const adminNav = await screen.findByRole('navigation', { name: '관리자 메뉴' })
+    expect(adminNav.closest('[data-density]')).toHaveAttribute('data-density', 'compact')
+  })
+})
+
 describe('사이드바 하단 참고 링크', () => {
   test('가이드는 콘솔 내부 경로로, 문의·의견은 새 탭 외부 링크로 걸린다', async () => {
     renderConsole()
