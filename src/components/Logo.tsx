@@ -1,16 +1,21 @@
 import { Link } from 'react-router'
 import pnuLogo from '../assets/pnu-logo.png'
 import pnuLogoWhite from '../assets/pnu-logo-white.png'
-import { BRAND_NAME, OFFICIAL_SERVICE_NAME, PLATFORM_NAME } from '../lib/brand'
+import { BRAND_NAME, OFFICIAL_SERVICE_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
-export type LogoTone = 'default' | 'inverse' | 'monochrome'
+export type LogoTone = 'default' | 'inverse'
+export type PickleSymbolTone = LogoTone | 'monochrome'
 export type LogoVariant = 'brand' | 'lockup' | 'symbol' | 'wordmark' | 'endorsement'
+
+// Measured mail lockup invariant: top 130px, subtitle 131px, rows separated by 7px.
+const MAIL_LOCKUP_FONT =
+  "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 
 export interface PickleSymbolProps {
   className?: string
   decorative?: boolean
-  tone?: LogoTone
+  tone?: PickleSymbolTone
 }
 
 /** 16px와 단색 출력에서도 형태가 남는 code-native Pickle P symbol. */
@@ -53,10 +58,7 @@ export interface LogoProps {
   size?: 'sm' | 'md'
 }
 
-/**
- * Pickle-first surface lockup. 부산대학교 엠블럼은 institutional endorsement가
- * 필요한 `endorsement` variant에서만 렌더한다.
- */
+/** 일반 console은 단일 행, 대표 surface는 공식 명칭을 둔 2단 lockup을 쓴다. */
 export function Logo({
   to = '/',
   className,
@@ -64,69 +66,93 @@ export function Logo({
   variant = 'brand',
   size = 'md',
 }: LogoProps) {
-  const showSymbol = variant !== 'wordmark'
+  const showEmblem = variant === 'brand' || variant === 'lockup' || variant === 'endorsement'
+  const showSymbol = variant === 'symbol'
   const showWordmark = variant !== 'symbol'
-  const showDescriptor = variant === 'lockup' || variant === 'endorsement'
+  const showStackedDescriptor = variant === 'lockup'
+  const showInlineDescriptor = variant === 'endorsement'
   const accessibleName =
-    variant === 'endorsement'
+    showStackedDescriptor || showInlineDescriptor
       ? `${BRAND_NAME}, ${OFFICIAL_SERVICE_NAME}`
-      : showDescriptor
-        ? `${BRAND_NAME}, ${PLATFORM_NAME}`
-        : BRAND_NAME
+      : BRAND_NAME
 
   return (
     <Link
       to={to}
       aria-label={accessibleName}
       className={cn(
-        'inline-flex min-w-0 items-center gap-2 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
+        'inline-flex min-w-0 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
+        showStackedDescriptor ? 'w-[131px] flex-col items-center gap-[7px]' : 'items-center gap-2',
         tone === 'inverse' ? 'focus-visible:outline-primary-300' : 'focus-visible:outline-focus-ring',
         className,
       )}
+      style={showStackedDescriptor ? { fontFamily: MAIL_LOCKUP_FONT } : undefined}
     >
-      {showSymbol && (
-        <PickleSymbol
-          decorative
-          tone={tone}
-          className={size === 'sm' ? 'size-4' : 'size-7'}
-        />
-      )}
-      {showWordmark && (
-        <span className="inline-flex min-w-0 items-center gap-2">
+      <span
+        className={cn(
+          'inline-flex min-w-0 items-center',
+          showStackedDescriptor ? 'w-[130px] gap-3' : 'gap-2',
+        )}
+      >
+        {showEmblem && (
+          <img
+            src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
+            alt=""
+            aria-hidden="true"
+            className={cn(
+              'w-auto shrink-0',
+              showStackedDescriptor
+                ? 'h-[30px] w-[31px]'
+                : size === 'sm'
+                  ? 'h-4'
+                  : 'h-7',
+            )}
+          />
+        )}
+        {showSymbol && (
+          <PickleSymbol
+            decorative
+            tone={tone}
+            className={size === 'sm' ? 'size-4' : 'size-7'}
+          />
+        )}
+        {showWordmark && (
           <span
             className={cn(
-              'font-bold tracking-tight',
-              size === 'sm' ? 'text-base' : 'text-lg',
-              tone === 'inverse'
-                ? 'text-white'
-                : tone === 'monochrome'
-                  ? 'text-current'
-                  : 'text-foreground-primary',
+              'font-bold tracking-[-0.035em]',
+              showStackedDescriptor
+                ? 'text-[30px] leading-[1.1] tracking-[0.5px]'
+                : size === 'sm'
+                  ? 'text-base'
+                  : 'text-lg',
+              tone === 'inverse' ? 'text-white' : 'text-foreground-primary',
             )}
           >
             {BRAND_NAME}
           </span>
-          {showDescriptor && (
-            <span
-              className={cn(
-                'hidden border-l pl-2 text-[0.6875rem] leading-tight font-medium sm:inline',
-                tone === 'inverse'
-                  ? 'border-white/30 text-neutral-300'
-                  : 'border-stroke-default text-foreground-muted',
-              )}
-            >
-              {variant === 'endorsement' ? OFFICIAL_SERVICE_NAME : PLATFORM_NAME}
-            </span>
+        )}
+        {showInlineDescriptor && (
+          <span
+            className={cn(
+              'hidden border-l pl-2 text-[0.6875rem] leading-tight font-medium sm:inline',
+              tone === 'inverse'
+                ? 'border-white/30 text-neutral-300'
+                : 'border-stroke-default text-foreground-muted',
+            )}
+          >
+            {OFFICIAL_SERVICE_NAME}
+          </span>
+        )}
+      </span>
+      {showStackedDescriptor && (
+        <span
+          className={cn(
+            'w-[131px] whitespace-nowrap text-center text-[12px] leading-[1.4]',
+            tone === 'inverse' ? 'text-neutral-300' : 'text-foreground-muted',
           )}
+        >
+          {OFFICIAL_SERVICE_NAME}
         </span>
-      )}
-      {variant === 'endorsement' && (
-        <img
-          src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
-          alt=""
-          aria-hidden="true"
-          className={size === 'sm' ? 'h-4 w-auto shrink-0' : 'h-6 w-auto shrink-0'}
-        />
       )}
     </Link>
   )

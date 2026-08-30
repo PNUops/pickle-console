@@ -36,7 +36,7 @@ export function LandingHeader() {
           : 'border-b border-transparent bg-transparent',
       )}
     >
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
         <Logo tone="inverse" variant="lockup" />
         <nav aria-label="랜딩 섹션" className="hidden items-center gap-1 md:flex">
           {navItems.map((item) => (

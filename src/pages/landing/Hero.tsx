@@ -47,7 +47,7 @@ export function Hero() {
           궤도 씬은 씬 내부에서 우측으로 배치된다. */}
       {isDesktop && <HeroVisual />}
 
-      <div className="relative z-10 mx-auto flex min-h-svh w-full max-w-7xl flex-col justify-center px-4 pt-16 sm:px-6">
+      <div className="relative z-10 mx-auto flex min-h-svh w-full max-w-7xl flex-col justify-center px-4 pt-20 sm:px-6">
         <div className="grid items-center gap-12 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:py-8">
           {/* 좌측: 카피 */}
           <div>
