@@ -117,12 +117,48 @@ describe('셸 정보 밀도', () => {
     renderConsole()
     const user = userEvent.setup()
 
-    await user.click(await screen.findByRole('button', { name: '사이드바 접기' }))
-    expect(screen.queryByRole('navigation', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '사이드바 펼치기' })).toBeInTheDocument()
+    const toggle = await screen.findByRole('button', { name: '사이드바 접기' })
+    const header = toggle.closest('header')
+    expect(header).not.toBeNull()
+    expect(
+      within(header as HTMLElement).getByRole('link', { name: 'Pickle' }),
+    ).toBeInTheDocument()
+    expect(
+      within(header as HTMLElement).getByRole('button', { name: /계정 메뉴/ }),
+    ).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '사이드바 펼치기' }))
+    const sidebarId = toggle.getAttribute('aria-controls')
+    expect(sidebarId).not.toBeNull()
+    const sidebar = document.getElementById(sidebarId as string)
+    expect(sidebar).not.toBeNull()
+    expect(sidebar).toHaveClass(
+      'w-60',
+      'transition-[width,border-color]',
+      'duration-[var(--duration-normal)]',
+      'ease-standard',
+      'motion-reduce:transition-none',
+    )
+    expect(
+      within(sidebar as HTMLElement).queryByRole('link', { name: 'Pickle' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(toggle)
+    expect(document.activeElement).toBe(toggle)
+    expect(screen.queryByRole('navigation', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(toggle).toHaveAccessibleName('사이드바 펼치기')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(sidebar).toHaveClass('w-0', 'border-transparent')
+    expect(sidebar).toHaveAttribute('aria-hidden', 'true')
+    expect(sidebar).toHaveAttribute('inert')
+
+    await user.click(toggle)
+    expect(document.activeElement).toBe(toggle)
     expect(await screen.findByRole('navigation', { name: '콘솔 메뉴' })).toBeInTheDocument()
+    expect(toggle).toHaveAccessibleName('사이드바 접기')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(sidebar).toHaveClass('w-60', 'border-neutral-200')
+    expect(sidebar).not.toHaveAttribute('aria-hidden')
+    expect(sidebar).not.toHaveAttribute('inert')
   })
 
   test('상단바는 이름만 한 줄로 보이고 역할은 계정 메뉴 안에서 확인한다', async () => {
