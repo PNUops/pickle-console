@@ -49,11 +49,10 @@ export function ComponentGallery() {
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-8">
             <Logo variant="brand" />
-            <Logo variant="lockup" />
             <Logo variant="endorsement" />
             <PickleSymbol className="size-4" />
             <div data-theme="auth-dark" className="rounded-panel bg-surface-canvas p-4">
-              <Logo tone="inverse" variant="lockup" />
+              <Logo tone="inverse" variant="brand" />
             </div>
           </CardContent>
         </Card>

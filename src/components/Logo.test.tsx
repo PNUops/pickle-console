@@ -17,37 +17,13 @@ describe('Logo', () => {
     expect(container.querySelector('svg')).not.toBeInTheDocument()
   })
 
-  test('대표 lockup은 mail 원본의 130px·131px 측정값으로 두 줄을 맞춘다', () => {
-    const { container, rerender } = render(
-      <MemoryRouter>
-        <Logo variant="lockup" size="sm" />
-      </MemoryRouter>,
-    )
-
-    const lockup = screen.getByRole('link', {
-      name: 'Pickle, 부산대학교 클라우드 플랫폼',
-    })
-    const topRow = container.querySelector('a > span')
-    const emblem = container.querySelector('img')
-    const wordmark = screen.getByText('Pickle')
-    const subtitle = screen.getByText('부산대학교 클라우드 플랫폼')
-
-    expect(lockup).toHaveClass('w-[131px]', 'gap-[7px]')
-    expect(lockup).toHaveStyle({
-      fontFamily:
-        "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    })
-    expect(topRow).toHaveClass('w-[130px]', 'gap-3')
-    expect(emblem).toHaveClass('h-[30px]', 'w-[31px]')
-    expect(wordmark).toHaveClass('text-[30px]', 'leading-[1.1]', 'tracking-[0.5px]')
-    expect(subtitle).toHaveClass('w-[131px]', 'text-[12px]', 'leading-[1.4]')
-    expect(screen.queryByText('PNU Cloud')).not.toBeInTheDocument()
-
-    rerender(
+  test('공식 명칭 병기는 footer용 endorsement에만 포함한다', () => {
+    const { container } = render(
       <MemoryRouter>
         <Logo variant="endorsement" />
       </MemoryRouter>,
     )
+
     expect(
       screen.getByRole('link', { name: 'Pickle, 부산대학교 클라우드 플랫폼' }),
     ).toBeInTheDocument()
@@ -55,10 +31,10 @@ describe('Logo', () => {
     expect(container.querySelector('img')).toBeInTheDocument()
   })
 
-  test('inverse lockup은 흰색 부산대학교 엠블럼을 사용한다', () => {
+  test('inverse brand는 흰색 부산대학교 엠블럼을 사용하고 공식 명칭을 넣지 않는다', () => {
     const { container } = render(
       <MemoryRouter>
-        <Logo tone="inverse" variant="lockup" />
+        <Logo tone="inverse" variant="brand" />
       </MemoryRouter>,
     )
 
@@ -66,6 +42,8 @@ describe('Logo', () => {
       'src',
       expect.stringContaining('pnu-logo-white'),
     )
+    expect(screen.getByRole('link', { name: 'Pickle' })).toBeInTheDocument()
+    expect(screen.queryByText('부산대학교 클라우드 플랫폼')).not.toBeInTheDocument()
     expect(screen.queryByText('PNU Cloud')).not.toBeInTheDocument()
   })
 

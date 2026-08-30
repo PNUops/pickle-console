@@ -6,11 +6,7 @@ import { cn } from '../lib/cn'
 
 export type LogoTone = 'default' | 'inverse'
 export type PickleSymbolTone = LogoTone | 'monochrome'
-export type LogoVariant = 'brand' | 'lockup' | 'symbol' | 'wordmark' | 'endorsement'
-
-// Measured mail lockup invariant: top 130px, subtitle 131px, rows separated by 7px.
-const MAIL_LOCKUP_FONT =
-  "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+export type LogoVariant = 'brand' | 'symbol' | 'wordmark' | 'endorsement'
 
 export interface PickleSymbolProps {
   className?: string
@@ -58,7 +54,7 @@ export interface LogoProps {
   size?: 'sm' | 'md'
 }
 
-/** 일반 console은 단일 행, 대표 surface는 공식 명칭을 둔 2단 lockup을 쓴다. */
+/** Header는 단일 행 brand를 쓰고 공식 명칭 병기는 footer의 endorsement로 제한한다. */
 export function Logo({
   to = '/',
   className,
@@ -66,34 +62,23 @@ export function Logo({
   variant = 'brand',
   size = 'md',
 }: LogoProps) {
-  const showEmblem = variant === 'brand' || variant === 'lockup' || variant === 'endorsement'
+  const showEmblem = variant === 'brand' || variant === 'endorsement'
   const showSymbol = variant === 'symbol'
   const showWordmark = variant !== 'symbol'
-  const showStackedDescriptor = variant === 'lockup'
   const showInlineDescriptor = variant === 'endorsement'
-  const accessibleName =
-    showStackedDescriptor || showInlineDescriptor
-      ? `${BRAND_NAME}, ${OFFICIAL_SERVICE_NAME}`
-      : BRAND_NAME
+  const accessibleName = showInlineDescriptor ? `${BRAND_NAME}, ${OFFICIAL_SERVICE_NAME}` : BRAND_NAME
 
   return (
     <Link
       to={to}
       aria-label={accessibleName}
       className={cn(
-        'inline-flex min-w-0 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
-        showStackedDescriptor ? 'w-[131px] flex-col items-center gap-[7px]' : 'items-center gap-2',
+        'inline-flex min-w-0 items-center gap-2 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2',
         tone === 'inverse' ? 'focus-visible:outline-primary-300' : 'focus-visible:outline-focus-ring',
         className,
       )}
-      style={showStackedDescriptor ? { fontFamily: MAIL_LOCKUP_FONT } : undefined}
     >
-      <span
-        className={cn(
-          'inline-flex min-w-0 items-center',
-          showStackedDescriptor ? 'w-[130px] gap-3' : 'gap-2',
-        )}
-      >
+      <span className="inline-flex min-w-0 items-center gap-2">
         {showEmblem && (
           <img
             src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
@@ -101,11 +86,7 @@ export function Logo({
             aria-hidden="true"
             className={cn(
               'w-auto shrink-0',
-              showStackedDescriptor
-                ? 'h-[30px] w-[31px]'
-                : size === 'sm'
-                  ? 'h-4'
-                  : 'h-7',
+              size === 'sm' ? 'h-4' : 'h-7',
             )}
           />
         )}
@@ -120,11 +101,7 @@ export function Logo({
           <span
             className={cn(
               'font-bold tracking-[-0.035em]',
-              showStackedDescriptor
-                ? 'text-[30px] leading-[1.1] tracking-[0.5px]'
-                : size === 'sm'
-                  ? 'text-base'
-                  : 'text-lg',
+              size === 'sm' ? 'text-base' : 'text-lg',
               tone === 'inverse' ? 'text-white' : 'text-foreground-primary',
             )}
           >
@@ -144,16 +121,6 @@ export function Logo({
           </span>
         )}
       </span>
-      {showStackedDescriptor && (
-        <span
-          className={cn(
-            'w-[131px] whitespace-nowrap text-center text-[12px] leading-[1.4]',
-            tone === 'inverse' ? 'text-neutral-300' : 'text-foreground-muted',
-          )}
-        >
-          {OFFICIAL_SERVICE_NAME}
-        </span>
-      )}
     </Link>
   )
 }
