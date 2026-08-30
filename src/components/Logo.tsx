@@ -4,13 +4,14 @@ import pnuLogoWhite from '../assets/pnu-logo-white.png'
 import { BRAND_NAME, OFFICIAL_SERVICE_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
-export type LogoTone = 'default' | 'inverse' | 'monochrome'
+export type LogoTone = 'default' | 'inverse'
+export type PickleSymbolTone = LogoTone | 'monochrome'
 export type LogoVariant = 'brand' | 'lockup' | 'symbol' | 'wordmark' | 'endorsement'
 
 export interface PickleSymbolProps {
   className?: string
   decorative?: boolean
-  tone?: LogoTone
+  tone?: PickleSymbolTone
 }
 
 /** 16px와 단색 출력에서도 형태가 남는 code-native Pickle P symbol. */
@@ -101,11 +102,7 @@ export function Logo({
             className={cn(
               'font-bold tracking-tight',
               size === 'sm' ? 'text-base' : 'text-lg',
-              tone === 'inverse'
-                ? 'text-white'
-                : tone === 'monochrome'
-                  ? 'text-current'
-                  : 'text-foreground-primary',
+              tone === 'inverse' ? 'text-white' : 'text-foreground-primary',
             )}
           >
             {BRAND_NAME}

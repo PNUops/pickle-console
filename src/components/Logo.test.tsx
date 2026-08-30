@@ -40,6 +40,20 @@ describe('Logo', () => {
     expect(container.querySelector('img')).toBeInTheDocument()
   })
 
+  test('inverse lockup은 흰색 부산대학교 엠블럼을 사용한다', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <Logo tone="inverse" variant="lockup" />
+      </MemoryRouter>,
+    )
+
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src',
+      expect.stringContaining('pnu-logo-white'),
+    )
+    expect(screen.queryByText('PNU Cloud')).not.toBeInTheDocument()
+  })
+
   test('16px monochrome symbol은 독립 accessible name을 가진다', () => {
     render(<PickleSymbol tone="monochrome" className="size-4" />)
     expect(screen.getByRole('img', { name: 'Pickle' })).toHaveClass('size-4', 'text-current')
