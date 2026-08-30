@@ -544,6 +544,7 @@ export type LlmKeyBrief = Schemas['LlmKeyBrief']
 export function fetchAdminLlmKeys(params: {
   orgId?: string
   workspaceId?: string
+  requestId?: string
   status?: LlmApiKeyStatus
   query?: string
   page?: number

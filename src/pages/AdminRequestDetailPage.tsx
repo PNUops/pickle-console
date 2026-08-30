@@ -160,10 +160,10 @@ export function AdminRequestDetailPage() {
 function ApprovedLlmKeyLink({ requestId, orgId }: { requestId: string; orgId?: string }) {
   const { activeOrgId } = useAdminScope()
   const key = useQuery({
-    queryKey: ['admin', 'llm-keys', 'request', requestId],
+    queryKey: ['admin', 'llm-keys', 'request', requestId, { orgId: orgId ?? null }],
     queryFn: async () => {
-      const page = await fetchAdminLlmKeys({ orgId, page: 0, size: 100 })
-      return page.content.find((item) => item.requestId === requestId) ?? null
+      const page = await fetchAdminLlmKeys({ orgId, requestId, page: 0, size: 1 })
+      return page.content[0] ?? null
     },
   })
   if (!key.data) return null

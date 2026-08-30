@@ -205,7 +205,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 목록
-         * @description 기관과 워크스페이스, 상태, 검색어로 키를 조회합니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
+         * @description 기관과 워크스페이스, 발급 신청, 상태, 검색어로 키를 조회합니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
          */
         get: operations["listAdminLlmKeys"];
         put?: never;
@@ -5940,6 +5940,8 @@ export interface operations {
             query?: {
                 orgId?: string;
                 workspaceId?: string;
+                /** @description 키를 발급한 신청 공개 ID */
+                requestId?: string;
                 status?: components["schemas"]["LlmApiKeyStatus"];
                 query?: string;
                 page?: number;

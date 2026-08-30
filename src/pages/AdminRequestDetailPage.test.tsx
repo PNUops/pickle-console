@@ -16,6 +16,7 @@ import {
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { adminLlmListQueries } from '../test/msw/handlers/llm-keys'
 
 function renderDetail(requestId: string) {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -120,6 +121,8 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
       'href',
       `/admin/llm/keys/${uuid(170)}?org=${uuid(1)}`,
     )
+    expect(adminLlmListQueries.some((query) => query.includes(`requestId=${uuid(205)}`))).toBe(true)
+    expect(adminLlmListQueries.some((query) => query.includes('size=100'))).toBe(false)
   })
 
   test('참고 정보를 불러오지 못해도 결정 폼은 계속 쓸 수 있다', async () => {

@@ -291,6 +291,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
 
 export let adminLlmKeyStore: AdminLlmKey[] = initialAdminLlmKeys()
 export let adminLlmLimitBodies: Schemas['AdminLlmKeyLimitsRequest'][] = []
+export let adminLlmListQueries: string[] = []
 let nextGrantId = 380
 let nextTokenSuffix = 0
 
@@ -299,6 +300,7 @@ export function resetLlmKeyFixtures() {
   llmKeyAccessStore = initialLlmKeyAccessGrants()
   adminLlmKeyStore = initialAdminLlmKeys()
   adminLlmLimitBodies = []
+  adminLlmListQueries = []
   nextGrantId = 380
   nextTokenSuffix = 0
 }
@@ -618,8 +620,10 @@ export const llmKeyHandlers: RequestHandler[] = [
     const profile = adminActor(request)
     if (!profile) return notFoundProblem()
     const url = new URL(request.url)
+    adminLlmListQueries.push(url.searchParams.toString())
     const orgId = url.searchParams.get('orgId')
     const workspaceId = url.searchParams.get('workspaceId')
+    const requestId = url.searchParams.get('requestId')
     const status = url.searchParams.get('status')
     const query = url.searchParams.get('query')?.toLocaleLowerCase('ko-KR')
     const page = Number(url.searchParams.get('page') ?? '0')
@@ -627,6 +631,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     let filtered = adminLlmKeyStore.filter((key) => canReadAdminKey(profile, key))
     if (orgId) filtered = filtered.filter((key) => key.orgId === orgId)
     if (workspaceId) filtered = filtered.filter((key) => key.workspaceId === workspaceId)
+    if (requestId) filtered = filtered.filter((key) => key.requestId === requestId)
     if (status) filtered = filtered.filter((key) => key.status === status)
     if (query) {
       filtered = filtered.filter((key) =>
