@@ -16,7 +16,6 @@ import {
   Card,
   Modal,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TaskStatusBadge,
@@ -72,11 +71,6 @@ export function AdminTasksPage() {
           VM 비동기 작업(생성·삭제·재설치) 현황입니다. 재시도가 소진된 작업(관리자 확인
           필요)은 원인 해결 후 재시도할 수 있습니다.
         </p>
-        {!canRetry && (
-          <PermissionNotice>
-            작업 재시도는 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
       </div>
 
       <FilterBar
@@ -116,9 +110,11 @@ export function AdminTasksPage() {
                   <TH>상태</TH>
                   <TH>시도</TH>
                   <TH>갱신 시각</TH>
-                  <TH>
-                    <span className="sr-only">재시도</span>
-                  </TH>
+                  {canRetry && (
+                    <TH>
+                      <span className="sr-only">재시도</span>
+                    </TH>
+                  )}
                 </TR>
               </THead>
               <TBody>
@@ -158,19 +154,20 @@ export function AdminTasksPage() {
                     <TD className="whitespace-nowrap text-xs text-neutral-500">
                       {formatDateTime(task.updatedAt)}
                     </TD>
-                    <TD className="text-right">
-                      {/* 계약: NEEDS_ADMIN만 재시도 가능 (그 외 409) */}
-                      {task.status === 'NEEDS_ADMIN' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={!canRetry}
-                          onClick={() => setRetryTarget(task)}
-                        >
-                          재시도
-                        </Button>
-                      )}
-                    </TD>
+                    {canRetry && (
+                      <TD className="text-right">
+                        {/* 계약: NEEDS_ADMIN만 재시도 가능 (그 외 409) */}
+                        {task.status === 'NEEDS_ADMIN' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setRetryTarget(task)}
+                          >
+                            재시도
+                          </Button>
+                        )}
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>

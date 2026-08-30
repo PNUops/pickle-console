@@ -34,7 +34,6 @@ import {
   Input,
   Modal,
   Pagination,
-  PermissionNotice,
   Select,
   Spinner,
   Table,
@@ -395,14 +394,11 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
 
       <UserOrgRolesSection user={user} />
 
-      <UserRoleSection user={user} canManage={canManage} />
+      {canManage && <UserRoleSection user={user} />}
 
-      <UserStatusActions
-        userId={userId}
-        status={user.status}
-        mfaEnabled={user.mfaEnabled}
-        canManage={canManage}
-      />
+      {canManage && (
+        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} />
+      )}
     </div>
   )
 }
@@ -472,9 +468,6 @@ function UserProfileSection({
         <Field label="학번" value={user.studentNo ?? '입력하지 않음'} />
         <Field label="소속" value={department ?? '입력하지 않음'} />
       </dl>
-      {!canManage && (
-        <p className="text-xs text-neutral-500">정정은 시스템 관리자만 할 수 있습니다.</p>
-      )}
       {open && (
         <UserProfileCorrectionModal
           user={user}
@@ -686,8 +679,8 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
         id: org.orgId,
         name: org.orgName,
       }))
-  // 자기 자신과 시스템 계층 계정은 API가 403으로 거부한다. 버튼을 숨기지 않고
-  // 비활성화하고 사유를 적는다(드로어 3분할 규약).
+  // 자기 자신과 시스템 계층 계정은 API가 403으로 거부하므로 변경 액션을
+  // 렌더하지 않는다.
   const isSelf = viewer?.id === user.id
   const targetIsSysTier = isSysTier(user.role)
   const blockedReason = isSelf
@@ -734,12 +727,6 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">기관 역할</h3>
-      {!canStaff && (
-        <PermissionNotice>
-          기관 역할 부여와 회수는 기관 관리자와 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
-      {canStaff && blockedReason && <PermissionNotice>{blockedReason}</PermissionNotice>}
       <p className="text-sm text-neutral-500">
         한 계정이 여러 기관의 관리자를 겸할 수 있습니다. 기관 관리자는 자기가 관리자로 있는
         기관만 더하고 뺄 수 있습니다.
@@ -761,27 +748,24 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
                   <span className="font-medium text-neutral-900">{org.orgName}</span>{' '}
                   <Badge variant="neutral">{USER_ROLE_LABELS[org.role]}</Badge>
                 </span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!canStaff || !mine || blockedReason != null}
-                  onClick={() => setConfirmRevoke(org)}
-                >
-                  회수
-                </Button>
+                {canStaff && mine && blockedReason == null && (
+                  <Button size="sm" variant="secondary" onClick={() => setConfirmRevoke(org)}>
+                    회수
+                  </Button>
+                )}
               </li>
             )
           })}
         </ul>
       )}
 
-      {canStaff && (
+      {canStaff && blockedReason == null && (
         <div className="flex flex-wrap items-end gap-3">
           <FormField label="부여할 기관">
             <Select
               className="w-56"
               value={addOrgId}
-              disabled={blockedReason != null || addable.length === 0}
+              disabled={addable.length === 0}
               onChange={(event) => setAddOrgId(event.target.value)}
             >
               <option value="">기관 선택</option>
@@ -796,7 +780,6 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
             <Select
               className="w-40"
               value={addRole}
-              disabled={blockedReason != null}
               onChange={(event) => setAddRole(event.target.value as UserRole)}
             >
               <option value="ORG_VIEWER">{USER_ROLE_LABELS.ORG_VIEWER}</option>
@@ -805,7 +788,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
             </Select>
           </FormField>
           <Button
-            disabled={blockedReason != null || !addOrgId}
+            disabled={!addOrgId}
             loading={grant.isPending}
             onClick={() => grant.mutate()}
           >
@@ -850,14 +833,14 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
 
 /* ─── 역할 관리 (수행은 SYS_ADMIN 전용, 표시는 전 관리자) ─── */
 
-function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage: boolean }) {
+function UserRoleSection({ user }: { user: UserAdminDetail }) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [role, setRole] = useState<UserRole>(user.role)
   const [orgId, setOrgId] = useState(user.managedOrgs[0]?.orgId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: canManage })
+  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs })
 
   const update = useMutation({
     mutationFn: () =>
@@ -892,9 +875,6 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">역할 관리</h3>
-      {!canManage && (
-        <PermissionNotice>역할 변경은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       <p className="text-sm text-neutral-500">
         전역 역할을 변경합니다. 역할이 바뀌면 이 사용자의 기존 로그인 세션은 무효화됩니다.
       </p>
@@ -903,7 +883,6 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
         <FormField label="역할" required error={fieldErrors.role}>
           <Select
             value={role}
-            disabled={!canManage}
             onChange={(event) => setRole(event.target.value as UserRole)}
             className="w-40"
           >
@@ -922,7 +901,7 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
         >
           <Select
             value={orgId}
-            disabled={!canManage || !isOrgTier(role)}
+            disabled={!isOrgTier(role)}
             onChange={(event) => setOrgId(event.target.value)}
             className="w-56"
           >
@@ -936,7 +915,6 @@ function UserRoleSection({ user, canManage }: { user: UserAdminDetail; canManage
         </FormField>
         <Button
           type="submit"
-          disabled={!canManage}
           loading={update.isPending}
           className="mt-6"
         >
@@ -962,12 +940,10 @@ function UserStatusActions({
   userId,
   status,
   mfaEnabled,
-  canManage,
 }: {
   userId: string
   status: UserStatus
   mfaEnabled: boolean
-  canManage: boolean
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -1027,11 +1003,6 @@ function UserStatusActions({
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">계정 상태 관리</h3>
-      {!canManage && (
-        <PermissionNotice>
-          계정 상태 변경과 2단계 인증 초기화는 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       {error && <Alert variant="danger">{error}</Alert>}
       {status === 'DISABLED' ? (
         <>
@@ -1041,7 +1012,6 @@ function UserStatusActions({
           <Button
             variant="secondary"
             loading={enable.isPending}
-            disabled={!canManage}
             onClick={() => enable.mutate()}
           >
             비활성화 해제
@@ -1053,7 +1023,7 @@ function UserStatusActions({
             계정을 비활성화하면 즉시 로그인·SSH 접속이 차단됩니다. 워크스페이스·VM은 유지되며 해제 시
             원상 복귀됩니다.
           </p>
-          <Button variant="danger" disabled={!canManage} onClick={() => setOpen(true)}>
+          <Button variant="danger" onClick={() => setOpen(true)}>
             계정 비활성화
           </Button>
         </>
@@ -1107,7 +1077,7 @@ function UserStatusActions({
             인증 앱·복구 코드를 모두 분실한 사용자의 2단계 인증을 초기화합니다. 오프라인 본인 확인
             후에만 수행해야 하는 민감 작업입니다.
           </p>
-          <Button variant="secondary" disabled={!canManage} onClick={() => setMfaResetOpen(true)}>
+          <Button variant="secondary" onClick={() => setMfaResetOpen(true)}>
             2단계 인증 초기화
           </Button>
         </div>

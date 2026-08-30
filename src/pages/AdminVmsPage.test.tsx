@@ -108,7 +108,7 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 비활성+사유로 보인다', async () => {
+  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
@@ -120,31 +120,25 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByText('ai-train')).not.toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '강제 삭제' })).toBeDisabled()
-    expect(
-      screen.getByText('강제 삭제는 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '삭제 예약' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게도 드로어가 열리고 삭제 조작은 비활성+사유로 보인다', async () => {
+  test('SYS_MANAGER에게도 드로어가 열리고 삭제 조작은 보이지 않는다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/vms')
 
     const drawer = await selectVm(user, 'algo-judge')
     expect(within(drawer).getByText('호스트네임')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '강제 삭제' })).toBeDisabled()
-    expect(
-      screen.getByText('일반 삭제 접수·취소는 기관 관리자·시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 })
 
-describe('관리자 VM 일반 삭제 접수', () => {
+describe('관리자 VM 삭제 예약', () => {
   test('과거 날짜는 422 필드 에러, 7일 미만은 경고와 함께 접수된다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
@@ -159,7 +153,7 @@ describe('관리자 VM 일반 삭제 접수', () => {
     expect(
       screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
+    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(
       await screen.findByText('삭제 예정일은 미래 시각이어야 합니다.'),
     ).toBeInTheDocument()
@@ -170,10 +164,10 @@ describe('관리자 VM 일반 삭제 접수', () => {
     expect(
       screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
+    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(
       await screen.findByText(
-        '일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
+        '삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
       ),
     ).toBeInTheDocument()
   })
@@ -186,7 +180,7 @@ describe('관리자 VM 일반 삭제 접수', () => {
     fireEvent.change(screen.getByLabelText(/파기 예정일/), {
       target: { value: '2099-01-01' },
     })
-    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
+    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(await screen.findByText('삭제 사유를 입력해 주세요.')).toBeInTheDocument()
   })
 })
@@ -232,15 +226,12 @@ describe('SSH·웹 터미널 차단 토글', () => {
     expect(await screen.findByRole('button', { name: '차단 해제' })).toBeEnabled()
   })
 
-  test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보인다', async () => {
+  test('ORG_ADMIN에게는 차단 토글이 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByRole('button', { name: '접속 차단' })).toBeDisabled()
-    expect(
-      screen.getByText('차단 토글은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '접속 차단' })).not.toBeInTheDocument()
   })
 })
 
@@ -304,16 +295,6 @@ describe('관리자 삭제 취소', () => {
     ).toBeInTheDocument()
   })
 
-  test('대기 중인 삭제가 없으면 409 안내를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAsOrgAdmin()
-
-    await selectVm(user, 'algo-judge')
-    await user.click(screen.getByRole('button', { name: '삭제 취소' }))
-    expect(
-      await screen.findByText(/취소할 수 있는 삭제가 없습니다/),
-    ).toBeInTheDocument()
-  })
 })
 
 describe('강제 삭제 (SYS_ADMIN)', () => {

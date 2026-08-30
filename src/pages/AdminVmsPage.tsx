@@ -14,7 +14,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { canManageVmDeletion, canOperateVm, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import { useOrgOptions } from '../lib/use-org-options'
@@ -28,7 +28,6 @@ import {
   FormField,
   Input,
   Pagination,
-  PermissionNotice,
   Select,
   SortableTH,
   Spinner,
@@ -77,6 +76,7 @@ export function AdminVmsPage() {
   // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
   const isSysAdmin = !!role && isSysTier(role)
   const canDelete = !!role && canManageVmDeletion(role)
+  const canOperate = !!role && canOperateVm(role)
   const canForceDelete = !!role && isSysAdminOnly(role)
   // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
   // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
@@ -145,7 +145,7 @@ export function AdminVmsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 일반 삭제 접수와 취소 등
+          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 삭제 예약과 취소 등
           관리 작업을 수행합니다.
         </p>
       </div>
@@ -338,6 +338,7 @@ export function AdminVmsPage() {
             key={selected.id}
             vm={selected}
             canDelete={canDelete}
+            canOperate={canOperate}
             canForceDelete={canForceDelete}
             notice={feedback?.vmId === selected.id ? feedback.text : null}
             onDone={(text) => setFeedback({ vmId: selected.id, text })}
@@ -362,6 +363,7 @@ export function AdminVmsPage() {
 function VmDrawerContent({
   vm,
   canDelete,
+  canOperate,
   canForceDelete,
   notice,
   onDone,
@@ -370,6 +372,7 @@ function VmDrawerContent({
 }: {
   vm: VmSummary
   canDelete: boolean
+  canOperate: boolean
   canForceDelete: boolean
   /** 이 VM의 액션 결과 — 페이지가 소유하고 드로어가 열려 있는 동안 여기 표시. */
   notice: string | null
@@ -419,29 +422,39 @@ function VmDrawerContent({
         <Field label="생성일" value={formatDateTime(vm.createdAt)} />
         {vm.statusDetail && <Field label="상태 상세" value={vm.statusDetail} />}
       </dl>
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
-        <p className="text-sm text-neutral-500">
-          사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
-        </p>
-        <Button variant="secondary" onClick={() => setExtendOpen(true)}>
-          기간 연장
-        </Button>
-        {extendOpen && (
-          <ExtendVmPeriodModal
-            vm={vm}
-            onClose={() => setExtendOpen(false)}
-            onDone={(text) => {
-              setExtendOpen(false)
-              onDone(text)
-            }}
-          />
-        )}
-      </section>
-      <VmGatewayBlockSection vm={vm} canManage={canForceDelete} onDone={onDone} />
-      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={onDone} />
-      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={onDone} />
-      <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onForceDeleted} />
+      {canOperate && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
+          <p className="text-sm text-neutral-500">
+            사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+          </p>
+          <Button variant="secondary" onClick={() => setExtendOpen(true)}>
+            기간 연장
+          </Button>
+          {extendOpen && (
+            <ExtendVmPeriodModal
+              vm={vm}
+              onClose={() => setExtendOpen(false)}
+              onDone={(text) => {
+                setExtendOpen(false)
+                onDone(text)
+              }}
+            />
+          )}
+        </section>
+      )}
+      {canForceDelete && vm.status !== 'DELETED' && (
+        <VmGatewayBlockSection vm={vm} canManage onDone={onDone} />
+      )}
+      {canDelete && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
+        <ScheduleDeleteForm vm={vm} onDone={onDone} />
+      )}
+      {canDelete && vm.status === 'DELETING' && (
+        <CancelDeleteAction vm={vm} onDone={onDone} />
+      )}
+      {canForceDelete && vm.status !== 'DELETED' && (
+        <ForceDeleteAction vm={vm} onDone={onForceDeleted} />
+      )}
     </div>
   )
 }
@@ -458,11 +471,9 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function ScheduleDeleteForm({
   vm,
-  canManage,
   onDone,
 }: {
   vm: VmSummary
-  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -483,12 +494,12 @@ function ScheduleDeleteForm({
       setFieldErrors({})
       setDate('')
       setReason('')
-      onDone('일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
+      onDone('삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await invalidateResourceLists(queryClient)
     },
     onError: (err) => {
-      const apiError = toApiError(err, '일반 삭제를 접수하지 못했습니다.')
+      const apiError = toApiError(err, '삭제 예약을 접수하지 못했습니다.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -511,12 +522,7 @@ function ScheduleDeleteForm({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-neutral-800">일반 삭제 접수</h3>
-      {!canManage && (
-        <PermissionNotice>
-          일반 삭제 접수·취소는 기관 관리자·시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
+      <h3 className="text-sm font-semibold text-neutral-800">삭제 예약</h3>
       <p className="text-sm text-neutral-500">
         파기 예정일(미래 시각)을 지정해 접수하며, 접수 즉시 사용자에게 사유가 포함된
         통보 메일이 발송됩니다. 파기가 실제로 시작되기 전까지는 관리자가 취소할 수
@@ -537,7 +543,6 @@ function ScheduleDeleteForm({
             type="date"
             min={minScheduleDate()}
             value={date}
-            disabled={!canManage}
             onChange={(event) => setDate(event.target.value)}
             className="w-44"
           />
@@ -551,7 +556,6 @@ function ScheduleDeleteForm({
           <Textarea
             rows={2}
             value={reason}
-            disabled={!canManage}
             onChange={(event) => setReason(event.target.value)}
             placeholder="사용자 통보 메일에 그대로 포함됩니다."
           />
@@ -560,10 +564,9 @@ function ScheduleDeleteForm({
           type="submit"
           variant="danger"
           loading={schedule.isPending}
-          disabled={!canManage}
           className="mt-6"
         >
-          일반 삭제 접수
+          삭제 예약
         </Button>
       </form>
     </section>
@@ -572,11 +575,9 @@ function ScheduleDeleteForm({
 
 function CancelDeleteAction({
   vm,
-  canManage,
   onDone,
 }: {
   vm: VmSummary
-  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -605,7 +606,6 @@ function CancelDeleteAction({
       <Button
         variant="secondary"
         loading={cancel.isPending}
-        disabled={!canManage}
         onClick={() => cancel.mutate()}
       >
         삭제 취소
@@ -616,11 +616,9 @@ function CancelDeleteAction({
 
 function ForceDeleteAction({
   vm,
-  canManage,
   onDone,
 }: {
   vm: VmSummary
-  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -648,9 +646,6 @@ function ForceDeleteAction({
   return (
     <section className="space-y-3 rounded-lg border border-danger-200 p-4">
       <h3 className="text-sm font-semibold text-danger-700">강제 삭제</h3>
-      {!canManage && (
-        <PermissionNotice>강제 삭제는 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       <p className="text-sm text-neutral-500">
         보안 사고 등 비상 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
         없습니다.
@@ -658,7 +653,6 @@ function ForceDeleteAction({
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button
         variant="danger"
-        disabled={!canManage}
         onClick={() => {
           setError(null)
           setOpen(true)

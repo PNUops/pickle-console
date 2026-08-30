@@ -89,10 +89,10 @@ export function LlmKeyDetailPage() {
 }
 
 function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
-  const revoked = llmKey.status === 'REVOKED'
   // 만료는 저장된 상태가 아니라 시각이 지배한다 — 게이트웨이가 보는 것과 같은
   // 근거를 화면도 본다. 배지·안내·발급 가능 판정이 모두 이 값을 쓴다.
   const status = effectiveLlmKeyStatus(llmKey.status, llmKey.expiresAt)
+  const terminal = status === 'REVOKED' || status === 'EXPIRED'
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = KEY_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
@@ -182,7 +182,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </CardContent>
       </Card>
 
-      <EditSection llmKey={llmKey} />
+      {!terminal && <EditSection llmKey={llmKey} />}
 
       <Card>
         <CardHeader>
@@ -208,7 +208,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </CardContent>
       </Card>
 
-      {!revoked && (
+      {!terminal && (
         <RevokeKeyCard
           keyId={llmKey.id}
           name={llmKey.name}

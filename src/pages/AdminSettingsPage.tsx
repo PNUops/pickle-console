@@ -15,7 +15,6 @@ import {
   Card,
   FormField,
   Modal,
-  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -74,11 +73,6 @@ export function AdminSettingsPage() {
         <p className="mt-1 text-sm text-neutral-500">
           플랫폼 운영 설정입니다. 모든 변경은 감사 로그에 기록됩니다.
         </p>
-        {!canEdit && (
-          <PermissionNotice>
-            설정 수정은 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
       </div>
 
       {message && <Alert variant="info">{message}</Alert>}
@@ -98,9 +92,11 @@ export function AdminSettingsPage() {
                 <TH>설명</TH>
                 <TH>현재값</TH>
                 <TH>수정 시각</TH>
-                <TH>
-                  <span className="sr-only">수정</span>
-                </TH>
+                {canEdit && (
+                  <TH>
+                    <span className="sr-only">수정</span>
+                  </TH>
+                )}
               </TR>
             </THead>
             <TBody>
@@ -116,19 +112,20 @@ export function AdminSettingsPage() {
                   <TD className="whitespace-nowrap text-xs text-neutral-500">
                     {formatDateTime(setting.updatedAt)}
                   </TD>
-                  <TD className="text-right">
-                    {/* editable=false는 조회 전용 (수정 시도 시 404) — 버튼 자체를 숨긴다 */}
-                    {setting.editable && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!canEdit}
-                        onClick={() => setEditTarget(setting)}
-                      >
-                        수정
-                      </Button>
-                    )}
-                  </TD>
+                  {canEdit && (
+                    <TD className="text-right">
+                      {/* editable=false는 조회 전용 (수정 시도 시 404) — 버튼 자체를 숨긴다 */}
+                      {setting.editable && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setEditTarget(setting)}
+                        >
+                          수정
+                        </Button>
+                      )}
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>

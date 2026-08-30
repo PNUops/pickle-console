@@ -36,7 +36,6 @@ import {
   Input,
   Modal,
   Pagination,
-  PermissionNotice,
   PortForwardApplyStateBadge,
   PortMappingStatusBadge,
   Spinner,
@@ -219,18 +218,12 @@ function RelayCard({ relay, isSysAdmin }: { relay: AdminRelayView; isSysAdmin: b
         </Alert>
       )}
 
-      <RelayTokenSection relay={relay} isSysAdmin={isSysAdmin} />
+      {isSysAdmin && <RelayTokenSection relay={relay} />}
     </Card>
   )
 }
 
-function RelayTokenSection({
-  relay,
-  isSysAdmin,
-}: {
-  relay: AdminRelayView
-  isSysAdmin: boolean
-}) {
+function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -262,7 +255,6 @@ function RelayTokenSection({
         <Button
           variant="secondary"
           size="sm"
-          disabled={!isSysAdmin}
           onClick={() => {
             setError(null)
             setConfirming(true)
@@ -271,9 +263,6 @@ function RelayTokenSection({
           {actionLabel}
         </Button>
       </div>
-      {!isSysAdmin && (
-        <PermissionNotice>토큰 발급은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       {error && <Alert variant="danger">{error}</Alert>}
 
       {/* 발급 확인 모달 */}
@@ -551,50 +540,36 @@ function MappingDrawerContent({
         </Alert>
       )}
 
-      <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
-        <p className="text-sm text-neutral-500">
-          정지는 매핑을 유지한 채 공인 포트만 닫고(해제 시 같은 포트로 복원),
-          삭제는 매핑과 공인 포트 점유를 되돌릴 수 없이 제거합니다.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {mapping.status === 'ACTIVE' ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!canOperate}
-              onClick={() => setSuspendOpen(true)}
-            >
-              정지
+      {canOperate && (
+        <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+          <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
+          <p className="text-sm text-neutral-500">
+            정지는 매핑을 유지한 채 공인 포트만 닫고(해제 시 같은 포트로 복원),
+            삭제는 매핑과 공인 포트 점유를 되돌릴 수 없이 제거합니다.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {mapping.status === 'ACTIVE' ? (
+              <Button variant="secondary" size="sm" onClick={() => setSuspendOpen(true)}>
+                정지
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={unsuspend.isPending}
+                onClick={() => unsuspend.mutate()}
+              >
+                재개
+              </Button>
+            )}
+            <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
+              삭제
             </Button>
-          ) : (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!canOperate}
-              loading={unsuspend.isPending}
-              onClick={() => unsuspend.mutate()}
-            >
-              재개
-            </Button>
-          )}
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={!canOperate}
-            onClick={() => setDeleteOpen(true)}
-          >
-            삭제
-          </Button>
-        </div>
-        {!canOperate && (
-          <PermissionNotice>
-            정지와 재개, 삭제는 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
-      </section>
+          </div>
+        </section>
+      )}
 
-      <GuardsSection mapping={mapping} isSysAdmin={isSysAdmin} onNotice={setNotice} />
+      {isSysAdmin && <GuardsSection mapping={mapping} onNotice={setNotice} />}
 
       {suspendOpen && (
         <SuspendMappingModal
@@ -754,11 +729,9 @@ const GUARD_FIELDS: { key: keyof UpdatePortMappingGuardsRequest; label: string }
 
 function GuardsSection({
   mapping,
-  isSysAdmin,
   onNotice,
 }: {
   mapping: AdminPortMappingView
-  isSysAdmin: boolean
   onNotice: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -813,9 +786,6 @@ function GuardsSection({
           해당 가드가 해제(무제한)되며, 양수는 이 매핑에만 적용되는 오버라이드입니다.
         </InfoTip>
       </h3>
-      {!isSysAdmin && (
-        <PermissionNotice>연결 가드 조정은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       {fieldError && <Alert variant="danger">{fieldError}</Alert>}
       <form onSubmit={submit} className="space-y-3" noValidate>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -824,7 +794,6 @@ function GuardsSection({
               <Input
                 inputMode="numeric"
                 placeholder="기본값"
-                disabled={!isSysAdmin}
                 value={values[key]}
                 onChange={(event) =>
                   setValues((prev) => ({ ...prev, [key]: event.target.value }))
@@ -838,7 +807,6 @@ function GuardsSection({
           type="submit"
           variant="secondary"
           size="sm"
-          disabled={!isSysAdmin}
           loading={save.isPending}
         >
           가드 저장
@@ -1021,7 +989,7 @@ function CampusDrawerContent({
         </section>
       )}
 
-      <CampusTransitionSection request={request} isSysAdmin={isSysAdmin} />
+      {isSysAdmin && <CampusTransitionSection request={request} />}
     </div>
   )
 }
@@ -1057,10 +1025,8 @@ const TRANSITIONS: Record<
 
 function CampusTransitionSection({
   request,
-  isSysAdmin,
 }: {
   request: AdminCampusIpRequestView
-  isSysAdmin: boolean
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -1096,14 +1062,7 @@ function CampusTransitionSection({
     },
   })
 
-  if (transitions.length === 0) {
-    return (
-      <section className="space-y-2 rounded-lg border border-neutral-200 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800">상태 전환</h3>
-        <p className="text-sm text-neutral-500">종료된 신청입니다. 가능한 전환이 없습니다.</p>
-      </section>
-    )
-  }
+  if (transitions.length === 0) return null
 
   const run = (to: CampusIpRequestStatus) => {
     setError(null)
@@ -1121,11 +1080,6 @@ function CampusTransitionSection({
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">상태 전환</h3>
-      {!isSysAdmin && (
-        <PermissionNotice>
-          캠퍼스 IP 신청 처리(승인·할당·반려·회수)는 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       {request.status === 'APPROVED' && (
         <p className="text-sm text-neutral-500">
           정보전산원 절차가 끝나면 부여된 주소를 입력해 할당으로 전환합니다.
@@ -1142,7 +1096,6 @@ function CampusTransitionSection({
           className="max-w-xs"
         >
           <Input
-            disabled={!isSysAdmin}
             value={grantedAddress}
             placeholder="예: 10.20.30.40"
             onChange={(event) => setGrantedAddress(event.target.value)}
@@ -1156,7 +1109,6 @@ function CampusTransitionSection({
         <Textarea
           rows={2}
           maxLength={1000}
-          disabled={!isSysAdmin}
           value={adminNote}
           onChange={(event) => setAdminNote(event.target.value)}
         />
@@ -1167,7 +1119,6 @@ function CampusTransitionSection({
             key={transition.to}
             variant={transition.danger ? 'danger' : 'primary'}
             size="sm"
-            disabled={!isSysAdmin}
             loading={update.isPending && update.variables === transition.to}
             onClick={() => run(transition.to)}
           >

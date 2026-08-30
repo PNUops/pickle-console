@@ -24,7 +24,6 @@ import {
   Card,
   Modal,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TabPanel,
@@ -142,9 +141,14 @@ export function AdminVmDetailPage() {
           </dl>
         </Card>
 
-        <PowerSection vm={vm} canOperate={canOperate} onDone={setMessage} />
-        <PeriodSection vm={vm} canOperate={canOperate} onDone={setMessage} />
-        <VmGatewayBlockSection vm={vm} canManage={isSysAdmin} onDone={setMessage} />
+        {canOperate && <PowerSection vm={vm} onDone={setMessage} />}
+        {canOperate &&
+          vm.status !== 'DELETED' &&
+          vm.status !== 'DELETING' &&
+          vm.deletion == null && <PeriodSection vm={vm} onDone={setMessage} />}
+        {isSysAdmin && vm.status !== 'DELETED' && (
+          <VmGatewayBlockSection vm={vm} canManage onDone={setMessage} />
+        )}
       </TabPanel>
 
       <TabPanel id="events" active={activeTab === 'events'} className="space-y-4">
@@ -211,11 +215,9 @@ const POWER_ACTIONS: {
 
 function PowerSection({
   vm,
-  canOperate,
   onDone,
 }: {
   vm: VmDetail
-  canOperate: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -238,6 +240,9 @@ function PowerSection({
     },
   })
 
+  const availableActions = POWER_ACTIONS.filter((action) => action.enabledFor(vm.status))
+  if (availableActions.length === 0) return null
+
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">전원 제어 (관리자 개입)</h3>
@@ -247,23 +252,16 @@ function PowerSection({
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="flex flex-wrap gap-2">
-        {POWER_ACTIONS.map((action) => (
+        {availableActions.map((action) => (
           <Button
             key={action.key}
             variant={action.variant}
-            disabled={!canOperate || !action.enabledFor(vm.status)}
             onClick={() => setConfirmTarget(action)}
           >
             {action.label}
           </Button>
         ))}
       </div>
-      {!canOperate && (
-        <PermissionNotice>
-          전원 제어는 이 VM의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
-          운영자, 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       <Modal
         open={confirmTarget !== null}
         onClose={() => setConfirmTarget(null)}
@@ -293,11 +291,9 @@ function PowerSection({
 
 function PeriodSection({
   vm,
-  canOperate,
   onDone,
 }: {
   vm: VmDetail
-  canOperate: boolean
   onDone: (message: string) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -307,15 +303,9 @@ function PeriodSection({
       <p className="text-sm text-neutral-500">
         사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
       </p>
-      <Button variant="secondary" disabled={!canOperate} onClick={() => setOpen(true)}>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
         기간 연장
       </Button>
-      {!canOperate && (
-        <PermissionNotice>
-          기간 연장은 이 VM의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
-          운영자, 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       {open && (
         <ExtendVmPeriodModal
           vm={vm}

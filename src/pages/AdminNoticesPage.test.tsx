@@ -15,7 +15,7 @@ import { server } from '../test/msw/server'
 import { currentPath, renderApp } from '../test/render'
 
 describe('공지사항 관리', () => {
-  test('운영자에게도 드로어는 열리되 쓰기 액션은 사유와 함께 비활성이다', async () => {
+  test('운영자는 공지 상세를 읽지만 쓰기 액션은 볼 수 없다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/notices')
@@ -23,12 +23,10 @@ describe('공지사항 관리', () => {
     await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
-    expect(within(drawer).getByRole('button', { name: '저장' })).toBeDisabled()
-    expect(within(drawer).getByRole('button', { name: '삭제' })).toBeDisabled()
+    expect(within(drawer).queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
     expect(
-      within(drawer).getByText(
-        '공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.',
-      ),
+      within(drawer).getByText(/8월 20일 02:00~04:00 사이 일부 서비스가 중단됩니다/),
     ).toBeInTheDocument()
   })
 
@@ -185,7 +183,7 @@ describe('공지사항 관리', () => {
     expect(await within(drawer).findByText('팝업 공지는 게시 기간이 필요합니다.')).toBeInTheDocument()
   })
 
-  test('기관 열람자는 관리 목록에 닿고, 쓰기는 사유와 함께 막힌다', async () => {
+  test('기관 열람자는 관리 목록과 상세를 읽고 쓰기 액션은 볼 수 없다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
     renderApp('/admin/notices')
@@ -196,14 +194,8 @@ describe('공지사항 관리', () => {
     await user.click(await screen.findByRole('button', { name: '서비스 점검 팝업' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
-    expect(within(drawer).getByRole('button', { name: '저장' })).toBeDisabled()
-    expect(within(drawer).getByRole('button', { name: '삭제' })).toBeDisabled()
-    // 비활성만으로는 부족하다 — 왜 못 하는지가 함께 있어야 한다.
-    expect(
-      within(drawer).getByText(
-        '공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
   })
 
   test('시스템 열람자도 관리 목록을 전부 읽고 쓰지는 못한다', async () => {
@@ -216,12 +208,8 @@ describe('공지사항 관리', () => {
     await user.click(screen.getByRole('button', { name: '데이터센터 정기 점검 안내' }))
 
     const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
-    expect(within(drawer).getByRole('button', { name: '저장' })).toBeDisabled()
-    expect(
-      within(drawer).getByText(
-        '공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
   })
 
   test('게시 창 밖 공지의 미리보기도 자격을 실어 받아 온다', async () => {

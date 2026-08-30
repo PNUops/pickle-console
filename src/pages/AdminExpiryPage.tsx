@@ -13,7 +13,6 @@ import {
   Card,
   DdayBadge,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -98,12 +97,6 @@ export function AdminExpiryPage() {
       />
 
       {message && <Alert variant="info">{message}</Alert>}
-      {!canExtend && (
-        <PermissionNotice>
-          기간 연장은 기관 운영자 이상과 시스템 운영자, 시스템 관리자만 수행할 수
-          있습니다.
-        </PermissionNotice>
-      )}
 
       {vms.isPending && (
         <div className="flex justify-center py-12">
@@ -125,9 +118,11 @@ export function AdminExpiryPage() {
                   <TH>VM</TH>
                   <TH>종료일</TH>
                   <TH>상태</TH>
-                  <TH>
-                    <span className="sr-only">작업</span>
-                  </TH>
+                  {canExtend && (
+                    <TH>
+                      <span className="sr-only">작업</span>
+                    </TH>
+                  )}
                 </TR>
               </THead>
               <TBody>
@@ -149,16 +144,17 @@ export function AdminExpiryPage() {
                         </Badge>
                       )}
                     </TD>
-                    <TD className="text-right">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!canExtend}
-                        onClick={() => setExtendTarget(vm)}
-                      >
-                        기간 연장
-                      </Button>
-                    </TD>
+                    {canExtend && (
+                      <TD className="text-right">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setExtendTarget(vm)}
+                        >
+                          기간 연장
+                        </Button>
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>

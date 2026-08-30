@@ -16,7 +16,6 @@ import {
   CardTitle,
   ErrorBoundary,
   Modal,
-  PermissionNotice,
   Select,
   Spinner,
   Table,
@@ -107,9 +106,6 @@ export function AdminNodesPage() {
       </TabPanel>
 
       <TabPanel id="nodes" active={activeTab === 'nodes'} className="space-y-6">
-      {!isSysAdmin && (
-        <PermissionNotice>노드 상태 전환은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       {message && <Alert variant="info">{message}</Alert>}
 
       {nodes.isPending && (
@@ -130,9 +126,11 @@ export function AdminNodesPage() {
                 <TH>메모리 할당</TH>
                 <TH>IP 풀 여유</TH>
                 <TH>브리지 / 스토리지</TH>
-                <TH>
-                  <span className="sr-only">작업</span>
-                </TH>
+                {isSysAdmin && (
+                  <TH>
+                    <span className="sr-only">작업</span>
+                  </TH>
+                )}
               </TR>
             </THead>
             <TBody>
@@ -174,16 +172,17 @@ export function AdminNodesPage() {
                       {node.diskCapacityGb != null ? `${node.diskCapacityGb} GiB` : '미측정'}
                     </span>
                   </TD>
-                  <TD className="text-right">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={!isSysAdmin}
-                      onClick={() => setStatusTarget(node)}
-                    >
-                      상태 전환
-                    </Button>
-                  </TD>
+                  {isSysAdmin && (
+                    <TD className="text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setStatusTarget(node)}
+                      >
+                        상태 전환
+                      </Button>
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>

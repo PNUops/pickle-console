@@ -156,31 +156,25 @@ describe('관리자 사용자 목록', () => {
     expect(userPatchBodies).toEqual([{ userId: uuid(42), body: { role: 'ORG_ADMIN', orgId: uuid(1) } }])
   })
 
-  test('ORG_ADMIN에게는 역할 변경이 보이되 비활성 상태다', async () => {
+  test('ORG_ADMIN에게는 전역 역할 변경이 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await openDetail(user, '홍길동')
     const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
-    await drawer.findByText('역할 관리')
-    expect(
-      drawer.getByText('역할 변경은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
-    expect(drawer.getByRole('button', { name: '역할 변경' })).toBeDisabled()
-    expect(drawer.getByLabelText('역할')).toBeDisabled()
+    await drawer.findByText('워크스페이스 멤버십')
+    expect(drawer.queryByText('역할 관리')).not.toBeInTheDocument()
+    expect(drawer.queryByRole('button', { name: '역할 변경' })).not.toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게도 상태 관리가 보이되 비활성 상태로 사유가 표시된다', async () => {
+  test('ORG_ADMIN에게는 계정 상태 관리가 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await openDetail(user, '홍길동')
     await screen.findByText('워크스페이스 멤버십')
-    expect(screen.getByText('계정 상태 관리')).toBeInTheDocument()
-    expect(
-      screen.getByText('계정 상태 변경과 2단계 인증 초기화는 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '계정 비활성화' })).toBeDisabled()
+    expect(screen.queryByText('계정 상태 관리')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '계정 비활성화' })).not.toBeInTheDocument()
   })
 
   test('ORG_ADMIN이 자기 관리 기관의 역할을 부여하고 회수한다', async () => {
@@ -225,17 +219,15 @@ describe('관리자 사용자 목록', () => {
     )
   })
 
-  test('시스템 계층 계정에는 기관 역할 부여가 사유와 함께 막힌다', async () => {
+  test('시스템 계층 계정에는 기관 역할 변경 액션이 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await openDetail(user, '이시스템')
     const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
     await drawer.findByText('기관 역할')
-    expect(
-      drawer.getByText('시스템 관리자 계정의 기관 역할은 변경할 수 없습니다.'),
-    ).toBeInTheDocument()
-    expect(drawer.getByRole('button', { name: '부여' })).toBeDisabled()
+    expect(drawer.queryByLabelText('부여할 기관')).not.toBeInTheDocument()
+    expect(drawer.queryByRole('button', { name: '부여' })).not.toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 상세에서 프로필을 읽고 정정한다', async () => {
@@ -381,9 +373,6 @@ describe('관리자 사용자 목록', () => {
     await openDetail(user, '홍길동')
     expect(await screen.findByText('202012345')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
-    expect(
-      screen.getByText('정정은 시스템 관리자만 할 수 있습니다.'),
-    ).toBeInTheDocument()
   })
 
   test('코드와 직접 입력을 함께 보내면 필드 오류로 돌아온다', async () => {

@@ -1102,7 +1102,7 @@ export function scheduleVmDeletion(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '일반 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '삭제 예약을 접수하지 못했습니다.')
     return data
   })
 }

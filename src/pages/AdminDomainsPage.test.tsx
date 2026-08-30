@@ -72,14 +72,13 @@ describe('공개 서비스 — 도메인 탭', () => {
     expect(await screen.findByText(/라우트 재적용을 접수했습니다/)).toBeInTheDocument()
   })
 
-  test('검증 미완 도메인의 재적용 거부(409)는 드로어 안에 사유를 보여준다', async () => {
+  test('검증 미완 도메인에는 재적용 액션이 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderDomains()
 
     await user.click(await screen.findByRole('button', { name: 'demo.example.com' }))
     const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
-    await user.click(drawer.getByRole('button', { name: '재적용' }))
-    expect(await drawer.findByText(/소유권 검증이 완료/)).toBeInTheDocument()
+    expect(drawer.queryByRole('button', { name: '재적용' })).not.toBeInTheDocument()
   })
 
   test('예약 중인 이름은 목록에서 예약 배지와 만료 D-day로 구분된다', async () => {

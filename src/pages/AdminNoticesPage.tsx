@@ -26,7 +26,6 @@ import {
   Input,
   Modal,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -63,7 +62,7 @@ function fromDateTimeInput(value: string): string | null {
 
 /**
  * 공지사항 관리 — 목록 + 드로어. 드로어는 관리자 전 역할에게 열리고, 쓰기 권한이
- * 없는 역할에게는 액션이 보이되 비활성으로 남아 사유가 함께 적힌다.
+ * 없는 역할에게는 읽을 정보만 제공한다.
  */
 export function AdminNoticesPage() {
   const { user } = useAuth()
@@ -98,22 +97,17 @@ export function AdminNoticesPage() {
             콘솔 공지사항에 게시되는 공지를 등록하고 게시 기간을 관리합니다.
           </p>
         </div>
-        <Button
-          disabled={!canManage}
-          onClick={() => {
-            setSelectedId(null)
-            setCreating(true)
-          }}
-        >
-          공지 등록
-        </Button>
+        {canManage && (
+          <Button
+            onClick={() => {
+              setSelectedId(null)
+              setCreating(true)
+            }}
+          >
+            공지 등록
+          </Button>
+        )}
       </div>
-
-      {!canManage && (
-        <PermissionNotice>
-          공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
 
       {notices.isPending && (
         <div className="flex justify-center py-12">
@@ -325,13 +319,42 @@ function NoticeDetailBody({
     else create.mutate()
   }
 
+  if (!canManage && notice) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-neutral-900">{notice.title}</h3>
+            {notice.pinned && <Badge variant="warning">고정</Badge>}
+            {notice.popup && <Badge variant="info">팝업</Badge>}
+            <Badge variant={notice.active ? 'success' : 'neutral'}>
+              {notice.active ? '게시 중' : '게시 안 함'}
+            </Badge>
+          </div>
+          <p className="text-sm text-neutral-500">
+            작성자 {notice.createdByName} · 등록 {formatDateTime(notice.createdAt)}
+          </p>
+        </div>
+        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-neutral-500">게시 시작</dt>
+            <dd className="font-medium text-neutral-900">{formatDateTime(notice.startsAt)}</dd>
+          </div>
+          <div>
+            <dt className="text-neutral-500">게시 종료</dt>
+            <dd className="font-medium text-neutral-900">
+              {notice.endsAt ? formatDateTime(notice.endsAt) : '계속 게시'}
+            </dd>
+          </div>
+        </dl>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{notice.body}</p>
+        <NoticeImageSection notice={notice} canManage={false} onChanged={invalidate} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      {!canManage && (
-        <PermissionNotice>
-          공지 등록·수정·삭제는 기관 관리자·시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       {notice && (
         <p className="text-sm text-neutral-500">
           작성자 {notice.createdByName} · 등록 {formatDateTime(notice.createdAt)}
@@ -519,30 +542,33 @@ function NoticeImageSection({
                     image={image}
                     className="h-24 w-32 rounded border border-neutral-200 object-cover"
                   />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={!canManage}
-                    loading={remove.isPending}
-                    onClick={() => remove.mutate(image.id)}
-                  >
-                    이미지 삭제
-                  </Button>
+                  {canManage && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      loading={remove.isPending}
+                      onClick={() => remove.mutate(image.id)}
+                    >
+                      이미지 삭제
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
           )}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-neutral-700">이미지 추가</span>
-            <input
-              type="file"
-              accept={ACCEPTED_IMAGE_TYPES.join(',')}
-              disabled={!canManage || full || upload.isPending}
-              onChange={pick}
-              className="text-sm text-neutral-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-neutral-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium disabled:cursor-not-allowed disabled:text-neutral-400"
-            />
-          </label>
-          {full && (
+          {canManage && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-neutral-700">이미지 추가</span>
+              <input
+                type="file"
+                accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                disabled={full || upload.isPending}
+                onChange={pick}
+                className="text-sm text-neutral-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-neutral-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium disabled:cursor-not-allowed disabled:text-neutral-400"
+              />
+            </label>
+          )}
+          {canManage && full && (
             <p className="text-xs text-neutral-500">
               이미지는 최대 {MAX_IMAGES}장까지 첨부할 수 있습니다.
             </p>

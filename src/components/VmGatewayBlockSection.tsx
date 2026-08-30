@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { invalidateResourceLists, updateVmGatewayBlock } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { Alert, Button, Modal, PermissionNotice, Textarea } from './ui'
+import { Alert, Button, Modal, Textarea } from './ui'
 
 /**
  * VM별 SSH·웹 터미널 차단 토글 섹션. VM 관리 드로어와 관리자 VM 상세가
- * 공유한다. 수행은 SYS_ADMIN 전용(서버 강제), 표시는 전 관리자 —
- * 비권한자는 비활성+사유.
+ * 공유한다. 수행은 SYS_ADMIN 전용이며, 비권한 관리자에게는 섹션 자체를
+ * 렌더하지 않는다.
  */
 export function VmGatewayBlockSection({
   vm,
@@ -43,12 +43,11 @@ export function VmGatewayBlockSection({
     },
   })
 
+  if (!canManage) return null
+
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">SSH·웹 터미널 차단</h3>
-      {!canManage && (
-        <PermissionNotice>차단 토글은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       <p className="text-sm text-neutral-500">
         {vm.sshGatewayBlocked
           ? '현재 차단됨 — SSH 게이트웨이·웹 터미널 접속이 거부됩니다. 이미 열린 웹 터미널 세션은 웹 터미널 세션 화면에서 별도로 강제 종료해야 합니다.'
@@ -57,7 +56,6 @@ export function VmGatewayBlockSection({
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button
         variant={vm.sshGatewayBlocked ? 'secondary' : 'danger'}
-        disabled={!canManage}
         onClick={() => {
           setError(null)
           setOpen(true)

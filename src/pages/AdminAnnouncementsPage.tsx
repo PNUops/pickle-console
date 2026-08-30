@@ -169,12 +169,6 @@ export function AdminAnnouncementsPage() {
         <Alert variant="danger">{error}</Alert>
       )}
 
-      {!canSend && (
-        <Alert variant="info">
-          알림 발송은 기관 관리자·시스템 관리자만 할 수 있습니다. 최근 발송 내역은
-          아래에서 확인할 수 있습니다.
-        </Alert>
-      )}
       {canSend && (
         <Card>
         <CardContent>

@@ -34,7 +34,6 @@ import {
   DomainStatusBadge,
   Drawer,
   Pagination,
-  PermissionNotice,
   RouteStatusBadge,
   Select,
   Spinner,
@@ -395,11 +394,9 @@ function DomainDrawerContent({
           <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
             <div className="flex items-center justify-between">
               <RouteStatusBadge status={route.status} />
-              <ApplyRouteButton
-                routeId={route.id}
-                disabled={!canIntervene}
-                onResult={setNotice}
-              />
+              {canIntervene && (route.status === 'REMOVED' || domain.status === 'ACTIVE') && (
+                <ApplyRouteButton routeId={route.id} onResult={setNotice} />
+              )}
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
               <Field label="대상 포트" value={String(route.targetPort)} />
@@ -429,33 +426,22 @@ function DomainDrawerContent({
         )}
       </section>
 
-      <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
-        <p className="text-sm text-neutral-500">
-          커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
-          즉시 회수)를 수행합니다. 기관 계층은 자기가 운영하는 기관의 도메인에만
-          적용됩니다.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {domain.kind === 'CUSTOM' && (
-            <ReverifyButton domain={domain} disabled={!canIntervene} onResult={setNotice} />
-          )}
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={!canIntervene}
-            onClick={() => setReleaseOpen(true)}
-          >
-            강제 해제
-          </Button>
-        </div>
-        {!canIntervene && (
-          <PermissionNotice>
-            사후 개입은 이 도메인의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
-            운영자, 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
-      </section>
+      {canIntervene && (
+        <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+          <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
+          <p className="text-sm text-neutral-500">
+            커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
+            즉시 회수)를 수행합니다. 기관 계층은 자기가 운영하는 기관의 도메인에만
+            적용됩니다.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {domain.kind === 'CUSTOM' && <ReverifyButton domain={domain} onResult={setNotice} />}
+            <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
+              강제 해제
+            </Button>
+          </div>
+        </section>
+      )}
 
       {releaseOpen && (
         <ForceReleaseModal
@@ -486,11 +472,9 @@ type DrawerNotice = { variant: 'info' | 'danger'; text: string }
 
 function ReverifyButton({
   domain,
-  disabled,
   onResult,
 }: {
   domain: AdminDomainView
-  disabled: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -510,7 +494,6 @@ function ReverifyButton({
     <Button
       variant="secondary"
       size="sm"
-      disabled={disabled}
       loading={reverify.isPending}
       onClick={() => reverify.mutate()}
     >
@@ -522,11 +505,9 @@ function ReverifyButton({
 /** 개별 라우트 재적용 — 전역 sync-all 없이 이 도메인의 라우트만 재전파. */
 function ApplyRouteButton({
   routeId,
-  disabled,
   onResult,
 }: {
   routeId: string
-  disabled: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -547,7 +528,6 @@ function ApplyRouteButton({
     <Button
       variant="secondary"
       size="sm"
-      disabled={disabled}
       loading={apply.isPending}
       onClick={() => apply.mutate()}
     >

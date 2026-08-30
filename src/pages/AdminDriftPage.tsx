@@ -18,7 +18,6 @@ import {
   DriftStatusBadge,
   Modal,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -73,11 +72,6 @@ export function AdminDriftPage() {
           조정자(reconciler)가 감지한 DB와 Proxmox 사이의 불일치입니다. 원인을 정리한 뒤
           해결 처리하세요. 더 이상 관측되지 않으면 자동으로 해소됩니다.
         </p>
-        {!canResolve && (
-          <PermissionNotice>
-            해결 처리는 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
       </div>
 
       <FilterBar
@@ -117,9 +111,11 @@ export function AdminDriftPage() {
                   <TH>요약</TH>
                   <TH>감지</TH>
                   <TH>상태</TH>
-                  <TH>
-                    <span className="sr-only">작업</span>
-                  </TH>
+                  {canResolve && (
+                    <TH>
+                      <span className="sr-only">작업</span>
+                    </TH>
+                  )}
                 </TR>
               </THead>
               <TBody>
@@ -149,18 +145,19 @@ export function AdminDriftPage() {
                         </span>
                       )}
                     </TD>
-                    <TD className="text-right">
-                      {finding.status === 'OPEN' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={!canResolve}
-                          onClick={() => setResolveTarget(finding)}
-                        >
-                          해결 처리
-                        </Button>
-                      )}
-                    </TD>
+                    {canResolve && (
+                      <TD className="text-right">
+                        {finding.status === 'OPEN' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setResolveTarget(finding)}
+                          >
+                            해결 처리
+                          </Button>
+                        )}
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>

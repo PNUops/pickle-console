@@ -23,7 +23,6 @@ import {
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
   Modal,
-  PermissionNotice,
   RequestStatusBadge,
   Spinner,
   Textarea,
@@ -132,13 +131,6 @@ export function AdminRequestDetailPage() {
               request={data}
               onNotice={setNotice}
             />
-          )}
-          {data.status === 'SUBMITTED' && !canDecide && (
-            <PermissionNotice>
-              {roleCanDecide
-                ? '이 기관에서는 열람 역할이므로 승인과 반려를 수행할 수 없습니다.'
-                : '승인과 반려는 기관 운영자, 기관 관리자, 시스템 관리자만 수행할 수 있습니다.'}
-            </PermissionNotice>
           )}
         </div>
 
