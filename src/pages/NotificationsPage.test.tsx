@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest'
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { uuid } from '../test/msw/ids'
 
 describe('알림 종(bell)', () => {
   test('사용자 상단 바에 읽지 않은 알림 수를 배지로 보여준다', async () => {
@@ -61,7 +62,7 @@ describe('알림 종(bell)', () => {
     await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 1개' }))
     expect(await screen.findByRole('link', { name: '알림함 전체 보기' })).toHaveAttribute(
       'href',
-      '/admin/notifications',
+      `/admin/notifications?org=${uuid(1)}`,
     )
   })
 

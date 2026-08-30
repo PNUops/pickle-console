@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import type { components } from '../api/schema'
@@ -38,6 +39,17 @@ describe('전체 리소스', () => {
     // 발급 전도 인벤토리에 남는다 — 승인은 났고 비밀만 아직 없다.
     expect(within(screen.getByText('발급 전').closest('tr')!).getByText('LLM API 키'))
       .toBeInTheDocument()
+  })
+
+  test('종류 필터로 LLM API 키만 좁혀 본다', async () => {
+    const user = userEvent.setup()
+    renderResources()
+
+    await screen.findByRole('link', { name: 'capstone-chatbot' })
+    await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), 'LLM_API_KEY')
+
+    expect(await screen.findByRole('link', { name: 'capstone-chatbot' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'algo-judge' })).not.toBeInTheDocument())
   })
 
   test('워크스페이스 범위 주소는 그 워크스페이스의 리소스만 보여준다', async () => {

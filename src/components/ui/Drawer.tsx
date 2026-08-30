@@ -45,7 +45,7 @@ export function Drawer({ open, onClose, title, className, children, footer }: Dr
     <div className="fixed inset-0 z-50">
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-neutral-950/50 transition-opacity duration-200 starting:opacity-0 motion-reduce:transition-none"
+        className="absolute inset-0 bg-surface-inverse/50 transition-opacity duration-[var(--duration-normal)] starting:opacity-0 motion-reduce:transition-none"
         onClick={onClose}
       />
       <div
@@ -55,19 +55,19 @@ export function Drawer({ open, onClose, title, className, children, footer }: Dr
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 right-0 flex w-full translate-x-0 flex-col bg-white shadow-overlay outline-none transition-transform duration-200 ease-out starting:translate-x-full motion-reduce:transition-none sm:max-w-xl',
+          'absolute inset-y-0 right-0 flex w-full translate-x-0 flex-col bg-surface-card text-foreground-primary shadow-elevation-3 outline-none transition-transform duration-[var(--duration-normal)] ease-decelerate starting:translate-x-full motion-reduce:transition-none sm:max-w-xl',
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-neutral-100 px-5 py-4">
-          <h2 id={titleId} className="text-base font-semibold text-neutral-900">
+        <div className="flex items-start justify-between gap-4 border-b border-stroke-subtle px-5 py-4">
+          <h2 id={titleId} className="type-section-title text-foreground-primary">
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="cursor-pointer rounded p-1 text-neutral-400 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-600"
+            className="cursor-pointer rounded-control p-1 text-foreground-muted hover:text-foreground-primary focus-visible:outline-2 focus-visible:outline-focus-ring"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="size-5" aria-hidden="true">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -76,7 +76,7 @@ export function Drawer({ open, onClose, title, className, children, footer }: Dr
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-neutral-100 px-5 py-3">
+          <div className="flex items-center justify-end gap-2 border-t border-stroke-subtle px-5 py-3">
             {footer}
           </div>
         )}

@@ -97,6 +97,26 @@ export function canOperateVm(role: UserRole): boolean {
   )
 }
 
+/** LLM API 키 한도와 suspend/resume를 관리하는 운영 역할. */
+export function canOperateLlmKey(role: UserRole): boolean {
+  return (
+    role === 'ORG_MANAGER' ||
+    role === 'ORG_ADMIN' ||
+    role === 'SYS_MANAGER' ||
+    role === 'SYS_ADMIN'
+  )
+}
+
+/** 금액 한도까지 포함한 6축 편집. SYS_MANAGER는 비금액 4축만 다룬다. */
+export function canManageLlmCredit(role: UserRole): boolean {
+  return role === 'ORG_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+}
+
+/** 관리자 경로에서 LLM API 키를 폐기하는 역할. */
+export function canAdminRevokeLlmKey(role: UserRole): boolean {
+  return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+}
+
 /** Domain force-release / reverification and route re-apply (§3.16). Same
  *  operating roles as VM control; the org tier acts in its operated orgs only. */
 export function canInterveneDomain(role: UserRole): boolean {

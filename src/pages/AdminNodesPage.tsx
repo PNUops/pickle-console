@@ -16,7 +16,7 @@ import {
   CardTitle,
   ErrorBoundary,
   Modal,
-  PermissionNotice,
+  PageHeader,
   Select,
   Spinner,
   Table,
@@ -43,7 +43,7 @@ const CapacityTrendSection = lazy(
 const SCREEN_TABS = [
   { id: 'nodes', label: '노드' },
   { id: 'ips', label: 'IP 할당' },
-  { id: 'trend', label: '할당 추이' },
+  { id: 'trend', label: '가상머신 할당 추이' },
 ]
 
 const NODE_STATUS_LABELS: Record<NodeSummary['status'], string> = {
@@ -73,19 +73,22 @@ export function AdminNodesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">노드/IP</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Proxmox 노드별 물리 용량·할당 합계와 IP 풀 할당 현황입니다. 수치는 30초
-          주기 상태 폴러가 갱신합니다.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="운영"
+        title="노드/IP"
+        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다. 수치는 30초 주기 상태 폴러가 갱신합니다."
+      />
 
       <Tabs
         aria-label="노드/IP 탭"
         tabs={SCREEN_TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'nodes' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'nodes') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="ips" active={activeTab === 'ips'}>
@@ -107,9 +110,6 @@ export function AdminNodesPage() {
       </TabPanel>
 
       <TabPanel id="nodes" active={activeTab === 'nodes'} className="space-y-6">
-      {!isSysAdmin && (
-        <PermissionNotice>노드 상태 전환은 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       {message && <Alert variant="info">{message}</Alert>}
 
       {nodes.isPending && (
@@ -130,9 +130,11 @@ export function AdminNodesPage() {
                 <TH>메모리 할당</TH>
                 <TH>IP 풀 여유</TH>
                 <TH>브리지 / 스토리지</TH>
-                <TH>
-                  <span className="sr-only">작업</span>
-                </TH>
+                {isSysAdmin && (
+                  <TH>
+                    <span className="sr-only">작업</span>
+                  </TH>
+                )}
               </TR>
             </THead>
             <TBody>
@@ -174,16 +176,17 @@ export function AdminNodesPage() {
                       {node.diskCapacityGb != null ? `${node.diskCapacityGb} GiB` : '미측정'}
                     </span>
                   </TD>
-                  <TD className="text-right">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={!isSysAdmin}
-                      onClick={() => setStatusTarget(node)}
-                    >
-                      상태 전환
-                    </Button>
-                  </TD>
+                  {isSysAdmin && (
+                    <TD className="text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setStatusTarget(node)}
+                      >
+                        상태 전환
+                      </Button>
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>

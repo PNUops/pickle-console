@@ -71,6 +71,7 @@ export function ConsoleLayout() {
     <AppShell
       home="/console"
       navLabel="콘솔 메뉴"
+      density="comfortable"
       sections={sections}
       sidebarTop={<WorkspaceScopeSelector />}
       notificationsTo={consolePaths.notifications}

@@ -32,7 +32,7 @@ describe('점검 모드·공지 배너·문의처 (AppShell)', () => {
     renderApp('/admin')
 
     expect(await screen.findByText(/점검 모드가 켜져 있습니다/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '사용자 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '사용자' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '서비스 점검 중' })).not.toBeInTheDocument()
   })
 

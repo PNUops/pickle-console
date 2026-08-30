@@ -65,7 +65,7 @@ export function Hero() {
                 서비스가 시작되는 곳 <br className="hidden sm:block" />
                 <span className="whitespace-nowrap text-[0.9837em]">
                   PNU Cloud,{' '}
-                  <span className="bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
+                  <span className="text-[1.08em] font-black bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
                     Pickle
                   </span>
                 </span>

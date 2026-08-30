@@ -10,7 +10,7 @@ export function PublicLayout() {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Logo />
+          <Logo variant="lockup" />
           <nav aria-label="주 메뉴" className="flex items-center gap-2">
             {status === 'authenticated' && user ? (
               <Link

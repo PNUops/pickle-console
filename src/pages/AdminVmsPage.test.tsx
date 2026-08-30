@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
@@ -12,6 +12,7 @@ import {
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { toVmSummary, vmStore } from '../test/msw/handlers/vms'
 
 function renderAsOrgAdmin() {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -31,11 +32,12 @@ async function selectVm(user: ReturnType<typeof userEvent.setup>, name: string) 
 }
 
 describe('관리자 VM 목록', () => {
-  test('VM을 워크스페이스 이름과 함께 나열하고 상태 탭·기관 필터가 동작한다', async () => {
+  test('VM을 워크스페이스 이름과 함께 나열하고 상태 탭·관리 범위가 동작한다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
     await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(await screen.findByText('관리자 가상머신 목록')).toBeInTheDocument()
     const row = (await screen.findByText('capstone-team3-api')).closest('tr')!
     expect(within(row).getByText('캡스톤 3조')).toBeInTheDocument()
 
@@ -44,11 +46,47 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('web-lab')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
 
-    // 기관 필터 (SYS_ADMIN 전용): org 2 → ai-train만
+    // 전역 관리 범위: org 2 → ai-train만
     await user.click(screen.getByRole('button', { name: '전체' }))
-    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(2))
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
+    expect(screen.getByText(/테스트 기관 가상머신을 조회하고/)).toBeInTheDocument()
+  })
+
+  test('기관 scope 응답 대기 중 이전 기관 행과 drawer action을 숨긴다', async () => {
+    const user = userEvent.setup()
+    let releaseOrgResponse!: () => void
+    const orgResponsePending = new Promise<void>((resolve) => {
+      releaseOrgResponse = resolve
+    })
+    server.use(
+      http.get('*/api/v1/admin/vms', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('orgId') !== uuid(2)) return
+        await orgResponsePending
+        const scopedVm = vmStore.find((vm) => vm.orgId === uuid(2))!
+        return HttpResponse.json({
+          content: [toVmSummary(scopedVm)],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+    renderAsSysAdmin()
+
+    const drawer = await selectVm(user, 'algo-judge')
+    expect(within(drawer).getByRole('button', { name: '삭제 예약' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
+
+    expect(screen.queryByText('algo-judge')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+
+    releaseOrgResponse()
+    expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
   test('이름 검색과 정렬 헤더가 서버 파라미터로 동작한다', async () => {
@@ -61,7 +99,7 @@ describe('관리자 VM 목록', () => {
     await waitFor(() =>
       expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument(),
     )
-    expect(screen.getByText('algo-judge')).toBeInTheDocument()
+    expect(await screen.findByText('algo-judge')).toBeInTheDocument()
     await user.clear(screen.getByLabelText('VM 검색'))
     await screen.findByText('capstone-team3-api')
 
@@ -103,12 +141,12 @@ describe('관리자 VM 목록', () => {
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
 
     // 기관을 바꾸면 이전 기관의 워크스페이스 선택은 무효 → 전체 워크스페이스로 초기화
-    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(2))
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
     expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('')
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 비활성+사유로 보인다', async () => {
+  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
@@ -120,31 +158,25 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByText('ai-train')).not.toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '강제 삭제' })).toBeDisabled()
-    expect(
-      screen.getByText('강제 삭제는 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '삭제 예약' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게도 드로어가 열리고 삭제 조작은 비활성+사유로 보인다', async () => {
+  test('SYS_MANAGER에게도 드로어가 열리고 삭제 조작은 보이지 않는다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/vms')
 
     const drawer = await selectVm(user, 'algo-judge')
     expect(within(drawer).getByText('호스트네임')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '일반 삭제 접수' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '강제 삭제' })).toBeDisabled()
-    expect(
-      screen.getByText('일반 삭제 접수·취소는 기관 관리자·시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 })
 
-describe('관리자 VM 일반 삭제 접수', () => {
+describe('관리자 VM 삭제 예약', () => {
   test('과거 날짜는 422 필드 에러, 7일 미만은 경고와 함께 접수된다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
@@ -159,7 +191,7 @@ describe('관리자 VM 일반 삭제 접수', () => {
     expect(
       screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
+    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(
       await screen.findByText('삭제 예정일은 미래 시각이어야 합니다.'),
     ).toBeInTheDocument()
@@ -170,12 +202,16 @@ describe('관리자 VM 일반 삭제 접수', () => {
     expect(
       screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
     ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
+    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(
       await screen.findByText(
-        '일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
+        '삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
       ),
     ).toBeInTheDocument()
+    expect(await screen.findByText('삭제 예약됨')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '삭제 취소' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기간 연장' })).not.toBeInTheDocument()
   })
 
   test('사유 없이 제출하면 필드 에러를 보여준다', async () => {
@@ -186,7 +222,7 @@ describe('관리자 VM 일반 삭제 접수', () => {
     fireEvent.change(screen.getByLabelText(/파기 예정일/), {
       target: { value: '2099-01-01' },
     })
-    await user.click(screen.getByRole('button', { name: '일반 삭제 접수' }))
+    await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(await screen.findByText('삭제 사유를 입력해 주세요.')).toBeInTheDocument()
   })
 })
@@ -232,15 +268,12 @@ describe('SSH·웹 터미널 차단 토글', () => {
     expect(await screen.findByRole('button', { name: '차단 해제' })).toBeEnabled()
   })
 
-  test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보인다', async () => {
+  test('ORG_ADMIN에게는 차단 토글이 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByRole('button', { name: '접속 차단' })).toBeDisabled()
-    expect(
-      screen.getByText('차단 토글은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '접속 차단' })).not.toBeInTheDocument()
   })
 })
 
@@ -263,6 +296,41 @@ describe('VM 드로어 기간 연장', () => {
 })
 
 describe('관리자 삭제 취소', () => {
+  test('취소 불가 deletion은 상태만 보이고 취소 action이 없다', async () => {
+    const user = userEvent.setup()
+    const vm = vmStore.find((item) => item.id === uuid(56))!
+    server.use(
+      http.get('*/api/v1/admin/vms', () =>
+        HttpResponse.json({
+          content: [
+            {
+              ...toVmSummary(vm),
+              deletion: {
+                kind: 'FORCE',
+                scheduledFor: '2026-08-30T14:00:00+09:00',
+                requestedAt: '2026-08-30T14:00:00+09:00',
+                requestedById: sysAdminUser.id,
+                reason: '보안 사고 대응',
+                cancelable: false,
+              },
+            },
+          ],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+    )
+    renderAsOrgAdmin()
+
+    await selectVm(user, 'algo-judge')
+    expect(screen.getByText('삭제가 진행 중입니다')).toBeInTheDocument()
+    expect(screen.getByText(/취소할 수 없습니다/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+  })
+
   test('본인 삭제 유예 중 VM을 취소하면 중지됨으로 남는다는 안내를 보여준다', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
@@ -304,16 +372,6 @@ describe('관리자 삭제 취소', () => {
     ).toBeInTheDocument()
   })
 
-  test('대기 중인 삭제가 없으면 409 안내를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderAsOrgAdmin()
-
-    await selectVm(user, 'algo-judge')
-    await user.click(screen.getByRole('button', { name: '삭제 취소' }))
-    expect(
-      await screen.findByText(/취소할 수 있는 삭제가 없습니다/),
-    ).toBeInTheDocument()
-  })
 })
 
 describe('강제 삭제 (SYS_ADMIN)', () => {

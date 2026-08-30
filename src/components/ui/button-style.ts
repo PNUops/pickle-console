@@ -1,24 +1,40 @@
+import { cva } from 'class-variance-authority'
 import { cn } from '../../lib/cn'
 
-const variants = {
-  primary:
-    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 disabled:bg-primary-300',
-  secondary:
-    'border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 active:bg-neutral-100 disabled:text-neutral-400',
-  danger:
-    'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 disabled:bg-danger-300',
-  ghost:
-    'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 active:bg-neutral-200 disabled:text-neutral-400',
-} as const
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost'
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
-const sizes = {
-  sm: 'h-8 gap-1.5 px-3 text-sm',
-  md: 'h-10 gap-2 px-4 text-sm',
-  lg: 'h-12 gap-2 px-6 text-base',
-} as const
-
-export type ButtonVariant = keyof typeof variants
-export type ButtonSize = keyof typeof sizes
+const buttonVariants = cva(
+  [
+    'inline-flex cursor-pointer items-center justify-center rounded-control font-medium',
+    'transition-colors duration-[var(--duration-fast)] ease-standard',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
+    'disabled:cursor-not-allowed',
+  ],
+  {
+    variants: {
+      variant: {
+        primary:
+          'bg-brand-fill text-white hover:bg-brand-fill-hover active:bg-brand-fill-pressed disabled:bg-primary-300',
+        secondary:
+          'border border-stroke-default bg-surface-card text-foreground-secondary hover:bg-surface-subtle active:bg-surface-muted disabled:text-foreground-disabled',
+        danger:
+          'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 disabled:bg-danger-300',
+        ghost:
+          'text-foreground-secondary hover:bg-surface-subtle hover:text-foreground-primary active:bg-surface-muted disabled:text-foreground-disabled',
+      },
+      size: {
+        sm: 'h-8 gap-1.5 px-3 text-sm',
+        md: 'control-height gap-2 px-4 text-sm',
+        lg: 'h-12 gap-2 px-6 text-base',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+      size: 'md',
+    },
+  },
+)
 
 /**
  * 버튼의 겉모습만 낸다 — 실제로는 링크인 자리(목록 화면의 신청 버튼)가 같은 옷을
@@ -34,12 +50,5 @@ export function buttonClass({
   size?: ButtonSize
   className?: string
 } = {}) {
-  return cn(
-    'inline-flex cursor-pointer items-center justify-center rounded-lg font-medium transition-colors',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600',
-    'disabled:cursor-not-allowed',
-    variants[variant],
-    sizes[size],
-    className,
-  )
+  return cn(buttonVariants({ variant, size }), className)
 }

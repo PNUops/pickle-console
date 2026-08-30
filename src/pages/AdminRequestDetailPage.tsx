@@ -8,7 +8,9 @@ import { canDecideRequest, isSysTier, operatesOrg } from '../auth/permissions'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
+  fetchAdminLlmKeys,
   type ApprovalContext,
+  type LlmKeyBrief,
   type RequestDetail,
 } from '../api/queries'
 import {
@@ -23,7 +25,8 @@ import {
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
   Modal,
-  PermissionNotice,
+  LlmKeyStatusBadge,
+  PageHeader,
   RequestStatusBadge,
   Spinner,
   Textarea,
@@ -39,6 +42,9 @@ import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
+import { effectiveLlmKeyStatus } from '../lib/status'
 
 interface Notice {
   variant: 'success' | 'warning' | 'danger'
@@ -46,6 +52,7 @@ interface Notice {
 }
 
 export function AdminRequestDetailPage() {
+  const { activeOrgId } = useAdminScope()
   const params = useParams()
   const requestId = params.requestId ?? ''
   const idValid = isUuid(requestId)
@@ -57,7 +64,7 @@ export function AdminRequestDetailPage() {
   const roleCanDecide = !!user && canDecideRequest(user.role)
 
   const request = useQuery({
-    queryKey: ['admin', 'requests', requestId],
+    queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null }],
     queryFn: () => fetchAdminRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
@@ -80,6 +87,16 @@ export function AdminRequestDetailPage() {
   }
 
   const data = request.data
+  if (activeOrgId != null && data.orgId !== activeOrgId) {
+    return (
+      <Alert variant="danger" title="선택한 관리 범위의 신청이 아닙니다">
+        현재 기관 범위에서는 이 신청을 볼 수 없습니다.{' '}
+        <Link to={adminPaths.requests(activeOrgId)} className="font-medium underline">
+          신청 목록으로 돌아가기
+        </Link>
+      </Alert>
+    )
+  }
   // 신청 내용·검토 결과·결정 폼의 종류별 부분은 전부 이 모듈이 답한다.
   const kind = requestKindView(data.type)
   const canDecide =
@@ -91,23 +108,22 @@ export function AdminRequestDetailPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
-        <Link to="/admin/requests" className="text-primary-700 hover:underline">
+        <Link to={adminPaths.requests(activeOrgId)} className="text-primary-700 hover:underline">
           ← 승인 대기
         </Link>
       </nav>
 
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-neutral-900">신청 상세</h1>
-          <RequestStatusBadge status={data.status} />
-        </div>
-        <p className="mt-1 text-sm text-neutral-500">
-          {formatDateTime(data.createdAt)} 제출 · 신청자 {data.requesterName} ·{' '}
-          {data.orgName}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="신청 검토"
+        title="신청 상세"
+        description={`${formatDateTime(data.createdAt)} 제출 · 신청자 ${data.requesterName} · ${data.orgName}`}
+        actions={<RequestStatusBadge status={data.status} />}
+      />
 
       {notice && <Alert variant={notice.variant}>{notice.message}</Alert>}
+      {data.type === 'LLM_API_KEY' && data.status === 'APPROVED' && (
+        <ApprovedLlmKeyLink requestId={data.id} orgId={data.orgId ?? undefined} />
+      )}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-6">
@@ -133,18 +149,33 @@ export function AdminRequestDetailPage() {
               onNotice={setNotice}
             />
           )}
-          {data.status === 'SUBMITTED' && !canDecide && (
-            <PermissionNotice>
-              {roleCanDecide
-                ? '이 기관에서는 열람 역할이므로 승인과 반려를 수행할 수 없습니다.'
-                : '승인과 반려는 기관 운영자, 기관 관리자, 시스템 관리자만 수행할 수 있습니다.'}
-            </PermissionNotice>
-          )}
         </div>
 
         <ApprovalContextPanel requestId={requestId} />
       </div>
     </div>
+  )
+}
+
+function ApprovedLlmKeyLink({ requestId, orgId }: { requestId: string; orgId?: string }) {
+  const { activeOrgId } = useAdminScope()
+  const key = useQuery({
+    queryKey: ['admin', 'llm-keys', 'request', requestId, { orgId: orgId ?? null }],
+    queryFn: async () => {
+      const page = await fetchAdminLlmKeys({ orgId, requestId, page: 0, size: 1 })
+      return page.content[0] ?? null
+    },
+  })
+  if (!key.data) return null
+  return (
+    <Alert variant="success" title="승인된 LLM API 키">
+      <Link
+        to={adminPaths.llmKeyDetail(key.data.id, activeOrgId)}
+        className="font-semibold underline underline-offset-2"
+      >
+        {key.data.name} 상세 보기
+      </Link>
+    </Alert>
   )
 }
 
@@ -423,8 +454,9 @@ function DecisionSection({
 /* ─── 승인 판단 참고 패널 ─── */
 
 function ApprovalContextPanel({ requestId }: { requestId: string }) {
+  const { activeOrgId } = useAdminScope()
   const context = useQuery({
-    queryKey: ['admin', 'requests', requestId, 'context'],
+    queryKey: ['admin', 'requests', requestId, 'context', { orgId: activeOrgId ?? null }],
     queryFn: () => fetchApprovalContext(requestId),
   })
 
@@ -444,15 +476,10 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
   }
 
   const data = context.data
+  const vm = data.type === 'VM' ? data.vm : null
+  const llmKey = data.type === 'LLM_API_KEY' ? data.llmKey : null
   return (
     <aside aria-label="승인 판단 참고 정보" className="space-y-4">
-      <Alert
-        variant={data.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}
-        title="판단 안내"
-      >
-        {data.guidance}
-      </Alert>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">신청자</CardTitle>
@@ -464,16 +491,6 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
           <p>
             승인 {data.applicant.approvedCount}회 · 반려 {data.applicant.rejectedCount}회
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">신청자 보유 리소스</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-neutral-700">
-          <VmBriefList vms={data.applicantResources.activeVms} />
-          <TotalsLine totals={data.applicantResources.totals} />
         </CardContent>
       </Card>
 
@@ -492,13 +509,16 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
               </li>
             ))}
           </ul>
-          <div className="border-t border-neutral-100 pt-2">
-            <p className="mb-1 text-xs font-medium text-neutral-500">워크스페이스 보유 VM</p>
-            <VmBriefList vms={data.workspace.activeVms} />
-            <TotalsLine totals={data.workspace.totals} />
-          </div>
         </CardContent>
       </Card>
+
+      {vm && <VmApprovalContext vm={vm} />}
+      {llmKey && <LlmKeyApprovalContext context={llmKey} />}
+      {!vm && !llmKey && (
+        <Alert variant="warning" title="종류별 참고 정보가 없습니다">
+          신청 종류와 일치하는 참고 정보가 없어 공통 정보만 표시합니다.
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -512,7 +532,15 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
               {data.history.map((item) => (
                 <li key={item.requestId} className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">지난 신청</span>
+                    <Link
+                      to={adminPaths.requestDetail(item.requestId, activeOrgId)}
+                      className="font-medium text-primary-700 hover:underline"
+                    >
+                      {item.resourceName}
+                    </Link>
+                    <Badge variant="neutral">
+                      {item.type === 'VM' ? '가상머신' : 'LLM API 키'}
+                    </Badge>
                     <RequestStatusBadge status={item.status} />
                   </div>
                   <p className="text-xs text-neutral-500">
@@ -526,15 +554,45 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
           )}
         </CardContent>
       </Card>
+    </aside>
+  )
+}
 
+function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
+  return (
+    <>
+      <Alert
+        variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}
+        title="가상머신 판단 안내"
+      >
+        {vm.guidance}
+      </Alert>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">기관 리소스 여유</CardTitle>
+          <CardTitle className="text-sm">신청자 보유 가상머신</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-neutral-700">
+          <VmBriefList vms={vm.applicantResources.activeVms} />
+          <TotalsLine totals={vm.applicantResources.totals} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">워크스페이스 보유 가상머신</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-neutral-700">
+          <VmBriefList vms={vm.workspaceResources.activeVms} />
+          <TotalsLine totals={vm.workspaceResources.totals} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">기관 가상머신 리소스 여유</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-neutral-700">
-          {data.orgHeadroom.warnings.length > 0 && (
+          {vm.orgHeadroom.warnings.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {data.orgHeadroom.warnings.map((warning) => (
+              {vm.orgHeadroom.warnings.map((warning) => (
                 <Badge key={warning} variant="danger">
                   {warning}
                 </Badge>
@@ -543,26 +601,73 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
           )}
           <RatioBar
             label="vCPU 할당"
-            valueLabel={`${data.orgHeadroom.allocated.vcpu} vCPU / ${data.orgHeadroom.capacity.cpuThreads} 스레드`}
-            ratio={data.orgHeadroom.vcpuOvercommitRatio}
+            valueLabel={`${vm.orgHeadroom.allocated.vcpu} vCPU / ${vm.orgHeadroom.capacity.cpuThreads} 스레드`}
+            ratio={vm.orgHeadroom.vcpuOvercommitRatio}
           />
           <RatioBar
             label="메모리 할당"
-            valueLabel={`${formatMemory(data.orgHeadroom.allocated.memoryMb)} / ${formatMemory(data.orgHeadroom.capacity.memoryMb)}`}
-            ratio={data.orgHeadroom.memoryUsageRatio}
+            valueLabel={`${formatMemory(vm.orgHeadroom.allocated.memoryMb)} / ${formatMemory(vm.orgHeadroom.capacity.memoryMb)}`}
+            ratio={vm.orgHeadroom.memoryUsageRatio}
           />
           <p className="text-xs text-neutral-500">
-            vCPU 오버커밋 ×{data.orgHeadroom.vcpuOvercommitRatio.toFixed(2)} · 메모리 사용률{' '}
-            {Math.round(data.orgHeadroom.memoryUsageRatio * 100)}% · 디스크 할당 합계{' '}
-            {data.orgHeadroom.allocated.diskGb} GiB
+            vCPU 오버커밋 ×{vm.orgHeadroom.vcpuOvercommitRatio.toFixed(2)} · 메모리 사용률{' '}
+            {Math.round(vm.orgHeadroom.memoryUsageRatio * 100)}% · 디스크 할당 합계{' '}
+            {vm.orgHeadroom.allocated.diskGb} GiB
           </p>
         </CardContent>
       </Card>
-    </aside>
+    </>
   )
 }
 
-function VmBriefList({ vms }: { vms: ApprovalContext['applicantResources']['activeVms'] }) {
+function LlmKeyApprovalContext({ context }: { context: NonNullable<ApprovalContext['llmKey']> }) {
+  return (
+    <>
+      <Alert variant="info" title="LLM API 키 판단 안내">
+        기존 키의 상태와 현재 한도를 확인하세요. LLM API 키에는 물리 리소스 용량 판단을 적용하지 않습니다.
+      </Alert>
+      <LlmKeyBriefCard title="신청자 보유 LLM API 키" keys={context.applicantKeys} />
+      <LlmKeyBriefCard title="워크스페이스 보유 LLM API 키" keys={context.workspaceKeys} />
+    </>
+  )
+}
+
+function LlmKeyBriefCard({ title, keys }: { title: string; keys: LlmKeyBrief[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {keys.length === 0 ? (
+          <p className="text-sm text-neutral-500">보유 중인 LLM API 키가 없습니다.</p>
+        ) : (
+          <ul className="space-y-3 text-sm">
+            {keys.map((key) => (
+              <li key={key.id} className="rounded-lg border border-neutral-100 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-neutral-900">{key.name}</span>
+                  <LlmKeyStatusBadge status={effectiveLlmKeyStatus(key.status, key.expiresAt)} />
+                </div>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {key.workspaceName} · RPM {limitText(key.rpm)} · TPM {limitText(key.tpm)} · 일일{' '}
+                  {limitText(key.dailyTokens)} · 동시 {limitText(key.concurrency)} · 금액{' '}
+                  {key.creditLimit === 0 ? '미부여' : `$${key.creditLimit.toLocaleString('ko-KR')}`}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function limitText(value: number | null | undefined): string {
+  return value == null ? '기본값' : value.toLocaleString('ko-KR')
+}
+
+function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applicantResources']['activeVms'] }) {
   if (vms.length === 0) {
     return <p className="text-neutral-500">보유 중인 VM이 없습니다.</p>
   }
@@ -584,7 +689,7 @@ function VmBriefList({ vms }: { vms: ApprovalContext['applicantResources']['acti
   )
 }
 
-function TotalsLine({ totals }: { totals: ApprovalContext['applicantResources']['totals'] }) {
+function TotalsLine({ totals }: { totals: NonNullable<ApprovalContext['vm']>['applicantResources']['totals'] }) {
   return (
     <p className="text-xs text-neutral-500">
       합계 {formatSpec(totals.vcpu, totals.memoryMb, totals.diskGb)}

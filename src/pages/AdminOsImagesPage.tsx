@@ -21,7 +21,6 @@ import {
   FormField,
   Input,
   Modal,
-  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -69,11 +68,6 @@ export function AdminOsImagesPage() {
         </p>
       </div>
 
-      {!isSysAdmin && (
-        <PermissionNotice>
-          OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       {message && <Alert variant="info">{message}</Alert>}
 
       <section className="space-y-3">
@@ -101,9 +95,11 @@ export function AdminOsImagesPage() {
                   <TH>노드 / VMID</TH>
                   <TH>최소 디스크</TH>
                   <TH>비고</TH>
-                  <TH>
-                    <span className="sr-only">작업</span>
-                  </TH>
+                  {isSysAdmin && (
+                    <TH>
+                      <span className="sr-only">작업</span>
+                    </TH>
+                  )}
                 </TR>
               </THead>
               <TBody>
@@ -125,16 +121,17 @@ export function AdminOsImagesPage() {
                     <TD className="max-w-xs truncate text-xs text-neutral-500">
                       {image.notes ?? '—'}
                     </TD>
-                    <TD className="text-right">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!isSysAdmin}
-                        onClick={() => setToggleTarget(image)}
-                      >
-                        {image.status === 'ACTIVE' ? '은퇴' : '되살리기'}
-                      </Button>
-                    </TD>
+                    {isSysAdmin && (
+                      <TD className="text-right">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setToggleTarget(image)}
+                        >
+                          {image.status === 'ACTIVE' ? '은퇴' : '되살리기'}
+                        </Button>
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>
@@ -152,9 +149,11 @@ export function AdminOsImagesPage() {
               바뀝니다.
             </p>
           </div>
-          <Button size="sm" disabled={!isSysAdmin} onClick={() => setFlavorCreateOpen(true)}>
-            프리셋 추가
-          </Button>
+          {isSysAdmin && (
+            <Button size="sm" onClick={() => setFlavorCreateOpen(true)}>
+              프리셋 추가
+            </Button>
+          )}
         </div>
 
         {flavors.isPending && (
@@ -178,9 +177,11 @@ export function AdminOsImagesPage() {
                   <TH>사양</TH>
                   <TH>상태</TH>
                   <TH>비고</TH>
-                  <TH>
-                    <span className="sr-only">작업</span>
-                  </TH>
+                  {isSysAdmin && (
+                    <TH>
+                      <span className="sr-only">작업</span>
+                    </TH>
+                  )}
                 </TR>
               </THead>
               <TBody>
@@ -199,24 +200,24 @@ export function AdminOsImagesPage() {
                     <TD className="max-w-xs truncate text-xs text-neutral-500">
                       {flavor.notes ?? '—'}
                     </TD>
-                    <TD className="space-x-2 text-right whitespace-nowrap">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!isSysAdmin}
-                        onClick={() => setFlavorEditTarget(flavor)}
-                      >
-                        수정
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!isSysAdmin}
-                        onClick={() => setFlavorToggleTarget(flavor)}
-                      >
-                        {flavor.status === 'ACTIVE' ? '은퇴' : '되살리기'}
-                      </Button>
-                    </TD>
+                    {isSysAdmin && (
+                      <TD className="space-x-2 text-right whitespace-nowrap">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setFlavorEditTarget(flavor)}
+                        >
+                          수정
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setFlavorToggleTarget(flavor)}
+                        >
+                          {flavor.status === 'ACTIVE' ? '은퇴' : '되살리기'}
+                        </Button>
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Route, Routes, useLocation } from 'react-router'
 import { RequireRole } from './auth/RequireRole'
-import { ErrorBoundary } from './components/ui'
+import { ErrorBoundary, LoadingBlock } from './components/ui'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ResourcesPage } from './pages/ResourcesPage'
 import { ScopeProvider } from './lib/scope'
@@ -29,6 +29,8 @@ import { AdminWorkspacesPage } from './pages/AdminWorkspacesPage'
 import { AdminOsImagesPage } from './pages/AdminOsImagesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
+import { AdminLlmKeyDetailPage } from './pages/AdminLlmKeyDetailPage'
+import { AdminLlmKeysPage } from './pages/AdminLlmKeysPage'
 import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { DocsPage } from './pages/DocsPage'
@@ -56,12 +58,21 @@ import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { VmAccessPage } from './pages/VmAccessPage'
 import { VmDetailPage } from './pages/VmDetailPage'
 import { VmsPage } from './pages/VmsPage'
+import { COMPONENT_GALLERY_ROUTE } from './dev/gallery'
+import { AdminScopeProvider } from './lib/admin-scope'
+import { DocumentTitle } from './lib/document-title'
 
 // 랜딩은 motion(+lazy 3D)을 끌어오므로 통째로 코드 분할한다 — 콘솔만 쓰는
 // 사용자의 진입 번들을 키우지 않는다. 폴백은 히어로와 같은 다크 배경(플래시 방지).
 const LandingPage = lazy(() =>
   import('./pages/landing/LandingPage').then((m) => ({ default: m.LandingPage })),
 )
+
+const ComponentGallery = import.meta.env.DEV
+  ? lazy(() =>
+      import('./dev/ComponentGallery').then((module) => ({ default: module.ComponentGallery })),
+    )
+  : null
 
 // SPA 내비게이션은 스크롤을 리셋하지 않는다 — 긴 랜딩 하단에서 회원가입/로그인으로
 // 이동하면 이전 오프셋이 남으므로 경로 변경 시 최상단으로 복귀시킨다.
@@ -77,8 +88,19 @@ function ScrollToTop() {
 function App() {
   return (
     <>
+      <DocumentTitle />
       <ScrollToTop />
       <Routes>
+      {ComponentGallery && (
+        <Route
+          path={COMPONENT_GALLERY_ROUTE}
+          element={
+            <Suspense fallback={<LoadingBlock label="컴포넌트 gallery 불러오는 중" />}>
+              <ComponentGallery />
+            </Suspense>
+          }
+        />
+      )}
       {/* 랜딩은 자체 다크 헤더/푸터를 가진 full-bleed 페이지 — PublicLayout 밖에서 렌더. */}
       <Route
         index
@@ -165,7 +187,9 @@ function App() {
               'SYS_ADMIN',
             ]}
           >
-            <AdminLayout />
+            <AdminScopeProvider>
+              <AdminLayout />
+            </AdminScopeProvider>
           </RequireRole>
         }
       >
@@ -174,6 +198,8 @@ function App() {
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
         <Route path="vms/:vmId" element={<AdminVmDetailPage />} />
+        <Route path="llm/keys" element={<AdminLlmKeysPage />} />
+        <Route path="llm/keys/:keyId" element={<AdminLlmKeyDetailPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="workspaces" element={<AdminWorkspacesPage />} />

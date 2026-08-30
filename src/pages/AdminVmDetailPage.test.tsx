@@ -24,8 +24,8 @@ describe('관리자 VM 상세', () => {
     expect(screen.getByText('10.10.0.56')).toBeInTheDocument()
     expect(screen.getByText('알고리즘 스터디')).toBeInTheDocument()
 
-    // RUNNING: 시작만 비활성, 종료·재부팅·강제 종료는 활성
-    expect(screen.getByRole('button', { name: '시작' })).toBeDisabled()
+    // RUNNING: 상태상 가능한 액션만 보인다.
+    expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '종료' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '재부팅' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '강제 종료' })).toBeEnabled()
@@ -51,8 +51,22 @@ describe('관리자 VM 상세', () => {
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(screen.getByRole('button', { name: '시작' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '종료' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '강제 종료' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
+  })
+
+  test('SYS 기관 scope 밖의 VM deep link는 작업 action을 렌더하지 않는다', async () => {
+    renderAsSysAdmin(`/admin/vms/${uuid(61)}?org=${uuid(1)}`)
+
+    expect(
+      await screen.findByText('선택한 관리 범위의 가상머신이 아닙니다'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'ai-train' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '가상머신 목록으로 돌아가기' })).toHaveAttribute(
+      'href',
+      `/admin/vms?org=${uuid(1)}`,
+    )
   })
 
   test('이벤트 탭은 이력을 최신순으로 보여준다', async () => {
@@ -108,31 +122,22 @@ describe('관리자 VM 상세', () => {
     expect(within(unknownRow).getByText('화면 미기록')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 차단 토글이 비활성+사유로 보이고 전원 제어는 열려 있다', async () => {
+  test('ORG_ADMIN에게는 차단 토글이 보이지 않고 전원 제어는 열린다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('button', { name: '종료' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '접속 차단' })).toBeDisabled()
-    expect(
-      screen.getByText('차단 토글은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '접속 차단' })).not.toBeInTheDocument()
   })
 
-  test('ORG_VIEWER에게는 전원 제어와 기간 연장이 비활성+사유로 보인다', async () => {
+  test('ORG_VIEWER에게는 전원 제어와 기간 연장이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
     renderApp(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    // RUNNING이라도 열람 역할에는 모든 전원 버튼이 닫혀 있고 사유가 붙는다.
-    expect(screen.getByRole('button', { name: '종료' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '기간 연장' })).toBeDisabled()
-    expect(
-      screen.getByText(/전원 제어는 이 VM의 기관에서 운영자 이상 역할을 가진/),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/기간 연장은 이 VM의 기관에서 운영자 이상 역할을 가진/),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기간 연장' })).not.toBeInTheDocument()
+    expect(screen.queryByText('전원 제어 (관리자 개입)')).not.toBeInTheDocument()
   })
 })

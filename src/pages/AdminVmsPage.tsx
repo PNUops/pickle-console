@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cancelScheduledVmDeletion,
   fetchAdminWorkspaces,
@@ -14,10 +14,9 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { canManageVmDeletion, canOperateVm, isSysAdminOnly } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
-import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
@@ -28,11 +27,10 @@ import {
   FormField,
   Input,
   Pagination,
-  PermissionNotice,
   Select,
   SortableTH,
   Spinner,
-  Table,
+  DataTable,
   TBody,
   TD,
   Textarea,
@@ -47,6 +45,8 @@ import { formatDateTime, formatSpec, isShortNotice, minScheduleDate } from '../l
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { VM_STATUS_LABELS } from '../lib/status'
 import { isUuid } from '../lib/validation'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 /** 정렬 가능한 컬럼 키 (계약 sort 화이트리스트의 축). */
 type SortKey = 'name' | 'endDate' | 'createdAt'
@@ -71,19 +71,20 @@ function idParam(value: string | null): string | undefined {
 
 export function AdminVmsPage() {
   const { user } = useAuth()
+  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   const role = user?.role
+  const effectiveRole = tier === 'org' ? activeOrgRole : role
   // 조회 범위: 시스템 계층은 전 기관, 기관 계층은 역할을 보유한 기관(계약
   // v0.46.0). 삭제 라이프사이클(예약과 취소)은 대상 VM 기관의 ORG_ADMIN과
   // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
-  const isSysAdmin = !!role && isSysTier(role)
-  const canDelete = !!role && canManageVmDeletion(role)
-  const canForceDelete = !!role && isSysAdminOnly(role)
+  const canDelete = !!effectiveRole && canManageVmDeletion(effectiveRole)
+  const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
+  const canForceDelete = !!effectiveRole && isSysAdminOnly(effectiveRole)
   // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
   // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
   // 되돌려 쓰지 않는다(의도된 절단).
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<VmStatus | undefined>(undefined)
-  const [orgId, setOrgId] = useState<string | undefined>(() => idParam(searchParams.get('orgId')))
   const [workspaceId, setWorkspaceId] = useState<string | undefined>(() =>
     idParam(searchParams.get('workspaceId')),
   )
@@ -91,6 +92,13 @@ export function AdminVmsPage() {
   const [sort, setSort] = useState<AdminVmSort | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const previousOrgId = useRef(activeOrgId)
+  useEffect(() => {
+    if (previousOrgId.current === activeOrgId) return
+    previousOrgId.current = activeOrgId
+    setWorkspaceId(undefined)
+    setPage(0)
+  }, [activeOrgId])
   // 액션 결과는 (vmId, text)로 페이지가 소유한다: 그 VM의 드로어가 열려 있으면
   // 드로어 안에, 액션의 결과로 VM이 필터된 목록을 떠나 드로어가 닫히면(취소로
   // 상태 전환·강제 삭제 등) 페이지 알림으로 — 어느 경로에서도 유실되지 않는다.
@@ -112,7 +120,7 @@ export function AdminVmsPage() {
       'vms',
       {
         status: status ?? null,
-        orgId: orgId ?? null,
+        orgId: activeOrgId ?? null,
         workspaceId: workspaceId ?? null,
         q: q ?? null,
         sort: sort ?? null,
@@ -120,8 +128,8 @@ export function AdminVmsPage() {
         size: PAGE_SIZE,
       },
     ],
-    queryFn: () => fetchAdminVms({ status, orgId, workspaceId, q, sort, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+    queryFn: () =>
+      fetchAdminVms({ status, orgId: activeOrgId, workspaceId, q, sort, page, size: PAGE_SIZE }),
   })
 
   const sortDirection = (key: SortKey) =>
@@ -130,12 +138,11 @@ export function AdminVmsPage() {
     setSort(next === null ? undefined : next === 'asc' ? key : (`-${key}` as AdminVmSort))
     setPage(0)
   }
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-  // 기관을 고르지 않으면 조회 범위 전체, 고르면 그 기관의 워크스페이스로 좁혀진다.
+  // active scope가 있으면 해당 기관의 워크스페이스만 2차 필터로 제공한다.
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: orgId ?? null }],
-    queryFn: () => fetchAdminWorkspaces(orgId !== undefined ? { orgId } : {}),
+    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null }],
+    queryFn: () =>
+      fetchAdminWorkspaces(activeOrgId !== undefined ? { orgId: activeOrgId } : {}),
   })
 
   const selected = vms.data?.content.find((vm) => vm.id === selectedId) ?? null
@@ -145,7 +152,7 @@ export function AdminVmsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '우리 기관'} VM을 조회하고 일반 삭제 접수와 취소 등
+          {activeOrg?.name ?? '플랫폼 전체'} 가상머신을 조회하고 삭제 예약과 취소 등
           관리 작업을 수행합니다.
         </p>
       </div>
@@ -188,28 +195,6 @@ export function AdminVmsPage() {
               setPage(0)
             }}
           />
-          {orgOptions.length > 1 && (
-            <label className="flex items-center gap-2 text-sm text-neutral-600">
-              기관
-              <Select
-                aria-label="기관 필터"
-                className="w-56"
-                value={orgId ?? ''}
-                onChange={(event) => {
-                  setOrgId(event.target.value || undefined)
-                  setWorkspaceId(undefined) // 기관이 바뀌면 이전 기관의 워크스페이스 선택은 무효
-                  setPage(0)
-                }}
-              >
-                <option value="">전체 기관</option>
-                {orgOptions.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          )}
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             워크스페이스
             <Select
@@ -247,8 +232,7 @@ export function AdminVmsPage() {
       )}
       {vms.isSuccess && vms.data.content.length > 0 && (
         <>
-          <Card>
-            <Table>
+          <DataTable caption="관리자 가상머신 목록">
               <THead>
                 <TR>
                   <SortableTH direction={sortDirection('name')} onSort={onSort('name')}>
@@ -318,8 +302,7 @@ export function AdminVmsPage() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
-          </Card>
+          </DataTable>
           <Pagination
             page={vms.data.page}
             totalPages={vms.data.totalPages}
@@ -338,6 +321,7 @@ export function AdminVmsPage() {
             key={selected.id}
             vm={selected}
             canDelete={canDelete}
+            canOperate={canOperate}
             canForceDelete={canForceDelete}
             notice={feedback?.vmId === selected.id ? feedback.text : null}
             onDone={(text) => setFeedback({ vmId: selected.id, text })}
@@ -362,6 +346,7 @@ export function AdminVmsPage() {
 function VmDrawerContent({
   vm,
   canDelete,
+  canOperate,
   canForceDelete,
   notice,
   onDone,
@@ -370,6 +355,7 @@ function VmDrawerContent({
 }: {
   vm: VmSummary
   canDelete: boolean
+  canOperate: boolean
   canForceDelete: boolean
   /** 이 VM의 액션 결과 — 페이지가 소유하고 드로어가 열려 있는 동안 여기 표시. */
   notice: string | null
@@ -377,6 +363,7 @@ function VmDrawerContent({
   onForceDeleted: (message: string) => void
   onFilterWorkspace: (workspaceId: string) => void
 }) {
+  const { activeOrgId } = useAdminScope()
   const [extendOpen, setExtendOpen] = useState(false)
   return (
     <div className="space-y-6">
@@ -389,7 +376,7 @@ function VmDrawerContent({
       </div>
       {notice && <Alert variant="success">{notice}</Alert>}
       <Link
-        to={`/admin/vms/${vm.id}`}
+        to={adminPaths.vmDetail(vm.id, activeOrgId)}
         className="inline-block text-sm text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
       >
         상세 페이지로 (이벤트·전원 제어)
@@ -419,30 +406,54 @@ function VmDrawerContent({
         <Field label="생성일" value={formatDateTime(vm.createdAt)} />
         {vm.statusDetail && <Field label="상태 상세" value={vm.statusDetail} />}
       </dl>
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
-        <p className="text-sm text-neutral-500">
-          사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
-        </p>
-        <Button variant="secondary" onClick={() => setExtendOpen(true)}>
-          기간 연장
-        </Button>
-        {extendOpen && (
-          <ExtendVmPeriodModal
-            vm={vm}
-            onClose={() => setExtendOpen(false)}
-            onDone={(text) => {
-              setExtendOpen(false)
-              onDone(text)
-            }}
-          />
-        )}
-      </section>
-      <VmGatewayBlockSection vm={vm} canManage={canForceDelete} onDone={onDone} />
-      <ScheduleDeleteForm vm={vm} canManage={canDelete} onDone={onDone} />
-      <CancelDeleteAction vm={vm} canManage={canDelete} onDone={onDone} />
-      <ForceDeleteAction vm={vm} canManage={canForceDelete} onDone={onForceDeleted} />
+      {canOperate && vm.deletion == null && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
+          <p className="text-sm text-neutral-500">
+            사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+          </p>
+          <Button variant="secondary" onClick={() => setExtendOpen(true)}>
+            기간 연장
+          </Button>
+          {extendOpen && (
+            <ExtendVmPeriodModal
+              vm={vm}
+              onClose={() => setExtendOpen(false)}
+              onDone={(text) => {
+                setExtendOpen(false)
+                onDone(text)
+              }}
+            />
+          )}
+        </section>
+      )}
+      {canForceDelete && vm.status !== 'DELETED' && (
+        <VmGatewayBlockSection vm={vm} canManage onDone={onDone} />
+      )}
+      {vm.deletion && <DeletionStatus deletion={vm.deletion} />}
+      {canDelete && vm.deletion == null && vm.status !== 'DELETED' && vm.status !== 'DELETING' && (
+        <ScheduleDeleteForm vm={vm} onDone={onDone} />
+      )}
+      {canDelete && vm.deletion?.cancelable === true && (
+        <CancelDeleteAction vm={vm} onDone={onDone} />
+      )}
+      {canForceDelete && vm.status !== 'DELETED' && (
+        <ForceDeleteAction vm={vm} onDone={onForceDeleted} />
+      )}
     </div>
+  )
+}
+
+function DeletionStatus({ deletion }: { deletion: NonNullable<VmSummary['deletion']> }) {
+  return (
+    <Alert
+      variant={deletion.cancelable ? 'warning' : 'danger'}
+      title={deletion.cancelable ? '삭제 예약됨' : '삭제가 진행 중입니다'}
+    >
+      <p>{formatDateTime(deletion.scheduledFor)} 파기 예정</p>
+      {deletion.reason && <p>사유: {deletion.reason}</p>}
+      {!deletion.cancelable && <p>이미 파기가 시작됐거나 강제 삭제라 취소할 수 없습니다.</p>}
+    </Alert>
   )
 }
 
@@ -458,11 +469,9 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function ScheduleDeleteForm({
   vm,
-  canManage,
   onDone,
 }: {
   vm: VmSummary
-  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -483,12 +492,12 @@ function ScheduleDeleteForm({
       setFieldErrors({})
       setDate('')
       setReason('')
-      onDone('일반 삭제를 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
+      onDone('삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await invalidateResourceLists(queryClient)
     },
     onError: (err) => {
-      const apiError = toApiError(err, '일반 삭제를 접수하지 못했습니다.')
+      const apiError = toApiError(err, '삭제 예약을 접수하지 못했습니다.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -511,12 +520,7 @@ function ScheduleDeleteForm({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-neutral-800">일반 삭제 접수</h3>
-      {!canManage && (
-        <PermissionNotice>
-          일반 삭제 접수·취소는 기관 관리자·시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
+      <h3 className="text-sm font-semibold text-neutral-800">삭제 예약</h3>
       <p className="text-sm text-neutral-500">
         파기 예정일(미래 시각)을 지정해 접수하며, 접수 즉시 사용자에게 사유가 포함된
         통보 메일이 발송됩니다. 파기가 실제로 시작되기 전까지는 관리자가 취소할 수
@@ -537,7 +541,6 @@ function ScheduleDeleteForm({
             type="date"
             min={minScheduleDate()}
             value={date}
-            disabled={!canManage}
             onChange={(event) => setDate(event.target.value)}
             className="w-44"
           />
@@ -551,7 +554,6 @@ function ScheduleDeleteForm({
           <Textarea
             rows={2}
             value={reason}
-            disabled={!canManage}
             onChange={(event) => setReason(event.target.value)}
             placeholder="사용자 통보 메일에 그대로 포함됩니다."
           />
@@ -560,10 +562,9 @@ function ScheduleDeleteForm({
           type="submit"
           variant="danger"
           loading={schedule.isPending}
-          disabled={!canManage}
           className="mt-6"
         >
-          일반 삭제 접수
+          삭제 예약
         </Button>
       </form>
     </section>
@@ -572,11 +573,9 @@ function ScheduleDeleteForm({
 
 function CancelDeleteAction({
   vm,
-  canManage,
   onDone,
 }: {
   vm: VmSummary
-  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -605,7 +604,6 @@ function CancelDeleteAction({
       <Button
         variant="secondary"
         loading={cancel.isPending}
-        disabled={!canManage}
         onClick={() => cancel.mutate()}
       >
         삭제 취소
@@ -616,11 +614,9 @@ function CancelDeleteAction({
 
 function ForceDeleteAction({
   vm,
-  canManage,
   onDone,
 }: {
   vm: VmSummary
-  canManage: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -648,9 +644,6 @@ function ForceDeleteAction({
   return (
     <section className="space-y-3 rounded-lg border border-danger-200 p-4">
       <h3 className="text-sm font-semibold text-danger-700">강제 삭제</h3>
-      {!canManage && (
-        <PermissionNotice>강제 삭제는 시스템 관리자만 수행할 수 있습니다.</PermissionNotice>
-      )}
       <p className="text-sm text-neutral-500">
         보안 사고 등 비상 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
         없습니다.
@@ -658,7 +651,6 @@ function ForceDeleteAction({
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button
         variant="danger"
-        disabled={!canManage}
         onClick={() => {
           setError(null)
           setOpen(true)

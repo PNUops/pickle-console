@@ -69,7 +69,12 @@ describe('사이드바 리소스 목록', () => {
     ]
     for (const label of planned) {
       expect(within(nav).queryByRole('link', { name: label })).not.toBeInTheDocument()
-      expect(within(nav).getByText(label)).toHaveAttribute('aria-disabled', 'true')
+      const text = within(nav).getByText(label)
+      const item = text.closest('[aria-disabled="true"]')
+      expect(item).not.toBeNull()
+      expect(item).not.toHaveClass('whitespace-nowrap')
+      expect(text).toHaveClass('min-w-0', 'flex-1')
+      expect(within(item as HTMLElement).getByText('준비 중')).toHaveClass('shrink-0')
     }
     expect(within(nav).getAllByText('준비 중')).toHaveLength(7)
   })
@@ -93,6 +98,19 @@ describe('사이드바 리소스 목록', () => {
       `/console/workspaces/${uuid(15)}`,
     )
     expect(within(nav).queryByRole('link', { name: '내 워크스페이스' })).not.toBeInTheDocument()
+  })
+})
+
+describe('셸 정보 밀도', () => {
+  test('사용자 console은 comfortable, 관리자 console은 compact density를 쓴다', async () => {
+    renderConsole()
+    const consoleNav = await screen.findByRole('navigation', { name: '콘솔 메뉴' })
+    expect(consoleNav.closest('[data-density]')).toHaveAttribute('data-density', 'comfortable')
+
+    server.use(refreshSuccessHandler('access-sys-admin'))
+    renderApp('/admin')
+    const adminNav = await screen.findByRole('navigation', { name: '관리자 메뉴' })
+    expect(adminNav.closest('[data-density]')).toHaveAttribute('data-density', 'compact')
   })
 })
 

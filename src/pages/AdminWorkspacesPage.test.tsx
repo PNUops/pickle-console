@@ -19,7 +19,7 @@ describe('관리자 워크스페이스 관리', () => {
     const row = (await screen.findByText('캡스톤 3조')).closest('tr')!
     expect(within(row).getByText('4')).toBeInTheDocument()
     expect(screen.getByText('AI 동아리')).toBeInTheDocument()
-    expect(screen.getByLabelText('기관 필터')).toBeInTheDocument()
+    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue('')
   })
 
   test('상세 드로어는 비활성·탈퇴 구성원까지 상태와 함께 보여준다', async () => {

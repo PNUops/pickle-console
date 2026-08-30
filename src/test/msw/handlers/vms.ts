@@ -852,11 +852,13 @@ export const invalidVmStateProblem = (instance: string, detail: string) =>
 export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
   const {
     id, name, hostname, status, vcpu, memoryMb, diskGb, workspaceId, workspaceName,
-    requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
+    orgId, orgName, requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt,
+    deletion, createdAt,
   } = vm
   return {
     id, name, hostname, status, vcpu, memoryMb, diskGb, workspaceId, workspaceName,
-    requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt, createdAt,
+    orgId, orgName, requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt,
+    deletion, createdAt,
     accessLimited: false, ownerNames: [], accessManageAllowed: vm.accessManageAllowed,
   }
 }
@@ -872,7 +874,8 @@ export function toRestrictedVmSummary(
     id, name, status, workspaceId, workspaceName, createdAt,
     hostname: null, vcpu: null, memoryMb: null, diskGb: null, requestId: null,
     statusDetail: null, sshGatewayBlocked: null, endDate: null, expiryStoppedAt: null,
-    orgName: null, accessLimited: true, ownerNames, accessManageAllowed,
+    orgId: null, orgName: null, deletion: null,
+    accessLimited: true, ownerNames, accessManageAllowed,
   }
 }
 

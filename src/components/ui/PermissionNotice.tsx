@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 
 /**
- * 권한이 없어 비활성화된 액션 옆에 사유를 밝히는 안내 문구. 액션 자체를
- * 숨기면 기능의 존재를 알 수 없으므로, 보이되 비활성 + 이 문구가 관례다.
+ * 사용자 콘솔에서 권한 부족의 이유를 설명하는 안내 문구. 같은 워크스페이스
+ * 안에서 더 높은 리소스 등급을 받을 수 있는 사용자에게만 기능의 존재와 차단
+ * 이유를 함께 보여 준다. 관리자 콘솔은 수행할 수 없는 액션을 렌더하지 않는다.
  */
 export function PermissionNotice({ children }: { children: ReactNode }) {
   return (

@@ -16,6 +16,7 @@ import {
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { adminLlmListQueries } from '../test/msw/handlers/llm-keys'
 
 function renderDetail(requestId: string) {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -58,7 +59,10 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     expect(within(panel).getByText('캡스톤 3조')).toBeInTheDocument()
     expect(within(panel).getByText('김철수')).toBeInTheDocument()
     // 4) 신청 이력
-    expect(within(panel).getByText('지난 신청')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: '이전 개발 VM' })).toHaveAttribute(
+      'href',
+      `/admin/requests/${uuid(88)}?org=${uuid(1)}`,
+    )
     expect(within(panel).getByText('소규모 개발용으로 승인')).toBeInTheDocument()
     // 5) 기관 리소스 여유
     expect(within(panel).getByText('34 vCPU / 40 스레드')).toBeInTheDocument()
@@ -80,6 +84,45 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     expect(
       within(panel).getByText('메모리 사용률이 임계값(85%)을 초과했습니다'),
     ).toBeInTheDocument()
+  })
+
+  test('SYS scope deep link도 선택한 기관 밖의 신청을 렌더하지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/requests/${uuid(204)}?org=${uuid(1)}`)
+
+    expect(
+      await screen.findByText('선택한 관리 범위의 신청이 아닙니다'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '신청 상세' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '신청 목록으로 돌아가기' })).toHaveAttribute(
+      'href',
+      `/admin/requests?org=${uuid(1)}`,
+    )
+  })
+
+  test('LLM context는 공통 정보와 기존 키만 표시하고 물리 headroom은 표시하지 않는다', async () => {
+    renderDetail(uuid(205))
+
+    const panel = await screen.findByRole('complementary', {
+      name: '승인 판단 참고 정보',
+    })
+    expect(within(panel).getByText('example@pusan.ac.kr')).toBeInTheDocument()
+    expect(within(panel).getByText('김철수')).toBeInTheDocument()
+    expect(within(panel).getByText('active-admin-key')).toBeInTheDocument()
+    expect(within(panel).getByText('pending-admin-key')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: 'previous-chatbot-key' })).toHaveAttribute(
+      'href',
+      `/admin/requests/${uuid(90)}?org=${uuid(1)}`,
+    )
+    expect(within(panel).queryByText(/물리 용량 경고/)).not.toBeInTheDocument()
+    expect(within(panel).queryByText(/999 vCPU/)).not.toBeInTheDocument()
+    expect(within(panel).queryByRole('meter')).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'pending-admin-key 상세 보기' })).toHaveAttribute(
+      'href',
+      `/admin/llm/keys/${uuid(170)}?org=${uuid(1)}`,
+    )
+    expect(adminLlmListQueries.some((query) => query.includes(`requestId=${uuid(205)}`))).toBe(true)
+    expect(adminLlmListQueries.some((query) => query.includes('size=100'))).toBe(false)
   })
 
   test('참고 정보를 불러오지 못해도 결정 폼은 계속 쓸 수 있다', async () => {
@@ -275,16 +318,12 @@ describe('반려 폼', () => {
 })
 
 describe('열람 역할', () => {
-  test('ORG_VIEWER에게는 결정 폼 대신 사유가 보인다', async () => {
+  test('ORG_VIEWER에게는 결정 폼이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
     renderApp(`/admin/requests/${uuid(201)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument()
-    expect(
-      await screen.findByText(
-        '승인과 반려는 기관 운영자, 기관 관리자, 시스템 관리자만 수행할 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '반려하기' })).not.toBeInTheDocument()
   })
 })

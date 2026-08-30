@@ -24,7 +24,6 @@ import {
   Card,
   Modal,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TabPanel,
@@ -39,6 +38,8 @@ import {
 import { formatDateTime, formatSpec } from '../lib/format'
 import { isUuid } from '../lib/validation'
 import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/status'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -51,6 +52,7 @@ const TABS = [
  * 한정 — 서버 강제), 열람 역할은 조회만, 차단 토글은 SYS_ADMIN.
  */
 export function AdminVmDetailPage() {
+  const { activeOrgId } = useAdminScope()
   const { vmId: vmIdParam } = useParams()
   const vmId = vmIdParam ?? ''
   const idValid = isUuid(vmId)
@@ -63,7 +65,7 @@ export function AdminVmDetailPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const detail = useQuery({
-    queryKey: ['admin', 'vms', 'detail', vmId],
+    queryKey: ['admin', 'vms', 'detail', vmId, { orgId: activeOrgId ?? null }],
     queryFn: () => fetchAdminVm(vmId),
     enabled: idValid,
   })
@@ -83,6 +85,16 @@ export function AdminVmDetailPage() {
   }
 
   const vm = detail.data
+  if (activeOrgId != null && vm.orgId !== activeOrgId) {
+    return (
+      <Alert variant="danger" title="선택한 관리 범위의 가상머신이 아닙니다">
+        현재 기관 범위에서는 이 가상머신을 볼 수 없습니다.{' '}
+        <Link to={adminPaths.vms(activeOrgId)} className="font-medium underline">
+          가상머신 목록으로 돌아가기
+        </Link>
+      </Alert>
+    )
+  }
   // 역할이 닿아도 이 VM의 기관에서 행위할 수 있어야 한다: 열람 역할로만 보이는
   // 기관의 VM에 전원이나 기간을 건드리면 API가 404로 거부한다.
   const canOperate =
@@ -92,7 +104,7 @@ export function AdminVmDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/admin/vms" className="text-sm text-primary-700 hover:underline">
+        <Link to={adminPaths.vms(activeOrgId)} className="text-sm text-primary-700 hover:underline">
           ← VM 관리
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -109,7 +121,12 @@ export function AdminVmDetailPage() {
         aria-label="VM 상세 탭"
         tabs={TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'overview') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
@@ -122,7 +139,7 @@ export function AdminVmDetailPage() {
               <dd className="font-medium text-neutral-900">
                 {vm.workspaceName}{' '}
                 <Link
-                  to={`/admin/vms?workspaceId=${vm.workspaceId}`}
+                  to={adminPaths.vms(activeOrgId, vm.workspaceId)}
                   className="text-sm font-normal text-primary-700 hover:underline"
                 >
                   VM 보기
@@ -142,9 +159,14 @@ export function AdminVmDetailPage() {
           </dl>
         </Card>
 
-        <PowerSection vm={vm} canOperate={canOperate} onDone={setMessage} />
-        <PeriodSection vm={vm} canOperate={canOperate} onDone={setMessage} />
-        <VmGatewayBlockSection vm={vm} canManage={isSysAdmin} onDone={setMessage} />
+        {canOperate && <PowerSection vm={vm} onDone={setMessage} />}
+        {canOperate &&
+          vm.status !== 'DELETED' &&
+          vm.status !== 'DELETING' &&
+          vm.deletion == null && <PeriodSection vm={vm} onDone={setMessage} />}
+        {isSysAdmin && vm.status !== 'DELETED' && (
+          <VmGatewayBlockSection vm={vm} canManage onDone={setMessage} />
+        )}
       </TabPanel>
 
       <TabPanel id="events" active={activeTab === 'events'} className="space-y-4">
@@ -211,11 +233,9 @@ const POWER_ACTIONS: {
 
 function PowerSection({
   vm,
-  canOperate,
   onDone,
 }: {
   vm: VmDetail
-  canOperate: boolean
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -238,6 +258,9 @@ function PowerSection({
     },
   })
 
+  const availableActions = POWER_ACTIONS.filter((action) => action.enabledFor(vm.status))
+  if (availableActions.length === 0) return null
+
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">전원 제어 (관리자 개입)</h3>
@@ -247,23 +270,16 @@ function PowerSection({
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="flex flex-wrap gap-2">
-        {POWER_ACTIONS.map((action) => (
+        {availableActions.map((action) => (
           <Button
             key={action.key}
             variant={action.variant}
-            disabled={!canOperate || !action.enabledFor(vm.status)}
             onClick={() => setConfirmTarget(action)}
           >
             {action.label}
           </Button>
         ))}
       </div>
-      {!canOperate && (
-        <PermissionNotice>
-          전원 제어는 이 VM의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
-          운영자, 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       <Modal
         open={confirmTarget !== null}
         onClose={() => setConfirmTarget(null)}
@@ -293,11 +309,9 @@ function PowerSection({
 
 function PeriodSection({
   vm,
-  canOperate,
   onDone,
 }: {
   vm: VmDetail
-  canOperate: boolean
   onDone: (message: string) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -307,15 +321,9 @@ function PeriodSection({
       <p className="text-sm text-neutral-500">
         사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
       </p>
-      <Button variant="secondary" disabled={!canOperate} onClick={() => setOpen(true)}>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
         기간 연장
       </Button>
-      {!canOperate && (
-        <PermissionNotice>
-          기간 연장은 이 VM의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
-          운영자, 시스템 관리자만 수행할 수 있습니다.
-        </PermissionNotice>
-      )}
       {open && (
         <ExtendVmPeriodModal
           vm={vm}

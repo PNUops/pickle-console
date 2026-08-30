@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminCertificates,
   type CertificateStatus,
@@ -21,7 +21,6 @@ import {
 } from './ui'
 import { formatDateTime } from '../lib/format'
 import { CERTIFICATE_KIND_LABELS, CERTIFICATE_STATUS_LABELS } from '../lib/status'
-import { useOrgOptions } from '../lib/use-org-options'
 import { FilterBar } from './FilterBar'
 
 const PAGE_SIZE = 20
@@ -37,9 +36,8 @@ const STATUS_TABS: { label: string; status: CertificateStatus | undefined }[] = 
 ]
 
 /** 인증서 만료·발급 상태 — 공개 서비스 화면의 인증서 탭 (만료 임박 일괄 점검 축). */
-export function CertificatesSection() {
+export function CertificatesSection({ orgId }: { orgId?: string }) {
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [expiringSoon, setExpiringSoon] = useState(false)
   const [page, setPage] = useState(0)
 
@@ -52,11 +50,7 @@ export function CertificatesSection() {
       { status: status ?? null, orgId: orgId ?? null, expiringInDays: expiringInDays ?? null, page },
     ],
     queryFn: () => fetchAdminCertificates({ status, orgId, expiringInDays, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
   })
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-
   return (
     <div className="space-y-6">
       <FilterBar
@@ -66,13 +60,10 @@ export function CertificatesSection() {
           setStatus(next)
           setPage(0)
         }}
-        showOrgFilter={orgOptions.length > 1}
+        showOrgFilter={false}
         orgId={orgId}
-        onOrg={(next) => {
-          setOrgId(next)
-          setPage(0)
-        }}
-        orgs={orgOptions}
+        onOrg={() => {}}
+        orgs={[]}
       >
         <Checkbox
           label={`${EXPIRY_SOON_DAYS}일 이내 만료만`}

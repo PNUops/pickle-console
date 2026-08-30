@@ -26,6 +26,12 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     })
     expect(screen.getByRole('link', { name: '대기 중 신청' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '읽지 않은 알림' })).toHaveTextContent('2건')
+    expect(screen.getByRole('link', { name: /내 리소스/ })).toHaveTextContent(/LLM API 키/)
+    expect(
+      screen
+        .getAllByRole('link', { name: '리소스 신청' })
+        .some((link) => link.getAttribute('href') === '/console/requests/new'),
+    ).toBe(true)
   })
 
   test('내 리소스 카드가 종류를 가리지 않고 목록과 상세 링크를 보여준다', async () => {

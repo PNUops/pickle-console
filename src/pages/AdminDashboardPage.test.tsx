@@ -11,7 +11,7 @@ import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 
 describe('관리자 대시보드', () => {
-  test('ORG_ADMIN은 기관 요약 타일과 리소스 현황을 보고 시스템 요약은 없다', async () => {
+  test('ORG_ADMIN은 기관 요약 타일과 가상머신 할당 현황을 보고 시스템 요약은 없다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin')
 
@@ -20,18 +20,18 @@ describe('관리자 대시보드', () => {
     const tiles = await screen.findByRole('region', { name: '기관 요약' })
     expect(within(tiles).getByRole('link', { name: '승인 대기' })).toHaveAttribute(
       'href',
-      '/admin/requests',
+      `/admin/requests?org=${uuid(1)}`,
     )
     expect(within(tiles).getByRole('link', { name: 'VM 현황' })).toHaveAttribute(
       'href',
-      '/admin/vms',
+      `/admin/vms?org=${uuid(1)}`,
     )
     expect(within(tiles).getByRole('link', { name: '만료 예정 (30일)' })).toHaveAttribute(
       'href',
-      '/admin/expiry',
+      `/admin/expiry?org=${uuid(1)}`,
     )
     expect(within(tiles).getByRole('link', { name: '확인 필요' })).toBeInTheDocument()
-    // 리소스 현황 바 + 안내 문구
+    // 가상머신 할당 현황 바 + 안내 문구
     expect(screen.getByRole('progressbar', { name: 'vCPU 할당률' })).toBeInTheDocument()
     expect(screen.getByText(/리소스에 여유가 있어 승인이 가능합니다/)).toBeInTheDocument()
     // 시스템 요약 타일은 SYS_ADMIN 전용
@@ -212,7 +212,7 @@ describe('관리자 대시보드 — 할당 추이', () => {
         '최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었습니다. 메모리는 32 GiB에서 48 GiB로 늘었습니다.',
       ),
     ).toBeInTheDocument()
-    const trend = screen.getByRole('heading', { name: '할당 추이 (최근 90일)' })
+    const trend = screen.getByRole('heading', { name: '가상머신 할당 추이 (최근 90일)' })
       .parentElement!.parentElement as HTMLElement
     expect(within(trend).getByRole('heading', { name: 'vCPU 할당' })).toBeInTheDocument()
     expect(within(trend).getByRole('heading', { name: '메모리 할당' })).toBeInTheDocument()

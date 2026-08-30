@@ -1,14 +1,14 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { fetchAuditLogs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { isSysTier } from '../auth/permissions'
+import { canViewAudit } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
-import { useOrgOptions } from '../lib/use-org-options'
 import {
   Alert,
   Badge,
   Card,
+  EmptyState,
   Input,
   Pagination,
   Select,
@@ -25,6 +25,7 @@ import { USER_ROLE_LABELS, type UserRole } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { AUDIT_ACTION_LABELS, labelForAuditAction } from '../lib/status'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 const PAGE_SIZE = 20
 
@@ -49,7 +50,8 @@ function isKnownRole(role: string): role is UserRole {
 /** 감사 로그 — 관리자가 행위자·동작·기간으로 활동 기록을 추적한다. */
 export function AdminAuditPage() {
   const { user } = useAuth()
-  const isSysAdmin = !!user && isSysTier(user.role)
+  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
+  const canReadActive = !!user && canViewAudit(tier === 'org' ? (activeOrgRole ?? user.role) : user.role)
   // 감사 로그의 범위는 조회 화면 중 가장 좁다: 역할을 보유한 기관이 아니라
   // 행위할 수 있는(관리자나 운영자인) 기관만이다 — 로그인 IP는 운영 데이터가
   // 아니라 증거다. 기관 선택기도 그 기관들만 담는다.
@@ -57,7 +59,6 @@ export function AdminAuditPage() {
   const [actorEmail, setActorEmail] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
@@ -73,7 +74,7 @@ export function AdminAuditPage() {
         actorEmail: debouncedActorEmail || null,
         from: from || null,
         to: to || null,
-        orgId: orgId ?? null,
+        orgId: activeOrgId ?? null,
         page,
       },
     ],
@@ -83,20 +84,28 @@ export function AdminAuditPage() {
         actorEmail: debouncedActorEmail || undefined,
         from: from || undefined,
         to: to || undefined,
-        orgId,
+        orgId: activeOrgId,
         page,
         size: PAGE_SIZE,
       }),
-    placeholderData: keepPreviousData,
+    enabled: canReadActive,
   })
-  const orgOptions = useOrgOptions('operated')
+
+  if (!canReadActive) {
+    return (
+      <EmptyState
+        title="이 기관의 감사 로그를 볼 수 없습니다"
+        description="기관 운영자 또는 기관 관리자 역할이 있는 관리 범위를 선택하세요."
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">감사 로그</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isSysAdmin ? '전체' : '관리 기관'} 관리자와 사용자의 활동 기록입니다. 로그인,
+          {activeOrg?.name ?? '플랫폼 전체'} 관리자와 사용자의 활동 기록입니다. 로그인,
           설정 변경, VM 작업 등 주요 동작이 남습니다. 열람 역할만 보유한 기관의
           기록은 여기 보이지 않습니다.
         </p>
@@ -106,13 +115,10 @@ export function AdminAuditPage() {
         tabs={[]}
         status={undefined}
         onStatus={() => {}}
-        showOrgFilter={orgOptions.length > 1}
-        orgId={orgId}
-        onOrg={(next) => {
-          setOrgId(next)
-          setPage(0)
-        }}
-        orgs={orgOptions}
+        showOrgFilter={false}
+        orgId={activeOrgId}
+        onOrg={() => {}}
+        orgs={[]}
       >
         <label className="flex items-center gap-2 text-sm text-neutral-600">
           동작

@@ -3,8 +3,15 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
-import { fetchWorkspace, type WorkspaceDetail, type WorkspaceMember, type WorkspaceMemberRole } from '../api/queries'
+import {
+  fetchResources,
+  fetchWorkspace,
+  type WorkspaceDetail,
+  type WorkspaceMember,
+  type WorkspaceMemberRole,
+} from '../api/queries'
 import { useAuth } from '../auth/auth-context'
+import { resourceTypeEntry } from '../components/resource/registry'
 import {
   Alert,
   Button,
@@ -31,6 +38,7 @@ import {
 } from '../components/ui'
 import { WORKSPACE_ROLE_LABELS } from '../lib/labels'
 import { formatDateTime } from '../lib/format'
+import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 const ASSIGNABLE_ROLES: WorkspaceMemberRole[] = ['OWNER', 'MEMBER']
@@ -72,9 +80,72 @@ export function WorkspaceDetailPage() {
         </Link>
       </nav>
       <WorkspaceInfoSection workspace={data} myRole={myRole} />
+      <WorkspaceResourcesSection workspaceId={data.id} />
       <MembersSection workspace={data} myRole={myRole} />
       {myRole === 'OWNER' && data.kind !== 'PERSONAL' && <DangerZoneSection workspace={data} />}
     </div>
+  )
+}
+
+function WorkspaceResourcesSection({ workspaceId }: { workspaceId: string }) {
+  const resources = useQuery({
+    queryKey: ['resources', { workspaceId, page: 0, size: 10 }],
+    queryFn: () => fetchResources({ workspaceId, page: 0, size: 10 }),
+  })
+
+  return (
+    <Card>
+      <CardHeader className="flex items-center justify-between gap-3">
+        <CardTitle>리소스</CardTitle>
+        <Link
+          to={consolePaths.resources(workspaceId)}
+          className="text-sm font-medium text-primary-700 hover:underline"
+        >
+          전체 보기
+        </Link>
+      </CardHeader>
+      <CardContent>
+        {resources.isPending && (
+          <div className="flex justify-center py-6">
+            <Spinner label="워크스페이스 리소스 불러오는 중" />
+          </div>
+        )}
+        {resources.isError && <Alert variant="danger">리소스 목록을 불러오지 못했습니다.</Alert>}
+        {resources.isSuccess && resources.data.content.length === 0 && (
+          <p className="text-sm text-neutral-500">이 워크스페이스에 리소스가 없습니다.</p>
+        )}
+        {resources.isSuccess && resources.data.content.length > 0 && (
+          <ul className="divide-y divide-neutral-100">
+            {resources.data.content.map((resource) => {
+              const entry = resourceTypeEntry(resource.type)
+              return (
+                <li
+                  key={`${resource.type}-${resource.id}`}
+                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <span className="min-w-0">
+                    {resource.accessLimited || !entry.detailPath ? (
+                      <span className="block truncate font-medium text-neutral-600">
+                        {resource.displayName || resource.name}
+                      </span>
+                    ) : (
+                      <Link
+                        to={entry.detailPath(resource.id)}
+                        className="block truncate font-medium text-primary-700 hover:underline"
+                      >
+                        {resource.displayName || resource.name}
+                      </Link>
+                    )}
+                    <span className="text-xs text-neutral-500">{entry.label}</span>
+                  </span>
+                  {entry.statusBadge(resource)}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -116,8 +187,8 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
         {error && <Alert variant="danger">{error}</Alert>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-neutral-600">
-            워크스페이스를 삭제하면 모든 목록에서 사라집니다. 삭제되지 않은 VM이 있으면 먼저
-            VM을 삭제(파기 완료)해야 합니다. 구성원 전원에게 알림이 발송됩니다.
+            워크스페이스를 삭제하면 모든 목록에서 사라집니다. 남아 있는 리소스가 있으면 먼저
+            정리해야 합니다. 구성원 전원에게 알림이 발송됩니다.
           </p>
           <Button
             variant="danger"

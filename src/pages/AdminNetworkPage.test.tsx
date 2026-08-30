@@ -44,15 +44,12 @@ describe('네트워크 — 릴레이 탭', () => {
     expect(within(degraded).getByText(/nft 적용 실패/)).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게 토큰 발급은 비활성 + 권한 안내가 보인다', async () => {
+  test('SYS_MANAGER에게 토큰 발급 액션은 보이지 않는다', async () => {
     renderNetwork('', 'access-sys-manager', sysManagerUser)
 
     await screen.findByText('relay-1')
-    expect(screen.getByRole('button', { name: '토큰 재발급' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '토큰 발급' })).toBeDisabled()
-    expect(
-      screen.getAllByText('토큰 발급은 시스템 관리자만 수행할 수 있습니다.').length,
-    ).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: '토큰 재발급' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '토큰 발급' })).not.toBeInTheDocument()
   })
 
   test('SYS_ADMIN 재발급: 무효화 경고 확인 후 평문 토큰을 1회만 보여준다', async () => {
@@ -144,17 +141,14 @@ describe('네트워크 — 포트포워딩 탭', () => {
     expect(within(drawer).queryByText(/자동 정지/)).not.toBeInTheDocument()
   })
 
-  test('가드 조정은 SYS_ADMIN 전용 — SYS_MANAGER는 비활성 + 안내', async () => {
+  test('가드 조정은 SYS_ADMIN 전용이라 SYS_MANAGER에게 보이지 않는다', async () => {
     const user = userEvent.setup()
     renderNetwork('forwardings', 'access-sys-manager', sysManagerUser)
 
     await user.click(await screen.findByRole('button', { name: 'expiring-api' }))
     const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
-    expect(
-      within(drawer).getByText('연결 가드 조정은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
-    expect(within(drawer).getByLabelText('동시 연결 상한')).toBeDisabled()
-    expect(within(drawer).getByRole('button', { name: '가드 저장' })).toBeDisabled()
+    expect(within(drawer).queryByLabelText('동시 연결 상한')).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '가드 저장' })).not.toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 가드를 저장할 수 있다 (빈칸=null 기본값, 0=해제 payload)', async () => {
@@ -225,17 +219,14 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
     expect(await within(drawer).findByRole('button', { name: '회수' })).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER는 전환 버튼이 비활성 + 권한 안내를 본다', async () => {
+  test('SYS_MANAGER는 캠퍼스 IP 전환 액션을 볼 수 없다', async () => {
     const user = userEvent.setup()
     renderNetwork('campus', 'access-sys-manager', sysManagerUser)
 
     await user.click(await screen.findByRole('button', { name: 'shop-app' }))
     const drawer = await screen.findByRole('dialog', { name: '캠퍼스 IP 신청 상세' })
-    expect(
-      within(drawer).getByText(/캠퍼스 IP 신청 처리.*시스템 관리자만/),
-    ).toBeInTheDocument()
-    expect(within(drawer).getByRole('button', { name: '승인' })).toBeDisabled()
-    expect(within(drawer).getByRole('button', { name: '반려' })).toBeDisabled()
+    expect(within(drawer).queryByRole('button', { name: '승인' })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '반려' })).not.toBeInTheDocument()
   })
 
   test('상태 필터로 부여된 신청만 볼 수 있다', async () => {

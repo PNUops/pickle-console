@@ -28,12 +28,12 @@ export function SettingRow({ label, description, action, note, className }: Sett
     <div className={cn('space-y-2 py-4 first:pt-0 last:pb-0', className)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-neutral-900">{label}</p>
-          {description && <p className="mt-0.5 text-sm text-neutral-500">{description}</p>}
+          <p className="text-sm font-medium text-foreground-primary">{label}</p>
+          {description && <p className="mt-0.5 text-sm text-foreground-muted">{description}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      {note && <p className="text-xs text-neutral-500">{note}</p>}
+      {note && <p className="text-xs text-foreground-muted">{note}</p>}
     </div>
   )
 }

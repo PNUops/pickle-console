@@ -34,7 +34,7 @@ describe('관리자 대시보드 요약', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '전체 보기 →' })).toHaveAttribute(
       'href',
-      '/admin/requests',
+      `/admin/requests?org=${uuid(1)}`,
     )
   })
 })
@@ -45,6 +45,7 @@ describe('승인 대기 큐', () => {
     renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('heading', { name: '승인 대기' })
+    expect(await screen.findByText('관리자 신청 목록')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '승인 대기' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -93,17 +94,27 @@ describe('승인 대기 큐', () => {
     expect(screen.queryByRole('link', { name: '박영희' })).not.toBeInTheDocument()
   })
 
-  test('SYS_ADMIN은 기관 필터로 특정 기관의 신청만 볼 수 있다', async () => {
+  test('SYS_ADMIN은 전역 관리 범위로 특정 기관의 신청만 볼 수 있다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin('/admin/requests')
 
     await screen.findByRole('link', { name: '홍길동' })
-    await user.selectOptions(await screen.findByLabelText('기관 필터'), uuid(2))
+    await user.selectOptions(await screen.findByLabelText('관리 기관 선택'), uuid(2))
 
     expect(await screen.findByRole('link', { name: '박영희' })).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.queryByRole('link', { name: '홍길동' })).not.toBeInTheDocument(),
     )
+  })
+
+  test('리소스 종류 필터로 LLM API 키 신청만 좁힌다', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin('/admin/requests')
+
+    await user.click(await screen.findByRole('button', { name: '승인됨' }))
+    await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), 'LLM_API_KEY')
+    expect(await screen.findByText('캡스톤 챗봇 LLM API 호출')).toBeInTheDocument()
+    expect(screen.queryByText('알고리즘 스터디 채점 서버')).not.toBeInTheDocument()
   })
 
   test('10건이 넘으면 페이지네이션으로 나눠 보여준다', async () => {

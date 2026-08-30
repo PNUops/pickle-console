@@ -70,7 +70,7 @@ export function Tabs({
       role="tablist"
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      className="flex gap-1 overflow-x-auto border-b border-neutral-200"
+      className="flex gap-1 overflow-x-auto border-b border-stroke-subtle"
     >
       {tabs.map((tab) => {
         const selected = tab.id === value
@@ -85,10 +85,10 @@ export function Tabs({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn(
-              '-mb-px cursor-pointer border-b-2 px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-600',
+              '-mb-px cursor-pointer border-b-2 px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors duration-[var(--duration-fast)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring',
               selected
-                ? 'border-primary-600 font-semibold text-primary-800'
-                : 'border-transparent font-medium text-neutral-500 hover:border-neutral-300 hover:text-neutral-800',
+                ? 'border-brand-fill font-semibold text-brand-foreground'
+                : 'border-transparent font-medium text-foreground-muted hover:border-stroke-default hover:text-foreground-primary',
             )}
           >
             {tab.label}

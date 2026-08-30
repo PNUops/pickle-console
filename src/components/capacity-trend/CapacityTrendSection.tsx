@@ -13,6 +13,7 @@ import {
   formatVmCount,
   trendTimes,
 } from './capacity-series'
+import { useAdminScope } from '../../lib/use-admin-scope'
 
 /** 조회 기간 선택지 — 기본 90일. */
 const DAY_OPTIONS = [30, 90, 180, 365]
@@ -28,9 +29,15 @@ export default function CapacityTrendSection({
 }: {
   canFilterByOrg: boolean
 }) {
+  const { activeOrgId } = useAdminScope()
   const [days, setDays] = useState(90)
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: canFilterByOrg })
+  const [pageOrgId, setPageOrgId] = useState<string | undefined>(undefined)
+  const orgId = activeOrgId ?? pageOrgId
+  const orgs = useQuery({
+    queryKey: ['orgs'],
+    queryFn: fetchOrgs,
+    enabled: canFilterByOrg && activeOrgId == null,
+  })
   const trend = useQuery({
     queryKey: ['admin', 'capacity-trend', { days, orgId: orgId ?? null }],
     queryFn: () => fetchCapacityTrend({ days, orgId }),
@@ -44,7 +51,7 @@ export default function CapacityTrendSection({
   return (
     <Card>
       <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-        <CardTitle>할당 추이</CardTitle>
+        <CardTitle>가상머신 할당 추이</CardTitle>
         <div className="flex flex-wrap items-center gap-3">
           <div role="group" aria-label="조회 기간" className="flex flex-wrap gap-1">
             {DAY_OPTIONS.map((option) => {
@@ -67,15 +74,16 @@ export default function CapacityTrendSection({
               )
             })}
           </div>
-          {canFilterByOrg && (
+          {canFilterByOrg && activeOrgId == null && (
             <label className="flex items-center gap-2 text-sm text-neutral-600">
               기관
               <Select
+                aria-label="할당 추이 기관 필터"
                 className="w-44"
-                value={orgId ?? ''}
+                value={pageOrgId ?? ''}
                 // DOM 값은 언제나 문자열이다. 빈 문자열("전체")만 없음으로
                 // 접어야 질의 키의 `orgId: null` 항목과 뒤섞이지 않는다.
-                onChange={(event) => setOrgId(event.target.value || undefined)}
+                onChange={(event) => setPageOrgId(event.target.value || undefined)}
               >
                 <option value="">전체</option>
                 {(orgs.data ?? []).map((org) => (

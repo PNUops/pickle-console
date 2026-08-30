@@ -9,14 +9,18 @@ import { cn } from '../lib/cn'
 /**
  * 인증 화면(로그인/회원가입/메일 인증/비밀번호 재설정) 전용 다크 레이아웃.
  * 랜딩의 다크 비주얼 언어(그리드 패턴+틸 글로우)를 이어받아 랜딩→인증 전환이
- * 자연스럽다. 전역 다크 모드가 아니라 이 레이아웃 스코프(.auth-dark)에서만
- * 폼 컨트롤을 다크화한다(index.css 참조).
+ * 자연스럽다. 전역 다크 모드가 아니라 이 레이아웃의 명시적 auth-dark theme에서만
+ * semantic token과 폼 컨트롤을 다크화한다(index.css 참조).
  */
 export function AuthLayout() {
   const { status, user } = useAuth()
 
   return (
-    <div className="auth-dark relative flex min-h-svh flex-col overflow-hidden break-keep bg-neutral-950">
+    <div
+      data-theme="auth-dark"
+      data-density="comfortable"
+      className="relative flex min-h-svh flex-col overflow-hidden break-keep bg-surface-canvas"
+    >
       {/* 배경: 랜딩 히어로와 같은 문법의 그리드 + 틸 글로우(절제) */}
       <div
         aria-hidden="true"
@@ -39,7 +43,7 @@ export function AuthLayout() {
 
       <header className="relative z-10">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Logo tone="inverse" />
+          <Logo tone="inverse" variant="lockup" />
           <nav aria-label="주 메뉴" className="flex items-center gap-2">
             {status === 'authenticated' && user ? (
               <TransitionLink

@@ -45,7 +45,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-neutral-950/50"
+        className="absolute inset-0 bg-surface-inverse/50"
         onClick={dismissible ? onClose : undefined}
       />
       <div
@@ -59,12 +59,12 @@ export function Modal({
           // 스크롤바도 생기지 않았다. 형제인 Drawer 는 처음부터 이 모양이다.
           // vh 가 아니라 dvh 여야 모바일 브라우저 크롬이 계산에 들어간다.
           'relative flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col',
-          'rounded-card bg-white shadow-overlay outline-none',
+          'rounded-card bg-surface-card text-foreground-primary shadow-elevation-3 outline-none',
           className,
         )}
       >
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 px-5 py-4">
-          <h2 id={titleId} className="text-base font-semibold text-neutral-900">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle px-5 py-4">
+          <h2 id={titleId} className="type-section-title text-foreground-primary">
             {title}
           </h2>
           <button
@@ -72,7 +72,7 @@ export function Modal({
             onClick={onClose}
             aria-label="닫기"
             hidden={!dismissible}
-            className="cursor-pointer rounded p-1 text-neutral-400 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-600"
+            className="cursor-pointer rounded-control p-1 text-foreground-muted hover:text-foreground-primary focus-visible:outline-2 focus-visible:outline-focus-ring"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="size-5" aria-hidden="true">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -81,7 +81,7 @@ export function Modal({
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-neutral-100 px-5 py-3">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-stroke-subtle px-5 py-3">
             {footer}
           </div>
         )}

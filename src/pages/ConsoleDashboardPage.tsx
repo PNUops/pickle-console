@@ -6,6 +6,7 @@ import {
   fetchUnreadCount,
   fetchRequests,
   fetchResources,
+  fetchLlmKeys,
   fetchVms,
 } from '../api/queries'
 import { resourceTypeEntry } from '../components/resource/registry'
@@ -20,7 +21,7 @@ import {
   Spinner,
   StatTile,
 } from '../components/ui'
-import { formatDateTime, formatDday } from '../lib/format'
+import { formatDateTime, formatDday, kstDateString } from '../lib/format'
 
 
 /** 만료 임박으로 취급하는 잔여 일수 상한. */
@@ -33,8 +34,8 @@ const NOTICE_PREVIEW_SIZE = 3
  * 사용자 대시보드 — 별도 집계 API 없이 목록 API를 클라이언트에서 합성한다
  * (최대 50건 기준, 현 규모에서 충분).
  *
- * 목록은 종류를 가리지 않는 리소스 인벤토리에서 읽는다. 만료 타일만 VM 목록을
- * 따로 보는데, 남은 기간은 아직 리소스 공통 항목이 아니기 때문이다.
+ * 목록은 종류를 가리지 않는 리소스 인벤토리에서 읽는다. 만료 타일은 종류별
+ * 목록의 수명 필드를 합성한다. 남은 기간은 아직 리소스 공통 항목이 아니기 때문이다.
  */
 export function ConsoleDashboardPage() {
   const { user } = useAuth()
@@ -47,6 +48,10 @@ export function ConsoleDashboardPage() {
   const vms = useQuery({
     queryKey: ['vms', { page: 0, size: 50, workspaceId: scope }],
     queryFn: () => fetchVms({ size: 50, workspaceId: scope ?? undefined }),
+  })
+  const llmKeys = useQuery({
+    queryKey: ['llm-keys', { page: 0, size: 50, workspaceId: scope }],
+    queryFn: () => fetchLlmKeys({ size: 50, workspaceId: scope ?? undefined }),
   })
   const pendingRequests = useQuery({
     queryKey: ['requests', { status: 'SUBMITTED', page: 0, size: 3, workspaceId: scope }],
@@ -78,12 +83,30 @@ export function ConsoleDashboardPage() {
   const activeResources = (resources.data?.content ?? []).filter((resource) =>
     resourceTypeEntry(resource.type).isActive(resource),
   )
-  const runningCount = activeVms.filter((vm) => vm.status === 'RUNNING').length
+  const typeCounts = {
+    VM: activeResources.filter((resource) => resource.type === 'VM').length,
+    LLM_API_KEY: activeResources.filter((resource) => resource.type === 'LLM_API_KEY').length,
+  }
 
-  // 만료 임박: endDate가 있고 D-14 이내인 VM 중 가장 임박한 것.
-  const expiring = activeVms
-    .filter((vm) => vm.endDate)
-    .map((vm) => ({ vm, dday: formatDday(vm.endDate!) }))
+  // 만료 임박: VM의 종료일과 LLM API 키의 만료 시각을 같은 KST 달력일로 비교한다.
+  const expiring = [
+    ...activeVms
+      .filter((vm) => vm.endDate)
+      .map((vm) => ({
+        name: vm.displayName || vm.name,
+        type: '가상머신',
+        to: consolePaths.vmDetail(vm.id),
+        dday: formatDday(vm.endDate!),
+      })),
+    ...(llmKeys.data?.content ?? [])
+      .filter((key) => key.status !== 'REVOKED' && key.expiresAt)
+      .map((key) => ({
+        name: key.name,
+        type: 'LLM API 키',
+        to: consolePaths.llmKeyDetail(key.id),
+        dday: formatDday(kstDateString(new Date(key.expiresAt!))),
+      })),
+  ]
     .filter(({ dday }) => dday.daysLeft <= EXPIRY_SOON_DAYS)
     .sort((a, b) => a.dday.daysLeft - b.dday.daysLeft)[0]
 
@@ -97,7 +120,7 @@ export function ConsoleDashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <LinkButton to={consolePaths.newRequest(scope, 'VM')}>가상머신 신청</LinkButton>
+          <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
           <LinkButton to={consolePaths.workspaces} variant="secondary">
             워크스페이스 만들기
           </LinkButton>
@@ -109,7 +132,11 @@ export function ConsoleDashboardPage() {
         <StatTile
           label="내 리소스"
           value={resources.isPending ? '—' : `${activeResources.length}개`}
-          hint={vms.isPending ? undefined : `실행 중인 VM ${runningCount}대`}
+          hint={
+            resources.isPending
+              ? undefined
+              : `가상머신 ${typeCounts.VM}개 · LLM API 키 ${typeCounts.LLM_API_KEY}개`
+          }
           to={consolePaths.resources(scope)}
         />
         <StatTile
@@ -127,13 +154,13 @@ export function ConsoleDashboardPage() {
           value={expiring ? expiring.dday.label : '—'}
           hint={
             expiring
-              ? expiring.vm.displayName || expiring.vm.name
-              : vms.isPending
+              ? `${expiring.type} · ${expiring.name}`
+              : vms.isPending || llmKeys.isPending
                 ? undefined
                 : `${EXPIRY_SOON_DAYS}일 내 만료 없음`
           }
           tone={expiring && expiring.dday.daysLeft <= 7 ? 'danger' : 'normal'}
-          to={expiring ? consolePaths.vmDetail(expiring.vm.id) : undefined}
+          to={expiring?.to}
         />
       </div>
 

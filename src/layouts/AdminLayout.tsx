@@ -1,72 +1,178 @@
+import {
+  AppsListDetail24Regular,
+  ClipboardTaskListLtr24Regular,
+  Clock24Regular,
+  Desktop24Regular,
+  DocumentCheckmark24Regular,
+  Globe24Regular,
+  Home24Regular,
+  Key24Regular,
+  Megaphone24Regular,
+  Organization24Regular,
+  People24Regular,
+  Server24Regular,
+  Settings24Regular,
+  Shield24Regular,
+  Wrench24Regular,
+} from '@fluentui/react-icons'
 import { useAuth } from '../auth/auth-context'
 import { canViewAudit, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { AdminScopeSelector } from '../components/AdminScopeSelector'
 import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
+import { Button, EmptyState, LoadingBlock } from '../components/ui'
+import { useAdminScope } from '../lib/use-admin-scope'
 import { AppShell, type NavSection } from './AppShell'
+
+const iconClass = 'size-4 shrink-0'
 
 export function AdminLayout() {
   const { user } = useAuth()
+  const scope = useAdminScope()
   const sysTier = !!user && isSysTier(user.role)
   const sysAdmin = !!user && isSysAdminOnly(user.role)
-  const auditAllowed = !!user && canViewAudit(user.role)
+  const effectiveRole = scope.tier === 'org' ? scope.activeOrgRole : user?.role
+  const auditAllowed = !!effectiveRole && canViewAudit(effectiveRole)
+  const path = scope.path
 
   const sections: NavSection[] = [
     {
-      heading: '운영',
+      heading: '개요',
       items: [
-        { to: '/admin', label: '대시보드', end: true },
-        { to: '/admin/requests', label: '승인 대기' },
-        { to: '/admin/vms', label: 'VM 관리' },
-        { to: '/admin/terminal-sessions', label: '웹 터미널 세션' },
-        { to: '/admin/users', label: '사용자 관리' },
-        { to: '/admin/workspaces', label: '워크스페이스 관리' },
-        { to: '/admin/expiry', label: '만료 관리' },
+        { to: path('/admin'), label: '대시보드', end: true, icon: <Home24Regular className={iconClass} /> },
       ],
     },
     {
-      heading: '공개 서비스',
-      // 도메인 중심 1화면(라우팅 흡수) + 인증서 탭 — 3메뉴 통합 (2026-07-27).
-      items: [{ to: '/admin/domains', label: '도메인·인증서' }],
+      heading: '신청',
+      items: [
+        {
+          to: path('/admin/requests'),
+          label: '신청 검토',
+          icon: <DocumentCheckmark24Regular className={iconClass} />,
+        },
+      ],
+    },
+    {
+      heading: '리소스',
+      items: [
+        {
+          to: path('/admin/vms'),
+          label: '가상머신',
+          icon: <Server24Regular className={iconClass} />,
+        },
+        {
+          to: path('/admin/llm/keys'),
+          label: 'LLM API 키',
+          icon: <Key24Regular className={iconClass} />,
+        },
+      ],
+    },
+    {
+      heading: '사용자·워크스페이스',
+      items: [
+        { to: path('/admin/users'), label: '사용자', icon: <People24Regular className={iconClass} /> },
+        {
+          to: path('/admin/workspaces'),
+          label: '워크스페이스',
+          icon: <AppsListDetail24Regular className={iconClass} />,
+        },
+      ],
+    },
+    {
+      heading: '운영',
+      items: [
+        { to: path('/admin/expiry'), label: '만료 관리', icon: <Clock24Regular className={iconClass} /> },
+        {
+          to: path('/admin/terminal-sessions'),
+          label: '웹 터미널 세션',
+          icon: <Desktop24Regular className={iconClass} />,
+        },
+        {
+          to: path('/admin/domains'),
+          label: '도메인·인증서',
+          icon: <Globe24Regular className={iconClass} />,
+        },
+        ...(sysTier
+          ? [
+              { to: path('/admin/nodes'), label: '노드·IP', icon: <Server24Regular className={iconClass} /> },
+              { to: path('/admin/network'), label: '네트워크', icon: <Globe24Regular className={iconClass} /> },
+              {
+                to: path('/admin/os-images'),
+                label: 'OS 이미지',
+                icon: <Desktop24Regular className={iconClass} />,
+              },
+              {
+                to: path('/admin/tasks'),
+                label: '작업',
+                icon: <ClipboardTaskListLtr24Regular className={iconClass} />,
+              },
+              {
+                to: path('/admin/settings'),
+                label: '플랫폼 설정',
+                icon: <Settings24Regular className={iconClass} />,
+              },
+              { to: path('/admin/drift'), label: '드리프트', icon: <Wrench24Regular className={iconClass} /> },
+              {
+                to: path('/admin/notification-log'),
+                label: '알림 발송 이력',
+                icon: <Megaphone24Regular className={iconClass} />,
+              },
+            ]
+          : []),
+      ],
     },
     {
       heading: '소통',
       items: [
-        { to: '/admin/announcements', label: '알림 보내기' },
-        { to: '/admin/notices', label: '공지사항 관리' },
-        // 감사 로그는 기관에서 행위할 수 있는 역할만 — ORG_VIEWER는 조회 화면
-        // 중 유일하게 제외된다 (로그인 IP는 운영 데이터가 아니라 증거다).
-        ...(auditAllowed ? [{ to: '/admin/audit', label: '감사 로그' }] : []),
-        // 알림함은 상단 바 알림 팝오버("전체 보기")로 진입 — 사이드바에서 제외.
+        {
+          to: path('/admin/announcements'),
+          label: '알림 보내기',
+          icon: <Megaphone24Regular className={iconClass} />,
+        },
+        { to: path('/admin/notices'), label: '공지사항', icon: <ClipboardTaskListLtr24Regular className={iconClass} /> },
       ],
     },
-    // 시스템 섹션은 시스템 계층 전용 — 각 라우트에서도 한 번 더 가드한다.
-    // SYS_VIEWER도 조회 화면은 모두 본다. 기관 관리(org 생성/수정)만 SYS_ADMIN 전용(§4).
-    ...(sysTier
-      ? [
-          {
-            heading: '시스템',
-            items: [
-              { to: '/admin/nodes', label: '노드/IP' },
-              { to: '/admin/network', label: '네트워크' },
-              { to: '/admin/os-images', label: 'OS 이미지 관리' },
-              ...(sysAdmin ? [{ to: '/admin/orgs', label: '기관 관리' }] : []),
-              { to: '/admin/tasks', label: '작업' },
-              { to: '/admin/settings', label: '플랫폼 설정' },
-              { to: '/admin/drift', label: '드리프트' },
-              { to: '/admin/notification-log', label: '알림 발송 이력' },
-            ],
-          } satisfies NavSection,
-        ]
-      : []),
-  ]
+    {
+      heading: '거버넌스',
+      items: [
+        ...(auditAllowed
+          ? [{ to: path('/admin/audit'), label: '감사 로그', icon: <Shield24Regular className={iconClass} /> }]
+          : []),
+        ...(sysAdmin
+          ? [{ to: path('/admin/orgs'), label: '기관 관리', icon: <Organization24Regular className={iconClass} /> }]
+          : []),
+      ],
+    },
+  ].filter((section) => section.items.length > 0)
+
+  const scopeBlock = !scope.ready
+    ? scope.error
+      ? (
+          <EmptyState
+            title="관리 범위를 불러오지 못했습니다"
+            description="기관 목록을 다시 불러온 뒤 선택한 관리 범위를 확인합니다."
+            action={<Button onClick={scope.retry}>관리 범위 다시 시도</Button>}
+          />
+        )
+      : scope.resolving
+      ? <LoadingBlock label="관리 범위 확인 중" />
+      : (
+          <EmptyState
+            title={scope.options.length === 0 ? '관리할 기관이 없습니다' : '관리 기관을 선택하세요'}
+            description="왼쪽 관리 범위에서 기관을 선택하면 해당 기관의 운영 화면을 엽니다."
+          />
+        )
+    : undefined
 
   return (
     <AppShell
-      home="/admin"
+      home={path('/admin')}
       navLabel="관리자 메뉴"
+      density="compact"
       sections={sections}
-      notificationsTo="/admin/notifications"
-      // 기관 계층 2FA 권유 — 시스템 계층은 로그인에서 강제되므로 배너의 대상이 아니다.
+      sidebarTop={<AdminScopeSelector />}
+      notificationsTo={path('/admin/notifications')}
       banner={<MfaNudgeBanner />}
+      content={scopeBlock}
     />
   )
 }

@@ -19,12 +19,12 @@ describe('운영자 계층 화면 접근', () => {
   test('ORG_MANAGER는 관리 화면을 보되 시스템 섹션·기관 관리는 숨긴다', async () => {
     renderAs('access-org-manager', orgManagerUser, '/admin')
     expect(await screen.findByRole('heading', { name: '관리자 대시보드' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '승인 대기' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'VM 관리' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '사용자 관리' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '워크스페이스 관리' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '신청 검토' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '가상머신' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '사용자' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '워크스페이스' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '기관 관리' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '노드/IP' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '노드·IP' })).not.toBeInTheDocument()
   })
 
   test('ORG_MANAGER가 시스템 전용 경로(/admin/settings)에 가면 대시보드로 돌아간다', async () => {
@@ -36,7 +36,7 @@ describe('운영자 계층 화면 접근', () => {
   test('SYS_MANAGER는 시스템 조회 섹션을 보되 기관 관리는 숨긴다', async () => {
     renderAs('access-sys-manager', sysManagerUser, '/admin')
     expect(await screen.findByRole('heading', { name: '관리자 대시보드' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '노드/IP' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '노드·IP' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '작업' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '플랫폼 설정' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '기관 관리' })).not.toBeInTheDocument()

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
+  adminPath,
+  adminPaths,
   consolePathInScope,
   consolePaths,
   parseTerminalWindowVmId,
@@ -65,6 +67,27 @@ describe('consolePaths — 상세 주소', () => {
     expect(consolePaths.requestDetail(uuid(201))).toBe(`/console/requests/${uuid(201)}`)
     expect(consolePaths.llmKeyDetail(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}`)
     expect(consolePaths.llmKeyAccess(uuid(70))).toBe(`/console/llm-keys/${uuid(70)}/access`)
+  })
+})
+
+describe('adminPaths — 기관 query scope', () => {
+  test('기존 query를 보존하고 정확히 org key 하나로 scope를 전달한다', () => {
+    expect(adminPath('/admin/nodes?tab=ips', SCOPE)).toBe(
+      `/admin/nodes?tab=ips&org=${SCOPE}`,
+    )
+    expect(adminPaths.vmDetail(OTHER, SCOPE)).toBe(`/admin/vms/${OTHER}?org=${SCOPE}`)
+    expect(adminPaths.llmKeyDetail(OTHER, SCOPE)).toBe(
+      `/admin/llm/keys/${OTHER}?org=${SCOPE}`,
+    )
+    expect(adminPaths.vms(SCOPE, OTHER)).toBe(
+      `/admin/vms?workspaceId=${OTHER}&org=${SCOPE}`,
+    )
+  })
+
+  test('전체 플랫폼은 org만 제거하고 다른 query는 유지한다', () => {
+    expect(adminPath(`/admin/vms?org=${SCOPE}&workspaceId=${OTHER}`, undefined)).toBe(
+      `/admin/vms?workspaceId=${OTHER}`,
+    )
   })
 })
 

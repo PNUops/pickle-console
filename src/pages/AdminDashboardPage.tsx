@@ -19,10 +19,13 @@ import {
   CardHeader,
   CardTitle,
   ErrorBoundary,
+  PageHeader,
   Spinner,
   StatTile,
 } from '../components/ui'
 import { formatBytes, formatDateTime, formatMemory } from '../lib/format'
+import { useAdminScope } from '../lib/use-admin-scope'
+import { adminPath } from '../lib/paths'
 
 // 할당 추이 카드는 uPlot을 끌어오므로 대시보드 진입 번들과 분리한다.
 const OrgAllocationTrendCard = lazy(
@@ -59,11 +62,12 @@ function sumLivePair(
  */
 export function AdminDashboardPage() {
   const { user } = useAuth()
+  const { activeOrgId, activeOrg, path } = useAdminScope()
   const isSysAdmin = !!user && isSysTier(user.role)
 
   const summary = useQuery({
-    queryKey: ['admin', 'summary'],
-    queryFn: () => fetchAdminSummary(),
+    queryKey: ['admin', 'summary', { orgId: activeOrgId ?? null }],
+    queryFn: () => fetchAdminSummary({ orgId: activeOrgId }),
   })
   const system = useQuery({
     queryKey: ['admin', 'system-summary'],
@@ -71,19 +75,22 @@ export function AdminDashboardPage() {
     enabled: isSysAdmin,
   })
   const pending = useQuery({
-    queryKey: ['admin', 'requests', { status: 'SUBMITTED', page: 0, size: 5 }],
-    queryFn: () => fetchAdminRequests({ status: 'SUBMITTED', page: 0, size: 5 }),
+    queryKey: [
+      'admin',
+      'requests',
+      { status: 'SUBMITTED', orgId: activeOrgId ?? null, page: 0, size: 5 },
+    ],
+    queryFn: () =>
+      fetchAdminRequests({ status: 'SUBMITTED', orgId: activeOrgId, page: 0, size: 5 }),
   })
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">관리자 대시보드</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {user?.name}님, 환영합니다. {isSysAdmin ? '플랫폼 전체' : '우리 기관'} 운영
-          현황입니다.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="개요"
+        title="관리자 대시보드"
+        description={`${user?.name}님, 환영합니다. ${activeOrg?.name ?? '플랫폼 전체'} 운영 현황입니다.`}
+      />
 
       {summary.isPending && (
         <div className="flex justify-center py-8">
@@ -93,7 +100,7 @@ export function AdminDashboardPage() {
       {summary.isError && <Alert variant="danger">{summary.error.message}</Alert>}
       {summary.isSuccess && (
         <>
-          <OrgSummaryTiles summary={summary.data} />
+          <OrgSummaryTiles summary={summary.data} orgId={activeOrgId} />
           <ResourceCard summary={summary.data} />
           <ErrorBoundary label="할당 추이">
             <Suspense
@@ -103,7 +110,7 @@ export function AdminDashboardPage() {
                 </div>
               }
             >
-              <OrgAllocationTrendCard />
+              <OrgAllocationTrendCard orgId={activeOrgId} />
             </Suspense>
           </ErrorBoundary>
         </>
@@ -120,7 +127,7 @@ export function AdminDashboardPage() {
               label="노드"
               value={`${system.data.nodes.length}대`}
               hint={`경고 ${system.data.nodes.filter((n) => n.warn).length}대`}
-              to="/admin/nodes"
+              to={path('/admin/nodes')}
               tone={system.data.nodes.some((n) => n.warn) ? 'danger' : 'normal'}
             />
             <StatTile
@@ -129,32 +136,32 @@ export function AdminDashboardPage() {
                 .reduce((sum, pool) => sum + pool.freeCount, 0)
                 .toLocaleString()}개`}
               hint={`${system.data.ipPools.length}개 풀`}
-              to="/admin/nodes?tab=ips"
+              to={path('/admin/nodes?tab=ips')}
             />
             <StatTile
               label="드리프트 미해결"
               value={`${system.data.openDriftFindingCount}건`}
-              to="/admin/drift"
+              to={path('/admin/drift')}
               tone={system.data.openDriftFindingCount > 0 ? 'danger' : 'normal'}
             />
             <StatTile
               label="알림 발송 실패"
               value={`${system.data.notificationFailureCount}건`}
-              to="/admin/notification-log"
+              to={path('/admin/notification-log')}
               tone={system.data.notificationFailureCount > 0 ? 'danger' : 'normal'}
             />
             <StatTile
               label="작업"
               value={`진행 ${system.data.tasks.runningCount + system.data.tasks.retryingCount}`}
               hint={`관리자 확인 ${system.data.tasks.needsAdminCount}건`}
-              to="/admin/tasks"
+              to={path('/admin/tasks')}
               tone={system.data.tasks.needsAdminCount > 0 ? 'danger' : 'normal'}
             />
             <StatTile
               label="비밀번호 SSH 허용"
               value={`${system.data.sshPasswordEnabledVmCount}대`}
               hint="VM별 설정으로 허용된 VM"
-              to="/admin/vms"
+              to={path('/admin/vms')}
               tone={system.data.sshPasswordEnabledVmCount > 0 ? 'danger' : 'normal'}
             />
           </div>
@@ -170,7 +177,7 @@ export function AdminDashboardPage() {
         <CardHeader className="flex items-center justify-between gap-4">
           <CardTitle>승인 대기</CardTitle>
           <Link
-            to="/admin/requests"
+            to={path('/admin/requests')}
             className="text-sm font-medium text-primary-700 hover:underline"
           >
             전체 보기 →
@@ -197,7 +204,7 @@ export function AdminDashboardPage() {
                   {pending.data.content.map((request) => (
                     <li key={request.id}>
                       <Link
-                        to={`/admin/requests/${request.id}`}
+                        to={path(`/admin/requests/${request.id}`)}
                         className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-primary-600"
                       >
                         <span className="min-w-0">
@@ -224,7 +231,7 @@ export function AdminDashboardPage() {
   )
 }
 
-function OrgSummaryTiles({ summary }: { summary: OrgDashboardSummary }) {
+function OrgSummaryTiles({ summary, orgId }: { summary: OrgDashboardSummary; orgId?: string }) {
   const counts = summary.vmCountsByStatus
   const attentionCount =
     summary.attention.failedTaskCount + summary.attention.needsAdminVmCount
@@ -238,7 +245,7 @@ function OrgSummaryTiles({ summary }: { summary: OrgDashboardSummary }) {
         label="승인 대기"
         value={`${summary.pendingRequestCount}건`}
         hint={`최근 14일 승인 ${summary.recentDecisions14d.approvedCount} · 반려 ${summary.recentDecisions14d.rejectedCount}`}
-        to="/admin/requests"
+        to={adminPath('/admin/requests', orgId)}
       />
       <StatTile
         label="VM 현황"
@@ -246,19 +253,19 @@ function OrgSummaryTiles({ summary }: { summary: OrgDashboardSummary }) {
         hint={`중지 ${countOf(counts, 'STOPPED')} · 오류·확인 필요 ${
           countOf(counts, 'ERROR') + countOf(counts, 'NEEDS_ADMIN')
         }`}
-        to="/admin/vms"
+        to={adminPath('/admin/vms', orgId)}
       />
       <StatTile
         label="만료 예정 (30일)"
         value={`${summary.expiringVmCount30d}대`}
         hint={`만료됨 ${summary.attention.expiredVmCount}대`}
-        to="/admin/expiry"
+        to={adminPath('/admin/expiry', orgId)}
       />
       <StatTile
         label="확인 필요"
         value={`${attentionCount}건`}
         hint="실패 작업·관리자 확인 VM"
-        to="/admin/vms"
+        to={adminPath('/admin/vms', orgId)}
         tone={attentionCount > 0 ? 'danger' : 'normal'}
       />
     </div>
@@ -419,7 +426,7 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>리소스 현황</CardTitle>
+        <CardTitle>가상머신 할당 현황</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <ResourceBar

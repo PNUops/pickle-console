@@ -17,7 +17,6 @@ import {
   DeliveryStatusBadge,
   Modal,
   Pagination,
-  PermissionNotice,
   Spinner,
   Table,
   TBody,
@@ -62,11 +61,6 @@ export function AdminNotificationLogPage() {
           이메일 알림 발송 로그입니다. 발송에 실패한 알림은 원인 확인 후 재발송할 수
           있습니다.
         </p>
-        {!canResend && (
-          <PermissionNotice>
-            재발송은 시스템 운영자와 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
       </div>
 
       <FilterBar
@@ -106,9 +100,11 @@ export function AdminNotificationLogPage() {
                   <TH>이벤트</TH>
                   <TH>상태</TH>
                   <TH>생성·발송 시각</TH>
-                  <TH>
-                    <span className="sr-only">재발송</span>
-                  </TH>
+                  {canResend && (
+                    <TH>
+                      <span className="sr-only">재발송</span>
+                    </TH>
+                  )}
                 </TR>
               </THead>
               <TBody>
@@ -138,19 +134,20 @@ export function AdminNotificationLogPage() {
                           : '미발송'}
                       </span>
                     </TD>
-                    <TD className="text-right">
-                      {/* 계약: FAILED만 재발송 가능 */}
-                      {notification.status === 'FAILED' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={!canResend}
-                          onClick={() => setResendTarget(notification)}
-                        >
-                          재발송
-                        </Button>
-                      )}
-                    </TD>
+                    {canResend && (
+                      <TD className="text-right">
+                        {/* 계약: FAILED만 재발송 가능 */}
+                        {notification.status === 'FAILED' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setResendTarget(notification)}
+                          >
+                            재발송
+                          </Button>
+                        )}
+                      </TD>
+                    )}
                   </TR>
                 ))}
               </TBody>

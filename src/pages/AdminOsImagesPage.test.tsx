@@ -62,16 +62,13 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     expect(within(updated).getByText('은퇴')).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게는 토글이 비활성+사유로 보인다', async () => {
+  test('SYS_MANAGER에게는 OS 이미지 변경 액션이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/os-images')
 
     await screen.findByRole('heading', { name: 'OS 이미지·사양 관리' })
-    expect(
-      screen.getByText('OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
-    expect(within(active).getByRole('button', { name: '은퇴' })).toBeDisabled()
+    expect(within(active).queryByRole('button', { name: '은퇴' })).not.toBeInTheDocument()
   })
 })
 
@@ -205,16 +202,13 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     ).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게는 프리셋 작업이 비활성+사유로 보인다', async () => {
+  test('SYS_MANAGER에게는 프리셋 변경 액션이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/os-images')
 
     const basic = await findFlavorRow('기본형')
-    expect(
-      screen.getByText('OS 이미지·사양 프리셋 변경은 시스템 관리자만 수행할 수 있습니다.'),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '프리셋 추가' })).toBeDisabled()
-    expect(within(basic).getByRole('button', { name: '수정' })).toBeDisabled()
-    expect(within(basic).getByRole('button', { name: '은퇴' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '프리셋 추가' })).not.toBeInTheDocument()
+    expect(within(basic).queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
+    expect(within(basic).queryByRole('button', { name: '은퇴' })).not.toBeInTheDocument()
   })
 })

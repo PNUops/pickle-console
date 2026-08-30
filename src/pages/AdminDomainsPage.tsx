@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   applyAdminRoute,
   fetchAdminDomains,
@@ -34,7 +34,6 @@ import {
   DomainStatusBadge,
   Drawer,
   Pagination,
-  PermissionNotice,
   RouteStatusBadge,
   Select,
   Spinner,
@@ -50,7 +49,8 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
-import { useOrgOptions } from '../lib/use-org-options'
+import { useAdminScope } from '../lib/use-admin-scope'
+import { adminPaths } from '../lib/paths'
 
 const PAGE_SIZE = 20
 
@@ -76,7 +76,7 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
-  const isSysAdmin = !!user && isSysTier(user.role)
+  const { activeOrgId, activeOrg } = useAdminScope()
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -84,7 +84,6 @@ export function AdminDomainsPage() {
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -98,14 +97,11 @@ export function AdminDomainsPage() {
     queryKey: [
       'admin',
       'domains',
-      { status: status ?? null, kind: kind ?? null, orgId: orgId ?? null, page },
+      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, page },
     ],
-    queryFn: () => fetchAdminDomains({ status, kind, orgId, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+    queryFn: () =>
+      fetchAdminDomains({ status, kind, orgId: activeOrgId, page, size: PAGE_SIZE }),
   })
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
 
   return (
@@ -114,7 +110,7 @@ export function AdminDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {isSysAdmin ? '전체' : '우리 기관'} VM의 도메인과 라우트 적용, 인증서
+            {activeOrg?.name ?? '플랫폼 전체'} 가상머신의 도메인과 라우트 적용, 인증서
             상태입니다. 행을 선택하면 라우트와 인증서 상세, 개입 작업이 열립니다.
           </p>
         </div>
@@ -125,7 +121,12 @@ export function AdminDomainsPage() {
         aria-label="공개 서비스 탭"
         tabs={SCREEN_TABS}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'domains' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'domains') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
       />
 
       <TabPanel id="domains" active={activeTab === 'domains'} className="space-y-6">
@@ -136,13 +137,10 @@ export function AdminDomainsPage() {
             setStatus(next)
             setPage(0)
           }}
-          showOrgFilter={orgOptions.length > 1}
-          orgId={orgId}
-          onOrg={(next) => {
-            setOrgId(next)
-            setPage(0)
-          }}
-          orgs={orgOptions}
+          showOrgFilter={false}
+          orgId={activeOrgId}
+          onOrg={() => {}}
+          orgs={[]}
         >
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             종류
@@ -286,7 +284,7 @@ export function AdminDomainsPage() {
       </TabPanel>
 
       <TabPanel id="certificates" active={activeTab === 'certificates'}>
-        <CertificatesSection />
+        <CertificatesSection orgId={activeOrgId} />
       </TabPanel>
     </div>
   )
@@ -301,6 +299,7 @@ function DomainDrawerContent({
   domain: AdminDomainView
   onDone: (message: string) => void
 }) {
+  const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
   // 역할이 닿아도 이 도메인의 기관에서 행위할 수 있어야 한다: 열람 역할로만
   // 보이는 기관의 도메인에 개입하면 API가 404로 거부한다.
@@ -316,8 +315,8 @@ function DomainDrawerContent({
   // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
   // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
   const routes = useQuery({
-    queryKey: ['admin', 'routes', { forDomainJoin: true }],
-    queryFn: () => fetchAdminRoutes({ page: 0, size: 100 }),
+    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: activeOrgId ?? null }],
+    queryFn: () => fetchAdminRoutes({ orgId: activeOrgId, page: 0, size: 100 }),
   })
   const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
   const routesTruncated =
@@ -339,7 +338,7 @@ function DomainDrawerContent({
             {domain.vmName ?? '—'}{' '}
             {domain.vmId != null && (
               <Link
-                to={`/admin/vms/${domain.vmId}`}
+                to={adminPaths.vmDetail(domain.vmId, activeOrgId)}
                 className="text-sm font-normal text-primary-700 hover:underline"
               >
                 상세
@@ -395,11 +394,9 @@ function DomainDrawerContent({
           <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
             <div className="flex items-center justify-between">
               <RouteStatusBadge status={route.status} />
-              <ApplyRouteButton
-                routeId={route.id}
-                disabled={!canIntervene}
-                onResult={setNotice}
-              />
+              {canIntervene && (route.status === 'REMOVED' || domain.status === 'ACTIVE') && (
+                <ApplyRouteButton routeId={route.id} onResult={setNotice} />
+              )}
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
               <Field label="대상 포트" value={String(route.targetPort)} />
@@ -429,33 +426,22 @@ function DomainDrawerContent({
         )}
       </section>
 
-      <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
-        <p className="text-sm text-neutral-500">
-          커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
-          즉시 회수)를 수행합니다. 기관 계층은 자기가 운영하는 기관의 도메인에만
-          적용됩니다.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {domain.kind === 'CUSTOM' && (
-            <ReverifyButton domain={domain} disabled={!canIntervene} onResult={setNotice} />
-          )}
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={!canIntervene}
-            onClick={() => setReleaseOpen(true)}
-          >
-            강제 해제
-          </Button>
-        </div>
-        {!canIntervene && (
-          <PermissionNotice>
-            사후 개입은 이 도메인의 기관에서 운영자 이상 역할을 가진 관리자와 시스템
-            운영자, 시스템 관리자만 수행할 수 있습니다.
-          </PermissionNotice>
-        )}
-      </section>
+      {canIntervene && (
+        <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+          <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
+          <p className="text-sm text-neutral-500">
+            커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
+            즉시 회수)를 수행합니다. 기관 계층은 자기가 운영하는 기관의 도메인에만
+            적용됩니다.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {domain.kind === 'CUSTOM' && <ReverifyButton domain={domain} onResult={setNotice} />}
+            <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
+              강제 해제
+            </Button>
+          </div>
+        </section>
+      )}
 
       {releaseOpen && (
         <ForceReleaseModal
@@ -486,11 +472,9 @@ type DrawerNotice = { variant: 'info' | 'danger'; text: string }
 
 function ReverifyButton({
   domain,
-  disabled,
   onResult,
 }: {
   domain: AdminDomainView
-  disabled: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -510,7 +494,6 @@ function ReverifyButton({
     <Button
       variant="secondary"
       size="sm"
-      disabled={disabled}
       loading={reverify.isPending}
       onClick={() => reverify.mutate()}
     >
@@ -522,11 +505,9 @@ function ReverifyButton({
 /** 개별 라우트 재적용 — 전역 sync-all 없이 이 도메인의 라우트만 재전파. */
 function ApplyRouteButton({
   routeId,
-  disabled,
   onResult,
 }: {
   routeId: string
-  disabled: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
   const queryClient = useQueryClient()
@@ -547,7 +528,6 @@ function ApplyRouteButton({
     <Button
       variant="secondary"
       size="sm"
-      disabled={disabled}
       loading={apply.isPending}
       onClick={() => apply.mutate()}
     >

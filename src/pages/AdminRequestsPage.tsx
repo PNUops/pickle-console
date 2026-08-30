@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
+  type ResourceType,
   type RequestStatus,
 } from '../api/queries'
 import {
@@ -12,7 +13,7 @@ import {
   RequestStatusBadge,
   Select,
   Spinner,
-  Table,
+  DataTable,
   TBody,
   TD,
   TH,
@@ -26,7 +27,8 @@ import {
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
 import { REQUEST_STATUS_LABELS } from '../lib/status'
-import { useOrgOptions } from '../lib/use-org-options'
+import { adminPaths } from '../lib/paths'
+import { useAdminScope } from '../lib/use-admin-scope'
 
 const PAGE_SIZE = 10
 
@@ -41,30 +43,27 @@ const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
 
 export function AdminRequestsPage() {
   const navigate = useNavigate()
+  const { activeOrgId } = useAdminScope()
   const [status, setStatus] = useState<RequestStatus | undefined>('SUBMITTED')
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
+  const [type, setType] = useState<ResourceType | undefined>(undefined)
   const [page, setPage] = useState(0)
 
   const requests = useQuery({
     queryKey: [
       'admin',
       'requests',
-      { status: status ?? null, orgId: orgId ?? null, page, size: PAGE_SIZE },
+      { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, page, size: PAGE_SIZE },
     ],
-    queryFn: () => fetchAdminRequests({ status, orgId, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+    queryFn: () => fetchAdminRequests({ status, type, orgId: activeOrgId, page, size: PAGE_SIZE }),
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
-  // 기관 선택지는 계정이 지정할 수 있는 기관만 — 보유하지 않은 기관은 404다.
-  const orgOptions = useOrgOptions()
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          제출된 VM 신청을 검토하고 승인 또는 반려합니다.
+          제출된 리소스 신청을 종류별 참고 정보와 함께 검토하고 승인 또는 반려합니다.
         </p>
       </div>
 
@@ -94,27 +93,19 @@ export function AdminRequestsPage() {
             )
           })}
         </div>
-        {orgOptions.length > 1 && (
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            기관
-            <Select
-              aria-label="기관 필터"
-              className="w-56"
-              value={orgId ?? ''}
-              onChange={(event) => {
-                setOrgId(event.target.value || undefined)
-                setPage(0)
-              }}
-            >
-              <option value="">전체 기관</option>
-              {orgOptions.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-        )}
+        <Select
+          aria-label="리소스 종류 필터"
+          className="w-full sm:w-44"
+          value={type ?? ''}
+          onChange={(event) => {
+            setType((event.target.value || undefined) as ResourceType | undefined)
+            setPage(0)
+          }}
+        >
+          <option value="">전체 리소스</option>
+          <option value="VM">가상머신</option>
+          <option value="LLM_API_KEY">LLM API 키</option>
+        </Select>
       </div>
 
       {requests.isPending && (
@@ -130,8 +121,7 @@ export function AdminRequestsPage() {
       )}
       {requests.isSuccess && requests.data.content.length > 0 && (
         <>
-          <Card>
-            <Table>
+          <DataTable caption="관리자 신청 목록">
               <THead>
                 <TR>
                   <TH>신청자</TH>
@@ -146,11 +136,11 @@ export function AdminRequestsPage() {
                   <TR
                     key={request.id}
                     className="cursor-pointer hover:bg-neutral-50"
-                    onClick={() => navigate(`/admin/requests/${request.id}`)}
+                    onClick={() => navigate(adminPaths.requestDetail(request.id, activeOrgId))}
                   >
                     <TD>
                       <Link
-                        to={`/admin/requests/${request.id}`}
+                        to={adminPaths.requestDetail(request.id, activeOrgId)}
                         className="font-medium text-primary-700 hover:underline"
                         onClick={(event) => event.stopPropagation()}
                       >
@@ -172,8 +162,7 @@ export function AdminRequestsPage() {
                   </TR>
                 ))}
               </TBody>
-            </Table>
-          </Card>
+          </DataTable>
           <Pagination
             page={requests.data.page}
             totalPages={requests.data.totalPages}

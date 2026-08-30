@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/auth-context'
 import { isOrgTier } from '../auth/permissions'
 import { MFA_NUDGE_DISMISS_KEY } from '../lib/storage-keys'
+import { adminPath } from '../lib/paths'
 
 /**
  * 기관 계층 2FA 권유 배너 — 관리자 셸 상단에 서서 계정 설정(/admin/account)의 등록
@@ -14,6 +15,11 @@ import { MFA_NUDGE_DISMISS_KEY } from '../lib/storage-keys'
  */
 export function MfaNudgeBanner() {
   const { user } = useAuth()
+  const { search } = useLocation()
+  const accountPath = adminPath(
+    '/admin/account?enroll=2fa',
+    new URLSearchParams(search).get('org') ?? undefined,
+  )
   const [dismissed, setDismissed] = useState(
     () =>
       typeof sessionStorage !== 'undefined' &&
@@ -34,7 +40,7 @@ export function MfaNudgeBanner() {
     >
       <span className="min-w-0 flex-1">
         관리자 계정에는 2단계 인증(2FA) 등록을 권장합니다.{' '}
-        <Link to="/admin/account?enroll=2fa" className="font-medium underline hover:text-info-900">
+        <Link to={accountPath} className="font-medium underline hover:text-info-900">
           지금 등록하기
         </Link>
       </span>

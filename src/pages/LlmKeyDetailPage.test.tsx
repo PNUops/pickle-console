@@ -147,8 +147,8 @@ describe('기간이 지난 키 — 상태 열은 아직 활성이다', () => {
     expect(screen.queryByText('활성')).not.toBeInTheDocument()
     expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
-    // 폐기는 여전히 열려 있다 — 기간이 지난 키도 정리할 수 있어야 한다.
-    expect(screen.getByRole('button', { name: '키 폐기' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   })
 
   test('목록도 같은 근거로 판정해 상세와 다른 말을 하지 않는다', async () => {
@@ -179,8 +179,8 @@ describe('정지·만료된 키', () => {
     await screen.findByRole('heading', { name: 'study-shared-key' })
     expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
-    // 폐기는 여전히 열려 있다 — 만료된 키도 정리할 수 있어야 한다.
-    expect(screen.getByRole('button', { name: '키 폐기' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   })
 })
 

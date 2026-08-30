@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse } from './auth'
+import { ACCESS_TOKENS, problemResponse } from './auth'
+import { isSysTier } from '../../../auth/permissions'
 import { isMyWorkspace, workspaceMembersOf } from './workspaces'
 import { uuid } from '../ids'
 
@@ -8,6 +9,7 @@ type Schemas = components['schemas']
 type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
 type ResourceRole = Schemas['ResourceRole']
 type AccessGrant = Schemas['ResourceAccessGrantView']
+type AdminLlmKey = Schemas['AdminLlmKeyDetailResponse']
 
 const RESOURCE_ROLE_RANK: Record<ResourceRole, number> = {
   VIEWER: 0,
@@ -240,12 +242,65 @@ function initialLlmKeyAccessGrants(): Record<string, AccessGrant[]> {
 
 export let llmKeyStore: LlmKeyDetail[] = initialLlmKeys()
 export let llmKeyAccessStore: Record<string, AccessGrant[]> = initialLlmKeyAccessGrants()
+function initialAdminLlmKeys(): AdminLlmKey[] {
+  const base = {
+    orgId: uuid(1),
+    orgName: '정보컴퓨터공학부 실습지원센터',
+    workspaceId: uuid(12),
+    workspaceName: '캡스톤 3조',
+    purpose: '관리자 LLM API 키 검증',
+    rpm: 60,
+    tpm: 40_000,
+    dailyTokens: 1_000_000,
+    concurrency: 4,
+    creditLimit: 5,
+    creditLimitReset: 'MONTHLY' as const,
+    creditAxisConnected: true,
+    quotaExhausted: false,
+    expiresAt: null,
+    lastUsedAt: '2026-08-20T10:00:00+09:00',
+    revokedAt: null,
+    createdAt: '2026-08-01T09:00:00+09:00',
+  }
+  return [
+    { ...base, id: uuid(170), name: 'pending-admin-key', status: 'PENDING', requestId: uuid(205), lastUsedAt: null },
+    { ...base, id: uuid(171), name: 'active-admin-key', status: 'ACTIVE', requestId: uuid(206) },
+    { ...base, id: uuid(172), name: 'suspended-admin-key', status: 'SUSPENDED', requestId: uuid(207) },
+    { ...base, id: uuid(173), name: 'expired-admin-key', status: 'EXPIRED', requestId: uuid(208) },
+    {
+      ...base,
+      id: uuid(174),
+      name: 'revoked-admin-key',
+      status: 'REVOKED',
+      requestId: uuid(209),
+      revokedAt: '2026-08-21T10:00:00+09:00',
+    },
+    {
+      ...base,
+      id: uuid(175),
+      name: 'other-org-key',
+      status: 'ACTIVE',
+      requestId: uuid(210),
+      orgId: uuid(2),
+      orgName: '테스트 기관',
+      workspaceId: uuid(21),
+      workspaceName: 'AI 동아리',
+    },
+  ]
+}
+
+export let adminLlmKeyStore: AdminLlmKey[] = initialAdminLlmKeys()
+export let adminLlmLimitBodies: Schemas['AdminLlmKeyLimitsRequest'][] = []
+export let adminLlmListQueries: string[] = []
 let nextGrantId = 380
 let nextTokenSuffix = 0
 
 export function resetLlmKeyFixtures() {
   llmKeyStore = initialLlmKeys()
   llmKeyAccessStore = initialLlmKeyAccessGrants()
+  adminLlmKeyStore = initialAdminLlmKeys()
+  adminLlmLimitBodies = []
+  adminLlmListQueries = []
   nextGrantId = 380
   nextTokenSuffix = 0
 }
@@ -519,7 +574,142 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
   }
 }
 
+function adminActor(request: Request): Schemas['UserProfileResponse'] | undefined {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+  return ACCESS_TOKENS[token]
+}
+
+function activeAdminRole(
+  profile: Schemas['UserProfileResponse'],
+  orgId: string | null | undefined,
+): Schemas['UserRole'] | undefined {
+  if (isSysTier(profile.role)) return profile.role
+  return profile.managedOrgs.find((org) => org.orgId === orgId)?.role
+}
+
+function canReadAdminKey(profile: Schemas['UserProfileResponse'], key: AdminLlmKey): boolean {
+  return isSysTier(profile.role) || profile.managedOrgs.some((org) => org.orgId === key.orgId)
+}
+
+function toAdminSummary(key: AdminLlmKey): Schemas['AdminLlmKeySummaryResponse'] {
+  return {
+    id: key.id,
+    name: key.name,
+    purpose: key.purpose,
+    status: key.status,
+    orgId: key.orgId,
+    orgName: key.orgName,
+    workspaceId: key.workspaceId,
+    workspaceName: key.workspaceName,
+    requestId: key.requestId,
+    rpm: key.rpm,
+    tpm: key.tpm,
+    dailyTokens: key.dailyTokens,
+    concurrency: key.concurrency,
+    creditLimit: key.creditLimit,
+    creditLimitReset: key.creditLimitReset,
+    creditAxisConnected: key.creditAxisConnected,
+    expiresAt: key.expiresAt,
+    lastUsedAt: key.lastUsedAt,
+    createdAt: key.createdAt,
+  }
+}
+
 export const llmKeyHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/llm/keys', ({ request }) => {
+    const profile = adminActor(request)
+    if (!profile) return notFoundProblem()
+    const url = new URL(request.url)
+    adminLlmListQueries.push(url.searchParams.toString())
+    const orgId = url.searchParams.get('orgId')
+    const workspaceId = url.searchParams.get('workspaceId')
+    const requestId = url.searchParams.get('requestId')
+    const status = url.searchParams.get('status')
+    const query = url.searchParams.get('query')?.toLocaleLowerCase('ko-KR')
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const size = Number(url.searchParams.get('size') ?? '20')
+    let filtered = adminLlmKeyStore.filter((key) => canReadAdminKey(profile, key))
+    if (orgId) filtered = filtered.filter((key) => key.orgId === orgId)
+    if (workspaceId) filtered = filtered.filter((key) => key.workspaceId === workspaceId)
+    if (requestId) filtered = filtered.filter((key) => key.requestId === requestId)
+    if (status) filtered = filtered.filter((key) => key.status === status)
+    if (query) {
+      filtered = filtered.filter((key) =>
+        `${key.name} ${key.purpose ?? ''}`.toLocaleLowerCase('ko-KR').includes(query),
+      )
+    }
+    filtered.sort((a, b) => b.id.localeCompare(a.id))
+    return HttpResponse.json(
+      {
+        content: filtered.slice(page * size, (page + 1) * size).map(toAdminSummary),
+        page,
+        size,
+        totalElements: filtered.length,
+        totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+      } satisfies Schemas['PageResponseAdminLlmKeySummaryResponse'],
+      { status: 200 },
+    )
+  }),
+
+  http.get('*/api/v1/admin/llm/keys/:keyId', ({ params, request }) => {
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    return HttpResponse.json(key, { status: 200 })
+  }),
+
+  http.put('*/api/v1/admin/llm/keys/:keyId/limits', async ({ params, request }) => {
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    const role = activeAdminRole(profile, key.orgId)
+    if (!role || !['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN'].includes(role)) {
+      return notFoundProblem()
+    }
+    const body = (await request.json()) as Schemas['AdminLlmKeyLimitsRequest']
+    if (
+      role === 'SYS_MANAGER' &&
+      (body.creditLimit !== key.creditLimit || body.creditLimitReset !== key.creditLimitReset)
+    ) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '권한이 없습니다',
+        status: 403,
+        detail: '시스템 운영자는 금액 한도를 변경할 수 없습니다.',
+        code: 'FORBIDDEN',
+      })
+    }
+    adminLlmLimitBodies.push(body)
+    Object.assign(key, body)
+    return HttpResponse.json(key, { status: 200 })
+  }),
+
+  http.post('*/api/v1/admin/llm/keys/:keyId/suspend', async ({ params, request }) => {
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    const role = activeAdminRole(profile, key.orgId)
+    if (!role || !['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN'].includes(role)) {
+      return notFoundProblem()
+    }
+    const body = (await request.json()) as Schemas['SuspendAdminLlmKeyRequest']
+    if (!body.reason.trim()) return validationProblem('/api/v1/admin/llm/keys', 'reason', '정지 사유를 입력해 주세요.')
+    key.status = 'SUSPENDED'
+    return HttpResponse.json(key, { status: 200 })
+  }),
+
+  http.post('*/api/v1/admin/llm/keys/:keyId/resume', ({ params, request }) => {
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    const role = activeAdminRole(profile, key.orgId)
+    if (!role || !['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN'].includes(role)) {
+      return notFoundProblem()
+    }
+    key.status = 'ACTIVE'
+    return HttpResponse.json(key, { status: 200 })
+  }),
+
   http.get('*/api/v1/llm-keys', ({ request }) => {
     const url = new URL(request.url)
     const workspaceId = url.searchParams.get('workspaceId')
@@ -598,7 +788,17 @@ export const llmKeyHandlers: RequestHandler[] = [
     )
   }),
 
-  http.post('*/api/v1/llm-keys/:keyId/revoke', ({ params }) => {
+  http.post('*/api/v1/llm-keys/:keyId/revoke', ({ params, request }) => {
+    const adminKey = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (adminKey) {
+      const profile = adminActor(request)
+      if (!profile || !canReadAdminKey(profile, adminKey)) return notFoundProblem()
+      const role = activeAdminRole(profile, adminKey.orgId)
+      if (role !== 'ORG_ADMIN' && role !== 'SYS_ADMIN') return notFoundProblem()
+      adminKey.status = 'REVOKED'
+      adminKey.revokedAt = '2026-08-22T10:00:00+09:00'
+      return new HttpResponse(null, { status: 204 })
+    }
     const key = llmKeyStore.find((k) => k.id === String(params.keyId))
     if (!key) return notFoundProblem()
     // 폐기는 상시 권한이다 — 유출된 키는 워크스페이스 소유자도 죽일 수 있어야 한다.
