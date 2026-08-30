@@ -9,7 +9,7 @@ export function LandingFooter() {
       <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-sm">
-            <Logo tone="inverse" />
+            <Logo tone="inverse" variant="endorsement" />
             <p className="mt-3 text-sm leading-relaxed text-neutral-400">
               부산대학교 구성원을 위한 클라우드 플랫폼입니다.
             </p>

@@ -107,6 +107,7 @@ describe('TerminalWindow — 티켓 핸드셰이크', () => {
     await waitFor(() => expect(postSpy).toHaveBeenCalledTimes(1))
     sendTicket()
     expect(await screen.findByText('알고리즘 채점기')).toBeInTheDocument()
+    expect(document.title).toBe('알고리즘 채점기 터미널 · Pickle')
   })
 })
 

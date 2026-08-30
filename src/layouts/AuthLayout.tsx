@@ -43,7 +43,7 @@ export function AuthLayout() {
 
       <header className="relative z-10">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Logo tone="inverse" />
+          <Logo tone="inverse" variant="lockup" />
           <nav aria-label="주 메뉴" className="flex items-center gap-2">
             {status === 'authenticated' && user ? (
               <TransitionLink

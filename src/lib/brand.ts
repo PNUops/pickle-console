@@ -3,10 +3,11 @@
  * 부산대학교 클라우드 플랫폼을 identity/legal surface에서 병치한다.
  * 식별자(쿠키·스토리지 키 등)의 `pickle`은 코드네임이므로 이 상수와 무관하다.
  */
-export const SERVICE_NAME = 'PNU Cloud'
-
 /** 일반 console surface와 brand lockup의 주 표시명. */
 export const BRAND_NAME = 'Pickle'
+
+/** 일반 UI 문장에서 사용하는 서비스 표시명. */
+export const SERVICE_NAME = BRAND_NAME
 
 /** 대표 identity surface에서 Pickle과 병치하는 통용명. */
 export const PLATFORM_NAME = 'PNU Cloud'

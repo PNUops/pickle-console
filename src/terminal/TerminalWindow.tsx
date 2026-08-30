@@ -119,7 +119,7 @@ export function TerminalWindow({ vmId }: { vmId: string }) {
   const label = opener.vm?.label ?? 'VM'
 
   useEffect(() => {
-    document.title = `터미널 · ${label}`
+    document.title = `${label} 터미널 · Pickle`
   }, [label])
 
   if (opener.shutdown) {

@@ -365,7 +365,7 @@ export function AppShell({
       <NoticePopupHost />
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
         <div className="flex h-16 items-center border-b border-neutral-100 px-5">
-          <Logo to={home} />
+          <Logo to={home} variant="lockup" />
         </div>
         {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
         <ShellNav navLabel={navLabel} navSections={navSections} />
@@ -388,7 +388,7 @@ export function AppShell({
             className="absolute inset-y-0 left-0 flex w-60 flex-col bg-white shadow-overlay outline-none"
           >
             <div className="flex h-16 items-center justify-between border-b border-neutral-100 px-5">
-              <Logo to={home} />
+              <Logo to={home} variant="lockup" />
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
