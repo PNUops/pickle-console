@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -136,6 +136,25 @@ describe('셸 정보 밀도', () => {
     expect(
       within(screen.getByRole('dialog', { name: '내 계정' })).getByText('사용자'),
     ).toBeInTheDocument()
+  })
+
+  test('Web Storage가 차단돼도 기본 펼침 상태로 console을 렌더한다', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+      setItem: () => {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+    })
+
+    try {
+      renderConsole()
+      expect(await screen.findByRole('navigation', { name: '콘솔 메뉴' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '사이드바 접기' })).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 

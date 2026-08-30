@@ -31,6 +31,22 @@ const BANNER_DISMISS_KEY = 'pickle_banner_dismissed'
 /** 데스크톱 사이드바 접힘 상태를 브라우저에 유지한다. */
 const SIDEBAR_COLLAPSED_KEY = 'pickle_sidebar_collapsed'
 
+function loadSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function storeSidebarCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed))
+  } catch {
+    // Web Storage가 차단돼도 선택적 UI 설정 때문에 console을 중단하지 않는다.
+  }
+}
+
 export interface NavItem {
   /** 갈 곳. 준비 중 항목은 아직 화면이 없으므로 비운다. */
   to?: string
@@ -223,11 +239,7 @@ export function AppShell({
 }) {
   const navSections: NavSection[] = sections ?? [{ items: items ?? [] }]
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () =>
-      typeof localStorage !== 'undefined' &&
-      localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true',
-  )
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed)
   const drawerId = useId()
   const drawerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(drawerRef, { active: drawerOpen, onEscape: () => setDrawerOpen(false) })
@@ -319,7 +331,7 @@ export function AppShell({
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed))
+    storeSidebarCollapsed(sidebarCollapsed)
   }, [sidebarCollapsed])
 
   // 비관리자는 점검 중 콘솔 전체를 차단한다(점검 해제 시 폴링이 자동 복구).
