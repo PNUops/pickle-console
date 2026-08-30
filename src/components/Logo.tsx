@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import pnuLogo from '../assets/pnu-logo.png'
 import pnuLogoWhite from '../assets/pnu-logo-white.png'
-import { BRAND_NAME, OFFICIAL_SERVICE_NAME, PLATFORM_NAME } from '../lib/brand'
+import { BRAND_NAME, OFFICIAL_SERVICE_NAME } from '../lib/brand'
 import { cn } from '../lib/cn'
 
 export type LogoTone = 'default' | 'inverse' | 'monochrome'
@@ -53,10 +53,7 @@ export interface LogoProps {
   size?: 'sm' | 'md'
 }
 
-/**
- * Pickle-first surface lockup. 부산대학교 엠블럼은 institutional endorsement가
- * 필요한 `endorsement` variant에서만 렌더한다.
- */
+/** 일반 surface는 부산대학교 엠블럼과 Pickle wordmark를 한 lockup으로 쓴다. */
 export function Logo({
   to = '/',
   className,
@@ -64,15 +61,14 @@ export function Logo({
   variant = 'brand',
   size = 'md',
 }: LogoProps) {
-  const showSymbol = variant !== 'wordmark'
+  const showEmblem = variant === 'brand' || variant === 'lockup' || variant === 'endorsement'
+  const showSymbol = variant === 'symbol'
   const showWordmark = variant !== 'symbol'
-  const showDescriptor = variant === 'lockup' || variant === 'endorsement'
+  const showDescriptor = variant === 'endorsement'
   const accessibleName =
     variant === 'endorsement'
       ? `${BRAND_NAME}, ${OFFICIAL_SERVICE_NAME}`
-      : showDescriptor
-        ? `${BRAND_NAME}, ${PLATFORM_NAME}`
-        : BRAND_NAME
+      : BRAND_NAME
 
   return (
     <Link
@@ -84,6 +80,14 @@ export function Logo({
         className,
       )}
     >
+      {showEmblem && (
+        <img
+          src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
+          alt=""
+          aria-hidden="true"
+          className={size === 'sm' ? 'h-4 w-auto shrink-0' : 'h-7 w-auto shrink-0'}
+        />
+      )}
       {showSymbol && (
         <PickleSymbol
           decorative
@@ -115,18 +119,10 @@ export function Logo({
                   : 'border-stroke-default text-foreground-muted',
               )}
             >
-              {variant === 'endorsement' ? OFFICIAL_SERVICE_NAME : PLATFORM_NAME}
+              {OFFICIAL_SERVICE_NAME}
             </span>
           )}
         </span>
-      )}
-      {variant === 'endorsement' && (
-        <img
-          src={tone === 'inverse' ? pnuLogoWhite : pnuLogo}
-          alt=""
-          aria-hidden="true"
-          className={size === 'sm' ? 'h-4 w-auto shrink-0' : 'h-6 w-auto shrink-0'}
-        />
       )}
     </Link>
   )
