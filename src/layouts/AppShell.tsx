@@ -380,12 +380,17 @@ export function AppShell({
     ) : null
 
   const desktopSidebarLabel = sidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'
+  const mobileMenuLabel = drawerOpen ? '메뉴 닫기' : '메뉴 열기'
 
   return (
     <div data-density={density} className="flex min-h-screen flex-col">
       <PostLoginOverlay />
       <NoticePopupHost />
-      <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6">
+      <header
+        aria-hidden={drawerOpen || undefined}
+        inert={drawerOpen}
+        className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6"
+      >
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -400,11 +405,10 @@ export function AppShell({
           </button>
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="메뉴 열기"
+            onClick={() => setDrawerOpen((open) => !open)}
+            aria-label={mobileMenuLabel}
             aria-expanded={drawerOpen}
-            /* 드로어는 열려 있을 때만 마운트 — 닫힌 상태에서 없는 id를 참조하지 않는다 */
-            aria-controls={drawerOpen ? drawerId : undefined}
+            aria-controls={drawerId}
             className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600 md:hidden"
           >
             {navigationMenuIcon}
@@ -416,46 +420,68 @@ export function AppShell({
           <UserMenu />
         </div>
       </header>
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-neutral-950/50"
+      <div
+        ref={drawerRef}
+        id={drawerId}
+        role="dialog"
+        aria-modal="true"
+        aria-label={navLabel}
+        aria-hidden={!drawerOpen || undefined}
+        inert={!drawerOpen}
+        tabIndex={-1}
+        className={cn(
+          'fixed inset-0 z-50 outline-none md:hidden',
+          drawerOpen ? 'pointer-events-auto' : 'pointer-events-none',
+        )}
+      >
+        <div
+          className={cn(
+            'relative z-10 flex h-14 items-center gap-2 border-b border-neutral-200 bg-white px-4 transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none sm:px-6',
+            drawerOpen ? 'opacity-100' : 'opacity-0',
+          )}
+        >
+          <button
+            type="button"
             onClick={() => setDrawerOpen(false)}
-          />
-          <div
-            ref={drawerRef}
-            id={drawerId}
-            role="dialog"
-            aria-modal="true"
-            aria-label={navLabel}
-            tabIndex={-1}
-            className="absolute inset-y-0 left-0 flex w-60 flex-col bg-white shadow-overlay outline-none"
+            aria-label="메뉴 닫기"
+            aria-expanded={drawerOpen}
+            aria-controls={drawerId}
+            className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
           >
-            <div className="flex h-14 items-center justify-between border-b border-neutral-100 px-4">
-              <Logo to={home} variant="brand" />
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="메뉴 닫기"
-                className="cursor-pointer rounded p-1 text-neutral-400 hover:text-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-600"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="size-5" aria-hidden="true">
-                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
-              </button>
-            </div>
-            {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
-            <ShellNav
-              navLabel={navLabel}
-              navSections={navSections}
-              onNavigate={() => setDrawerOpen(false)}
-            />
-            <ShellFooterNav onNavigate={() => setDrawerOpen(false)} />
-          </div>
+            {navigationMenuIcon}
+          </button>
+          <Logo to={home} variant="brand" />
         </div>
-      )}
-      <div className="flex min-h-[calc(100vh-3.5rem)] flex-1">
+        <div
+          aria-hidden="true"
+          data-testid="mobile-navigation-backdrop"
+          className={cn(
+            'absolute inset-x-0 bottom-0 top-14 bg-neutral-950/50 transition-opacity duration-[var(--duration-normal)] ease-standard motion-reduce:transition-none',
+            drawerOpen ? 'opacity-100' : 'opacity-0',
+          )}
+          onClick={() => setDrawerOpen(false)}
+        />
+        <div
+          data-testid="mobile-navigation-panel"
+          className={cn(
+            'absolute bottom-0 left-0 top-14 flex w-60 flex-col bg-white shadow-overlay transition-transform duration-[var(--duration-normal)] ease-decelerate motion-reduce:transition-none',
+            drawerOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+        >
+          {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
+          <ShellNav
+            navLabel={navLabel}
+            navSections={navSections}
+            onNavigate={() => setDrawerOpen(false)}
+          />
+          <ShellFooterNav onNavigate={() => setDrawerOpen(false)} />
+        </div>
+      </div>
+      <div
+        aria-hidden={drawerOpen || undefined}
+        inert={drawerOpen}
+        className="flex min-h-[calc(100vh-3.5rem)] flex-1"
+      >
         <aside
           id={desktopSidebarId}
           aria-hidden={sidebarCollapsed || undefined}

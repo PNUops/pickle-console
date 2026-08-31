@@ -17,18 +17,33 @@ describe('모바일 드로어 내비게이션', () => {
     const user = userEvent.setup()
 
     const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
+    const openIcon = openButton.querySelector('svg')?.innerHTML
     expect(openButton).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
 
     await user.click(openButton)
     const drawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
-    expect(screen.getByRole('button', { name: '메뉴 열기' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    const closeButton = within(drawer).getByRole('button', { name: '메뉴 닫기' })
+    const panel = within(drawer).getByTestId('mobile-navigation-panel')
+    const backdrop = within(drawer).getByTestId('mobile-navigation-backdrop')
+    expect(closeButton.querySelector('svg')?.innerHTML).toBe(openIcon)
+    expect(document.activeElement).toBe(closeButton)
+    expect(closeButton).toHaveAttribute('aria-expanded', 'true')
+    expect(panel).toHaveClass(
+      'top-14',
+      'translate-x-0',
+      'transition-transform',
+      'duration-[var(--duration-normal)]',
+      'ease-decelerate',
+      'motion-reduce:transition-none',
     )
+    expect(backdrop).toHaveClass('opacity-100', 'transition-opacity')
 
     await user.click(within(drawer).getByRole('link', { name: '가상머신' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(panel).toHaveClass('-translate-x-full')
+    expect(backdrop).toHaveClass('opacity-0')
+    expect(document.activeElement).toBe(openButton)
     expect(await screen.findByRole('heading', { name: '내 가상머신' })).toBeInTheDocument()
   })
 
@@ -36,16 +51,19 @@ describe('모바일 드로어 내비게이션', () => {
     renderConsole()
     const user = userEvent.setup()
 
-    await user.click(await screen.findByRole('button', { name: '메뉴 열기' }))
+    const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
+    await user.click(openButton)
     expect(screen.getByRole('dialog', { name: '콘솔 메뉴' })).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(document.activeElement).toBe(openButton)
 
-    await user.click(screen.getByRole('button', { name: '메뉴 열기' }))
+    await user.click(openButton)
     const drawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
     await user.click(within(drawer).getByRole('button', { name: '메뉴 닫기' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(document.activeElement).toBe(openButton)
   })
 })
 
