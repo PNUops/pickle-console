@@ -18,14 +18,14 @@ describe('모바일 드로어 내비게이션', () => {
 
     const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
     const openIcon = openButton.querySelector('svg')?.innerHTML
-    const drawerId = openButton.getAttribute('aria-controls')
     expect(openButton).toHaveAttribute('aria-expanded', 'false')
+    expect(openButton).not.toHaveAttribute('aria-controls')
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
-    expect(document.getElementById(drawerId!)).not.toBeInTheDocument()
 
     await user.click(openButton)
     const drawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
     const closeButton = within(drawer).getByRole('button', { name: '메뉴 닫기' })
+    expect(openButton).toHaveAttribute('aria-controls', drawer.id)
     const panel = within(drawer).getByTestId('mobile-navigation-panel')
     const backdrop = within(drawer).getByTestId('mobile-navigation-backdrop')
     expect(closeButton.querySelector('svg')?.innerHTML).toBe(openIcon)
@@ -54,9 +54,9 @@ describe('모바일 드로어 내비게이션', () => {
     const user = userEvent.setup()
 
     const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
-    const drawerId = openButton.getAttribute('aria-controls')
     await user.click(openButton)
-    expect(screen.getByRole('dialog', { name: '콘솔 메뉴' })).toBeInTheDocument()
+    const firstDrawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
+    const drawerId = firstDrawer.id
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
@@ -68,6 +68,7 @@ describe('모바일 드로어 내비게이션', () => {
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
     expect(document.activeElement).toBe(openButton)
     await waitFor(() => expect(document.getElementById(drawerId!)).not.toBeInTheDocument())
+    expect(openButton).not.toHaveAttribute('aria-controls')
   })
 })
 

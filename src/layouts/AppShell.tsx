@@ -446,7 +446,7 @@ export function AppShell({
             onClick={openDrawer}
             aria-label={mobileMenuLabel}
             aria-expanded={drawerOpen}
-            aria-controls={drawerId}
+            aria-controls={drawerRendered ? drawerId : undefined}
             className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600 md:hidden"
           >
             {navigationMenuIcon}
