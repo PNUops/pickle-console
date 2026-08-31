@@ -68,6 +68,18 @@ describe('관리자 LLM API 키 목록', () => {
     expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
   })
 
+  test('usage deep link의 workspaceId URL filter를 목록과 API query에 적용한다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/llm/keys?workspaceId=${uuid(12)}`)
+
+    const workspace = await screen.findByLabelText('LLM API 키 워크스페이스 필터')
+    await within(workspace).findByRole('option', { name: '캡스톤 3조' })
+    expect(workspace).toHaveValue(uuid(12))
+    expect(await screen.findByText('active-admin-key')).toBeInTheDocument()
+    expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
+    expect(adminLlmListQueries.some((query) => query.includes(`workspaceId=${uuid(12)}`))).toBe(true)
+  })
+
   test('기관 scope 변경 시 이전 기관 workspace 필터를 초기화한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))

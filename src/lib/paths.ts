@@ -58,9 +58,20 @@ export const adminPaths = {
       orgId,
     ),
   vmDetail: (vmId: string, orgId?: string) => adminPath(`/admin/vms/${vmId}`, orgId),
-  llmKeys: (orgId?: string) => adminPath('/admin/llm/keys', orgId),
+  llmKeys: (orgId?: string, workspaceId?: string | null) =>
+    adminPath(
+      workspaceId == null ? '/admin/llm/keys' : `/admin/llm/keys?workspaceId=${workspaceId}`,
+      orgId,
+    ),
   llmKeyDetail: (keyId: string, orgId?: string) =>
     adminPath(`/admin/llm/keys/${keyId}`, orgId),
+  llmUsage: (orgId?: string, workspaceId?: string | null, days?: 7 | 30 | 90) => {
+    const query = new URLSearchParams()
+    if (workspaceId != null) query.set('workspaceId', workspaceId)
+    if (days != null) query.set('days', String(days))
+    const suffix = query.size > 0 ? `?${query}` : ''
+    return adminPath(`/admin/llm/usage${suffix}`, orgId)
+  },
   llmAccounts: (orgId?: string) => adminPath('/admin/llm/accounts', orgId),
   llmAccountDetail: (accountId: string, orgId?: string) =>
     adminPath(`/admin/llm/accounts/${accountId}`, orgId),

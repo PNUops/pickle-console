@@ -16,6 +16,10 @@ import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces
 import { llmKeyHandlers, resetLlmKeyFixtures } from './handlers/llm-keys'
 import { llmObservabilityHandlers } from './handlers/llm-observability'
 import {
+  llmAdminUsageHandlers,
+  resetAdminLlmUsageFixtures,
+} from './handlers/llm-admin-usage'
+import {
   openRouterAccountHandlers,
   resetOpenRouterAccountFixtures,
 } from './handlers/openrouter-accounts'
@@ -48,6 +52,7 @@ export const handlers: RequestHandler[] = [
   ...llmKeyHandlers,
   ...openRouterAccountHandlers,
   ...llmObservabilityHandlers,
+  ...llmAdminUsageHandlers,
   ...resourceHandlers,
   ...terminalHandlers,
   ...vmSshKeyHandlers,
@@ -75,6 +80,7 @@ export function resetFixtures() {
   resetVmFixtures()
   resetLlmKeyFixtures()
   resetOpenRouterAccountFixtures()
+  resetAdminLlmUsageFixtures()
   resetTerminalFixtures()
   resetVmSshKeyFixtures()
   resetPublishingFixtures()

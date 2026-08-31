@@ -551,6 +551,15 @@ export type LlmCatalogStatus = Schemas['LlmCatalogStatus']
 export type AdminLlmMetrics = Schemas['LlmMetricsResponse']
 export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
 export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']
+export type AdminLlmUsage = Schemas['AdminLlmUsageResponse']
+export type LlmUsageConsumer = Schemas['LlmUsageConsumerResponse']
+export type LlmUsageConsumerLevel = Schemas['LlmUsageConsumerLevel']
+export type LlmUsageDailyPoint = Schemas['LlmUsageDailyPointResponse']
+export type LlmUsageWindow = Schemas['LlmUsageWindowResponse']
+export type LlmLimitReview = Schemas['LlmLimitReviewResponse']
+export type LlmLimitPressure = Schemas['LlmLimitPressureResponse']
+export type LlmUsageQuality = Schemas['LlmUsageQualityResponse']
+export type AdminLlmUsageDays = 7 | 30 | 90
 export type OpenRouterAccount = Schemas['OpenRouterAccountResponse']
 export type OpenRouterAccountStatus = Schemas['OpenRouterAccountStatus']
 export type OpenRouterCredentialState = Schemas['OpenRouterCredentialStateResponse']
@@ -716,6 +725,21 @@ export function fetchAdminLlmMetrics(orgId?: string, days = 7): Promise<AdminLlm
       params: { query: { orgId, days } },
     })
     if (!data) throw toApiError(error, 'LLM 서비스 지표를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminLlmUsage(params: {
+  orgId?: string
+  workspaceId?: string
+  days: AdminLlmUsageDays
+  top?: number
+}): Promise<AdminLlmUsage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/usage', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '관리자 LLM 사용량을 불러오지 못했습니다.')
     return data
   })
 }

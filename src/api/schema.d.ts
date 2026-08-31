@@ -504,6 +504,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM 사용량 통계
+         * @description DB에 저장된 rollup과 usage event, vendor meter cache, gateway 자기보고를 읽어 수요·소비처·한도 검토·데이터 신뢰도를 제공합니다. 조회 과정에서 gateway나 vendor를 직접 호출하지 않습니다.
+         */
+        get: operations["getAdminLlmUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/nodes": {
         parameters: {
             query?: never;
@@ -2998,6 +3018,22 @@ export interface components {
             workspaceId?: string | null;
             workspaceName: string;
         };
+        AdminLlmUsageResponse: {
+            consumers: components["schemas"]["LlmUsageConsumersResponse"];
+            /** Format: int32 */
+            days: number;
+            demand: components["schemas"]["LlmUsageDemandResponse"];
+            /** Format: date */
+            from: string;
+            /** Format: date-time */
+            generatedAt: string;
+            limitReview: components["schemas"]["LlmLimitReviewCollectionResponse"];
+            quality: components["schemas"]["LlmUsageQualityResponse"];
+            /** @description 모든 일자 경계와 오늘 사용량에 적용한 시간대 */
+            timezone: string;
+            /** Format: date */
+            to: string;
+        };
         AdminNoticeView: {
             /** @description 지금 게시 창 안에 있는지. 예정·만료된 공지도 이 목록에는 함께 나옵니다. */
             active: boolean;
@@ -4335,6 +4371,54 @@ export interface components {
             /** Format: date */
             to: string;
         };
+        LlmLimitPressureResponse: {
+            /** @enum {string} */
+            reason: "quota_exhausted" | "credit_exhausted" | "rate_limit_requests" | "rate_limit_tokens" | "rate_limit_concurrency";
+            /** Format: int64 */
+            requests: number;
+        };
+        LlmLimitReviewCollectionResponse: {
+            items: components["schemas"]["LlmLimitReviewResponse"][];
+            /** Format: int64 */
+            totalItems: number;
+            truncated: boolean;
+        };
+        LlmLimitReviewResponse: {
+            creditAxisConnected: boolean;
+            creditLimit: number;
+            creditLimitRemaining?: number | null;
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            creditUsage?: number | null;
+            /** Format: date-time */
+            creditUsageAt?: string | null;
+            /** Format: int64 */
+            dailyTokens?: number | null;
+            /** Format: uuid */
+            keyId: string;
+            keyName: string;
+            /**
+             * Format: uuid
+             * @description 불변 binding된 OpenRouter 사업 account. 미결합이면 null
+             */
+            openrouterAccountId?: string | null;
+            openrouterAccountName?: string | null;
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            pressure: components["schemas"]["LlmLimitPressureResponse"][];
+            quotaExhausted: boolean;
+            status: components["schemas"]["LlmApiKeyStatus"];
+            /** Format: int64 */
+            todayTokens: number;
+            /**
+             * Format: int64
+             * @description 요청 당시 budget axis가 보고되지 않은 오늘 입력+출력 token
+             */
+            todayUnknownAxisTokens: number;
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+        };
         LlmLocalRejectionMetricResponse: {
             errorType: string;
             /** Format: int64 */
@@ -4495,6 +4579,146 @@ export interface components {
             ref?: string | null;
             /** @description 등록부와 versioned gateway 보고의 관계 및 신선도 */
             reportState: components["schemas"]["LlmUpstreamReportState"];
+        };
+        /** @enum {string} */
+        LlmUsageConsumerLevel: "ORG" | "WORKSPACE" | "KEY";
+        LlmUsageConsumerResponse: {
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: uuid */
+            keyId?: string | null;
+            keyName?: string | null;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName?: string | null;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName?: string | null;
+        };
+        LlmUsageConsumersResponse: {
+            items: components["schemas"]["LlmUsageConsumerResponse"][];
+            level: components["schemas"]["LlmUsageConsumerLevel"];
+            /** Format: int64 */
+            totalItems: number;
+            truncated: boolean;
+        };
+        LlmUsageDailyPointResponse: {
+            /**
+             * Format: double
+             * @description 요청 당시 TOKEN/CREDIT 축이 기록된 request 비율. 요청이 없으면 null
+             */
+            axisCoverage?: number | null;
+            /** Format: int64 */
+            creditAxisRequests: number;
+            /** Format: date */
+            day: string;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            tokenAxisRequests: number;
+            /** Format: int64 */
+            unknownAxisRequests: number;
+        };
+        LlmUsageDemandResponse: {
+            daily: components["schemas"]["LlmUsageDailyPointResponse"][];
+            windows: components["schemas"]["LlmUsageWindowResponse"][];
+        };
+        /** @description 사용량 숫자의 source와 delivery 상태. latestUsageReceivedAt은 API가 마지막으로 event를 받은 시각일 뿐 completeness watermark가 아닙니다. Gateway queue와 loss 수치는 전역 값이며 SYS가 기관으로 좁혀도 전역이고, ORG에는 null입니다. */
+        LlmUsageQualityResponse: {
+            /**
+             * Format: int64
+             * @description 양수 credit limit key 중 vendor meter 관측 이력이 있는 수
+             */
+            creditMetersObserved: number;
+            /**
+             * Format: int64
+             * @description 양수 credit limit을 가진 key 수
+             */
+            creditMetersTotal: number;
+            /** Format: double */
+            estimatedRequestRatio?: number | null;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: double */
+            estimatedTokenRatio?: number | null;
+            /**
+             * Format: int64
+             * @description Estimated input+output token. 원본이 없는 bucket이 섞이면 null
+             */
+            estimatedTokens?: number | null;
+            gatewayReportState: components["schemas"]["LlmGatewayReportState"];
+            /** Format: date-time */
+            lastContactAt?: string | null;
+            /** Format: date-time */
+            lastUsageShipSuccessAt?: string | null;
+            /** Format: date-time */
+            latestCreditUsageAt?: string | null;
+            /**
+             * Format: date-time
+             * @description API가 마지막 usage event를 받은 시각. Completeness watermark가 아님
+             */
+            latestUsageReceivedAt?: string | null;
+            /** Format: date-time */
+            oldestCreditUsageAt?: string | null;
+            /** Format: date-time */
+            oldestUnshippedEventAt?: string | null;
+            /** Format: int64 */
+            queuedUsageBytes?: number | null;
+            /** Format: int64 */
+            queuedUsageEvents?: number | null;
+            /** Format: date-time */
+            rollupLastSuccessAt?: string | null;
+            /** Format: int64 */
+            spoolWriteFailures?: number | null;
+            /** Format: int64 */
+            totalRequests: number;
+            /** Format: int64 */
+            totalTokens: number;
+            /**
+             * Format: int64
+             * @description Key에 귀속되지 않은 selected-window request 수. SYS global에서만 값이 있음
+             */
+            unattributedRequests?: number | null;
+            /** Format: date-time */
+            usageQueueObservedAt?: string | null;
+            usageQueueReportState: components["schemas"]["LlmGatewayReportState"];
+            /** Format: int64 */
+            usageQueueScanFailures?: number | null;
+            /** Format: int64 */
+            usageShipFailures?: number | null;
+        };
+        LlmUsageWindowResponse: {
+            /**
+             * Format: double
+             * @description 요청 당시 TOKEN/CREDIT 축이 기록된 request 비율. 요청이 없으면 null
+             */
+            axisCoverage?: number | null;
+            /** Format: int64 */
+            creditAxisRequests: number;
+            /** Format: int32 */
+            days: number;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            tokenAxisRequests: number;
+            /** Format: int64 */
+            unknownAxisRequests: number;
         };
         LoginRequest: {
             email: string;
@@ -7390,6 +7614,44 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LlmStatusResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmUsage: {
+        parameters: {
+            query?: {
+                /** @description 조회할 기관. 기관 계층은 맡은 기관만 지정할 수 있습니다. */
+                orgId?: string;
+                /** @description 소비처를 key 단계로 좁힐 workspace 공개 ID */
+                workspaceId?: string;
+                /** @description 일별 추이와 소비처 기간. 7, 30, 90 중 하나 */
+                days?: number;
+                /** @description 소비처와 한도 검토가 각각 반환할 최대 행 수 */
+                top?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmUsageResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

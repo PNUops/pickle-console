@@ -52,7 +52,9 @@ VM 신청서(4스텝), 승인 대기, 대시보드, SSH 키 등록, 웹 터미�
 - **알림함**: 승인이나 만료 같은 사건이 쌓이고, 읽은 것과 안 읽은 것이 구분됩니다.
 - **관리자 콘솔**: 가상머신·LLM API 키 신청을 종류별 참고 정보로 검토하고, 승인된 LLM
   API 키의 6개 한도와 정지·해제·폐기를 역할과 상태에 맞게 관리합니다. Gateway·upstream의
-  관측 상태와 최종 처리 지표를 읽습니다. 기관별 OpenRouter 사업 계정 화면에서는 사업·재원
+  관측 상태와 최종 처리 지표를 읽습니다. LLM 사용량 화면은 7·30·90일 수요와 scope-aware
+  소비처, 실제 한도 소진과 정확한 차단 사유를 보여 주며 rollup·usage 수신·vendor meter와
+  Gateway queue의 관측 시각을 함께 표시합니다. 기관별 OpenRouter 사업 계정 화면에서는 사업·재원
   metadata와 secret-free management credential lifecycle을 관리하고, DB cache에 저장된 구매 credits,
   누적 사용액, 잔액, 소진 예상과 paired 미관리 지출을 각 관측 시각과 함께 읽습니다. 이 값은 vendor를
   화면 요청에서 동기 조회한 값이 아니며, 마지막 성공·시도·실패와 key 대사 freshness를 분리해

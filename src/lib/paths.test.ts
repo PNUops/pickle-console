@@ -82,6 +82,12 @@ describe('adminPaths — 기관 query scope', () => {
     expect(adminPaths.llmAccountDetail(OTHER, SCOPE)).toBe(
       `/admin/llm/accounts/${OTHER}?org=${SCOPE}`,
     )
+    expect(adminPaths.llmUsage(SCOPE, OTHER, 30)).toBe(
+      `/admin/llm/usage?workspaceId=${OTHER}&days=30&org=${SCOPE}`,
+    )
+    expect(adminPaths.llmKeys(SCOPE, OTHER)).toBe(
+      `/admin/llm/keys?workspaceId=${OTHER}&org=${SCOPE}`,
+    )
     expect(adminPaths.vms(SCOPE, OTHER)).toBe(
       `/admin/vms?workspaceId=${OTHER}&org=${SCOPE}`,
     )

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import {
   fetchAdminLlmKeys,
   fetchAdminWorkspaces,
@@ -47,8 +47,9 @@ function limitText(value: number | null | undefined): string {
 export function AdminLlmKeysPage() {
   const scope = useAdminScope()
   const { activeOrgId } = scope
+  const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState<LlmApiKeyStatus | undefined>(undefined)
-  const [workspaceId, setWorkspaceId] = useState<string | undefined>(undefined)
+  const workspaceId = searchParams.get('workspaceId') ?? undefined
   const [openrouterAccountId, setOpenrouterAccountId] = useState<string | undefined>(undefined)
   const [queryInput, setQueryInput] = useState('')
   const [page, setPage] = useState(0)
@@ -58,7 +59,6 @@ export function AdminLlmKeysPage() {
   useEffect(() => {
     if (previousOrgId.current === activeOrgId) return
     previousOrgId.current = activeOrgId
-    setWorkspaceId(undefined)
     setOpenrouterAccountId(undefined)
     setPage(0)
   }, [activeOrgId])
@@ -147,7 +147,10 @@ export function AdminLlmKeysPage() {
           className="w-full sm:w-56"
           value={workspaceId ?? ''}
           onChange={(event) => {
-            setWorkspaceId(event.target.value || undefined)
+            const next = new URLSearchParams(searchParams)
+            if (event.target.value) next.set('workspaceId', event.target.value)
+            else next.delete('workspaceId')
+            setSearchParams(next, { replace: true })
             setPage(0)
           }}
         >
