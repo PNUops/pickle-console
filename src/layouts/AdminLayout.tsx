@@ -2,6 +2,7 @@ import {
   AppsListDetail24Regular,
   ClipboardTaskListLtr24Regular,
   Clock24Regular,
+  DataUsage24Regular,
   Desktop24Regular,
   DocumentCheckmark24Regular,
   Globe24Regular,
@@ -63,6 +64,11 @@ export function AdminLayout() {
           to: path('/admin/llm/keys'),
           label: 'LLM API 키',
           icon: <Key24Regular className={iconClass} />,
+        },
+        {
+          to: path('/admin/llm/usage'),
+          label: 'LLM 사용량',
+          icon: <DataUsage24Regular className={iconClass} />,
         },
         {
           to: path('/admin/llm/accounts'),
