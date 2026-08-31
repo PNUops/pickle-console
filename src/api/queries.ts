@@ -551,6 +551,132 @@ export type LlmCatalogStatus = Schemas['LlmCatalogStatus']
 export type AdminLlmMetrics = Schemas['LlmMetricsResponse']
 export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
 export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']
+export type OpenRouterAccount = Schemas['OpenRouterAccountResponse']
+export type OpenRouterAccountStatus = Schemas['OpenRouterAccountStatus']
+export type OpenRouterCredentialState = Schemas['OpenRouterCredentialStateResponse']
+export type OpenRouterCredentialStatus = Schemas['OpenRouterCredentialStatus']
+export type CreateOpenRouterAccount = Schemas['CreateOpenRouterAccountRequest']
+export type UpdateOpenRouterAccount = Schemas['UpdateOpenRouterAccountRequest']
+
+export function fetchOpenRouterAccounts(orgId?: string): Promise<OpenRouterAccount[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/accounts', {
+      params: { query: { orgId } },
+    })
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchOpenRouterAccount(accountId: string): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/accounts/{accountId}', {
+      params: { path: { accountId } },
+    })
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createOpenRouterAccount(
+  body: CreateOpenRouterAccount,
+): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/llm/accounts', { body })
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정을 등록하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateOpenRouterAccount(
+  accountId: string,
+  body: UpdateOpenRouterAccount,
+): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/llm/accounts/{accountId}', {
+      params: { path: { accountId } },
+      body,
+    })
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 정보를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * managementKey는 TanStack mutation 변수로 넘기지 않는다. 호출 화면이 입력 state를
+ * 먼저 비운 뒤 이 직접 요청을 기다려, mutation cache·toast·snapshot 어느 곳에도
+ * credential 평문이 남지 않게 한다.
+ */
+export function stageOpenRouterCredential(
+  accountId: string,
+  managementKey: string,
+  confirmName: string,
+): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST(
+      '/admin/llm/accounts/{accountId}/credentials/staged',
+      {
+        params: { path: { accountId } },
+        body: { managementKey, confirmName },
+      },
+    )
+    if (!data) throw toApiError(error, 'OpenRouter management credential을 검증하지 못했습니다.')
+    return data
+  })
+}
+
+type ConfirmCredentialAction = 'activate' | 'cancel' | 'rollback'
+
+export function confirmOpenRouterCredentialAction(
+  accountId: string,
+  action: ConfirmCredentialAction,
+  confirmName: string,
+): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const request = action === 'activate'
+      ? api.POST('/admin/llm/accounts/{accountId}/credentials/staged/activate', {
+          params: { path: { accountId } },
+          body: { confirmName },
+        })
+      : action === 'cancel'
+        ? api.POST('/admin/llm/accounts/{accountId}/credentials/staged/cancel', {
+            params: { path: { accountId } },
+            body: { confirmName },
+          })
+        : api.POST('/admin/llm/accounts/{accountId}/credentials/retiring/rollback', {
+            params: { path: { accountId } },
+            body: { confirmName },
+          })
+    const { data, error } = await request
+    if (!data) throw toApiError(error, 'OpenRouter credential 상태를 변경하지 못했습니다.')
+    return data
+  })
+}
+
+type RevokeCredentialAction = 'finalize' | 'delete'
+
+export function revokeOpenRouterCredential(
+  accountId: string,
+  action: RevokeCredentialAction,
+  confirmName: string,
+): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const body = { confirmName, vendorRevocationConfirmed: true }
+    const request =
+      action === 'finalize'
+        ? api.POST('/admin/llm/accounts/{accountId}/credentials/retiring/finalize', {
+            params: { path: { accountId } },
+            body,
+          })
+        : api.POST('/admin/llm/accounts/{accountId}/credentials/active/delete', {
+            params: { path: { accountId } },
+            body,
+          })
+    const { data, error } = await request
+    if (!data) throw toApiError(error, 'OpenRouter credential을 정리하지 못했습니다.')
+    return data
+  })
+}
 
 export function fetchAdminLlmKeys(params: {
   orgId?: string

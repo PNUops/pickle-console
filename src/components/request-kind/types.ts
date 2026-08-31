@@ -134,7 +134,7 @@ export interface RequestKindView {
   /** 검토 결과 카드의 승인 상세(부여 사양·기간 등) — 반려·해당 없음이면 null. */
   resultFields(request: RequestDetail): ReactNode
   /** 결정용 카탈로그 로딩 — 결정 폼보다 바깥에서 불려 폼 상태와 분리된다. */
-  useDecisionData(): DecisionData
+  useDecisionData(request: RequestDetail): DecisionData
   /**
    * 승인 폼 상태·검증·본문. ready일 때만 마운트되는 컴포넌트에서 불리므로,
    * 카탈로그 오류로 gate가 열리면 폼 상태는 이전처럼 통째로 초기화된다.

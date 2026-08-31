@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import {
   fetchAdminLlmKey,
+  fetchOpenRouterAccounts,
   replaceAdminLlmKeyLimits,
   resumeAdminLlmKey,
   revokeLlmKey,
@@ -170,6 +171,17 @@ export function AdminLlmKeyDetailPage() {
           { term: '마지막 사용', description: key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음' },
           { term: '만료', description: key.expiresAt ? formatDateTime(key.expiresAt) : '만료 없음' },
           { term: '금액 축 연결', description: key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
+          {
+            term: 'OpenRouter 사업 계정',
+            description: key.openrouterAccountId && key.openrouterAccountName ? (
+              <Link
+                to={adminPaths.llmAccountDetail(key.openrouterAccountId, scope.activeOrgId)}
+                className="font-medium text-brand-foreground hover:underline"
+              >
+                {key.openrouterAccountName}
+              </Link>
+            ) : '미결합',
+          },
         ]}
       />
 
@@ -287,9 +299,23 @@ function LimitsModal({
   )
   const [creditLimit, setCreditLimit] = useState(String(llmKey.creditLimit))
   const [creditLimitReset, setCreditLimitReset] = useState(llmKey.creditLimitReset ?? '')
+  const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const initialBindingAllowed = llmKey.openrouterAccountId == null &&
+    llmKey.creditLimit <= 0 && !llmKey.creditAxisConnected
+  const accounts = useQuery({
+    queryKey: ['admin', 'llm-accounts', { orgId: llmKey.orgId ?? null, for: 'initial-key-binding' }],
+    queryFn: () => fetchOpenRouterAccounts(llmKey.orgId ?? undefined),
+    enabled: canEditCredit && initialBindingAllowed && llmKey.orgId != null,
+  })
+  const rawAccounts = accounts.data ?? []
+  const eligibleAccounts = rawAccounts.filter((account) => account.eligibleForBinding)
+  const bindingPaused = eligibleAccounts.length === 0 && rawAccounts.some(
+    (account) => account.status === 'ACTIVE' && account.credentialAvailable &&
+      !account.eligibleForBinding,
+  )
 
   useEffect(() => {
     if (Object.keys(fieldErrors).length === 0) return
@@ -335,6 +361,19 @@ function LimitsModal({
     if (canEditCredit && !errors.creditLimit && creditLimitReset && !(credit > 0)) {
       errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
+    if (canEditCredit && credit > 0 && initialBindingAllowed) {
+      if (accounts.isPending) {
+        errors.openrouterAccountId = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
+      } else if (accounts.isError) {
+        errors.openrouterAccountId = '사업 계정 목록을 불러오지 못해 금액 축을 연결할 수 없습니다.'
+      } else if (bindingPaused) {
+        errors.openrouterAccountId = 'OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 연결할 수 없습니다.'
+      } else if (eligibleAccounts.length === 0) {
+        errors.openrouterAccountId = '검증된 management credential이 있는 활성 사업 계정이 필요합니다.'
+      } else if (eligibleAccounts.length > 1 && !openrouterAccountId) {
+        errors.openrouterAccountId = '금액 축에 사용할 사업 계정을 선택해 주세요.'
+      }
+    }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     save.mutate({
@@ -346,6 +385,13 @@ function LimitsModal({
       creditLimitReset: canEditCredit
         ? (creditLimitReset as AdminLlmKeyLimits['creditLimitReset']) || null
         : llmKey.creditLimitReset ?? null,
+      openrouterAccountId:
+        llmKey.openrouterAccountId ??
+        (canEditCredit && initialBindingAllowed && credit > 0
+          ? eligibleAccounts.length === 1
+            ? eligibleAccounts[0].id
+            : openrouterAccountId || null
+          : null),
     })
   }
 
@@ -381,31 +427,44 @@ function LimitsModal({
           />
         </div>
         {canEditCredit && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="금액 한도 (USD)" error={fieldErrors.creditLimit}>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                aria-invalid={fieldErrors.creditLimit != null}
-                value={creditLimit}
-                onChange={(event) => setCreditLimit(event.target.value)}
-              />
-            </FormField>
-            <FormField label="금액 리셋 창">
-              <Select
-                value={creditLimitReset}
-                onChange={(event) => setCreditLimitReset(event.target.value)}
-              >
-                <option value="">리셋 없음</option>
-                {Object.entries(CREDIT_LIMIT_RESET_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="금액 한도 (USD)" error={fieldErrors.creditLimit}>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  aria-invalid={fieldErrors.creditLimit != null}
+                  value={creditLimit}
+                  onChange={(event) => setCreditLimit(event.target.value)}
+                />
+              </FormField>
+              <FormField label="금액 리셋 창">
+                <Select
+                  value={creditLimitReset}
+                  onChange={(event) => setCreditLimitReset(event.target.value)}
+                >
+                  <option value="">리셋 없음</option>
+                  {Object.entries(CREDIT_LIMIT_RESET_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
+            <OpenRouterBindingField
+              llmKey={llmKey}
+              initialBindingAllowed={initialBindingAllowed}
+              accounts={eligibleAccounts}
+              bindingPaused={bindingPaused}
+              loading={accounts.isPending}
+              failed={accounts.isError}
+              value={openrouterAccountId}
+              onChange={setOpenrouterAccountId}
+              error={fieldErrors.openrouterAccountId}
+            />
+          </>
         )}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
@@ -417,6 +476,103 @@ function LimitsModal({
         </div>
       </form>
     </Modal>
+  )
+}
+
+function OpenRouterBindingField({
+  llmKey,
+  initialBindingAllowed,
+  accounts,
+  bindingPaused,
+  loading,
+  failed,
+  value,
+  onChange,
+  error,
+}: {
+  llmKey: AdminLlmKeyDetail
+  initialBindingAllowed: boolean
+  accounts: Awaited<ReturnType<typeof fetchOpenRouterAccounts>>
+  bindingPaused: boolean
+  loading: boolean
+  failed: boolean
+  value: string
+  onChange: (value: string) => void
+  error?: string
+}) {
+  if (llmKey.openrouterAccountId && llmKey.openrouterAccountName) {
+    return (
+      <MessageBar title="사업 계정 binding은 변경할 수 없습니다">
+        <Link
+          to={adminPaths.llmAccountDetail(llmKey.openrouterAccountId, llmKey.orgId ?? undefined)}
+          className="font-semibold underline underline-offset-2"
+        >
+          {llmKey.openrouterAccountName}
+        </Link>
+        에 계속 연결됩니다. 다른 사업 계정으로 이동하려면 새 key를 발급해 전환해야 합니다.
+      </MessageBar>
+    )
+  }
+  if (!initialBindingAllowed) {
+    return (
+      <MessageBar variant="warning" title="기존 미결합 key는 이 화면에서 사업 계정에 연결할 수 없습니다">
+        이 key는 이미 금액 축이 양수이거나 vendor runtime key가 발급된 legacy 상태입니다. 기존
+        binding을 바꾸지 말고 새 Pickle key를 올바른 사업 계정으로 발급해 전환하세요.{' '}
+        <Link
+          to={adminPaths.requests(llmKey.orgId ?? undefined)}
+          className="font-semibold underline underline-offset-2"
+        >
+          신규 key 신청 검토
+        </Link>
+      </MessageBar>
+    )
+  }
+  if (loading) return <MessageBar>금액 축에 연결할 사업 계정을 확인하고 있습니다.</MessageBar>
+  if (failed) {
+    return (
+      <MessageBar variant="warning" title="사업 계정 목록을 불러오지 못했습니다">
+        TOKEN 한도만 변경할 수 있습니다. 금액 한도를 0보다 크게 저장하려면 목록을 다시 불러와야 합니다.
+      </MessageBar>
+    )
+  }
+  if (bindingPaused) {
+    return (
+      <MessageBar variant="warning" title="OpenRouter account binding 전환 준비 중">
+        검증된 management credential은 있지만 새 account binding 운영 전환이 아직 열리지 않았습니다.
+        TOKEN 한도는 변경할 수 있고, 금액 축을 0보다 크게 연결하는 작업만 대기합니다.
+        {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
+      </MessageBar>
+    )
+  }
+  if (accounts.length === 0) {
+    return (
+      <MessageBar variant="warning" title="연결할 수 있는 사업 계정이 없습니다">
+        <Link to={adminPaths.llmAccounts(llmKey.orgId ?? undefined)} className="font-semibold underline underline-offset-2">
+          OpenRouter 사업 계정 관리
+        </Link>
+        에서 검증된 management credential을 먼저 등록하세요.
+      </MessageBar>
+    )
+  }
+  if (accounts.length === 1) {
+    return (
+      <MessageBar title="첫 금액 축 binding">
+        {accounts[0].name}에 자동으로 연결됩니다. 발급 뒤 binding은 바꿀 수 없습니다.
+      </MessageBar>
+    )
+  }
+  return (
+    <FormField
+      label="OpenRouter 사업 계정"
+      required
+      error={error}
+      description="처음 연결한 뒤에는 변경할 수 없습니다. 이동하려면 새 Pickle key를 발급해야 합니다."
+    >
+      <Select value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error != null}>
+        <option value="">사업 계정 선택</option>
+        {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+      </Select>
+    </FormField>
   )
 }
 

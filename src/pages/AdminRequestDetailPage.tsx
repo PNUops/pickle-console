@@ -222,7 +222,7 @@ function DecisionArea({
   onNotice: (notice: Notice | null) => void
 }) {
   const kind = requestKindView(request.type)
-  const decision = kind.useDecisionData()
+  const decision = kind.useDecisionData(request)
   if (decision.status === 'blocked') return decision.gate
   return (
     <DecisionSection

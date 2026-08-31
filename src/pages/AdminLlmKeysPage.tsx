@@ -151,6 +151,7 @@ export function AdminLlmKeysPage() {
                 <TH>상태</TH>
                 <TH>워크스페이스</TH>
                 <TH>기관</TH>
+                <TH>사업 계정</TH>
                 <TH>운영 한도</TH>
                 <TH>마지막 사용</TH>
               </TR>
@@ -178,6 +179,18 @@ export function AdminLlmKeysPage() {
                     </TD>
                     <TD>{key.workspaceName}</TD>
                     <TD>{key.orgName}</TD>
+                    <TD>
+                      {key.openrouterAccountId && key.openrouterAccountName ? (
+                        <Link
+                          to={adminPaths.llmAccountDetail(key.openrouterAccountId, activeOrgId)}
+                          className="font-medium text-brand-foreground hover:underline"
+                        >
+                          {key.openrouterAccountName}
+                        </Link>
+                      ) : (
+                        <span className="text-foreground-muted">미결합</span>
+                      )}
+                    </TD>
                     <TD className="whitespace-nowrap text-xs">
                       RPM {limitText(key.rpm)} · TPM {limitText(key.tpm)}
                       <span className="block text-foreground-muted">

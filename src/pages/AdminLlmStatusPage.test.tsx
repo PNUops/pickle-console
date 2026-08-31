@@ -14,8 +14,17 @@ import { server } from '../test/msw/server'
 import { currentPath, renderApp } from '../test/render'
 
 function statusUpstream(name: string, ref: string): LlmUpstreamStatus {
+  const fixtureIds: Record<string, number> = {
+    'org-one': 401,
+    'org-two': 402,
+    'runtime-only': 403,
+    'stale-probe': 404,
+    'local-only': 405,
+    'old-failure': 406,
+    'org-catalog': 407,
+  }
   return {
-    id: uuid(ref === 'org-one' ? 401 : 402),
+    id: uuid(fixtureIds[ref] ?? 408),
     ref,
     name,
     kind: 'ON_PREM',

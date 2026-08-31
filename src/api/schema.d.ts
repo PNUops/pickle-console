@@ -196,6 +196,174 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * OpenRouter 사업 account 목록
+         * @description 관리 범위의 사업·재원별 OpenRouter account와 credential 상태를 조회합니다. 인증 정보와 vendor 내부 식별자는 반환하지 않습니다.
+         */
+        get: operations["listAdminLlmAccounts"];
+        put?: never;
+        /**
+         * OpenRouter 사업 account 등록
+         * @description 기관에 사업·재원별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
+         */
+        post: operations["createAdminLlmAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * OpenRouter 사업 account 상세
+         * @description 관리 범위의 account metadata, binding 가능 여부, 연결된 key 수와 secret-free credential lifecycle 상태를 조회합니다.
+         */
+        get: operations["getAdminLlmAccount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * OpenRouter 사업 account 정보 수정
+         * @description 이름·재원·증빙 참조·상태 중 보낸 항목만 변경합니다. 활성 또는 미만료 key가 연결된 account는 보관할 수 없습니다.
+         */
+        patch: operations["updateAdminLlmAccount"];
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}/credentials/active/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 사용하지 않는 OpenRouter credential 삭제
+         * @description 연결된 key와 rotation이 없고 운영자가 vendor console 폐기를 확인한 경우에만 ACTIVE 암호문을 삭제합니다. API는 vendor management key 자체를 폐기하지 않습니다.
+         */
+        post: operations["deleteActiveAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}/credentials/retiring/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 이전 OpenRouter credential 정리
+         * @description 새 ACTIVE credential로 key reconciliation이 성공하고 운영자가 vendor console에서 이전 management key를 폐기했음을 확인한 뒤 RETIRING 암호문을 삭제합니다.
+         */
+        post: operations["finalizeAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}/credentials/retiring/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * OpenRouter credential 교체 되돌리기
+         * @description 재인증과 이름 확인 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌립니다. Vendor credential은 API가 폐기하지 않습니다.
+         */
+        post: operations["rollbackAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}/credentials/staged": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * OpenRouter 관리 credential 검증 및 대기 등록
+         * @description 재인증과 account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. 평문과 credential 조각은 응답하지 않습니다.
+         */
+        post: operations["stageAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}/credentials/staged/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 대기 중 OpenRouter credential 활성화
+         * @description 재인증과 이름 확인 뒤 STAGED credential을 다시 검증합니다. 교체 시 기존 ACTIVE가 만든 disposable key를 새 credential로 조회·수정·삭제한 뒤 두 상태를 원자적으로 ACTIVE와 RETIRING으로 전환합니다.
+         */
+        post: operations["activateAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/accounts/{accountId}/credentials/staged/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 대기 중 OpenRouter credential 취소
+         * @description 재인증과 이름 확인 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제합니다. ACTIVE credential에는 영향을 주지 않습니다.
+         */
+        post: operations["cancelAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/llm/keys": {
         parameters: {
             query?: never;
@@ -2725,6 +2893,9 @@ export interface components {
             lastUsedAt?: string | null;
             name: string;
             /** Format: uuid */
+            openrouterAccountId?: string | null;
+            openrouterAccountName?: string | null;
+            /** Format: uuid */
             orgId?: string | null;
             orgName: string;
             purpose?: string | null;
@@ -2758,6 +2929,11 @@ export interface components {
              */
             dailyTokens: number | null;
             /**
+             * Format: uuid
+             * @description 금액 축 사업 account. 생략하거나 null이면 기존 binding을 유지합니다.
+             */
+            openrouterAccountId?: string | null;
+            /**
              * Format: int32
              * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
              */
@@ -2786,6 +2962,9 @@ export interface components {
             /** Format: date-time */
             lastUsedAt?: string | null;
             name: string;
+            /** Format: uuid */
+            openrouterAccountId?: string | null;
+            openrouterAccountName?: string | null;
             /** Format: uuid */
             orgId?: string | null;
             orgName: string;
@@ -3147,6 +3326,11 @@ export interface components {
              * @description 부여 분당 토큰 수. 비우면 서비스 기본값이 적용됩니다.
              */
             grantedTpm?: number | null;
+            /**
+             * Format: uuid
+             * @description 금액 축에 사용할 기관 OpenRouter 사업 account. 하나뿐이면 생략할 수 있습니다.
+             */
+            openrouterAccountId?: string | null;
         };
         ApproveRequestRequest: {
             comment?: string | null;
@@ -3286,6 +3470,10 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        ConfirmOpenRouterAccountRequest: {
+            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            confirmName: string;
+        };
         ConsentInput: {
             docType: components["schemas"]["TermsDocType"];
             /** Format: int32 */
@@ -3325,6 +3513,21 @@ export interface components {
             reqTpm?: number | null;
             /** @description 이 Key를 어디에 쓸지. 기본 한도로 충분하면 비워 두어도 됩니다. */
             usagePlan?: string | null;
+        };
+        CreateOpenRouterAccountRequest: {
+            /** @description 오입력 방지를 위해 name과 정확히 같아야 하는 확인값 */
+            confirmName: string;
+            /** @description 증빙 참조. 없으면 null */
+            evidenceReference?: string | null;
+            /** @description 재원 참조. 없으면 null */
+            fundingReference?: string | null;
+            /** @description 기관 관리자가 구분하는 사업 account 이름 */
+            name: string;
+            /**
+             * Format: uuid
+             * @description Account를 소유할 기관 공개 ID
+             */
+            orgId: string;
         };
         CreateOrgRequest: {
             description?: string | null;
@@ -3496,6 +3699,12 @@ export interface components {
             field: string;
             /** @description 한국어 오류 메시지 */
             message: string;
+        };
+        FinalizeOpenRouterCredentialRequest: {
+            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            confirmName: string;
+            /** @description Vendor console에서 대상 management key를 폐기했으면 true. API는 vendor key를 폐기하지 않습니다. */
+            vendorRevocationConfirmed: boolean;
         };
         ForceDeleteVmRequest: {
             confirmName: string;
@@ -4540,6 +4749,100 @@ export interface components {
             expiresAt: string;
             state: string;
         };
+        OpenRouterAccountResponse: {
+            /** @description 현재 ACTIVE credential의 secret-free 상태. 없으면 null */
+            activeCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
+            /**
+             * Format: int64
+             * @description 이 account에 불변 binding된 Pickle LLM key 수
+             */
+            boundKeyCount: number;
+            /**
+             * Format: date-time
+             * @description 등록 시각
+             */
+            createdAt: string;
+            /** @description 프로비저닝과 대사에 사용할 management credential이 있는지 */
+            credentialAvailable: boolean;
+            /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
+            eligibleForBinding: boolean;
+            /** @description 증빙 참조. 없으면 null */
+            evidenceReference?: string | null;
+            /** @description 재원 참조. 없으면 null */
+            fundingReference?: string | null;
+            /**
+             * Format: uuid
+             * @description Account 공개 ID
+             */
+            id: string;
+            /** @description 사업 account 이름 */
+            name: string;
+            /**
+             * Format: uuid
+             * @description 소유 기관 공개 ID
+             */
+            orgId: string;
+            /** @description 소유 기관 이름 */
+            orgName: string;
+            /** @description STAGED 또는 RETIRING credential의 secret-free 상태. 없으면 null */
+            rotationCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
+            /** @description Account lifecycle 상태 */
+            status: components["schemas"]["OpenRouterAccountStatus"];
+            /**
+             * Format: date-time
+             * @description Metadata 최종 변경 시각
+             */
+            updatedAt: string;
+        };
+        /** @enum {string} */
+        OpenRouterAccountStatus: "ACTIVE" | "ARCHIVED";
+        /** @enum {string} */
+        OpenRouterCredentialError: "CREDENTIAL_ERROR" | "THROTTLED" | "VENDOR_UNAVAILABLE" | "VENDOR_REJECTED";
+        OpenRouterCredentialStateResponse: {
+            /**
+             * Format: date-time
+             * @description ACTIVE 전환 시각. 활성화 전이면 null
+             */
+            activatedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 등록 시각
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 이 credential로 key reconciliation이 마지막으로 성공한 시각. 성공 전이면 null
+             */
+            lastReconciledAt?: string | null;
+            /**
+             * Format: date-time
+             * @description Management API 호출에 마지막으로 사용한 시각. 사용 전이면 null
+             */
+            lastUsedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 검증 시도 시각. 시도 전이면 null
+             */
+            lastVerificationAttemptAt?: string | null;
+            /**
+             * Format: date-time
+             * @description RETIRING 전환 시각. 해당 상태가 아니면 null
+             */
+            retiringAt?: string | null;
+            /** @description RETIRING 상태가 24시간을 넘었는지 */
+            retiringOverdue: boolean;
+            /** @description Credential lifecycle 상태 */
+            status: components["schemas"]["OpenRouterCredentialStatus"];
+            /** @description 마지막 검증 오류 분류. 최근 검증이 성공했으면 null */
+            verificationError?: components["schemas"]["OpenRouterCredentialError"] | null;
+            /**
+             * Format: date-time
+             * @description 마지막 검증 성공 시각. 성공 이력이 없으면 null
+             */
+            verifiedAt?: string | null;
+        };
+        /** @enum {string} */
+        OpenRouterCredentialStatus: "STAGED" | "ACTIVE" | "RETIRING";
         OrgDashboardSummaryResponse: {
             attention: components["schemas"]["Attention"];
             /** Format: int64 */
@@ -5182,6 +5485,12 @@ export interface components {
             position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
         };
+        StageOpenRouterCredentialRequest: {
+            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            confirmName: string;
+            /** @description OpenRouter management key. 응답에는 반환되지 않습니다. */
+            managementKey: string;
+        };
         SuspendAdminLlmKeyRequest: {
             reason: string;
         };
@@ -5301,6 +5610,16 @@ export interface components {
         UpdateNodeStatusRequest: {
             /** @description ACTIVE만 신규 VM 배치 대상 — MAINTENANCE/OFFLINE은 배치 제외 (기존 게스트 무영향) */
             status: components["schemas"]["NodeStatus"];
+        };
+        UpdateOpenRouterAccountRequest: {
+            /** @description 새 증빙 참조. 생략하면 유지하고 null이면 지웁니다. */
+            evidenceReference?: string | null;
+            /** @description 새 재원 참조. 생략하면 유지하고 null이면 지웁니다. */
+            fundingReference?: string | null;
+            /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
+            name?: string;
+            /** @description 새 lifecycle 상태. 생략하면 유지하며 null은 허용하지 않습니다. */
+            status?: components["schemas"]["OpenRouterAccountStatus"];
         };
         UpdateOrgRequest: {
             description?: string | null;
@@ -6309,6 +6628,430 @@ export interface operations {
             };
         };
     };
+    listAdminLlmAccounts: {
+        parameters: {
+            query?: {
+                orgId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createAdminLlmAccount: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOpenRouterAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminLlmAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOpenRouterAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteActiveAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinalizeOpenRouterCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    finalizeAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinalizeOpenRouterCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rollbackAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmOpenRouterAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    stageAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StageOpenRouterCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    activateAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmOpenRouterAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmOpenRouterAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminLlmKeys: {
         parameters: {
             query?: {
@@ -6393,13 +7136,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 변경된 LLM API 키 상세 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                    "application/json": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description OpenRouter account binding 전환 미활성 (`OPENROUTER_ACCOUNT_BINDING_DISABLED`) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -7387,13 +8139,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 승인 완료 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RequestDetailResponse"];
+                    "application/json": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description OpenRouter account binding 전환 미활성 (`OPENROUTER_ACCOUNT_BINDING_DISABLED`) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

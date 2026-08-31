@@ -79,6 +79,9 @@ describe('adminPaths — 기관 query scope', () => {
     expect(adminPaths.llmKeyDetail(OTHER, SCOPE)).toBe(
       `/admin/llm/keys/${OTHER}?org=${SCOPE}`,
     )
+    expect(adminPaths.llmAccountDetail(OTHER, SCOPE)).toBe(
+      `/admin/llm/accounts/${OTHER}?org=${SCOPE}`,
+    )
     expect(adminPaths.vms(SCOPE, OTHER)).toBe(
       `/admin/vms?workspaceId=${OTHER}&org=${SCOPE}`,
     )

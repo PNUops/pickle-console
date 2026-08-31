@@ -1,6 +1,14 @@
 import { useState } from 'react'
-import type { ApproveRequest, RequestDetail } from '../../api/queries'
-import { FormField, Input, Select, Textarea } from '../ui'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router'
+import {
+  fetchOpenRouterAccounts,
+  type ApproveRequest,
+  type OpenRouterAccount,
+  type RequestDetail,
+} from '../../api/queries'
+import { Alert, Button, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
+import { adminPaths } from '../../lib/paths'
 import { Field } from './Field'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
@@ -76,12 +84,44 @@ function limitValue(raw: string): number | null {
  * 전부 승인자가 직접 적는 수다. 참조할 카탈로그가 없으니 로딩도 오류도 없고,
  * 결정 카드는 신청 응답만으로 곧바로 열린다.
  */
-function useLlmKeyDecisionData(): DecisionData {
-  return { status: 'ready', value: null }
+interface LlmAccountDecisionData {
+  accounts: OpenRouterAccount[]
+  bindingPaused: boolean
+  loading: boolean
+  failed: boolean
+  retry: () => void
 }
 
-function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
+function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
+  const accounts = useQuery({
+    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null, for: 'request-approval' }],
+    queryFn: () => fetchOpenRouterAccounts(request.orgId ?? undefined),
+    enabled: request.orgId != null,
+    retry: false,
+  })
+  // Account 관측은 금액 축만 막는다. TOKEN-only 승인과 반려는 이 조회가 실패해도
+  // 살아 있어야 하므로 결정 카드 전체를 blocked gate로 바꾸지 않는다.
+  const rawAccounts = accounts.data ?? []
+  const eligibleAccounts = rawAccounts.filter((account) => account.eligibleForBinding)
+  const bindingPaused = eligibleAccounts.length === 0 && rawAccounts.some(
+    (account) => account.status === 'ACTIVE' && account.credentialAvailable &&
+      !account.eligibleForBinding,
+  )
+  return {
+    status: 'ready',
+    value: {
+      accounts: eligibleAccounts,
+      bindingPaused,
+      loading: accounts.isPending,
+      failed: accounts.isError || request.orgId == null,
+      retry: () => void accounts.refetch(),
+    } satisfies LlmAccountDecisionData,
+  }
+}
+
+function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionFormApi {
   const spec = request.llmKey
+  const accountData = value as LlmAccountDecisionData
 
   // 한도는 비워 둔 채로 연다 — 희망값을 그대로 채워 두면 승인 버튼 한 번이
   // 곧 "희망대로 부여"가 되어 검토가 사라진다. 희망값은 각 칸 아래에 적어
@@ -94,6 +134,7 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
   // 승인자가 의도적으로 금액을 적어야 한다.
   const [creditLimit, setCreditLimit] = useState('')
   const [creditReset, setCreditReset] = useState('')
+  const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
@@ -118,6 +159,19 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
       if (!creditLimitError && creditReset && !(Number(creditLimit) > 0)) {
         errors['llmKey.grantedCreditLimit'] = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
       }
+      if (!creditLimitError && Number(creditLimit) > 0) {
+        if (accountData.loading) {
+          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
+        } else if (accountData.failed) {
+          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오지 못해 금액 축을 승인할 수 없습니다.'
+        } else if (accountData.bindingPaused) {
+          errors['llmKey.openrouterAccountId'] = 'OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 승인할 수 없습니다.'
+        } else if (accountData.accounts.length === 0) {
+          errors['llmKey.openrouterAccountId'] = '검증된 management credential이 있는 활성 사업 계정이 필요합니다.'
+        } else if (accountData.accounts.length > 1 && !openrouterAccountId) {
+          errors['llmKey.openrouterAccountId'] = '금액 축에 사용할 사업 계정을 선택해 주세요.'
+        }
+      }
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
       if (!rpmError && !tpmError && rpm.trim() && tpm.trim()) {
         if (Number(tpm) < Number(rpm))
@@ -141,6 +195,12 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
         grantedCreditLimitReset: creditReset
           ? (creditReset as 'DAILY' | 'WEEKLY' | 'MONTHLY')
           : null,
+        openrouterAccountId:
+          Number(creditLimit) > 0
+            ? accountData.accounts.length === 1
+              ? accountData.accounts[0].id
+              : openrouterAccountId || null
+            : null,
       },
     }),
 
@@ -238,6 +298,13 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
             </Select>
           </FormField>
         </div>
+        {approvalAccountField({
+          request,
+          data: accountData,
+          value: openrouterAccountId,
+          onChange: setOpenrouterAccountId,
+          error: fieldErrors['llmKey.openrouterAccountId'],
+        })}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="사용 시작일" error={fieldErrors.grantedStartDate}>
             <Input
@@ -275,7 +342,20 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
           <li>동시 요청 수 {limitText(limitValue(concurrency))}</li>
           <li>금액 한도 {creditText(creditValue(creditLimit))}</li>
           {creditValue(creditLimit) ? <li>리셋 창 {creditResetText(creditReset || null)}</li> : null}
+          {creditValue(creditLimit) ? (
+            <li>
+              사업 계정{' '}
+              {accountData.accounts.length === 1
+                ? accountData.accounts[0].name
+                : accountData.accounts.find((account) => account.id === openrouterAccountId)?.name ?? '선택 필요'}
+            </li>
+          ) : null}
         </ul>
+        {creditValue(creditLimit) ? (
+          <Alert variant="warning">
+            이 Pickle key의 사업 계정 binding은 발급 뒤 바꿀 수 없습니다. 이동하려면 새 key를 발급해 전환해야 합니다.
+          </Alert>
+        ) : null}
         <p>
           승인하면 키가 만들어지지만 아직 쓸 수 없습니다. 평문 키는 신청자가 직접
           발급받습니다.
@@ -285,6 +365,77 @@ function useLlmKeyApproveForm(request: RequestDetail): DecisionFormApi {
 
     successMessage: '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
   }
+}
+
+function approvalAccountField({
+  request,
+  data,
+  value,
+  onChange,
+  error,
+}: {
+  request: RequestDetail
+  data: LlmAccountDecisionData
+  value: string
+  onChange: (value: string) => void
+  error?: string
+}) {
+  if (data.loading) {
+    return <div className="flex justify-center py-2"><Spinner label="OpenRouter 사업 계정 확인 중" /></div>
+  }
+  if (data.failed) {
+    return (
+      <Alert variant="warning" title="사업 계정 목록을 불러오지 못했습니다">
+        <div className="space-y-2">
+          <p>TOKEN-only 승인은 계속할 수 있지만 금액 축 승인은 목록을 확인할 때까지 막힙니다.</p>
+          {error && <p className="font-medium text-danger-800">{error}</p>}
+          <Button size="sm" variant="secondary" onClick={data.retry}>다시 시도</Button>
+        </div>
+      </Alert>
+    )
+  }
+  if (data.bindingPaused) {
+    return (
+      <MessageBar variant="warning" title="OpenRouter account binding 전환 준비 중">
+        검증된 management credential은 있지만 새 account binding 운영 전환이 아직 열리지 않았습니다.
+        TOKEN-only 승인과 반려는 계속할 수 있습니다.
+        {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
+      </MessageBar>
+    )
+  }
+  if (data.accounts.length === 0) {
+    return (
+      <MessageBar variant="warning" title="금액 축에 연결할 사업 계정이 없습니다">
+        <Link
+          to={adminPaths.llmAccounts(request.orgId ?? undefined)}
+          className="font-semibold underline underline-offset-2"
+        >
+          OpenRouter 사업 계정 관리
+        </Link>
+        에서 management credential을 먼저 검증하세요. TOKEN-only 승인은 계속할 수 있습니다.
+        {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
+      </MessageBar>
+    )
+  }
+  if (data.accounts.length === 1) {
+    return (
+      <MessageBar title="금액 축 사업 계정 자동 선택">
+        {data.accounts[0].name} 하나만 binding 가능하므로 금액 축을 부여하면 자동으로 선택됩니다.
+      </MessageBar>
+    )
+  }
+  return (
+    <FormField
+      label="OpenRouter 사업 계정"
+      error={error}
+      description="금액 축을 부여할 때만 필요합니다. Binding은 발급 뒤 바꿀 수 없습니다."
+    >
+      <Select value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error != null}>
+        <option value="">사업 계정 선택</option>
+        {data.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+      </Select>
+    </FormField>
+  )
 }
 
 export const llmKeyRequestView: RequestKindView = {
