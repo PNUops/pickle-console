@@ -257,6 +257,9 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     creditLimit: 5,
     creditLimitReset: 'MONTHLY' as const,
     creditAxisConnected: true,
+    creditUsage: 2.5,
+    creditLimitRemaining: 2.5,
+    creditUsageAt: '2026-08-31T00:27:30+09:00',
     quotaExhausted: false,
     expiresAt: null,
     lastUsedAt: '2026-08-20T10:00:00+09:00',
@@ -323,6 +326,9 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       creditLimit: 0,
       creditLimitReset: null,
       creditAxisConnected: false,
+      creditUsage: null,
+      creditLimitRemaining: null,
+      creditUsageAt: null,
     },
     {
       ...base,
@@ -333,6 +339,9 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       creditLimit: 0,
       creditLimitReset: null,
       creditAxisConnected: true,
+      creditUsage: 0,
+      creditLimitRemaining: 0,
+      creditUsageAt: '2026-08-31T00:27:30+09:00',
     },
   ]
 }
@@ -657,6 +666,9 @@ function toAdminSummary(key: AdminLlmKey): Schemas['AdminLlmKeySummaryResponse']
     creditLimit: key.creditLimit,
     creditLimitReset: key.creditLimitReset,
     creditAxisConnected: key.creditAxisConnected,
+    creditUsage: key.creditUsage,
+    creditLimitRemaining: key.creditLimitRemaining,
+    creditUsageAt: key.creditUsageAt,
     openrouterAccountId: key.openrouterAccountId,
     openrouterAccountName: key.openrouterAccountName,
     expiresAt: key.expiresAt,
@@ -674,6 +686,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     const orgId = url.searchParams.get('orgId')
     const workspaceId = url.searchParams.get('workspaceId')
     const requestId = url.searchParams.get('requestId')
+    const openrouterAccountId = url.searchParams.get('openrouterAccountId')
     const status = url.searchParams.get('status')
     const query = url.searchParams.get('query')?.toLocaleLowerCase('ko-KR')
     const page = Number(url.searchParams.get('page') ?? '0')
@@ -682,6 +695,9 @@ export const llmKeyHandlers: RequestHandler[] = [
     if (orgId) filtered = filtered.filter((key) => key.orgId === orgId)
     if (workspaceId) filtered = filtered.filter((key) => key.workspaceId === workspaceId)
     if (requestId) filtered = filtered.filter((key) => key.requestId === requestId)
+    if (openrouterAccountId) {
+      filtered = filtered.filter((key) => key.openrouterAccountId === openrouterAccountId)
+    }
     if (status) filtered = filtered.filter((key) => key.status === status)
     if (query) {
       filtered = filtered.filter((key) =>

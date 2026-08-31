@@ -555,6 +555,11 @@ export type OpenRouterAccount = Schemas['OpenRouterAccountResponse']
 export type OpenRouterAccountStatus = Schemas['OpenRouterAccountStatus']
 export type OpenRouterCredentialState = Schemas['OpenRouterCredentialStateResponse']
 export type OpenRouterCredentialStatus = Schemas['OpenRouterCredentialStatus']
+export type OpenRouterAccountCredits = Schemas['OpenRouterAccountCreditsResponse']
+export type OpenRouterCreditsFreshness = Schemas['OpenRouterCreditsFreshness']
+export type OpenRouterForecastUnavailableReason = Schemas['OpenRouterForecastUnavailableReason']
+export type OpenRouterUnmanagedSpendUnavailableReason =
+  Schemas['OpenRouterUnmanagedSpendUnavailableReason']
 export type CreateOpenRouterAccount = Schemas['CreateOpenRouterAccountRequest']
 export type UpdateOpenRouterAccount = Schemas['UpdateOpenRouterAccountRequest']
 
@@ -682,6 +687,7 @@ export function fetchAdminLlmKeys(params: {
   orgId?: string
   workspaceId?: string
   requestId?: string
+  openrouterAccountId?: string
   status?: LlmApiKeyStatus
   query?: string
   page?: number

@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import {
   fetchAdminLlmKeys,
   fetchAdminWorkspaces,
+  fetchOpenRouterAccounts,
   type LlmApiKeyStatus,
 } from '../api/queries'
 import {
@@ -27,6 +28,7 @@ import { adminPaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, LLM_KEY_STATUS_LABELS } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { useDebouncedValue } from '../lib/use-debounced-value'
+import { KeyCreditObservation } from '../components/OpenRouterCredits'
 
 const PAGE_SIZE = 20
 
@@ -43,9 +45,11 @@ function limitText(value: number | null | undefined): string {
 }
 
 export function AdminLlmKeysPage() {
-  const { activeOrgId } = useAdminScope()
+  const scope = useAdminScope()
+  const { activeOrgId } = scope
   const [status, setStatus] = useState<LlmApiKeyStatus | undefined>(undefined)
   const [workspaceId, setWorkspaceId] = useState<string | undefined>(undefined)
+  const [openrouterAccountId, setOpenrouterAccountId] = useState<string | undefined>(undefined)
   const [queryInput, setQueryInput] = useState('')
   const [page, setPage] = useState(0)
   const query = useDebouncedValue(queryInput).trim() || undefined
@@ -55,6 +59,7 @@ export function AdminLlmKeysPage() {
     if (previousOrgId.current === activeOrgId) return
     previousOrgId.current = activeOrgId
     setWorkspaceId(undefined)
+    setOpenrouterAccountId(undefined)
     setPage(0)
   }, [activeOrgId])
 
@@ -62,22 +67,29 @@ export function AdminLlmKeysPage() {
     queryKey: [
       'admin',
       'llm-keys',
-      { orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, status: status ?? null, query: query ?? null, page },
+      { orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, openrouterAccountId: openrouterAccountId ?? null, status: status ?? null, query: query ?? null, page },
     ],
     queryFn: () =>
       fetchAdminLlmKeys({
         orgId: activeOrgId,
         workspaceId,
+        openrouterAccountId,
         status,
         query,
         page,
         size: PAGE_SIZE,
       }),
+    enabled: scope.ready,
   })
   const workspaces = useQuery({
     queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, for: 'llm-key-filter' }],
     queryFn: () =>
       fetchAdminWorkspaces(activeOrgId == null ? {} : { orgId: activeOrgId }),
+  })
+  const accounts = useQuery({
+    queryKey: ['admin', 'llm-accounts', { orgId: activeOrgId ?? null, for: 'llm-key-filter' }],
+    queryFn: () => fetchOpenRouterAccounts(activeOrgId),
+    enabled: scope.ready,
   })
 
   return (
@@ -117,6 +129,20 @@ export function AdminLlmKeysPage() {
           ))}
         </Select>
         <Select
+          aria-label="OpenRouter 사업 계정 필터"
+          className="w-full sm:w-56"
+          value={openrouterAccountId ?? ''}
+          onChange={(event) => {
+            setOpenrouterAccountId(event.target.value || undefined)
+            setPage(0)
+          }}
+        >
+          <option value="">전체 사업 계정</option>
+          {accounts.data?.map((account) => (
+            <option key={account.id} value={account.id}>{account.name}</option>
+          ))}
+        </Select>
+        <Select
           aria-label="LLM API 키 워크스페이스 필터"
           className="w-full sm:w-56"
           value={workspaceId ?? ''}
@@ -153,6 +179,7 @@ export function AdminLlmKeysPage() {
                 <TH>기관</TH>
                 <TH>사업 계정</TH>
                 <TH>운영 한도</TH>
+                <TH>금액 관측</TH>
                 <TH>마지막 사용</TH>
               </TR>
             </THead>
@@ -197,6 +224,7 @@ export function AdminLlmKeysPage() {
                         일일 {limitText(key.dailyTokens)} · 동시 {limitText(key.concurrency)}
                       </span>
                     </TD>
+                    <TD><KeyCreditObservation llmKey={key} /></TD>
                     <TD className="whitespace-nowrap">
                       {key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음'}
                     </TD>

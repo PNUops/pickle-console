@@ -53,9 +53,12 @@ VM 신청서(4스텝), 승인 대기, 대시보드, SSH 키 등록, 웹 터미�
 - **관리자 콘솔**: 가상머신·LLM API 키 신청을 종류별 참고 정보로 검토하고, 승인된 LLM
   API 키의 6개 한도와 정지·해제·폐기를 역할과 상태에 맞게 관리합니다. Gateway·upstream의
   관측 상태와 최종 처리 지표를 읽습니다. 기관별 OpenRouter 사업 계정 화면에서는 사업·재원
-  metadata와 secret-free management credential lifecycle을 관리하고, 금액 축 승인자가 내부적으로
-  account를 선택합니다. 사용자는 account를 고르지 않으며 기존 key의 binding은 화면에서 바꿀 수
-  없습니다. 리소스 현황, 감사 로그, 드리프트 리포트와 관리자 개입도 함께 다룹니다.
+  metadata와 secret-free management credential lifecycle을 관리하고, DB cache에 저장된 구매 credits,
+  누적 사용액, 잔액, 소진 예상과 paired 미관리 지출을 각 관측 시각과 함께 읽습니다. 이 값은 vendor를
+  화면 요청에서 동기 조회한 값이 아니며, 마지막 성공·시도·실패와 key 대사 freshness를 분리해
+  표시합니다. 금액 축 승인자는 내부적으로 account를 선택합니다. 사용자는 account를 고르지 않으며
+  기존 key의 binding은 화면에서 바꿀 수 없습니다. 리소스 현황, 감사 로그, 드리프트 리포트와 관리자
+  개입도 함께 다룹니다.
 
 ## 동작 방식
 
