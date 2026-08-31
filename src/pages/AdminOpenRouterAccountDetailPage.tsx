@@ -32,6 +32,9 @@ import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { AccountCreditsSection } from '../components/OpenRouterCredits'
+
+const ACCOUNT_CACHE_REFETCH_MS = 2 * 60 * 1000
 
 type ConfirmAction = 'activate' | 'cancel' | 'rollback' | 'finalize' | 'delete'
 
@@ -82,6 +85,13 @@ function reconciledAfterActivation(credential: OpenRouterCredentialState | null 
     new Date(credential.lastReconciledAt).getTime() >= new Date(credential.activatedAt).getTime()
 }
 
+function preserveObservedCredits(
+  cached: OpenRouterAccount | undefined,
+  mutationResult: OpenRouterAccount,
+): OpenRouterAccount {
+  return cached ? { ...mutationResult, credits: cached.credits } : mutationResult
+}
+
 export function AdminOpenRouterAccountDetailPage() {
   const { accountId: accountIdParam } = useParams()
   const accountId = accountIdParam ?? ''
@@ -102,10 +112,12 @@ export function AdminOpenRouterAccountDetailPage() {
     queryKey: detailKey,
     queryFn: () => fetchOpenRouterAccount(accountId),
     enabled: idValid && scope.ready,
+    refetchInterval: ACCOUNT_CACHE_REFETCH_MS,
   })
 
   const applyUpdated = (account: OpenRouterAccount, message: string) => {
-    queryClient.setQueryData(detailKey, account)
+    const cached = queryClient.getQueryData<OpenRouterAccount>(detailKey)
+    queryClient.setQueryData(detailKey, preserveObservedCredits(cached, account))
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] })
     setEditOpen(false)
     setStageOpen(false)
@@ -197,6 +209,8 @@ export function AdminOpenRouterAccountDetailPage() {
           { term: '마지막 변경', description: time(account.updatedAt) },
         ]}
       />
+
+      <AccountCreditsSection credits={account.credits} />
 
       <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div>

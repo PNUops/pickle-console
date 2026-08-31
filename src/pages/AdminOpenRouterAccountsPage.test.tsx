@@ -1,5 +1,6 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
@@ -38,6 +39,7 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
         ? `/admin/llm/accounts/${uuid(410)}?org=${uuid(1)}`
         : `/admin/llm/accounts/${uuid(410)}`,
     )
+    expect(screen.getByText('잔액 $87.50')).toBeInTheDocument()
     expect(screen.queryByText(/sk-or|managementKey|prefix|hash/i)).not.toBeInTheDocument()
   })
 
@@ -113,6 +115,158 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
       orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
     })
+  })
+})
+
+describe('OpenRouter account credits 관측', () => {
+  test('목록 compact cell은 balance·누적 사용·freshness와 관측 시각을 함께 표시한다', async () => {
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    renderApp('/admin/llm/accounts')
+
+    const first = (await screen.findByRole('link', { name: 'AI 교육 사업 A' })).closest('tr')!
+    expect(within(first).getByText('잔액 $87.50')).toBeInTheDocument()
+    expect(within(first).getByText('누적 사용 $12.50')).toBeInTheDocument()
+    expect(within(first).getByText('30분 안에 갱신됨')).toBeInTheDocument()
+    expect(within(first).getByText('2026-08-31 00:28 KST')).toBeInTheDocument()
+
+    const negative = screen.getByRole('link', { name: '산학 협력 사업 B' }).closest('tr')!
+    expect(within(negative).getByText('잔액 -$1.25')).toBeInTheDocument()
+    expect(within(negative).getByText('갱신 지연')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(/현재 잔액|실시간|live 잔액/i)
+  })
+
+  test('상세는 FRESH credits·forecast·paired managed/unmanaged와 각 observedAt을 분리한다', async () => {
+    server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
+    renderApp(`/admin/llm/accounts/${uuid(410)}`)
+
+    expect(await screen.findByRole('heading', { name: 'Credits 관측' })).toBeInTheDocument()
+    expect(screen.getByText('구매 credits 합계').closest('div')).toHaveTextContent('$100.00')
+    expect(screen.getByText('Account 누적 사용').closest('div')).toHaveTextContent('$12.50')
+    expect(screen.getByText('잔액').closest('div')).toHaveTextContent('$87.50')
+    expect(screen.getByText('일평균 사용').closest('div')).toHaveTextContent('$2.50')
+    expect(screen.getByText('Pickle 관리 key 증가분').closest('div')).toHaveTextContent('$5.00')
+    expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('$3.00')
+    expect(screen.getAllByText('2026-08-31 00:28 KST').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('2026-08-31 00:27 KST').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('30분 안에 갱신됨')).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: /갱신|새로 고침/ })).not.toBeInTheDocument()
+  })
+
+  test('STALE 실패는 마지막 성공과 시도를 보존하고 forecast·paired reset 이유를 말한다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/llm/accounts/${uuid(411)}`)
+
+    expect(await screen.findByText('최근 credits 확인 실패')).toBeInTheDocument()
+    expect(screen.getByText(/Vendor 요청 제한/)).toBeInTheDocument()
+    expect(screen.getByText('최근 key 대사 실패')).toBeInTheDocument()
+    expect(screen.getByText(/Vendor 연결 실패/)).toBeInTheDocument()
+    expect(screen.getByText('잔액').closest('div')).toHaveTextContent('-$1.25')
+    expect(screen.getByText('잔액 소진 예상').closest('div')).toHaveTextContent('reset 경계')
+    expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('reset 경계')
+    expect(screen.getByText('Credits 마지막 성공').closest('div')).toHaveTextContent(
+      '2026-08-31 00:28 KST',
+    )
+    expect(screen.getByText('Credits 마지막 시도').closest('div')).toHaveTextContent(
+      '2026-08-31 01:20 KST',
+    )
+  })
+
+  test('UNKNOWN null은 0으로 표시하지 않고 실제 0 관측과 구분한다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    const unknown = renderApp(`/admin/llm/accounts/${uuid(412)}`)
+    await screen.findByRole('heading', { name: 'Credits 관측' })
+    expect(screen.getAllByText('확인 전').length).toBeGreaterThan(2)
+    expect(document.body).not.toHaveTextContent('$0.00')
+    unknown.unmount()
+
+    const account = openRouterAccountStore.find((item) => item.id === uuid(412))!
+    account.credits = {
+      ...account.credits,
+      totalCredits: 0,
+      totalUsage: 0,
+      balance: 0,
+      freshness: 'FRESH',
+      observedAt: '2026-08-31T02:00:00+09:00',
+      lastSuccessAt: '2026-08-31T02:00:00+09:00',
+      lastAttemptAt: '2026-08-31T02:00:00+09:00',
+    }
+    renderApp(`/admin/llm/accounts/${uuid(412)}`)
+    await screen.findByRole('heading', { name: 'Credits 관측' })
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(3)
+  })
+
+  test('mutation 응답은 독립된 credits·keys 관측 cache를 덮지 않는다', async () => {
+    const user = userEvent.setup()
+    const base = openRouterAccountStore.find((item) => item.id === uuid(410))!
+    const newer = {
+      ...base,
+      credits: {
+        ...base.credits,
+        totalCredits: 100,
+        totalUsage: 10,
+        balance: 90,
+        observedAt: '2026-08-31T03:00:00+09:00',
+        lastSuccessAt: '2026-08-31T03:00:00+09:00',
+        keysLastAttemptAt: '2026-08-31T04:00:00+09:00',
+      },
+    }
+    let getCount = 0
+    let releaseRefetch!: () => void
+    const refetchBlocked = new Promise<void>((resolve) => { releaseRefetch = resolve })
+    server.use(
+      refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/admin/llm/accounts/:accountId', async () => {
+        getCount += 1
+        if (getCount > 1) await refetchBlocked
+        return HttpResponse.json(newer)
+      }),
+      http.patch('*/api/v1/admin/llm/accounts/:accountId', () =>
+        HttpResponse.json({
+          ...newer,
+          name: 'AI 교육 사업 A 변경',
+          credits: {
+            ...newer.credits,
+            totalUsage: 99,
+            balance: 1,
+            observedAt: '2026-08-31T03:30:00+09:00',
+            keysLastAttemptAt: '2026-08-31T03:00:00+09:00',
+          },
+        }),
+      ),
+    )
+    renderApp(`/admin/llm/accounts/${uuid(410)}`)
+    await screen.findByText('$90.00')
+    await user.click(screen.getByRole('button', { name: '정보 변경' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('OpenRouter 사업 계정 정보를 변경했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('잔액').closest('div')).toHaveTextContent('$90.00')
+    expect(screen.queryByText('$1.00')).not.toBeInTheDocument()
+    releaseRefetch()
+  })
+
+  test('기관 scope 전환 중에는 이전 기관 credits 행을 재사용하지 않는다', async () => {
+    const user = userEvent.setup()
+    let releaseSecond!: () => void
+    const secondReady = new Promise<void>((resolve) => { releaseSecond = resolve })
+    server.use(
+      refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/admin/llm/accounts', async ({ request }) => {
+        const orgId = new URL(request.url).searchParams.get('orgId')
+        if (orgId === uuid(2)) await secondReady
+        return HttpResponse.json(
+          openRouterAccountStore.filter((account) => account.orgId === orgId),
+        )
+      }),
+    )
+    renderApp(`/admin/llm/accounts?org=${uuid(1)}`)
+    await screen.findByText('AI 교육 사업 A')
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
+    await waitFor(() => {
+      expect(screen.queryByText('AI 교육 사업 A')).not.toBeInTheDocument()
+      expect(screen.getByText('OpenRouter 사업 계정 목록 불러오는 중')).toBeInTheDocument()
+    })
+    releaseSecond()
+    expect(await screen.findByText('테스트 상용 모델 사업')).toBeInTheDocument()
   })
 })
 

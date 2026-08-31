@@ -2882,7 +2882,16 @@ export interface components {
             /** @description 금액 축이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
             creditLimit: number;
+            /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
+            creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            /** @description OpenRouter가 마지막으로 보고한 현재 limit window 사용액. 미관측이면 null */
+            creditUsage?: number | null;
+            /**
+             * Format: date-time
+             * @description Key 금액을 vendor에서 관측한 시각. 미관측이면 null
+             */
+            creditUsageAt?: string | null;
             /** Format: int64 */
             dailyTokens?: number | null;
             /** Format: date-time */
@@ -2952,7 +2961,16 @@ export interface components {
             /** @description 금액 축이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
             creditLimit: number;
+            /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
+            creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            /** @description OpenRouter가 마지막으로 보고한 현재 limit window 사용액. 미관측이면 null */
+            creditUsage?: number | null;
+            /**
+             * Format: date-time
+             * @description Key 금액을 vendor에서 관측한 시각. 미관측이면 null
+             */
+            creditUsageAt?: string | null;
             /** Format: int64 */
             dailyTokens?: number | null;
             /** Format: date-time */
@@ -4016,11 +4034,11 @@ export interface components {
             creditDepletionForecast?: string | null;
             /** @description 상용 모델에 쓸 수 있는 금액 한도(USD). 0이면 상용 모델을 쓸 수 없습니다. */
             creditLimit: number;
-            /** @description OpenRouter가 보고한 누적 사용액(USD). 아직 보고된 적이 없으면 null이며, 0으로 표시하지 않습니다. */
+            /** @description OpenRouter가 보고한 현재 limit window 사용액(USD). DAILY/WEEKLY/MONTHLY reset 뒤에는 감소할 수 있습니다. 아직 보고된 적이 없으면 null이며 0으로 표시하지 않습니다. */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             * @description 그 limit window 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
              */
             creditUsageAt?: string | null;
             /**
@@ -4749,6 +4767,84 @@ export interface components {
             expiresAt: string;
             state: string;
         };
+        OpenRouterAccountCreditsResponse: {
+            /** @description 첫 paired baseline 뒤 account 누적 사용 증가분. 계산 불가하면 null */
+            accountUsageSinceBaseline?: number | null;
+            /** @description 최근 7일 관측 window의 일평균 사용액. 계산 불가하면 null */
+            averageDailyUsage?: number | null;
+            /** @description totalCredits - totalUsage. 음수도 그대로 반환하며 미관측이면 null */
+            balance?: number | null;
+            /**
+             * Format: date-time
+             * @description 현재 소비 속도가 계속될 때 잔액 소진 예상 시각. 계산 불가하면 null
+             */
+            depletionForecastAt?: string | null;
+            /** @description 마지막 시도가 실패했을 때의 분류. vendor 원문은 반환하지 않음 */
+            error?: components["schemas"]["OpenRouterCredentialError"] | null;
+            /** @description 예상 시각이 없는 이유. 예상 시각이 있으면 null */
+            forecastUnavailableReason?: components["schemas"]["OpenRouterForecastUnavailableReason"] | null;
+            /**
+             * Format: date-time
+             * @description 예상 계산에 사용한 첫 관측 시각. 이력 부족이면 null
+             */
+            forecastWindowStartedAt?: string | null;
+            /** @description 마지막 성공 기준 30분 미만 FRESH, 그 이상 STALE, 성공 없음 UNKNOWN */
+            freshness: components["schemas"]["OpenRouterCreditsFreshness"];
+            /** @description 마지막 account key 대사가 실패했을 때의 오류 분류 */
+            keysError?: components["schemas"]["OpenRouterCredentialError"] | null;
+            /** @description 마지막 성공한 account key 대사의 freshness */
+            keysFreshness: components["schemas"]["OpenRouterCreditsFreshness"];
+            /**
+             * Format: date-time
+             * @description 성공·실패를 포함한 마지막 account key 대사 시도 시각
+             */
+            keysLastAttemptAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막으로 account key 대사가 성공한 시각. 없으면 null
+             */
+            keysLastSuccessAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 성공·실패를 포함한 마지막 시도 시각. 시도 이력이 없으면 null
+             */
+            lastAttemptAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막 성공 시각. 성공 이력이 없으면 null
+             */
+            lastSuccessAt?: string | null;
+            /** @description Key reset·삭제를 보존한 Pickle 관리 key 사용 증가분. 없으면 null */
+            managedUsageSinceBaseline?: number | null;
+            /**
+             * Format: date-time
+             * @description 현재 금액 값을 vendor에서 관측한 시각. 미관측이면 null
+             */
+            observedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description Paired window의 account credits 관측 시각. 없으면 null
+             */
+            pairedCreditsObservedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description Paired window의 전체 key 대사 관측 시각. 없으면 null
+             */
+            pairedKeysObservedAt?: string | null;
+            /** @description OpenRouter가 보고한 구매 credits 합계. 성공 이력이 없으면 null */
+            totalCredits?: number | null;
+            /** @description OpenRouter가 보고한 account 누적 사용액. 성공 이력이 없으면 null */
+            totalUsage?: number | null;
+            /**
+             * Format: date-time
+             * @description 미관리 지출 baseline의 paired 관측 시각. 없으면 null
+             */
+            unmanagedBaselineAt?: string | null;
+            /** @description Account 증가분에서 관리 key 증가분을 뺀 금액. reset 경계면 null */
+            unmanagedSpend?: number | null;
+            /** @description 미관리 지출이 없는 이유. 값이 있으면 null */
+            unmanagedSpendUnavailableReason?: components["schemas"]["OpenRouterUnmanagedSpendUnavailableReason"] | null;
+        };
         OpenRouterAccountResponse: {
             /** @description 현재 ACTIVE credential의 secret-free 상태. 없으면 null */
             activeCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
@@ -4764,6 +4860,8 @@ export interface components {
             createdAt: string;
             /** @description 프로비저닝과 대사에 사용할 management credential이 있는지 */
             credentialAvailable: boolean;
+            /** @description DB cache에서 읽은 account credits·예상·미관리 지출 관측 상태 */
+            credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
             /** @description 증빙 참조. 없으면 null */
@@ -4843,6 +4941,12 @@ export interface components {
         };
         /** @enum {string} */
         OpenRouterCredentialStatus: "STAGED" | "ACTIVE" | "RETIRING";
+        /** @enum {string} */
+        OpenRouterCreditsFreshness: "FRESH" | "STALE" | "UNKNOWN";
+        /** @enum {string} */
+        OpenRouterForecastUnavailableReason: "INSUFFICIENT_HISTORY" | "RESET_BOUNDARY" | "NO_CONSUMPTION" | "OUT_OF_RANGE";
+        /** @enum {string} */
+        OpenRouterUnmanagedSpendUnavailableReason: "NO_BASELINE" | "INCOMPLETE_PAIR" | "RESET_BOUNDARY";
         OrgDashboardSummaryResponse: {
             attention: components["schemas"]["Attention"];
             /** Format: int64 */
@@ -7059,6 +7163,8 @@ export interface operations {
                 workspaceId?: string;
                 /** @description 키를 발급한 신청 공개 ID */
                 requestId?: string;
+                /** @description 불변 binding된 OpenRouter 사업 account 공개 ID */
+                openrouterAccountId?: string;
                 status?: components["schemas"]["LlmApiKeyStatus"];
                 query?: string;
                 page?: number;

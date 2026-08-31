@@ -6,6 +6,7 @@ import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/h
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { adminLlmListQueries } from '../test/msw/handlers/llm-keys'
 
 describe('관리자 LLM API 키 목록', () => {
   test('active 기관 범위의 키를 상태·워크스페이스·한도와 함께 나열한다', async () => {
@@ -22,6 +23,28 @@ describe('관리자 LLM API 키 목록', () => {
     expect(screen.getAllByText(/RPM 60 · TPM 40,000/).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' }).length).toBeGreaterThan(0)
     expect(screen.getAllByText('미결합').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Limit window 사용 $2.50').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('잔여 한도 $2.50').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('2026-08-31 00:27 KST').length).toBeGreaterThan(0)
+  })
+
+  test('사업 계정 filter를 계약 query에 적용하고 account deep link를 유지한다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/llm/keys')
+
+    const account = await screen.findByLabelText('OpenRouter 사업 계정 필터')
+    await within(account).findByRole('option', { name: 'AI 교육 사업 A' })
+    await user.selectOptions(account, uuid(410))
+    expect(await screen.findByText('active-admin-key')).toBeInTheDocument()
+    expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
+    expect(adminLlmListQueries.some((query) =>
+      query.includes(`openrouterAccountId=${uuid(410)}`),
+    )).toBe(true)
+    expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' })[0]).toHaveAttribute(
+      'href',
+      `/admin/llm/accounts/${uuid(410)}`,
+    )
   })
 
   test('상태·검색·워크스페이스 필터를 API 목록에 적용한다', async () => {
@@ -51,12 +74,15 @@ describe('관리자 LLM API 키 목록', () => {
     renderApp('/admin/llm/keys')
 
     const workspace = await screen.findByLabelText('LLM API 키 워크스페이스 필터')
+    const account = screen.getByLabelText('OpenRouter 사업 계정 필터')
     await within(workspace).findByRole('option', { name: '캡스톤 3조' })
     await user.selectOptions(workspace, uuid(12))
+    await user.selectOptions(account, uuid(410))
     expect(workspace).toHaveValue(uuid(12))
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
 
     await waitFor(() => expect(workspace).toHaveValue(''))
+    expect(account).toHaveValue('')
     expect(await screen.findByText('other-org-key')).toBeInTheDocument()
     expect(screen.queryByText('active-admin-key')).not.toBeInTheDocument()
   })

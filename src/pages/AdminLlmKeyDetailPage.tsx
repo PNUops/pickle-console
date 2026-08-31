@@ -38,6 +38,7 @@ import { adminPaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { KeyCreditObservation } from '../components/OpenRouterCredits'
 
 const EDITABLE_STATUSES = new Set<LlmApiKeyStatus>(['PENDING', 'ACTIVE', 'SUSPENDED'])
 const REVOKABLE_STATUSES = new Set<LlmApiKeyStatus>(['PENDING', 'ACTIVE', 'SUSPENDED'])
@@ -201,6 +202,7 @@ export function AdminLlmKeyDetailPage() {
                 ? CREDIT_LIMIT_RESET_LABELS[key.creditLimitReset]
                 : '리셋 없는 총액 상한',
             },
+            { term: '금액 관측', description: <KeyCreditObservation llmKey={key} /> },
           ]}
         />
       </section>

@@ -136,6 +136,11 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
       'href',
       `/admin/llm/accounts/${uuid(410)}?org=${uuid(1)}`,
     )
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $2.50')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $2.50')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent(
+      '2026-08-31 00:27 KST',
+    )
     await user.click(screen.getByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
     expect(dialog.getByText('사업 계정 binding은 변경할 수 없습니다')).toBeInTheDocument()
@@ -143,6 +148,19 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     await user.click(dialog.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
     expect(adminLlmLimitBodies[0].openrouterAccountId).toBe(uuid(410))
+  })
+
+  test('key 금액의 null과 실제 0을 구분한다', async () => {
+    const unknown = renderDetail('access-sys-admin', sysAdminUser, uuid(176))
+    await screen.findByRole('heading', { name: 'initial-binding-key' })
+    expect(screen.getByText('금액 관측 전')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent('$0.00')
+    unknown.unmount()
+
+    renderDetail('access-sys-admin', sysAdminUser, uuid(177))
+    await screen.findByRole('heading', { name: 'legacy-connected-unbound-key' })
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $0.00')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $0.00')
   })
 
   test('미결합 key의 첫 positive 금액 축은 사업 계정을 선택해 같은 ID로 저장한다', async () => {

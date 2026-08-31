@@ -30,6 +30,9 @@ import {
 } from '../components/ui'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { AccountCreditsCompact } from '../components/OpenRouterCredits'
+
+const ACCOUNT_CACHE_REFETCH_MS = 2 * 60 * 1000
 
 function accountStatus(account: OpenRouterAccount) {
   return account.status === 'ACTIVE' ? (
@@ -57,6 +60,7 @@ export function AdminOpenRouterAccountsPage() {
     queryKey: ['admin', 'llm-accounts', { orgId: scope.activeOrgId ?? null }],
     queryFn: () => fetchOpenRouterAccounts(scope.activeOrgId),
     enabled: scope.ready,
+    refetchInterval: ACCOUNT_CACHE_REFETCH_MS,
   })
 
   return (
@@ -91,6 +95,7 @@ export function AdminOpenRouterAccountsPage() {
               <TH>재원·증빙</TH>
               <TH>Credential</TH>
               <TH>Key binding</TH>
+              <TH>Credits</TH>
             </TR>
           </THead>
           <TBody>
@@ -117,6 +122,7 @@ export function AdminOpenRouterAccountsPage() {
                 </TD>
                 <TD>{credentialSummary(account)}</TD>
                 <TD>{account.boundKeyCount.toLocaleString('ko-KR')}개</TD>
+                <TD><AccountCreditsCompact credits={account.credits} /></TD>
               </TR>
             ))}
           </TBody>
