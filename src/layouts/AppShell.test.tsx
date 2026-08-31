@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test, vi } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
@@ -18,8 +18,10 @@ describe('모바일 드로어 내비게이션', () => {
 
     const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
     const openIcon = openButton.querySelector('svg')?.innerHTML
+    const drawerId = openButton.getAttribute('aria-controls')
     expect(openButton).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(document.getElementById(drawerId!)).not.toBeInTheDocument()
 
     await user.click(openButton)
     const drawer = screen.getByRole('dialog', { name: '콘솔 메뉴' })
@@ -52,6 +54,7 @@ describe('모바일 드로어 내비게이션', () => {
     const user = userEvent.setup()
 
     const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
+    const drawerId = openButton.getAttribute('aria-controls')
     await user.click(openButton)
     expect(screen.getByRole('dialog', { name: '콘솔 메뉴' })).toBeInTheDocument()
 
@@ -64,6 +67,7 @@ describe('모바일 드로어 내비게이션', () => {
     await user.click(within(drawer).getByRole('button', { name: '메뉴 닫기' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
     expect(document.activeElement).toBe(openButton)
+    await waitFor(() => expect(document.getElementById(drawerId!)).not.toBeInTheDocument())
   })
 })
 

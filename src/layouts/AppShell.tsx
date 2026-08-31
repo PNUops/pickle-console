@@ -31,6 +31,9 @@ const BANNER_DISMISS_KEY = 'pickle_banner_dismissed'
 /** 데스크톱 사이드바 접힘 상태를 브라우저에 유지한다. */
 const SIDEBAR_COLLAPSED_KEY = 'pickle_sidebar_collapsed'
 
+/** `--duration-normal`과 맞춘 mobile drawer exit 보존 시간. */
+const DRAWER_TRANSITION_MS = 200
+
 function loadSidebarCollapsed() {
   try {
     return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
@@ -249,11 +252,41 @@ export function AppShell({
 }) {
   const navSections: NavSection[] = sections ?? [{ items: items ?? [] }]
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerRendered, setDrawerRendered] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed)
   const drawerId = useId()
   const desktopSidebarId = useId()
   const drawerRef = useRef<HTMLDivElement>(null)
-  useFocusTrap(drawerRef, { active: drawerOpen, onEscape: () => setDrawerOpen(false) })
+  const drawerCloseTimer = useRef<number | null>(null)
+
+  const clearDrawerCloseTimer = () => {
+    if (drawerCloseTimer.current == null) return
+    window.clearTimeout(drawerCloseTimer.current)
+    drawerCloseTimer.current = null
+  }
+
+  const openDrawer = () => {
+    clearDrawerCloseTimer()
+    setDrawerRendered(true)
+    setDrawerOpen(true)
+  }
+
+  const closeDrawer = () => {
+    clearDrawerCloseTimer()
+    setDrawerOpen(false)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDrawerRendered(false)
+      return
+    }
+    drawerCloseTimer.current = window.setTimeout(() => {
+      setDrawerRendered(false)
+      drawerCloseTimer.current = null
+    }, DRAWER_TRANSITION_MS)
+  }
+
+  useFocusTrap(drawerRef, { active: drawerOpen, onEscape: closeDrawer })
+
+  useEffect(() => clearDrawerCloseTimer, [])
 
   // 점검 모드·공지 배너·문의처: 공개 상태를 ~60초 폴링한다. 관리자 계층(USER
   // 외 전 역할 — 매니저 역할 포함)은 점검 중에도 콘솔을 계속 쓸 수 있고,
@@ -328,6 +361,8 @@ export function AppShell({
   // NavLink onClick이 기본 닫힘 경로지만, UserMenu 등 다른 경로 이동도 덮는 안전망.
   useEffect(() => {
     setDrawerOpen(false)
+    setDrawerRendered(false)
+    clearDrawerCloseTimer()
   }, [pathname])
 
   // md 이상으로 커지면 드로어는 CSS로만 숨겨지므로(md:hidden) 상태도 함께 닫는다 —
@@ -335,7 +370,10 @@ export function AppShell({
   useEffect(() => {
     const query = window.matchMedia('(min-width: 768px)')
     const onChange = (event: MediaQueryListEvent) => {
-      if (event.matches) setDrawerOpen(false)
+      if (!event.matches) return
+      setDrawerOpen(false)
+      setDrawerRendered(false)
+      clearDrawerCloseTimer()
     }
     query.addEventListener('change', onChange)
     return () => query.removeEventListener('change', onChange)
@@ -405,7 +443,7 @@ export function AppShell({
           </button>
           <button
             type="button"
-            onClick={() => setDrawerOpen((open) => !open)}
+            onClick={openDrawer}
             aria-label={mobileMenuLabel}
             aria-expanded={drawerOpen}
             aria-controls={drawerId}
@@ -420,63 +458,61 @@ export function AppShell({
           <UserMenu />
         </div>
       </header>
-      <div
-        ref={drawerRef}
-        id={drawerId}
-        role="dialog"
-        aria-modal="true"
-        aria-label={navLabel}
-        aria-hidden={!drawerOpen || undefined}
-        inert={!drawerOpen}
-        tabIndex={-1}
-        className={cn(
-          'fixed inset-0 z-50 outline-none md:hidden',
-          drawerOpen ? 'pointer-events-auto' : 'pointer-events-none',
-        )}
-      >
+      {drawerRendered && (
         <div
+          ref={drawerRef}
+          id={drawerId}
+          role="dialog"
+          aria-modal="true"
+          aria-label={navLabel}
+          aria-hidden={!drawerOpen || undefined}
+          inert={!drawerOpen}
+          tabIndex={-1}
           className={cn(
-            'relative z-10 flex h-14 items-center gap-2 border-b border-neutral-200 bg-white px-4 transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none sm:px-6',
-            drawerOpen ? 'opacity-100' : 'opacity-0',
+            'fixed inset-0 z-50 outline-none md:hidden',
+            drawerOpen ? 'pointer-events-auto' : 'pointer-events-none',
           )}
         >
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(false)}
-            aria-label="메뉴 닫기"
-            aria-expanded={drawerOpen}
-            aria-controls={drawerId}
-            className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
+          <div
+            className={cn(
+              'relative z-10 flex h-14 items-center gap-2 border-b border-neutral-200 bg-white px-4 transition-opacity duration-[var(--duration-fast)] ease-standard starting:opacity-0 motion-reduce:transition-none sm:px-6',
+              drawerOpen ? 'opacity-100' : 'opacity-0',
+            )}
           >
-            {navigationMenuIcon}
-          </button>
-          <Logo to={home} variant="brand" />
-        </div>
-        <div
-          aria-hidden="true"
-          data-testid="mobile-navigation-backdrop"
-          className={cn(
-            'absolute inset-x-0 bottom-0 top-14 bg-neutral-950/50 transition-opacity duration-[var(--duration-normal)] ease-standard motion-reduce:transition-none',
-            drawerOpen ? 'opacity-100' : 'opacity-0',
-          )}
-          onClick={() => setDrawerOpen(false)}
-        />
-        <div
-          data-testid="mobile-navigation-panel"
-          className={cn(
-            'absolute bottom-0 left-0 top-14 flex w-60 flex-col bg-white shadow-overlay transition-transform duration-[var(--duration-normal)] ease-decelerate motion-reduce:transition-none',
-            drawerOpen ? 'translate-x-0' : '-translate-x-full',
-          )}
-        >
-          {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
-          <ShellNav
-            navLabel={navLabel}
-            navSections={navSections}
-            onNavigate={() => setDrawerOpen(false)}
+            <button
+              type="button"
+              onClick={closeDrawer}
+              aria-label="메뉴 닫기"
+              aria-expanded={drawerOpen}
+              aria-controls={drawerId}
+              className="cursor-pointer rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
+            >
+              {navigationMenuIcon}
+            </button>
+            <Logo to={home} variant="brand" />
+          </div>
+          <div
+            aria-hidden="true"
+            data-testid="mobile-navigation-backdrop"
+            className={cn(
+              'absolute inset-x-0 bottom-0 top-14 bg-neutral-950/50 transition-opacity duration-[var(--duration-normal)] ease-standard starting:opacity-0 motion-reduce:transition-none',
+              drawerOpen ? 'opacity-100' : 'opacity-0',
+            )}
+            onClick={closeDrawer}
           />
-          <ShellFooterNav onNavigate={() => setDrawerOpen(false)} />
+          <div
+            data-testid="mobile-navigation-panel"
+            className={cn(
+              'absolute bottom-0 left-0 top-14 flex w-60 flex-col bg-white shadow-overlay transition-transform duration-[var(--duration-normal)] ease-decelerate starting:-translate-x-full motion-reduce:transition-none',
+              drawerOpen ? 'translate-x-0' : '-translate-x-full',
+            )}
+          >
+            {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
+            <ShellNav navLabel={navLabel} navSections={navSections} onNavigate={closeDrawer} />
+            <ShellFooterNav onNavigate={closeDrawer} />
+          </div>
         </div>
-      </div>
+      )}
       <div
         aria-hidden={drawerOpen || undefined}
         inert={drawerOpen}
