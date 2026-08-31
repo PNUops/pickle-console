@@ -64,6 +64,11 @@ export function AdminLayout() {
           label: 'LLM API 키',
           icon: <Key24Regular className={iconClass} />,
         },
+        {
+          to: path('/admin/llm/accounts'),
+          label: 'OpenRouter 사업 계정',
+          icon: <Organization24Regular className={iconClass} />,
+        },
       ],
     },
     {

@@ -4,6 +4,7 @@ import { ACCESS_TOKENS, problemResponse } from './auth'
 import { isSysTier } from '../../../auth/permissions'
 import { isMyWorkspace, workspaceMembersOf } from './workspaces'
 import { uuid } from '../ids'
+import { openRouterAccountStore } from './openrouter-accounts'
 
 type Schemas = components['schemas']
 type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
@@ -261,11 +262,37 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     lastUsedAt: '2026-08-20T10:00:00+09:00',
     revokedAt: null,
     createdAt: '2026-08-01T09:00:00+09:00',
+    openrouterAccountId: null,
+    openrouterAccountName: null,
   }
   return [
-    { ...base, id: uuid(170), name: 'pending-admin-key', status: 'PENDING', requestId: uuid(205), lastUsedAt: null },
-    { ...base, id: uuid(171), name: 'active-admin-key', status: 'ACTIVE', requestId: uuid(206) },
-    { ...base, id: uuid(172), name: 'suspended-admin-key', status: 'SUSPENDED', requestId: uuid(207) },
+    {
+      ...base,
+      id: uuid(170),
+      name: 'pending-admin-key',
+      status: 'PENDING',
+      requestId: uuid(205),
+      lastUsedAt: null,
+      creditAxisConnected: false,
+    },
+    {
+      ...base,
+      id: uuid(171),
+      name: 'active-admin-key',
+      status: 'ACTIVE',
+      requestId: uuid(206),
+      openrouterAccountId: uuid(410),
+      openrouterAccountName: 'AI 교육 사업 A',
+    },
+    {
+      ...base,
+      id: uuid(172),
+      name: 'suspended-admin-key',
+      status: 'SUSPENDED',
+      requestId: uuid(207),
+      openrouterAccountId: uuid(410),
+      openrouterAccountName: 'AI 교육 사업 A',
+    },
     { ...base, id: uuid(173), name: 'expired-admin-key', status: 'EXPIRED', requestId: uuid(208) },
     {
       ...base,
@@ -285,6 +312,27 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       orgName: '테스트 기관',
       workspaceId: uuid(21),
       workspaceName: 'AI 동아리',
+    },
+    {
+      ...base,
+      id: uuid(176),
+      name: 'initial-binding-key',
+      status: 'PENDING',
+      requestId: uuid(211),
+      lastUsedAt: null,
+      creditLimit: 0,
+      creditLimitReset: null,
+      creditAxisConnected: false,
+    },
+    {
+      ...base,
+      id: uuid(177),
+      name: 'legacy-connected-unbound-key',
+      status: 'ACTIVE',
+      requestId: uuid(212),
+      creditLimit: 0,
+      creditLimitReset: null,
+      creditAxisConnected: true,
     },
   ]
 }
@@ -609,6 +657,8 @@ function toAdminSummary(key: AdminLlmKey): Schemas['AdminLlmKeySummaryResponse']
     creditLimit: key.creditLimit,
     creditLimitReset: key.creditLimitReset,
     creditAxisConnected: key.creditAxisConnected,
+    openrouterAccountId: key.openrouterAccountId,
+    openrouterAccountName: key.openrouterAccountName,
     expiresAt: key.expiresAt,
     lastUsedAt: key.lastUsedAt,
     createdAt: key.createdAt,
@@ -681,6 +731,11 @@ export const llmKeyHandlers: RequestHandler[] = [
     }
     adminLlmLimitBodies.push(body)
     Object.assign(key, body)
+    if (body.openrouterAccountId && !key.openrouterAccountName) {
+      key.openrouterAccountName = openRouterAccountStore.find(
+        (account) => account.id === body.openrouterAccountId,
+      )?.name ?? null
+    }
     return HttpResponse.json(key, { status: 200 })
   }),
 

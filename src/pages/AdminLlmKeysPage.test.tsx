@@ -20,6 +20,8 @@ describe('관리자 LLM API 키 목록', () => {
     expect(screen.getByText('suspended-admin-key')).toBeInTheDocument()
     expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
     expect(screen.getAllByText(/RPM 60 · TPM 40,000/).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('미결합').length).toBeGreaterThan(0)
   })
 
   test('상태·검색·워크스페이스 필터를 API 목록에 적용한다', async () => {

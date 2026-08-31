@@ -112,6 +112,11 @@ export function canManageLlmCredit(role: UserRole): boolean {
   return role === 'ORG_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
 }
 
+/** OpenRouter 사업 계정 metadata와 management credential lifecycle. */
+export function canManageOpenRouterAccount(role: UserRole): boolean {
+  return role === 'ORG_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+}
+
 /** 관리자 경로에서 LLM API 키를 폐기하는 역할. */
 export function canAdminRevokeLlmKey(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'

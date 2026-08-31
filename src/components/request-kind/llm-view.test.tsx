@@ -7,6 +7,7 @@ import { orgAdminUser, refreshSuccessHandler } from '../../test/msw/handlers/aut
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
 import { uuid } from '../../test/msw/ids'
+import { openRouterAccountStore } from '../../test/msw/handlers/openrouter-accounts'
 
 const REQUEST_ID = uuid(301)
 
@@ -170,6 +171,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
           grantedDailyTokens: null,
           grantedCreditLimit: null,
           grantedCreditLimitReset: null,
+          openrouterAccountId: null,
         },
       },
     ])
@@ -182,6 +184,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('금액 한도 리셋 창'), 'MONTHLY')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
@@ -192,6 +195,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(approved[0].llmKey).toMatchObject({
       grantedCreditLimit: 5,
       grantedCreditLimitReset: 'MONTHLY',
+      openrouterAccountId: uuid(410),
     })
   })
 
@@ -207,6 +211,99 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       await screen.findByText('리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
+  })
+
+  test('eligible account가 없으면 금액 축만 막고 계정 관리 deep link를 제공한다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([])),
+    )
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(await screen.findByRole('link', { name: 'OpenRouter 사업 계정 관리' })).toHaveAttribute(
+      'href',
+      `/admin/llm/accounts?org=${uuid(1)}`,
+    )
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    expect(await screen.findByText('검증된 management credential이 있는 활성 사업 계정이 필요합니다.')).toBeInTheDocument()
+    expect(approved).toHaveLength(0)
+  })
+
+  test('eligible account가 하나면 금액 축 승인에서 자동 선택하고 불변 binding을 확인한다', async () => {
+    const user = userEvent.setup()
+    const only = openRouterAccountStore.find((account) => account.id === uuid(410))!
+    server.use(
+      http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([only])),
+    )
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(await screen.findByText(/AI 교육 사업 A 하나만 binding 가능/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '3')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
+    expect(dialog.getByText(/binding은 발급 뒤 바꿀 수 없습니다/)).toBeInTheDocument()
+    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
+    expect(approved[0].llmKey?.openrouterAccountId).toBe(uuid(410))
+  })
+
+  test('account 조회 실패에도 TOKEN-only 승인과 반려 form은 살아 있다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('*/api/v1/admin/llm/accounts', () =>
+        HttpResponse.json(
+          { title: '오류', status: 500, detail: '사업 계정 조회 실패', code: 'INTERNAL_ERROR' },
+          { status: 500, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const approved = renderDetail({})
+
+    expect(await screen.findByText('사업 계정 목록을 불러오지 못했습니다')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '반려' }))
+    expect(screen.getByLabelText('반려 사유')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '승인' }))
+    await user.type(screen.getByLabelText('부여 분당 요청 수'), '20')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
+    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
+    expect(approved[0].llmKey).toMatchObject({
+      grantedRpm: 20,
+      grantedCreditLimit: null,
+      openrouterAccountId: null,
+    })
+  })
+
+  test('rollout gate OFF는 credential 부족이 아니라 binding 전환 준비로 표시하고 TOKEN-only는 허용한다', async () => {
+    const user = userEvent.setup()
+    const readyButPaused = openRouterAccountStore.find((account) => account.id === uuid(410))!
+    server.use(
+      http.get('*/api/v1/admin/llm/accounts', () =>
+        HttpResponse.json([{ ...readyButPaused, credentialAvailable: true, eligibleForBinding: false }]),
+      ),
+    )
+    const approved = renderDetail({})
+
+    expect(await screen.findByText('OpenRouter account binding 전환 준비 중')).toBeInTheDocument()
+    expect(screen.queryByText('금액 축에 연결할 사업 계정이 없습니다')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    expect(await screen.findByText('OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 승인할 수 없습니다.')).toBeInTheDocument()
+    expect(approved).toHaveLength(0)
+
+    await user.clear(screen.getByLabelText('부여 금액 한도 (USD)'))
+    await user.type(screen.getByLabelText('부여 분당 요청 수'), '30')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
+    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
+    expect(approved[0].llmKey).toMatchObject({
+      grantedRpm: 30,
+      grantedCreditLimit: null,
+      openrouterAccountId: null,
+    })
   })
 
   test('승인자가 적은 한도만 부여값으로 나가고, 결과 카드에 그대로 남는다', async () => {
@@ -232,6 +329,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedDailyTokens: null,
       grantedCreditLimit: null,
       grantedCreditLimitReset: null,
+      openrouterAccountId: null,
     })
 
     const granted = screen.getByText('부여 분당 요청 수').closest('div')!
