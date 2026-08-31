@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { onMaintenanceDetected } from '../api/maintenance'
@@ -259,19 +259,19 @@ export function AppShell({
   const drawerRef = useRef<HTMLDivElement>(null)
   const drawerCloseTimer = useRef<number | null>(null)
 
-  const clearDrawerCloseTimer = () => {
+  const clearDrawerCloseTimer = useCallback(() => {
     if (drawerCloseTimer.current == null) return
     window.clearTimeout(drawerCloseTimer.current)
     drawerCloseTimer.current = null
-  }
+  }, [])
 
-  const openDrawer = () => {
+  const openDrawer = useCallback(() => {
     clearDrawerCloseTimer()
     setDrawerRendered(true)
     setDrawerOpen(true)
-  }
+  }, [clearDrawerCloseTimer])
 
-  const closeDrawer = () => {
+  const closeDrawer = useCallback(() => {
     clearDrawerCloseTimer()
     setDrawerOpen(false)
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -282,11 +282,11 @@ export function AppShell({
       setDrawerRendered(false)
       drawerCloseTimer.current = null
     }, DRAWER_TRANSITION_MS)
-  }
+  }, [clearDrawerCloseTimer])
 
   useFocusTrap(drawerRef, { active: drawerOpen, onEscape: closeDrawer })
 
-  useEffect(() => clearDrawerCloseTimer, [])
+  useEffect(() => clearDrawerCloseTimer, [clearDrawerCloseTimer])
 
   // 점검 모드·공지 배너·문의처: 공개 상태를 ~60초 폴링한다. 관리자 계층(USER
   // 외 전 역할 — 매니저 역할 포함)은 점검 중에도 콘솔을 계속 쓸 수 있고,
@@ -333,6 +333,7 @@ export function AppShell({
   // 되살아나는 방향으로 틀린다.
   const navigate = useNavigate()
   const { pathname, search } = useLocation()
+  const previousLocation = useRef(`${pathname}\u0000${search}`)
   const atEnrollScreen = pathname === MFA_ENROLL_PATH
   const currentAdminOrg = new URLSearchParams(search).get('org') ?? undefined
   useEffect(() => {
@@ -358,12 +359,14 @@ export function AppShell({
     if (bannerMessage) sessionStorage.setItem(BANNER_DISMISS_KEY, bannerMessage)
   }
 
-  // NavLink onClick이 기본 닫힘 경로지만, UserMenu 등 다른 경로 이동도 덮는 안전망.
+  // NavLink onClick이 기본 닫힘 경로지만, 기관 scope처럼 search만 바뀌는 이동도 덮는다.
+  // 즉시 unmount하지 않고 공통 exit 경로를 써야 route 이동에서도 animation이 보인다.
   useEffect(() => {
-    setDrawerOpen(false)
-    setDrawerRendered(false)
-    clearDrawerCloseTimer()
-  }, [pathname])
+    const nextLocation = `${pathname}\u0000${search}`
+    const changed = previousLocation.current !== nextLocation
+    previousLocation.current = nextLocation
+    if (changed && drawerRendered) closeDrawer()
+  }, [closeDrawer, drawerRendered, pathname, search])
 
   // md 이상으로 커지면 드로어는 CSS로만 숨겨지므로(md:hidden) 상태도 함께 닫는다 —
   // 안 닫으면 보이지 않는 드로어에 스크롤 락과 Tab 포커스 트랩이 남는다.
@@ -377,7 +380,7 @@ export function AppShell({
     }
     query.addEventListener('change', onChange)
     return () => query.removeEventListener('change', onChange)
-  }, [])
+  }, [clearDrawerCloseTimer])
 
   useEffect(() => {
     storeSidebarCollapsed(sidebarCollapsed)

@@ -43,10 +43,12 @@ describe('모바일 드로어 내비게이션', () => {
 
     await user.click(within(drawer).getByRole('link', { name: '가상머신' }))
     expect(screen.queryByRole('dialog', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
+    expect(document.getElementById(drawer.id)).toBeInTheDocument()
     expect(panel).toHaveClass('-translate-x-full')
     expect(backdrop).toHaveClass('opacity-0')
     expect(document.activeElement).toBe(openButton)
     expect(await screen.findByRole('heading', { name: '내 가상머신' })).toBeInTheDocument()
+    await waitFor(() => expect(document.getElementById(drawer.id)).not.toBeInTheDocument())
   })
 
   test('ESC와 닫기 버튼으로 드로어를 닫을 수 있다', async () => {
@@ -69,6 +71,23 @@ describe('모바일 드로어 내비게이션', () => {
     expect(document.activeElement).toBe(openButton)
     await waitFor(() => expect(document.getElementById(drawerId!)).not.toBeInTheDocument())
     expect(openButton).not.toHaveAttribute('aria-controls')
+  })
+
+  test('관리자 기관 scope처럼 search만 바뀌어도 전환 후 닫힌다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin'))
+    renderApp('/admin')
+    const user = userEvent.setup()
+
+    const openButton = await screen.findByRole('button', { name: '메뉴 열기' })
+    await user.click(openButton)
+    const drawer = screen.getByRole('dialog', { name: '관리자 메뉴' })
+
+    await user.selectOptions(within(drawer).getByLabelText('관리 기관 선택'), uuid(2))
+
+    expect(screen.queryByRole('dialog', { name: '관리자 메뉴' })).not.toBeInTheDocument()
+    expect(document.getElementById(drawer.id)).toBeInTheDocument()
+    await waitFor(() => expect(document.getElementById(drawer.id)).not.toBeInTheDocument())
+    expect(document.activeElement).toBe(openButton)
   })
 })
 
