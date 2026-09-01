@@ -138,8 +138,16 @@ src/terminal/    웹 터미널 창 — 화면·소켓 훅·콘솔 탭과의 티�
 src/components/  src/layouts/   공용 UI
 src/lib/         상태·라벨 매핑, 포맷, 검증 유틸
 src/test/        vitest 설정과 MSW 목
+public/          빌드가 그대로 내보내는 정적 파일
 assets/          README 스크린샷
 ```
+
+`public/pnu-logo.png`는 지우거나 이름을 바꾸지 마세요. 콘솔 소스가 참조하지 않아 쓰이지
+않는 것처럼 보이지만, favicon이 `/pnu-logo.png`로 가리키고 발송 메일의 HTML 상단도 같은
+파일을 절대 URL로 불러옵니다. 없어져도 nginx가 SPA 껍데기를 200으로 돌려주므로 배포
+검사에 걸리지 않고, 이미 발송된 메일의 로고까지 함께 깨집니다. 엠블럼을 교체할 때는 이
+파일과 `src/assets/pnu-logo.png`를 같이 바꿔야 favicon과 메일이 화면 속 로고와 어긋나지
+않습니다.
 
 ## 전체 아키텍처
 

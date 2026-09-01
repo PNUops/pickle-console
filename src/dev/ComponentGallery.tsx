@@ -1,5 +1,5 @@
 import { Add24Regular, Delete24Regular, Settings24Regular } from '@fluentui/react-icons'
-import { Logo, PickleSymbol } from '../components/Logo'
+import { Logo } from '../components/Logo'
 import {
   Button,
   Card,
@@ -50,7 +50,6 @@ export function ComponentGallery() {
           <CardContent className="flex flex-wrap items-center gap-8">
             <Logo variant="brand" />
             <Logo variant="endorsement" />
-            <PickleSymbol className="size-4" />
             <div data-theme="auth-dark" className="rounded-panel bg-surface-canvas p-4">
               <Logo tone="inverse" variant="brand" />
             </div>
