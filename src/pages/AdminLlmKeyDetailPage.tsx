@@ -176,7 +176,7 @@ export function AdminLlmKeyDetailPage() {
           { term: '생성일', description: formatDateTime(key.createdAt) },
           { term: '마지막 사용', description: key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음' },
           { term: '만료', description: key.expiresAt ? formatDateTime(key.expiresAt) : '만료 없음' },
-          { term: '금액 축 연결', description: key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
+          { term: '유료 모델 연결', description: key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
           {
             term: 'OpenRouter 사업 계정',
             description: key.openrouterAccountId && key.openrouterAccountName ? (
@@ -317,12 +317,7 @@ function LimitsModal({
     queryFn: () => fetchOpenRouterAccounts(llmKey.orgId ?? undefined),
     enabled: canEditCredit && initialBindingAllowed && llmKey.orgId != null,
   })
-  const rawAccounts = accounts.data ?? []
-  const eligibleAccounts = rawAccounts.filter((account) => account.eligibleForBinding)
-  const bindingPaused = eligibleAccounts.length === 0 && rawAccounts.some(
-    (account) => account.status === 'ACTIVE' && account.credentialAvailable &&
-      !account.eligibleForBinding,
-  )
+  const eligibleAccounts = (accounts.data ?? []).filter((account) => account.eligibleForBinding)
 
   useEffect(() => {
     if (Object.keys(fieldErrors).length === 0) return
@@ -372,13 +367,11 @@ function LimitsModal({
       if (accounts.isPending) {
         errors.openrouterAccountId = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
       } else if (accounts.isError) {
-        errors.openrouterAccountId = '사업 계정 목록을 불러오지 못해 금액 축을 연결할 수 없습니다.'
-      } else if (bindingPaused) {
-        errors.openrouterAccountId = 'OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 연결할 수 없습니다.'
+        errors.openrouterAccountId = '사업 계정 목록을 불러오지 못해 유료 모델을 연결할 수 없습니다.'
       } else if (eligibleAccounts.length === 0) {
-        errors.openrouterAccountId = '검증된 management credential이 있는 활성 사업 계정이 필요합니다.'
+        errors.openrouterAccountId = '관리용 키까지 확인된 활성 사업 계정이 필요합니다.'
       } else if (eligibleAccounts.length > 1 && !openrouterAccountId) {
-        errors.openrouterAccountId = '금액 축에 사용할 사업 계정을 선택해 주세요.'
+        errors.openrouterAccountId = '어느 사업 계정으로 결제할지 선택해 주세요.'
       }
     }
     setFieldErrors(errors)
@@ -464,7 +457,6 @@ function LimitsModal({
               llmKey={llmKey}
               initialBindingAllowed={initialBindingAllowed}
               accounts={eligibleAccounts}
-              bindingPaused={bindingPaused}
               loading={accounts.isPending}
               failed={accounts.isError}
               value={openrouterAccountId}
@@ -490,7 +482,6 @@ function OpenRouterBindingField({
   llmKey,
   initialBindingAllowed,
   accounts,
-  bindingPaused,
   loading,
   failed,
   value,
@@ -500,7 +491,6 @@ function OpenRouterBindingField({
   llmKey: AdminLlmKeyDetail
   initialBindingAllowed: boolean
   accounts: Awaited<ReturnType<typeof fetchOpenRouterAccounts>>
-  bindingPaused: boolean
   loading: boolean
   failed: boolean
   value: string
@@ -509,45 +499,36 @@ function OpenRouterBindingField({
 }) {
   if (llmKey.openrouterAccountId && llmKey.openrouterAccountName) {
     return (
-      <MessageBar title="사업 계정 binding은 변경할 수 없습니다">
+      <MessageBar title="연결된 사업 계정은 바꿀 수 없습니다">
         <Link
           to={adminPaths.llmAccountDetail(llmKey.openrouterAccountId, llmKey.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
         >
           {llmKey.openrouterAccountName}
         </Link>
-        에 계속 연결됩니다. 다른 사업 계정으로 이동하려면 새 key를 발급해 전환해야 합니다.
+        으로 계속 결제됩니다. 다른 사업 계정으로 옮기려면 새 키를 발급해 전환해야 합니다.
       </MessageBar>
     )
   }
   if (!initialBindingAllowed) {
     return (
-      <MessageBar variant="warning" title="기존 미결합 key는 이 화면에서 사업 계정에 연결할 수 없습니다">
-        이 key는 이미 금액 축이 양수이거나 vendor runtime key가 발급된 legacy 상태입니다. 기존
-        binding을 바꾸지 말고 새 Pickle key를 올바른 사업 계정으로 발급해 전환하세요.{' '}
+      <MessageBar variant="warning" title="이 키는 이 화면에서 사업 계정에 연결할 수 없습니다">
+        이미 금액이 부여되어 있거나 OpenRouter 쪽 키가 발급된 상태입니다. 연결을 바꾸지 말고
+        올바른 사업 계정으로 새 키를 발급해 전환하세요.{' '}
         <Link
           to={adminPaths.requests(llmKey.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
         >
-          신규 key 신청 검토
+          새 키 신청 검토
         </Link>
       </MessageBar>
     )
   }
-  if (loading) return <MessageBar>금액 축에 연결할 사업 계정을 확인하고 있습니다.</MessageBar>
+  if (loading) return <MessageBar>연결할 수 있는 사업 계정을 확인하고 있습니다.</MessageBar>
   if (failed) {
     return (
       <MessageBar variant="warning" title="사업 계정 목록을 불러오지 못했습니다">
-        TOKEN 한도만 변경할 수 있습니다. 금액 한도를 0보다 크게 저장하려면 목록을 다시 불러와야 합니다.
-      </MessageBar>
-    )
-  }
-  if (bindingPaused) {
-    return (
-      <MessageBar variant="warning" title="OpenRouter account binding 전환 준비 중">
-        검증된 management credential은 있지만 새 account binding 운영 전환이 아직 열리지 않았습니다.
-        TOKEN 한도는 변경할 수 있고, 금액 축을 0보다 크게 연결하는 작업만 대기합니다.
-        {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
+        토큰 한도만 변경할 수 있습니다. 금액 한도를 0보다 크게 저장하려면 목록을 다시 불러와야 합니다.
       </MessageBar>
     )
   }
@@ -557,14 +538,14 @@ function OpenRouterBindingField({
         <Link to={adminPaths.llmAccounts(llmKey.orgId ?? undefined)} className="font-semibold underline underline-offset-2">
           OpenRouter 사업 계정 관리
         </Link>
-        에서 검증된 management credential을 먼저 등록하세요.
+        에서 관리용 키를 먼저 등록하세요.
       </MessageBar>
     )
   }
   if (accounts.length === 1) {
     return (
-      <MessageBar title="첫 금액 축 binding">
-        {accounts[0].name}에 자동으로 연결됩니다. 발급 뒤 binding은 바꿀 수 없습니다.
+      <MessageBar title="사업 계정 자동 선택">
+        {accounts[0].name}에 자동으로 연결됩니다. 한 번 정해지면 바꿀 수 없습니다.
       </MessageBar>
     )
   }

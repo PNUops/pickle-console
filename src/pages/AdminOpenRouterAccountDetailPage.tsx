@@ -40,29 +40,29 @@ type ConfirmAction = 'activate' | 'cancel' | 'rollback' | 'finalize' | 'delete'
 
 const ACTION_COPY: Record<ConfirmAction, { title: string; label: string; success: string }> = {
   activate: {
-    title: '대기 credential 활성화',
+    title: '대기 중인 관리용 키 활성화',
     label: '활성화',
-    success: '대기 중인 management credential을 활성화했습니다.',
+    success: '대기 중이던 관리용 키를 활성화했습니다.',
   },
   cancel: {
-    title: '대기 credential 취소',
+    title: '대기 중인 관리용 키 취소',
     label: '대기 취소',
-    success: '대기 중인 management credential을 취소했습니다.',
+    success: '대기 중이던 관리용 키를 취소했습니다.',
   },
   rollback: {
-    title: 'Credential 교체 되돌리기',
+    title: '관리용 키 교체 되돌리기',
     label: '되돌리기',
-    success: '이전 management credential을 다시 활성화했습니다.',
+    success: '이전 관리용 키를 다시 활성화했습니다.',
   },
   finalize: {
-    title: '이전 credential 정리',
+    title: '이전 관리용 키 정리',
     label: '정리',
-    success: '폐기된 이전 management credential 암호문을 정리했습니다.',
+    success: '폐기된 이전 관리용 키를 정리했습니다.',
   },
   delete: {
-    title: '사용하지 않는 credential 삭제',
+    title: '쓰지 않는 관리용 키 삭제',
     label: '삭제',
-    success: '폐기된 management credential 암호문을 삭제했습니다.',
+    success: '폐기된 관리용 키를 삭제했습니다.',
   },
 }
 
@@ -72,11 +72,11 @@ function time(value: string | null | undefined): string {
 
 function credentialError(value: OpenRouterCredentialState['verificationError']): string {
   switch (value) {
-    case 'CREDENTIAL_ERROR': return 'Credential 오류'
-    case 'THROTTLED': return 'Vendor 요청 제한'
-    case 'VENDOR_UNAVAILABLE': return 'Vendor 연결 불가'
-    case 'VENDOR_REJECTED': return 'Vendor 거부'
-    default: return '최근 검증 오류 없음'
+    case 'CREDENTIAL_ERROR': return '관리용 키 인증 실패'
+    case 'THROTTLED': return 'OpenRouter 요청 제한'
+    case 'VENDOR_UNAVAILABLE': return 'OpenRouter 연결 불가'
+    case 'VENDOR_REJECTED': return 'OpenRouter가 요청 거부'
+    default: return '최근 확인 오류 없음'
   }
 }
 
@@ -134,7 +134,7 @@ export function AdminOpenRouterAccountDetailPage() {
     onSuccess: (account, variables) => applyUpdated(account, ACTION_COPY[variables.kind].success),
     onError: (failure) => {
       setConfirmAction(null)
-      setError(toApiError(failure, 'OpenRouter credential 상태를 변경하지 못했습니다.').message)
+      setError(toApiError(failure, '관리용 키 상태를 변경하지 못했습니다.').message)
     },
   })
 
@@ -153,9 +153,9 @@ export function AdminOpenRouterAccountDetailPage() {
   const canRollback = canManage && rotation?.status === 'RETIRING'
   const canFinalize = canManage && rotation?.status === 'RETIRING' &&
     reconciledAfterActivation(account.activeCredential)
-  // Vendor에서 이미 폐기되어 최근 검증이 CREDENTIAL_ERROR인 credential은
+  // OpenRouter에서 이미 폐기되어 최근 확인이 CREDENTIAL_ERROR인 키는
   // credentialAvailable=false가 정상이다. Safe delete는 그 암호문을 치우는 복구
-  // 경로이므로 존재·rotation·binding만으로 열고, 서버가 실제 401/403을 확인한다.
+  // 경로이므로 존재와 교체 상태만으로 열고, 서버가 실제 401/403을 확인한다.
   const canDeleteActive = canManage && !!account.activeCredential && rotation == null &&
     account.boundKeyCount === 0
   const hasCredentialActions = canStage || canActivate || canCancel || canRollback || canFinalize || canDeleteActive
@@ -168,7 +168,7 @@ export function AdminOpenRouterAccountDetailPage() {
       <PageHeader
         eyebrow={account.orgName}
         title={account.name}
-        description="사업·재원 단위의 account metadata와 secret-free credential lifecycle입니다."
+        description="사업 단위 결제 계정의 정보와 관리용 키 상태입니다. 키 값 자체는 저장하지도 보여 주지도 않습니다."
         actions={<Badge variant={account.status === 'ACTIVE' ? 'success' : 'neutral'}>{account.status === 'ACTIVE' ? '활성' : '보관됨'}</Badge>}
       />
 
@@ -178,16 +178,16 @@ export function AdminOpenRouterAccountDetailPage() {
           primary={
             <>
               {canManage && <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>정보 변경</Button>}
-              {canStage && <Button size="sm" variant="secondary" onClick={() => setStageOpen(true)}>Credential 등록·교체</Button>}
-              {canActivate && <Button size="sm" onClick={() => setConfirmAction('activate')}>대기 credential 활성화</Button>}
+              {canStage && <Button size="sm" variant="secondary" onClick={() => setStageOpen(true)}>관리용 키 등록·교체</Button>}
+              {canActivate && <Button size="sm" onClick={() => setConfirmAction('activate')}>대기 중인 키 활성화</Button>}
               {canCancel && <Button size="sm" variant="secondary" onClick={() => setConfirmAction('cancel')}>대기 취소</Button>}
               {canRollback && <Button size="sm" variant="secondary" onClick={() => setConfirmAction('rollback')}>교체 되돌리기</Button>}
             </>
           }
           secondary={
             <>
-              {canFinalize && <Button size="sm" variant="danger" onClick={() => setConfirmAction('finalize')}>이전 credential 정리</Button>}
-              {canDeleteActive && <Button size="sm" variant="danger" onClick={() => setConfirmAction('delete')}>Credential 삭제</Button>}
+              {canFinalize && <Button size="sm" variant="danger" onClick={() => setConfirmAction('finalize')}>이전 키 정리</Button>}
+              {canDeleteActive && <Button size="sm" variant="danger" onClick={() => setConfirmAction('delete')}>관리용 키 삭제</Button>}
             </>
           }
         />
@@ -200,11 +200,11 @@ export function AdminOpenRouterAccountDetailPage() {
         columns={3}
         items={[
           { term: '기관', description: account.orgName },
-          { term: '재원 참조', description: account.fundingReference ?? '입력하지 않음' },
-          { term: '증빙 참조', description: account.evidenceReference ?? '입력하지 않음' },
-          { term: '연결된 Pickle key', description: `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
-          { term: 'Credential 사용 가능', description: account.credentialAvailable ? '가능' : '불가' },
-          { term: '금액 축 binding', description: account.eligibleForBinding ? '선택 가능' : '선택 불가' },
+          { term: '사업', description: account.program ?? '입력하지 않음' },
+          { term: '담당자', description: account.contact ?? '입력하지 않음' },
+          { term: '연결된 키', description: `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
+          { term: '관리용 키', description: account.credentialAvailable ? '사용 가능' : '사용 불가' },
+          { term: '유료 모델 연결', description: account.eligibleForBinding ? '가능' : '불가' },
           { term: '등록', description: time(account.createdAt) },
           { term: '마지막 변경', description: time(account.updatedAt) },
         ]}
@@ -214,29 +214,30 @@ export function AdminOpenRouterAccountDetailPage() {
 
       <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div>
-          <h2 className="type-section-title">Management credential</h2>
+          <h2 className="type-section-title">관리용 키</h2>
           <p className="mt-1 text-sm text-foreground-muted">
-            평문, hash, prefix, label은 저장 상태 화면과 응답에 표시하지 않습니다.
+            키 값과 그 일부는 저장하지도 화면에 보여 주지도 않습니다.
           </p>
         </div>
         {!account.activeCredential && !rotation && (
-          <MessageBar>등록된 management credential이 없습니다.</MessageBar>
+          <MessageBar>등록된 관리용 키가 없습니다.</MessageBar>
         )}
-        {account.activeCredential && <CredentialStateCard title="현재 ACTIVE" credential={account.activeCredential} />}
+        {account.activeCredential && <CredentialStateCard title="사용 중" credential={account.activeCredential} />}
         {rotation && (
           <CredentialStateCard
-            title={rotation.status === 'STAGED' ? '교체 대기 STAGED' : '정리 대기 RETIRING'}
+            title={rotation.status === 'STAGED' ? '교체 대기' : '정리 대기'}
             credential={rotation}
           />
         )}
         {rotation?.retiringOverdue && (
-          <MessageBar variant="warning" title="RETIRING 상태가 24시간을 넘었습니다">
-            Vendor console 폐기와 새 ACTIVE reconciliation 상태를 확인한 뒤 직접 정리하세요. 자동 삭제하지 않습니다.
+          <MessageBar variant="warning" title="정리 대기가 24시간을 넘었습니다">
+            OpenRouter 쪽에서 이전 키를 폐기했는지, 새 키로 대사가 성공했는지 확인한 뒤 직접
+            정리하세요. 자동으로 삭제하지 않습니다.
           </MessageBar>
         )}
         {rotation?.status === 'RETIRING' && !reconciledAfterActivation(account.activeCredential) && (
-          <MessageBar title="새 ACTIVE credential reconciliation 대기 중">
-            새 credential로 key reconciliation이 성공한 뒤에만 이전 credential을 정리할 수 있습니다.
+          <MessageBar title="새 키로 대사가 끝나기를 기다리는 중">
+            새 키로 키 대사가 한 번 성공한 뒤에야 이전 키를 정리할 수 있습니다.
           </MessageBar>
         )}
       </section>
@@ -252,7 +253,7 @@ export function AdminOpenRouterAccountDetailPage() {
         <StageCredentialModal
           account={account}
           onClose={() => setStageOpen(false)}
-          onSaved={(updated) => applyUpdated(updated, 'Management credential을 검증해 STAGED로 등록했습니다.')}
+          onSaved={(updated) => applyUpdated(updated, '관리용 키를 확인해 교체 대기로 등록했습니다.')}
           onError={(message) => {
             setStageOpen(false)
             setError(message)
@@ -278,20 +279,20 @@ function CredentialStateCard({ title, credential }: { title: string; credential:
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h3 className="font-semibold text-foreground-primary">{title}</h3>
         <Badge variant={credential.verificationError ? 'warning' : credential.verifiedAt ? 'success' : 'neutral'}>
-          {credential.verificationError ? '최근 검증 실패' : credential.verifiedAt ? '검증됨' : '검증 이력 없음'}
+          {credential.verificationError ? '최근 확인 실패' : credential.verifiedAt ? '확인됨' : '확인 이력 없음'}
         </Badge>
       </div>
       <DescriptionList
         columns={3}
         items={[
           { term: '등록', description: time(credential.createdAt) },
-          { term: '검증 성공', description: time(credential.verifiedAt) },
-          { term: '최근 검증 시도', description: time(credential.lastVerificationAttemptAt) },
-          { term: '최근 검증 결과', description: credentialError(credential.verificationError) },
+          { term: '확인 성공', description: time(credential.verifiedAt) },
+          { term: '최근 확인 시도', description: time(credential.lastVerificationAttemptAt) },
+          { term: '최근 확인 결과', description: credentialError(credential.verificationError) },
           { term: '활성화', description: time(credential.activatedAt) },
-          { term: '최근 reconciliation', description: time(credential.lastReconciledAt) },
-          { term: 'Management API 사용', description: time(credential.lastUsedAt) },
-          { term: 'RETIRING 전환', description: time(credential.retiringAt) },
+          { term: '최근 키 대사', description: time(credential.lastReconciledAt) },
+          { term: '마지막 사용', description: time(credential.lastUsedAt) },
+          { term: '정리 대기 전환', description: time(credential.retiringAt) },
         ]}
       />
     </div>
@@ -308,8 +309,8 @@ function EditAccountModal({
   onSaved: (account: OpenRouterAccount) => void
 }) {
   const [name, setName] = useState(account.name)
-  const [fundingReference, setFundingReference] = useState(account.fundingReference ?? '')
-  const [evidenceReference, setEvidenceReference] = useState(account.evidenceReference ?? '')
+  const [program, setProgram] = useState(account.program ?? '')
+  const [contact, setContact] = useState(account.contact ?? '')
   const [status, setStatus] = useState(account.status)
   const [error, setError] = useState<string | null>(null)
   const save = useMutation({
@@ -322,8 +323,8 @@ function EditAccountModal({
     if (!name.trim()) return
     save.mutate({
       name: name.trim(),
-      fundingReference: fundingReference.trim() || null,
-      evidenceReference: evidenceReference.trim() || null,
+      program: program.trim() || null,
+      contact: contact.trim() || null,
       status,
     })
   }
@@ -335,8 +336,8 @@ function EditAccountModal({
           <Input value={name} onChange={(event) => setName(event.target.value)} />
         </FormField>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="재원 참조"><Input value={fundingReference} onChange={(event) => setFundingReference(event.target.value)} /></FormField>
-          <FormField label="증빙 참조"><Input value={evidenceReference} onChange={(event) => setEvidenceReference(event.target.value)} /></FormField>
+          <FormField label="사업명"><Input value={program} onChange={(event) => setProgram(event.target.value)} /></FormField>
+          <FormField label="담당자"><Input value={contact} onChange={(event) => setContact(event.target.value)} /></FormField>
         </div>
         <FormField label="상태" description="활성 또는 미만료 key가 연결되어 있으면 보관할 수 없습니다.">
           <Select value={status} onChange={(event) => setStatus(event.target.value as OpenRouterAccount['status'])}>
@@ -380,19 +381,19 @@ function StageCredentialModal({
       const updated = await stageOpenRouterCredential(account.id, oneUseKey, confirmName)
       onSaved(updated)
     } catch (failure) {
-      onError(toApiError(failure, 'OpenRouter management credential을 검증하지 못했습니다.').message)
+      onError(toApiError(failure, '관리용 키를 확인하지 못했습니다.').message)
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Management credential 등록·교체">
+    <Modal open onClose={onClose} title="관리용 키 등록·교체">
       <form className="space-y-4" onSubmit={(event) => void submit(event)} noValidate>
         <MessageBar>
-          Management 전용 권한과 vendor workspace를 disposable key로 검증합니다. 입력값은 응답이나 화면 기록에 남기지 않습니다.
+          입력한 키로 일회용 키를 하나 만들었다 지워 보면서 권한과 계정을 확인합니다. 입력값은 응답이나 화면 기록에 남기지 않습니다.
         </MessageBar>
-        <FormField label="OpenRouter management key" required error={submitted && !managementKey && !pending ? 'Management key를 입력해 주세요.' : undefined}>
+        <FormField label="OpenRouter 관리용 키" required error={submitted && !managementKey && !pending ? '관리용 키를 입력해 주세요.' : undefined}>
           <Input
             type="password"
             value={managementKey}
@@ -450,14 +451,14 @@ function CredentialConfirmModal({
       }
     >
       <div className="space-y-4">
-        {action === 'activate' && <p className="text-sm text-foreground-secondary">STAGED credential을 다시 검증하고 활성화합니다. 기존 ACTIVE가 있으면 RETIRING으로 보존합니다.</p>}
-        {action === 'rollback' && <p className="text-sm text-foreground-secondary">현재 ACTIVE를 STAGED로 되돌리고 이전 RETIRING을 다시 활성화합니다.</p>}
+        {action === 'activate' && <p className="text-sm text-foreground-secondary">교체 대기 중인 키를 다시 확인하고 활성화합니다. 쓰던 키가 있으면 정리 대기로 남겨 둡니다.</p>}
+        {action === 'rollback' && <p className="text-sm text-foreground-secondary">지금 쓰는 키를 교체 대기로 되돌리고 정리 대기 중이던 이전 키를 다시 활성화합니다.</p>}
         {requiresVendorRevocation && (
           <Checkbox
             checked={vendorRevoked}
             onChange={(event) => setVendorRevoked(event.target.checked)}
-            label="Vendor console에서 대상 management key를 폐기했습니다"
-            description="API는 vendor key를 대신 폐기하지 않습니다. Vendor가 폐기를 확인해야 정리가 진행됩니다."
+            label="OpenRouter 콘솔에서 해당 관리용 키를 폐기했습니다"
+            description="Pickle이 대신 폐기하지 않습니다. 폐기를 확인해야 정리가 진행됩니다."
           />
         )}
         <FormField label={`계속하려면 이름(${account.name})을 정확히 입력하세요`} required>

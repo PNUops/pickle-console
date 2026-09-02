@@ -68,7 +68,7 @@ export function AdminOpenRouterAccountsPage() {
       <PageHeader
         eyebrow="리소스"
         title="OpenRouter 사업 계정"
-        description="기관의 사업·재원·결제 단위와 management credential 상태를 조회합니다. 계정끼리 잔액이나 사용액을 합치지 않습니다."
+        description="기관이 사업 단위로 쓰는 OpenRouter 결제 계정과 관리용 키 상태입니다. 계정끼리 잔액이나 사용액을 합치지 않습니다."
         actions={
           canManage ? (
             <Button onClick={() => setCreateOpen(true)}>사업 계정 등록</Button>
@@ -82,7 +82,7 @@ export function AdminOpenRouterAccountsPage() {
       {accounts.isSuccess && accounts.data.length === 0 && (
         <EmptyState
           title="등록된 OpenRouter 사업 계정이 없습니다"
-          description="금액 축을 승인하려면 이 기관에 검증된 management credential이 있는 활성 사업 계정이 필요합니다."
+          description="유료 모델을 승인하려면 이 기관에 관리용 키까지 확인된 활성 사업 계정이 필요합니다."
         />
       )}
       {accounts.isSuccess && accounts.data.length > 0 && (
@@ -92,10 +92,10 @@ export function AdminOpenRouterAccountsPage() {
               <TH>사업 계정</TH>
               <TH>기관</TH>
               <TH>상태</TH>
-              <TH>재원·증빙</TH>
-              <TH>Credential</TH>
-              <TH>Key binding</TH>
-              <TH>Credits</TH>
+              <TH>사업·담당자</TH>
+              <TH>관리용 키</TH>
+              <TH>연결된 키</TH>
+              <TH>잔액</TH>
             </TR>
           </THead>
           <TBody>
@@ -109,15 +109,15 @@ export function AdminOpenRouterAccountsPage() {
                     {account.name}
                   </Link>
                   <p className="mt-0.5 text-xs text-foreground-muted">
-                    {account.eligibleForBinding ? '금액 축 binding 가능' : '금액 축 binding 불가'}
+                    {account.eligibleForBinding ? '유료 모델 연결 가능' : '유료 모델 연결 불가'}
                   </p>
                 </TD>
                 <TD>{account.orgName}</TD>
                 <TD>{accountStatus(account)}</TD>
                 <TD className="text-xs">
-                  <span className="block">재원 {account.fundingReference ?? '미입력'}</span>
+                  <span className="block">사업 {account.program ?? '미입력'}</span>
                   <span className="block text-foreground-muted">
-                    증빙 {account.evidenceReference ?? '미입력'}
+                    담당자 {account.contact ?? '미입력'}
                   </span>
                 </TD>
                 <TD>{credentialSummary(account)}</TD>
@@ -158,8 +158,8 @@ function CreateAccountModal({
   const queryClient = useQueryClient()
   const [orgId, setOrgId] = useState(fixedOrgId ?? '')
   const [name, setName] = useState('')
-  const [fundingReference, setFundingReference] = useState('')
-  const [evidenceReference, setEvidenceReference] = useState('')
+  const [program, setProgram] = useState('')
+  const [contact, setContact] = useState('')
   const [confirmName, setConfirmName] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -183,8 +183,8 @@ function CreateAccountModal({
     create.mutate({
       orgId,
       name: normalizedName,
-      fundingReference: fundingReference.trim() || null,
-      evidenceReference: evidenceReference.trim() || null,
+      program: program.trim() || null,
+      contact: contact.trim() || null,
       confirmName,
     })
   }
@@ -194,8 +194,8 @@ function CreateAccountModal({
       <form className="space-y-4" onSubmit={submit} noValidate>
         {error && <MessageBar variant="danger">{error}</MessageBar>}
         <p className="text-sm text-foreground-secondary">
-          사업 계정은 재원·결제 단위입니다. Management credential은 계정을 만든 뒤 별도로
-          검증해 등록합니다.
+          사업 계정은 결제가 이루어지는 단위입니다. 관리용 키는 계정을 만든 뒤 따로
+          등록하고 확인합니다.
         </p>
         <FormField label="기관" required error={submitted && !orgId ? '기관을 선택해 주세요.' : undefined}>
           {fixedOrgId ? (
@@ -217,11 +217,11 @@ function CreateAccountModal({
           <Input value={name} onChange={(event) => setName(event.target.value)} />
         </FormField>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="재원 참조" description="선택">
-            <Input value={fundingReference} onChange={(event) => setFundingReference(event.target.value)} />
+          <FormField label="사업명" description="선택">
+            <Input value={program} onChange={(event) => setProgram(event.target.value)} />
           </FormField>
-          <FormField label="증빙 참조" description="선택">
-            <Input value={evidenceReference} onChange={(event) => setEvidenceReference(event.target.value)} />
+          <FormField label="담당자" description="선택">
+            <Input value={contact} onChange={(event) => setContact(event.target.value)} />
           </FormField>
         </div>
         <FormField

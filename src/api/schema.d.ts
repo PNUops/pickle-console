@@ -204,14 +204,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * OpenRouter 사업 account 목록
-         * @description 관리 범위의 사업·재원별 OpenRouter account와 credential 상태를 조회합니다. 인증 정보와 vendor 내부 식별자는 반환하지 않습니다.
+         * OpenRouter 사업 계정 목록
+         * @description 관리 범위의 사업별 OpenRouter account와 credential 상태를 조회합니다. 인증 정보와 vendor 내부 식별자는 반환하지 않습니다.
          */
         get: operations["listAdminLlmAccounts"];
         put?: never;
         /**
-         * OpenRouter 사업 account 등록
-         * @description 기관에 사업·재원별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
+         * OpenRouter 사업 계정 등록
+         * @description 기관에 사업별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
          */
         post: operations["createAdminLlmAccount"];
         delete?: never;
@@ -228,8 +228,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * OpenRouter 사업 account 상세
-         * @description 관리 범위의 account metadata, binding 가능 여부, 연결된 key 수와 secret-free credential lifecycle 상태를 조회합니다.
+         * OpenRouter 사업 계정 상세
+         * @description 관리 범위의 사업 계정 정보, 유료 모델 연결 가능 여부, 연결된 키 수와 관리용 키 상태를 조회합니다. 키 값은 반환하지 않습니다.
          */
         get: operations["getAdminLlmAccount"];
         put?: never;
@@ -238,8 +238,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * OpenRouter 사업 account 정보 수정
-         * @description 이름·재원·증빙 참조·상태 중 보낸 항목만 변경합니다. 활성 또는 미만료 key가 연결된 account는 보관할 수 없습니다.
+         * OpenRouter 사업 계정 정보 수정
+         * @description 이름·사업·담당자·상태 중 보낸 항목만 변경합니다. 활성 또는 미만료 key가 연결된 account는 보관할 수 없습니다.
          */
         patch: operations["updateAdminLlmAccount"];
         trace?: never;
@@ -2899,7 +2899,7 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 금액 축이 발급되어 현재 연결되어 있는지 */
+            /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
             creditLimit: number;
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
@@ -2948,7 +2948,7 @@ export interface components {
              * @description 동시 요청 한도. null이면 서비스 기본값을 따릅니다.
              */
             concurrency: number | null;
-            /** @description 금액 한도(USD 크레딧). 0이면 금액 축을 닫습니다. */
+            /** @description 금액 한도(USD 크레딧). 0이면 유료 모델을 닫습니다. */
             creditLimit: number;
             /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. */
             creditLimitReset: components["schemas"]["CreditLimitReset"] | null;
@@ -2959,7 +2959,7 @@ export interface components {
             dailyTokens: number | null;
             /**
              * Format: uuid
-             * @description 금액 축 사업 account. 생략하거나 null이면 기존 binding을 유지합니다.
+             * @description 유료 모델을 결제할 사업 계정. 생략하거나 null이면 기존 연결을 유지합니다.
              */
             openrouterAccountId?: string | null;
             /**
@@ -2978,7 +2978,7 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 금액 축이 발급되어 현재 연결되어 있는지 */
+            /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
             creditLimit: number;
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
@@ -3382,7 +3382,7 @@ export interface components {
             grantedTpm?: number | null;
             /**
              * Format: uuid
-             * @description 금액 축에 사용할 기관 OpenRouter 사업 account. 하나뿐이면 생략할 수 있습니다.
+             * @description 유료 모델을 결제할 기관 사업 계정. 하나뿐이면 생략할 수 있습니다.
              */
             openrouterAccountId?: string | null;
         };
@@ -3571,17 +3571,17 @@ export interface components {
         CreateOpenRouterAccountRequest: {
             /** @description 오입력 방지를 위해 name과 정확히 같아야 하는 확인값 */
             confirmName: string;
-            /** @description 증빙 참조. 없으면 null */
-            evidenceReference?: string | null;
-            /** @description 재원 참조. 없으면 null */
-            fundingReference?: string | null;
-            /** @description 기관 관리자가 구분하는 사업 account 이름 */
+            /** @description 이 account를 물어볼 담당자. 없으면 null */
+            contact?: string | null;
+            /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
              * Format: uuid
              * @description Account를 소유할 기관 공개 ID
              */
             orgId: string;
+            /** @description 이 account가 청구되는 사업. 없으면 null */
+            program?: string | null;
         };
         CreateOrgRequest: {
             description?: string | null;
@@ -4086,7 +4086,7 @@ export interface components {
             quotaExhausted: boolean;
             /**
              * Format: int64
-             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 상용 모델 사용은 금액 축에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 상용 모델 사용은 금액 한도에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
              */
             todayTokens: number;
         };
@@ -4398,7 +4398,7 @@ export interface components {
             keyName: string;
             /**
              * Format: uuid
-             * @description 불변 binding된 OpenRouter 사업 account. 미결합이면 null
+             * @description 연결된 사업 계정. 연결 전이면 null
              */
             openrouterAccountId?: string | null;
             openrouterAccountName?: string | null;
@@ -5074,9 +5074,11 @@ export interface components {
             activeCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
             /**
              * Format: int64
-             * @description 이 account에 불변 binding된 Pickle LLM key 수
+             * @description 이 사업 계정에 연결된 LLM API 키 수
              */
             boundKeyCount: number;
+            /** @description 이 account를 물어볼 담당자. 없으면 null */
+            contact?: string | null;
             /**
              * Format: date-time
              * @description 등록 시각
@@ -5088,16 +5090,12 @@ export interface components {
             credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
-            /** @description 증빙 참조. 없으면 null */
-            evidenceReference?: string | null;
-            /** @description 재원 참조. 없으면 null */
-            fundingReference?: string | null;
             /**
              * Format: uuid
              * @description Account 공개 ID
              */
             id: string;
-            /** @description 사업 account 이름 */
+            /** @description 사업 계정 이름 */
             name: string;
             /**
              * Format: uuid
@@ -5106,6 +5104,8 @@ export interface components {
             orgId: string;
             /** @description 소유 기관 이름 */
             orgName: string;
+            /** @description 이 account가 청구되는 사업. 없으면 null */
+            program?: string | null;
             /** @description STAGED 또는 RETIRING credential의 secret-free 상태. 없으면 null */
             rotationCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
             /** @description Account lifecycle 상태 */
@@ -5940,12 +5940,12 @@ export interface components {
             status: components["schemas"]["NodeStatus"];
         };
         UpdateOpenRouterAccountRequest: {
-            /** @description 새 증빙 참조. 생략하면 유지하고 null이면 지웁니다. */
-            evidenceReference?: string | null;
-            /** @description 새 재원 참조. 생략하면 유지하고 null이면 지웁니다. */
-            fundingReference?: string | null;
+            /** @description 새 담당자. 생략하면 유지하고 null이면 지웁니다. */
+            contact?: string | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
+            /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */
+            program?: string | null;
             /** @description 새 lifecycle 상태. 생략하면 유지하며 null은 허용하지 않습니다. */
             status?: components["schemas"]["OpenRouterAccountStatus"];
         };
@@ -7387,7 +7387,7 @@ export interface operations {
                 workspaceId?: string;
                 /** @description 키를 발급한 신청 공개 ID */
                 requestId?: string;
-                /** @description 불변 binding된 OpenRouter 사업 account 공개 ID */
+                /** @description 연결된 사업 계정의 공개 ID */
                 openrouterAccountId?: string;
                 status?: components["schemas"]["LlmApiKeyStatus"];
                 query?: string;
@@ -7473,15 +7473,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminLlmKeyDetailResponse"];
-                };
-            };
-            /** @description OpenRouter account binding 전환 미활성 (`OPENROUTER_ACCOUNT_BINDING_DISABLED`) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -8514,15 +8505,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequestDetailResponse"];
-                };
-            };
-            /** @description OpenRouter account binding 전환 미활성 (`OPENROUTER_ACCOUNT_BINDING_DISABLED`) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

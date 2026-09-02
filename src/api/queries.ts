@@ -634,7 +634,7 @@ export function stageOpenRouterCredential(
         body: { managementKey, confirmName },
       },
     )
-    if (!data) throw toApiError(error, 'OpenRouter management credential을 검증하지 못했습니다.')
+    if (!data) throw toApiError(error, '관리용 키를 확인하지 못했습니다.')
     return data
   })
 }

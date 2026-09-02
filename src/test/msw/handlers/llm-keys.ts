@@ -333,7 +333,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     {
       ...base,
       id: uuid(177),
-      name: 'legacy-connected-unbound-key',
+      name: 'remote-connected-unbound-key',
       status: 'ACTIVE',
       requestId: uuid(212),
       creditLimit: 0,

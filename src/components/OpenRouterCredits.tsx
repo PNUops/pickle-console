@@ -4,7 +4,7 @@ import type {
   OpenRouterAccountCredits,
   OpenRouterCreditsFreshness,
 } from '../api/queries'
-import { formatDateTime, formatRelative } from '../lib/format'
+import { formatRelative } from '../lib/format'
 import {
   FORECAST_REASON_LABELS,
   FRESHNESS_LABELS,
@@ -20,6 +20,12 @@ const FRESHNESS_VARIANTS: Record<OpenRouterCreditsFreshness, BadgeVariant> = {
   UNKNOWN: 'neutral',
 }
 
+/**
+ * 지금 얼마나 신선한지를 묻는 자리의 시각. 상대 표기 하나만 쓴다. 같은
+ * 값을 절대 시각으로 한 번 더 그리거나 title 로 또 얹으면 한 사실이 화면
+ * 한 줄에 세 번 나온다. 언제 있었는지를 기록하는 자리(감사, 활동 내역,
+ * 생성·변경일)는 반대로 절대 시각만 쓴다.
+ */
 export function ObservationMoment({
   value,
   empty = '기록 없음',
@@ -28,16 +34,13 @@ export function ObservationMoment({
   empty?: string
 }) {
   if (!value) return <span>{empty}</span>
-  return (
-    <time dateTime={value} title={`${formatDateTime(value)} KST`}>
-      <span>{formatRelative(value)}</span>
-      <span className="block text-xs text-foreground-muted">{formatDateTime(value)} KST</span>
-    </time>
-  )
+  return <time dateTime={value}>{formatRelative(value)}</time>
 }
 
 export function CreditsFreshnessBadge({ freshness }: { freshness: OpenRouterCreditsFreshness }) {
-  return <Badge variant={FRESHNESS_VARIANTS[freshness]}>{FRESHNESS_LABELS[freshness]}</Badge>
+  const label = FRESHNESS_LABELS[freshness]
+  if (!label) return null
+  return <Badge variant={FRESHNESS_VARIANTS[freshness]}>{label}</Badge>
 }
 
 export function AccountCreditsCompact({ credits }: { credits: OpenRouterAccountCredits }) {
@@ -58,9 +61,9 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
     <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="type-section-title">Credits 관측</h2>
+          <h2 className="type-section-title">잔액과 사용액</h2>
           <p className="mt-1 text-sm text-foreground-muted">
-            화면은 DB cache만 읽습니다. 금액과 key 대사는 각 관측 시각을 기준으로 해석하세요.
+            금액과 키 대사는 각각 따로 읽으므로 갱신 시각이 다를 수 있습니다.
           </p>
         </div>
         <CreditsFreshnessBadge freshness={credits.freshness} />
@@ -97,7 +100,7 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
       />
 
       <div className="border-t border-stroke-subtle pt-4">
-        <h3 className="mb-3 font-semibold text-foreground-primary">Paired 미관리 지출</h3>
+        <h3 className="mb-3 font-semibold text-foreground-primary">Pickle 밖에서 쓴 금액</h3>
         <DescriptionList
           columns={3}
           items={[
@@ -111,16 +114,16 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
                   ? UNMANAGED_REASON_LABELS[credits.unmanagedSpendUnavailableReason]
                   : '계산 전',
             },
-            { term: 'Baseline', description: <ObservationMoment value={credits.unmanagedBaselineAt} /> },
-            { term: 'Paired credits 관측', description: <ObservationMoment value={credits.pairedCreditsObservedAt} /> },
-            { term: 'Paired key 관측', description: <ObservationMoment value={credits.pairedKeysObservedAt} /> },
+            { term: '비교 기준 시점', description: <ObservationMoment value={credits.unmanagedBaselineAt} /> },
+            { term: '계정 사용액 읽은 때', description: <ObservationMoment value={credits.pairedCreditsObservedAt} /> },
+            { term: '키 사용액 읽은 때', description: <ObservationMoment value={credits.pairedKeysObservedAt} /> },
           ]}
         />
       </div>
 
       <div className="border-t border-stroke-subtle pt-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h3 className="font-semibold text-foreground-primary">Key 대사 상태</h3>
+          <h3 className="font-semibold text-foreground-primary">키 대사 상태</h3>
           <CreditsFreshnessBadge freshness={credits.keysFreshness} />
         </div>
         {credits.keysError && (

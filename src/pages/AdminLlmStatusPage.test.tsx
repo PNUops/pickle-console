@@ -111,8 +111,8 @@ describe('관리자 LLM 서비스 상태', () => {
     expect(screen.getByText('Passive 요청')).toBeInTheDocument()
     expect(screen.getByText('Catalog')).toBeInTheDocument()
     expect(screen.getByText('문서 지원 형식')).toBeInTheDocument()
-    expect(screen.getByText('Gateway 현재 프로세스 누적 진단 counter')).toBeInTheDocument()
-    expect(screen.getByText('Queue 마지막 관측')).toBeInTheDocument()
+    expect(screen.getByText('게이트웨이가 재시작된 뒤로 쌓인 진단 수치')).toBeInTheDocument()
+    expect(screen.getByText('대기열 마지막 확인')).toBeInTheDocument()
     expect(screen.getByText('Queue 확인 실패')).toBeInTheDocument()
     expect(screen.getByText('본문 수집 누락')).toBeInTheDocument()
     expect(screen.queryByText(/uptime/i)).not.toBeInTheDocument()
@@ -196,7 +196,7 @@ describe('관리자 LLM 서비스 상태', () => {
     renderApp('/admin/llm/status')
 
     expect(
-      await screen.findByText('Gateway 현재 프로세스 누적 진단 counter'),
+      await screen.findByText('게이트웨이가 재시작된 뒤로 쌓인 진단 수치'),
     ).toBeInTheDocument()
     expect(screen.getAllByText('미보고').length).toBeGreaterThanOrEqual(6)
   })
@@ -244,12 +244,12 @@ describe('관리자 LLM 서비스 상태', () => {
     )
     renderApp('/admin/llm/status')
 
-    expect(await screen.findByText('Queue 상태를 현재 값으로 확인할 수 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('전송 대기열을 지금 값으로 확인할 수 없습니다')).toBeInTheDocument()
     expect(screen.getByText('0건 · 0 B')).toBeInTheDocument()
     expect(screen.getByText('마지막 관측 기준')).toBeInTheDocument()
-    expect(screen.getByText(/0건으로 보여도 지금 queue가 비어 있다는 뜻은 아닙니다/)).toBeInTheDocument()
+    expect(screen.getByText(/0건으로 보여도 지금 비어 있다는 뜻은 아닙니다/)).toBeInTheDocument()
     const counters = screen.getByRole('table', {
-      name: 'Gateway 현재 프로세스 누적 진단 counter',
+      name: '게이트웨이가 재시작된 뒤로 쌓인 진단 수치',
     })
     expect(within(counters).getAllByRole('cell')[2]).toHaveTextContent('2회')
   })
@@ -275,10 +275,10 @@ describe('관리자 LLM 서비스 상태', () => {
     renderApp('/admin/llm/status')
 
     expect(await screen.findByText('0건 · 0 B')).toBeInTheDocument()
-    expect(screen.queryByText('Queue 상태를 현재 값으로 확인할 수 없습니다')).not.toBeInTheDocument()
+    expect(screen.queryByText('전송 대기열을 지금 값으로 확인할 수 없습니다')).not.toBeInTheDocument()
     expect(screen.queryByText('마지막 관측 기준')).not.toBeInTheDocument()
     const counters = screen.getByRole('table', {
-      name: 'Gateway 현재 프로세스 누적 진단 counter',
+      name: '게이트웨이가 재시작된 뒤로 쌓인 진단 수치',
     })
     expect(within(counters).getAllByRole('cell')[2]).toHaveTextContent('2회')
   })
@@ -305,8 +305,10 @@ describe('관리자 LLM 서비스 상태', () => {
     const row = (await screen.findByText('오래된 probe 서비스')).closest('tr') as HTMLElement
     expect(within(row).getByText('확인되지 않음')).toBeInTheDocument()
     expect(within(row).getByText('마지막 연결 확인 성공 · 관측 기한 지남')).toBeInTheDocument()
-    expect(within(row).getByText(/60초 주기/)).toBeInTheDocument()
-    expect(within(row).getByText('2026-08-29 18:00 KST')).toBeInTheDocument()
+    // 확인 주기 딱지는 걷었다. 남는 질문은 "마지막으로 언제 확인했나"뿐이고,
+    // 그 답은 상대 표기 하나로 그린다.
+    expect(within(row).queryByText(/주기/)).not.toBeInTheDocument()
+    expect(row.querySelector('time[datetime="2026-08-29T18:00:00+09:00"]')).not.toBeNull()
     expect(within(row).queryByText('연결 확인 성공')).not.toBeInTheDocument()
   })
 
@@ -335,21 +337,21 @@ describe('관리자 LLM 서비스 상태', () => {
     const localRow = (await screen.findByText('로컬 거절 서비스')).closest('tr') as HTMLElement
     expect(within(localRow).getByText('가용성 판정 기록 없음')).toBeInTheDocument()
     expect(within(localRow).queryByText('최근 요청 성공')).not.toBeInTheDocument()
-    expect(within(localRow).getByTitle('2026-08-30 18:10 KST')).toHaveTextContent(
-      '마지막 요청 시도',
+    expect(within(localRow).getByText(/마지막 요청 시도/)).toHaveAttribute(
+      'datetime',
+      '2026-08-30T18:10:00+09:00',
     )
-    expect(within(localRow).getByText('2026-08-30 18:10 KST')).toBeInTheDocument()
 
     const failureRow = screen.getByText('과거 실패 서비스').closest('tr') as HTMLElement
     expect(within(failureRow).getByText('최근 요청 실패')).toBeInTheDocument()
-    expect(within(failureRow).getByTitle('2026-08-28 18:00 KST')).toHaveTextContent(
-      '가용성 결과',
+    expect(within(failureRow).getByText(/판정$/)).toHaveAttribute(
+      'datetime',
+      '2026-08-28T18:00:00+09:00',
     )
-    expect(within(failureRow).getByText('2026-08-28 18:00 KST')).toBeInTheDocument()
-    expect(within(failureRow).getByTitle('2026-08-30 18:10 KST')).toHaveTextContent(
-      '마지막 요청 시도',
+    expect(within(failureRow).getByText(/마지막 요청 시도/)).toHaveAttribute(
+      'datetime',
+      '2026-08-30T18:10:00+09:00',
     )
-    expect(within(failureRow).getByText('2026-08-30 18:10 KST')).toBeInTheDocument()
   })
 
   test('기관 화면은 catalog 차이 개수만 보이고 누락 모델 이름은 렌더하지 않는다', async () => {
