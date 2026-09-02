@@ -92,6 +92,28 @@ describe('이미 발급된 키', () => {
   })
 })
 
+describe('연결 정보', () => {
+  test('발급된 키에는 어디로 보내는지와 모델 이름이 함께 보인다', async () => {
+    renderKey(ISSUED_KEY)
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('https://llm.pcl.kr/v1')
+    expect(body).toContain('pickle-general')
+    // 사이드바 하단에도 같은 이름의 링크가 있으므로 본문 안에서만 찾는다.
+    const main = within(screen.getByRole('main'))
+    expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/docs')
+  })
+
+  test('아직 발급 전인 키에는 연결 정보를 보여 주지 않는다', async () => {
+    renderKey(PENDING_KEY)
+
+    await screen.findByRole('heading', { name: 'algo-hint-writer' })
+    expect(screen.queryByText('연결 정보')).not.toBeInTheDocument()
+    expect(document.body.textContent ?? '').not.toContain('https://llm.pcl.kr/v1')
+  })
+})
+
 describe('폐기된 키', () => {
   test('죽었다고 말하고 발급도 폐기도 제안하지 않는다', async () => {
     renderKey(REVOKED_KEY)
