@@ -213,7 +213,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(approved).toHaveLength(0)
   })
 
-  test('eligible account가 없으면 금액 축만 막고 계정 관리 deep link를 제공한다', async () => {
+  test('연결할 계정이 없으면 유료 모델만 막고 계정 관리 deep link를 제공한다', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([])),
@@ -227,11 +227,11 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     )
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
-    expect(await screen.findByText('검증된 management credential이 있는 활성 사업 계정이 필요합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('관리용 키까지 확인된 활성 사업 계정이 필요합니다.')).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
 
-  test('eligible account가 하나면 금액 축 승인에서 자동 선택하고 불변 binding을 확인한다', async () => {
+  test('연결할 계정이 하나면 유료 모델 승인에서 자동 선택하고 불변임을 확인한다', async () => {
     const user = userEvent.setup()
     const only = openRouterAccountStore.find((account) => account.id === uuid(410))!
     server.use(
@@ -240,17 +240,17 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    expect(await screen.findByText(/AI 교육 사업 A 하나만 binding 가능/)).toBeInTheDocument()
+    expect(await screen.findByText(/AI 교육 사업 A 하나뿐이라/)).toBeInTheDocument()
     expect(screen.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '3')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
-    expect(dialog.getByText(/binding은 발급 뒤 바꿀 수 없습니다/)).toBeInTheDocument()
+    expect(dialog.getByText(/발급 뒤 바꿀 수 없습니다/)).toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '승인 확정' }))
     expect(approved[0].llmKey?.openrouterAccountId).toBe(uuid(410))
   })
 
-  test('account 조회 실패에도 TOKEN-only 승인과 반려 form은 살아 있다', async () => {
+  test('계정 조회가 실패해도 자체 서빙 모델 승인과 반려 form은 살아 있다', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/v1/admin/llm/accounts', () =>
@@ -272,35 +272,6 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(dialog.getByRole('button', { name: '승인 확정' }))
     expect(approved[0].llmKey).toMatchObject({
       grantedRpm: 20,
-      grantedCreditLimit: null,
-      openrouterAccountId: null,
-    })
-  })
-
-  test('rollout gate OFF는 credential 부족이 아니라 binding 전환 준비로 표시하고 TOKEN-only는 허용한다', async () => {
-    const user = userEvent.setup()
-    const readyButPaused = openRouterAccountStore.find((account) => account.id === uuid(410))!
-    server.use(
-      http.get('*/api/v1/admin/llm/accounts', () =>
-        HttpResponse.json([{ ...readyButPaused, credentialAvailable: true, eligibleForBinding: false }]),
-      ),
-    )
-    const approved = renderDetail({})
-
-    expect(await screen.findByText('OpenRouter account binding 전환 준비 중')).toBeInTheDocument()
-    expect(screen.queryByText('금액 축에 연결할 사업 계정이 없습니다')).not.toBeInTheDocument()
-    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
-    await user.click(screen.getByRole('button', { name: '승인하기' }))
-    expect(await screen.findByText('OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 승인할 수 없습니다.')).toBeInTheDocument()
-    expect(approved).toHaveLength(0)
-
-    await user.clear(screen.getByLabelText('부여 금액 한도 (USD)'))
-    await user.type(screen.getByLabelText('부여 분당 요청 수'), '30')
-    await user.click(screen.getByRole('button', { name: '승인하기' }))
-    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
-    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
-    expect(approved[0].llmKey).toMatchObject({
-      grantedRpm: 30,
       grantedCreditLimit: null,
       openrouterAccountId: null,
     })

@@ -36,7 +36,8 @@ import {
   type BadgeVariant,
   type DescriptionItem,
 } from '../components/ui'
-import { formatBytes, formatDateTime, formatRelative } from '../lib/format'
+import { ObservationMoment } from '../components/OpenRouterCredits'
+import { formatBytes } from '../lib/format'
 import { formatUsd } from '../lib/openrouter-credits'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
@@ -95,13 +96,7 @@ function axisShare(value: number, total: number): string {
 }
 
 function moment(value: string | null | undefined, empty = '기록 없음'): ReactNode {
-  if (value == null) return empty
-  return (
-    <time dateTime={value} title={`${formatDateTime(value)} KST`}>
-      <span>{formatRelative(value)}</span>
-      <span className="block text-xs text-foreground-muted">{formatDateTime(value)} KST</span>
-    </time>
-  )
+  return <ObservationMoment value={value} empty={empty} />
 }
 
 function reportBadge(state: GatewayReportState) {
@@ -369,7 +364,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                 <TH>Key</TH>
                 <TH>판정</TH>
                 <TH>오늘 TOKEN</TH>
-                <TH>금액 축</TH>
+                <TH>유료 모델</TH>
                 <TH>최근 7일 압력</TH>
               </TR>
             </THead>
@@ -414,7 +409,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                       <span className="block">잔여 {formatUsd(item.creditLimitRemaining)}</span>
                       <span className="block text-foreground-muted">{moment(item.creditUsageAt, '금액 관측 전')}</span>
                       <span className="mt-1 block">
-                        {item.creditAxisConnected ? '금액 축 연결됨' : '금액 축 연결되지 않음'}
+                        {item.creditAxisConnected ? '유료 모델 연결됨' : '유료 모델 연결되지 않음'}
                       </span>
                       {item.openrouterAccountId && (
                         <Link
@@ -465,28 +460,28 @@ function QualitySection({
     diagnostics.push({ term: '마지막 usage 전송 성공', description: moment(quality.lastUsageShipSuccessAt) })
   }
   if (quality.usageQueueObservedAt != null) {
-    diagnostics.push({ term: 'Queue 마지막 관측', description: moment(quality.usageQueueObservedAt) })
+    diagnostics.push({ term: '대기열 마지막 확인', description: moment(quality.usageQueueObservedAt) })
   }
   if (quality.oldestUnshippedEventAt != null) {
-    diagnostics.push({ term: '가장 오래된 미전송 event', description: moment(quality.oldestUnshippedEventAt) })
+    diagnostics.push({ term: '가장 오래된 미전송 기록', description: moment(quality.oldestUnshippedEventAt) })
   }
   if (quality.queuedUsageEvents != null) {
-    diagnostics.push({ term: '대기 event', description: `${count(quality.queuedUsageEvents)}건` })
+    diagnostics.push({ term: '전송 대기 기록', description: `${count(quality.queuedUsageEvents)}건` })
   }
   if (quality.queuedUsageBytes != null) {
-    diagnostics.push({ term: '대기 byte', description: formatBytes(quality.queuedUsageBytes) })
+    diagnostics.push({ term: '전송 대기 용량', description: formatBytes(quality.queuedUsageBytes) })
   }
   if (quality.spoolWriteFailures != null) {
-    diagnostics.push({ term: 'Spool 기록 실패', description: `${count(quality.spoolWriteFailures)}회` })
+    diagnostics.push({ term: '게이트웨이 저장 실패', description: `${count(quality.spoolWriteFailures)}회` })
   }
   if (quality.usageShipFailures != null) {
-    diagnostics.push({ term: 'Usage 전송 실패', description: `${count(quality.usageShipFailures)}회` })
+    diagnostics.push({ term: '사용량 전송 실패', description: `${count(quality.usageShipFailures)}회` })
   }
   if (quality.usageQueueScanFailures != null) {
-    diagnostics.push({ term: 'Queue 확인 실패', description: `${count(quality.usageQueueScanFailures)}회` })
+    diagnostics.push({ term: '대기열 확인 실패', description: `${count(quality.usageQueueScanFailures)}회` })
   }
   if (quality.unattributedRequests != null) {
-    diagnostics.push({ term: '미귀속 request', description: `${count(quality.unattributedRequests)}건` })
+    diagnostics.push({ term: '어느 키인지 모르는 요청', description: `${count(quality.unattributedRequests)}건` })
   }
 
   return (
@@ -496,7 +491,7 @@ function QualitySection({
           <div>
             <CardTitle>데이터 신선도·신뢰도</CardTitle>
             <p className="type-caption mt-1 text-foreground-muted">
-              수요 수치를 만든 source와 전달 상태를 함께 확인합니다.
+              위 수치를 만든 자료가 언제 들어왔고 빠진 것은 없는지 확인합니다.
             </p>
           </div>
           <Link to={adminPaths.llmStatus(activeOrgId)} className="text-sm text-brand-foreground hover:underline">
@@ -507,20 +502,13 @@ function QualitySection({
           <DescriptionList
             columns={3}
             items={[
-              { term: 'Rollup 마지막 성공', description: moment(quality.rollupLastSuccessAt, '성공 기록 없음') },
+              { term: '집계 마지막 성공', description: moment(quality.rollupLastSuccessAt, '성공 기록 없음') },
               {
-                term: '마지막 usage 수신',
-                description: (
-                  <div>
-                    {moment(quality.latestUsageReceivedAt, '수신 기록 없음')}
-                    <span className="mt-1 block text-xs text-foreground-muted">
-                      마지막 수신 시각일 뿐 완전성 watermark가 아닙니다.
-                    </span>
-                  </div>
-                ),
+                term: '마지막 사용량 수신',
+                description: moment(quality.latestUsageReceivedAt, '수신 기록 없음'),
               },
               {
-                term: 'Vendor meter 관측',
+                term: 'OpenRouter 사용액 확인',
                 description: quality.creditMetersTotal === 0
                   ? '양수 금액 한도 key 없음'
                   : `${count(quality.creditMetersObserved)} / ${count(quality.creditMetersTotal)}개`,
@@ -528,14 +516,14 @@ function QualitySection({
               { term: '가장 오래된 금액 관측', description: moment(quality.oldestCreditUsageAt, '관측 기록 없음') },
               { term: '가장 최근 금액 관측', description: moment(quality.latestCreditUsageAt, '관측 기록 없음') },
               {
-                term: '추정 request',
+                term: '추정으로 채운 요청',
                 description: quality.totalRequests === 0
                   ? '표본 없음'
                   : `${count(quality.estimatedRequests)}건 · ${ratio(quality.estimatedRequestRatio)}`,
               },
-              { term: 'Gateway 보고', description: reportBadge(quality.gatewayReportState) },
-              { term: 'Usage queue 관측', description: reportBadge(quality.usageQueueReportState) },
-              { term: 'Gateway 마지막 연결', description: moment(quality.lastContactAt, '연결 기록 없음') },
+              { term: '게이트웨이 보고', description: reportBadge(quality.gatewayReportState) },
+              { term: '전송 대기열 확인', description: reportBadge(quality.usageQueueReportState) },
+              { term: '게이트웨이 마지막 연결', description: moment(quality.lastContactAt, '연결 기록 없음') },
             ]}
           />
         </CardContent>
@@ -543,9 +531,9 @@ function QualitySection({
       {diagnostics.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>전역 usage 전달 진단</CardTitle>
+            <CardTitle>사용량 전달 진단</CardTitle>
             <p className="type-caption mt-1 text-foreground-muted">
-              시스템 계층에만 제공되는 전역 queue·loss 수치입니다.
+              시스템 관리자에게만 보이는 전체 전송 대기와 유실 수치입니다.
             </p>
           </CardHeader>
           <CardContent>

@@ -126,8 +126,8 @@ describe('OpenRouter account credits 관측', () => {
     const first = (await screen.findByRole('link', { name: 'AI 교육 사업 A' })).closest('tr')!
     expect(within(first).getByText('잔액 $87.50')).toBeInTheDocument()
     expect(within(first).getByText('누적 사용 $12.50')).toBeInTheDocument()
-    expect(within(first).getByText('30분 안에 갱신됨')).toBeInTheDocument()
-    expect(within(first).getByText('2026-08-31 00:28 KST')).toBeInTheDocument()
+    expect(within(first).queryByText('갱신 지연')).not.toBeInTheDocument()
+    expect(first.querySelector('time[datetime="2026-08-31T00:28:00+09:00"]')).not.toBeNull()
 
     const negative = screen.getByRole('link', { name: '산학 협력 사업 B' }).closest('tr')!
     expect(within(negative).getByText('잔액 -$1.25')).toBeInTheDocument()
@@ -139,16 +139,21 @@ describe('OpenRouter account credits 관측', () => {
     server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
     renderApp(`/admin/llm/accounts/${uuid(410)}`)
 
-    expect(await screen.findByRole('heading', { name: 'Credits 관측' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '잔액과 사용액' })).toBeInTheDocument()
     expect(screen.getByText('구매 credits 합계').closest('div')).toHaveTextContent('$100.00')
     expect(screen.getByText('Account 누적 사용').closest('div')).toHaveTextContent('$12.50')
     expect(screen.getByText('잔액').closest('div')).toHaveTextContent('$87.50')
     expect(screen.getByText('일평균 사용').closest('div')).toHaveTextContent('$2.50')
     expect(screen.getByText('Pickle 관리 key 증가분').closest('div')).toHaveTextContent('$5.00')
     expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('$3.00')
-    expect(screen.getAllByText('2026-08-31 00:28 KST').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('2026-08-31 00:27 KST').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('30분 안에 갱신됨')).toHaveLength(2)
+    // 관측 시각은 상대 표기만 그리므로 화면 문자열이 아니라 기계가 읽는
+    // datetime 으로 확인한다. 두 값이 달라야 credits 와 key 관측이 한 시각으로
+    // 뭉개지지 않았다는 뜻이다.
+    expect(document.querySelectorAll('time[datetime="2026-08-31T00:28:00+09:00"]').length)
+      .toBeGreaterThan(0)
+    expect(document.querySelectorAll('time[datetime="2026-08-31T00:27:30+09:00"]').length)
+      .toBeGreaterThan(0)
+    expect(screen.queryAllByText('갱신 지연')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /갱신|새로 고침/ })).not.toBeInTheDocument()
   })
 
@@ -157,24 +162,22 @@ describe('OpenRouter account credits 관측', () => {
     renderApp(`/admin/llm/accounts/${uuid(411)}`)
 
     expect(await screen.findByText('최근 credits 확인 실패')).toBeInTheDocument()
-    expect(screen.getByText(/Vendor 요청 제한/)).toBeInTheDocument()
+    expect(screen.getByText(/OpenRouter 요청 제한/)).toBeInTheDocument()
     expect(screen.getByText('최근 key 대사 실패')).toBeInTheDocument()
-    expect(screen.getByText(/Vendor 연결 실패/)).toBeInTheDocument()
+    expect(screen.getByText(/OpenRouter 연결 실패/)).toBeInTheDocument()
     expect(screen.getByText('잔액').closest('div')).toHaveTextContent('-$1.25')
-    expect(screen.getByText('잔액 소진 예상').closest('div')).toHaveTextContent('reset 경계')
-    expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('reset 경계')
-    expect(screen.getByText('Credits 마지막 성공').closest('div')).toHaveTextContent(
-      '2026-08-31 00:28 KST',
-    )
-    expect(screen.getByText('Credits 마지막 시도').closest('div')).toHaveTextContent(
-      '2026-08-31 01:20 KST',
-    )
+    expect(screen.getByText('잔액 소진 예상').closest('div')).toHaveTextContent('초기화')
+    expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('초기화')
+    expect(screen.getByText('Credits 마지막 성공').closest('div')!
+      .querySelector('time[datetime="2026-08-31T00:28:00+09:00"]')).not.toBeNull()
+    expect(screen.getByText('Credits 마지막 시도').closest('div')!
+      .querySelector('time[datetime="2026-08-31T01:20:00+09:00"]')).not.toBeNull()
   })
 
   test('UNKNOWN null은 0으로 표시하지 않고 실제 0 관측과 구분한다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     const unknown = renderApp(`/admin/llm/accounts/${uuid(412)}`)
-    await screen.findByRole('heading', { name: 'Credits 관측' })
+    await screen.findByRole('heading', { name: '잔액과 사용액' })
     expect(screen.getAllByText('확인 전').length).toBeGreaterThan(2)
     expect(document.body).not.toHaveTextContent('$0.00')
     unknown.unmount()
@@ -191,7 +194,7 @@ describe('OpenRouter account credits 관측', () => {
       lastAttemptAt: '2026-08-31T02:00:00+09:00',
     }
     renderApp(`/admin/llm/accounts/${uuid(412)}`)
-    await screen.findByRole('heading', { name: 'Credits 관측' })
+    await screen.findByRole('heading', { name: '잔액과 사용액' })
     expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(3)
   })
 
@@ -298,9 +301,9 @@ describe('OpenRouter credential lifecycle', () => {
       ...reauthGateHandlers('POST /admin/llm/accounts/:accountId/credentials/staged'),
     )
     renderApp(`/admin/llm/accounts/${uuid(410)}`)
-    await user.click(await screen.findByRole('button', { name: 'Credential 등록·교체' }))
-    const stage = within(screen.getByRole('dialog', { name: 'Management credential 등록·교체' }))
-    await user.type(stage.getByLabelText('OpenRouter management key'), secret)
+    await user.click(await screen.findByRole('button', { name: '관리용 키 등록·교체' }))
+    const stage = within(screen.getByRole('dialog', { name: '관리용 키 등록·교체' }))
+    await user.type(stage.getByLabelText('OpenRouter 관리용 키'), secret)
     await user.type(stage.getByLabelText(/계속하려면 이름/), 'AI 교육 사업 A')
     await user.click(stage.getByRole('button', { name: '검증 후 대기 등록' }))
 
@@ -308,8 +311,8 @@ describe('OpenRouter credential lifecycle', () => {
     const reauth = within(await screen.findByRole('dialog', { name: '본인 확인' }))
     await user.type(reauth.getByLabelText('비밀번호'), USER_PASSWORD)
     await user.click(reauth.getByRole('button', { name: '확인' }))
-    expect(await screen.findByText('Management credential을 검증해 STAGED로 등록했습니다.')).toBeInTheDocument()
-    expect(screen.getByText('교체 대기 STAGED')).toBeInTheDocument()
+    expect(await screen.findByText('관리용 키를 확인해 교체 대기로 등록했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('교체 대기')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent(secret)
     expect(JSON.stringify(openRouterAccountStore)).not.toContain(secret)
   })
@@ -331,15 +334,15 @@ describe('OpenRouter credential lifecycle', () => {
     }
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp(`/admin/llm/accounts/${uuid(410)}`)
-    await user.click(await screen.findByRole('button', { name: '대기 credential 활성화' }))
-    const activate = within(screen.getByRole('dialog', { name: '대기 credential 활성화' }))
+    await user.click(await screen.findByRole('button', { name: '대기 중인 키 활성화' }))
+    const activate = within(screen.getByRole('dialog', { name: '대기 중인 관리용 키 활성화' }))
     await user.type(activate.getByLabelText(/계속하려면 이름/), 'AI 교육 사업 A')
     await user.click(activate.getByRole('button', { name: '활성화' }))
-    expect(await screen.findByText('대기 중인 management credential을 활성화했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('대기 중이던 관리용 키를 활성화했습니다.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '교체 되돌리기' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '이전 credential 정리' })).not.toBeInTheDocument()
-    expect(screen.getByText('새 ACTIVE credential reconciliation 대기 중')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Credential 등록·교체' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이전 키 정리' })).not.toBeInTheDocument()
+    expect(screen.getByText('새 키로 대사가 끝나기를 기다리는 중')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '관리용 키 등록·교체' })).not.toBeInTheDocument()
   })
 
   test('reconciliation 뒤 finalize는 vendor 폐기 확인과 정확한 이름을 모두 요구한다', async () => {
@@ -361,11 +364,11 @@ describe('OpenRouter credential lifecycle', () => {
     }
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp(`/admin/llm/accounts/${uuid(410)}`)
-    await user.click(await screen.findByRole('button', { name: '이전 credential 정리' }))
-    const finalize = within(screen.getByRole('dialog', { name: '이전 credential 정리' }))
+    await user.click(await screen.findByRole('button', { name: '이전 키 정리' }))
+    const finalize = within(screen.getByRole('dialog', { name: '이전 관리용 키 정리' }))
     await user.type(finalize.getByLabelText(/계속하려면 이름/), 'AI 교육 사업 A')
     expect(finalize.getByRole('button', { name: '정리' })).toBeDisabled()
-    await user.click(finalize.getByRole('checkbox', { name: /Vendor console/ }))
+    await user.click(finalize.getByRole('checkbox', { name: /OpenRouter 콘솔/ }))
     expect(finalize.getByRole('button', { name: '정리' })).toBeEnabled()
   })
 
@@ -373,7 +376,7 @@ describe('OpenRouter credential lifecycle', () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     const bound = renderApp(`/admin/llm/accounts/${uuid(410)}`)
     await screen.findByRole('heading', { name: 'AI 교육 사업 A' })
-    expect(screen.queryByRole('button', { name: 'Credential 삭제' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '관리용 키 삭제' })).not.toBeInTheDocument()
     bound.unmount()
 
     const deletable = openRouterAccountStore.find((item) => item.id === uuid(411))!
@@ -386,6 +389,6 @@ describe('OpenRouter credential lifecycle', () => {
     }
     renderApp(`/admin/llm/accounts/${uuid(411)}`)
     await screen.findByRole('heading', { name: '산학 협력 사업 B' })
-    expect(screen.getByRole('button', { name: 'Credential 삭제' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '관리용 키 삭제' })).toBeInTheDocument()
   })
 })

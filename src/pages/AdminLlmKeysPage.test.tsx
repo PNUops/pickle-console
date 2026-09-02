@@ -25,7 +25,8 @@ describe('관리자 LLM API 키 목록', () => {
     expect(screen.getAllByText('미결합').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Limit window 사용 $2.50').length).toBeGreaterThan(0)
     expect(screen.getAllByText('잔여 한도 $2.50').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('2026-08-31 00:27 KST').length).toBeGreaterThan(0)
+    expect(document.querySelectorAll('time[datetime="2026-08-31T00:27:30+09:00"]').length)
+      .toBeGreaterThan(0)
   })
 
   test('사업 계정 filter를 계약 query에 적용하고 account deep link를 유지한다', async () => {

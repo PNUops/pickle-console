@@ -129,7 +129,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
 })
 
 describe('관리자 LLM API 키 동작·링크·scope', () => {
-  test('기존 binding은 계정 링크만 보여 주고 한도 화면에서 변경 UI를 만들지 않는다', async () => {
+  test('이미 연결된 계정은 링크만 보여 주고 한도 화면에서 변경 UI를 만들지 않는다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(171), uuid(1))
     expect(await screen.findByRole('link', { name: 'AI 교육 사업 A' })).toHaveAttribute(
@@ -138,12 +138,11 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     )
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $2.50')
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $2.50')
-    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent(
-      '2026-08-31 00:27 KST',
-    )
+    expect(screen.getByText('금액 관측').closest('div')!
+      .querySelector('time[datetime="2026-08-31T00:27:30+09:00"]')).not.toBeNull()
     await user.click(screen.getByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.getByText('사업 계정 binding은 변경할 수 없습니다')).toBeInTheDocument()
+    expect(dialog.getByText('연결된 사업 계정은 바꿀 수 없습니다')).toBeInTheDocument()
     expect(dialog.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
@@ -158,12 +157,12 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     unknown.unmount()
 
     renderDetail('access-sys-admin', sysAdminUser, uuid(177))
-    await screen.findByRole('heading', { name: 'legacy-connected-unbound-key' })
+    await screen.findByRole('heading', { name: 'remote-connected-unbound-key' })
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $0.00')
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $0.00')
   })
 
-  test('미결합 key의 첫 positive 금액 축은 사업 계정을 선택해 같은 ID로 저장한다', async () => {
+  test('미결합 키의 첫 금액 부여는 사업 계정을 선택해 같은 ID로 저장한다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(176))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
@@ -177,36 +176,10 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     expect(await screen.findByRole('link', { name: '산학 협력 사업 B' })).toBeInTheDocument()
   })
 
-  test('binding rollout 503의 운영 전환 상태를 서버 문구대로 표시한다', async () => {
-    const user = userEvent.setup()
-    server.use(
-      http.put('*/api/v1/admin/llm/keys/:keyId/limits', () =>
-        HttpResponse.json(
-          {
-            type: 'about:blank',
-            title: 'OpenRouter account binding을 사용할 수 없습니다',
-            status: 503,
-            detail: '운영 전환이 완료될 때까지 새 금액 축 binding이 중지되어 있습니다.',
-            code: 'OPENROUTER_ACCOUNT_BINDING_DISABLED',
-          },
-          { status: 503, headers: { 'Content-Type': 'application/problem+json' } },
-        ),
-      ),
-    )
-    renderDetail('access-sys-admin', sysAdminUser, uuid(176))
-    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
-    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    await user.selectOptions(dialog.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    await user.click(dialog.getByRole('button', { name: '저장' }))
-    expect(await dialog.findByRole('alert')).toHaveTextContent(
-      '운영 전환이 완료될 때까지 새 금액 축 binding이 중지되어 있습니다.',
-    )
-  })
-
   test.each([
     [uuid(170), 'pending-admin-key'],
-    [uuid(177), 'legacy-connected-unbound-key'],
-  ])('positive 또는 provisioned legacy 미결합 key %s는 최초 binding UI를 열지 않는다', async (keyId, name) => {
+    [uuid(177), 'remote-connected-unbound-key'],
+  ])('금액이 있거나 OpenRouter 키가 발급된 미결합 키 %s는 최초 연결 UI를 열지 않는다', async (keyId, name) => {
     const user = userEvent.setup()
     let accountCalls = 0
     server.use(
@@ -218,9 +191,9 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     renderDetail('access-sys-admin', sysAdminUser, keyId)
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.getByText('기존 미결합 key는 이 화면에서 사업 계정에 연결할 수 없습니다')).toBeInTheDocument()
+    expect(dialog.getByText('이 키는 이 화면에서 사업 계정에 연결할 수 없습니다')).toBeInTheDocument()
     expect(dialog.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
-    expect(dialog.getByRole('link', { name: '신규 key 신청 검토' })).toHaveAttribute(
+    expect(dialog.getByRole('link', { name: '새 키 신청 검토' })).toHaveAttribute(
       'href',
       `/admin/requests?org=${uuid(1)}`,
     )
@@ -229,42 +202,6 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     expect(adminLlmLimitBodies[0].openrouterAccountId).toBeNull()
     expect(accountCalls).toBe(0)
     expect(await screen.findByRole('heading', { name })).toBeInTheDocument()
-  })
-
-  test('rollout 대기 account는 credential 부족이 아니라 binding 전환 준비 상태로 표시한다', async () => {
-    const user = userEvent.setup()
-    server.use(
-      http.get('*/api/v1/admin/llm/accounts', () =>
-        HttpResponse.json([
-          {
-            id: uuid(410),
-            orgId: uuid(1),
-            orgName: '정보컴퓨터공학부 실습지원센터',
-            name: 'AI 교육 사업 A',
-            fundingReference: null,
-            evidenceReference: null,
-            status: 'ACTIVE',
-            boundKeyCount: 0,
-            credentialAvailable: true,
-            eligibleForBinding: false,
-            activeCredential: null,
-            rotationCredential: null,
-            createdAt: '2026-08-31T00:00:00+09:00',
-            updatedAt: '2026-08-31T00:00:00+09:00',
-          },
-        ]),
-      ),
-    )
-    renderDetail('access-sys-admin', sysAdminUser, uuid(176))
-    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
-    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(await dialog.findByText('OpenRouter account binding 전환 준비 중')).toBeInTheDocument()
-    expect(dialog.queryByText('연결할 수 있는 사업 계정이 없습니다')).not.toBeInTheDocument()
-    await user.clear(dialog.getByLabelText('금액 한도 (USD)'))
-    await user.type(dialog.getByLabelText('금액 한도 (USD)'), '5')
-    await user.click(dialog.getByRole('button', { name: '저장' }))
-    expect(await dialog.findAllByText('OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 연결할 수 없습니다.')).not.toHaveLength(0)
-    expect(adminLlmLimitBodies).toHaveLength(0)
   })
 
   test('ACTIVE suspend와 SUSPENDED resume 상태 전이를 수행한다', async () => {

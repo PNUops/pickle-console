@@ -37,6 +37,7 @@ import {
   TR,
   type BadgeVariant,
 } from '../components/ui'
+import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatBytes, formatDateTime, formatRelative } from '../lib/format'
 import { useAdminScope } from '../lib/use-admin-scope'
 
@@ -137,13 +138,7 @@ function coverage(value: number, covered: number, total: number): string {
 }
 
 function moment(value: string | null | undefined, empty = '기록 없음') {
-  if (value == null) return empty
-  return (
-    <time dateTime={value} title={`${formatDateTime(value)} KST`}>
-      <span>{formatRelative(value)}</span>
-      <span className="block text-xs text-foreground-muted">{formatDateTime(value)} KST</span>
-    </time>
-  )
+  return <ObservationMoment value={value} empty={empty} />
 }
 
 function metricRangeEndpoint(value: string): string {
@@ -154,12 +149,6 @@ function upstreamKind(kind: string | null | undefined): string {
   if (kind === 'ON_PREM') return '온프렘'
   if (kind === 'EXTERNAL_API' || kind === 'EXTERNAL') return '외부 API'
   return kind == null ? '구분 없음' : '기타'
-}
-
-function intervalText(seconds: number | null | undefined): string | null {
-  if (seconds == null) return null
-  if (seconds >= 120 && seconds % 60 === 0) return `${seconds / 60}분 주기`
-  return `${seconds}초 주기`
 }
 
 function generationText(status: AdminLlmStatus['gateway']): string {
@@ -186,7 +175,6 @@ function activeProbeText(upstream: LlmUpstreamStatus, systemView: boolean) {
         ? '최근 probe 결과 없음'
         : '최근 상태 확인 불가'
       : ACTIVE_LABELS[active.status]
-  const cadence = intervalText(active.intervalSeconds)
   return (
     <div>
       <span className="font-medium text-foreground-primary">{statusLabel}</span>
@@ -205,20 +193,11 @@ function activeProbeText(upstream: LlmUpstreamStatus, systemView: boolean) {
         </span>
       )}
       {active.lastAttemptAt ? (
-        <time
-          dateTime={active.lastAttemptAt}
-          title={`${formatDateTime(active.lastAttemptAt)} KST`}
-          className="block text-xs text-foreground-muted"
-        >
-          <span>
-            {formatRelative(active.lastAttemptAt)} 확인{cadence ? ` · ${cadence}` : ''}
-          </span>
-          <span className="block">{formatDateTime(active.lastAttemptAt)} KST</span>
+        <time dateTime={active.lastAttemptAt} className="block text-xs text-foreground-muted">
+          {formatRelative(active.lastAttemptAt)} 확인
         </time>
       ) : (
-        <span className="block text-xs text-foreground-muted">
-          확인 시각 없음{cadence ? ` · ${cadence}` : ''}
-        </span>
+        <span className="block text-xs text-foreground-muted">확인 시각 없음</span>
       )}
     </div>
   )
@@ -263,23 +242,13 @@ function passiveText(upstream: LlmUpstreamStatus, systemView: boolean) {
         </span>
       )}
       {outcomeAt && (
-        <time
-          dateTime={outcomeAt}
-          title={`${formatDateTime(outcomeAt)} KST`}
-          className="block text-xs text-foreground-muted"
-        >
-          <span>{formatRelative(outcomeAt)} 가용성 결과</span>
-          <span className="block">{formatDateTime(outcomeAt)} KST</span>
+        <time dateTime={outcomeAt} className="block text-xs text-foreground-muted">
+          {formatRelative(outcomeAt)} 판정
         </time>
       )}
       {passive.lastAttemptAt && (
-        <time
-          dateTime={passive.lastAttemptAt}
-          title={`${formatDateTime(passive.lastAttemptAt)} KST`}
-          className="block text-xs text-foreground-muted"
-        >
-          <span>{formatRelative(passive.lastAttemptAt)} 마지막 요청 시도</span>
-          <span className="block">{formatDateTime(passive.lastAttemptAt)} KST</span>
+        <time dateTime={passive.lastAttemptAt} className="block text-xs text-foreground-muted">
+          {formatRelative(passive.lastAttemptAt)} 마지막 요청 시도
         </time>
       )}
     </div>
@@ -426,8 +395,7 @@ function PipelineDiagnostics({ status }: { status: AdminLlmStatus['gateway'] }) 
       <CardHeader>
         <CardTitle>사용량 전달 상태</CardTitle>
         <p className="type-caption mt-1 text-foreground-muted">
-          Gateway spool과 API 전달 경로의 자기보고 값입니다. Counter는 현재 프로세스가 시작된
-          뒤부터 누적됩니다.
+          게이트웨이가 스스로 보고한 값입니다.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -439,19 +407,19 @@ function PipelineDiagnostics({ status }: { status: AdminLlmStatus['gateway'] }) 
               term: '전송 대기',
               description: queueBacklog,
             },
-            { term: 'Queue 마지막 관측', description: moment(status.usageQueueObservedAt) },
-            { term: '가장 오래된 미전송 event', description: moment(status.oldestUnshippedEventAt) },
+            { term: '대기열 마지막 확인', description: moment(status.usageQueueObservedAt) },
+            { term: '가장 오래된 미전송 기록', description: moment(status.oldestUnshippedEventAt) },
           ]}
         />
         {queueObservationStale && (
-          <MessageBar variant="warning" title="Queue 상태를 현재 값으로 확인할 수 없습니다">
+          <MessageBar variant="warning" title="전송 대기열을 지금 값으로 확인할 수 없습니다">
             {status.usageQueueReportState === 'STALE'
-              ? '마지막 Queue 관측이 10분 이상 지났습니다.'
-              : 'Queue를 성공적으로 관측한 기록이 없습니다.'}{' '}
-            전송 대기가 0건으로 보여도 지금 queue가 비어 있다는 뜻은 아닙니다.
+              ? '대기열을 마지막으로 확인한 지 오래됐습니다.'
+              : '대기열을 확인한 기록이 없습니다.'}{' '}
+            전송 대기가 0건으로 보여도 지금 비어 있다는 뜻은 아닙니다.
           </MessageBar>
         )}
-        <DataTable caption="Gateway 현재 프로세스 누적 진단 counter" captionVisible>
+        <DataTable caption="게이트웨이가 재시작된 뒤로 쌓인 진단 수치" captionVisible>
           <THead>
             <TR>
               <TH>스풀 기록 실패</TH>
@@ -560,8 +528,7 @@ function StatusView({ data, systemView }: { data: AdminLlmStatus; systemView: bo
             연결된 서비스
           </h2>
           <p className="type-caption mt-1 text-foreground-muted">
-            실제 요청 결과와 별도 연결 확인을 섞지 않고 각각 표시합니다. 자동 확인 기본 주기는
-            온프렘 60초, 외부 API 5분입니다.
+            실제 요청 결과와 별도 연결 확인을 섞지 않고 각각 표시합니다.
           </p>
         </div>
         <UpstreamStatusTable upstreams={data.upstreams} systemView={systemView} />
@@ -608,7 +575,7 @@ const REJECTION_LABELS: Record<string, string> = {
   rate_limit_requests: '분당 요청 수 한도 초과',
   rate_limit_tokens: '분당 토큰 한도 초과',
   rate_limit_concurrency: '동시 요청 한도 초과',
-  credit_unavailable: '금액 축 연결 불가',
+  credit_unavailable: '유료 모델 연결 불가',
   server_busy: 'Gateway 처리 여유 부족',
 }
 

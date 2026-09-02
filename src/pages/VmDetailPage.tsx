@@ -63,7 +63,7 @@ import {
   useToast,
   VmStatusBadge,
 } from '../components/ui'
-import { formatDateTime, formatDday, formatRelative, formatSpec } from '../lib/format'
+import { formatDateTime, formatDday, formatSpec } from '../lib/format'
 import {
   DELETION_BANNER_TITLES,
   PROVISIONING_KIND_LABELS,
@@ -1203,7 +1203,7 @@ function StringSettingControl({
 /* ─── 삭제 예정 배너 (사용자 화면 — 취소 버튼 없음, 관리자 문의 안내) ─── */
 
 function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
-  const scheduled = `${formatDateTime(deletion.scheduledFor)} (${formatRelative(deletion.scheduledFor)})`
+  const scheduled = formatDateTime(deletion.scheduledFor)
   return (
     <Alert variant="danger" title={DELETION_BANNER_TITLES[deletion.kind]}>
       <div className="space-y-1">

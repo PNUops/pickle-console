@@ -205,13 +205,13 @@ export interface paths {
         };
         /**
          * OpenRouter 사업 account 목록
-         * @description 관리 범위의 사업·재원별 OpenRouter account와 credential 상태를 조회합니다. 인증 정보와 vendor 내부 식별자는 반환하지 않습니다.
+         * @description 관리 범위의 사업별 OpenRouter account와 credential 상태를 조회합니다. 인증 정보와 vendor 내부 식별자는 반환하지 않습니다.
          */
         get: operations["listAdminLlmAccounts"];
         put?: never;
         /**
          * OpenRouter 사업 account 등록
-         * @description 기관에 사업·재원별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
+         * @description 기관에 사업별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
          */
         post: operations["createAdminLlmAccount"];
         delete?: never;
@@ -239,7 +239,7 @@ export interface paths {
         head?: never;
         /**
          * OpenRouter 사업 account 정보 수정
-         * @description 이름·재원·증빙 참조·상태 중 보낸 항목만 변경합니다. 활성 또는 미만료 key가 연결된 account는 보관할 수 없습니다.
+         * @description 이름·사업·담당자·상태 중 보낸 항목만 변경합니다. 활성 또는 미만료 key가 연결된 account는 보관할 수 없습니다.
          */
         patch: operations["updateAdminLlmAccount"];
         trace?: never;
@@ -3571,10 +3571,8 @@ export interface components {
         CreateOpenRouterAccountRequest: {
             /** @description 오입력 방지를 위해 name과 정확히 같아야 하는 확인값 */
             confirmName: string;
-            /** @description 증빙 참조. 없으면 null */
-            evidenceReference?: string | null;
-            /** @description 재원 참조. 없으면 null */
-            fundingReference?: string | null;
+            /** @description 이 account를 물어볼 담당자. 없으면 null */
+            contact?: string | null;
             /** @description 기관 관리자가 구분하는 사업 account 이름 */
             name: string;
             /**
@@ -3582,6 +3580,8 @@ export interface components {
              * @description Account를 소유할 기관 공개 ID
              */
             orgId: string;
+            /** @description 이 account가 청구되는 사업. 없으면 null */
+            program?: string | null;
         };
         CreateOrgRequest: {
             description?: string | null;
@@ -5077,6 +5077,8 @@ export interface components {
              * @description 이 account에 불변 binding된 Pickle LLM key 수
              */
             boundKeyCount: number;
+            /** @description 이 account를 물어볼 담당자. 없으면 null */
+            contact?: string | null;
             /**
              * Format: date-time
              * @description 등록 시각
@@ -5088,10 +5090,6 @@ export interface components {
             credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
-            /** @description 증빙 참조. 없으면 null */
-            evidenceReference?: string | null;
-            /** @description 재원 참조. 없으면 null */
-            fundingReference?: string | null;
             /**
              * Format: uuid
              * @description Account 공개 ID
@@ -5106,6 +5104,8 @@ export interface components {
             orgId: string;
             /** @description 소유 기관 이름 */
             orgName: string;
+            /** @description 이 account가 청구되는 사업. 없으면 null */
+            program?: string | null;
             /** @description STAGED 또는 RETIRING credential의 secret-free 상태. 없으면 null */
             rotationCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
             /** @description Account lifecycle 상태 */
@@ -5940,12 +5940,12 @@ export interface components {
             status: components["schemas"]["NodeStatus"];
         };
         UpdateOpenRouterAccountRequest: {
-            /** @description 새 증빙 참조. 생략하면 유지하고 null이면 지웁니다. */
-            evidenceReference?: string | null;
-            /** @description 새 재원 참조. 생략하면 유지하고 null이면 지웁니다. */
-            fundingReference?: string | null;
+            /** @description 새 담당자. 생략하면 유지하고 null이면 지웁니다. */
+            contact?: string | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
+            /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */
+            program?: string | null;
             /** @description 새 lifecycle 상태. 생략하면 유지하며 null은 허용하지 않습니다. */
             status?: components["schemas"]["OpenRouterAccountStatus"];
         };
@@ -7475,15 +7475,6 @@ export interface operations {
                     "application/json": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
-            /** @description OpenRouter account binding 전환 미활성 (`OPENROUTER_ACCOUNT_BINDING_DISABLED`) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -8514,15 +8505,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequestDetailResponse"];
-                };
-            };
-            /** @description OpenRouter account binding 전환 미활성 (`OPENROUTER_ACCOUNT_BINDING_DISABLED`) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

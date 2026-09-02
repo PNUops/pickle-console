@@ -86,7 +86,6 @@ function limitValue(raw: string): number | null {
  */
 interface LlmAccountDecisionData {
   accounts: OpenRouterAccount[]
-  bindingPaused: boolean
   loading: boolean
   failed: boolean
   retry: () => void
@@ -99,19 +98,13 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
     enabled: request.orgId != null,
     retry: false,
   })
-  // Account 관측은 금액 축만 막는다. TOKEN-only 승인과 반려는 이 조회가 실패해도
-  // 살아 있어야 하므로 결정 카드 전체를 blocked gate로 바꾸지 않는다.
-  const rawAccounts = accounts.data ?? []
-  const eligibleAccounts = rawAccounts.filter((account) => account.eligibleForBinding)
-  const bindingPaused = eligibleAccounts.length === 0 && rawAccounts.some(
-    (account) => account.status === 'ACTIVE' && account.credentialAvailable &&
-      !account.eligibleForBinding,
-  )
+  // 사업 계정 조회는 유료 모델만 막는다. 자체 서빙 모델만 주는 승인과 반려는 이
+  // 조회가 실패해도 살아 있어야 하므로 결정 카드 전체를 막지 않는다.
+  const eligibleAccounts = (accounts.data ?? []).filter((account) => account.eligibleForBinding)
   return {
     status: 'ready',
     value: {
       accounts: eligibleAccounts,
-      bindingPaused,
       loading: accounts.isPending,
       failed: accounts.isError || request.orgId == null,
       retry: () => void accounts.refetch(),
@@ -130,7 +123,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [tpm, setTpm] = useState('')
   const [concurrency, setConcurrency] = useState('')
   const [dailyTokens, setDailyTokens] = useState('')
-  // 금액 축은 비움이 기본값 부여가 아니라 미부여(0)다 — 상용 모델을 열려면
+  // 금액은 비움이 기본값 부여가 아니라 미부여(0)다 — 유료 모델을 열려면
   // 승인자가 의도적으로 금액을 적어야 한다.
   const [creditLimit, setCreditLimit] = useState('')
   const [creditReset, setCreditReset] = useState('')
@@ -163,13 +156,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         if (accountData.loading) {
           errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
         } else if (accountData.failed) {
-          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오지 못해 금액 축을 승인할 수 없습니다.'
-        } else if (accountData.bindingPaused) {
-          errors['llmKey.openrouterAccountId'] = 'OpenRouter 사업 계정 binding 전환 준비 중에는 새 금액 축을 승인할 수 없습니다.'
+          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오지 못해 유료 모델을 승인할 수 없습니다.'
         } else if (accountData.accounts.length === 0) {
-          errors['llmKey.openrouterAccountId'] = '검증된 management credential이 있는 활성 사업 계정이 필요합니다.'
+          errors['llmKey.openrouterAccountId'] = '관리용 키까지 확인된 활성 사업 계정이 필요합니다.'
         } else if (accountData.accounts.length > 1 && !openrouterAccountId) {
-          errors['llmKey.openrouterAccountId'] = '금액 축에 사용할 사업 계정을 선택해 주세요.'
+          errors['llmKey.openrouterAccountId'] = '어느 사업 계정으로 결제할지 선택해 주세요.'
         }
       }
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
@@ -353,7 +344,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         </ul>
         {creditValue(creditLimit) ? (
           <Alert variant="warning">
-            이 Pickle key의 사업 계정 binding은 발급 뒤 바꿀 수 없습니다. 이동하려면 새 key를 발급해 전환해야 합니다.
+            이 키가 어느 사업 계정으로 결제되는지는 발급 뒤 바꿀 수 없습니다. 옮기려면 새 키를 발급해 전환해야 합니다.
           </Alert>
         ) : null}
         <p>
@@ -387,40 +378,31 @@ function approvalAccountField({
     return (
       <Alert variant="warning" title="사업 계정 목록을 불러오지 못했습니다">
         <div className="space-y-2">
-          <p>TOKEN-only 승인은 계속할 수 있지만 금액 축 승인은 목록을 확인할 때까지 막힙니다.</p>
+          <p>자체 서빙 모델만 주는 승인은 계속할 수 있지만, 유료 모델은 목록을 확인할 때까지 막힙니다.</p>
           {error && <p className="font-medium text-danger-800">{error}</p>}
           <Button size="sm" variant="secondary" onClick={data.retry}>다시 시도</Button>
         </div>
       </Alert>
     )
   }
-  if (data.bindingPaused) {
-    return (
-      <MessageBar variant="warning" title="OpenRouter account binding 전환 준비 중">
-        검증된 management credential은 있지만 새 account binding 운영 전환이 아직 열리지 않았습니다.
-        TOKEN-only 승인과 반려는 계속할 수 있습니다.
-        {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
-      </MessageBar>
-    )
-  }
   if (data.accounts.length === 0) {
     return (
-      <MessageBar variant="warning" title="금액 축에 연결할 사업 계정이 없습니다">
+      <MessageBar variant="warning" title="유료 모델을 결제할 사업 계정이 없습니다">
         <Link
           to={adminPaths.llmAccounts(request.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
         >
           OpenRouter 사업 계정 관리
         </Link>
-        에서 management credential을 먼저 검증하세요. TOKEN-only 승인은 계속할 수 있습니다.
+        에서 관리용 키를 먼저 등록하세요. 자체 서빙 모델만 주는 승인은 계속할 수 있습니다.
         {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
       </MessageBar>
     )
   }
   if (data.accounts.length === 1) {
     return (
-      <MessageBar title="금액 축 사업 계정 자동 선택">
-        {data.accounts[0].name} 하나만 binding 가능하므로 금액 축을 부여하면 자동으로 선택됩니다.
+      <MessageBar title="사업 계정 자동 선택">
+        연결할 수 있는 사업 계정이 {data.accounts[0].name} 하나뿐이라 금액을 부여하면 자동으로 선택됩니다.
       </MessageBar>
     )
   }
@@ -428,7 +410,7 @@ function approvalAccountField({
     <FormField
       label="OpenRouter 사업 계정"
       error={error}
-      description="금액 축을 부여할 때만 필요합니다. Binding은 발급 뒤 바꿀 수 없습니다."
+      description="금액을 부여할 때만 필요합니다. 한 번 정해지면 바꿀 수 없습니다."
     >
       <Select value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error != null}>
         <option value="">사업 계정 선택</option>

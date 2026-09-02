@@ -152,7 +152,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(within(actual).getByText('UNKNOWN 1,000 token')).toBeInTheDocument()
     expect(within(actual).getByText('사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
-    expect(within(actual).getByText('2026-08-31 12:00 KST')).toBeInTheDocument()
+    expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
     expect(within(actual).getByText('일일 token 한도 소진 2건')).toBeInTheDocument()
     expect(within(actual).getByText('금액 한도 소진 1건')).toBeInTheDocument()
     expect(within(actual).getByText('분당 요청 수 한도 3건')).toBeInTheDocument()
@@ -180,30 +180,30 @@ describe('관리자 LLM 사용량 신뢰도와 상태 처리', () => {
     renderApp('/admin/llm/usage')
 
     expect(await screen.findByRole('heading', { name: '데이터 신선도·신뢰도' })).toBeInTheDocument()
-    expect(screen.getByText('마지막 수신 시각일 뿐 완전성 watermark가 아닙니다.')).toBeInTheDocument()
     expect(screen.getByText('1 / 2개')).toBeInTheDocument()
-    expect(screen.getAllByText('2026-08-31 12:05 KST').length).toBeGreaterThan(0)
+    expect(document.querySelectorAll('time[datetime="2026-08-31T12:05:00+09:00"]').length)
+      .toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'LLM 서비스 상태 보기' })).toHaveAttribute(
       'href',
       `/admin/llm/status?org=${uuid(1)}`,
     )
-    expect(screen.queryByRole('heading', { name: '전역 usage 전달 진단' })).not.toBeInTheDocument()
-    expect(screen.queryByText('대기 event')).not.toBeInTheDocument()
-    expect(screen.queryByText('Usage 전송 실패')).not.toBeInTheDocument()
-    expect(screen.queryByText('미귀속 request')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '사용량 전달 진단' })).not.toBeInTheDocument()
+    expect(screen.queryByText('전송 대기 기록')).not.toBeInTheDocument()
+    expect(screen.queryByText('사용량 전송 실패')).not.toBeInTheDocument()
+    expect(screen.queryByText('어느 키인지 모르는 요청')).not.toBeInTheDocument()
   })
 
   test('SYS는 nonnull queue/loss와 실제 0을 숨기지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
     renderApp('/admin/llm/usage')
 
-    const diagnostics = await screen.findByRole('heading', { name: '전역 usage 전달 진단' })
+    const diagnostics = await screen.findByRole('heading', { name: '사용량 전달 진단' })
     const card = diagnostics.closest('div')!.parentElement as HTMLElement
-    expect(within(card).getByText('대기 event').closest('div')).toHaveTextContent('0건')
-    expect(within(card).getByText('대기 byte').closest('div')).toHaveTextContent('0 B')
-    expect(within(card).getByText('Spool 기록 실패').closest('div')).toHaveTextContent('0회')
-    expect(within(card).getByText('Usage 전송 실패').closest('div')).toHaveTextContent('2회')
-    expect(within(card).getByText('미귀속 request').closest('div')).toHaveTextContent('0건')
+    expect(within(card).getByText('전송 대기 기록').closest('div')).toHaveTextContent('0건')
+    expect(within(card).getByText('전송 대기 용량').closest('div')).toHaveTextContent('0 B')
+    expect(within(card).getByText('게이트웨이 저장 실패').closest('div')).toHaveTextContent('0회')
+    expect(within(card).getByText('사용량 전송 실패').closest('div')).toHaveTextContent('2회')
+    expect(within(card).getByText('어느 키인지 모르는 요청').closest('div')).toHaveTextContent('0건')
   })
 
   test('scope 변경 대기 중 직전 기관 응답을 한 frame도 렌더하지 않는다', async () => {
