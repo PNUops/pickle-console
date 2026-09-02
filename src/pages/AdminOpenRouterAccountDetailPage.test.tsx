@@ -12,6 +12,23 @@ function renderDetail(accountId: string) {
   renderApp(`/admin/llm/accounts/${accountId}`)
 }
 
+/**
+ * 잔액보다 많이 배정된 상태를 만든다. 기본 픽스처를 이 모양으로 두면 금액 축을
+ * 승인하는 무관한 테스트가 전부 확인 절차에 걸리므로, 필요한 테스트만 세운다.
+ */
+function overAllocate(accountId: string) {
+  const account = openRouterAccountStore.find((item) => item.id === accountId)!
+  account.allocation = {
+    ...account.allocation,
+    committedCreditLimit: 300,
+    committedTotalCap: 300,
+    committedKeyCount: 30,
+    remainingCommitment: 290,
+    committedUsage: 10,
+    awaitingProvisionKeyCount: 28,
+  }
+}
+
 /** 관측 없는 계정 픽스처는 다른 기관에 있어 시스템 계층으로 읽는다. */
 function renderDetailAsSysAdmin(accountId: string) {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -25,6 +42,7 @@ describe('사업 계정 상세의 배정 현황', () => {
    * 알 수 있다.
    */
   test('남은 배정이 잔액을 넘으면 경고와 함께 두 수를 나란히 보여 준다', async () => {
+    overAllocate(uuid(410))
     renderDetail(uuid(410))
 
     const section = (await screen.findByRole('heading', { name: '배정 현황' })).closest('section')!
@@ -38,6 +56,7 @@ describe('사업 계정 상세의 배정 현황', () => {
 
   /** 승인만 받고 아직 발급되지 않은 키가 합계에 이미 들어 있다는 사실을 말한다. */
   test('발급 대기 키가 합계에 포함돼 있음을 밝힌다', async () => {
+    overAllocate(uuid(410))
     renderDetail(uuid(410))
 
     const section = (await screen.findByRole('heading', { name: '배정 현황' })).closest('section')!
