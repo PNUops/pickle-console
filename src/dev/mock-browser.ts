@@ -1,5 +1,6 @@
 import { setupWorker } from 'msw/browser'
-import { handlers } from '../test/msw/server'
+import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { handlers } from '../test/msw/handlers'
 
 /**
  * 브라우저에서 도는 목 API.
@@ -13,7 +14,16 @@ import { handlers } from '../test/msw/server'
  * 이 모듈은 개발 빌드에서만 동적으로 불린다.
  */
 export async function startMockApi(): Promise<void> {
-  const worker = setupWorker(...handlers)
+  // 로그인된 채로 띄운다. 미리 보기의 목적은 화면을 보는 것이고, 목에는 진짜 리프레시
+  // 쿠키가 없어 주소를 직접 치면 세션이 끊긴다.
+  //
+  // 기본은 일반 사용자다. 관리자는 로그인하면 관리자 화면으로 가므로 신청 화면을 볼 수
+  // 없다. 관리자 화면을 보려면 `VITE_MOCK_USER=admin`으로 띄운다.
+  const asAdmin = import.meta.env.VITE_MOCK_USER === 'admin'
+  const session = asAdmin
+    ? refreshSuccessHandler('access-org-admin')
+    : refreshSuccessHandler('access-user')
+  const worker = setupWorker(session, ...handlers)
   await worker.start({
     onUnhandledRequest: 'bypass',
     quiet: true,

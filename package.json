@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:mock": "VITE_MOCK_API=1 vite",
+    "dev:mock:admin": "VITE_MOCK_API=1 VITE_MOCK_USER=admin vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint --deny-warnings",
     "preview": "vite preview",
