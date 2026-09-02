@@ -78,7 +78,10 @@ export function AdminLlmKeyDetailPage() {
       setRevokeOpen(false)
       setError(null)
       setNotice('LLM API 키를 폐기했습니다.')
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }),
+      ])
     },
     onError: (failure) => {
       setRevokeOpen(false)
@@ -109,6 +112,8 @@ export function AdminLlmKeyDetailPage() {
       updated,
     )
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] })
+    // 한도 변경은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] })
     setError(null)
     setNotice(message)
   }
@@ -308,7 +313,7 @@ function LimitsModal({
   const initialBindingAllowed = llmKey.openrouterAccountId == null &&
     llmKey.creditLimit <= 0 && !llmKey.creditAxisConnected
   const accounts = useQuery({
-    queryKey: ['admin', 'llm-accounts', { orgId: llmKey.orgId ?? null, for: 'initial-key-binding' }],
+    queryKey: ['admin', 'llm-accounts', { orgId: llmKey.orgId ?? null }],
     queryFn: () => fetchOpenRouterAccounts(llmKey.orgId ?? undefined),
     enabled: canEditCredit && initialBindingAllowed && llmKey.orgId != null,
   })

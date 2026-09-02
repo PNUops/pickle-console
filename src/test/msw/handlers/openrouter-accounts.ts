@@ -156,9 +156,13 @@ function initialAccounts(): Account[] {
 export let openRouterAccountStore = initialAccounts()
 let nextAccountId = 430
 
+/** 목록 조회마다 쌓이는 쿼리스트링 — 뮤테이션 뒤 재조회 여부를 세는 데 쓴다. */
+export const openRouterAccountListQueries: string[] = []
+
 export function resetOpenRouterAccountFixtures() {
   openRouterAccountStore = initialAccounts()
   nextAccountId = 430
+  openRouterAccountListQueries.length = 0
 }
 
 function profileOf(request: Request) {
@@ -220,7 +224,9 @@ export const openRouterAccountHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/llm/accounts', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return notFound()
-    const orgId = new URL(request.url).searchParams.get('orgId')
+    const url = new URL(request.url)
+    openRouterAccountListQueries.push(url.searchParams.toString())
+    const orgId = url.searchParams.get('orgId')
     const scope = adminReadScope(profile, orgId, '/api/v1/admin/llm/accounts')
     if (scope.notFound) return scope.notFound
     return HttpResponse.json(openRouterAccountStore.filter((account) => scope.matches(account.orgId)), { status: 200 })

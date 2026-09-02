@@ -112,7 +112,7 @@ export function canManageLlmCredit(role: UserRole): boolean {
   return role === 'ORG_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
 }
 
-/** OpenRouter 사업 계정 metadata와 management credential lifecycle. */
+/** OpenRouter 사업 계정 정보와 관리용 키 상태. */
 export function canManageOpenRouterAccount(role: UserRole): boolean {
   return role === 'ORG_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
 }

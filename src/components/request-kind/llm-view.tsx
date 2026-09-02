@@ -93,7 +93,7 @@ interface LlmAccountDecisionData {
 
 function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
   const accounts = useQuery({
-    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null, for: 'request-approval' }],
+    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null }],
     queryFn: () => fetchOpenRouterAccounts(request.orgId ?? undefined),
     enabled: request.orgId != null,
     retry: false,
@@ -133,6 +133,13 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [approveComment, setApproveComment] = useState('')
 
+  // 검증과 제출 본문과 확인 창이 같은 계정을 근거로 삼아야 한다 — 자동 선택 규칙을
+  // 세 번 다시 쓰면 한 곳만 고쳤을 때 서로 다른 계정을 말하게 된다.
+  const effectiveAccount =
+    accountData.accounts.length === 1
+      ? accountData.accounts[0]
+      : accountData.accounts.find((account) => account.id === openrouterAccountId) ?? null
+
   return {
     validate: () => {
       // 422의 errors[]가 실어 오는 필드 경로와 같은 키를 쓴다 — 서버가 되돌려준
@@ -159,7 +166,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오지 못해 유료 모델을 승인할 수 없습니다.'
         } else if (accountData.accounts.length === 0) {
           errors['llmKey.openrouterAccountId'] = '관리용 키까지 확인된 활성 사업 계정이 필요합니다.'
-        } else if (accountData.accounts.length > 1 && !openrouterAccountId) {
+        } else if (!effectiveAccount) {
           errors['llmKey.openrouterAccountId'] = '어느 사업 계정으로 결제할지 선택해 주세요.'
         }
       }
@@ -186,12 +193,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         grantedCreditLimitReset: creditReset
           ? (creditReset as 'DAILY' | 'WEEKLY' | 'MONTHLY')
           : null,
-        openrouterAccountId:
-          Number(creditLimit) > 0
-            ? accountData.accounts.length === 1
-              ? accountData.accounts[0].id
-              : openrouterAccountId || null
-            : null,
+        openrouterAccountId: Number(creditLimit) > 0 ? effectiveAccount?.id ?? null : null,
       },
     }),
 
@@ -334,12 +336,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <li>금액 한도 {creditText(creditValue(creditLimit))}</li>
           {creditValue(creditLimit) ? <li>리셋 창 {creditResetText(creditReset || null)}</li> : null}
           {creditValue(creditLimit) ? (
-            <li>
-              사업 계정{' '}
-              {accountData.accounts.length === 1
-                ? accountData.accounts[0].name
-                : accountData.accounts.find((account) => account.id === openrouterAccountId)?.name ?? '선택 필요'}
-            </li>
+            <li>사업 계정 {effectiveAccount?.name ?? '선택 필요'}</li>
           ) : null}
         </ul>
         {creditValue(creditLimit) ? (

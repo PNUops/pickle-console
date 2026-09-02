@@ -17,6 +17,7 @@ import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 import { adminLlmListQueries } from '../test/msw/handlers/llm-keys'
+import { openRouterAccountListQueries } from '../test/msw/handlers/openrouter-accounts'
 
 function renderDetail(requestId: string) {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -213,6 +214,36 @@ describe('승인 폼', () => {
     expect(await screen.findByText(/이미 처리된 신청입니다/)).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('검토 결정')).not.toBeInTheDocument())
     expect(approveBodies).toHaveLength(0)
+  })
+
+  // 승인은 사업 계정에 걸린 배정 상태를 바꾼다. 계정 목록을 그대로 두면 다음 승인이
+  // 이미 낡은 배정을 근거로 판단하게 된다.
+  test('승인 성공 후 계정 목록을 다시 조회한다', async () => {
+    const user = userEvent.setup()
+    // 픽스처의 LLM 신청은 이미 결정된 상태다 — 결정 폼을 열려면 되돌려야 한다.
+    // afterEach의 resetFixtures가 원래대로 복원한다.
+    const target = adminRequestStore.find((r) => r.id === uuid(205))!
+    target.status = 'SUBMITTED'
+    target.review = null
+    renderDetail(uuid(205))
+
+    // 결정 폼이 계정 목록을 한 번 읽은 뒤에서 출발한다.
+    await screen.findByRole('button', { name: '승인하기' })
+    await waitFor(() => expect(openRouterAccountListQueries.length).toBeGreaterThan(0))
+    const before = openRouterAccountListQueries.length
+
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    expect(
+      await screen.findByText(
+        '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
+      ),
+    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(openRouterAccountListQueries.length).toBeGreaterThan(before),
+    )
   })
 })
 
