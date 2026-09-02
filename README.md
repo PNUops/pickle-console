@@ -103,8 +103,14 @@ Node.js 24(LTS)가 필요합니다. `package.json`의 `engines`에 적혀 있습
 ```bash
 npm install
 npm run dev              # /api·/terminal/ws 를 로컬 pickle-api :8080 으로 프록시
+npm run dev:mock         # api 없이 목 데이터로 실행
 scripts/verify.sh        # lint → typecheck → test → build → 취약점 감사
 ```
+
+`dev:mock` 은 데이터베이스도 api도 없이 화면만 띄웁니다. 테스트가 쓰는 목 핸들러를 그대로
+브라우저에 물리므로 로그인부터 신청, 승인까지 눌러 볼 수 있고, 접속 이름 중복처럼 서버만
+아는 실패도 그대로 재현됩니다. 저장되는 것은 없고 새로고침하면 처음 상태로 돌아갑니다.
+목 코드는 운영 번들에 들어가지 않습니다(동적 import 와 `import.meta.env.DEV` 가드).
 
 | 명령 | 내용 |
 |---|---|
