@@ -27,7 +27,13 @@ import {
   Modal,
   PageHeader,
   Select,
+  Textarea,
 } from '../components/ui'
+import {
+  creditModelsError,
+  formatCreditModels,
+  parseCreditModels,
+} from '../lib/credit-model-allowlist'
 import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
@@ -202,6 +208,13 @@ export function AdminOpenRouterAccountDetailPage() {
           { term: '기관', description: account.orgName },
           { term: '사업', description: account.program ?? '입력하지 않음' },
           { term: '담당자', description: account.contact ?? '입력하지 않음' },
+          {
+            term: '승인 기본 모델 목록',
+            description:
+              account.defaultCreditAllowedModels.length === 0
+                ? '없음. 승인 폼이 비어서 열립니다'
+                : account.defaultCreditAllowedModels.join(', '),
+          },
           { term: '연결된 키', description: `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
           { term: '관리용 키', description: account.credentialAvailable ? '사용 가능' : '사용 불가' },
           { term: '유료 모델 연결', description: account.eligibleForBinding ? '가능' : '불가' },
@@ -313,6 +326,10 @@ function EditAccountModal({
   const [program, setProgram] = useState(account.program ?? '')
   const [contact, setContact] = useState(account.contact ?? '')
   const [status, setStatus] = useState(account.status)
+  const [defaultModels, setDefaultModels] = useState(
+    formatCreditModels(account.defaultCreditAllowedModels),
+  )
+  const [modelsError, setModelsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const save = useMutation({
     mutationFn: (body: UpdateOpenRouterAccount) => updateOpenRouterAccount(account.id, body),
@@ -322,11 +339,16 @@ function EditAccountModal({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!name.trim()) return
+    const parsedModels = parseCreditModels(defaultModels)
+    const invalid = creditModelsError(parsedModels)
+    setModelsError(invalid)
+    if (invalid) return
     save.mutate({
       name: name.trim(),
       program: program.trim() || null,
       contact: contact.trim() || null,
       status,
+      defaultCreditAllowedModels: parsedModels,
     })
   }
   return (
@@ -340,6 +362,19 @@ function EditAccountModal({
           <FormField label="사업명"><Input value={program} onChange={(event) => setProgram(event.target.value)} /></FormField>
           <FormField label="담당자"><Input value={contact} onChange={(event) => setContact(event.target.value)} /></FormField>
         </div>
+        <FormField
+          label="승인 화면 기본 모델 목록"
+          error={modelsError ?? undefined}
+          description="한 줄에 하나씩 적습니다. 이 계정으로 금액 축을 승인할 때 폼에 미리 채워지며, 승인자가 고칠 수 있습니다. 여기를 바꿔도 이미 발급된 키는 그대로입니다."
+        >
+          <Textarea
+            rows={4}
+            aria-invalid={modelsError != null}
+            value={defaultModels}
+            onChange={(event) => setDefaultModels(event.target.value)}
+            placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
+          />
+        </FormField>
         <FormField label="상태" description="활성 또는 미만료 key가 연결되어 있으면 보관할 수 없습니다.">
           <Select value={status} onChange={(event) => setStatus(event.target.value as OpenRouterAccount['status'])}>
             <option value="ACTIVE">활성</option>

@@ -68,6 +68,7 @@ function llmKeyRequest(): Omit<
       grantedTpm: null,
       grantedConcurrency: null,
       grantedDailyTokens: null,
+      grantedCreditAllowedModels: [],
     },
   }
 }
@@ -235,6 +236,10 @@ export const requestHandlers: RequestHandler[] = [
               grantedTpm: null,
               grantedConcurrency: null,
               grantedDailyTokens: null,
+              // 승인 전이므로 부여된 것이 없다. 빈 배열은 "제한 없음"이
+              // 아니라 "아직 부여되지 않음"이고, 화면은 승인 여부를
+              // status로 읽는다.
+              grantedCreditAllowedModels: [],
             }
           : null,
       vm: body.type !== 'VM' ? null : {

@@ -45,6 +45,9 @@ function initialLlmKeys(): LlmKeyDetail[] {
       // 가능) 중 마지막을 픽스처가 하나는 들고 있어야 화면이 검증된다.
       creditLimit: 5,
       creditAxisConnected: true,
+      // 목록이 걸린 키를 하나는 들고 있어야 화면이 "제한 없음"만 보여주고
+      // 지나가지 않는다.
+      creditAllowedModels: ['openai/*'],
       revokedAt: null,
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -67,6 +70,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
+      creditAllowedModels: [],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
@@ -89,6 +93,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
+      creditAllowedModels: [],
       revokedAt: null,
       workspaceId: uuid(14),
       workspaceName: '데이터베이스 실습',
@@ -111,6 +116,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       recordBodies: true,
       creditLimit: 0,
       creditAxisConnected: false,
+      creditAllowedModels: [],
       revokedAt: '2026-07-31T09:00:00+09:00',
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -133,6 +139,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
+      creditAllowedModels: [],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
@@ -157,6 +164,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
+      creditAllowedModels: [],
       revokedAt: null,
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -257,6 +265,9 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     creditLimit: 5,
     creditLimitReset: 'MONTHLY' as const,
     creditAxisConnected: true,
+    // 금액 축이 열린 키의 기본 모습은 제한 없음이다. 목록이 걸린 모습은
+    // 그것을 확인하는 화면 테스트가 따로 덮어쓴다.
+    creditAllowedModels: [] as string[],
     creditUsage: 2.5,
     creditLimitRemaining: 2.5,
     creditUsageAt: '2026-08-31T00:27:30+09:00',
@@ -277,6 +288,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       requestId: uuid(205),
       lastUsedAt: null,
       creditAxisConnected: false,
+      creditAllowedModels: [],
     },
     {
       ...base,
@@ -326,6 +338,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       creditLimit: 0,
       creditLimitReset: null,
       creditAxisConnected: false,
+      creditAllowedModels: [],
       creditUsage: null,
       creditLimitRemaining: null,
       creditUsageAt: null,

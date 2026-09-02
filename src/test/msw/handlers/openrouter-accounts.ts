@@ -91,6 +91,8 @@ function initialAccounts(): Account[] {
       boundKeyCount: 2,
       credentialAvailable: true,
       eligibleForBinding: true,
+      // 기본 목록을 든 계정이 하나는 있어야 승인 폼의 프리필이 검증된다.
+      defaultCreditAllowedModels: ['openai/*'],
       activeCredential: activeCredential(),
       rotationCredential: null,
       credits: credits(),
@@ -116,6 +118,7 @@ function initialAccounts(): Account[] {
       boundKeyCount: 0,
       credentialAvailable: true,
       eligibleForBinding: true,
+      defaultCreditAllowedModels: [],
       activeCredential: activeCredential({ createdAt: '2026-08-30T21:00:00+09:00' }),
       rotationCredential: null,
       credits: credits({
@@ -160,6 +163,7 @@ function initialAccounts(): Account[] {
       boundKeyCount: 0,
       credentialAvailable: false,
       eligibleForBinding: false,
+      defaultCreditAllowedModels: [],
       activeCredential: null,
       rotationCredential: null,
       credits: credits({
@@ -288,6 +292,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       boundKeyCount: 0,
       credentialAvailable: false,
       eligibleForBinding: false,
+      defaultCreditAllowedModels: [],
       activeCredential: null,
       rotationCredential: null,
       credits: credits({

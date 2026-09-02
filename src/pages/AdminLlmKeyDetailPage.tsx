@@ -31,7 +31,13 @@ import {
   Modal,
   PageHeader,
   Select,
+  Textarea,
 } from '../components/ui'
+import {
+  creditModelsError,
+  formatCreditModels,
+  parseCreditModels,
+} from '../lib/credit-model-allowlist'
 import { formatDateTime } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
@@ -207,6 +213,13 @@ export function AdminLlmKeyDetailPage() {
                 ? CREDIT_LIMIT_RESET_LABELS[key.creditLimitReset]
                 : '리셋 없는 총액 상한',
             },
+            {
+              term: '허용 상용 모델',
+              description:
+                key.creditAllowedModels.length === 0
+                  ? '제한 없음 (금액 한도 안에서 전부)'
+                  : key.creditAllowedModels.join(', '),
+            },
             { term: '금액 관측', description: <KeyCreditObservation llmKey={key} /> },
           ]}
         />
@@ -306,6 +319,9 @@ function LimitsModal({
   )
   const [creditLimit, setCreditLimit] = useState(String(llmKey.creditLimit))
   const [creditLimitReset, setCreditLimitReset] = useState(llmKey.creditLimitReset ?? '')
+  const [creditModels, setCreditModels] = useState(
+    formatCreditModels(llmKey.creditAllowedModels),
+  )
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -363,6 +379,13 @@ function LimitsModal({
     if (canEditCredit && !errors.creditLimit && creditLimitReset && !(credit > 0)) {
       errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
+    const parsedModels = parseCreditModels(creditModels)
+    const modelsError = canEditCredit ? creditModelsError(parsedModels) : null
+    if (modelsError) {
+      errors.creditAllowedModels = modelsError
+    } else if (canEditCredit && !errors.creditLimit && parsedModels.length > 0 && !(credit > 0)) {
+      errors.creditLimit = '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
+    }
     if (canEditCredit && credit > 0 && initialBindingAllowed) {
       if (accounts.isPending) {
         errors.openrouterAccountId = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
@@ -385,6 +408,8 @@ function LimitsModal({
       creditLimitReset: canEditCredit
         ? (creditLimitReset as AdminLlmKeyLimits['creditLimitReset']) || null
         : llmKey.creditLimitReset ?? null,
+      // 전체 교체라 편집 권한이 없는 역할도 현재 값을 그대로 되돌려 보낸다.
+      creditAllowedModels: canEditCredit ? parsedModels : llmKey.creditAllowedModels,
       openrouterAccountId:
         llmKey.openrouterAccountId ??
         (canEditCredit && initialBindingAllowed && credit > 0
@@ -453,6 +478,19 @@ function LimitsModal({
                 </Select>
               </FormField>
             </div>
+            <FormField
+              label="허용할 상용 모델"
+              error={fieldErrors.creditAllowedModels}
+              description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 상용 모델을 쓸 수 있습니다. 벤더 전체를 열려면 openai/* 처럼 적습니다. 자체 서빙 모델은 이 목록과 무관합니다."
+            >
+              <Textarea
+                rows={4}
+                aria-invalid={fieldErrors.creditAllowedModels != null}
+                value={creditModels}
+                onChange={(event) => setCreditModels(event.target.value)}
+                placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
+              />
+            </FormField>
             <OpenRouterBindingField
               llmKey={llmKey}
               initialBindingAllowed={initialBindingAllowed}

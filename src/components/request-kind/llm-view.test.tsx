@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
@@ -36,6 +36,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
       grantedTpm: null,
       grantedConcurrency: null,
       grantedDailyTokens: null,
+      grantedCreditAllowedModels: [],
       ...spec,
     },
     status: 'SUBMITTED',
@@ -71,6 +72,7 @@ function renderDetail(spec: Partial<NonNullable<RequestDetail['llmKey']>> = {}) 
           grantedTpm: body.llmKey?.grantedTpm ?? null,
           grantedConcurrency: body.llmKey?.grantedConcurrency ?? null,
           grantedDailyTokens: body.llmKey?.grantedDailyTokens ?? null,
+          grantedCreditAllowedModels: body.llmKey?.grantedCreditAllowedModels ?? [],
         },
         review: {
           reviewerId: orgAdminUser.id,
@@ -171,6 +173,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
           grantedDailyTokens: null,
           grantedCreditLimit: null,
           grantedCreditLimitReset: null,
+          grantedCreditAllowedModels: [],
           openrouterAccountId: null,
         },
       },
@@ -209,6 +212,85 @@ describe('LLM API 키 신청 — 승인 폼', () => {
 
     expect(
       await screen.findByText('리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'),
+    ).toBeInTheDocument()
+    expect(approved).toHaveLength(0)
+  })
+
+  test('사업 계정을 고르면 그 계정의 기본 모델 목록이 채워지고 그대로 나간다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    // 프리필은 계정을 고른 결과이지 신청자의 희망값이 아니다 — 채워도 검토가
+    // 사라지지 않는 유일한 칸이라서 이 칸만 미리 찬다.
+    const field = screen.getByLabelText('허용할 상용 모델')
+    await waitFor(() => expect(field).toHaveValue('openai/*'))
+
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByText(/허용 상용 모델 openai\/\*/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditAllowedModels: ['openai/*'],
+    })
+  })
+
+  test('승인자가 고친 모델 목록이 계정 기본값을 대신한다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    const field = screen.getByLabelText('허용할 상용 모델')
+    await waitFor(() => expect(field).toHaveValue('openai/*'))
+
+    await user.clear(field)
+    await user.type(field, 'Anthropic/Claude-Sonnet-4')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    // 판정이 소문자 기준이므로 대문자로 적어도 소문자로 저장돼야 한다.
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditAllowedModels: ['anthropic/claude-sonnet-4'],
+    })
+  })
+
+  test('금액 없이 모델 목록만 적으면 확인 모달 앞에서 걸린다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('허용할 상용 모델'), 'openai/*')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    expect(
+      await screen.findByText('모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'),
+    ).toBeInTheDocument()
+    expect(approved).toHaveLength(0)
+  })
+
+  test('자체 서빙 접두를 적으면 상용 목록이 아니라고 막는다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    const field = screen.getByLabelText('허용할 상용 모델')
+    await user.clear(field)
+    await user.type(field, 'pickle-general')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    expect(
+      await screen.findByText(/자체 서빙 모델이라 이 목록의 대상이 아닙니다/),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
@@ -300,6 +382,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedDailyTokens: null,
       grantedCreditLimit: null,
       grantedCreditLimitReset: null,
+      grantedCreditAllowedModels: [],
       openrouterAccountId: null,
     })
 

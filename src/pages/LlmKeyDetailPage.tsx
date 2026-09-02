@@ -173,7 +173,14 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             <Field label="분당 요청 한도">{limitLabel(llmKey.rpm, '회')}</Field>
             <Field label="분당 토큰 한도">{limitLabel(llmKey.tpm, '토큰')}</Field>
             <Field label="동시 요청 한도">{limitLabel(llmKey.concurrency, '건')}</Field>
-            <Field label="상용 모델">{creditAxisLabel(llmKey)}</Field>
+            <Field label="유료 모델">{creditAxisLabel(llmKey)}</Field>
+            {llmKey.creditLimit ? (
+              <Field label="쓸 수 있는 유료 모델">
+                {llmKey.creditAllowedModels.length === 0
+                  ? '제한 없음. 금액 한도 안에서 모든 유료 모델'
+                  : llmKey.creditAllowedModels.join(', ')}
+              </Field>
+            ) : null}
             <Field label="생성일">{formatDateTime(llmKey.createdAt)}</Field>
             {llmKey.revokedAt && (
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>
