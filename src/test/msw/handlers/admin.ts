@@ -147,6 +147,7 @@ function initialAdminRequests(): RequestDetail[] {
         grantedConcurrency: 4,
         grantedCreditLimit: 5,
         grantedCreditLimitReset: 'MONTHLY',
+        grantedCreditAllowedModels: ['openai/*'],
       },
       purpose: '캡스톤 챗봇 LLM API 호출',
       displayName: 'capstone-chatbot-admin',
