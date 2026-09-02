@@ -32,10 +32,10 @@ describe('LLM API 키 상세', () => {
   // 울타리가 걸린 키를 "제한 없음"으로 보여 주면 소유자는 왜 거절당하는지
   // 화면에서 알 수 없다. 게이트웨이 거절 문구가 이 화면을 가리키므로, 여기가
   // 답을 갖고 있어야 그 안내가 참이 된다.
-  test('금액 축이 열린 키는 쓸 수 있는 상용 모델을 보여 준다', async () => {
+  test('금액 축이 열린 키는 쓸 수 있는 유료 모델을 보여 준다', async () => {
     renderKey(ISSUED_KEY)
 
-    await screen.findByText('쓸 수 있는 상용 모델')
+    await screen.findByText('쓸 수 있는 유료 모델')
     expect(screen.getByText('openai/*')).toBeInTheDocument()
   })
 
