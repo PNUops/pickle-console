@@ -293,7 +293,11 @@ function DecisionSection({
     onSuccess: async () => {
       setConfirm(null)
       onNotice({ variant: 'success', message: form.successMessage })
-      await refresh()
+      // 승인은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
+      await Promise.all([
+        refresh(),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }),
+      ])
     },
     onError: (error) => handleError(error, '신청을 승인하지 못했습니다.'),
   })
