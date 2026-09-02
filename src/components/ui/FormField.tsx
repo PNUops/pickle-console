@@ -35,7 +35,7 @@ export function FormField({ label, error, description, required, className, chil
           {description}
         </p>
       )}
-      <FieldContext.Provider value={{ id, descriptionId, errorId, invalid: Boolean(error) }}>
+      <FieldContext.Provider value={{ id, descriptionId, errorId, invalid: Boolean(error), required: Boolean(required) }}>
         {children}
       </FieldContext.Provider>
       {error && (

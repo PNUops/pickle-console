@@ -23,6 +23,7 @@ export function Input({
     <input
       id={field?.id}
       aria-invalid={isInvalid || undefined}
+      aria-required={field?.required || undefined}
       aria-describedby={describedBy}
       className={cn(
         'control-height w-full rounded-control border bg-surface-card px-3 text-sm text-foreground-primary',

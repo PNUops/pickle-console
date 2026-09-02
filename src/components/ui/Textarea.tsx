@@ -17,6 +17,7 @@ export function Textarea({ invalid, className, ...rest }: TextareaProps) {
     <textarea
       id={field?.id}
       aria-invalid={isInvalid || undefined}
+      aria-required={field?.required || undefined}
       aria-describedby={describedBy}
       rows={3}
       className={cn(
