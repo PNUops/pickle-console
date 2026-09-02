@@ -4991,6 +4991,38 @@ export interface components {
             expiresAt: string;
             state: string;
         };
+        /** @description 이 account에 걸린 살아 있는 key의 금액 한도 합계 */
+        OpenRouterAccountAllocationResponse: {
+            /**
+             * Format: int64
+             * @description 금액 한도가 0보다 큰데 아직 프로비저닝되지 않아 vendor에 한도가 걸리지 않은 key 수
+             */
+            awaitingProvisionKeyCount: number;
+            /** @description 네 갈래 합계를 모두 더한 값. 이미 쓴 금액을 포함한 약속의 총량이라 잔액과 직접 비교하지 않는다 */
+            committedCreditLimit: number;
+            /** @description 일간 리셋 key의 한도 합. 창마다 다시 채워진다 */
+            committedDaily: number;
+            /**
+             * Format: int64
+             * @description 금액 한도가 0보다 큰 살아 있는 key 수. 한도 0인 key는 돈을 쥐고 있지 않으므로 세지 않는다
+             */
+            committedKeyCount: number;
+            /** @description 월간 리셋 key의 한도 합. 창마다 다시 채워진다 */
+            committedMonthly: number;
+            /** @description 리셋 창이 없는 key의 한도 합. 한 번 나가고 끝나는 채무 */
+            committedTotalCap: number;
+            /** @description 살아 있는 key의 reset-aware 누적 사용액 합. 현재 창 사용액이 아니라 account baseline 뒤 누계이며, 폐기와 만료 key의 몫은 빠져 있어 credits.managedUsageSinceBaseline과 다른 수다 */
+            committedUsage: number;
+            /** @description 주간 리셋 key의 한도 합. 창마다 다시 채워진다 */
+            committedWeekly: number;
+            /** @description Key마다 한도에서 현재 limit window 사용액을 뺀 값을 0에서 끊어 더한 합. 잔액과 분모가 맞는 쪽은 이 값이다. 사용액은 30분 주기 대사값이라 리셋 직후 다음 대사 전까지는 실제보다 작을 수 있다 */
+            remainingCommitment: number;
+            /**
+             * Format: int64
+             * @description 프로비저닝됐지만 사용액 보고가 아직 없는 key 수. 0이 아니면 remainingCommitment의 그만큼은 실측이 아니라 한도 전액
+             */
+            usageUnreportedKeyCount: number;
+        };
         OpenRouterAccountCreditsResponse: {
             /** @description 첫 paired baseline 뒤 account 누적 사용 증가분. 계산 불가하면 null */
             accountUsageSinceBaseline?: number | null;
@@ -5072,6 +5104,8 @@ export interface components {
         OpenRouterAccountResponse: {
             /** @description 현재 ACTIVE credential의 secret-free 상태. 없으면 null */
             activeCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
+            /** @description 이 account에 걸린 살아 있는 key의 금액 한도 합계 */
+            allocation: components["schemas"]["OpenRouterAccountAllocationResponse"];
             /**
              * Format: int64
              * @description 이 사업 계정에 연결된 LLM API 키 수

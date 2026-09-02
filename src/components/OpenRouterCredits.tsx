@@ -1,17 +1,21 @@
 import type {
   AdminLlmKeyDetail,
   AdminLlmKeySummary,
+  OpenRouterAccountAllocation,
   OpenRouterAccountCredits,
   OpenRouterCreditsFreshness,
 } from '../api/queries'
 import { formatRelative } from '../lib/format'
 import {
+  type AllocationVerdict,
+  evaluateAllocation,
   FORECAST_REASON_LABELS,
   FRESHNESS_LABELS,
   UNMANAGED_REASON_LABELS,
   VENDOR_ERROR_LABELS,
   formatUsd,
 } from '../lib/openrouter-credits'
+import { BudgetGauge } from './llm-usage/BudgetGauge'
 import { Badge, DescriptionList, MessageBar, type BadgeVariant } from './ui'
 
 const FRESHNESS_VARIANTS: Record<OpenRouterCreditsFreshness, BadgeVariant> = {
@@ -163,5 +167,93 @@ export function KeyCreditObservation({
       </span>
       <ObservationMoment value={llmKey.creditUsageAt} />
     </div>
+  )
+}
+
+const ALLOCATION_NOTES: Record<AllocationVerdict, string | null> = {
+  WITHIN: null,
+  EXCEEDED: '남은 배정이 잔액을 넘습니다. 먼저 쓰는 사람이 잔액을 소진하면 나머지 키는 호출이 실패합니다.',
+  NO_BALANCE: '잔액이 0입니다. 지금 이 계정의 키는 호출이 곧바로 실패합니다.',
+  NEGATIVE_BALANCE: '이미 잔액을 넘겨 쓴 상태입니다. 충전 전에는 이 계정의 키가 동작하지 않습니다.',
+  UNKNOWN: '잔액을 아직 관측하지 못해 초과 여부를 판단할 수 없습니다.',
+}
+
+/**
+ * 사업 계정 하나가 얼마를 약속했고 그중 얼마가 아직 나갈 수 있는지.
+ *
+ * 잔액 옆에 두 수를 나란히 놓는다. **배정 합계**는 「얼마를 약속했나」이고
+ * **남은 배정**은 「앞으로 얼마가 더 나갈 수 있나」다. 잔액은 이미 쓴 금액을 뺀
+ * 값이므로 잔액과 견주는 쪽은 뒤쪽이고, 게이지도 그것으로 그린다.
+ */
+export function AccountAllocationSection({
+  allocation,
+  credits,
+}: {
+  allocation: OpenRouterAccountAllocation
+  credits: OpenRouterAccountCredits
+}) {
+  const judgement = evaluateAllocation({ allocation, credits })
+  const note = ALLOCATION_NOTES[judgement.state]
+  return (
+    <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
+      <h2 className="text-sm font-semibold text-foreground-primary">배정 현황</h2>
+      <BudgetGauge
+        label="남은 배정 대비 잔액"
+        usedLabel={formatUsd(judgement.remaining)}
+        limitLabel={judgement.balance == null ? null : formatUsd(judgement.balance)}
+        ratio={
+          judgement.balance == null || judgement.balance <= 0
+            ? null
+            : judgement.remaining / judgement.balance
+        }
+        note={judgement.balance == null || judgement.balance <= 0 ? (note ?? undefined) : undefined}
+        freshness={
+          credits.observedAt ? `잔액 관측 ${formatRelative(credits.observedAt)}` : undefined
+        }
+      />
+      {judgement.balance != null && judgement.balance > 0 && note ? (
+        <MessageBar variant="warning">{note}</MessageBar>
+      ) : null}
+      <DescriptionList
+        items={[
+          {
+            term: '배정 합계',
+            description: `${formatUsd(judgement.committed)} (키 ${allocation.committedKeyCount}개)`,
+          },
+          { term: '남은 배정', description: formatUsd(judgement.remaining) },
+          { term: '사용액', description: formatUsd(allocation.committedUsage) },
+          ...(judgement.windowCommitment > 0
+            ? [
+                {
+                  term: '창마다 다시 채워지는 몫',
+                  description: `${formatUsd(judgement.windowCommitment)} — 배정 합계에 포함되어 있고 리셋 창마다 한도가 되살아납니다.`,
+                },
+              ]
+            : []),
+          ...(allocation.awaitingProvisionKeyCount > 0
+            ? [
+                {
+                  term: '발급 대기',
+                  description: `${allocation.awaitingProvisionKeyCount}개 — 승인은 났고 아직 발급되지 않았습니다. 배정 합계에는 이미 들어 있습니다.`,
+                },
+              ]
+            : []),
+          ...(allocation.usageUnreportedKeyCount > 0
+            ? [
+                {
+                  term: '사용액 미보고',
+                  description: `${allocation.usageUnreportedKeyCount}개 — 그만큼의 남은 배정은 실측이 아니라 한도 전액으로 셉니다.`,
+                },
+              ]
+            : []),
+        ]}
+      />
+      {credits.unmanagedSpend != null ? (
+        <p className="text-xs text-foreground-secondary">
+          이 잔액에서는 Pickle이 발급하지 않은 키의 지출 {formatUsd(credits.unmanagedSpend)}도 함께
+          빠져나갔습니다. 위 두 수에는 들어 있지 않습니다.
+        </p>
+      ) : null}
+    </section>
   )
 }

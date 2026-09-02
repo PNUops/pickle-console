@@ -32,7 +32,7 @@ import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
-import { AccountCreditsSection } from '../components/OpenRouterCredits'
+import { AccountAllocationSection, AccountCreditsSection } from '../components/OpenRouterCredits'
 
 const ACCOUNT_CACHE_REFETCH_MS = 2 * 60 * 1000
 
@@ -211,6 +211,7 @@ export function AdminOpenRouterAccountDetailPage() {
       />
 
       <AccountCreditsSection credits={account.credits} />
+      <AccountAllocationSection allocation={account.allocation} credits={account.credits} />
 
       <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div>

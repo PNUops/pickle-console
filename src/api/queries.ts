@@ -565,6 +565,7 @@ export type OpenRouterAccountStatus = Schemas['OpenRouterAccountStatus']
 export type OpenRouterCredentialState = Schemas['OpenRouterCredentialStateResponse']
 export type OpenRouterCredentialStatus = Schemas['OpenRouterCredentialStatus']
 export type OpenRouterAccountCredits = Schemas['OpenRouterAccountCreditsResponse']
+export type OpenRouterAccountAllocation = Schemas['OpenRouterAccountAllocationResponse']
 export type OpenRouterCreditsFreshness = Schemas['OpenRouterCreditsFreshness']
 export type OpenRouterForecastUnavailableReason = Schemas['OpenRouterForecastUnavailableReason']
 export type OpenRouterUnmanagedSpendUnavailableReason =

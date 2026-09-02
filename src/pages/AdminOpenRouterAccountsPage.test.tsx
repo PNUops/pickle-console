@@ -177,9 +177,12 @@ describe('OpenRouter account credits 관측', () => {
   test('UNKNOWN null은 0으로 표시하지 않고 실제 0 관측과 구분한다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     const unknown = renderApp(`/admin/llm/accounts/${uuid(412)}`)
-    await screen.findByRole('heading', { name: '잔액과 사용액' })
+    const creditsSection = (await screen.findByRole('heading', { name: '잔액과 사용액' }))
+      .closest('section')!
     expect(screen.getAllByText('확인 전').length).toBeGreaterThan(2)
-    expect(document.body).not.toHaveTextContent('$0.00')
+    // 미관측을 0으로 적지 말라는 규칙은 벤더에게 물어 온 금액에 대한 것이다.
+    // 같은 화면의 배정 현황이 적는 0은 우리가 확실히 아는 0이라 여기서 제외한다.
+    expect(creditsSection).not.toHaveTextContent('$0.00')
     unknown.unmount()
 
     const account = openRouterAccountStore.find((item) => item.id === uuid(412))!
