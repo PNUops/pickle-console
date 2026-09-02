@@ -10,6 +10,7 @@ import { Button } from './Button'
 import { ConfirmNameModal } from './ConfirmNameModal'
 import { Drawer } from './Drawer'
 import { ErrorBoundary } from './ErrorBoundary'
+import { CardRadioGroup } from './CardRadioGroup'
 import { FormField } from './FormField'
 import { Input } from './Input'
 import { Select } from './Select'
@@ -65,6 +66,63 @@ describe('FormField required', () => {
       </FormField>,
     )
     expect(screen.getByLabelText('메모')).not.toHaveAttribute('aria-required')
+  })
+})
+
+describe('CardRadioGroup', () => {
+  const OPTIONS = [
+    { value: 'highcpu' as const, title: '컴퓨팅 최적화' },
+    { value: 'highmem' as const, title: '메모리 최적화' },
+    { value: 'custom' as const, title: '직접 입력' },
+  ]
+
+  function Harness({ initial = null }: { initial?: 'highcpu' | 'highmem' | 'custom' | null }) {
+    const [value, setValue] = useState<'highcpu' | 'highmem' | 'custom' | null>(initial)
+    return (
+      <CardRadioGroup legend="사양" required value={value} onChange={setValue} options={OPTIONS} />
+    )
+  }
+
+  test('라디오 그룹으로 노출되고 고른 것만 checked가 된다', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    const options = screen.getAllByRole('radio')
+    expect(options).toHaveLength(3)
+    expect(options.every((option) => !(option as HTMLInputElement).checked)).toBe(true)
+
+    await user.click(screen.getByRole('radio', { name: '메모리 최적화' }))
+    expect(screen.getByRole('radio', { name: '메모리 최적화' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '컴퓨팅 최적화' })).not.toBeChecked()
+  })
+
+  // 이 그룹이 aria-pressed 버튼 나열을 대신하는 이유가 이것이다.
+  test('화살표 키로 다음 항목으로 옮겨 간다', async () => {
+    const user = userEvent.setup()
+    render(<Harness initial="highcpu" />)
+
+    await user.click(screen.getByRole('radio', { name: '컴퓨팅 최적화' }))
+    await user.keyboard('{ArrowDown}')
+
+    expect(screen.getByRole('radio', { name: '메모리 최적화' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '메모리 최적화' })).toHaveFocus()
+  })
+
+  test('오류를 alert으로 알리고 그룹에 묶는다', () => {
+    render(
+      <CardRadioGroup
+        legend="사양"
+        required
+        value={null}
+        onChange={() => {}}
+        options={OPTIONS}
+        error="사양을 선택해 주세요."
+      />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('사양을 선택해 주세요.')
+    expect(screen.getByRole('group', { name: /사양/ })).toHaveAccessibleDescription(
+      '사양을 선택해 주세요.',
+    )
   })
 })
 
