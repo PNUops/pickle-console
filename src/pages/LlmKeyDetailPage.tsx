@@ -9,6 +9,7 @@ import {
   type LlmKeyDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { CodeBlock } from '../components/CodeBlock'
 import { CopyButton } from '../components/CopyButton'
 import { RevokeKeyCard } from '../components/llm-key/RevokeKeyCard'
 import {
@@ -31,7 +32,9 @@ import {
   Textarea,
   type TabItem,
 } from '../components/ui'
+import { DOCS_PATH } from '../lib/brand'
 import { formatDateTime } from '../lib/format'
+import { LLM_API_BASE_URL, LLM_DEFAULT_MODEL } from '../lib/llm-api'
 import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -140,6 +143,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
       <StatusNotice status={status} />
       <IssueSection llmKey={llmKey} status={status} />
+      {status === 'ACTIVE' && <ConnectionSection />}
 
       <Card>
         <CardHeader>
@@ -294,6 +298,56 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
   return null
 }
 
+/* ─── 연결 정보 ─── */
+
+/**
+ * 키를 손에 쥔 자리에서 첫 호출까지 가게 하는 카드.
+ *
+ * 키 평문은 서버에 없으므로 예시에는 환경 변수 자리표시자만 넣는다. 발급 화면을
+ * 떠나면 어디로 보내는지 알 방법이 없어, 주소와 모델 이름을 여기에 둔다.
+ */
+function ConnectionSection() {
+  const example = `curl ${LLM_API_BASE_URL}/chat/completions \\
+  -H "Authorization: Bearer $PICKLE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "${LLM_DEFAULT_MODEL}", "messages": [{"role": "user", "content": "안녕하세요"}]}'`
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>연결 정보</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+          <Field label="base URL">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm">{LLM_API_BASE_URL}</span>
+              <CopyButton value={LLM_API_BASE_URL} label="복사" />
+            </div>
+          </Field>
+          <Field label="모델">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm">{LLM_DEFAULT_MODEL}</span>
+              <CopyButton value={LLM_DEFAULT_MODEL} label="복사" />
+            </div>
+          </Field>
+        </dl>
+        <CodeBlock label="curl" code={example} />
+        <p className="text-sm text-neutral-600">
+          지원 파라미터와 한도, 에러 코드는{' '}
+          <Link
+            to={DOCS_PATH}
+            className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
+          >
+            사용 가이드
+          </Link>
+          에 있습니다.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 /* ─── 발급·재발급 ─── */
 
 /**
@@ -428,6 +482,17 @@ function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApi
                   만료: {formatDateTime(issue.data.expiresAt)}
                 </p>
               )}
+              <p className="text-sm text-neutral-600">
+                이 키는 <code className="font-mono text-xs">{LLM_API_BASE_URL}</code>로
+                보냅니다. 호출 방법은{' '}
+                <Link
+                  to={DOCS_PATH}
+                  className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
+                >
+                  사용 가이드
+                </Link>
+                에 있습니다.
+              </p>
             </div>
           )}
         </Modal>

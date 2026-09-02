@@ -24,5 +24,5 @@ export const FEEDBACK_URL = 'https://feedback.pnuops.com/'
 /** 1:1 문의 창구 — 카카오 채널 채팅(외부 서비스, 새 탭). */
 export const CONTACT_URL = 'https://pf.kakao.com/_xmxjxmUn/chat'
 
-/** 사용법 문서 경로(콘솔 내부 라우트). 본문은 준비 중. */
+/** 사용법 문서 경로(콘솔 내부 라우트). */
 export const DOCS_PATH = '/docs'
