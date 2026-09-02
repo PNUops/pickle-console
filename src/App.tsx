@@ -131,7 +131,8 @@ function App() {
       </Route>
       <Route element={<PublicLayout />}>
         <Route path="terms/:docType" element={<TermsPage />} />
-        {/* 사용자 문서 — 본문은 준비 중이고, 사이드바 링크가 가리킬 경로만 먼저 둔다. */}
+        {/* 사용자 문서 — 로그인 없이 열려야 한다. 게이트웨이 에러를 받은 사람에게
+            세션이 없을 수 있고, 주소는 서로 전달되는 물건이다. */}
         <Route path="docs" element={<DocsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

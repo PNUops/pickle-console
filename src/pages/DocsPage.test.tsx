@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { renderApp } from '../test/render'
 
@@ -23,10 +23,12 @@ describe('사용 가이드', () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '지원 파라미터' })
 
-    const body = document.body.textContent ?? ''
-    expect(body).toContain('tools')
-    expect(body).toContain('stream_options')
-    expect(body).toContain('unsupported_parameter')
+    // 목록의 구성원은 lib/llm-api.test.ts가 얼려 둔다. 여기서는 그 목록이 실제로
+    // 화면에 렌더되는지만 본다 — 산문에도 나오는 이름으로 확인하면 목록이 통째로
+    // 사라져도 통과하므로, 목록에만 있는 이름을 고른다.
+    expect(screen.getByText('parallel_tool_calls')).toBeInTheDocument()
+    expect(screen.getByText('max_completion_tokens')).toBeInTheDocument()
+    expect(screen.getByText('presence_penalty')).toBeInTheDocument()
     expect(screen.getByText('목록에 없는 필드는 거부됩니다')).toBeInTheDocument()
   })
 
@@ -34,8 +36,8 @@ describe('사용 가이드', () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '시작하기' })
 
-    expect(screen.getByText('base URL은 /v1까지 넣습니다')).toBeInTheDocument()
-    expect(document.body.textContent ?? '').toContain('unknown_endpoint')
+    const alert = screen.getByText('base URL은 /v1까지 넣습니다').closest('div')
+    expect(alert?.textContent ?? '').toContain('unknown_endpoint')
   })
 
   test('코딩 에이전트는 openai-compatible 프로바이더로 붙인다고 말한다', async () => {
@@ -47,20 +49,29 @@ describe('사용 가이드', () => {
     expect(body).toContain('"baseURL": "https://llm.pcl.kr/v1"')
   })
 
-  test('기본 한도를 숫자로 말한다', async () => {
+  test('기본 한도를 숫자로 말하고 일일 토큰 한도도 함께 설명한다', async () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '한도' })
 
     expect(screen.getByText('20회')).toBeInTheDocument()
-    expect(screen.getByText('20,000토큰')).toBeInTheDocument()
+    expect(screen.getByText('30,000토큰')).toBeInTheDocument()
     expect(screen.getByText('2건')).toBeInTheDocument()
+    // 분당 한도를 다 지켜도 429가 날 수 있는 축이라 빠지면 안 된다.
+    expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
+    expect(document.body.textContent ?? '').toContain('quota_exhausted')
   })
 
   test('에러는 메시지가 아니라 code로 찾게 한다', async () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '에러' })
 
-    expect(screen.getByText('rate_limit_requests')).toBeInTheDocument()
-    expect(screen.getByText('invalid_api_key')).toBeInTheDocument()
+    // code와 상태 코드의 짝은 lib/llm-api.test.ts가 얼려 둔다. 여기서는 표가 그 짝을
+    // 실제로 한 행에 나란히 렌더하는지 확인한다.
+    const row = screen.getByText('rate_limit_requests').closest('tr')
+    expect(row).not.toBeNull()
+    expect(within(row!).getByText('429')).toBeInTheDocument()
+
+    const authRow = screen.getByText('invalid_api_key').closest('tr')
+    expect(within(authRow!).getByText('401')).toBeInTheDocument()
   })
 })

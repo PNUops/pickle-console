@@ -63,7 +63,8 @@ export function DocsPage() {
       <h1 className="text-2xl font-semibold text-neutral-900">사용 가이드</h1>
       <p className="mt-3 text-sm leading-6 text-neutral-600">
         교내 LLM API를 코드에서 호출하는 방법입니다. OpenAI 호환 API이므로 쓰던 SDK의
-        base URL과 API 키만 바꾸면 그대로 동작합니다.
+        base URL과 LLM API 키만 바꾸면 됩니다. 보낼 수 있는 요청 필드는 아래 지원 파라미터
+        절의 목록으로 한정됩니다.
       </p>
 
       <div className="mt-8 space-y-6">
@@ -78,9 +79,9 @@ export function DocsPage() {
           </Labeled>
           <Labeled label="인증">
             <p className="text-sm leading-6 text-neutral-600">
-              콘솔에서 발급한 키를 <Code>Authorization: Bearer</Code> 헤더에 넣습니다. 키
-              평문은 발급할 때 한 번만 보이므로, 소스 코드에 적지 말고 환경 변수에 두는
-              편이 안전합니다.
+              콘솔에서 발급한 LLM API 키를 <Code>Authorization: Bearer</Code> 헤더에
+              넣습니다. 평문은 발급할 때 한 번만 보이므로 소스 코드에 적지 말고 환경
+              변수에 둡니다.
             </p>
           </Labeled>
           <Alert variant="info" title="base URL은 /v1까지 넣습니다">
@@ -93,11 +94,16 @@ export function DocsPage() {
 
         <Section title="모델">
           <p className="text-sm leading-6 text-neutral-600">
-            현재 제공하는 모델은 <Code>{LLM_DEFAULT_MODEL}</Code> 하나입니다. 공개 이름과
-            실제 모델이 분리되어 있어, 서빙하는 모델이 바뀌어도 코드는 그대로 둡니다.
+            교내에서 직접 서빙하는 모델은 <Code>{LLM_DEFAULT_MODEL}</Code> 하나입니다. 공개
+            이름과 실제 모델이 분리되어 있어, 서빙하는 모델이 바뀌어도 코드는 그대로 둡니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            키로 쓸 수 있는 모델 목록은 API로 확인합니다.
+            상용 모델은 금액 한도가 부여된 키만 쓸 수 있고, 모델 이름을 그대로 보내면
+            됩니다. 금액 한도가 없으면 <Code>credit_unavailable</Code>로 거절됩니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            아래 요청은 교내 서빙 모델 목록을 돌려줍니다. 상용 모델은 목록에 나오지
+            않습니다.
           </p>
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
         </Section>
@@ -112,7 +118,7 @@ export function DocsPage() {
         <Section title="코딩 에이전트 연결">
           <p className="text-sm leading-6 text-neutral-600">
             opencode에 붙여서 씁니다. 프로젝트 폴더에 <Code>opencode.json</Code>으로
-            저장하고 키는 <Code>PICKLE_API_KEY</Code> 환경 변수로 넘깁니다.
+            저장하고 LLM API 키는 <Code>PICKLE_API_KEY</Code> 환경 변수로 넘깁니다.
           </p>
           <CodeBlock label="opencode.json" code={OPENCODE_EXAMPLE} />
           <p className="text-sm leading-6 text-neutral-600">
@@ -121,7 +127,8 @@ export function DocsPage() {
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             Claude Code와 Codex는 붙지 않습니다. 각각 Anthropic Messages API와 OpenAI
-            Responses API를 쓰는데, 이 API가 제공하는 것은 OpenAI Chat Completions입니다.
+            Responses API를 요구하는데, 이 API가 제공하는 것은 OpenAI Chat Completions
+            하나입니다. 2026-09-02 기준입니다.
           </p>
         </Section>
 
@@ -139,7 +146,7 @@ export function DocsPage() {
               </li>
             ))}
           </ul>
-          <Alert variant="warning" title="목록에 없는 필드는 거부됩니다">
+          <Alert variant="info" title="목록에 없는 필드는 거부됩니다">
             모르는 필드는 무시하고 전달하는 것이 아니라 요청 전체를 400으로 되돌립니다.
             응답의 <Code>error.code</Code>가 <Code>unsupported_parameter</Code>이고 메시지에
             해당 필드 이름이 담깁니다.
@@ -174,8 +181,16 @@ export function DocsPage() {
           </Table>
           <p className="text-sm leading-6 text-neutral-600">
             한도는 키마다 다르게 부여될 수 있습니다. 내 키에 적용된 값은 콘솔의 키 상세
-            화면에서 확인합니다. 한도를 넘으면 429로 거부되며, 응답의{' '}
-            <Code>Retry-After</Code> 헤더가 다시 시도할 시점을 알려 줍니다.
+            화면에서 확인합니다. 위 세 가지를 넘으면 429로 거부되고, 이때만 응답의{' '}
+            <Code>Retry-After</Code> 헤더가 다시 시도할 시점을 알려 줍니다. 성공 응답에는{' '}
+            <Code>X-RateLimit-Remaining-Requests</Code> 헤더로 남은 요청 수가 실립니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            분당 한도와 별개로 <strong>일일 토큰 한도</strong>가 부여될 수 있습니다. 교내
+            서빙 모델에만 적용되고 자정(KST)에 초기화되며, 소진하면{' '}
+            <Code>quota_exhausted</Code>로 거절됩니다. 이 한도에는{' '}
+            <Code>Retry-After</Code>가 붙지 않습니다. 부여 여부와 남은 양은 키 상세 화면의
+            사용량 탭에서 확인합니다.
           </p>
         </Section>
 
@@ -194,7 +209,7 @@ export function DocsPage() {
         <Section title="에러">
           <p className="text-sm leading-6 text-neutral-600">
             응답 본문은 OpenAI와 같은 모양입니다. 코드에서 분기할 때는 메시지 문구가 아니라{' '}
-            <Code>error.code</Code>를 보세요. 문구는 다듬어질 수 있지만 코드는 그대로
+            <Code>error.code</Code>를 확인합니다. 문구는 다듬어질 수 있지만 코드는 그대로
             유지됩니다.
           </p>
           <div className="overflow-x-auto">
@@ -226,6 +241,10 @@ export function DocsPage() {
             안내에 없는 내용은{' '}
             <ExternalLink href={CONTACT_URL}>문의 창구</ExternalLink>로, 개선 의견은{' '}
             <ExternalLink href={FEEDBACK_URL}>의견 창구</ExternalLink>로 보내 주세요.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            특정 요청이 실패한 경우를 문의할 때는 응답의 <Code>X-Request-Id</Code> 헤더
+            값을 함께 적어 주시면 그 요청을 바로 찾을 수 있습니다.
           </p>
         </Section>
       </div>

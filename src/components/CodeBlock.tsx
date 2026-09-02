@@ -19,7 +19,10 @@ export function CodeBlock({ code, label, copyable = true }: CodeBlockProps) {
           {copyable && <CopyButton value={code} label="복사" />}
         </div>
       )}
-      <pre className="overflow-x-auto px-4 py-3 font-mono text-[13px] leading-6 text-neutral-100">
+      <pre
+        tabIndex={0}
+        className="overflow-x-auto px-4 py-3 font-mono text-[13px] leading-6 text-neutral-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-400"
+      >
         <code>{code}</code>
       </pre>
     </div>
