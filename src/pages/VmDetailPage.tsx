@@ -1304,7 +1304,7 @@ function ProvisioningPanel({ task }: { task: ProvisioningTaskView }) {
         <CardTitle>{PROVISIONING_KIND_LABELS[task.kind]} 진행 상황</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Stepper steps={steps} current={task.currentStep} hideLabels />
+        <Stepper steps={steps} current={task.currentStep} labels="never" />
         <p className="text-sm text-neutral-700">
           단계 {task.currentStep + 1}/{task.totalSteps} · {task.stepLabel}
           {task.attempts > 1 && ` (시도 ${task.attempts}회)`}

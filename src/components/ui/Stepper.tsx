@@ -6,14 +6,17 @@ export interface StepperProps {
   /** Zero-based index of the current step. Steps before it render as complete. */
   current: number
   /**
-   * Visually hide the step labels (kept for screen readers). Use for dense
-   * numeric pipelines where a caption below the stepper names the current step.
+   * 라벨을 어디까지 보여 줄지.
+   *
+   * `always`는 언제나, `sm`은 좁은 화면에서만 감추고, `never`는 늘 감춘다.
+   * 감춘 라벨도 DOM에는 남으므로 보조 기술은 언제나 읽는다. 좁은 화면에서
+   * 감출 때는 스테퍼 아래에 지금 단계를 말하는 문장을 따로 둔다.
    */
-  hideLabels?: boolean
+  labels?: 'always' | 'sm' | 'never'
   className?: string
 }
 
-export function Stepper({ steps, current, hideLabels = false, className }: StepperProps) {
+export function Stepper({ steps, current, labels = 'always', className }: StepperProps) {
   return (
     <ol className={cn('flex items-center gap-2', className)}>
       {steps.map((step, index) => {
@@ -47,7 +50,9 @@ export function Stepper({ steps, current, hideLabels = false, className }: Stepp
             </span>
             <span
               className={cn(
-                hideLabels ? 'sr-only' : 'text-sm whitespace-nowrap',
+                labels === 'never' && 'sr-only',
+                labels === 'sm' && 'sr-only sm:not-sr-only sm:text-sm',
+                labels === 'always' && 'text-sm',
                 state === 'current' ? 'font-semibold text-primary-800' : 'text-neutral-500',
               )}
             >
