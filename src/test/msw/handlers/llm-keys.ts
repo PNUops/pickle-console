@@ -265,8 +265,8 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     creditLimit: 5,
     creditLimitReset: 'MONTHLY' as const,
     creditAxisConnected: true,
-    // 금액 축이 열린 키의 기본 모습은 제한 없음이다. 목록이 걸린 모습은
-    // 그것을 확인하는 화면 테스트가 따로 덮어쓴다.
+    // 금액 축이 열린 관리자 키의 기본 모습. 목록이 걸린 모습은 아래
+    // active-admin-key 가 들고 있고 AdminLlmKeyDetailPage 테스트가 읽는다.
     creditAllowedModels: [] as string[],
     creditUsage: 2.5,
     creditLimitRemaining: 2.5,
@@ -298,6 +298,9 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       requestId: uuid(206),
       openrouterAccountId: uuid(410),
       openrouterAccountName: 'AI 교육 사업 A',
+      // 울타리가 걸린 키가 픽스처에 하나는 있어야, 걸린 키를 "제한 없음"으로
+      // 보여 주는 회귀와 SYS_MANAGER 게이트가 실제로 검증된다.
+      creditAllowedModels: ['openai/*'],
     },
     {
       ...base,
@@ -746,20 +749,32 @@ export const llmKeyHandlers: RequestHandler[] = [
       return notFoundProblem()
     }
     const body = (await request.json()) as Schemas['AdminLlmKeyLimitsRequest']
+    // 서버는 모델 허용 목록 변경도 금액 변경과 같은 권한으로 막는다 — 무엇에
+    // 돈을 쓸 수 있는지를 정하기 때문이다. 목이 이 축을 빠뜨리면 서버가 낼 수
+    // 없는 200을 내고, 그 위의 화면 테스트가 초록으로 거짓말한다.
+    const nextModels = body.creditAllowedModels ?? []
+    const modelsChanged =
+      nextModels.length !== key.creditAllowedModels.length ||
+      nextModels.some((model, index) => model !== key.creditAllowedModels[index])
     if (
       role === 'SYS_MANAGER' &&
-      (body.creditLimit !== key.creditLimit || body.creditLimitReset !== key.creditLimitReset)
+      (body.creditLimit !== key.creditLimit ||
+        body.creditLimitReset !== key.creditLimitReset ||
+        modelsChanged)
     ) {
       return problemResponse({
         type: 'about:blank',
         title: '권한이 없습니다',
         status: 403,
-        detail: '시스템 운영자는 금액 한도를 변경할 수 없습니다.',
+        detail: '시스템 운영자는 금액 한도와 모델 허용 목록을 변경할 수 없습니다.',
         code: 'FORBIDDEN',
       })
     }
     adminLlmLimitBodies.push(body)
     Object.assign(key, body)
+    // 서버는 null 을 저장하지 않는다 — 빈 목록으로 정규화한다. 목이 null 을
+    // 그대로 두면 상세 화면의 join 이 터지는 상태가 목에서만 존재하게 된다.
+    key.creditAllowedModels = nextModels
     if (body.openrouterAccountId && !key.openrouterAccountName) {
       key.openrouterAccountName = openRouterAccountStore.find(
         (account) => account.id === body.openrouterAccountId,

@@ -102,6 +102,12 @@ export function DocsPage() {
             됩니다. 금액 한도가 없으면 <Code>credit_unavailable</Code>로 거절됩니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
+            키에 따라 쓸 수 있는 상용 모델이 정해져 있을 수 있습니다. 목록 밖 모델은{' '}
+            <Code>model_not_allowed</Code>로 거절되며, 이때는 금액 한도가 아니라 허용
+            목록이 원인이므로 키 상세에서 무엇이 열려 있는지 확인해 주세요. 목록이 비어
+            있으면 금액 한도 안에서 모든 상용 모델을 쓸 수 있습니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
             아래 요청은 교내 서빙 모델 목록을 돌려줍니다. 상용 모델은 목록에 나오지
             않습니다.
           </p>

@@ -97,6 +97,48 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     })
   })
 
+  // 관리자가 입력한 목록이 요청 본문에 실리는지. 이 단언이 없으면 창이 값을
+  // 버리고 저장해도 화면은 정직하게 "제한 없음"을 보여 주므로 아무도 모른다.
+  test('한도 창이 입력한 모델 허용 목록을 정규화해 본문에 싣는다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    const field = dialog.getByLabelText('허용할 상용 모델')
+    await user.clear(field)
+    await user.type(field, 'OpenAI/*{enter}anthropic/claude-sonnet-4')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    // 판정이 소문자 기준이라 대문자로 적어도 소문자로 나가야 한다.
+    expect(adminLlmLimitBodies[0].creditAllowedModels)
+      .toEqual(['openai/*', 'anthropic/claude-sonnet-4'])
+  })
+
+  test('상세가 키의 모델 허용 목록을 보여 준다', async () => {
+    // uuid(171)이 울타리가 걸린 픽스처다. 걸린 키를 "제한 없음"으로 보여 주는
+    // 회귀를 잡는 것이 이 단언의 전부다.
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    expect(await screen.findByText('허용 상용 모델')).toBeInTheDocument()
+    expect(screen.getByText('openai/*')).toBeInTheDocument()
+  })
+
+  test('SYS_MANAGER가 모델 허용 목록을 바꾸면 서버가 거절한다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-manager', sysManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    // 금액 축을 못 만지는 역할이라 목록 칸도 없다 — 창은 기존 값을 그대로
+    // 되돌려 보내고, 그래서 403이 나지 않는다.
+    expect(dialog.queryByLabelText('허용할 상용 모델')).not.toBeInTheDocument()
+    await user.clear(dialog.getByLabelText('RPM'))
+    await user.type(dialog.getByLabelText('RPM'), '80')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    expect(adminLlmLimitBodies[0].creditAllowedModels).toEqual(['openai/*'])
+  })
+
   test('6축 form은 오류 summary를 표시하고 첫 오류 입력으로 focus를 옮긴다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
