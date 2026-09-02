@@ -32,6 +32,7 @@ import {
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatSpec } from '../lib/format'
+import { AdminRequestPeriods } from '../components/request-period/AdminRequestPeriods'
 
 /** 프리셋 이름 규칙 — 소문자·숫자·하이픈 (서버 검증과 동일). */
 const FLAVOR_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
@@ -63,7 +64,7 @@ export function AdminOsImagesPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">OS 이미지·사양 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          신청 위저드의 두 축입니다 — OS 이미지와 사양 프리셋. 은퇴(비활성)해도 기존 VM은
+          신청 화면이 제공하는 것들입니다. OS 이미지와 사양, 그리고 사용 기간. 은퇴(비활성)해도 기존 VM은
           영향받지 않습니다.
         </p>
       </div>
@@ -237,6 +238,8 @@ export function AdminOsImagesPage() {
           }}
         />
       )}
+
+      <AdminRequestPeriods isSysAdmin={isSysAdmin} />
 
       {flavorToggleTarget && (
         <ToggleFlavorModal

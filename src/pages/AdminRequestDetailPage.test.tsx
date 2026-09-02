@@ -152,6 +152,27 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
   })
 })
 
+describe('관리자 신청 상세 — 직접 입력 신청', () => {
+  /**
+   * 직접 입력 신청이 큐에서 다른 신청과 똑같이 보이면, 사용자 쪽에만 문턱을 세우고
+   * 관문은 세우지 않은 것이 된다.
+   */
+  test('가리키는 사양이 없으면 눈에 띄게 표시하고 사유를 보라고 말한다', async () => {
+    const target = adminRequestStore.find((r) => r.id === uuid(201))!
+    target.vm!.flavorId = null
+    target.vm!.flavorName = null
+    target.vm!.specReason = 'Spring Boot와 PostgreSQL을 함께 띄웁니다'
+    renderDetail(uuid(201))
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(screen.getByText('직접 입력')).toBeInTheDocument()
+    expect(screen.getByText('준비된 사양을 쓰지 않는 신청입니다')).toBeInTheDocument()
+    expect(
+      screen.getByText('Spring Boot와 PostgreSQL을 함께 띄웁니다'),
+    ).toBeInTheDocument()
+  })
+})
+
 describe('승인 폼', () => {
   test('요청 사양으로 프리필되고, 확인 모달을 거쳐 계약 형식의 본문을 전송한다', async () => {
     const user = userEvent.setup()

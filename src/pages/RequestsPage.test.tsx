@@ -110,7 +110,7 @@ describe('신청 상세', () => {
 
     await screen.findByRole('heading', { name: '신청 상세' })
     const flavor = screen.getByText('사양').closest('div')!
-    expect(within(flavor).getByText('직접 입력 (관리자 검토)')).toBeInTheDocument()
+    expect(within(flavor).getByText('직접 입력')).toBeInTheDocument()
   })
 
   // 신청자 화면이 VM 아닌 종류를 설명하지 못하던 자리 — OS·사양 칸만 '—'로 채워

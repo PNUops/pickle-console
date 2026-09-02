@@ -255,11 +255,20 @@ export const vmRequestView: RequestKindView = {
           남으므로 공개 목록을 따로 뒤질 필요가 없다. */}
       <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
       <Field label="사양">
-        {data.vm?.flavorName ?? '직접 입력 (관리자 검토)'}
+        {data.vm?.flavorName ?? (
+          <span className="font-medium text-warning-700">직접 입력</span>
+        )}
       </Field>
       <Field label="요청 사양">
         {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
       </Field>
+      {data.vm != null && data.vm.flavorId == null && (
+        <div className="sm:col-span-2">
+          <Alert variant="warning" title="준비된 사양을 쓰지 않는 신청입니다">
+            신청자가 사양을 직접 적었습니다. 아래 사유를 보고 부여 사양을 정해 주세요.
+          </Alert>
+        </div>
+      )}
       <Field label="사용 기간">
         {periodText(data)}
       </Field>

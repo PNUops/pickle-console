@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { uuid } from '../ids'
+import { requestPeriodStore } from './admin'
 
 type Schemas = components['schemas']
 
@@ -153,21 +154,21 @@ export const requestOptions = {
 /* ─── 사용 기간 ─── */
 
 /**
- * 공개 목록은 오늘 기준으로 아직 끝나지 않은 것만 담는다. 여기 상대 날짜를 쓰는 것은
- * 절대 날짜로 적어 두면 그 날이 지나는 순간 테스트가 조용히 다른 것을 시험하기
- * 때문이다. 무기한 한 줄이 섞여 있다.
+ * 공개 목록은 관리자 저장소(`handlers/admin.ts`)를 걸러 내보낸다. 활성이고 아직 끝나지
+ * 않은 것만이다. 저장소를 두 벌 두면 관리자 화면에서 만든 것이 신청 화면에 안 보이는,
+ * 실제로는 일어나지 않는 상태를 테스트가 보게 된다.
  */
-function daysFromNow(days: number): string {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+export function offerablePeriods(): Schemas['RequestPeriodResponse'][] {
+  const today = new Date().toISOString().slice(0, 10)
+  return requestPeriodStore
+    .filter((period) => period.status === 'ACTIVE' && (period.endDate == null || period.endDate >= today))
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((period) => ({
+      id: period.id,
+      displayName: period.displayName,
+      endDate: period.endDate ?? null,
+    }))
 }
-
-export const requestPeriods: Schemas['RequestPeriodResponse'][] = [
-  { id: uuid(21), displayName: '이번 학기', endDate: daysFromNow(120) },
-  { id: uuid(22), displayName: '이번 방학', endDate: daysFromNow(60) },
-  { id: uuid(23), displayName: '무기한 (교내 서비스)', endDate: null },
-]
 
 /* ─── handlers ─── */
 
@@ -182,7 +183,7 @@ export const referenceHandlers: RequestHandler[] = [
     ),
   ),
   http.get('*/api/v1/request-periods', () =>
-    HttpResponse.json(requestPeriods, { status: 200 }),
+    HttpResponse.json(offerablePeriods(), { status: 200 }),
   ),
   http.get('*/api/v1/meta/request-options', () =>
     HttpResponse.json(requestOptions, { status: 200 }),

@@ -212,3 +212,89 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     expect(within(basic).queryByRole('button', { name: '은퇴' })).not.toBeInTheDocument()
   })
 })
+
+describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
+  /** 기간 표를 표시명 셀 기준으로 찾는다. */
+  async function findPeriodRow(displayName: string) {
+    return (await screen.findByText(displayName)).closest('tr')!
+  }
+
+  /**
+   * 이 화면이 존재하는 이유가 이 비대칭이다. 날짜가 절대값이라 학기마다 갱신해야 하는데,
+   * 지난 항목이 보이지 않으면 이번 학기 항목이 빠졌다는 것을 알아챌 방법이 없다.
+   */
+  test('신청 화면이 감추는 지난 기간까지 배지와 함께 나열한다', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images')
+
+    const past = await findPeriodRow('지난 학기')
+    expect(within(past).getByText('기간 지남')).toBeInTheDocument()
+    // 내린 것과 지난 것은 다른 상태다.
+    expect(within(past).getByText('활성')).toBeInTheDocument()
+
+    const indefinite = await findPeriodRow('무기한 (교내 서비스)')
+    expect(within(indefinite).getByText('무기한')).toBeInTheDocument()
+  })
+
+  test('기간을 추가하면 신청 화면의 선택지가 된다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images')
+
+    await findPeriodRow('이번 학기')
+    await user.click(screen.getByRole('button', { name: '기간 추가' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '사용 기간 추가' })
+    await user.type(within(dialog).getByLabelText('이름'), 'term-2027-1')
+    await user.type(within(dialog).getByLabelText('표시명'), '2027학년도 1학기')
+    await user.click(within(dialog).getByRole('button', { name: '추가' }))
+
+    expect(await screen.findByText('사용 기간을 추가했습니다.')).toBeInTheDocument()
+    const created = await findPeriodRow('2027학년도 1학기')
+    // 종료일을 비우면 무기한 항목이 된다.
+    expect(within(created).getByText('무기한')).toBeInTheDocument()
+  })
+
+  test('이름이 중복되면 서버 422가 이름 칸에 붙는다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images')
+
+    await findPeriodRow('이번 학기')
+    await user.click(screen.getByRole('button', { name: '기간 추가' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '사용 기간 추가' })
+    await user.type(within(dialog).getByLabelText('이름'), 'term')
+    await user.type(within(dialog).getByLabelText('표시명'), '겹치는 학기')
+    await user.click(within(dialog).getByRole('button', { name: '추가' }))
+
+    expect(await within(dialog).findByText('이미 사용 중인 기간 이름입니다.')).toBeInTheDocument()
+  })
+
+  // 서버는 날짜 지정과 지우기를 함께 받지 않는다. 화면이 한쪽만 보내는지 본다.
+  test('무기한으로 바꾸면 종료일 칸이 사라지고 표가 따라간다', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images')
+
+    const row = await findPeriodRow('이번 방학')
+    await user.click(within(row).getByRole('button', { name: '수정' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '사용 기간 수정' })
+    expect(within(dialog).getByLabelText('종료일')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('checkbox', { name: /무기한/ }))
+    expect(within(dialog).queryByLabelText('종료일')).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+    expect(await screen.findByText('사용 기간을 수정했습니다.')).toBeInTheDocument()
+    expect(within(await findPeriodRow('이번 방학')).getByText('무기한')).toBeInTheDocument()
+  })
+
+  test('SYS_MANAGER에게는 기간 변경 액션이 보이지 않는다', async () => {
+    server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
+    renderApp('/admin/os-images')
+
+    await findPeriodRow('이번 학기')
+    expect(screen.queryByRole('button', { name: '기간 추가' })).not.toBeInTheDocument()
+  })
+})

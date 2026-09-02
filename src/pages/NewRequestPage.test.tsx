@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { requestOptions, requestPeriods } from '../test/msw/handlers/reference'
+import { offerablePeriods, requestOptions } from '../test/msw/handlers/reference'
 import { createdRequestBodies } from '../test/msw/handlers/requests'
 import { REQUEST_DRAFT_KEY } from '../lib/request-draft'
 import { server } from '../test/msw/server'
@@ -197,7 +197,7 @@ describe('VM 신청 위저드 — 사용 기간', () => {
     await passKindStep(user)
     await fillResourceStep(user)
 
-    const indefinite = requestPeriods.find((period) => period.endDate == null)!
+    const indefinite = offerablePeriods().find((period) => period.endDate == null)!
     const radios = await screen.findAllByRole('radio')
     await user.click(
       radios.find((radio) => radio.closest('label')?.textContent?.includes(indefinite.displayName))!,
