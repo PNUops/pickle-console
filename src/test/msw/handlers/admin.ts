@@ -34,7 +34,6 @@ export function submittedAdminRequest(n: number): RequestDetail {
     purpose: `추가 실습 서버 ${n}`,
     courseOrProject: null,
     extraNote: null,
-    reqStartDate: null,
     reqEndDate: null,
     displayName: `추가 실습 서버 ${n}`,
     vm: {
@@ -47,8 +46,6 @@ export function submittedAdminRequest(n: number): RequestDetail {
       reqDiskGb: 20,
       specReason: null,
       desiredSlug: null,
-      desiredSubdomain: null,
-      rootDomain: null,
       granted: null,
     },
     status: 'SUBMITTED',
@@ -64,14 +61,11 @@ function initialAdminRequests(): RequestDetail[] {
       ...submittedAdminRequest(201),
       purpose: '캡스톤 프로젝트 백엔드 서버 운영',
       courseOrProject: '2026-1 캡스톤디자인 3조',
-      reqStartDate: '2026-07-15',
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
       vm: {
         ...submittedAdminRequest(0).vm!,
         desiredSlug: 'capstone-api',
-        desiredSubdomain: 'capstone-team3',
-        rootDomain: 'pusan.dev',
       },
       createdAt: '2026-07-08T11:30:00+09:00',
       updatedAt: '2026-07-08T11:30:00+09:00',
@@ -790,7 +784,7 @@ export const adminHandlers: RequestHandler[] = [
         status: 422,
         detail: '요청 값을 확인해 주세요.',
         code: 'VALIDATION_FAILED',
-        errors: [{ field: 'name', message: '이미 사용 중인 프리셋 이름입니다.' }],
+        errors: [{ field: 'name', message: '이미 사용 중인 사양 이름입니다.' }],
       })
     }
     const created: Schemas['VmFlavorResponse'] = {
@@ -802,6 +796,7 @@ export const adminHandlers: RequestHandler[] = [
       diskGb: body.diskGb,
       status: 'ACTIVE',
       notes: body.notes ?? null,
+      displayOrder: body.displayOrder ?? 0,
     }
     flavorStore.push(created)
     return HttpResponse.json(created, { status: 201 })

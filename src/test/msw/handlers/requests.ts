@@ -27,7 +27,6 @@ function baseRequest(): Omit<
     type: 'VM',
     courseOrProject: '2026-1 캡스톤디자인 3조',
     extraNote: null,
-    reqStartDate: '2026-07-15',
     reqEndDate: '2026-12-20',
     displayName: '캡스톤 백엔드 서버',
     vm: {
@@ -40,8 +39,6 @@ function baseRequest(): Omit<
       reqDiskGb: 20,
       specReason: null,
       desiredSlug: null,
-      desiredSubdomain: 'capstone-team3',
-      rootDomain: 'pusan.dev',
     },
   }
 }
@@ -221,7 +218,6 @@ export const requestHandlers: RequestHandler[] = [
       requesterName: regularUser.name,
       courseOrProject: body.courseOrProject ?? null,
       extraNote: body.extraNote ?? null,
-      reqStartDate: body.reqStartDate ?? null,
       reqEndDate: body.reqEndDate ?? null,
       displayName: body.displayName,
       // 서버는 신청한 종류의 항목만 채워 돌려준다 — 종류가 다른 멤버는 null이다.
@@ -254,8 +250,6 @@ export const requestHandlers: RequestHandler[] = [
         specReason: body.vm?.specReason ?? null,
         desiredSlug: body.vm?.desiredSlug ?? null,
         // 신청서에서 도메인 축이 빠졌다 — 새 신청의 이력 필드는 항상 비어 있다.
-        desiredSubdomain: null,
-        rootDomain: null,
         granted: null,
       },
       status: 'SUBMITTED',

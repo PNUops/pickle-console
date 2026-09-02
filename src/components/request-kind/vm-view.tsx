@@ -15,9 +15,10 @@ import {
   Spinner,
   Textarea,
 } from '../ui'
-import { formatSpec } from '../../lib/format'
+import { formatSpec, todayKstDate } from '../../lib/format'
 import { SUBDOMAIN_RE, isUuid } from '../../lib/validation'
 import { Field } from './Field'
+import { periodText } from './period-text'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
 function useVmDecisionData(): DecisionData {
@@ -75,7 +76,8 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const [memoryMb, setMemoryMb] = useState(String(request.vm?.reqMemoryMb))
   const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
   const [imageId, setImageId] = useState(String(request.vm?.imageId))
-  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
+  // 신청서에는 시작일이 없다. 부여 기간의 시작은 만들어지는 날, 곧 오늘이다.
+  const [startDate, setStartDate] = useState(todayKstDate)
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
   const [nodeId, setNodeId] = useState('')
@@ -252,27 +254,21 @@ export const vmRequestView: RequestKindView = {
       {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이
           남으므로 공개 목록을 따로 뒤질 필요가 없다. */}
       <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
-      <Field label="사양 프리셋">{data.vm?.flavorName ?? '—'}</Field>
+      <Field label="사양">
+        {data.vm?.flavorName ?? '직접 입력 (관리자 검토)'}
+      </Field>
       <Field label="요청 사양">
         {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
       </Field>
       <Field label="사용 기간">
-        {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
+        {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
       <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
       <Field label="사양 사유">{data.vm?.specReason ?? '—'}</Field>
       <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
       <Field label="표시명">{data.displayName}</Field>
-      <Field label="희망 호스트명(슬러그)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
-      {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
-      {data.vm?.desiredSubdomain && (
-        <Field label="서브도메인 선지정">
-          {data.vm?.rootDomain
-            ? `${data.vm?.desiredSubdomain}.${data.vm?.rootDomain}`
-            : data.vm?.desiredSubdomain}
-        </Field>
-      )}
+      <Field label="접속 이름">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
     </>
   ),
   resultFields: (data) => {

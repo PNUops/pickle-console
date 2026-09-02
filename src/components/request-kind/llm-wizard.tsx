@@ -1,11 +1,6 @@
 import { useState } from 'react'
 import { Alert, FormField, Input, Textarea } from '../ui'
-import type {
-  FieldErrors,
-  KindWizard,
-  RequestKindModule,
-  WizardStepId,
-} from './types'
+import type { FieldErrors, KindWizard, RequestKindModule, WizardStepId } from './types'
 
 /**
  * LLM API 키 스펙 입력 상태 — 신청 초안의 spec 부분으로 그대로 직렬화된다.
@@ -27,43 +22,12 @@ const INITIAL_SPEC: LlmKeySpecState = {
   reqDailyTokens: '',
 }
 
-const SPEC_FIELDS = ['usagePlan', 'reqRpm', 'reqTpm', 'reqDailyTokens'] as const
-
-/** 계약이 정한 상한 — 정책이 아니라 수의 폭이다 (분당 요청 수만 서버가 따로 막는다). */
+/** 계약이 정한 상한. 정책이 아니라 수의 폭이다(분당 요청 수만 서버가 따로 막는다). */
 const MAX_RPM = 10_000
-/** 계약의 reqTpm은 32비트 정수다 — 더 큰 값은 서버에 닿기 전에 뜻을 잃는다. */
+/** 계약의 reqTpm은 32비트 정수다. 더 큰 값은 서버에 닿기 전에 뜻을 잃는다. */
 const MAX_INT32 = 2_147_483_647
 /** reqDailyTokens는 64비트지만, 자바스크립트가 정확히 셀 수 있는 데까지만 받는다. */
 const MAX_SAFE = Number.MAX_SAFE_INTEGER
-
-/**
- * 저장된 초안의 LLM API 키 스펙 부분이 지금 모양인지.
- *
- * 모르는 키가 하나라도 있으면 버린다 — 다른 종류의 초안(그리고 필드가 갈라지기
- * 전의 평평한 초안)은 값의 타입만 봐서는 통과할 수 있는데, 그렇게 들어온 초안은
- * 화면에는 빈 칸으로 보이면서 제출 본문에는 남의 종류 필드를 싣는다.
- * 모양이 다르면 초안 전체가 버려진다(판단은 위저드 본체).
- */
-function isCompatibleSpecDraft(
-  value: unknown,
-): value is Partial<LlmKeySpecState> | null | undefined {
-  if (value === undefined || value === null) return true
-  if (typeof value !== 'object') return false
-  const draft = value as Record<string, unknown>
-  const known: readonly string[] = SPEC_FIELDS
-  for (const key of Object.keys(draft)) {
-    if (!known.includes(key)) return false
-  }
-  for (const field of SPEC_FIELDS) {
-    const entry = draft[field]
-    if (entry === undefined) continue
-    // null도 거른다 — 이 종류의 초안은 빈 칸을 빈 문자열로 적는다. null이 들어
-    // 있다면 이 화면이 쓴 초안이 아니고, 그대로 상태에 들어가면 다음 입력에서
-    // trim()·length가 터진다 (타입은 string이라 컴파일러는 잡지 못한다).
-    if (typeof entry !== 'string') return false
-  }
-  return true
-}
 
 /**
  * 비워 둔 한도는 오류가 아니다 — 적어 넣은 값만 검사한다.
@@ -94,7 +58,7 @@ function limitLabel(raw: string): string {
 function useLlmKeyWizard(draftSpec: unknown): KindWizard {
   const [spec, setSpec] = useState<LlmKeySpecState>(() => ({
     ...INITIAL_SPEC,
-    ...(isCompatibleSpecDraft(draftSpec) ? draftSpec : null),
+    ...(typeof draftSpec === 'object' && draftSpec != null ? draftSpec : null),
   }))
 
   const update = (patch: Partial<LlmKeySpecState>) =>
@@ -102,7 +66,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
   const validateStep = (step: WizardStepId): FieldErrors => {
     const next: FieldErrors = {}
-    if (step !== 'spec') return next
+    if (step !== 'resource') return next
     // 422의 errors[]가 실어 오는 필드 경로와 같은 키를 쓴다 — 서버가 되돌려준
     // 오류가 그대로 같은 입력 칸에 붙는다.
     if (spec.usagePlan.length > 2000)
@@ -129,7 +93,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
     error: null,
     validateStep,
 
-    specStep: (errors) => (
+    resourceFields: (errors) => (
       <>
         <Alert variant="info" title="한도는 비워 두어도 됩니다">
           모든 항목이 선택 입력입니다. 비워 두면 서비스 기본 한도로 발급되며, 그것으로
@@ -194,26 +158,16 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
       </>
     ),
 
-    summaryRows: (common, names) => [
-      ['워크스페이스', names.workspaceName],
-      ['기관', names.orgName],
-      ['사용 계획', spec.usagePlan.trim() || '—'],
-      ['희망 분당 요청 수', limitLabel(spec.reqRpm)],
-      ['희망 분당 토큰 수', limitLabel(spec.reqTpm)],
-      ['희망 일일 토큰 수', limitLabel(spec.reqDailyTokens)],
-      ['사용 목적', common.purpose.trim()],
-      ['수업/프로젝트명', common.courseOrProject.trim() || '—'],
-      ['기타 참고', common.extraNote.trim() || '—'],
-      ['표시명', common.displayName.trim()],
-      [
-        '사용 기간',
-        common.reqStartDate || common.reqEndDate
-          ? `${common.reqStartDate || '미지정'} ~ ${common.reqEndDate || '미지정'}`
-          : '미지정',
+    reviewRows: () => ({
+      resource: [
+        ['사용 계획', spec.usagePlan.trim() || '—'],
+        ['희망 분당 요청 수', limitLabel(spec.reqRpm)],
+        ['희망 분당 토큰 수', limitLabel(spec.reqTpm)],
+        ['희망 일일 토큰 수', limitLabel(spec.reqDailyTokens)],
       ],
-    ],
+    }),
 
-    confirmNotice: (
+    notice: (
       <Alert variant="info" title="한도 확정 안내">
         희망 한도는 참고 자료입니다. 실제 부여 한도는 관리자가 승인할 때 정하며,
         비워 둔 항목은 서비스 기본 한도로 발급됩니다.
@@ -238,20 +192,16 @@ export const llmKeyRequestKind: RequestKindModule = {
     title: 'LLM API 키',
     description: '코드에서 교내 LLM API를 호출할 때 쓰는 자격증명입니다.',
   },
-  specStepTitle: '사용 계획·한도',
   copy: {
-    workspaceDescription:
-      'LLM API 키는 워크스페이스 명의로 발급됩니다. 발급된 키는 신청한 사람만 쓸 수 있고, 접근 권한은 발급 후 키 상세에서 부여합니다.',
     noWorkspaceNotice:
       'LLM API 키를 신청할 수 있는 워크스페이스가 없습니다. 워크스페이스에 속해 있어야 신청할 수 있습니다.',
   },
-  fieldLabels: {
-    llmKey: 'LLM API 키 신청 항목',
-    'llmKey.usagePlan': '사용 계획',
-    'llmKey.reqRpm': '희망 분당 요청 수',
-    'llmKey.reqTpm': '희망 분당 토큰 수',
-    'llmKey.reqDailyTokens': '희망 일일 토큰 수',
+  fields: {
+    llmKey: { label: 'LLM API 키 신청 항목', step: 'resource' },
+    'llmKey.usagePlan': { label: '사용 계획', step: 'resource' },
+    'llmKey.reqRpm': { label: '희망 분당 요청 수', step: 'resource' },
+    'llmKey.reqTpm': { label: '희망 분당 토큰 수', step: 'resource' },
+    'llmKey.reqDailyTokens': { label: '희망 일일 토큰 수', step: 'resource' },
   },
-  isCompatibleSpecDraft,
   useWizard: useLlmKeyWizard,
 }

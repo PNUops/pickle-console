@@ -53,7 +53,42 @@ export const ubuntuOsImage: Schemas['OsImageResponse'] = {
   notes: '대부분의 수업·동아리 프로젝트에 적합합니다.',
 }
 
-export const osImages: Schemas['OsImageResponse'][] = [ubuntuOsImage]
+/**
+ * 서버가 주는 순서 그대로다: 계열 오름차순, 계열 안에서는 **최신 버전 먼저**.
+ * 신청 화면이 계열을 먼저 묻고 버전을 그다음에 물으며 그 두 번째 물음의 기본값이
+ * 최신이므로, 이 순서가 곧 화면의 기본 선택을 정한다.
+ */
+export const debian13OsImage: Schemas['OsImageResponse'] = {
+  id: uuid(3),
+  name: 'debian-13',
+  displayName: 'Debian 13',
+  osFamily: 'debian',
+  osVersion: '13',
+  sshUsername: 'debian',
+  version: 1,
+  minDiskGb: 10,
+  status: 'ACTIVE',
+  notes: null,
+}
+
+export const ubuntu2204OsImage: Schemas['OsImageResponse'] = {
+  id: uuid(2),
+  name: 'ubuntu-22.04',
+  displayName: 'Ubuntu 22.04 LTS',
+  osFamily: 'ubuntu',
+  osVersion: '22.04',
+  sshUsername: 'ubuntu',
+  version: 1,
+  minDiskGb: 10,
+  status: 'ACTIVE',
+  notes: null,
+}
+
+export const osImages: Schemas['OsImageResponse'][] = [
+  debian13OsImage,
+  ubuntuOsImage,
+  ubuntu2204OsImage,
+]
 
 /* ─── 사양 프리셋 (OS와 직교하는 축) ─── */
 
@@ -66,47 +101,41 @@ export const osImages: Schemas['OsImageResponse'][] = [ubuntuOsImage]
 function initialFlavors(): Schemas['VmFlavorResponse'][] {
   return [
     {
-      id: uuid(1),
-      name: 'small',
-      displayName: '소형',
-      vcpu: 1,
-      memoryMb: 1024,
-      diskGb: 10,
-      status: 'ACTIVE',
-      notes: '간단한 실습·정적 웹 서버에 적합합니다.',
-    },
-    {
-      id: uuid(2),
-      name: 'basic',
-      displayName: '기본형',
+      id: uuid(31),
+      name: 'highcpu',
+      displayName: '컴퓨팅 최적화',
       vcpu: 2,
+      memoryMb: 1024,
+      diskGb: 32,
+      status: 'ACTIVE',
+      notes: '연산을 많이 쓰는 작업에 맞습니다.',
+      displayOrder: 1,
+    },
+    {
+      id: uuid(32),
+      name: 'highmem',
+      displayName: '메모리 최적화',
+      vcpu: 1,
       memoryMb: 2048,
-      diskGb: 20,
+      diskGb: 32,
       status: 'ACTIVE',
-      notes: '대부분의 수업·캡스톤 프로젝트에 적합합니다.',
+      notes: '메모리를 많이 쓰는 작업에 맞습니다.',
+      displayOrder: 2,
     },
     {
-      id: uuid(3),
-      name: 'large',
-      displayName: '대형',
-      vcpu: 4,
-      memoryMb: 8192,
-      diskGb: 40,
-      status: 'ACTIVE',
-      notes: 'DB·데이터 처리 실습용입니다.',
-    },
-    {
-      id: uuid(9),
+      id: uuid(39),
       name: 'legacy',
-      displayName: '구형 프리셋',
+      displayName: '구형 사양',
       vcpu: 1,
       memoryMb: 512,
       diskGb: 10,
       status: 'DISABLED',
-      notes: '메모리가 부족해 은퇴시킨 프리셋',
+      notes: '메모리가 부족해 은퇴시킨 사양',
+      displayOrder: 9,
     },
   ]
 }
+
 
 /** 전 상태의 프리셋 저장소. 배열 자체는 유지하고 내용만 갈아 끼운다(참조 공유). */
 export const flavorStore: Schemas['VmFlavorResponse'][] = initialFlavors()
@@ -121,6 +150,25 @@ export const requestOptions = {
   sshHost: 'ssh.pcl.kr',
 }
 
+/* ─── 사용 기간 ─── */
+
+/**
+ * 공개 목록은 오늘 기준으로 아직 끝나지 않은 것만 담는다. 여기 상대 날짜를 쓰는 것은
+ * 절대 날짜로 적어 두면 그 날이 지나는 순간 테스트가 조용히 다른 것을 시험하기
+ * 때문이다. 무기한 한 줄이 섞여 있다.
+ */
+function daysFromNow(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+export const requestPeriods: Schemas['RequestPeriodResponse'][] = [
+  { id: uuid(21), displayName: '이번 학기', endDate: daysFromNow(120) },
+  { id: uuid(22), displayName: '이번 방학', endDate: daysFromNow(60) },
+  { id: uuid(23), displayName: '무기한 (교내 서비스)', endDate: null },
+]
+
 /* ─── handlers ─── */
 
 export const referenceHandlers: RequestHandler[] = [
@@ -132,6 +180,9 @@ export const referenceHandlers: RequestHandler[] = [
       flavorStore.filter((flavor) => flavor.status === 'ACTIVE'),
       { status: 200 },
     ),
+  ),
+  http.get('*/api/v1/request-periods', () =>
+    HttpResponse.json(requestPeriods, { status: 200 }),
   ),
   http.get('*/api/v1/meta/request-options', () =>
     HttpResponse.json(requestOptions, { status: 200 }),

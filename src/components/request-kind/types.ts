@@ -10,10 +10,14 @@ import type { ApproveRequest, CreateRequest, RequestDetail } from '../../api/que
  * 화면 컴포넌트는 바뀌지 않는다.
  */
 
-/** 위저드가 걷는 단계의 정체 — 위치(index)가 아니라 이것이 검증·렌더링의 키다. */
-export type WizardStepId = 'kind' | 'target' | 'spec' | 'purpose' | 'confirm'
+export type { WizardStepId } from './wizard-steps'
+import type { FieldSlot, WizardStepId } from './wizard-steps'
+export type { FieldSlot }
 
 export type FieldErrors = Partial<Record<string, string>>
+
+/** 사용 기간을 고르는 두 갈래. 무기한은 종료일이 없는 항목이라 여기 나타나지 않는다. */
+export type PeriodMode = 'preset' | 'custom'
 
 /** 종류와 무관한 신청 공통 입력 — 위저드 본체가 소유한다. */
 export interface CommonWizardState {
@@ -22,7 +26,8 @@ export interface CommonWizardState {
   purpose: string
   courseOrProject: string
   extraNote: string
-  reqStartDate: string
+  periodMode: PeriodMode
+  periodPresetId: string | null
   reqEndDate: string
   displayName: string
 }
@@ -35,31 +40,37 @@ export type KindCreatePayload = Omit<
   | 'purpose'
   | 'courseOrProject'
   | 'extraNote'
-  | 'reqStartDate'
+  | 'periodPresetId'
   | 'reqEndDate'
   | 'displayName'
 >
 
 /** useWizard가 돌려주는, 마운트된 위저드 한 판에서의 종류별 동작. */
 export interface KindWizard {
-  /** 이 종류의 스펙 상태 — 세션 초안의 spec 부분으로 그대로 직렬화된다. */
+  /** 이 종류의 스펙 상태. 세션 초안의 spec 부분으로 그대로 직렬화된다. */
   spec: unknown
-  /** 이 종류가 쓰는 카탈로그 로딩 — 페이지의 로딩·오류 게이트에 합류한다. */
+  /** 이 종류가 쓰는 카탈로그 로딩. 페이지의 로딩과 오류 게이트에 합류한다. */
   isPending: boolean
   error: Error | null
-  /** 단계마다 자기 필드만 검증한다 — 공통 필드는 위저드 본체가 본다. */
+  /** 단계마다 자기 필드만 검증한다. 공통 필드는 위저드 본체가 본다. */
   validateStep(step: WizardStepId): FieldErrors
-  /** 워크스페이스·기관·이름 단계의 '리소스 이름' 묶음에 덧붙는 종류별 입력. */
-  targetFields?: (errors: FieldErrors) => ReactNode
-  /** 종류별 스펙 단계 본문. */
-  specStep(errors: FieldErrors): ReactNode
-  /** 확인 단계 요약 — 공통·종류 항목이 섞이는 순서까지 종류가 정한다. */
-  summaryRows(
-    common: CommonWizardState,
-    names: { workspaceName: string; orgName: string },
-  ): [string, string][]
-  /** 확인 단계에 붙는 종류별 고지 (VM: 백업 책임 안내). */
-  confirmNotice?: ReactNode
+  /**
+   * '만들 리소스' 단계에서 이름 아래에 붙는 이 종류의 입력.
+   *
+   * 종류가 무엇을 얹든 한 덩어리로 받는다. 종전에는 이름 옆에 붙는 것과 사양
+   * 단계 본문이 따로였는데, 두 단계가 하나로 합쳐지면서 나눌 이유가 없어졌다.
+   */
+  resourceFields(errors: FieldErrors): ReactNode
+  /**
+   * 확인 단계 요약. 자기가 받은 항목만, 그 값을 입력한 단계별로 돌려준다.
+   *
+   * 공통 항목은 위저드 본체가 든다. 종전에는 종류가 공통 항목까지 섞어 한 줄로
+   * 늘어놓았는데, 확인 단계가 단계별 구획과 「수정」 링크를 갖게 되면서 어느
+   * 구획에 넣을지를 종류가 말해야 한다.
+   */
+  reviewRows(): Partial<Record<WizardStepId, [string, string][]>>
+  /** 확인 단계에 붙는 종류별 고지 (VM은 백업 책임 안내). */
+  notice?: ReactNode
   payload(): KindCreatePayload
 }
 
@@ -67,14 +78,16 @@ export interface KindWizard {
 export interface RequestKindModule {
   type: CreateRequest['type']
   picker: { title: string; description: string }
-  /** 종류별 스펙 단계의 스테퍼 제목 (VM: 'OS·사양'). */
-  specStepTitle: string
-  /** 종류가 언급되는 공통 단계 문구 — 화면 골격은 종류 이름을 모른다. */
-  copy: { workspaceDescription: string; noWorkspaceNotice: string }
-  /** 422 errors[] 필드명 → 한국어 라벨 — 공통 라벨에 합쳐진다. */
-  fieldLabels: Record<string, string>
-  /** 저장된 초안의 spec 부분이 지금 모양인지 — 아니면 초안 전체를 버린다. */
-  isCompatibleSpecDraft(value: unknown): boolean
+  /** 종류가 언급되는 공통 단계 문구. 화면 골격은 종류 이름을 모른다. */
+  copy: { noWorkspaceNotice: string }
+  /**
+   * 이 종류가 422로 되돌려받을 수 있는 필드. 공통 표에 합쳐진다.
+   *
+   * 라벨과 단계를 한 값에 묶은 것은 의도다. 따로 두면 종류를 추가하는 사람이
+   * 라벨만 등록하고 단계를 빠뜨릴 수 있고, 그러면 그 필드의 422는 아무 칸에도
+   * 붙지 못한 채 목록으로만 뜬다.
+   */
+  fields: Record<string, FieldSlot>
   useWizard(draftSpec: unknown): KindWizard
 }
 

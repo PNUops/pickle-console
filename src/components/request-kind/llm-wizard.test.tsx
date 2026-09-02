@@ -3,27 +3,31 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { createdRequestBodies } from '../../test/msw/handlers/requests'
-import { VM_REQUEST_DRAFT_KEY } from '../../lib/storage-keys'
+import { REQUEST_DRAFT_KEY } from '../../lib/request-draft'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
 import { uuid } from '../../test/msw/ids'
-import { llmKeyRequestKind } from './llm-wizard'
 
 function renderWizard() {
   server.use(refreshSuccessHandler('access-user'))
   renderApp('/console/requests/new')
 }
 
-/** 종류 선택 → 워크스페이스·기관·이름까지, 스펙 단계 앞에서 멈춘다. */
+/** 종류를 고르고 이름까지 채워, 한도 칸이 보이는 자리에서 멈춘다. */
 async function reachSpecStep(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole('heading', { name: '리소스 신청' })
-  await user.click(await screen.findByRole('button', { name: /LLM API 키/ }))
+  await user.click(await screen.findByRole('radio', { name: /LLM API 키/ }))
   await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.selectOptions(await screen.findByLabelText('신청 워크스페이스'), uuid(12))
-  await user.selectOptions(screen.getByLabelText('기관'), uuid(1))
-  await user.type(screen.getByLabelText('표시명'), '캡스톤 챗봇 키')
-  await user.click(screen.getByRole('button', { name: '다음' }))
+  await user.type(await screen.findByLabelText('이름'), '캡스톤 챗봇 키')
   await screen.findByLabelText('희망 분당 요청 수')
+}
+
+/** 한도 뒤의 신청 내용 단계를 채운다. */
+async function fillRequestStep(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+  await user.click(screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+  await user.type(screen.getByLabelText('사용 목적'), '실습')
+  await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
 }
 
 describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
@@ -39,11 +43,11 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
 
     // 아무것도 채우지 않고 다음으로 넘어간다.
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.type(await screen.findByLabelText('사용 목적'), '캡스톤 챗봇 개발')
+    await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     // 확인 단계: 비워 둔 한도는 '—'가 아니라 서비스 기본값으로 읽힌다.
-    expect(await screen.findByText('신청 내용 확인')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '만들 리소스' })).toBeInTheDocument()
     expect(screen.getAllByText('서비스 기본값')).toHaveLength(3)
     expect(screen.getByText('한도 확정 안내')).toBeInTheDocument()
 
@@ -54,10 +58,10 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
       type: 'LLM_API_KEY',
       workspaceId: uuid(12),
       orgId: uuid(1),
-      purpose: '캡스톤 챗봇 개발',
+      purpose: '실습',
       courseOrProject: null,
       extraNote: null,
-      reqStartDate: null,
+      periodPresetId: uuid(21),
       reqEndDate: null,
       displayName: '캡스톤 챗봇 키',
       llmKey: {
@@ -79,7 +83,7 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
     await user.type(screen.getByLabelText('희망 분당 토큰 수'), '20000')
     await user.type(screen.getByLabelText('희망 일일 토큰 수'), '1000000')
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.type(await screen.findByLabelText('사용 목적'), '캡스톤 챗봇 개발')
+    await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     expect(await screen.findByText('20,000')).toBeInTheDocument()
@@ -133,64 +137,55 @@ describe('LLM API 키 신청 위저드 — 한도 검증', () => {
   })
 })
 
-describe('LLM API 키 신청 위저드 — 초안 호환성', () => {
-  test('이 종류의 모양이 아닌 spec은 초안 자체를 거른다', () => {
-    const compatible = llmKeyRequestKind.isCompatibleSpecDraft
-    // 비어 있는 초안과 이 종류의 모양은 통과한다.
-    expect(compatible(null)).toBe(true)
-    expect(compatible(undefined)).toBe(true)
-    expect(compatible({})).toBe(true)
-    expect(compatible({ usagePlan: '요약', reqRpm: '600' })).toBe(true)
-    // 다른 종류(VM)의 초안은 모르는 키 때문에 걸린다.
-    expect(
-      compatible({ imageId: uuid(1), flavorId: uuid(2), reqVcpu: 2, reqDiskGb: 20 }),
-    ).toBe(false)
-    // 한도를 숫자로 적어 둔 옛 초안은 빈 칸과 0을 구분하지 못한다.
-    expect(compatible({ reqRpm: 600 })).toBe(false)
-    expect(compatible('reqRpm=600')).toBe(false)
-    // null은 이 화면이 쓰지 않는 값이다 — 그대로 들어오면 trim()에서 터진다.
-    expect(compatible({ usagePlan: null })).toBe(false)
-    expect(compatible({ reqRpm: null })).toBe(false)
-  })
-
-  test('다른 종류의 spec이 남은 초안은 통째로 버려진다', async () => {
+describe('LLM API 키 신청 위저드 — 초안', () => {
+  /**
+   * 초안의 모양 판정은 없앴다. 초안을 쓰는 곳이 이 화면 하나뿐이라 남의 모양이 들어올
+   * 자리가 없고, 판정을 두면 없어질 초안을 계속 걸러 내는 코드가 남는다. 대신 지켜야
+   * 할 것은 이것이다. 남의 모양이 섞여 있어도 제출 본문에는 이 종류의 필드만 실린다.
+   */
+  test('남의 종류 모양이 섞인 초안도 제출 본문을 오염시키지 않는다', async () => {
+    const user = userEvent.setup()
     sessionStorage.setItem(
-      VM_REQUEST_DRAFT_KEY,
+      REQUEST_DRAFT_KEY,
       JSON.stringify({
         kind: 'LLM_API_KEY',
-        common: {
-          workspaceId: uuid(12),
-          orgId: uuid(1),
-          purpose: '실습',
-          displayName: '실습 키',
-        },
-        // VM 초안의 스펙 모양 — 타입만 보면 통과할 수도 있는 값이다.
-        spec: { imageId: uuid(1), flavorId: uuid(2), reqVcpu: 2, reqDiskGb: 20 },
+        common: { displayName: '실습 키' },
+        // VM 초안의 스펙 모양이 남아 있는 경우.
+        spec: { imageId: uuid(1), flavorId: uuid(31), reqVcpu: 2, usagePlan: '요약' },
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
-    renderApp('/console/requests/new?step=3')
+    renderApp('/console/requests/new?kind=LLM_API_KEY')
 
-    // 초안이 버려졌으므로 공통 입력까지 비어 있고, 첫 미완료 단계로 돌아온다.
-    expect(await screen.findByLabelText('표시명')).toHaveValue('')
+    expect(await screen.findByLabelText('이름')).toHaveValue('실습 키')
+    expect(screen.getByLabelText('사용 계획')).toHaveValue('요약')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+
+    const body = createdRequestBodies.at(-1)!
+    expect(body).not.toHaveProperty('vm')
+    expect(body.llmKey).toEqual({
+      usagePlan: '요약',
+      reqRpm: null,
+      reqTpm: null,
+      reqDailyTokens: null,
+    })
   })
 
   test('이 종류의 spec은 초안에서 그대로 복원된다', async () => {
     sessionStorage.setItem(
-      VM_REQUEST_DRAFT_KEY,
+      REQUEST_DRAFT_KEY,
       JSON.stringify({
         kind: 'LLM_API_KEY',
-        common: {
-          workspaceId: uuid(12),
-          orgId: uuid(1),
-          purpose: '실습',
-          displayName: '실습 키',
-        },
+        common: { displayName: '실습 키' },
         spec: { usagePlan: '요약 호출', reqRpm: '600', reqTpm: '', reqDailyTokens: '' },
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
-    renderApp('/console/requests/new?step=3')
+    renderApp('/console/requests/new?kind=LLM_API_KEY')
 
     expect(await screen.findByLabelText('희망 분당 요청 수')).toHaveValue(600)
     expect(screen.getByLabelText('사용 계획')).toHaveValue('요약 호출')

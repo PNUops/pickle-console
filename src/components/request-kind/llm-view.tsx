@@ -14,7 +14,9 @@ import {
   formatCreditModels,
   parseCreditModels,
 } from '../../lib/credit-model-allowlist'
+import { todayKstDate } from '../../lib/format'
 import { Field } from './Field'
+import { periodText } from './period-text'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
 /** 금액 한도 리셋 창의 표시 이름 — 값은 계약의 CreditLimitReset. */
@@ -140,7 +142,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditModelsTouched, setCreditModelsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
-  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
+  // 신청서에는 시작일이 없다. 부여 기간의 시작은 발급되는 날, 곧 오늘이다.
+  const [startDate, setStartDate] = useState(todayKstDate)
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [approveComment, setApproveComment] = useState('')
 
@@ -523,7 +526,7 @@ export const llmKeyRequestView: RequestKindView = {
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
       <Field label="사용 기간">
-        {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
+        {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
       <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>

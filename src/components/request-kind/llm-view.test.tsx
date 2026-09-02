@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
+import { todayKstDate } from '../../lib/format'
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
 import { orgAdminUser, refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { server } from '../../test/msw/server'
@@ -24,7 +25,6 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
     purpose: '캡스톤 챗봇 개발',
     courseOrProject: '2026-1 캡스톤디자인 3조',
     extraNote: null,
-    reqStartDate: '2026-07-15',
     reqEndDate: '2026-12-20',
     displayName: '캡스톤 챗봇 키',
     llmKey: {
@@ -129,8 +129,9 @@ describe('LLM API 키 신청 — 승인 폼', () => {
         '신청서에 대응하는 항목이 없어 승인자만 정합니다. 비우면 서비스 기본값이 적용됩니다.',
       ),
     ).toBeInTheDocument()
-    // 기간은 종류를 가리지 않는 공통 축이라 신청 기간에서 시작한다.
-    expect(screen.getByLabelText('사용 시작일')).toHaveValue('2026-07-15')
+    // 신청서에는 시작일이 없다. 걸린 로직이 없어 없앴고, 부여 기간의 시작은 발급되는
+    // 날이므로 오늘로 채운다. KST 달력 날짜다.
+    expect(screen.getByLabelText('사용 시작일')).toHaveValue(todayKstDate())
   })
 
   test('희망값을 적지 않은 신청도 그 사실을 그대로 말한다', async () => {
@@ -163,7 +164,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     // 네 항목이 모두 비어 있어도 llmKey 자체는 실려 나간다 (계약이 요구한다).
     expect(approved).toEqual([
       {
-        grantedStartDate: '2026-07-15',
+        grantedStartDate: todayKstDate(),
         grantedEndDate: '2026-12-20',
         comment: null,
         llmKey: {

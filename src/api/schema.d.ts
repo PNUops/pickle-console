@@ -844,6 +844,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/request-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminRequestPeriods"];
+        put?: never;
+        post: operations["createAdminRequestPeriod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/request-periods/{periodId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminRequestPeriod"];
+        trace?: never;
+    };
     "/admin/requests": {
         parameters: {
             query?: never;
@@ -2273,6 +2305,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/request-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 신청 가능한 사용 기간 목록
+         * @description 관리자가 등록한 기간 중 오늘 기준으로 아직 끝나지 않은 것만 돌려줍니다. 종료일이 없는 항목은 무기한입니다.
+         */
+        get: operations["listRequestPeriods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests": {
         parameters: {
             query?: never;
@@ -3210,6 +3262,25 @@ export interface components {
             /** @description 동기화 토큰 발급 여부 (미발급이면 에이전트 인증이 항상 실패) */
             tokenIssued: boolean;
         };
+        AdminRequestPeriodResponse: {
+            displayName: string;
+            /**
+             * Format: int32
+             * @description 신청 화면에서의 표시 순서. 값이 같으면 먼저 만든 것이 앞에 옵니다.
+             */
+            displayOrder: number;
+            /**
+             * Format: date
+             * @description 종료일. 값이 없으면 무기한입니다.
+             */
+            endDate?: string | null;
+            /** @description 종료일이 이미 지나 신청 화면에 나오지 않는 항목인지. */
+            expired: boolean;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            status: components["schemas"]["CatalogStatus"];
+        };
         AdminRouteView: {
             /** Format: date-time */
             appliedAt?: string | null;
@@ -3604,6 +3675,20 @@ export interface components {
              */
             targetPort: number;
         };
+        CreateRequestPeriodRequest: {
+            displayName: string;
+            /**
+             * Format: int32
+             * @description 표시 순서. 비우면 0입니다.
+             */
+            displayOrder?: number | null;
+            /**
+             * Format: date
+             * @description 종료일. 비우면 무기한 항목이 되고, 신청자가 그것을 고를 수 있게 됩니다.
+             */
+            endDate?: string | null;
+            name: string;
+        };
         CreateRequestRequest: {
             courseOrProject?: string | null;
             displayName: string;
@@ -3611,11 +3696,11 @@ export interface components {
             llmKey?: components["schemas"]["CreateLlmKeyRequestSpec"] | null;
             /** Format: uuid */
             orgId: string;
+            /** Format: uuid */
+            periodPresetId?: string | null;
             purpose: string;
             /** Format: date */
             reqEndDate?: string | null;
-            /** Format: date */
-            reqStartDate?: string | null;
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["CreateVmRequestSpec"] | null;
             /** Format: uuid */
@@ -3633,6 +3718,8 @@ export interface components {
             diskGb: number;
             displayName: string;
             /** Format: int32 */
+            displayOrder?: number | null;
+            /** Format: int32 */
             memoryMb: number;
             name: string;
             notes?: string | null;
@@ -3642,7 +3729,7 @@ export interface components {
         CreateVmRequestSpec: {
             desiredSlug?: string | null;
             /** Format: uuid */
-            flavorId: string;
+            flavorId?: string | null;
             /** Format: uuid */
             imageId: string;
             /** Format: int32 */
@@ -5664,11 +5751,17 @@ export interface components {
              */
             orgId?: string | null;
             orgName: string;
+            /**
+             * @description 종료일을 고른 기간 항목의 이름. 직접 적었으면 null입니다.
+             * @example 2026학년도 1학기
+             */
+            periodName?: string | null;
             purpose: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description 신청한 사용 종료일. 값이 없으면 무기한을 요청한 것입니다.
+             */
             reqEndDate?: string | null;
-            /** Format: date */
-            reqStartDate?: string | null;
             /**
              * Format: uuid
              * @description 신청자. 행이 사라진 경우에만 null입니다.
@@ -5692,6 +5785,24 @@ export interface components {
             allowedRootDomains: string[];
             reservedSubdomains: string[];
             sshHost: string;
+        };
+        RequestPeriodResponse: {
+            /**
+             * @description 화면에 보이는 이름
+             * @example 2026학년도 1학기
+             */
+            displayName: string;
+            /**
+             * Format: date
+             * @description 이 기간의 종료일. 값이 없으면 무기한입니다.
+             * @example 2026-06-30
+             */
+            endDate?: string | null;
+            /**
+             * Format: uuid
+             * @description 기간 항목 식별자
+             */
+            id: string;
         };
         RequestReviewResponse: {
             comment?: string | null;
@@ -6043,6 +6154,19 @@ export interface components {
             position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
         };
+        UpdateRequestPeriodRequest: {
+            /** @description true면 종료일을 지워 무기한으로 만듭니다. endDate와 함께 보낼 수 없습니다. */
+            clearEndDate?: boolean | null;
+            displayName?: string | null;
+            /** Format: int32 */
+            displayOrder?: number | null;
+            /**
+             * Format: date
+             * @description 종료일. 무기한으로 바꾸려면 clearEndDate를 씁니다.
+             */
+            endDate?: string | null;
+            status?: components["schemas"]["CatalogStatus"] | null;
+        };
         UpdateResourceAccessGrantRequest: {
             /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
@@ -6054,10 +6178,15 @@ export interface components {
             /** Format: int32 */
             diskGb?: number | null;
             displayName?: string | null;
+            /**
+             * Format: int32
+             * @description 신청 화면에서의 표시 순서. 값이 같으면 먼저 만든 것이 앞에 옵니다.
+             */
+            displayOrder?: number | null;
             /** Format: int32 */
             memoryMb?: number | null;
             notes?: string | null;
-            /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 신청·VM 무영향) */
+            /** @description ACTIVE = 신청 화면에 노출, DISABLED = 은퇴 (기존 신청과 VM 무영향) */
             status?: components["schemas"]["CatalogStatus"] | null;
             /** Format: int32 */
             vcpu?: number | null;
@@ -6276,6 +6405,8 @@ export interface components {
             /** Format: int32 */
             diskGb: number;
             displayName: string;
+            /** Format: int32 */
+            displayOrder: number;
             /** Format: uuid */
             id: string;
             /** Format: int32 */
@@ -6361,7 +6492,6 @@ export interface components {
         };
         VmRequestSpecResponse: {
             desiredSlug?: string | null;
-            desiredSubdomain?: string | null;
             /** Format: uuid */
             flavorId?: string | null;
             /** @description 요청한 사양 프리셋의 표시 이름. flavorId가 있을 때 함께 있습니다. */
@@ -6377,7 +6507,6 @@ export interface components {
             reqMemoryMb: number;
             /** Format: int32 */
             reqVcpu: number;
-            rootDomain?: string | null;
             specReason?: string | null;
         };
         /** @enum {string} */
@@ -8454,6 +8583,103 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminRequestPeriods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminRequestPeriodResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createAdminRequestPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRequestPeriodRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminRequestPeriodResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminRequestPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                periodId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRequestPeriodRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminRequestPeriodResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -11663,6 +11889,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OsImageResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listRequestPeriods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestPeriodResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

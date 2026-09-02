@@ -1,20 +1,3 @@
-/**
- * 리소스 신청 위저드 초안의 sessionStorage 키. 작성 페이지가 저장·복원하고,
- * 로그아웃 시 함께 제거해 같은 탭의 다음 사용자에게 초안이 새지 않게 한다.
- * 초안은 종류 판별자(kind)와 공통부·종류별 스펙부를 담는다 — 키 이름과 값은
- * VM 전용이던 시절의 것이지만, 바꾸면 이미 저장된 초안이 로그아웃 정리를
- * 비켜가므로 그대로 둔다.
- */
-export const VM_REQUEST_DRAFT_KEY = 'pickle.vm-request-draft'
-
-/**
- * 마지막으로 보던 워크스페이스를 기억하던 localStorage 키. 지금은 아무도 쓰지
- * 않는다 — 범위는 URL이 정한다. 이미 값이 남아 있는 브라우저가 있으므로
- * 로그아웃 시 함께 지워, 같은 브라우저의 다음 사용자에게 직전 사용자의
- * 워크스페이스 id가 남지 않게 한다.
- */
-export const LEGACY_CONSOLE_SCOPE_KEY = 'pickle.console-scope'
-
 /** ORG 계층 관리자가 마지막으로 선택한 유효 기관. URL `org`가 항상 우선한다. */
 export const ADMIN_ORG_SCOPE_KEY = 'pickle.admin-org-scope'
 

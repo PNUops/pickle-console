@@ -14,6 +14,10 @@ export type ResourceRole = Schemas['ResourceRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
 export type OsImage = Schemas['OsImageResponse']
 export type VmFlavor = Schemas['VmFlavorResponse']
+export type RequestPeriod = Schemas['RequestPeriodResponse']
+export type AdminRequestPeriod = Schemas['AdminRequestPeriodResponse']
+export type CreateRequestPeriod = Schemas['CreateRequestPeriodRequest']
+export type UpdateRequestPeriod = Schemas['UpdateRequestPeriodRequest']
 export type CreateVmFlavor = Schemas['CreateVmFlavorRequest']
 export type UpdateVmFlavor = Schemas['UpdateVmFlavorRequest']
 export type CreateRequest = Schemas['CreateRequestRequest']
@@ -233,6 +237,18 @@ export function fetchVmFlavors(): Promise<VmFlavor[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vm-flavors')
     if (!data) throw toApiError(error, '사양 프리셋 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 신청 화면이 제공할 사용 기간. 서버가 오늘 기준으로 아직 끝나지 않은 것만 준다.
+ * 비어 있는 것은 정상이고, 그때 사용자는 날짜를 직접 적는다.
+ */
+export function fetchRequestPeriods(): Promise<RequestPeriod[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/request-periods')
+    if (!data) throw toApiError(error, '사용 기간 목록을 불러오지 못했습니다.')
     return data
   })
 }

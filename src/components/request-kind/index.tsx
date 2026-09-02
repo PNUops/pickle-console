@@ -1,6 +1,7 @@
 import { useQueries } from '@tanstack/react-query'
 import { Alert } from '../ui'
 import { Field } from './Field'
+import { periodText } from './period-text'
 import type { RequestKindView, RequestKindModule } from './types'
 import { vmRequestKind } from './vm-wizard'
 import { vmRequestView } from './vm-view'
@@ -51,7 +52,7 @@ const unknownKindView: RequestKindView = {
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
       <Field label="사용 기간">
-        {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
+        {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
       <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
