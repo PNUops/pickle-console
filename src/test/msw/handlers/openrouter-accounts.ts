@@ -8,6 +8,7 @@ import { adminReadScope } from './org-scope'
 type Schemas = components['schemas']
 type Account = Schemas['OpenRouterAccountResponse']
 type Credential = Schemas['OpenRouterCredentialStateResponse']
+type Allocation = Schemas['OpenRouterAccountAllocationResponse']
 type Credits = Schemas['OpenRouterAccountCreditsResponse']
 
 const now = '2026-08-31T00:30:00+09:00'
@@ -57,6 +58,26 @@ function activeCredential(overrides: Partial<Credential> = {}): Credential {
   }
 }
 
+/**
+ * 배정 합계 픽스처. 기본은 아무것도 배정되지 않은 계정이고, 화면이 갈리는
+ * 자리(초과, 창 한도, 발급 대기, 사용액 미보고)는 부르는 쪽이 덮어쓴다.
+ */
+function allocation(overrides: Partial<Allocation> = {}): Allocation {
+  return {
+    committedCreditLimit: 0,
+    committedTotalCap: 0,
+    committedDaily: 0,
+    committedWeekly: 0,
+    committedMonthly: 0,
+    committedKeyCount: 0,
+    remainingCommitment: 0,
+    committedUsage: 0,
+    awaitingProvisionKeyCount: 0,
+    usageUnreportedKeyCount: 0,
+    ...overrides,
+  }
+}
+
 function initialAccounts(): Account[] {
   return [
     {
@@ -73,6 +94,14 @@ function initialAccounts(): Account[] {
       activeCredential: activeCredential(),
       rotationCredential: null,
       credits: credits(),
+      allocation: allocation({
+        committedCreditLimit: 300,
+        committedTotalCap: 300,
+        committedKeyCount: 30,
+        remainingCommitment: 290,
+        committedUsage: 10,
+        awaitingProvisionKeyCount: 28,
+      }),
       createdAt: '2026-08-30T19:50:00+09:00',
       updatedAt: now,
     },
@@ -107,6 +136,15 @@ function initialAccounts(): Account[] {
         keysFreshness: 'STALE',
         keysError: 'VENDOR_UNAVAILABLE',
         keysLastAttemptAt: '2026-08-31T01:19:00+09:00',
+      }),
+      allocation: allocation({
+        committedCreditLimit: 40,
+        committedTotalCap: 20,
+        committedMonthly: 20,
+        committedKeyCount: 3,
+        remainingCommitment: 38,
+        committedUsage: 2,
+        usageUnreportedKeyCount: 1,
       }),
       createdAt: '2026-08-30T20:50:00+09:00',
       updatedAt: now,
@@ -147,6 +185,7 @@ function initialAccounts(): Account[] {
         keysLastSuccessAt: null,
         keysLastAttemptAt: null,
       }),
+      allocation: allocation(),
       createdAt: '2026-08-30T21:50:00+09:00',
       updatedAt: now,
     },
@@ -274,6 +313,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
         keysLastSuccessAt: null,
         keysLastAttemptAt: null,
       }),
+      allocation: allocation(),
       createdAt: now,
       updatedAt: now,
     }
