@@ -7,7 +7,9 @@ import {
   type OpenRouterAccount,
   type RequestDetail,
 } from '../../api/queries'
-import { Alert, Button, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
+import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
+import { AllocationWarning } from '../OpenRouterCredits'
+import { evaluateAllocation } from '../../lib/openrouter-credits'
 import { adminPaths } from '../../lib/paths'
 import {
   creditModelsError,
@@ -143,6 +145,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [approveComment, setApproveComment] = useState('')
+  // 확인한 내용을 통째로 들고 있다가 지금 값과 대조한다. boolean으로 들면 확인 뒤
+  // 모달을 닫고 금액이나 계정을 고쳐 다시 열었을 때 확인이 살아남는다.
+  const [acknowledged, setAcknowledged] = useState<string | null>(null)
 
   // 검증과 제출 본문과 확인 창이 같은 계정을 근거로 삼아야 한다 — 자동 선택 규칙을
   // 세 번 다시 쓰면 한 곳만 고쳤을 때 서로 다른 계정을 말하게 된다.
@@ -150,6 +155,28 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     accountData.accounts.length === 1
       ? accountData.accounts[0]
       : accountData.accounts.find((account) => account.id === openrouterAccountId) ?? null
+
+  // 초과 배정 판정. 계정과 금액이 정해졌을 때만 의미가 있고, 판정 자체는 화면
+  // 넷이 공유하는 순수 함수 하나가 한다.
+  const pendingCredit = creditValue(creditLimit) ?? 0
+  const judgement =
+    effectiveAccount && pendingCredit > 0
+      ? evaluateAllocation({
+          allocation: effectiveAccount.allocation,
+          credits: effectiveAccount.credits,
+          pendingAmount: pendingCredit,
+        })
+      : null
+  const acknowledgementKey = judgement
+    ? JSON.stringify([
+        effectiveAccount?.id,
+        pendingCredit,
+        judgement.state,
+        judgement.remaining,
+        judgement.balance,
+        judgement.observedAt,
+      ])
+    : null
 
   const accountDefault = effectiveAccount?.defaultCreditAllowedModels ?? []
   const prefillKey = effectiveAccount?.id ?? null
@@ -362,6 +389,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             </button>
           </p>
         ) : null}
+        {judgement ? (
+          <AllocationWarning judgement={judgement} pendingLabel={creditText(pendingCredit)} />
+        ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField label="사용 시작일" error={fieldErrors.grantedStartDate}>
             <Input
@@ -416,12 +446,26 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             이 키가 어느 사업 계정으로 결제되는지는 발급 뒤 바꿀 수 없습니다. 옮기려면 새 키를 발급해 전환해야 합니다.
           </Alert>
         ) : null}
+        {judgement ? (
+          <AllocationWarning judgement={judgement} pendingLabel={creditText(pendingCredit)} />
+        ) : null}
+        {judgement?.needsAcknowledgement ? (
+          <Checkbox
+            checked={acknowledged === acknowledgementKey}
+            onChange={(event) =>
+              setAcknowledged(event.target.checked ? acknowledgementKey : null)
+            }
+            label="초과 배정임을 확인했습니다"
+          />
+        ) : null}
         <p>
           승인하면 키가 만들어지지만 아직 쓸 수 없습니다. 평문 키는 신청자가 직접
           발급받습니다.
         </p>
       </div>
     ),
+
+    confirmReady: !judgement?.needsAcknowledgement || acknowledged === acknowledgementKey,
 
     successMessage: '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
   }

@@ -7,6 +7,7 @@ import type {
 } from '../api/queries'
 import { formatRelative } from '../lib/format'
 import {
+  type AllocationJudgement,
   type AllocationVerdict,
   evaluateAllocation,
   FORECAST_REASON_LABELS,
@@ -255,5 +256,58 @@ export function AccountAllocationSection({
         </p>
       ) : null}
     </section>
+  )
+}
+
+/**
+ * 승인과 한도 변경이 함께 쓰는 초과 배정 경고.
+ *
+ * 막지 않는다. 대부분 한도를 다 쓰지 않으므로 의도적인 초과 배정은 정당한 운영
+ * 판단이고, 여기서 하는 일은 승인자가 그 판단을 하고 있다는 것을 알게 하는 것뿐이다.
+ * 잔액을 한 번도 관측하지 못한 계정은 경고가 아니라 안내다 — 우리 관측이 없는 것이지
+ * 잔액이 없는 것이 아니고, 그 이유로 승인을 붙잡으면 방금 등록한 계정을 못 쓴다.
+ */
+export function AllocationWarning({
+  judgement,
+  pendingLabel,
+}: {
+  judgement: AllocationJudgement
+  /** 지금 부여하려는 금액의 표기. 없으면 이번 분을 따로 적지 않는다. */
+  pendingLabel?: string
+}) {
+  if (!judgement.warns) return null
+  const note = ALLOCATION_NOTES[judgement.state]
+  return (
+    <MessageBar
+      variant={judgement.state === 'UNKNOWN' ? 'info' : 'warning'}
+      title={judgement.state === 'UNKNOWN' ? '잔액을 확인하지 못했습니다' : '초과 배정'}
+    >
+      <div className="space-y-1">
+        <p>{note}</p>
+        <ul className="space-y-0.5">
+          <li>
+            남은 배정 {formatUsd(judgement.remaining)}
+            {pendingLabel ? ` + 이번 승인 ${pendingLabel}` : null}
+            {' = '}
+            {formatUsd(judgement.projected)}
+          </li>
+          <li>
+            잔액 {formatUsd(judgement.balance)}
+            {judgement.observedAt ? ` (${formatRelative(judgement.observedAt)} 관측)` : null}
+          </li>
+          {judgement.committed !== judgement.remaining ? (
+            <li className="text-foreground-secondary">
+              배정 합계는 {formatUsd(judgement.committed)}입니다. 이미 쓴 금액은 잔액에서도
+              빠져 있으므로 잔액과 견주는 쪽은 남은 배정입니다.
+            </li>
+          ) : null}
+          {judgement.windowCommitment > 0 ? (
+            <li className="text-foreground-secondary">
+              이 중 {formatUsd(judgement.windowCommitment)}는 리셋 창마다 다시 채워집니다.
+            </li>
+          ) : null}
+        </ul>
+      </div>
+    </MessageBar>
   )
 }
