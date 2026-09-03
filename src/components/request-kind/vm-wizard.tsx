@@ -269,18 +269,18 @@ function useVmWizard(draftSpec: unknown): KindWizard {
         if (spec.raiseVcpu) {
           if (spec.reqVcpu <= CUSTOM_BASE.vcpu)
             next['vm.reqVcpu'] = `기본값(${CUSTOM_BASE.vcpu})보다 큰 값을 적어 주세요.`
-          if (!spec.vcpuReason.trim()) next['vm.vcpuReason'] = 'vCPU를 늘리는 이유를 적어 주세요.'
+          if (!spec.vcpuReason.trim()) next['vm.vcpuReason'] = 'vCPU 요청 사유를 적어 주세요.'
         }
         if (spec.raiseMemory) {
           if (spec.reqMemoryMb <= CUSTOM_BASE.memoryMb)
             next['vm.reqMemoryMb'] = `기본값(${CUSTOM_BASE.memoryMb / 1024} GiB)보다 큰 값을 적어 주세요.`
           if (!spec.memoryReason.trim())
-            next['vm.memoryReason'] = '메모리를 늘리는 이유를 적어 주세요.'
+            next['vm.memoryReason'] = '메모리 요청 사유를 적어 주세요.'
         }
         if (spec.raiseDisk) {
           if (spec.reqDiskGb <= baseDisk)
             next['vm.reqDiskGb'] = `기본값(${baseDisk} GiB)보다 큰 값을 적어 주세요.`
-          if (!spec.diskReason.trim()) next['vm.diskReason'] = '디스크를 늘리는 이유를 적어 주세요.'
+          if (!spec.diskReason.trim()) next['vm.diskReason'] = '디스크 요청 사유를 적어 주세요.'
         }
         if (!spec.raiseVcpu && !spec.raiseMemory && !spec.raiseDisk)
           next['vm.flavorId'] = '늘릴 항목을 하나 이상 고르고 이유를 적어 주세요.'

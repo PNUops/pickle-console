@@ -156,13 +156,13 @@ describe('VM 신청 위저드 — 사양', () => {
 
     await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
     expect(screen.getByLabelText('메모리 (GiB)')).toBeEnabled()
-    expect(screen.getByLabelText('메모리를 늘리는 이유')).toBeInTheDocument()
+    expect(screen.getByLabelText('메모리 요청 사유')).toBeInTheDocument()
     // 켜지 않은 축은 잠긴 채이고 이유를 묻지 않는다.
     expect(screen.getByLabelText('vCPU (개)')).toBeDisabled()
-    expect(screen.queryByLabelText('vCPU를 늘리는 이유')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('vCPU 요청 사유')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('메모리를 늘리는 이유를 적어 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('메모리 요청 사유를 적어 주세요.')).toBeInTheDocument()
     expect(screen.getByText('기본값(1 GiB)보다 큰 값을 적어 주세요.')).toBeInTheDocument()
   })
 
@@ -180,12 +180,12 @@ describe('VM 신청 위저드 — 사양', () => {
     await user.click(screen.getByRole('checkbox', { name: 'vCPU 변경' }))
     await user.clear(screen.getByLabelText('vCPU (개)'))
     await user.type(screen.getByLabelText('vCPU (개)'), '4')
-    await user.type(screen.getByLabelText('vCPU를 늘리는 이유'), '빌드를 병렬로 돌립니다')
+    await user.type(screen.getByLabelText('vCPU 요청 사유'), '빌드를 병렬로 돌립니다')
 
     await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
     await user.clear(screen.getByLabelText('메모리 (GiB)'))
     await user.type(screen.getByLabelText('메모리 (GiB)'), '16')
-    await user.type(screen.getByLabelText('메모리를 늘리는 이유'), '데이터셋을 올려 둡니다')
+    await user.type(screen.getByLabelText('메모리 요청 사유'), '데이터셋을 올려 둡니다')
 
     await user.click(screen.getByRole('button', { name: '다음' }))
     await fillRequestStep(user)
@@ -217,7 +217,7 @@ describe('VM 신청 위저드 — 사양', () => {
     const memory = screen.getByLabelText('메모리 (GiB)')
     await user.clear(memory)
     await user.type(memory, '16')
-    await user.type(screen.getByLabelText('메모리를 늘리는 이유'), '큰 모델을 올립니다')
+    await user.type(screen.getByLabelText('메모리 요청 사유'), '큰 모델을 올립니다')
 
     await user.click(screen.getByRole('radio', { name: /메모리 최적화/ }))
     expect(screen.queryByLabelText('메모리 (GiB)')).not.toBeInTheDocument()
@@ -241,12 +241,12 @@ describe('VM 신청 위저드 — 사양', () => {
     await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
     await user.clear(screen.getByLabelText('메모리 (GiB)'))
     await user.type(screen.getByLabelText('메모리 (GiB)'), '16')
-    await user.type(screen.getByLabelText('메모리를 늘리는 이유'), '큰 모델을 올립니다')
+    await user.type(screen.getByLabelText('메모리 요청 사유'), '큰 모델을 올립니다')
 
     await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
     await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
     expect(screen.getByLabelText('메모리 (GiB)')).toHaveValue(1)
-    expect(screen.getByLabelText('메모리를 늘리는 이유')).toHaveValue('')
+    expect(screen.getByLabelText('메모리 요청 사유')).toHaveValue('')
   })
 })
 

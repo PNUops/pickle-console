@@ -66,10 +66,12 @@ export function RaisedAxis({
         </div>
       </div>
       {checked && (
-        <FormField label={`${label}를 늘리는 이유`} required error={reasonError}>
+        <FormField label="요청 사유" required error={reasonError}>
           <Textarea
             value={reason}
             onChange={(event) => onReason(event.target.value)}
+            // 세 축의 칸이 모두 「요청 사유」라, 읽어 주는 이름에는 어느 축인지 넣는다.
+            aria-label={`${label} 요청 사유`}
             maxLength={2000}
             rows={2}
             placeholder={reasonPlaceholder}
