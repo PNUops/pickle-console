@@ -50,7 +50,10 @@ const OPENCODE_EXAMPLE = `{
         "apiKey": "{env:PICKLE_API_KEY}"
       },
       "models": {
-        "${LLM_DEFAULT_MODEL}": { "name": "Pickle General" }
+        "${LLM_DEFAULT_MODEL}": {
+          "name": "Pickle General",
+          "limit": { "context": 65536, "output": 8192 }
+        }
       }
     }
   },
@@ -128,6 +131,15 @@ export function DocsPage() {
           <p className="text-sm leading-6 text-neutral-600">
             <Code>npm</Code> 항목이 <Code>@ai-sdk/openai-compatible</Code>이어야 합니다. 다른
             프로바이더 패키지는 동작이 확인되지 않았습니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            <Code>limit</Code>을 넣지 않으면 모델 정보에 컨텍스트가 <Code>0</Code>으로
+            표시됩니다. <strong>대화가 유지되지 않는다는 뜻은 아닙니다.</strong> 이전 대화는
+            매 요청에 함께 실려 가고, 도구가 창 크기를 몰라서 남은 양을 보여 주지 못하고 대화를
+            줄일 시점도 잡지 못하는 것입니다. 그대로 두면 대화가 길어졌을 때 경고 없이 한도를
+            넘어 <Code>upstream_rejected</Code>로 실패합니다. 교내 서빙 모델의 입출력 합계
+            한도는 65,536토큰이고, <Code>output</Code>은 답변 몫으로 남겨 둘 양이라 필요에 맞춰
+            정합니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             Claude Code와 Codex는 붙지 않습니다. 각각 Anthropic Messages API와 OpenAI
