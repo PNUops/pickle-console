@@ -146,7 +146,7 @@ export function AdminOsImagesPage() {
           <div>
             <h2 className="text-lg font-semibold text-neutral-900">사양 프리셋</h2>
             <p className="mt-1 text-sm text-neutral-500">
-              값을 고쳐도 이미 만들어진 VM과 접수된 신청은 그대로입니다 — 이후 신청의 기준선만
+              값을 고쳐도 이미 만들어진 VM과 접수된 신청은 그대로입니다. 이후 신청의 기준선만
               바뀝니다.
             </p>
           </div>
@@ -348,7 +348,7 @@ function ToggleOsImageModal({
         )}
         {lastActive && (
           <Alert variant="warning">
-            마지막 ACTIVE OS 이미지입니다 — 은퇴시키면 신규 VM 신청이 불가능해집니다.
+            마지막 활성 OS 이미지입니다. 은퇴시키면 신규 VM 신청이 불가능해집니다.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}
@@ -417,7 +417,7 @@ function ToggleFlavorModal({
         )}
         {lastActive && (
           <Alert variant="warning">
-            마지막 ACTIVE 프리셋입니다 — 은퇴시키면 신규 VM 신청이 불가능해집니다.
+            마지막 활성 사양입니다. 은퇴시키면 신규 VM 신청이 불가능해집니다.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}
@@ -589,7 +589,7 @@ function EditFlavorModal({
           fieldErrors={fieldErrors}
         />
         <p className="text-sm text-neutral-500">
-          값 변경은 이후 신청의 기준선에만 반영됩니다 — 기존 VM·접수된 신청은 그대로입니다.
+          값 변경은 이후 신청의 기준선에만 반영됩니다. 기존 VM과 접수된 신청은 그대로입니다.
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={update.isPending}>

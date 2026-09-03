@@ -1,5 +1,5 @@
 import { setupWorker } from 'msw/browser'
-import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { handlers } from '../test/msw/handlers'
 
 /**
@@ -19,9 +19,11 @@ export async function startMockApi(): Promise<void> {
   //
   // 기본은 일반 사용자다. 관리자는 로그인하면 관리자 화면으로 가므로 신청 화면을 볼 수
   // 없다. 관리자 화면을 보려면 `VITE_MOCK_USER=admin`으로 띄운다.
+  // 시스템 계층으로 연다. 사양과 사용 기간 카탈로그가 그 계층의 화면이라, 기관
+  // 관리자로는 그 화면에 닿지 못한다.
   const asAdmin = import.meta.env.VITE_MOCK_USER === 'admin'
   const session = asAdmin
-    ? refreshSuccessHandler('access-org-admin')
+    ? refreshSuccessHandler('access-sys-admin', sysAdminUser)
     : refreshSuccessHandler('access-user')
   const worker = setupWorker(session, ...handlers)
   await worker.start({

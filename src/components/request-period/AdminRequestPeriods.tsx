@@ -53,7 +53,7 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground-primary">사용 기간</h2>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -63,7 +63,7 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
           </p>
         </div>
         {isSysAdmin && (
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" className="shrink-0" onClick={() => setCreateOpen(true)}>
             기간 추가
           </Button>
         )}

@@ -54,7 +54,7 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     await user.click(within(active).getByRole('button', { name: '은퇴' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'OS 이미지 은퇴' })
-    expect(within(dialog).getByText(/마지막 ACTIVE OS 이미지입니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/마지막 활성 OS 이미지입니다/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
     expect(await screen.findByText('OS 이미지를 은퇴시켰습니다.')).toBeInTheDocument()
@@ -144,7 +144,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     )
 
     const dialog = await screen.findByRole('dialog', { name: '사양 프리셋 은퇴' })
-    expect(within(dialog).queryByText(/마지막 ACTIVE 프리셋입니다/)).not.toBeInTheDocument()
+    expect(within(dialog).queryByText(/마지막 활성 사양입니다/)).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
     expect(await screen.findByText('사양 프리셋을 은퇴시켰습니다.')).toBeInTheDocument()

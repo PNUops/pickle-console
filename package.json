@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:mock": "VITE_MOCK_API=1 vite",
-    "dev:mock:admin": "VITE_MOCK_API=1 VITE_MOCK_USER=admin vite",
+    "dev:mock": "VITE_MOCK_API=1 vite --port 5180 --strictPort",
+    "dev:mock:admin": "VITE_MOCK_API=1 VITE_MOCK_USER=admin vite --port 5181 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "oxlint --deny-warnings",
     "preview": "vite preview",
