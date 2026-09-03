@@ -36,6 +36,8 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
       grantedTpm: null,
       grantedConcurrency: null,
       grantedDailyTokens: null,
+      useCampusModels: true,
+      useCommercialModels: false,
       grantedCreditAllowedModels: [],
       ...spec,
     },
@@ -72,6 +74,8 @@ function renderDetail(spec: Partial<NonNullable<RequestDetail['llmKey']>> = {}) 
           grantedTpm: body.llmKey?.grantedTpm ?? null,
           grantedConcurrency: body.llmKey?.grantedConcurrency ?? null,
           grantedDailyTokens: body.llmKey?.grantedDailyTokens ?? null,
+          useCampusModels: true,
+          useCommercialModels: false,
           grantedCreditAllowedModels: body.llmKey?.grantedCreditAllowedModels ?? [],
         },
         review: {

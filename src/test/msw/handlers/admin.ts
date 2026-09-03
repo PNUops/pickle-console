@@ -141,6 +141,8 @@ function initialAdminRequests(): RequestDetail[] {
         grantedConcurrency: 4,
         grantedCreditLimit: 5,
         grantedCreditLimitReset: 'MONTHLY',
+        useCampusModels: true,
+        useCommercialModels: false,
         grantedCreditAllowedModels: ['openai/*'],
       },
       purpose: '캡스톤 챗봇 LLM API 호출',
@@ -1178,6 +1180,12 @@ export const adminHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as Schemas['VmPeriodUpdateRequest']
     const startDate = body.startDate ?? vm.startDate
+    // 종료일 지우기가 무기한이다. 날짜 검사를 건너뛴다.
+    if (body.clearEndDate) {
+      vm.startDate = startDate
+      vm.endDate = null
+      return HttpResponse.json(vm, { status: 200 })
+    }
     if (!body.endDate || body.endDate < localDateStr(0)) {
       return problemResponse({
         type: 'about:blank',

@@ -66,6 +66,10 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
       displayName: '캡스톤 챗봇 키',
       llmKey: {
         usagePlan: null,
+        // 축은 기본값이 있다. 교내 모델만 쓰는 것이 보통의 신청이다.
+        useCampusModels: true,
+        useCommercialModels: false,
+        reqCreditLimit: null,
         reqRpm: null,
         reqTpm: null,
         reqDailyTokens: null,
@@ -98,6 +102,62 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
         reqTpm: 20000,
         reqDailyTokens: 1000000,
       },
+    })
+  })
+})
+
+describe('LLM API 키 신청 위저드 — 쓸 모델', () => {
+  /**
+   * 축은 한도와 다르다. 빈 한도는 "서비스 기본값"이지만 빈 축은 무엇을 달라는 것인지
+   * 말하지 않은 것이다. 그래서 한도와 달리 하나는 골라야 한다.
+   */
+  test('둘 다 끄면 넘어가지 못한다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    await user.click(screen.getByRole('checkbox', { name: /교내 모델/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(
+      screen.getByText('교내 모델과 유료 모델 중 최소 하나는 선택해 주세요.'),
+    ).toBeInTheDocument()
+  })
+
+  test('유료를 켜야 금액 칸이 나오고, 끄면 적어 둔 금액이 실려 나가지 않는다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    expect(screen.queryByLabelText(/희망 금액 한도/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    await user.type(screen.getByLabelText(/희망 금액 한도/), '20')
+
+    // 껐다 켜도 금액이 되살아나지 않는다. 화면에 없는 값이 제출되면 안 된다.
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    expect(screen.getByLabelText(/희망 금액 한도/)).toHaveValue(null)
+  })
+
+  test('축과 금액이 그대로 실려 나가고 요약에도 나온다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    await user.type(screen.getByLabelText(/희망 금액 한도/), '20')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
+    expect(screen.getByText('교내 모델, 유료 모델')).toBeInTheDocument()
+    expect(screen.getByText('$20')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+
+    expect(createdRequestBodies.at(-1)!.llmKey).toMatchObject({
+      useCampusModels: true,
+      useCommercialModels: true,
+      reqCreditLimit: 20,
     })
   })
 })
@@ -169,6 +229,9 @@ describe('LLM API 키 신청 위저드 — 초안', () => {
     expect(body).not.toHaveProperty('vm')
     expect(body.llmKey).toEqual({
       usagePlan: '요약',
+      useCampusModels: true,
+      useCommercialModels: false,
+      reqCreditLimit: null,
       reqRpm: null,
       reqTpm: null,
       reqDailyTokens: null,

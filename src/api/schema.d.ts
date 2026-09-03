@@ -3628,6 +3628,11 @@ export interface components {
         };
         CreateLlmKeyRequestSpec: {
             /**
+             * @description 희망 금액 한도(USD). 유료 모델을 쓸 때만 적습니다.
+             * @example 20
+             */
+            reqCreditLimit?: number | null;
+            /**
              * Format: int64
              * @description 희망 일일 토큰 수. 비우면 서비스 기본값을 받습니다.
              */
@@ -3644,6 +3649,10 @@ export interface components {
             reqTpm?: number | null;
             /** @description 이 Key를 어디에 쓸지. 기본 한도로 충분하면 비워 두어도 됩니다. */
             usagePlan?: string | null;
+            /** @description 교내 자체 서빙 모델을 쓸지. 비우면 사용으로 봅니다. */
+            useCampusModels?: boolean | null;
+            /** @description 유료(상용) 모델을 쓸지. 비우면 사용하지 않는 것으로 봅니다. */
+            useCommercialModels?: boolean | null;
         };
         CreateOpenRouterAccountRequest: {
             /** @description 오입력 방지를 위해 name과 정확히 같아야 하는 확인값 */
@@ -4338,6 +4347,8 @@ export interface components {
              * @description 부여 분당 토큰 수. 비어 있으면 서비스 기본값입니다.
              */
             grantedTpm?: number | null;
+            /** @description 신청자가 요청한 금액 한도(USD). 유료를 쓰지 않는 신청은 비어 있습니다. */
+            reqCreditLimit?: number | null;
             /**
              * Format: int64
              * @description 희망 일일 토큰 수
@@ -4355,6 +4366,10 @@ export interface components {
             reqTpm?: number | null;
             /** @description 사용 계획 */
             usagePlan?: string | null;
+            /** @description 신청자가 교내 자체 서빙 모델을 쓰겠다고 했는지. */
+            useCampusModels: boolean;
+            /** @description 신청자가 유료 모델을 쓰겠다고 했는지. */
+            useCommercialModels: boolean;
         };
         LlmKeySummaryResponse: {
             /** @description true면 이 키의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
@@ -6485,10 +6500,15 @@ export interface components {
             sshUsername: string;
         };
         VmPeriodUpdateRequest: {
+            /** @description true면 종료일을 지워 무기한으로 만듭니다. endDate와 함께 보낼 수 없습니다. */
+            clearEndDate?: boolean | null;
+            /**
+             * Format: date
+             * @description 새 종료일. 무기한으로 바꾸려면 clearEndDate를 씁니다.
+             */
+            endDate?: string | null;
             /** Format: date */
-            endDate: string;
-            /** Format: date */
-            startDate?: string;
+            startDate?: string | null;
         };
         VmRequestSpecResponse: {
             desiredSlug?: string | null;
