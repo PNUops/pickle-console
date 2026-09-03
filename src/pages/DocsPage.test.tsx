@@ -48,7 +48,7 @@ describe('사용 가이드', () => {
     // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
     const body = document.body.textContent ?? ''
     expect(body).toContain('교내 서빙 모델에만 적용됩니다')
-    expect(body).toContain('상용 모델에는 분당')
+    expect(body).toContain('유료 모델에는 분당')
   })
 
   test('코딩 에이전트는 openai-compatible 프로바이더로 붙인다고 말한다', async () => {

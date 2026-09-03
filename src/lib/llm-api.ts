@@ -72,7 +72,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'credit_pending',
     status: 503,
-    meaning: '부여받은 금액 한도를 키에 적용하는 중입니다. 잠시 후 자동으로 풀립니다.',
+    meaning: '승인된 금액 한도를 적용하는 중입니다. 잠시 후 다시 시도하면 됩니다.',
   },
   { code: 'credit_exhausted', status: 429, meaning: '상용 모델의 금액 한도를 모두 썼습니다.' },
   { code: 'unsupported_parameter', status: 400, meaning: '지원 목록에 없는 필드를 보냈습니다.' },

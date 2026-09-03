@@ -99,17 +99,17 @@ export function DocsPage() {
             이름과 실제 모델이 분리되어 있어, 서빙하는 모델이 바뀌어도 코드는 그대로 둡니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            상용 모델은 금액 한도가 부여된 키만 쓸 수 있고, 모델 이름을 그대로 보내면
+            유료 모델은 금액 한도가 부여된 키만 쓸 수 있고, 모델 이름을 그대로 보내면
             됩니다. 금액 한도가 없으면 <Code>credit_unavailable</Code>로 거절됩니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            키에 따라 쓸 수 있는 상용 모델이 정해져 있을 수 있습니다. 목록 밖 모델은{' '}
+            키에 따라 쓸 수 있는 유료 모델이 정해져 있을 수 있습니다. 목록 밖 모델은{' '}
             <Code>model_not_allowed</Code>로 거절되며, 이때는 금액 한도가 아니라 허용
             목록이 원인이므로 키 상세에서 무엇이 열려 있는지 확인해 주세요. 목록이 비어
-            있으면 금액 한도 안에서 모든 상용 모델을 쓸 수 있습니다.
+            있으면 금액 한도 안에서 모든 유료 모델을 쓸 수 있습니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            아래 요청은 교내 서빙 모델 목록을 돌려줍니다. 상용 모델은 목록에 나오지
+            아래 요청은 교내 서빙 모델 목록을 돌려줍니다. 유료 모델은 목록에 나오지
             않습니다.
           </p>
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
@@ -171,7 +171,7 @@ export function DocsPage() {
 
         <Section title="한도">
           <p className="text-sm leading-6 text-neutral-600">
-            아래 한도는 <strong>교내 서빙 모델에만 적용됩니다.</strong> 상용 모델 호출은 이
+            아래 한도는 <strong>교내 서빙 모델에만 적용됩니다.</strong> 유료 모델 호출은 이
             한도를 쓰지 않고 금액 한도가 통제합니다. 표의 값은 키에 별도 한도가 부여되지
             않았을 때 적용됩니다.
           </p>
@@ -211,7 +211,7 @@ export function DocsPage() {
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             교내 서빙 모델 응답에는 <Code>X-RateLimit-Limit-Requests</Code>와{' '}
-            <Code>X-RateLimit-Remaining-Requests</Code> 헤더가 실립니다. 상용 모델에는 분당
+            <Code>X-RateLimit-Remaining-Requests</Code> 헤더가 실립니다. 유료 모델에는 분당
             요청 한도 자체가 없으므로 두 헤더도 오지 않습니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
