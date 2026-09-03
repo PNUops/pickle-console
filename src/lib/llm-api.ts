@@ -69,6 +69,11 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'rate_limit_concurrency', status: 429, meaning: '동시 요청 수를 초과했습니다.' },
   { code: 'quota_exhausted', status: 429, meaning: '부여된 사용량을 모두 썼습니다.' },
   { code: 'credit_unavailable', status: 403, meaning: '상용 모델을 쓸 금액 한도가 없습니다.' },
+  {
+    code: 'credit_pending',
+    status: 503,
+    meaning: '부여받은 금액 한도를 키에 적용하는 중입니다. 잠시 후 자동으로 풀립니다.',
+  },
   { code: 'credit_exhausted', status: 429, meaning: '상용 모델의 금액 한도를 모두 썼습니다.' },
   { code: 'unsupported_parameter', status: 400, meaning: '지원 목록에 없는 필드를 보냈습니다.' },
   { code: 'invalid_parameter_value', status: 400, meaning: '파라미터 값이 허용 범위 밖입니다.' },
@@ -77,7 +82,12 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'request_too_large', status: 400, meaning: '요청 본문이 허용 크기를 넘었습니다.' },
   { code: 'input_too_long', status: 400, meaning: '입력이 모델의 최대 입력 길이를 넘었습니다.' },
   { code: 'output_limit_exceeded', status: 400, meaning: '요청한 최대 출력 길이가 허용치를 넘었습니다.' },
-  { code: 'unknown_endpoint', status: 404, meaning: '지원하지 않는 경로입니다.' },
+  {
+    code: 'unknown_endpoint',
+    status: 404,
+    meaning:
+      '지원하지 않는 경로입니다. 메시지에 적힌 경로는 지원 범위이지 보낸 경로가 아니므로, base URL에 /v1이 붙어 있는지 먼저 확인합니다.',
+  },
   { code: 'method_not_allowed', status: 405, meaning: '지원하지 않는 HTTP 메서드입니다.' },
   { code: 'service_disabled', status: 503, meaning: '서비스가 점검 중입니다.' },
   { code: 'server_busy', status: 503, meaning: '요청이 몰려 처리하지 못했습니다. 한도는 차감되지 않습니다.' },

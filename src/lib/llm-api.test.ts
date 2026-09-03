@@ -44,8 +44,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 27개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(27)
+  test('에러 표는 사용자에게 도달하는 28개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(28)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -60,6 +60,7 @@ describe('LLM API 사실 사본', () => {
       rate_limit_concurrency: 429,
       quota_exhausted: 429,
       credit_unavailable: 403,
+      credit_pending: 503,
       credit_exhausted: 429,
       unsupported_parameter: 400,
       invalid_parameter_value: 400,

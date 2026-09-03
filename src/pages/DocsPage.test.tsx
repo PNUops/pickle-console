@@ -32,12 +32,23 @@ describe('사용 가이드', () => {
     expect(screen.getByText('목록에 없는 필드는 거부됩니다')).toBeInTheDocument()
   })
 
-  test('base URL에 /v1이 빠지는 실수를 미리 막는다', async () => {
+  test('base URL이 어디까지인지 주소 옆에서 말한다', async () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '시작하기' })
 
-    const alert = screen.getByText('base URL은 /v1까지 넣습니다').closest('div')
-    expect(alert?.textContent ?? '').toContain('unknown_endpoint')
+    // 주소를 복사해 가는 자리라, 어디까지가 base URL인지가 그 옆에 있어야 한다.
+    expect(screen.getByText(/까지가 base URL입니다/)).toBeInTheDocument()
+  })
+
+  test('분당 한도가 교내 서빙 모델에만 적용된다고 말한다', async () => {
+    renderApp('/docs')
+    await screen.findByRole('heading', { name: '한도' })
+
+    // 2026-09-02 축 분리 이후 네 한도 전부 자체 서빙 전용이다. 이 문장이 빠지면
+    // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('교내 서빙 모델에만 적용됩니다')
+    expect(body).toContain('상용 모델에는 분당')
   })
 
   test('코딩 에이전트는 openai-compatible 프로바이더로 붙인다고 말한다', async () => {

@@ -12,7 +12,7 @@ import {
   LLM_SUPPORTED_PARAMS,
 } from '../lib/llm-api'
 
-const LAST_UPDATED = '2026-09-02'
+const LAST_UPDATED = '2026-09-03'
 
 const CURL_EXAMPLE = `curl ${LLM_API_BASE_URL}/chat/completions \\
   -H "Authorization: Bearer $PICKLE_API_KEY" \\
@@ -76,6 +76,9 @@ export function DocsPage() {
               </code>
               <CopyButton value={LLM_API_BASE_URL} label="복사" />
             </div>
+            <p className="mt-2 text-sm leading-6 text-neutral-600">
+              <Code>/v1</Code>까지가 base URL입니다.
+            </p>
           </Labeled>
           <Labeled label="인증">
             <p className="text-sm leading-6 text-neutral-600">
@@ -84,11 +87,6 @@ export function DocsPage() {
               변수에 둡니다.
             </p>
           </Labeled>
-          <Alert variant="info" title="base URL은 /v1까지 넣습니다">
-            도메인만 넣으면 요청이 <Code>/chat/completions</Code>로 나가고{' '}
-            <Code>unknown_endpoint</Code>로 거부됩니다. 에러 메시지에 적힌 경로는 이 API가
-            받는 경로를 알려 주는 것이지 보낸 경로가 아닙니다.
-          </Alert>
           <CodeBlock label="curl" code={CURL_EXAMPLE} />
         </Section>
 
@@ -128,13 +126,13 @@ export function DocsPage() {
           </p>
           <CodeBlock label="opencode.json" code={OPENCODE_EXAMPLE} />
           <p className="text-sm leading-6 text-neutral-600">
-            <Code>npm</Code> 항목이 <Code>@ai-sdk/openai-compatible</Code>이어야 합니다.{' '}
-            <Code>@ai-sdk/openai</Code>로 두면 요청이 Responses 규격으로 나가서 거부됩니다.
+            <Code>npm</Code> 항목이 <Code>@ai-sdk/openai-compatible</Code>이어야 합니다. 다른
+            프로바이더 패키지는 동작이 확인되지 않았습니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             Claude Code와 Codex는 붙지 않습니다. 각각 Anthropic Messages API와 OpenAI
             Responses API를 요구하는데, 이 API가 제공하는 것은 OpenAI Chat Completions
-            하나입니다. 2026-09-02 기준입니다.
+            하나입니다. 2026-09-03 기준입니다.
           </p>
         </Section>
 
@@ -161,7 +159,9 @@ export function DocsPage() {
 
         <Section title="한도">
           <p className="text-sm leading-6 text-neutral-600">
-            키에 별도 한도가 부여되지 않았을 때 적용되는 값입니다.
+            아래 한도는 <strong>교내 서빙 모델에만 적용됩니다.</strong> 상용 모델 호출은 이
+            한도를 쓰지 않고 금액 한도가 통제합니다. 표의 값은 키에 별도 한도가 부여되지
+            않았을 때 적용됩니다.
           </p>
           <Table>
             <THead>
@@ -187,13 +187,24 @@ export function DocsPage() {
           </Table>
           <p className="text-sm leading-6 text-neutral-600">
             한도는 키마다 다르게 부여될 수 있습니다. 내 키에 적용된 값은 콘솔의 키 상세
-            화면에서 확인합니다. 위 세 가지를 넘으면 429로 거부되고, 이때만 응답의{' '}
-            <Code>Retry-After</Code> 헤더가 다시 시도할 시점을 알려 줍니다. 성공 응답에는{' '}
-            <Code>X-RateLimit-Remaining-Requests</Code> 헤더로 남은 요청 수가 실립니다.
+            화면에서 확인합니다. 위 세 가지를 넘으면 429로 거부되고 응답의{' '}
+            <Code>Retry-After</Code> 헤더가 다시 시도할 시점을 알려 줍니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            분당 한도와 별개로 <strong>일일 토큰 한도</strong>가 부여될 수 있습니다. 교내
-            서빙 모델에만 적용되고 자정(KST)에 초기화되며, 소진하면{' '}
+            <Code>Retry-After</Code>는 <strong>기다리면 저절로 풀리는 거절에만</strong>{' '}
+            붙습니다. 위 세 한도와, 승인된 금액 한도를 키에 적용하는 중인{' '}
+            <Code>credit_pending</Code>(503)입니다. 일일 토큰 한도(
+            <Code>quota_exhausted</Code>)나 금액 소진(<Code>credit_exhausted</Code>)에는
+            붙지 않습니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            교내 서빙 모델 응답에는 <Code>X-RateLimit-Limit-Requests</Code>와{' '}
+            <Code>X-RateLimit-Remaining-Requests</Code> 헤더가 실립니다. 상용 모델에는 분당
+            요청 한도 자체가 없으므로 두 헤더도 오지 않습니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            분당 한도와 별개로 <strong>일일 토큰 한도</strong>가 부여될 수 있습니다. 이것도
+            교내 서빙 모델에만 적용되고 자정(KST)에 초기화되며, 소진하면{' '}
             <Code>quota_exhausted</Code>로 거절됩니다. 이 한도에는{' '}
             <Code>Retry-After</Code>가 붙지 않습니다. 부여 여부와 남은 양은 키 상세 화면의
             사용량 탭에서 확인합니다.
