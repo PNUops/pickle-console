@@ -50,8 +50,8 @@ export interface FieldSlot {
  * 못한 채 조용히 목록으로만 뜬다.
  */
 export const COMMON_FIELDS: Record<string, FieldSlot> = {
-  workspaceId: { label: '워크스페이스', step: 'request' },
   orgId: { label: '기관', step: 'request' },
+  workspaceId: { label: '워크스페이스', step: 'request' },
   purpose: { label: '사용 목적', step: 'request' },
   extraNote: { label: '참고 사항', step: 'request' },
   periodPresetId: { label: '사용 기간', step: 'request' },

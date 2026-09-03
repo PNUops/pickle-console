@@ -299,8 +299,8 @@ export function RequestWizard({
   const commonRows: Partial<Record<WizardStepId, [string, string][]>> = {
     resource: [['이름', state.displayName.trim()]],
     request: [
-      ['워크스페이스', selectedWorkspace?.name ?? '—'],
       ['기관', selectedOrg?.name ?? '—'],
+      ['워크스페이스', selectedWorkspace?.name ?? '—'],
       ['사용 목적', state.purpose.trim()],
       ['사용 기간', periodLabel],
       ['참고 사항', state.extraNote.trim() || '—'],
@@ -385,6 +385,24 @@ export function RequestWizard({
 
             {step === 'request' && (
               <>
+                {orgs.data?.length === 0 ? (
+                  <Alert variant="warning">
+                    신청할 수 있는 기관이 없습니다. 관리자에게 문의해 주세요.
+                  </Alert>
+                ) : (
+                  <CardRadioGroup
+                    legend="기관"
+                    required
+                    error={shown.orgId}
+                    description="이 기관이 자원을 제공하고 신청을 검토합니다."
+                    value={state.orgId}
+                    onChange={(value) => update({ orgId: value })}
+                    options={(orgs.data ?? []).map((org) => ({
+                      value: org.id,
+                      title: org.name,
+                    }))}
+                  />
+                )}
                 {eligibleWorkspaces.length === 0 && (
                   <Alert variant="warning">
                     {kind.copy.noWorkspaceNotice}{' '}
@@ -404,24 +422,6 @@ export function RequestWizard({
                     title: workspace.name,
                   }))}
                 />
-                {orgs.data?.length === 0 ? (
-                  <Alert variant="warning">
-                    신청할 수 있는 기관이 없습니다. 관리자에게 문의해 주세요.
-                  </Alert>
-                ) : (
-                  <CardRadioGroup
-                    legend="기관"
-                    required
-                    error={shown.orgId}
-                    description="이 기관이 자원을 제공하고 신청을 검토합니다."
-                    value={state.orgId}
-                    onChange={(value) => update({ orgId: value })}
-                    options={(orgs.data ?? []).map((org) => ({
-                      value: org.id,
-                      title: org.name,
-                    }))}
-                  />
-                )}
 
                 <FormField label="사용 목적" required error={shown.purpose}>
                   <Textarea

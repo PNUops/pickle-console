@@ -17,6 +17,8 @@ export function RaisedAxis({
   checked,
   onToggle,
   min,
+  step = 1,
+  decimals = 0,
   value,
   onValue,
   valueError,
@@ -30,6 +32,10 @@ export function RaisedAxis({
   checked: boolean
   onToggle: (on: boolean) => void
   min: number
+  /** 입력 눈금. 메모리처럼 소수를 받는 축은 0.5로 준다. */
+  step?: number
+  /** 잠긴 채 보여 줄 때의 소수 자릿수. 소수를 받는 축임을 기본값으로 말해 준다. */
+  decimals?: number
   value: number
   onValue: (value: number) => void
   valueError?: string
@@ -50,7 +56,10 @@ export function RaisedAxis({
           <Input
             type="number"
             min={min}
-            value={value}
+            step={step}
+            // 잠겨 있을 때만 자릿수를 맞춰 보여 준다. 켠 뒤에도 매 렌더에서 다시
+            // 서식을 입히면 두 자리째를 치는 순간 앞자리가 잘려 나간다.
+            value={checked ? value : value.toFixed(decimals)}
             disabled={!checked}
             onChange={(event) => onValue(Number(event.target.value))}
           />

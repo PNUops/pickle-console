@@ -265,6 +265,9 @@ function useVmWizard(draftSpec: unknown): KindWizard {
         // **축마다 따로 묻는 이유가 여기 있다.** 사유가 하나뿐이면 메모리가 필요한
         // 이유를 적고 vCPU까지 함께 올릴 수 있고, 검토하는 쪽은 그 글만 보고는
         // 어느 축이 근거를 가진 것인지 가려낼 수 없다.
+        //
+        // 아무 축도 켜지 않은 것은 오류가 아니다. 바닥값은 어느 프리셋보다도 작아서
+        // 프리셋으로는 요청할 수 없는 크기이고, 그대로 내는 것이 정당한 신청이다.
         const baseDisk = Math.max(CUSTOM_BASE.diskGb, selectedImage.minDiskGb)
         if (spec.raiseVcpu) {
           if (spec.reqVcpu <= CUSTOM_BASE.vcpu)
@@ -282,8 +285,6 @@ function useVmWizard(draftSpec: unknown): KindWizard {
             next['vm.reqDiskGb'] = `기본값(${baseDisk} GiB)보다 큰 값을 적어 주세요.`
           if (!spec.diskReason.trim()) next['vm.diskReason'] = '디스크 요청 사유를 적어 주세요.'
         }
-        if (!spec.raiseVcpu && !spec.raiseMemory && !spec.raiseDisk)
-          next['vm.flavorId'] = '늘릴 항목을 하나 이상 고르고 이유를 적어 주세요.'
       } else if (exceeds(spec, selectedFlavor)) {
         // 준비된 사양은 값을 손으로 고칠 자리가 없으므로 여기 걸리면 초안이 낡은
         // 것이다. 사용자가 고칠 칸이 없으니 사양을 다시 고르게 한다.
@@ -417,7 +418,11 @@ function useVmWizard(draftSpec: unknown): KindWizard {
               unit="GiB"
               checked={spec.raiseMemory}
               onToggle={(on) => toggleAxis('memory', on)}
-              min={CUSTOM_BASE.memoryMb / 1024 + 1}
+              // 메모리만 소수를 받는다. 0.5 GiB는 512 MiB라 저장 단위에서도 정수이고,
+              // 실제로 쓰이는 크기(1.5, 2.5)가 전부 이 눈금 위에 있다.
+              min={CUSTOM_BASE.memoryMb / 1024 + 0.5}
+              step={0.5}
+              decimals={1}
               value={spec.reqMemoryMb / 1024}
               onValue={(value) => update({ reqMemoryMb: Math.round(value * 1024) })}
               valueError={errors['vm.reqMemoryMb']}

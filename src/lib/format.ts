@@ -99,6 +99,10 @@ export function formatDday(endDate: string, base: Date = new Date()): Dday {
 /** MiB → human-readable GiB/MiB label (e.g. 2048 → '2 GiB'). */
 export function formatMemory(memoryMb: number): string {
   if (memoryMb % 1024 === 0) return `${memoryMb / 1024} GiB`
+  // 반 GiB 단위는 GiB로 읽는다. 신청 화면이 GiB로 묻고 0.5 눈금을 주므로, 1.5 GiB로
+  // 적어 낸 사양이 요약에서 1536 MiB로 돌아오면 같은 수가 두 얼굴을 갖는다. 1 GiB
+  // 미만은 그대로 MiB인데, 그 크기에서는 MiB가 읽기 쉽다.
+  if (memoryMb >= 1024 && memoryMb % 512 === 0) return `${memoryMb / 1024} GiB`
   return `${memoryMb} MiB`
 }
 

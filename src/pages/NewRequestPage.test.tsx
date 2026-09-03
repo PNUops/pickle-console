@@ -138,7 +138,7 @@ describe('VM 신청 위저드 — 사양', () => {
     expect(screen.getByText('1 vCPU, 2 GiB 메모리, 32 GiB 디스크')).toBeInTheDocument()
   })
 
-  test('직접 입력은 늘릴 항목을 고르게 하고, 고른 항목마다 이유를 묻는다', async () => {
+  test('직접 입력은 늘릴 항목만 고르게 하고, 고른 항목마다 이유를 묻는다', async () => {
     const user = userEvent.setup()
     renderWizard()
     await user.type(await screen.findByLabelText('이름'), '큰 서버')
@@ -150,9 +150,9 @@ describe('VM 신청 위저드 — 사양', () => {
     expect(screen.getByLabelText('vCPU (개)')).toBeDisabled()
     expect(screen.getByLabelText('vCPU (개)')).toHaveValue(1)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(32)
-
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('늘릴 항목을 하나 이상 고르고 이유를 적어 주세요.')).toBeInTheDocument()
+    // 메모리만 소수를 받고, 잠긴 기본값이 그것을 말해 준다.
+    expect(screen.getByLabelText('메모리 (GiB)')).toHaveValue(1)
+    expect(screen.getByLabelText('메모리 (GiB)')).toHaveAttribute('step', '0.5')
 
     await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
     expect(screen.getByLabelText('메모리 (GiB)')).toBeEnabled()
@@ -164,6 +164,54 @@ describe('VM 신청 위저드 — 사양', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByText('메모리 요청 사유를 적어 주세요.')).toBeInTheDocument()
     expect(screen.getByText('기본값(1 GiB)보다 큰 값을 적어 주세요.')).toBeInTheDocument()
+  })
+
+  /**
+   * 바닥값(1/1/32)은 어느 프리셋보다도 작아서 프리셋으로는 요청할 수 없는 크기다.
+   * 그대로 내는 것이 정당한 신청이고, 거기에 사유를 요구하면 작게 쓰겠다는 사람에게만
+   * 문턱을 세우는 셈이 된다.
+   */
+  test('아무 항목도 늘리지 않은 직접 입력은 사유 없이 제출된다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await user.type(await screen.findByLabelText('이름'), '작은 서버')
+    await user.click(screen.getByRole('radio', { name: 'Ubuntu' }))
+    await user.click(screen.getByRole('radio', { name: /직접 입력/ }))
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+
+    const body = createdRequestBodies.at(-1)!
+    expect(body.vm!.flavorId).toBeNull()
+    expect(body.vm!.specReason).toBeNull()
+    expect(body.vm!.reqVcpu).toBe(1)
+    expect(body.vm!.reqMemoryMb).toBe(1024)
+    expect(body.vm!.reqDiskGb).toBe(32)
+  })
+
+  // 0.5 GiB는 512 MiB라 저장 단위에서도 정수다.
+  test('메모리는 반 GiB 단위로 적을 수 있다', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await user.type(await screen.findByLabelText('이름'), '큰 서버')
+    await user.click(screen.getByRole('radio', { name: 'Ubuntu' }))
+    await user.click(screen.getByRole('radio', { name: /직접 입력/ }))
+
+    await user.click(screen.getByRole('checkbox', { name: '메모리 변경' }))
+    await user.clear(screen.getByLabelText('메모리 (GiB)'))
+    await user.type(screen.getByLabelText('메모리 (GiB)'), '1.5')
+    await user.type(screen.getByLabelText('메모리 요청 사유'), '조금 더 필요합니다')
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    // 요약이 적어 낸 그대로 읽힌다. 1536 MiB로 되돌아오면 같은 수가 두 얼굴을 갖는다.
+    expect(screen.getByText('1 vCPU, 1.5 GiB 메모리, 32 GiB 디스크')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    expect(createdRequestBodies.at(-1)!.vm!.reqMemoryMb).toBe(1536)
   })
 
   /**
