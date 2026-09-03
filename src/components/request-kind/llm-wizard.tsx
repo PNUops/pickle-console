@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Alert, Checkbox, FormField, Input, Textarea } from '../ui'
+import { LLM_DEFAULT_MODEL } from '../../lib/llm-api'
 import type { FieldErrors, KindWizard, RequestKindModule, WizardStepId } from './types'
 
 /**
@@ -16,18 +17,16 @@ interface LlmKeySpecState {
    */
   useCampus: boolean
   useCommercial: boolean
-  reqRpm: string
-  reqTpm: string
   reqDailyTokens: string
   reqCreditLimit: string
 }
 
 const INITIAL_SPEC: LlmKeySpecState = {
   usagePlan: '',
-  useCampus: true,
+  // 두 축 모두 꺼진 채로 연다. 무엇을 쓸지는 신청자가 말해야 하는 것이지 화면이
+  // 대신 골라 줄 것이 아니고, 둘 다 끄면 넘어가지 않으므로 빠뜨릴 수도 없다.
+  useCampus: false,
   useCommercial: false,
-  reqRpm: '',
-  reqTpm: '',
   reqDailyTokens: '',
   reqCreditLimit: '',
 }
@@ -35,10 +34,6 @@ const INITIAL_SPEC: LlmKeySpecState = {
 /** 요청 금액의 상한. 계약이 정한 수의 폭이다. */
 const MAX_CREDIT = 100_000
 
-/** 계약이 정한 상한. 정책이 아니라 수의 폭이다(분당 요청 수만 서버가 따로 막는다). */
-const MAX_RPM = 10_000
-/** 계약의 reqTpm은 32비트 정수다. 더 큰 값은 서버에 닿기 전에 뜻을 잃는다. */
-const MAX_INT32 = 2_147_483_647
 /** reqDailyTokens는 64비트지만, 자바스크립트가 정확히 셀 수 있는 데까지만 받는다. */
 const MAX_SAFE = Number.MAX_SAFE_INTEGER
 
@@ -95,17 +90,8 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
       else if (amount > MAX_CREDIT)
         next['llmKey.reqCreditLimit'] = `금액은 ${MAX_CREDIT.toLocaleString('ko-KR')} 이하로 입력해 주세요.`
     }
-    const rpm = limitError(spec.reqRpm, '분당 요청 수', MAX_RPM)
-    if (rpm) next['llmKey.reqRpm'] = rpm
-    const tpm = limitError(spec.reqTpm, '분당 토큰 수', MAX_INT32)
-    if (tpm) next['llmKey.reqTpm'] = tpm
     const daily = limitError(spec.reqDailyTokens, '일일 토큰 수', MAX_SAFE)
     if (daily) next['llmKey.reqDailyTokens'] = daily
-    // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
-    if (!rpm && !tpm && spec.reqRpm.trim() && spec.reqTpm.trim()) {
-      if (Number(spec.reqTpm) < Number(spec.reqRpm))
-        next['llmKey.reqTpm'] = '분당 토큰 수는 분당 요청 수보다 작을 수 없습니다.'
-    }
     return next
   }
 
@@ -119,7 +105,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
     resourceFields: (errors) => (
       <>
-        <fieldset className="flex flex-col gap-2">
+        <fieldset className="flex flex-col gap-3">
           <legend className="flex items-center gap-0.5 text-sm font-medium text-foreground-secondary">
             무엇을 쓸까요
             <span aria-hidden="true" className="text-danger-600">
@@ -132,13 +118,43 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
               {errors['llmKey.useCampusModels']}
             </p>
           )}
-          <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+          {/* 축을 켜야 그 축의 한도가 나온다. 한 줄에 나란히 두면 금액 칸이 토큰 축만
+              쓰는 신청에도 보이고, 어느 한도가 어느 축의 것인지가 배치로 드러나지 않는다. */}
+          <div className="space-y-3">
             <Checkbox
-              label="자체 서빙 모델"
-              description="학교가 직접 서빙합니다. 돈이 들지 않고 토큰 한도로 씁니다."
+              label="Pickle LLM"
+              description={`학교가 직접 서빙합니다. 돈이 들지 않고 토큰 한도로 씁니다. 모델 이름은 ${LLM_DEFAULT_MODEL}입니다.`}
               checked={spec.useCampus}
-              onChange={(event) => update({ useCampus: event.target.checked })}
+              onChange={(event) =>
+                update({
+                  useCampus: event.target.checked,
+                  // 끄면 그 축의 한도를 남기지 않는다. 남으면 화면에 없는 값이 제출된다.
+                  ...(event.target.checked ? {} : { reqDailyTokens: '' }),
+                })
+              }
             />
+            {spec.useCampus && (
+              <div className="ml-7">
+                {/* 분당 한도는 묻지 않는다. 신청자가 판단할 수 있는 수가 아니고, 실제로
+                    모자라는 것은 하루치다. 분당 쪽은 승인 화면에 남아 관리자가 다룬다. */}
+                <FormField
+                  label="희망 일일 토큰 수"
+                  error={errors['llmKey.reqDailyTokens']}
+                  description="하루에 쓸 토큰 상한입니다. 자정(KST)에 초기화됩니다."
+                >
+                  <Input
+                    type="number"
+                    min={1}
+                    value={spec.reqDailyTokens}
+                    onChange={(event) => update({ reqDailyTokens: event.target.value })}
+                    placeholder="예: 200000"
+                    className="w-56"
+                  />
+                </FormField>
+              </div>
+            )}
+
             <Checkbox
               label="유료 모델"
               description="외부 유료 모델입니다. 쓴 만큼 돈이 들어 금액 한도로 씁니다."
@@ -146,18 +162,32 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
               onChange={(event) =>
                 update({
                   useCommercial: event.target.checked,
-                  // 끄면 금액을 남기지 않는다. 남으면 화면에 없는 값이 제출된다.
                   reqCreditLimit: event.target.checked ? spec.reqCreditLimit : '',
                 })
               }
             />
+            {spec.useCommercial && (
+              <div className="ml-7">
+                <FormField
+                  label="희망 금액 한도 (USD)"
+                  error={errors['llmKey.reqCreditLimit']}
+                  description="이 키가 유료 모델에 쓸 수 있는 금액 상한입니다. 다 쓰면 호출이 거절됩니다."
+                >
+                  <Input
+                    type="number"
+                    min={0.01}
+                    step={0.01}
+                    max={MAX_CREDIT}
+                    value={spec.reqCreditLimit}
+                    onChange={(event) => update({ reqCreditLimit: event.target.value })}
+                    placeholder="예: 20"
+                    className="w-44"
+                  />
+                </FormField>
+              </div>
+            )}
           </div>
         </fieldset>
-
-        <Alert variant="info" title="한도는 비워 두어도 됩니다">
-          한도는 전부 선택 입력입니다. 비워 두면 서비스 기본 한도로 발급되며, 그것으로
-          충분한 것이 보통입니다. 기본 한도로 모자랄 때만 희망값을 적어 주세요.
-        </Alert>
 
         <FormField
           label="사용 계획"
@@ -171,79 +201,24 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
             placeholder="예: 캡스톤 프로젝트 챗봇에서 문서 요약 호출"
           />
         </FormField>
-
-        {spec.useCommercial && (
-          <FormField
-            label="희망 금액 한도 (USD)"
-            error={errors['llmKey.reqCreditLimit']}
-            description="이 키가 유료 모델에 쓸 수 있는 상한입니다. 비우면 관리자가 정합니다."
-          >
-            <Input
-              type="number"
-              min={0.01}
-              step={0.01}
-              max={MAX_CREDIT}
-              value={spec.reqCreditLimit}
-              onChange={(event) => update({ reqCreditLimit: event.target.value })}
-              placeholder="예: 20"
-              className="w-44"
-            />
-          </FormField>
-        )}
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <FormField
-            label="희망 분당 요청 수"
-            error={errors['llmKey.reqRpm']}
-            description="비우면 기본값"
-          >
-            <Input
-              type="number"
-              min={1}
-              max={MAX_RPM}
-              value={spec.reqRpm}
-              onChange={(event) => update({ reqRpm: event.target.value })}
-              placeholder="기본값"
-            />
-          </FormField>
-          <FormField
-            label="희망 분당 토큰 수"
-            error={errors['llmKey.reqTpm']}
-            description="비우면 기본값"
-          >
-            <Input
-              type="number"
-              min={1}
-              value={spec.reqTpm}
-              onChange={(event) => update({ reqTpm: event.target.value })}
-              placeholder="기본값"
-            />
-          </FormField>
-          <FormField
-            label="희망 일일 토큰 수"
-            error={errors['llmKey.reqDailyTokens']}
-            description="비우면 기본값"
-          >
-            <Input
-              type="number"
-              min={1}
-              value={spec.reqDailyTokens}
-              onChange={(event) => update({ reqDailyTokens: event.target.value })}
-              placeholder="기본값"
-            />
-          </FormField>
-        </div>
       </>
     ),
 
+    // 켜지 않은 축의 한도는 요약에도 싣지 않는다. 화면에서 묻지 않은 값이 확인
+    // 단계에만 나타나면, 신청자는 자기가 적지 않은 것을 확인하게 된다.
     reviewRows: () => ({
       resource: [
         [
           '쓸 모델',
-          [spec.useCampus ? '자체 서빙 모델' : null, spec.useCommercial ? '유료 모델' : null]
+          [spec.useCampus ? 'Pickle LLM' : null, spec.useCommercial ? '유료 모델' : null]
             .filter(Boolean)
             .join(', ') || '미선택',
         ],
+        ...(spec.useCampus
+          ? ([
+              ['희망 일일 토큰 수', limitLabel(spec.reqDailyTokens)],
+            ] as [string, string][])
+          : []),
         ...(spec.useCommercial
           ? ([
               [
@@ -255,16 +230,13 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
             ] as [string, string][])
           : []),
         ['사용 계획', spec.usagePlan.trim() || '—'],
-        ['희망 분당 요청 수', limitLabel(spec.reqRpm)],
-        ['희망 분당 토큰 수', limitLabel(spec.reqTpm)],
-        ['희망 일일 토큰 수', limitLabel(spec.reqDailyTokens)],
       ],
     }),
 
     notice: (
       <Alert variant="info" title="한도 확정 안내">
         희망 한도는 참고 자료입니다. 실제 부여 한도는 관리자가 승인할 때 정하며,
-        비워 둔 항목은 서비스 기본 한도로 발급됩니다.
+        고치지 않은 항목은 위에 적힌 기본 한도로 발급됩니다.
       </Alert>
     ),
 
@@ -279,9 +251,14 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
           spec.useCommercial && spec.reqCreditLimit.trim()
             ? Number(spec.reqCreditLimit)
             : null,
-        reqRpm: limitValue(spec.reqRpm),
-        reqTpm: limitValue(spec.reqTpm),
-        reqDailyTokens: limitValue(spec.reqDailyTokens),
+        // 토큰 축을 끈 신청은 그 축의 한도를 싣지 않는다.
+        // 그리고 **기본값 그대로면 비운 것과 같이 보낸다** — 화면이 숫자를 보여 주려고
+        // 채워 둔 것이지 신청자가 그 값을 요구한 것이 아니고, 배포 기본값이 바뀌면
+        // 그때의 기본값을 받는 것이 맞다.
+        // 분당 한도는 이 화면이 묻지 않는다. 비운 신청은 배포된 기본 한도를 받는다.
+        reqRpm: null,
+        reqTpm: null,
+        reqDailyTokens: spec.useCampus ? limitValue(spec.reqDailyTokens) : null,
       },
     }),
   }
