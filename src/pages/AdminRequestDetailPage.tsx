@@ -418,7 +418,11 @@ function DecisionSection({
               <Button variant="secondary" onClick={() => setConfirm(null)}>
                 돌아가기
               </Button>
-              <Button loading={approve.isPending} onClick={() => approve.mutate()}>
+              <Button
+                loading={approve.isPending}
+                disabled={form.confirmReady === false}
+                onClick={() => approve.mutate()}
+              >
                 승인 확정
               </Button>
             </>

@@ -413,3 +413,93 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(approved).toHaveLength(0)
   })
 })
+
+describe('초과 배정 경고', () => {
+  /**
+   * 잔액보다 많이 배정된 상태를 만든다. 기본 픽스처를 이 모양으로 두면 금액 축을
+   * 승인하는 무관한 테스트가 전부 확인 절차에 걸린다.
+   */
+  function overAllocate(accountId: string) {
+    const account = openRouterAccountStore.find((item) => item.id === accountId)!
+    account.allocation = {
+      ...account.allocation,
+      committedCreditLimit: 300,
+      committedTotalCap: 300,
+      committedKeyCount: 30,
+      remainingCommitment: 290,
+      committedUsage: 10,
+    }
+  }
+
+  /**
+   * 착수 근거가 된 사고. 잔액 100인 계정에 10씩 서른 명을 승인하면 늦게 쓰는
+   * 사람이 못 쓴다. 막지는 않되 승인자가 그 사실을 알고 눌러야 한다.
+   */
+  test('초과면 폼과 확인 창 양쪽에 경고가 뜨고 확정 버튼이 잠긴다', async () => {
+    const user = userEvent.setup()
+    overAllocate(uuid(410))
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '10')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    // 폼 안에서 먼저 보인다 — 승인하기를 누르기 전에 읽힌다.
+    expect(await screen.findByText(/남은 배정 \$290\.00 \+ 이번 승인 \$10/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    const confirm = within(dialog).getByRole('button', { name: '승인 확정' })
+    expect(confirm).toBeDisabled()
+
+    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
+    expect(confirm).toBeEnabled()
+  })
+
+  /**
+   * 확인을 boolean으로 들면 확인 뒤 값을 고쳐도 살아남는다. 무엇을 확인했는지를
+   * 들고 대조해야 금액이 바뀐 순간 확인이 무효가 된다.
+   */
+  test('확인한 뒤 금액을 고치면 확인이 무효가 된다', async () => {
+    const user = userEvent.setup()
+    overAllocate(uuid(410))
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    const creditField = screen.getByLabelText('부여 금액 한도 (USD)')
+    await user.type(creditField, '10')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
+    expect(within(dialog).getByRole('button', { name: '승인 확정' })).toBeEnabled()
+
+    await user.click(within(dialog).getByRole('button', { name: '돌아가기' }))
+    await user.clear(creditField)
+    await user.type(creditField, '20')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const reopened = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(reopened).getByRole('button', { name: '승인 확정' })).toBeDisabled()
+    expect(within(reopened).getByLabelText('초과 배정임을 확인했습니다')).not.toBeChecked()
+  })
+
+  /** 넘지 않으면 경고도 확인도 없다. 평범한 승인이 느려지면 안 된다. */
+  test('넘지 않으면 경고 없이 그대로 승인된다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).queryByLabelText('초과 배정임을 확인했습니다')).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({ grantedCreditLimit: 5 })
+  })
+})

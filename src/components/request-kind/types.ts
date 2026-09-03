@@ -110,6 +110,15 @@ export interface DecisionFormApi {
   body(): ApproveRequest
   /** 승인 확인 모달 본문. */
   confirmBody: ReactNode
+  /**
+   * 확인 모달의 확정 버튼을 열어도 되는가. 생략하면 열려 있다.
+   *
+   * 종류가 승인 직전에 한 번 더 확인을 받아야 할 때 쓴다. 모달이 열렸다는 것을
+   * 종류에 알리는 통로가 없으므로, 확인 상태를 boolean으로 들면 확인 뒤 모달을
+   * 닫고 값을 고쳐 다시 열었을 때 확인이 살아남는다. 무엇을 확인했는지를 들고
+   * 지금 값과 대조하는 편이 안전하다.
+   */
+  confirmReady?: boolean
   /** 승인 성공 알림 문구. */
   successMessage: string
 }

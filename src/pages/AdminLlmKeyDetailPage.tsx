@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import {
   fetchAdminLlmKey,
+  fetchOpenRouterAccount,
   fetchOpenRouterAccounts,
   replaceAdminLlmKeyLimits,
   resumeAdminLlmKey,
@@ -44,7 +45,8 @@ import { adminPaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
-import { KeyCreditObservation } from '../components/OpenRouterCredits'
+import { AllocationWarning, KeyCreditObservation } from '../components/OpenRouterCredits'
+import { evaluateAllocation } from '../lib/openrouter-credits'
 
 const EDITABLE_STATUSES = new Set<LlmApiKeyStatus>(['PENDING', 'ACTIVE', 'SUSPENDED'])
 const REVOKABLE_STATUSES = new Set<LlmApiKeyStatus>(['PENDING', 'ACTIVE', 'SUSPENDED'])
@@ -335,6 +337,35 @@ function LimitsModal({
   })
   const eligibleAccounts = (accounts.data ?? []).filter((account) => account.eligibleForBinding)
 
+  // 이미 연결된 키는 위 목록 조회가 꺼져 있다. 그래도 배정 판정에는 그 계정의
+  // 배정 합계와 잔액이 필요하므로 단건으로 따로 읽는다.
+  const boundAccount = useQuery({
+    queryKey: ['admin', 'llm-account', llmKey.openrouterAccountId],
+    queryFn: () => fetchOpenRouterAccount(llmKey.openrouterAccountId!),
+    enabled: canEditCredit && llmKey.openrouterAccountId != null,
+  })
+  const judgementAccount =
+    boundAccount.data ??
+    (eligibleAccounts.length === 1
+      ? eligibleAccounts[0]
+      : eligibleAccounts.find((account) => account.id === openrouterAccountId) ?? null)
+  const pendingCredit = Number(creditLimit)
+  // 자기 키의 현재 한도는 **그 키가 판정 대상 계정에 이미 연결됐을 때만** 뺀다.
+  // 처음 연결되는 키는 합계에 없으므로 빼면 없는 여유를 만들어 낸다.
+  const excludeAmount =
+    judgementAccount && llmKey.openrouterAccountId === judgementAccount.id
+      ? llmKey.creditLimit
+      : 0
+  const judgement =
+    canEditCredit && judgementAccount && Number.isFinite(pendingCredit) && pendingCredit > 0
+      ? evaluateAllocation({
+          allocation: judgementAccount.allocation,
+          credits: judgementAccount.credits,
+          pendingAmount: pendingCredit,
+          excludeAmount,
+        })
+      : null
+
   useEffect(() => {
     if (Object.keys(fieldErrors).length === 0) return
     const firstInvalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
@@ -501,6 +532,7 @@ function LimitsModal({
               onChange={setOpenrouterAccountId}
               error={fieldErrors.openrouterAccountId}
             />
+            {judgement ? <AllocationWarning judgement={judgement} /> : null}
           </>
         )}
         <div className="flex justify-end gap-2">
