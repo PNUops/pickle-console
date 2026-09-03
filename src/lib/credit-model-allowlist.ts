@@ -12,7 +12,12 @@ export const MAX_CREDIT_MODELS = 50
 /** 자체 서빙 전용 접두. 이 목록은 상용 모델만 다루므로 넣으면 오해다. */
 const RESERVED_PREFIXES = ['pickle-', 'pnu-']
 
-const PATTERN = /^[a-z0-9][a-z0-9._:-]*(\/([a-z0-9][a-z0-9._:-]*|\*))?$/
+/**
+ * 서버와 DB CHECK 의 규칙과 같은 모양이다. 선행 `~` 는 벤더가 부동 별칭
+ * (`~anthropic/claude-sonnet-latest` 처럼 그 계열의 최신 모델로 따라가는 이름)에
+ * 붙이는 표시라서 받는다. `~anthropic/*` 와 `anthropic/*` 는 서로를 덮지 않는다.
+ */
+const PATTERN = /^~?[a-z0-9][a-z0-9._:-]*(\/([a-z0-9][a-z0-9._:-]*|\*))?$/
 
 /**
  * 줄바꿈이나 쉼표로 나눈 입력을 목록으로 만든다. 소문자로 내리고 중복을 없애되
@@ -42,7 +47,10 @@ export function creditModelsError(models: readonly string[]): string | null {
     if (model === '*') {
       return "모든 모델을 허용하려면 목록을 비워 주세요. '*' 하나만 적을 수는 없습니다."
     }
-    if (RESERVED_PREFIXES.some((prefix) => model.startsWith(prefix))) {
+    // 선행 `~` 를 떼고 본다. 안 그러면 `~pickle-general` 이 한 글자 차이로
+    // 이 검사를 빠져나가 자체 서빙 이름이 상용 목록에 들어온다.
+    const bare = model.startsWith('~') ? model.slice(1) : model
+    if (RESERVED_PREFIXES.some((prefix) => bare.startsWith(prefix))) {
       return `${model}은(는) 자체 서빙 모델이라 이 목록의 대상이 아닙니다. 상용 모델 이름을 적어 주세요.`
     }
     if (!PATTERN.test(model)) {
