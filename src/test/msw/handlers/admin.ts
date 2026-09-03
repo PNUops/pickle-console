@@ -4,6 +4,7 @@ import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './aut
 import { adminReadScope } from './org-scope'
 import { flavorStore, orgs, resetFlavorStore } from './reference'
 import { uuid } from '../ids'
+import { kstDateString } from '../../../lib/format'
 import {
   accessOf,
   invalidVmStateProblem,
@@ -32,7 +33,6 @@ export function submittedAdminRequest(n: number): RequestDetail {
     requesterName: regularUser.name,
     type: 'VM',
     purpose: `추가 실습 서버 ${n}`,
-    courseOrProject: null,
     extraNote: null,
     reqEndDate: null,
     displayName: `추가 실습 서버 ${n}`,
@@ -60,7 +60,6 @@ function initialAdminRequests(): RequestDetail[] {
     {
       ...submittedAdminRequest(201),
       purpose: '캡스톤 프로젝트 백엔드 서버 운영',
-      courseOrProject: '2026-1 캡스톤디자인 3조',
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
       vm: {
@@ -585,8 +584,6 @@ export const requestPeriodStore: Schemas['AdminRequestPeriodResponse'][] = [
     status: 'ACTIVE', displayOrder: 1, expired: false },
   { id: uuid(22), name: 'vacation', displayName: '이번 방학', endDate: isoDaysFromNow(60),
     status: 'ACTIVE', displayOrder: 2, expired: false },
-  { id: uuid(23), name: 'indefinite', displayName: '무기한 (교내 서비스)', endDate: null,
-    status: 'ACTIVE', displayOrder: 3, expired: false },
   // 지난 항목. 관리자 목록에는 남고 신청 화면에는 나오지 않는다.
   { id: uuid(24), name: 'term-past', displayName: '지난 학기', endDate: isoDaysFromNow(-30),
     status: 'ACTIVE', displayOrder: 0, expired: true },
@@ -635,22 +632,11 @@ export const requestPeriodHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     const body = (await request.json()) as Schemas['UpdateRequestPeriodRequest']
-    if (body.clearEndDate && body.endDate != null) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '입력값이 올바르지 않습니다',
-        status: 422,
-        detail: '요청 값을 확인해 주세요.',
-        code: 'VALIDATION_FAILED',
-        errors: [{ field: 'endDate', message: '종료일을 지우면서 동시에 지정할 수는 없습니다.' }],
-      })
-    }
     if (body.displayName != null) period.displayName = body.displayName
-    if (body.clearEndDate) period.endDate = null
-    else if (body.endDate != null) period.endDate = body.endDate
+    if (body.endDate != null) period.endDate = body.endDate
     if (body.status != null) period.status = body.status
     if (body.displayOrder != null) period.displayOrder = body.displayOrder
-    period.expired = period.endDate != null && period.endDate < new Date().toISOString().slice(0, 10)
+    period.expired = period.endDate < kstDateString(new Date())
     return HttpResponse.json(period, { status: 200 })
   }),
 ]

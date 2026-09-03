@@ -55,7 +55,6 @@ const unknownKindView: RequestKindView = {
         {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
-      <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
       <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
       <Field label="표시명">{data.displayName}</Field>
     </>

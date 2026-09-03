@@ -7,34 +7,29 @@
  */
 
 /** 단계의 정체. 검증과 렌더링은 위치가 아니라 이 id로 갈린다. */
-export type WizardStepId = 'kind' | 'resource' | 'request' | 'review'
+export type WizardStepId = 'resource' | 'request' | 'review'
 
-/** 종류를 모르고 들어왔을 때의 전체 단계. */
-export const ALL_STEPS: WizardStepId[] = ['kind', 'resource', 'request', 'review']
+/**
+ * 위저드의 단계. **진입 경로와 무관하게 언제나 이 셋이다.**
+ *
+ * 무엇을 신청할지 고르는 것은 단계가 아니라 위저드 앞의 화면(KindPicker)이다.
+ * 종류를 아는 자리에서 들어오면 그 화면을 지나지 않으므로, 단계로 두면 같은
+ * 위저드가 진입마다 3단계였다 4단계였다 한다. 그러면 스텝퍼의 「1」이 사람마다
+ * 다른 화면을 가리키고, 첫 단계의 「이전」은 언제나 죽은 버튼으로 남는다.
+ */
+export const ALL_STEPS: WizardStepId[] = ['resource', 'request', 'review']
 
 export const STEP_TITLES: Record<WizardStepId, string> = {
-  kind: '종류',
-  resource: '만들 리소스',
+  resource: '리소스 구성',
   request: '신청 내용',
   review: '확인',
 }
 
 /**
- * 실제로 걷는 단계.
- *
- * 종류를 아는 자리에서 들어왔다면 그 단계를 접는다. 리소스 목록의 신청 버튼은
- * 무엇을 신청하는지 이미 말하고 있으므로, 방금 누른 것을 한 번 더 고르게 할
- * 이유가 없다.
- */
-export function visibleSteps(kindLocked: boolean): WizardStepId[] {
-  return kindLocked ? ALL_STEPS.filter((step) => step !== 'kind') : ALL_STEPS
-}
-
-/**
  * `?step=`이 가리키는 단계. 모르는 값은 첫 단계로 떨어진다.
  *
- * 서수가 아니라 id를 싣는 이유는 단계 수가 진입에 따라 달라지기 때문이다.
- * `?step=2`는 종류를 아는 진입과 모르는 진입에서 서로 다른 화면을 가리킨다.
+ * 서수가 아니라 id를 싣는 이유는 단계가 자리를 옮겨도 확인 단계의 「수정」 링크와
+ * 되돌아온 422가 같은 화면을 계속 가리키게 하기 위해서다.
  */
 export function parseStepId(value: string | null, steps: WizardStepId[]): WizardStepId {
   const found = steps.find((step) => step === value)
@@ -55,11 +50,9 @@ export interface FieldSlot {
  * 못한 채 조용히 목록으로만 뜬다.
  */
 export const COMMON_FIELDS: Record<string, FieldSlot> = {
-  type: { label: '리소스 종류', step: 'kind' },
   workspaceId: { label: '워크스페이스', step: 'request' },
   orgId: { label: '기관', step: 'request' },
   purpose: { label: '사용 목적', step: 'request' },
-  courseOrProject: { label: '수업이나 프로젝트', step: 'request' },
   extraNote: { label: '참고 사항', step: 'request' },
   periodPresetId: { label: '사용 기간', step: 'request' },
   reqEndDate: { label: '사용 종료일', step: 'request' },

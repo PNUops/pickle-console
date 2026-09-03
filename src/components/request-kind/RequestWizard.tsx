@@ -16,6 +16,7 @@ import {
   Card,
   CardContent,
   CardRadioGroup,
+  Checkbox,
   ErrorSummary,
   FormField,
   Input,
@@ -28,8 +29,8 @@ import {
 import { fieldErrorsOf } from '../../lib/field-errors'
 import { kstDateString, todayKstDate } from '../../lib/format'
 import { clearDraft, loadDraft, saveDraft } from '../../lib/request-draft'
+import { consolePaths } from '../../lib/paths'
 import { useScope } from '../../lib/use-scope'
-import { KIND_PICKER_FOOTNOTE, REQUEST_KINDS } from './index'
 import { ReviewStep, type ReviewSection } from './ReviewStep'
 import {
   COMMON_FIELDS,
@@ -38,7 +39,7 @@ import {
   routeServerErrors,
   slotsFor,
   STEP_TITLES,
-  visibleSteps,
+  ALL_STEPS,
   type FieldSlot,
   type WizardStepId,
 } from './wizard-steps'
@@ -48,10 +49,10 @@ const INITIAL_COMMON: CommonWizardState = {
   workspaceId: null,
   orgId: null,
   purpose: '',
-  courseOrProject: '',
   extraNote: '',
   periodMode: 'preset',
   periodPresetId: null,
+  indefinite: false,
   reqEndDate: '',
   displayName: '',
 }
@@ -61,12 +62,8 @@ const MAX_CUSTOM_PERIOD_YEARS = 2
 
 export function RequestWizard({
   kind,
-  kindLocked,
-  onSelectKind,
 }: {
   kind: RequestKindModule
-  kindLocked: boolean
-  onSelectKind: (type: string) => void
 }) {
   const scope = useScope()
   const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: fetchWorkspaces })
@@ -93,7 +90,7 @@ export function RequestWizard({
   const formRef = useRef<HTMLFormElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
-  const steps = visibleSteps(kindLocked)
+  const steps = ALL_STEPS
   const fields: Record<string, FieldSlot> = { ...COMMON_FIELDS, ...kind.fields }
   const update = (patch: Partial<CommonWizardState>) =>
     setState((prev) => ({ ...prev, ...patch }))
@@ -124,10 +121,10 @@ export function RequestWizard({
       if (!state.purpose.trim()) next.purpose = '사용 목적을 입력해 주세요.'
       else if (state.purpose.length > 2000)
         next.purpose = '사용 목적은 2000자 이하로 입력해 주세요.'
-      if (state.courseOrProject.length > 200)
-        next.courseOrProject = '수업이나 프로젝트 이름은 200자 이하로 입력해 주세요.'
       if (state.periodMode === 'preset') {
         if (!selectedPeriod) next.periodPresetId = '사용 기간을 선택해 주세요.'
+      } else if (state.indefinite) {
+        // 무기한은 값이 없는 상태가 아니라 고른 값이다. 검사할 날짜가 없다.
       } else if (!state.reqEndDate) {
         next.reqEndDate = '사용 종료일을 정해 주세요.'
       } else {
@@ -198,7 +195,7 @@ export function RequestWizard({
     saveDraft(kind.type, state, kindApi.spec)
   }, [kind.type, kindApi.spec, state, submitted])
 
-  // 입력이 바뀌면 서버 오류를 지운다. 접속 이름을 다시 치는 순간 문구가 사라진다.
+  // 입력이 바뀌면 서버 오류를 지운다. 호스트 이름을 다시 치는 순간 문구가 사라진다.
   useEffect(() => {
     setServerFieldErrors((prev) => (Object.keys(prev).length === 0 ? prev : {}))
     setSubmitError(null)
@@ -214,7 +211,16 @@ export function RequestWizard({
     onSuccess: (data) => {
       clearDraft()
       void queryClient.invalidateQueries({ queryKey: ['requests'] })
-      setSearchParams(new URLSearchParams(), { replace: true })
+      // `step`만 뺀다. 통째로 비우면 `kind`가 함께 날아가고, 종류를 잃은 주소는
+      // 위저드가 아니라 종류 고르기 화면이라 성공 화면이 마운트되지도 못한다.
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('step')
+          return next
+        },
+        { replace: true },
+      )
       setSubmitted(data)
     },
     onError: (err) => {
@@ -257,10 +263,11 @@ export function RequestWizard({
     workspaceId: state.workspaceId!,
     orgId: state.orgId!,
     purpose: state.purpose.trim(),
-    courseOrProject: state.courseOrProject.trim() || null,
     extraNote: state.extraNote.trim() || null,
     periodPresetId: state.periodMode === 'preset' ? state.periodPresetId : null,
-    reqEndDate: state.periodMode === 'custom' ? state.reqEndDate : null,
+    reqEndDate:
+      state.periodMode === 'custom' && !state.indefinite ? state.reqEndDate : null,
+    reqIndefinite: state.periodMode === 'custom' && state.indefinite ? true : null,
     displayName: state.displayName.trim(),
     ...kindApi.payload(),
   })
@@ -282,9 +289,11 @@ export function RequestWizard({
   const shown: FieldErrors = { ...errors, ...serverFieldErrors }
   const periodLabel = state.periodMode === 'preset'
     ? selectedPeriod
-      ? `${selectedPeriod.displayName}${selectedPeriod.endDate ? ` (${selectedPeriod.endDate}까지)` : ' (무기한)'}`
+      ? `${selectedPeriod.displayName} (${selectedPeriod.endDate}까지)`
       : '미선택'
-    : state.reqEndDate || '미지정'
+    : state.indefinite
+      ? '무기한'
+      : state.reqEndDate || '미지정'
 
   const reviewRows = kindApi.reviewRows()
   const commonRows: Partial<Record<WizardStepId, [string, string][]>> = {
@@ -293,13 +302,12 @@ export function RequestWizard({
       ['워크스페이스', selectedWorkspace?.name ?? '—'],
       ['기관', selectedOrg?.name ?? '—'],
       ['사용 목적', state.purpose.trim()],
-      ['수업이나 프로젝트', state.courseOrProject.trim() || '—'],
       ['사용 기간', periodLabel],
       ['참고 사항', state.extraNote.trim() || '—'],
     ],
   }
   const sections: ReviewSection[] = steps
-    .filter((candidate) => candidate !== 'review' && candidate !== 'kind')
+    .filter((candidate) => candidate !== 'review')
     .map((candidate) => ({
       step: candidate,
       rows: [...(commonRows[candidate] ?? []), ...(reviewRows[candidate] ?? [])],
@@ -320,15 +328,13 @@ export function RequestWizard({
         {`${steps.length}단계 중 ${steps.indexOf(step) + 1}단계, ${STEP_TITLES[step]}`}
       </p>
 
-      {kindLocked && (
-        <div className="flex items-center gap-3 text-sm text-foreground-secondary">
-          <span className="text-foreground-muted">종류</span>
-          <span className="font-medium text-foreground-primary">{kind.picker.title}</span>
-          <Link to="/console/requests/new" className="font-medium text-primary-700 underline">
-            변경
-          </Link>
-        </div>
-      )}
+      <div className="flex items-center gap-3 text-sm text-foreground-secondary">
+        <span className="text-foreground-muted">종류</span>
+        <span className="font-medium text-foreground-primary">{kind.picker.title}</span>
+        <Link to={consolePaths.newRequest(scope)} className="font-medium text-primary-700 underline">
+          변경
+        </Link>
+      </div>
 
       <Card>
         <CardContent className="py-6">
@@ -357,23 +363,6 @@ export function RequestWizard({
               slots={slotsFor(step, fields)}
               fieldLabels={fieldLabels(fields)}
             />
-
-            {step === 'kind' && (
-              <div className="space-y-4">
-                <CardRadioGroup
-                  legend="무엇을 신청할까요"
-                  required
-                  value={kind.type}
-                  onChange={onSelectKind}
-                  options={REQUEST_KINDS.map((entry) => ({
-                    value: entry.type,
-                    title: entry.picker.title,
-                    description: entry.picker.description,
-                  }))}
-                />
-                <p className="text-xs text-foreground-muted">{KIND_PICKER_FOOTNOTE}</p>
-              </div>
-            )}
 
             {step === 'resource' && (
               <>
@@ -451,37 +440,50 @@ export function RequestWizard({
                   onChange={(value) =>
                     value === 'custom'
                       ? update({ periodMode: 'custom', periodPresetId: null })
-                      : update({ periodMode: 'preset', periodPresetId: value, reqEndDate: '' })
+                      : update({
+                          periodMode: 'preset',
+                          periodPresetId: value,
+                          reqEndDate: '',
+                          indefinite: false,
+                        })
                   }
                   columns={3}
                   options={[
                     ...offeredPeriods.map((period) => ({
                       value: period.id,
                       title: period.displayName,
-                      meta: period.endDate ? `${period.endDate}까지` : '무기한',
+                      meta: `${period.endDate}까지`,
                     })),
-                    { value: 'custom', title: '직접 입력', description: '날짜를 정해 적습니다.' },
+                    { value: 'custom', title: '직접 입력', description: '날짜를 정해 적거나 무기한을 고릅니다.' },
                   ]}
                 />
                 {state.periodMode === 'custom' && (
-                  <FormField label="사용 종료일" required error={shown.reqEndDate}>
-                    <Input
-                      type="date"
-                      min={todayKstDate()}
-                      value={state.reqEndDate}
-                      onChange={(event) => update({ reqEndDate: event.target.value })}
+                  <div className="space-y-3">
+                    <FormField
+                      label="사용 종료일"
+                      required={!state.indefinite}
+                      error={shown.reqEndDate}
+                    >
+                      <Input
+                        type="date"
+                        min={todayKstDate()}
+                        value={state.reqEndDate}
+                        disabled={state.indefinite}
+                        onChange={(event) => update({ reqEndDate: event.target.value })}
+                      />
+                    </FormField>
+                    <Checkbox
+                      label="무기한 (사전 승인 필요)"
+                      description="끝나지 않아야 하는 서비스만 해당합니다. 관리자와 먼저 이야기한 뒤 신청해 주세요."
+                      checked={state.indefinite}
+                      onChange={(event) =>
+                        // 종료일을 남겨 두면 화면에 없는 날짜가 함께 제출된다.
+                        update({ indefinite: event.target.checked, reqEndDate: '' })
+                      }
                     />
-                  </FormField>
+                  </div>
                 )}
 
-                <FormField label="수업이나 프로젝트" error={shown.courseOrProject}>
-                  <Input
-                    value={state.courseOrProject}
-                    onChange={(event) => update({ courseOrProject: event.target.value })}
-                    maxLength={200}
-                    placeholder="예: 2026-1 캡스톤디자인 3조"
-                  />
-                </FormField>
                 <FormField label="참고 사항" error={shown.extraNote}>
                   <Textarea
                     value={state.extraNote}
@@ -498,14 +500,19 @@ export function RequestWizard({
             )}
 
             <div className="flex items-center justify-between border-t border-stroke-subtle pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={goPrev}
-                disabled={steps.indexOf(step) === 0 || submit.isPending}
-              >
-                이전
-              </Button>
+              {/* 첫 단계에는 돌아갈 앞이 없다. 종류를 바꾸는 길은 위의 「변경」이다. */}
+              {steps.indexOf(step) > 0 ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={goPrev}
+                  disabled={submit.isPending}
+                >
+                  이전
+                </Button>
+              ) : (
+                <span />
+              )}
               <Button type="submit" loading={submit.isPending}>
                 {isLast ? '신청 제출' : '다음'}
               </Button>

@@ -24,10 +24,11 @@ export interface CommonWizardState {
   workspaceId: string | null
   orgId: string | null
   purpose: string
-  courseOrProject: string
   extraNote: string
   periodMode: PeriodMode
   periodPresetId: string | null
+  /** 직접 입력에서 종료일 대신 무기한을 골랐는지. */
+  indefinite: boolean
   reqEndDate: string
   displayName: string
 }
@@ -38,7 +39,6 @@ export type KindCreatePayload = Omit<
   | 'workspaceId'
   | 'orgId'
   | 'purpose'
-  | 'courseOrProject'
   | 'extraNote'
   | 'periodPresetId'
   | 'reqEndDate'
@@ -55,7 +55,7 @@ export interface KindWizard {
   /** 단계마다 자기 필드만 검증한다. 공통 필드는 위저드 본체가 본다. */
   validateStep(step: WizardStepId): FieldErrors
   /**
-   * '만들 리소스' 단계에서 이름 아래에 붙는 이 종류의 입력.
+   * '리소스 구성' 단계에서 이름 아래에 붙는 이 종류의 입력.
    *
    * 종류가 무엇을 얹든 한 덩어리로 받는다. 종전에는 이름 옆에 붙는 것과 사양
    * 단계 본문이 따로였는데, 두 단계가 하나로 합쳐지면서 나눌 이유가 없어졌다.

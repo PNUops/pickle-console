@@ -3271,9 +3271,9 @@ export interface components {
             displayOrder: number;
             /**
              * Format: date
-             * @description 종료일. 값이 없으면 무기한입니다.
+             * @description 종료일
              */
-            endDate?: string | null;
+            endDate: string;
             /** @description 종료일이 이미 지나 신청 화면에 나오지 않는 항목인지. */
             expired: boolean;
             /** Format: uuid */
@@ -3693,13 +3693,12 @@ export interface components {
             displayOrder?: number | null;
             /**
              * Format: date
-             * @description 종료일. 비우면 무기한 항목이 되고, 신청자가 그것을 고를 수 있게 됩니다.
+             * @description 종료일. 모든 기간 항목은 끝나는 날이 있습니다.
              */
-            endDate?: string | null;
+            endDate: string;
             name: string;
         };
         CreateRequestRequest: {
-            courseOrProject?: string | null;
             displayName: string;
             extraNote?: string | null;
             llmKey?: components["schemas"]["CreateLlmKeyRequestSpec"] | null;
@@ -3710,6 +3709,8 @@ export interface components {
             purpose: string;
             /** Format: date */
             reqEndDate?: string | null;
+            /** @description true면 종료일 없이 신청합니다. reqEndDate·periodPresetId와 함께 보낼 수 없습니다. */
+            reqIndefinite?: boolean | null;
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["CreateVmRequestSpec"] | null;
             /** Format: uuid */
@@ -5752,7 +5753,6 @@ export interface components {
             token: string;
         };
         RequestDetailResponse: {
-            courseOrProject?: string | null;
             /** Format: date-time */
             createdAt: string;
             displayName: string;
@@ -5809,10 +5809,10 @@ export interface components {
             displayName: string;
             /**
              * Format: date
-             * @description 이 기간의 종료일. 값이 없으면 무기한입니다.
+             * @description 이 기간의 종료일
              * @example 2026-06-30
              */
-            endDate?: string | null;
+            endDate: string;
             /**
              * Format: uuid
              * @description 기간 항목 식별자
@@ -6170,14 +6170,12 @@ export interface components {
             studentNo?: string | null;
         };
         UpdateRequestPeriodRequest: {
-            /** @description true면 종료일을 지워 무기한으로 만듭니다. endDate와 함께 보낼 수 없습니다. */
-            clearEndDate?: boolean | null;
             displayName?: string | null;
             /** Format: int32 */
             displayOrder?: number | null;
             /**
              * Format: date
-             * @description 종료일. 무기한으로 바꾸려면 clearEndDate를 씁니다.
+             * @description 새 종료일
              */
             endDate?: string | null;
             status?: components["schemas"]["CatalogStatus"] | null;

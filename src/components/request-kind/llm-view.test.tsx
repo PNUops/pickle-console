@@ -23,7 +23,6 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
     requesterName: '홍길동',
     type: 'LLM_API_KEY',
     purpose: '캡스톤 챗봇 개발',
-    courseOrProject: '2026-1 캡스톤디자인 3조',
     extraNote: null,
     reqEndDate: '2026-12-20',
     displayName: '캡스톤 챗봇 키',

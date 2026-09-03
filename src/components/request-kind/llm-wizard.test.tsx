@@ -47,7 +47,7 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     // 확인 단계: 비워 둔 한도는 '—'가 아니라 서비스 기본값으로 읽힌다.
-    expect(await screen.findByRole('heading', { name: '만들 리소스' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '리소스 구성' })).toBeInTheDocument()
     expect(screen.getAllByText('서비스 기본값')).toHaveLength(3)
     expect(screen.getByText('한도 확정 안내')).toBeInTheDocument()
 
@@ -59,10 +59,10 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
       workspaceId: uuid(12),
       orgId: uuid(1),
       purpose: '실습',
-      courseOrProject: null,
       extraNote: null,
       periodPresetId: uuid(21),
       reqEndDate: null,
+      reqIndefinite: null,
       displayName: '캡스톤 챗봇 키',
       llmKey: {
         usagePlan: null,

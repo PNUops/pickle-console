@@ -577,7 +577,6 @@ export const llmKeyRequestView: RequestKindView = {
         {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
-      <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
       <Field label="사용 계획">{data.llmKey?.usagePlan ?? '—'}</Field>
       {/* 비어 있는 희망 한도는 빠뜨린 값이 아니라 "기본값이면 된다"는 답이다. */}
       <Field label="쓸 모델">

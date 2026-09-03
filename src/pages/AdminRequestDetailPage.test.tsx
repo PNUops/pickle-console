@@ -181,7 +181,7 @@ describe('승인 폼', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     // 프리필 검증
     expect(screen.getByLabelText('vCPU')).toHaveValue(2)
-    expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
+    expect(screen.getByLabelText('메모리 (GiB)')).toHaveValue(2)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
     expect(screen.getByLabelText('OS 이미지')).toHaveValue(uuid(1))
     // 신청서에 시작일이 없으므로 부여 기간의 시작은 만들어지는 날, 곧 오늘이다.
@@ -190,7 +190,7 @@ describe('승인 폼', () => {
     expect(screen.getByLabelText('배치 노드 ID')).toHaveValue('')
     // 프리필 락: 희망 호스트명이 그대로 채워져 있어야 승인 시 자동 생성으로
     // 조용히 무시되지 않는다.
-    expect(screen.getByLabelText('호스트명(슬러그) 확정')).toHaveValue('capstone-api')
+    expect(screen.getByLabelText('호스트 이름 확정')).toHaveValue('capstone-api')
     // 공개 여부·서브도메인은 승인 대상이 아니다 (사용자가 공개할 때 정한다).
     expect(screen.queryByLabelText('HTTP 게시')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('서브도메인 확정')).not.toBeInTheDocument()
@@ -301,7 +301,7 @@ describe('승인 폼 — 서버 검증 오류', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    const slugField = (await screen.findByLabelText('호스트명(슬러그) 확정')).closest('div')!
+    const slugField = (await screen.findByLabelText('호스트 이름 확정')).closest('div')!
     expect(
       await within(slugField).findByText('이미 사용 중인 호스트명입니다.'),
     ).toBeInTheDocument()

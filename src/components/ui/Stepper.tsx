@@ -25,7 +25,12 @@ export function Stepper({ steps, current, labels = 'always', className }: Steppe
           <li
             key={step}
             aria-current={state === 'current' ? 'step' : undefined}
-            className="flex flex-1 items-center gap-2"
+            // 마지막 항목은 늘리지 않는다. 연결선이 없는데 같은 몫을 받으면 그만큼이
+            // 오른쪽 빈자리로 남는다.
+            className={cn(
+              'flex items-center gap-2',
+              index < steps.length - 1 ? 'flex-1' : 'flex-none',
+            )}
           >
             <span
               aria-hidden="true"

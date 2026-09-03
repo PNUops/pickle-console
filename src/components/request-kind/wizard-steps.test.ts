@@ -5,29 +5,29 @@ import {
   parseStepId,
   routeServerErrors,
   slotsFor,
-  visibleSteps,
+  ALL_STEPS,
   type FieldSlot,
 } from './wizard-steps'
 
 const VM_FIELDS: Record<string, FieldSlot> = {
   ...COMMON_FIELDS,
-  'vm.desiredSlug': { label: '접속 이름', step: 'resource' },
+  'vm.desiredSlug': { label: '호스트 이름', step: 'resource' },
   'vm.imageId': { label: 'OS', step: 'resource' },
   'vm.specReason': { label: '사양 사유', step: 'resource' },
 }
 
-describe('visibleSteps', () => {
-  test('종류를 알고 들어오면 그 단계를 접는다', () => {
-    expect(visibleSteps(false)).toEqual(['kind', 'resource', 'request', 'review'])
-    expect(visibleSteps(true)).toEqual(['resource', 'request', 'review'])
+describe('ALL_STEPS', () => {
+  // 종류 고르기는 위저드 앞의 화면이므로, 진입 경로가 단계 수를 바꾸지 않는다.
+  test('진입과 무관하게 세 단계다', () => {
+    expect(ALL_STEPS).toEqual(['resource', 'request', 'review'])
   })
 })
 
 describe('parseStepId', () => {
   test('모르는 값과 접힌 단계는 첫 단계로 떨어진다', () => {
-    const steps = visibleSteps(true)
+    const steps = ALL_STEPS
     expect(parseStepId('request', steps)).toBe('request')
-    // 옛 링크의 서수도, 이 진입에서 접힌 단계도 모르는 값이다.
+    // 옛 링크의 서수도, 단계에서 빠진 종류 고르기도 모르는 값이다.
     expect(parseStepId('3', steps)).toBe('resource')
     expect(parseStepId('kind', steps)).toBe('resource')
     expect(parseStepId(null, steps)).toBe('resource')
@@ -35,7 +35,7 @@ describe('parseStepId', () => {
 })
 
 describe('routeServerErrors', () => {
-  const steps = visibleSteps(true)
+  const steps = ALL_STEPS
 
   test('종류가 얹은 필드도 자기 단계로 되돌린다', () => {
     expect(routeServerErrors({ 'vm.desiredSlug': '이미 사용 중인 이름입니다.' }, VM_FIELDS, steps))
@@ -73,6 +73,6 @@ describe('slotsFor', () => {
 
 describe('fieldLabels', () => {
   test('원시 경로가 아니라 한국어 이름을 준다', () => {
-    expect(fieldLabels(VM_FIELDS)['vm.desiredSlug']).toBe('접속 이름')
+    expect(fieldLabels(VM_FIELDS)['vm.desiredSlug']).toBe('호스트 이름')
   })
 })

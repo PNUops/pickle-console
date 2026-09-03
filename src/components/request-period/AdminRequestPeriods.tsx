@@ -58,8 +58,8 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
           <h2 className="text-lg font-semibold text-foreground-primary">사용 기간</h2>
           <p className="mt-1 text-sm text-foreground-muted">
             신청 화면이 고를 수 있게 제공하는 기간입니다. 날짜가 절대값이라 학기마다
-            갱신해야 하고, 이미 지난 항목은 신청 화면에 나오지 않습니다. 종료일이 없는
-            항목이 무기한이며, 그것을 만들지 않으면 무기한은 신청할 수 없습니다.
+            갱신해야 하고, 이미 지난 항목은 신청 화면에 나오지 않습니다. 무기한은 여기에
+            두지 않습니다. 신청자가 신청 화면에서 직접 고릅니다.
           </p>
         </div>
         {isSysAdmin && (
@@ -103,7 +103,7 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
                 <TR key={period.id}>
                   <TD className="font-medium text-foreground-primary">{period.displayName}</TD>
                   <TD className="font-mono text-xs text-foreground-muted">{period.name}</TD>
-                  <TD className="whitespace-nowrap">{period.endDate ?? '무기한'}</TD>
+                  <TD className="whitespace-nowrap">{period.endDate}</TD>
                   <TD className="space-x-1 whitespace-nowrap">
                     <Badge variant={period.status === 'ACTIVE' ? 'success' : 'neutral'}>
                       {period.status === 'ACTIVE' ? '활성' : '은퇴'}
@@ -158,7 +158,7 @@ function CreatePeriodModal({
       createAdminRequestPeriod({
         name: name.trim(),
         displayName: displayName.trim(),
-        endDate: endDate || null,
+        endDate,
         displayOrder: Number(displayOrder) || 0,
       }),
     onSuccess: async () => {
@@ -200,11 +200,7 @@ function CreatePeriodModal({
             placeholder="2026학년도 1학기"
           />
         </FormField>
-        <FormField
-          label="종료일"
-          error={fieldErrors.endDate}
-          description="비우면 무기한 항목이 됩니다. 종료하면 안 되는 교내 서비스가 그것을 고릅니다."
-        >
+        <FormField label="종료일" required error={fieldErrors.endDate}>
           <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </FormField>
         <FormField label="표시 순서" error={fieldErrors.displayOrder} description="작을수록 앞에 옵니다.">
@@ -238,8 +234,7 @@ function EditPeriodModal({
 }) {
   const queryClient = useQueryClient()
   const [displayName, setDisplayName] = useState(period.displayName)
-  const [endDate, setEndDate] = useState(period.endDate ?? '')
-  const [indefinite, setIndefinite] = useState(period.endDate == null)
+  const [endDate, setEndDate] = useState(period.endDate)
   const [displayOrder, setDisplayOrder] = useState(String(period.displayOrder))
   const [retired, setRetired] = useState(period.status === 'DISABLED')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -249,9 +244,7 @@ function EditPeriodModal({
     mutationFn: () =>
       updateAdminRequestPeriod(period.id, {
         displayName: displayName.trim(),
-        // 서버는 날짜 지정과 지우기를 함께 받지 않는다. 화면도 한쪽만 보낸다.
-        endDate: indefinite ? null : endDate || null,
-        clearEndDate: indefinite ? true : null,
+        endDate: endDate || null,
         status: retired ? 'DISABLED' : 'ACTIVE',
         displayOrder: Number(displayOrder) || 0,
       }),
@@ -286,17 +279,9 @@ function EditPeriodModal({
             maxLength={100}
           />
         </FormField>
-        <Checkbox
-          label="무기한"
-          description="종료일 없이 제공합니다."
-          checked={indefinite}
-          onChange={(e) => setIndefinite(e.target.checked)}
-        />
-        {!indefinite && (
-          <FormField label="종료일" error={fieldErrors.endDate}>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </FormField>
-        )}
+        <FormField label="종료일" error={fieldErrors.endDate}>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+        </FormField>
         <FormField label="표시 순서" error={fieldErrors.displayOrder}>
           <Input
             type="number"
