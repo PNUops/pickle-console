@@ -66,7 +66,7 @@ describe('LLM API 키 신청 위저드 — 비워 두는 것이 정상', () => {
       displayName: '캡스톤 챗봇 키',
       llmKey: {
         usagePlan: null,
-        // 축은 기본값이 있다. 교내 모델만 쓰는 것이 보통의 신청이다.
+        // 축은 기본값이 있다. 자체 서빙 모델만 쓰는 것이 보통의 신청이다.
         useCampusModels: true,
         useCommercialModels: false,
         reqCreditLimit: null,
@@ -116,10 +116,10 @@ describe('LLM API 키 신청 위저드 — 쓸 모델', () => {
     renderWizard()
     await reachSpecStep(user)
 
-    await user.click(screen.getByRole('checkbox', { name: /교내 모델/ }))
+    await user.click(screen.getByRole('checkbox', { name: /자체 서빙 모델/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(
-      screen.getByText('교내 모델과 유료 모델 중 최소 하나는 선택해 주세요.'),
+      screen.getByText('자체 서빙 모델과 유료 모델 중 최소 하나는 선택해 주세요.'),
     ).toBeInTheDocument()
   })
 
@@ -149,7 +149,7 @@ describe('LLM API 키 신청 위저드 — 쓸 모델', () => {
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(screen.getByText('교내 모델, 유료 모델')).toBeInTheDocument()
+    expect(screen.getByText('자체 서빙 모델, 유료 모델')).toBeInTheDocument()
     expect(screen.getByText('$20')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })

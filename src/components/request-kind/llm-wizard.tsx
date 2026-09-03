@@ -87,7 +87,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
     // 축은 한도와 다르다. 비워 둔 한도는 기본값이지만, 축을 다 끄면 무엇을 달라는
     // 것인지 말하지 않은 것이다. 서버가 같은 규칙으로 막는다.
     if (!spec.useCampus && !spec.useCommercial)
-      next['llmKey.useCampusModels'] = '교내 모델과 유료 모델 중 최소 하나는 선택해 주세요.'
+      next['llmKey.useCampusModels'] = '자체 서빙 모델과 유료 모델 중 최소 하나는 선택해 주세요.'
     if (spec.useCommercial && spec.reqCreditLimit.trim()) {
       const amount = Number(spec.reqCreditLimit)
       if (!Number.isFinite(amount) || amount <= 0)
@@ -134,14 +134,14 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
           )}
           <div className="mt-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Checkbox
-              label="교내 모델"
+              label="자체 서빙 모델"
               description="학교가 직접 서빙합니다. 돈이 들지 않고 토큰 한도로 씁니다."
               checked={spec.useCampus}
               onChange={(event) => update({ useCampus: event.target.checked })}
             />
             <Checkbox
               label="유료 모델"
-              description="외부 상용 모델입니다. 쓴 만큼 돈이 들어 금액 한도로 씁니다."
+              description="외부 유료 모델입니다. 쓴 만큼 돈이 들어 금액 한도로 씁니다."
               checked={spec.useCommercial}
               onChange={(event) =>
                 update({
@@ -240,7 +240,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
       resource: [
         [
           '쓸 모델',
-          [spec.useCampus ? '교내 모델' : null, spec.useCommercial ? '유료 모델' : null]
+          [spec.useCampus ? '자체 서빙 모델' : null, spec.useCommercial ? '유료 모델' : null]
             .filter(Boolean)
             .join(', ') || '미선택',
         ],

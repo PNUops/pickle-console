@@ -582,7 +582,7 @@ export const llmKeyRequestView: RequestKindView = {
       {/* 비어 있는 희망 한도는 빠뜨린 값이 아니라 "기본값이면 된다"는 답이다. */}
       <Field label="쓸 모델">
         {[
-          data.llmKey?.useCampusModels ? '교내 모델' : null,
+          data.llmKey?.useCampusModels ? '자체 서빙 모델' : null,
           data.llmKey?.useCommercialModels ? '유료 모델' : null,
         ]
           .filter(Boolean)
