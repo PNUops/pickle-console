@@ -36,11 +36,13 @@ describe('LLM API 사실 사본', () => {
   })
 
   test('기본 한도는 배포된 게이트웨이 환경 값이다', () => {
-    // 분당 토큰만 환경 변수로 상향되어 있고 나머지 둘은 코드 기본값과 같다.
+    // 2026-09-03 상향. 셋 다 llm-gateway.env 가 명시하는 값이고, 코드 기본값
+    // (20 / 20,000 / 2)과 다르다. 이 숫자가 곧 모든 키의 정책이므로 배포된 값과
+    // 어긋나면 학생에게 없는 한도를 알려 주게 된다.
     expect(LLM_DEFAULT_LIMITS).toEqual({
-      requestsPerMinute: 20,
-      tokensPerMinute: 30_000,
-      concurrency: 2,
+      requestsPerMinute: 600,
+      tokensPerMinute: 1_000_000,
+      concurrency: 32,
     })
   })
 

@@ -21,8 +21,8 @@ export const ALL_STEPS: WizardStepId[] = ['resource', 'request', 'review']
 
 export const STEP_TITLES: Record<WizardStepId, string> = {
   resource: '리소스 구성',
-  request: '신청 내용',
-  review: '확인',
+  request: '신청 정보',
+  review: '검토',
 }
 
 /**

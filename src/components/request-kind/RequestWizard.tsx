@@ -323,10 +323,7 @@ export function RequestWizard({
         description="필요한 것을 고르고 왜 언제까지 쓸지 적으면 관리자가 검토합니다."
       />
 
-      <Stepper steps={steps.map((id) => STEP_TITLES[id])} current={steps.indexOf(step)} labels="sm" />
-      <p className="text-sm text-foreground-muted sm:sr-only">
-        {`${steps.length}단계 중 ${steps.indexOf(step) + 1}단계, ${STEP_TITLES[step]}`}
-      </p>
+      <Stepper steps={steps.map((id) => STEP_TITLES[id])} current={steps.indexOf(step)} />
 
       <div className="flex items-center gap-3 text-sm text-foreground-secondary">
         <span className="text-foreground-muted">종류</span>

@@ -41,11 +41,18 @@ export const LLM_SUPPORTED_PARAMS = [
   'parallel_tool_calls',
 ] as const
 
-/** 키에 별도 한도가 부여되지 않았을 때 적용되는 값. 배포된 게이트웨이 환경 기준. */
+/**
+ * 키에 별도 한도가 부여되지 않았을 때 적용되는 값. 배포된 게이트웨이 환경 기준
+ * (2026-09-03 상향).
+ *
+ * 분당 한도는 예산이 아니라 폭주 방지다. 예산은 일일 토큰 한도와 금액 한도가 맡고
+ * 신청 화면도 그 둘만 묻는다. 넷 다 교내 서빙 용량을 나누는 장치라 상용 모델 호출은
+ * 지나가지 않는다(2026-09-02 축 분리).
+ */
 export const LLM_DEFAULT_LIMITS = {
-  requestsPerMinute: 20,
-  tokensPerMinute: 30_000,
-  concurrency: 2,
+  requestsPerMinute: 600,
+  tokensPerMinute: 1_000_000,
+  concurrency: 32,
 } as const
 
 export interface LlmErrorEntry {

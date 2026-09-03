@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
@@ -43,14 +43,18 @@ describe('종류 고르기와 위저드의 경계', () => {
     expect(screen.getByLabelText('사용 계획')).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: /가상머신/ })).not.toBeInTheDocument()
     expect(screen.getByText('LLM API 키')).toBeInTheDocument()
-    expect(screen.getByText(/3단계 중 1단계/)).toBeInTheDocument()
+    // 세 단계 라벨이 모두 보인다. 어디까지 왔는지는 색이 말한다.
+    const stepper = screen.getByRole('list')
+    expect(within(stepper).getByText('리소스 구성')).toBeInTheDocument()
+    expect(within(stepper).getByText('신청 정보')).toBeInTheDocument()
+    expect(within(stepper).getByText('검토')).toBeInTheDocument()
   })
 
   // 단계 수가 진입 경로마다 달라지면 스텝퍼의 「1」이 사람마다 다른 화면을 가리킨다.
   test('종류를 모르고 들어오면 고르는 화면이고, 그 화면에는 단계가 없다', async () => {
     renderWizard('/console/requests/new')
     expect(await screen.findByRole('radio', { name: /가상머신/ })).toBeInTheDocument()
-    expect(screen.queryByText(/단계 중/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다음' })).not.toBeInTheDocument()
   })
 
@@ -58,7 +62,7 @@ describe('종류 고르기와 위저드의 경계', () => {
     const user = userEvent.setup()
     renderWizard('/console/requests/new')
     await user.click(await screen.findByRole('radio', { name: /가상머신/ }))
-    expect(await screen.findByText(/3단계 중 1단계/)).toBeInTheDocument()
+    expect(await screen.findByRole('list')).toBeInTheDocument()
     expect(screen.getByLabelText('호스트 이름')).toBeInTheDocument()
   })
 
@@ -66,7 +70,7 @@ describe('종류 고르기와 위저드의 경계', () => {
   test('모르는 종류는 고르는 화면으로 떨어진다', async () => {
     renderWizard('/console/requests/new?kind=NOPE')
     expect(await screen.findByRole('radio', { name: /가상머신/ })).toBeInTheDocument()
-    expect(screen.queryByText(/단계 중/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 })
 
@@ -457,7 +461,7 @@ describe('VM 신청 위저드 — 확인 단계', () => {
     await fillRequestStep(user)
 
     expect(screen.getByRole('heading', { name: '리소스 구성' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '신청 내용' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '신청 정보' })).toBeInTheDocument()
 
     const [editResource] = screen.getAllByRole('button', { name: '수정' })
     await user.click(editResource)

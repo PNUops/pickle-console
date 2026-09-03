@@ -12,7 +12,7 @@ import {
   LLM_SUPPORTED_PARAMS,
 } from '../lib/llm-api'
 
-const LAST_UPDATED = '2026-09-02'
+const LAST_UPDATED = '2026-09-03'
 
 const CURL_EXAMPLE = `curl ${LLM_API_BASE_URL}/chat/completions \\
   -H "Authorization: Bearer $PICKLE_API_KEY" \\
