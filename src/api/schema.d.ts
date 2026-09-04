@@ -484,6 +484,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/openrouter-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 유료 모델 카탈로그
+         * @description 승인 화면에서 고를 수 있는 유료 모델 후보와 그 가격을 조회합니다. 캐시만 읽으므로 이 호출이 벤더를 부르지 않으며, 목록이 비어 있거나 오래됐어도 모델 이름을 직접 입력해 승인할 수 있습니다. 응답의 신선도로 «아직 갱신된 적 없음»과 «벤더를 못 부르는 중»을 구분합니다.
+         */
+        get: operations["listAdminOpenRouterModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/llm/status": {
         parameters: {
             query?: never;
@@ -3515,6 +3535,22 @@ export interface components {
         };
         /** @enum {string} */
         CatalogStatus: "ACTIVE" | "DISABLED";
+        /** @description 카탈로그의 모델 한 건. */
+        CatalogueModel: {
+            /** @description 백만 토큰당 출력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
+            completionPricePerMillion?: number | null;
+            /**
+             * Format: int32
+             * @description 컨텍스트 길이(토큰).
+             */
+            contextLength?: number | null;
+            /** @description 허용 목록에 그대로 넣을 수 있는 모델 이름. */
+            id: string;
+            /** @description 벤더가 표시하는 이름. */
+            name: string;
+            /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
+            promptPricePerMillion?: number | null;
+        };
         /** @enum {string} */
         CertificateKind: "ORIGIN_CA_WILDCARD" | "LETS_ENCRYPT";
         /** @enum {string} */
@@ -5166,6 +5202,30 @@ export interface components {
         };
         /** @enum {string} */
         OpenRouterAccountStatus: "ACTIVE" | "ARCHIVED";
+        /** @description OpenRouter 모델 카탈로그 캐시. 승인 화면의 모델 선택 후보이며, 이 목록이 비어 있어도 모델 이름을 직접 입력할 수 있습니다. */
+        OpenRouterCatalogueResponse: {
+            /**
+             * Format: int32
+             * @description 연속 실패 횟수. 0이면 마지막 시도가 성공했습니다.
+             */
+            consecutiveFailures: number;
+            /** @description 마지막 성공 기준 신선도. 갱신 주기의 세 배를 넘기면 STALE, 성공한 적이 없으면 UNKNOWN입니다. */
+            freshness: components["schemas"]["OpenRouterCreditsFreshness"];
+            /**
+             * Format: date-time
+             * @description 마지막 갱신 시도 시각. 실패해도 갱신됩니다.
+             */
+            lastAttemptAt?: string | null;
+            /** @description 마지막 실패의 분류. 성공했다면 비어 있습니다. 벤더 응답 본문은 담지 않습니다. */
+            lastError?: string | null;
+            /**
+             * Format: date-time
+             * @description 마지막으로 벤더 목록을 성공적으로 가져온 시각.
+             */
+            lastSuccessAt?: string | null;
+            /** @description 캐시에 남아 있는 모델. 벤더 목록에서 사라진 모델은 제외됩니다. */
+            models: components["schemas"]["CatalogueModel"][];
+        };
         /** @enum {string} */
         OpenRouterCredentialError: "CREDENTIAL_ERROR" | "THROTTLED" | "VENDOR_UNAVAILABLE" | "VENDOR_REJECTED";
         OpenRouterCredentialStateResponse: {
@@ -7623,6 +7683,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LlmMetricsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminOpenRouterModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterCatalogueResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

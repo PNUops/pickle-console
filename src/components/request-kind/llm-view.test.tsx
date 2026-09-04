@@ -1,13 +1,16 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
 import { orgAdminUser, refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
 import { uuid } from '../../test/msw/ids'
-import { openRouterAccountStore } from '../../test/msw/handlers/openrouter-accounts'
+import {
+  openRouterAccountStore,
+  openRouterCatalogueStore,
+} from '../../test/msw/handlers/openrouter-accounts'
 
 const REQUEST_ID = uuid(301)
 
@@ -410,6 +413,76 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(approved).toHaveLength(0)
+  })
+})
+
+describe('유료 모델 선택기', () => {
+  // 아래 테스트들이 목 상태를 바꾸므로 매번 되돌린다.
+  beforeEach(() => openRouterCatalogueStore.reset())
+
+  test('가격과 함께 고른 모델이 목록에 들어간다', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    // 이 선택기가 있는 이유는 이름을 대신 쳐 주는 것이 아니라 가격을 판단하는
+    // 자리에 갖다 놓는 것이다. 값이 안 보이면 자유 입력과 다를 것이 없다.
+    const expensive = await screen.findByText('openai/o1-pro')
+    expect(expensive.parentElement).toHaveTextContent('출력 $600 / 1M')
+
+    const row = expensive.closest('li')
+    await user.click(within(row as HTMLElement).getByRole('button', { name: '추가' }))
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('허용할 상용 모델')).toHaveValue('openai/*\nopenai/o1-pro'),
+    )
+  })
+
+  test('별칭은 벤더 프리픽스에 안 덮인다고 표시한다', async () => {
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    const alias = await screen.findByText('~anthropic/claude-sonnet-latest')
+    expect(alias.parentElement).toHaveTextContent('최신 모델을 따라가는 별칭')
+  })
+
+  test('목록을 못 불러와도 승인이 막히지 않는다', async () => {
+    const user = userEvent.setup()
+    openRouterCatalogueStore.fail = true
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await screen.findByText(/모델 목록을 불러오지 못했습니다/)
+
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    await user.clear(screen.getByLabelText('허용할 상용 모델'))
+    await user.type(screen.getByLabelText('허용할 상용 모델'), 'openai/gpt-4o-mini')
+
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditAllowedModels: ['openai/gpt-4o-mini'],
+    })
+  })
+
+  test('한 번도 못 가져온 목록과 오래된 목록을 구분해 말한다', async () => {
+    openRouterCatalogueStore.response = {
+      ...openRouterCatalogueStore.response,
+      models: [],
+      freshness: 'UNKNOWN',
+      lastSuccessAt: null,
+    }
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await screen.findByText(/아직 목록을 가져온 적이 없습니다/)
   })
 })
 

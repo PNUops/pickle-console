@@ -262,7 +262,67 @@ function confirm(account: Account, confirmName: string): Response | null {
   })
 }
 
+/**
+ * 카탈로그 캐시. 서버는 캐시만 읽으므로 이 핸들러도 벤더를 흉내 내지 않는다.
+ * 신선도는 서버가 정하는 값이라 목에서도 응답에 실려 온다 — 화면이 그것으로
+ * "아직 가져온 적 없음"과 "벤더가 죽음"을 가른다.
+ */
+const defaultCatalogue = (): Schemas['OpenRouterCatalogueResponse'] => ({
+  models: [
+    {
+      id: 'openai/gpt-4o-mini',
+      name: 'OpenAI: GPT-4o-mini',
+      promptPricePerMillion: 0.15,
+      completionPricePerMillion: 0.6,
+      contextLength: 128000,
+    },
+    {
+      id: '~anthropic/claude-sonnet-latest',
+      name: 'Anthropic Claude Sonnet Latest',
+      promptPricePerMillion: 2,
+      completionPricePerMillion: 10,
+      contextLength: 1000000,
+    },
+    {
+      id: 'openai/o1-pro',
+      name: 'OpenAI: o1-pro',
+      promptPricePerMillion: 150,
+      completionPricePerMillion: 600,
+      contextLength: 200000,
+    },
+  ],
+  freshness: 'FRESH',
+  lastSuccessAt: '2026-09-04T00:00:00Z',
+  lastAttemptAt: '2026-09-04T00:00:00Z',
+  lastError: null,
+  consecutiveFailures: 0,
+})
+
+// 테스트가 이 값을 바꾸므로 되돌릴 방법이 함께 있어야 한다. 없으면 한 테스트의
+// 「벤더가 죽었다」가 뒤 테스트로 새고, 그 실패는 실행 순서에 따라 나타났다 사라진다.
+export const openRouterCatalogueStore: {
+  response: Schemas['OpenRouterCatalogueResponse']
+  fail: boolean
+  reset: () => void
+} = {
+  response: defaultCatalogue(),
+  fail: false,
+  reset() {
+    openRouterCatalogueStore.response = defaultCatalogue()
+    openRouterCatalogueStore.fail = false
+  },
+}
+
 export const openRouterAccountHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/llm/openrouter-models', ({ request }) => {
+    const profile = profileOf(request)
+    if (!profile) return notFound()
+    if (openRouterCatalogueStore.fail) {
+      return HttpResponse.json({ title: '서버 오류', status: 500 }, { status: 500 })
+    }
+    return HttpResponse.json(openRouterCatalogueStore.response, { status: 200 })
+  }),
+
   http.get('*/api/v1/admin/llm/accounts', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return notFound()
