@@ -17,7 +17,7 @@ function renderWizard(path = '/console/requests/new?kind=VM') {
   renderApp(path)
 }
 
-/** 리소스 구성 단계를 프리셋 그대로 채운다. */
+/** 리소스 구성 단계를 준비된 사양 그대로 채운다. */
 async function fillResourceStep(user: User) {
   await user.type(await screen.findByLabelText('이름'), '캡스톤 백엔드 서버')
   await user.click(screen.getByRole('radio', { name: 'Ubuntu' }))
@@ -171,7 +171,7 @@ describe('VM 신청 위저드 — 사양', () => {
   })
 
   /**
-   * 바닥값(1/1/32)은 어느 프리셋보다도 작아서 프리셋으로는 요청할 수 없는 크기다.
+   * 바닥값(1/1/32)은 준비된 어느 사양보다도 작아서 골라서는 요청할 수 없는 크기다.
    * 그대로 내는 것이 정당한 신청이고, 거기에 사유를 요구하면 작게 쓰겠다는 사람에게만
    * 문턱을 세우는 셈이 된다.
    */

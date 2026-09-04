@@ -34,12 +34,12 @@ import { fieldErrorsOf } from '../lib/field-errors'
 import { formatSpec } from '../lib/format'
 import { AdminRequestPeriods } from '../components/request-period/AdminRequestPeriods'
 
-/** 프리셋 이름 규칙 — 소문자·숫자·하이픈 (서버 검증과 동일). */
+/** 사양 이름 규칙 — 소문자·숫자·하이픈 (서버 검증과 동일). */
 const FLAVOR_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 
 /**
- * OS 이미지·사양 관리 — OS 카탈로그와 사양 프리셋을 각각 나열하고
- * ACTIVE/DISABLED 를 토글한다. 프리셋은 등록·값 수정까지 지원한다.
+ * OS 이미지·사양 관리 — OS 카탈로그와 사양을 각각 나열하고
+ * ACTIVE/DISABLED 를 토글한다. 사양은 등록·값 수정까지 지원한다.
  */
 export function AdminOsImagesPage() {
   const { user } = useAuth()
@@ -143,24 +143,24 @@ export function AdminOsImagesPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-neutral-900">사양 프리셋</h2>
+            <h2 className="text-lg font-semibold text-neutral-900">사양</h2>
           </div>
           {isSysAdmin && (
             <Button size="sm" onClick={() => setFlavorCreateOpen(true)}>
-              프리셋 추가
+              사양 추가
             </Button>
           )}
         </div>
 
         {flavors.isPending && (
           <div className="flex justify-center py-12">
-            <Spinner label="사양 프리셋 목록 불러오는 중" />
+            <Spinner label="사양 목록 불러오는 중" />
           </div>
         )}
         {flavors.isError && <Alert variant="danger">{flavors.error.message}</Alert>}
         {flavors.isSuccess && flavors.data.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            등록된 사양 프리셋이 없습니다.
+            등록된 사양이 없습니다.
           </Card>
         )}
         {flavors.isSuccess && flavors.data.length > 0 && (
@@ -272,7 +272,7 @@ export function AdminOsImagesPage() {
   )
 }
 
-/** 프리셋 변경 후 관리자 목록과 신청 위저드 목록을 함께 되살린다. */
+/** 사양 변경 후 관리자 목록과 신청 위저드 목록을 함께 되살린다. */
 function useFlavorInvalidation() {
   const queryClient = useQueryClient()
   return async () => {
@@ -371,18 +371,18 @@ function ToggleFlavorModal({
       updateAdminVmFlavor(flavor.id, { status: retiring ? 'DISABLED' : 'ACTIVE' }),
     onSuccess: async () => {
       setError(null)
-      onDone(retiring ? '사양 프리셋을 은퇴시켰습니다.' : '사양 프리셋을 다시 활성화했습니다.')
+      onDone(retiring ? '사양을 은퇴시켰습니다.' : '사양을 다시 활성화했습니다.')
       await invalidate()
     },
     onError: (err) =>
-      setError(toApiError(err, '사양 프리셋 상태를 변경하지 못했습니다.').message),
+      setError(toApiError(err, '사양 상태를 변경하지 못했습니다.').message),
   })
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={retiring ? '사양 프리셋 은퇴' : '사양 프리셋 활성화'}
+      title={retiring ? '사양 은퇴' : '사양 활성화'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -539,11 +539,11 @@ function EditFlavorModal({
         notes: notes.trim(),
       }),
     onSuccess: async () => {
-      onDone('사양 프리셋을 수정했습니다.')
+      onDone('사양을 수정했습니다.')
       await invalidate()
     },
     onError: (error) => {
-      const apiError = toApiError(error, '사양 프리셋을 수정하지 못했습니다.')
+      const apiError = toApiError(error, '사양을 수정하지 못했습니다.')
       const mapped = fieldErrorsOf(apiError.problem)
       if (Object.keys(mapped).length > 0) {
         setFieldErrors(mapped)
@@ -563,7 +563,7 @@ function EditFlavorModal({
   }
 
   return (
-    <Modal open onClose={onClose} title="사양 프리셋 수정">
+    <Modal open onClose={onClose} title="사양 수정">
       <form onSubmit={submit} className="space-y-4" noValidate>
         {formError && <Alert variant="danger">{formError}</Alert>}
         <FormField label="이름" description="이름은 변경할 수 없습니다.">
@@ -626,11 +626,11 @@ function CreateFlavorModal({
         notes: notes.trim() || null,
       }),
     onSuccess: async () => {
-      onDone('사양 프리셋을 추가했습니다.')
+      onDone('사양을 추가했습니다.')
       await invalidate()
     },
     onError: (error) => {
-      const apiError = toApiError(error, '사양 프리셋을 만들지 못했습니다.')
+      const apiError = toApiError(error, '사양을 만들지 못했습니다.')
       const mapped = fieldErrorsOf(apiError.problem)
       if (Object.keys(mapped).length > 0) {
         setFieldErrors(mapped)
@@ -644,17 +644,17 @@ function CreateFlavorModal({
     event.preventDefault()
     setFormError(null)
     const errors = validateSpecFields({ displayName, vcpu, memoryMb, diskGb })
-    if (!name) errors.name = '프리셋 이름을 입력해 주세요.'
+    if (!name) errors.name = '사양 이름을 입력해 주세요.'
     else if (!FLAVOR_NAME_RE.test(name))
       errors.name =
-        '프리셋 이름은 소문자·숫자·하이픈만 사용해 주세요. (하이픈으로 시작·끝 불가)'
+        '사양 이름은 소문자·숫자·하이픈만 사용해 주세요. (하이픈으로 시작·끝 불가)'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     create.mutate()
   }
 
   return (
-    <Modal open onClose={onClose} title="사양 프리셋 추가">
+    <Modal open onClose={onClose} title="사양 추가">
       <form onSubmit={submit} className="space-y-4" noValidate>
         {formError && <Alert variant="danger">{formError}</Alert>}
         <FormField

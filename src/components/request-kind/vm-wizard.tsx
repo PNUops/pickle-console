@@ -113,7 +113,7 @@ function exceeds(spec: VmSpecState, flavor: VmFlavor | undefined, minDiskGb: num
     spec.reqVcpu > flavor.vcpu ||
     spec.reqMemoryMb > flavor.memoryMb ||
     // 고른 사양의 디스크가 OS 최소치보다 작으면 그 최소치가 바닥이다. 올리지 않으면
-    // OS가 요구하는 크기를 맞춘 것만으로 초과가 되는데, 프리셋에는 고칠 칸이 없다.
+    // OS가 요구하는 크기를 맞춘 것만으로 초과가 되는데, 고른 사양에는 고칠 칸이 없다.
     spec.reqDiskGb > Math.max(flavor.diskGb, minDiskGb)
   )
 }
@@ -268,8 +268,8 @@ function useVmWizard(draftSpec: unknown): KindWizard {
         // 이유를 적고 vCPU까지 함께 올릴 수 있고, 검토하는 쪽은 그 글만 보고는
         // 어느 축이 근거를 가진 것인지 가려낼 수 없다.
         //
-        // 아무 축도 켜지 않은 것은 오류가 아니다. 바닥값은 어느 프리셋보다도 작아서
-        // 프리셋으로는 요청할 수 없는 크기이고, 그대로 내는 것이 정당한 신청이다.
+        // 아무 축도 켜지 않은 것은 오류가 아니다. 바닥값은 준비된 어느 사양보다도 작아서
+        // 골라서는 요청할 수 없는 크기이고, 그대로 내는 것이 정당한 신청이다.
         const baseDisk = Math.max(CUSTOM_BASE.diskGb, selectedImage.minDiskGb)
         if (spec.raiseVcpu) {
           if (spec.reqVcpu <= CUSTOM_BASE.vcpu)

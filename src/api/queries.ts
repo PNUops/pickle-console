@@ -232,11 +232,11 @@ export function fetchOsImages(): Promise<OsImage[]> {
   })
 }
 
-/** 신청 위저드의 사양 축 — ACTIVE 프리셋만 id 순으로 온다. */
+/** 신청 위저드의 사양 축 — ACTIVE 행만 서버가 정한 표시 순서로 온다. */
 export function fetchVmFlavors(): Promise<VmFlavor[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vm-flavors')
-    if (!data) throw toApiError(error, '사양 프리셋 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사양 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -2007,7 +2007,6 @@ export function updateAdminOsImage(
   })
 }
 
-/** 사양 프리셋 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴 프리셋 포함). */
 /** 관리자 목록은 은퇴한 것과 이미 지난 것까지 담는다. 그 비대칭이 이 화면의 쓸모다. */
 export function fetchAdminRequestPeriods(): Promise<AdminRequestPeriod[]> {
   return guardNetwork(async () => {
@@ -2041,10 +2040,11 @@ export function updateAdminRequestPeriod(
   })
 }
 
+/** 사양 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴한 행 포함). */
 export function fetchAdminVmFlavors(): Promise<VmFlavor[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vm-flavors')
-    if (!data) throw toApiError(error, '사양 프리셋 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사양 목록을 불러오지 못했습니다.')
     return data
   })
 }
@@ -2052,7 +2052,7 @@ export function fetchAdminVmFlavors(): Promise<VmFlavor[]> {
 export function createAdminVmFlavor(body: CreateVmFlavor): Promise<VmFlavor> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vm-flavors', { body })
-    if (!data) throw toApiError(error, '사양 프리셋을 만들지 못했습니다.')
+    if (!data) throw toApiError(error, '사양을 만들지 못했습니다.')
     return data
   })
 }
@@ -2066,7 +2066,7 @@ export function updateAdminVmFlavor(
       params: { path: { flavorId } },
       body,
     })
-    if (!data) throw toApiError(error, '사양 프리셋을 수정하지 못했습니다.')
+    if (!data) throw toApiError(error, '사양을 수정하지 못했습니다.')
     return data
   })
 }

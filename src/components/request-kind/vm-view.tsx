@@ -77,8 +77,6 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const [memoryGb, setMemoryGb] = useState(String((request.vm?.reqMemoryMb ?? 0) / 1024))
   const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
   const [imageId, setImageId] = useState(String(request.vm?.imageId))
-  // 신청서에는 시작일이 없다. 부여 기간의 시작은 만들어지는 날, 곧 오늘이다.
-  const [startDate, setStartDate] = useState(todayKstDate)
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
   const [nodeId, setNodeId] = useState('')
@@ -89,8 +87,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
      * 오류 키는 서버가 422의 errors[]에 싣는 필드 경로와 같아야 한다.
      * 부여 사양은 승인 본문의 vm 아래에 있으므로 서버가 보내는 이름도
      * 'vm.grantedVcpu'처럼 중첩형이다 — 평평한 이름으로 받으면 서버가
-     * 되돌려준 오류가 어느 칸에도 붙지 못한다. 기간(grantedStartDate·
-     * grantedEndDate)과 승인 의견은 본문 최상위라 접두사가 없다.
+     * 되돌려준 오류가 어느 칸에도 붙지 못한다. 종료일과 승인 의견은 본문 최상위라
+     * 접두사가 없다. 시작일은 칸이 없어 오류를 붙일 자리도 없는데, 서버가 그 이름으로
+     * 오류를 내지 않으므로(선후 검사도 `grantedEndDate`에 붙는다) 잃는 것이 없다.
      */
     validate: () => {
       const errors: Record<string, string> = {}
@@ -112,7 +111,14 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
     },
 
     body: (): ApproveRequest => ({
-      grantedStartDate: startDate || null,
+      // 시작일은 고르는 값이 아니라 승인하는 날이므로 **제출하는 순간에 읽는다.**
+      // 렌더 시점에 잡아 두면 자정을 넘겨 열어 둔 화면이 어제 날짜를 보내고,
+      // 그 값이 마지막 렌더가 언제였는지에 따라 달라진다.
+      //
+      // **본문에서 빼지는 않는다.** 서버는 `grantedStartDate`를 그대로 받고 비우면
+      // null로 저장하는데, 그러면 VM 상세의 사용 기간에 시작이 빈 채로 남는다.
+      // 칸을 없앤 것이 값을 없앤다는 뜻은 아니다.
+      grantedStartDate: todayKstDate(),
       grantedEndDate: endDate || null,
       comment: approveComment.trim() ? approveComment.trim() : null,
       vm: {
@@ -168,22 +174,17 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             ))}
           </Select>
         </FormField>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="사용 시작일" error={fieldErrors.grantedStartDate}>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
-          </FormField>
-          <FormField label="사용 종료일" error={fieldErrors.grantedEndDate}>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
-          </FormField>
-        </div>
+        <FormField
+          label="사용 종료일"
+          error={fieldErrors.grantedEndDate}
+          description="비우면 만료되지 않습니다. 사용 시작일은 승인하는 날로 정해집니다."
+        >
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
+        </FormField>
         <FormField
           label="호스트 이름 확정"
           error={fieldErrors['vm.grantedSlug']}
@@ -251,7 +252,7 @@ export const vmRequestView: RequestKindView = {
     <>
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
-      {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이
+      {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·사양도 이름이
           남으므로 공개 목록을 따로 뒤질 필요가 없다. */}
       <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
       <Field label="사양">

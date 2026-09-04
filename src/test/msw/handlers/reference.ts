@@ -91,12 +91,12 @@ export const osImages: Schemas['OsImageResponse'][] = [
   ubuntu2204OsImage,
 ]
 
-/* ─── 사양 프리셋 (OS와 직교하는 축) ─── */
+/* ─── 사양 (OS와 직교하는 축) ─── */
 
 /**
- * 프리셋 인벤토리 — 공개 목록(GET /vm-flavors)과 관리자 목록
+ * 사양 인벤토리 — 공개 목록(GET /vm-flavors)과 관리자 목록
  * (GET /admin/vm-flavors)이 함께 쓰는 단일 저장소다. 공개 목록은 여기서 ACTIVE만
- * 걸러 내보내므로, 관리자 화면에서 은퇴시키거나 새로 만든 프리셋이 신청 화면에도
+ * 걸러 내보내므로, 관리자 화면에서 은퇴시키거나 새로 만든 사양이 신청 화면에도
  * 그대로 반영된다(서버와 같은 관계).
  */
 function initialFlavors(): Schemas['VmFlavorResponse'][] {
@@ -138,7 +138,7 @@ function initialFlavors(): Schemas['VmFlavorResponse'][] {
 }
 
 
-/** 전 상태의 프리셋 저장소. 배열 자체는 유지하고 내용만 갈아 끼운다(참조 공유). */
+/** 전 상태의 사양 저장소. 배열 자체는 유지하고 내용만 갈아 끼운다(참조 공유). */
 export const flavorStore: Schemas['VmFlavorResponse'][] = initialFlavors()
 
 export function resetFlavorStore() {
@@ -175,7 +175,7 @@ export function offerablePeriods(): Schemas['RequestPeriodResponse'][] {
 export const referenceHandlers: RequestHandler[] = [
   http.get('*/api/v1/orgs', () => HttpResponse.json(orgs, { status: 200 })),
   http.get('*/api/v1/os-images', () => HttpResponse.json(osImages, { status: 200 })),
-  // 공개 목록은 ACTIVE 프리셋만 노출한다 (은퇴 프리셋은 관리자 목록에만 남는다).
+  // 공개 목록은 ACTIVE 사양만 노출한다 (은퇴한 행은 관리자 목록에만 남는다).
   http.get('*/api/v1/vm-flavors', () =>
     HttpResponse.json(
       flavorStore.filter((flavor) => flavor.status === 'ACTIVE'),

@@ -459,10 +459,10 @@ function initialAdminOsImages(): Schemas['AdminOsImageResponse'][] {
 
 export let adminOsImages: Schemas['AdminOsImageResponse'][] = initialAdminOsImages()
 
-/* 사양 프리셋 인벤토리는 공개 목록과 공유하는 저장소(flavorStore)를 그대로 쓴다 —
+/* 사양 인벤토리는 공개 목록과 공유하는 저장소(flavorStore)를 그대로 쓴다 —
    관리자 목록은 전 상태를, 공개 목록은 ACTIVE만 노출한다. */
 
-/** POST /admin/vm-flavors 로 만들어진 프리셋의 id 채번. */
+/** POST /admin/vm-flavors 로 만들어진 사양의 id 채번. */
 let nextFlavorId = 100
 
 const notFound = () =>

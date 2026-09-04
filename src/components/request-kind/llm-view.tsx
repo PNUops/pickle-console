@@ -165,8 +165,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditModelsTouched, setCreditModelsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
-  // 신청서에는 시작일이 없다. 부여 기간의 시작은 발급되는 날, 곧 오늘이다.
-  const [startDate, setStartDate] = useState(todayKstDate)
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [approveComment, setApproveComment] = useState('')
   // 확인한 내용을 통째로 들고 있다가 지금 값과 대조한다. boolean으로 들면 확인 뒤
@@ -258,7 +256,10 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     },
 
     body: (): ApproveRequest => ({
-      grantedStartDate: startDate || null,
+      // 제출하는 순간에 읽는다. 이유는 vm-view.tsx의 같은 자리에 적어 두었다.
+      // 이 화면에서 「발급」은 신청자가 나중에 하는 일이므로(아래 안내 문구) 부여 기간의
+      // 시작은 발급일이 아니라 승인일이다.
+      grantedStartDate: todayKstDate(),
       grantedEndDate: endDate || null,
       comment: approveComment.trim() ? approveComment.trim() : null,
       // 네 항목이 모두 비어 있어도 llmKey 자체는 실어 보낸다 — 서버는 "기본
@@ -425,22 +426,17 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         {judgement ? (
           <AllocationWarning judgement={judgement} pendingLabel={creditText(pendingCredit)} />
         ) : null}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="사용 시작일" error={fieldErrors.grantedStartDate}>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-            />
-          </FormField>
-          <FormField label="사용 종료일" error={fieldErrors.grantedEndDate}>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(event) => setEndDate(event.target.value)}
-            />
-          </FormField>
-        </div>
+        <FormField
+          label="사용 종료일"
+          error={fieldErrors.grantedEndDate}
+          description="비우면 만료되지 않습니다. 사용 시작일은 승인하는 날로 정해집니다."
+        >
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
+        </FormField>
         <FormField label="승인 의견" description="신청자에게 전달됩니다. (선택)">
           <Textarea
             value={approveComment}

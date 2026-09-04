@@ -133,9 +133,10 @@ describe('LLM API 키 신청 — 승인 폼', () => {
         '신청서에 대응하는 항목이 없어 승인자만 정합니다. 비우면 서비스 기본값이 적용됩니다.',
       ),
     ).toBeInTheDocument()
-    // 신청서에는 시작일이 없다. 걸린 로직이 없어 없앴고, 부여 기간의 시작은 발급되는
-    // 날이므로 오늘로 채운다. KST 달력 날짜다.
-    expect(screen.getByLabelText('사용 시작일')).toHaveValue(todayKstDate())
+    // 신청서에도 승인 화면에도 시작일 칸이 없다. 고를 것이 없기 때문이고, 부여
+    // 기간의 시작은 키가 발급되는 날이다. 칸이 사라져도 본문은 그 날짜를 계속
+    // 실어 보낸다 — 그쪽은 제출 본문을 통째로 대조하는 테스트가 지킨다.
+    expect(screen.queryByLabelText('사용 시작일')).not.toBeInTheDocument()
   })
 
   test('희망값을 적지 않은 신청도 그 사실을 그대로 말한다', async () => {
