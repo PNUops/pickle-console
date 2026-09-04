@@ -107,12 +107,14 @@ function checkSlug(value: string, reserved: string[] | undefined): string | null
 }
 
 /** 선택한 사양을 초과하는 요청인지. 서버와 같은 규칙이다. */
-function exceeds(spec: VmSpecState, flavor: VmFlavor | undefined): boolean {
+function exceeds(spec: VmSpecState, flavor: VmFlavor | undefined, minDiskGb: number): boolean {
   if (!flavor) return false
   return (
     spec.reqVcpu > flavor.vcpu ||
     spec.reqMemoryMb > flavor.memoryMb ||
-    spec.reqDiskGb > flavor.diskGb
+    // 고른 사양의 디스크가 OS 최소치보다 작으면 그 최소치가 바닥이다. 올리지 않으면
+    // OS가 요구하는 크기를 맞춘 것만으로 초과가 되는데, 프리셋에는 고칠 칸이 없다.
+    spec.reqDiskGb > Math.max(flavor.diskGb, minDiskGb)
   )
 }
 
@@ -285,7 +287,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
             next['vm.reqDiskGb'] = `기본값(${baseDisk} GiB)보다 큰 값을 적어 주세요.`
           if (!spec.diskReason.trim()) next['vm.diskReason'] = '디스크 요청 사유를 적어 주세요.'
         }
-      } else if (exceeds(spec, selectedFlavor)) {
+      } else if (exceeds(spec, selectedFlavor, selectedImage?.minDiskGb ?? 0)) {
         // 준비된 사양은 값을 손으로 고칠 자리가 없으므로 여기 걸리면 초안이 낡은
         // 것이다. 사용자가 고칠 칸이 없으니 사양을 다시 고르게 한다.
         next['vm.flavorId'] = '사양을 다시 선택해 주세요.'

@@ -42,7 +42,7 @@ describe('LLM API 사실 사본', () => {
     expect(LLM_DEFAULT_LIMITS).toEqual({
       requestsPerMinute: 600,
       tokensPerMinute: 1_000_000,
-      concurrency: 32,
+      concurrency: 8,
     })
   })
 

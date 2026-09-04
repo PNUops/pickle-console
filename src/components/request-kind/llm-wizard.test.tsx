@@ -44,7 +44,7 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
 
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(
-      screen.getByText('자체 서빙 모델과 유료 모델 중 최소 하나는 선택해 주세요.'),
+      screen.getByText('Pickle LLM과 유료 모델 중 최소 하나는 선택해 주세요.'),
     ).toBeInTheDocument()
   })
 

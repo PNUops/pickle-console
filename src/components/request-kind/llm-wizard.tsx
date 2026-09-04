@@ -78,7 +78,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
     // 축은 한도와 다르다. 비워 둔 한도는 기본값이지만, 축을 다 끄면 무엇을 달라는
     // 것인지 말하지 않은 것이다. 서버가 같은 규칙으로 막는다.
     if (!spec.useCampus && !spec.useCommercial)
-      next['llmKey.useCampusModels'] = '자체 서빙 모델과 유료 모델 중 최소 하나는 선택해 주세요.'
+      next['llmKey.useCampusModels'] = 'Pickle LLM과 유료 모델 중 최소 하나는 선택해 주세요.'
     if (spec.useCommercial && spec.reqCreditLimit.trim()) {
       const amount = Number(spec.reqCreditLimit)
       if (!Number.isFinite(amount) || amount <= 0)

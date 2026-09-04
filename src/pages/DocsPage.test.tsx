@@ -55,7 +55,7 @@ describe('사용 가이드', () => {
 
     expect(screen.getByText('600회')).toBeInTheDocument()
     expect(screen.getByText('1,000,000토큰')).toBeInTheDocument()
-    expect(screen.getByText('32건')).toBeInTheDocument()
+    expect(screen.getByText('8건')).toBeInTheDocument()
     // 분당 한도를 다 지켜도 429가 날 수 있는 축이라 빠지면 안 된다.
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
     expect(document.body.textContent ?? '').toContain('quota_exhausted')

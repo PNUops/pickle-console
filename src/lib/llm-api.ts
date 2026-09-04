@@ -52,7 +52,7 @@ export const LLM_SUPPORTED_PARAMS = [
 export const LLM_DEFAULT_LIMITS = {
   requestsPerMinute: 600,
   tokensPerMinute: 1_000_000,
-  concurrency: 32,
+  concurrency: 8,
 } as const
 
 export interface LlmErrorEntry {
