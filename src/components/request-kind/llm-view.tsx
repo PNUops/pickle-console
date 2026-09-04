@@ -3,11 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import {
   fetchOpenRouterAccounts,
+  fetchOpenRouterCatalogue,
   type ApproveRequest,
+  type OpenRouterCatalogue,
   type OpenRouterAccount,
   type RequestDetail,
 } from '../../api/queries'
 import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
+import { CreditModelPicker } from '../CreditModelPicker'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
 import { adminPaths } from '../../lib/paths'
@@ -98,6 +101,9 @@ interface LlmAccountDecisionData {
   loading: boolean
   failed: boolean
   retry: () => void
+  // 카탈로그는 별도로 실패할 수 있고, 실패해도 승인은 진행된다.
+  catalogue: OpenRouterCatalogue | undefined
+  catalogueFailed: boolean
 }
 
 function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
@@ -106,6 +112,15 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
     queryFn: () => fetchOpenRouterAccounts(request.orgId ?? undefined),
     enabled: request.orgId != null,
     retry: false,
+  })
+  // 모델 카탈로그는 캐시를 읽을 뿐이고 편의 계층이다. 실패해도 자유 입력이 남아
+  // 있으므로 결정 카드는 물론 유료 모델 승인도 막지 않는다. 계정 조회와 달리
+  // 이것이 없다고 승인이 불가능해지는 경우는 없다.
+  const catalogue = useQuery({
+    queryKey: ['admin', 'openrouter-catalogue'],
+    queryFn: fetchOpenRouterCatalogue,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   })
   // 사업 계정 조회는 유료 모델만 막는다. 자체 서빙 모델만 주는 승인과 반려는 이
   // 조회가 실패해도 살아 있어야 하므로 결정 카드 전체를 막지 않는다.
@@ -117,6 +132,8 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
       loading: accounts.isPending,
       failed: accounts.isError || request.orgId == null,
       retry: () => void accounts.refetch(),
+      catalogue: catalogue.data,
+      catalogueFailed: catalogue.isError,
     } satisfies LlmAccountDecisionData,
   }
 }
@@ -374,6 +391,15 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               setCreditModels(event.target.value)
             }}
             placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
+          />
+          <CreditModelPicker
+            catalogue={accountData.catalogue}
+            failed={accountData.catalogueFailed}
+            selected={parsedCreditModels}
+            onAdd={(modelId) => {
+              setCreditModelsTouched(true)
+              setCreditModels(formatCreditModels([...parsedCreditModels, modelId]))
+            }}
           />
         </FormField>
         {!creditModelsTouched && accountDefault.length > 0 ? (

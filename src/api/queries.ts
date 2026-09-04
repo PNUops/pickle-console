@@ -589,6 +589,22 @@ export type OpenRouterUnmanagedSpendUnavailableReason =
 export type CreateOpenRouterAccount = Schemas['CreateOpenRouterAccountRequest']
 export type UpdateOpenRouterAccount = Schemas['UpdateOpenRouterAccountRequest']
 
+export type OpenRouterCatalogue = Schemas['OpenRouterCatalogueResponse']
+export type OpenRouterCatalogueModel = Schemas['OpenRouterCatalogueModel']
+
+/**
+ * 유료 모델 카탈로그 캐시. 서버가 캐시만 읽으므로 이 호출은 벤더를 부르지 않는다.
+ * 실패해도 승인이 막히면 안 되므로 호출부는 `retry: false` 로 두고 자유 입력으로
+ * 떨어뜨린다.
+ */
+export function fetchOpenRouterCatalogue(): Promise<OpenRouterCatalogue> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/openrouter-models', {})
+    if (!data) throw toApiError(error, '유료 모델 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 export function fetchOpenRouterAccounts(orgId?: string): Promise<OpenRouterAccount[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/accounts', {
