@@ -93,7 +93,6 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
       reqIndefinite: null,
       displayName: '캡스톤 챗봇 키',
       llmKey: {
-        usagePlan: null,
         useCampusModels: true,
         useCommercialModels: false,
         reqCreditLimit: null,
@@ -105,13 +104,14 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
     })
   })
 
-  test('적어 넣은 일일 토큰과 사용 계획은 그대로 실려 나간다', async () => {
+  // 용도는 신청 정보 단계의 사용 목적이 묻는다. 이 단계가 또 묻지 않는다.
+  test('적어 넣은 일일 토큰이 그대로 실려 나간다', async () => {
     const user = userEvent.setup()
     renderWizard()
     await reachSpecStep(user)
 
+    expect(screen.queryByLabelText('사용 계획')).not.toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /Pickle LLM/ }))
-    await user.type(screen.getByLabelText('사용 계획'), '문서 요약 배치 작업')
     await user.type(screen.getByLabelText('희망 일일 토큰 수'), '1000000')
     await user.click(screen.getByRole('button', { name: '다음' }))
     await fillRequestStep(user)
@@ -124,7 +124,6 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
     expect(createdRequestBodies.at(-1)).toMatchObject({
       type: 'LLM_API_KEY',
       llmKey: {
-        usagePlan: '문서 요약 배치 작업',
         reqDailyTokens: 1000000,
       },
     })
@@ -206,15 +205,15 @@ describe('LLM API 키 신청 위저드 — 초안', () => {
         kind: 'LLM_API_KEY',
         common: { displayName: '실습 키' },
         // VM 초안의 스펙 모양이 남아 있는 경우.
-        spec: { imageId: uuid(1), flavorId: uuid(31), reqVcpu: 2, usagePlan: '요약' },
+        spec: { imageId: uuid(1), flavorId: uuid(31), reqVcpu: 2, useCampus: true },
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/requests/new?kind=LLM_API_KEY')
 
     expect(await screen.findByLabelText('이름')).toHaveValue('실습 키')
-    expect(screen.getByLabelText('사용 계획')).toHaveValue('요약')
-    await user.click(screen.getByRole('checkbox', { name: /Pickle LLM/ }))
+    // 초안이 축을 들고 있으므로 다시 고르지 않는다.
+    expect(screen.getByRole('checkbox', { name: /Pickle LLM/ })).toBeChecked()
     await user.click(screen.getByRole('button', { name: '다음' }))
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '다음' }))
@@ -224,7 +223,6 @@ describe('LLM API 키 신청 위저드 — 초안', () => {
     const body = createdRequestBodies.at(-1)!
     expect(body).not.toHaveProperty('vm')
     expect(body.llmKey).toEqual({
-      usagePlan: '요약',
       useCampusModels: true,
       useCommercialModels: false,
       reqCreditLimit: null,
@@ -240,14 +238,13 @@ describe('LLM API 키 신청 위저드 — 초안', () => {
       JSON.stringify({
         kind: 'LLM_API_KEY',
         common: { displayName: '실습 키' },
-        spec: { usagePlan: '요약 호출', useCampus: true, reqDailyTokens: '500000' },
+        spec: { useCampus: true, reqDailyTokens: '500000' },
       }),
     )
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/requests/new?kind=LLM_API_KEY')
 
-    expect(await screen.findByLabelText('사용 계획')).toHaveValue('요약 호출')
-    expect(screen.getByRole('checkbox', { name: /Pickle LLM/ })).toBeChecked()
+    expect(await screen.findByRole('checkbox', { name: /Pickle LLM/ })).toBeChecked()
     expect(screen.getByLabelText('희망 일일 토큰 수')).toHaveValue(500000)
   })
 })

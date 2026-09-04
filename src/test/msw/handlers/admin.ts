@@ -133,7 +133,6 @@ function initialAdminRequests(): RequestDetail[] {
         reqRpm: 60,
         reqTpm: 40_000,
         reqDailyTokens: 1_000_000,
-        usagePlan: '캡스톤 챗봇 응답 생성',
         grantedRpm: 60,
         grantedTpm: 40_000,
         grantedDailyTokens: 1_000_000,

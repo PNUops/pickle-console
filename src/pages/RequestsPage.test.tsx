@@ -115,11 +115,10 @@ describe('신청 상세', () => {
 
   // 신청자 화면이 VM 아닌 종류를 설명하지 못하던 자리 — OS·사양 칸만 '—'로 채워
   // 두는 대신, 그 종류가 실제로 신청한 것을 그 종류의 말로 보여준다.
-  test('LLM API 키 신청은 사용 계획과 희망 한도를 보여준다', async () => {
+  test('LLM API 키 신청은 희망 한도를 그 종류의 말로 보여준다', async () => {
     renderRequests(`/console/requests/${uuid(104)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    expect(screen.getByText('문서 요약 배치 작업')).toBeInTheDocument()
     const rpm = screen.getByText('희망 분당 요청 수').closest('div')!
     expect(within(rpm).getByText('600')).toBeInTheDocument()
     // 적지 않은 한도는 빠뜨린 값이 아니라 기본값을 받겠다는 답이다.

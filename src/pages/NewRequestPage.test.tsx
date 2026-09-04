@@ -40,7 +40,7 @@ describe('종류 고르기와 위저드의 경계', () => {
     renderWizard('/console/requests/new?kind=LLM_API_KEY')
 
     expect(await screen.findByLabelText('이름')).toBeInTheDocument()
-    expect(screen.getByLabelText('사용 계획')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /Pickle LLM/ })).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: /가상머신/ })).not.toBeInTheDocument()
     expect(screen.getByText('LLM API 키')).toBeInTheDocument()
     // 세 단계 라벨이 모두 보인다. 어디까지 왔는지는 색이 말한다.

@@ -3647,8 +3647,6 @@ export interface components {
              * @description 희망 분당 토큰 수. 비우면 서비스 기본값을 받습니다.
              */
             reqTpm?: number | null;
-            /** @description 이 Key를 어디에 쓸지. 기본 한도로 충분하면 비워 두어도 됩니다. */
-            usagePlan?: string | null;
             /** @description 자체 서빙 모델을 쓸지. 비우면 사용으로 봅니다. */
             useCampusModels?: boolean | null;
             /** @description 유료 모델을 쓸지. 비우면 사용하지 않는 것으로 봅니다. */
@@ -4365,8 +4363,6 @@ export interface components {
              * @description 희망 분당 토큰 수
              */
             reqTpm?: number | null;
-            /** @description 사용 계획 */
-            usagePlan?: string | null;
             /** @description 신청자가 자체 서빙 모델을 쓰겠다고 했는지. */
             useCampusModels: boolean;
             /** @description 신청자가 유료 모델을 쓰겠다고 했는지. */

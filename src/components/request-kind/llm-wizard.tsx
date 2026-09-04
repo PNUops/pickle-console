@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Checkbox, FormField, Input, Textarea } from '../ui'
+import { Alert, Checkbox, FormField, Input } from '../ui'
 import { LLM_DEFAULT_MODEL } from '../../lib/llm-api'
 import type { FieldErrors, KindWizard, RequestKindModule, WizardStepId } from './types'
 
@@ -10,7 +10,6 @@ import type { FieldErrors, KindWizard, RequestKindModule, WizardStepId } from '.
  * 비어 있는 것이 정상이고, 숫자 상태로는 "비움"과 "0"을 구분할 수 없다.
  */
 interface LlmKeySpecState {
-  usagePlan: string
   /**
    * 어느 축을 쓸지. 한도가 비어 있는 것으로는 알 수 없다. 빈 한도는 "서비스 기본값"이지
    * "그 축은 안 쓴다"가 아니다.
@@ -22,7 +21,6 @@ interface LlmKeySpecState {
 }
 
 const INITIAL_SPEC: LlmKeySpecState = {
-  usagePlan: '',
   // 두 축 모두 꺼진 채로 연다. 무엇을 쓸지는 신청자가 말해야 하는 것이지 화면이
   // 대신 골라 줄 것이 아니고, 둘 다 끄면 넘어가지 않으므로 빠뜨릴 수도 없다.
   useCampus: false,
@@ -77,8 +75,6 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
     if (step !== 'resource') return next
     // 422의 errors[]가 실어 오는 필드 경로와 같은 키를 쓴다 — 서버가 되돌려준
     // 오류가 그대로 같은 입력 칸에 붙는다.
-    if (spec.usagePlan.length > 2000)
-      next['llmKey.usagePlan'] = '사용 계획은 2000자 이하로 입력해 주세요.'
     // 축은 한도와 다르다. 비워 둔 한도는 기본값이지만, 축을 다 끄면 무엇을 달라는
     // 것인지 말하지 않은 것이다. 서버가 같은 규칙으로 막는다.
     if (!spec.useCampus && !spec.useCommercial)
@@ -189,18 +185,6 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
           </div>
         </fieldset>
 
-        <FormField
-          label="사용 계획"
-          error={errors['llmKey.usagePlan']}
-          description="이 키를 어디에 쓸지 적어 주세요. 관리자가 부여 한도를 정할 때 봅니다."
-        >
-          <Textarea
-            value={spec.usagePlan}
-            onChange={(event) => update({ usagePlan: event.target.value })}
-            maxLength={2000}
-            placeholder="예: 캡스톤 프로젝트 챗봇에서 문서 요약 호출"
-          />
-        </FormField>
       </>
     ),
 
@@ -229,7 +213,6 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
               ],
             ] as [string, string][])
           : []),
-        ['사용 계획', spec.usagePlan.trim() || '—'],
       ],
     }),
 
@@ -243,7 +226,6 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
     payload: () => ({
       type: 'LLM_API_KEY',
       llmKey: {
-        usagePlan: spec.usagePlan.trim() || null,
         useCampusModels: spec.useCampus,
         useCommercialModels: spec.useCommercial,
         // 유료를 끈 신청은 금액을 싣지 않는다. 서버도 스키마도 같은 규칙이다.
@@ -276,7 +258,6 @@ export const llmKeyRequestKind: RequestKindModule = {
   },
   fields: {
     llmKey: { label: 'LLM API 키 신청 항목', step: 'resource' },
-    'llmKey.usagePlan': { label: '사용 계획', step: 'resource' },
     'llmKey.useCampusModels': { label: '쓸 모델', step: 'resource' },
     'llmKey.useCommercialModels': { label: '쓸 모델', step: 'resource' },
     'llmKey.reqCreditLimit': { label: '희망 금액 한도', step: 'resource' },

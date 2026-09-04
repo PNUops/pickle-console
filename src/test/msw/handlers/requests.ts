@@ -56,7 +56,6 @@ function llmKeyRequest(): Omit<
     displayName: '캡스톤 챗봇 키',
     vm: null,
     llmKey: {
-      usagePlan: '문서 요약 배치 작업',
       reqRpm: 600,
       reqTpm: null,
       reqDailyTokens: null,
@@ -224,7 +223,6 @@ export const requestHandlers: RequestHandler[] = [
       llmKey:
         body.type === 'LLM_API_KEY'
           ? {
-              usagePlan: body.llmKey?.usagePlan ?? null,
               reqRpm: body.llmKey?.reqRpm ?? null,
               reqTpm: body.llmKey?.reqTpm ?? null,
               reqDailyTokens: body.llmKey?.reqDailyTokens ?? null,

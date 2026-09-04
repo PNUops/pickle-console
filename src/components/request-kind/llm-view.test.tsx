@@ -27,7 +27,6 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
     reqEndDate: '2026-12-20',
     displayName: '캡스톤 챗봇 키',
     llmKey: {
-      usagePlan: '문서 요약 배치 작업',
       reqRpm: null,
       reqTpm: null,
       reqDailyTokens: null,
@@ -103,7 +102,6 @@ describe('LLM API 키 신청 — 관리자 신청 내용', () => {
     expect(within(rpm).getByText('1,000')).toBeInTheDocument()
     const tpm = screen.getByText('희망 분당 토큰 수').closest('div')!
     expect(within(tpm).getByText('서비스 기본값')).toBeInTheDocument()
-    expect(screen.getByText('문서 요약 배치 작업')).toBeInTheDocument()
     // 이 종류에는 결정용 카탈로그가 없으므로 결정 폼이 곧바로 열린다.
     expect(screen.getByRole('button', { name: '승인하기' })).toBeInTheDocument()
   })
