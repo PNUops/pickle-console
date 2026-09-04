@@ -554,7 +554,15 @@ describe('VM 신청 위저드 — 제출', () => {
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
     // 라우터가 메모리에 있어 window.location은 움직이지 않는다. 그것을 읽는 단언은
     // 빈 문자열을 검사하느라 무엇이 남아 있든 통과한다.
-    expect(currentPath()).not.toContain('step=')
+    //
+    // 성공 화면과 주소 정리는 각자의 상태 갱신이라 같은 커밋에 실린다는 보장이 없다.
+    // 화면이 뜬 순간을 그대로 재면 주소가 아직 단계를 들고 있는 틈에 걸리고, CI가
+    // 실제로 그 틈을 밟아 `step=review`를 읽었다. 기다려서 재도 단언은 약해지지
+    // 않는다 — 단계가 끝까지 남으면 waitFor가 시간을 다 쓰고 실패한다. 나중에
+    // 지워지는 것과 영영 안 지워지는 것을 여전히 가른다.
+    await waitFor(() => {
+      expect(currentPath()).not.toContain('step=')
+    })
     // 종류까지 함께 지우면 주소가 종류 고르기 화면을 가리켜 성공 화면이 사라진다.
     expect(currentPath()).toContain('kind=VM')
   })
