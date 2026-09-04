@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
@@ -34,7 +34,7 @@ describe('계정 설정 — 프로필', () => {
     await screen.findByRole('heading', { name: '계정 설정' })
 
     await user.click(screen.getAllByRole('button', { name: '변경' })[0])
-    await screen.findByRole('heading', { name: '프로필 변경' })
+    const dialog = await screen.findByRole('dialog', { name: '프로필 변경' })
 
     // 이름만 고칠 수 있다. 세 값은 저장돼 있으므로 서버가 422로 거절하고, 화면이
     // 입력칸을 주면 그 거절을 사용자가 눌러서 알게 된다.
@@ -43,8 +43,8 @@ describe('계정 설정 — 프로필', () => {
     expect(screen.queryByLabelText('학번')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('소속 학과')).not.toBeInTheDocument()
 
-    // 숨기지는 않는다. 값과 이유가 함께 있어야 왜 못 바꾸는지 알 수 있다.
-    expect(screen.getAllByText(/직접 바꿀 수 없습니다/).length).toBeGreaterThan(0)
+    // 숨기지는 않는다. 값과 잠김 표시가 함께 있어야 왜 못 바꾸는지 알 수 있다.
+    expect(within(dialog).getAllByText('변경 불가').length).toBe(3)
   })
 
   test('이름만 보내고 잠긴 값은 본문에 담지 않는다', async () => {

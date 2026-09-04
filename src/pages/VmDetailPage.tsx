@@ -228,18 +228,15 @@ export function VmDetailPage() {
       </div>
 
       {data.status === 'CREATING' && (
-        <Alert variant="info">
-          VM을 생성하고 있습니다. 생성이 끝나면 상태가 자동으로 갱신됩니다.
-        </Alert>
+        <Alert variant="info">생성이 끝나면 상태가 자동으로 갱신됩니다.</Alert>
       )}
       {data.status === 'NEEDS_ADMIN' && (
         <Alert variant="warning" title="관리자 확인 중입니다">
-          작업 처리 중 문제가 발생해 관리자가 원인을 확인하고 있습니다. 복구될 때까지
-          전원 제어·삭제 등 모든 조작이 제한됩니다.
+          복구될 때까지 전원 제어·삭제 등 모든 조작이 제한됩니다.
         </Alert>
       )}
       {data.status === 'DELETED' && (
-        <Alert variant="info">이 VM은 삭제되었습니다. 기록 조회만 가능합니다.</Alert>
+        <Alert variant="info">기록 조회만 가능합니다.</Alert>
       )}
       {/* 정상 실행 중에는 지난 작업 메시지(예: "프로비저닝 완료")를 경고로 띄우지 않는다. */}
       {data.statusDetail && data.status !== 'RUNNING' && (
@@ -247,7 +244,7 @@ export function VmDetailPage() {
       )}
       {expiredStopped && (
         <Alert variant="warning" title="사용 기간 만료">
-          사용 기간이 만료되어 중지되었습니다. 연장이 필요하면 관리자에게 문의해 주세요.
+          연장이 필요하면 관리자에게 문의해 주세요.
         </Alert>
       )}
       {data.deletion && data.status !== 'DELETED' && (
@@ -369,7 +366,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     allowed: (status) => status === 'STOPPED',
     run: startVm,
     confirmTitle: 'VM 시작',
-    confirmBody: 'VM을 시작하시겠습니까? 잠시 후 실행 중 상태로 바뀝니다.',
+    confirmBody: '잠시 후 실행 중 상태로 바뀝니다.',
   },
   shutdown: {
     label: '종료',
@@ -384,7 +381,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     allowed: (status) => status === 'RUNNING',
     run: rebootVm,
     confirmTitle: 'VM 재부팅',
-    confirmBody: 'VM을 재부팅하시겠습니까? 재부팅하는 동안 접속이 잠시 끊깁니다.',
+    confirmBody: '재부팅하는 동안 접속이 잠시 끊깁니다.',
   },
   forceStop: {
     label: '강제 종료',
@@ -623,8 +620,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
           <div>
             <p className="text-sm font-medium text-neutral-900">SSH 클라이언트</p>
             <p className="mt-0.5 text-sm text-neutral-500">
-              이 가상머신 전용 개인키로 접속합니다. 키는 가상머신마다 따로 발급되므로
-              다른 가상머신에는 쓸 수 없습니다.
+              이 가상머신 전용 개인키로 접속합니다. 다른 가상머신에는 쓸 수 없습니다.
             </p>
           </div>
 
@@ -709,8 +705,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
             새 키쌍을 만들고 개인키를 내려받습니다.
           </p>
           <Alert variant="danger">
-            기존 키는 즉시 무효화되어 그 키 파일로는 더 이상 접속할 수 없습니다. 이미
-            열려 있는 SSH 세션은 끊기지 않습니다.
+            기존 키는 즉시 무효화됩니다. 이미 열려 있는 SSH 세션은 끊기지 않습니다.
           </Alert>
         </div>
       </Modal>
@@ -822,7 +817,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
         {vm.passwordAvailable && vm.passwordRevealAllowed && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-neutral-600">
-              비밀번호는 VM 내부 sudo 자격입니다. 언제든 다시 확인할 수 있습니다.
+              비밀번호는 VM 내부 sudo 자격입니다.
             </p>
             <Button size="sm" onClick={openReveal} disabled={!viewable}>
               비밀번호 보기
@@ -840,9 +835,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
         {!vm.passwordAvailable && (
           <Alert variant="info">
             저장된 비밀번호가 없습니다.
-            {canRegenerate
-              ? ' 아래 재생성으로 새 비밀번호를 만들 수 있습니다.'
-              : ' 비밀번호 재생성은 이 VM의 편집자 이상만 할 수 있습니다.'}
+            {!canRegenerate && ' 비밀번호 재생성은 이 VM의 편집자 이상만 할 수 있습니다.'}
           </Alert>
         )}
 
@@ -935,8 +928,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
         <div className="space-y-3">
           <Alert variant="danger">기존 비밀번호가 즉시 무효화됩니다.</Alert>
           <p className="text-sm text-neutral-600">
-            새 비밀번호는 시스템이 생성합니다. 실행 중인 VM에 즉시 적용되며,
-            구성원 제거 후 이전 비밀번호를 아는 사람의 접근을 회수하는 수단입니다.
+            새 비밀번호는 시스템이 생성하며 실행 중인 VM에 즉시 적용됩니다.
           </p>
         </div>
       </Modal>
@@ -1090,7 +1082,7 @@ function VmSettingRow({ vmId, setting }: { vmId: string; setting: VmSettingView 
               <strong>이 경로는 접근 권한 목록을 검사하지 않습니다.</strong> 비밀번호를
               아는 사람이면 목록에 없어도, 접근 권한을 회수한 뒤에도 접속할 수 있습니다.
             </li>
-            <li>이 변경은 감사 기록되며 관리자에게 표시됩니다.</li>
+            <li>이 변경은 관리자에게 표시됩니다.</li>
           </ul>
         </div>
       </Modal>
@@ -1208,15 +1200,15 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
     <Alert variant="danger" title={DELETION_BANNER_TITLES[deletion.kind]}>
       <div className="space-y-1">
         {deletion.kind === 'FORCE' ? (
-          <p>보안상의 사유로 즉시 파기됩니다. 이 삭제는 취소할 수 없습니다.</p>
+          <p>보안상의 사유로 즉시 파기됩니다. 취소할 수 없습니다.</p>
         ) : (
-          <p>{scheduled}에 영구 파기될 예정입니다.</p>
+          <p>
+            {scheduled}에 영구 파기될 예정입니다. 파기 전에 복구가 필요하면 관리자에게
+            문의하세요.
+          </p>
         )}
         {deletion.reason && <p>사유: {deletion.reason}</p>}
-        <p>
-          삭제된 VM의 데이터는 파기 후 되돌릴 수 없습니다. 복구가 필요하면 관리자에게
-          문의하세요.
-        </p>
+        <p>파기된 데이터는 되돌릴 수 없습니다.</p>
       </div>
     </Alert>
   )
@@ -1262,8 +1254,8 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
           <>
             <p className="text-sm text-neutral-600">
               {isErrorVm
-                ? '생성에 실패한 VM입니다. 파기할 실체가 없으므로 삭제만 가능하며, 접수 즉시 삭제됩니다.'
-                : '삭제를 접수하면 VM이 종료되고 유예 기간이 지난 뒤 영구 파기됩니다. 삭제 접수 후에는 직접 취소할 수 없으며, 복구가 필요하면 관리자에게 문의해야 합니다.'}
+                ? '생성에 실패한 VM입니다. 접수 즉시 삭제됩니다.'
+                : '삭제를 접수하면 VM이 종료되고 유예 기간이 지난 뒤 영구 파기됩니다.'}
             </p>
             <Button variant="danger" onClick={() => setOpen(true)}>
               VM 삭제
@@ -1281,11 +1273,12 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
                 플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
                 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
               </Alert>
-              <p className="text-sm text-neutral-600">
-                {isErrorVm
-                  ? '생성 실패 상태이므로 접수 즉시 삭제됩니다.'
-                  : '삭제 접수 후에는 취소할 수 없습니다. 유예 기간 중 복구가 필요하면 관리자에게 문의하세요.'}
-              </p>
+              {!isErrorVm && (
+                <p className="text-sm text-neutral-600">
+                  삭제 접수 후에는 취소할 수 없습니다. 유예 기간 중 복구가 필요하면
+                  관리자에게 문의하세요.
+                </p>
+              )}
             </ConfirmNameModal>
           </>
         )}
@@ -1317,8 +1310,7 @@ function ProvisioningPanel({ task }: { task: ProvisioningTaskView }) {
         )}
         {task.status === 'NEEDS_ADMIN' && (
           <Alert variant="warning" title="관리자 개입이 필요합니다">
-            재시도가 모두 실패해 관리자가 원인을 확인하고 있습니다. 복구되면 상태가
-            자동으로 갱신됩니다.
+            재시도가 모두 실패했습니다.
             {task.lastError && ` 마지막 오류: ${task.lastError}`}
           </Alert>
         )}

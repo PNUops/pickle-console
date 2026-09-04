@@ -146,8 +146,8 @@ function ConnectForm({
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <p className="text-sm text-neutral-600">
-        내가 소유한 도메인을 연결합니다. 접수하면 안내되는 DNS 레코드를 등록해야
-        소유 확인과 인증서 발급이 진행됩니다.
+        접수하면 안내되는 DNS 레코드를 등록해야 소유 확인과 인증서 발급이
+        진행됩니다.
       </p>
       {error && (
         <ErrorSummary

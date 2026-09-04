@@ -75,7 +75,7 @@ function deriveSteps(pub: PublicationView): JourneyStep[] {
             : '확인 완료',
         }
       : domain.status === 'FAILED'
-        ? { state: 'failed', caption: '확인 실패 — DNS 레코드를 확인해 주세요' }
+        ? { state: 'failed', caption: 'DNS 레코드를 확인해 주세요' }
         : domain.status === 'VERIFYING'
           ? { state: 'active', caption: '확인 진행 중' }
           : { state: 'active', caption: 'DNS 레코드 대기' }),

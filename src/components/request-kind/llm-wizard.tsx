@@ -218,8 +218,8 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
     notice: (
       <Alert variant="info" title="한도 확정 안내">
-        희망 한도는 참고 자료입니다. 실제 부여 한도는 관리자가 승인할 때 정하며,
-        고치지 않은 항목은 위에 적힌 기본 한도로 발급됩니다.
+        실제 부여 한도는 관리자가 승인할 때 정합니다. 비워 둔 항목은 기본 한도로
+        발급됩니다.
       </Alert>
     ),
 

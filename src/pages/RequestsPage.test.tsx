@@ -163,7 +163,7 @@ describe('신청 상세', () => {
     await user.click(screen.getByRole('button', { name: '신청 취소' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 취소' })
-    expect(within(dialog).getByText(/정말 이 신청을 취소하시겠습니까/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/취소한 신청은 되돌릴 수 없으며/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '신청 취소' }))
 
     expect(await screen.findByText('취소됨')).toBeInTheDocument()

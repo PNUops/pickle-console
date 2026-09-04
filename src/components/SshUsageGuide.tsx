@@ -96,9 +96,8 @@ export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsag
             등록 후에는 <span className="font-mono">ssh {host}</span> 만으로 접속할 수 있습니다.
           </p>
           <p className="text-xs text-neutral-500">
-            <span className="font-mono">IdentitiesOnly yes</span> 는 꼭 넣어 주세요. 키는 VM마다
-            따로 발급되므로 VM이 여러 대면 개인키도 여러 개가 되는데, 이 줄이 없으면 SSH가 가진 키를
-            전부 차례로 제시해 접속이 거부될 수 있습니다.
+            <span className="font-mono">IdentitiesOnly yes</span> 는 꼭 넣어 주세요. 없으면 다른
+            키까지 함께 제시되어 접속이 거부될 수 있습니다.
           </p>
         </Step>
       </TabPanel>

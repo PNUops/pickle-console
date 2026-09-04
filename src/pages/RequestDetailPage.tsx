@@ -74,7 +74,7 @@ export function RequestDetailPage() {
       {cancelError && <Alert variant="danger">{cancelError}</Alert>}
 
       {data.status === 'SUBMITTED' && (
-        <Alert variant="info">관리자 검토를 기다리고 있습니다. 처리되면 알려 드립니다.</Alert>
+        <Alert variant="info">처리되면 알려 드립니다.</Alert>
       )}
 
       {data.review && <ReviewCard request={data} review={data.review} />}
@@ -174,8 +174,7 @@ function CancelRequestButton({
         }
       >
         <p className="text-sm text-neutral-600">
-          정말 이 신청을 취소하시겠습니까? 취소한 신청은 되돌릴 수 없으며, 필요하면 새로
-          신청해야 합니다.
+          취소한 신청은 되돌릴 수 없으며, 필요하면 새로 신청해야 합니다.
         </p>
       </Modal>
     </>
