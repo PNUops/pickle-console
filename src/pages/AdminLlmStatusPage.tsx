@@ -576,6 +576,7 @@ const REJECTION_LABELS: Record<string, string> = {
   rate_limit_tokens: '분당 토큰 한도 초과',
   rate_limit_concurrency: '동시 요청 한도 초과',
   credit_unavailable: '유료 모델 연결 불가',
+  credit_pending: '유료 모델 연결 적용 대기',
   server_busy: 'Gateway 처리 여유 부족',
 }
 

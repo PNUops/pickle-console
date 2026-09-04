@@ -240,16 +240,17 @@ function limitLabel(value: number | null | undefined, unit: string): string {
 }
 
 /**
- * 유료 모델의 세 상태를 한 줄로 말한다. 한도가 부여됐는데 아직 연결 전인 상태는
- * 사용자가 보게 되는 실제 상태다 — 키는 있고 자체 서빙은 되는데 상용만 안 되는
- * 이유를 화면이 말해 줘야 한다.
+ * 유료 모델의 세 상태를 한 줄로 말한다. 한도는 부여됐는데 아직 적용 전인 상태가
+ * 셋째이고, 이 상태를 말하지 않으면 화면은 한도를 보여주면서 호출은 거절되는
+ * 모습이 되어 사용자가 플랫폼 오류로 읽는다. 게이트웨이가 같은 순간 돌려주는
+ * `credit_pending` 문구와 같은 사실을 말해야 한다.
  */
 function creditAxisLabel(llmKey: {
   creditLimit: number
   creditLimitReset?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null
   creditAxisConnected: boolean
 }): string {
-  if (!llmKey.creditLimit) return '사용 불가 — 금액 한도가 부여되지 않았습니다'
+  if (!llmKey.creditLimit) return '금액 한도가 없어 유료 모델을 쓸 수 없습니다'
   const window =
     llmKey.creditLimitReset == null
       ? '총액'
@@ -257,7 +258,7 @@ function creditAxisLabel(llmKey: {
   const amount = `$${llmKey.creditLimit.toLocaleString('ko-KR')} (${window})`
   return llmKey.creditAxisConnected
     ? amount
-    : `${amount} — 연결 준비 중입니다. 준비되면 자동으로 사용 가능해집니다`
+    : `${amount}, 승인된 한도를 적용하는 중입니다`
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
