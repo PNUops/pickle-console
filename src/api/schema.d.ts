@@ -3002,7 +3002,7 @@ export interface components {
              * @description 동시 요청 한도. null이면 서비스 기본값을 따릅니다.
              */
             concurrency: number | null;
-            /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 교내 서빙 모델은 이 값에 영향을 받지 않습니다. */
+            /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. */
             creditAllowedModels: string[] | null;
             /** @description 금액 한도(USD 크레딧). 0이면 유료 모델을 닫습니다. */
             creditLimit: number;
@@ -3436,7 +3436,7 @@ export interface components {
              * @description 부여 동시 요청 수. 비우면 서비스 기본값이 적용됩니다.
              */
             grantedConcurrency?: number | null;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 비우면 제한이 없고, 교내 서빙 모델은 이 목록과 무관합니다. 항목은 모델 이름 또는 벤더 프리픽스(예: openai/*)입니다. */
+            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 비우면 제한이 없고, 자체 서빙 모델은 이 목록과 무관합니다. 항목은 모델 이름 또는 벤더 프리픽스(예: openai/*)입니다. */
             grantedCreditAllowedModels?: string[] | null;
             /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
