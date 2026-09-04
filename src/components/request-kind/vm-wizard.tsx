@@ -449,8 +449,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
             />
 
             <Alert variant="warning">
-              직접 적은 사양은 관리자가 따로 검토합니다. 승인이 늦어질 수 있고 더 작은 사양으로
-              승인될 수 있습니다.
+              승인이 늦어질 수 있고 더 작은 사양으로 승인될 수 있습니다.
             </Alert>
           </>
         )}

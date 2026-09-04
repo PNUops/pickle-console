@@ -344,7 +344,9 @@ describe('OpenRouter credential lifecycle', () => {
     expect(await screen.findByText('대기 중이던 관리용 키를 활성화했습니다.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '교체 되돌리기' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '이전 키 정리' })).not.toBeInTheDocument()
-    expect(screen.getByText('새 키로 대사가 끝나기를 기다리는 중')).toBeInTheDocument()
+    expect(
+      screen.getByText('새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있습니다.'),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '관리용 키 등록·교체' })).not.toBeInTheDocument()
   })
 

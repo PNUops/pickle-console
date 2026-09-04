@@ -245,7 +245,7 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
         </FormField>
         <FormField
           label="상태"
-          description="비활성화: 신규 VM 신청 대상에서만 제외됩니다 — 로그인·기존 VM·기관 관리자 계정은 영향받지 않습니다."
+          description="비활성화: 신규 VM 신청 대상에서만 제외됩니다. 로그인·기존 VM·기관 관리자 계정은 영향받지 않습니다."
         >
           <Select
             aria-label="기관 상태"
@@ -262,8 +262,8 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
           onChange={(event) => setHidden(event.target.checked)}
         />
         <p className="text-sm text-neutral-500">
-          숨김: 일반 사용자의 신청 폼 기관 목록에서만 빠집니다 — 관리자에게는 항상
-          표시되며, 기능(신청 대상 지정·기관 관리자 로그인)은 그대로입니다.
+          숨김: 일반 사용자의 신청 폼 기관 목록에서만 빠집니다. 관리자에게는 항상 표시되고,
+          신청 대상 지정과 기관 관리자 로그인은 그대로입니다.
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={update.isPending}>

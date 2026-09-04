@@ -148,10 +148,7 @@ export function AddPlatformSubdomainDrawer({
         />
       ) : (
         <form onSubmit={submit} className="space-y-4" noValidate>
-          <p className="text-sm text-neutral-600">
-            플랫폼 도메인 아래에 이름을 붙입니다. 인증서는 이미 준비돼 있어 소유
-            확인 없이 바로 연결됩니다.
-          </p>
+          <p className="text-sm text-neutral-600">소유 확인 없이 바로 연결됩니다.</p>
           {error && (
             <ErrorSummary
               error={error}

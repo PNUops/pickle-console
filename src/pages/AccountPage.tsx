@@ -82,9 +82,6 @@ export function AccountPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">계정 설정</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          프로필과 로그인 수단, 회원 탈퇴를 관리합니다.
-        </p>
       </div>
       {/*
         값은 한 줄로 보이고 고치는 일은 모달이 맡는다. 종전에는 비밀번호 입력 칸
@@ -180,8 +177,9 @@ function ProfileSection({ user }: { user: UserProfile }) {
 
   const locked = lockedProfileFields(user)
   const departmentValue = user.departmentOther ?? user.departmentName
-  // 잠금이 필드 단위이므로, 아직 비어 있는 것이 하나라도 있으면 모달에 넣을 것이 있다.
-  const inquiryNote = '변경이 필요하면 문의해 주세요.'
+  // 잠금은 필드 단위라 행마다 표시하되, 문의 경로는 아래에서 한 번만 말한다.
+  const lockedNote = '변경 불가'
+  const anyLocked = locked.position || locked.department || locked.studentNo
 
   return (
     <>
@@ -197,12 +195,12 @@ function ProfileSection({ user }: { user: UserProfile }) {
       <SettingRow
         label="직책"
         description={positionLabel ?? '입력하지 않음'}
-        note={locked.position ? inquiryNote : undefined}
+        note={locked.position ? lockedNote : undefined}
       />
       <SettingRow
         label="소속"
         description={departmentValue ?? '입력하지 않음'}
-        note={locked.department ? inquiryNote : undefined}
+        note={locked.department ? lockedNote : undefined}
       />
       {/*
         학번 행은 값이 없어도 보여 준다. 숨기면 왜 못 넣는지도, 넣을 수 있다는 것도
@@ -213,8 +211,11 @@ function ProfileSection({ user }: { user: UserProfile }) {
         description={
           user.studentNo ?? (studentNoApplies(options.data?.positions, user) ? '입력하지 않음' : '해당 없음')
         }
-        note={locked.studentNo ? inquiryNote : undefined}
+        note={locked.studentNo ? lockedNote : undefined}
       />
+      {anyLocked && (
+        <p className="pt-3 text-xs text-neutral-500">변경이 필요하면 문의해 주세요.</p>
+      )}
       <Modal open={open} onClose={() => setOpen(false)} title="프로필 변경">
         {error && (
           <Alert variant="danger" className="mb-4">
@@ -754,7 +755,7 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
         note={
           hasPassword
             ? undefined
-            : '복구 코드 재발급과 해제는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 비밀번호를 먼저 설정해 주세요.'
+            : '복구 코드 재발급과 해제는 비밀번호 확인을 거칩니다. 비밀번호를 먼저 설정해 주세요.'
         }
         action={<EnrolledPanel hasPassword={hasPassword} />}
       />
@@ -775,7 +776,7 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
         note={
           hasPassword
             ? '인증 앱(TOTP)으로 로그인에 한 단계를 더합니다.'
-            : '등록은 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 비밀번호를 먼저 설정해 주세요.'
+            : '등록은 비밀번호 확인을 거칩니다. 비밀번호를 먼저 설정해 주세요.'
         }
         action={
           <Button
@@ -1003,7 +1004,7 @@ function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-neutral-600">
-              재발급하면 기존 복구 코드는 모두 무효화됩니다. 비밀번호와 현재 인증 코드를 입력해 주세요.
+              재발급하면 기존 복구 코드는 모두 무효화됩니다.
             </p>
             {error && <Alert variant="danger">{error}</Alert>}
             <FormField label="비밀번호" required>
@@ -1049,9 +1050,6 @@ function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-neutral-600">
-            비밀번호와 현재 인증 코드(또는 복구 코드)를 입력해 주세요.
-          </p>
           {error && <Alert variant="danger">{error}</Alert>}
           <FormField label="비밀번호" required>
             <Input
@@ -1145,11 +1143,11 @@ function WithdrawSection({
       <CardContent>
         <SettingRow
           label="계정 삭제"
-          description="로그인과 SSH 접속이 즉시 차단되고 같은 이메일로는 다시 가입할 수 없습니다."
+          description="로그인과 SSH 접속이 즉시 차단됩니다."
           note={
             hasPassword
               ? '삭제되지 않은 VM을 보유한 워크스페이스의 유일한 소유자이거나 개인 워크스페이스에 VM이 남아 있으면 먼저 정리해야 합니다.'
-              : '탈퇴는 비밀번호 확인을 거칩니다. 이 계정에는 비밀번호가 없으니 비밀번호를 먼저 설정해 주세요.'
+              : '탈퇴는 비밀번호 확인을 거칩니다. 비밀번호를 먼저 설정해 주세요.'
           }
           action={
             <Button

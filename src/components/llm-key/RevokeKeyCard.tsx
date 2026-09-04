@@ -65,8 +65,7 @@ export function RevokeKeyCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-neutral-600">
-          키를 폐기하면 이후 이 키로 보낸 요청이 거부됩니다. 되돌릴 수 없고, 폐기한 키는 다시
-          발급할 수 없습니다.
+          키를 폐기하면 이후 이 키로 보낸 요청이 거부됩니다.
         </p>
         {error && <Alert variant="danger">{error}</Alert>}
         <Button variant="danger" disabled={!allowed} onClick={() => setConfirming(true)}>
@@ -91,10 +90,7 @@ export function RevokeKeyCard({
             <Alert variant="danger" title="되돌릴 수 없습니다">
               폐기한 키는 다시 발급할 수 없습니다. 계속 쓰려면 새로 신청해야 합니다.
             </Alert>
-            <p>
-              게이트웨이에는 폴링 주기 안에 반영되며, 이후 이 키로 보낸 요청은 폐기된 키로
-              거부됩니다. 지금까지의 사용 기록은 남습니다.
-            </p>
+            <p>지금까지의 사용 기록은 남습니다.</p>
           </div>
         </ConfirmNameModal>
       </CardContent>

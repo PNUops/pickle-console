@@ -297,8 +297,7 @@ function GatewayNotice({
             : '서비스 상태를 확인한 기록이 없습니다'
         }
       >
-        연결 상태를 판단할 자료가 아직 없습니다. 등록되지 않은 상태와 장애 상태를 같은 것으로
-        표시하지 않습니다.
+        연결 상태를 판단할 자료가 아직 없습니다.
       </MessageBar>
     )
   }
@@ -413,9 +412,6 @@ function PipelineDiagnostics({ status }: { status: AdminLlmStatus['gateway'] }) 
         />
         {queueObservationStale && (
           <MessageBar variant="warning" title="전송 대기열을 지금 값으로 확인할 수 없습니다">
-            {status.usageQueueReportState === 'STALE'
-              ? '대기열을 마지막으로 확인한 지 오래됐습니다.'
-              : '대기열을 확인한 기록이 없습니다.'}{' '}
             전송 대기가 0건으로 보여도 지금 비어 있다는 뜻은 아닙니다.
           </MessageBar>
         )}
@@ -523,14 +519,9 @@ function StatusView({ data, systemView }: { data: AdminLlmStatus; systemView: bo
       <GatewayNotice status={data.gateway} systemView={systemView} />
       <GatewaySummary data={data} systemView={systemView} />
       <section aria-labelledby="llm-upstreams-heading" className="space-y-3">
-        <div>
-          <h2 id="llm-upstreams-heading" className="type-section-title text-foreground-primary">
-            연결된 서비스
-          </h2>
-          <p className="type-caption mt-1 text-foreground-muted">
-            실제 요청 결과와 별도 연결 확인을 섞지 않고 각각 표시합니다.
-          </p>
-        </div>
+        <h2 id="llm-upstreams-heading" className="type-section-title text-foreground-primary">
+          연결된 서비스
+        </h2>
         <UpstreamStatusTable upstreams={data.upstreams} systemView={systemView} />
       </section>
       {systemView && <PipelineDiagnostics status={data.gateway} />}
@@ -576,6 +567,7 @@ const REJECTION_LABELS: Record<string, string> = {
   rate_limit_tokens: '분당 토큰 한도 초과',
   rate_limit_concurrency: '동시 요청 한도 초과',
   credit_unavailable: '유료 모델 연결 불가',
+  credit_pending: '유료 모델 연결 적용 대기',
   server_busy: 'Gateway 처리 여유 부족',
 }
 
@@ -590,9 +582,6 @@ function MetricsView({ data, systemView }: { data: AdminLlmMetrics; systemView: 
       <Card>
         <CardHeader>
           <CardTitle>집계 범위와 데이터 품질</CardTitle>
-          <p className="type-caption mt-1 text-foreground-muted">
-            지표를 해석할 때 함께 봐야 하는 범위 정보이며 성과 지표가 아닙니다.
-          </p>
         </CardHeader>
         <CardContent>
           <DescriptionList
@@ -636,17 +625,17 @@ function MetricsView({ data, systemView }: { data: AdminLlmMetrics; systemView: 
 
       {data.totalEvents > 0 &&
         (data.attributionCoverage < 1 || data.attemptCoverage < 1 || data.estimatedCoverage > 0) && (
-        <MessageBar variant="warning" title="일부 지표에는 해석 범위가 있습니다">
+        <MessageBar variant="warning">
           {systemView
-            ? '귀속되지 않은 event와 시도 횟수가 없는 event는 upstream·다중 시도 계산에서 빠집니다. 추정 토큰은 실제 사용량이 아니라 Gateway가 산정한 값입니다.'
-            : '처리 서비스를 확인할 수 없거나 시도 횟수가 없는 요청 기록은 일부 계산에서 빠집니다. 추정 토큰은 실제 사용량이 아니라 시스템이 산정한 값입니다.'}
+            ? '귀속되지 않은 event와 시도 횟수가 없는 event는 upstream·다중 시도 계산에서 빠집니다. 추정 토큰은 Gateway가 산정한 값입니다.'
+            : '처리 서비스나 시도 횟수를 확인할 수 없는 요청 기록은 일부 계산에서 빠집니다. 추정 토큰은 시스템이 산정한 값입니다.'}
         </MessageBar>
       )}
 
-      <MessageBar title="지표를 읽는 기준">
+      <MessageBar>
         {systemView
-          ? 'Upstream별 수치는 요청을 마지막으로 처리한 서비스의 최종 결과입니다. 중간 시도의 서비스와 retry·fallback 경로는 현재 event만으로 구분할 수 없습니다.'
-          : '서비스별 수치는 요청을 마지막으로 처리한 서비스의 최종 결과입니다. 중간 시도의 서비스와 재시도·다른 서비스 전환 과정은 현재 요청 기록만으로 구분할 수 없습니다.'}
+          ? '중간 시도의 서비스와 retry·fallback 경로는 현재 event로 구분할 수 없습니다.'
+          : '중간 시도의 서비스와 재시도·전환 경로는 현재 요청 기록으로 구분할 수 없습니다.'}
       </MessageBar>
 
       {data.upstreams.length === 0 ? (
@@ -718,15 +707,9 @@ function MetricsView({ data, systemView }: { data: AdminLlmMetrics; systemView: 
       )}
 
       <section aria-labelledby="llm-local-rejections-heading" className="space-y-3">
-        <div>
-          <h2 id="llm-local-rejections-heading" className="type-section-title text-foreground-primary">
-            {systemView ? 'Upstream' : '서비스'} 도달 전 거절
-          </h2>
-          <p className="type-caption mt-1 text-foreground-muted">
-            사용자 한도와 {systemView ? 'Gateway' : '서비스'} 상태로 요청이 외부 서비스에 전달되기
-            전에 끝난 건입니다.
-          </p>
-        </div>
+        <h2 id="llm-local-rejections-heading" className="type-section-title text-foreground-primary">
+          {systemView ? 'Upstream' : '서비스'} 도달 전 거절
+        </h2>
         {data.localRejections.length === 0 ? (
           <EmptyState
             title="로컬 거절이 없습니다"
@@ -816,11 +799,6 @@ export function AdminLlmStatusPage() {
             : `${activeOrg?.name ?? '선택한 기관'}이 사용하는 LLM 서비스의 상태와 처리 결과를 확인합니다.`
         }
       />
-
-      <MessageBar>
-        이 화면은 관측 전용입니다. 서비스·모델 설정 변경이나 즉시 연결 확인 작업은 제공하지
-        않습니다.
-      </MessageBar>
 
       <Tabs
         aria-label="LLM 서비스 화면"

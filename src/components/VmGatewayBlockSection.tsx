@@ -51,7 +51,7 @@ export function VmGatewayBlockSection({
       <p className="text-sm text-neutral-500">
         {vm.sshGatewayBlocked
           ? '현재 차단됨 — SSH 게이트웨이·웹 터미널 접속이 거부됩니다. 이미 열린 웹 터미널 세션은 웹 터미널 세션 화면에서 별도로 강제 종료해야 합니다.'
-          : 'VM 단위 킬 스위치입니다. 차단하면 SSH 게이트웨이·웹 터미널 접속이 모두 거부됩니다. 전역 킬 스위치와 독립적으로 동작합니다.'}
+          : '차단하면 SSH 게이트웨이·웹 터미널 접속이 모두 거부됩니다. 전역 차단과는 별개로 동작합니다.'}
       </p>
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button

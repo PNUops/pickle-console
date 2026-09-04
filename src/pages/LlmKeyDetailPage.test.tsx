@@ -69,7 +69,7 @@ describe('발급 전 키', () => {
 
     const confirm = await screen.findByRole('dialog')
     expect(
-      within(confirm).getByText(/단 한 번만 확인할 수 있으며, 서버에는 해시로만/),
+      within(confirm).getByText(/평문은 다음 화면에서 한 번만 볼 수 있습니다/),
     ).toBeInTheDocument()
     await user.click(within(confirm).getByRole('button', { name: '키 발급' }))
 

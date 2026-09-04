@@ -64,7 +64,7 @@ export function foldDomainStatus(axes: DomainAxes): FoldedDomainStatus {
   }
   // 실패 축은 여정 순서(소유 확인 → 인증서 → 라우트)로 지목한다.
   if (axes.status === 'FAILED') {
-    return failed('소유 확인에 실패했습니다 — DNS 레코드를 확인해 주세요.')
+    return failed('소유 확인에 실패했습니다. DNS 레코드를 확인해 주세요.')
   }
   if (axes.certificate?.status === 'FAILED') {
     return failed('인증서 발급에 실패했습니다.')

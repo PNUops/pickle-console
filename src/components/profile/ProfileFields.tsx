@@ -239,9 +239,7 @@ function LockedField({ label, value }: { label: string; value: string }) {
     <dl>
       <dt className="mb-1 text-sm font-medium text-neutral-700">{label}</dt>
       <dd className="text-sm text-neutral-900">{value || '입력하지 않음'}</dd>
-      <dd className="mt-1 text-xs text-neutral-500">
-        한 번 입력한 뒤에는 직접 바꿀 수 없습니다. 변경이 필요하면 문의해 주세요.
-      </dd>
+      <dd className="mt-1 text-xs text-neutral-500">변경 불가</dd>
     </dl>
   )
 }

@@ -182,7 +182,7 @@ describe('관리자 대시보드 — 씬 프로비저닝 디스크', () => {
     expect(bar.firstElementChild).toHaveClass('bg-primary-500')
     expect(bar.firstElementChild).not.toHaveClass('bg-danger-500')
     expect(
-      screen.getByText(/디스크 할당 합계가 풀 용량을 넘었습니다/),
+      screen.getByText(/배치를 막는 한계가 아닌 참고용 수치/),
     ).toBeInTheDocument()
     // 한계가 분명한 메모리 막대는 임계 색을 그대로 쓴다.
     const memory = screen.getByRole('progressbar', { name: '메모리 할당률' })
@@ -197,7 +197,7 @@ describe('관리자 대시보드 — 씬 프로비저닝 디스크', () => {
       await screen.findByRole('progressbar', { name: '디스크 할당률' }),
     ).toHaveAttribute('aria-valuenow', '51')
     expect(
-      screen.queryByText(/디스크 할당 합계가 풀 용량을 넘었습니다/),
+      screen.queryByText(/배치를 막는 한계가 아닌 참고용 수치/),
     ).not.toBeInTheDocument()
   })
 })

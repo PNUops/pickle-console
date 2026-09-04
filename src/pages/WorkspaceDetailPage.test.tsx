@@ -42,7 +42,7 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     await screen.findByRole('heading', { name: '홍길동' })
 
     expect(
-      screen.getByText(/개인 워크스페이스는 회원가입 시 자동으로 생성되는 워크스페이스/),
+      screen.getByText(/개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없습니다/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '워크스페이스 나가기' })).not.toBeInTheDocument()

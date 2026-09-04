@@ -421,8 +421,7 @@ function MembersSection({
       <CardContent className="space-y-4">
         {isPersonal && (
           <Alert variant="info">
-            개인 워크스페이스는 회원가입 시 자동으로 생성되는 워크스페이스로, 구성원을 추가하거나 역할을
-            변경할 수 없습니다.
+            개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없습니다.
           </Alert>
         )}
         {actionError && <Alert variant="danger">{actionError}</Alert>}
@@ -518,7 +517,7 @@ function MembersSection({
         }
       >
         <p className="text-sm text-neutral-600">
-          {removeTarget?.name}({removeTarget?.email}) 님을 이 워크스페이스에서 제거하시겠습니까?
+          {removeTarget?.name}({removeTarget?.email}) 님을 이 워크스페이스에서 제거합니다.
         </p>
       </Modal>
 
@@ -545,7 +544,7 @@ function MembersSection({
         }
       >
         <p className="text-sm text-neutral-600">
-          정말 이 워크스페이스에서 나가시겠습니까? 나간 후에는 다시 초대받아야 합니다.
+          나간 후에는 다시 초대받아야 합니다.
         </p>
       </Modal>
     </Card>

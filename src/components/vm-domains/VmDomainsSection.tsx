@@ -92,8 +92,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
               아직 연결된 도메인이 없습니다
             </p>
             <p className="text-sm text-neutral-500">
-              도메인을 연결하면 VM의 HTTP 서비스가 그 주소로 공개됩니다. 플랫폼
-              서브도메인은 바로 연결되고, 내 소유 도메인은 DNS 확인을 거쳐
+              플랫폼 서브도메인은 바로 연결되고, 내 소유 도메인은 DNS 확인을 거쳐
               연결됩니다.
             </p>
             {(canMutate ? (
