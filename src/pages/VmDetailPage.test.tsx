@@ -195,9 +195,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     await user.type(within(dialog).getByRole('textbox'), 'broken-vm')
     await user.click(within(dialog).getByRole('button', { name: '즉시 삭제' }))
 
-    expect(
-      await screen.findByText('이 VM은 삭제되었습니다. 기록 조회만 가능합니다.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('기록 조회만 가능합니다.')).toBeInTheDocument()
     expect(screen.getByText('삭제됨')).toBeInTheDocument()
   })
 })
@@ -313,7 +311,7 @@ describe('VM 상세 — 사용 기간 만료 표면화', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('D-3')).toBeInTheDocument()
-    expect(screen.queryByText(/사용 기간이 만료되어 중지되었습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText('사용 기간 만료')).not.toBeInTheDocument()
   })
 
   test('만료로 자동 중지된 VM은 경고 안내와 D+n 배지를 보여준다', async () => {
@@ -331,8 +329,9 @@ describe('VM 상세 — 사용 기간 만료 표면화', () => {
     renderVm(uuid(57))
 
     await screen.findByRole('heading', { name: 'web-lab' })
+    expect(await screen.findByText('사용 기간 만료')).toBeInTheDocument()
     expect(
-      await screen.findByText(/사용 기간이 만료되어 중지되었습니다/),
+      screen.getByText('연장이 필요하면 관리자에게 문의해 주세요.'),
     ).toBeInTheDocument()
     expect(screen.getByText('D+2')).toBeInTheDocument()
   })
@@ -431,7 +430,7 @@ describe('VM 상세 — 접속', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '키 재발급' }))
     expect(
-      await screen.findByText(/기존 키는 즉시 무효화되어/),
+      await screen.findByText(/기존 키는 즉시 무효화됩니다/),
     ).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '재발급하고 내려받기' }))
 

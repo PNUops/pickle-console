@@ -165,11 +165,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             <Field label="만료">
               {llmKey.expiresAt ? formatDateTime(llmKey.expiresAt) : '만료 없음'}
             </Field>
-            <Field label="본문 기록">
-              {llmKey.recordBodies
-                ? '켜짐 — 이 키로 보낸 프롬프트와 응답이 수집됩니다'
-                : '꺼짐'}
-            </Field>
+            <Field label="본문 기록">{llmKey.recordBodies ? '켜짐' : '꺼짐'}</Field>
             <Field label="분당 요청 한도 (자체 서빙)">{limitLabel(llmKey.rpm, '회')}</Field>
             <Field label="분당 토큰 한도 (자체 서빙)">{limitLabel(llmKey.tpm, '토큰')}</Field>
             <Field label="동시 요청 한도 (자체 서빙)">
@@ -189,9 +185,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             )}
           </dl>
           <p className="mt-4 text-xs text-neutral-500">
-            위 세 한도와 일일 토큰 한도는 자체 서빙 모델에만 적용됩니다. 유료 모델 호출은
-            금액 한도가 통제합니다. 마지막 사용 시각은 게이트웨이가 배치로 보고하므로 최근
-            호출이 늦게 반영될 수 있습니다. 일별 사용량은 사용량 탭에서 볼 수 있습니다.
+            마지막 사용 시각에는 최근 호출이 늦게 반영될 수 있습니다.
           </p>
         </CardContent>
       </Card>
@@ -279,8 +273,7 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
   if (status === 'PENDING') {
     return (
       <Alert variant="info" title="아직 발급되지 않은 키입니다">
-        신청은 승인됐지만 비밀은 아직 만들어지지 않았습니다. 발급 전에는 이 키로 보낸 요청이
-        하나도 인증되지 않습니다. 아래에서 발급하면 평문이 한 번만 표시됩니다.
+        발급 전에는 이 키로 보낸 요청이 하나도 인증되지 않습니다.
       </Alert>
     )
   }
@@ -295,14 +288,14 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
   if (status === 'SUSPENDED') {
     return (
       <Alert variant="warning" title="정지된 키입니다">
-        관리자가 이 키의 사용을 멈춰 두었습니다. 해제 전까지는 요청이 거부됩니다.
+        관리자가 해제하기 전까지는 요청이 거부됩니다.
       </Alert>
     )
   }
   if (status === 'EXPIRED') {
     return (
       <Alert variant="warning" title="만료된 키입니다">
-        사용 기간이 끝나 더 이상 요청을 인증하지 않습니다. 계속 쓰려면 새로 신청해 주세요.
+        더 이상 요청을 인증하지 않습니다. 계속 쓰려면 새로 신청해 주세요.
       </Alert>
     )
   }
@@ -407,11 +400,9 @@ function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApi
         <CardTitle>{actionLabel}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-neutral-600">
-          {rotation
-            ? '키 평문은 발급할 때 한 번만 보입니다. 값을 잃어버렸다면 재발급해야 하고, 재발급하는 순간 이전 값은 곧바로 쓸 수 없게 됩니다.'
-            : '발급하면 키 평문이 한 번만 표시됩니다. 서버에는 해시만 남아 다시 조회할 수 없습니다.'}
-        </p>
+        {rotation && (
+          <p className="text-sm text-neutral-600">값을 잃어버렸다면 재발급합니다.</p>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant={rotation ? 'secondary' : 'primary'}
@@ -459,8 +450,7 @@ function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApi
               </Alert>
             )}
             <p className="text-sm text-neutral-600">
-              새 키의 평문은 이 다음 화면에서 단 한 번만 확인할 수 있으며, 서버에는 해시로만
-              저장됩니다.
+              평문은 다음 화면에서 한 번만 볼 수 있습니다.
             </p>
           </div>
         </Modal>
@@ -494,8 +484,7 @@ function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApi
                 </p>
               )}
               <p className="text-sm text-neutral-600">
-                이 키는 <code className="font-mono text-xs">{LLM_API_BASE_URL}</code>로
-                보냅니다. 호출 방법은{' '}
+                호출 방법은{' '}
                 <Link
                   to={DOCS_PATH}
                   className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"

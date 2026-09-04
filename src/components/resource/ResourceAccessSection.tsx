@@ -87,9 +87,9 @@ const ACCESS_KINDS: Record<ResourceType, AccessKind> = {
     removeGrant: removeVmAccessGrant,
     roleHints: RESOURCE_ROLE_HINTS,
     listIntro:
-      '이 VM에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스이라도 목록에 없으면 이름과 상태만 보입니다.',
+      '이 VM에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스라도 목록에 없으면 이름과 상태만 보입니다.',
     workspaceWideWho: '이 VM을 소유한 워크스페이스의 구성원 전원',
-    emptyList: '접근 권한이 하나도 없습니다. 이 VM에 닿을 수 있는 사람이 없습니다.',
+    emptyList: '이 VM에 닿을 수 있는 사람이 없습니다.',
     grantEligibility:
       '이 VM을 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있습니다.',
     revokeSentence: (who) => `${who}의 이 VM 접근 권한을 회수합니다.`,
@@ -113,9 +113,9 @@ const ACCESS_KINDS: Record<ResourceType, AccessKind> = {
     removeGrant: removeLlmKeyAccessGrant,
     roleHints: LLM_KEY_RESOURCE_ROLE_HINTS,
     listIntro:
-      '이 LLM API 키에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스이라도 목록에 없으면 이름과 상태만 보입니다.',
+      '이 LLM API 키에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스라도 목록에 없으면 이름과 상태만 보입니다.',
     workspaceWideWho: '이 키를 소유한 워크스페이스의 구성원 전원',
-    emptyList: '접근 권한이 하나도 없습니다. 이 LLM API 키에 닿을 수 있는 사람이 없습니다.',
+    emptyList: '이 LLM API 키에 닿을 수 있는 사람이 없습니다.',
     grantEligibility:
       '이 키를 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있습니다.',
     revokeSentence: (who) => `${who}의 이 LLM API 키 접근 권한을 회수합니다.`,
@@ -123,12 +123,9 @@ const ACCESS_KINDS: Record<ResourceType, AccessKind> = {
       <ul className="list-disc space-y-1 pl-4">
         <li>
           이미 발급받아 확인한 키 평문은 회수되지 않습니다. 그 값을 못 쓰게 하려면
-          키를 재발급해 주세요 — 재발급하면 이전 값이 곧바로 무효가 됩니다.
+          키를 재발급해 주세요.
         </li>
-        <li>
-          게이트웨이에는 폴링 주기 안에 반영됩니다. 그때까지 진행 중인 요청은
-          그대로 처리될 수 있습니다.
-        </li>
+        <li>회수 직후 진행 중인 요청은 그대로 처리될 수 있습니다.</li>
       </ul>
     ),
   },

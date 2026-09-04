@@ -20,7 +20,6 @@ import {
   CardTitle,
   ErrorSummary,
   FormField,
-  InfoTip,
   Input,
   Spinner,
   Textarea,
@@ -84,21 +83,13 @@ export function VmCampusIpSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          캠퍼스 IP
-          <InfoTip label="캠퍼스 IP 도움말">
-            VM을 캠퍼스 네트워크의 교내 IP(10.x)로 연결하는 신청입니다. 관리자
-            승인 후 주소가 부여되며, 부여된 주소는 기본 차단 상태로 신청한
-            포트만 열립니다.
-          </InfoTip>
-        </CardTitle>
+        <CardTitle>캠퍼스 IP</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
           승인되면 VM이 캠퍼스 네트워크의 교내 IP(10.x)로 연결됩니다. 부여된
-          주소는 기본 차단 상태이며 신청한 포트만 개방됩니다. 이후 공인 IP
-          연결(NAT)이 필요하면 정보전산원 포털에서 직접 신청하며, 상세 절차는
-          메뉴얼로 제공될 예정입니다.
+          주소는 기본 차단 상태이며 신청한 포트만 개방됩니다. 공인 IP(NAT)는
+          정보전산원 포털에서 따로 신청합니다.
         </p>
 
         {requests.isPending && (
@@ -185,13 +176,9 @@ function ActiveRequestCard({
         )}
       </div>
       {error && <Alert variant="danger">{error}</Alert>}
-      {request.status === 'REQUESTED' && (
-        <p className="text-sm text-neutral-600">관리자 검토를 기다리고 있습니다.</p>
-      )}
       {request.status === 'APPROVED' && (
         <p className="text-sm text-neutral-600">
-          승인되었습니다. VM을 캠퍼스 네트워크에 연결하는 작업이 끝나면 부여된
-          교내 IP가 여기에 표시됩니다.
+          연결 작업이 끝나면 부여된 교내 IP가 여기에 표시됩니다.
         </p>
       )}
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
@@ -311,7 +298,7 @@ function RequestForm({ vm }: { vm: VmDetail }) {
         label="개방 포트"
         required
         error={fieldErrors.ports}
-        description="쉼표로 구분해 입력합니다 (예: 80, 443). 여기 적은 포트만 열립니다."
+        description="쉼표로 구분해 입력합니다 (예: 80, 443)."
         className="max-w-md"
       >
         <Input

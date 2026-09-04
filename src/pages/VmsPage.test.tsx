@@ -85,12 +85,12 @@ describe('VM 상세', () => {
     // 첫 응답: 생성 중 + 안내 배너, IP는 아직 없음
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
     expect(screen.getByText('생성 중')).toBeInTheDocument()
-    expect(screen.getByText(/VM을 생성하고 있습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/생성이 끝나면 상태가 자동으로 갱신됩니다/)).toBeInTheDocument()
     expect(screen.getByText('할당 전')).toBeInTheDocument()
 
     // 폴링이 돌면 mock 프로비저닝 완료 → 실행 중으로 갱신
     expect(await screen.findByText('실행 중')).toBeInTheDocument()
-    expect(screen.queryByText(/VM을 생성하고 있습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/생성이 끝나면 상태가 자동으로 갱신됩니다/)).not.toBeInTheDocument()
     expect(screen.getByText('10.10.0.55')).toBeInTheDocument()
   })
 

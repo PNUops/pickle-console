@@ -24,7 +24,6 @@ import {
   CardTitle,
   ErrorSummary,
   FormField,
-  InfoTip,
   Input,
   PortForwardApplyStateBadge,
   PortMappingStatusBadge,
@@ -76,32 +75,18 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          포트포워딩
-          <InfoTip label="포트포워딩 도움말">
-            릴레이의 공인 포트 하나를 VM의 TCP/UDP 포트 하나로 넘겨 외부에
-            공개합니다. 공인 포트는 릴레이 대역에서 자동 할당되며 직접 정할 수
-            없습니다. 위쪽 HTTP 서비스 공개가 웹 주소를 붙이는 수단이라면, 이쪽은
-            웹이 아닌 포트를 그대로 여는 수단입니다.
-          </InfoTip>
-        </CardTitle>
+        <CardTitle>포트포워딩</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          VM 내부 포트를 릴레이 공인 포트로 외부에 공개합니다. 적용은 비동기로
-          수렴하며, 외부에서 들어온 연결은 VM에 릴레이 주소로 보입니다.
+          VM 내부 포트를 릴레이 공인 포트로 외부에 공개합니다. 외부에서 들어온
+          연결은 VM에 릴레이 주소로 보입니다.
         </p>
 
         <Alert variant="info" title="본인만 접속한다면 SSH 로컬 포워딩으로 충분합니다">
-          <div className="space-y-1">
-            <p>
-              외부 공개 없이 내 컴퓨터에서만 접근하려면 SSH 로컬 포워딩을 사용할
-              수 있습니다.
-            </p>
-            <code className="block overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
-              {`ssh -L <로컬포트>:localhost:<VM포트> ${vm.hostname}@${vm.sshHost}`}
-            </code>
-          </div>
+          <code className="block overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
+            {`ssh -L <로컬포트>:localhost:<VM포트> ${vm.hostname}@${vm.sshHost}`}
+          </code>
         </Alert>
 
         {canMutate ? (
@@ -282,7 +267,7 @@ function ForwardingList({
         ))}
       </ul>
       <p className="text-xs text-neutral-500">
-        정지됨 상태는 관리자 개입에 의한 것입니다. 문의는 관리자에게 해 주세요.
+        정지됨 상태는 관리자 개입에 의한 것이니 관리자에게 문의해 주세요.
       </p>
     </div>
   )

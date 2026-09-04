@@ -63,7 +63,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
     })
     expect(fold.key).toBe('failed')
     expect(fold.tone).toBe('danger')
-    expect(fold.hint).toBe('소유 확인에 실패했습니다 — DNS 레코드를 확인해 주세요.')
+    expect(fold.hint).toBe('소유 확인에 실패했습니다. DNS 레코드를 확인해 주세요.')
   })
 
   test('인증서 실패는 도메인이 정상일 때 인증서 축을 지목한다', () => {

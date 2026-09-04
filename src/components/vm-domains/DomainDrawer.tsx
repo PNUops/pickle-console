@@ -473,8 +473,8 @@ function ReservedDomainBody({
         }
       >
         <p className="text-sm text-neutral-600">
-          <span className="font-mono">{domain.fqdn}</span> — 지금 반납하면 이름이 즉시
-          풀려 다른 사용자가 사용할 수 있게 됩니다.
+          <span className="font-mono">{domain.fqdn}</span> 이름이 즉시 풀려 다른 사용자가
+          사용할 수 있게 됩니다.
         </p>
       </Modal>
     </div>
