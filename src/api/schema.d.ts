@@ -493,7 +493,7 @@ export interface paths {
         };
         /**
          * 유료 모델 카탈로그
-         * @description 승인 화면에서 고를 수 있는 유료 모델 후보와 그 가격을 조회합니다. 캐시만 읽으므로 이 호출이 벤더를 부르지 않으며, 목록이 비어 있거나 오래됐어도 모델 이름을 직접 입력해 승인할 수 있습니다. 응답의 신선도로 «아직 갱신된 적 없음»과 «벤더를 못 부르는 중»을 구분합니다.
+         * @description 승인 화면에서 고를 수 있는 유료 모델 후보와 그 가격을 조회합니다. 캐시만 읽으므로 이 호출이 벤더를 부르지 않으며, 목록이 비어 있거나 오래됐어도 모델 이름을 직접 입력해 승인할 수 있습니다. 목록이 빈 이유는 신선도 하나로 갈리지 않습니다. 한 번도 못 가져온 것과 계속 실패하는 것이 둘 다 UNKNOWN이므로, lastError와 consecutiveFailures를 함께 읽어야 구분됩니다.
          */
         get: operations["listAdminOpenRouterModels"];
         put?: never;
@@ -3535,22 +3535,6 @@ export interface components {
         };
         /** @enum {string} */
         CatalogStatus: "ACTIVE" | "DISABLED";
-        /** @description 카탈로그의 모델 한 건. */
-        CatalogueModel: {
-            /** @description 백만 토큰당 출력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
-            completionPricePerMillion?: number | null;
-            /**
-             * Format: int32
-             * @description 컨텍스트 길이(토큰).
-             */
-            contextLength?: number | null;
-            /** @description 허용 목록에 그대로 넣을 수 있는 모델 이름. */
-            id: string;
-            /** @description 벤더가 표시하는 이름. */
-            name: string;
-            /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
-            promptPricePerMillion?: number | null;
-        };
         /** @enum {string} */
         CertificateKind: "ORIGIN_CA_WILDCARD" | "LETS_ENCRYPT";
         /** @enum {string} */
@@ -5202,6 +5186,22 @@ export interface components {
         };
         /** @enum {string} */
         OpenRouterAccountStatus: "ACTIVE" | "ARCHIVED";
+        /** @description 카탈로그의 모델 한 건. */
+        OpenRouterCatalogueModel: {
+            /** @description 백만 토큰당 출력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
+            completionPricePerMillion?: number | null;
+            /**
+             * Format: int32
+             * @description 컨텍스트 길이(토큰).
+             */
+            contextLength?: number | null;
+            /** @description 허용 목록에 그대로 넣을 수 있는 모델 이름. */
+            id: string;
+            /** @description 벤더가 표시하는 이름. */
+            name: string;
+            /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
+            promptPricePerMillion?: number | null;
+        };
         /** @description OpenRouter 모델 카탈로그 캐시. 승인 화면의 모델 선택 후보이며, 이 목록이 비어 있어도 모델 이름을 직접 입력할 수 있습니다. */
         OpenRouterCatalogueResponse: {
             /**
@@ -5224,7 +5224,7 @@ export interface components {
              */
             lastSuccessAt?: string | null;
             /** @description 캐시에 남아 있는 모델. 벤더 목록에서 사라진 모델은 제외됩니다. */
-            models: components["schemas"]["CatalogueModel"][];
+            models: components["schemas"]["OpenRouterCatalogueModel"][];
         };
         /** @enum {string} */
         OpenRouterCredentialError: "CREDENTIAL_ERROR" | "THROTTLED" | "VENDOR_UNAVAILABLE" | "VENDOR_REJECTED";

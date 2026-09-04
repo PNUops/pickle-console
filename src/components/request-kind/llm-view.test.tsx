@@ -472,6 +472,37 @@ describe('유료 모델 선택기', () => {
     })
   })
 
+  test('잘려 나간 개수를 말한다', async () => {
+    // 서버가 싼 순으로 주므로 잘라낸 뒤 남는 것은 싼 쪽이고, 예산을 정하기 전에
+    // 꼭 봐야 할 비싼 모델이 정확히 잘려 나간다. 몇 개 중 몇 개인지 말하지 않으면
+    // 나머지가 있다는 것조차 모른다.
+    openRouterCatalogueStore.response = {
+      ...openRouterCatalogueStore.response,
+      models: Array.from({ length: 60 }, (_, i) => ({
+        id: `vendor/model-${String(i).padStart(2, '0')}`,
+        name: `Model ${i}`,
+        promptPricePerMillion: i,
+        completionPricePerMillion: i,
+        contextLength: 1000,
+      })),
+    }
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await screen.findByText(/60개 중 40개를 보고 있습니다/)
+  })
+
+  test('오래된 목록이라고 말한다', async () => {
+    openRouterCatalogueStore.response = {
+      ...openRouterCatalogueStore.response,
+      freshness: 'STALE',
+    }
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await screen.findByText(/목록이 오래됐습니다/)
+  })
+
   test('한 번도 못 가져온 목록과 오래된 목록을 구분해 말한다', async () => {
     openRouterCatalogueStore.response = {
       ...openRouterCatalogueStore.response,

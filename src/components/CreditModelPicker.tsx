@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { OpenRouterCatalogue, OpenRouterCatalogueModel } from '../api/queries'
 
+/** 한 번에 그리는 최대 개수. 벤더 목록이 400을 넘으므로 전부 그리지는 않는다. */
+const LIMIT = 40
+
 /**
  * 카탈로그에서 유료 모델을 골라 허용 목록에 넣는다.
  *
@@ -12,7 +15,7 @@ import type { OpenRouterCatalogue, OpenRouterCatalogueModel } from '../api/queri
  * 선택기는 그 위에 얹힌다.
  */
 
-const FRESHNESS_NOTE: Record<string, string> = {
+const FRESHNESS_NOTE: Partial<Record<OpenRouterCatalogue['freshness'], string>> = {
   STALE: '목록이 오래됐습니다. 최근에 나온 모델이 빠져 있을 수 있으니 이름을 직접 적어도 됩니다.',
   UNKNOWN: '아직 목록을 가져온 적이 없습니다. 모델 이름을 직접 적어 주세요.',
 }
@@ -46,16 +49,17 @@ export function CreditModelPicker({
 }) {
   const [query, setQuery] = useState('')
 
-  const matches = useMemo(() => {
+  const { shown, matched } = useMemo(() => {
     const models: OpenRouterCatalogueModel[] = catalogue?.models ?? []
     const needle = query.trim().toLowerCase()
     const pool = needle
       ? models.filter(
           (model) =>
-            model.id.includes(needle) || model.name.toLowerCase().includes(needle),
+            model.id.toLowerCase().includes(needle) ||
+            model.name.toLowerCase().includes(needle),
         )
       : models
-    return pool.slice(0, 40)
+    return { shown: pool.slice(0, LIMIT), matched: pool.length }
   }, [catalogue, query])
 
   if (failed) {
@@ -68,6 +72,10 @@ export function CreditModelPicker({
 
   const note = catalogue ? FRESHNESS_NOTE[catalogue.freshness] : undefined
   const total = catalogue?.models.length ?? 0
+  // 서버가 싼 순으로 준다. 그러니 잘라낸 뒤에 남는 것은 싼 쪽이고, 승인자가
+  // 예산을 정하기 전에 꼭 봐야 할 비싼 모델이 정확히 잘려 나간다. 몇 개 중 몇
+  // 개를 보고 있는지 말해 주지 않으면 나머지가 있다는 것조차 모른다.
+  const truncated = matched > shown.length
 
   return (
     <div className="space-y-2">
@@ -82,7 +90,7 @@ export function CreditModelPicker({
       {note ? <p className="text-sm text-amber-700">{note}</p> : null}
       {total > 0 ? (
         <ul className="max-h-56 divide-y divide-neutral-200 overflow-y-auto rounded border border-neutral-200">
-          {matches.map((model) => {
+          {shown.map((model) => {
             const already = selected.includes(model.id)
             return (
               <li key={model.id} className="flex items-center justify-between gap-2 px-2 py-1">
@@ -106,10 +114,16 @@ export function CreditModelPicker({
               </li>
             )
           })}
-          {matches.length === 0 ? (
+          {shown.length === 0 ? (
             <li className="px-2 py-1 text-sm text-neutral-500">검색 결과가 없습니다.</li>
           ) : null}
         </ul>
+      ) : null}
+      {truncated ? (
+        <p className="text-sm text-neutral-500">
+          {total}개 중 {shown.length}개를 보고 있습니다. 목록은 싼 순이라 비싼 모델은 뒤에
+          있으니, 찾는 모델이 있으면 이름으로 검색해 주세요.
+        </p>
       ) : null}
     </div>
   )
