@@ -95,8 +95,9 @@ export function DocsPage() {
 
         <Section title="모델">
           <p className="text-sm leading-6 text-neutral-600">
-            교내에서 직접 서빙하는 모델은 <Code>{LLM_DEFAULT_MODEL}</Code> 하나입니다. 공개
-            이름과 실제 모델이 분리되어 있어, 서빙하는 모델이 바뀌어도 코드는 그대로 둡니다.
+            교내에서 직접 서빙하는 <strong>자체 서빙 모델</strong>은{' '}
+            <Code>{LLM_DEFAULT_MODEL}</Code> 하나입니다. 공개 이름과 실제 모델이 분리되어
+            있어, 서빙하는 모델이 바뀌어도 코드는 그대로 둡니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             유료 모델은 금액 한도가 부여된 키만 쓸 수 있고, 모델 이름을 그대로 보내면
@@ -109,7 +110,7 @@ export function DocsPage() {
             있으면 금액 한도 안에서 모든 유료 모델을 쓸 수 있습니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            아래 요청은 교내 서빙 모델 목록을 돌려줍니다. 유료 모델은 목록에 나오지
+            아래 요청은 자체 서빙 모델 목록을 돌려줍니다. 유료 모델은 목록에 나오지
             않습니다.
           </p>
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
@@ -137,7 +138,7 @@ export function DocsPage() {
             표시됩니다. <strong>대화가 유지되지 않는다는 뜻은 아닙니다.</strong> 이전 대화는
             매 요청에 함께 실려 가고, 도구가 창 크기를 몰라서 남은 양을 보여 주지 못하고 대화를
             줄일 시점도 잡지 못하는 것입니다. 그대로 두면 대화가 길어졌을 때 경고 없이 한도를
-            넘어 <Code>upstream_rejected</Code>로 실패합니다. 교내 서빙 모델의 입출력 합계
+            넘어 <Code>upstream_rejected</Code>로 실패합니다. 자체 서빙 모델의 입출력 합계
             한도는 65,536토큰이고, <Code>output</Code>은 답변 몫으로 남겨 둘 양이라 필요에 맞춰
             정합니다.
           </p>
@@ -171,7 +172,7 @@ export function DocsPage() {
 
         <Section title="한도">
           <p className="text-sm leading-6 text-neutral-600">
-            아래 한도는 <strong>교내 서빙 모델에만 적용됩니다.</strong> 유료 모델 호출은 이
+            아래 한도는 <strong>자체 서빙 모델에만 적용됩니다.</strong> 유료 모델 호출은 이
             한도를 쓰지 않고 금액 한도가 통제합니다. 표의 값은 키에 별도 한도가 부여되지
             않았을 때 적용됩니다.
           </p>
@@ -210,13 +211,13 @@ export function DocsPage() {
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             <Code>X-RateLimit-Limit-Requests</Code>와{' '}
-            <Code>X-RateLimit-Remaining-Requests</Code> 헤더는 <strong>한도를 통과한 교내 서빙
+            <Code>X-RateLimit-Remaining-Requests</Code> 헤더는 <strong>한도를 통과한 자체 서빙
             모델 응답에만</strong> 실립니다. 유료 모델 응답에는 분당 요청 한도 자체가 없어
             오지 않고, 한도에 걸린 429 응답에도 오지 않습니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             분당 한도와 별개로 <strong>일일 토큰 한도</strong>가 부여될 수 있습니다. 이것도
-            교내 서빙 모델에만 적용되고 자정(KST)에 초기화되며, 소진하면{' '}
+            자체 서빙 모델에만 적용되고 자정(KST)에 초기화되며, 소진하면{' '}
             <Code>quota_exhausted</Code>로 거절됩니다. 이 한도에는{' '}
             <Code>Retry-After</Code>가 붙지 않습니다. 부여 여부와 남은 양은 키 상세 화면의
             사용량 탭에서 확인합니다.

@@ -43,17 +43,17 @@ describe('사용 가이드', () => {
     expect(note?.textContent ?? '').toContain('/v1까지가 base URL입니다')
   })
 
-  test('분당 한도가 교내 서빙 모델에만 적용된다고 말한다', async () => {
+  test('분당 한도가 자체 서빙 모델에만 적용된다고 말한다', async () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '한도' })
 
     // 2026-09-02 축 분리 이후 네 한도 전부 자체 서빙 전용이다. 이 문장이 빠지면
     // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
     const body = document.body.textContent ?? ''
-    expect(body).toContain('교내 서빙 모델에만 적용됩니다')
+    expect(body).toContain('자체 서빙 모델에만 적용됩니다')
     // 헤더가 어디에 실리는지도 축을 따른다. 이 문장이 빠지면 유료 모델 사용자가
     // 오지 않는 헤더를 기다린다.
-    expect(body).toContain('한도를 통과한 교내 서빙')
+    expect(body).toContain('한도를 통과한 자체 서빙')
     expect(body).toContain('유료 모델 응답에는 분당 요청 한도 자체가 없어')
   })
 
