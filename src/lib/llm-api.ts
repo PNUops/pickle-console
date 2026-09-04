@@ -41,11 +41,20 @@ export const LLM_SUPPORTED_PARAMS = [
   'parallel_tool_calls',
 ] as const
 
-/** 키에 별도 한도가 부여되지 않았을 때 적용되는 값. 배포된 게이트웨이 환경 기준. */
+/**
+ * 키에 별도 한도가 부여되지 않았을 때 적용되는 값. 배포된 게이트웨이 환경 기준이고
+ * 코드 기본값이 아니다. 셋 다 배포 env가 덮고 있으므로 코드 기본값을 옮겨 적으면
+ * 아무 키도 받지 않는 숫자가 된다.
+ *
+ * 2026-09-03에 상향됐다. 종전 값(20 / 30,000 / 2)은 코딩 에이전트처럼 긴 문맥을
+ * 연달아 보내는 사용에서 실제로 걸렸다. 지금 값은 되돌이 루프만 걸리게 두는 수준이고,
+ * 호스트 용량을 지키는 것은 이 셋이 아니라 게이트웨이 전체 동시 요청 상한과 서빙
+ * 쪽 큐다.
+ */
 export const LLM_DEFAULT_LIMITS = {
-  requestsPerMinute: 20,
-  tokensPerMinute: 30_000,
-  concurrency: 2,
+  requestsPerMinute: 600,
+  tokensPerMinute: 1_000_000,
+  concurrency: 32,
 } as const
 
 export interface LlmErrorEntry {
@@ -94,4 +103,14 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'upstream_rejected', status: 400, meaning: '모델 서버가 요청을 거부했습니다.' },
   { code: 'upstream_error', status: 502, meaning: '모델 서버 호출에 실패했습니다.' },
   { code: 'upstream_timeout', status: 504, meaning: '모델 서버 응답이 제한 시간을 넘었습니다.' },
+  {
+    code: 'request_deadline_exceeded',
+    status: 200,
+    meaning: '요청 시간 상한을 넘겨 스트림이 끊겼습니다. 스트림 도중에만 나옵니다.',
+  },
+  {
+    code: 'upstream_stream_interrupted',
+    status: 200,
+    meaning: '모델 서버가 스트림을 도중에 끊었습니다. 스트림 도중에만 나옵니다.',
+  },
 ]

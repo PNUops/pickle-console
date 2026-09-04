@@ -36,16 +36,17 @@ describe('LLM API 사실 사본', () => {
   })
 
   test('기본 한도는 배포된 게이트웨이 환경 값이다', () => {
-    // 분당 토큰만 환경 변수로 상향되어 있고 나머지 둘은 코드 기본값과 같다.
+    // 셋 다 배포 env가 덮는다. 코드 기본값(20 / 20,000 / 2)을 적으면 아무 키도 받지
+    // 않는 숫자가 되므로, 이 값을 고칠 때는 라이브 env를 읽고 고친다.
     expect(LLM_DEFAULT_LIMITS).toEqual({
-      requestsPerMinute: 20,
-      tokensPerMinute: 30_000,
-      concurrency: 2,
+      requestsPerMinute: 600,
+      tokensPerMinute: 1_000_000,
+      concurrency: 32,
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 28개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(28)
+  test('에러 표는 사용자에게 도달하는 30개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(30)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -76,6 +77,8 @@ describe('LLM API 사실 사본', () => {
       upstream_rejected: 400,
       upstream_error: 502,
       upstream_timeout: 504,
+      request_deadline_exceeded: 200,
+      upstream_stream_interrupted: 200,
     })
   })
 

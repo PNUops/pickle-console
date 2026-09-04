@@ -203,16 +203,16 @@ export function DocsPage() {
             <Code>Retry-After</Code> 헤더가 다시 시도할 시점을 알려 줍니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            <Code>Retry-After</Code>는 <strong>기다리면 저절로 풀리는 거절에만</strong>{' '}
-            붙습니다. 위 세 한도와, 승인된 금액 한도를 키에 적용하는 중인{' '}
-            <Code>credit_pending</Code>(503)입니다. 일일 토큰 한도(
-            <Code>quota_exhausted</Code>)나 금액 소진(<Code>credit_exhausted</Code>)에는
-            붙지 않습니다.
+            <Code>Retry-After</Code>가 붙는 응답은 넷입니다. 위 세 한도의 429와, 승인된 금액
+            한도를 키에 적용하는 중인 <Code>credit_pending</Code>(503)입니다. 일일 토큰 한도(
+            <Code>quota_exhausted</Code>), 금액 소진(<Code>credit_exhausted</Code>), 서버가
+            몰렸을 때(<Code>server_busy</Code>)에는 붙지 않으므로 재시도 간격을 직접 정합니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
-            교내 서빙 모델 응답에는 <Code>X-RateLimit-Limit-Requests</Code>와{' '}
-            <Code>X-RateLimit-Remaining-Requests</Code> 헤더가 실립니다. 유료 모델에는 분당
-            요청 한도 자체가 없으므로 두 헤더도 오지 않습니다.
+            <Code>X-RateLimit-Limit-Requests</Code>와{' '}
+            <Code>X-RateLimit-Remaining-Requests</Code> 헤더는 <strong>한도를 통과한 교내 서빙
+            모델 응답에만</strong> 실립니다. 유료 모델 응답에는 분당 요청 한도 자체가 없어
+            오지 않고, 한도에 걸린 429 응답에도 오지 않습니다.
           </p>
           <p className="text-sm leading-6 text-neutral-600">
             분당 한도와 별개로 <strong>일일 토큰 한도</strong>가 부여될 수 있습니다. 이것도
