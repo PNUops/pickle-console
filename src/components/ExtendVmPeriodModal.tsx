@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { invalidateResourceLists, updateVmPeriod } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { Alert, Button, FormField, Input, Modal } from './ui'
+import { Alert, Button, Checkbox, FormField, Input, Modal } from './ui'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { todayKstDate } from '../lib/format'
 
@@ -22,15 +22,22 @@ export function ExtendVmPeriodModal({
 }) {
   const queryClient = useQueryClient()
   const [endDate, setEndDate] = useState('')
+  const [indefinite, setIndefinite] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const extend = useMutation({
-    mutationFn: () => updateVmPeriod(vm.id, { endDate }),
+    // 서버는 날짜 지정과 지우기를 함께 받지 않는다. 화면도 한쪽만 보낸다.
+    mutationFn: () =>
+      updateVmPeriod(vm.id, indefinite ? { clearEndDate: true } : { endDate }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await invalidateResourceLists(queryClient)
-      onDone('연장되었습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.')
+      onDone(
+        indefinite
+          ? '무기한으로 바꿨습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'
+          : '연장되었습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.',
+      )
     },
     onError: (err) => {
       const apiError = toApiError(err, '사용 기간을 변경하지 못했습니다.')
@@ -43,7 +50,7 @@ export function ExtendVmPeriodModal({
     event.preventDefault()
     setError(null)
     setFieldErrors({})
-    if (!endDate) {
+    if (!indefinite && !endDate) {
       setFieldErrors({ endDate: '새 종료일을 선택해 주세요.' })
       return
     }
@@ -60,21 +67,29 @@ export function ExtendVmPeriodModal({
         {error && Object.keys(fieldErrors).length === 0 && (
           <Alert variant="danger">{error}</Alert>
         )}
-        <FormField label="새 종료일" required error={fieldErrors.endDate}>
-          <Input
-            type="date"
-            min={todayKstDate()}
-            value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
-            className="w-44"
-          />
-        </FormField>
+        {!indefinite && (
+          <FormField label="새 종료일" required error={fieldErrors.endDate}>
+            <Input
+              type="date"
+              min={todayKstDate()}
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="w-44"
+            />
+          </FormField>
+        )}
+        <Checkbox
+          label="무기한"
+          description="종료일을 지웁니다. 만료로 자동 중지되지 않습니다."
+          checked={indefinite}
+          onChange={(event) => setIndefinite(event.target.checked)}
+        />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             취소
           </Button>
           <Button type="submit" loading={extend.isPending}>
-            연장
+            {indefinite ? '무기한으로' : '연장'}
           </Button>
         </div>
       </form>

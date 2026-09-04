@@ -25,9 +25,7 @@ function baseRequest(): Omit<
     requesterId: regularUser.id,
     requesterName: regularUser.name,
     type: 'VM',
-    courseOrProject: '2026-1 캡스톤디자인 3조',
     extraNote: null,
-    reqStartDate: '2026-07-15',
     reqEndDate: '2026-12-20',
     displayName: '캡스톤 백엔드 서버',
     vm: {
@@ -40,8 +38,6 @@ function baseRequest(): Omit<
       reqDiskGb: 20,
       specReason: null,
       desiredSlug: null,
-      desiredSubdomain: 'capstone-team3',
-      rootDomain: 'pusan.dev',
     },
   }
 }
@@ -60,7 +56,6 @@ function llmKeyRequest(): Omit<
     displayName: '캡스톤 챗봇 키',
     vm: null,
     llmKey: {
-      usagePlan: '문서 요약 배치 작업',
       reqRpm: 600,
       reqTpm: null,
       reqDailyTokens: null,
@@ -68,6 +63,8 @@ function llmKeyRequest(): Omit<
       grantedTpm: null,
       grantedConcurrency: null,
       grantedDailyTokens: null,
+      useCampusModels: true,
+      useCommercialModels: false,
       grantedCreditAllowedModels: [],
     },
   }
@@ -219,16 +216,13 @@ export const requestHandlers: RequestHandler[] = [
       orgName: '정보컴퓨터공학부 실습지원센터',
       requesterId: regularUser.id,
       requesterName: regularUser.name,
-      courseOrProject: body.courseOrProject ?? null,
       extraNote: body.extraNote ?? null,
-      reqStartDate: body.reqStartDate ?? null,
       reqEndDate: body.reqEndDate ?? null,
       displayName: body.displayName,
       // 서버는 신청한 종류의 항목만 채워 돌려준다 — 종류가 다른 멤버는 null이다.
       llmKey:
         body.type === 'LLM_API_KEY'
           ? {
-              usagePlan: body.llmKey?.usagePlan ?? null,
               reqRpm: body.llmKey?.reqRpm ?? null,
               reqTpm: body.llmKey?.reqTpm ?? null,
               reqDailyTokens: body.llmKey?.reqDailyTokens ?? null,
@@ -239,6 +233,8 @@ export const requestHandlers: RequestHandler[] = [
               // 승인 전이므로 부여된 것이 없다. 빈 배열은 "제한 없음"이
               // 아니라 "아직 부여되지 않음"이고, 화면은 승인 여부를
               // status로 읽는다.
+              useCampusModels: true,
+              useCommercialModels: false,
               grantedCreditAllowedModels: [],
             }
           : null,
@@ -254,8 +250,6 @@ export const requestHandlers: RequestHandler[] = [
         specReason: body.vm?.specReason ?? null,
         desiredSlug: body.vm?.desiredSlug ?? null,
         // 신청서에서 도메인 축이 빠졌다 — 새 신청의 이력 필드는 항상 비어 있다.
-        desiredSubdomain: null,
-        rootDomain: null,
         granted: null,
       },
       status: 'SUBMITTED',

@@ -10,8 +10,11 @@ import { Button } from './Button'
 import { ConfirmNameModal } from './ConfirmNameModal'
 import { Drawer } from './Drawer'
 import { ErrorBoundary } from './ErrorBoundary'
+import { CardRadioGroup } from './CardRadioGroup'
 import { FormField } from './FormField'
 import { Input } from './Input'
+import { Select } from './Select'
+import { Textarea } from './Textarea'
 import { Modal } from './Modal'
 import { Pagination } from './Pagination'
 import { RequestStatusBadge, VmStatusBadge } from './Badge'
@@ -38,6 +41,88 @@ describe('FormField + Input', () => {
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(input).toHaveAccessibleDescription('필수 항목입니다 학교 이메일을 입력하세요')
     expect(screen.getByRole('alert')).toHaveTextContent('필수 항목입니다')
+  })
+})
+
+describe('FormField required', () => {
+  // 별표는 aria-hidden이라, 필수라는 사실이 보조 기술에 닿는 길은 이 속성뿐이다.
+  test.each([
+    ['Input', <Input key="i" />],
+    ['Select', <Select key="s" />],
+    ['Textarea', <Textarea key="t" />],
+  ])('%s에 aria-required를 전달한다', (_name, control) => {
+    render(
+      <FormField label="이름" required>
+        {control}
+      </FormField>,
+    )
+    expect(screen.getByLabelText('이름')).toHaveAttribute('aria-required', 'true')
+  })
+
+  test('필수가 아니면 속성을 남기지 않는다', () => {
+    render(
+      <FormField label="메모">
+        <Input />
+      </FormField>,
+    )
+    expect(screen.getByLabelText('메모')).not.toHaveAttribute('aria-required')
+  })
+})
+
+describe('CardRadioGroup', () => {
+  const OPTIONS = [
+    { value: 'highcpu' as const, title: '컴퓨팅 최적화' },
+    { value: 'highmem' as const, title: '메모리 최적화' },
+    { value: 'custom' as const, title: '직접 입력' },
+  ]
+
+  function Harness({ initial = null }: { initial?: 'highcpu' | 'highmem' | 'custom' | null }) {
+    const [value, setValue] = useState<'highcpu' | 'highmem' | 'custom' | null>(initial)
+    return (
+      <CardRadioGroup legend="사양" required value={value} onChange={setValue} options={OPTIONS} />
+    )
+  }
+
+  test('라디오 그룹으로 노출되고 고른 것만 checked가 된다', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    const options = screen.getAllByRole('radio')
+    expect(options).toHaveLength(3)
+    expect(options.every((option) => !(option as HTMLInputElement).checked)).toBe(true)
+
+    await user.click(screen.getByRole('radio', { name: '메모리 최적화' }))
+    expect(screen.getByRole('radio', { name: '메모리 최적화' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '컴퓨팅 최적화' })).not.toBeChecked()
+  })
+
+  // 이 그룹이 aria-pressed 버튼 나열을 대신하는 이유가 이것이다.
+  test('화살표 키로 다음 항목으로 옮겨 간다', async () => {
+    const user = userEvent.setup()
+    render(<Harness initial="highcpu" />)
+
+    await user.click(screen.getByRole('radio', { name: '컴퓨팅 최적화' }))
+    await user.keyboard('{ArrowDown}')
+
+    expect(screen.getByRole('radio', { name: '메모리 최적화' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: '메모리 최적화' })).toHaveFocus()
+  })
+
+  test('오류를 alert으로 알리고 그룹에 묶는다', () => {
+    render(
+      <CardRadioGroup
+        legend="사양"
+        required
+        value={null}
+        onChange={() => {}}
+        options={OPTIONS}
+        error="사양을 선택해 주세요."
+      />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('사양을 선택해 주세요.')
+    expect(screen.getByRole('group', { name: /사양/ })).toHaveAccessibleDescription(
+      '사양을 선택해 주세요.',
+    )
   })
 })
 

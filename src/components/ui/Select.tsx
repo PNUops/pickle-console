@@ -17,6 +17,7 @@ export function Select({ invalid, className, children, ...rest }: SelectProps) {
       <select
         id={field?.id}
         aria-invalid={isInvalid || undefined}
+      aria-required={field?.required || undefined}
         aria-describedby={describedBy}
         className={cn(
           'control-height w-full cursor-pointer appearance-none rounded-control border bg-surface-card pr-9 pl-3 text-sm text-foreground-primary',

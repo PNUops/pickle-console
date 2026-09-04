@@ -77,49 +77,48 @@ describe('신청 상세', () => {
     expect(screen.getAllByText('2 vCPU · 2 GiB · 20 GiB').length).toBeGreaterThan(0)
   })
 
-  test('OS와 사양 프리셋을 각각 보여준다', async () => {
+  test('OS와 사양을 각각 보여준다', async () => {
     renderRequests(`/console/requests/${uuid(101)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
     const os = screen.getByText('OS').closest('div')!
     expect(within(os).getByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
-    const flavor = screen.getByText('사양 프리셋').closest('div')!
+    const flavor = screen.getByText('사양').closest('div')!
     expect(await within(flavor).findByText('기본형')).toBeInTheDocument()
   })
 
   // 은퇴한 프리셋·이미지는 공개 카탈로그에 없다. 예전에는 그 행을 찾지 못해 '알 수 없는
   // 프리셋'이라고만 적었지만, 이제 응답이 이름을 실어 주므로 신청자는 자기가 무엇을
   // 신청했는지 그대로 읽을 수 있다.
-  test('카탈로그에서 내려간 프리셋도 응답이 실어 준 이름으로 보여준다', async () => {
+  test('카탈로그에서 내려간 사양도 응답이 실어 준 이름으로 보여준다', async () => {
     const target = requestStore.find((r) => r.id === uuid(101))!
     target.vm!.flavorId = uuid(9)
     target.vm!.flavorName = '구형 프리셋'
     renderRequests(`/console/requests/${uuid(101)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    const flavor = screen.getByText('사양 프리셋').closest('div')!
+    const flavor = screen.getByText('사양').closest('div')!
     expect(await within(flavor).findByText('구형 프리셋')).toBeInTheDocument()
     expect(screen.queryByText('알 수 없는 프리셋')).not.toBeInTheDocument()
   })
 
-  test('프리셋 없이 접수된 신청은 사양 프리셋을 —로 보여준다', async () => {
+  test('가리키는 사양이 없는 신청은 직접 입력으로 읽힌다', async () => {
     const target = requestStore.find((r) => r.id === uuid(101))!
     target.vm!.flavorId = null
     target.vm!.flavorName = null
     renderRequests(`/console/requests/${uuid(101)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    const flavor = screen.getByText('사양 프리셋').closest('div')!
-    expect(within(flavor).getByText('—')).toBeInTheDocument()
+    const flavor = screen.getByText('사양').closest('div')!
+    expect(within(flavor).getByText('직접 입력')).toBeInTheDocument()
   })
 
   // 신청자 화면이 VM 아닌 종류를 설명하지 못하던 자리 — OS·사양 칸만 '—'로 채워
   // 두는 대신, 그 종류가 실제로 신청한 것을 그 종류의 말로 보여준다.
-  test('LLM API 키 신청은 사용 계획과 희망 한도를 보여준다', async () => {
+  test('LLM API 키 신청은 희망 한도를 그 종류의 말로 보여준다', async () => {
     renderRequests(`/console/requests/${uuid(104)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    expect(screen.getByText('문서 요약 배치 작업')).toBeInTheDocument()
     const rpm = screen.getByText('희망 분당 요청 수').closest('div')!
     expect(within(rpm).getByText('600')).toBeInTheDocument()
     // 적지 않은 한도는 빠뜨린 값이 아니라 기본값을 받겠다는 답이다.
@@ -127,7 +126,7 @@ describe('신청 상세', () => {
     expect(within(tpm).getByText('서비스 기본값')).toBeInTheDocument()
     // VM의 항목은 아예 나오지 않는다 (예전에는 '—'로 남아 있었다).
     expect(screen.queryByText('OS')).not.toBeInTheDocument()
-    expect(screen.queryByText('사양 프리셋')).not.toBeInTheDocument()
+    expect(screen.queryByText('사양')).not.toBeInTheDocument()
     expect(screen.queryByText('호스트명(SSH 접속명)')).not.toBeInTheDocument()
   })
 

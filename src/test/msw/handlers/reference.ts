@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { uuid } from '../ids'
+import { requestPeriodStore } from './admin'
 
 type Schemas = components['schemas']
 
@@ -53,7 +54,42 @@ export const ubuntuOsImage: Schemas['OsImageResponse'] = {
   notes: '대부분의 수업·동아리 프로젝트에 적합합니다.',
 }
 
-export const osImages: Schemas['OsImageResponse'][] = [ubuntuOsImage]
+/**
+ * 서버가 주는 순서 그대로다: 계열 오름차순, 계열 안에서는 **최신 버전 먼저**.
+ * 신청 화면이 계열을 먼저 묻고 버전을 그다음에 물으며 그 두 번째 물음의 기본값이
+ * 최신이므로, 이 순서가 곧 화면의 기본 선택을 정한다.
+ */
+export const debian13OsImage: Schemas['OsImageResponse'] = {
+  id: uuid(3),
+  name: 'debian-13',
+  displayName: 'Debian 13',
+  osFamily: 'debian',
+  osVersion: '13',
+  sshUsername: 'debian',
+  version: 1,
+  minDiskGb: 10,
+  status: 'ACTIVE',
+  notes: null,
+}
+
+export const ubuntu2204OsImage: Schemas['OsImageResponse'] = {
+  id: uuid(2),
+  name: 'ubuntu-22.04',
+  displayName: 'Ubuntu 22.04 LTS',
+  osFamily: 'ubuntu',
+  osVersion: '22.04',
+  sshUsername: 'ubuntu',
+  version: 1,
+  minDiskGb: 10,
+  status: 'ACTIVE',
+  notes: null,
+}
+
+export const osImages: Schemas['OsImageResponse'][] = [
+  debian13OsImage,
+  ubuntuOsImage,
+  ubuntu2204OsImage,
+]
 
 /* ─── 사양 프리셋 (OS와 직교하는 축) ─── */
 
@@ -66,47 +102,41 @@ export const osImages: Schemas['OsImageResponse'][] = [ubuntuOsImage]
 function initialFlavors(): Schemas['VmFlavorResponse'][] {
   return [
     {
-      id: uuid(1),
-      name: 'small',
-      displayName: '소형',
-      vcpu: 1,
-      memoryMb: 1024,
-      diskGb: 10,
-      status: 'ACTIVE',
-      notes: '간단한 실습·정적 웹 서버에 적합합니다.',
-    },
-    {
-      id: uuid(2),
-      name: 'basic',
-      displayName: '기본형',
+      id: uuid(31),
+      name: 'highcpu',
+      displayName: '컴퓨팅 최적화',
       vcpu: 2,
+      memoryMb: 1024,
+      diskGb: 32,
+      status: 'ACTIVE',
+      notes: '연산을 많이 쓰는 작업에 맞습니다.',
+      displayOrder: 1,
+    },
+    {
+      id: uuid(32),
+      name: 'highmem',
+      displayName: '메모리 최적화',
+      vcpu: 1,
       memoryMb: 2048,
-      diskGb: 20,
+      diskGb: 32,
       status: 'ACTIVE',
-      notes: '대부분의 수업·캡스톤 프로젝트에 적합합니다.',
+      notes: '메모리를 많이 쓰는 작업에 맞습니다.',
+      displayOrder: 2,
     },
     {
-      id: uuid(3),
-      name: 'large',
-      displayName: '대형',
-      vcpu: 4,
-      memoryMb: 8192,
-      diskGb: 40,
-      status: 'ACTIVE',
-      notes: 'DB·데이터 처리 실습용입니다.',
-    },
-    {
-      id: uuid(9),
+      id: uuid(39),
       name: 'legacy',
-      displayName: '구형 프리셋',
+      displayName: '구형 사양',
       vcpu: 1,
       memoryMb: 512,
       diskGb: 10,
       status: 'DISABLED',
-      notes: '메모리가 부족해 은퇴시킨 프리셋',
+      notes: '메모리가 부족해 은퇴시킨 사양',
+      displayOrder: 9,
     },
   ]
 }
+
 
 /** 전 상태의 프리셋 저장소. 배열 자체는 유지하고 내용만 갈아 끼운다(참조 공유). */
 export const flavorStore: Schemas['VmFlavorResponse'][] = initialFlavors()
@@ -121,6 +151,25 @@ export const requestOptions = {
   sshHost: 'ssh.pcl.kr',
 }
 
+/* ─── 사용 기간 ─── */
+
+/**
+ * 공개 목록은 관리자 저장소(`handlers/admin.ts`)를 걸러 내보낸다. 활성이고 아직 끝나지
+ * 않은 것만이다. 저장소를 두 벌 두면 관리자 화면에서 만든 것이 신청 화면에 안 보이는,
+ * 실제로는 일어나지 않는 상태를 테스트가 보게 된다.
+ */
+export function offerablePeriods(): Schemas['RequestPeriodResponse'][] {
+  const today = new Date().toISOString().slice(0, 10)
+  return requestPeriodStore
+    .filter((period) => period.status === 'ACTIVE' && (period.endDate == null || period.endDate >= today))
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((period) => ({
+      id: period.id,
+      displayName: period.displayName,
+      endDate: period.endDate ?? null,
+    }))
+}
+
 /* ─── handlers ─── */
 
 export const referenceHandlers: RequestHandler[] = [
@@ -132,6 +181,9 @@ export const referenceHandlers: RequestHandler[] = [
       flavorStore.filter((flavor) => flavor.status === 'ACTIVE'),
       { status: 200 },
     ),
+  ),
+  http.get('*/api/v1/request-periods', () =>
+    HttpResponse.json(offerablePeriods(), { status: 200 }),
   ),
   http.get('*/api/v1/meta/request-options', () =>
     HttpResponse.json(requestOptions, { status: 200 }),

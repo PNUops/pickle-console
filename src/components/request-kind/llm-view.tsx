@@ -16,7 +16,9 @@ import {
   formatCreditModels,
   parseCreditModels,
 } from '../../lib/credit-model-allowlist'
+import { todayKstDate } from '../../lib/format'
 import { Field } from './Field'
+import { periodText } from './period-text'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
 /** 금액 한도 리셋 창의 표시 이름 — 값은 계약의 CreditLimitReset. */
@@ -132,7 +134,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [dailyTokens, setDailyTokens] = useState('')
   // 금액은 비움이 기본값 부여가 아니라 미부여(0)다 — 유료 모델을 열려면
   // 승인자가 의도적으로 금액을 적어야 한다.
-  const [creditLimit, setCreditLimit] = useState('')
+  // 신청자가 적은 금액에서 시작한다. 종전에는 프리필할 원본이 없어 승인자가 숫자를
+  // 만들어 냈다. 부여값은 여전히 승인자가 정하고, 이것은 출발점일 뿐이다.
+  const [creditLimit, setCreditLimit] = useState(
+    request.llmKey?.reqCreditLimit != null ? String(request.llmKey.reqCreditLimit) : '',
+  )
   const [creditReset, setCreditReset] = useState('')
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   // 모델 목록만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
@@ -142,7 +148,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditModelsTouched, setCreditModelsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
-  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
+  // 신청서에는 시작일이 없다. 부여 기간의 시작은 발급되는 날, 곧 오늘이다.
+  const [startDate, setStartDate] = useState(todayKstDate)
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [approveComment, setApproveComment] = useState('')
   // 확인한 내용을 통째로 들고 있다가 지금 값과 대조한다. boolean으로 들면 확인 뒤
@@ -567,12 +574,25 @@ export const llmKeyRequestView: RequestKindView = {
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
       <Field label="사용 기간">
-        {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
+        {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
-      <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
-      <Field label="사용 계획">{data.llmKey?.usagePlan ?? '—'}</Field>
       {/* 비어 있는 희망 한도는 빠뜨린 값이 아니라 "기본값이면 된다"는 답이다. */}
+      <Field label="쓸 모델">
+        {[
+          data.llmKey?.useCampusModels ? '자체 서빙 모델' : null,
+          data.llmKey?.useCommercialModels ? '유료 모델' : null,
+        ]
+          .filter(Boolean)
+          .join(', ') || '—'}
+      </Field>
+      <Field label="희망 금액 한도">
+        {data.llmKey?.reqCreditLimit != null
+          ? `$${data.llmKey.reqCreditLimit.toLocaleString('ko-KR')}`
+          : data.llmKey?.useCommercialModels
+            ? '적지 않음'
+            : '—'}
+      </Field>
       <Field label="희망 분당 요청 수">{limitText(data.llmKey?.reqRpm)}</Field>
       <Field label="희망 분당 토큰 수">{limitText(data.llmKey?.reqTpm)}</Field>
       <Field label="희망 일일 토큰 수">{limitText(data.llmKey?.reqDailyTokens)}</Field>

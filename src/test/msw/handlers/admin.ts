@@ -4,6 +4,7 @@ import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './aut
 import { adminReadScope } from './org-scope'
 import { flavorStore, orgs, resetFlavorStore } from './reference'
 import { uuid } from '../ids'
+import { kstDateString } from '../../../lib/format'
 import {
   accessOf,
   invalidVmStateProblem,
@@ -32,9 +33,7 @@ export function submittedAdminRequest(n: number): RequestDetail {
     requesterName: regularUser.name,
     type: 'VM',
     purpose: `추가 실습 서버 ${n}`,
-    courseOrProject: null,
     extraNote: null,
-    reqStartDate: null,
     reqEndDate: null,
     displayName: `추가 실습 서버 ${n}`,
     vm: {
@@ -47,8 +46,6 @@ export function submittedAdminRequest(n: number): RequestDetail {
       reqDiskGb: 20,
       specReason: null,
       desiredSlug: null,
-      desiredSubdomain: null,
-      rootDomain: null,
       granted: null,
     },
     status: 'SUBMITTED',
@@ -63,15 +60,11 @@ function initialAdminRequests(): RequestDetail[] {
     {
       ...submittedAdminRequest(201),
       purpose: '캡스톤 프로젝트 백엔드 서버 운영',
-      courseOrProject: '2026-1 캡스톤디자인 3조',
-      reqStartDate: '2026-07-15',
       reqEndDate: '2026-12-20',
       displayName: '캡스톤 백엔드 서버',
       vm: {
         ...submittedAdminRequest(0).vm!,
         desiredSlug: 'capstone-api',
-        desiredSubdomain: 'capstone-team3',
-        rootDomain: 'pusan.dev',
       },
       createdAt: '2026-07-08T11:30:00+09:00',
       updatedAt: '2026-07-08T11:30:00+09:00',
@@ -140,13 +133,14 @@ function initialAdminRequests(): RequestDetail[] {
         reqRpm: 60,
         reqTpm: 40_000,
         reqDailyTokens: 1_000_000,
-        usagePlan: '캡스톤 챗봇 응답 생성',
         grantedRpm: 60,
         grantedTpm: 40_000,
         grantedDailyTokens: 1_000_000,
         grantedConcurrency: 4,
         grantedCreditLimit: 5,
         grantedCreditLimitReset: 'MONTHLY',
+        useCampusModels: true,
+        useCommercialModels: false,
         grantedCreditAllowedModels: ['openai/*'],
       },
       purpose: '캡스톤 챗봇 LLM API 호출',
@@ -571,7 +565,83 @@ function actorProfileOf(request: Request) {
   return ACCESS_TOKENS[token] ?? null
 }
 
+/* ─── 사용 기간 카탈로그 ─── */
+
+/**
+ * 관리자 목록과 공개 목록이 함께 쓰는 단일 저장소. 공개 쪽은 여기서 활성이고 아직
+ * 끝나지 않은 것만 걸러 내보내므로, 관리자 화면에서 만들거나 은퇴시킨 것이 신청 화면에
+ * 그대로 반영된다(서버와 같은 관계).
+ */
+function isoDaysFromNow(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+export const requestPeriodStore: Schemas['AdminRequestPeriodResponse'][] = [
+  { id: uuid(21), name: 'term', displayName: '이번 학기', endDate: isoDaysFromNow(120),
+    status: 'ACTIVE', displayOrder: 1, expired: false },
+  { id: uuid(22), name: 'vacation', displayName: '이번 방학', endDate: isoDaysFromNow(60),
+    status: 'ACTIVE', displayOrder: 2, expired: false },
+  // 지난 항목. 관리자 목록에는 남고 신청 화면에는 나오지 않는다.
+  { id: uuid(24), name: 'term-past', displayName: '지난 학기', endDate: isoDaysFromNow(-30),
+    status: 'ACTIVE', displayOrder: 0, expired: true },
+]
+
+let nextPeriodId = 60
+
+export const requestPeriodHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/request-periods', () =>
+    HttpResponse.json([...requestPeriodStore].sort((a, b) => a.displayOrder - b.displayOrder), {
+      status: 200,
+    }),
+  ),
+  http.post('*/api/v1/admin/request-periods', async ({ request }) => {
+    const body = (await request.json()) as Schemas['CreateRequestPeriodRequest']
+    if (requestPeriodStore.some((period) => period.name === body.name)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값이 올바르지 않습니다',
+        status: 422,
+        detail: '요청 값을 확인해 주세요.',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'name', message: '이미 사용 중인 기간 이름입니다.' }],
+      })
+    }
+    const created: Schemas['AdminRequestPeriodResponse'] = {
+      id: uuid(nextPeriodId++),
+      name: body.name,
+      displayName: body.displayName,
+      endDate: body.endDate ?? null,
+      status: 'ACTIVE',
+      displayOrder: body.displayOrder ?? 0,
+      expired: false,
+    }
+    requestPeriodStore.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+  http.patch('*/api/v1/admin/request-periods/:periodId', async ({ params, request }) => {
+    const period = requestPeriodStore.find((candidate) => candidate.id === params.periodId)
+    if (!period)
+      return problemResponse({
+        type: 'about:blank',
+        title: '리소스를 찾을 수 없습니다',
+        status: 404,
+        detail: '해당 사용 기간이 존재하지 않습니다.',
+        code: 'RESOURCE_NOT_FOUND',
+      })
+    const body = (await request.json()) as Schemas['UpdateRequestPeriodRequest']
+    if (body.displayName != null) period.displayName = body.displayName
+    if (body.endDate != null) period.endDate = body.endDate
+    if (body.status != null) period.status = body.status
+    if (body.displayOrder != null) period.displayOrder = body.displayOrder
+    period.expired = period.endDate < kstDateString(new Date())
+    return HttpResponse.json(period, { status: 200 })
+  }),
+]
+
 export const adminHandlers: RequestHandler[] = [
+  ...requestPeriodHandlers,
   http.get('*/api/v1/admin/requests', ({ request }) => {
     const url = new URL(request.url)
     // 계약(v0.2.3): status 미지정 시 모든 상태를 반환한다.
@@ -790,7 +860,7 @@ export const adminHandlers: RequestHandler[] = [
         status: 422,
         detail: '요청 값을 확인해 주세요.',
         code: 'VALIDATION_FAILED',
-        errors: [{ field: 'name', message: '이미 사용 중인 프리셋 이름입니다.' }],
+        errors: [{ field: 'name', message: '이미 사용 중인 사양 이름입니다.' }],
       })
     }
     const created: Schemas['VmFlavorResponse'] = {
@@ -802,6 +872,7 @@ export const adminHandlers: RequestHandler[] = [
       diskGb: body.diskGb,
       status: 'ACTIVE',
       notes: body.notes ?? null,
+      displayOrder: body.displayOrder ?? 0,
     }
     flavorStore.push(created)
     return HttpResponse.json(created, { status: 201 })
@@ -1094,6 +1165,12 @@ export const adminHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as Schemas['VmPeriodUpdateRequest']
     const startDate = body.startDate ?? vm.startDate
+    // 종료일 지우기가 무기한이다. 날짜 검사를 건너뛴다.
+    if (body.clearEndDate) {
+      vm.startDate = startDate
+      vm.endDate = null
+      return HttpResponse.json(vm, { status: 200 })
+    }
     if (!body.endDate || body.endDate < localDateStr(0)) {
       return problemResponse({
         type: 'about:blank',

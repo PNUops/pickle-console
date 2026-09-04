@@ -1,73 +1,27 @@
 import { setupServer } from 'msw/node'
-import type { RequestHandler } from 'msw'
-import { accountHandlers } from './handlers/account'
-import { adminHandlers, resetAdminFixtures } from './handlers/admin'
-import { adminOpsHandlers, resetAdminOpsFixtures } from './handlers/admin-ops'
-import { announcementHandlers, resetAnnouncementFixtures } from './handlers/announcements'
-import { auditHandlers, resetAuditFixtures } from './handlers/audit'
-import { authHandlers } from './handlers/auth'
-import { campusIpHandlers, resetCampusIpFixtures } from './handlers/campusip'
-import { consentHandlers } from './handlers/consent'
-import { googleOauthHandlers } from './handlers/google-oauth'
-import { profileOptionsHandlers } from './handlers/profile-options'
-import { mfaHandlers } from './handlers/mfa'
-import { resetUserFixtures, userHandlers } from './handlers/users'
-import { workspaceHandlers, resetWorkspaceFixtures } from './handlers/workspaces'
-import { llmKeyHandlers, resetLlmKeyFixtures } from './handlers/llm-keys'
-import { llmObservabilityHandlers } from './handlers/llm-observability'
-import {
-  llmAdminUsageHandlers,
-  resetAdminLlmUsageFixtures,
-} from './handlers/llm-admin-usage'
-import {
-  openRouterAccountHandlers,
-  resetOpenRouterAccountFixtures,
-} from './handlers/openrouter-accounts'
-import { metricsHandlers } from './handlers/metrics'
-import { networkHandlers, resetNetworkFixtures } from './handlers/network'
-import { resourceHandlers } from './handlers/resources'
-import { noticeHandlers, resetNoticeFixtures } from './handlers/notices'
-import { notificationHandlers, resetNotificationFixtures } from './handlers/notifications'
-import { publishingHandlers, resetPublishingFixtures } from './handlers/publishing'
-import { referenceHandlers, resetReferenceFixtures } from './handlers/reference'
-import { resetSettingFixtures, settingHandlers } from './handlers/settings'
-import { resetRequestFixtures, requestHandlers } from './handlers/requests'
-import { resetVmFixtures, vmHandlers } from './handlers/vms'
-import { resetTerminalFixtures, terminalHandlers } from './handlers/terminal'
-import { resetVmSshKeyFixtures, vmSshKeyHandlers } from './handlers/vm-ssh-key'
+import { handlers } from './handlers'
+import { resetAdminFixtures } from './handlers/admin'
+import { resetAdminOpsFixtures } from './handlers/admin-ops'
+import { resetAnnouncementFixtures } from './handlers/announcements'
+import { resetAuditFixtures } from './handlers/audit'
+import { resetCampusIpFixtures } from './handlers/campusip'
+import { resetUserFixtures } from './handlers/users'
+import { resetWorkspaceFixtures } from './handlers/workspaces'
+import { resetLlmKeyFixtures } from './handlers/llm-keys'
+import { resetAdminLlmUsageFixtures } from './handlers/llm-admin-usage'
+import { resetOpenRouterAccountFixtures } from './handlers/openrouter-accounts'
+import { resetNetworkFixtures } from './handlers/network'
+import { resetNoticeFixtures } from './handlers/notices'
+import { resetNotificationFixtures } from './handlers/notifications'
+import { resetPublishingFixtures } from './handlers/publishing'
+import { resetReferenceFixtures } from './handlers/reference'
+import { resetSettingFixtures } from './handlers/settings'
+import { resetRequestFixtures } from './handlers/requests'
+import { resetVmFixtures } from './handlers/vms'
+import { resetTerminalFixtures } from './handlers/terminal'
+import { resetVmSshKeyFixtures } from './handlers/vm-ssh-key'
 
-/** Add feature API mock handlers here (or compose them from feature modules). */
-export const handlers: RequestHandler[] = [
-  ...authHandlers,
-  ...accountHandlers,
-  ...mfaHandlers,
-  ...consentHandlers,
-  ...profileOptionsHandlers,
-  ...googleOauthHandlers,
-  ...userHandlers,
-  ...referenceHandlers,
-  ...workspaceHandlers,
-  ...requestHandlers,
-  ...vmHandlers,
-  ...llmKeyHandlers,
-  ...openRouterAccountHandlers,
-  ...llmObservabilityHandlers,
-  ...llmAdminUsageHandlers,
-  ...resourceHandlers,
-  ...terminalHandlers,
-  ...vmSshKeyHandlers,
-  ...publishingHandlers,
-  ...networkHandlers,
-  ...campusIpHandlers,
-  ...adminHandlers,
-  ...adminOpsHandlers,
-  ...metricsHandlers,
-  ...auditHandlers,
-  ...settingHandlers,
-  ...notificationHandlers,
-  ...noticeHandlers,
-  ...announcementHandlers,
-]
+export { handlers }
 
 export const server = setupServer(...handlers)
 

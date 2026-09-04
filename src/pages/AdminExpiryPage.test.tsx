@@ -68,4 +68,30 @@ describe('만료 관리', () => {
     // 연장되어 endDate가 미래가 되었으니 만료됨 탭에서 사라진다.
     await waitFor(() => expect(screen.queryByText('expired-lab')).not.toBeInTheDocument())
   })
+
+  /**
+   * 승인 시점에는 무기한을 줄 수 있었는데 이미 만들어진 VM은 바꿀 수 없었다. 기간이
+   * 한 방향으로만 움직이던 구멍이다.
+   */
+  test('무기한으로 바꾸면 날짜 칸이 사라지고 만료 목록에서도 빠진다', async () => {
+    const user = userEvent.setup()
+    renderExpiry()
+
+    await screen.findByRole('heading', { name: '만료 관리' })
+    await user.click(screen.getByRole('button', { name: '만료됨' }))
+    const row = (await screen.findByText('expired-lab')).closest('tr')!
+    await user.click(within(row).getByRole('button', { name: '기간 연장' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '기간 연장 — expired-lab' })
+    await user.click(within(dialog).getByRole('checkbox', { name: /무기한/ }))
+    expect(within(dialog).queryByLabelText(/새 종료일/)).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '무기한으로' }))
+
+    expect(
+      await screen.findByText(
+        '무기한으로 바꿨습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.',
+      ),
+    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('expired-lab')).not.toBeInTheDocument())
+  })
 })
