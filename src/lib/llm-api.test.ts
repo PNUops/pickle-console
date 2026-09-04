@@ -4,7 +4,9 @@ import {
   LLM_DEFAULT_LIMITS,
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
-  LLM_SUPPORTED_PARAMS,
+  LLM_PAID_ONLY_PARAMS,
+  LLM_PAID_PARAMS,
+  LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
 
 /**
@@ -13,8 +15,8 @@ import {
  * 게이트웨이가 바뀌어 이 시험이 깨지면 그것이 정상이고, 깨진 값을 확인한 뒤 고친다.
  */
 describe('LLM API 사실 사본', () => {
-  test('지원 파라미터는 게이트웨이 허용 목록과 같은 17개다', () => {
-    expect([...LLM_SUPPORTED_PARAMS]).toEqual([
+  test('자체 서빙 파라미터는 게이트웨이 토큰 축 목록과 같다', () => {
+    expect([...LLM_SELF_SERVED_PARAMS]).toEqual([
       'model',
       'messages',
       'stream',
@@ -33,6 +35,28 @@ describe('LLM API 사실 사본', () => {
       'tool_choice',
       'parallel_tool_calls',
     ])
+  })
+
+  test('유료 축은 자체 서빙의 상위집합이고 두 필드만 더 갖는다', () => {
+    // 개수만 얼리면 축이 갈렸다는 사실이 시험에서 사라진다. 상위집합 단언이 한쪽에만
+    // 필드를 더하는 실수를 잡고, 차집합 단언이 유료 축이 조용히 넓어지는 것을 잡는다.
+    //
+    // 이 단언은 「유료 ⊇ 자체 서빙」이 참인 동안만 유효하다. 자체 서빙에만 있고 유료에
+    // 없는 필드가 생기면 여기가 먼저 깨지는데, 그때는 단언을 고치기 전에 그 설계가
+    // 맞는지부터 본다.
+    expect([...LLM_PAID_ONLY_PARAMS]).toEqual(['reasoning_effort', 'verbosity'])
+    // 「유료가 자체 서빙을 전부 포함한다」는 단언하지 않는다. 유료 목록이 두 목록의
+    // 합집합으로 파생되므로 그 방향은 구조가 보장하고, 시험으로 적으면 절대 깨지지
+    // 않는 문장이 하나 늘 뿐이다. 아래 둘만 실제로 무언가를 본다.
+    const extra = LLM_PAID_PARAMS.filter(
+      (param) => !LLM_SELF_SERVED_PARAMS.includes(param as never),
+    )
+    expect(extra).toEqual([...LLM_PAID_ONLY_PARAMS])
+    // 자체 서빙 목록은 유료 전용 필드를 갖지 않는다. 이 방향이 깨지면 사고 모드를
+    // 요청 단위로 열지 않는다는 결정이 조용히 뒤집힌 것이다.
+    for (const param of LLM_PAID_ONLY_PARAMS) {
+      expect(LLM_SELF_SERVED_PARAMS).not.toContain(param as never)
+    }
   })
 
   test('기본 한도는 배포된 게이트웨이 환경 값이다', () => {

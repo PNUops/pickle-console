@@ -18,10 +18,10 @@ export const LLM_API_BASE_URL = `https://${LLM_GATEWAY_HOST}/v1`
 export const LLM_DEFAULT_MODEL = 'pickle-general'
 
 /**
- * 게이트웨이가 업스트림으로 넘기는 요청 필드. 목록에 없는 최상위 필드는 무시가 아니라
- * 거부이므로, 무엇을 보낼 수 있는지가 사용자에게 보여야 한다.
+ * 자체 서빙 모델에 보낼 수 있는 최상위 필드. 목록에 없는 필드는 무시가 아니라 거부이므로,
+ * 무엇을 보낼 수 있는지가 사용자에게 보여야 한다.
  */
-export const LLM_SUPPORTED_PARAMS = [
+export const LLM_SELF_SERVED_PARAMS = [
   'model',
   'messages',
   'stream',
@@ -39,6 +39,21 @@ export const LLM_SUPPORTED_PARAMS = [
   'tools',
   'tool_choice',
   'parallel_tool_calls',
+] as const
+
+/**
+ * 유료 모델에서만 보낼 수 있는 필드.
+ *
+ * 상용 공급자가 정의하는 필드이고 에이전트 도구가 모델 정보를 보고 스스로 붙인다. 자체
+ * 서빙 모델에 보내면 400으로 거부되는데, 그것은 누락이 아니라 사고 모드를 요청 단위로
+ * 열지 않는다는 결정의 집행 지점이다.
+ */
+export const LLM_PAID_ONLY_PARAMS = ['reasoning_effort', 'verbosity'] as const
+
+/** 유료 모델에 보낼 수 있는 필드 전부. 자체 서빙 목록의 상위집합이다. */
+export const LLM_PAID_PARAMS = [
+  ...LLM_SELF_SERVED_PARAMS,
+  ...LLM_PAID_ONLY_PARAMS,
 ] as const
 
 /**

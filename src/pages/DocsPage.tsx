@@ -9,7 +9,8 @@ import {
   LLM_DEFAULT_LIMITS,
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
-  LLM_SUPPORTED_PARAMS,
+  LLM_PAID_ONLY_PARAMS,
+  LLM_SELF_SERVED_PARAMS,
 } from '../lib/llm-api'
 
 const LAST_UPDATED = '2026-09-03'
@@ -67,7 +68,7 @@ export function DocsPage() {
       <p className="mt-3 text-sm leading-6 text-neutral-600">
         교내 LLM API를 코드에서 호출하는 방법입니다. OpenAI 호환 API이므로 쓰던 SDK의
         base URL과 LLM API 키만 바꾸면 됩니다. 보낼 수 있는 요청 필드는 아래 지원 파라미터
-        절의 목록으로 한정됩니다.
+        절이 정하고, 자체 서빙 모델과 유료 모델이 서로 다릅니다.
       </p>
 
       <div className="mt-8 space-y-6">
@@ -151,18 +152,20 @@ export function DocsPage() {
 
         <Section title="지원 파라미터">
           <p className="text-sm leading-6 text-neutral-600">
-            요청 본문에 넣을 수 있는 최상위 필드입니다.
+            요청 본문에 넣을 수 있는 최상위 필드입니다.{' '}
+            <strong>모델의 종류에 따라 다릅니다.</strong>
           </p>
-          <ul className="flex flex-wrap gap-1.5">
-            {LLM_SUPPORTED_PARAMS.map((param) => (
-              <li
-                key={param}
-                className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-xs text-neutral-700"
-              >
-                {param}
-              </li>
-            ))}
-          </ul>
+          <Labeled label="두 종류에 공통">
+            <ParamChips params={LLM_SELF_SERVED_PARAMS} />
+          </Labeled>
+          <Labeled label="유료 모델에만">
+            <ParamChips params={LLM_PAID_ONLY_PARAMS} />
+          </Labeled>
+          <p className="text-sm leading-6 text-neutral-600">
+            <Code>reasoning_effort</Code>와 <Code>verbosity</Code>는 자체 서빙 모델에
+            보내면 거부됩니다. 추론을 쓰는 도구는 이 필드를 스스로 붙이므로, 자체 서빙
+            모델을 부를 때는 그 설정을 꺼야 합니다.
+          </p>
           <Alert variant="info" title="목록에 없는 필드는 거부됩니다">
             모르는 필드는 무시하고 전달하는 것이 아니라 요청 전체를 400으로 되돌립니다.
             응답의 <Code>error.code</Code>가 <Code>unsupported_parameter</Code>이고 메시지에
@@ -299,6 +302,21 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       </CardHeader>
       <CardContent className="space-y-3">{children}</CardContent>
     </Card>
+  )
+}
+
+function ParamChips({ params }: { params: readonly string[] }) {
+  return (
+    <ul className="flex flex-wrap gap-1.5">
+      {params.map((param) => (
+        <li
+          key={param}
+          className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-xs text-neutral-700"
+        >
+          {param}
+        </li>
+      ))}
+    </ul>
   )
 }
 
