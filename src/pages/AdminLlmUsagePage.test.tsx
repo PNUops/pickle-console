@@ -170,7 +170,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(within(rateOnly).getByText('UNKNOWN 0 token')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('server_busy')
     expect(document.body).not.toHaveTextContent('80%')
-    expect(screen.getByText(/4개 중 API가 정렬한 상위 2개만/)).toBeInTheDocument()
+    expect(screen.getByText(/4개 중 상위 2개만 표시합니다/)).toBeInTheDocument()
   })
 })
 

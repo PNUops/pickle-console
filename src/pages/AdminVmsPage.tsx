@@ -410,7 +410,7 @@ function VmDrawerContent({
         <section className="space-y-3">
           <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
           <p className="text-sm text-neutral-500">
-            사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+            만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
           </p>
           <Button variant="secondary" onClick={() => setExtendOpen(true)}>
             기간 연장
@@ -522,14 +522,12 @@ function ScheduleDeleteForm({
     <section className="space-y-3">
       <h3 className="text-sm font-semibold text-neutral-800">삭제 예약</h3>
       <p className="text-sm text-neutral-500">
-        파기 예정일(미래 시각)을 지정해 접수하며, 접수 즉시 사용자에게 사유가 포함된
-        통보 메일이 발송됩니다. 파기가 실제로 시작되기 전까지는 관리자가 취소할 수
+        접수 즉시 사용자에게 통보 메일이 발송됩니다. 파기가 시작되기 전까지는 취소할 수
         있습니다.
       </p>
       {date && isShortNotice(date) && (
         <Alert variant="warning">
-          권장 통보 기간(7일)보다 이른 파기 예정일입니다. 사용자가 대응할 시간이
-          짧으니 유의해 주세요.
+          권장 통보 기간(7일)보다 이른 파기 예정일입니다.
         </Alert>
       )}
       {error && Object.keys(fieldErrors).length === 0 && (
@@ -596,9 +594,8 @@ function CancelDeleteAction({
     <section className="space-y-3">
       <h3 className="text-sm font-semibold text-neutral-800">대기 중인 삭제 취소</h3>
       <p className="text-sm text-neutral-500">
-        본인 삭제 유예 중이거나 접수된 관리자 삭제를 취소합니다. 본인 삭제를 취소하면 VM은
-        중지됨 상태로 남고(시작은 사용자가 수행), 관리자 삭제를 취소하면 현재 전원
-        상태가 유지됩니다. 강제 삭제는 취소할 수 없습니다.
+        본인 삭제를 취소하면 VM은 중지됨 상태로 남고(시작은 사용자가 수행), 관리자 삭제를
+        취소하면 현재 전원 상태가 유지됩니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <Button
@@ -645,8 +642,7 @@ function ForceDeleteAction({
     <section className="space-y-3 rounded-lg border border-danger-200 p-4">
       <h3 className="text-sm font-semibold text-danger-700">강제 삭제</h3>
       <p className="text-sm text-neutral-500">
-        보안 사고 등 비상 상황에서 유예 없이 즉시 강제 종료하고 파기합니다. 취소할 수
-        없습니다.
+        보안 사고 등 비상 상황에서 씁니다.
       </p>
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button

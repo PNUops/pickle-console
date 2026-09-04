@@ -86,8 +86,7 @@ export function AdminNetworkPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">네트워크</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          포트포워딩 릴레이와 매핑, 캠퍼스 IP 신청을 관리합니다. 릴레이 상태는
-          에이전트의 자기 보고에서 파생됩니다.
+          릴레이 상태는 에이전트의 자기 보고에서 파생된 값입니다.
         </p>
       </div>
 
@@ -220,7 +219,7 @@ function RelayCard({ relay, isSysAdmin }: { relay: AdminRelayView; isSysAdmin: b
       </div>
 
       {relay.lastError && (
-        <Alert variant="danger" title="적용 실패 — 에이전트가 보고한 마지막 오류">
+        <Alert variant="danger" title="에이전트가 보고한 마지막 적용 오류">
           {relay.lastError}
         </Alert>
       )}
@@ -256,8 +255,7 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
     <section className="space-y-2 border-t border-neutral-100 pt-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-neutral-500">
-          동기화 토큰은 릴레이 에이전트 인증에 쓰입니다. 재발급하면 이전 토큰이
-          즉시 무효화됩니다.
+          동기화 토큰은 릴레이 에이전트 인증에 쓰입니다.
         </p>
         <Button
           variant="secondary"
@@ -296,8 +294,7 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
             </Alert>
           )}
           <p className="text-sm text-neutral-600">
-            새 토큰의 평문은 발급 응답에서 단 한 번만 확인할 수 있으며, 서버에는
-            해시로만 저장됩니다.
+            새 토큰의 평문은 발급 직후 한 번만 확인할 수 있습니다.
           </p>
         </div>
       </Modal>
@@ -316,8 +313,7 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
         {issue.data && (
           <div className="space-y-3">
             <Alert variant="warning" title="이 토큰은 다시 볼 수 없습니다">
-              창을 닫으면 평문을 다시 확인할 수 없습니다. 릴레이 에이전트 설정에
-              바로 반영해 주세요.
+              릴레이 에이전트 설정에 바로 반영해 주세요.
             </Alert>
             <div className="flex items-center justify-between gap-3">
               <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs break-all text-neutral-100">
@@ -551,10 +547,6 @@ function MappingDrawerContent({
       {canOperate && (
         <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
           <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
-          <p className="text-sm text-neutral-500">
-            정지는 매핑을 유지한 채 공인 포트만 닫고(해제 시 같은 포트로 복원),
-            삭제는 매핑과 공인 포트 점유를 되돌릴 수 없이 제거합니다.
-          </p>
           <div className="flex flex-wrap gap-2">
             {mapping.status === 'ACTIVE' ? (
               <Button variant="secondary" size="sm" onClick={() => setSuspendOpen(true)}>
@@ -790,8 +782,7 @@ function GuardsSection({
       <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
         연결 가드 조정
         <InfoTip label="연결 가드 도움말">
-          매핑별 남용 방지 한도입니다. 비워 두면 릴레이 기본값을 쓰고, 0을 넣으면
-          해당 가드가 해제(무제한)되며, 양수는 이 매핑에만 적용되는 오버라이드입니다.
+          매핑별 남용 방지 한도입니다. 양수를 넣으면 이 매핑에만 적용됩니다.
         </InfoTip>
       </h3>
       {fieldError && <Alert variant="danger">{fieldError}</Alert>}

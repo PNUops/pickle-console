@@ -105,9 +105,8 @@ export function AdminAuditPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">감사 로그</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {activeOrg?.name ?? '플랫폼 전체'} 관리자와 사용자의 활동 기록입니다. 로그인,
-          설정 변경, VM 작업 등 주요 동작이 남습니다. 열람 역할만 보유한 기관의
-          기록은 여기 보이지 않습니다.
+          {activeOrg?.name ?? '플랫폼 전체'} 관리자와 사용자의 활동 기록입니다. 열람 역할만
+          보유한 기관의 기록은 여기 보이지 않습니다.
         </p>
       </div>
 

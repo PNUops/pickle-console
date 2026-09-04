@@ -63,7 +63,7 @@ export function AdminRequestsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          제출된 리소스 신청을 종류별 참고 정보와 함께 검토하고 승인 또는 반려합니다.
+          제출된 리소스 신청을 검토하고 승인 또는 반려합니다.
         </p>
       </div>
 

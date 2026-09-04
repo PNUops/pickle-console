@@ -90,7 +90,6 @@ export function AdminRequestDetailPage() {
   if (activeOrgId != null && data.orgId !== activeOrgId) {
     return (
       <Alert variant="danger" title="선택한 관리 범위의 신청이 아닙니다">
-        현재 기관 범위에서는 이 신청을 볼 수 없습니다.{' '}
         <Link to={adminPaths.requests(activeOrgId)} className="font-medium underline">
           신청 목록으로 돌아가기
         </Link>
@@ -335,7 +334,7 @@ function DecisionSection({
     event.preventDefault()
     onNotice(null)
     if (!rejectComment.trim()) {
-      setFieldErrors({ comment: '반려 사유를 입력해 주세요. 사유는 신청자에게 전달됩니다.' })
+      setFieldErrors({ comment: '반려 사유를 입력해 주세요.' })
       return
     }
     setFieldErrors({})
@@ -451,7 +450,7 @@ function DecisionSection({
           }
         >
           <p className="text-sm text-neutral-600">
-            이 신청을 반려하시겠습니까? 입력한 반려 사유가 신청자에게 전달됩니다.
+            입력한 반려 사유가 신청자에게 전달됩니다.
           </p>
         </Modal>
       </CardContent>
@@ -524,7 +523,7 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
       {llmKey && <LlmKeyApprovalContext context={llmKey} />}
       {!vm && !llmKey && (
         <Alert variant="warning" title="종류별 참고 정보가 없습니다">
-          신청 종류와 일치하는 참고 정보가 없어 공통 정보만 표시합니다.
+          공통 정보만 표시합니다.
         </Alert>
       )}
 
@@ -569,10 +568,7 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
 function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
   return (
     <>
-      <Alert
-        variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}
-        title="가상머신 판단 안내"
-      >
+      <Alert variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}>
         {vm.guidance}
       </Alert>
       <Card>
@@ -631,9 +627,6 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
 function LlmKeyApprovalContext({ context }: { context: NonNullable<ApprovalContext['llmKey']> }) {
   return (
     <>
-      <Alert variant="info" title="LLM API 키 판단 안내">
-        기존 키의 상태와 현재 한도를 확인하세요. LLM API 키에는 물리 리소스 용량 판단을 적용하지 않습니다.
-      </Alert>
       <LlmKeyBriefCard title="신청자 보유 LLM API 키" keys={context.applicantKeys} />
       <LlmKeyBriefCard title="워크스페이스 보유 LLM API 키" keys={context.workspaceKeys} />
     </>

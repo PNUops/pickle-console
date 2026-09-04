@@ -441,7 +441,7 @@ describe('관리자 LLM 서비스 지표', () => {
     expect(await screen.findByRole('heading', { name: '집계할 upstream 요청이 없습니다' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '로컬 거절이 없습니다' })).toBeInTheDocument()
     expect(screen.getAllByText('표본 없음')).toHaveLength(3)
-    expect(screen.queryByText('일부 지표에는 해석 범위가 있습니다')).not.toBeInTheDocument()
+    expect(screen.queryByText(/계산에서 빠집니다/)).not.toBeInTheDocument()
     empty.unmount()
 
     server.use(

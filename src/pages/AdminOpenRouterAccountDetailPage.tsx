@@ -174,7 +174,7 @@ export function AdminOpenRouterAccountDetailPage() {
       <PageHeader
         eyebrow={account.orgName}
         title={account.name}
-        description="사업 단위 결제 계정의 정보와 관리용 키 상태입니다. 키 값 자체는 저장하지도 보여 주지도 않습니다."
+        description="사업 단위 결제 계정의 정보와 관리용 키 상태입니다."
         actions={<Badge variant={account.status === 'ACTIVE' ? 'success' : 'neutral'}>{account.status === 'ACTIVE' ? '활성' : '보관됨'}</Badge>}
       />
 
@@ -246,12 +246,12 @@ export function AdminOpenRouterAccountDetailPage() {
         {rotation?.retiringOverdue && (
           <MessageBar variant="warning" title="정리 대기가 24시간을 넘었습니다">
             OpenRouter 쪽에서 이전 키를 폐기했는지, 새 키로 대사가 성공했는지 확인한 뒤 직접
-            정리하세요. 자동으로 삭제하지 않습니다.
+            정리하세요.
           </MessageBar>
         )}
         {rotation?.status === 'RETIRING' && !reconciledAfterActivation(account.activeCredential) && (
-          <MessageBar title="새 키로 대사가 끝나기를 기다리는 중">
-            새 키로 키 대사가 한 번 성공한 뒤에야 이전 키를 정리할 수 있습니다.
+          <MessageBar>
+            새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있습니다.
           </MessageBar>
         )}
       </section>
@@ -494,7 +494,7 @@ function CredentialConfirmModal({
             checked={vendorRevoked}
             onChange={(event) => setVendorRevoked(event.target.checked)}
             label="OpenRouter 콘솔에서 해당 관리용 키를 폐기했습니다"
-            description="Pickle이 대신 폐기하지 않습니다. 폐기를 확인해야 정리가 진행됩니다."
+            description="Pickle이 대신 폐기하지 않습니다."
           />
         )}
         <FormField label={`계속하려면 이름(${account.name})을 정확히 입력하세요`} required>

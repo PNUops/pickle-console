@@ -422,7 +422,7 @@ function UserProfileSection({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">프로필</h3>
         <p className="text-sm text-neutral-500">
-          직책과 학번과 소속은 시스템 계층에서만 조회할 수 있습니다.
+          직책·학번·소속은 시스템 계층에서만 조회할 수 있습니다.
         </p>
       </section>
     )
@@ -553,8 +553,7 @@ function UserProfileCorrectionModal({
       >
         {error && <Alert variant="danger">{error}</Alert>}
         <p className="text-sm text-neutral-600">
-          본인은 이 값을 바꿀 수 없습니다. 문의로 접수된 내용을 확인한 뒤 정정해 주세요.
-          변경 사실은 본인에게 알림으로 갑니다.
+          문의로 접수된 내용을 확인한 뒤 정정해 주세요. 변경 사실은 본인에게 알림으로 갑니다.
         </p>
         <FormField label="직책" error={fieldErrors.position}>
           <Select value={position} onChange={(event) => setPosition(event.target.value)}>
@@ -643,10 +642,6 @@ function UserPermissionsSection({
     <section className="space-y-5 rounded-lg border border-neutral-200 p-4">
       <div>
         <h3 className="text-sm font-semibold text-neutral-800">권한 관리</h3>
-        <p className="mt-1 text-sm text-neutral-500">
-          기관 권한은 기관별로 부여·회수하고, 전역 역할은 기관 권한이 하나도 없을 때만
-          변경합니다.
-        </p>
       </div>
       <UserOrgRolesSection user={user} />
       {canManageGlobal && (
@@ -738,10 +733,6 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-neutral-800">기관별 역할</h4>
-      <p className="text-sm text-neutral-500">
-        한 계정이 여러 기관의 관리자를 겸할 수 있습니다. 기관 관리자는 자기가 관리자로 있는
-        기관만 더하고 뺄 수 있습니다.
-      </p>
       {error && <Alert variant="danger">{error}</Alert>}
 
       {user.managedOrgs.length === 0 ? (
@@ -1021,8 +1012,7 @@ function UserStatusActions({
       ) : (
         <>
           <p className="text-sm text-neutral-500">
-            계정을 비활성화하면 즉시 로그인·SSH 접속이 차단됩니다. 워크스페이스·VM은 유지되며 해제 시
-            원상 복귀됩니다.
+            워크스페이스·VM은 유지되며 해제 시 원상 복귀됩니다.
           </p>
           <Button variant="danger" onClick={() => setOpen(true)}>
             계정 비활성화
@@ -1075,8 +1065,8 @@ function UserStatusActions({
       {mfaEnabled && (
         <div className="space-y-2 border-t border-neutral-200 pt-3">
           <p className="text-sm text-neutral-500">
-            인증 앱·복구 코드를 모두 분실한 사용자의 2단계 인증을 초기화합니다. 오프라인 본인 확인
-            후에만 수행해야 하는 민감 작업입니다.
+            인증 앱과 복구 코드를 모두 분실한 사용자에게만, 오프라인 본인 확인을 마친 뒤에
+            수행해 주세요.
           </p>
           <Button variant="secondary" onClick={() => setMfaResetOpen(true)}>
             2단계 인증 초기화

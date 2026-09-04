@@ -88,7 +88,6 @@ export function AdminVmDetailPage() {
   if (activeOrgId != null && vm.orgId !== activeOrgId) {
     return (
       <Alert variant="danger" title="선택한 관리 범위의 가상머신이 아닙니다">
-        현재 기관 범위에서는 이 가상머신을 볼 수 없습니다.{' '}
         <Link to={adminPaths.vms(activeOrgId)} className="font-medium underline">
           가상머신 목록으로 돌아가기
         </Link>
@@ -265,8 +264,7 @@ function PowerSection({
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">전원 제어 (관리자 개입)</h3>
       <p className="text-sm text-neutral-500">
-        워크스페이스 구성원 자격 없이 수행하는 관리자 개입입니다. 종료·재부팅·강제 종료는 정지
-        보호 설정을 우회하며, 접수 전건이 감사 기록에 남습니다.
+        접수 전건이 감사 기록에 남습니다.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="flex flex-wrap gap-2">
@@ -319,7 +317,7 @@ function PeriodSection({
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
       <p className="text-sm text-neutral-500">
-        사용 기간을 연장합니다. 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+        만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
       </p>
       <Button variant="secondary" onClick={() => setOpen(true)}>
         기간 연장

@@ -339,7 +339,7 @@ describe('반려 폼', () => {
     await user.click(screen.getByRole('button', { name: '반려하기' }))
 
     expect(
-      screen.getByText('반려 사유를 입력해 주세요. 사유는 신청자에게 전달됩니다.'),
+      screen.getByText('반려 사유를 입력해 주세요.'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(rejectBodies).toHaveLength(0)

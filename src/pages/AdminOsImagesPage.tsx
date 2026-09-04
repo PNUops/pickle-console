@@ -64,8 +64,7 @@ export function AdminOsImagesPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">OS 이미지·사양 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          신청 화면이 제공하는 것들입니다. OS 이미지와 사양, 그리고 사용 기간. 은퇴(비활성)해도 기존 VM은
-          영향받지 않습니다.
+          신청 화면이 제공하는 OS 이미지와 사양, 사용 기간입니다.
         </p>
       </div>
 
@@ -145,10 +144,6 @@ export function AdminOsImagesPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900">사양 프리셋</h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              값을 고쳐도 이미 만들어진 VM과 접수된 신청은 그대로입니다. 이후 신청의 기준선만
-              바뀝니다.
-            </p>
           </div>
           {isSysAdmin && (
             <Button size="sm" onClick={() => setFlavorCreateOpen(true)}>
@@ -336,9 +331,8 @@ function ToggleOsImageModal({
       <div className="space-y-3">
         {retiring ? (
           <p className="text-sm text-neutral-600">
-            <strong>{image.displayName}</strong> (v{image.version})을(를) 은퇴시키면
-            신청 위저드에서 사라지고 새 신청 검증에서 거부됩니다. 기존 VM은 영향받지
-            않으며, 언제든 다시 활성화할 수 있습니다.
+            <strong>{image.displayName}</strong> (v{image.version})을(를) 은퇴시키면 새 신청에서
+            선택할 수 없습니다. 기존 VM은 영향받지 않으며, 언제든 다시 활성화할 수 있습니다.
           </p>
         ) : (
           <p className="text-sm text-neutral-600">
@@ -589,7 +583,7 @@ function EditFlavorModal({
           fieldErrors={fieldErrors}
         />
         <p className="text-sm text-neutral-500">
-          값 변경은 이후 신청의 기준선에만 반영됩니다. 기존 VM과 접수된 신청은 그대로입니다.
+          이후 신청의 기준선만 바뀌고 기존 VM과 접수된 신청은 그대로입니다.
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={update.isPending}>

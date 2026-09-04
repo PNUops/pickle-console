@@ -268,7 +268,7 @@ describe('관리자 사용자 목록', () => {
     // 않으므로 서버가 비워서 보낸다. 화면은 값이 없는 것과 볼 권한이 없는 것을 구분해
     // 적어야 한다 — 「입력하지 않음」으로 찍으면 거짓말이 된다.
     expect(
-      await screen.findByText('직책과 학번과 소속은 시스템 계층에서만 조회할 수 있습니다.'),
+      await screen.findByText('직책·학번·소속은 시스템 계층에서만 조회할 수 있습니다.'),
     ).toBeInTheDocument()
     expect(screen.queryByText('202012345')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()

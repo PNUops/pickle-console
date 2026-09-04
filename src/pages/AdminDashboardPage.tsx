@@ -409,8 +409,7 @@ function LiveUsageTile({
             />
             {measuredNodeCount < nodeCount && (
               <p className="text-xs text-neutral-600">
-                노드 {nodeCount}대 중 {measuredNodeCount}대에서 읽은 값입니다 — 플랫폼
-                전체 수치가 아닙니다
+                노드 {nodeCount}대 중 {measuredNodeCount}대에서 읽은 값입니다
               </p>
             )}
             {hint && <p className="text-xs text-neutral-500">{hint}</p>}
@@ -460,7 +459,7 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
             resource.capacityDiskGb != null ? `${resource.capacityDiskGb} GiB` : null
           }
           advisory
-          overNote="디스크 할당 합계가 풀 용량을 넘었습니다. 씬 프로비저닝 풀이라 참고용 수치이며, 배치를 막는 한계는 아닙니다."
+          overNote="씬 프로비저닝 풀이라 배치를 막는 한계가 아닌 참고용 수치입니다."
         />
         <p className="text-sm text-neutral-600">{resource.guidance}</p>
       </CardContent>
