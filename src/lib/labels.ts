@@ -45,7 +45,7 @@ export const RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
 /** 같은 등급을 LLM API 키에 붙였을 때 실제로 열리는 것. */
 export const LLM_KEY_RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
   OWNER: '발급·재발급, 접근 권한 관리, 폐기까지',
-  EDITOR: '이름·용도·본문 기록 설정 변경까지',
+  EDITOR: '이름과 용도, 본문 기록 설정 변경까지',
   MEMBER: '키 상세 조회 — 평문은 발급한 사람만 봅니다',
   VIEWER: '키 상세 조회',
 }

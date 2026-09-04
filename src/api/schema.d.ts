@@ -1865,6 +1865,46 @@ export interface paths {
         patch: operations["updateLlmKeyAccessGrant"];
         trace?: never;
     };
+    "/llm-keys/{keyId}/bodies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 기록된 본문 목록
+         * @description 본문 기록을 켠 동안 이 키로 오간 프롬프트와 응답의 목록입니다. 각 줄에는 앞부분만 담기고, 전문은 개별 조회로 봅니다. **이 키에 접근 권한이 있는 사람은 모두 읽을 수 있습니다** — 게이트웨이는 키를 인증할 뿐 보낸 사람이 누구인지 알지 못하므로 열람 단위가 사람이 아니라 키입니다. 기록은 30일 동안 보관하고 지난 것부터 지웁니다. 본문 기록을 끈 뒤에도 이미 기록된 것은 보관 기간까지 그대로 보입니다.
+         */
+        get: operations["listLlmKeyBodies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/bodies/{bodyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 기록된 본문 상세
+         * @description 기록 한 건의 전문입니다. `request`는 보통 보낸 messages 배열 그대로이고, 길이 제한에 걸린 경우에는 앞부분을 담은 문자열입니다. 저장된 본문을 그대로 돌려주므로 **재인증이 필요합니다** (X-Reauth-Token). 목록 조회에는 필요하지 않습니다.
+         */
+        get: operations["getLlmKeyBody"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/llm-keys/{keyId}/revoke": {
         parameters: {
             query?: never;
@@ -4163,6 +4203,66 @@ export interface components {
              */
             usageShipFailures?: number | null;
         };
+        LlmKeyBodyDetailResponse: {
+            /** @description 이 기록과 같은 요청에서 나온 사용량 이벤트의 식별자입니다. */
+            eventUuid: string;
+            /** Format: uuid */
+            id: string;
+            /** @description false면 이 기록을 푸는 암호화 키가 서버에 없어 본문을 읽을 수 없습니다. */
+            readable: boolean;
+            /** Format: date-time */
+            receivedAt: string;
+            /** @description 보낸 프롬프트. 보통은 messages 배열 그대로이고, 길이 제한에 걸린 경우에는 앞부분을 담은 문자열입니다. 기록되지 않았으면 null입니다. */
+            request?: unknown;
+            /** Format: int32 */
+            requestBytes: number;
+            /** @description 프롬프트가 길이 제한에 걸려 앞부분만 기록됐는지 여부 */
+            requestTruncated: boolean;
+            /** Format: date-time */
+            requestedAt: string;
+            /** @description 받은 응답 텍스트. 기록되지 않았으면 null입니다. */
+            response?: string | null;
+            /** Format: int32 */
+            responseBytes: number;
+            /** @description 응답이 길이 제한에 걸려 앞부분만 기록됐는지 여부 */
+            responseTruncated: boolean;
+        };
+        LlmKeyBodySummaryResponse: {
+            /** @description 이 기록과 같은 요청에서 나온 사용량 이벤트의 식별자입니다. 리소스 id가 아니라 두 기록을 잇는 값이고, 클라이언트 로그와 대조할 때 씁니다. */
+            eventUuid: string;
+            /** Format: uuid */
+            id: string;
+            /** @description false면 이 기록을 푸는 암호화 키가 서버에 없어 본문을 읽을 수 없습니다. 미리보기도 null입니다. */
+            readable: boolean;
+            /**
+             * Format: date-time
+             * @description 이 기록이 서버에 도착한 시각
+             */
+            receivedAt: string;
+            /**
+             * Format: int32
+             * @description 기록된 프롬프트의 바이트 수
+             */
+            requestBytes: number;
+            /** @description 프롬프트 앞부분. 읽을 수 없거나 기록되지 않았으면 null입니다. */
+            requestPreview?: string | null;
+            /** @description 프롬프트가 길이 제한에 걸려 앞부분만 기록됐는지 여부 */
+            requestTruncated: boolean;
+            /**
+             * Format: date-time
+             * @description 요청 시각. 게이트웨이가 보고한 값입니다.
+             */
+            requestedAt: string;
+            /**
+             * Format: int32
+             * @description 기록된 응답의 바이트 수
+             */
+            responseBytes: number;
+            /** @description 응답 앞부분. 읽을 수 없거나 기록되지 않았으면 null입니다. */
+            responsePreview?: string | null;
+            /** @description 응답이 길이 제한에 걸려 앞부분만 기록됐는지 여부 */
+            responseTruncated: boolean;
+        };
         LlmKeyBrief: {
             /** Format: int32 */
             concurrency?: number | null;
@@ -5598,6 +5698,17 @@ export interface components {
         };
         PageResponseIpAllocationResponse: {
             content: components["schemas"]["IpAllocationResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseLlmKeyBodySummaryResponse: {
+            content: components["schemas"]["LlmKeyBodySummaryResponse"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -11000,6 +11111,85 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listLlmKeyBodies: {
+        parameters: {
+            query?: {
+                page?: number;
+                /** @description 한 번에 가져올 개수. 한 건이 최대 320 KiB라 통상 목록보다 상한이 낮습니다. */
+                size?: number;
+            };
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseLlmKeyBodySummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getLlmKeyBody: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                keyId: string;
+                bodyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LlmKeyBodyDetailResponse"];
                 };
             };
             /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
