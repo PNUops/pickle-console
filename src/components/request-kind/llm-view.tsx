@@ -148,9 +148,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditModelsTouched, setCreditModelsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
-  // 신청서에도 승인 화면에도 시작일 칸이 없다. 부여 기간의 시작은 키가 발급되는
-  // 날, 곧 승인하는 오늘이다. 본문에는 계속 실어 보낸다(vm-view.tsx의 같은 자리 참조).
-  const startDate = todayKstDate()
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [approveComment, setApproveComment] = useState('')
   // 확인한 내용을 통째로 들고 있다가 지금 값과 대조한다. boolean으로 들면 확인 뒤
@@ -242,7 +239,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     },
 
     body: (): ApproveRequest => ({
-      grantedStartDate: startDate,
+      // 제출하는 순간에 읽는다. 이유는 vm-view.tsx의 같은 자리에 적어 두었다.
+      grantedStartDate: todayKstDate(),
       grantedEndDate: endDate || null,
       comment: approveComment.trim() ? approveComment.trim() : null,
       // 네 항목이 모두 비어 있어도 llmKey 자체는 실어 보낸다 — 서버는 "기본

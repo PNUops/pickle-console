@@ -77,13 +77,6 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const [memoryGb, setMemoryGb] = useState(String((request.vm?.reqMemoryMb ?? 0) / 1024))
   const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
   const [imageId, setImageId] = useState(String(request.vm?.imageId))
-  // 신청서에는 시작일이 없고 승인 화면에도 칸이 없다. 부여 기간의 시작은 VM이
-  // 만들어지는 날, 곧 승인하는 오늘이다. 고를 것이 없으므로 상태도 두지 않는다.
-  //
-  // **본문에서 빼지는 않는다.** 서버는 `grantedStartDate`를 그대로 받고 비우면
-  // null로 저장하는데, 그러면 VM 상세의 사용 기간에 시작이 빈 채로 남는다.
-  // 칸을 없앤 것이 값을 없앤다는 뜻은 아니다.
-  const startDate = todayKstDate()
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
   const [nodeId, setNodeId] = useState('')
@@ -117,7 +110,14 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
     },
 
     body: (): ApproveRequest => ({
-      grantedStartDate: startDate,
+      // 시작일은 고르는 값이 아니라 승인하는 날이므로 **제출하는 순간에 읽는다.**
+      // 렌더 시점에 잡아 두면 자정을 넘겨 열어 둔 화면이 어제 날짜를 보내고,
+      // 그 값이 마지막 렌더가 언제였는지에 따라 달라진다.
+      //
+      // **본문에서 빼지는 않는다.** 서버는 `grantedStartDate`를 그대로 받고 비우면
+      // null로 저장하는데, 그러면 VM 상세의 사용 기간에 시작이 빈 채로 남는다.
+      // 칸을 없앤 것이 값을 없앤다는 뜻은 아니다.
+      grantedStartDate: todayKstDate(),
       grantedEndDate: endDate || null,
       comment: approveComment.trim() ? approveComment.trim() : null,
       vm: {
