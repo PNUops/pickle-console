@@ -29,6 +29,15 @@ describe('사용 가이드', () => {
     expect(screen.getByText('parallel_tool_calls')).toBeInTheDocument()
     expect(screen.getByText('max_completion_tokens')).toBeInTheDocument()
     expect(screen.getByText('presence_penalty')).toBeInTheDocument()
+    // 축이 갈렸다는 것이 화면에도 보여야 한다. 목록 하나만 두면 유료 전용 필드를
+    // 자체 서빙에 보내도 되는 것처럼 읽힌다.
+    expect(screen.getByText('두 종류에 공통')).toBeInTheDocument()
+    expect(screen.getByText('유료 모델에만')).toBeInTheDocument()
+    // 산문에도 같은 이름이 나오므로 칩 목록 안에서만 찾는다. 설명이 아니라 목록에
+    // 들어 있는지가 이 시험이 지키려는 것이다.
+    const paidChips = screen.getByText('유료 모델에만').parentElement!
+    expect(within(paidChips).getByText('reasoning_effort')).toBeInTheDocument()
+    expect(within(paidChips).getByText('verbosity')).toBeInTheDocument()
     expect(screen.getByText('목록에 없는 필드는 거부됩니다')).toBeInTheDocument()
   })
 
