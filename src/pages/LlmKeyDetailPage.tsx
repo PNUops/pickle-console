@@ -170,9 +170,11 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
                 ? '켜짐 — 이 키로 보낸 프롬프트와 응답이 수집됩니다'
                 : '꺼짐'}
             </Field>
-            <Field label="분당 요청 한도">{limitLabel(llmKey.rpm, '회')}</Field>
-            <Field label="분당 토큰 한도">{limitLabel(llmKey.tpm, '토큰')}</Field>
-            <Field label="동시 요청 한도">{limitLabel(llmKey.concurrency, '건')}</Field>
+            <Field label="분당 요청 한도 (자체 서빙)">{limitLabel(llmKey.rpm, '회')}</Field>
+            <Field label="분당 토큰 한도 (자체 서빙)">{limitLabel(llmKey.tpm, '토큰')}</Field>
+            <Field label="동시 요청 한도 (자체 서빙)">
+              {limitLabel(llmKey.concurrency, '건')}
+            </Field>
             <Field label="유료 모델">{creditAxisLabel(llmKey)}</Field>
             {llmKey.creditLimit ? (
               <Field label="쓸 수 있는 유료 모델">
@@ -187,8 +189,9 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             )}
           </dl>
           <p className="mt-4 text-xs text-neutral-500">
-            마지막 사용 시각은 게이트웨이가 배치로 보고하므로 최근 호출이 늦게 반영될 수
-            있습니다. 일별 사용량은 사용량 탭에서 볼 수 있습니다.
+            위 세 한도와 일일 토큰 한도는 자체 서빙 모델에만 적용됩니다. 유료 모델 호출은
+            금액 한도가 통제합니다. 마지막 사용 시각은 게이트웨이가 배치로 보고하므로 최근
+            호출이 늦게 반영될 수 있습니다. 일별 사용량은 사용량 탭에서 볼 수 있습니다.
           </p>
         </CardContent>
       </Card>

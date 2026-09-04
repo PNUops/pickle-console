@@ -364,7 +364,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         <FormField
           label="허용할 상용 모델"
           error={fieldErrors['llmKey.grantedCreditAllowedModels']}
-          description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 상용 모델을 쓸 수 있습니다. 벤더 전체를 열려면 openai/* 처럼 적습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다."
+          description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 상용 모델을 쓸 수 있습니다. 벤더 전체를 열려면 openai/* 처럼 적습니다. ~로 시작하는 이름은 최신 모델을 따라가는 별칭이라 openai/* 에 포함되지 않고 ~openai/* 로 따로 열어야 합니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다."
         >
           <Textarea
             rows={4}

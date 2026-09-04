@@ -32,12 +32,29 @@ describe('사용 가이드', () => {
     expect(screen.getByText('목록에 없는 필드는 거부됩니다')).toBeInTheDocument()
   })
 
-  test('base URL에 /v1이 빠지는 실수를 미리 막는다', async () => {
+  test('base URL이 어디까지인지 주소 옆에서 말한다', async () => {
     renderApp('/docs')
     await screen.findByRole('heading', { name: '시작하기' })
 
-    const alert = screen.getByText('base URL은 /v1까지 넣습니다').closest('div')
-    expect(alert?.textContent ?? '').toContain('unknown_endpoint')
+    // 주소를 복사해 가는 자리라, 어디까지가 base URL인지가 그 옆에 있어야 한다.
+    // 문장을 통째로 찾으면 안 된다. testing-library 의 매처는 직계 텍스트 노드만
+    // 이어 붙이므로 <Code>/v1</Code> 이 매칭에서 빠지고, /v2 로 바뀌어도 통과한다.
+    const note = screen.getByText(/까지가 base URL입니다/).closest('p')
+    expect(note?.textContent ?? '').toContain('/v1까지가 base URL입니다')
+  })
+
+  test('분당 한도가 자체 서빙 모델에만 적용된다고 말한다', async () => {
+    renderApp('/docs')
+    await screen.findByRole('heading', { name: '한도' })
+
+    // 2026-09-02 축 분리 이후 네 한도 전부 자체 서빙 전용이다. 이 문장이 빠지면
+    // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('자체 서빙 모델에만 적용됩니다')
+    // 헤더가 어디에 실리는지도 축을 따른다. 이 문장이 빠지면 유료 모델 사용자가
+    // 오지 않는 헤더를 기다린다.
+    expect(body).toContain('한도를 통과한 자체 서빙')
+    expect(body).toContain('유료 모델 응답에는 분당 요청 한도 자체가 없어')
   })
 
   test('코딩 에이전트는 openai-compatible 프로바이더로 붙인다고 말한다', async () => {
