@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
+import { todayKstDate } from '../lib/format'
 import {
   adminRequestStore,
   approveBodies,
@@ -36,11 +37,12 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
 
     await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.getByText('캡스톤 프로젝트 백엔드 서버 운영')).toBeInTheDocument()
-    expect(screen.getByText('capstone-team3.pusan.dev')).toBeInTheDocument()
-    // OS·사양 프리셋은 각각의 축으로 표시된다.
+    // 신청서의 도메인 축은 폐지됐고 이력 필드까지 걷었다. 승인 화면에도 자리가 없다.
+    expect(screen.queryByText('서브도메인 선지정')).not.toBeInTheDocument()
+    // OS와 사양은 각각의 축으로 표시된다.
     const os = screen.getByText('OS').closest('div')!
     expect(await within(os).findByText('Ubuntu 24.04 LTS')).toBeInTheDocument()
-    const flavor = screen.getByText('사양 프리셋').closest('div')!
+    const flavor = screen.getByText('사양').closest('div')!
     expect(await within(flavor).findByText('기본형')).toBeInTheDocument()
 
     const panel = await screen.findByRole('complementary', {
@@ -150,6 +152,27 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
   })
 })
 
+describe('관리자 신청 상세 — 직접 입력 신청', () => {
+  /**
+   * 직접 입력 신청이 큐에서 다른 신청과 똑같이 보이면, 사용자 쪽에만 문턱을 세우고
+   * 관문은 세우지 않은 것이 된다.
+   */
+  test('가리키는 사양이 없으면 눈에 띄게 표시하고 사유를 보라고 말한다', async () => {
+    const target = adminRequestStore.find((r) => r.id === uuid(201))!
+    target.vm!.flavorId = null
+    target.vm!.flavorName = null
+    target.vm!.specReason = 'Spring Boot와 PostgreSQL을 함께 띄웁니다'
+    renderDetail(uuid(201))
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(screen.getByText('직접 입력')).toBeInTheDocument()
+    expect(screen.getByText('준비된 사양을 쓰지 않는 신청입니다')).toBeInTheDocument()
+    expect(
+      screen.getByText('Spring Boot와 PostgreSQL을 함께 띄웁니다'),
+    ).toBeInTheDocument()
+  })
+})
+
 describe('승인 폼', () => {
   test('요청 사양으로 프리필되고, 확인 모달을 거쳐 계약 형식의 본문을 전송한다', async () => {
     const user = userEvent.setup()
@@ -158,15 +181,16 @@ describe('승인 폼', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     // 프리필 검증
     expect(screen.getByLabelText('vCPU')).toHaveValue(2)
-    expect(screen.getByLabelText('메모리 (MiB)')).toHaveValue(2048)
+    expect(screen.getByLabelText('메모리 (GiB)')).toHaveValue(2)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
     expect(screen.getByLabelText('OS 이미지')).toHaveValue(uuid(1))
-    expect(screen.getByLabelText('사용 시작일')).toHaveValue('2026-07-15')
+    // 신청서에 시작일이 없으므로 부여 기간의 시작은 만들어지는 날, 곧 오늘이다.
+    expect(screen.getByLabelText('사용 시작일')).toHaveValue(todayKstDate())
     expect(screen.getByLabelText('사용 종료일')).toHaveValue('2026-12-20')
     expect(screen.getByLabelText('배치 노드 ID')).toHaveValue('')
     // 프리필 락: 희망 호스트명이 그대로 채워져 있어야 승인 시 자동 생성으로
     // 조용히 무시되지 않는다.
-    expect(screen.getByLabelText('호스트명(슬러그) 확정')).toHaveValue('capstone-api')
+    expect(screen.getByLabelText('호스트 이름 확정')).toHaveValue('capstone-api')
     // 공개 여부·서브도메인은 승인 대상이 아니다 (사용자가 공개할 때 정한다).
     expect(screen.queryByLabelText('HTTP 게시')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('서브도메인 확정')).not.toBeInTheDocument()
@@ -184,7 +208,7 @@ describe('승인 폼', () => {
     expect(approveBodies).toHaveLength(1)
     expect(approveBodies[0].requestId).toBe(uuid(201))
     expect(approveBodies[0].body).toEqual({
-      grantedStartDate: '2026-07-15',
+      grantedStartDate: todayKstDate(),
       grantedEndDate: '2026-12-20',
       comment: null,
       vm: {
@@ -277,7 +301,7 @@ describe('승인 폼 — 서버 검증 오류', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    const slugField = (await screen.findByLabelText('호스트명(슬러그) 확정')).closest('div')!
+    const slugField = (await screen.findByLabelText('호스트 이름 확정')).closest('div')!
     expect(
       await within(slugField).findByText('이미 사용 중인 호스트명입니다.'),
     ).toBeInTheDocument()

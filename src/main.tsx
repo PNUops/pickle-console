@@ -32,6 +32,20 @@ const queryClient = new QueryClient({
 // 폐기되어 모든 탭이 로그아웃된다. 완화하는 대신 레이스를 만들지 않는다.
 const terminalVmId = parseTerminalWindowVmId(window.location.pathname)
 
+/**
+ * 목 API로 띄우는 개발 모드. `VITE_MOCK_API=1 npm run dev`로 켠다.
+ *
+ * 동적 import라 운영 번들에는 이 모듈도 msw도 들어가지 않는다. `import.meta.env.DEV`가
+ * 함께 걸려 있어 프로덕션 빌드에서는 조건 자체가 상수 false로 접힌다.
+ */
+async function startMockApiIfRequested(): Promise<void> {
+  if (!import.meta.env.DEV || import.meta.env.VITE_MOCK_API !== '1') return
+  const { startMockApi } = await import('./dev/mock-browser')
+  await startMockApi()
+}
+
+await startMockApiIfRequested()
+
 createRoot(document.getElementById('root')!).render(
   terminalVmId !== null ? (
     <StrictMode>

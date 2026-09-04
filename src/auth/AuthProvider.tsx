@@ -7,11 +7,10 @@ import { resetMfaEnrollmentRequired } from '../api/mfa-enrollment'
 import { clearReauthToken } from '../api/reauth'
 import { clearAccessToken, onSessionExpired, setAccessToken } from '../api/token'
 import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
+import { clearDraft } from '../lib/request-draft'
 import {
-  LEGACY_CONSOLE_SCOPE_KEY,
   MFA_NUDGE_DISMISS_KEY,
   POST_LOGIN_OVERLAY_KEY,
-  VM_REQUEST_DRAFT_KEY,
 } from '../lib/storage-keys'
 import { closeTerminalWindows } from '../terminal/openTerminalWindow'
 import { AuthContext, type AuthStatus, type LoginResult, type UserProfile } from './auth-context'
@@ -141,11 +140,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 터미널 팝업은 별도 문서라 이 탭이 로그아웃해도 저절로 닫히지 않는다.
       closeTerminalWindows()
       // 같은 탭에서 다음 사용자가 이전 사용자의 신청서 초안을 물려받지 않게 지운다.
-      sessionStorage.removeItem(VM_REQUEST_DRAFT_KEY)
+      clearDraft()
       // 2FA 권유 배너의 닫음도 같은 이유로 — 다음 사용자는 권유를 다시 봐야 한다.
       sessionStorage.removeItem(MFA_NUDGE_DISMISS_KEY)
-      // 예전 버전이 남긴 워크스페이스 범위도 같은 이유로 정리한다.
-      localStorage.removeItem(LEGACY_CONSOLE_SCOPE_KEY)
       // 구글 왕복용 복귀 경로가 남으면 다음 사용자가 그 경로로 간다. 내부 경로라
       // 오픈 리다이렉트 가드도 통과하므로, 이전 사용자의 VM 상세 주소를 그대로
       // 물려받는다.

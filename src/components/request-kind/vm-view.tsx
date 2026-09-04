@@ -15,9 +15,10 @@ import {
   Spinner,
   Textarea,
 } from '../ui'
-import { formatSpec } from '../../lib/format'
+import { formatSpec, todayKstDate } from '../../lib/format'
 import { SUBDOMAIN_RE, isUuid } from '../../lib/validation'
 import { Field } from './Field'
+import { periodText } from './period-text'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
 
 function useVmDecisionData(): DecisionData {
@@ -72,10 +73,12 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
 
   // 승인 폼 — 요청 사양으로 프리필
   const [vcpu, setVcpu] = useState(String(request.vm?.reqVcpu))
-  const [memoryMb, setMemoryMb] = useState(String(request.vm?.reqMemoryMb))
+  // 신청서가 GiB로 말하므로 승인 폼도 GiB로 묻는다. 본문의 단위는 MiB 그대로다.
+  const [memoryGb, setMemoryGb] = useState(String((request.vm?.reqMemoryMb ?? 0) / 1024))
   const [diskGb, setDiskGb] = useState(String(request.vm?.reqDiskGb))
   const [imageId, setImageId] = useState(String(request.vm?.imageId))
-  const [startDate, setStartDate] = useState(request.reqStartDate ?? '')
+  // 신청서에는 시작일이 없다. 부여 기간의 시작은 만들어지는 날, 곧 오늘이다.
+  const [startDate, setStartDate] = useState(todayKstDate)
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
   const [nodeId, setNodeId] = useState('')
@@ -94,8 +97,8 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       const image = images.find((t) => t.id === imageId)
       if (!Number.isInteger(Number(vcpu)) || Number(vcpu) < 1)
         errors['vm.grantedVcpu'] = 'vCPU는 1 이상의 정수로 입력해 주세요.'
-      if (!Number.isInteger(Number(memoryMb)) || Number(memoryMb) < 256)
-        errors['vm.grantedMemoryMb'] = '메모리는 256 MiB 이상으로 입력해 주세요.'
+      if (!Number.isInteger(Number(memoryGb)) || Number(memoryGb) < 1)
+        errors['vm.grantedMemoryMb'] = '메모리는 1 GiB 이상으로 입력해 주세요.'
       if (!Number.isInteger(Number(diskGb)) || Number(diskGb) < 1)
         errors['vm.grantedDiskGb'] = '디스크는 1 GiB 이상으로 입력해 주세요.'
       else if (image && Number(diskGb) < image.minDiskGb)
@@ -104,7 +107,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         errors['vm.nodeId'] = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
       if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
         errors['vm.grantedSlug'] =
-          '호스트명(슬러그)은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요.'
+          '소문자와 숫자, 하이픈만 써서 3~40자로 입력해 주세요.'
       return errors
     },
 
@@ -114,7 +117,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       comment: approveComment.trim() ? approveComment.trim() : null,
       vm: {
         grantedVcpu: Number(vcpu),
-        grantedMemoryMb: Number(memoryMb),
+        grantedMemoryMb: Number(memoryGb) * 1024,
         grantedDiskGb: Number(diskGb),
         grantedImageId: imageId,
         grantedSlug: grantedSlug.trim() || null,
@@ -136,13 +139,12 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
               onChange={(event) => setVcpu(event.target.value)}
             />
           </FormField>
-          <FormField label="메모리 (MiB)" required error={fieldErrors['vm.grantedMemoryMb']}>
+          <FormField label="메모리 (GiB)" required error={fieldErrors['vm.grantedMemoryMb']}>
             <Input
               type="number"
-              min={256}
-              step={256}
-              value={memoryMb}
-              onChange={(event) => setMemoryMb(event.target.value)}
+              min={1}
+              value={memoryGb}
+              onChange={(event) => setMemoryGb(event.target.value)}
             />
           </FormField>
           <FormField label="디스크 (GiB)" required error={fieldErrors['vm.grantedDiskGb']}>
@@ -183,9 +185,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
           </FormField>
         </div>
         <FormField
-          label="호스트명(슬러그) 확정"
+          label="호스트 이름 확정"
           error={fieldErrors['vm.grantedSlug']}
-          description="SSH 접속명·VM 이름으로 쓰입니다. 신청자의 희망값이 채워져 있으며, 비우면 자동 생성됩니다."
+          description="SSH 접속과 게스트 OS의 호스트 이름으로 쓰입니다. 신청자의 희망값이 채워져 있고, 비우면 자동으로 정해집니다."
         >
           <Input
             value={grantedSlug}
@@ -220,7 +222,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       <div className="space-y-2 text-sm text-neutral-600">
         <p>아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.</p>
         <p className="font-medium text-neutral-800">
-          {formatSpec(Number(vcpu), Number(memoryMb), Number(diskGb))} ·{' '}
+          {formatSpec(Number(vcpu), Number(memoryGb) * 1024, Number(diskGb))} ·{' '}
           {images.find((t) => t.id === imageId)?.displayName}
         </p>
         <p>{nodeId.trim() ? `지정한 노드에 배치` : '자동 배치'}</p>
@@ -252,27 +254,29 @@ export const vmRequestView: RequestKindView = {
       {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이
           남으므로 공개 목록을 따로 뒤질 필요가 없다. */}
       <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
-      <Field label="사양 프리셋">{data.vm?.flavorName ?? '—'}</Field>
+      <Field label="사양">
+        {data.vm?.flavorName ?? (
+          <span className="font-medium text-warning-700">직접 입력</span>
+        )}
+      </Field>
       <Field label="요청 사양">
         {formatSpec(data.vm?.reqVcpu, data.vm?.reqMemoryMb, data.vm?.reqDiskGb)}
       </Field>
+      {data.vm != null && data.vm.flavorId == null && (
+        <div className="sm:col-span-2">
+          <Alert variant="warning" title="준비된 사양을 쓰지 않는 신청입니다">
+            신청자가 사양을 직접 적었습니다. 아래 사유를 보고 부여 사양을 정해 주세요.
+          </Alert>
+        </div>
+      )}
       <Field label="사용 기간">
-        {data.reqStartDate ?? '미지정'} ~ {data.reqEndDate ?? '미지정'}
+        {periodText(data)}
       </Field>
       <Field label="용도">{data.purpose}</Field>
-      <Field label="수업/프로젝트">{data.courseOrProject ?? '—'}</Field>
       <Field label="사양 사유">{data.vm?.specReason ?? '—'}</Field>
       <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
       <Field label="표시명">{data.displayName}</Field>
-      <Field label="희망 호스트명(슬러그)">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
-      {/* 신청서의 도메인 축은 폐지됐다 — 과거 신청의 이력 값만 보여준다. */}
-      {data.vm?.desiredSubdomain && (
-        <Field label="서브도메인 선지정">
-          {data.vm?.rootDomain
-            ? `${data.vm?.desiredSubdomain}.${data.vm?.rootDomain}`
-            : data.vm?.desiredSubdomain}
-        </Field>
-      )}
+      <Field label="호스트 이름">{data.vm?.desiredSlug ?? '자동 생성'}</Field>
     </>
   ),
   resultFields: (data) => {
