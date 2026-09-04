@@ -1991,7 +1991,6 @@ export function updateAdminOsImage(
   })
 }
 
-/** 사양 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴한 행 포함). */
 /** 관리자 목록은 은퇴한 것과 이미 지난 것까지 담는다. 그 비대칭이 이 화면의 쓸모다. */
 export function fetchAdminRequestPeriods(): Promise<AdminRequestPeriod[]> {
   return guardNetwork(async () => {
@@ -2025,6 +2024,7 @@ export function updateAdminRequestPeriod(
   })
 }
 
+/** 사양 인벤토리 (전 상태 — 공개 /vm-flavors와 달리 은퇴한 행 포함). */
 export function fetchAdminVmFlavors(): Promise<VmFlavor[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vm-flavors')

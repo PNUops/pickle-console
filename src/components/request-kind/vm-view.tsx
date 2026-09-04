@@ -87,8 +87,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
      * 오류 키는 서버가 422의 errors[]에 싣는 필드 경로와 같아야 한다.
      * 부여 사양은 승인 본문의 vm 아래에 있으므로 서버가 보내는 이름도
      * 'vm.grantedVcpu'처럼 중첩형이다 — 평평한 이름으로 받으면 서버가
-     * 되돌려준 오류가 어느 칸에도 붙지 못한다. 기간(grantedStartDate·
-     * grantedEndDate)과 승인 의견은 본문 최상위라 접두사가 없다.
+     * 되돌려준 오류가 어느 칸에도 붙지 못한다. 종료일과 승인 의견은 본문 최상위라
+     * 접두사가 없다. 시작일은 칸이 없어 오류를 붙일 자리도 없는데, 서버가 그 이름으로
+     * 오류를 내지 않으므로(선후 검사도 `grantedEndDate`에 붙는다) 잃는 것이 없다.
      */
     validate: () => {
       const errors: Record<string, string> = {}

@@ -240,6 +240,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
     body: (): ApproveRequest => ({
       // 제출하는 순간에 읽는다. 이유는 vm-view.tsx의 같은 자리에 적어 두었다.
+      // 이 화면에서 「발급」은 신청자가 나중에 하는 일이므로(아래 안내 문구) 부여 기간의
+      // 시작은 발급일이 아니라 승인일이다.
       grantedStartDate: todayKstDate(),
       grantedEndDate: endDate || null,
       comment: approveComment.trim() ? approveComment.trim() : null,
