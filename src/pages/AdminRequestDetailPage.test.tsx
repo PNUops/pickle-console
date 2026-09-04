@@ -184,8 +184,9 @@ describe('승인 폼', () => {
     expect(screen.getByLabelText('메모리 (GiB)')).toHaveValue(2)
     expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(20)
     expect(screen.getByLabelText('OS 이미지')).toHaveValue(uuid(1))
-    // 신청서에 시작일이 없으므로 부여 기간의 시작은 만들어지는 날, 곧 오늘이다.
-    expect(screen.getByLabelText('사용 시작일')).toHaveValue(todayKstDate())
+    // 시작일은 승인자가 고를 것이 아니라 VM이 만들어지는 날이므로 칸이 없다.
+    // 본문에 오늘이 실리는 것은 아래 제출 본문 대조가 지킨다.
+    expect(screen.queryByLabelText('사용 시작일')).not.toBeInTheDocument()
     expect(screen.getByLabelText('사용 종료일')).toHaveValue('2026-12-20')
     expect(screen.getByLabelText('배치 노드 ID')).toHaveValue('')
     // 프리필 락: 희망 호스트명이 그대로 채워져 있어야 승인 시 자동 생성으로
