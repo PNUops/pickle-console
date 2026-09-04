@@ -88,7 +88,6 @@ export default function AdminLlmUsageCharts({
           format={(value) => `${count(value)}건`}
           formatTime={formatKstDay}
           splitBase="integer"
-          caption="선택 기간의 KST 달력일별 전체 요청입니다. 사용하지 않은 날은 0으로 표시합니다."
         />
         <DailyValuesTable
           title="날짜별 요청 수"
@@ -107,7 +106,6 @@ export default function AdminLlmUsageCharts({
           format={(value) => `${count(value)} token`}
           formatTime={formatKstDay}
           splitBase="integer"
-          caption="요청 당시 기록된 입력과 출력 token을 분리해 표시합니다."
         />
         <DailyValuesTable
           title="날짜별 입력·출력 token"
