@@ -93,8 +93,8 @@ export function formatTokens(value: number): string {
  * 직후 새 라벨이 옛 자료 위에 얹혀, 구간 밖의 날짜를 "가장 많이 쓴 날"로
  * 가리키게 된다.
  *
- * 토큰 합에 추정이 섞였으면 그 사실을 이 문장에서 밝힌다 — 가장 먼저 읽히는
- * 숫자를 실측인 척 내보내고 주석을 저 아래 차트에만 두면 아무도 읽지 않는다.
+ * 합계는 말하지 않는다. 바로 아래 타일이 요청 수와 토큰 합을 그대로 보여 주므로,
+ * 이 문장이 할 일은 타일에 없는 것 하나를 짚는 것뿐이다.
  */
 export function usageSummary(points: LlmKeyUsagePoint[]): string {
   const days = points.length
@@ -103,13 +103,8 @@ export function usageSummary(points: LlmKeyUsagePoint[]): string {
   if (totals.requests === 0) {
     return `최근 ${days}일 동안 이 키로 들어온 요청이 없습니다.`
   }
-  const tokens = totals.inputTokens + totals.outputTokens
-  const estimated = totals.estimatedRequests > 0 ? '(일부 추정)' : ''
   const busiest = points.reduce((top, point) => (point.requests > top.requests ? point : top))
-  return (
-    `최근 ${days}일 동안 요청 ${group(totals.requests)}회, 토큰 ${group(tokens)}개${estimated}를 썼습니다.` +
-    ` 가장 많이 쓴 날은 ${busiest.day}(${group(busiest.requests)}회)입니다.`
-  )
+  return `가장 많이 쓴 날은 ${busiest.day}(${group(busiest.requests)}회)입니다.`
 }
 
 /**

@@ -134,9 +134,8 @@ export default function LlmKeyUsageSection({
                   {data.from} ~ {data.to}
                 </p>
 
-                {/* 문장은 남긴다 — 카드가 숫자를 빨리 읽게 하는 대신 문장은
-                    구간과 가장 많이 쓴 날을 함께 말한다. 추정 비율은 합계 카드에도
-                    붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}
+                {/* 합계는 타일이, 가장 많이 쓴 날은 위 문장이 말한다. 추정 비율은
+                    합계 카드에 붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                   <StatTile label="총 요청" value={formatRequests(totals.requests)} />
                   <StatTile label="정상 응답" value={formatRequests(totals.succeeded)} />
@@ -195,7 +194,6 @@ export default function LlmKeyUsageSection({
                       format={formatRequests}
                       formatTime={formatKstDay}
                       splitBase="integer"
-                      caption={zeroDayCaption(reporting)}
                     />
                     <TimeSeriesChart
                       title="거부·실패"
@@ -217,7 +215,6 @@ export default function LlmKeyUsageSection({
                       format={formatRequests}
                       formatTime={formatKstDay}
                       splitBase="integer"
-                      caption="한도 초과 거부는 한도를 올리면 사라지는 실패이고, 그 밖의 실패는 업스트림 오류·시간 초과 등 손댈 수 없는 실패입니다."
                     />
                     <TimeSeriesChart
                       title={
@@ -237,18 +234,6 @@ export default function LlmKeyUsageSection({
                       format={formatTokens}
                       formatTime={formatKstDay}
                       splitBase="integer"
-                      caption={
-                        totals.estimatedRequests > 0 ? (
-                          <>
-                            토큰을 만든 요청 {formatRequests(totals.succeeded)} 중{' '}
-                            {formatRequests(totals.estimatedRequests)}({formatShare(estimated)})은
-                            업스트림이 사용량을 주지 않아 게이트웨이가 토큰 수를 추정했습니다.
-                            토큰 합은 그만큼 추정값입니다.
-                          </>
-                        ) : (
-                          '업스트림이 보고한 실측 토큰 수입니다.'
-                        )
-                      }
                     />
                   </div>
                 )}
@@ -363,7 +348,6 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
                 ? '오늘 한도에 도달해 자체 서빙 모델 요청이 거절되고 있습니다. 자정(KST)에 초기화됩니다.'
                 : undefined
         }
-        freshness="사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다."
       />
       <BudgetGauge
         label="금액 사용"
@@ -485,48 +469,32 @@ function formatUsd(amount: number): string {
 }
 
 /**
- * 바닥에 붙은 구간을 어떻게 읽어야 하는지.
+ * 화면의 숫자가 어느 시점까지의 것인지.
  *
- * 보고가 구간 끝까지 닿았으면 0은 0이다. 보고가 끊긴 뒤의 0은 요청이 없었다는
- * 뜻이 아니므로 그렇다고 단언하면 안 된다.
- */
-function zeroDayCaption(state: ReportingState): string {
-  const base =
-    '호출이 없던 날도 0으로 그립니다 — 바닥에 붙은 구간은 자료가 빠진 날이 아니라 요청이 없던 날입니다.'
-  if (state.kind === 'stale') {
-    return `${base} 다만 ${state.unreportedFrom}부터는 아직 보고가 오지 않아, 그 날짜의 0은 요청이 없었다는 뜻이 아닐 수 있습니다.`
-  }
-  return base
-}
-
-/**
- * 마지막 점이 왜 낮은지, 또는 뒤쪽 0을 왜 믿으면 안 되는지.
- *
- * 전송이 배치라 오늘 자 값은 아직 채워지는 중이다. 이 말을 하지 않으면 사용자는
- * 마지막 날이 낮은 것을 "사용량이 줄었다"로 읽는다. 반대로 보고가 며칠째 없는
- * 키에 같은 말을 붙이면, 진짜 0을 "곧 채워질 값"으로 읽게 만든다.
+ * 전송이 배치라 오늘 자 값은 아직 채워지는 중이다. 반대로 보고가 며칠째 없는 키에
+ * 같은 말을 붙이면 진짜 0을 "곧 채워질 값"으로 읽게 만들므로 두 경우를 가른다.
+ * 차트 옆 캡션이 아니라 여기 한 자리에서만 말한다.
  */
 function ReportingNotice({ state }: { state: ReportingState }) {
   if (state.kind === 'never') {
     return (
       <p className="text-xs text-neutral-500">
-        게이트웨이가 이 키의 사용량을 아직 한 번도 보고하지 않았습니다. 사용한 적이 있다면
-        다음 보고 때 반영됩니다.
+        게이트웨이가 이 키의 사용량을 아직 보고하지 않았습니다.
       </p>
     )
   }
   if (state.kind === 'stale') {
     return (
       <p className="text-xs text-neutral-500">
-        게이트웨이 마지막 보고 {formatDateTime(state.at)}. {state.unreportedFrom}부터는 아직
-        보고가 오지 않았습니다 — 그 날짜의 0은 아직 모르는 값입니다.
+        게이트웨이 마지막 보고 {formatDateTime(state.at)}. {state.unreportedFrom}부터는 보고가
+        없어 그 뒤의 0은 아직 모르는 값입니다.
       </p>
     )
   }
   return (
     <p className="text-xs text-neutral-500">
       게이트웨이 마지막 보고 {formatDateTime(state.at)}. 전송이 배치라 오늘 자 값은 아직
-      채워지는 중이며, 마지막 날이 낮게 보이는 것은 정상입니다.
+      채워지는 중입니다.
     </p>
   )
 }

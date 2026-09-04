@@ -17,13 +17,13 @@ function renderUsage(keyId: string) {
 }
 
 describe('사용량 탭', () => {
-  test('주소로 바로 열리고 구간 요약을 문장으로 먼저 말한다', async () => {
+  test('주소로 바로 열리고 타일에 없는 것 하나를 문장으로 말한다', async () => {
     renderUsage(USED_KEY)
 
     expect(await screen.findByRole('tab', { name: '사용량', selected: true })).toBeInTheDocument()
-    expect(
-      await screen.findByText(/최근 30일 동안 요청 .*회, 토큰 .*개\(일부 추정\)를 썼습니다/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/가장 많이 쓴 날은 /)).toBeInTheDocument()
+    // 합계는 문장이 아니라 타일이 말한다 — 한 화면에서 두 번 세지 않는다.
+    expect(screen.queryByText(/동안 요청 .*회, 토큰/)).not.toBeInTheDocument()
   })
 
   test('개요 탭에서 사용량 탭으로 넘어갈 수 있다', async () => {
@@ -40,30 +40,20 @@ describe('사용량 탭', () => {
     expect(screen.queryByRole('button', { name: '키 재발급' })).not.toBeInTheDocument()
   })
 
-  test('호출이 없던 날이 0이라는 것을 화면이 말한다', async () => {
-    // 계약이 0으로 채워 보내므로 빈 구간이 아니다. 차트가 둘을 같게 그리면
-    // "게이트웨이가 죽었나"로 읽힌다.
-    renderUsage(USED_KEY)
-
-    expect(
-      await screen.findByText(/바닥에 붙은 구간은 자료가 빠진 날이 아니라 요청이 없던 날입니다/),
-    ).toBeInTheDocument()
-  })
-
   test('오늘 자 값이 아직 채워지는 중이라는 근거를 마지막 보고 시각으로 댄다', async () => {
     renderUsage(USED_KEY)
 
     expect(
       await screen.findByText(/게이트웨이 마지막 보고 2026-08-11 09:20/),
     ).toBeInTheDocument()
-    expect(screen.getByText(/마지막 날이 낮게 보이는 것은 정상입니다/)).toBeInTheDocument()
+    expect(screen.getByText(/오늘 자 값은 아직 채워지는 중입니다/)).toBeInTheDocument()
   })
 
   test('한 번도 보고가 없으면 그 사실을 그대로 말하고 빈 차트를 그리지 않는다', async () => {
     renderUsage(NEVER_USED_KEY)
 
     expect(
-      await screen.findByText(/아직 한 번도 보고하지 않았습니다/),
+      await screen.findByText(/사용량을 아직 보고하지 않았습니다/),
     ).toBeInTheDocument()
     expect(screen.getByText('최근 30일 동안 이 키로 들어온 요청이 없습니다.')).toBeInTheDocument()
     // 0으로 눕는 선 세 개는 위 문장이 이미 말한 것을 되풀이할 뿐이다.
@@ -76,12 +66,10 @@ describe('사용량 탭', () => {
     renderUsage(REVOKED_KEY)
 
     expect(
-      await screen.findByText(/2026-08-01부터는 아직 보고가 오지 않았습니다/),
+      await screen.findByText(/2026-08-01부터는 보고가 없어/),
     ).toBeInTheDocument()
-    expect(screen.queryByText(/마지막 날이 낮게 보이는 것은 정상입니다/)).not.toBeInTheDocument()
-    expect(
-      screen.getByText(/그 날짜의 0은 요청이 없었다는 뜻이 아닐 수 있습니다/),
-    ).toBeInTheDocument()
+    expect(screen.queryByText(/채워지는 중입니다/)).not.toBeInTheDocument()
+    expect(screen.getByText(/그 뒤의 0은 아직 모르는 값입니다/)).toBeInTheDocument()
   })
 
   test('한도 초과 거부는 다른 실패와 따로 세고, 할 수 있는 일을 알려 준다', async () => {
@@ -97,21 +85,20 @@ describe('사용량 탭', () => {
     expect(within(chart).getByText('그 밖의 실패')).toBeInTheDocument()
   })
 
-  test('토큰이 추정 섞인 값이면 제목과 설명이 그렇게 말한다', async () => {
+  test('토큰이 추정 섞인 값이면 제목과 타일이 그렇게 말한다', async () => {
+    // 실측인 척하는 숫자를 남기지 않는다. 차트 제목이 표시하고, 얼마나
+    // 섞였는지는 합계 타일이 센다 — 같은 말을 문단으로 또 하지는 않는다.
     renderUsage(USED_KEY)
 
     expect(await screen.findByRole('img', { name: '토큰 사용량 (일부 추정)' })).toBeInTheDocument()
-    // 분모는 전체 요청이 아니라 토큰을 만든 요청이다 — 거부에 가려 추정 비율이
-    // 낮아 보이면 실측인 척하는 것과 다르지 않다.
-    expect(screen.getByText(/토큰을 만든 요청 .*회 중/)).toBeInTheDocument()
-    expect(screen.getByText(/토큰 합은 그만큼 추정값입니다/)).toBeInTheDocument()
+    expect(screen.getByText(/가 추정값/)).toBeInTheDocument()
   })
 
-  test('추정이 없는 구간은 실측이라고 말한다', async () => {
+  test('추정이 없는 구간은 제목에 단서를 달지 않는다', async () => {
     renderUsage(REVOKED_KEY)
 
     expect(await screen.findByRole('img', { name: '토큰 사용량' })).toBeInTheDocument()
-    expect(screen.getByText('업스트림이 보고한 실측 토큰 수입니다.')).toBeInTheDocument()
+    expect(screen.queryByText(/가 추정값/)).not.toBeInTheDocument()
   })
 
   test('조회 기간을 바꾸면 그 기간으로 다시 묻는다', async () => {
@@ -123,7 +110,6 @@ describe('사용량 탭', () => {
     expect(await screen.findByText('2026-07-13 ~ 2026-08-11')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '7일' }))
     expect(await screen.findByText('2026-08-05 ~ 2026-08-11')).toBeInTheDocument()
-    expect(screen.getByText(/최근 7일 동안 요청/)).toBeInTheDocument()
   })
 
   test('발급 전 키는 빈 차트 대신 왜 비었는지를 말한다', async () => {
@@ -147,8 +133,8 @@ describe('사용량 탭', () => {
     expect(await screen.findByRole('img', { name: '요청 수' })).toBeInTheDocument()
   })
 
-  test('합계가 문장 옆에 숫자로도 선다', async () => {
-    // 문장은 남는다 — '일부 추정' 같은 단서를 담는 것은 문장뿐이다.
+  test('합계는 타일이 센다', async () => {
+    // 추정 단서도 여기 붙는다. 문장은 타일이 말하지 않는 것만 맡는다.
     renderUsage(USED_KEY)
 
     const totals = await screen.findByText('총 요청')

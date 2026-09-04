@@ -93,37 +93,22 @@ describe('usageSummary', () => {
     )
   })
 
-  test('구간 길이는 응답이 준 점 수에서 읽는다', () => {
+  test('가장 많이 쓴 날은 응답이 준 점에서 고른다', () => {
     // 화면이 고른 일수를 쓰면 기간을 바꾼 직후 새 라벨이 옛 자료 위에 얹혀,
     // 구간 밖의 날짜를 그 구간의 최댓값이라고 말하게 된다.
-    expect(usageSummary([point('2026-08-11', { requests: 5 })])).toContain('최근 1일 동안')
+    expect(usageSummary([point('2026-08-11', { requests: 5 })])).toBe(
+      '가장 많이 쓴 날은 2026-08-11(5회)입니다.',
+    )
   })
 
-  test('요청·토큰 합과 가장 많이 쓴 날을 한 문장으로 말한다', () => {
+  test('합계는 되풀이하지 않는다 — 타일이 이미 말한다', () => {
     expect(
       usageSummary([
         point('2026-08-09', { requests: 1200, inputTokens: 900_000, outputTokens: 300_000 }),
         point('2026-08-10'),
         point('2026-08-11', { requests: 300, inputTokens: 20_000, outputTokens: 8_000 }),
       ]),
-    ).toBe(
-      '최근 3일 동안 요청 1,500회, 토큰 1,228,000개를 썼습니다. 가장 많이 쓴 날은 2026-08-09(1,200회)입니다.',
-    )
-  })
-
-  test('토큰 합에 추정이 섞였으면 가장 먼저 읽히는 문장이 그 사실을 밝힌다', () => {
-    // 주석을 차트 밑에만 두면 아무도 읽지 않는다 — 실측인 척하는 숫자가 위에 남는다.
-    expect(
-      usageSummary([
-        point('2026-08-11', {
-          requests: 10,
-          succeeded: 10,
-          inputTokens: 900,
-          outputTokens: 100,
-          estimatedRequests: 4,
-        }),
-      ]),
-    ).toContain('토큰 1,000개(일부 추정)를 썼습니다')
+    ).toBe('가장 많이 쓴 날은 2026-08-09(1,200회)입니다.')
   })
 })
 
