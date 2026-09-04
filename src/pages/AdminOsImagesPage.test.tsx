@@ -9,12 +9,12 @@ import {
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-/** 프리셋 표를 표시명 셀 기준으로 찾는다 (OS 표와 열 구성이 달라 행 단위로 본다). */
+/** 사양 표를 표시명 셀 기준으로 찾는다 (OS 표와 열 구성이 달라 행 단위로 본다). */
 function flavorRow(displayName: string) {
   return screen.getByText(displayName).closest('tr')!
 }
 
-/** 프리셋 표가 도착할 때까지 기다린 뒤 해당 행을 돌려준다. */
+/** 사양 표가 도착할 때까지 기다린 뒤 해당 행을 돌려준다. */
 async function findFlavorRow(displayName: string) {
   return (await screen.findByText(displayName)).closest('tr')!
 }
@@ -72,12 +72,12 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
   })
 })
 
-describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
-  test('전 상태 프리셋을 사양과 함께 나열하고 은퇴 프리셋에 배지를 붙인다', async () => {
+describe('관리자 OS 이미지·사양 관리 — 사양', () => {
+  test('전 상태의 사양을 수치와 함께 나열하고 은퇴한 행에 배지를 붙인다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
 
-    await screen.findByRole('heading', { name: '사양 프리셋' })
+    await screen.findByRole('heading', { name: '사양' })
     const basic = await findFlavorRow('컴퓨팅 최적화')
     expect(within(basic).getByText('2 vCPU · 1 GiB · 32 GiB')).toBeInTheDocument()
     expect(within(basic).getByText('활성')).toBeInTheDocument()
@@ -96,7 +96,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
       within(await findFlavorRow('메모리 최적화')).getByRole('button', { name: '수정' }),
     )
 
-    const dialog = await screen.findByRole('dialog', { name: '사양 프리셋 수정' })
+    const dialog = await screen.findByRole('dialog', { name: '사양 수정' })
     // 이름(식별자)은 잠겨 있다.
     expect(within(dialog).getByLabelText('이름')).toBeDisabled()
     const memory = within(dialog).getByLabelText('메모리 (MiB)')
@@ -107,7 +107,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     await user.type(display, '메모리 최적화 플러스')
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('사양 프리셋을 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 수정했습니다.')).toBeInTheDocument()
     const updated = flavorRow('메모리 최적화 플러스')
     expect(within(updated).getByText('1 vCPU · 2 GiB · 32 GiB')).toBeInTheDocument()
   })
@@ -121,11 +121,11 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     expect(within(before).getByText('메모리를 많이 쓰는 작업에 맞습니다.')).toBeInTheDocument()
     await user.click(within(before).getByRole('button', { name: '수정' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '사양 프리셋 수정' })
+    const dialog = await screen.findByRole('dialog', { name: '사양 수정' })
     await user.clear(within(dialog).getByLabelText('비고'))
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('사양 프리셋을 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 수정했습니다.')).toBeInTheDocument()
     // 빈 값은 null이 아니라 빈 문자열로 보내야 서버가 "변경 없음"으로 보지 않는다.
     const after = flavorRow('메모리 최적화')
     expect(
@@ -134,7 +134,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     expect(within(after).getByText('—')).toBeInTheDocument()
   })
 
-  test('마지막 ACTIVE 프리셋이 아니면 경고 없이 은퇴시킨다', async () => {
+  test('마지막 ACTIVE 사양이 아니면 경고 없이 은퇴시킨다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
@@ -143,23 +143,23 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
       within(await findFlavorRow('메모리 최적화')).getByRole('button', { name: '은퇴' }),
     )
 
-    const dialog = await screen.findByRole('dialog', { name: '사양 프리셋 은퇴' })
+    const dialog = await screen.findByRole('dialog', { name: '사양 은퇴' })
     expect(within(dialog).queryByText(/마지막 활성 사양입니다/)).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
-    expect(await screen.findByText('사양 프리셋을 은퇴시켰습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 은퇴시켰습니다.')).toBeInTheDocument()
     expect(within(flavorRow('메모리 최적화')).getByText('은퇴')).toBeInTheDocument()
   })
 
-  test('프리셋을 추가하고, 이름이 중복되면 422 필드 오류를 보여준다', async () => {
+  test('사양을 추가하고, 이름이 중복되면 422 필드 오류를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
 
     await findFlavorRow('컴퓨팅 최적화')
-    await user.click(screen.getByRole('button', { name: '프리셋 추가' }))
+    await user.click(screen.getByRole('button', { name: '사양 추가' }))
 
-    let dialog = await screen.findByRole('dialog', { name: '사양 프리셋 추가' })
+    let dialog = await screen.findByRole('dialog', { name: '사양 추가' })
     // 중복 이름 → 서버 422가 이름 필드에 붙는다.
     await user.type(within(dialog).getByLabelText('이름'), 'highcpu')
     await user.type(within(dialog).getByLabelText('표시명'), '컴퓨팅 최적화 사본')
@@ -169,7 +169,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     ).toBeInTheDocument()
 
     // 이름을 바꾸면 추가된다.
-    dialog = screen.getByRole('dialog', { name: '사양 프리셋 추가' })
+    dialog = screen.getByRole('dialog', { name: '사양 추가' })
     const name = within(dialog).getByLabelText('이름')
     await user.clear(name)
     await user.type(name, 'xlarge')
@@ -178,7 +178,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     await user.type(vcpu, '8')
     await user.click(within(dialog).getByRole('button', { name: '추가' }))
 
-    expect(await screen.findByText('사양 프리셋을 추가했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 추가했습니다.')).toBeInTheDocument()
     const created = flavorRow('컴퓨팅 최적화 사본')
     expect(within(created).getByText('xlarge')).toBeInTheDocument()
     expect(within(created).getByText('8 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
@@ -190,24 +190,24 @@ describe('관리자 OS 이미지·사양 관리 — 사양 프리셋', () => {
     renderApp('/admin/os-images')
 
     await findFlavorRow('컴퓨팅 최적화')
-    await user.click(screen.getByRole('button', { name: '프리셋 추가' }))
+    await user.click(screen.getByRole('button', { name: '사양 추가' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '사양 프리셋 추가' })
+    const dialog = await screen.findByRole('dialog', { name: '사양 추가' })
     await user.type(within(dialog).getByLabelText('이름'), 'Big_Flavor')
     await user.type(within(dialog).getByLabelText('표시명'), '대용량')
     await user.click(within(dialog).getByRole('button', { name: '추가' }))
 
     expect(
-      within(dialog).getByText(/프리셋 이름은 소문자·숫자·하이픈만 사용해 주세요/),
+      within(dialog).getByText(/사양 이름은 소문자·숫자·하이픈만 사용해 주세요/),
     ).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게는 프리셋 변경 액션이 보이지 않는다', async () => {
+  test('SYS_MANAGER에게는 사양 변경 액션이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/os-images')
 
     const basic = await findFlavorRow('컴퓨팅 최적화')
-    expect(screen.queryByRole('button', { name: '프리셋 추가' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '사양 추가' })).not.toBeInTheDocument()
     expect(within(basic).queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
     expect(within(basic).queryByRole('button', { name: '은퇴' })).not.toBeInTheDocument()
   })

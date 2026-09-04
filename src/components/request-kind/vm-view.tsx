@@ -251,7 +251,7 @@ export const vmRequestView: RequestKindView = {
     <>
       <Field label="워크스페이스">{data.workspaceName}</Field>
       <Field label="기관">{data.orgName}</Field>
-      {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·프리셋도 이름이
+      {/* 이름은 응답이 실어 준다 — 카탈로그에서 내려간 OS·사양도 이름이
           남으므로 공개 목록을 따로 뒤질 필요가 없다. */}
       <Field label="OS">{data.vm?.imageName ?? '—'}</Field>
       <Field label="사양">

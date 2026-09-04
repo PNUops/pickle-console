@@ -87,19 +87,19 @@ describe('신청 상세', () => {
     expect(await within(flavor).findByText('기본형')).toBeInTheDocument()
   })
 
-  // 은퇴한 프리셋·이미지는 공개 카탈로그에 없다. 예전에는 그 행을 찾지 못해 '알 수 없는
-  // 프리셋'이라고만 적었지만, 이제 응답이 이름을 실어 주므로 신청자는 자기가 무엇을
+  // 은퇴한 사양·이미지는 공개 카탈로그에 없다. 예전에는 그 행을 찾지 못해 '알 수 없는
+  // 사양'이라고만 적었지만, 이제 응답이 이름을 실어 주므로 신청자는 자기가 무엇을
   // 신청했는지 그대로 읽을 수 있다.
   test('카탈로그에서 내려간 사양도 응답이 실어 준 이름으로 보여준다', async () => {
     const target = requestStore.find((r) => r.id === uuid(101))!
     target.vm!.flavorId = uuid(9)
-    target.vm!.flavorName = '구형 프리셋'
+    target.vm!.flavorName = '구형 사양'
     renderRequests(`/console/requests/${uuid(101)}`)
 
     await screen.findByRole('heading', { name: '신청 상세' })
     const flavor = screen.getByText('사양').closest('div')!
-    expect(await within(flavor).findByText('구형 프리셋')).toBeInTheDocument()
-    expect(screen.queryByText('알 수 없는 프리셋')).not.toBeInTheDocument()
+    expect(await within(flavor).findByText('구형 사양')).toBeInTheDocument()
+    expect(screen.queryByText('알 수 없는 사양')).not.toBeInTheDocument()
   })
 
   test('가리키는 사양이 없는 신청은 직접 입력으로 읽힌다', async () => {
