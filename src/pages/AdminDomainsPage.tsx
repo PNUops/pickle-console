@@ -371,9 +371,9 @@ function DomainDrawerContent({
 
       {domain.releasedAt && (
         <Alert variant="info">
-          해제된 뒤 이 VM에 이름만 예약된 상태입니다 — 트래픽은 받지 않습니다. 예약이
-          만료되면 이름이 자동으로 회수되고, 그 전에는 소유 워크스페이스가 같은 이름으로 다시
-          연결할 수 있습니다. 이름을 먼저 풀어야 한다면 아래 강제 해제를 씁니다.
+          트래픽은 받지 않고 이름만 예약되어 있습니다. 예약이 만료되면 이름이 자동으로
+          회수되고, 그 전에는 소유 워크스페이스가 같은 이름으로 다시 연결할 수 있습니다. 이름을
+          먼저 풀어야 한다면 아래 강제 해제를 씁니다.
         </Alert>
       )}
 
@@ -386,7 +386,7 @@ function DomainDrawerContent({
         )}
         {routes.isSuccess && !route && routesTruncated && (
           <Alert variant="warning">
-            라우트가 많아 일부만 조회했습니다 — 이 도메인의 라우트는 표시하지 못할 수
+            라우트가 많아 일부만 조회했습니다. 이 도메인의 라우트는 표시하지 못했을 수
             있습니다.
           </Alert>
         )}
@@ -429,11 +429,6 @@ function DomainDrawerContent({
       {canIntervene && (
         <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
           <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
-          <p className="text-sm text-neutral-500">
-            커스텀 도메인 소유권 재검증과 도메인 강제 해제(라우트 제거·인증서 폐기·이름
-            즉시 회수)를 수행합니다. 기관 계층은 자기가 운영하는 기관의 도메인에만
-            적용됩니다.
-          </p>
           <div className="flex flex-wrap gap-2">
             {domain.kind === 'CUSTOM' && <ReverifyButton domain={domain} onResult={setNotice} />}
             <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>

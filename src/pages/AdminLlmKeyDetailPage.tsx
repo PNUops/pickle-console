@@ -238,9 +238,7 @@ export function AdminLlmKeyDetailPage() {
               정확한 신청 보기
             </Link>
           }
-        >
-          이 키를 생성한 승인 신청과 검토 결과를 확인할 수 있습니다.
-        </MessageBar>
+        />
       )}
 
       {limitsOpen && (
@@ -615,7 +613,7 @@ function OpenRouterBindingField({
   if (accounts.length === 1) {
     return (
       <MessageBar title="사업 계정 자동 선택">
-        {accounts[0].name}에 자동으로 연결됩니다. 한 번 정해지면 바꿀 수 없습니다.
+        {accounts[0].name}에 연결됩니다. 한 번 정해지면 바꿀 수 없습니다.
       </MessageBar>
     )
   }

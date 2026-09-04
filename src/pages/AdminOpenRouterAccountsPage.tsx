@@ -68,7 +68,7 @@ export function AdminOpenRouterAccountsPage() {
       <PageHeader
         eyebrow="리소스"
         title="OpenRouter 사업 계정"
-        description="기관이 사업 단위로 쓰는 OpenRouter 결제 계정과 관리용 키 상태입니다. 계정끼리 잔액이나 사용액을 합치지 않습니다."
+        description="기관이 사업 단위로 쓰는 OpenRouter 결제 계정과 관리용 키 상태입니다."
         actions={
           canManage ? (
             <Button onClick={() => setCreateOpen(true)}>사업 계정 등록</Button>
@@ -194,8 +194,7 @@ function CreateAccountModal({
       <form className="space-y-4" onSubmit={submit} noValidate>
         {error && <MessageBar variant="danger">{error}</MessageBar>}
         <p className="text-sm text-foreground-secondary">
-          사업 계정은 결제가 이루어지는 단위입니다. 관리용 키는 계정을 만든 뒤 따로
-          등록하고 확인합니다.
+          관리용 키는 계정을 만든 뒤 따로 등록하고 확인합니다.
         </p>
         <FormField label="기관" required error={submitted && !orgId ? '기관을 선택해 주세요.' : undefined}>
           {fixedOrgId ? (

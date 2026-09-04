@@ -42,8 +42,7 @@ export function AdminTerminalSessionsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">웹 터미널 세션</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          현재 진행 중인 웹 터미널 세션입니다. 터미널 내용은 어디에도 기록되지 않으며,
-          세션 수명주기만 감사에 남습니다.
+          터미널 내용은 어디에도 기록되지 않으며, 세션 수명주기만 감사에 남습니다.
         </p>
       </div>
 

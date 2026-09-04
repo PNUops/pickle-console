@@ -133,7 +133,7 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
         </div>
         {credits.keysError && (
           <MessageBar variant="warning" title="최근 key 대사 실패">
-            {keysErrorLabel}. 마지막 성공 시각과 credits 관측은 서로 독립입니다.
+            {keysErrorLabel}.
           </MessageBar>
         )}
         <DescriptionList
@@ -227,7 +227,7 @@ export function AccountAllocationSection({
             ? [
                 {
                   term: '창마다 다시 채워지는 몫',
-                  description: `${formatUsd(judgement.windowCommitment)} — 배정 합계에 포함되어 있고 리셋 창마다 한도가 되살아납니다.`,
+                  description: `${formatUsd(judgement.windowCommitment)}. 배정 합계에 포함되어 있고 리셋 창마다 한도가 되살아납니다.`,
                 },
               ]
             : []),
@@ -235,7 +235,7 @@ export function AccountAllocationSection({
             ? [
                 {
                   term: '발급 대기',
-                  description: `${allocation.awaitingProvisionKeyCount}개 — 승인은 났고 아직 발급되지 않았습니다. 배정 합계에는 이미 들어 있습니다.`,
+                  description: `${allocation.awaitingProvisionKeyCount}개. 승인은 났고 아직 발급되지 않았으며 배정 합계에는 이미 들어 있습니다.`,
                 },
               ]
             : []),
@@ -243,7 +243,7 @@ export function AccountAllocationSection({
             ? [
                 {
                   term: '사용액 미보고',
-                  description: `${allocation.usageUnreportedKeyCount}개 — 그만큼의 남은 배정은 실측이 아니라 한도 전액으로 셉니다.`,
+                  description: `${allocation.usageUnreportedKeyCount}개. 그만큼의 남은 배정은 실측이 아니라 한도 전액으로 셉니다.`,
                 },
               ]
             : []),
@@ -297,8 +297,7 @@ export function AllocationWarning({
           </li>
           {judgement.committed !== judgement.remaining ? (
             <li className="text-foreground-secondary">
-              배정 합계는 {formatUsd(judgement.committed)}입니다. 이미 쓴 금액은 잔액에서도
-              빠져 있으므로 잔액과 견주는 쪽은 남은 배정입니다.
+              배정 합계는 {formatUsd(judgement.committed)}입니다.
             </li>
           ) : null}
           {judgement.windowCommitment > 0 ? (

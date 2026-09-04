@@ -120,7 +120,7 @@ function DemandSection({
         <div>
           <CardTitle>수요 추이</CardTitle>
           <p className="type-caption mt-1 text-foreground-muted">
-            KST 달력일 기준 요청과 token을 7·30·90일 고정 구간으로 비교합니다.
+            KST 달력일 기준입니다.
           </p>
         </div>
         <div role="group" aria-label="LLM 사용량 조회 기간" className="flex flex-wrap gap-1">
@@ -183,13 +183,12 @@ function DemandSection({
 
         {quality.totalTokens > 0 && quality.estimatedTokens == null && (
           <MessageBar variant="warning" title="추정 token 비율을 계산할 수 없습니다">
-            선택 구간에 원본 event가 보존되지 않은 bucket이 있어 추정 token 합과 비율은 UNKNOWN입니다.
+            선택 구간에 원본 event가 보존되지 않은 bucket이 있습니다.
           </MessageBar>
         )}
         {quality.estimatedTokenRatio != null && quality.estimatedTokenRatio > 0 && (
           <MessageBar variant="warning" title="일부 token은 추정값입니다">
-            {tokens(quality.estimatedTokens ?? 0)} · 전체 token의 {percent(quality.estimatedTokenRatio)}가
-            Gateway 추정값입니다. 수요 수치의 해석 조건으로만 사용합니다.
+            {tokens(quality.estimatedTokens ?? 0)} · 전체 token의 {percent(quality.estimatedTokenRatio)}
           </MessageBar>
         )}
       </CardContent>
@@ -236,7 +235,7 @@ function ConsumersSection({
       <CardHeader>
         <CardTitle>주요 소비처</CardTitle>
         <p className="type-caption mt-1 text-foreground-muted">
-          선택 범위에서 API가 정한 한 단계만 표시합니다. 행을 따라 기관·워크스페이스·key로 좁힙니다.
+          행을 따라 기관·워크스페이스·key로 좁힙니다.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -346,9 +345,6 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
     <Card>
       <CardHeader>
         <CardTitle>한도 검토</CardTitle>
-        <p className="type-caption mt-1 text-foreground-muted">
-          API가 정렬한 순서를 유지합니다. 실제 소진 또는 quota·credit 소진 기록만 danger로 표시합니다.
-        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {data.limitReview.items.length === 0 ? (
@@ -439,7 +435,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
         )}
         {data.limitReview.truncated && (
           <MessageBar>
-            {data.limitReview.totalItems.toLocaleString('ko-KR')}개 중 API가 정렬한 상위{' '}
+            {data.limitReview.totalItems.toLocaleString('ko-KR')}개 중 상위{' '}
             {data.limitReview.items.length.toLocaleString('ko-KR')}개만 표시합니다.
           </MessageBar>
         )}
@@ -490,9 +486,6 @@ function QualitySection({
         <CardHeader className="flex min-w-0 flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>데이터 신선도·신뢰도</CardTitle>
-            <p className="type-caption mt-1 text-foreground-muted">
-              위 수치를 만든 자료가 언제 들어왔고 빠진 것은 없는지 확인합니다.
-            </p>
           </div>
           <Link to={adminPaths.llmStatus(activeOrgId)} className="text-sm text-brand-foreground hover:underline">
             LLM 서비스 상태 보기
@@ -533,7 +526,7 @@ function QualitySection({
           <CardHeader>
             <CardTitle>사용량 전달 진단</CardTitle>
             <p className="type-caption mt-1 text-foreground-muted">
-              시스템 관리자에게만 보이는 전체 전송 대기와 유실 수치입니다.
+              기관 범위와 무관한 플랫폼 전체 수치입니다.
             </p>
           </CardHeader>
           <CardContent>

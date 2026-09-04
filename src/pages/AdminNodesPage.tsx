@@ -76,7 +76,7 @@ export function AdminNodesPage() {
       <PageHeader
         eyebrow="운영"
         title="노드/IP"
-        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다. 수치는 30초 주기 상태 폴러가 갱신합니다."
+        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다."
       />
 
       <Tabs
@@ -287,8 +287,8 @@ function NodeStatusModal({
     >
       <div className="space-y-3">
         <p className="text-sm text-neutral-600">
-          배치는 ACTIVE 노드만 선택합니다 — 점검 중/오프라인으로 전환하면 신규 VM
-          배치에서 제외되며, 기존 게스트는 영향받지 않습니다.
+          점검 중·오프라인으로 전환하면 신규 VM 배치에서 제외되고, 기존 게스트는 영향받지
+          않습니다.
         </p>
         <Select
           aria-label="노드 상태"
