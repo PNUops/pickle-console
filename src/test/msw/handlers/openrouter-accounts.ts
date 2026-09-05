@@ -157,7 +157,7 @@ function initialAccounts(): Account[] {
       id: uuid(412),
       orgId: uuid(2),
       orgName: '테스트 기관',
-      name: '테스트 상용 모델 사업',
+      name: '테스트 유료 모델 사업',
       program: null,
       contact: null,
       status: 'ACTIVE',
