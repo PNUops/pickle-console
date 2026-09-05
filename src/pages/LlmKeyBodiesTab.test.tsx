@@ -93,6 +93,9 @@ describe('기록된 본문 탭', () => {
     // 문장이 줄바꿈을 걸쳐 있어 getByText 가 요소 단위로 물지 못한다.
     expect(drawer.textContent).toContain('역할별로 나눌 수 없어 한 덩어리로')
     expect(drawer.textContent).toContain('64 KiB를 넘어')
+    // 잘렸다는 사실은 한 번만 나온다. 설명 문장이 그것을 되풀이하면 한 화면이
+    // 같은 말을 두 번 하게 되고, 그 형태로 한 번 배포된 적이 있다.
+    expect(drawer.textContent?.match(/앞부분만/g) ?? []).toHaveLength(1)
   })
 
   test('읽을 수 없는 기록은 빈 것과 다르게 말한다', async () => {
