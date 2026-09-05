@@ -62,7 +62,7 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
   test('SYS 기관 scope는 목록과 deep link에 유지되고 다른 기관 상세는 렌더하지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     const list = renderApp(`/admin/llm/accounts?org=${uuid(2)}`)
-    expect(await screen.findByRole('link', { name: '테스트 상용 모델 사업' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '테스트 유료 모델 사업' })).toHaveAttribute(
       'href',
       `/admin/llm/accounts/${uuid(412)}?org=${uuid(2)}`,
     )
@@ -73,7 +73,7 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없습니다.',
     )
-    expect(screen.queryByRole('heading', { name: '테스트 상용 모델 사업' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '테스트 유료 모델 사업' })).not.toBeInTheDocument()
   })
 
   test('계정 등록은 정확한 이름과 전역 재인증을 요구한다', async () => {
@@ -272,7 +272,7 @@ describe('OpenRouter account credits 관측', () => {
       expect(screen.getByText('OpenRouter 사업 계정 목록 불러오는 중')).toBeInTheDocument()
     })
     releaseSecond()
-    expect(await screen.findByText('테스트 상용 모델 사업')).toBeInTheDocument()
+    expect(await screen.findByText('테스트 유료 모델 사업')).toBeInTheDocument()
   })
 })
 

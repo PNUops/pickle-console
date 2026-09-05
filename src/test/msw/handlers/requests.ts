@@ -66,6 +66,7 @@ function llmKeyRequest(): Omit<
       useCampusModels: true,
       useCommercialModels: false,
       grantedCreditAllowedModels: [],
+      grantedCreditDeniedModels: [],
     },
   }
 }
@@ -236,6 +237,7 @@ export const requestHandlers: RequestHandler[] = [
               useCampusModels: true,
               useCommercialModels: false,
               grantedCreditAllowedModels: [],
+              grantedCreditDeniedModels: [],
             }
           : null,
       vm: body.type !== 'VM' ? null : {

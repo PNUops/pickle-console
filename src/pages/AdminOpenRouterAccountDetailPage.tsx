@@ -209,11 +209,18 @@ export function AdminOpenRouterAccountDetailPage() {
           { term: '사업', description: account.program ?? '입력하지 않음' },
           { term: '담당자', description: account.contact ?? '입력하지 않음' },
           {
-            term: '승인 기본 모델 목록',
+            term: '승인 기본 허용 목록',
             description:
               account.defaultCreditAllowedModels.length === 0
                 ? '없음. 승인 폼이 비어서 열립니다'
                 : account.defaultCreditAllowedModels.join(', '),
+          },
+          {
+            term: '승인 기본 차단 목록',
+            description:
+              account.defaultCreditDeniedModels.length === 0
+                ? '없음. 승인 폼이 비어서 열립니다'
+                : account.defaultCreditDeniedModels.join(', '),
           },
           { term: '연결된 키', description: `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
           { term: '관리용 키', description: account.credentialAvailable ? '사용 가능' : '사용 불가' },
@@ -329,7 +336,11 @@ function EditAccountModal({
   const [defaultModels, setDefaultModels] = useState(
     formatCreditModels(account.defaultCreditAllowedModels),
   )
+  const [defaultDeniedModels, setDefaultDeniedModels] = useState(
+    formatCreditModels(account.defaultCreditDeniedModels),
+  )
   const [modelsError, setModelsError] = useState<string | null>(null)
+  const [deniedError, setDeniedError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const save = useMutation({
     mutationFn: (body: UpdateOpenRouterAccount) => updateOpenRouterAccount(account.id, body),
@@ -340,15 +351,19 @@ function EditAccountModal({
     event.preventDefault()
     if (!name.trim()) return
     const parsedModels = parseCreditModels(defaultModels)
-    const invalid = creditModelsError(parsedModels)
+    const parsedDeniedModels = parseCreditModels(defaultDeniedModels)
+    const invalid = creditModelsError(parsedModels, 'ALLOW')
+    const deniedInvalid = creditModelsError(parsedDeniedModels, 'DENY')
     setModelsError(invalid)
-    if (invalid) return
+    setDeniedError(deniedInvalid)
+    if (invalid || deniedInvalid) return
     save.mutate({
       name: name.trim(),
       program: program.trim() || null,
       contact: contact.trim() || null,
       status,
       defaultCreditAllowedModels: parsedModels,
+      defaultCreditDeniedModels: parsedDeniedModels,
     })
   }
   return (
@@ -363,9 +378,9 @@ function EditAccountModal({
           <FormField label="담당자"><Input value={contact} onChange={(event) => setContact(event.target.value)} /></FormField>
         </div>
         <FormField
-          label="승인 화면 기본 모델 목록"
+          label="승인 화면 기본 허용 목록"
           error={modelsError ?? undefined}
-          description="한 줄에 하나씩 적습니다. 이 계정으로 금액 축을 승인할 때 폼에 미리 채워지며, 승인자가 고칠 수 있습니다. 여기를 바꿔도 이미 발급된 키는 그대로입니다."
+          description="한 줄에 하나씩 적습니다. 이 계정으로 유료 모델을 승인할 때 폼에 미리 채워지며, 승인자가 고칠 수 있습니다. 여기를 바꿔도 이미 발급된 키는 그대로입니다."
         >
           <Textarea
             rows={4}
@@ -373,6 +388,19 @@ function EditAccountModal({
             value={defaultModels}
             onChange={(event) => setDefaultModels(event.target.value)}
             placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
+          />
+        </FormField>
+        <FormField
+          label="승인 화면 기본 차단 목록"
+          error={deniedError ?? undefined}
+          description="허용 목록과 함께 승인 폼에 채워집니다. 차단은 허용을 이깁니다."
+        >
+          <Textarea
+            rows={3}
+            aria-invalid={deniedError != null}
+            value={defaultDeniedModels}
+            onChange={(event) => setDefaultDeniedModels(event.target.value)}
+            placeholder={'openai/*-pro'}
           />
         </FormField>
         <FormField label="상태" description="활성 또는 미만료 key가 연결되어 있으면 보관할 수 없습니다.">

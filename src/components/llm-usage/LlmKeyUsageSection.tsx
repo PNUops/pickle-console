@@ -356,7 +356,7 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
         ratio={creditUsage != null && creditLimit > 0 ? creditUsage / creditLimit : null}
         note={
           creditLimit === 0
-            ? '금액 한도가 없어 상용 모델을 쓸 수 없습니다.'
+            ? '금액 한도가 없어 유료 모델을 쓸 수 없습니다.'
             : budget.creditDepletionForecast
               ? `이 속도면 ${budget.creditDepletionForecast}에 한도에 도달합니다.`
               : creditUsage == null

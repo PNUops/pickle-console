@@ -1,4 +1,5 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
@@ -89,5 +90,46 @@ describe('사업 계정 상세의 배정 현황', () => {
     const section = (await screen.findByRole('heading', { name: '배정 현황' })).closest('section')!
     expect(within(section).getByText(/창마다 다시 채워지는 몫/)).toBeInTheDocument()
     expect(within(section).getByText(/리셋 창마다 한도가 되살아납니다/)).toBeInTheDocument()
+  })
+})
+
+describe('사업 계정의 승인 기본 목록', () => {
+  /**
+   * 승인 폼이 두 목록을 함께 프리필하므로 계정도 둘을 함께 든다. 한쪽만 저장하면
+   * 승인 화면에서 차단이 조용히 빠진 채로 열린다.
+   */
+  test('허용과 차단 기본값을 각각 저장한다', async () => {
+    const user = userEvent.setup()
+    renderDetail(uuid(410))
+
+    await user.click(await screen.findByRole('button', { name: '정보 변경' }))
+    const dialog = within(
+      screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
+    )
+    await user.type(dialog.getByLabelText('승인 화면 기본 차단 목록'), 'openai/*-pro')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => {
+      const account = openRouterAccountStore.find((item) => item.id === uuid(410))!
+      expect(account.defaultCreditDeniedModels).toEqual(['openai/*-pro'])
+      expect(account.defaultCreditAllowedModels).toEqual(['openai/*'])
+    })
+  })
+
+  test('차단 기본값이 틀리면 저장하지 않는다', async () => {
+    const user = userEvent.setup()
+    renderDetail(uuid(410))
+
+    await user.click(await screen.findByRole('button', { name: '정보 변경' }))
+    const dialog = within(
+      screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
+    )
+    // 앞 테스트가 남긴 값 위에 적으면 무엇을 검사하는지 흐려진다.
+    const denied = dialog.getByLabelText('승인 화면 기본 차단 목록')
+    await user.clear(denied)
+    await user.type(denied, 'openai/**')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    expect(await dialog.findByText(/형식이 아닙니다/)).toBeInTheDocument()
   })
 })

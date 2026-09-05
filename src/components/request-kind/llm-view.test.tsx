@@ -40,6 +40,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
       useCampusModels: true,
       useCommercialModels: false,
       grantedCreditAllowedModels: [],
+      grantedCreditDeniedModels: [],
       ...spec,
     },
     status: 'SUBMITTED',
@@ -78,6 +79,7 @@ function renderDetail(spec: Partial<NonNullable<RequestDetail['llmKey']>> = {}) 
           useCampusModels: true,
           useCommercialModels: false,
           grantedCreditAllowedModels: body.llmKey?.grantedCreditAllowedModels ?? [],
+          grantedCreditDeniedModels: body.llmKey?.grantedCreditDeniedModels ?? [],
         },
         review: {
           reviewerId: orgAdminUser.id,
@@ -180,6 +182,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
           grantedCreditLimit: null,
           grantedCreditLimitReset: null,
           grantedCreditAllowedModels: [],
+          grantedCreditDeniedModels: [],
           openrouterAccountId: null,
         },
       },
@@ -232,12 +235,12 @@ describe('LLM API 키 신청 — 승인 폼', () => {
 
     // 프리필은 계정을 고른 결과이지 신청자의 희망값이 아니다 — 채워도 검토가
     // 사라지지 않는 유일한 칸이라서 이 칸만 미리 찬다.
-    const field = screen.getByLabelText('허용할 상용 모델')
+    const field = screen.getByLabelText('허용할 유료 모델')
     await waitFor(() => expect(field).toHaveValue('openai/*'))
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText(/허용 상용 모델 openai\/\*/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/허용 유료 모델 openai\/\*/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
@@ -253,7 +256,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    const field = screen.getByLabelText('허용할 상용 모델')
+    const field = screen.getByLabelText('허용할 유료 모델')
     await waitFor(() => expect(field).toHaveValue('openai/*'))
 
     await user.clear(field)
@@ -269,12 +272,12 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     })
   })
 
-  test('금액 없이 모델 목록만 적으면 확인 모달 앞에서 걸린다', async () => {
+  test('금액 없이 허용 목록만 적으면 확인 모달 앞에서 걸린다', async () => {
     const user = userEvent.setup()
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await user.type(screen.getByLabelText('허용할 상용 모델'), 'openai/*')
+    await user.type(screen.getByLabelText('허용할 유료 모델'), 'openai/*')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
@@ -283,14 +286,42 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(approved).toHaveLength(0)
   })
 
-  test('자체 서빙 접두를 적으면 상용 목록이 아니라고 막는다', async () => {
+  // 차단 목록은 반대다. 금액이 0이어도 "이 키는 그 모델을 못 쓴다"가 참이고, 나중에
+  // 누가 금액을 채워도 참으로 남는다. 화면이 여기서 막으면 승인자의 거부가 돈이 안
+  // 드는 바로 그 순간에 사라졌다가 예산이 붙는 순간 열린다. 서버는 받는 값이다.
+  test('금액이 없어도 차단 목록만 적어 승인할 수 있다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*-pro')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    // 되돌릴 수 없는 부여 직전 마지막 화면이 무엇을 막는지 말해야 한다. 본문만
+    // 단언하면 화면이 한 줄도 안 그려도 초록이다.
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByText(/차단 유료 모델 openai\/\*-pro/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditLimit: null,
+      grantedCreditDeniedModels: ['openai/*-pro'],
+    })
+    // 승인 뒤 결과 카드도 마찬가지다. 승인자가 자기 결정을 되읽을 자리가 없으면
+    // 반영됐는지 확인할 방법이 없다.
+    expect(screen.getByText('차단 유료 모델')).toBeInTheDocument()
+    expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
+  })
+
+  test('자체 서빙 접두를 적으면 유료 모델 목록이 아니라고 막는다', async () => {
     const user = userEvent.setup()
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    const field = screen.getByLabelText('허용할 상용 모델')
+    const field = screen.getByLabelText('허용할 유료 모델')
     await user.clear(field)
     await user.type(field, 'pickle-general')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
@@ -389,6 +420,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedCreditLimit: null,
       grantedCreditLimitReset: null,
       grantedCreditAllowedModels: [],
+      grantedCreditDeniedModels: [],
       openrouterAccountId: null,
     })
 
@@ -433,22 +465,120 @@ describe('유료 모델 선택기', () => {
 
     // 이 선택기가 있는 이유는 이름을 대신 쳐 주는 것이 아니라 가격을 판단하는
     // 자리에 갖다 놓는 것이다. 값이 안 보이면 자유 입력과 다를 것이 없다.
-    const expensive = await screen.findByText('openai/o1-pro')
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    const expensive = picker.getByText('openai/o1-pro')
     expect(expensive.parentElement).toHaveTextContent('출력 $600 / 1M')
 
-    const row = expensive.closest('li')
-    await user.click(within(row as HTMLElement).getByRole('button', { name: '추가' }))
+    await user.click(picker.getByRole('button', { name: 'openai/o1-pro 허용 목록에 추가' }))
 
     await waitFor(() =>
-      expect(screen.getByLabelText('허용할 상용 모델')).toHaveValue('openai/*\nopenai/o1-pro'),
+      expect(screen.getByLabelText('허용할 유료 모델')).toHaveValue('openai/*\nopenai/o1-pro'),
     )
+  })
+
+  // 같은 행에서 두 목록으로 갈라 넣는다. 갈래가 하나였을 때는 차단할 모델을
+  // 손으로 옮겨 적어야 했고, 옮겨 적는 자리가 곧 오타 자리다.
+  test('같은 행에서 차단 목록으로도 넣는다', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    await user.click(picker.getByRole('button', { name: 'openai/o1-pro 차단 목록에 추가' }))
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('차단할 유료 모델')).toHaveValue('openai/o1-pro'),
+    )
+    // 두 입력란은 서로를 건드리지 않는다.
+    expect(screen.getByLabelText('허용할 유료 모델')).toHaveValue('openai/*')
+  })
+
+  // 개수는 판정 함수가 센다. 접두만 비교하면 변형이 빠진 수를 보여 주고,
+  // 승인자는 자기가 무엇을 여는지 모른 채 고른다.
+  test('패턴 제안이 잡는 개수를 변형까지 세어 보여 준다', async () => {
+    const user = userEvent.setup()
+    openRouterCatalogueStore.response = {
+      ...openRouterCatalogueStore.response,
+      models: [
+        { id: 'openai/gpt-5-pro', name: 'GPT-5 Pro', promptPricePerMillion: 10, completionPricePerMillion: 120, contextLength: 400000 },
+        { id: 'openai/gpt-5-pro:batch', name: 'GPT-5 Pro batch', promptPricePerMillion: 5, completionPricePerMillion: 60, contextLength: 400000 },
+        { id: 'openai/gpt-5-nano', name: 'GPT-5 nano', promptPricePerMillion: 0.05, completionPricePerMillion: 0.2, contextLength: 400000 },
+        { id: 'anthropic/claude-opus-pro', name: 'Claude Opus Pro', promptPricePerMillion: 15, completionPricePerMillion: 75, contextLength: 200000 },
+      ],
+    }
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    await user.click(picker.getByRole('button', { name: 'openai/gpt-5-pro 패턴 제안' }))
+
+    // 티어 패턴은 openai/*-pro 이고, 반값 변형까지 둘을 잡는다. 벤더가 다른
+    // claude-opus-pro 는 안 잡는다.
+    const tier = picker.getByText('openai/*-pro').parentElement as HTMLElement
+    expect(tier).toHaveTextContent('티어. 이 패턴은 지금 2개를 잡습니다')
+    const family = picker.getByText('openai/gpt-5-*').parentElement as HTMLElement
+    expect(family).toHaveTextContent('계열. 이 패턴은 지금 3개를 잡습니다')
+
+    await user.click(picker.getByRole('button', { name: 'openai/*-pro 차단 목록에 추가' }))
+    await waitFor(() =>
+      expect(screen.getByLabelText('차단할 유료 모델')).toHaveValue('openai/*-pro'),
+    )
+  })
+
+  // 승인자가 아는 것은 자기가 친 문자열뿐이다. 그 문자열이 카탈로그에서 무엇을
+  // 여는지, 그중 제일 비싼 것이 얼마인지가 예산 판단의 전부다.
+  test('미리보기가 쓸 수 있는 모델과 최고가를 말한다', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+
+    // 계정을 고르기 전에는 두 목록이 비어 있고, 그때는 카탈로그 전체가 대상이다.
+    expect(await screen.findByText(/제한이 없습니다. 지금 카탈로그 3개 전부/)).toBeInTheDocument()
+    expect(screen.getByText(/최고가는 openai\/o1-pro, 백만 토큰당 출력 \$600/)).toBeInTheDocument()
+
+    // 계정 기본값 openai/* 가 채워지면 별칭 하나가 빠진다.
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    await waitFor(() =>
+      expect(screen.getByText(/쓸 수 있는 유료 모델 2개/)).toBeInTheDocument(),
+    )
+
+    // 차단이 최고가를 걷어내면 최고가 문장이 그다음 모델로 내려간다.
+    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*-pro')
+    await waitFor(() =>
+      expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument(),
+    )
+    expect(screen.getByText(/차단 목록이 걷어낸 모델 1개: openai\/o1-pro/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/최고가는 openai\/gpt-4o-mini, 백만 토큰당 출력 \$0.6/),
+    ).toBeInTheDocument()
+  })
+
+  // 틀린 항목을 빼고 세면 허용은 넓게, 차단은 좁게 나온다. 그 수를 보여 주느니
+  // 세지 않는다.
+  test('목록이 틀리면 미리보기를 멈춘다', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*gpt*')
+
+    expect(await screen.findByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
   })
 
   test('별칭은 벤더 프리픽스에 안 덮인다고 표시한다', async () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    const alias = await screen.findByText('~anthropic/claude-sonnet-latest')
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    const alias = picker.getByText('~anthropic/claude-sonnet-latest')
     expect(alias.parentElement).toHaveTextContent('최신 모델을 따라가는 별칭')
   })
 
@@ -462,8 +592,8 @@ describe('유료 모델 선택기', () => {
 
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    await user.clear(screen.getByLabelText('허용할 상용 모델'))
-    await user.type(screen.getByLabelText('허용할 상용 모델'), 'openai/gpt-4o-mini')
+    await user.clear(screen.getByLabelText('허용할 유료 모델'))
+    await user.type(screen.getByLabelText('허용할 유료 모델'), 'openai/gpt-4o-mini')
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
