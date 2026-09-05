@@ -37,6 +37,9 @@ describe('LLM API 키 상세', () => {
 
     await screen.findByText('쓸 수 있는 유료 모델')
     expect(screen.getByText('openai/*')).toBeInTheDocument()
+    // 허용 줄만 읽으면 openai/* 안의 pro 계열도 쓸 수 있다고 믿게 된다.
+    expect(screen.getByText('쓸 수 없는 유료 모델')).toBeInTheDocument()
+    expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
   })
 
   test('마지막 사용 시각이 늦게 반영될 수 있다는 것을 말한다', async () => {

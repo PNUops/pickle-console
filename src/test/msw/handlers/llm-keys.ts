@@ -46,8 +46,10 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 5,
       creditAxisConnected: true,
       // 목록이 걸린 키를 하나는 들고 있어야 화면이 "제한 없음"만 보여주고
-      // 지나가지 않는다.
+      // 지나가지 않는다. 차단이 허용을 이기므로 소유자 화면은 둘을 다 보여 줘야
+      // 하고, 그러려면 픽스처가 둘을 다 들어야 한다.
       creditAllowedModels: ['openai/*'],
+      creditDeniedModels: ['openai/*-pro'],
       revokedAt: null,
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -71,6 +73,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 0,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
@@ -94,6 +97,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 0,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
       revokedAt: null,
       workspaceId: uuid(14),
       workspaceName: '데이터베이스 실습',
@@ -117,6 +121,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 0,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
       revokedAt: '2026-07-31T09:00:00+09:00',
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -140,6 +145,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 0,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
@@ -165,6 +171,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 0,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
       revokedAt: null,
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -268,6 +275,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     // 금액 축이 열린 관리자 키의 기본 모습. 목록이 걸린 모습은 아래
     // active-admin-key 가 들고 있고 AdminLlmKeyDetailPage 테스트가 읽는다.
     creditAllowedModels: [] as string[],
+    creditDeniedModels: [] as string[],
     creditUsage: 2.5,
     creditLimitRemaining: 2.5,
     creditUsageAt: '2026-08-31T00:27:30+09:00',
@@ -289,6 +297,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       lastUsedAt: null,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
     },
     {
       ...base,
@@ -299,8 +308,10 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       openrouterAccountId: uuid(410),
       openrouterAccountName: 'AI 교육 사업 A',
       // 울타리가 걸린 키가 픽스처에 하나는 있어야, 걸린 키를 "제한 없음"으로
-      // 보여 주는 회귀와 SYS_MANAGER 게이트가 실제로 검증된다.
+      // 보여 주는 회귀와 SYS_MANAGER 게이트가 실제로 검증된다. 차단 목록도 비어
+      // 있으면 안 된다. 비어 있으면 지워지는 회귀와 구별되지 않는다.
       creditAllowedModels: ['openai/*'],
+      creditDeniedModels: ['openai/*-pro'],
     },
     {
       ...base,
@@ -342,6 +353,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       creditLimitReset: null,
       creditAxisConnected: false,
       creditAllowedModels: [],
+      creditDeniedModels: [],
       creditUsage: null,
       creditLimitRemaining: null,
       creditUsageAt: null,
@@ -860,9 +872,12 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 돈을 쓸 수 있는지를 정하기 때문이다. 목이 이 축을 빠뜨리면 서버가 낼 수
     // 없는 200을 내고, 그 위의 화면 테스트가 초록으로 거짓말한다.
     const nextModels = body.creditAllowedModels ?? []
+    const nextDenied = body.creditDeniedModels ?? []
+    const listChanged = (next: string[], current: string[]) =>
+      next.length !== current.length || next.some((model, index) => model !== current[index])
     const modelsChanged =
-      nextModels.length !== key.creditAllowedModels.length ||
-      nextModels.some((model, index) => model !== key.creditAllowedModels[index])
+      listChanged(nextModels, key.creditAllowedModels) ||
+      listChanged(nextDenied, key.creditDeniedModels)
     if (
       role === 'SYS_MANAGER' &&
       (body.creditLimit !== key.creditLimit ||
@@ -873,7 +888,7 @@ export const llmKeyHandlers: RequestHandler[] = [
         type: 'about:blank',
         title: '권한이 없습니다',
         status: 403,
-        detail: '시스템 운영자는 금액 한도와 모델 허용 목록을 변경할 수 없습니다.',
+        detail: '시스템 운영자는 금액 한도와 모델 목록을 변경할 수 없습니다.',
         code: 'FORBIDDEN',
       })
     }
@@ -882,6 +897,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 서버는 null 을 저장하지 않는다 — 빈 목록으로 정규화한다. 목이 null 을
     // 그대로 두면 상세 화면의 join 이 터지는 상태가 목에서만 존재하게 된다.
     key.creditAllowedModels = nextModels
+    key.creditDeniedModels = nextDenied
     if (body.openrouterAccountId && !key.openrouterAccountName) {
       key.openrouterAccountName = openRouterAccountStore.find(
         (account) => account.id === body.openrouterAccountId,

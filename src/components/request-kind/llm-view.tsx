@@ -11,6 +11,7 @@ import {
 } from '../../api/queries'
 import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
 import { CreditModelPicker } from '../CreditModelPicker'
+import { CreditModelPreview } from '../CreditModelPreview'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
 import { adminPaths } from '../../lib/paths'
@@ -18,6 +19,7 @@ import {
   creditModelsError,
   formatCreditModels,
   parseCreditModels,
+  type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
 import { todayKstDate } from '../../lib/format'
 import { Field } from './Field'
@@ -35,10 +37,10 @@ function creditResetText(value: string | null | undefined): string {
   return value ? (CREDIT_RESET_LABELS[value] ?? value) : '총액 상한 (리셋 없음)'
 }
 
-/** 금액은 다른 한도와 달리 비움이 기본값이 아니라 0(상용 축 미사용)이다. */
+/** 금액은 다른 한도와 달리 비움이 기본값이 아니라 0(유료 모델 미사용)이다. */
 function creditText(value: number | null | undefined): string {
   return value == null || value === 0
-    ? '미부여 — 상용 모델 사용 불가'
+    ? '미부여, 유료 모델 사용 불가'
     : `$${value.toLocaleString('ko-KR')}`
 }
 
@@ -161,7 +163,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   // 모델 목록만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
   // 희망이 아니라 관리자가 사업 계정에 미리 정해 둔 정책이라, 채워도 검토가
   // 사라지지 않는다. 한 번이라도 손대면 그 뒤로는 계정을 바꿔도 덮지 않는다.
+  // 두 목록은 한 정책의 양면이라 프리필도 되돌리기도 함께 움직인다.
   const [creditModels, setCreditModels] = useState('')
+  const [creditDeniedModels, setCreditDeniedModels] = useState('')
   const [creditModelsTouched, setCreditModelsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
@@ -201,13 +205,25 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     : null
 
   const accountDefault = effectiveAccount?.defaultCreditAllowedModels ?? []
+  const accountDenyDefault = effectiveAccount?.defaultCreditDeniedModels ?? []
   const prefillKey = effectiveAccount?.id ?? null
   if (!creditModelsTouched && prefillKey !== prefilledFrom) {
     setPrefilledFrom(prefillKey)
     setCreditModels(formatCreditModels(accountDefault))
+    setCreditDeniedModels(formatCreditModels(accountDenyDefault))
   }
 
   const parsedCreditModels = parseCreditModels(creditModels)
+  const parsedDeniedModels = parseCreditModels(creditDeniedModels)
+  // 선택기가 어느 목록에 넣을지는 누른 버튼이 정한다.
+  const addModel = (pattern: string, list: CreditModelListKind) => {
+    setCreditModelsTouched(true)
+    if (list === 'ALLOW') {
+      setCreditModels(formatCreditModels([...parsedCreditModels, pattern]))
+    } else {
+      setCreditDeniedModels(formatCreditModels([...parsedDeniedModels, pattern]))
+    }
+  }
 
   return {
     validate: () => {
@@ -240,12 +256,19 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         }
       }
       // 모델 목록도 리셋 창과 같은 모양이다 — 금액 없이 두면 아무것도 제한하지 않는다.
-      const modelsError = creditModelsError(parsedCreditModels)
+      const modelsError = creditModelsError(parsedCreditModels, 'ALLOW')
       if (modelsError) {
         errors['llmKey.grantedCreditAllowedModels'] = modelsError
       } else if (parsedCreditModels.length > 0 && !(Number(creditLimit) > 0)) {
         errors['llmKey.grantedCreditLimit'] =
           '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
+      }
+      const deniedError = creditModelsError(parsedDeniedModels, 'DENY')
+      if (deniedError) {
+        errors['llmKey.grantedCreditDeniedModels'] = deniedError
+      } else if (parsedDeniedModels.length > 0 && !(Number(creditLimit) > 0)) {
+        errors['llmKey.grantedCreditLimit'] =
+          '모델 차단 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
       }
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
       if (!rpmError && !tpmError && rpm.trim() && tpm.trim()) {
@@ -274,6 +297,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           ? (creditReset as 'DAILY' | 'WEEKLY' | 'MONTHLY')
           : null,
         grantedCreditAllowedModels: parsedCreditModels,
+        grantedCreditDeniedModels: parsedDeniedModels,
         openrouterAccountId: Number(creditLimit) > 0 ? effectiveAccount?.id ?? null : null,
       },
     }),
@@ -346,7 +370,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <FormField
             label="부여 금액 한도 (USD)"
             error={fieldErrors['llmKey.grantedCreditLimit']}
-            description="상용 모델(OpenRouter 경유)에 쓸 수 있는 금액입니다. 비우거나 0이면 상용 모델을 쓸 수 없습니다."
+            description="유료 모델(OpenRouter 경유)에 쓸 수 있는 금액입니다. 비우거나 0이면 유료 모델을 쓸 수 없습니다."
           >
             <Input
               type="number"
@@ -354,7 +378,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               step="0.01"
               value={creditLimit}
               onChange={(event) => setCreditLimit(event.target.value)}
-              placeholder="0 (상용 축 미사용)"
+              placeholder="0 (유료 모델 미사용)"
             />
           </FormField>
           <FormField
@@ -380,9 +404,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           error: fieldErrors['llmKey.openrouterAccountId'],
         })}
         <FormField
-          label="허용할 상용 모델"
+          label="허용할 유료 모델"
           error={fieldErrors['llmKey.grantedCreditAllowedModels']}
-          description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 상용 모델을 쓸 수 있습니다. 벤더 전체를 열려면 openai/* 처럼 적습니다. ~로 시작하는 이름은 최신 모델을 따라가는 별칭이라 openai/* 에 포함되지 않고 ~openai/* 로 따로 열어야 합니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다."
+          description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 유료 모델을 쓸 수 있습니다. 벤더 전체는 openai/*, 계열은 openai/gpt-5-*, 티어는 openai/*-pro 처럼 적습니다. ~로 시작하는 이름은 최신 모델을 따라가는 별칭이라 openai/* 에 포함되지 않고 ~openai/* 로 따로 열어야 합니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다."
         >
           <Textarea
             rows={4}
@@ -393,23 +417,46 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             }}
             placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
           />
-          <CreditModelPicker
-            catalogue={accountData.catalogue}
-            failed={accountData.catalogueFailed}
-            selected={parsedCreditModels}
-            onAdd={(modelId) => {
+        </FormField>
+        <FormField
+          label="차단할 유료 모델"
+          error={fieldErrors['llmKey.grantedCreditDeniedModels']}
+          description="여기 적은 모델은 허용 목록에 들어 있어도 쓸 수 없습니다. 계열을 열어 두고 비싼 모델 몇 개만 빼는 자리입니다. 비우면 차단이 없습니다."
+        >
+          <Textarea
+            rows={3}
+            value={creditDeniedModels}
+            onChange={(event) => {
               setCreditModelsTouched(true)
-              setCreditModels(formatCreditModels([...parsedCreditModels, modelId]))
+              setCreditDeniedModels(event.target.value)
             }}
+            placeholder={'openai/*-pro'}
           />
         </FormField>
-        {!creditModelsTouched && accountDefault.length > 0 ? (
+        <CreditModelPicker
+          catalogue={accountData.catalogue}
+          failed={accountData.catalogueFailed}
+          allowed={parsedCreditModels}
+          denied={parsedDeniedModels}
+          onAdd={addModel}
+        />
+        <CreditModelPreview
+          catalogue={accountData.catalogue}
+          failed={accountData.catalogueFailed}
+          allowed={parsedCreditModels}
+          denied={parsedDeniedModels}
+          invalid={
+            creditModelsError(parsedCreditModels, 'ALLOW') != null ||
+            creditModelsError(parsedDeniedModels, 'DENY') != null
+          }
+        />
+        {!creditModelsTouched && accountDefault.length + accountDenyDefault.length > 0 ? (
           <p className="text-sm text-neutral-500">
             {effectiveAccount?.name} 계정의 기본 목록에서 채웠습니다. 이 승인에만 적용되며,
             계정 기본값을 나중에 바꿔도 발급된 키는 그대로입니다.
           </p>
         ) : null}
-        {creditModelsTouched && accountDefault.length > 0 ? (
+        {creditModelsTouched && accountDefault.length + accountDenyDefault.length > 0 ? (
           <p className="text-sm text-neutral-500">
             <button
               type="button"
@@ -417,6 +464,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               onClick={() => {
                 setCreditModelsTouched(false)
                 setCreditModels(formatCreditModels(accountDefault))
+                setCreditDeniedModels(formatCreditModels(accountDenyDefault))
               }}
             >
               {effectiveAccount?.name} 계정의 기본 목록으로 되돌리기
@@ -463,10 +511,16 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           ) : null}
           {creditValue(creditLimit) ? (
             <li>
-              허용 상용 모델{' '}
+              허용 유료 모델{' '}
               {parsedCreditModels.length === 0
                 ? '제한 없음 (금액 한도 안에서 전부)'
                 : parsedCreditModels.join(', ')}
+            </li>
+          ) : null}
+          {creditValue(creditLimit) ? (
+            <li>
+              차단 유료 모델{' '}
+              {parsedDeniedModels.length === 0 ? '없음' : parsedDeniedModels.join(', ')}
             </li>
           ) : null}
         </ul>
@@ -637,7 +691,7 @@ export const llmKeyRequestView: RequestKindView = {
           <Field label="금액 리셋 창">{creditResetText(spec?.grantedCreditLimitReset)}</Field>
         ) : null}
         {spec?.grantedCreditLimit ? (
-          <Field label="허용 상용 모델">
+          <Field label="허용 유료 모델">
             {spec.grantedCreditAllowedModels.length === 0
               ? '제한 없음 (금액 한도 안에서 전부)'
               : spec.grantedCreditAllowedModels.join(', ')}

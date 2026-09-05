@@ -3013,6 +3013,9 @@ export interface components {
             createdAt: string;
             /** @description 상용(금액) 축에서 이 키가 쓸 수 있는 모델 목록. 빈 배열은 제한 없음 */
             creditAllowedModels: string[];
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 유료 모델 차단 목록. 빈 배열은 차단 없음이며, 차단이 허용을 이깁니다 */
+            creditDeniedModels: string[];
             /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
             creditLimit: number;
@@ -3064,6 +3067,9 @@ export interface components {
             concurrency: number | null;
             /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. */
             creditAllowedModels: string[] | null;
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 유료 모델 차단 목록. 빈 배열이나 null이면 차단이 없습니다. 허용 목록과 함께 적으면 차단이 이깁니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. */
+            creditDeniedModels: string[] | null;
             /** @description 금액 한도(USD 크레딧). 0이면 유료 모델을 닫습니다. */
             creditLimit: number;
             /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. */
@@ -3498,6 +3504,9 @@ export interface components {
             grantedConcurrency?: number | null;
             /** @description 이 키가 쓸 수 있는 유료 모델 목록. 비우면 제한이 없고, 자체 서빙 모델은 이 목록과 무관합니다. 항목은 모델 이름 또는 벤더 프리픽스(예: openai/*)입니다. */
             grantedCreditAllowedModels?: string[] | null;
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 비우면 차단이 없고, 허용 목록과 함께 적으면 차단이 이깁니다. 항목은 모델 이름 또는 벤더 프리픽스(예: openai/*)입니다. */
+            grantedCreditDeniedModels?: string[] | null;
             /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
             /** @description 금액 한도 리셋 창. 비우면 리셋 없는 총액 상한입니다. 창은 UTC 자정에 초기화됩니다. */
@@ -3719,6 +3728,9 @@ export interface components {
             contact?: string | null;
             /** @description 승인 화면 프리필에 쓸 상용 모델 허용 목록 기본값. 비우면 제한 없음이 기본이 됩니다. */
             defaultCreditAllowedModels?: string[] | null;
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. */
+            defaultCreditDeniedModels?: string[] | null;
             /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
@@ -4329,6 +4341,9 @@ export interface components {
             createdAt: string;
             /** @description 상용(금액) 축에서 이 키가 쓸 수 있는 모델 목록. 빈 배열이면 제한이 없습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다. */
             creditAllowedModels: string[];
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열이면 차단이 없습니다. 차단은 허용을 이깁니다. */
+            creditDeniedModels: string[];
             /** @description 상용 축 사용 가능 여부. 금액 한도가 부여됐지만 아직 연결 전이면 false입니다. */
             creditAxisConnected: boolean;
             /** @description 상용(금액) 축 한도, USD 크레딧. 0이면 상용 모델을 쓸 수 없습니다. */
@@ -4447,6 +4462,9 @@ export interface components {
             grantedConcurrency?: number | null;
             /** @description 부여된 상용(금액) 축 모델 허용 목록. 빈 배열이면 제한이 없습니다. 어떤 모델을 열지는 신청자가 요구하는 값이 아니라 승인자가 정하는 값이라 희망 쪽 짝이 없습니다. */
             grantedCreditAllowedModels: string[];
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 부여된 유료 모델 차단 목록. 빈 배열이면 차단이 없고, 허용 목록과 함께 있으면 차단이 이깁니다. */
+            grantedCreditDeniedModels: string[];
             /** @description 부여 금액 한도(USD 크레딧). 비어 있거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
             /** @description 금액 한도 리셋 창. 비어 있으면 리셋 없는 총액 상한입니다. */
@@ -5355,6 +5373,9 @@ export interface components {
             credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
             /** @description 승인 화면이 프리필에 쓰는 상용 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
             defaultCreditAllowedModels: string[];
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
+            defaultCreditDeniedModels: string[];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
             /**
@@ -6285,6 +6306,9 @@ export interface components {
             contact?: string | null;
             /** @description 새 상용 모델 허용 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
             defaultCreditAllowedModels?: string[] | null;
+            // 계약 재생성 전까지 손으로 넣어 둔 필드. 재생성 뒤에는 이 줄이 남아 있으면 안 된다.
+            /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
+            defaultCreditDeniedModels?: string[] | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
             /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */

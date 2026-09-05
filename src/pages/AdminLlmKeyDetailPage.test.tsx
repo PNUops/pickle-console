@@ -104,7 +104,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    const field = dialog.getByLabelText('허용할 상용 모델')
+    const field = dialog.getByLabelText('허용할 유료 모델')
     await user.clear(field)
     await user.type(field, 'OpenAI/*{enter}anthropic/claude-sonnet-4')
     await user.click(dialog.getByRole('button', { name: '저장' }))
@@ -115,12 +115,49 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
       .toEqual(['openai/*', 'anthropic/claude-sonnet-4'])
   })
 
+  // 두 칸이 서로를 덮지 않는지. 한 칸만 확인하면 다른 칸이 같은 값으로 나가는
+  // 실수를 못 본다.
+  test('한도 창이 두 목록을 각각 본문에 싣는다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    const denied = dialog.getByLabelText('차단할 유료 모델')
+    await user.clear(denied)
+    await user.type(denied, 'OpenAI/*-Pro{enter}anthropic/claude-opus-*')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    expect(adminLlmLimitBodies[0].creditAllowedModels).toEqual(['openai/*'])
+    expect(adminLlmLimitBodies[0].creditDeniedModels)
+      .toEqual(['openai/*-pro', 'anthropic/claude-opus-*'])
+  })
+
+  // 금액 축을 못 만지는 역할에게는 두 칸이 다 없다. 창이 현재 값을 그대로
+  // 되돌려 보내지 않으면, 그 역할이 RPM 하나를 고치는 순간 차단 목록이 사라진다.
+  // 목이 서버처럼 403을 내므로 이 단언이 실제로 그 자리를 지킨다.
+  test('금액을 못 만지는 역할이 저장해도 차단 목록이 남는다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-manager', sysManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.queryByLabelText('차단할 유료 모델')).not.toBeInTheDocument()
+    await user.clear(dialog.getByLabelText('RPM'))
+    await user.type(dialog.getByLabelText('RPM'), '80')
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    expect(adminLlmLimitBodies[0].creditDeniedModels).toEqual(['openai/*-pro'])
+  })
+
   test('상세가 키의 모델 허용 목록을 보여 준다', async () => {
     // uuid(171)이 울타리가 걸린 픽스처다. 걸린 키를 "제한 없음"으로 보여 주는
     // 회귀를 잡는 것이 이 단언의 전부다.
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
-    expect(await screen.findByText('허용 상용 모델')).toBeInTheDocument()
+    expect(await screen.findByText('허용 유료 모델')).toBeInTheDocument()
     expect(screen.getByText('openai/*')).toBeInTheDocument()
+    expect(screen.getByText('차단 유료 모델')).toBeInTheDocument()
+    expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
   })
 
   test('SYS_MANAGER가 모델 허용 목록을 바꾸면 서버가 거절한다', async () => {
@@ -130,7 +167,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
     // 금액 축을 못 만지는 역할이라 목록 칸도 없다 — 창은 기존 값을 그대로
     // 되돌려 보내고, 그래서 403이 나지 않는다.
-    expect(dialog.queryByLabelText('허용할 상용 모델')).not.toBeInTheDocument()
+    expect(dialog.queryByLabelText('허용할 유료 모델')).not.toBeInTheDocument()
     await user.clear(dialog.getByLabelText('RPM'))
     await user.type(dialog.getByLabelText('RPM'), '80')
     await user.click(dialog.getByRole('button', { name: '저장' }))

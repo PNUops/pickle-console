@@ -217,6 +217,12 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
                   : llmKey.creditAllowedModels.join(', ')}
               </Field>
             ) : null}
+            {/* 차단은 허용을 이기므로, 허용 줄만 읽고 쓸 수 있다고 믿으면 안 된다. */}
+            {llmKey.creditLimit && llmKey.creditDeniedModels.length > 0 ? (
+              <Field label="쓸 수 없는 유료 모델">
+                {llmKey.creditDeniedModels.join(', ')}
+              </Field>
+            ) : null}
             <Field label="생성일">{formatDateTime(llmKey.createdAt)}</Field>
             {llmKey.revokedAt && (
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>

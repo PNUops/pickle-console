@@ -142,6 +142,7 @@ function initialAdminRequests(): RequestDetail[] {
         useCampusModels: true,
         useCommercialModels: false,
         grantedCreditAllowedModels: ['openai/*'],
+        grantedCreditDeniedModels: [],
       },
       purpose: '캡스톤 챗봇 LLM API 호출',
       displayName: 'capstone-chatbot-admin',
