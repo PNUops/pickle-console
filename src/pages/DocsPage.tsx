@@ -10,10 +10,11 @@ import {
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
   LLM_PAID_ONLY_PARAMS,
+  LLM_PASSTHROUGH_ROUTES,
   LLM_SELF_SERVED_PARAMS,
 } from '../lib/llm-api'
 
-const LAST_UPDATED = '2026-09-03'
+const LAST_UPDATED = '2026-09-06'
 
 const CURL_EXAMPLE = `curl ${LLM_API_BASE_URL}/chat/completions \\
   -H "Authorization: Bearer $PICKLE_API_KEY" \\
@@ -117,6 +118,44 @@ export function DocsPage() {
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
         </Section>
 
+        <Section title="이미지와 임베딩">
+          <p className="text-sm leading-6 text-neutral-600">
+            채팅 외에 아래 경로를 중계합니다. 이 경로들은 <strong>기능 단위로 부여</strong>되어,
+            키에 그 기능이 없으면 <Code>endpoint_not_allowed</Code>로 거절됩니다. 콘솔에서
+            신청하면 승인 후 쓸 수 있습니다.
+          </p>
+          <Table>
+            <THead>
+              <TR>
+                <TH>경로</TH>
+                <TH>기능</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {LLM_PASSTHROUGH_ROUTES.map((route) => (
+                <TR key={`${route.method} ${route.path}`}>
+                  <TD>
+                    <Code>
+                      {route.method} {route.path}
+                    </Code>
+                  </TD>
+                  <TD>{route.summary}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+          <p className="text-sm leading-6 text-neutral-600">
+            <Code>/v1/images</Code>는 OpenAI의 <Code>/v1/images/generations</Code>가 아니라
+            공급자가 정한 경로입니다. 두 경로 모두 스트리밍을 지원하지 않아,{' '}
+            <Code>stream</Code>을 보내면 <Code>streaming_not_supported</Code>로 거절됩니다.
+          </p>
+          <p className="text-sm leading-6 text-neutral-600">
+            이미지 응답은 base64라 원본보다 커집니다. 중계 상한을 넘으면{' '}
+            <Code>upstream_response_too_large</Code>로 거절되므로, 한 번에 만드는 개수(
+            <Code>n</Code>)나 요청한 크기를 줄여 다시 보냅니다.
+          </p>
+        </Section>
+
         <Section title="Python SDK 연결">
           <p className="text-sm leading-6 text-neutral-600">
             공식 <Code>openai</Code> 패키지를 그대로 씁니다.
@@ -166,10 +205,11 @@ export function DocsPage() {
             보내면 거부됩니다. 추론을 쓰는 도구는 이 필드를 스스로 붙이므로, 자체 서빙
             모델을 부를 때는 그 설정을 꺼야 합니다.
           </p>
-          <Alert variant="info" title="목록에 없는 필드는 거부됩니다">
+          <Alert variant="info" title="자체 서빙 모델은 목록에 없는 필드를 거부합니다">
             모르는 필드는 무시하고 전달하는 것이 아니라 요청 전체를 400으로 되돌립니다.
             응답의 <Code>error.code</Code>가 <Code>unsupported_parameter</Code>이고 메시지에
-            해당 필드 이름이 담깁니다.
+            해당 필드 이름이 담깁니다. 유료 모델은 공급자가 받는 요청을 그대로 보내므로 위
+            목록이 거부의 기준이 아닙니다.
           </Alert>
         </Section>
 

@@ -18,6 +18,21 @@ export const LLM_API_BASE_URL = `https://${LLM_GATEWAY_HOST}/v1`
 export const LLM_DEFAULT_MODEL = 'pickle-general'
 
 /**
+ * 채팅 외에 이 게이트웨이가 중계하는 경로.
+ *
+ * 기능 단위로 부여되고, 부여받지 않은 키는 403 `endpoint_not_allowed`로 답한다. 경로가
+ * 없는 것과 키에 허용되지 않은 것은 다른 상태이므로 404로 감추지 않는다.
+ *
+ * `/v1/images`는 OpenAI의 `/v1/images/generations`가 아니다. 공급자가 정한 경로여서,
+ * OpenAI 경로를 그대로 쓰면 404가 난다. 처음 묻는 사람이 실제로 그 경로부터 시도했다.
+ */
+export const LLM_PASSTHROUGH_ROUTES = [
+  { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
+  { capability: 'images', method: 'GET', path: '/v1/images/models', summary: '이미지 모델 목록' },
+  { capability: 'embeddings', method: 'POST', path: '/v1/embeddings', summary: '임베딩' },
+] as const
+
+/**
  * 자체 서빙 모델에 보낼 수 있는 최상위 필드. 목록에 없는 필드는 무시가 아니라 거부이므로,
  * 무엇을 보낼 수 있는지가 사용자에게 보여야 한다.
  */
@@ -50,7 +65,13 @@ export const LLM_SELF_SERVED_PARAMS = [
  */
 export const LLM_PAID_ONLY_PARAMS = ['reasoning_effort', 'verbosity'] as const
 
-/** 유료 모델에 보낼 수 있는 필드 전부. 자체 서빙 목록의 상위집합이다. */
+/**
+ * 유료 모델을 부를 때 안내에 싣는 필드. **허용 목록이 아니다.**
+ *
+ * 유료 모델은 공급자가 받는 요청을 그대로 전달하므로 이 목록 밖의 필드도 거부되지
+ * 않는다. 목록을 두는 것은 무엇을 보낼 수 있는지 묻는 사람에게 답하기 위해서이지
+ * 나머지를 막기 때문이 아니다. 실제 울타리는 자체 서빙 목록 하나뿐이다.
+ */
 export const LLM_PAID_PARAMS = [
   ...LLM_SELF_SERVED_PARAMS,
   ...LLM_PAID_ONLY_PARAMS,
@@ -95,6 +116,11 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'account_suspended', status: 403, meaning: '계정 이용이 정지된 상태입니다.' },
   { code: 'model_not_found', status: 404, meaning: '그런 이름의 모델이 없습니다.' },
   { code: 'model_not_allowed', status: 403, meaning: '이 키로는 쓸 수 없는 모델입니다.' },
+  {
+    code: 'endpoint_not_allowed',
+    status: 403,
+    meaning: '이 키에 그 기능이 부여되어 있지 않습니다. 콘솔에서 신청하면 승인 후 쓸 수 있습니다.',
+  },
   { code: 'rate_limit_requests', status: 429, meaning: '분당 요청 횟수를 초과했습니다.' },
   { code: 'rate_limit_tokens', status: 429, meaning: '분당 토큰 사용량을 초과했습니다.' },
   { code: 'rate_limit_concurrency', status: 429, meaning: '동시 요청 수를 초과했습니다.' },
@@ -120,6 +146,16 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
       '지원하지 않는 경로입니다. 메시지에 적힌 경로는 지원 범위이지 보낸 경로가 아니므로, base URL에 /v1이 붙어 있는지 먼저 확인합니다.',
   },
   { code: 'method_not_allowed', status: 405, meaning: '지원하지 않는 HTTP 메서드입니다.' },
+  {
+    code: 'streaming_not_supported',
+    status: 400,
+    meaning: '이미지와 임베딩 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
+  },
+  {
+    code: 'upstream_response_too_large',
+    status: 502,
+    meaning: '응답이 중계 가능한 크기를 넘었습니다. 한 번에 만드는 개수(n)나 요청한 크기를 줄입니다.',
+  },
   { code: 'service_disabled', status: 503, meaning: '서비스가 점검 중입니다.' },
   { code: 'server_busy', status: 503, meaning: '요청이 몰려 처리하지 못했습니다. 한도는 차감되지 않습니다.' },
   { code: 'upstream_rejected', status: 400, meaning: '모델 서버가 요청을 거부했습니다.' },

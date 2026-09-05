@@ -38,7 +38,35 @@ describe('사용 가이드', () => {
     const paidChips = screen.getByText('유료 모델에만').parentElement!
     expect(within(paidChips).getByText('reasoning_effort')).toBeInTheDocument()
     expect(within(paidChips).getByText('verbosity')).toBeInTheDocument()
-    expect(screen.getByText('목록에 없는 필드는 거부됩니다')).toBeInTheDocument()
+    // 거부는 자체 서빙 쪽 사실이다. 유료 축에는 허용 목록이 아예 없어 목록 밖 필드가
+    // 그대로 전달되므로, 제목이 축을 말하지 않으면 화면이 두 축 모두에 거부를 약속한다.
+    expect(
+      screen.getByText('자체 서빙 모델은 목록에 없는 필드를 거부합니다'),
+    ).toBeInTheDocument()
+    // 제목만 걸면 문구를 되돌려도 통과한다. 유료 쪽이 면제라는 것까지 화면에 있어야
+    // 이 구분이 지켜진다.
+    expect(document.body.textContent ?? '').toContain(
+      '유료 모델은 공급자가 받는 요청을 그대로 보내므로',
+    )
+  })
+
+  test('채팅 밖 경로와 그 경로가 기능 부여를 요구한다는 것을 말한다', async () => {
+    renderApp('/docs')
+    await screen.findByRole('heading', { name: '이미지와 임베딩' })
+
+    // 경로 목록은 lib/llm-api.ts 가 갖는다. 여기서는 그것이 실제로 표에 그려지는지를
+    // 본다 — 셋 다 확인하는 것은 하나만 보면 map 이 깨져도 통과하기 때문이다.
+    expect(screen.getByText(/POST \/v1\/images$/)).toBeInTheDocument()
+    expect(screen.getByText(/GET \/v1\/images\/models/)).toBeInTheDocument()
+    expect(screen.getByText(/POST \/v1\/embeddings/)).toBeInTheDocument()
+
+    const body = document.body.textContent ?? ''
+    // 이 경로들은 키에 기능이 부여돼야 열린다. 그 말이 없으면 403 을 받은 사람이
+    // 자기 코드를 의심한다.
+    expect(body).toContain('endpoint_not_allowed')
+    // 처음 물어 온 사람이 OpenAI 경로부터 시도해 404 를 받았다. 같은 실수를 막는 문장이다.
+    expect(body).toContain('/v1/images/generations')
+    expect(body).toContain('streaming_not_supported')
   })
 
   test('base URL이 어디까지인지 주소 옆에서 말한다', async () => {
