@@ -3084,7 +3084,7 @@ export interface components {
             orgId?: string | null;
             orgName: string;
             /** @description 이 키가 쓸 수 있는 확장 기능. 빈 배열은 확장 기능 없음. 모델 목록 둘과 반대로 채워야 열린다. */
-            passthroughEndpoints: string[];
+            passthroughEndpoints: ("images" | "embeddings")[];
             purpose?: string | null;
             quotaExhausted: boolean;
             /** Format: uuid */
@@ -3125,7 +3125,7 @@ export interface components {
              */
             openrouterAccountId?: string | null;
             /** @description 이 키가 쓸 수 있는 확장 기능. 빈 배열이나 null이면 확장 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 값에 영향을 받지 않습니다. */
-            passthroughEndpoints: string[] | null;
+            passthroughEndpoints: ("images" | "embeddings")[] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
@@ -3558,7 +3558,7 @@ export interface components {
              */
             grantedDailyTokens?: number | null;
             /** @description 이 키가 쓸 수 있는 확장 기능. 비우면 확장 기능을 하나도 쓸 수 없습니다. 모델 목록과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            grantedPassthroughEndpoints?: string[] | null;
+            grantedPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비우면 서비스 기본값이 적용됩니다.
@@ -3779,7 +3779,7 @@ export interface components {
             /** @description 승인 화면 프리필에 쓸 상용 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 승인 화면 프리필에 쓸 확장 기능 기본값. 비우면 확장 기능 없음이 기본이 됩니다. */
-            defaultPassthroughEndpoints?: string[] | null;
+            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
@@ -4415,7 +4415,7 @@ export interface components {
             /** @description 키 이름 */
             name: string;
             /** @description 이 키가 쓸 수 있는 확장 기능. 빈 배열이면 확장 기능을 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            passthroughEndpoints: string[];
+            passthroughEndpoints: ("images" | "embeddings")[];
             /** @description 용도 */
             purpose?: string | null;
             /** @description 프롬프트·응답 본문 기록 여부 */
@@ -4531,7 +4531,7 @@ export interface components {
              */
             grantedDailyTokens?: number | null;
             /** @description 승인자가 부여한 확장 기능. 빈 배열은 부여하지 않았다는 뜻이다. */
-            grantedPassthroughEndpoints: string[];
+            grantedPassthroughEndpoints: ("images" | "embeddings")[];
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비어 있으면 서비스 기본값입니다.
@@ -5434,7 +5434,7 @@ export interface components {
             /** @description 승인 화면이 프리필에 쓰는 상용 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
             defaultCreditDeniedModels: string[];
             /** @description 승인 화면이 프리필에 쓰는 확장 기능 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
-            defaultPassthroughEndpoints: string[];
+            defaultPassthroughEndpoints: ("images" | "embeddings")[];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
             /**
@@ -6432,7 +6432,7 @@ export interface components {
             /** @description 새 상용 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 새 확장 기능 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
-            defaultPassthroughEndpoints?: string[] | null;
+            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
             /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */
