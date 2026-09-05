@@ -189,12 +189,11 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             </Field>
             <Field label="본문 기록">
               {llmKey.recordBodies ? (
-                <>
-                  켜짐. 이 키로 보낸 프롬프트와 응답을 30일 동안 보관합니다.
-                  <span className="mt-0.5 block text-xs text-neutral-500">
-                    이 키에 접근 권한이 있는 사람은 모두 「기록된 본문」 탭에서 읽을 수 있습니다.
-                  </span>
-                </>
+                // 열람 범위와 보관 기간은 같은 화면의 설정 문구가 말한다. 여기서
+                // 되풀이하면 한 화면이 같은 사실을 두 번 말한다. 꺼짐 쪽은
+                // 되풀이가 아니라서 남는다 - 이미 기록된 것이 어떻게 되는지는
+                // 설정 문구가 답하지 않는다.
+                <>켜짐. 새 요청이 기록됩니다.</>
               ) : (
                 <>
                   꺼짐. 새 요청은 기록되지 않습니다.
@@ -638,7 +637,7 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
               게이트웨이는 키를 인증할 뿐 보낸 사람을 모른다. */}
           <Checkbox
             className="max-w-md"
-            label="프롬프트와 응답 기록"
+            label="본문 기록"
             description="켜면 이 키로 보낸 프롬프트와 응답을 30일 동안 보관합니다. 이 키에 접근 권한이 있는 사람은 모두 그 내용을 읽을 수 있으므로, 개인정보가 담기는 요청에는 켜지 마세요."
             checked={recordBodies}
             disabled={!allowed}

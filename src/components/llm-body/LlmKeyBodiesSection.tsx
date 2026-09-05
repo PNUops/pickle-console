@@ -120,7 +120,7 @@ export function LlmKeyBodiesSection({
     <div className="space-y-4">
       {!recordBodies && (
         <Alert variant="info" title="본문 기록은 지금 꺼져 있습니다">
-          아래는 켜져 있던 동안 기록된 것입니다. 기록된 지 30일이 지나면 삭제됩니다.
+          아래는 켜져 있던 동안 기록된 것입니다.
         </Alert>
       )}
       {status === 'REVOKED' && (
@@ -179,8 +179,8 @@ export function LlmKeyBodiesSection({
             totalPages={bodies.data.totalPages}
             onPageChange={setPage}
           />
-          {/* 켜지 않은 사람이 규칙을 배우는 자리는 여기뿐이다 — 토글 문구는 켜는
-              사람만 읽는다. */}
+          {/* 목록이 있는 한 언제나 나오므로, 보관 기간을 말하는 자리는 여기
+              하나다. 위의 「꺼져 있습니다」 안내가 같은 말을 하고 있었다. */}
           <p className="text-xs text-neutral-500">
             기록된 본문은 이 키에 접근 권한이 있는 사람이면 누구나 읽을 수 있습니다. 보관 기간은
             30일이고, 지난 것부터 삭제됩니다.
