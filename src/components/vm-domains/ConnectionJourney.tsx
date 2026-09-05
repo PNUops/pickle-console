@@ -75,7 +75,9 @@ function deriveSteps(pub: PublicationView): JourneyStep[] {
             : '확인 완료',
         }
       : domain.status === 'FAILED'
-        ? { state: 'failed', caption: 'DNS 레코드를 확인해 주세요' }
+        // 실패 아이콘은 aria-hidden 이고 색만으로는 스크린 리더에 닿지 않으므로,
+        // 형제 두 단계처럼 캡션이 실패를 말한다.
+        ? { state: 'failed', caption: '확인 실패. DNS 레코드를 확인해 주세요' }
         : domain.status === 'VERIFYING'
           ? { state: 'active', caption: '확인 진행 중' }
           : { state: 'active', caption: 'DNS 레코드 대기' }),

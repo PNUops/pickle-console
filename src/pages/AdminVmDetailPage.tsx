@@ -226,7 +226,8 @@ const POWER_ACTIONS: {
     mutate: adminForceStopVm,
     enabledFor: (status) => status === 'RUNNING' || status === 'REBOOTING',
     variant: 'danger',
-    confirm: '전원을 강제로 차단할까요? 저장되지 않은 데이터는 유실될 수 있습니다.',
+    confirm:
+      '전원을 강제로 차단할까요? 정지 보호 설정과 무관하게 수행되며, 저장되지 않은 데이터는 유실될 수 있습니다.',
   },
 ]
 

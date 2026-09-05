@@ -152,7 +152,7 @@ export default function LlmKeyUsageSection({
                     value={formatTokens(totals.inputTokens + totals.outputTokens)}
                     hint={
                       totals.estimatedRequests > 0
-                        ? `${formatShare(estimated)}가 추정값`
+                        ? `토큰 만든 요청의 ${formatShare(estimated)}가 추정`
                         : undefined
                     }
                   />
@@ -324,9 +324,9 @@ function StatTile({
 /**
  * 두 예산 축.
  *
- * 한 축은 우리가 세고 다른 축은 OpenRouter가 집행한다. 신선도가 다르므로 그
- * 사실을 각 게이지가 스스로 말한다 — 두 숫자를 나란히 놓고 아무 말도 하지 않으면
- * 같은 시점의 값으로 읽힌다.
+ * 한 축은 우리가 세고 다른 축은 OpenRouter가 집행한다. 금액 쪽만 자기 관측 시각을
+ * 달고 있는데, 토큰 쪽의 배치 지연은 아래 ReportingNotice 한 자리가 맡기 때문이다.
+ * 두 숫자를 나란히 놓고 아무 말도 하지 않으면 같은 시점의 값으로 읽힌다.
  */
 function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
   const tokenLimit = budget.dailyTokens
@@ -473,7 +473,12 @@ function formatUsd(amount: number): string {
  *
  * 전송이 배치라 오늘 자 값은 아직 채워지는 중이다. 반대로 보고가 며칠째 없는 키에
  * 같은 말을 붙이면 진짜 0을 "곧 채워질 값"으로 읽게 만들므로 두 경우를 가른다.
- * 차트 옆 캡션이 아니라 여기 한 자리에서만 말한다.
+ * 배치 지연을 말하는 자리는 화면에서 여기 하나다.
+ *
+ * 바닥에 붙은 0이 "요청이 없던 날"이라는 것은 말하지 않는다. 차트가 자료 없는 날을
+ * 빈 구간으로 그리므로 선이 0에 붙어 있다는 것 자체가 그 답이고, 계기 읽는 법을
+ * 가르치지 않는 것이 화면 문구 규약이다. 보고가 끊긴 뒤의 0만 단언할 수 없어서
+ * stale 갈래가 그것을 뒤집는다.
  */
 function ReportingNotice({ state }: { state: ReportingState }) {
   if (state.kind === 'never') {

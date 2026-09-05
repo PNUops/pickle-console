@@ -76,7 +76,7 @@ export function AdminNodesPage() {
       <PageHeader
         eyebrow="운영"
         title="노드/IP"
-        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다."
+        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다. 30초 주기 상태 폴러가 갱신합니다."
       />
 
       <Tabs
