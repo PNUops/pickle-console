@@ -6,12 +6,14 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { llmKeyStore } from '../test/msw/handlers/llm-keys'
 
 const RECORDING_OFF_WITH_HISTORY = uuid(75)
 const RECORDED_KEY = uuid(73)
 const NO_RECORDS_KEY = uuid(70)
 const PENDING_KEY = uuid(71)
 const NO_GRANT_KEY = uuid(72)
+const LIVE_KEY = uuid(74)
 
 function renderBodies(keyId: string) {
   server.use(refreshSuccessHandler('access-user'))
@@ -69,6 +71,15 @@ describe('기록된 본문 탭', () => {
     expect(screen.getByText(/보관 기간은 30일/)).toBeInTheDocument()
   })
 
+  test('기록이 꺼진 키에서도 보관 기간은 한 번만 나온다', async () => {
+    // 「꺼져 있습니다」 안내와 상시 고지가 둘 다 30일을 말하던 적이 있다. 한
+    // 화면이 같은 사실을 두 번 말하지 않는다.
+    renderBodies(RECORDING_OFF_WITH_HISTORY)
+
+    await screen.findByText('본문 기록은 지금 꺼져 있습니다')
+    expect(document.body.textContent?.match(/30일/g) ?? []).toHaveLength(1)
+  })
+
   test('전문을 열면 역할별로 나뉜다', async () => {
     const user = userEvent.setup()
     renderBodies(RECORDED_KEY)
@@ -112,5 +123,33 @@ describe('기록된 본문 탭', () => {
 
     expect(await screen.findByRole('tab', { name: '개요', selected: true })).toBeInTheDocument()
     expect(screen.queryByText(/질문입니다/)).not.toBeInTheDocument()
+  })
+
+  test('개요 탭은 보관 기간과 열람 범위를 각각 한 번만 말한다', async () => {
+    // 키 정보 칸과 설정 문구가 같은 두 사실을 나란히 말하던 적이 있다. 설정
+    // 문구가 그 자리이고, 키 정보는 켜짐과 꺼짐만 말한다.
+    //
+    // 켜져 있으면서 폐기되지 않은 키가 픽스처에 없어서 여기서 만든다. 폐기된
+    // 키는 설정 카드 자체가 안 그려지므로 두 문구가 만나지 않는다 - 이 결함이
+    // 배포까지 간 이유가 그것이다.
+    const key = llmKeyStore.find((candidate) => candidate.id === LIVE_KEY)!
+    key.recordBodies = true
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp(`/console/llm-keys/${LIVE_KEY}`)
+
+    await screen.findByText('켜짐. 새 요청이 기록됩니다.')
+    const text = document.body.textContent ?? ''
+    expect(text.match(/30일 동안 보관합니다/g) ?? []).toHaveLength(1)
+    expect(text.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(1)
+  })
+
+  test('설정 이름은 화면 전체에서 하나다', async () => {
+    // 「본문 기록」과 「프롬프트와 응답 기록」이 같은 설정을 가리키던 적이 있다.
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp(`/console/llm-keys/${LIVE_KEY}`)
+
+    // 라벨이 input 을 감싸므로 접근 이름에 설명까지 들어간다.
+    expect(await screen.findByRole('checkbox', { name: /^본문 기록/ })).toBeInTheDocument()
+    expect(screen.queryByText('프롬프트와 응답 기록')).not.toBeInTheDocument()
   })
 })
