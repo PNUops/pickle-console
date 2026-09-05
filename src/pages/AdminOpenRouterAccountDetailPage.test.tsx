@@ -143,7 +143,7 @@ describe('사업 계정의 승인 기본 목록', () => {
     const dialog = within(
       screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
     )
-    await user.click(dialog.getByLabelText('임베딩'))
+    await user.click(dialog.getByRole('checkbox', { name: /임베딩/ }))
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => {

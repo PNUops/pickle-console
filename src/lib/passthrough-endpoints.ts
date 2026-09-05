@@ -24,8 +24,25 @@ const LABELS: Record<PassthroughEndpoint, string> = {
   embeddings: '임베딩',
 }
 
+/**
+ * 이름이 실제로 여는 범위보다 좁게 읽히는 값에만 붙이는 한 줄.
+ *
+ * `images` 토큰 하나가 생성과 편집과 이미지 모델 목록 조회를 덮는다. 「이미지 생성」만
+ * 읽고 부여한 승인자는 편집까지 준 줄 모르는데, 이 축이 있는 이유가 승인자가 준 것과
+ * 실제로 열리는 것을 같게 두는 것이라 그 자리를 이 줄이 메운다. `embeddings` 는 경로가
+ * 하나뿐이라 이름이 곧 범위여서 없다.
+ */
+const SCOPES: Partial<Record<PassthroughEndpoint, string>> = {
+  images: '편집과 이미지 모델 목록 조회가 함께 들어 있습니다.',
+}
+
 /** 체크박스가 서는 순서. 표시명 표가 그대로 순서다. */
 export const PASSTHROUGH_ENDPOINTS = Object.keys(LABELS) as PassthroughEndpoint[]
+
+/** 이름이 곧 범위인 값에는 붙일 말이 없는 것이 맞다. */
+export function passthroughScope(value: PassthroughEndpoint): string | undefined {
+  return SCOPES[value]
+}
 
 /** 값 하나의 표시명. 표에 없는 값은 원문 그대로 — 감추면 부여된 것이 안 보인다. */
 export function passthroughLabel(value: string): string {

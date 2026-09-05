@@ -180,7 +180,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.queryByLabelText('이미지 생성')).not.toBeInTheDocument()
+    expect(dialog.queryByRole('checkbox', { name: /이미지 생성/ })).not.toBeInTheDocument()
     await user.clear(dialog.getByLabelText('RPM'))
     await user.type(dialog.getByLabelText('RPM'), '80')
     await user.click(dialog.getByRole('button', { name: '저장' }))
@@ -194,7 +194,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    await user.click(dialog.getByLabelText('이미지 생성'))
+    await user.click(dialog.getByRole('checkbox', { name: /이미지 생성/ }))
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))

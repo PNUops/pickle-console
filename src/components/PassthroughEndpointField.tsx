@@ -2,6 +2,7 @@ import { Checkbox } from './ui'
 import {
   PASSTHROUGH_ENDPOINTS,
   passthroughLabel,
+  passthroughScope,
   togglePassthrough,
   type PassthroughEndpoint,
 } from '../lib/passthrough-endpoints'
@@ -49,6 +50,7 @@ export function PassthroughEndpointField({
               onChange(togglePassthrough(value, endpoint, event.target.checked))
             }
             label={passthroughLabel(endpoint)}
+            description={passthroughScope(endpoint)}
           />
         ))}
       </div>

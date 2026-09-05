@@ -340,7 +340,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await user.click(screen.getByLabelText('이미지 생성'))
+    await user.click(screen.getByRole('checkbox', { name: /이미지 생성/ }))
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
@@ -351,6 +351,21 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(approved[0].llmKey).toMatchObject({ grantedPassthroughEndpoints: ['images'] })
     const granted = screen.getByText('기능 권한').closest('div')!
     expect(within(granted).getByText('이미지 생성')).toBeInTheDocument()
+  })
+
+  // 「이미지 생성」은 토큰이 실제로 여는 범위보다 좁게 읽힌다. 그 이름만 보고 부여한
+  // 승인자는 편집까지 준 줄 모르고, 이 축은 준 것과 열리는 것이 같아야 뜻이 있다.
+  test('이미지 체크 옆에 편집과 목록 조회까지 열린다고 적는다', async () => {
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    expect(
+      screen.getByText('편집과 이미지 모델 목록 조회가 함께 들어 있습니다.'),
+    ).toBeInTheDocument()
+    // 임베딩은 경로가 하나라 붙일 말이 없다. 둘 다 달면 이 줄이 경고가 아니라
+    // 장식이 된다.
+    const embeddings = screen.getByRole('checkbox', { name: /임베딩/ }).closest('label')!
+    expect(within(embeddings).queryByText(/들어 있습니다/)).not.toBeInTheDocument()
   })
 
   test('자체 서빙 접두를 적으면 유료 모델 목록이 아니라고 막는다', async () => {
