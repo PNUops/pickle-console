@@ -272,7 +272,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     })
   })
 
-  test('금액 없이 모델 목록만 적으면 확인 모달 앞에서 걸린다', async () => {
+  test('금액 없이 허용 목록만 적으면 확인 모달 앞에서 걸린다', async () => {
     const user = userEvent.setup()
     const approved = renderDetail({})
 
@@ -284,6 +284,27 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       await screen.findByText('모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
+  })
+
+  // 차단 목록은 반대다. 금액이 0이어도 "이 키는 그 모델을 못 쓴다"가 참이고, 나중에
+  // 누가 금액을 채워도 참으로 남는다. 화면이 여기서 막으면 승인자의 거부가 돈이 안
+  // 드는 바로 그 순간에 사라졌다가 예산이 붙는 순간 열린다. 서버는 받는 값이다.
+  test('금액이 없어도 차단 목록만 적어 승인할 수 있다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*-pro')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditLimit: null,
+      grantedCreditDeniedModels: ['openai/*-pro'],
+    })
   })
 
   test('자체 서빙 접두를 적으면 유료 모델 목록이 아니라고 막는다', async () => {

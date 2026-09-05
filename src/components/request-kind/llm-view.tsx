@@ -263,12 +263,14 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         errors['llmKey.grantedCreditLimit'] =
           '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
       }
+      // 차단 목록에는 같은 규칙을 걸지 않는다. 허용 목록은 돈이 없으면 아무것도
+      // 열지 않아 잘못 읽은 폼이지만, 차단은 금액이 0이어도 "이 키는 그 모델을 못
+      // 쓴다"가 참이고 나중에 누가 금액을 채워도 참으로 남는다. 여기서 막으면
+      // 승인자의 거부가 돈이 안 드는 바로 그 순간에 사라졌다가 예산이 붙는 순간
+      // 열린다. 서버도 이 규칙을 허용 목록에만 건다.
       const deniedError = creditModelsError(parsedDeniedModels, 'DENY')
       if (deniedError) {
         errors['llmKey.grantedCreditDeniedModels'] = deniedError
-      } else if (parsedDeniedModels.length > 0 && !(Number(creditLimit) > 0)) {
-        errors['llmKey.grantedCreditLimit'] =
-          '모델 차단 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
       }
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
       if (!rpmError && !tpmError && rpm.trim() && tpm.trim()) {

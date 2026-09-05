@@ -425,17 +425,15 @@ function LimitsModal({
     } else if (canEditCredit && !errors.creditLimit && parsedModels.length > 0 && !(credit > 0)) {
       errors.creditLimit = '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
+    // 차단 목록에는 금액 한도를 요구하지 않는다. 허용 목록은 돈이 없으면 아무것도
+    // 열지 않아 잘못 읽은 폼이지만, 차단은 금액이 0이어도 "이 키는 그 모델을 못
+    // 쓴다"가 참이고 나중에 금액이 붙어도 참으로 남는다. 여기서 막으면 승인자의
+    // 거부가 돈이 안 드는 순간에 사라졌다가 예산이 붙는 순간 열린다. 서버도 이
+    // 규칙을 허용 목록에만 건다.
     const parsedDeniedModels = parseCreditModels(creditDeniedModels)
     const deniedError = canEditCredit ? creditModelsError(parsedDeniedModels, 'DENY') : null
     if (deniedError) {
       errors.creditDeniedModels = deniedError
-    } else if (
-      canEditCredit &&
-      !errors.creditLimit &&
-      parsedDeniedModels.length > 0 &&
-      !(credit > 0)
-    ) {
-      errors.creditLimit = '모델 차단 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
     if (canEditCredit && credit > 0 && initialBindingAllowed) {
       if (accounts.isPending) {
@@ -462,6 +460,11 @@ function LimitsModal({
       // 전체 교체라 편집 권한이 없는 역할도 현재 값을 그대로 되돌려 보낸다.
       // 두 목록 다 그래야 한다. 한쪽만 되돌려 보내면 금액을 못 만지는 역할이
       // 다른 칸을 저장하는 순간 나머지 목록이 지워진다.
+      //
+      // 이 삼항은 방어선 두 겹째다. 그 역할에게는 입력란이 없어 state 가 키 값
+      // 그대로라, 삼항을 걷어내고 parsed 를 그냥 보내도 값은 같고 테스트도 초록으로
+      // 남는다. 실제 데이터 소멸은 빈 배열을 보내거나 필드를 아예 빠뜨릴 때
+      // 일어나고, 테스트가 지키는 것은 그쪽이다. 정리하려거든 그 사실을 알고 해라.
       creditAllowedModels: canEditCredit ? parsedModels : llmKey.creditAllowedModels,
       creditDeniedModels: canEditCredit ? parsedDeniedModels : llmKey.creditDeniedModels,
       openrouterAccountId:

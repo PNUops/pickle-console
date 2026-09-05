@@ -133,6 +133,29 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
       .toEqual(['openai/*-pro', 'anthropic/claude-opus-*'])
   })
 
+  // 차단 목록에는 금액 한도를 요구하지 않는다. 금액이 0이어도 "이 키는 그 모델을 못
+  // 쓴다"가 참이고, 나중에 금액이 붙어도 참으로 남는다. 화면이 여기서 막으면 승인자의
+  // 거부가 돈이 안 드는 순간에 사라졌다가 예산이 붙는 순간 열린다.
+  test('금액 한도가 0이어도 차단 목록만으로 저장된다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    const credit = dialog.getByLabelText('금액 한도 (USD)')
+    await user.clear(credit)
+    await user.type(credit, '0')
+    await user.selectOptions(dialog.getByLabelText('금액 리셋 창'), '')
+    await user.clear(dialog.getByLabelText('허용할 유료 모델'))
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    expect(adminLlmLimitBodies[0]).toMatchObject({
+      creditLimit: 0,
+      creditAllowedModels: [],
+      creditDeniedModels: ['openai/*-pro'],
+    })
+  })
+
   // 금액 축을 못 만지는 역할에게는 두 칸이 다 없다. 창이 현재 값을 그대로
   // 되돌려 보내지 않으면, 그 역할이 RPM 하나를 고치는 순간 차단 목록이 사라진다.
   // 목이 서버처럼 403을 내므로 이 단언이 실제로 그 자리를 지킨다.
