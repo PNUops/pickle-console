@@ -111,10 +111,9 @@ function PromptSection({ view, truncated }: { view: PromptView | null; truncated
           <Block>{view.text}</Block>
           {/* 두 모양이 한 화면에 공존하는 이유를 그 자리에서 말한다. 없으면
               「어떤 기록은 왜 역할별로 나뉘고 어떤 것은 왜 뭉쳐 있나」를 영원히
-              모른다. */}
+              모른다. 잘렸다는 사실 자체는 아래 경고가 한 번만 말한다. */}
           <p className="text-xs text-neutral-500">
-            길이 제한에 걸려 앞부분만 글자 그대로 기록됐습니다. 역할별로 나눌 수 없어 한 덩어리로
-            보입니다.
+            역할별로 나눌 수 없어 한 덩어리로 보입니다.
           </p>
         </>
       )}
