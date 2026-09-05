@@ -71,8 +71,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 30개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(30)
+  test('에러 표는 사용자에게 도달하는 33개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(33)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -82,6 +82,7 @@ describe('LLM API 사실 사본', () => {
       account_suspended: 403,
       model_not_found: 404,
       model_not_allowed: 403,
+      endpoint_not_allowed: 403,
       rate_limit_requests: 429,
       rate_limit_tokens: 429,
       rate_limit_concurrency: 429,
@@ -98,6 +99,8 @@ describe('LLM API 사실 사본', () => {
       output_limit_exceeded: 400,
       unknown_endpoint: 404,
       method_not_allowed: 405,
+      streaming_not_supported: 400,
+      upstream_response_too_large: 502,
       service_disabled: 503,
       server_busy: 503,
       upstream_rejected: 400,
