@@ -22,7 +22,10 @@ import {
   parseCreditModels,
   type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
-import { passthroughText } from '../../lib/passthrough-endpoints'
+import {
+  passthroughText,
+  type PassthroughEndpoint,
+} from '../../lib/passthrough-endpoints'
 import { todayKstDate } from '../../lib/format'
 import { Field } from './Field'
 import { periodText } from './period-text'
@@ -170,7 +173,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditDeniedModels, setCreditDeniedModels] = useState('')
   // 확장 기능만 빈 값의 뜻이 반대다. 모델 목록 둘은 비면 제한이 풀리지만 이쪽은
   // 비면 아무것도 안 열리므로, 프리필이 없으면 아무 기능도 없는 승인이 된다.
-  const [passthroughEndpoints, setPassthroughEndpoints] = useState<readonly string[]>([])
+  const [passthroughEndpoints, setPassthroughEndpoints] = useState<
+    readonly PassthroughEndpoint[]
+  >([])
   const [accountDefaultsTouched, setAccountDefaultsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.

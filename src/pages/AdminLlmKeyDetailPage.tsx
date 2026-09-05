@@ -41,7 +41,7 @@ import {
   formatCreditModels,
   parseCreditModels,
 } from '../lib/credit-model-allowlist'
-import { passthroughText } from '../lib/passthrough-endpoints'
+import { passthroughText, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
 import { formatDateTime } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
@@ -349,9 +349,9 @@ function LimitsModal({
   const [creditDeniedModels, setCreditDeniedModels] = useState(
     formatCreditModels(llmKey.creditDeniedModels),
   )
-  const [passthroughEndpoints, setPassthroughEndpoints] = useState<readonly string[]>(
-    llmKey.passthroughEndpoints,
-  )
+  const [passthroughEndpoints, setPassthroughEndpoints] = useState<
+    readonly PassthroughEndpoint[]
+  >(llmKey.passthroughEndpoints)
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)

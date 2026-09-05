@@ -3,7 +3,7 @@ import {
   PASSTHROUGH_ENDPOINTS,
   passthroughLabel,
   togglePassthrough,
-  unknownPassthrough,
+  type PassthroughEndpoint,
 } from '../lib/passthrough-endpoints'
 
 /**
@@ -31,12 +31,11 @@ export function PassthroughEndpointField({
   error,
 }: {
   label: string
-  value: readonly string[]
-  onChange: (next: string[]) => void
+  value: readonly PassthroughEndpoint[]
+  onChange: (next: PassthroughEndpoint[]) => void
   description?: string
   error?: string
 }) {
-  const unknown = unknownPassthrough(value)
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className="text-sm font-medium text-foreground-secondary">{label}</legend>
@@ -53,12 +52,6 @@ export function PassthroughEndpointField({
           />
         ))}
       </div>
-      {unknown.length > 0 ? (
-        <p className="text-sm text-foreground-muted">
-          이 화면에 없는 기능 {unknown.join(', ')}이(가) 함께 부여되어 있고, 저장해도 그대로
-          남습니다.
-        </p>
-      ) : null}
       {error && (
         <p role="alert" className="text-sm text-danger-600">
           {error}

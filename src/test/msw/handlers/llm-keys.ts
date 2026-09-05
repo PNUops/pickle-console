@@ -284,7 +284,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     // active-admin-key 가 들고 있고 AdminLlmKeyDetailPage 테스트가 읽는다.
     creditAllowedModels: [] as string[],
     creditDeniedModels: [] as string[],
-    passthroughEndpoints: [] as string[],
+    passthroughEndpoints: [] as Schemas['AdminLlmKeyDetailResponse']['passthroughEndpoints'],
     creditUsage: 2.5,
     creditLimitRemaining: 2.5,
     creditUsageAt: '2026-08-31T00:27:30+09:00',

@@ -34,7 +34,7 @@ import {
   formatCreditModels,
   parseCreditModels,
 } from '../lib/credit-model-allowlist'
-import { passthroughLabel } from '../lib/passthrough-endpoints'
+import { passthroughLabel, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
 import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
@@ -348,9 +348,9 @@ function EditAccountModal({
   const [defaultDeniedModels, setDefaultDeniedModels] = useState(
     formatCreditModels(account.defaultCreditDeniedModels),
   )
-  const [defaultPassthrough, setDefaultPassthrough] = useState<readonly string[]>(
-    account.defaultPassthroughEndpoints,
-  )
+  const [defaultPassthrough, setDefaultPassthrough] = useState<
+    readonly PassthroughEndpoint[]
+  >(account.defaultPassthroughEndpoints)
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [deniedError, setDeniedError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
