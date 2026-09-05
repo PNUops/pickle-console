@@ -132,4 +132,23 @@ describe('사업 계정의 승인 기본 목록', () => {
 
     expect(await dialog.findByText(/형식이 아닙니다/)).toBeInTheDocument()
   })
+
+  // 기능 권한 기본값도 두 목록과 같은 저장에 실려야 한다. 빠지면 승인 폼이 계정이
+  // 정해 둔 것보다 적게 체크된 채로 열리고, 승인자는 그것을 계정의 뜻으로 읽는다.
+  test('기능 권한 기본값도 같은 저장에 실린다', async () => {
+    const user = userEvent.setup()
+    renderDetail(uuid(410))
+
+    await user.click(await screen.findByRole('button', { name: '정보 변경' }))
+    const dialog = within(
+      screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
+    )
+    await user.click(dialog.getByRole('checkbox', { name: /임베딩/ }))
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => {
+      const account = openRouterAccountStore.find((item) => item.id === uuid(410))!
+      expect(account.defaultPassthroughEndpoints).toEqual(['images', 'embeddings'])
+    })
+  })
 })

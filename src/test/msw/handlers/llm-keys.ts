@@ -50,6 +50,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       // 하고, 그러려면 픽스처가 둘을 다 들어야 한다.
       creditAllowedModels: ['openai/*'],
       creditDeniedModels: ['openai/*-pro'],
+      passthroughEndpoints: ['images'],
       revokedAt: null,
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -76,6 +77,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       // 금액은 없는데 차단만 걸린 키가 하나는 있어야, 금액으로 표시를 가리는
       // 회귀가 잡힌다. 승인자가 막아 둔 것은 금액이 붙는 날 그대로 적용된다.
       creditDeniedModels: ['openai/*-pro'],
+      passthroughEndpoints: [],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
@@ -100,6 +102,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditAxisConnected: false,
       creditAllowedModels: [],
       creditDeniedModels: [],
+      passthroughEndpoints: [],
       revokedAt: null,
       workspaceId: uuid(14),
       workspaceName: '데이터베이스 실습',
@@ -124,6 +127,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditAxisConnected: false,
       creditAllowedModels: [],
       creditDeniedModels: [],
+      passthroughEndpoints: [],
       revokedAt: '2026-07-31T09:00:00+09:00',
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -148,6 +152,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditAxisConnected: false,
       creditAllowedModels: [],
       creditDeniedModels: [],
+      passthroughEndpoints: [],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',
@@ -174,6 +179,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditAxisConnected: false,
       creditAllowedModels: [],
       creditDeniedModels: [],
+      passthroughEndpoints: [],
       revokedAt: null,
       workspaceId: uuid(12),
       workspaceName: '캡스톤 3조',
@@ -278,6 +284,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     // active-admin-key 가 들고 있고 AdminLlmKeyDetailPage 테스트가 읽는다.
     creditAllowedModels: [] as string[],
     creditDeniedModels: [] as string[],
+    passthroughEndpoints: [] as Schemas['AdminLlmKeyDetailResponse']['passthroughEndpoints'],
     creditUsage: 2.5,
     creditLimitRemaining: 2.5,
     creditUsageAt: '2026-08-31T00:27:30+09:00',
@@ -314,6 +321,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
       // 있으면 안 된다. 비어 있으면 지워지는 회귀와 구별되지 않는다.
       creditAllowedModels: ['openai/*'],
       creditDeniedModels: ['openai/*-pro'],
+      passthroughEndpoints: ['images'],
     },
     {
       ...base,
@@ -977,11 +985,15 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 없는 200을 내고, 그 위의 화면 테스트가 초록으로 거짓말한다.
     const nextModels = body.creditAllowedModels ?? []
     const nextDenied = body.creditDeniedModels ?? []
+    // 기능 권한도 같은 게이트 뒤에 있다. 셋 중 유일하게 부여하는 축이라, 빠뜨리면
+    // 목이 서버보다 헐거워지는 정도가 아니라 반대 방향으로 헐거워진다.
+    const nextPassthrough = body.passthroughEndpoints ?? []
     const listChanged = (next: string[], current: string[]) =>
       next.length !== current.length || next.some((model, index) => model !== current[index])
     const modelsChanged =
       listChanged(nextModels, key.creditAllowedModels) ||
-      listChanged(nextDenied, key.creditDeniedModels)
+      listChanged(nextDenied, key.creditDeniedModels) ||
+      listChanged(nextPassthrough, key.passthroughEndpoints)
     if (
       role === 'SYS_MANAGER' &&
       (body.creditLimit !== key.creditLimit ||
@@ -992,7 +1004,7 @@ export const llmKeyHandlers: RequestHandler[] = [
         type: 'about:blank',
         title: '권한이 없습니다',
         status: 403,
-        detail: '시스템 운영자는 금액 한도와 모델 목록을 변경할 수 없습니다.',
+        detail: '시스템 운영자는 금액 한도와 모델 목록, 기능 권한을 변경할 수 없습니다.',
         code: 'FORBIDDEN',
       })
     }
@@ -1002,6 +1014,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 그대로 두면 상세 화면의 join 이 터지는 상태가 목에서만 존재하게 된다.
     key.creditAllowedModels = nextModels
     key.creditDeniedModels = nextDenied
+    key.passthroughEndpoints = nextPassthrough
     if (body.openrouterAccountId && !key.openrouterAccountName) {
       key.openrouterAccountName = openRouterAccountStore.find(
         (account) => account.id === body.openrouterAccountId,

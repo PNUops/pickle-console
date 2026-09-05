@@ -67,6 +67,7 @@ function llmKeyRequest(): Omit<
       useCommercialModels: false,
       grantedCreditAllowedModels: [],
       grantedCreditDeniedModels: [],
+      grantedPassthroughEndpoints: [],
     },
   }
 }
@@ -238,6 +239,7 @@ export const requestHandlers: RequestHandler[] = [
               useCommercialModels: false,
               grantedCreditAllowedModels: [],
               grantedCreditDeniedModels: [],
+              grantedPassthroughEndpoints: [],
             }
           : null,
       vm: body.type !== 'VM' ? null : {
