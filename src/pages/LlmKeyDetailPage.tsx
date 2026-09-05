@@ -38,6 +38,7 @@ import { LLM_API_BASE_URL, LLM_DEFAULT_MODEL } from '../lib/llm-api'
 import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { LlmKeyBodiesSection } from '../components/llm-body/LlmKeyBodiesSection'
 
 // 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
 // (할당 추이·VM 모니터링과 같은 규칙).
@@ -47,6 +48,9 @@ const LlmKeyUsageSection = lazy(() => import('../components/llm-usage/LlmKeyUsag
 const KEY_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
   { id: 'usage', label: '사용량' },
+  // 설정은 「본문 기록」, 이 화면은 「기록된 본문」이다. 같은 말이 둘을 가리키면
+  // 「본문 기록을 껐는데 본문 기록이 남아 있다」는 문장이 나온다.
+  { id: 'bodies', label: '기록된 본문' },
 ]
 
 /**
@@ -96,6 +100,8 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   // 근거를 화면도 본다. 배지·안내·발급 가능 판정이 모두 이 값을 쓴다.
   const status = effectiveLlmKeyStatus(llmKey.status, llmKey.expiresAt)
   const terminal = status === 'REVOKED' || status === 'EXPIRED'
+  // 본문 기록을 켜는 등급 — EditSection이 쓰는 것과 같은 근거를 그대로 본다.
+  const canEditKey = llmKey.myResourceRole === 'OWNER' || llmKey.myResourceRole === 'EDITOR'
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = KEY_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
@@ -140,6 +146,22 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </ErrorBoundary>
       </TabPanel>
 
+      <TabPanel id="bodies" active={activeTab === 'bodies'}>
+        {/* 지연 로드하지 않는다 — 사용량 탭이 그러는 이유는 uPlot 하나뿐이고
+            여기에는 새 의존이 없다. ErrorBoundary만 두른다: 기록된 프롬프트의
+            모양을 서버 타입이 보장하지 못하는 유일한 탭이라 렌더 실패가 실제로
+            가능하다. */}
+        <ErrorBoundary label="기록된 본문">
+          <LlmKeyBodiesSection
+            keyId={llmKey.id}
+            status={status}
+            recordBodies={llmKey.recordBodies}
+            canEdit={canEditKey}
+            onGoToOverview={() => selectTab('overview')}
+          />
+        </ErrorBoundary>
+      </TabPanel>
+
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
       <StatusNotice status={status} />
       <IssueSection llmKey={llmKey} status={status} />
@@ -165,7 +187,24 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             <Field label="만료">
               {llmKey.expiresAt ? formatDateTime(llmKey.expiresAt) : '만료 없음'}
             </Field>
-            <Field label="본문 기록">{llmKey.recordBodies ? '켜짐' : '꺼짐'}</Field>
+            <Field label="본문 기록">
+              {llmKey.recordBodies ? (
+                <>
+                  켜짐. 이 키로 보낸 프롬프트와 응답을 30일 동안 보관합니다.
+                  <span className="mt-0.5 block text-xs text-neutral-500">
+                    이 키에 접근 권한이 있는 사람은 모두 「기록된 본문」 탭에서 읽을 수 있습니다.
+                  </span>
+                </>
+              ) : (
+                <>
+                  꺼짐. 새 요청은 기록되지 않습니다.
+                  <span className="mt-0.5 block text-xs text-neutral-500">
+                    이미 기록된 본문이 있으면 「기록된 본문」 탭에 남아 있고, 기록된 지 30일이
+                    지나면 삭제됩니다.
+                  </span>
+                </>
+              )}
+            </Field>
             <Field label="분당 요청 한도 (자체 서빙)">{limitLabel(llmKey.rpm, '회')}</Field>
             <Field label="분당 토큰 한도 (자체 서빙)">{limitLabel(llmKey.tpm, '토큰')}</Field>
             <Field label="동시 요청 한도 (자체 서빙)">
@@ -593,10 +632,14 @@ function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
               onChange={(event) => setPurpose(event.target.value)}
             />
           </FormField>
+          {/* 켜기 전에 셋을 말한다. 무엇이 보관되는지, 접근 권한자 전원이 읽는다는
+              것, 30일이라는 것. 가운데가 지시문의 이유이므로 이유가 먼저 온다.
+              읽는 단위가 사람이 아니라 키인 것은 편의가 아니라 구조다 —
+              게이트웨이는 키를 인증할 뿐 보낸 사람을 모른다. */}
           <Checkbox
             className="max-w-md"
-            label="프롬프트·응답 본문 기록"
-            description="켜면 이 키로 보낸 프롬프트와 응답이 수집됩니다. 개인정보가 담기는 요청에는 켜지 마세요."
+            label="프롬프트와 응답 기록"
+            description="켜면 이 키로 보낸 프롬프트와 응답을 30일 동안 보관합니다. 이 키에 접근 권한이 있는 사람은 모두 그 내용을 읽을 수 있으므로, 개인정보가 담기는 요청에는 켜지 마세요."
             checked={recordBodies}
             disabled={!allowed}
             onChange={(event) => setRecordBodies(event.target.checked)}
