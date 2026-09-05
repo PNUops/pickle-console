@@ -91,14 +91,14 @@ describe('사용량 탭', () => {
     renderUsage(USED_KEY)
 
     expect(await screen.findByRole('img', { name: '토큰 사용량 (일부 추정)' })).toBeInTheDocument()
-    expect(screen.getByText(/가 추정값/)).toBeInTheDocument()
+    expect(screen.getByText(/가 추정$/)).toBeInTheDocument()
   })
 
   test('추정이 없는 구간은 제목에 단서를 달지 않는다', async () => {
     renderUsage(REVOKED_KEY)
 
     expect(await screen.findByRole('img', { name: '토큰 사용량' })).toBeInTheDocument()
-    expect(screen.queryByText(/가 추정값/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/가 추정$/)).not.toBeInTheDocument()
   })
 
   test('조회 기간을 바꾸면 그 기간으로 다시 묻는다', async () => {
@@ -140,7 +140,7 @@ describe('사용량 탭', () => {
     const totals = await screen.findByText('총 요청')
     expect(totals.parentElement).toHaveTextContent(/[0-9,]+회/)
     expect(screen.getByText('합계 토큰')).toBeInTheDocument()
-    expect(screen.getByText(/가 추정값/)).toBeInTheDocument()
+    expect(screen.getByText(/가 추정$/)).toBeInTheDocument()
   })
 
   test('모델별 비중이 원형과 표로 함께 나온다', async () => {

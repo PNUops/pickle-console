@@ -165,7 +165,16 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             <Field label="만료">
               {llmKey.expiresAt ? formatDateTime(llmKey.expiresAt) : '만료 없음'}
             </Field>
-            <Field label="본문 기록">{llmKey.recordBodies ? '켜짐' : '꺼짐'}</Field>
+            <Field label="본문 기록">
+              {llmKey.recordBodies ? '켜짐' : '꺼짐'}
+              {/* 폐기·만료된 키는 아래 편집 카드가 렌더되지 않아 무엇이 수집됐는지
+                  말할 자리가 여기뿐이다. 지난 일이므로 시제도 다르다. */}
+              {terminal && llmKey.recordBodies && (
+                <span className="mt-0.5 block text-xs text-neutral-500">
+                  이 키로 보낸 프롬프트와 응답이 수집됐습니다.
+                </span>
+              )}
+            </Field>
             <Field label="분당 요청 한도 (자체 서빙)">{limitLabel(llmKey.rpm, '회')}</Field>
             <Field label="분당 토큰 한도 (자체 서빙)">{limitLabel(llmKey.tpm, '토큰')}</Field>
             <Field label="동시 요청 한도 (자체 서빙)">
