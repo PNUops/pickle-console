@@ -814,6 +814,108 @@ function toAdminSummary(key: AdminLlmKey): Schemas['AdminLlmKeySummaryResponse']
   }
 }
 
+
+/**
+ * 모델 목록 응답의 상태별 고정값.
+ *
+ * 이 화면이 그려야 하는 조합을 여기서 **세어 두고** 시험이 그 목록에서 고른다.
+ * 픽스처가 쌓이는 대로 두면 그 집합이 무엇을 그릴지 대신 정하고, 만들어 본 적
+ * 없는 조합은 한 번도 안 그려진 채로 배포된다.
+ */
+const SELF_SERVED = [
+  { name: 'pickle-general', maxInputTokens: null, maxOutputTokens: null },
+]
+
+const PAID_ROWS = [
+  {
+    id: 'openai/gpt-5.6-luna',
+    name: 'GPT-5.6 Luna',
+    promptPricePerMillion: 0.2,
+    completionPricePerMillion: 1.2,
+    contextLength: 1050000,
+  },
+  {
+    id: 'anthropic/claude-sonnet-4',
+    name: 'Claude Sonnet 4',
+    promptPricePerMillion: 3,
+    completionPricePerMillion: 15,
+    contextLength: 200000,
+  },
+]
+
+const paidBase = {
+  access: 'UNRESTRICTED' as const,
+  allowedPatterns: [] as string[],
+  deniedPatterns: [] as string[],
+  models: PAID_ROWS,
+  unmatchedAllowedPatterns: [] as string[],
+  unmatchedDeniedPatterns: [] as string[],
+  catalogFreshness: 'FRESH' as const,
+  catalogObservedAt: '2026-09-05T00:00:00Z',
+}
+
+export const llmKeyModelsStates = {
+  // 한도가 없어도 목록은 채워진다. 이름을 모르면 신청 자체를 할 수 없다.
+  noBudget: { selfServed: SELF_SERVED, paid: { ...paidBase, access: 'NONE' } },
+  pending: { selfServed: SELF_SERVED, paid: { ...paidBase, access: 'PENDING' } },
+  unrestricted: { selfServed: SELF_SERVED, paid: paidBase },
+  allowOnly: {
+    selfServed: SELF_SERVED,
+    paid: {
+      ...paidBase,
+      access: 'LISTED',
+      allowedPatterns: ['openai/*'],
+      models: [PAID_ROWS[0]],
+    },
+  },
+  // 차단만 있는 키. 허용 목록이 비었는데 LISTED 인 자리다.
+  denyOnly: {
+    selfServed: SELF_SERVED,
+    paid: {
+      ...paidBase,
+      access: 'LISTED',
+      deniedPatterns: ['anthropic/*'],
+      models: [PAID_ROWS[0]],
+    },
+  },
+  // 안 맞는 규칙 둘. 허용 쪽과 차단 쪽 문구가 달라야 한다.
+  unmatched: {
+    selfServed: SELF_SERVED,
+    paid: {
+      ...paidBase,
+      access: 'LISTED',
+      allowedPatterns: ['openai/*', 'vendor/gone'],
+      deniedPatterns: ['openai/*-pro'],
+      models: [PAID_ROWS[0]],
+      unmatchedAllowedPatterns: ['vendor/gone'],
+      unmatchedDeniedPatterns: ['openai/*-pro'],
+    },
+  },
+  // 한 번도 못 가져온 카탈로그. 비어 있는 것과 다르다.
+  neverFetched: {
+    selfServed: SELF_SERVED,
+    paid: { ...paidBase, models: [], catalogFreshness: 'UNKNOWN', catalogObservedAt: null },
+  },
+  stale: { selfServed: SELF_SERVED, paid: { ...paidBase, catalogFreshness: 'STALE' } },
+  // 좁혀서 남은 것이 없는 상태. 카탈로그가 빈 것과 문구가 달라야 한다.
+  narrowedToNothing: {
+    selfServed: SELF_SERVED,
+    paid: {
+      ...paidBase,
+      access: 'LISTED',
+      allowedPatterns: ['vendor/gone'],
+      models: [],
+      unmatchedAllowedPatterns: ['vendor/gone'],
+    },
+  },
+  // 자체 서빙이 하나도 없는 상태. 구역 하나가 비어도 고장으로 읽히면 안 된다.
+  noSelfServed: { selfServed: [], paid: paidBase },
+} as const
+
+export type LlmKeyModelsState = keyof typeof llmKeyModelsStates
+
+const modelsFor = () => llmKeyModelsStates.unrestricted
+
 export const llmKeyHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/llm/keys', ({ request }) => {
     const profile = adminActor(request)
@@ -958,6 +1060,23 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 소속 워크스페이스의 키라도 접근 목록에 없으면 존재만 알고 안은 못 본다.
     if (key.myResourceRole == null) return noGrantProblem(key.id)
     return HttpResponse.json(key, { status: 200 })
+  }),
+
+  http.get('*/api/v1/llm-keys/:keyId/models', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 상세와 같은 문이다 — 부여가 있어야 열린다.
+    if (key.myResourceRole == null) {
+      return noGrantProblem(key.id, `/api/v1/llm-keys/${key.id}/models`)
+    }
+    return HttpResponse.json(modelsFor(), { status: 200 })
+  }),
+
+  http.get('*/api/v1/admin/llm/keys/:keyId/models', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 관리자 경로는 리소스 부여를 보지 않는다. 기관 스코프가 이 자리의 규칙이다.
+    return HttpResponse.json(modelsFor(), { status: 200 })
   }),
 
   http.get('*/api/v1/llm-keys/:keyId/usage', ({ params, request }) => {
