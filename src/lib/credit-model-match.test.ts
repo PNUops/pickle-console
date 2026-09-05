@@ -27,6 +27,8 @@ const CASES: [pattern: string, name: string, matches: boolean, why: string][] = 
   ['openai/*-pro', 'openai/gpt-5-nano', false, '꼬리 불일치'],
   ['openai/*-pro', 'openai/pro', false, '시작-별은 자기 이름을 안 잡음'],
   ['openai/*-pro', 'anthropic/claude-opus-pro', false, '벤더 불일치'],
+  ['openai/gpt-5*', 'openai/gpt-5', true, '별이 빈 문자열을 먹는다'],
+  ['*', '*', false, '이름이 * 인 모델이 합성돼도 막는다'],
   ['pickle-general', 'pickle-general', true, '벤더 없는 이름'],
 ]
 

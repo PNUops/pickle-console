@@ -28,6 +28,10 @@ export function matchesCreditModel(pattern: string, name: string): boolean {
   const p = normalize(pattern)
   const n = normalize(name)
   if (!p || !n) return false
+  // 적재 정규식이 이미 떨구는 모양이지만 여기서도 막는다. 패스스루가 `*` 라는
+  // 이름의 모델을 합성할 수 있어서, 이 가드가 없으면 목록에 남아 있던 `*` 하나가
+  // 그 모델을 잡는다.
+  if (p === '*') return false
 
   const slash = p.indexOf('/')
   // 벤더 없는 이름은 정확히 같을 때만 잡는다.
@@ -55,9 +59,13 @@ export function matchesCreditModel(pattern: string, name: string): boolean {
 
   if (seg.endsWith('*')) {
     const stem = seg.slice(0, -1)
-    if (rest.startsWith(stem) && rest.length > stem.length) return true
+    // 별은 빈 문자열도 먹는다. 길이 조건을 걸면 `openai/gpt-5*` 가
+    // `openai/gpt-5` 를 놓치는데, 구분자 규칙 때문에 더 좁아 보이는
+    // `openai/gpt-5-*` 는 그것을 잡는다. 넓은 패턴이 덜 잡는 자리는 만들지 않는다.
+    if (rest.startsWith(stem)) return true
     // `openai/gpt-5-*` 는 `openai/gpt-5` 도 잡는다. 구분자를 뗀 자기 이름이
-    // 계열에서 빠지면 계열을 열어 준 사람이 뜻한 것과 다르다.
+    // 계열에서 빠지면 계열을 열어 준 사람이 뜻한 것과 다르다. 접두 관계가 아니라
+    // 위의 규칙으로는 안 잡히므로 이 줄이 따로 필요하다.
     const last = stem.slice(-1)
     if ((last === '-' || last === '.' || last === ':') && rest === stem.slice(0, -1)) return true
     return false
