@@ -374,7 +374,12 @@ describe('VM 신청 위저드 — 서버가 되돌려준 오류', () => {
 
     const slug = await screen.findByLabelText('호스트 이름')
     expect(slug).toHaveAttribute('aria-invalid', 'true')
-    expect(slug).toHaveFocus()
+    // 오류 표시와 포커스 이동은 같은 커밋이 아니다. `aria-invalid`는 렌더가 붙이고
+    // 포커스는 그 뒤 effect가 옮기므로, 칸을 찾은 순간을 그대로 재면 아직 제출 버튼이
+    // 들고 있는 틈에 걸린다(CI에서 실측). 끝까지 안 옮겨지면 waitFor가 실패한다.
+    await waitFor(() => {
+      expect(slug).toHaveFocus()
+    })
     expect(screen.getByText('이미 사용 중인 이름입니다.')).toBeInTheDocument()
     expect(screen.getByText(/되돌아왔습니다/)).toBeInTheDocument()
     // 원시 경로가 그대로 새지 않는다.
