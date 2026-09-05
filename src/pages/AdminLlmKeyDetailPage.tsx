@@ -13,6 +13,7 @@ import {
   type AdminLlmKeyLimits,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
 import { useAuth } from '../auth/auth-context'
 import {
   canAdminRevokeLlmKey,
@@ -71,6 +72,7 @@ export function AdminLlmKeyDetailPage() {
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [resumeOpen, setResumeOpen] = useState(false)
   const [revokeOpen, setRevokeOpen] = useState(false)
+  const [modelsOpen, setModelsOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -200,7 +202,13 @@ export function AdminLlmKeyDetailPage() {
       />
 
       <section className="space-y-3 rounded-panel border border-stroke-subtle bg-surface-card p-4">
-        <h2 className="type-section-title">현재 한도</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="type-section-title">현재 한도</h2>
+          {/* 위 두 목록이 실제로 무엇을 남기는지는 문자열만 봐서는 모른다. */}
+          <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
+            호출할 수 있는 모델 보기
+          </Button>
+        </div>
         <DescriptionList
           columns={3}
           items={[
@@ -231,6 +239,12 @@ export function AdminLlmKeyDetailPage() {
             },
             { term: '금액 관측', description: <KeyCreditObservation llmKey={key} /> },
           ]}
+        />
+        <LlmKeyModelsModal
+          keyId={keyId}
+          open={modelsOpen}
+          onClose={() => setModelsOpen(false)}
+          variant="admin"
         />
       </section>
 

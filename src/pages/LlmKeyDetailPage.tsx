@@ -39,6 +39,7 @@ import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { LlmKeyBodiesSection } from '../components/llm-body/LlmKeyBodiesSection'
+import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
 
 // 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
 // (할당 추이·VM 모니터링과 같은 규칙).
@@ -165,7 +166,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
       <StatusNotice status={status} />
       <IssueSection llmKey={llmKey} status={status} />
-      {status === 'ACTIVE' && <ConnectionSection />}
+      {status === 'ACTIVE' && <ConnectionSection keyId={llmKey.id} />}
 
       <Card>
         <CardHeader>
@@ -358,7 +359,8 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
  * 키 평문은 서버에 없으므로 예시에는 환경 변수 자리표시자만 넣는다. 발급 화면을
  * 떠나면 어디로 보내는지 알 방법이 없어, 주소와 모델 이름을 여기에 둔다.
  */
-function ConnectionSection() {
+function ConnectionSection({ keyId }: { keyId: string }) {
+  const [modelsOpen, setModelsOpen] = useState(false)
   const example = `curl ${LLM_API_BASE_URL}/chat/completions \\
   -H "Authorization: Bearer $PICKLE_API_KEY" \\
   -H "Content-Type: application/json" \\
@@ -384,6 +386,11 @@ function ConnectionSection() {
             </div>
           </Field>
         </dl>
+        <div>
+          <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
+            호출할 수 있는 모델 보기
+          </Button>
+        </div>
         <CodeBlock label="curl" code={example} />
         <p className="text-sm text-neutral-600">
           지원 파라미터와 한도, 에러 코드는{' '}
@@ -395,6 +402,11 @@ function ConnectionSection() {
           </Link>
           에 있습니다.
         </p>
+        <LlmKeyModelsModal
+          keyId={keyId}
+          open={modelsOpen}
+          onClose={() => setModelsOpen(false)}
+        />
       </CardContent>
     </Card>
   )

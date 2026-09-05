@@ -556,6 +556,10 @@ export type AdminLlmKeyDetail = Schemas['AdminLlmKeyDetailResponse']
 export type AdminLlmKeyPage = Schemas['PageResponseAdminLlmKeySummaryResponse']
 export type AdminLlmKeyLimits = Schemas['AdminLlmKeyLimitsRequest']
 export type LlmKeyBrief = Schemas['LlmKeyBrief']
+export type LlmKeyModels = Schemas['LlmKeyModelsResponse']
+export type PaidModels = Schemas['PaidModels']
+export type PaidModel = Schemas['PaidModel']
+export type SelfServedModel = Schemas['SelfServedModel']
 export type AdminLlmStatus = Schemas['LlmStatusResponse']
 export type LlmGatewayStatus = Schemas['LlmGatewayStatusResponse']
 export type LlmUpstreamStatus = Schemas['LlmUpstreamStatusResponse']
@@ -854,6 +858,40 @@ export function fetchLlmKey(keyId: string): Promise<LlmKeyDetail> {
  * 값은 그 자리에서 무효가 된다. 호출부는 받은 값을 컴포넌트 상태로 옮기지 말고
  * 뮤테이션 상태에만 두었다가 `reset()`으로 버려야 한다 (릴레이 토큰과 같은 규칙).
  */
+/**
+ * 이 키로 부를 수 있는 모델.
+ *
+ * 부여가 아니라 후보 목록이다. 최종 판정은 호출 시점의 게이트웨이가 하고, 서버가
+ * 알 수 없는 것이 하나 남는다 — 이 키 뒤의 계정에 공급자가 그 모델을 실제로
+ * 서빙하는지. 그래서 화면은 「쓸 수 있다」가 아니라 「이 이름을 넣을 수 있다」를
+ * 말한다.
+ */
+export function fetchLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys/{keyId}/models', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, '호출할 수 있는 모델을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 같은 답을 승인자 자리에서. 인가만 다르고 계산은 서버에서 하나를 공유한다.
+ *
+ * 소유자 경로는 리소스 부여로, 이쪽은 기관 스코프로 연다. 부여를 우회하도록
+ * 소유자 경로를 넓히지 않고 경로를 따로 둔 것이라, 화면도 둘을 섞지 않는다.
+ */
+export function fetchAdminLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/keys/{keyId}/models', {
+      params: { path: { keyId } },
+    })
+    if (!data) throw toApiError(error, '호출할 수 있는 모델을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 export function issueLlmKeyToken(keyId: string): Promise<IssuedLlmKey> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/llm-keys/{keyId}/token', {
