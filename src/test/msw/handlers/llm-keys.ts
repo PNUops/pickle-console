@@ -985,7 +985,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 없는 200을 내고, 그 위의 화면 테스트가 초록으로 거짓말한다.
     const nextModels = body.creditAllowedModels ?? []
     const nextDenied = body.creditDeniedModels ?? []
-    // 확장 기능도 같은 게이트 뒤에 있다. 셋 중 유일하게 부여하는 축이라, 빠뜨리면
+    // 기능 권한도 같은 게이트 뒤에 있다. 셋 중 유일하게 부여하는 축이라, 빠뜨리면
     // 목이 서버보다 헐거워지는 정도가 아니라 반대 방향으로 헐거워진다.
     const nextPassthrough = body.passthroughEndpoints ?? []
     const listChanged = (next: string[], current: string[]) =>
@@ -1004,7 +1004,7 @@ export const llmKeyHandlers: RequestHandler[] = [
         type: 'about:blank',
         title: '권한이 없습니다',
         status: 403,
-        detail: '시스템 운영자는 금액 한도와 모델 목록, 확장 기능을 변경할 수 없습니다.',
+        detail: '시스템 운영자는 금액 한도와 모델 목록, 기능 권한을 변경할 수 없습니다.',
         code: 'FORBIDDEN',
       })
     }

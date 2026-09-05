@@ -171,7 +171,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   // 셋은 한 계정이 정해 둔 한 벌이라 프리필도 되돌리기도 함께 움직인다.
   const [creditModels, setCreditModels] = useState('')
   const [creditDeniedModels, setCreditDeniedModels] = useState('')
-  // 확장 기능만 빈 값의 뜻이 반대다. 모델 목록 둘은 비면 제한이 풀리지만 이쪽은
+  // 기능 권한만 빈 값의 뜻이 반대다. 모델 목록 둘은 비면 제한이 풀리지만 이쪽은
   // 비면 아무것도 안 열리므로, 프리필이 없으면 아무 기능도 없는 승인이 된다.
   const [passthroughEndpoints, setPassthroughEndpoints] = useState<
     readonly PassthroughEndpoint[]
@@ -469,7 +469,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           }
         />
         <PassthroughEndpointField
-          label="부여할 확장 기능"
+          label="부여할 기능 권한"
           value={passthroughEndpoints}
           onChange={(next) => {
             setAccountDefaultsTouched(true)
@@ -557,10 +557,10 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             </li>
           ) : null}
           {/*
-            확장 기능은 금액 게이트 밖에 언제나 선다. 위 두 줄과 달리 비어 있는 것이
+            기능 권한은 금액 게이트 밖에 언제나 선다. 위 두 줄과 달리 비어 있는 것이
             부여의 부재라서, 안 보이면 승인자가 무엇을 안 줬는지 확인할 자리가 없다.
           */}
-          <li>확장 기능 {passthroughText(passthroughEndpoints)}</li>
+          <li>기능 권한 {passthroughText(passthroughEndpoints)}</li>
         </ul>
         {creditValue(creditLimit) ? (
           <Alert variant="warning">
@@ -740,7 +740,7 @@ export const llmKeyRequestView: RequestKindView = {
           <Field label="차단 유료 모델">{spec.grantedCreditDeniedModels.join(', ')}</Field>
         ) : null}
         {/* 부여되지 않았다는 것이 이 축의 결정이라 빈 값도 남는다. */}
-        <Field label="확장 기능">
+        <Field label="기능 권한">
           {passthroughText(spec?.grantedPassthroughEndpoints ?? [])}
         </Field>
         <Field label="부여 기간">

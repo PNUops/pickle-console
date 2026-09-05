@@ -54,21 +54,21 @@ describe('LLM API 키 상세', () => {
     expect(screen.queryByText('쓸 수 있는 유료 모델')).not.toBeInTheDocument()
   })
 
-  // 확장 기능은 위 두 줄과 반대로 비어 있는 것이 답이다. 셋이 나란히 서 있어서
+  // 기능 권한은 위 두 줄과 반대로 비어 있는 것이 답이다. 셋이 나란히 서 있어서
   // 같은 말로 비면 소유자가 셋을 같은 뜻으로 읽는다.
-  test('확장 기능이 없으면 못 쓴다고 말한다', async () => {
+  test('기능 권한이 없으면 못 쓴다고 말한다', async () => {
     renderKey(PENDING_KEY)
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
-    expect(screen.getByText('확장 기능')).toBeInTheDocument()
+    expect(screen.getByText('기능 권한')).toBeInTheDocument()
     expect(screen.getByText(/부여 안 됨\. 이미지 생성 · 임베딩 모두 쓸 수 없습니다/))
       .toBeInTheDocument()
   })
 
-  test('부여된 확장 기능은 이름으로 보여 준다', async () => {
+  test('부여된 기능은 이름으로 보여 준다', async () => {
     renderKey(ISSUED_KEY)
 
-    await screen.findByText('확장 기능')
+    await screen.findByText('기능 권한')
     expect(screen.getByText('이미지 생성')).toBeInTheDocument()
   })
 

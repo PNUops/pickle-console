@@ -173,9 +173,9 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     expect(adminLlmLimitBodies[0].creditDeniedModels).toEqual(['openai/*-pro'])
   })
 
-  // 확장 기능은 세 목록 중 유일하게 부여하는 쪽이라 지워지는 방향이 더 나쁘다.
+  // 기능 권한은 세 목록 중 유일하게 부여하는 쪽이라 지워지는 방향이 더 나쁘다.
   // 금액을 못 만지는 역할이 RPM 하나를 고쳤을 때 부여된 기능이 남는지 본다.
-  test('금액을 못 만지는 역할이 저장해도 확장 기능이 남는다', async () => {
+  test('금액을 못 만지는 역할이 저장해도 기능 권한이 남는다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
@@ -189,7 +189,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['images'])
   })
 
-  test('한도 창에서 확장 기능 체크를 풀면 빈 목록으로 나간다', async () => {
+  test('한도 창에서 기능 체크를 풀면 빈 목록으로 나간다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
@@ -211,11 +211,11 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
   })
 
-  // 빈 확장 기능이 옆의 두 목록처럼 '제한 없음'으로 읽히면 안 된다. 다른 픽스처는
+  // 빈 기능 권한이 옆의 두 목록처럼 '제한 없음'으로 읽히면 안 된다. 다른 픽스처는
   // 비어 있으므로 그 줄이 무엇이라고 말하는지가 이 단언의 전부다.
-  test('상세가 확장 기능 없음을 못 쓴다고 말한다', async () => {
+  test('상세가 기능 권한 없음을 못 쓴다고 말한다', async () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(172))
-    expect(await screen.findByText('확장 기능')).toBeInTheDocument()
+    expect(await screen.findByText('기능 권한')).toBeInTheDocument()
     expect(screen.getByText(/부여 안 됨\. 이미지 생성 · 임베딩 모두 쓸 수 없습니다/))
       .toBeInTheDocument()
   })

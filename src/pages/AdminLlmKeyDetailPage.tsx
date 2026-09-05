@@ -239,7 +239,7 @@ export function AdminLlmKeyDetailPage() {
                   ? '없음'
                   : key.creditDeniedModels.join(', '),
             },
-            { term: '확장 기능', description: passthroughText(key.passthroughEndpoints) },
+            { term: '기능 권한', description: passthroughText(key.passthroughEndpoints) },
             { term: '금액 관측', description: <KeyCreditObservation llmKey={key} /> },
           ]}
         />
@@ -588,7 +588,7 @@ function LimitsModal({
               />
             </FormField>
             <PassthroughEndpointField
-              label="부여할 확장 기능"
+              label="부여할 기능 권한"
               value={passthroughEndpoints}
               onChange={setPassthroughEndpoints}
             />

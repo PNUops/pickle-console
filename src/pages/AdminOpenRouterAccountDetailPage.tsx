@@ -225,7 +225,7 @@ export function AdminOpenRouterAccountDetailPage() {
                 : account.defaultCreditDeniedModels.join(', '),
           },
           {
-            term: '승인 기본 확장 기능',
+            term: '승인 기본 기능 권한',
             description:
               account.defaultPassthroughEndpoints.length === 0
                 ? '없음. 승인 폼이 아무것도 체크되지 않은 채로 열립니다'
@@ -417,7 +417,7 @@ function EditAccountModal({
           />
         </FormField>
         <PassthroughEndpointField
-          label="승인 화면 기본 확장 기능"
+          label="승인 화면 기본 기능 권한"
           value={defaultPassthrough}
           onChange={setDefaultPassthrough}
           description="위 두 목록과 함께 승인 폼에 채워집니다. 비워 두면 승인 폼이 아무것도 체크되지 않은 채로 열립니다."

@@ -234,7 +234,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
               이 줄은 비어 있는 것 자체가 답이고, 없으면 키 주인이 왜 404가 나는지
               알아볼 자리가 이 화면에 없다.
             */}
-            <Field label="확장 기능">{passthroughText(llmKey.passthroughEndpoints)}</Field>
+            <Field label="기능 권한">{passthroughText(llmKey.passthroughEndpoints)}</Field>
             <Field label="생성일">{formatDateTime(llmKey.createdAt)}</Field>
             {llmKey.revokedAt && (
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>
