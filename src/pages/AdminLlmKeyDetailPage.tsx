@@ -14,6 +14,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
+import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 import { useAuth } from '../auth/auth-context'
 import {
   canAdminRevokeLlmKey,
@@ -40,6 +41,7 @@ import {
   formatCreditModels,
   parseCreditModels,
 } from '../lib/credit-model-allowlist'
+import { passthroughText } from '../lib/passthrough-endpoints'
 import { formatDateTime } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
@@ -237,6 +239,7 @@ export function AdminLlmKeyDetailPage() {
                   ? '없음'
                   : key.creditDeniedModels.join(', '),
             },
+            { term: '확장 기능', description: passthroughText(key.passthroughEndpoints) },
             { term: '금액 관측', description: <KeyCreditObservation llmKey={key} /> },
           ]}
         />
@@ -345,6 +348,9 @@ function LimitsModal({
   )
   const [creditDeniedModels, setCreditDeniedModels] = useState(
     formatCreditModels(llmKey.creditDeniedModels),
+  )
+  const [passthroughEndpoints, setPassthroughEndpoints] = useState<readonly string[]>(
+    llmKey.passthroughEndpoints,
   )
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -481,6 +487,12 @@ function LimitsModal({
       // 일어나고, 테스트가 지키는 것은 그쪽이다. 정리하려거든 그 사실을 알고 해라.
       creditAllowedModels: canEditCredit ? parsedModels : llmKey.creditAllowedModels,
       creditDeniedModels: canEditCredit ? parsedDeniedModels : llmKey.creditDeniedModels,
+      // 서버가 이 목록을 금액과 같은 쪽 게이트에 두었다 — 시스템 운영자가 바꾸면
+      // 403이다. 그래서 두 모델 목록과 똑같이 현재 값을 그대로 되돌려 보낸다.
+      // 빠뜨리면 422이고, 빈 배열을 보내면 부여된 기능이 통째로 없어진다.
+      passthroughEndpoints: canEditCredit
+        ? [...passthroughEndpoints]
+        : llmKey.passthroughEndpoints,
       openrouterAccountId:
         llmKey.openrouterAccountId ??
         (canEditCredit && initialBindingAllowed && credit > 0
@@ -575,6 +587,11 @@ function LimitsModal({
                 placeholder={'openai/*-pro'}
               />
             </FormField>
+            <PassthroughEndpointField
+              label="부여할 확장 기능"
+              value={passthroughEndpoints}
+              onChange={setPassthroughEndpoints}
+            />
             <OpenRouterBindingField
               llmKey={llmKey}
               initialBindingAllowed={initialBindingAllowed}

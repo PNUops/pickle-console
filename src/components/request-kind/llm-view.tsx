@@ -12,6 +12,7 @@ import {
 import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
 import { CreditModelPicker } from '../CreditModelPicker'
 import { CreditModelPreview } from '../CreditModelPreview'
+import { PassthroughEndpointField } from '../PassthroughEndpointField'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
 import { adminPaths } from '../../lib/paths'
@@ -21,6 +22,7 @@ import {
   parseCreditModels,
   type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
+import { passthroughText } from '../../lib/passthrough-endpoints'
 import { todayKstDate } from '../../lib/format'
 import { Field } from './Field'
 import { periodText } from './period-text'
@@ -160,13 +162,16 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   )
   const [creditReset, setCreditReset] = useState('')
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
-  // 모델 목록만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
+  // 계정 기본값만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
   // 희망이 아니라 관리자가 사업 계정에 미리 정해 둔 정책이라, 채워도 검토가
   // 사라지지 않는다. 한 번이라도 손대면 그 뒤로는 계정을 바꿔도 덮지 않는다.
-  // 두 목록은 한 정책의 양면이라 프리필도 되돌리기도 함께 움직인다.
+  // 셋은 한 계정이 정해 둔 한 벌이라 프리필도 되돌리기도 함께 움직인다.
   const [creditModels, setCreditModels] = useState('')
   const [creditDeniedModels, setCreditDeniedModels] = useState('')
-  const [creditModelsTouched, setCreditModelsTouched] = useState(false)
+  // 확장 기능만 빈 값의 뜻이 반대다. 모델 목록 둘은 비면 제한이 풀리지만 이쪽은
+  // 비면 아무것도 안 열리므로, 프리필이 없으면 아무 기능도 없는 승인이 된다.
+  const [passthroughEndpoints, setPassthroughEndpoints] = useState<readonly string[]>([])
+  const [accountDefaultsTouched, setAccountDefaultsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
@@ -206,18 +211,22 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
   const accountDefault = effectiveAccount?.defaultCreditAllowedModels ?? []
   const accountDenyDefault = effectiveAccount?.defaultCreditDeniedModels ?? []
+  const accountPassthroughDefault = effectiveAccount?.defaultPassthroughEndpoints ?? []
+  const hasAccountDefaults =
+    accountDefault.length + accountDenyDefault.length + accountPassthroughDefault.length > 0
   const prefillKey = effectiveAccount?.id ?? null
-  if (!creditModelsTouched && prefillKey !== prefilledFrom) {
+  if (!accountDefaultsTouched && prefillKey !== prefilledFrom) {
     setPrefilledFrom(prefillKey)
     setCreditModels(formatCreditModels(accountDefault))
     setCreditDeniedModels(formatCreditModels(accountDenyDefault))
+    setPassthroughEndpoints(accountPassthroughDefault)
   }
 
   const parsedCreditModels = parseCreditModels(creditModels)
   const parsedDeniedModels = parseCreditModels(creditDeniedModels)
   // 선택기가 어느 목록에 넣을지는 누른 버튼이 정한다.
   const addModel = (pattern: string, list: CreditModelListKind) => {
-    setCreditModelsTouched(true)
+    setAccountDefaultsTouched(true)
     if (list === 'ALLOW') {
       setCreditModels(formatCreditModels([...parsedCreditModels, pattern]))
     } else {
@@ -300,6 +309,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           : null,
         grantedCreditAllowedModels: parsedCreditModels,
         grantedCreditDeniedModels: parsedDeniedModels,
+        // 금액과 무관한 축이라 금액이 0인 승인에서도 그대로 실어 보낸다.
+        grantedPassthroughEndpoints: [...passthroughEndpoints],
         openrouterAccountId: Number(creditLimit) > 0 ? effectiveAccount?.id ?? null : null,
       },
     }),
@@ -414,7 +425,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             rows={4}
             value={creditModels}
             onChange={(event) => {
-              setCreditModelsTouched(true)
+              setAccountDefaultsTouched(true)
               setCreditModels(event.target.value)
             }}
             placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
@@ -429,7 +440,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             rows={3}
             value={creditDeniedModels}
             onChange={(event) => {
-              setCreditModelsTouched(true)
+              setAccountDefaultsTouched(true)
               setCreditDeniedModels(event.target.value)
             }}
             placeholder={'openai/*-pro'}
@@ -452,24 +463,33 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             creditModelsError(parsedDeniedModels, 'DENY') != null
           }
         />
-        {!creditModelsTouched && accountDefault.length + accountDenyDefault.length > 0 ? (
+        <PassthroughEndpointField
+          label="부여할 확장 기능"
+          value={passthroughEndpoints}
+          onChange={(next) => {
+            setAccountDefaultsTouched(true)
+            setPassthroughEndpoints(next)
+          }}
+        />
+        {!accountDefaultsTouched && hasAccountDefaults ? (
           <p className="text-sm text-neutral-500">
-            {effectiveAccount?.name} 계정의 기본 목록에서 채웠습니다. 이 승인에만 적용되며,
+            {effectiveAccount?.name} 계정의 기본값에서 채웠습니다. 이 승인에만 적용되며,
             계정 기본값을 나중에 바꿔도 발급된 키는 그대로입니다.
           </p>
         ) : null}
-        {creditModelsTouched && accountDefault.length + accountDenyDefault.length > 0 ? (
+        {accountDefaultsTouched && hasAccountDefaults ? (
           <p className="text-sm text-neutral-500">
             <button
               type="button"
               className="underline"
               onClick={() => {
-                setCreditModelsTouched(false)
+                setAccountDefaultsTouched(false)
                 setCreditModels(formatCreditModels(accountDefault))
                 setCreditDeniedModels(formatCreditModels(accountDenyDefault))
+                setPassthroughEndpoints(accountPassthroughDefault)
               }}
             >
-              {effectiveAccount?.name} 계정의 기본 목록으로 되돌리기
+              {effectiveAccount?.name} 계정의 기본값으로 되돌리기
             </button>
           </p>
         ) : null}
@@ -531,6 +551,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               {parsedDeniedModels.length === 0 ? '없음' : parsedDeniedModels.join(', ')}
             </li>
           ) : null}
+          {/*
+            확장 기능은 금액 게이트 밖에 언제나 선다. 위 두 줄과 달리 비어 있는 것이
+            부여의 부재라서, 안 보이면 승인자가 무엇을 안 줬는지 확인할 자리가 없다.
+          */}
+          <li>확장 기능 {passthroughText(passthroughEndpoints)}</li>
         </ul>
         {creditValue(creditLimit) ? (
           <Alert variant="warning">
@@ -709,6 +734,10 @@ export const llmKeyRequestView: RequestKindView = {
         {spec && spec.grantedCreditDeniedModels.length > 0 ? (
           <Field label="차단 유료 모델">{spec.grantedCreditDeniedModels.join(', ')}</Field>
         ) : null}
+        {/* 부여되지 않았다는 것이 이 축의 결정이라 빈 값도 남는다. */}
+        <Field label="확장 기능">
+          {passthroughText(spec?.grantedPassthroughEndpoints ?? [])}
+        </Field>
         <Field label="부여 기간">
           {data.review.grantedStartDate ?? '미지정'} ~{' '}
           {data.review.grantedEndDate ?? '미지정'}

@@ -34,6 +34,7 @@ import {
 } from '../components/ui'
 import { DOCS_PATH } from '../lib/brand'
 import { formatDateTime } from '../lib/format'
+import { passthroughText } from '../lib/passthrough-endpoints'
 import { LLM_API_BASE_URL, LLM_DEFAULT_MODEL } from '../lib/llm-api'
 import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
@@ -228,6 +229,12 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
                 {llmKey.creditDeniedModels.join(', ')}
               </Field>
             ) : null}
+            {/*
+              위 두 줄과 달리 비어 있을 때도 남는다. 두 목록은 비면 말할 것이 없지만
+              이 줄은 비어 있는 것 자체가 답이고, 없으면 키 주인이 왜 404가 나는지
+              알아볼 자리가 이 화면에 없다.
+            */}
+            <Field label="확장 기능">{passthroughText(llmKey.passthroughEndpoints)}</Field>
             <Field label="생성일">{formatDateTime(llmKey.createdAt)}</Field>
             {llmKey.revokedAt && (
               <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>

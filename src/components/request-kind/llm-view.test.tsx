@@ -41,6 +41,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
       useCommercialModels: false,
       grantedCreditAllowedModels: [],
       grantedCreditDeniedModels: [],
+      grantedPassthroughEndpoints: [],
       ...spec,
     },
     status: 'SUBMITTED',
@@ -80,6 +81,7 @@ function renderDetail(spec: Partial<NonNullable<RequestDetail['llmKey']>> = {}) 
           useCommercialModels: false,
           grantedCreditAllowedModels: body.llmKey?.grantedCreditAllowedModels ?? [],
           grantedCreditDeniedModels: body.llmKey?.grantedCreditDeniedModels ?? [],
+          grantedPassthroughEndpoints: body.llmKey?.grantedPassthroughEndpoints ?? [],
         },
         review: {
           reviewerId: orgAdminUser.id,
@@ -183,6 +185,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
           grantedCreditLimitReset: null,
           grantedCreditAllowedModels: [],
           grantedCreditDeniedModels: [],
+          grantedPassthroughEndpoints: [],
           openrouterAccountId: null,
         },
       },
@@ -314,6 +317,42 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
   })
 
+  // 확장 기능은 세 목록 중 유일하게 비움이 '제한 없음'이 아니라 '아무것도 없음'이다.
+  // 승인자가 그 차이를 읽을 자리는 확인 모달뿐이고, 그 줄이 없으면 아무 기능도 안 준
+  // 승인과 안 물어본 승인이 화면에서 구별되지 않는다.
+  test('확장 기능을 고르지 않으면 부여되지 않았다고 확인 모달이 말한다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByText(/확장 기능 부여 안 됨/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({ grantedPassthroughEndpoints: [] })
+  })
+
+  test('체크한 확장 기능만 부여값으로 나가고 결과 카드에 남는다', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.click(screen.getByLabelText('이미지 생성'))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByText(/확장 기능 이미지 생성/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({ grantedPassthroughEndpoints: ['images'] })
+    const granted = screen.getByText('확장 기능').closest('div')!
+    expect(within(granted).getByText('이미지 생성')).toBeInTheDocument()
+  })
+
   test('자체 서빙 접두를 적으면 유료 모델 목록이 아니라고 막는다', async () => {
     const user = userEvent.setup()
     const approved = renderDetail({})
@@ -421,6 +460,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedCreditLimitReset: null,
       grantedCreditAllowedModels: [],
       grantedCreditDeniedModels: [],
+      grantedPassthroughEndpoints: [],
       openrouterAccountId: null,
     })
 
