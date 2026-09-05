@@ -376,6 +376,7 @@ export function resetLlmKeyFixtures() {
   adminLlmListQueries = []
   nextGrantId = 380
   nextTokenSuffix = 0
+  seedBodies()
 }
 
 /**
@@ -486,6 +487,112 @@ type UsageValues = Omit<UsagePoint, 'day'>
  * 자료를 받으므로 고정한다 — 화면이 읽는 것은 서버가 준 날짜 문자열뿐이다.
  */
 export const USAGE_ANCHOR_DAY = '2026-08-11'
+
+/**
+ * 기록된 본문 픽스처.
+ *
+ * 아래 넷은 서버의 불변식이라 mock 도 어겨서는 안 된다. 주석이 아니라
+ * `assertBodyFixtures`가 실행 시점에 검사한다 — 주석으로 둔 규칙은 언젠가 어긴
+ * 픽스처가 들어오고, 그 순간 화면의 분기가 도달하지 않는 길로 초록이 된다.
+ *
+ * 1. 권한 문이 상세·사용량과 같다 (handler 쪽)
+ * 2. `recordBodies`는 쓰기 스위치이지 읽기 스위치가 아니다 — 꺼진 키의 저장된
+ *    기록도 그대로 준다
+ * 3. `request`가 문자열인 것과 `requestTruncated: true`는 항상 함께 온다
+ * 4. `id`와 `eventUuid`는 한 키 안에서 유일하다
+ */
+type BodySummary = Schemas['LlmKeyBodySummaryResponse']
+
+function bodyRecord(
+  index: number,
+  over: Partial<BodySummary> & { request?: unknown } = {},
+): BodySummary & { request?: unknown } {
+  const requestedAt = `2026-08-11T0${index % 10}:12:3${index % 10}Z`
+  const request = over.request ?? [
+    { role: 'system', content: 'you are helpful' },
+    { role: 'user', content: `${index}번째 질문입니다` },
+  ]
+  const response = `${index}번째 답입니다`
+  return {
+    id: uuid(200 + index),
+    eventUuid: `evt-${index}`,
+    requestedAt,
+    receivedAt: requestedAt,
+    requestTruncated: over.requestTruncated ?? false,
+    responseTruncated: over.responseTruncated ?? false,
+    requestBytes: new TextEncoder().encode(JSON.stringify(request)).length,
+    responseBytes: new TextEncoder().encode(response).length,
+    readable: over.readable ?? true,
+    requestPreview: JSON.stringify(request).slice(0, 200),
+    responsePreview: response.slice(0, 200),
+    ...over,
+    request,
+  } as BodySummary & { request?: unknown }
+}
+
+/** 잘린 프롬프트는 배열이 될 수 없다 — 문자열과 플래그가 함께 움직인다. */
+function truncatedBodyRecord(index: number): BodySummary & { request?: unknown } {
+  const prefix = '[{"role":"user","content":"아주 긴 프롬프'
+  return bodyRecord(index, {
+    request: prefix,
+    requestTruncated: true,
+    requestPreview: prefix.slice(0, 200),
+  })
+}
+
+export const llmBodyStore: Record<string, (BodySummary & { request?: unknown })[]> = {}
+
+function seedBodies() {
+  for (const id of Object.keys(llmBodyStore)) delete llmBodyStore[id]
+  // uuid(73)은 폐기됐지만 기록을 켠 채 쓰였다 — 25건이라 페이지네이션이 뜬다.
+  // 잘린 기록을 맨 앞에 둔다 — 목록이 최근 순이고 화면은 한 쪽에 20건만
+  // 그리므로, 뒤에 두면 페이지 2로 밀려 첫 화면에서 검증할 수 없다.
+  llmBodyStore[uuid(73)] = [
+    truncatedBodyRecord(24),
+    ...Array.from({ length: 24 }, (_, i) => bodyRecord(i)),
+  ]
+  // uuid(75)는 기록이 꺼져 있는데 기록은 남아 있다. 지난 학기에 켰다 끈 키이고,
+  // 「꺼졌으면 탭을 숨긴다」는 회귀를 막는 유일한 그물이다.
+  llmBodyStore[uuid(75)] = [bodyRecord(90), bodyRecord(91, { readable: false })]
+  assertBodyFixtures()
+}
+
+function assertBodyFixtures() {
+  for (const [keyId, records] of Object.entries(llmBodyStore)) {
+    const ids = new Set<string>()
+    for (const record of records) {
+      if (ids.has(record.id) || ids.has(record.eventUuid)) {
+        throw new Error(`중복된 기록 식별자: ${keyId}`)
+      }
+      ids.add(record.id)
+      ids.add(record.eventUuid)
+      const isString = typeof (record as { request?: unknown }).request === 'string'
+      if (isString !== record.requestTruncated) {
+        throw new Error(`잘림 플래그와 프롬프트 모양이 어긋남: ${record.eventUuid}`)
+      }
+      if (record.requestBytes > 64 * 1024 || record.responseBytes > 256 * 1024) {
+        throw new Error(`게이트웨이가 보낼 수 없는 크기: ${record.eventUuid}`)
+      }
+    }
+  }
+}
+
+function llmBodyDetail(
+  summary: BodySummary & { request?: unknown },
+): Schemas['LlmKeyBodyDetailResponse'] {
+  const { requestPreview, responsePreview, ...rest } = summary
+  void requestPreview
+  void responsePreview
+  return {
+    ...rest,
+    request: summary.readable ? (summary as { request?: unknown }).request : null,
+    response: summary.readable ? `${Number(summary.eventUuid.split('-')[1])}번째 답입니다` : null,
+  } as Schemas['LlmKeyBodyDetailResponse']
+}
+
+// afterEach 에서만 reset 이 돌므로 파일의 첫 테스트는 seed 를 못 받는다. 모듈
+// 적재 시점에도 한 번 채워 둔다.
+seedBodies()
 
 const NO_USAGE: UsageValues = {
   requests: 0,
@@ -855,6 +962,52 @@ export const llmKeyHandlers: RequestHandler[] = [
       )
     }
     return HttpResponse.json(usageTrend(key.id, days), { status: 200 })
+  }),
+
+  http.get('*/api/v1/llm-keys/:keyId/bodies', ({ params, request }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    // 본문은 상세·사용량과 같은 문을 쓴다. 여기서 갈리면 「상세는 403인데 본문은
+    // 열리는」 서버에 없는 세계를 mock이 만든다.
+    if (key.myResourceRole == null) {
+      return noGrantProblem(key.id, `/api/v1/llm-keys/${key.id}/bodies`)
+    }
+    const query = new URL(request.url).searchParams
+    const page = query.get('page') == null ? 0 : Number(query.get('page'))
+    const size = query.get('size') == null ? 20 : Number(query.get('size'))
+    // 서버는 범위를 잘라 주지 않고 거절한다. 잘라 주면 잘못된 값을 보내는 화면이
+    // 테스트에서만 멀쩡해 보인다 (사용량 handler와 같은 이유).
+    if (!Number.isInteger(page) || page < 0) {
+      return validationProblem(`/api/v1/llm-keys/${key.id}/bodies`, 'page', '0 이상이어야 합니다.')
+    }
+    if (!Number.isInteger(size) || size < 1 || size > 50) {
+      return validationProblem(`/api/v1/llm-keys/${key.id}/bodies`, 'size', '1 이상 50 이하여야 합니다.')
+    }
+    const all = llmBodyStore[key.id] ?? []
+    const start = page * size
+    return HttpResponse.json(
+      {
+        content: all.slice(start, start + size),
+        page,
+        size,
+        totalElements: all.length,
+        totalPages: Math.max(1, Math.ceil(all.length / size)),
+      },
+      { status: 200 },
+    )
+  }),
+
+  http.get('*/api/v1/llm-keys/:keyId/bodies/:bodyId', ({ params }) => {
+    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
+    if (!key) return notFoundProblem()
+    if (key.myResourceRole == null) {
+      return noGrantProblem(key.id, `/api/v1/llm-keys/${key.id}/bodies`)
+    }
+    // 그 키 밑에 없는 기록은 404다 — 경로의 키가 경계이므로 기록 id만으로 찾지
+    // 않는다. 이 줄이 서버의 이중 술어에 대응한다.
+    const summary = (llmBodyStore[key.id] ?? []).find((b) => b.id === String(params.bodyId))
+    if (!summary) return notFoundProblem()
+    return HttpResponse.json(llmBodyDetail(summary), { status: 200 })
   }),
 
   http.post('*/api/v1/llm-keys/:keyId/token', ({ params }) => {

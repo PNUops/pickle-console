@@ -27,6 +27,27 @@ export function formatDateTime(iso: string): string {
   return kstDateTimeFormat.format(new Date(iso)).replace(',', '')
 }
 
+const kstDateTimeSecondsFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: KST_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+})
+
+/**
+ * 초까지 적는 판. 로그성 목록에서만 쓴다 — 같은 분 안에 여러 행이 앉는 자리라
+ * 분 단위로는 두 기록이 화면에서 같은 글자가 되고, 사용자가 자기 클라이언트
+ * 로그와 대조할 근거도 사라진다. 다른 자리에서는 초가 잡음이므로
+ * `formatDateTime`을 그대로 쓴다.
+ */
+export function formatDateTimeSeconds(iso: string): string {
+  return kstDateTimeSecondsFormat.format(new Date(iso)).replace(',', '')
+}
+
 /** 주어진 시각의 KST 달력 날짜(YYYY-MM-DD). */
 export function kstDateString(at: Date = new Date()): string {
   return kstDateFormat.format(at)

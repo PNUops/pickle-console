@@ -906,6 +906,46 @@ export function fetchLlmKeyUsage(keyId: string, days: number): Promise<LlmKeyUsa
   })
 }
 
+export type LlmKeyBodySummary = Schemas['LlmKeyBodySummaryResponse']
+export type LlmKeyBodyDetail = Schemas['LlmKeyBodyDetailResponse']
+export type LlmKeyBodyPage = Schemas['PageResponseLlmKeyBodySummaryResponse']
+
+/**
+ * 기록된 본문 목록. 각 줄은 앞부분만 담고 전문은 개별 조회에 있다.
+ *
+ * 이 키에 접근 권한이 있는 사람은 모두 읽는다 — 게이트웨이가 키를 인증할 뿐
+ * 보낸 사람이 누구인지 모르므로 열람 단위가 사람이 아니라 키다. 화면은 그
+ * 사실을 목록에 상시로 적는다.
+ */
+export function fetchLlmKeyBodies(
+  keyId: string,
+  page: number,
+  size: number,
+): Promise<LlmKeyBodyPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys/{keyId}/bodies', {
+      params: { path: { keyId }, query: { page, size } },
+    })
+    if (!data) throw toApiError(error, '기록된 본문을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 기록 한 건의 전문. 재인증이 필요하다 — 저장된 본문을 그대로 돌려주는
+ * 호출이라 VM 초기 비밀번호 열람과 같은 자리이고, 비밀번호와 달리 프롬프트는
+ * 새어 나간 뒤에 바꿀 수 없다.
+ */
+export function fetchLlmKeyBody(keyId: string, bodyId: string): Promise<LlmKeyBodyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/llm-keys/{keyId}/bodies/{bodyId}', {
+      params: { path: { keyId, bodyId } },
+    })
+    if (!data) throw toApiError(error, '기록된 본문을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 /* ─── LLM API 키 접근 권한 (VM과 같은 목록·같은 규칙, 경로만 다르다) ─── */
 
 export function fetchLlmKeyAccessGrants(keyId: string): Promise<VmAccessList> {
