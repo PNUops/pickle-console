@@ -217,8 +217,12 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
                   : llmKey.creditAllowedModels.join(', ')}
               </Field>
             ) : null}
-            {/* 차단은 허용을 이기므로, 허용 줄만 읽고 쓸 수 있다고 믿으면 안 된다. */}
-            {llmKey.creditLimit && llmKey.creditDeniedModels.length > 0 ? (
+            {/*
+              차단은 허용을 이기므로, 허용 줄만 읽고 쓸 수 있다고 믿으면 안 된다.
+              금액 한도로 가리지도 않는다. 지금 금액이 없어도 승인자가 막아 둔
+              것은 그대로 남아 있고, 나중에 금액이 붙는 순간 그대로 적용된다.
+            */}
+            {llmKey.creditDeniedModels.length > 0 ? (
               <Field label="쓸 수 없는 유료 모델">
                 {llmKey.creditDeniedModels.join(', ')}
               </Field>

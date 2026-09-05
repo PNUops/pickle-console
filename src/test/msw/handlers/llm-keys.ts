@@ -73,7 +73,9 @@ function initialLlmKeys(): LlmKeyDetail[] {
       creditLimit: 0,
       creditAxisConnected: false,
       creditAllowedModels: [],
-      creditDeniedModels: [],
+      // 금액은 없는데 차단만 걸린 키가 하나는 있어야, 금액으로 표시를 가리는
+      // 회귀가 잡힌다. 승인자가 막아 둔 것은 금액이 붙는 날 그대로 적용된다.
+      creditDeniedModels: ['openai/*-pro'],
       revokedAt: null,
       workspaceId: uuid(15),
       workspaceName: '알고리즘 스터디',

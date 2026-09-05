@@ -297,7 +297,10 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*-pro')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
+    // 되돌릴 수 없는 부여 직전 마지막 화면이 무엇을 막는지 말해야 한다. 본문만
+    // 단언하면 화면이 한 줄도 안 그려도 초록이다.
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByText(/차단 유료 모델 openai\/\*-pro/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
@@ -305,6 +308,10 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedCreditLimit: null,
       grantedCreditDeniedModels: ['openai/*-pro'],
     })
+    // 승인 뒤 결과 카드도 마찬가지다. 승인자가 자기 결정을 되읽을 자리가 없으면
+    // 반영됐는지 확인할 방법이 없다.
+    expect(screen.getByText('차단 유료 모델')).toBeInTheDocument()
+    expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
   })
 
   test('자체 서빙 접두를 적으면 유료 모델 목록이 아니라고 막는다', async () => {

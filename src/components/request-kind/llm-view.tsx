@@ -519,7 +519,13 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
                 : parsedCreditModels.join(', ')}
             </li>
           ) : null}
-          {creditValue(creditLimit) ? (
+          {/*
+            차단 줄만 금액 게이트 밖에 둔다. 금액이 없으면 허용 목록은 아무것도 열지
+            않아 말할 것이 없지만, 차단은 금액 없이도 승인자가 내린 결정이고 되돌릴
+            수 없는 부여 직전 마지막 화면이 그것을 안 보여 주면 반영됐는지 확인할
+            자리가 없다. 검증에서 같은 게이트를 걷어낸 것과 같은 이유다.
+          */}
+          {creditValue(creditLimit) || parsedDeniedModels.length > 0 ? (
             <li>
               차단 유료 모델{' '}
               {parsedDeniedModels.length === 0 ? '없음' : parsedDeniedModels.join(', ')}
@@ -698,6 +704,10 @@ export const llmKeyRequestView: RequestKindView = {
               ? '제한 없음 (금액 한도 안에서 전부)'
               : spec.grantedCreditAllowedModels.join(', ')}
           </Field>
+        ) : null}
+        {/* 금액이 얼마든 차단은 승인자가 내린 결정이라 결과 카드에 남아야 한다. */}
+        {spec && spec.grantedCreditDeniedModels.length > 0 ? (
+          <Field label="차단 유료 모델">{spec.grantedCreditDeniedModels.join(', ')}</Field>
         ) : null}
         <Field label="부여 기간">
           {data.review.grantedStartDate ?? '미지정'} ~{' '}
