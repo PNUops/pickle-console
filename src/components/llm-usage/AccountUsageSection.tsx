@@ -86,12 +86,15 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
         <>
           {/* 이 카드가 말하는 금액이 무엇이 아닌지를 먼저 말한다. 위 구역의
               잔액과 나란히 서 있으므로, 말하지 않으면 두 숫자가 같은 것을
-              뜻한다고 읽힌다. */}
+              뜻한다고 읽힌다. **쓴 것이 없으면 말하지 않는다** — 구별할 숫자가
+              아직 없는데 구별을 설명하는 문장이 서면 그것도 되풀이다. */}
+          {data.requests > 0 && (
           <MessageBar>
             공급자가 청구한 금액이 아니라 <strong>요청마다 알려 준 금액을 이 계정의 키로
             귀속한 값</strong>입니다. 키가 확인되지 않은 요청은 어느 계정에도 속하지 않고,
             금액이 보고되지 않은 요청은 합계에서 빠집니다.
           </MessageBar>
+          )}
 
           <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <Tile

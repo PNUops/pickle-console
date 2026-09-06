@@ -3,9 +3,11 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminLlmKeyUsage,
   fetchLlmKeyUsage,
+  type AdminLlmKeyUsage,
   type LlmApiKeyStatus,
   type LlmKeyBudget,
   type LlmKeyModelUsage,
+  type LlmKeyUsageTrend,
 } from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { formatUsd } from '../../lib/openrouter-credits'
@@ -15,6 +17,7 @@ import { formatKstDay } from '../metrics/timeframe'
 import { ObservationMoment } from '../OpenRouterCredits'
 import { BudgetGauge } from './BudgetGauge'
 import { DonutChart, type DonutSlice } from './DonutChart'
+import { endpointKindLabel } from '../../lib/llm-endpoint-kinds'
 import { KEY_USAGE_COPY, type UsageAudience } from './key-usage-copy'
 import { UsageHeatmap } from './UsageHeatmap'
 import {
@@ -68,15 +71,20 @@ export default function LlmKeyUsageSection({
     queryKey: admin
       ? ['admin', 'llm-keys', keyId, 'usage', { days }]
       : ['llm-keys', keyId, 'usage', { days }],
-    queryFn: async () =>
-      admin
-        ? (await fetchAdminLlmKeyUsage(keyId, days)).trend
-        : await fetchLlmKeyUsage(keyId, days),
+    queryFn: async (): Promise<{
+      trend: LlmKeyUsageTrend
+      extra: AdminLlmKeyUsage | null
+    }> => {
+      if (!admin) return { trend: await fetchLlmKeyUsage(keyId, days), extra: null }
+      const response = await fetchAdminLlmKeyUsage(keyId, days)
+      return { trend: response.trend, extra: response }
+    },
     placeholderData: keepPreviousData,
     enabled: !unissued,
   })
 
-  const data = usage.data
+  const data = usage.data?.trend
+  const extra = usage.data?.extra ?? null
   const points = data?.points ?? []
   const times = usageTimes(points)
   const totals = usageTotals(points)
@@ -329,12 +337,110 @@ export default function LlmKeyUsageSection({
                     <UsageHeatmap cells={data.hourly} />
                   </section>
                 )}
+
+                {/* 여기부터는 관리자만 본다. 키 소유자는 모델별 금액까지만 보고
+                    일별 금액도 경로별 분해도 보지 않는다 — 그 경계가 응답 모양에
+                    이미 들어 있어서, 이 블록들이 `trend` 밖에 있다. */}
+                {extra && <AdminOnlyBreakdowns extra={extra} times={times} />}
               </>
             )}
           </>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * 관리자만 보는 셋. 소유자 응답에는 아예 실리지 않는다.
+ *
+ * 일별 금액이 여기 있고 위의 토큰 차트 옆에 없는 것이 경계 그 자체다 — 소유자는
+ * 모델별 금액까지만 보고 일별 금액은 보지 않으며, 일별 금액을 나르지 않는 응답이라야
+ * 화면이 실수로 그릴 수 없다.
+ */
+function AdminOnlyBreakdowns({
+  extra,
+  times,
+}: {
+  extra: AdminLlmKeyUsage
+  times: number[]
+}) {
+  const priced = extra.costPoints.some((point) => point.pricedRequests > 0)
+  return (
+    <>
+      {/* 제목을 밖에 한 번 더 쓰지 않는다 — 차트가 자기 제목을 이미 갖는다.
+          위의 다른 차트들도 같은 이유로 감싸는 제목이 없다. */}
+      {priced && (
+        <section className="space-y-2" aria-label="일별 금액">
+          <TimeSeriesChart
+            title="일별 금액"
+            times={times}
+            series={[
+              {
+                label: '금액',
+                // 가격이 붙지 않은 날은 0이 아니라 공백이다. 0으로 그리면 그 날
+                // 공짜로 썼다는, 서버가 하지 않은 주장을 선이 대신 한다.
+                data: extra.costPoints.map((point) => point.attributedCostUsd ?? null),
+              },
+            ]}
+            format={(value) => formatUsd(value)}
+            formatTime={formatKstDay}
+          />
+        </section>
+      )}
+
+      {extra.endpointKinds.length > 0 && (
+        <section className="space-y-2" aria-label="호출 종류별 사용">
+          <h3 className="text-sm font-semibold text-neutral-700">호출 종류별</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+                  <th scope="col" className="py-2 pr-3 font-normal">호출 종류</th>
+                  <th scope="col" className="py-2 pr-3 text-right font-normal">요청</th>
+                  <th scope="col" className="py-2 pr-3 text-right font-normal">토큰</th>
+                  <th scope="col" className="py-2 text-right font-normal">금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extra.endpointKinds.map((kind) => (
+                  <tr key={kind.endpoint ?? 'unknown'} className="border-b border-neutral-100">
+                    <td className="py-2 pr-3 text-neutral-700">
+                      {endpointKindLabel(kind.endpoint)}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-neutral-600">
+                      {formatRequests(kind.requests)}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-neutral-600">
+                      {formatTokens(kind.inputTokens + kind.outputTokens)}
+                    </td>
+                    <td className="py-2 text-right text-neutral-600">
+                      {kind.attributedCostUsd == null ? '—' : formatUsd(kind.attributedCostUsd)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* 빈 목록을 「대체가 없었다」로 쓰지 않는다. 응답 최상위 `model`만 다시 쓰는
+          구조라 라우터가 더 깊은 자리에 진짜 모델을 넣으면 여기 안 잡힌다. */}
+      {extra.servedModels.length > 0 && (
+        <section className="space-y-2" aria-label="다른 모델로 응답한 사례">
+          <h3 className="text-sm font-semibold text-neutral-700">요청과 다른 모델로 응답</h3>
+          <ul className="space-y-1 text-sm text-neutral-700">
+            {extra.servedModels.map((served) => (
+              <li key={served.servedModelName} className="flex justify-between">
+                <span>{served.servedModelName}</span>
+                <span className="text-neutral-500">{formatRequests(served.requests)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   )
 }
 

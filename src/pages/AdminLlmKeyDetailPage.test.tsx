@@ -545,3 +545,93 @@ describe('관리자 LLM API 키 사용량 탭', () => {
     await waitFor(() => expect(screen.getByText('현재 한도')).toBeInTheDocument())
   })
 })
+
+describe('관리자 사용량 탭의 소유자에게 없는 분해', () => {
+  test('일별 금액과 호출 종류, 대체 응답은 관리자 화면에만 선다', async () => {
+    // 셋을 받아 놓고 그리지 않으면 응답이 실어 오는 것과 화면이 말하는 것이
+    // 갈린다. 「소유자 화면에 없는 것」이 화면에 실제로 있어야 그 문장이 참이다.
+    server.use(
+      http.get('*/api/v1/admin/llm/keys/:keyId/usage', () => {
+        const body = adminUsageBody()
+        return HttpResponse.json(
+          {
+            ...body,
+            costPoints: [
+              { day: '2026-08-11', attributedCostUsd: 0.75, pricedRequests: 3, requests: 140 },
+            ],
+            endpointKinds: [
+              {
+                endpoint: 'images',
+                requests: 3,
+                succeeded: 3,
+                rateLimited: 0,
+                failed: 0,
+                inputTokens: 90,
+                outputTokens: 0,
+                attributedCostUsd: 0.75,
+                pricedRequests: 3,
+                imageCount: 3,
+              },
+              {
+                // 경로가 기록되기 전의 요청. 「기타」가 아니라 「종류 미상」이다.
+                endpoint: null,
+                requests: 137,
+                succeeded: 131,
+                rateLimited: 6,
+                failed: 0,
+                inputTokens: 91_910,
+                outputTokens: 33_500,
+                attributedCostUsd: null,
+                pricedRequests: 0,
+                imageCount: 0,
+              },
+            ],
+            servedModels: [{ servedModelName: 'anthropic/claude-x', requests: 2 }],
+          },
+          { status: 200 },
+        )
+      }),
+    )
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    expect(await screen.findByRole('heading', { name: 'active-admin-key' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '사용량' }))
+
+    expect(await screen.findByRole('heading', { name: '호출 종류별' })).toBeInTheDocument()
+    expect(screen.getByText('이미지 생성')).toBeInTheDocument()
+    // 값 없음은 0이 아니라 —.
+    expect(screen.getByText('종류 미상')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '일별 금액' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '요청과 다른 모델로 응답' })).toBeInTheDocument()
+    expect(screen.getByText('anthropic/claude-x')).toBeInTheDocument()
+  })
+
+  test('금액이 붙은 요청이 없으면 일별 금액 차트를 세우지 않는다', async () => {
+    // 전부 null인 계열은 빈 캔버스일 뿐이라, 그리는 것이 안 그리는 것보다
+    // 말해 주는 것이 없다.
+    server.use(
+      http.get('*/api/v1/admin/llm/keys/:keyId/usage', () =>
+        HttpResponse.json(
+          {
+            ...adminUsageBody(),
+            costPoints: [
+              { day: '2026-08-11', attributedCostUsd: null, pricedRequests: 0, requests: 140 },
+            ],
+            endpointKinds: [],
+            servedModels: [],
+          },
+          { status: 200 },
+        )),
+    )
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    expect(await screen.findByRole('heading', { name: 'active-admin-key' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '사용량' }))
+
+    expect(await screen.findByText('총 요청')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '일별 금액' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '호출 종류별' })).not.toBeInTheDocument()
+  })
+})
