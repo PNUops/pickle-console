@@ -7,10 +7,11 @@ import {
   type LlmKeyModelUsage,
 } from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
-import { formatDateTime } from '../../lib/format'
+import { formatUsd } from '../../lib/openrouter-credits'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
 import { CHART_CATEGORICAL, CHART_SERIES_1, CHART_SERIES_2 } from '../metrics/chart-colors'
 import { formatKstDay } from '../metrics/timeframe'
+import { ObservationMoment } from '../OpenRouterCredits'
 import { BudgetGauge } from './BudgetGauge'
 import { DonutChart, type DonutSlice } from './DonutChart'
 import { UsageHeatmap } from './UsageHeatmap'
@@ -322,11 +323,17 @@ function StatTile({
 }
 
 /**
- * 두 예산 축.
+ * The two budget axes.
  *
- * 한 축은 우리가 세고 다른 축은 OpenRouter가 집행한다. 금액 쪽만 자기 관측 시각을
- * 달고 있는데, 토큰 쪽의 배치 지연은 아래 ReportingNotice 한 자리가 맡기 때문이다.
- * 두 숫자를 나란히 놓고 아무 말도 하지 않으면 같은 시점의 값으로 읽힌다.
+ * One is counted here and the other is enforced by the vendor. Only the money
+ * gauge carries an observation time, because the token side's batching delay
+ * is stated once by the ReportingNotice below; putting two numbers side by
+ * side and saying nothing makes them read as the same moment.
+ *
+ * The vendor is not named on this screen. An administrator has to find that
+ * account and revoke a key in it, so their screens say who it is; a student
+ * cannot act on the name and it is not theirs to know. The comment keeps the
+ * fact that the code needs and the screen does not.
  */
 function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
   const tokenLimit = budget.dailyTokens
@@ -364,9 +371,11 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
                 : '소진 예상을 내기에는 아직 사용 이력이 짧습니다.'
         }
         freshness={
-          budget.creditUsageAt
-            ? `OpenRouter 기준 ${formatDateTime(budget.creditUsageAt)}에 읽은 값입니다.`
-            : undefined
+          budget.creditUsageAt ? (
+            <>
+              <ObservationMoment value={budget.creditUsageAt} /> 관측
+            </>
+          ) : undefined
         }
       />
     </section>
@@ -464,10 +473,6 @@ function formatMs(ms: number): string {
   return `${Math.round(ms)}ms`
 }
 
-function formatUsd(amount: number): string {
-  return `$${amount.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
 /**
  * 화면의 숫자가 어느 시점까지의 것인지.
  *
@@ -488,18 +493,22 @@ function ReportingNotice({ state }: { state: ReportingState }) {
       </p>
     )
   }
+  // `state.at` asks "is this current?" and takes the relative form.
+  // `unreportedFrom` is a different question: it is a calendar day that pairs
+  // with the chart's own x axis, so it stays absolute. Relativising it too
+  // would leave the sentence and the chart on different coordinates.
   if (state.kind === 'stale') {
     return (
       <p className="text-xs text-neutral-500">
-        게이트웨이 마지막 보고 {formatDateTime(state.at)}. {state.unreportedFrom}부터는 보고가
-        없어 그 뒤의 0은 아직 모르는 값입니다.
+        게이트웨이 마지막 보고 <ObservationMoment value={state.at} />. {state.unreportedFrom}부터는
+        보고가 없어 그 뒤의 0은 아직 모르는 값입니다.
       </p>
     )
   }
   return (
     <p className="text-xs text-neutral-500">
-      게이트웨이 마지막 보고 {formatDateTime(state.at)}. 전송이 배치라 오늘 자 값은 아직
-      채워지는 중입니다.
+      게이트웨이 마지막 보고 <ObservationMoment value={state.at} />. 전송이 배치라 오늘 자 값은
+      아직 채워지는 중입니다.
     </p>
   )
 }
