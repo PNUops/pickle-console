@@ -944,6 +944,48 @@ export function fetchLlmKeyUsage(keyId: string, days: number): Promise<LlmKeyUsa
   })
 }
 
+export type AdminLlmKeyUsage = Schemas['AdminLlmKeyUsageResponse']
+export type AdminLlmAccountUsage = Schemas['AdminLlmAccountUsageResponse']
+export type LlmUsageCostPoint = Schemas['LlmUsageCostPointResponse']
+export type LlmEndpointKindUsage = Schemas['LlmEndpointKindUsageResponse']
+export type LlmServedModelUsage = Schemas['LlmServedModelUsageResponse']
+
+/**
+ * 같은 답을 승인자 자리에서, 그리고 소유자에게는 없는 분해 셋과 함께.
+ *
+ * `trend`는 소유자가 받는 것과 **같은 서버 계산**이다. 관리자 쪽에서 다시 세면
+ * 두 화면이 다른 숫자를 내고, 그것을 처음 보는 사람은 학생이 아니라 관리자다.
+ */
+export function fetchAdminLlmKeyUsage(keyId: string, days: number): Promise<AdminLlmKeyUsage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/keys/{keyId}/usage', {
+      params: { path: { keyId }, query: { days } },
+    })
+    if (!data) throw toApiError(error, '사용량을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 사업 계정이 무엇에 얼마를 썼는지.
+ *
+ * **공급자가 말하는 지출액이나 잔액이 아니다** — 그쪽은 계정 상세의 credits가
+ * 답하고 기간도 다르다. 이 값은 이미 아는 총액이 어디로 갔는지만 말하므로 잔액에서
+ * 빼지 않는다.
+ */
+export function fetchAdminLlmAccountUsage(
+  accountId: string,
+  days: number,
+): Promise<AdminLlmAccountUsage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/accounts/{accountId}/usage', {
+      params: { path: { accountId }, query: { days } },
+    })
+    if (!data) throw toApiError(error, '계정 사용량을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 export type LlmKeyBodySummary = Schemas['LlmKeyBodySummaryResponse']
 export type LlmKeyBodyDetail = Schemas['LlmKeyBodyDetailResponse']
 export type LlmKeyBodyPage = Schemas['PageResponseLlmKeyBodySummaryResponse']

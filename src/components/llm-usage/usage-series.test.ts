@@ -23,6 +23,10 @@ function point(day: string, values: Partial<LlmKeyUsagePoint> = {}): LlmKeyUsage
     inputTokens: 0,
     outputTokens: 0,
     estimatedRequests: 0,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    imageCount: 0,
+    streamedRequests: 0,
     ...values,
   }
 }
@@ -67,9 +71,17 @@ describe('usageTotals', () => {
         inputTokens: 100,
         outputTokens: 40,
         estimatedRequests: 2,
+        // 부분집합이라 각각 위 토큰 값보다 작다. 합계에 더하는 것이 아니라
+        // 그 안에서 얼마인지를 말하므로, 아래 기대값의 입출력 합은 안 움직인다.
+        cachedInputTokens: 30,
+        reasoningTokens: 12,
+        imageCount: 2,
+        streamedRequests: 4,
       }),
       point('2026-08-11', { requests: 5, succeeded: 5, inputTokens: 50, outputTokens: 20 }),
     ])
+    // toEqual 로 통째로 비교하는 것이 이 시험의 값이다 — 축이 하나 늘면
+    // 여기서 걸리고, 합치는 것을 빠뜨린 축도 같이 걸린다.
     expect(totals).toEqual({
       requests: 15,
       succeeded: 13,
@@ -78,6 +90,10 @@ describe('usageTotals', () => {
       inputTokens: 150,
       outputTokens: 60,
       estimatedRequests: 2,
+      cachedInputTokens: 30,
+      reasoningTokens: 12,
+      imageCount: 2,
+      streamedRequests: 4,
     })
   })
 

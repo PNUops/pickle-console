@@ -97,22 +97,22 @@ export default function AdminLlmUsageCharts({
       </div>
       <div className="space-y-3">
         <TimeSeriesChart
-          title="일별 입력·출력 token"
+          title="일별 입력·출력 토큰"
           times={times}
           series={[
             { label: '입력', data: points.map((point) => point.inputTokens) },
             { label: '출력', data: points.map((point) => point.outputTokens) },
           ]}
-          format={(value) => `${count(value)} token`}
+          format={(value) => `${count(value)} 토큰`}
           formatTime={formatKstDay}
           splitBase="integer"
         />
         <DailyValuesTable
-          title="날짜별 입력·출력 token"
+          title="날짜별 입력·출력 토큰"
           points={points}
           columns={[
-            { label: '입력 token', value: (point) => point.inputTokens, suffix: '' },
-            { label: '출력 token', value: (point) => point.outputTokens, suffix: '' },
+            { label: '입력 토큰', value: (point) => point.inputTokens, suffix: '' },
+            { label: '출력 토큰', value: (point) => point.outputTokens, suffix: '' },
           ]}
         />
       </div>

@@ -398,6 +398,70 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     return found ? HttpResponse.json(found.account, { status: 200 }) : notFound()
   }),
 
+  /**
+   * 계정 사용량. **금액이 붙지 않은 날은 0이 아니라 null**이고, 그 구분이 이
+   * handler 가 지켜야 하는 서버 불변식이다. 목이 0을 주면 화면이 자체 서빙만 쓴
+   * 날을 「공짜」로 그려도 시험이 통과한다.
+   */
+  http.get('*/api/v1/admin/llm/accounts/:accountId/usage', ({ params, request }) => {
+    // 상세와 같은 문을 쓴다. 여기서 갈리면 「상세는 404인데 사용량은 열리는」
+    // 서버에 없는 세계를 목이 만든다.
+    const found = accountFor(request, String(params.accountId))
+    if (!found) return notFound()
+    const raw = new URL(request.url).searchParams.get('days')
+    const days = raw == null ? 30 : Number(raw)
+    const to = '2026-08-31'
+    const points = Array.from({ length: days }, (_, index) => {
+      const day = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1 - index) * 86_400_000)
+        .toISOString()
+        .slice(0, 10)
+      // 마지막 이틀만 금액이 붙었다. 나머지는 0이 아니라 없음이다.
+      const priced = index >= days - 2
+      return {
+        day,
+        attributedCostUsd: priced ? 0.25 : null,
+        pricedRequests: priced ? 2 : 0,
+        requests: priced ? 5 : index % 3 === 0 ? 1 : 0,
+      }
+    })
+    const requests = points.reduce((sum, point) => sum + point.requests, 0)
+    const pricedRequests = points.reduce((sum, point) => sum + point.pricedRequests, 0)
+    return HttpResponse.json(
+      {
+        from: points[0].day,
+        to: points[points.length - 1].day,
+        attributedCostUsd: 0.5,
+        requests,
+        pricedRequests,
+        keysUsed: 2,
+        keysLinked: 3,
+        points,
+        keys: [
+          {
+            keyId: uuid(501),
+            keyName: 'capstone-chatbot',
+            requests: requests - 3,
+            inputTokens: 2_400,
+            outputTokens: 800,
+            attributedCostUsd: 0.5,
+            pricedRequests,
+          },
+          {
+            keyId: uuid(502),
+            keyName: 'lab-embeddings',
+            requests: 3,
+            inputTokens: 300,
+            outputTokens: 0,
+            // 자체 서빙만 쓴 키. 금액은 0이 아니라 없음이다.
+            attributedCostUsd: null,
+            pricedRequests: 0,
+          },
+        ],
+      },
+      { status: 200 },
+    )
+  }),
+
   http.patch('*/api/v1/admin/llm/accounts/:accountId', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
     if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()

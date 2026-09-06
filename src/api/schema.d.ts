@@ -364,6 +364,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/accounts/{accountId}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * OpenRouter 사업 계정 사용량
+         * @description 이 계정의 키들이 무엇에 얼마를 썼는지 귀속해 보여 줍니다. **공급자가 말하는 지출액이나 잔액이 아닙니다** — 그쪽은 계정 상세의 credits가 답하고 기간도 다릅니다. 키가 확인되지 않은 요청은 어느 계정에도 속하지 않고, 공급자가 금액을 알려 주지 않은 요청은 금액이 0인 것이 아니라 모르는 것이라 합계에서 빠집니다. 그래서 금액마다 가격이 붙은 요청 수가 함께 옵니다.
+         */
+        get: operations["getAdminLlmAccountUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/llm/keys": {
         parameters: {
             query?: never;
@@ -478,6 +498,26 @@ export interface paths {
          * @description 활성 키를 정지합니다. 사유는 감사 기록에 남고 평문 요청 본문은 기록하지 않습니다.
          */
         post: operations["suspendAdminLlmKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/keys/{keyId}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM API 키 사용량
+         * @description 이 키의 일별 사용량과, 키 소유자 화면에는 없는 분해 셋입니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         */
+        get: operations["getAdminLlmKeyUsage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3046,16 +3086,66 @@ export interface components {
         };
         /** @enum {string} */
         AdminGlobalRole: "USER" | "SYS_VIEWER" | "SYS_MANAGER" | "SYS_ADMIN";
+        AdminLlmAccountKeyUsageResponse: {
+            /** @description 이 키가 이 기간에 쓴 금액(USD). 가격이 붙은 요청이 없으면 null이며 0으로 표시하지 않습니다. */
+            attributedCostUsd?: number | null;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: uuid */
+            keyId: string;
+            keyName: string;
+            /** Format: int64 */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 이 키의 요청 중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests: number;
+            /** Format: int64 */
+            requests: number;
+        };
+        AdminLlmAccountUsageResponse: {
+            /** @description 이 기간에 이 계정에 귀속된 금액(USD). 공급자가 말하는 지출액이 아닙니다 — 그쪽은 계정 잔액과 함께 따로 오고 기간도 다릅니다. 가격이 붙은 요청이 하나도 없으면 null입니다. */
+            attributedCostUsd?: number | null;
+            /** Format: date */
+            from: string;
+            /** @description 이 기간에 실제로 호출된 키만, 금액이 큰 순 */
+            keys: components["schemas"]["AdminLlmAccountKeyUsageResponse"][];
+            /**
+             * Format: int32
+             * @description 이 계정에 연결된 키 수. keysUsed와 견주면 놀고 있는 키가 보입니다.
+             */
+            keysLinked: number;
+            /**
+             * Format: int32
+             * @description 이 기간에 실제로 호출된 키 수
+             */
+            keysUsed: number;
+            /** @description 하루 한 점, 오래된 날부터. 호출이 없던 날도 채워집니다. */
+            points: components["schemas"]["LlmUsageCostPointResponse"][];
+            /**
+             * Format: int64
+             * @description 그중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests: number;
+            /**
+             * Format: int64
+             * @description 이 기간에 이 계정의 키들이 보낸 요청 수
+             */
+            requests: number;
+            /** Format: date */
+            to: string;
+        };
         AdminLlmKeyDetailResponse: {
             /** Format: int32 */
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 상용(금액) 축에서 이 키가 쓸 수 있는 모델 목록. 빈 배열은 제한 없음 */
+            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열은 제한 없음 */
             creditAllowedModels: string[];
             /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
-            /** @description 상용(금액) 축에서 이 키가 쓸 수 없는 모델 목록. 빈 배열은 차단 없음. 허용 목록과 함께 걸리면 차단이 이긴다. */
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열은 차단 없음. 허용 목록과 함께 걸리면 차단이 이긴다. */
             creditDeniedModels: string[];
             creditLimit: number;
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
@@ -3182,7 +3272,19 @@ export interface components {
             workspaceId?: string | null;
             workspaceName: string;
         };
+        AdminLlmKeyUsageResponse: {
+            /** @description 일별 금액. 소유자 화면에는 없는 계열입니다 — 소유자는 모델별 금액만 봅니다. */
+            costPoints: components["schemas"]["LlmUsageCostPointResponse"][];
+            /** @description 이 기간에 실제로 호출된 경로만, 요청이 많은 순 */
+            endpointKinds: components["schemas"]["LlmEndpointKindUsageResponse"][];
+            /** @description 공급자가 요청과 다른 모델로 응답한 사례. 없으면 빈 목록이고, 빈 것이 「대체가 없었다」를 증명하지는 않습니다. */
+            servedModels: components["schemas"]["LlmServedModelUsageResponse"][];
+            /** @description 키 소유자가 보는 것과 같은 응답, 같은 계산 */
+            trend: components["schemas"]["LlmKeyUsageTrendResponse"];
+        };
         AdminLlmUsageResponse: {
+            /** @description 같은 기간을 「무엇을」로 자른 셋. 모델별, 경로별, 그리고 기능 권한이 실제로 쓰이고 있는지입니다. */
+            breakdown: components["schemas"]["LlmUsageBreakdownResponse"];
             consumers: components["schemas"]["LlmUsageConsumersResponse"];
             /** Format: int32 */
             days: number;
@@ -3548,7 +3650,7 @@ export interface components {
             grantedCreditAllowedModels?: string[] | null;
             /** @description 이 키가 쓸 수 없는 유료 모델 목록. 비우면 차단하는 모델이 없고, 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 목록과 무관합니다. */
             grantedCreditDeniedModels?: string[] | null;
-            /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
+            /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 유료 모델을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
             /** @description 금액 한도 리셋 창. 비우면 리셋 없는 총액 상한입니다. 창은 UTC 자정에 초기화됩니다. */
             grantedCreditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
@@ -3774,9 +3876,9 @@ export interface components {
             confirmName: string;
             /** @description 이 account를 물어볼 담당자. 없으면 null */
             contact?: string | null;
-            /** @description 승인 화면 프리필에 쓸 상용 모델 허용 목록 기본값. 비우면 제한 없음이 기본이 됩니다. */
+            /** @description 승인 화면 프리필에 쓸 유료 모델 허용 목록 기본값. 비우면 제한 없음이 기본이 됩니다. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 승인 화면 프리필에 쓸 상용 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. */
+            /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 승인 화면 프리필에 쓸 기능 권한 기본값. 비우면 아무 기능도 부여되지 않은 상태가 기본이 됩니다. */
             defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
@@ -4161,6 +4263,40 @@ export interface components {
         };
         /** @enum {string} */
         LlmCatalogStatus: "MATCH" | "MISMATCH" | "NOT_APPLICABLE" | "UNKNOWN";
+        LlmEndpointKindUsageResponse: {
+            /** @description 이 경로가 쓴 금액(USD). 가격이 붙은 요청이 없으면 null입니다. */
+            attributedCostUsd?: number | null;
+            /** @description 요청이 들어온 경로. 값은 게이트웨이가 정하는 열린 어휘이고, null은 「기타」가 아니라 이 축이 기록되기 전의 요청입니다. */
+            endpoint?: string | null;
+            /**
+             * Format: int64
+             * @description 한도 거부가 **아닌** 사유로 실패한 요청 수. 한도 거부를 여기 넣지 않는 것은 집계 표와 같은 가름이라야 같은 이름이 두 숫자를 뜻하지 않기 때문입니다.
+             */
+            failed: number;
+            /**
+             * Format: int64
+             * @description 이 경로가 돌려준 이미지 수
+             */
+            imageCount: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 이 경로 요청 중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests: number;
+            /**
+             * Format: int64
+             * @description 한도에 걸려 거부된 요청 수. failed와 겹치지 않습니다 — 셋을 더하면 requests가 됩니다.
+             */
+            rateLimited: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            succeeded: number;
+        };
         /** @enum {string} */
         LlmGatewayReportState: "NOT_REPORTED" | "FRESH" | "STALE";
         /** @description LLM gateway heartbeat와 usage 전송 상태. reportState, usageQueueReportState와 lastContactAt은 모든 관리자에게 보입니다. Queue 수치와 loss counter를 포함한 나머지 진단 필드는 SYS 계층에만 값이 있고 ORG 계층에서는 null입니다. */
@@ -4352,7 +4488,7 @@ export interface components {
              * @description 최근 소비 속도로 금액 한도에 도달할 것으로 보이는 날짜. 이력이 부족하거나 최근에 쓴 적이 없으면 null입니다 — 그때는 화면이 예상 대신 이유를 말합니다.
              */
             creditDepletionForecast?: string | null;
-            /** @description 상용 모델에 쓸 수 있는 금액 한도(USD). 0이면 상용 모델을 쓸 수 없습니다. */
+            /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
             creditLimit: number;
             /** @description OpenRouter가 보고한 현재 limit window 사용액(USD). DAILY/WEEKLY/MONTHLY reset 뒤에는 감소할 수 있습니다. 아직 보고된 적이 없으면 null이며 0으로 표시하지 않습니다. */
             creditUsage?: number | null;
@@ -4370,7 +4506,7 @@ export interface components {
             quotaExhausted: boolean;
             /**
              * Format: int64
-             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 상용 모델 사용은 금액 한도에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 유료 모델 사용은 금액 한도에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
              */
             todayTokens: number;
         };
@@ -4388,13 +4524,13 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 상용(금액) 축에서 이 키가 쓸 수 있는 모델 목록. 빈 배열이면 제한이 없습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다. */
+            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열이면 제한이 없습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다. */
             creditAllowedModels: string[];
-            /** @description 상용 축 사용 가능 여부. 금액 한도가 부여됐지만 아직 연결 전이면 false입니다. */
+            /** @description 유료 모델 사용 가능 여부. 금액 한도가 부여됐지만 아직 연결 전이면 false입니다. */
             creditAxisConnected: boolean;
-            /** @description 상용(금액) 축에서 이 키가 쓸 수 없는 모델 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
             creditDeniedModels: string[];
-            /** @description 상용(금액) 축 한도, USD 크레딧. 0이면 상용 모델을 쓸 수 없습니다. */
+            /** @description 유료 모델 한도, USD 크레딧. 0이면 유료 모델을 쓸 수 없습니다. */
             creditLimit: number;
             /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. 창은 UTC 자정 기준입니다. */
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
@@ -4482,6 +4618,8 @@ export interface components {
             samples: number;
         };
         LlmKeyModelUsageResponse: {
+            /** @description 이 기간에 이 모델이 쓴 금액(USD)으로, 요청마다 공급자가 알려 준 값을 더한 것입니다. 한도나 잔액과 견주는 숫자가 아닙니다 — 그쪽은 공급자 미터가 답하고 기간도 다릅니다. 가격이 붙지 않은 요청이 하나라도 있으면 이 합계는 그만큼 작으므로 pricedRequests와 함께 읽습니다. 이 기간에 가격이 붙은 요청이 하나도 없으면 null이며 0으로 표시하지 않습니다. */
+            attributedCostUsd?: number | null;
             /**
              * Format: int64
              * @description 이 모델 요청의 평균 응답 시간(ms). 실패와 거부까지 포함한 평균이라 정상 응답만 재는 백분위와는 다른 값입니다.
@@ -4491,12 +4629,22 @@ export interface components {
             estimatedRequests: number;
             /** Format: int64 */
             failed: number;
+            /**
+             * Format: int64
+             * @description 이 모델이 돌려준 이미지 수
+             */
+            imageCount: number;
             /** Format: int64 */
             inputTokens: number;
             /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며, 화면에서는 '모델 미상'으로 묶입니다. */
             modelName?: string | null;
             /** Format: int64 */
             outputTokens: number;
+            /**
+             * Format: int64
+             * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수. requests보다 작으면 나머지는 금액을 모르는 것이지 공짜였던 것이 아닙니다.
+             */
+            pricedRequests: number;
             /** Format: int64 */
             rateLimited: number;
             /** Format: int64 */
@@ -4517,11 +4665,11 @@ export interface components {
              * @description 부여 동시 요청 수. 비어 있으면 서비스 기본값입니다.
              */
             grantedConcurrency?: number | null;
-            /** @description 부여된 상용(금액) 축 모델 허용 목록. 빈 배열이면 제한이 없습니다. 어떤 모델을 열지는 신청자가 요구하는 값이 아니라 승인자가 정하는 값이라 희망 쪽 짝이 없습니다. */
+            /** @description 부여된 유료 모델 허용 목록. 빈 배열이면 제한이 없습니다. 어떤 모델을 열지는 신청자가 요구하는 값이 아니라 승인자가 정하는 값이라 희망 쪽 짝이 없습니다. */
             grantedCreditAllowedModels: string[];
-            /** @description 부여된 상용(금액) 축 모델 차단 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
+            /** @description 부여된 유료 모델 차단 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
             grantedCreditDeniedModels: string[];
-            /** @description 부여 금액 한도(USD 크레딧). 비어 있거나 0이면 상용(금액) 축을 쓸 수 없습니다. */
+            /** @description 부여 금액 한도(USD 크레딧). 비어 있거나 0이면 유료 모델을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
             /** @description 금액 한도 리셋 창. 비어 있으면 리셋 없는 총액 상한입니다. */
             grantedCreditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
@@ -4530,7 +4678,7 @@ export interface components {
              * @description 부여 일일 토큰 수. 비어 있으면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 승인자가 부여한 기능 권한. 빈 배열은 부여하지 않았다는 뜻이다. */
+            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. */
             grantedPassthroughEndpoints: ("images" | "embeddings")[];
             /**
              * Format: int32
@@ -4617,6 +4765,11 @@ export interface components {
             workspaceName: string;
         };
         LlmKeyUsagePointResponse: {
+            /**
+             * Format: int64
+             * @description 입력 토큰 중 공급자가 캐시에서 읽어 처리한 몫. 입력 토큰의 **부분집합**이라 입력 토큰에 더하면 이중 계산입니다.
+             */
+            cachedInputTokens: number;
             /** Format: date */
             day: string;
             /**
@@ -4629,6 +4782,11 @@ export interface components {
              * @description 그 밖의 사유로 실패한 요청 수 (업스트림 오류, 시간 초과, 잘못된 요청 등)
              */
             failed: number;
+            /**
+             * Format: int64
+             * @description 이 날 응답으로 돌아온 이미지 수. 요청한 장수가 아니라 실제로 받은 장수이고, 이미지 생성이 아닌 요청은 여기에 아무것도 더하지 않습니다.
+             */
+            imageCount: number;
             /**
              * Format: int64
              * @description 입력 토큰 합
@@ -4646,9 +4804,19 @@ export interface components {
             rateLimited: number;
             /**
              * Format: int64
+             * @description 출력 토큰 중 모델이 답을 내기 전에 생각하는 데 쓴 몫. 출력 토큰의 **부분집합**이라 출력 토큰에 더하면 이중 계산입니다.
+             */
+            reasoningTokens: number;
+            /**
+             * Format: int64
              * @description 이 날 이 Key로 들어온 요청 수 — 거부된 것과 실패한 것을 포함합니다.
              */
             requests: number;
+            /**
+             * Format: int64
+             * @description 스트리밍으로 받은 요청 수
+             */
+            streamedRequests: number;
             /**
              * Format: int64
              * @description 정상 응답한 요청 수
@@ -4792,6 +4960,15 @@ export interface components {
              */
             lastSuccessAt?: string | null;
         };
+        LlmServedModelUsageResponse: {
+            /**
+             * Format: int64
+             * @description 그 이름으로 돌아온 요청 수
+             */
+            requests: number;
+            /** @description 공급자가 실제로 응답한 모델 이름. 요청한 모델과 다를 때만 기록됩니다. */
+            servedModelName: string;
+        };
         LlmStatusResponse: {
             gateway: components["schemas"]["LlmGatewayStatusResponse"];
             /** Format: date-time */
@@ -4887,9 +5064,19 @@ export interface components {
             /** @description 등록부와 versioned gateway 보고의 관계 및 신선도 */
             reportState: components["schemas"]["LlmUpstreamReportState"];
         };
+        LlmUsageBreakdownResponse: {
+            /** @description 이 기간에 실제로 들어온 경로만, 요청이 많은 순 */
+            endpointKinds: components["schemas"]["LlmEndpointKindUsageResponse"][];
+            /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
+            models: components["schemas"]["LlmUsageModelBreakdownResponse"][];
+            /** @description 기능 권한 값마다 한 줄. 부여만 되고 안 쓰이는 것이 보입니다. */
+            passthroughGrants: components["schemas"]["LlmUsagePassthroughGrantResponse"][];
+        };
         /** @enum {string} */
         LlmUsageConsumerLevel: "ORG" | "WORKSPACE" | "KEY";
         LlmUsageConsumerResponse: {
+            /** @description 이 소비처가 이 기간에 쓴 금액(USD). 가격이 붙은 요청이 하나도 없으면 null이며 0으로 표시하지 않습니다. */
+            attributedCostUsd?: number | null;
             /** Format: int64 */
             inputTokens: number;
             /** Format: uuid */
@@ -4900,6 +5087,11 @@ export interface components {
             orgName?: string | null;
             /** Format: int64 */
             outputTokens: number;
+            /**
+             * Format: int64
+             * @description 이 소비처의 요청 중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests: number;
             /** Format: int64 */
             requests: number;
             /** Format: uuid */
@@ -4912,6 +5104,22 @@ export interface components {
             /** Format: int64 */
             totalItems: number;
             truncated: boolean;
+        };
+        LlmUsageCostPointResponse: {
+            /** @description 이 날 요청들에 공급자가 매긴 금액의 합(USD). 가격이 붙은 요청이 하나도 없는 날은 null이며 0으로 그리지 않습니다 — 자체 서빙만 쓴 날은 금액이 0인 것이 아니라 금액이라는 것이 없습니다. */
+            attributedCostUsd?: number | null;
+            /** Format: date */
+            day: string;
+            /**
+             * Format: int64
+             * @description 이 날 요청 중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests: number;
+            /**
+             * Format: int64
+             * @description 이 날 요청 수. pricedRequests와 견주면 합계가 얼마나 덮는지 보입니다.
+             */
+            requests: number;
         };
         LlmUsageDailyPointResponse: {
             /**
@@ -4940,6 +5148,49 @@ export interface components {
             daily: components["schemas"]["LlmUsageDailyPointResponse"][];
             windows: components["schemas"]["LlmUsageWindowResponse"][];
         };
+        LlmUsageModelBreakdownResponse: {
+            /** @description 이 모델이 쓴 금액(USD). 가격이 붙은 요청이 없으면 null입니다. */
+            attributedCostUsd?: number | null;
+            /**
+             * Format: int64
+             * @description 평균 응답 시간(ms). 일별 집계의 합을 요청 수로 나눈 값이라 백분위는 낼 수 없습니다. 백분위가 필요하면 키 상세로 갑니다.
+             */
+            avgLatencyMs: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며 화면에서는 「모델 미상」으로 묶입니다. */
+            modelName?: string | null;
+            /** Format: int64 */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests: number;
+            /** Format: int64 */
+            requests: number;
+        };
+        LlmUsagePassthroughGrantResponse: {
+            /** @description 기능 권한 값. images 또는 embeddings입니다. */
+            capability: string;
+            /**
+             * Format: int64
+             * @description 지금 이 기능을 부여받은 키 수
+             */
+            grantedKeys: number;
+            /**
+             * Format: int64
+             * @description 이 기능이 여는 경로들로 들어온 요청 수
+             */
+            requests: number;
+            /**
+             * Format: int64
+             * @description 이 기간에 이 기능이 여는 경로를 실제로 호출한 키 수. **grantedKeys의 부분집합이 아닙니다** — 부여는 지금 상태이고 호출은 지나간 사실이라, 쓰고 나서 권한이 회수된 키가 여기에만 남아 grantedKeys보다 클 수 있습니다. 호출한 쪽을 부여로 걸러 내지 않는 것은 그렇게 하면 그 요청이 아래 requests 에는 있고 이 수에는 없어 두 칸이 서로를 반박하기 때문입니다.
+             */
+            usedKeys: number;
+        };
         /** @description 사용량 숫자의 source와 delivery 상태. latestUsageReceivedAt은 API가 마지막으로 event를 받은 시각일 뿐 completeness watermark가 아닙니다. Gateway queue와 loss 수치는 전역 값이며 SYS가 기관으로 좁혀도 전역이고, ORG에는 null입니다. */
         LlmUsageQualityResponse: {
             /**
@@ -4952,6 +5203,11 @@ export interface components {
              * @description 양수 credit limit을 가진 key 수
              */
             creditMetersTotal: number;
+            /**
+             * Format: int64
+             * @description 이 기간 요청 중 들어온 경로가 기록된 수. 경로 축은 2026-09-06에 생겼으므로 그 전 요청은 여기 들어가지 않고, 경로별 분해도 그만큼 덜 덮습니다.
+             */
+            endpointRecordedRequests: number;
             /** Format: double */
             estimatedRequestRatio?: number | null;
             /** Format: int64 */
@@ -4979,6 +5235,11 @@ export interface components {
             oldestCreditUsageAt?: string | null;
             /** Format: date-time */
             oldestUnshippedEventAt?: string | null;
+            /**
+             * Format: int64
+             * @description 이 기간 요청 중 공급자가 금액을 알려 준 수. totalRequests와 견주면 금액 합계가 얼마나 덮는지 보입니다. 자체 서빙 요청은 금액이라는 것이 없어 여기 들어가지 않으므로, 이 값이 작은 것 자체는 결함이 아닙니다.
+             */
+            pricedRequests: number;
             /** Format: int64 */
             queuedUsageBytes?: number | null;
             /** Format: int64 */
@@ -5429,9 +5690,9 @@ export interface components {
             credentialAvailable: boolean;
             /** @description DB cache에서 읽은 account credits·예상·미관리 지출 관측 상태 */
             credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
-            /** @description 승인 화면이 프리필에 쓰는 상용 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
+            /** @description 승인 화면이 프리필에 쓰는 유료 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
             defaultCreditAllowedModels: string[];
-            /** @description 승인 화면이 프리필에 쓰는 상용 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
+            /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
             defaultCreditDeniedModels: string[];
             /** @description 승인 화면이 프리필에 쓰는 기능 권한 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
             defaultPassthroughEndpoints: ("images" | "embeddings")[];
@@ -6427,9 +6688,9 @@ export interface components {
         UpdateOpenRouterAccountRequest: {
             /** @description 새 담당자. 생략하면 유지하고 null이면 지웁니다. */
             contact?: string | null;
-            /** @description 새 상용 모델 허용 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
+            /** @description 새 유료 모델 허용 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 새 상용 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
+            /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 새 기능 권한 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
             defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
@@ -7892,6 +8153,40 @@ export interface operations {
             };
         };
     };
+    getAdminLlmAccountUsage: {
+        parameters: {
+            query?: {
+                /** @description 오늘을 포함해 거슬러 올라갈 일수 */
+                days?: number;
+            };
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmAccountUsageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminLlmKeys: {
         parameters: {
             query?: {
@@ -8082,6 +8377,40 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmKeyUsage: {
+        parameters: {
+            query?: {
+                /** @description 오늘을 포함해 거슬러 올라갈 일수 */
+                days?: number;
+            };
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmKeyUsageResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

@@ -399,3 +399,149 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('해당 LLM API 키가 존재하지 않습니다.')
   })
 })
+
+function adminUsageBody({ rateLimited = 0 }: { rateLimited?: number } = {}) {
+  return {
+    trend: {
+      from: '2026-08-05',
+      to: '2026-08-11',
+      reportedUntil: '2026-08-11T09:20:00+09:00',
+      points: [
+        {
+          day: '2026-08-11',
+          requests: 140,
+          succeeded: 134 - rateLimited,
+          rateLimited,
+          failed: 6,
+          inputTokens: 92_000,
+          outputTokens: 33_500,
+          estimatedRequests: 18,
+          cachedInputTokens: 30_000,
+          reasoningTokens: 12_000,
+          imageCount: 4,
+          streamedRequests: 61,
+        },
+      ],
+      models: [],
+      errorTypes: [],
+      latency: null,
+      hourly: [],
+      budget: {
+        dailyTokens: 1_000_000,
+        todayTokens: 0,
+        quotaExhausted: false,
+        creditLimit: 10,
+        creditUsage: null,
+        creditUsageAt: null,
+        creditDepletionForecast: null,
+      },
+    },
+    costPoints: [],
+    endpointKinds: [],
+    servedModels: [],
+  }
+}
+
+describe('관리자 LLM API 키 사용량 탭', () => {
+  test('사용량 탭은 관리자 경로를 부르고 소유자 경로를 부르지 않는다', async () => {
+    // 두 경로가 같은 형태의 응답을 주므로, 화면이 잘못된 쪽을 불러도 숫자는
+    // 그럴듯하게 나온다. 어느 쪽을 불렀는지는 요청을 세는 수밖에 없다.
+    const calls: string[] = []
+    server.use(
+      http.get('*/api/v1/admin/llm/keys/:keyId/usage', ({ request }) => {
+        calls.push(`admin:${new URL(request.url).pathname}`)
+        return HttpResponse.json(
+          {
+            trend: {
+              from: '2026-08-05',
+              to: '2026-08-11',
+              reportedUntil: '2026-08-11T09:20:00+09:00',
+              points: [
+                {
+                  day: '2026-08-11',
+                  requests: 140,
+                  succeeded: 132,
+                  rateLimited: 6,
+                  failed: 2,
+                  inputTokens: 92_000,
+                  outputTokens: 33_500,
+                  estimatedRequests: 18,
+                  cachedInputTokens: 30_000,
+                  reasoningTokens: 12_000,
+                  imageCount: 4,
+                  streamedRequests: 61,
+                },
+              ],
+              models: [],
+              errorTypes: [],
+              latency: null,
+              hourly: [],
+              budget: {
+                dailyTokens: 1_000_000,
+                todayTokens: 0,
+                quotaExhausted: false,
+                creditLimit: 10,
+                creditUsage: null,
+                creditUsageAt: null,
+                creditDepletionForecast: null,
+              },
+            },
+            costPoints: [],
+            endpointKinds: [],
+            servedModels: [],
+          },
+          { status: 200 },
+        )
+      }),
+      http.get('*/api/v1/llm-keys/:keyId/usage', ({ request }) => {
+        calls.push(`owner:${new URL(request.url).pathname}`)
+        return HttpResponse.json({}, { status: 200 })
+      }),
+    )
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    expect(await screen.findByRole('heading', { name: 'active-admin-key' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '사용량' }))
+
+    expect(await screen.findByText('총 요청')).toBeInTheDocument()
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0))
+    expect(calls.every((call) => call.startsWith('admin:'))).toBe(true)
+  })
+
+  test('한도 거부 안내가 신청이 아니라 한도 변경을 가리킨다', async () => {
+    // 관리자는 한도 상향을 신청하지 않는다. 바로 그 화면에 한도를 바꾸는 버튼이
+    // 있으므로, 소유자용 문장이 그대로 나오면 없는 절차를 안내하게 된다.
+    server.use(
+      http.get('*/api/v1/admin/llm/keys/:keyId/usage', () =>
+        HttpResponse.json(adminUsageBody({ rateLimited: 6 }), { status: 200 })),
+    )
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    expect(await screen.findByRole('heading', { name: 'active-admin-key' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '사용량' }))
+
+    expect(await screen.findByText(/한도를 올릴지는/)).toBeInTheDocument()
+    expect(screen.queryByText(/한도 상향을 신청해 주세요/)).not.toBeInTheDocument()
+  })
+
+  test('개요가 기본 탭이고 탭을 오가도 각 화면이 그대로 선다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    expect(await screen.findByRole('heading', { name: 'active-admin-key' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '개요' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('현재 한도')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '사용량' }))
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '사용량' }))
+        .toHaveAttribute('aria-selected', 'true'))
+    // 명령 막대는 탭 위에 남는다 — 사용량을 보고 한도를 올리려는 사람이 탭을
+    // 되돌리지 않아도 되는 것이 이 배치의 이유다.
+    expect(screen.getByRole('button', { name: '한도 변경' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '개요' }))
+    await waitFor(() => expect(screen.getByText('현재 한도')).toBeInTheDocument())
+  })
+})

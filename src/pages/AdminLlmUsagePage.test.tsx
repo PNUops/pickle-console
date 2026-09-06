@@ -51,7 +51,7 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     await waitFor(() => expect(currentPath()).toBe('/console'))
   })
 
-  test('7·30·90 numeric URL 선택과 TOKEN·CREDIT·UNKNOWN을 숨김없이 표시한다', async () => {
+  test('7·30·90 numeric URL 선택과 세 축을 숨김없이 표시한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/llm/usage')
@@ -64,7 +64,7 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     expect(screen.getAllByText('3건 · 11.1%').length).toBeGreaterThan(0)
     expect(screen.getByText('88.9%')).toBeInTheDocument()
     expect(await screen.findByRole('img', { name: '일별 요청 수' })).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: '일별 입력·출력 token' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '일별 입력·출력 토큰' })).toBeInTheDocument()
 
     const requestSummary = screen.getByText('날짜별 요청 수 표')
     requestSummary.focus()
@@ -76,18 +76,21 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     const requestDay = within(requestTable).getByRole('rowheader', { name: '2026-08-31' }).closest('tr')!
     expect(within(requestDay).getByRole('cell', { name: '12건' })).toBeInTheDocument()
 
-    const tokenSummary = screen.getByText('날짜별 입력·출력 token 표')
+    const tokenSummary = screen.getByText('날짜별 입력·출력 토큰 표')
     tokenSummary.focus()
     await user.keyboard(' ')
     expect(tokenSummary.closest('details')).toHaveAttribute('open')
-    const tokenTable = screen.getByRole('table', { name: '날짜별 입력·출력 token' })
-    expect(within(tokenTable).getByRole('columnheader', { name: '입력 token' })).toBeInTheDocument()
-    expect(within(tokenTable).getByRole('columnheader', { name: '출력 token' })).toBeInTheDocument()
+    const tokenTable = screen.getByRole('table', { name: '날짜별 입력·출력 토큰' })
+    expect(within(tokenTable).getByRole('columnheader', { name: '입력 토큰' })).toBeInTheDocument()
+    expect(within(tokenTable).getByRole('columnheader', { name: '출력 토큰' })).toBeInTheDocument()
     const tokenDay = within(tokenTable).getByRole('rowheader', { name: '2026-08-31' }).closest('tr')!
     expect(within(tokenDay).getByRole('cell', { name: '1,200' })).toBeInTheDocument()
     expect(within(tokenDay).getByRole('cell', { name: '400' })).toBeInTheDocument()
-    expect(screen.getAllByRole('table')).toHaveLength(4)
-    expect(screen.getByText('일부 token은 추정값입니다')).toBeInTheDocument()
+    // 정확한 개수를 유지한다 — 이 단언이 아니면 표가 하나 늘어난 것을 아무도 못 본다.
+    // 다섯째는 「호출 분해」 카드의 기본 눈금(모델별)이다.
+    expect(screen.getAllByRole('table')).toHaveLength(5)
+    expect(screen.getByRole('table', { name: '모델별 사용' })).toBeInTheDocument()
+    expect(screen.getByText('일부 토큰은 추정값입니다')).toBeInTheDocument()
     expect(adminLlmUsageQueries.some((query) => query.includes('days=7') && query.includes('top=20'))).toBe(true)
 
     const thirty = screen.getByRole('button', { name: '30일' })
@@ -124,7 +127,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
       'href',
       `/admin/llm/usage?workspaceId=${uuid(12)}&days=30&org=${uuid(1)}`,
     )
-    expect(screen.getByRole('link', { name: '필터된 key 목록' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '이 워크스페이스의 키 목록' })).toHaveAttribute(
       'href',
       `/admin/llm/keys?workspaceId=${uuid(12)}&org=${uuid(1)}`,
     )
@@ -148,15 +151,15 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
 
     const actual = (await screen.findByRole('link', { name: 'capstone-chatbot' })).closest('tr')!
     expect(within(actual).getByText('실제 소진 확인')).toBeInTheDocument()
-    expect(within(actual).getByText('TOKEN 90,000 token')).toBeInTheDocument()
-    expect(within(actual).getByText('UNKNOWN 1,000 token')).toBeInTheDocument()
+    expect(within(actual).getByText('자체 서빙 90,000 토큰')).toBeInTheDocument()
+    expect(within(actual).getByText('종류 미상 1,000 토큰')).toBeInTheDocument()
     expect(within(actual).getByText('사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
     expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
-    expect(within(actual).getByText('일일 token 한도 소진 2건')).toBeInTheDocument()
+    expect(within(actual).getByText('일일 토큰 한도 소진 2건')).toBeInTheDocument()
     expect(within(actual).getByText('금액 한도 소진 1건')).toBeInTheDocument()
     expect(within(actual).getByText('분당 요청 수 한도 3건')).toBeInTheDocument()
-    expect(within(actual).getByText('분당 token 한도 4건')).toBeInTheDocument()
+    expect(within(actual).getByText('분당 토큰 한도 4건')).toBeInTheDocument()
     expect(within(actual).getByText('동시 요청 한도 5건')).toBeInTheDocument()
     expect(within(actual).getByRole('link', { name: 'AI 교육 사업 A' })).toHaveAttribute(
       'href',
@@ -167,7 +170,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(within(rateOnly).getByText('한도 압력')).toBeInTheDocument()
     expect(within(rateOnly).queryByText('실제 소진 확인')).not.toBeInTheDocument()
     expect(within(rateOnly).getByText('사용 확인 전')).toBeInTheDocument()
-    expect(within(rateOnly).getByText('UNKNOWN 0 token')).toBeInTheDocument()
+    expect(within(rateOnly).getByText('종류 미상 0 토큰')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('server_busy')
     expect(document.body).not.toHaveTextContent('80%')
     expect(screen.getByText(/4개 중 상위 2개만 표시합니다/)).toBeInTheDocument()

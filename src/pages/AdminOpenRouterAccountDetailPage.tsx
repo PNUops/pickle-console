@@ -39,6 +39,7 @@ import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { AccountUsageSection } from '../components/llm-usage/AccountUsageSection'
 import { AccountAllocationSection, AccountCreditsSection } from '../components/OpenRouterCredits'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 
@@ -239,7 +240,12 @@ export function AdminOpenRouterAccountDetailPage() {
         ]}
       />
 
+      {/* 읽는 순서: 지금 얼마 남았나 → 무엇에 나갔나 → 앞으로 얼마가 더 나갈 수
+          있나. 가운데 하나만 시간축을 갖고, 그것이 세 구역의 경계를 말이 아니라
+          형태로 만든다. 탭으로 가르지 않는 것은 셋을 동시에 볼 수 없으면 볼 수
+          없는 두 숫자가 자동으로 같은 것으로 가정되기 때문이다. */}
       <AccountCreditsSection credits={account.credits} />
+      <AccountUsageSection accountId={accountId} />
       <AccountAllocationSection allocation={account.allocation} credits={account.credits} />
 
       <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">

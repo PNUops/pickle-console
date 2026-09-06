@@ -99,6 +99,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           requests: 18,
           inputTokens: 2_400,
           outputTokens: 800,
+          attributedCostUsd: 0.124_5,
+          pricedRequests: 6,
         },
       ],
       totalItems: 1,
@@ -119,6 +121,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           requests: 18,
           inputTokens: 2_400,
           outputTokens: 800,
+          attributedCostUsd: 0.124_5,
+          pricedRequests: 6,
         },
       ],
       totalItems: 3,
@@ -138,6 +142,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
         requests: 21,
         inputTokens: 2_700,
         outputTokens: 900,
+        attributedCostUsd: 0.124_5,
+        pricedRequests: 6,
       },
       {
         orgId: uuid(2),
@@ -149,6 +155,9 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
         requests: 6,
         inputTokens: 300,
         outputTokens: 150,
+        // 자체 서빙만 쓴 기관. 금액은 0이 아니라 없음이다.
+        attributedCostUsd: null,
+        pricedRequests: 0,
       },
     ],
     totalItems: 3,
@@ -182,6 +191,84 @@ function quality(systemTier: boolean, globalScope: boolean): AdminLlmUsage['qual
     usageShipFailures: systemTier ? 2 : null,
     usageQueueScanFailures: systemTier ? 0 : null,
     unattributedRequests: systemTier && globalScope ? 0 : null,
+    pricedRequests: 6,
+    // 27건 중 24건만 경로가 기록돼 있다. 경로 축 도입 전 요청이 섞인 구간을
+    // 화면이 그대로 말하는지 보는 자료다.
+    endpointRecordedRequests: 24,
+  }
+}
+
+function breakdown(): AdminLlmUsage['breakdown'] {
+  return {
+    models: [
+      {
+        modelName: 'pickle-general',
+        requests: 21,
+        failed: 1,
+        inputTokens: 2_700,
+        outputTokens: 900,
+        attributedCostUsd: null,
+        pricedRequests: 0,
+        avgLatencyMs: 820,
+      },
+      {
+        modelName: 'openai/gpt-5.6',
+        requests: 6,
+        failed: 0,
+        inputTokens: 300,
+        outputTokens: 150,
+        attributedCostUsd: 0.124_5,
+        pricedRequests: 6,
+        avgLatencyMs: 1_450,
+      },
+    ],
+    endpointKinds: [
+      {
+        endpoint: 'chat',
+        requests: 21,
+        succeeded: 20,
+        // 셋을 더하면 requests 가 된다. 서버가 지키는 불변식을 목이 어기면
+        // 화면 시험이 초록으로 거짓말한다.
+        rateLimited: 0,
+        failed: 1,
+        inputTokens: 2_700,
+        outputTokens: 900,
+        attributedCostUsd: null,
+        pricedRequests: 0,
+        imageCount: 0,
+      },
+      {
+        endpoint: 'images',
+        requests: 3,
+        succeeded: 3,
+        rateLimited: 0,
+        failed: 0,
+        inputTokens: 90,
+        outputTokens: 0,
+        attributedCostUsd: 0.124_5,
+        pricedRequests: 3,
+        imageCount: 3,
+      },
+      {
+        // 경로가 기록되기 전의 요청. 「기타」가 아니라 「종류 미상」이고,
+        // 화면이 둘을 같은 조각으로 묶으면 안 된다.
+        endpoint: null,
+        requests: 3,
+        succeeded: 3,
+        rateLimited: 0,
+        failed: 0,
+        inputTokens: 210,
+        outputTokens: 150,
+        attributedCostUsd: null,
+        pricedRequests: 0,
+        imageCount: 0,
+      },
+    ],
+    passthroughGrants: [
+      { capability: 'images', grantedKeys: 2, usedKeys: 1, requests: 3 },
+      // 부여만 되고 아무도 안 쓰는 기능. 이 행이 없는 것이 아니라 0인 것이 답이다.
+      { capability: 'embeddings', grantedKeys: 1, usedKeys: 0, requests: 0 },
+    ],
   }
 }
 
@@ -204,6 +291,7 @@ export function adminLlmUsageFixture({
     days,
     demand: { windows: windows(), daily: daily(days) },
     consumers: consumers(orgId, workspaceId),
+    breakdown: breakdown(),
     limitReview: {
       items: [
         {

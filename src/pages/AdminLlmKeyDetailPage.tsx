@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import {
   fetchAdminLlmKey,
   fetchOpenRouterAccount,
@@ -14,6 +14,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
+import LlmKeyUsageSection from '../components/llm-usage/LlmKeyUsageSection'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 import { useAuth } from '../auth/auth-context'
 import {
@@ -34,6 +35,8 @@ import {
   Modal,
   PageHeader,
   Select,
+  TabPanel,
+  Tabs,
   Textarea,
 } from '../components/ui'
 import {
@@ -62,6 +65,11 @@ function creditText(value: number): string {
   return value === 0 ? '미부여' : `$${value.toLocaleString('ko-KR')}`
 }
 
+const KEY_DETAIL_TABS = [
+  { id: 'overview', label: '개요' },
+  { id: 'usage', label: '사용량' },
+]
+
 export function AdminLlmKeyDetailPage() {
   const { keyId: keyIdParam } = useParams()
   const keyId = keyIdParam ?? ''
@@ -77,6 +85,8 @@ export function AdminLlmKeyDetailPage() {
   const [modelsOpen, setModelsOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') === 'usage' ? 'usage' : 'overview'
 
   const detail = useQuery({
     queryKey: ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null }],
@@ -180,6 +190,28 @@ export function AdminLlmKeyDetailPage() {
       {notice && <MessageBar variant="success">{notice}</MessageBar>}
       {error && <MessageBar variant="danger">{error}</MessageBar>}
 
+      {/* 탭 띠는 명령 막대 **아래**에 둔다. 사용량을 읽고 「한도를 올려야겠다」고
+          판단한 사람이 탭을 되돌리지 않고 바로 누를 수 있어야 하고, 그것이 탭으로
+          가른 실질적인 이득이다. */}
+      <Tabs
+        aria-label="LLM API 키 화면"
+        tabs={KEY_DETAIL_TABS}
+        value={activeTab}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'overview') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
+      />
+
+      <TabPanel id="usage" active={activeTab === 'usage'}>
+        {activeTab === 'usage' && (
+          <LlmKeyUsageSection keyId={keyId} status={status} audience="admin" />
+        )}
+      </TabPanel>
+
+      <TabPanel id="overview" active={activeTab === 'overview'}>
       <DescriptionList
         columns={3}
         items={[
@@ -264,6 +296,7 @@ export function AdminLlmKeyDetailPage() {
           }
         />
       )}
+      </TabPanel>
 
       {limitsOpen && (
         <LimitsModal
