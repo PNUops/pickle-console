@@ -38,7 +38,9 @@ import {
 } from '../components/ui'
 import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatBytes } from '../lib/format'
+import { endpointKindLabel } from '../lib/llm-endpoint-kinds'
 import { formatUsd } from '../lib/openrouter-credits'
+import { passthroughLabel } from '../lib/passthrough-endpoints'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 
@@ -50,10 +52,10 @@ const DAY_OPTIONS = [7, 30, 90] as const
 const PAGE_TOP = 20
 
 const PRESSURE_LABELS: Record<LlmLimitPressure['reason'], string> = {
-  quota_exhausted: '일일 token 한도 소진',
+  quota_exhausted: '일일 토큰 한도 소진',
   credit_exhausted: '금액 한도 소진',
   rate_limit_requests: '분당 요청 수 한도',
-  rate_limit_tokens: '분당 token 한도',
+  rate_limit_tokens: '분당 토큰 한도',
   rate_limit_concurrency: '동시 요청 한도',
 }
 
@@ -79,7 +81,7 @@ function count(value: number): string {
 }
 
 function tokens(value: number): string {
-  return `${count(value)} token`
+  return `${count(value)} 토큰`
 }
 
 function percent(value: number): string {
@@ -153,9 +155,9 @@ function DemandSection({
           <DescriptionList
             columns={2}
             items={[
-              { term: 'TOKEN request', description: axisShare(selected.tokenAxisRequests, selected.requests) },
-              { term: 'CREDIT request', description: axisShare(selected.creditAxisRequests, selected.requests) },
-              { term: 'UNKNOWN request', description: axisShare(selected.unknownAxisRequests, selected.requests) },
+              { term: '자체 서빙 모델 요청', description: axisShare(selected.tokenAxisRequests, selected.requests) },
+              { term: '유료 모델 요청', description: axisShare(selected.creditAxisRequests, selected.requests) },
+              { term: '종류 미상 요청', description: axisShare(selected.unknownAxisRequests, selected.requests) },
               { term: '예산 축 기록 범위', description: ratio(selected.axisCoverage) },
             ]}
           />
@@ -182,13 +184,13 @@ function DemandSection({
         )}
 
         {quality.totalTokens > 0 && quality.estimatedTokens == null && (
-          <MessageBar variant="warning" title="추정 token 비율을 계산할 수 없습니다">
-            선택 구간에 원본 event가 보존되지 않은 bucket이 있습니다.
+          <MessageBar variant="warning" title="추정 토큰 비율을 계산할 수 없습니다">
+            선택 구간에 원본 기록이 보존되지 않은 날이 있습니다.
           </MessageBar>
         )}
         {quality.estimatedTokenRatio != null && quality.estimatedTokenRatio > 0 && (
-          <MessageBar variant="warning" title="일부 token은 추정값입니다">
-            {tokens(quality.estimatedTokens ?? 0)} · 전체 token의 {percent(quality.estimatedTokenRatio)}
+          <MessageBar variant="warning" title="일부 토큰은 추정값입니다">
+            {tokens(quality.estimatedTokens ?? 0)} · 전체 토큰의 {percent(quality.estimatedTokenRatio)}
           </MessageBar>
         )}
       </CardContent>
@@ -235,7 +237,7 @@ function ConsumersSection({
       <CardHeader>
         <CardTitle>주요 소비처</CardTitle>
         <p className="type-caption mt-1 text-foreground-muted">
-          행을 따라 기관·워크스페이스·key로 좁힙니다.
+          행을 따라 기관과 워크스페이스, 키로 좁힙니다.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -251,8 +253,8 @@ function ConsumersSection({
               <TR>
                 <TH>소비처</TH>
                 <TH>요청</TH>
-                <TH>입력 token</TH>
-                <TH>출력 token</TH>
+                <TH>입력 토큰</TH>
+                <TH>출력 토큰</TH>
                 <TH>연결</TH>
               </TR>
             </THead>
@@ -322,15 +324,210 @@ function ConsumerRow({
             to={adminPaths.llmKeys(activeOrgId, item.workspaceId)}
             className="text-brand-foreground hover:underline"
           >
-            필터된 key 목록
+            이 워크스페이스의 키 목록
           </Link>
         ) : primary ? (
           <Link to={primary} className="text-brand-foreground hover:underline">
-            {level === 'ORG' ? '워크스페이스 보기' : 'key 상세'}
+            {level === 'ORG' ? '워크스페이스 보기' : '키 상세'}
           </Link>
         ) : '—'}
       </TD>
     </TR>
+  )
+}
+
+type BreakdownGrain = 'model' | 'endpoint' | 'capability'
+
+const BREAKDOWN_GRAINS: { value: BreakdownGrain; label: string }[] = [
+  { value: 'model', label: '모델별' },
+  { value: 'endpoint', label: '호출 종류별' },
+  { value: 'capability', label: '기능 권한별' },
+]
+
+/**
+ * 같은 기간을 「무엇을」로 자른 셋.
+ *
+ * 카드 하나에 전환기를 두고 셋을 담는다. 라우트를 나누면 한 응답이 실어 온 것을
+ * 다시 받아야 하고, 관리자 내비의 LLM 항목이 이미 넷이라 다섯째를 더하면 이
+ * 구역만 다른 전 구역보다 커진다. 무엇보다 셋은 같은 질문의 세 입도라, 흩으면
+ * 읽는 사람이 카드를 오가며 합을 맞춰야 한다.
+ *
+ * 어느 자리에도 시간축을 주지 않는다. 여기서 조치로 이어지는 사실은 추이가 아니라
+ * 구성비이고, 범주가 넷을 넘는 순간 계열 색이 모자란다.
+ */
+function BreakdownSection({ data }: { data: AdminLlmUsage }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const raw = searchParams.get('breakdown')
+  const grain: BreakdownGrain =
+    raw === 'endpoint' || raw === 'capability' ? raw : 'model'
+  const select = (next: BreakdownGrain) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'model') params.delete('breakdown')
+    else params.set('breakdown', next)
+    setSearchParams(params, { replace: true })
+  }
+  const { breakdown } = data
+  return (
+    <Card>
+      <CardHeader className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <CardTitle>호출 분해</CardTitle>
+        </div>
+        <div className="flex flex-wrap gap-1" role="group" aria-label="분해 기준">
+          {BREAKDOWN_GRAINS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => select(option.value)}
+              aria-pressed={grain === option.value}
+              className={
+                grain === option.value
+                  ? 'rounded-md bg-brand-background px-3 py-1 text-sm font-medium text-brand-foreground cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground'
+                  : 'rounded-md px-3 py-1 text-sm text-foreground-muted hover:text-foreground-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground'
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {grain === 'model' && <ModelBreakdownTable rows={breakdown.models} />}
+        {grain === 'endpoint' && <EndpointBreakdownTable rows={breakdown.endpointKinds} />}
+        {grain === 'capability' && (
+          <CapabilityGrantTable rows={breakdown.passthroughGrants} />
+        )}
+        {grain !== 'capability' && data.quality.pricedRequests < data.quality.totalRequests && (
+          <MessageBar>
+            이 기간 요청 {count(data.quality.totalRequests)}건 가운데{' '}
+            {count(data.quality.pricedRequests)}건만 공급자가 금액을 알려 줬습니다.
+          </MessageBar>
+        )}
+        {grain === 'endpoint'
+          && data.quality.endpointRecordedRequests < data.quality.totalRequests && (
+          <MessageBar>
+            「종류 미상」은 {count(data.quality.totalRequests
+              - data.quality.endpointRecordedRequests)}건입니다.
+          </MessageBar>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ModelBreakdownTable({ rows }: { rows: AdminLlmUsage['breakdown']['models'] }) {
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        title="표시할 모델이 없습니다"
+        description="선택 기간과 관리 범위에 호출된 모델이 없습니다."
+        className="min-h-40"
+      />
+    )
+  }
+  return (
+    <DataTable caption="모델별 사용" captionVisible>
+      <THead>
+        <TR>
+          <TH>모델</TH>
+          <TH>요청</TH>
+          <TH>토큰</TH>
+          <TH>금액</TH>
+          <TH>평균 응답</TH>
+          <TH>실패율</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {rows.map((row) => (
+          <TR key={row.modelName ?? 'unknown'}>
+            <TD>{row.modelName ?? '모델 미상'}</TD>
+            <TD>{count(row.requests)}건</TD>
+            <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
+            {/* 값 없음과 0을 가른다. 자체 서빙 모델에는 금액이라는 것이 없다. */}
+            <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
+            <TD>{Math.round(row.avgLatencyMs).toLocaleString('ko-KR')}ms</TD>
+            <TD>
+              {/* percent()가 100을 곱한다. 여기서 또 곱하면 476%가 나온다. */}
+              {row.requests === 0 ? '—' : percent(row.failed / row.requests)}
+            </TD>
+          </TR>
+        ))}
+      </TBody>
+    </DataTable>
+  )
+}
+
+function EndpointBreakdownTable({
+  rows,
+}: {
+  rows: AdminLlmUsage['breakdown']['endpointKinds']
+}) {
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        title="표시할 호출 종류가 없습니다"
+        description="선택 기간과 관리 범위에 들어온 요청이 없습니다."
+        className="min-h-40"
+      />
+    )
+  }
+  const anyImages = rows.some((row) => row.imageCount > 0)
+  return (
+    <DataTable caption="호출 종류별 사용" captionVisible>
+      <THead>
+        <TR>
+          <TH>호출 종류</TH>
+          <TH>요청</TH>
+          <TH>토큰</TH>
+          <TH>금액</TH>
+          {anyImages && <TH>이미지</TH>}
+        </TR>
+      </THead>
+      <TBody>
+        {rows.map((row) => (
+          <TR key={row.endpoint ?? 'unknown'}>
+            <TD>{endpointKindLabel(row.endpoint)}</TD>
+            <TD>{count(row.requests)}건</TD>
+            <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
+            <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
+            {anyImages && <TD>{count(row.imageCount)}장</TD>}
+          </TR>
+        ))}
+      </TBody>
+    </DataTable>
+  )
+}
+
+/**
+ * 사용량이 아니라 「부여했는데 아무도 안 쓰는 권한이 있나」를 답한다. 사용량 자체는
+ * 호출 종류별이 이미 말하므로 되풀이하지 않는다.
+ */
+function CapabilityGrantTable({
+  rows,
+}: {
+  rows: AdminLlmUsage['breakdown']['passthroughGrants']
+}) {
+  return (
+    <DataTable caption="기능 권한별 사용" captionVisible>
+      <THead>
+        <TR>
+          <TH>기능</TH>
+          <TH>부여된 키</TH>
+          <TH>실제로 쓴 키</TH>
+          <TH>요청</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {rows.map((row) => (
+          <TR key={row.capability}>
+            <TD>{passthroughLabel(row.capability)}</TD>
+            <TD>{count(row.grantedKeys)}개</TD>
+            <TD>{count(row.usedKeys)}개</TD>
+            <TD>{count(row.requests)}건</TD>
+          </TR>
+        ))}
+      </TBody>
+    </DataTable>
   )
 }
 
@@ -350,16 +547,16 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
         {data.limitReview.items.length === 0 ? (
           <EmptyState
             title="검토할 한도가 없습니다"
-            description="설정된 한도나 최근 한도 압력이 있는 활성 key가 없습니다."
+            description="설정된 한도나 최근 한도 압력이 있는 활성 키가 없습니다."
             className="min-h-40"
           />
         ) : (
           <DataTable caption="LLM API 키 한도 검토" captionVisible>
             <THead>
               <TR>
-                <TH>Key</TH>
+                <TH>키</TH>
                 <TH>판정</TH>
-                <TH>오늘 TOKEN</TH>
+                <TH>오늘 자체 서빙</TH>
                 <TH>유료 모델</TH>
                 <TH>최근 7일 압력</TH>
               </TR>
@@ -391,9 +588,9 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                       )}
                     </TD>
                     <TD className="whitespace-nowrap text-xs">
-                      <span className="block">TOKEN {tokens(item.todayTokens)}</span>
+                      <span className="block">자체 서빙 {tokens(item.todayTokens)}</span>
                       <span className="block text-foreground-muted">
-                        UNKNOWN {tokens(item.todayUnknownAxisTokens)}
+                        종류 미상 {tokens(item.todayUnknownAxisTokens)}
                       </span>
                       <span className="block text-foreground-muted">
                         일일 한도 {item.dailyTokens == null ? '없음' : tokens(item.dailyTokens)}
@@ -412,7 +609,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                           to={adminPaths.llmAccountDetail(item.openrouterAccountId, activeOrgId)}
                           className="mt-1 inline-block text-brand-foreground hover:underline"
                         >
-                          {item.openrouterAccountName ?? 'OpenRouter 사업 account'}
+                          {item.openrouterAccountName ?? 'OpenRouter 사업 계정'}
                         </Link>
                       )}
                     </TD>
@@ -453,7 +650,7 @@ function QualitySection({
 }) {
   const diagnostics: DescriptionItem[] = []
   if (quality.lastUsageShipSuccessAt != null) {
-    diagnostics.push({ term: '마지막 usage 전송 성공', description: moment(quality.lastUsageShipSuccessAt) })
+    diagnostics.push({ term: '마지막 사용량 전송 성공', description: moment(quality.lastUsageShipSuccessAt) })
   }
   if (quality.usageQueueObservedAt != null) {
     diagnostics.push({ term: '대기열 마지막 확인', description: moment(quality.usageQueueObservedAt) })
@@ -503,7 +700,7 @@ function QualitySection({
               {
                 term: 'OpenRouter 사용액 확인',
                 description: quality.creditMetersTotal === 0
-                  ? '양수 금액 한도 key 없음'
+                  ? '금액 한도가 0보다 큰 키 없음'
                   : `${count(quality.creditMetersObserved)} / ${count(quality.creditMetersTotal)}개`,
               },
               { term: '가장 오래된 금액 관측', description: moment(quality.oldestCreditUsageAt, '관측 기록 없음') },
@@ -595,6 +792,7 @@ export function AdminLlmUsagePage() {
         <>
           <DemandSection data={data} onDays={selectDays} />
           <ConsumersSection data={data} activeOrgId={scope.activeOrgId} />
+          <BreakdownSection data={data} />
           <LimitReviewSection data={data} activeOrgId={scope.activeOrgId} />
           <QualitySection quality={data.quality} activeOrgId={scope.activeOrgId} />
         </>

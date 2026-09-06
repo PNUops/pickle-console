@@ -624,6 +624,10 @@ const NO_USAGE: UsageValues = {
   inputTokens: 0,
   outputTokens: 0,
   estimatedRequests: 0,
+  cachedInputTokens: 0,
+  reasoningTokens: 0,
+  imageCount: 0,
+  streamedRequests: 0,
 }
 
 function shiftDay(ymd: string, deltaDays: number): string {
@@ -654,6 +658,12 @@ const USAGE_PROFILES: Record<string, UsageProfile> = {
           inputTokens: 7_400,
           outputTokens: 2_600,
           estimatedRequests: 3,
+          // 부분집합이므로 반드시 각각의 상위 값보다 작다. 서버가 만들 수 없는
+          // 자료를 목이 만들면 시험이 초록으로 거짓말한다.
+          cachedInputTokens: 2_100,
+          reasoningTokens: 900,
+          imageCount: 0,
+          streamedRequests: 5,
         }
       }
       if (offset === 1) {
@@ -665,6 +675,10 @@ const USAGE_PROFILES: Record<string, UsageProfile> = {
           inputTokens: 92_000,
           outputTokens: 33_500,
           estimatedRequests: 18,
+          cachedInputTokens: 30_000,
+          reasoningTokens: 12_000,
+          imageCount: 4,
+          streamedRequests: 61,
         }
       }
       // 호출이 없던 날. 구멍이 아니라 0이며, 차트가 그 둘을 같게 그리면 안 된다.
@@ -679,6 +693,10 @@ const USAGE_PROFILES: Record<string, UsageProfile> = {
         inputTokens: requests * 620,
         outputTokens: requests * 210,
         estimatedRequests: offset % 6 === 0 ? 4 : 0,
+        cachedInputTokens: requests * 180,
+        reasoningTokens: requests * 60,
+        imageCount: 0,
+        streamedRequests: Math.round(requests * 0.4),
       }
     },
   },
@@ -696,6 +714,10 @@ const USAGE_PROFILES: Record<string, UsageProfile> = {
             inputTokens: 15_000,
             outputTokens: 5_000,
             estimatedRequests: 0,
+            cachedInputTokens: 0,
+            reasoningTokens: 0,
+            imageCount: 0,
+            streamedRequests: 0,
           },
   },
   // 발급은 됐지만 한 번도 쓰이지 않은 키 — 게이트웨이 보고 자체가 없다.
@@ -733,26 +755,37 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
     models: used
       ? [
           {
+            // 셋이 requests 를 나눈다. 종전에는 거부와 실패를 전량 이 행에
+            // 몰아 넣어 첫 행이 넘치고 둘째 행이 모자랐다. 성공만 나머지로 두면
+            // 두 행 모두 합이 맞는다.
             modelName: 'pickle-general',
             requests: Math.round(totals.requests * 0.7),
-            succeeded: Math.round(totals.succeeded * 0.7),
+            succeeded: Math.round(totals.requests * 0.7) - totals.rateLimited - totals.failed,
             rateLimited: totals.rateLimited,
             failed: totals.failed,
             inputTokens: Math.round(totals.inputTokens * 0.7),
             outputTokens: Math.round(totals.outputTokens * 0.7),
             estimatedRequests: 0,
             avgLatencyMs: 820,
+            // 자체 서빙 모델에는 금액이라는 것이 없다. 0이 아니라 null이라야
+            // 화면이 「공짜였다」고 말하지 않는다.
+            attributedCostUsd: null,
+            pricedRequests: 0,
+            imageCount: 0,
           },
           {
             modelName: 'openai/gpt-4o-mini',
             requests: totals.requests - Math.round(totals.requests * 0.7),
-            succeeded: totals.succeeded - Math.round(totals.succeeded * 0.7),
+            succeeded: totals.requests - Math.round(totals.requests * 0.7),
             rateLimited: 0,
             failed: 0,
             inputTokens: totals.inputTokens - Math.round(totals.inputTokens * 0.7),
             outputTokens: totals.outputTokens - Math.round(totals.outputTokens * 0.7),
             estimatedRequests: 0,
             avgLatencyMs: 1_450,
+            attributedCostUsd: 0.482_5,
+            pricedRequests: totals.requests - Math.round(totals.requests * 0.7),
+            imageCount: 0,
           },
         ]
       : [],
@@ -1090,6 +1123,60 @@ export const llmKeyHandlers: RequestHandler[] = [
     if (!key) return notFoundProblem()
     // 관리자 경로는 리소스 부여를 보지 않는다. 기관 스코프가 이 자리의 규칙이다.
     return HttpResponse.json(modelsFor(), { status: 200 })
+  }),
+
+  /**
+   * 관리자 사용량. **부여를 보지 않는다** — 기관 스코프가 이 자리의 규칙이고,
+   * 그 차이가 이 handler 가 소유자 것과 따로 있는 이유다. 부여를 보게 만들면
+   * 화면이 관리자 경로를 안 쓰고 소유자 경로를 써도 시험이 통과한다.
+   */
+  http.get('*/api/v1/admin/llm/keys/:keyId/usage', ({ params, request }) => {
+    // 상세와 **같은 store 와 같은 문**을 쓴다. 종전에는 소유자 store 에서 찾아
+    // 관리자 키 전부에 404 를 돌려줬고, 사용량 탭 내용을 단언하지 않는 시험이
+    // 그것을 초록으로 지나갔다.
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    const raw = new URL(request.url).searchParams.get('days')
+    const days = raw == null ? 30 : Number(raw)
+    if (!Number.isInteger(days) || days < 1 || days > 90) {
+      return validationProblem(
+        `/api/v1/admin/llm/keys/${key.id}/usage`,
+        'days',
+        '조회 일수는 1 이상 90 이하여야 합니다.',
+      )
+    }
+    // 사용량 픽스처는 소유자 store 의 id 로 붙어 있다. 관리자 키에는 그 id 가
+    // 없으므로, 화면이 그릴 것이 있도록 트래픽이 있는 프로필을 빌려 쓴다.
+    const trend = usageTrend(USAGE_PROFILES[key.id] ? key.id : uuid(70), days)
+    return HttpResponse.json(
+      {
+        trend,
+        costPoints: trend.points.map((point) => ({
+          day: point.day,
+          // 자체 서빙만 쓴 날은 금액이 0이 아니라 없다.
+          attributedCostUsd: point.requests > 0 ? 0.012_5 : null,
+          pricedRequests: point.requests > 0 ? 1 : 0,
+          requests: point.requests,
+        })),
+        endpointKinds: trend.models.length === 0 ? [] : [
+          {
+            endpoint: 'chat',
+            requests: trend.points.reduce((sum, p) => sum + p.requests, 0),
+            succeeded: trend.points.reduce((sum, p) => sum + p.succeeded, 0),
+            rateLimited: trend.points.reduce((sum, p) => sum + p.rateLimited, 0),
+            failed: trend.points.reduce((sum, p) => sum + p.failed, 0),
+            inputTokens: trend.points.reduce((sum, p) => sum + p.inputTokens, 0),
+            outputTokens: trend.points.reduce((sum, p) => sum + p.outputTokens, 0),
+            attributedCostUsd: null,
+            pricedRequests: 0,
+            imageCount: 0,
+          },
+        ],
+        servedModels: [],
+      },
+      { status: 200 },
+    )
   }),
 
   http.get('*/api/v1/llm-keys/:keyId/usage', ({ params, request }) => {

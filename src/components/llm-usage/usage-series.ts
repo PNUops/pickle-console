@@ -33,6 +33,10 @@ export interface UsageTotals {
   inputTokens: number
   outputTokens: number
   estimatedRequests: number
+  cachedInputTokens: number
+  reasoningTokens: number
+  imageCount: number
+  streamedRequests: number
 }
 
 const ZERO: UsageTotals = {
@@ -43,6 +47,10 @@ const ZERO: UsageTotals = {
   inputTokens: 0,
   outputTokens: 0,
   estimatedRequests: 0,
+  cachedInputTokens: 0,
+  reasoningTokens: 0,
+  imageCount: 0,
+  streamedRequests: 0,
 }
 
 export function usageTotals(points: LlmKeyUsagePoint[]): UsageTotals {
@@ -55,6 +63,12 @@ export function usageTotals(points: LlmKeyUsagePoint[]): UsageTotals {
       inputTokens: sum.inputTokens + point.inputTokens,
       outputTokens: sum.outputTokens + point.outputTokens,
       estimatedRequests: sum.estimatedRequests + point.estimatedRequests,
+      // 캐시와 사고 토큰은 입력·출력의 부분집합이다. 여기서 따로 더하는 것은
+      // 합계를 늘리기 위해서가 아니라 그 안에서 얼마인지를 말하기 위해서다.
+      cachedInputTokens: sum.cachedInputTokens + point.cachedInputTokens,
+      reasoningTokens: sum.reasoningTokens + point.reasoningTokens,
+      imageCount: sum.imageCount + point.imageCount,
+      streamedRequests: sum.streamedRequests + point.streamedRequests,
     }),
     ZERO,
   )

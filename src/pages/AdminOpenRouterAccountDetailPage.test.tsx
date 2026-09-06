@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
-import { openRouterAccountStore } from '../test/msw/handlers/openrouter-accounts'
+import {
+  accountUsageQueries,
+  openRouterAccountStore,
+} from '../test/msw/handlers/openrouter-accounts'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -150,5 +153,46 @@ describe('사업 계정의 승인 기본 목록', () => {
       const account = openRouterAccountStore.find((item) => item.id === uuid(410))!
       expect(account.defaultPassthroughEndpoints).toEqual(['images', 'embeddings'])
     })
+  })
+})
+
+describe('사업 계정 상세의 쓰임새', () => {
+  test('금액이 붙지 않은 키는 0이 아니라 값 없음으로 선다', async () => {
+    // 이 화면이 존재하는 이유 자체다. 자체 서빙만 쓴 키를 $0.00으로 적으면
+    // 「공짜로 썼다」는, 서버가 한 적 없는 주장을 화면이 대신 하게 된다.
+    renderDetail(uuid(410))
+
+    expect(await screen.findByText('쓰임새')).toBeInTheDocument()
+    const table = await screen.findByRole('table', { name: '키별 쓰임새' })
+    const unpriced = within(table).getByText('lab-embeddings').closest('tr')!
+    expect(within(unpriced).getByText('—')).toBeInTheDocument()
+    const priced = within(table).getByText('capstone-chatbot').closest('tr')!
+    expect(within(priced).getByText('$0.50')).toBeInTheDocument()
+  })
+
+  test('귀속이지 청구가 아니라는 것을 화면이 먼저 말한다', async () => {
+    // 바로 위 구역이 공급자 잔액을 말하고 있으므로, 이 말이 없으면 두 숫자가
+    // 같은 것을 뜻한다고 읽힌다.
+    renderDetail(uuid(410))
+
+    expect(await screen.findByText(/요청마다 알려 준 금액을 이 계정의 키로/))
+      .toBeInTheDocument()
+    expect(screen.getByText(/키가 확인되지 않은 요청은 어느 계정에도 속하지 않고/))
+      .toBeInTheDocument()
+  })
+
+  test('기간을 바꾸면 그 기간으로 다시 묻는다', async () => {
+    // 눌린 상태만 보면 이름이 주장하는 것을 단언하지 않는다. 쿼리 키에서 days를
+    // 빼도, 30일로 고정해도 그 시험은 초록이다. 나가는 query 를 세야 한다.
+    const user = userEvent.setup()
+    renderDetail(uuid(410))
+    expect(await screen.findByRole('table', { name: '키별 쓰임새' })).toBeInTheDocument()
+    expect(accountUsageQueries.some((query) => query.includes('days=30'))).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: '7일' }))
+
+    await waitFor(() =>
+      expect(accountUsageQueries.some((query) => query.includes('days=7'))).toBe(true))
+    expect(screen.getByRole('button', { name: '7일' })).toHaveAttribute('aria-pressed', 'true')
   })
 })

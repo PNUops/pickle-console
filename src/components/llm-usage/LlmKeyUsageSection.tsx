@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
+  fetchAdminLlmKeyUsage,
   fetchLlmKeyUsage,
+  type AdminLlmKeyUsage,
   type LlmApiKeyStatus,
   type LlmKeyBudget,
   type LlmKeyModelUsage,
+  type LlmKeyUsageTrend,
 } from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { formatUsd } from '../../lib/openrouter-credits'
@@ -14,6 +17,8 @@ import { formatKstDay } from '../metrics/timeframe'
 import { ObservationMoment } from '../OpenRouterCredits'
 import { BudgetGauge } from './BudgetGauge'
 import { DonutChart, type DonutSlice } from './DonutChart'
+import { endpointKindLabel } from '../../lib/llm-endpoint-kinds'
+import { KEY_USAGE_COPY, type UsageAudience } from './key-usage-copy'
 import { UsageHeatmap } from './UsageHeatmap'
 import {
   DEFAULT_USAGE_DAYS,
@@ -44,22 +49,42 @@ import {
 export default function LlmKeyUsageSection({
   keyId,
   status,
+  audience = 'owner',
 }: {
   keyId: string
   status: LlmApiKeyStatus
+  /**
+   * 누가 읽는가. 숫자는 갈리지 않고 **문장 둘만** 갈린다 — 무엇이 갈리는지는
+   * `key-usage-copy.ts`가 갖는다.
+   */
+  audience?: UsageAudience
 }) {
   const [days, setDays] = useState(DEFAULT_USAGE_DAYS)
+  const copy = KEY_USAGE_COPY[audience]
+  const admin = audience === 'admin'
   // 발급 전 키로는 어떤 요청도 인증되지 않았으므로 물어볼 것이 없다. 0으로 눕는
   // 선 세 개보다 왜 비었는지 말하는 편이 정확하다.
   const unissued = status === 'PENDING'
+  // 쿼리 키가 반드시 다르다. 같으면 관리 범위로 받은 응답이 소유자 캐시에 얹히고,
+  // 그 반대도 생긴다.
   const usage = useQuery({
-    queryKey: ['llm-keys', keyId, 'usage', { days }],
-    queryFn: () => fetchLlmKeyUsage(keyId, days),
+    queryKey: admin
+      ? ['admin', 'llm-keys', keyId, 'usage', { days }]
+      : ['llm-keys', keyId, 'usage', { days }],
+    queryFn: async (): Promise<{
+      trend: LlmKeyUsageTrend
+      extra: AdminLlmKeyUsage | null
+    }> => {
+      if (!admin) return { trend: await fetchLlmKeyUsage(keyId, days), extra: null }
+      const response = await fetchAdminLlmKeyUsage(keyId, days)
+      return { trend: response.trend, extra: response }
+    },
     placeholderData: keepPreviousData,
     enabled: !unissued,
   })
 
-  const data = usage.data
+  const data = usage.data?.trend
+  const extra = usage.data?.extra ?? null
   const points = data?.points ?? []
   const times = usageTimes(points)
   const totals = usageTotals(points)
@@ -103,8 +128,8 @@ export default function LlmKeyUsageSection({
       <CardContent className="space-y-4">
         {unissued && (
           <Alert variant="info" title="아직 발급되지 않은 키입니다">
-            발급 전에는 이 키로 인증되는 요청이 없으므로 사용 기록도 없습니다. 개요 탭에서
-            키를 발급하면 그때부터 쌓입니다.
+            발급 전에는 이 키로 인증되는 요청이 없으므로 사용 기록도 없습니다.{' '}
+            {copy.unissuedHint}
           </Alert>
         )}
 
@@ -162,6 +187,11 @@ export default function LlmKeyUsageSection({
                     value={data.latency ? `${formatMs(data.latency.p50Ms)}` : '—'}
                     hint={data.latency ? `p99 ${formatMs(data.latency.p99Ms)}` : '정상 응답 없음'}
                   />
+                  {/* 이미지를 한 번도 만들지 않은 키에 0 타일을 세우지 않는다.
+                      대부분의 키가 그렇고, 0은 여기서 아무것도 말하지 않는다. */}
+                  {totals.imageCount > 0 && (
+                    <StatTile label="받은 이미지" value={formatRequests(totals.imageCount)} />
+                  )}
                 </div>
 
                 <BudgetSection budget={data.budget} />
@@ -173,7 +203,7 @@ export default function LlmKeyUsageSection({
                 {totals.rateLimited > 0 && (
                   <Alert variant="warning" title="한도에 걸려 거부된 요청이 있습니다">
                     {data.from} ~ {data.to} 사이에 {formatRequests(totals.rateLimited)}가 한도에
-                    걸려 거부됐습니다. 계속 거부된다면 한도 상향을 신청해 주세요.
+                    걸려 거부됐습니다. {copy.rateLimitedAction}
                   </Alert>
                 )}
 
@@ -236,6 +266,28 @@ export default function LlmKeyUsageSection({
                       formatTime={formatKstDay}
                       splitBase="integer"
                     />
+                    {/* 위 차트에 계열을 더 얹지 않고 차트를 하나 더 만든다 —
+                        캐시와 사고 토큰은 입력·출력의 **부분집합**이라 같은 축에
+                        나란히 두면 합계로 읽힌다. */}
+                    {(totals.cachedInputTokens > 0 || totals.reasoningTokens > 0) && (
+                      <TimeSeriesChart
+                        title="캐시·사고 토큰"
+                        times={times}
+                        series={[
+                          {
+                            label: '캐시된 입력',
+                            data: usageSeries(points, (point) => point.cachedInputTokens),
+                          },
+                          {
+                            label: '사고',
+                            data: usageSeries(points, (point) => point.reasoningTokens),
+                          },
+                        ]}
+                        format={formatTokens}
+                        formatTime={formatKstDay}
+                        splitBase="integer"
+                      />
+                    )}
                   </div>
                 )}
 
@@ -285,12 +337,110 @@ export default function LlmKeyUsageSection({
                     <UsageHeatmap cells={data.hourly} />
                   </section>
                 )}
+
+                {/* 여기부터는 관리자만 본다. 키 소유자는 모델별 금액까지만 보고
+                    일별 금액도 경로별 분해도 보지 않는다 — 그 경계가 응답 모양에
+                    이미 들어 있어서, 이 블록들이 `trend` 밖에 있다. */}
+                {extra && <AdminOnlyBreakdowns extra={extra} times={times} />}
               </>
             )}
           </>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * 관리자만 보는 셋. 소유자 응답에는 아예 실리지 않는다.
+ *
+ * 일별 금액이 여기 있고 위의 토큰 차트 옆에 없는 것이 경계 그 자체다 — 소유자는
+ * 모델별 금액까지만 보고 일별 금액은 보지 않으며, 일별 금액을 나르지 않는 응답이라야
+ * 화면이 실수로 그릴 수 없다.
+ */
+function AdminOnlyBreakdowns({
+  extra,
+  times,
+}: {
+  extra: AdminLlmKeyUsage
+  times: number[]
+}) {
+  const priced = extra.costPoints.some((point) => point.pricedRequests > 0)
+  return (
+    <>
+      {/* 제목을 밖에 한 번 더 쓰지 않는다 — 차트가 자기 제목을 이미 갖는다.
+          위의 다른 차트들도 같은 이유로 감싸는 제목이 없다. */}
+      {priced && (
+        <section className="space-y-2" aria-label="일별 금액">
+          <TimeSeriesChart
+            title="일별 금액"
+            times={times}
+            series={[
+              {
+                label: '금액',
+                // 가격이 붙지 않은 날은 0이 아니라 공백이다. 0으로 그리면 그 날
+                // 공짜로 썼다는, 서버가 하지 않은 주장을 선이 대신 한다.
+                data: extra.costPoints.map((point) => point.attributedCostUsd ?? null),
+              },
+            ]}
+            format={(value) => formatUsd(value)}
+            formatTime={formatKstDay}
+          />
+        </section>
+      )}
+
+      {extra.endpointKinds.length > 0 && (
+        <section className="space-y-2" aria-label="호출 종류별 사용">
+          <h3 className="text-sm font-semibold text-neutral-700">호출 종류별</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
+                  <th scope="col" className="py-2 pr-3 font-normal">호출 종류</th>
+                  <th scope="col" className="py-2 pr-3 text-right font-normal">요청</th>
+                  <th scope="col" className="py-2 pr-3 text-right font-normal">토큰</th>
+                  <th scope="col" className="py-2 text-right font-normal">금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extra.endpointKinds.map((kind) => (
+                  <tr key={kind.endpoint ?? 'unknown'} className="border-b border-neutral-100">
+                    <td className="py-2 pr-3 text-neutral-700">
+                      {endpointKindLabel(kind.endpoint)}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-neutral-600">
+                      {formatRequests(kind.requests)}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-neutral-600">
+                      {formatTokens(kind.inputTokens + kind.outputTokens)}
+                    </td>
+                    <td className="py-2 text-right text-neutral-600">
+                      {kind.attributedCostUsd == null ? '—' : formatUsd(kind.attributedCostUsd)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* 빈 목록을 「대체가 없었다」로 쓰지 않는다. 응답 최상위 `model`만 다시 쓰는
+          구조라 라우터가 더 깊은 자리에 진짜 모델을 넣으면 여기 안 잡힌다. */}
+      {extra.servedModels.length > 0 && (
+        <section className="space-y-2" aria-label="다른 모델로 응답한 사례">
+          <h3 className="text-sm font-semibold text-neutral-700">요청과 다른 모델로 응답</h3>
+          <ul className="space-y-1 text-sm text-neutral-700">
+            {extra.servedModels.map((served) => (
+              <li key={served.servedModelName} className="flex justify-between">
+                <span>{served.servedModelName}</span>
+                <span className="text-neutral-500">{formatRequests(served.requests)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   )
 }
 
@@ -383,7 +533,19 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
 }
 
 /** 모델 x (요청·토큰·평균 지연·실패율). */
+/**
+ * 금액은 여기에만 둔다.
+ *
+ * 합계 타일을 만들지 않는 것은 화면 규약의 결론이다 — 「한도 창 사용」 게이지 옆에
+ * 다른 창의 달러가 나란히 서면 둘의 차이를 설명하는 문단이 필요해지고, 그 문단이
+ * 필요하다는 것 자체가 두 숫자를 한 자리에 둔 것이 틀렸다는 뜻이다.
+ *
+ * 값이 없는 것과 0인 것을 가른다. 자체 서빙 모델에는 금액이라는 것이 아예 없어서
+ * `$0.00`으로 적으면 「공짜로 썼다」는 없는 주장을 하게 된다. 열 전체가 비면 열을
+ * 세우지 않는다.
+ */
 function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
+  const showCost = models.some((model) => model.attributedCostUsd != null)
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -398,6 +560,11 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
             <th scope="col" className="py-2 pr-3 text-right font-normal">
               토큰
             </th>
+            {showCost && (
+              <th scope="col" className="py-2 pr-3 text-right font-normal">
+                금액
+              </th>
+            )}
             <th scope="col" className="py-2 pr-3 text-right font-normal">
               평균 응답
             </th>
@@ -416,6 +583,13 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
               <td className="py-2 pr-3 text-right text-neutral-600">
                 {formatTokens(model.inputTokens + model.outputTokens)}
               </td>
+              {showCost && (
+                <td className="py-2 pr-3 text-right text-neutral-600">
+                  {model.attributedCostUsd == null
+                    ? '—'
+                    : formatUsd(model.attributedCostUsd)}
+                </td>
+              )}
               <td className="py-2 pr-3 text-right text-neutral-600">
                 {formatMs(model.avgLatencyMs)}
               </td>
