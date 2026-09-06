@@ -43,10 +43,14 @@ describe('사용량 탭', () => {
   test('오늘 자 값이 아직 채워지는 중이라는 근거를 마지막 보고 시각으로 댄다', async () => {
     renderUsage(USED_KEY)
 
-    expect(
-      await screen.findByText(/게이트웨이 마지막 보고 2026-08-11 09:20/),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/오늘 자 값은 아직 채워지는 중입니다/)).toBeInTheDocument()
+    const notice = await screen.findByText(/오늘 자 값은 아직 채워지는 중입니다/)
+    // The claim needs its evidence on the screen, and the evidence is a
+    // moment. What pins it is the machine-readable attribute rather than the
+    // rendered words: "is this current?" takes the relative form, so a text
+    // match on an absolute stamp would pass only while the rule is broken.
+    const time = notice.querySelector('time')
+    expect(time).toHaveAttribute('dateTime', '2026-08-11T09:20:00+09:00')
+    expect(time?.textContent).not.toMatch(/-/)
   })
 
   test('한 번도 보고가 없으면 그 사실을 그대로 말하고 빈 차트를 그리지 않는다', async () => {
@@ -154,15 +158,45 @@ describe('사용량 탭', () => {
   })
 
   test('예산 게이지 둘이 서로 다른 신선도를 밝힌다', async () => {
-    // 하나는 우리가 세고 하나는 OpenRouter가 집행한다. 같은 시점의 값으로
+    // 하나는 우리가 세고 하나는 공급자가 집행한다. 같은 시점의 값으로
     // 읽히면 안 된다.
     renderUsage(USED_KEY)
 
-    expect(await screen.findByRole('progressbar', { name: '오늘 토큰 사용 소진율' }))
-      .toBeInTheDocument()
-    expect(screen.getByRole('progressbar', { name: '금액 사용 소진율' })).toBeInTheDocument()
-    expect(screen.getByText(/OpenRouter 기준 .*에 읽은 값입니다/)).toBeInTheDocument()
+    const token = await screen.findByRole('progressbar', { name: '오늘 토큰 사용 소진율' })
+    const money = screen.getByRole('progressbar', { name: '금액 사용 소진율' })
+    const tokenGauge = token.closest('div[class*="space-y"]') ?? token.parentElement!
+    const moneyGauge = money.closest('div[class*="space-y"]') ?? money.parentElement!
+
+    // The money gauge states its observation exactly once. Two renderings of
+    // one moment is the defect the time rule exists for, and hiding the second
+    // in a title attribute is the same defect wearing a hat.
+    const moments = moneyGauge.querySelectorAll('time')
+    expect(moments).toHaveLength(1)
+    expect(moments[0]).toHaveAttribute('dateTime', '2026-07-31T08:30:00+09:00')
+    expect(moneyGauge.querySelector('[title]')).toBeNull()
+
+    // The token gauge carries none: its delay is the batching one, and the
+    // reporting notice below already says that. Two places for one fact is
+    // what this assertion refuses.
+    //
+    // The label check is not decoration. An empty count proves nothing about
+    // an element that is not the gauge, so the container has to be shown to be
+    // the right one before its emptiness means anything.
+    expect(tokenGauge.textContent).toContain('오늘 토큰 사용')
+    expect(tokenGauge.querySelectorAll('time')).toHaveLength(0)
+
     expect(screen.getByText(/이 속도면 2026-09-12에 한도에 도달합니다/)).toBeInTheDocument()
+  })
+
+  test('user usage tab names no vendor', async () => {
+    // A student cannot act on the vendor's name and it is not theirs to know.
+    // A proper noun is one of the few things a text search can rule out
+    // exactly, so this axis is worth pinning even though copy checks usually
+    // cannot see the same fact said in different words.
+    renderUsage(USED_KEY)
+
+    await screen.findByRole('progressbar', { name: '금액 사용 소진율' })
+    expect(screen.queryByText(/openrouter/i)).not.toBeInTheDocument()
   })
 
   test('쓰인 적 없는 키는 분해가 비어도 화면이 선다', async () => {

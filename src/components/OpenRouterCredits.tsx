@@ -209,7 +209,11 @@ export function AccountAllocationSection({
         }
         note={judgement.balance == null || judgement.balance <= 0 ? (note ?? undefined) : undefined}
         freshness={
-          credits.observedAt ? `잔액 관측 ${formatRelative(credits.observedAt)}` : undefined
+          credits.observedAt ? (
+            <>
+              잔액 <ObservationMoment value={credits.observedAt} /> 관측
+            </>
+          ) : undefined
         }
       />
       {judgement.balance != null && judgement.balance > 0 && note ? (

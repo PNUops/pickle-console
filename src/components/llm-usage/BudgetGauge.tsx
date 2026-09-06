@@ -6,6 +6,8 @@
  * 언제나 숫자지만 예산의 분모는 **없을 수도, 0일 수도, 아직 모를 수도** 있고,
  * 그 세 경우를 하나로 뭉개면 "한도 없음"과 "쓸 수 없음"이 같은 그림이 된다.
  */
+import type { ReactNode } from 'react'
+
 export interface BudgetGaugeProps {
   label: string
   /** 쓴 만큼의 표기. 아직 알 수 없으면 null. */
@@ -16,8 +18,14 @@ export interface BudgetGaugeProps {
   ratio: number | null
   /** 막대 대신 보여 줄 문장. 한도가 없거나 축이 닫혀 있을 때. */
   note?: string
-  /** 값이 실측이 아니라 주기적으로 읽어 온 것임을 밝히는 꼬리말. */
-  freshness?: string
+  /**
+   * 값이 실측이 아니라 주기적으로 읽어 온 것임을 밝히는 꼬리말.
+   *
+   * A node rather than a string: the relative-time renderer this repository
+   * uses emits a `<time dateTime>` element, and taking only its text would
+   * drop the machine-readable moment and leave two renderers for one fact.
+   */
+  freshness?: ReactNode
 }
 
 export function BudgetGauge({
