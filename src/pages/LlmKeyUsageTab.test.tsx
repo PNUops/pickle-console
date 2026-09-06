@@ -208,3 +208,39 @@ describe('사용량 탭', () => {
     expect(screen.getByRole('progressbar', { name: '오늘 토큰 사용 소진율' })).toBeInTheDocument()
   })
 })
+
+describe('사용량 탭의 새 지표', () => {
+  test('캐시와 사고 토큰은 토큰 차트가 아니라 자기 차트에 선다', async () => {
+    // 둘은 입력·출력의 **부분집합**이라 같은 축에 나란히 두면 합계로 읽힌다.
+    // 계열이 넷인 차트 하나가 아니라 둘씩 나눈 차트 둘이라야 한다.
+    renderUsage(USED_KEY)
+
+    const tokens = await screen.findByRole('img', { name: '토큰 사용량 (일부 추정)' })
+    const subsets = await screen.findByRole('img', { name: '캐시·사고 토큰' })
+    expect(tokens).toBeInTheDocument()
+    expect(subsets).toBeInTheDocument()
+    expect(tokens).not.toBe(subsets)
+  })
+
+  test('이미지를 받은 적 있는 키만 이미지 타일을 세운다', async () => {
+    // 대부분의 키가 0이고, 0인 타일은 자리만 차지하고 말해 주는 것이 없다.
+    renderUsage(USED_KEY)
+    expect(await screen.findByText('받은 이미지')).toBeInTheDocument()
+
+    renderUsage(REVOKED_KEY)
+    expect(await screen.findAllByText('총 요청')).not.toHaveLength(0)
+  })
+
+  test('자체 서빙만 쓴 모델 행은 금액 자리에 0이 아니라 값 없음을 둔다', async () => {
+    // `$0.00`은 「공짜로 썼다」는, 서버가 한 적 없는 주장이다.
+    renderUsage(USED_KEY)
+
+    // 이름이 도넛 범례에도 있으므로 표의 칸에 있는 것만 고른다.
+    const cells = await screen.findAllByText('pickle-general')
+    const selfHosted = cells.find((node) => node.closest('td'))!.closest('tr')!
+    expect(within(selfHosted).getByText('—')).toBeInTheDocument()
+    const paid = screen.getAllByText('openai/gpt-4o-mini')
+      .find((node) => node.closest('td'))!.closest('tr')!
+    expect(within(paid).getByText('$0.4825')).toBeInTheDocument()
+  })
+})

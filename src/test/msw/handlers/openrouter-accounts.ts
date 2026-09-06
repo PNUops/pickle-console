@@ -5,6 +5,9 @@ import { uuid } from '../ids'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { adminReadScope } from './org-scope'
 
+/** 계정 사용량 조회가 실제로 어떤 query 로 나갔는지. */
+export const accountUsageQueries: string[] = []
+
 type Schemas = components['schemas']
 type Account = Schemas['OpenRouterAccountResponse']
 type Credential = Schemas['OpenRouterCredentialStateResponse']
@@ -211,6 +214,7 @@ export function resetOpenRouterAccountFixtures() {
   openRouterAccountStore = initialAccounts()
   nextAccountId = 430
   openRouterAccountListQueries.length = 0
+  accountUsageQueries.length = 0
 }
 
 function profileOf(request: Request) {
@@ -404,6 +408,10 @@ export const openRouterAccountHandlers: RequestHandler[] = [
    * 날을 「공짜」로 그려도 시험이 통과한다.
    */
   http.get('*/api/v1/admin/llm/accounts/:accountId/usage', ({ params, request }) => {
+    // 어떤 기간으로 물었는지를 남긴다. 이것이 없으면 「기간을 바꾸면 그 기간으로
+    // 다시 묻는다」를 단언할 방법 자체가 없고, 실제로 그 시험은 aria-pressed 만
+    // 보고 있었다.
+    accountUsageQueries.push(new URL(request.url).search)
     // 상세와 같은 문을 쓴다. 여기서 갈리면 「상세는 404인데 사용량은 열리는」
     // 서버에 없는 세계를 목이 만든다.
     const found = accountFor(request, String(params.accountId))
@@ -434,7 +442,9 @@ export const openRouterAccountHandlers: RequestHandler[] = [
         requests,
         pricedRequests,
         keysUsed: 2,
-        keysLinked: 3,
+        // 같은 계정의 상세가 boundKeyCount 2 를 말한다. 목이 3 을 주면 한 계정을
+        // 두 응답이 다르게 말하는, 서버에 없는 상태가 된다.
+        keysLinked: 2,
         points,
         keys: [
           {

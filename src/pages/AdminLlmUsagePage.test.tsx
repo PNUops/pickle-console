@@ -89,7 +89,16 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     // 정확한 개수를 유지한다 — 이 단언이 아니면 표가 하나 늘어난 것을 아무도 못 본다.
     // 다섯째는 「호출 분해」 카드의 기본 눈금(모델별)이다.
     expect(screen.getAllByRole('table')).toHaveLength(5)
-    expect(screen.getByRole('table', { name: '모델별 사용' })).toBeInTheDocument()
+    const modelTable = screen.getByRole('table', { name: '모델별 사용' })
+    expect(modelTable).toBeInTheDocument()
+    // 실패율은 비율이지 백분율이 아니다. 픽스처는 21건 중 1건 실패이므로 4.8%이고,
+    // 100을 두 번 곱하면 476%가 나온다. 그 자리를 이 단언이 지킨다.
+    const selfHosted = within(modelTable).getByText('pickle-general').closest('tr')!
+    expect(within(selfHosted).getByText('4.8%')).toBeInTheDocument()
+    // 자체 서빙 모델에는 금액이라는 것이 없다. $0.00이 아니라 —.
+    expect(within(selfHosted).getByText('—')).toBeInTheDocument()
+    const paid = within(modelTable).getByText('openai/gpt-5.6').closest('tr')!
+    expect(within(paid).getByText('$0.1245')).toBeInTheDocument()
     expect(screen.getByText('일부 토큰은 추정값입니다')).toBeInTheDocument()
     expect(adminLlmUsageQueries.some((query) => query.includes('days=7') && query.includes('top=20'))).toBe(true)
 

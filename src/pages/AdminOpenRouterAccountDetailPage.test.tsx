@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
-import { openRouterAccountStore } from '../test/msw/handlers/openrouter-accounts'
+import {
+  accountUsageQueries,
+  openRouterAccountStore,
+} from '../test/msw/handlers/openrouter-accounts'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -179,15 +182,17 @@ describe('사업 계정 상세의 쓰임새', () => {
   })
 
   test('기간을 바꾸면 그 기간으로 다시 묻는다', async () => {
+    // 눌린 상태만 보면 이름이 주장하는 것을 단언하지 않는다. 쿼리 키에서 days를
+    // 빼도, 30일로 고정해도 그 시험은 초록이다. 나가는 query 를 세야 한다.
     const user = userEvent.setup()
     renderDetail(uuid(410))
     expect(await screen.findByRole('table', { name: '키별 쓰임새' })).toBeInTheDocument()
+    expect(accountUsageQueries.some((query) => query.includes('days=30'))).toBe(true)
 
     await user.click(screen.getByRole('button', { name: '7일' }))
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: '7일' }))
-        .toHaveAttribute('aria-pressed', 'true'))
-    expect(await screen.findByRole('table', { name: '키별 쓰임새' })).toBeInTheDocument()
+      expect(accountUsageQueries.some((query) => query.includes('days=7'))).toBe(true))
+    expect(screen.getByRole('button', { name: '7일' })).toHaveAttribute('aria-pressed', 'true')
   })
 })

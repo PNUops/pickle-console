@@ -55,10 +55,9 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
     <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
+          {/* 캡션을 두지 않는다 — 아래 안내가 같은 말을 하고, 그것이 이 카드가
+              말해야 하는 「청구가 아니라 귀속」의 유일한 자리다. */}
           <h2 className="type-section-title">쓰임새</h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            이 계정의 키들이 고른 기간에 무엇에 얼마를 썼는지 귀속해 보여 줍니다.
-          </p>
         </div>
         <div className="flex gap-1" role="group" aria-label="조회 기간">
           {WINDOWS.map((option) => (
@@ -69,8 +68,8 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
               aria-pressed={days === option}
               className={
                 days === option
-                  ? 'rounded-md bg-brand-background px-3 py-1 text-sm font-medium text-brand-foreground'
-                  : 'rounded-md px-3 py-1 text-sm text-foreground-muted hover:text-foreground-primary'
+                  ? 'rounded-md bg-brand-background px-3 py-1 text-sm font-medium text-brand-foreground cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground'
+                  : 'rounded-md px-3 py-1 text-sm text-foreground-muted hover:text-foreground-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground'
               }
             >
               {option}일
@@ -96,7 +95,7 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
           </MessageBar>
           )}
 
-          <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <Tile
               label="기간 비용"
               value={data.attributedCostUsd == null ? '—' : formatUsd(data.attributedCostUsd)}
@@ -107,25 +106,24 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
               }
             />
             <Tile label="요청" value={`${count(data.requests)}건`} />
-            <Tile
-              label="쓰인 키"
-              value={`${count(data.keysUsed)}개`}
-              hint={`연결된 키 ${count(data.keysLinked)}개`}
-            />
-            <Tile
-              label="금액 미보고"
-              value={`${count(data.requests - data.pricedRequests)}건`}
-              hint="0원이 아니라 모르는 것"
-            />
+            {/* 「연결된 키」를 여기서 다시 말하지 않는다 — 위 목록이 이미 그
+                수를 갖고 있고, 두 자리가 다른 출처를 쓰면 한 화면에서 서로 다른
+                숫자가 뜬다. 「금액 미보고」 타일도 두지 않는다: 기간 비용 옆의
+                「N건 기준」이 이미 무엇이 덮이는지 말한다. */}
+            <Tile label="쓰인 키" value={`${count(data.keysUsed)}개`} />
           </dl>
 
           {data.requests === 0 ? (
+            /* 위 타일이 이미 「연결된 키 N개」를 말하므로 그 수를 문장으로 다시
+               말하지 않는다. 남길 것은 읽는 사람이 다음에 할 수 있는 것뿐이다. */
             <EmptyState
-              title="이 기간에 쓰인 기록이 없습니다"
-              description={
+              title={
                 data.keysLinked === 0
-                  ? '이 계정에 연결된 키가 아직 없습니다.'
-                  : '연결된 키는 있지만 고른 기간에 호출이 없었습니다.'
+                  ? '아직 이 계정으로 발급된 키가 없습니다'
+                  : '고른 기간에 호출이 없습니다'
+              }
+              description={
+                data.keysLinked === 0 ? undefined : '기간을 늘려 보세요.'
               }
               className="min-h-40"
             />

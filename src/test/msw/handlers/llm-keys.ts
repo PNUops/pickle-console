@@ -755,9 +755,12 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
     models: used
       ? [
           {
+            // 셋이 requests 를 나눈다. 종전에는 거부와 실패를 전량 이 행에
+            // 몰아 넣어 첫 행이 넘치고 둘째 행이 모자랐다. 성공만 나머지로 두면
+            // 두 행 모두 합이 맞는다.
             modelName: 'pickle-general',
             requests: Math.round(totals.requests * 0.7),
-            succeeded: Math.round(totals.succeeded * 0.7),
+            succeeded: Math.round(totals.requests * 0.7) - totals.rateLimited - totals.failed,
             rateLimited: totals.rateLimited,
             failed: totals.failed,
             inputTokens: Math.round(totals.inputTokens * 0.7),
@@ -773,7 +776,7 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
           {
             modelName: 'openai/gpt-4o-mini',
             requests: totals.requests - Math.round(totals.requests * 0.7),
-            succeeded: totals.succeeded - Math.round(totals.succeeded * 0.7),
+            succeeded: totals.requests - Math.round(totals.requests * 0.7),
             rateLimited: 0,
             failed: 0,
             inputTokens: totals.inputTokens - Math.round(totals.inputTokens * 0.7),
@@ -1128,8 +1131,12 @@ export const llmKeyHandlers: RequestHandler[] = [
    * 화면이 관리자 경로를 안 쓰고 소유자 경로를 써도 시험이 통과한다.
    */
   http.get('*/api/v1/admin/llm/keys/:keyId/usage', ({ params, request }) => {
-    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
-    if (!key) return notFoundProblem()
+    // 상세와 **같은 store 와 같은 문**을 쓴다. 종전에는 소유자 store 에서 찾아
+    // 관리자 키 전부에 404 를 돌려줬고, 사용량 탭 내용을 단언하지 않는 시험이
+    // 그것을 초록으로 지나갔다.
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
     const raw = new URL(request.url).searchParams.get('days')
     const days = raw == null ? 30 : Number(raw)
     if (!Number.isInteger(days) || days < 1 || days > 90) {
@@ -1139,7 +1146,9 @@ export const llmKeyHandlers: RequestHandler[] = [
         '조회 일수는 1 이상 90 이하여야 합니다.',
       )
     }
-    const trend = usageTrend(key.id, days)
+    // 사용량 픽스처는 소유자 store 의 id 로 붙어 있다. 관리자 키에는 그 id 가
+    // 없으므로, 화면이 그릴 것이 있도록 트래픽이 있는 프로필을 빌려 쓴다.
+    const trend = usageTrend(USAGE_PROFILES[key.id] ? key.id : uuid(70), days)
     return HttpResponse.json(
       {
         trend,

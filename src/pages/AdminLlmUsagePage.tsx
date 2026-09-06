@@ -372,9 +372,6 @@ function BreakdownSection({ data }: { data: AdminLlmUsage }) {
       <CardHeader className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <CardTitle>호출 분해</CardTitle>
-          <p className="type-caption mt-1 text-foreground-muted">
-            같은 기간을 무엇을 불렀는지로 자릅니다.
-          </p>
         </div>
         <div className="flex flex-wrap gap-1" role="group" aria-label="분해 기준">
           {BREAKDOWN_GRAINS.map((option) => (
@@ -385,8 +382,8 @@ function BreakdownSection({ data }: { data: AdminLlmUsage }) {
               aria-pressed={grain === option.value}
               className={
                 grain === option.value
-                  ? 'rounded-md bg-brand-background px-3 py-1 text-sm font-medium text-brand-foreground'
-                  : 'rounded-md px-3 py-1 text-sm text-foreground-muted hover:text-foreground-primary'
+                  ? 'rounded-md bg-brand-background px-3 py-1 text-sm font-medium text-brand-foreground cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground'
+                  : 'rounded-md px-3 py-1 text-sm text-foreground-muted hover:text-foreground-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground'
               }
             >
               {option.label}
@@ -403,17 +400,14 @@ function BreakdownSection({ data }: { data: AdminLlmUsage }) {
         {grain !== 'capability' && data.quality.pricedRequests < data.quality.totalRequests && (
           <MessageBar>
             이 기간 요청 {count(data.quality.totalRequests)}건 가운데{' '}
-            {count(data.quality.pricedRequests)}건만 공급자가 금액을 알려 줬습니다. 나머지는
-            금액이 0인 것이 아니라 금액이라는 것이 없거나 보고되지 않은 것이라 위 합계에서
-            빠져 있습니다.
+            {count(data.quality.pricedRequests)}건만 공급자가 금액을 알려 줬습니다.
           </MessageBar>
         )}
         {grain === 'endpoint'
           && data.quality.endpointRecordedRequests < data.quality.totalRequests && (
           <MessageBar>
-            이 기간 요청 가운데 {count(data.quality.totalRequests
-              - data.quality.endpointRecordedRequests)}건은 호출 종류가 기록되기 전의 것이라
-            「종류 미상」으로 묶여 있습니다.
+            「종류 미상」은 {count(data.quality.totalRequests
+              - data.quality.endpointRecordedRequests)}건입니다.
           </MessageBar>
         )}
       </CardContent>
@@ -453,7 +447,8 @@ function ModelBreakdownTable({ rows }: { rows: AdminLlmUsage['breakdown']['model
             <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
             <TD>{Math.round(row.avgLatencyMs).toLocaleString('ko-KR')}ms</TD>
             <TD>
-              {row.requests === 0 ? '—' : percent((row.failed / row.requests) * 100)}
+              {/* percent()가 100을 곱한다. 여기서 또 곱하면 476%가 나온다. */}
+              {row.requests === 0 ? '—' : percent(row.failed / row.requests)}
             </TD>
           </TR>
         ))}
@@ -559,7 +554,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
           <DataTable caption="LLM API 키 한도 검토" captionVisible>
             <THead>
               <TR>
-                <TH>Key</TH>
+                <TH>키</TH>
                 <TH>판정</TH>
                 <TH>오늘 자체 서빙</TH>
                 <TH>유료 모델</TH>
@@ -614,7 +609,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                           to={adminPaths.llmAccountDetail(item.openrouterAccountId, activeOrgId)}
                           className="mt-1 inline-block text-brand-foreground hover:underline"
                         >
-                          {item.openrouterAccountName ?? 'OpenRouter 사업 account'}
+                          {item.openrouterAccountName ?? 'OpenRouter 사업 계정'}
                         </Link>
                       )}
                     </TD>
@@ -655,7 +650,7 @@ function QualitySection({
 }) {
   const diagnostics: DescriptionItem[] = []
   if (quality.lastUsageShipSuccessAt != null) {
-    diagnostics.push({ term: '마지막 usage 전송 성공', description: moment(quality.lastUsageShipSuccessAt) })
+    diagnostics.push({ term: '마지막 사용량 전송 성공', description: moment(quality.lastUsageShipSuccessAt) })
   }
   if (quality.usageQueueObservedAt != null) {
     diagnostics.push({ term: '대기열 마지막 확인', description: moment(quality.usageQueueObservedAt) })

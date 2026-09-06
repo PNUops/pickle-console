@@ -223,6 +223,10 @@ function breakdown(): AdminLlmUsage['breakdown'] {
       },
     ],
     endpointKinds: [
+      // 셋은 같은 요청 집합을 다르게 자른 것이라 **가격이 붙은 요청 수의 합이
+      // 절단면마다 같아야 한다.** 모델별이 6이고 quality 가 6이므로 여기도 6이며,
+      // 유료 모델의 6건이 채팅 3건과 이미지 3건으로 갈린 모양이다. 행마다
+      // pricedRequests <= requests 도 함께 지킨다.
       {
         endpoint: 'chat',
         requests: 21,
@@ -233,8 +237,8 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         failed: 1,
         inputTokens: 2_700,
         outputTokens: 900,
-        attributedCostUsd: null,
-        pricedRequests: 0,
+        attributedCostUsd: 0.062_3,
+        pricedRequests: 3,
         imageCount: 0,
       },
       {
@@ -245,7 +249,7 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         failed: 0,
         inputTokens: 90,
         outputTokens: 0,
-        attributedCostUsd: 0.124_5,
+        attributedCostUsd: 0.062_2,
         pricedRequests: 3,
         imageCount: 3,
       },

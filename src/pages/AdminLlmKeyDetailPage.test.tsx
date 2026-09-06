@@ -537,6 +537,10 @@ describe('관리자 LLM API 키 사용량 탭', () => {
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: '사용량' }))
         .toHaveAttribute('aria-selected', 'true'))
+    // 탭이 선택됐다는 것만으로는 그 안이 섰다는 뜻이 아니다. 기본 목이 404를
+    // 돌려주던 동안 이 시험은 빈 패널을 초록으로 지나갔다.
+    expect(await screen.findByText('총 요청')).toBeInTheDocument()
+    expect(screen.queryByText(/불러오지 못했습니다/)).not.toBeInTheDocument()
     // 명령 막대는 탭 위에 남는다 — 사용량을 보고 한도를 올리려는 사람이 탭을
     // 되돌리지 않아도 되는 것이 이 배치의 이유다.
     expect(screen.getByRole('button', { name: '한도 변경' })).toBeInTheDocument()
