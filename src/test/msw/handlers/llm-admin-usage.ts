@@ -100,7 +100,10 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           inputTokens: 2_400,
           outputTokens: 800,
           attributedCostUsd: 0.124_5,
-          pricedRequests: 6,
+          pricedRequests: 4,
+          // 유료로 나간 것이 6건이고 그중 4건에 금액이 붙었다. 나머지 12건은
+          // 자체 서빙이라 「금액을 모르는 요청」이 아니다.
+          creditAxisRequests: 6,
         },
       ],
       totalItems: 1,
@@ -122,7 +125,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           inputTokens: 2_400,
           outputTokens: 800,
           attributedCostUsd: 0.124_5,
-          pricedRequests: 6,
+          pricedRequests: 4,
+          creditAxisRequests: 6,
         },
       ],
       totalItems: 3,
@@ -142,8 +146,12 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
         requests: 21,
         inputTokens: 2_700,
         outputTokens: 900,
-        attributedCostUsd: 0.124_5,
-        pricedRequests: 6,
+        // 이 행의 토큰은 모델별 표의 pickle-general 과 정확히 같다. 자체 서빙만 쓴
+        // 기관이므로 금액이 없다 — 종전 목은 여기에 금액을 붙이고 아래 행을 자체
+        // 서빙이라고 적어, 토큰으로 읽으면 두 행이 뒤바뀌어 있었다.
+        attributedCostUsd: null,
+        pricedRequests: 0,
+        creditAxisRequests: 0,
       },
       {
         orgId: uuid(2),
@@ -155,9 +163,11 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
         requests: 6,
         inputTokens: 300,
         outputTokens: 150,
-        // 자체 서빙만 쓴 기관. 금액은 0이 아니라 없음이다.
-        attributedCostUsd: null,
-        pricedRequests: 0,
+        // 유료 모델만 쓴 기관. 여섯 건 전부 유료 축인데 넷에만 금액이 붙었으므로
+        // 화면은 「2건 미상」이라고 말해야 한다.
+        attributedCostUsd: 0.124_5,
+        pricedRequests: 4,
+        creditAxisRequests: 6,
       },
     ],
     totalItems: 3,
@@ -191,7 +201,7 @@ function quality(systemTier: boolean, globalScope: boolean): AdminLlmUsage['qual
     usageShipFailures: systemTier ? 2 : null,
     usageQueueScanFailures: systemTier ? 0 : null,
     unattributedRequests: systemTier && globalScope ? 0 : null,
-    pricedRequests: 6,
+    pricedRequests: 4,
     // 27건 중 24건만 경로가 기록돼 있다. 경로 축 도입 전 요청이 섞인 구간을
     // 화면이 그대로 말하는지 보는 자료다.
     endpointRecordedRequests: 24,
@@ -209,7 +219,15 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         outputTokens: 900,
         attributedCostUsd: null,
         pricedRequests: 0,
+        // 자체 서빙 모델이라 유료 축 요청이 하나도 없다. 이 행이 두 행으로
+        // 갈라지지 않는 것과 「N건 미상」이 붙지 않는 것이 둘 다 이 0에 달려 있다.
+        creditAxisRequests: 0,
+        pricedInputTokens: 0,
+        pricedOutputTokens: 0,
         avgLatencyMs: 820,
+        pricedAvgLatencyMs: 0,
+        unpricedAvgLatencyMs: 820,
+        pricedFailed: 0,
       },
       {
         modelName: 'openai/gpt-5.6',
@@ -218,8 +236,19 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         inputTokens: 300,
         outputTokens: 150,
         attributedCostUsd: 0.124_5,
-        pricedRequests: 6,
+        pricedRequests: 4,
+        creditAxisRequests: 6,
+        // 금액이 붙은 넷이 쓴 토큰. 나머지 둘의 토큰은 전체에서 이것을 뺀
+        // 100/50 이고, 화면이 두 행으로 나누어 각각을 보여 준다.
+        pricedInputTokens: 200,
+        pricedOutputTokens: 100,
         avgLatencyMs: 1_450,
+        // 서버가 가격 기준으로 나눈 값이다. 둘의 가중평균이 전체와 맞는다
+        // (4×1,300 + 2×1,750) / 6 = 1,450.
+        pricedAvgLatencyMs: 1_300,
+        unpricedAvgLatencyMs: 1_750,
+        // 세어서 온 0이다. 화면이 위 행에 0%를 박아 두지 않는 것을 이 값이 지킨다.
+        pricedFailed: 0,
       },
     ],
     endpointKinds: [
@@ -238,7 +267,10 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         inputTokens: 2_700,
         outputTokens: 900,
         attributedCostUsd: 0.062_3,
-        pricedRequests: 3,
+        pricedRequests: 2,
+        // 스물한 건 가운데 셋만 유료 모델로 나갔다. 전체 요청에서 빼면 이 행이
+        // 「19건 미상」이 되는데, 그 열아홉 건에는 알아낼 금액이 없다.
+        creditAxisRequests: 3,
         imageCount: 0,
       },
       {
@@ -250,7 +282,8 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         inputTokens: 90,
         outputTokens: 0,
         attributedCostUsd: 0.062_2,
-        pricedRequests: 3,
+        pricedRequests: 2,
+        creditAxisRequests: 3,
         imageCount: 3,
       },
       {
@@ -265,6 +298,7 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         outputTokens: 150,
         attributedCostUsd: null,
         pricedRequests: 0,
+        creditAxisRequests: 0,
         imageCount: 0,
       },
     ],

@@ -1170,6 +1170,7 @@ export const llmKeyHandlers: RequestHandler[] = [
             outputTokens: trend.points.reduce((sum, p) => sum + p.outputTokens, 0),
             attributedCostUsd: null,
             pricedRequests: 0,
+            creditAxisRequests: 0,
             imageCount: 0,
           },
         ],
