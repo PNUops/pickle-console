@@ -243,4 +243,28 @@ describe('사용량 탭의 새 지표', () => {
       .find((node) => node.closest('td'))!.closest('tr')!
     expect(within(paid).getByText('$0.4825')).toBeInTheDocument()
   })
+
+  test('금액이 일부에만 붙은 모델은 아는 행과 모르는 행 둘로 선다', async () => {
+    // 종전에는 한 행에 「87회 · $0.079」로 적었고, 그 금액이 18건분이라는 것을
+    // 화면이 말하지 않았다. **같은 사실이 관리자 화면과 다르게 읽혔다**(운영자
+    // 2026-09-07). 관리자 쪽과 같은 규칙으로 나눈다.
+    renderUsage(USED_KEY)
+
+    await screen.findAllByText('pickle-general')
+    const rows = screen.getAllByText('openai/gpt-4o-mini')
+      .filter((node) => node.closest('td'))
+      .map((node) => node.closest('tr')!)
+    expect(rows).toHaveLength(2)
+    const [known, unknown] = rows
+    // 둘은 붙어 있다 — 사이에 다른 모델이 끼면 요청 수로 정렬한 순위가 깨진다.
+    expect(known.nextElementSibling).toBe(unknown)
+    expect(within(known).getByText('$0.4825')).toBeInTheDocument()
+    // 자체 서빙의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
+    // 이쪽은 있어야 하는데 모른다.
+    expect(within(unknown).getByText('정보 없음')).toBeInTheDocument()
+    // 응답 시간은 행마다 자기 값이다. 한 값을 되풀이하면 서로 다른 요청 수를
+    // 갖고도 같은 응답 시간을 말하게 된다.
+    expect(within(known).getByText('1.4초')).toBeInTheDocument()
+    expect(within(unknown).getByText('990ms')).toBeInTheDocument()
+  })
 })
