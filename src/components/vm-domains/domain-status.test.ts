@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import type { CertificateView, PublicationView, RouteView } from '../../api/queries'
+import type {
+  CertificateView,
+  DomainDnsStatus,
+  PublicationView,
+  RouteView,
+} from '../../api/queries'
 import { domainPollRate, foldDomainStatus } from './domain-status'
 import { uuid } from '../../test/msw/ids'
 
@@ -114,6 +119,51 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
     expect(fold.hint).toBe('인증서를 발급하고 있습니다. 보통 몇 분 안에 끝납니다.')
   })
 
+  test("DNS 레코드 등록 실패는 실패로 접히고, 인증서보다 먼저 지목된다", () => {
+    const fold = foldDomainStatus({
+      kind: 'PLATFORM',
+      status: 'ACTIVE',
+      dnsStatus: 'FAILED',
+      certificate: cert('FAILED'),
+      route: route('APPLIED'),
+    })
+    expect(fold.key).toBe('failed')
+    expect(fold.hint).toBe('DNS 레코드 등록에 실패했습니다.')
+  })
+
+  test('DNS 레코드 등록 대기는 연결 중이다', () => {
+    const fold = foldDomainStatus({
+      kind: 'PLATFORM',
+      status: 'ACTIVE',
+      dnsStatus: 'PENDING',
+      route: route('APPLIED'),
+    })
+    expect(fold.key).toBe('connecting')
+    expect(fold.hint).toBe('DNS 레코드를 등록하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
+  })
+
+  test("dnsStatus 'NONE'은 배지를 움직이지 않는다 — 서빙 중인 옛 행이 연결됨으로 남는다", () => {
+    const fold = foldDomainStatus({
+      kind: 'PLATFORM',
+      status: 'ACTIVE',
+      dnsStatus: 'NONE',
+      route: route('APPLIED'),
+    })
+    expect(fold.key).toBe('connected')
+    expect(fold.hint).toBeNull()
+  })
+
+  test("커스텀 도메인의 'NONE'도 연결됨을 막지 않는다", () => {
+    const fold = foldDomainStatus({
+      kind: 'CUSTOM',
+      status: 'ACTIVE',
+      dnsStatus: 'NONE',
+      certificate: cert('ACTIVE'),
+      route: route('APPLIED'),
+    })
+    expect(fold.key).toBe('connected')
+  })
+
   test('인증서 갱신 중(RENEWING)도 발급 안내로 접힌다', () => {
     const fold = foldDomainStatus({
       kind: 'CUSTOM',
@@ -176,9 +226,12 @@ function pub(overrides: {
   status?: 'PENDING' | 'VERIFYING' | 'ACTIVE' | 'FAILED'
   route?: RouteView | null
   certificate?: CertificateView | null
+  dnsStatus?: DomainDnsStatus
 }): PublicationView {
   const kind = overrides.kind ?? 'PLATFORM'
   const status = overrides.status ?? 'ACTIVE'
+  // 커스텀 도메인은 서버가 레코드를 만들지 않으므로 언제나 NONE이다.
+  const dnsStatus = overrides.dnsStatus ?? (kind === 'CUSTOM' ? 'NONE' : 'APPLIED')
   return {
     fqdn: 'x.pusan.dev',
     domain: {
@@ -188,6 +241,7 @@ function pub(overrides: {
       fqdn: 'x.pusan.dev',
       rootDomain: kind === 'CUSTOM' ? null : 'pusan.dev',
       status,
+      dnsStatus,
       verifiedAt: null,
       createdAt: '2026-07-12T09:00:00+09:00',
       verification: null,
@@ -209,6 +263,18 @@ describe('domainPollRate — 목록 전체의 폴링 단계', () => {
       domainPollRate([pub({ kind: 'CUSTOM', status: 'ACTIVE', route: null })]),
     ).toBe('fast')
     expect(domainPollRate([pub({ certificate: cert('RENEWING') })])).toBe('fast')
+  })
+
+  test('DNS 레코드 등록 대기는 빠른 폴링이다', () => {
+    expect(
+      domainPollRate([pub({ dnsStatus: 'PENDING', route: route('APPLIED') })]),
+    ).toBe('fast')
+  })
+
+  test("dnsStatus 'NONE'만으로는 폴링하지 않는다", () => {
+    expect(
+      domainPollRate([pub({ dnsStatus: 'NONE', route: route('APPLIED') })]),
+    ).toBeNull()
   })
 
   test('검증 전 커스텀의 라우트 대기는 빠른 폴링 사유가 아니다 — 느린 폴링이다', () => {

@@ -3059,6 +3059,10 @@ export interface components {
             certificateStatus?: components["schemas"]["CertificateStatus"] | null;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            dnsAppliedAt?: string | null;
+            dnsLastError?: string | null;
+            dnsStatus: components["schemas"]["DomainDnsStatus"];
             fqdn: string;
             /** Format: uuid */
             id: string;
@@ -3998,6 +4002,10 @@ export interface components {
         DomainDetailView: {
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            dnsAppliedAt?: string | null;
+            dnsLastError?: string | null;
+            dnsStatus: components["schemas"]["DomainDnsStatus"];
             fqdn: string;
             /** Format: uuid */
             id: string;
@@ -4015,12 +4023,18 @@ export interface components {
             vmId: string;
         };
         /** @enum {string} */
+        DomainDnsStatus: "NONE" | "PENDING" | "APPLIED" | "FAILED";
+        /** @enum {string} */
         DomainKind: "AUTO" | "PLATFORM" | "CUSTOM";
         /** @enum {string} */
         DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
         DomainSummaryView: {
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            dnsAppliedAt?: string | null;
+            dnsLastError?: string | null;
+            dnsStatus: components["schemas"]["DomainDnsStatus"];
             fqdn: string;
             /** Format: uuid */
             id: string;
