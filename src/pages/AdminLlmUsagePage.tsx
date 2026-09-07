@@ -240,6 +240,11 @@ function WindowSummary({ window, selected }: { window: LlmUsageWindow; selected:
  * 서빙 요청이 전부 「금액을 모르는 요청」이 되는데, 자체 서빙에는 금액이라는 것이 아예
  * 없으므로 모르는 것이 아니다. 카드 위의 총계 문장을 뺀 이유가 정확히 그것이었고, 행마다
  * 같은 계산을 하면 같은 거짓을 행 수만큼 말하게 된다.
+ *
+ * **소비처 표는 2026-09-07부터 이 함수를 쓰지 않는다.** 그 표는 공급자가 키마다 보고한
+ * 사용액을 쓰므로 값을 매기지 못한 건수라는 것이 없다. 여기 남은 두 표는 모델과 경로로
+ * 나누므로 그럴 수 없다 — 공급자는 키 단위로만 알려 주고, 그 금액을 모델이나 경로로
+ * 쪼개는 방법은 요청별 금액밖에 없다.
  */
 function amountCell(
   amount: number | null | undefined,
@@ -249,6 +254,21 @@ function amountCell(
   const missing = creditAxisRequests - priced
   if (amount == null) return missing > 0 ? `— (${count(missing)}건 미상)` : '—'
   return missing > 0 ? `${formatUsd(amount)} (${count(missing)}건 미상)` : formatUsd(amount)
+}
+
+/**
+ * The oldest vendor reading behind the amounts on screen.
+ *
+ * Each key is reconciled on its own schedule, so a table has as many reading
+ * times as it has keys. One moment per place is the rule, and the honest one
+ * is the oldest: it reads as "everything here is at least this current", where
+ * the newest would promise a freshness the column does not have.
+ */
+function oldestMeterReading(items: LlmUsageConsumer[]): string | undefined {
+  const moments = items
+    .map((item) => item.meteredObservedAt)
+    .filter((value): value is string => value != null)
+  return moments.length === 0 ? undefined : moments.reduce((a, b) => (a < b ? a : b))
 }
 
 /** 나열된 것이 무엇인지. 「소비처」는 세 단계를 한 단어로 뭉갠다. */
@@ -286,6 +306,15 @@ function ConsumersSection({
             ? '이름을 누르면 그 키의 상세로 갑니다.'
             : '이름을 누르면 이 화면이 그 범위로 좁혀집니다.'}
         </p>
+        {/* The amounts are the vendor's readings, so the column needs one
+            moment saying how current they are. The server sends the oldest
+            reading behind the table, which is what "at least this current"
+            means; a newer one would overstate the column. */}
+        {oldestMeterReading(consumers.items) && (
+          <p className="type-caption mt-1 text-foreground-muted">
+            금액은 <ObservationMoment value={oldestMeterReading(consumers.items)} /> 관측
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {consumers.items.length === 0 ? (
@@ -378,10 +407,12 @@ function ConsumerRow({
       <TD>{count(item.requests)}건</TD>
       <TD>{tokens(item.inputTokens)}</TD>
       <TD>{tokens(item.outputTokens)}</TD>
-      {/* 금액이 없는 것은 0이 아니다. 자체 서빙 모델에는 금액이라는 것이 아예
-          없고, 축이 생기기 전의 요청은 기록되지 않았다. 둘 다 `$0.00`으로 적으면
-          「공짜로 썼다」는, 서버가 한 적 없는 주장이 된다. */}
-      <TD>{amountCell(item.attributedCostUsd, item.creditAxisRequests, item.pricedRequests)}</TD>
+      {/* The vendor's meter, not our per-request sum: at this grain the reader
+          wants the amount and the count of requests we failed to price says
+          nothing they can act on. Null stays 「—」 — a consumer that spends
+          nothing on paid models has no dollar figure, and `$0.00` would be a
+          claim the server never made. */}
+      <TD>{item.meteredCostUsd == null ? '—' : formatUsd(item.meteredCostUsd)}</TD>
     </TR>
   )
 }

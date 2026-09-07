@@ -104,9 +104,30 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           // 유료로 나간 것이 6건이고 그중 4건에 금액이 붙었다. 나머지 12건은
           // 자체 서빙이라 「금액을 모르는 요청」이 아니다.
           creditAxisRequests: 6,
+          // 공급자 미터는 값을 매기지 못한 2건까지 담으므로 귀속 합계보다 크다.
+          meteredCostUsd: 0.310_2,
+          meteredObservedAt: '2026-08-12T00:40:00+09:00',
+        },
+        {
+          orgId: orgId ?? uuid(1),
+          orgName: '정보컴퓨터공학부 실습지원센터',
+          workspaceId,
+          workspaceName: '캡스톤 3조',
+          keyId: uuid(502),
+          keyName: 'capstone-batch',
+          requests: 4,
+          inputTokens: 600,
+          outputTokens: 120,
+          attributedCostUsd: null,
+          pricedRequests: 0,
+          creditAxisRequests: 4,
+          // 같은 워크스페이스의 둘째 키이고 대사가 더 오래 전이다. 카드의 시각은
+          // 둘 중 오래된 쪽이라야 「여기 있는 금액은 적어도 이 시점까지」가 된다.
+          meteredCostUsd: 0.045_0,
+          meteredObservedAt: '2026-08-12T00:20:00+09:00',
         },
       ],
-      totalItems: 1,
+      totalItems: 2,
       truncated: false,
     }
   }
@@ -127,6 +148,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           attributedCostUsd: 0.124_5,
           pricedRequests: 4,
           creditAxisRequests: 6,
+          meteredCostUsd: 0.310_2,
+          meteredObservedAt: '2026-08-12T00:40:00+09:00',
         },
       ],
       totalItems: 3,
@@ -152,6 +175,9 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
         attributedCostUsd: null,
         pricedRequests: 0,
         creditAxisRequests: 0,
+        // 자체 서빙만 쓴 기관이라 공급자 미터에도 잡힐 것이 없다.
+        meteredCostUsd: null,
+        meteredObservedAt: null,
       },
       {
         orgId: uuid(2),
@@ -163,11 +189,13 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
         requests: 6,
         inputTokens: 300,
         outputTokens: 150,
-        // 유료 모델만 쓴 기관. 여섯 건 전부 유료 축인데 넷에만 금액이 붙었으므로
-        // 화면은 「2건 미상」이라고 말해야 한다.
+        // 유료 모델만 쓴 기관. 여섯 건 전부 유료 축인데 넷에만 금액이 붙었다.
+        // 소비처 표는 공급자 미터를 쓰므로 여섯 건 전부가 담긴 금액을 적는다.
         attributedCostUsd: 0.124_5,
         pricedRequests: 4,
         creditAxisRequests: 6,
+        meteredCostUsd: 0.310_2,
+        meteredObservedAt: '2026-08-12T00:50:00+09:00',
       },
     ],
     totalItems: 3,

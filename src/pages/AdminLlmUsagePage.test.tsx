@@ -141,6 +141,22 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
 })
 
 describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
+  test('여러 키의 금액을 합칠 때 카드는 가장 오래된 대사 시각을 쓴다', async () => {
+    // 키마다 대사가 따로 돌아 표에는 키 수만큼의 관측 시각이 있다. 한 자리에 하나만
+    // 쓰는 것이 규약이고, 그 하나는 오래된 쪽이라야 「여기 있는 금액은 적어도 이
+    // 시점까지」가 된다. 최근 쪽을 쓰면 열이 갖지 않은 신선도를 약속한다.
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/llm/usage?workspaceId=${uuid(12)}&org=${uuid(1)}`)
+
+    const consumers = await screen.findByRole('table', { name: 'LLM 주요 소비처' })
+    expect(within(consumers).getByText('$0.3102')).toBeInTheDocument()
+    expect(within(consumers).getByText('$0.045')).toBeInTheDocument()
+    const moments = [...document.querySelectorAll('time')]
+      .filter((el) => /관측$/.test(el.parentElement?.textContent ?? ''))
+    expect(moments).toHaveLength(1)
+    expect(moments[0]).toHaveAttribute('datetime', '2026-08-12T00:20:00+09:00')
+  })
+
   test('기관→workspace→key drill-down이 scope와 days를 보존하고 마지막 단계가 키 상세로 나간다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -208,24 +224,35 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(await screen.findByRole('heading', { name: '호출 분해' })).toBeInTheDocument()
   })
 
-  test('금액 칸이 값을 그리고, 빠진 건수를 유료 요청에서만 센다', async () => {
-    // 두 가지를 한꺼번에 지킨다. 하나는 금액이 응답에 있는데 화면에 없던 결함이
-    // 되살아나지 않는 것이고(그 자리를 보는 시험이 종전에는 하나도 없었다), 다른
-    // 하나는 「N건 미상」의 분모다. 전체 요청에서 빼면 자체 서빙 요청이 전부
-    // 「금액을 모르는 요청」이 되는데, 자체 서빙에는 알아낼 금액이 없다.
+  test('소비처 금액은 공급자 미터를 그리고 빠진 건수를 세지 않는다', async () => {
+    // 소비처 단위에서 읽는 사람이 원하는 것은 금액이고, 값을 매기지 못한 건수는
+    // 그 자리에서 할 수 있는 일이 없다. 그래서 이 표만 공급자 미터를 쓴다 —
+    // 요청별 금액이 기록되기 전의 지출까지 담기므로 귀속 합계보다 크다.
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/llm/usage')
 
     const consumers = await screen.findByRole('table', { name: 'LLM 주요 소비처' })
-    // 유료만 쓴 기관: 여섯 건 전부 유료 축인데 넷에만 금액이 붙었다.
     const paidOrg = within(consumers).getByText('테스트 기관').closest('tr')!
-    expect(within(paidOrg).getByText('$0.1245 (2건 미상)')).toBeInTheDocument()
-    // 자체 서빙만 쓴 기관: 스물한 건 전부인데 미상은 한 건도 아니다.
+    expect(within(paidOrg).getByText('$0.3102')).toBeInTheDocument()
+    // 귀속 합계도 「N건 미상」도 이 표에 남아 있지 않다.
+    expect(within(paidOrg).queryByText(/0\.1245/)).not.toBeInTheDocument()
+    expect(within(consumers).queryByText(/미상/)).not.toBeInTheDocument()
+    // 자체 서빙만 쓴 기관은 공급자 미터에도 잡힐 것이 없다. $0.00이 아니라 —.
     const selfHostedOrg = within(consumers)
       .getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
     expect(within(selfHostedOrg).getByText('—')).toBeInTheDocument()
-    expect(within(selfHostedOrg).queryByText(/미상/)).not.toBeInTheDocument()
+    // 카드는 금액이 어느 시점의 것인지 한 번 말한다. 시각과 「관측」이 서로 다른
+    // 텍스트 노드라 문자열로는 못 찾으므로 `time` 요소로 찾는다.
+    const cardMoment = () => {
+      const found = [...document.querySelectorAll('time')]
+        .filter((el) => /관측$/.test(el.parentElement?.textContent ?? ''))
+      expect(found).toHaveLength(1)
+      return found[0]
+    }
+    expect(cardMoment().parentElement).toHaveTextContent(/^금액은 .+ 관측$/)
+    // 기관 단계에서 금액을 가진 행은 하나뿐이므로 그 시각이 카드의 시각이다.
+    expect(cardMoment()).toHaveAttribute('datetime', '2026-08-12T00:50:00+09:00')
 
     await user.click(screen.getByRole('button', { name: '호출 종류별' }))
     const kinds = await screen.findByRole('table', { name: '호출 종류별 사용' })
