@@ -150,6 +150,18 @@ describe('사용량 탭', () => {
     expect(screen.queryByRole('group', { name: '조회 기간' })).not.toBeInTheDocument()
   })
 
+  test('names the tab that actually holds the issue button', async () => {
+    // 이 문장은 두 번 거짓이 됐다. 버튼이 헤더로 갔을 때 「개요 탭에서」가 틀렸고,
+    // 개요 카드로 돌아왔을 때 「위의」가 틀렸다. 가리키는 자리를 시험이 붙든다.
+    const user = userEvent.setup()
+    renderUsage(PENDING_KEY)
+
+    const alert = (await screen.findByText('아직 발급되지 않은 키입니다')).closest('div')!
+    expect(alert.textContent).toContain('개요 탭에서 키를 발급하면 그때부터 쌓입니다.')
+    await user.click(screen.getByRole('tab', { name: '개요' }))
+    expect(screen.getByRole('button', { name: '키 발급' })).toBeInTheDocument()
+  })
+
   test('폐기된 키는 반대로 과거 기록이 남아 있다', async () => {
     renderUsage(REVOKED_KEY)
 

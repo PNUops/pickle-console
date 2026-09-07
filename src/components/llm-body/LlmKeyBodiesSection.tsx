@@ -71,7 +71,7 @@ export function LlmKeyBodiesSection({
   if (unissued) {
     return (
       <Alert variant="info" title="아직 발급되지 않은 키입니다">
-        발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없습니다. 위의 「키 발급」으로
+        발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없습니다. 개요 탭에서 키를
         발급하면 그때부터 쌓입니다.
       </Alert>
     )

@@ -79,9 +79,10 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           </DescriptionField>
           <DescriptionField label="본문 기록">
             {/* Who may read the bodies and for how long is said by the
-                settings checkbox and by the recorded-bodies tab. The one
-                line under "off" is not a repeat: neither of those says
-                where the bodies already recorded went. */}
+                switch on the 설정 tab and by the recorded-bodies tab. The
+                one line under "off" is not a repeat: the switch says what
+                turning it off does only while it is still on, so in this
+                state nothing else says where the records went. */}
             {llmKey.recordBodies ? (
               '켜짐'
             ) : (

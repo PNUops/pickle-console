@@ -5,7 +5,7 @@
  * 하고(두 화면이 다른 답을 내면 관리자가 받고 싶지 않은 문의가 생긴다), 그런데
  * **문장 일부는 소유자에게 말하고 있어서 관리자 화면에서는 틀린 말이 된다.**
  *
- * - 「위의 「키 발급」으로 발급하면」 — 관리자 화면에는 그 버튼이 없다.
+ * - 「개요 탭에서 키를 발급하면」 — 관리자 화면에는 그 카드가 없다.
  * - 「한도 상향을 신청해 주세요」 — 관리자는 신청하지 않는다. 바로 그 화면의
  *   명령 막대에 한도를 바꾸는 버튼이 있다.
  *
@@ -24,7 +24,7 @@ export interface KeyUsageCopy {
 
 export const KEY_USAGE_COPY: Record<UsageAudience, KeyUsageCopy> = {
   owner: {
-    unissuedHint: '위의 「키 발급」으로 발급하면 그때부터 쌓입니다.',
+    unissuedHint: '개요 탭에서 키를 발급하면 그때부터 쌓입니다.',
     rateLimitedAction: '계속 거부된다면 한도 상향을 신청해 주세요.',
   },
   admin: {
