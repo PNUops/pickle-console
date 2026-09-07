@@ -140,19 +140,35 @@ describe('기록된 본문 탭', () => {
     expect(screen.queryByText(/질문입니다/)).not.toBeInTheDocument()
   })
 
-  test('says retention and readership once on settings, and only on or off on overview', async () => {
-    // The key facts cell and the settings text once stated the same two facts
-    // side by side. The settings text is the place; the cell says on or off.
+  test('tells the reader the scope where the decision is, and only there', async () => {
+    // 보관 기간과 열람 범위를 말하는 자리는 켜기 확인 창과 기록 목록 하단의 상시
+    // 고지 둘뿐이다. 설정 탭의 행이 그것을 되풀이하면 「사용자가 열람 범위를 듣는
+    // 자리는 화면 두 곳」이라는 기획서의 대장이 틀린 말이 된다.
+    const user = userEvent.setup()
     const key = llmKeyStore.find((candidate) => candidate.id === LIVE_KEY)!
-    key.recordBodies = true
+    key.recordBodies = false
     server.use(refreshSuccessHandler('access-user'))
     const settings = renderApp(`/console/llm-keys/${LIVE_KEY}?tab=settings`)
 
-    await screen.findByRole('button', { name: '끄기' })
-    const text = document.body.textContent ?? ''
-    expect(text.match(/30일 동안 보관합니다/g) ?? []).toHaveLength(1)
-    expect(text.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(1)
+    await screen.findByRole('button', { name: '켜기' })
+    const closed = document.body.textContent ?? ''
+    expect(closed.match(/30일/g) ?? []).toHaveLength(0)
+    expect(closed.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(0)
+
+    await user.click(screen.getByRole('button', { name: '켜기' }))
+    const open = document.body.textContent ?? ''
+    expect(open.match(/30일 동안 보관합니다/g) ?? []).toHaveLength(1)
+    expect(open.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(1)
     settings.unmount()
+
+    // 켜진 뒤의 설정 행도 그 둘을 말하지 않는다 — 켠 사람이 아닌 사람이 읽는다.
+    key.recordBodies = true
+    const on = renderApp(`/console/llm-keys/${LIVE_KEY}?tab=settings`)
+    await screen.findByRole('button', { name: '끄기' })
+    const onText = document.body.textContent ?? ''
+    expect(onText.match(/30일/g) ?? []).toHaveLength(0)
+    expect(onText.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(0)
+    on.unmount()
 
     renderApp(`/console/llm-keys/${LIVE_KEY}`)
     const term = await screen.findByText('본문 기록', { selector: 'dt' })

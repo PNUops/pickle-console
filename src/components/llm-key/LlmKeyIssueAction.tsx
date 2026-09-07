@@ -176,11 +176,10 @@ export function LlmKeyIssueAction({
         {error && <Alert variant="danger">{error}</Alert>}
         <SettingRow
           label={rotation ? '이전 값이 즉시 무효화됩니다' : '평문은 발급 직후 한 번만 보입니다'}
-          description={
-            rotation
-              ? '값을 잃어버렸을 때만 재발급합니다.'
-              : '이 키는 발급하기 전까지 어떤 요청도 인증하지 않습니다.'
-          }
+          // 발급 전 갈래에는 설명이 없다. 이 카드 위의 StatusNotice 가 「발급 전에는
+          // 이 키로 보낸 요청이 하나도 인증되지 않습니다」를 이미 말하고 있어,
+          // 같은 사실이 한 탭에 열다섯 줄 간격으로 두 번 서게 된다.
+          description={rotation ? '값을 잃어버렸을 때만 재발급합니다.' : undefined}
           action={
             <Button
               variant={rotation ? 'secondary' : 'primary'}

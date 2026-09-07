@@ -19,11 +19,19 @@ import {
  *
  * Turning it on is asked for before it happens, the way a VM asks before
  * password SSH goes on: what gets kept, that everyone with access to the key
- * reads it, and for how long. Turning it off needs no question, but the row
- * says what it does and does not do while recording is still on, which is when
- * a reader is deciding. In the off state that line is gone: the 개요 property
- * row is what then points at the records already kept, and the two states
- * cannot be on screen together.
+ * reads it, and for how long.
+ *
+ * **Those two facts live in the confirm modal and nowhere else on this tab.**
+ * The row states neither, because the row is read by anyone who opens 설정 —
+ * including an editor who never turned it on — and the register of where a
+ * user is told the readership scope has exactly two entries: this modal and
+ * the standing line under the records list. A third carrier here would make
+ * that register wrong, which matters while there is no privacy policy.
+ *
+ * Turning it off needs no question, but the row says what it does and does not
+ * do while recording is still on, which is when a reader is deciding. In the
+ * off state that line is gone: the 개요 property row is what then points at
+ * the records already kept, and the two states cannot be on screen together.
  */
 export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
   const queryClient = useQueryClient()
@@ -57,7 +65,7 @@ export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           label={llmKey.recordBodies ? '켜짐' : '꺼짐'}
           description={
             llmKey.recordBodies
-              ? '이 키로 보낸 프롬프트와 응답을 30일 동안 보관합니다. 이 키에 접근 권한이 있는 사람은 모두 그 내용을 읽습니다.'
+              ? '이 키로 보낸 프롬프트와 응답을 보관합니다.'
               : '새 요청은 기록되지 않습니다.'
           }
           action={
