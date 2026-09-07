@@ -6,7 +6,6 @@ import {
   formatShare,
   formatTokens,
   hasUsage,
-  reportingState,
   usageSeries,
   usageSummary,
   usageTimes,
@@ -172,35 +171,6 @@ describe('추정 비율', () => {
     expect(formatShare(0.4)).toBe('1% 미만')
     expect(formatShare(0)).toBe('0%')
     expect(formatShare(25)).toBe('25%')
-  })
-})
-
-describe('reportingState — 뒤쪽 0을 어떻게 읽어야 하는지', () => {
-  test('보고가 한 번도 없었으면 never', () => {
-    expect(reportingState(null, '2026-08-11')).toEqual({ kind: 'never' })
-    expect(reportingState(undefined, '2026-08-11')).toEqual({ kind: 'never' })
-  })
-
-  test('보고가 구간 끝까지 닿았으면 마지막 점만 아직 채워지는 중이다', () => {
-    expect(reportingState('2026-08-11T09:20:00+09:00', '2026-08-11')).toEqual({
-      kind: 'current',
-      at: '2026-08-11T09:20:00+09:00',
-    })
-  })
-
-  test('며칠째 보고가 없으면 그 뒤 0은 아직 모르는 값이다', () => {
-    // 놀고 있는 키에 "곧 채워집니다"를 붙이면 진짜 0을 미완성으로 읽게 만들고,
-    // 보고가 끊긴 키에 "요청이 없던 날"을 붙이면 모르는 값을 단언하게 된다.
-    expect(reportingState('2026-07-31T08:00:00+09:00', '2026-08-11')).toEqual({
-      kind: 'stale',
-      at: '2026-07-31T08:00:00+09:00',
-      unreportedFrom: '2026-08-01',
-    })
-  })
-
-  test('보고 시각은 KST 달력일로 견준다', () => {
-    // 2026-08-11T00:30+09:00 = 2026-08-10T15:30Z — UTC로 자르면 하루가 밀린다.
-    expect(reportingState('2026-08-11T00:30:00+09:00', '2026-08-11').kind).toBe('current')
   })
 })
 

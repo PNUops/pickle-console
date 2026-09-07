@@ -28,12 +28,10 @@ import {
   formatShare,
   formatTokens,
   hasUsage,
-  reportingState,
   usageSeries,
   usageSummary,
   usageTimes,
   usageTotals,
-  type ReportingState,
 } from './usage-series'
 
 /**
@@ -89,7 +87,6 @@ export default function LlmKeyUsageSection({
   const times = usageTimes(points)
   const totals = usageTotals(points)
   const estimated = estimatedShare(totals)
-  const reporting = data ? reportingState(data.reportedUntil, data.to) : null
   // 옛 자료를 보여 주는 중이라는 사실을 숨기지 않는다 — 숫자가 아직 옛 구간의
   // 것이므로, 조용히 바뀌면 사용자는 새 구간을 읽었다고 믿는다.
   const refreshing = usage.isFetching && !usage.isPending
@@ -101,6 +98,14 @@ export default function LlmKeyUsageSection({
         {!unissued && (
           <div className="flex items-center gap-3">
             {refreshing && <Spinner size="sm" label="사용량 갱신 중" />}
+            {/* The gateway reports in batches, so the numbers end here rather
+                than now. One moment, relative only: the reader asks "is this
+                current?", and the day the chart ends is already on its axis. */}
+            {data?.reportedUntil && (
+              <p className="text-xs text-neutral-500">
+                <ObservationMoment value={data.reportedUntil} /> 보고
+              </p>
+            )}
             <div role="group" aria-label="조회 기간" className="flex flex-wrap gap-1">
               {USAGE_DAY_OPTIONS.map((option) => {
                 const selected = option === days
@@ -153,7 +158,7 @@ export default function LlmKeyUsageSection({
               </Alert>
             )}
 
-            {data && reporting && (
+            {data && (
               <>
                 <p className="text-sm text-neutral-600">{usageSummary(points)}</p>
                 <p className="text-xs text-neutral-500">
@@ -195,8 +200,6 @@ export default function LlmKeyUsageSection({
                 </div>
 
                 <BudgetSection budget={data.budget} />
-
-                <ReportingNotice state={reporting} />
 
                 {/* 한도에 걸린 요청만은 사용자가 할 수 있는 일이 있는 실패다 —
                     다른 실패와 같은 자리에 묻지 않고 먼저 꺼내 말한다. */}
@@ -479,8 +482,8 @@ function StatTile({
  *
  * One is counted here and the other is enforced by the vendor. Only the money
  * gauge carries an observation time, because the token side's batching delay
- * is stated once by the ReportingNotice below; putting two numbers side by
- * side and saying nothing makes them read as the same moment.
+ * is stated once by the report moment in the card header; putting two numbers
+ * side by side and saying nothing makes them read as the same moment.
  *
  * The vendor is not named on this screen. An administrator has to find that
  * account and revoke a key in it, so their screens say who it is; a student
@@ -518,9 +521,7 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
             ? '금액 한도가 없어 유료 모델을 쓸 수 없습니다.'
             : budget.creditDepletionForecast
               ? `이 속도면 ${budget.creditDepletionForecast}에 한도에 도달합니다.`
-              : creditUsage == null
-                ? undefined
-                : '소진 예상을 내기에는 아직 사용 이력이 짧습니다.'
+              : undefined
         }
         freshness={
           budget.creditUsageAt ? (
@@ -574,6 +575,9 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
     amount: model.attributedCostUsd == null ? '—' : formatUsd(model.attributedCostUsd),
     avgLatencyMs: model.avgLatencyMs,
     failed: model.failed,
+    // Names the row when the same model stands twice. Only the unpriced row
+    // carries one: the priced row is the ordinary case and says nothing.
+    qualifier: undefined as string | undefined,
   }
   // 금액 열을 안 세우는 화면에서는 나눌 이유가 없다. 나머지 열은 같은 값을 두 줄로
   // 쪼개기만 하므로, 읽는 사람에게 아무것도 더 말하지 않고 표만 길어진다.
@@ -598,6 +602,7 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
       amount: '정보 없음',
       avgLatencyMs: model.unpricedAvgLatencyMs,
       failed: model.failed - model.pricedFailed,
+      qualifier: '금액 미기록',
     },
   ]
 }
@@ -634,7 +639,12 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
         <tbody>
           {models.flatMap((model) => modelRows(model, showCost)).map((row) => (
             <tr key={row.key} className="border-b border-neutral-100">
-              <td className="py-2 pr-3 text-neutral-700">{row.name}</td>
+              <td className="py-2 pr-3 text-neutral-700">
+                {row.name}
+                {row.qualifier && (
+                  <span className="ml-1 text-xs text-neutral-500">{row.qualifier}</span>
+                )}
+              </td>
               <td className="py-2 pr-3 text-right text-neutral-600">
                 {formatRequests(row.requests)}
               </td>
@@ -699,44 +709,4 @@ function errorLabel(errorType: string | null | undefined): string {
 function formatMs(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(1)}초`
   return `${Math.round(ms)}ms`
-}
-
-/**
- * 화면의 숫자가 어느 시점까지의 것인지.
- *
- * 전송이 배치라 오늘 자 값은 아직 채워지는 중이다. 반대로 보고가 며칠째 없는 키에
- * 같은 말을 붙이면 진짜 0을 "곧 채워질 값"으로 읽게 만들므로 두 경우를 가른다.
- * 배치 지연을 말하는 자리는 화면에서 여기 하나다.
- *
- * 바닥에 붙은 0이 "요청이 없던 날"이라는 것은 말하지 않는다. 차트가 자료 없는 날을
- * 빈 구간으로 그리므로 선이 0에 붙어 있다는 것 자체가 그 답이고, 계기 읽는 법을
- * 가르치지 않는 것이 화면 문구 규약이다. 보고가 끊긴 뒤의 0만 단언할 수 없어서
- * stale 갈래가 그것을 뒤집는다.
- */
-function ReportingNotice({ state }: { state: ReportingState }) {
-  if (state.kind === 'never') {
-    return (
-      <p className="text-xs text-neutral-500">
-        게이트웨이가 이 키의 사용량을 아직 보고하지 않았습니다.
-      </p>
-    )
-  }
-  // `state.at` asks "is this current?" and takes the relative form.
-  // `unreportedFrom` is a different question: it is a calendar day that pairs
-  // with the chart's own x axis, so it stays absolute. Relativising it too
-  // would leave the sentence and the chart on different coordinates.
-  if (state.kind === 'stale') {
-    return (
-      <p className="text-xs text-neutral-500">
-        게이트웨이 마지막 보고 <ObservationMoment value={state.at} />. {state.unreportedFrom}부터는
-        보고가 없어 그 뒤의 0은 아직 모르는 값입니다.
-      </p>
-    )
-  }
-  return (
-    <p className="text-xs text-neutral-500">
-      게이트웨이 마지막 보고 <ObservationMoment value={state.at} />. 전송이 배치라 오늘 자 값은
-      아직 채워지는 중입니다.
-    </p>
-  )
 }
