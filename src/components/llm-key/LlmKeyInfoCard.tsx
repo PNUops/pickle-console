@@ -29,8 +29,9 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           <DescriptionField label="마지막 사용">
             {/* 「지금도 쓰이고 있나」를 묻는 값이므로 상대 시간 하나다 (Time display
                 규칙). 절대 시각을 옆에 함께 두면 한 자리가 한 시각을 두 번 읽는
-                것이 되고, 목록의 같은 열도 상대 시간만 쓴다. 정확한 값은
-                `time` 요소가 나른다. */}
+                것이 되고, 목록의 같은 열도 상대 시간만 쓴다. `dateTime` 은 기계용
+                이므로 **정확한 시각은 화면에 없다** — 그것이 필요한 질문은 사용량
+                탭이 답한다. */}
             {llmKey.lastUsedAt ? (
               <time dateTime={llmKey.lastUsedAt}>{formatRelative(llmKey.lastUsedAt)}</time>
             ) : (

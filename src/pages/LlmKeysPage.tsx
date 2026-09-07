@@ -122,8 +122,8 @@ export function LlmKeysPage() {
                       {key.tokenPrefix ?? '—'}
                     </TD>
                     {/* 「지금도 쓰이고 있나」를 묻는 칸이므로 상대 시간이다 (Time
-                        display 규칙). 상세는 옆에 절대 시각을 작게 붙이지만 표는
-                        칸이 좁아 `time` 요소가 그것을 나른다. */}
+                        display 규칙). 상세도 같은 규칙으로 상대 시간 하나만 쓴다.
+                        `dateTime` 은 기계용이라 정확한 시각은 어느 화면에도 없다. */}
                     <TD className="whitespace-nowrap">
                       {key.lastUsedAt ? (
                         <ObservationMoment value={key.lastUsedAt} />
