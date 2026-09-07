@@ -97,7 +97,7 @@ export function LlmKeySettingsCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           <FormField
             label="용도"
             className="max-w-md"
-            description="이 키를 무엇에 쓰는지 — 목록에서 두 키를 구별하는 데 쓰입니다."
+            description="목록에서 키를 구별하는 데 쓰입니다."
           >
             <Textarea
               rows={2}

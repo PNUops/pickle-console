@@ -21,11 +21,14 @@ function renderKey(keyId: string, tab?: string) {
 }
 
 describe('LLM API 키 상세', () => {
-  test('한도가 비어 있으면 무제한이 아니라 게이트웨이 기본값이라고 말한다', async () => {
-    renderKey(PENDING_KEY)
+  test('분당·동시 한도는 사용자에게 보이지 않는다', async () => {
+    // 관리자가 정하는 값이라 신청서도 묻지 않는다. 화면이 보여 주면 소유자는
+    // 자기가 바꿀 수 없는 숫자를 읽고 그 뜻을 묻게 된다.
+    renderKey(ISSUED_KEY)
 
-    await screen.findByRole('heading', { name: 'algo-hint-writer' })
-    expect(screen.getAllByText('게이트웨이 기본값')).toHaveLength(3)
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    expect(screen.queryByText(/분당/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/동시 요청/)).not.toBeInTheDocument()
   })
 
   // 울타리가 걸린 키를 "제한 없음"으로 보여 주면 소유자는 왜 거절당하는지
@@ -60,8 +63,7 @@ describe('LLM API 키 상세', () => {
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
     expect(screen.getByText('기능 권한')).toBeInTheDocument()
-    expect(screen.getByText(/부여 안 됨\. 이미지 생성 · 임베딩 모두 쓸 수 없습니다/))
-      .toBeInTheDocument()
+    expect(screen.getByText('부여 안 됨')).toBeInTheDocument()
   })
 
   test('부여된 기능은 이름으로 보여 준다', async () => {
@@ -71,12 +73,22 @@ describe('LLM API 키 상세', () => {
     expect(screen.getByText('이미지 생성')).toBeInTheDocument()
   })
 
-  test('마지막 사용 시각이 늦게 반영될 수 있다는 것을 말한다', async () => {
+  test('마지막 사용은 상대 시간으로 말하고 절대시각을 옆에 둔다', async () => {
+    // 배치 보고가 늦다는 설명 대신, 얼마나 지났는지가 그 사실을 말한다.
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
-    expect(screen.getByText('2026-08-10 18:22')).toBeInTheDocument()
-    expect(screen.getByText(/최근 호출이 늦게 반영될 수 있습니다/)).toBeInTheDocument()
+    const absolute = screen.getByText('2026-08-10 18:22')
+    expect(absolute.parentElement).toHaveTextContent(/^\d+(분|시간|일) 전/)
+    expect(screen.queryByText(/늦게 반영될 수 있습니다/)).not.toBeInTheDocument()
+  })
+
+  test('값 칸은 값만 말한다', async () => {
+    renderKey(PENDING_KEY)
+
+    await screen.findByRole('heading', { name: 'algo-hint-writer' })
+    expect(screen.getByText('금액 한도 없음')).toBeInTheDocument()
+    expect(screen.queryByText(/유료 모델을 쓸 수 없습니다/)).not.toBeInTheDocument()
   })
 })
 

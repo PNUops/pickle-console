@@ -216,8 +216,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
   test('상세가 기능 권한 없음을 못 쓴다고 말한다', async () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(172))
     expect(await screen.findByText('기능 권한')).toBeInTheDocument()
-    expect(screen.getByText(/부여 안 됨\. 이미지 생성 · 임베딩 모두 쓸 수 없습니다/))
-      .toBeInTheDocument()
+    expect(screen.getByText('부여 안 됨')).toBeInTheDocument()
   })
 
   test('SYS_MANAGER가 모델 허용 목록을 바꾸면 서버가 거절한다', async () => {

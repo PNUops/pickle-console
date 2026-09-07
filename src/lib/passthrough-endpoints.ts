@@ -49,11 +49,12 @@ export function passthroughLabel(value: string): string {
   return LABELS[value as PassthroughEndpoint] ?? value
 }
 
-/** 부여된 기능을 읽는 말. 빈 값은 '제한 없음'이 아니라 '아무것도 못 쓴다'이다. */
+/**
+ * 부여된 기능을 읽는 말. 빈 값은 '제한 없음'이 아니라 '아무것도 못 쓴다'이고,
+ * 그 차이는 「부여 안 됨」이라는 말 자체가 낸다. 값 칸은 값만 말한다.
+ */
 export function passthroughText(endpoints: readonly string[]): string {
-  if (endpoints.length === 0) {
-    return `부여 안 됨. ${PASSTHROUGH_ENDPOINTS.map(passthroughLabel).join(' · ')} 모두 쓸 수 없습니다`
-  }
+  if (endpoints.length === 0) return '부여 안 됨'
   return endpoints.map(passthroughLabel).join(', ')
 }
 

@@ -143,7 +143,7 @@ describe('기록된 본문 탭', () => {
 
     renderApp(`/console/llm-keys/${LIVE_KEY}`)
     const term = await screen.findByText('본문 기록', { selector: 'dt' })
-    expect(term.nextElementSibling).toHaveTextContent(/^켜짐/)
+    expect(term.nextElementSibling).toHaveTextContent(/^켜짐$/)
     expect(document.body.textContent?.match(/30일/g) ?? []).toHaveLength(0)
   })
 

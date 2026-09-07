@@ -1,9 +1,14 @@
 import type { LlmKeyDetail } from '../../api/queries'
 import { Card, CardContent, CardHeader, CardTitle, DescriptionField } from '../ui'
-import { formatDateTime } from '../../lib/format'
+import { formatDateTime, formatRelative } from '../../lib/format'
 import { passthroughText } from '../../lib/passthrough-endpoints'
 
-/** 키 정보 카드 — 값과 한도를 한 자리에서 읽는 dl. */
+/**
+ * 키 정보 카드 — 값과 한도를 한 자리에서 읽는 dl. 값 칸은 값만 말한다.
+ *
+ * 한도는 일일 토큰 한도 하나만 보인다. 분당 요청·분당 토큰·동시 요청은
+ * 관리자가 정하는 값이라 신청서도 묻지 않고, 이 화면도 보여 주지 않는다.
+ */
 export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
   return (
     <Card>
@@ -21,42 +26,27 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
             )}
           </DescriptionField>
           <DescriptionField label="마지막 사용">
-            {llmKey.lastUsedAt ? formatDateTime(llmKey.lastUsedAt) : '사용 기록 없음'}
+            {/* 게이트웨이가 배치로 보고하므로 최근 호출은 늦게 닿는다. 상대 시간이
+                그 사실을 말하고, 절대시각은 옆에 작게 남는다. */}
+            {llmKey.lastUsedAt ? (
+              <>
+                <time dateTime={llmKey.lastUsedAt}>{formatRelative(llmKey.lastUsedAt)}</time>
+                <span className="ml-1 text-xs text-neutral-500">
+                  {formatDateTime(llmKey.lastUsedAt)}
+                </span>
+              </>
+            ) : (
+              '사용 기록 없음'
+            )}
           </DescriptionField>
           <DescriptionField label="만료">
             {llmKey.expiresAt ? formatDateTime(llmKey.expiresAt) : '만료 없음'}
-          </DescriptionField>
-          <DescriptionField label="본문 기록">
-            {llmKey.recordBodies ? (
-              // 열람 범위와 보관 기간은 같은 화면의 설정 문구가 말한다. 여기서
-              // 되풀이하면 한 화면이 같은 사실을 두 번 말한다. 꺼짐 쪽은
-              // 되풀이가 아니라서 남는다 - 이미 기록된 것이 어떻게 되는지는
-              // 설정 문구가 답하지 않는다.
-              <>켜짐. 새 요청이 기록됩니다.</>
-            ) : (
-              <>
-                꺼짐. 새 요청은 기록되지 않습니다.
-                <span className="mt-0.5 block text-xs text-neutral-500">
-                  이미 기록된 본문이 있으면 「기록된 본문」 탭에 남아 있고, 기록된 지 30일이
-                  지나면 삭제됩니다.
-                </span>
-              </>
-            )}
-          </DescriptionField>
-          <DescriptionField label="분당 요청 한도 (자체 서빙)">
-            {limitLabel(llmKey.rpm, '회')}
-          </DescriptionField>
-          <DescriptionField label="분당 토큰 한도 (자체 서빙)">
-            {limitLabel(llmKey.tpm, '토큰')}
-          </DescriptionField>
-          <DescriptionField label="동시 요청 한도 (자체 서빙)">
-            {limitLabel(llmKey.concurrency, '건')}
           </DescriptionField>
           <DescriptionField label="유료 모델">{creditAxisLabel(llmKey)}</DescriptionField>
           {llmKey.creditLimit ? (
             <DescriptionField label="쓸 수 있는 유료 모델">
               {llmKey.creditAllowedModels.length === 0
-                ? '제한 없음. 금액 한도 안에서 모든 유료 모델'
+                ? '제한 없음'
                 : llmKey.creditAllowedModels.join(', ')}
             </DescriptionField>
           ) : null}
@@ -78,22 +68,29 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           <DescriptionField label="기능 권한">
             {passthroughText(llmKey.passthroughEndpoints)}
           </DescriptionField>
+          <DescriptionField label="본문 기록">
+            {/* 열람 범위와 보관 기간은 설정 탭의 체크박스 설명과 기록된 본문 탭이
+                말한다. 꺼짐 쪽의 한 줄은 되풀이가 아니다 - 이미 기록된 것이
+                어디 있는지는 그 둘이 답하지 않는다. */}
+            {llmKey.recordBodies ? (
+              '켜짐'
+            ) : (
+              <>
+                꺼짐
+                <span className="mt-0.5 block text-xs text-neutral-500">
+                  이미 기록된 본문은 「기록된 본문」 탭에 남아 있습니다.
+                </span>
+              </>
+            )}
+          </DescriptionField>
           <DescriptionField label="생성일">{formatDateTime(llmKey.createdAt)}</DescriptionField>
           {llmKey.revokedAt && (
             <DescriptionField label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</DescriptionField>
           )}
         </dl>
-        <p className="mt-4 text-xs text-neutral-500">
-          마지막 사용 시각에는 최근 호출이 늦게 반영될 수 있습니다.
-        </p>
       </CardContent>
     </Card>
   )
-}
-
-/** null 한도는 "무제한"이 아니라 "게이트웨이 기본값"이다 — 계약이 그렇게 말한다. */
-function limitLabel(value: number | null | undefined, unit: string): string {
-  return value == null ? '게이트웨이 기본값' : `${value}${unit}`
 }
 
 /**
@@ -107,13 +104,11 @@ function creditAxisLabel(llmKey: {
   creditLimitReset?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null
   creditAxisConnected: boolean
 }): string {
-  if (!llmKey.creditLimit) return '금액 한도가 없어 유료 모델을 쓸 수 없습니다'
+  if (!llmKey.creditLimit) return '금액 한도 없음'
   const window =
     llmKey.creditLimitReset == null
       ? '총액'
       : { DAILY: '일일', WEEKLY: '주간', MONTHLY: '월간' }[llmKey.creditLimitReset]
   const amount = `$${llmKey.creditLimit.toLocaleString('ko-KR')} (${window})`
-  return llmKey.creditAxisConnected
-    ? amount
-    : `${amount}, 승인된 한도를 적용하는 중입니다`
+  return llmKey.creditAxisConnected ? amount : `${amount} · 적용 중`
 }
