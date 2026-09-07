@@ -85,9 +85,6 @@ export function LlmKeysPage() {
                           {key.name}
                         </Link>
                       )}
-                      {key.purpose && (
-                        <p className="mt-0.5 truncate text-xs text-neutral-500">{key.purpose}</p>
-                      )}
                       {key.accessLimited && (
                         <p className="mt-0.5 text-xs text-neutral-500">
                           접근 권한이 없습니다

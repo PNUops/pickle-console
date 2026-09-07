@@ -101,15 +101,15 @@ export function RevokeKeyAction({ keyId, name, allowed }: RevokeKeyProps) {
 }
 
 /**
- * The revoke row on its own, for the screen that cannot load the key
- * detail. The detail's settings tab puts the same row under the re-issue
- * row instead ({@link ../llm-key/LlmKeyDangerCard}).
+ * The revoke row in its own card, used by the detail's settings tab and by
+ * the access screen that cannot load the detail at all. The title names the
+ * one action rather than a category, the way a VM's deletion card does.
  */
 export function RevokeKeyCard(props: RevokeKeyProps) {
   return (
     <Card className="border-danger-200">
       <CardHeader>
-        <CardTitle className="text-danger-700">되돌릴 수 없는 작업</CardTitle>
+        <CardTitle className="text-danger-700">키 폐기</CardTitle>
       </CardHeader>
       <CardContent>
         <RevokeKeyAction {...props} />
