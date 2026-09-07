@@ -1,16 +1,17 @@
-import { Suspense, lazy, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchLlmKey,
   invalidateResourceLists,
   issueLlmKeyToken,
-  updateLlmKey,
   type LlmKeyDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { CodeBlock } from '../components/CodeBlock'
 import { CopyButton } from '../components/CopyButton'
+import { LlmKeyConnectionCard } from '../components/llm-key/LlmKeyConnectionCard'
+import { LlmKeyInfoCard } from '../components/llm-key/LlmKeyInfoCard'
+import { LlmKeySettingsCard } from '../components/llm-key/LlmKeySettingsCard'
 import { RevokeKeyCard } from '../components/llm-key/RevokeKeyCard'
 import {
   Alert,
@@ -19,28 +20,21 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Checkbox,
   ErrorBoundary,
-  FormField,
-  Input,
   LlmKeyStatusBadge,
   Modal,
   PermissionNotice,
   Spinner,
   TabPanel,
   Tabs,
-  Textarea,
   type TabItem,
 } from '../components/ui'
 import { DOCS_PATH } from '../lib/brand'
 import { formatDateTime } from '../lib/format'
-import { passthroughText } from '../lib/passthrough-endpoints'
-import { LLM_API_BASE_URL, LLM_DEFAULT_MODEL } from '../lib/llm-api'
 import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { LlmKeyBodiesSection } from '../components/llm-body/LlmKeyBodiesSection'
-import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
 
 // 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
 // (할당 추이·VM 모니터링과 같은 규칙).
@@ -167,86 +161,10 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
       <StatusNotice status={status} />
       <IssueSection llmKey={llmKey} status={status} />
-      {status === 'ACTIVE' && <ConnectionSection keyId={llmKey.id} />}
+      {status === 'ACTIVE' && <LlmKeyConnectionCard keyId={llmKey.id} />}
+      <LlmKeyInfoCard llmKey={llmKey} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>키 정보</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-            <Field label="키 앞부분">
-              {/* 두 키를 구별하려고 두는 값이다. 아직 발급 전이면 존재하지 않는다. */}
-              {llmKey.tokenPrefix ? (
-                <code className="font-mono text-sm">{llmKey.tokenPrefix}…</code>
-              ) : (
-                '발급 전'
-              )}
-            </Field>
-            <Field label="마지막 사용">
-              {llmKey.lastUsedAt ? formatDateTime(llmKey.lastUsedAt) : '사용 기록 없음'}
-            </Field>
-            <Field label="만료">
-              {llmKey.expiresAt ? formatDateTime(llmKey.expiresAt) : '만료 없음'}
-            </Field>
-            <Field label="본문 기록">
-              {llmKey.recordBodies ? (
-                // 열람 범위와 보관 기간은 같은 화면의 설정 문구가 말한다. 여기서
-                // 되풀이하면 한 화면이 같은 사실을 두 번 말한다. 꺼짐 쪽은
-                // 되풀이가 아니라서 남는다 - 이미 기록된 것이 어떻게 되는지는
-                // 설정 문구가 답하지 않는다.
-                <>켜짐. 새 요청이 기록됩니다.</>
-              ) : (
-                <>
-                  꺼짐. 새 요청은 기록되지 않습니다.
-                  <span className="mt-0.5 block text-xs text-neutral-500">
-                    이미 기록된 본문이 있으면 「기록된 본문」 탭에 남아 있고, 기록된 지 30일이
-                    지나면 삭제됩니다.
-                  </span>
-                </>
-              )}
-            </Field>
-            <Field label="분당 요청 한도 (자체 서빙)">{limitLabel(llmKey.rpm, '회')}</Field>
-            <Field label="분당 토큰 한도 (자체 서빙)">{limitLabel(llmKey.tpm, '토큰')}</Field>
-            <Field label="동시 요청 한도 (자체 서빙)">
-              {limitLabel(llmKey.concurrency, '건')}
-            </Field>
-            <Field label="유료 모델">{creditAxisLabel(llmKey)}</Field>
-            {llmKey.creditLimit ? (
-              <Field label="쓸 수 있는 유료 모델">
-                {llmKey.creditAllowedModels.length === 0
-                  ? '제한 없음. 금액 한도 안에서 모든 유료 모델'
-                  : llmKey.creditAllowedModels.join(', ')}
-              </Field>
-            ) : null}
-            {/*
-              차단은 허용을 이기므로, 허용 줄만 읽고 쓸 수 있다고 믿으면 안 된다.
-              금액 한도로 가리지도 않는다. 지금 금액이 없어도 승인자가 막아 둔
-              것은 그대로 남아 있고, 나중에 금액이 붙는 순간 그대로 적용된다.
-            */}
-            {llmKey.creditDeniedModels.length > 0 ? (
-              <Field label="쓸 수 없는 유료 모델">
-                {llmKey.creditDeniedModels.join(', ')}
-              </Field>
-            ) : null}
-            {/*
-              위 두 줄과 달리 비어 있을 때도 남는다. 두 목록은 비면 말할 것이 없지만
-              이 줄은 비어 있는 것 자체가 답이고, 없으면 키 주인이 왜 404가 나는지
-              알아볼 자리가 이 화면에 없다.
-            */}
-            <Field label="기능 권한">{passthroughText(llmKey.passthroughEndpoints)}</Field>
-            <Field label="생성일">{formatDateTime(llmKey.createdAt)}</Field>
-            {llmKey.revokedAt && (
-              <Field label="폐기 시각">{formatDateTime(llmKey.revokedAt)}</Field>
-            )}
-          </dl>
-          <p className="mt-4 text-xs text-neutral-500">
-            마지막 사용 시각에는 최근 호출이 늦게 반영될 수 있습니다.
-          </p>
-        </CardContent>
-      </Card>
-
-      {!terminal && <EditSection llmKey={llmKey} />}
+      {!terminal && <LlmKeySettingsCard llmKey={llmKey} />}
 
       <Card>
         <CardHeader>
@@ -281,42 +199,6 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       )}
       </TabPanel>
     </>
-  )
-}
-
-/** null 한도는 "무제한"이 아니라 "게이트웨이 기본값"이다 — 계약이 그렇게 말한다. */
-function limitLabel(value: number | null | undefined, unit: string): string {
-  return value == null ? '게이트웨이 기본값' : `${value}${unit}`
-}
-
-/**
- * 유료 모델의 세 상태를 한 줄로 말한다. 한도는 부여됐는데 아직 적용 전인 상태가
- * 셋째이고, 이 상태를 말하지 않으면 화면은 한도를 보여주면서 호출은 거절되는
- * 모습이 되어 사용자가 플랫폼 오류로 읽는다. 게이트웨이가 같은 순간 돌려주는
- * `credit_pending` 문구와 같은 사실을 말해야 한다.
- */
-function creditAxisLabel(llmKey: {
-  creditLimit: number
-  creditLimitReset?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | null
-  creditAxisConnected: boolean
-}): string {
-  if (!llmKey.creditLimit) return '금액 한도가 없어 유료 모델을 쓸 수 없습니다'
-  const window =
-    llmKey.creditLimitReset == null
-      ? '총액'
-      : { DAILY: '일일', WEEKLY: '주간', MONTHLY: '월간' }[llmKey.creditLimitReset]
-  const amount = `$${llmKey.creditLimit.toLocaleString('ko-KR')} (${window})`
-  return llmKey.creditAxisConnected
-    ? amount
-    : `${amount}, 승인된 한도를 적용하는 중입니다`
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium text-neutral-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-neutral-800">{children}</dd>
-    </div>
   )
 }
 
@@ -356,67 +238,6 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
     )
   }
   return null
-}
-
-/* ─── 연결 정보 ─── */
-
-/**
- * 키를 손에 쥔 자리에서 첫 호출까지 가게 하는 카드.
- *
- * 키 평문은 서버에 없으므로 예시에는 환경 변수 자리표시자만 넣는다. 발급 화면을
- * 떠나면 어디로 보내는지 알 방법이 없어, 주소와 모델 이름을 여기에 둔다.
- */
-function ConnectionSection({ keyId }: { keyId: string }) {
-  const [modelsOpen, setModelsOpen] = useState(false)
-  const example = `curl ${LLM_API_BASE_URL}/chat/completions \\
-  -H "Authorization: Bearer $PICKLE_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"model": "${LLM_DEFAULT_MODEL}", "messages": [{"role": "user", "content": "안녕하세요"}]}'`
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>연결 정보</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-          <Field label="base URL">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm">{LLM_API_BASE_URL}</span>
-              <CopyButton value={LLM_API_BASE_URL} label="복사" />
-            </div>
-          </Field>
-          <Field label="모델">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm">{LLM_DEFAULT_MODEL}</span>
-              <CopyButton value={LLM_DEFAULT_MODEL} label="복사" />
-            </div>
-          </Field>
-        </dl>
-        <div>
-          <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
-            호출할 수 있는 모델 보기
-          </Button>
-        </div>
-        <CodeBlock label="curl" code={example} />
-        <p className="text-sm text-neutral-600">
-          지원 파라미터와 한도, 에러 코드는{' '}
-          <Link
-            to={DOCS_PATH}
-            className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
-          >
-            사용 가이드
-          </Link>
-          에 있습니다.
-        </p>
-        <LlmKeyModelsModal
-          keyId={keyId}
-          open={modelsOpen}
-          onClose={() => setModelsOpen(false)}
-        />
-      </CardContent>
-    </Card>
-  )
 }
 
 /* ─── 발급·재발급 ─── */
@@ -563,128 +384,6 @@ function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApi
             </div>
           )}
         </Modal>
-      </CardContent>
-    </Card>
-  )
-}
-
-/* ─── 이름·용도·본문 기록 ─── */
-
-function EditSection({ llmKey }: { llmKey: LlmKeyDetail }) {
-  const queryClient = useQueryClient()
-  const [name, setName] = useState(llmKey.name)
-  const [purpose, setPurpose] = useState(llmKey.purpose ?? '')
-  const [recordBodies, setRecordBodies] = useState(llmKey.recordBodies)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
-  // 편집은 편집자 등급부터다 (서버와 같은 기준).
-  const allowed = llmKey.myResourceRole === 'OWNER' || llmKey.myResourceRole === 'EDITOR'
-
-  // 서버 값이 갱신되면(다른 탭의 변경, 발급 후 재조회) 폼도 그 값을 따라간다.
-  useEffect(() => {
-    setName(llmKey.name)
-    setPurpose(llmKey.purpose ?? '')
-    setRecordBodies(llmKey.recordBodies)
-  }, [llmKey.name, llmKey.purpose, llmKey.recordBodies])
-
-  // 서버는 두 문자열을 모두 다듬어 저장한다. 화면도 같은 값으로 비교해야
-  // "바뀐 것"의 정의가 양쪽에서 같아진다 — 공백만 덧붙인 편집을 변경으로 보면
-  // 저장 후 돌아온 값이 그대로라 폼이 영원히 미저장 상태에 갇힌다.
-  const trimmedName = name.trim()
-  const trimmedPurpose = purpose.trim()
-
-  const save = useMutation({
-    // 바뀐 항목만 보낸다 — 생략한 항목을 서버가 그대로 두는 것이 계약이라,
-    // 전부 보내면 다른 사람이 방금 바꾼 값을 되돌리게 된다.
-    mutationFn: () =>
-      updateLlmKey(llmKey.id, {
-        ...(trimmedName === llmKey.name ? {} : { name: trimmedName }),
-        // 빈 문자열은 용도를 지우는 방법이고, 항목을 빼는 것은 그대로 두는 방법이다.
-        ...(trimmedPurpose === (llmKey.purpose ?? '') ? {} : { purpose: trimmedPurpose }),
-        ...(recordBodies === llmKey.recordBodies ? {} : { recordBodies }),
-      }),
-    onSuccess: async () => {
-      setError(null)
-      setSaved(true)
-      await queryClient.invalidateQueries({ queryKey: ['llm-keys', llmKey.id] })
-      await invalidateResourceLists(queryClient)
-    },
-    onError: (err) => {
-      setSaved(false)
-      setError(toApiError(err, 'LLM API 키를 수정하지 못했습니다.').message)
-    },
-  })
-
-  const dirty =
-    trimmedName !== llmKey.name ||
-    trimmedPurpose !== (llmKey.purpose ?? '') ||
-    recordBodies !== llmKey.recordBodies
-  // 이름은 지울 수 없다 (계약이 1자 이상을 요구한다). 서버가 422로 막기 전에
-  // 여기서 말해 준다 — 눌러야만 아는 거절을 만들지 않는다.
-  const nameError = trimmedName === '' ? '키 이름은 비워 둘 수 없습니다.' : undefined
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    if (!dirty || nameError) return
-    setSaved(false)
-    save.mutate()
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>키 설정</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && <Alert variant="danger">{error}</Alert>}
-        {saved && !dirty && <Alert variant="success">설정을 저장했습니다.</Alert>}
-        <form onSubmit={submit} className="space-y-4">
-          <FormField label="이름" className="max-w-md" error={nameError}>
-            <Input
-              value={name}
-              maxLength={100}
-              disabled={!allowed}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </FormField>
-          <FormField
-            label="용도"
-            className="max-w-md"
-            description="이 키를 무엇에 쓰는지 — 목록에서 두 키를 구별하는 데 쓰입니다."
-          >
-            <Textarea
-              rows={2}
-              value={purpose}
-              maxLength={2000}
-              disabled={!allowed}
-              onChange={(event) => setPurpose(event.target.value)}
-            />
-          </FormField>
-          {/* 켜기 전에 셋을 말한다. 무엇이 보관되는지, 접근 권한자 전원이 읽는다는
-              것, 30일이라는 것. 가운데가 지시문의 이유이므로 이유가 먼저 온다.
-              읽는 단위가 사람이 아니라 키인 것은 편의가 아니라 구조다 —
-              게이트웨이는 키를 인증할 뿐 보낸 사람을 모른다. */}
-          <Checkbox
-            className="max-w-md"
-            label="본문 기록"
-            description="켜면 이 키로 보낸 프롬프트와 응답을 30일 동안 보관합니다. 이 키에 접근 권한이 있는 사람은 모두 그 내용을 읽을 수 있으므로, 개인정보가 담기는 요청에는 켜지 마세요."
-            checked={recordBodies}
-            disabled={!allowed}
-            onChange={(event) => setRecordBodies(event.target.checked)}
-          />
-          <Button
-            type="submit"
-            loading={save.isPending}
-            disabled={!allowed || !dirty || Boolean(nameError)}
-          >
-            저장
-          </Button>
-        </form>
-        {!allowed && (
-          <PermissionNotice>
-            키 설정 변경은 편집자 이상 등급을 받은 사람만 할 수 있습니다.
-          </PermissionNotice>
-        )}
       </CardContent>
     </Card>
   )
