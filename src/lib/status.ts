@@ -116,6 +116,7 @@ export function effectiveLlmKeyStatus(
 
 export type DomainKind = components['schemas']['DomainKind']
 export type DomainStatus = components['schemas']['DomainStatus']
+export type DomainDnsStatus = components['schemas']['DomainDnsStatus']
 export type RouteStatus = components['schemas']['RouteStatus']
 export type CertificateKind = components['schemas']['CertificateKind']
 export type CertificateStatus = components['schemas']['CertificateStatus']
@@ -133,6 +134,13 @@ export const DOMAIN_STATUS_LABELS: Record<DomainStatus, string> = {
   ACTIVE: '연결됨',
   FAILED: '검증 실패',
   REMOVED: '해제됨',
+}
+
+export const DOMAIN_DNS_STATUS_LABELS: Record<DomainDnsStatus, string> = {
+  NONE: '없음',
+  PENDING: '등록 대기',
+  APPLIED: '등록됨',
+  FAILED: '등록 실패',
 }
 
 export const ROUTE_STATUS_LABELS: Record<RouteStatus, string> = {

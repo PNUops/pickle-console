@@ -14,6 +14,7 @@ import {
   CAMPUS_IP_STATUS_LABELS,
   CERTIFICATE_STATUS_LABELS,
   DELIVERY_STATUS_LABELS,
+  DOMAIN_DNS_STATUS_LABELS,
   DOMAIN_KIND_LABELS,
   DOMAIN_STATUS_LABELS,
   DRIFT_KIND_LABELS,
@@ -30,6 +31,7 @@ import {
   type CampusIpRequestStatus,
   type CertificateStatus,
   type DomainKind,
+  type DomainDnsStatus,
   type DomainStatus,
   type DriftFindingKind,
   type DriftFindingStatus,
@@ -136,6 +138,32 @@ export function DomainStatusBadge({ status, className }: { status: DomainStatus;
   return (
     <Badge variant={DOMAIN_STATUS_VARIANTS[status]} className={className}>
       {DOMAIN_STATUS_LABELS[status]}
+    </Badge>
+  )
+}
+
+const DOMAIN_DNS_STATUS_VARIANTS: Record<DomainDnsStatus, BadgeVariant> = {
+  NONE: 'neutral',
+  PENDING: 'info',
+  APPLIED: 'success',
+  FAILED: 'danger',
+}
+
+/**
+ * 플랫폼 이름의 DNS 레코드 상태. 'NONE'을 중립으로 두는 것은 그 값이 문제가
+ * 아니기 때문이다 — 커스텀 도메인은 언제나 그 값이고, 서버가 레코드를 관리하기
+ * 전에 만들어진 플랫폼 행도 그렇다.
+ */
+export function DomainDnsStatusBadge({
+  status,
+  className,
+}: {
+  status: DomainDnsStatus
+  className?: string
+}) {
+  return (
+    <Badge variant={DOMAIN_DNS_STATUS_VARIANTS[status]} className={className}>
+      {DOMAIN_DNS_STATUS_LABELS[status]}
     </Badge>
   )
 }

@@ -8,6 +8,7 @@ export {
   DeliveryStatusBadge,
   DomainConnectionBadge,
   DomainKindBadge,
+  DomainDnsStatusBadge,
   DomainStatusBadge,
   DriftKindBadge,
   DriftStatusBadge,

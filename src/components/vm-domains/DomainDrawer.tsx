@@ -107,6 +107,7 @@ export function LiveDomainBody({
     status: domain.status,
     route: pub.route,
     certificate: pub.certificate,
+    dnsStatus: domain.dnsStatus,
   })
   const certificate = pub.certificate ?? null
 

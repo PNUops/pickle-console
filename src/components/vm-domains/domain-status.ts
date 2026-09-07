@@ -1,5 +1,6 @@
 import type {
   CertificateView,
+  DomainDnsStatus,
   DomainKind,
   DomainStatus,
   PublicationView,
@@ -8,7 +9,7 @@ import type {
 import type { BadgeVariant } from '../ui'
 
 /**
- * 접힌 상태 파생의 입력 — 도메인 4축(도메인·검증·인증서·라우트) 중 화면이
+ * 접힌 상태 파생의 입력 — 도메인 5축(도메인·검증·DNS 레코드·인증서·라우트) 중 화면이
  * 받는 값들. 목록 행(요약)에는 route/certificate가 없을 수 있다.
  */
 export interface DomainAxes {
@@ -18,6 +19,13 @@ export interface DomainAxes {
   reservedUntil?: string | null
   route?: RouteView | null
   certificate?: CertificateView | null
+  /**
+   * 플랫폼 이름의 DNS 레코드 축. 'NONE'은 신호가 아니다 — 서버가 레코드를
+   * 관리하기 전에 만들어진 행과, 제공자가 설정되지 않아 발행이 거부된 행이
+   * 모두 그 값을 갖는다. 그중 첫째는 지금도 정상 서빙 중이므로 'NONE'으로
+   * 배지를 움직이면 멀쩡한 이름이 영원히 '연결 중'이 된다.
+   */
+  dnsStatus?: DomainDnsStatus | null
 }
 
 export type DomainConnectionKey =
@@ -44,7 +52,7 @@ const KST_MONTH_DAY = new Intl.DateTimeFormat('ko-KR', {
 })
 
 /**
- * 4축 상태를 접힌 배지 하나로 파생한다. 분류 기준은 시스템 축이 아니라
+ * 5축 상태를 접힌 배지 하나로 파생한다. 분류 기준은 시스템 축이 아니라
  * 사용자 행동 축이다 — 사용자가 할 일이 있는 상태는 '레코드 대기'와 '실패'
  * 둘뿐이고, 나머지는 기다림(연결 중)이거나 완료(연결됨)다. 우선순위는
  * 위에서 첫 일치: 예약 중 → 실패 → 레코드 대기 → 연결 중 → 연결됨.
@@ -62,9 +70,12 @@ export function foldDomainStatus(axes: DomainAxes): FoldedDomainStatus {
         : '곧 이름이 풀립니다. 그 전에는 다시 연결할 수 있습니다.',
     }
   }
-  // 실패 축은 여정 순서(소유 확인 → 인증서 → 라우트)로 지목한다.
+  // 실패 축은 여정 순서(소유 확인 → DNS 레코드 → 인증서 → 라우트)로 지목한다.
   if (axes.status === 'FAILED') {
     return failed('소유 확인에 실패했습니다. DNS 레코드를 확인해 주세요.')
+  }
+  if (axes.dnsStatus === 'FAILED') {
+    return failed('DNS 레코드 등록에 실패했습니다.')
   }
   if (axes.certificate?.status === 'FAILED') {
     return failed('인증서 발급에 실패했습니다.')
@@ -91,6 +102,9 @@ export function foldDomainStatus(axes: DomainAxes): FoldedDomainStatus {
   ) {
     return connecting('인증서를 발급하고 있습니다. 보통 몇 분 안에 끝납니다.')
   }
+  if (axes.dnsStatus === 'PENDING') {
+    return connecting('DNS 레코드를 등록하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
+  }
   if (axes.route == null || axes.route.status !== 'APPLIED') {
     return connecting('공개 설정을 적용하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
   }
@@ -110,7 +124,7 @@ export type DomainPollRate = 'fast' | 'slow' | null
 
 /**
  * 공개 목록 전체의 폴링 단계를 파생한다. 시스템이 곧 수렴시키는 전이(라우트
- * 적용 대기·인증서 발급/갱신)는 빠르게, 사용자 DNS 조치를 기다리는 상태
+ * 적용 대기·인증서 발급/갱신·DNS 레코드 등록)는 빠르게, 사용자 DNS 조치를 기다리는 상태
  * (커스텀 검증 대기·실패)는 서버 재검증 주기에 맞춰 완만하게, 전부 안정이면
  * 폴링하지 않는다.
  */
@@ -121,7 +135,7 @@ export function domainPollRate(publications: PublicationView[]): DomainPollRate 
       // 검증 전 커스텀 도메인의 라우트는 소유 확인이 끝나야 적용된다 — 빠른
       // 폴링 대상이 아니다 (아래 slow 축이 담당).
       (pub.domain.kind !== 'CUSTOM' || pub.domain.status === 'ACTIVE')
-    return applying || pub.certificate?.status === 'RENEWING'
+    return applying || pub.certificate?.status === 'RENEWING' || pub.domain.dnsStatus === 'PENDING'
   })
   if (fast) return 'fast'
   const awaitingUserDns = publications.some(

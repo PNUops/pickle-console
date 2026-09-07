@@ -122,6 +122,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
                       status: pub.domain.status,
                       route: pub.route,
                       certificate: pub.certificate,
+                      dnsStatus: pub.domain.dnsStatus,
                     })}
                     live
                     onDetail={() => setDrawerId(pub.domain.id)}

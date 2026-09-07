@@ -30,6 +30,7 @@ import {
   CertificateStatusBadge,
   ConfirmNameModal,
   DdayBadge,
+  DomainDnsStatusBadge,
   DomainKindBadge,
   DomainStatusBadge,
   Drawer,
@@ -186,6 +187,7 @@ export function AdminDomainsPage() {
                     <TH>VM / 워크스페이스</TH>
                     <TH>기관</TH>
                     <TH>상태</TH>
+                    <TH>DNS</TH>
                     <TH>라우트</TH>
                     <TH>인증서</TH>
                     <TH>검증일</TH>
@@ -233,6 +235,13 @@ export function AdminDomainsPage() {
                               <DdayBadge endDate={kstDateString(new Date(domain.reservedUntil))} />
                             )}
                           </span>
+                        )}
+                      </TD>
+                      <TD>
+                        {domain.dnsStatus === 'NONE' ? (
+                          <span className="text-xs text-neutral-400">—</span>
+                        ) : (
+                          <DomainDnsStatusBadge status={domain.dnsStatus} />
                         )}
                       </TD>
                       <TD>
