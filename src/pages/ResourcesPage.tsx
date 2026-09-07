@@ -94,6 +94,9 @@ export function ResourcesPage() {
                   <TH>상태</TH>
                   <TH>워크스페이스</TH>
                   <TH>생성일</TH>
+                  {/* 바로가기 열. 머리글은 화면에 그리지 않는다 — 열이 무엇인지는
+                      그 안의 버튼이 말하고, 종류에 따라 비는 칸이 대부분이다. */}
+                  <TH className="sr-only">바로가기</TH>
                 </TR>
               </THead>
               <TBody>
@@ -142,6 +145,10 @@ export function ResourcesPage() {
                       <TD>{entry.statusBadge(resource)}</TD>
                       <TD>{resource.workspaceName}</TD>
                       <TD className="whitespace-nowrap">{formatDateTime(resource.createdAt)}</TD>
+                      {/* 대시보드 행이 이미 주는 바로가기를 이 목록도 준다.
+                          종류가 그 바로가기를 갖지 않거나 상태가 맞지 않으면 빈
+                          칸이다. */}
+                      <TD className="text-right">{entry.rowAction?.(resource)}</TD>
                     </TR>
                   )
                 })}
