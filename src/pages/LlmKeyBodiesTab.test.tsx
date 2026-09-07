@@ -6,14 +6,16 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
-import { llmKeyStore } from '../test/msw/handlers/llm-keys'
+import { llmBodyStore, llmKeyDetailAs, llmKeyStore } from '../test/msw/handlers/llm-keys'
 
 const RECORDING_OFF_WITH_HISTORY = uuid(75)
 const RECORDED_KEY = uuid(73)
 const NO_RECORDS_KEY = uuid(70)
 const PENDING_KEY = uuid(71)
 const NO_GRANT_KEY = uuid(72)
-const LIVE_KEY = uuid(74)
+// No fixture is both recording and alive, so a test makes one. It has to be
+// an owner: a member gets no settings tab, and the test would pass on nothing.
+const LIVE_KEY = uuid(70)
 
 function renderBodies(keyId: string) {
   server.use(refreshSuccessHandler('access-user'))
@@ -41,7 +43,20 @@ describe('기록된 본문 탭', () => {
     renderBodies(NO_RECORDS_KEY)
 
     expect(await screen.findByText('기록된 본문이 없습니다')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '개요 탭에서 켜기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '설정 탭에서 켜기' })).toBeInTheDocument()
+  })
+
+  test('offers no way to turn recording on for a revoked key', async () => {
+    // The settings tab is hidden for a revoked or expired key, so a button
+    // pointing there would land on the overview. The notice goes with it:
+    // there is no grade that could take the action.
+    llmBodyStore[RECORDED_KEY] = []
+    server.use(llmKeyDetailAs(RECORDED_KEY, 'OWNER', { recordBodies: false }))
+    renderBodies(RECORDED_KEY)
+
+    expect(await screen.findByText('기록된 본문이 없습니다')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '설정 탭에서 켜기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
   test('발급 전 키는 조회하지 않고 이유를 말한다', async () => {
@@ -125,31 +140,39 @@ describe('기록된 본문 탭', () => {
     expect(screen.queryByText(/질문입니다/)).not.toBeInTheDocument()
   })
 
-  test('개요 탭은 보관 기간과 열람 범위를 각각 한 번만 말한다', async () => {
-    // 키 정보 칸과 설정 문구가 같은 두 사실을 나란히 말하던 적이 있다. 설정
-    // 문구가 그 자리이고, 키 정보는 켜짐과 꺼짐만 말한다.
-    //
-    // 켜져 있으면서 폐기되지 않은 키가 픽스처에 없어서 여기서 만든다. 폐기된
-    // 키는 설정 카드 자체가 안 그려지므로 두 문구가 만나지 않는다 - 이 결함이
-    // 배포까지 간 이유가 그것이다.
+  test('says retention and readership once on settings, and only on or off on overview', async () => {
+    // The key facts cell and the settings text once stated the same two facts
+    // side by side. The settings text is the place; the cell says on or off.
     const key = llmKeyStore.find((candidate) => candidate.id === LIVE_KEY)!
     key.recordBodies = true
     server.use(refreshSuccessHandler('access-user'))
-    renderApp(`/console/llm-keys/${LIVE_KEY}`)
+    const settings = renderApp(`/console/llm-keys/${LIVE_KEY}?tab=settings`)
 
-    await screen.findByText('켜짐. 새 요청이 기록됩니다.')
+    await screen.findByRole('checkbox', { name: /^본문 기록/ })
     const text = document.body.textContent ?? ''
     expect(text.match(/30일 동안 보관합니다/g) ?? []).toHaveLength(1)
     expect(text.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(1)
+    settings.unmount()
+
+    renderApp(`/console/llm-keys/${LIVE_KEY}`)
+    const term = await screen.findByText('본문 기록', { selector: 'dt' })
+    expect(term.nextElementSibling).toHaveTextContent(/^켜짐$/)
+    expect(document.body.textContent?.match(/30일/g) ?? []).toHaveLength(0)
   })
 
   test('설정 이름은 화면 전체에서 하나다', async () => {
     // 「본문 기록」과 「프롬프트와 응답 기록」이 같은 설정을 가리키던 적이 있다.
     server.use(refreshSuccessHandler('access-user'))
-    renderApp(`/console/llm-keys/${LIVE_KEY}`)
+    const settings = renderApp(`/console/llm-keys/${LIVE_KEY}?tab=settings`)
 
     // 라벨이 input 을 감싸므로 접근 이름에 설명까지 들어간다.
     expect(await screen.findByRole('checkbox', { name: /^본문 기록/ })).toBeInTheDocument()
+    expect(screen.queryByText('프롬프트와 응답 기록')).not.toBeInTheDocument()
+    settings.unmount()
+
+    // The overview's key facts use the same name.
+    renderApp(`/console/llm-keys/${LIVE_KEY}`)
+    expect(await screen.findByText('본문 기록', { selector: 'dt' })).toBeInTheDocument()
     expect(screen.queryByText('프롬프트와 응답 기록')).not.toBeInTheDocument()
   })
 })

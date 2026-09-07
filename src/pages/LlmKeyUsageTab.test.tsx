@@ -32,12 +32,12 @@ describe('사용량 탭', () => {
     renderApp(`/console/llm-keys/${USED_KEY}`)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
-    // 개요에는 발급 카드가 있고 사용량 차트는 없다.
-    expect(screen.getByRole('button', { name: '키 재발급' })).toBeInTheDocument()
+    // The overview has the key facts and no usage chart.
+    expect(screen.getByText('키 정보')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: '사용량' }))
     expect(await screen.findByRole('img', { name: '요청 수' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '키 재발급' })).not.toBeInTheDocument()
+    expect(screen.queryByText('키 정보')).not.toBeInTheDocument()
   })
 
   test('오늘 자 값이 아직 채워지는 중이라는 근거를 마지막 보고 시각으로 댄다', async () => {

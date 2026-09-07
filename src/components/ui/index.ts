@@ -30,6 +30,7 @@ export { buttonClass, type ButtonSize, type ButtonVariant } from './button-style
 export { CommandBar, type CommandBarProps } from './CommandBar'
 export { DataTable, type DataTableProps } from './DataTable'
 export {
+  DescriptionField,
   DescriptionList,
   type DescriptionItem,
   type DescriptionListProps,

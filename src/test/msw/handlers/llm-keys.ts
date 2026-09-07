@@ -40,6 +40,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       rpm: 60,
       tpm: 40000,
       concurrency: 4,
+      dailyTokens: 500_000,
       recordBodies: false,
       // 금액 축이 부여되고 연결까지 끝난 키 — 세 상태(미부여·연결 전·사용
       // 가능) 중 마지막을 픽스처가 하나는 들고 있어야 화면이 검증된다.
@@ -70,6 +71,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       rpm: null,
       tpm: null,
       concurrency: null,
+      dailyTokens: null,
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
@@ -97,6 +99,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       rpm: null,
       tpm: null,
       concurrency: null,
+      dailyTokens: null,
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
@@ -122,6 +125,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       rpm: null,
       tpm: null,
       concurrency: null,
+      dailyTokens: null,
       recordBodies: true,
       creditLimit: 0,
       creditAxisConnected: false,
@@ -147,6 +151,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       rpm: 30,
       tpm: null,
       concurrency: null,
+      dailyTokens: 0,
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
@@ -174,6 +179,7 @@ function initialLlmKeys(): LlmKeyDetail[] {
       rpm: null,
       tpm: null,
       concurrency: null,
+      dailyTokens: 200_000,
       recordBodies: false,
       creditLimit: 0,
       creditAxisConnected: false,
@@ -409,6 +415,25 @@ export function resetLlmKeyFixtures() {
 export function asLlmKeyGrantManager(keyId: string) {
   const key = llmKeyStore.find((k) => k.id === keyId)
   if (key) key.accessManageAllowed = true
+}
+
+/**
+ * A one-off handler that serves this key's detail at the given resource role,
+ * for the permission branches. Grant management follows the owner role only;
+ * any other combination comes through `overrides`.
+ */
+export function llmKeyDetailAs(
+  keyId: string,
+  role: ResourceRole | null,
+  overrides: Partial<LlmKeyDetail> = {},
+): RequestHandler {
+  return http.get(`*/api/v1/llm-keys/${keyId}`, () => {
+    const key = llmKeyStore.find((k) => k.id === keyId)!
+    return HttpResponse.json(
+      { ...key, myResourceRole: role, accessManageAllowed: role === 'OWNER', ...overrides },
+      { status: 200 },
+    )
+  })
 }
 
 /** 접근 목록의 소유자 이름 — 제한 행이 "누구에게 요청하라"고 말할 때 쓴다. */

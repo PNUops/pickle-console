@@ -32,3 +32,17 @@ export function DescriptionList({ items, columns = 2, className }: DescriptionLi
     </dl>
   )
 }
+
+/**
+ * One term and its value inside a hand-laid `<dl>` grid, for cards that
+ * mix plain values with composed rows (copy buttons, badges, sub-lines)
+ * and so cannot hand an `items` array to {@link DescriptionList}.
+ */
+export function DescriptionField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium text-neutral-500">{label}</dt>
+      <dd className="mt-0.5 text-sm text-neutral-800">{children}</dd>
+    </div>
+  )
+}
