@@ -4,10 +4,11 @@ import { formatDateTime, formatRelative } from '../../lib/format'
 import { passthroughText } from '../../lib/passthrough-endpoints'
 
 /**
- * 키 정보 카드 — 값과 한도를 한 자리에서 읽는 dl. 값 칸은 값만 말한다.
+ * The key facts as a dl. A value cell carries the value and nothing else.
  *
- * 한도는 일일 토큰 한도 하나만 보인다. 분당 요청·분당 토큰·동시 요청은
- * 관리자가 정하는 값이라 신청서도 묻지 않고, 이 화면도 보여 주지 않는다.
+ * Only the daily token limit is shown. The per-minute request, per-minute
+ * token and concurrency limits are the platform's to set, so the request
+ * form never asks for them and this card does not show them either.
  */
 export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
   return (
@@ -26,8 +27,9 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
             )}
           </DescriptionField>
           <DescriptionField label="마지막 사용">
-            {/* 게이트웨이가 배치로 보고하므로 최근 호출은 늦게 닿는다. 상대 시간이
-                그 사실을 말하고, 절대시각은 옆에 작게 남는다. */}
+            {/* The gateway reports in batches, so a recent call lands late.
+                The relative time says how stale the value is; the absolute
+                stamp stays beside it in small type. */}
             {llmKey.lastUsedAt ? (
               <>
                 <time dateTime={llmKey.lastUsedAt}>{formatRelative(llmKey.lastUsedAt)}</time>
@@ -69,9 +71,10 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
             {passthroughText(llmKey.passthroughEndpoints)}
           </DescriptionField>
           <DescriptionField label="본문 기록">
-            {/* 열람 범위와 보관 기간은 설정 탭의 체크박스 설명과 기록된 본문 탭이
-                말한다. 꺼짐 쪽의 한 줄은 되풀이가 아니다 - 이미 기록된 것이
-                어디 있는지는 그 둘이 답하지 않는다. */}
+            {/* Who may read the bodies and for how long is said by the
+                settings checkbox and by the recorded-bodies tab. The one
+                line under "off" is not a repeat: neither of those says
+                where the bodies already recorded went. */}
             {llmKey.recordBodies ? (
               '켜짐'
             ) : (

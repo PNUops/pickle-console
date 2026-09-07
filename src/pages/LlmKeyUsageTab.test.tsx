@@ -32,7 +32,7 @@ describe('사용량 탭', () => {
     renderApp(`/console/llm-keys/${USED_KEY}`)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
-    // 개요에는 키 정보가 있고 사용량 차트는 없다.
+    // The overview has the key facts and no usage chart.
     expect(screen.getByText('키 정보')).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: '사용량' }))

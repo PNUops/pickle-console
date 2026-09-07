@@ -13,8 +13,8 @@ const RECORDED_KEY = uuid(73)
 const NO_RECORDS_KEY = uuid(70)
 const PENDING_KEY = uuid(71)
 const NO_GRANT_KEY = uuid(72)
-// 켜져 있으면서 폐기되지 않은 키가 픽스처에 없어서 테스트가 만든다. 소유자 등급이라
-// 설정 탭이 보인다 — 참여자 등급이면 탭이 없어 아무것도 안 그린 채 지나간다.
+// No fixture is both recording and alive, so a test makes one. It has to be
+// an owner: a member gets no settings tab, and the test would pass on nothing.
 const LIVE_KEY = uuid(70)
 
 function renderBodies(keyId: string) {
@@ -127,9 +127,9 @@ describe('기록된 본문 탭', () => {
     expect(screen.queryByText(/질문입니다/)).not.toBeInTheDocument()
   })
 
-  test('보관 기간과 열람 범위는 설정 탭이 한 번씩만 말하고, 개요는 켜짐만 말한다', async () => {
-    // 키 정보 칸과 설정 문구가 같은 두 사실을 나란히 말하던 적이 있다. 설정
-    // 문구가 그 자리이고, 키 정보는 켜짐과 꺼짐만 말한다.
+  test('says retention and readership once on settings, and only on or off on overview', async () => {
+    // The key facts cell and the settings text once stated the same two facts
+    // side by side. The settings text is the place; the cell says on or off.
     const key = llmKeyStore.find((candidate) => candidate.id === LIVE_KEY)!
     key.recordBodies = true
     server.use(refreshSuccessHandler('access-user'))
@@ -157,7 +157,7 @@ describe('기록된 본문 탭', () => {
     expect(screen.queryByText('프롬프트와 응답 기록')).not.toBeInTheDocument()
     settings.unmount()
 
-    // 개요의 키 정보도 같은 이름으로 부른다.
+    // The overview's key facts use the same name.
     renderApp(`/console/llm-keys/${LIVE_KEY}`)
     expect(await screen.findByText('본문 기록', { selector: 'dt' })).toBeInTheDocument()
     expect(screen.queryByText('프롬프트와 응답 기록')).not.toBeInTheDocument()

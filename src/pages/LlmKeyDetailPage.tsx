@@ -28,7 +28,7 @@ const LlmKeyUsageSection = lazy(() => import('../components/llm-usage/LlmKeyUsag
 
 /**
  * 상세 탭 구성. 배열 순서가 렌더 순서이고, 탭 id는 `?tab=` 링크가 쓴다.
- * VM 상세와 같은 자리에 같은 이름의 탭을 둔다.
+ * The tabs sit where the VM detail puts the same names.
  */
 const KEY_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
@@ -87,7 +87,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   // 근거를 화면도 본다. 배지·안내·발급 가능 판정이 모두 이 값을 쓴다.
   const status = effectiveLlmKeyStatus(llmKey.status, llmKey.expiresAt)
   const terminal = status === 'REVOKED' || status === 'EXPIRED'
-  // 본문 기록을 켜는 등급 — 설정 카드가 쓰는 것과 같은 근거를 그대로 본다.
+  // The grade that may edit the key, the same test the settings card runs.
   const canEditKey = llmKey.myResourceRole === 'OWNER' || llmKey.myResourceRole === 'EDITOR'
   // The access tab follows the grant-management right alone, whatever the
   // status: a revoked key's grants still decide who may read its recorded
@@ -103,7 +103,7 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   })
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  // 잘못된/숨은 tab 값은 개요로 폴백한다(URL은 그대로 두어도 무해).
+  // An unknown or hidden tab value falls back to the overview; the URL can stay.
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
     // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.

@@ -21,9 +21,9 @@ function renderKey(keyId: string, tab?: string) {
 }
 
 describe('LLM API 키 상세', () => {
-  test('분당·동시 한도는 사용자에게 보이지 않는다', async () => {
-    // 관리자가 정하는 값이라 신청서도 묻지 않는다. 화면이 보여 주면 소유자는
-    // 자기가 바꿀 수 없는 숫자를 읽고 그 뜻을 묻게 된다.
+  test('hides the per-minute and concurrency limits from the owner', async () => {
+    // Those are the platform's values; the request form never asks for them.
+    // Shown here, the owner reads numbers they cannot change and asks why.
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
@@ -73,8 +73,8 @@ describe('LLM API 키 상세', () => {
     expect(screen.getByText('이미지 생성')).toBeInTheDocument()
   })
 
-  test('마지막 사용은 상대 시간으로 말하고 절대시각을 옆에 둔다', async () => {
-    // 배치 보고가 늦다는 설명 대신, 얼마나 지났는지가 그 사실을 말한다.
+  test('states the last use as a relative time with the stamp beside it', async () => {
+    // How long ago replaces the sentence about batched reporting being late.
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
@@ -83,7 +83,7 @@ describe('LLM API 키 상세', () => {
     expect(screen.queryByText(/늦게 반영될 수 있습니다/)).not.toBeInTheDocument()
   })
 
-  test('값 칸은 값만 말한다', async () => {
+  test('keeps the value cells to the value', async () => {
     renderKey(PENDING_KEY)
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
@@ -133,7 +133,7 @@ describe('발급 전 키', () => {
 })
 
 describe('이미 발급된 키', () => {
-  test('재발급은 설정 탭에 있고, 누르기 전에 이전 값이 무효가 된다고 말한다', async () => {
+  test('puts re-issue on the settings tab and warns before the old value dies', async () => {
     const user = userEvent.setup()
     renderKey(ISSUED_KEY, 'settings')
 
@@ -146,8 +146,8 @@ describe('이미 발급된 키', () => {
     ).toBeInTheDocument()
   })
 
-  test('개요에는 재발급이 없다', async () => {
-    // 되돌릴 수 없고 드문 작업은 첫 화면의 버튼이 아니다.
+  test('offers no re-issue on the overview', async () => {
+    // An irreversible and rare action is not a button on the first screen.
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
@@ -166,7 +166,7 @@ describe('연결 정보', () => {
     // 사이드바 하단에도 같은 이름의 링크가 있으므로 본문 안에서만 찾는다.
     const main = within(screen.getByRole('main'))
     expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/docs')
-    // 모델 목록은 그 모델의 복사 버튼과 같은 줄에 선다.
+    // The model list opens from the same row as that model's copy button.
     const row = main.getByRole('button', { name: '호출할 수 있는 모델 보기' }).parentElement!
     expect(within(row).getByText('pickle-general')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: '복사' })).toBeInTheDocument()
@@ -196,9 +196,9 @@ describe('폐기된 키', () => {
 })
 
 describe('권한이 화면에 미리 보인다', () => {
-  test('참여자 등급에는 발급·수정·폐기가 아예 없다', async () => {
-    // 눌러야만 403을 알게 되는 화면이 아니라, 서버가 준 등급을 그대로 그린다.
-    // 할 수 있는 것이 하나도 없는 등급에는 설정 탭도 접근 탭도 없다.
+  test('shows a member no issue, edit or revoke at all', async () => {
+    // The screen draws the role the server gave rather than a 403 on click.
+    // A role that can do nothing on those tabs does not get the tabs.
     renderKey(MEMBER_KEY)
 
     await screen.findByRole('heading', { name: 'study-shared-key' })
@@ -211,7 +211,7 @@ describe('권한이 화면에 미리 보인다', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('숨은 탭 주소는 개요로 떨어진다', async () => {
+  test('drops a hidden tab address onto the overview', async () => {
     renderKey(MEMBER_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'study-shared-key' })
@@ -219,8 +219,8 @@ describe('권한이 화면에 미리 보인다', () => {
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   })
 
-  test('편집자 등급은 설정은 고치고 발급·폐기는 잠긴 채 사유를 본다', async () => {
-    // 한쪽 권한만 있으면 탭은 열리고, 남은 카드가 잠긴 채 이유를 말한다.
+  test('lets an editor edit while issue and revoke stay locked with a reason', async () => {
+    // One right is enough to open the tab; the rest sits locked and says why.
     const user = userEvent.setup()
     server.use(llmKeyDetailAs(MEMBER_KEY, 'EDITOR', { accessManageAllowed: false }))
     renderKey(MEMBER_KEY, 'settings')
@@ -283,7 +283,7 @@ describe('정지·만료된 키', () => {
     await screen.findByRole('heading', { name: 'study-shared-key' })
     expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
-    // 설정 탭 자체가 없으니 주소로 열어도 개요다.
+    // With no settings tab, the address opens the overview.
     expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()

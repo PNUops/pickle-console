@@ -50,8 +50,9 @@ export function passthroughLabel(value: string): string {
 }
 
 /**
- * 부여된 기능을 읽는 말. 빈 값은 '제한 없음'이 아니라 '아무것도 못 쓴다'이고,
- * 그 차이는 「부여 안 됨」이라는 말 자체가 낸다. 값 칸은 값만 말한다.
+ * The granted features as one string. An empty grant means nothing can be
+ * used, not "no restriction", and the word 부여 안 됨 carries that difference
+ * on its own; a value cell says the value and nothing else.
  */
 export function passthroughText(endpoints: readonly string[]): string {
   if (endpoints.length === 0) return '부여 안 됨'

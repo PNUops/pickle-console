@@ -412,8 +412,9 @@ export function asLlmKeyGrantManager(keyId: string) {
 }
 
 /**
- * 접근 권한 분기 테스트용 — 이 키의 상세를 지정한 리소스 등급으로 내려주는 임시
- * 핸들러. 목록 관리는 소유자 등급에만 따라오고, 그 밖의 조합은 `overrides`로 준다.
+ * A one-off handler that serves this key's detail at the given resource role,
+ * for the permission branches. Grant management follows the owner role only;
+ * any other combination comes through `overrides`.
  */
 export function llmKeyDetailAs(
   keyId: string,
