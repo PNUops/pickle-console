@@ -52,6 +52,16 @@ describe('전체 리소스', () => {
     expect(within(keyRow).queryByRole('button', { name: '웹 터미널' })).not.toBeInTheDocument()
   })
 
+  test('withholds the shortcut from a running VM the reader may not open', async () => {
+    // 이름을 링크로 걸지 않는 것과 같은 이유다. 터미널은 그 VM 의 부여를 요구하므로
+    // 버튼을 세우면 눌러야만 아는 거절이 된다.
+    renderResources(`/console/${uuid(15)}/resources`)
+
+    const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
+    expect(within(limitedRow).getByText('실행 중')).toBeInTheDocument()
+    expect(within(limitedRow).queryByRole('button', { name: '웹 터미널' })).not.toBeInTheDocument()
+  })
+
   test('종류 필터로 LLM API 키만 좁혀 본다', async () => {
     const user = userEvent.setup()
     renderResources()
