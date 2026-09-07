@@ -41,6 +41,27 @@ describe('전체 리소스', () => {
       .toBeInTheDocument()
   })
 
+  test('gives a running VM the same shortcut the dashboard row gives it', async () => {
+    // 두 목록이 같은 리소스에 다른 것을 줄 이유가 없다. 바로가기는 종류가 정하므로
+    // 키 행에는 아무것도 서지 않는다.
+    renderResources()
+
+    const vmRow = (await screen.findByRole('link', { name: 'algo-judge' })).closest('tr')!
+    expect(within(vmRow).getByRole('button', { name: '웹 터미널' })).toBeInTheDocument()
+    const keyRow = screen.getByRole('link', { name: 'capstone-chatbot' }).closest('tr')!
+    expect(within(keyRow).queryByRole('button', { name: '웹 터미널' })).not.toBeInTheDocument()
+  })
+
+  test('withholds the shortcut from a running VM the reader may not open', async () => {
+    // 이름을 링크로 걸지 않는 것과 같은 이유다. 터미널은 그 VM 의 부여를 요구하므로
+    // 버튼을 세우면 눌러야만 아는 거절이 된다.
+    renderResources(`/console/${uuid(15)}/resources`)
+
+    const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
+    expect(within(limitedRow).getByText('실행 중')).toBeInTheDocument()
+    expect(within(limitedRow).queryByRole('button', { name: '웹 터미널' })).not.toBeInTheDocument()
+  })
+
   test('종류 필터로 LLM API 키만 좁혀 본다', async () => {
     const user = userEvent.setup()
     renderResources()

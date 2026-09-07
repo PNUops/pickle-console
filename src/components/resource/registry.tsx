@@ -42,8 +42,12 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
     accessPath: (id) => consolePaths.vmAccess(id),
     statusBadge: (resource) => <VmStatusBadge status={resource.status as VmStatus} />,
     isActive: (resource) => resource.status !== 'DELETED' && resource.status !== 'DELETING',
+    // 접근 권한이 없는 행에는 바로가기를 걸지 않는다. 이름이 링크가 아닌 것과 같은
+    // 이유이고, 터미널은 그 VM의 부여를 요구하므로 눌러야만 아는 거절이 된다.
     rowAction: (resource) =>
-      resource.status === 'RUNNING' ? <TerminalRowAction resource={resource} /> : null,
+      resource.status === 'RUNNING' && !resource.accessLimited ? (
+        <TerminalRowAction resource={resource} />
+      ) : null,
   },
   LLM_API_KEY: {
     label: 'LLM API 키',

@@ -94,6 +94,12 @@ export function ResourcesPage() {
                   <TH>상태</TH>
                   <TH>워크스페이스</TH>
                   <TH>생성일</TH>
+                  {/* 바로가기 열. 머리글은 화면에 보이지 않지만 셀은 자리를 지킨다 —
+                      `sr-only`를 `th` 자체에 걸면 셀이 흐름에서 빠져 머리글 행과
+                      본문 행의 칸 수가 어긋난다 (관리자 목록들과 같은 모양). */}
+                  <TH>
+                    <span className="sr-only">바로가기</span>
+                  </TH>
                 </TR>
               </THead>
               <TBody>
@@ -142,6 +148,10 @@ export function ResourcesPage() {
                       <TD>{entry.statusBadge(resource)}</TD>
                       <TD>{resource.workspaceName}</TD>
                       <TD className="whitespace-nowrap">{formatDateTime(resource.createdAt)}</TD>
+                      {/* 대시보드 행이 이미 주는 바로가기를 이 목록도 준다.
+                          종류가 그 바로가기를 갖지 않거나 상태가 맞지 않으면 빈
+                          칸이다. */}
+                      <TD className="text-right">{entry.rowAction?.(resource)}</TD>
                     </TR>
                   )
                 })}
