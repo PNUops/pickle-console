@@ -140,13 +140,20 @@ describe('발급 전 키', () => {
     expect(within(result).getByText('이 키는 다시 볼 수 없습니다')).toBeInTheDocument()
     const plaintext = within(result).getByText(/^pk-llm-live-.*-secret$/).textContent!
 
+    // 이 창은 배경 클릭과 Escape 로 닫히지 않는다. 이 카드가 탭 패널 안에 있어서,
+    // 닫히면 탭을 옮길 수 있게 되고 그 순간 평문이 사라진다.
+    await user.keyboard('{Escape}')
+    expect(within(result).getByText(/^pk-llm-live-.*-secret$/)).toBeInTheDocument()
+
     await user.click(within(result).getByRole('button', { name: '확인했습니다' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     // 남는 것은 두 키를 구별하는 앞부분뿐이고, 평문은 어디에도 없다.
     expect(screen.queryByText(plaintext)).not.toBeInTheDocument()
-    // 발급이 끝난 키의 헤더에는 더 할 일이 없고, 첫 카드는 연결 정보다.
+    // 발급이 끝난 키는 재발급 대상이 된다 — 같은 카드의 제목과 버튼이 함께 바뀌고,
+    // 연결 정보가 그 위에 선다.
     expect(screen.queryByRole('button', { name: '키 발급' })).not.toBeInTheDocument()
-    expect(await screen.findByText('연결 정보')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '키 재발급' })).toBeInTheDocument()
+    expect(screen.getByText('연결 정보')).toBeInTheDocument()
   })
 })
 

@@ -121,10 +121,17 @@ export function LlmKeyIssueAction({
         </div>
       </Modal>
 
-      {/* 발급 결과 — 평문이 존재하는 유일한 화면 */}
+      {/* 발급 결과 — 평문이 존재하는 유일한 화면.
+
+          `dismissible={false}` 가 여기 있는 이유는 이 카드가 탭 패널 안에 있기
+          때문이다. 비활성 패널은 아무것도 렌더하지 않으므로 탭을 옮기면 평문이
+          사라지고, 배경이 닫히지 않으면 그 탭에 손이 닿지도 않는다. 배경 클릭과
+          Escape 로 실수로 닫히는 것을 막는 것이 이 플래그의 본래 용도이고, 여기서는
+          이동 자체를 막는 일까지 겸한다. 나가는 길은 「확인했습니다」 하나다. */}
       <Modal
         open={issue.isSuccess}
         onClose={() => issue.reset()}
+        dismissible={false}
         title="LLM API 키 발급 완료"
         footer={
           <Button variant="secondary" onClick={() => issue.reset()}>
