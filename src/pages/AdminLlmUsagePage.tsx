@@ -559,7 +559,12 @@ function ModelRows({ row }: { row: AdminLlmUsage['breakdown']['models'][number] 
         <TD>{percent(row.pricedFailed / row.pricedRequests)}</TD>
       </TR>
       <TR>
-        <TD>{name}</TD>
+        {/* The same rule as the key screens: the name alone cannot say which
+            of the two rows this is, so the row says it next to the name. */}
+        <TD>
+          {name}
+          <span className="ml-1 text-xs text-neutral-500">금액 미기록</span>
+        </TD>
         <TD>{count(unpriced)}건</TD>
         <TD>
           {tokens(row.inputTokens + row.outputTokens

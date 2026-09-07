@@ -113,6 +113,10 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     // 자체 서빙의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
     // 이쪽은 있어야 하는데 모른다.
     expect(within(unknown).getByText('정보 없음')).toBeInTheDocument()
+    // The row says next to the name which of the two it is; the priced row
+    // is the ordinary case and carries nothing. Same words as the key screens.
+    expect(within(unknown).getByText('금액 미기록')).toBeInTheDocument()
+    expect(within(known).queryByText('금액 미기록')).not.toBeInTheDocument()
     // 응답 시간은 각 행이 자기 요청의 값을 갖는다. 한 값을 되풀이하면 서로 다른
     // 요청 수를 갖고도 같은 응답 시간을 말하게 된다.
     expect(within(known).getByText('1,300ms')).toBeInTheDocument()

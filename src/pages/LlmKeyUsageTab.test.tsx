@@ -284,6 +284,11 @@ describe('사용량 탭의 새 지표', () => {
     // 자체 서빙의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
     // 이쪽은 있어야 하는데 모른다.
     expect(within(unknown).getByText('정보 없음')).toBeInTheDocument()
+    // The name alone cannot say which of the two rows this is, so the row
+    // says it next to the name. The priced row is the ordinary case and
+    // carries nothing.
+    expect(within(unknown).getByText('금액 미기록')).toBeInTheDocument()
+    expect(within(known).queryByText('금액 미기록')).not.toBeInTheDocument()
     // 응답 시간은 행마다 자기 값이다. 한 값을 되풀이하면 서로 다른 요청 수를
     // 갖고도 같은 응답 시간을 말하게 된다.
     expect(within(known).getByText('1.4초')).toBeInTheDocument()

@@ -575,6 +575,9 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
     amount: model.attributedCostUsd == null ? '—' : formatUsd(model.attributedCostUsd),
     avgLatencyMs: model.avgLatencyMs,
     failed: model.failed,
+    // Names the row when the same model stands twice. Only the unpriced row
+    // carries one: the priced row is the ordinary case and says nothing.
+    qualifier: undefined as string | undefined,
   }
   // 금액 열을 안 세우는 화면에서는 나눌 이유가 없다. 나머지 열은 같은 값을 두 줄로
   // 쪼개기만 하므로, 읽는 사람에게 아무것도 더 말하지 않고 표만 길어진다.
@@ -599,6 +602,7 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
       amount: '정보 없음',
       avgLatencyMs: model.unpricedAvgLatencyMs,
       failed: model.failed - model.pricedFailed,
+      qualifier: '금액 미기록',
     },
   ]
 }
@@ -635,7 +639,12 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
         <tbody>
           {models.flatMap((model) => modelRows(model, showCost)).map((row) => (
             <tr key={row.key} className="border-b border-neutral-100">
-              <td className="py-2 pr-3 text-neutral-700">{row.name}</td>
+              <td className="py-2 pr-3 text-neutral-700">
+                {row.name}
+                {row.qualifier && (
+                  <span className="ml-1 text-xs text-neutral-500">{row.qualifier}</span>
+                )}
+              </td>
               <td className="py-2 pr-3 text-right text-neutral-600">
                 {formatRequests(row.requests)}
               </td>
