@@ -44,6 +44,13 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           <DescriptionField label="만료">
             {llmKey.expiresAt ? formatDateTime(llmKey.expiresAt) : '만료 없음'}
           </DescriptionField>
+          <DescriptionField label="일일 토큰 한도">
+            {/* 0 is a value, not an absence: the usage gauge already says
+                that a zero limit blocks the self-served models. */}
+            {llmKey.dailyTokens == null
+              ? '없음'
+              : `${llmKey.dailyTokens.toLocaleString('ko-KR')}토큰`}
+          </DescriptionField>
           <DescriptionField label="유료 모델">{creditAxisLabel(llmKey)}</DescriptionField>
           {llmKey.creditLimit ? (
             <DescriptionField label="쓸 수 있는 유료 모델">
