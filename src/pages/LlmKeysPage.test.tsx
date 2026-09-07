@@ -22,6 +22,12 @@ describe('내 LLM API 키 목록', () => {
     expect(within(activeRow).getByText('활성')).toBeInTheDocument()
     expect(within(activeRow).getByText('pk-llm-3f9a')).toBeInTheDocument()
     expect(within(activeRow).getByText('캡스톤 3조')).toBeInTheDocument()
+    // 열 이름이 「마지막 사용」인데 시각을 보는 단언이 하나도 없었다. 「지금도
+    // 쓰이고 있나」를 묻는 칸이므로 상대 시간이고, 상세도 같은 규칙을 쓴다.
+    const lastUsed = within(activeRow).getByText(/전$/)
+    expect(lastUsed.tagName).toBe('TIME')
+    expect(lastUsed).toHaveAttribute('datetime', '2026-08-10T18:22:00+09:00')
+    expect(within(activeRow).queryByText('2026-08-10 18:22')).not.toBeInTheDocument()
   })
 
   test('발급 전 키는 폐기된 키와 다른 상태로 나온다', async () => {
