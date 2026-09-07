@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminLlmUsage,
+  fetchAdminWorkspaces,
   type AdminLlmUsage,
   type AdminLlmUsageDays,
   type GatewayReportState,
@@ -27,6 +28,7 @@ import {
   LoadingBlock,
   MessageBar,
   PageHeader,
+  Select,
   Spinner,
   TBody,
   TD,
@@ -237,7 +239,7 @@ function ConsumersSection({
       <CardHeader>
         <CardTitle>주요 소비처</CardTitle>
         <p className="type-caption mt-1 text-foreground-muted">
-          행을 따라 기관과 워크스페이스, 키로 좁힙니다.
+          이름을 누르면 이 화면이 그 범위로 좁혀집니다.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -255,7 +257,7 @@ function ConsumersSection({
                 <TH>요청</TH>
                 <TH>입력 토큰</TH>
                 <TH>출력 토큰</TH>
-                <TH>연결</TH>
+                <TH>다른 화면으로</TH>
               </TR>
             </THead>
             <TBody>
@@ -318,17 +320,20 @@ function ConsumerRow({
       <TD>{count(item.requests)}건</TD>
       <TD>{tokens(item.inputTokens)}</TD>
       <TD>{tokens(item.outputTokens)}</TD>
+      {/* 한 행에 목적지가 둘이다. 이름은 이 화면을 그 범위로 좁히고, 이 열은
+          다른 화면으로 간다. 어느 쪽이 무엇인지 열 이름과 링크 문구가 함께 말해야
+          통계를 찾는 사람이 키 목록을 누르지 않는다. */}
       <TD>
         {level === 'WORKSPACE' && item.workspaceId ? (
           <Link
             to={adminPaths.llmKeys(activeOrgId, item.workspaceId)}
             className="text-brand-foreground hover:underline"
           >
-            이 워크스페이스의 키 목록
+            키 목록 화면
           </Link>
         ) : primary ? (
           <Link to={primary} className="text-brand-foreground hover:underline">
-            {level === 'ORG' ? '워크스페이스 보기' : '키 상세'}
+            {level === 'ORG' ? '이 기관으로 좁히기' : '키 상세 화면'}
           </Link>
         ) : '—'}
       </TD>
@@ -758,6 +763,15 @@ export function AdminLlmUsagePage() {
     enabled: scope.ready,
     staleTime: 60_000,
   })
+  // 고를 목록. 기관이 정해지지 않은 시스템 계층 전체 보기에서는 워크스페이스가
+  // 수백 개가 될 수 있어 고를 자리로 쓸 수 없으므로, 기관이 정해졌을 때만 묻는다.
+  const workspaces = useQuery({
+    queryKey: ['admin', 'workspaces', { orgId: scopeKey, for: 'llm-usage-filter' }],
+    queryFn: () => fetchAdminWorkspaces(scope.activeOrgId == null ? {} : { orgId: scope.activeOrgId }),
+    enabled: scope.ready && scope.activeOrgId != null,
+    staleTime: 60_000,
+  })
+
   const data = usage.data?.scopeKey === scopeKey
       && usage.data.workspaceKey === workspaceKey
       && usage.data.days === days
@@ -770,21 +784,52 @@ export function AdminLlmUsagePage() {
     setSearchParams(next, { replace: true })
   }
 
+  const selectWorkspace = (nextWorkspaceId: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (nextWorkspaceId) next.set('workspaceId', nextWorkspaceId)
+    else next.delete('workspaceId')
+    setSearchParams(next, { replace: true })
+  }
+
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow="리소스"
         title="LLM 사용량"
         description={`${scope.activeOrg?.name ?? '플랫폼 전체'}의 수요, 소비처, 한도 압력과 데이터 신뢰도를 확인합니다.`}
-        actions={workspaceId ? (
-          <Link
-            to={adminPaths.llmUsage(scope.activeOrgId, null, days)}
-            className="text-sm font-medium text-brand-foreground hover:underline"
-          >
-            전체 소비처로 돌아가기
-          </Link>
-        ) : undefined}
       />
+
+      {/* 워크스페이스를 직접 고르는 자리. 종전에는 「주요 소비처」 표에서 이름을
+          눌러야만 이 범위에 닿았는데, **같은 행의 마지막 열이 키 목록이라는 다른
+          곳으로 가서** 통계를 찾는 사람이 그쪽을 누르기 쉬웠다. 수업 하나를 보는
+          것이 가장 흔한 동작이면 그것이 세 단계여서는 안 된다.
+
+          이 화면의 다른 곳은 그대로다 — 서버는 이미 이 파라미터로 전 구역을
+          좁히고 있었고, 없던 것은 고르는 자리뿐이다. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          aria-label="LLM 사용량 워크스페이스 필터"
+          className="w-full sm:w-64"
+          value={workspaceId ?? ''}
+          onChange={(event) => selectWorkspace(event.target.value)}
+        >
+          <option value="">기관 전체</option>
+          {workspaces.data?.map((workspace) => (
+            <option key={workspace.id} value={workspace.id}>
+              {workspace.name}
+            </option>
+          ))}
+        </Select>
+        {workspaceId && (
+          <button
+            type="button"
+            onClick={() => selectWorkspace('')}
+            className="cursor-pointer rounded-md px-3 py-1 text-sm text-foreground-muted hover:text-foreground-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-foreground"
+          >
+            기관 전체로
+          </button>
+        )}
+      </div>
 
       {usage.isPending && <LoadingBlock label="LLM 사용량 불러오는 중" />}
       {usage.isError && !data && <MessageBar variant="danger">{usage.error.message}</MessageBar>}
