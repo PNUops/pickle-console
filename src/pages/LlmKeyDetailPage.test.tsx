@@ -217,7 +217,9 @@ describe('폐기된 키', () => {
 
     await screen.findByRole('heading', { name: 'leaked-demo-key' })
     expect(screen.getByText('폐기된 키입니다')).toBeInTheDocument()
-    expect(screen.getByText(/폐기된 키는 다시 발급할 수 없으니/)).toBeInTheDocument()
+    // 다음 행동을 말하고, 내부 어휘(게이트웨이)로 어디서 거부되는지는 말하지 않는다.
+    expect(screen.getByText(/계속 쓰려면 새로 신청해 주세요/)).toBeInTheDocument()
+    expect(screen.queryByText(/게이트웨이/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()

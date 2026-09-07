@@ -79,8 +79,7 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          VM 내부 포트를 릴레이 공인 포트로 외부에 공개합니다. 외부에서 들어온
-          연결은 VM에 릴레이 주소로 보입니다.
+          VM 내부 포트를 외부에 공개합니다.
         </p>
 
         <Alert variant="info" title="본인만 접속한다면 SSH 로컬 포워딩으로 충분합니다">

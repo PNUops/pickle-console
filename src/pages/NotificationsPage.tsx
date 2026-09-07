@@ -72,9 +72,6 @@ export function NotificationsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">알림함</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            내 계정으로 발송된 알림입니다. 알림을 누르면 읽음 처리됩니다.
-          </p>
         </div>
         <Button
           variant="secondary"

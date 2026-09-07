@@ -40,10 +40,6 @@ export function VmsPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">내 가상머신</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            내가 속한 워크스페이스의 가상머신 목록입니다. 승인된 신청의 가상머신은 생성이 끝나면
-            실행 중으로 바뀝니다.
-          </p>
         </div>
         <LinkButton to={consolePaths.newRequest(scope, 'VM')}>가상머신 신청</LinkButton>
       </div>

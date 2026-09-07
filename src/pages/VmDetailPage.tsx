@@ -1030,9 +1030,9 @@ function VmSettingsCard({ vm }: { vm: VmDetail }) {
                   </li>
                 ))}
             </ul>
-            <p className="text-xs text-neutral-500">
-              설정 변경은 모두 감사 로그에 기록됩니다.
-            </p>
+            {/* 「이 변경은 관리자에게 표시됩니다」를 비밀번호 접속 확인 창이 이미
+                말한다. 여기 있던 「감사 로그에 기록됩니다」는 같은 사실을 내부 어휘로
+                한 번 더 말하던 자리였다. */}
           </>
         )}
       </CardContent>

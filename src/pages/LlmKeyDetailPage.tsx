@@ -208,8 +208,8 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
   if (status === 'REVOKED') {
     return (
       <Alert variant="warning" title="폐기된 키입니다">
-        이 키로 보낸 요청은 게이트웨이에서 거부됩니다. 폐기된 키는 다시 발급할 수 없으니
-        필요하면 새로 신청해 주세요. 지금까지의 사용 기록은 남아 있습니다.
+        이 키로 보낸 요청은 거부됩니다. 계속 쓰려면 새로 신청해 주세요. 지금까지의 사용
+        기록은 남아 있습니다.
       </Alert>
     )
   }

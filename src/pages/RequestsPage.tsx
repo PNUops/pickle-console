@@ -49,7 +49,7 @@ export function RequestsPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">내 신청</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          내가 볼 수 있는 리소스 신청 목록입니다. 모든 신청은 관리자 검토 후 처리됩니다.
+          모든 신청은 관리자 검토 후 처리됩니다.
         </p>
       </div>
 

@@ -21,7 +21,9 @@ describe('전체 리소스', () => {
 
     expect(await screen.findByRole('link', { name: 'algo-judge' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'capstone-team3-api' })).toBeInTheDocument()
-    expect(screen.getByText('내가 속한 모든 워크스페이스의 리소스입니다.')).toBeInTheDocument()
+    // 범위를 말하는 부제는 없다 — 사이드바의 범위 선택이 그 자리다. 이 화면이 지키는
+    // 것은 여러 워크스페이스의 행이 한 표에 함께 선다는 사실이다.
+    expect(screen.queryByText(/워크스페이스의 리소스입니다/)).not.toBeInTheDocument()
     // 구성원이 아닌 워크스페이스의 리소스는 애초에 조회 범위 밖이다.
     expect(screen.queryByText('ai-train')).not.toBeInTheDocument()
   })
@@ -78,7 +80,6 @@ describe('전체 리소스', () => {
 
     const row = (await screen.findByRole('link', { name: 'algo-judge' })).closest('tr')!
     expect(within(row).getByText('알고리즘 스터디')).toBeInTheDocument()
-    expect(screen.getByText('이 워크스페이스의 리소스입니다.')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
   })
 
@@ -98,7 +99,6 @@ describe('전체 리소스', () => {
 
     // 주소가 범위 없는 같은 화면으로 바뀐다 — 남은 범위가 목록을 계속 거르지 못하게.
     await waitFor(() => expect(currentPath()).toBe('/console/resources'))
-    expect(screen.getByText('내가 속한 모든 워크스페이스의 리소스입니다.')).toBeInTheDocument()
     expect(await screen.findByRole('link', { name: 'capstone-team3-api' })).toBeInTheDocument()
   })
 

@@ -37,8 +37,7 @@ export function LlmKeysPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">내 LLM API 키</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            내가 속한 워크스페이스의 LLM API 키 목록입니다. 승인된 신청의 키는 소유자가 직접
-            발급해야 쓸 수 있습니다.
+            승인된 키는 소유자가 발급해야 쓸 수 있습니다.
           </p>
         </div>
         <LinkButton to={consolePaths.newRequest(scope, 'LLM_API_KEY')}>LLM API 키 신청</LinkButton>

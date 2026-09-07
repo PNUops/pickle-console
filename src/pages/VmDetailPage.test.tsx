@@ -559,9 +559,9 @@ describe('VM 상세 — VM 설정', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(await screen.findByText('VM 설정')).toBeInTheDocument()
-    expect(
-      screen.getByText('설정 변경은 모두 감사 로그에 기록됩니다.'),
-    ).toBeInTheDocument()
+    // 카드 밑의 「감사 로그에 기록됩니다」는 내부 어휘라 걷었다. 같은 사실은 아래
+    // 비밀번호 접속 확인 창이 사용자의 말로 한 번 말한다.
+    expect(screen.queryByText(/감사 로그/)).not.toBeInTheDocument()
 
     // OFF→ON 토글 → 2차 경고 모달.
     await user.click(screen.getByRole('checkbox', { name: '비밀번호 SSH 허용' }))
@@ -678,7 +678,9 @@ describe('VM 상세 — 모니터링', () => {
     // 차트마다 제목이 그림 영역의 접근 가능한 이름이 된다.
     expect(screen.getByRole('img', { name: 'CPU' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: '디스크 I/O' })).toBeInTheDocument()
-    expect(screen.getByText(/마지막 갱신/)).toBeInTheDocument()
+    // 신선도는 「지금 값인가」를 묻는 자리이므로 상대 시간이다 (Time display 규칙).
+    const freshness = screen.getByText(/갱신$/)
+    expect(freshness.textContent).toMatch(/(방금|\d+(분|시간|일) 전) 갱신$/)
     // 값 읽는 창구는 차트뿐이다 — 접이식 표는 두지 않는다.
     expect(screen.queryByText('표로 보기')).not.toBeInTheDocument()
     // 잰 값이 있는 구간에는 '값이 없다'는 안내를 붙이지 않는다.
