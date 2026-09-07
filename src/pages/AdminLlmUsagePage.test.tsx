@@ -136,7 +136,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
       'href',
       `/admin/llm/usage?workspaceId=${uuid(12)}&days=30&org=${uuid(1)}`,
     )
-    expect(screen.getByRole('link', { name: '이 워크스페이스의 키 목록' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '키 목록 화면' })).toHaveAttribute(
       'href',
       `/admin/llm/keys?workspaceId=${uuid(12)}&org=${uuid(1)}`,
     )
@@ -148,10 +148,40 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
       'href',
       `/admin/llm/keys/${uuid(501)}?org=${uuid(1)}`,
     )
-    expect(screen.getByRole('link', { name: '전체 소비처로 돌아가기' })).toHaveAttribute(
-      'href',
-      `/admin/llm/usage?days=30&org=${uuid(1)}`,
-    )
+    // 좁힌 뒤 돌아오는 길이 있어야 한다는 것이 이 단언이 지키던 것이다. 그 길이
+    // 헤더의 링크에서 선택기 옆 버튼으로 바뀌었으므로 불변식을 그쪽에 다시 세운다.
+    expect(screen.getByRole('combobox', { name: 'LLM 사용량 워크스페이스 필터' }))
+      .toHaveValue(uuid(12))
+    const back = screen.getByRole('button', { name: '기관 전체로' })
+    await user.click(back)
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'LLM 사용량 워크스페이스 필터' }))
+        .toHaveValue(''))
+    expect(await screen.findByRole('heading', { name: '주요 소비처' })).toBeInTheDocument()
+  })
+
+  test('워크스페이스를 골라 이 화면 전체를 그 범위로 좁힌다', async () => {
+    // 종전에는 「주요 소비처」 표에서 이름을 눌러야만 이 범위에 닿았고, 같은 행의
+    // 마지막 열은 다른 화면으로 갔다. 수업 하나를 보는 것이 흔한 동작이면 그것이
+    // 표를 뒤지는 일이어서는 안 된다.
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp(`/admin/llm/usage?org=${uuid(1)}`)
+
+    const picker = await screen.findByRole('combobox', {
+      name: 'LLM 사용량 워크스페이스 필터',
+    })
+    expect(picker).toHaveValue('')
+    // 목록이 도착하기 전에는 「기관 전체」 하나뿐이다.
+    await screen.findByRole('option', { name: '캡스톤 3조' })
+    await user.selectOptions(picker, uuid(12))
+
+    // 좁혀진 범위로 서버에 다시 물었는지를 요청으로 센다. 선택기가 눌린 것만으로는
+    // 화면이 그 범위를 읽었다는 뜻이 아니다.
+    await waitFor(() =>
+      expect(adminLlmUsageQueries.some((query) => query.includes(`workspaceId=${uuid(12)}`)))
+        .toBe(true))
+    expect(await screen.findByRole('heading', { name: '호출 분해' })).toBeInTheDocument()
   })
 
   test('actual exhaustion만 danger이고 exact 5 reasons·null/0·deep link를 보존한다', async () => {
