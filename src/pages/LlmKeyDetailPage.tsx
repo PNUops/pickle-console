@@ -113,14 +113,15 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-neutral-900">{llmKey.name}</h1>
-            <LlmKeyStatusBadge status={status} />
-          </div>
-          <p className="mt-1 text-sm text-neutral-500">{llmKey.workspaceName} 소유</p>
+      {/* No action slot: this key's own actions all live in their tabs, so the
+          header is a title and a badge and the wrapper that held both sides
+          of it is gone. */}
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-neutral-900">{llmKey.name}</h1>
+          <LlmKeyStatusBadge status={status} />
         </div>
+        <p className="mt-1 text-sm text-neutral-500">{llmKey.workspaceName} 소유</p>
       </div>
 
       <Tabs
