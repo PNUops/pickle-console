@@ -18,17 +18,32 @@ function renderAsSysAdmin(path: string) {
 
 describe('관리자 VM 상세', () => {
   test('개요 탭에 요약과 상태에 맞는 전원 버튼이 보인다', async () => {
+    const user = userEvent.setup()
     renderAsSysAdmin(`/admin/vms/${uuid(56)}`)
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByText('10.10.0.56')).toBeInTheDocument()
     expect(screen.getByText('알고리즘 스터디')).toBeInTheDocument()
 
-    // RUNNING: 상태상 가능한 액션만 보인다.
+    // RUNNING: 상태상 가능한 액션만 보인다. 강제 종료는 종료 버튼의 메뉴 항목이다.
     expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '종료' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '재부팅' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '강제 종료' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '종료 옵션' }))
+    expect(screen.getByRole('menuitem', { name: '강제 종료' })).toBeInTheDocument()
+  })
+
+  test('강제 종료는 메뉴에서 열리고 관리자용 확인 문구를 보여준다', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}`)
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('button', { name: '종료 옵션' }))
+    await user.click(screen.getByRole('menuitem', { name: '강제 종료' }))
+    const dialog = await screen.findByRole('dialog', { name: 'VM 강제 종료' })
+    expect(within(dialog).getByText(/저장되지 않은 데이터는 유실될 수 있습니다/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: '강제 종료' })).toBeEnabled()
   })
 
   test('종료는 확인 모달을 거쳐 접수 메시지를 보여준다', async () => {
@@ -52,6 +67,7 @@ describe('관리자 VM 상세', () => {
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(screen.getByRole('button', { name: '시작' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료 옵션' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
   })
 
