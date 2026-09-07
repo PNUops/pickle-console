@@ -16,6 +16,7 @@ import {
   THead,
   TR,
 } from '../components/ui'
+import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus } from '../lib/status'
@@ -121,12 +122,17 @@ export function LlmKeysPage() {
                     <TD className="font-mono text-xs whitespace-nowrap">
                       {key.tokenPrefix ?? '—'}
                     </TD>
+                    {/* 「지금도 쓰이고 있나」를 묻는 칸이므로 상대 시간이다 (Time
+                        display 규칙). 상세는 옆에 절대 시각을 작게 붙이지만 표는
+                        칸이 좁아 `time` 요소가 그것을 나른다. */}
                     <TD className="whitespace-nowrap">
-                      {key.lastUsedAt
-                        ? formatDateTime(key.lastUsedAt)
-                        : key.accessLimited
-                          ? '—'
-                          : '사용 기록 없음'}
+                      {key.lastUsedAt ? (
+                        <ObservationMoment value={key.lastUsedAt} />
+                      ) : key.accessLimited ? (
+                        '—'
+                      ) : (
+                        '사용 기록 없음'
+                      )}
                     </TD>
                     <TD>{key.workspaceName}</TD>
                     <TD className="whitespace-nowrap">{formatDateTime(key.createdAt)}</TD>
