@@ -1,5 +1,4 @@
 import type { LlmKeyUsagePoint } from '../../api/queries'
-import { kstDateString } from '../../lib/format'
 import { toEpochSeconds } from '../metrics/timeframe'
 
 /** 조회 기간 선택지 — 계약이 허용하는 1~90일 안에서. 기본 30일. */
@@ -137,31 +136,4 @@ export function estimatedShare(totals: UsageTotals): number {
 export function formatShare(percent: number): string {
   if (percent > 0 && percent < 1) return '1% 미만'
   return `${Math.round(percent)}%`
-}
-
-/**
- * 마지막 보고가 구간의 끝까지 닿았는지.
- *
- * `reportedUntil`은 이 키의 마지막 보고 시각이지 게이트웨이의 안부가 아니다.
- * 놀고 있는 키는 그 값이 몇 주 전이고, 그때의 뒤쪽 0은 "아직 채워지는 중"이
- * 아니라 진짜 0이다. 반대로 보고가 끊긴 뒤의 0은 요청이 없었다는 뜻이 아니다.
- * 두 경우에 같은 문장을 붙이면 화면이 사실을 뒤집는다.
- */
-export type ReportingState =
-  | { kind: 'never' }
-  | { kind: 'current'; at: string }
-  | { kind: 'stale'; at: string; unreportedFrom: string }
-
-export function reportingState(
-  reportedUntil: string | null | undefined,
-  lastDay: string,
-): ReportingState {
-  if (reportedUntil == null) return { kind: 'never' }
-  const reportedDay = kstDateString(new Date(reportedUntil))
-  if (reportedDay >= lastDay) return { kind: 'current', at: reportedUntil }
-  return { kind: 'stale', at: reportedUntil, unreportedFrom: nextDay(reportedDay) }
-}
-
-function nextDay(ymd: string): string {
-  return new Date(Date.parse(`${ymd}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 }

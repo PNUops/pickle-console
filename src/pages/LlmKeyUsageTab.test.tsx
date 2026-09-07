@@ -16,6 +16,17 @@ function renderUsage(keyId: string) {
   renderApp(`/console/llm-keys/${keyId}?tab=usage`)
 }
 
+/**
+ * The 「… 전 보고」 fragments on the screen. The words sit next to a `time`
+ * element, so the match runs on the paragraph's whole text rather than on
+ * one text node.
+ */
+function reportFragments(): HTMLElement[] {
+  return screen.queryAllByText(
+    (_, node) => node?.tagName === 'P' && /전 보고$/.test(node.textContent ?? ''),
+  )
+}
+
 describe('사용량 탭', () => {
   test('주소로 바로 열리고 타일에 없는 것 하나를 문장으로 말한다', async () => {
     renderUsage(USED_KEY)
@@ -40,40 +51,51 @@ describe('사용량 탭', () => {
     expect(screen.queryByRole('button', { name: '키 재발급' })).not.toBeInTheDocument()
   })
 
-  test('오늘 자 값이 아직 채워지는 중이라는 근거를 마지막 보고 시각으로 댄다', async () => {
+  test('숫자가 어느 시점까지의 것인지는 헤더의 보고 시각 하나가 말한다', async () => {
     renderUsage(USED_KEY)
 
-    const notice = await screen.findByText(/오늘 자 값은 아직 채워지는 중입니다/)
-    // The claim needs its evidence on the screen, and the evidence is a
-    // moment. What pins it is the machine-readable attribute rather than the
-    // rendered words: "is this current?" takes the relative form, so a text
-    // match on an absolute stamp would pass only while the rule is broken.
-    const time = notice.querySelector('time')
+    await screen.findByText(/가장 많이 쓴 날은 /)
+    // One fact, one place. The moment is machine-readable in the attribute
+    // and relative in the words: "is this current?" takes the relative form,
+    // so a text match on an absolute stamp would pass only while the rule is
+    // broken. No sentence restates the batching delay anywhere else.
+    const fragments = reportFragments()
+    expect(fragments).toHaveLength(1)
+    const time = fragments[0].querySelector('time')
     expect(time).toHaveAttribute('dateTime', '2026-08-11T09:20:00+09:00')
     expect(time?.textContent).not.toMatch(/-/)
+    expect(screen.queryByText(/게이트웨이 마지막 보고/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/채워지는 중/)).not.toBeInTheDocument()
   })
 
-  test('한 번도 보고가 없으면 그 사실을 그대로 말하고 빈 차트를 그리지 않는다', async () => {
+  test('한 번도 보고가 없으면 보고 시각 없이 빈 차트도 그리지 않는다', async () => {
     renderUsage(NEVER_USED_KEY)
 
     expect(
-      await screen.findByText(/사용량을 아직 보고하지 않았습니다/),
+      await screen.findByText('최근 30일 동안 이 키로 들어온 요청이 없습니다.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('최근 30일 동안 이 키로 들어온 요청이 없습니다.')).toBeInTheDocument()
+    // There is no moment to show, and a sentence saying so would only
+    // restate the summary above.
+    expect(reportFragments()).toHaveLength(0)
+    expect(screen.queryByText(/보고하지 않았습니다/)).not.toBeInTheDocument()
     // 0으로 눕는 선 세 개는 위 문장이 이미 말한 것을 되풀이할 뿐이다.
     expect(screen.queryByRole('img', { name: '요청 수' })).not.toBeInTheDocument()
   })
 
-  test('보고가 며칠째 끊긴 구간의 0을 요청이 없던 날로 단언하지 않는다', async () => {
-    // 마지막 보고가 구간 끝보다 앞서면 뒤쪽 0은 아직 모르는 값이다. 여기에
-    // "오늘 자 값은 채워지는 중"을 붙이면 화면이 사실을 뒤집는다.
+  test('보고가 며칠째 끊긴 키도 마지막 보고 시각만 보이고 0을 해설하지 않는다', async () => {
+    // The moment is the whole statement. How to read the zeros after it is
+    // the reader's inference, and the chart's axis already carries the day.
     renderUsage(REVOKED_KEY)
 
-    expect(
-      await screen.findByText(/2026-08-01부터는 보고가 없어/),
-    ).toBeInTheDocument()
-    expect(screen.queryByText(/채워지는 중입니다/)).not.toBeInTheDocument()
-    expect(screen.getByText(/그 뒤의 0은 아직 모르는 값입니다/)).toBeInTheDocument()
+    await screen.findByText(/가장 많이 쓴 날은 /)
+    const fragments = reportFragments()
+    expect(fragments).toHaveLength(1)
+    expect(fragments[0].querySelector('time')).toHaveAttribute(
+      'dateTime',
+      '2026-07-31T08:00:00+09:00',
+    )
+    expect(screen.queryByText(/그 뒤의 0은/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/채워지는 중/)).not.toBeInTheDocument()
   })
 
   test('한도 초과 거부는 다른 실패와 따로 세고, 할 수 있는 일을 알려 준다', async () => {
@@ -176,8 +198,8 @@ describe('사용량 탭', () => {
     expect(moneyGauge.querySelector('[title]')).toBeNull()
 
     // The token gauge carries none: its delay is the batching one, and the
-    // reporting notice below already says that. Two places for one fact is
-    // what this assertion refuses.
+    // report moment in the card header already says that. Two places for one
+    // fact is what this assertion refuses.
     //
     // The label check is not decoration. An empty count proves nothing about
     // an element that is not the gauge, so the container has to be shown to be
