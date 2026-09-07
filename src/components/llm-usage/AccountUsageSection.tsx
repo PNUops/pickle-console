@@ -95,40 +95,41 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
           </MessageBar>
           )}
 
-          <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            <Tile
-              label="기간 비용"
-              value={data.attributedCostUsd == null ? '—' : formatUsd(data.attributedCostUsd)}
-              hint={
-                data.attributedCostUsd == null
-                  ? '금액이 붙은 요청 없음'
-                  : `${count(data.pricedRequests)}건 기준`
-              }
-            />
-            <Tile label="요청" value={`${count(data.requests)}건`} />
-            {/* 「연결된 키」를 여기서 다시 말하지 않는다 — 위 목록이 이미 그
-                수를 갖고 있고, 두 자리가 다른 출처를 쓰면 한 화면에서 서로 다른
-                숫자가 뜬다. 「금액 미보고」 타일도 두지 않는다: 기간 비용 옆의
-                「N건 기준」이 이미 무엇이 덮이는지 말한다. */}
-            <Tile label="쓰인 키" value={`${count(data.keysUsed)}개`} />
-          </dl>
+          {/* 쓴 것이 없으면 **타일 줄까지 접는다.** 0으로 채운 타일 셋은
+              「요청 0건」과 「금액이 붙은 요청 없음」과 「쓰인 키 0개」로 같은
+              사실을 세 번 말하고, 그 옆의 문장이 네 번째가 된다. 없다는 말은
+              한 자리에서 한 번이면 된다.
 
+              「연결된 키」는 어느 쪽에도 두지 않는다 — 위 목록이 이미 그 수를
+              갖고 있고, 두 자리가 다른 출처를 쓰면 한 화면에서 서로 다른 숫자가
+              뜬다. */}
           {data.requests === 0 ? (
-            /* 위 타일이 이미 「연결된 키 N개」를 말하므로 그 수를 문장으로 다시
-               말하지 않는다. 남길 것은 읽는 사람이 다음에 할 수 있는 것뿐이다. */
             <EmptyState
               title={
                 data.keysLinked === 0
-                  ? '아직 이 계정으로 발급된 키가 없습니다'
-                  : '고른 기간에 호출이 없습니다'
-              }
-              description={
-                data.keysLinked === 0 ? undefined : '기간을 늘려 보세요.'
+                  ? '이 계정에 연결된 키가 없습니다'
+                  : '고른 기간에 이 계정으로 호출한 기록이 없습니다'
               }
               className="min-h-40"
             />
           ) : (
             <>
+              <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                <Tile
+                  label="기간 비용"
+                  value={
+                    data.attributedCostUsd == null ? '—' : formatUsd(data.attributedCostUsd)
+                  }
+                  hint={
+                    data.attributedCostUsd == null
+                      ? '금액이 붙은 요청 없음'
+                      : `${count(data.pricedRequests)}건 기준`
+                  }
+                />
+                <Tile label="요청" value={`${count(data.requests)}건`} />
+                <Tile label="쓰인 키" value={`${count(data.keysUsed)}개`} />
+              </dl>
+
               <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 <TimeSeriesChart
                   title="일별 금액"

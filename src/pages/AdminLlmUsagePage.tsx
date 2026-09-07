@@ -40,6 +40,7 @@ import {
 } from '../components/ui'
 import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatBytes } from '../lib/format'
+import { WORKSPACE_KIND_LABELS, type WorkspaceKind } from '../lib/labels'
 import { endpointKindLabel } from '../lib/llm-endpoint-kinds'
 import { formatUsd } from '../lib/openrouter-credits'
 import { passthroughLabel } from '../lib/passthrough-endpoints'
@@ -220,6 +221,34 @@ function WindowSummary({ window, selected }: { window: LlmUsageWindow; selected:
   )
 }
 
+/**
+ * 금액 칸.
+ *
+ * **값이 없는 것과 0은 다르고, 값이 없는 이유도 둘이다.** 자체 서빙 모델에는 금액이라는
+ * 것이 아예 없고, 축이 생기기 전(2026-09-06)의 요청은 기록되지 않았다. 둘 다 `$0.00`으로
+ * 적으면 「공짜로 썼다」는, 서버가 한 적 없는 주장이 된다.
+ *
+ * **일부만 가격이 붙은 행은 그 사실을 그 자리에서 말한다.** 전체 개수만 따로 세면 그 몇
+ * 건이 어느 모델에서, 어느 경로에서 빠진 것인지 알 수 없다. 여기 붙이면 빠진 자리가
+ * 곧 그 행이다. 한 건도 안 붙은 행은 값 자체가 없으므로 개수를 덧붙이지 않는다.
+ */
+function amountCell(
+  amount: number | null | undefined,
+  requests: number,
+  priced: number,
+): string {
+  if (amount == null) return '—'
+  const missing = requests - priced
+  return missing > 0 ? `${formatUsd(amount)} (${count(missing)}건 미상)` : formatUsd(amount)
+}
+
+/** 나열된 것이 무엇인지. 「소비처」는 세 단계를 한 단어로 뭉갠다. */
+const CONSUMER_LEVEL_LABELS: Record<LlmUsageConsumerLevel, string> = {
+  ORG: '기관',
+  WORKSPACE: '워크스페이스',
+  KEY: '키',
+}
+
 function consumerName(item: LlmUsageConsumer, level: LlmUsageConsumerLevel): string {
   if (level === 'ORG') return item.orgName ?? '이름 없는 기관'
   if (level === 'WORKSPACE') return item.workspaceName ?? '이름 없는 워크스페이스'
@@ -229,9 +258,11 @@ function consumerName(item: LlmUsageConsumer, level: LlmUsageConsumerLevel): str
 function ConsumersSection({
   data,
   activeOrgId,
+  workspaceKinds,
 }: {
   data: AdminLlmUsage
   activeOrgId?: string
+  workspaceKinds: Map<string, WorkspaceKind>
 }) {
   const { consumers } = data
   return (
@@ -250,14 +281,18 @@ function ConsumersSection({
             className="min-h-40"
           />
         ) : (
-          <DataTable caption="LLM 주요 소비처" captionVisible>
+          // caption 은 화면에 띄우지 않는다 — 바로 위 카드 제목이 같은 말을 한다.
+          <DataTable caption="LLM 주요 소비처">
             <THead>
               <TR>
-                <TH>소비처</TH>
+                {/* 무엇이 나열됐는지 열 이름이 말한다. 「소비처」는 세 단계를
+                    한 단어로 뭉개서, 워크스페이스 목록을 보면서도 그것이
+                    워크스페이스인지 알 수 없었다. */}
+                <TH>{CONSUMER_LEVEL_LABELS[consumers.level]}</TH>
                 <TH>요청</TH>
                 <TH>입력 토큰</TH>
                 <TH>출력 토큰</TH>
-                <TH>다른 화면으로</TH>
+                <TH>금액</TH>
               </TR>
             </THead>
             <TBody>
@@ -268,6 +303,7 @@ function ConsumersSection({
                   level={consumers.level}
                   activeOrgId={activeOrgId}
                   days={data.days as AdminLlmUsageDays}
+                  workspaceKinds={workspaceKinds}
                 />
               ))}
             </TBody>
@@ -289,13 +325,17 @@ function ConsumerRow({
   level,
   activeOrgId,
   days,
+  workspaceKinds,
 }: {
   item: LlmUsageConsumer
   level: LlmUsageConsumerLevel
   activeOrgId?: string
   days: AdminLlmUsageDays
+  /** 워크스페이스 종류. 목록 조회가 이미 실어 오므로 서버에 더 묻지 않는다. */
+  workspaceKinds: Map<string, WorkspaceKind>
 }) {
   const name = consumerName(item, level)
+  const kind = item.workspaceId ? workspaceKinds.get(item.workspaceId) : undefined
   const primary = level === 'ORG' && item.orgId
     ? adminPaths.llmUsage(item.orgId, null, days)
     : level === 'WORKSPACE' && item.workspaceId
@@ -313,6 +353,9 @@ function ConsumerRow({
         ) : (
           <span className="font-medium text-foreground-primary">{name}</span>
         )}
+        {level === 'WORKSPACE' && kind && (
+          <span className="text-foreground-muted"> ({WORKSPACE_KIND_LABELS[kind]})</span>
+        )}
         {level === 'KEY' && item.workspaceName && (
           <span className="block text-xs text-foreground-muted">{item.workspaceName}</span>
         )}
@@ -320,23 +363,10 @@ function ConsumerRow({
       <TD>{count(item.requests)}건</TD>
       <TD>{tokens(item.inputTokens)}</TD>
       <TD>{tokens(item.outputTokens)}</TD>
-      {/* 한 행에 목적지가 둘이다. 이름은 이 화면을 그 범위로 좁히고, 이 열은
-          다른 화면으로 간다. 어느 쪽이 무엇인지 열 이름과 링크 문구가 함께 말해야
-          통계를 찾는 사람이 키 목록을 누르지 않는다. */}
-      <TD>
-        {level === 'WORKSPACE' && item.workspaceId ? (
-          <Link
-            to={adminPaths.llmKeys(activeOrgId, item.workspaceId)}
-            className="text-brand-foreground hover:underline"
-          >
-            키 목록 화면
-          </Link>
-        ) : primary ? (
-          <Link to={primary} className="text-brand-foreground hover:underline">
-            {level === 'ORG' ? '이 기관으로 좁히기' : '키 상세 화면'}
-          </Link>
-        ) : '—'}
-      </TD>
+      {/* 금액이 없는 것은 0이 아니다. 자체 서빙 모델에는 금액이라는 것이 아예
+          없고, 축이 생기기 전의 요청은 기록되지 않았다. 둘 다 `$0.00`으로 적으면
+          「공짜로 썼다」는, 서버가 한 적 없는 주장이 된다. */}
+      <TD>{amountCell(item.attributedCostUsd, item.requests, item.pricedRequests)}</TD>
     </TR>
   )
 }
@@ -402,12 +432,6 @@ function BreakdownSection({ data }: { data: AdminLlmUsage }) {
         {grain === 'capability' && (
           <CapabilityGrantTable rows={breakdown.passthroughGrants} />
         )}
-        {grain !== 'capability' && data.quality.pricedRequests < data.quality.totalRequests && (
-          <MessageBar>
-            이 기간 요청 {count(data.quality.totalRequests)}건 가운데{' '}
-            {count(data.quality.pricedRequests)}건만 공급자가 금액을 알려 줬습니다.
-          </MessageBar>
-        )}
         {grain === 'endpoint'
           && data.quality.endpointRecordedRequests < data.quality.totalRequests && (
           <MessageBar>
@@ -449,7 +473,7 @@ function ModelBreakdownTable({ rows }: { rows: AdminLlmUsage['breakdown']['model
             <TD>{count(row.requests)}건</TD>
             <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
             {/* 값 없음과 0을 가른다. 자체 서빙 모델에는 금액이라는 것이 없다. */}
-            <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
+            <TD>{amountCell(row.attributedCostUsd, row.requests, row.pricedRequests)}</TD>
             <TD>{Math.round(row.avgLatencyMs).toLocaleString('ko-KR')}ms</TD>
             <TD>
               {/* percent()가 100을 곱한다. 여기서 또 곱하면 476%가 나온다. */}
@@ -494,7 +518,7 @@ function EndpointBreakdownTable({
             <TD>{endpointKindLabel(row.endpoint)}</TD>
             <TD>{count(row.requests)}건</TD>
             <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
-            <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
+            <TD>{amountCell(row.attributedCostUsd, row.requests, row.pricedRequests)}</TD>
             {anyImages && <TD>{count(row.imageCount)}장</TD>}
           </TR>
         ))}
@@ -772,6 +796,13 @@ export function AdminLlmUsagePage() {
     staleTime: 60_000,
   })
 
+  // 종류는 이미 받아 온 목록에 있다. 소비처 응답에 필드를 더하지 않고 화면에서
+  // 잇는다 — 종류가 필요한 자리가 이 표 하나뿐이고, 계약을 늘리면 그 필드를 쓰는
+  // 곳이 여기밖에 없는 채로 남는다.
+  const workspaceKinds = new Map(
+    (workspaces.data ?? []).map((workspace) => [workspace.id, workspace.kind]),
+  )
+
   const data = usage.data?.scopeKey === scopeKey
       && usage.data.workspaceKey === workspaceKey
       && usage.data.days === days
@@ -836,7 +867,11 @@ export function AdminLlmUsagePage() {
       {data && (
         <>
           <DemandSection data={data} onDays={selectDays} />
-          <ConsumersSection data={data} activeOrgId={scope.activeOrgId} />
+          <ConsumersSection
+            data={data}
+            activeOrgId={scope.activeOrgId}
+            workspaceKinds={workspaceKinds}
+          />
           <BreakdownSection data={data} />
           <LimitReviewSection data={data} activeOrgId={scope.activeOrgId} />
           <QualitySection quality={data.quality} activeOrgId={scope.activeOrgId} />

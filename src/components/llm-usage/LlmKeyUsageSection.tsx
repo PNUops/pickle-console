@@ -341,7 +341,7 @@ export default function LlmKeyUsageSection({
                 {/* 여기부터는 관리자만 본다. 키 소유자는 모델별 금액까지만 보고
                     일별 금액도 경로별 분해도 보지 않는다 — 그 경계가 응답 모양에
                     이미 들어 있어서, 이 블록들이 `trend` 밖에 있다. */}
-                {extra && <AdminOnlyBreakdowns extra={extra} times={times} />}
+                {extra && <AdminOnlyBreakdowns extra={extra} />}
               </>
             )}
           </>
@@ -358,23 +358,25 @@ export default function LlmKeyUsageSection({
  * 모델별 금액까지만 보고 일별 금액은 보지 않으며, 일별 금액을 나르지 않는 응답이라야
  * 화면이 실수로 그릴 수 없다.
  */
-function AdminOnlyBreakdowns({
-  extra,
-  times,
-}: {
-  extra: AdminLlmKeyUsage
-  times: number[]
-}) {
-  const priced = extra.costPoints.some((point) => point.pricedRequests > 0)
+function AdminOnlyBreakdowns({ extra }: { extra: AdminLlmKeyUsage }) {
+  // 「그릴 값이 있는가」를 값에게 직접 묻는다. 건수를 물으면 가격 붙은 요청은 있는데
+  // 금액이 전부 null 인 응답에서 빈 캔버스가 선다.
+  const priced = extra.costPoints.some((point) => point.attributedCostUsd != null)
   return (
     <>
       {/* 제목을 밖에 한 번 더 쓰지 않는다 — 차트가 자기 제목을 이미 갖는다.
           위의 다른 차트들도 같은 이유로 감싸는 제목이 없다. */}
       {priced && (
-        <section className="space-y-2" aria-label="일별 금액">
+        // 축을 이 계열 자신의 날짜에서 만든다. 종전에는 `trend.points` 에서 온 축에
+        // `costPoints` 의 값을 얹었는데, 둘이 같은 창을 같은 순서로 채운다는 것은
+        // 서버 사정이지 화면이 아는 사실이 아니다. 어긋나면 값이 엉뚱한 날짜에 찍히고
+        // 목이 한쪽에서 다른 쪽을 파생시키므로 시험이 그것을 못 본다.
+        <section className="space-y-2">
           <TimeSeriesChart
             title="일별 금액"
-            times={times}
+            times={extra.costPoints.map(
+              (point) => Date.parse(`${point.day}T00:00:00+09:00`) / 1000,
+            )}
             series={[
               {
                 label: '금액',
@@ -534,9 +536,13 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
 
 /** 모델 x (요청·토큰·평균 지연·실패율). */
 /**
- * 금액은 여기에만 둔다.
+ * 키 소유자에게는 금액이 여기에만 있다.
  *
- * 합계 타일을 만들지 않는 것은 화면 규약의 결론이다 — 「한도 창 사용」 게이지 옆에
+ * 관리자 화면에는 아래 `AdminOnlyBreakdowns` 가 일별 금액과 경로별 금액을 더 얹으므로
+ * 이 문장은 소유자 쪽에만 참이다. 처음 이 주석을 쓸 때는 그 구역이 없었고, 생긴 뒤에
+ * 고치지 않아 다음 편집자에게 거짓 면허를 줄 뻔했다.
+ *
+ * 합계 타일을 만들지 않는 것은 화면 규약의 결론이다. 「한도 창 사용」 게이지 옆에
  * 다른 창의 달러가 나란히 서면 둘의 차이를 설명하는 문단이 필요해지고, 그 문단이
  * 필요하다는 것 자체가 두 숫자를 한 자리에 둔 것이 틀렸다는 뜻이다.
  *

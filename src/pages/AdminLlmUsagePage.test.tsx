@@ -136,10 +136,12 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
       'href',
       `/admin/llm/usage?workspaceId=${uuid(12)}&days=30&org=${uuid(1)}`,
     )
-    expect(screen.getByRole('link', { name: '키 목록 화면' })).toHaveAttribute(
-      'href',
-      `/admin/llm/keys?workspaceId=${uuid(12)}&org=${uuid(1)}`,
-    )
+    // 종전에는 같은 행에 키 목록으로 가는 링크가 하나 더 있었다. 지웠다 — 이름을
+    // 누르면 이 표가 그 워크스페이스의 키 행으로 바뀌고, 그 행이 키 상세로 간다.
+    // 아래 단언이 그 경로를 그대로 지키므로 「키에 닿는다」는 불변식은 살아 있다.
+    expect(screen.queryByRole('link', { name: /키 목록/ })).not.toBeInTheDocument()
+    // 워크스페이스 행은 종류를 함께 말한다.
+    expect(await screen.findByText(/\(팀\)/)).toBeInTheDocument()
     await user.click(workspace)
 
     const keyConsumers = (await screen.findByRole('heading', { name: '주요 소비처' })).closest('div')!
