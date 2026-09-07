@@ -771,6 +771,12 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
             // 화면이 「공짜였다」고 말하지 않는다.
             attributedCostUsd: null,
             pricedRequests: 0,
+            // 자체 서빙 모델이라 가격이 붙은 쪽이 없다. 이 행은 나뉘지 않는다.
+            pricedInputTokens: 0,
+            pricedOutputTokens: 0,
+            pricedAvgLatencyMs: 0,
+            unpricedAvgLatencyMs: 820,
+            pricedFailed: 0,
             imageCount: 0,
           },
           {
@@ -784,7 +790,16 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
             estimatedRequests: 0,
             avgLatencyMs: 1_450,
             attributedCostUsd: 0.482_5,
-            pricedRequests: totals.requests - Math.round(totals.requests * 0.7),
+            // 이 모델의 요청 가운데 절반에만 금액이 붙었다. 화면이 이 행을 둘로
+            // 나누는지 보는 자료이고, 나뉜 뒤에도 금액은 위 행에 그대로 선다.
+            pricedRequests: Math.floor((totals.requests - Math.round(totals.requests * 0.7)) / 2),
+            pricedInputTokens:
+              Math.floor((totals.inputTokens - Math.round(totals.inputTokens * 0.7)) / 2),
+            pricedOutputTokens:
+              Math.floor((totals.outputTokens - Math.round(totals.outputTokens * 0.7)) / 2),
+            pricedAvgLatencyMs: 1_450,
+            unpricedAvgLatencyMs: 990,
+            pricedFailed: 0,
             imageCount: 0,
           },
         ]

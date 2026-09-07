@@ -550,6 +550,58 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
  * `$0.00`으로 적으면 「공짜로 썼다」는 없는 주장을 하게 된다. 열 전체가 비면 열을
  * 세우지 않는다.
  */
+/**
+ * 한 모델이 한 행이거나 두 행이다. **관리자 화면의 모델별 분해와 같은 규칙이다** — 같은
+ * 사실이 보는 화면에 따라 다르게 읽히면 안 된다(운영자 2026-09-07).
+ *
+ * 종전에는 「87회 · $0.079494」로 적었는데 그 금액이 18건분이었고 화면이 그 말을 하지
+ * 않았다. 운영자가 그 표를 보고 「이 모델은 다 금액 있는 데이터만 있는 건가」라고 물은 것이
+ * 그 표기가 틀렸다는 증거다.
+ *
+ * 가르는 기준은 가격이지 예산 축이 아니다. 두 행이 그 모델의 요청을 남김없이 갈라야 하고,
+ * 축으로 자르면 자체 서빙과 한도 거부와 축이 기록되기 전의 요청이 어느 쪽에도 안 들어간다.
+ * 대가는 아래 행이 순수한 유료 트래픽이 아니라는 것이고, 그래서 그 행은 「금액이 붙지
+ * 않았다」까지만 주장한다.
+ */
+function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
+  const name = modelLabel(model.modelName)
+  const unpriced = model.requests - model.pricedRequests
+  const whole = {
+    key: model.modelName ?? 'unknown',
+    name,
+    requests: model.requests,
+    tokens: model.inputTokens + model.outputTokens,
+    amount: model.attributedCostUsd == null ? '—' : formatUsd(model.attributedCostUsd),
+    avgLatencyMs: model.avgLatencyMs,
+    failed: model.failed,
+  }
+  // 금액 열을 안 세우는 화면에서는 나눌 이유가 없다. 나머지 열은 같은 값을 두 줄로
+  // 쪼개기만 하므로, 읽는 사람에게 아무것도 더 말하지 않고 표만 길어진다.
+  if (!showCost || model.pricedRequests === 0 || unpriced <= 0) return [whole]
+  return [
+    {
+      ...whole,
+      key: `${whole.key}:priced`,
+      requests: model.pricedRequests,
+      tokens: model.pricedInputTokens + model.pricedOutputTokens,
+      avgLatencyMs: model.pricedAvgLatencyMs,
+      failed: model.pricedFailed,
+    },
+    {
+      ...whole,
+      key: `${whole.key}:unpriced`,
+      requests: unpriced,
+      tokens: model.inputTokens + model.outputTokens
+        - model.pricedInputTokens - model.pricedOutputTokens,
+      // 자체 서빙 행의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
+      // 이쪽은 있어야 하는데 모른다.
+      amount: '정보 없음',
+      avgLatencyMs: model.unpricedAvgLatencyMs,
+      failed: model.failed - model.pricedFailed,
+    },
+  ]
+}
+
 function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
   const showCost = models.some((model) => model.attributedCostUsd != null)
   return (
@@ -580,29 +632,25 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
           </tr>
         </thead>
         <tbody>
-          {models.map((model) => (
-            <tr key={model.modelName ?? 'unknown'} className="border-b border-neutral-100">
-              <td className="py-2 pr-3 text-neutral-700">{modelLabel(model.modelName)}</td>
+          {models.flatMap((model) => modelRows(model, showCost)).map((row) => (
+            <tr key={row.key} className="border-b border-neutral-100">
+              <td className="py-2 pr-3 text-neutral-700">{row.name}</td>
               <td className="py-2 pr-3 text-right text-neutral-600">
-                {formatRequests(model.requests)}
+                {formatRequests(row.requests)}
               </td>
               <td className="py-2 pr-3 text-right text-neutral-600">
-                {formatTokens(model.inputTokens + model.outputTokens)}
+                {formatTokens(row.tokens)}
               </td>
               {showCost && (
-                <td className="py-2 pr-3 text-right text-neutral-600">
-                  {model.attributedCostUsd == null
-                    ? '—'
-                    : formatUsd(model.attributedCostUsd)}
-                </td>
+                <td className="py-2 pr-3 text-right text-neutral-600">{row.amount}</td>
               )}
               <td className="py-2 pr-3 text-right text-neutral-600">
-                {formatMs(model.avgLatencyMs)}
+                {formatMs(row.avgLatencyMs)}
               </td>
               <td className="py-2 text-right text-neutral-600">
-                {model.requests === 0
+                {row.requests === 0
                   ? '—'
-                  : formatShare((model.failed / model.requests) * 100)}
+                  : formatShare((row.failed / row.requests) * 100)}
               </td>
             </tr>
           ))}
