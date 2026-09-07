@@ -521,9 +521,7 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
             ? '금액 한도가 없어 유료 모델을 쓸 수 없습니다.'
             : budget.creditDepletionForecast
               ? `이 속도면 ${budget.creditDepletionForecast}에 한도에 도달합니다.`
-              : creditUsage == null
-                ? undefined
-                : '소진 예상을 내기에는 아직 사용 이력이 짧습니다.'
+              : undefined
         }
         freshness={
           budget.creditUsageAt ? (
