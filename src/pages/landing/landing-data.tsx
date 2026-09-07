@@ -228,7 +228,7 @@ export const featuredCards: Feature[] = [
     icon: 'chip',
     title: 'LLM API 키도 콘솔에서',
     description:
-      '발급한 키를 OpenAI 호환 SDK에 그대로 넣어 씁니다. 키마다 요청과 토큰 한도가 있고, 사용량도 콘솔에서 확인합니다.',
+      '발급한 키를 OpenAI 호환 SDK에 그대로 넣어 씁니다. 키마다 일일 토큰 한도와 금액 한도가 있고, 사용량도 콘솔에서 확인합니다.',
   },
 ]
 
