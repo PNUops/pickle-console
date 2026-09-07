@@ -411,6 +411,24 @@ export function asLlmKeyGrantManager(keyId: string) {
   if (key) key.accessManageAllowed = true
 }
 
+/**
+ * 접근 권한 분기 테스트용 — 이 키의 상세를 지정한 리소스 등급으로 내려주는 임시
+ * 핸들러. 목록 관리는 소유자 등급에만 따라오고, 그 밖의 조합은 `overrides`로 준다.
+ */
+export function llmKeyDetailAs(
+  keyId: string,
+  role: ResourceRole | null,
+  overrides: Partial<LlmKeyDetail> = {},
+): RequestHandler {
+  return http.get(`*/api/v1/llm-keys/${keyId}`, () => {
+    const key = llmKeyStore.find((k) => k.id === keyId)!
+    return HttpResponse.json(
+      { ...key, myResourceRole: role, accessManageAllowed: role === 'OWNER', ...overrides },
+      { status: 200 },
+    )
+  })
+}
+
 /** 접근 목록의 소유자 이름 — 제한 행이 "누구에게 요청하라"고 말할 때 쓴다. */
 function grantOwnerNames(keyId: string): string[] {
   return (llmKeyAccessStore[keyId] ?? [])

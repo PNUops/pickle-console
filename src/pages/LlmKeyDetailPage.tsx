@@ -1,36 +1,22 @@
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  fetchLlmKey,
-  invalidateResourceLists,
-  issueLlmKeyToken,
-  type LlmKeyDetail,
-} from '../api/queries'
-import { toApiError } from '../api/problem'
-import { CopyButton } from '../components/CopyButton'
+import { useQuery } from '@tanstack/react-query'
+import { fetchLlmKey, type LlmKeyDetail } from '../api/queries'
 import { LlmKeyConnectionCard } from '../components/llm-key/LlmKeyConnectionCard'
+import { LlmKeyDangerCard } from '../components/llm-key/LlmKeyDangerCard'
 import { LlmKeyInfoCard } from '../components/llm-key/LlmKeyInfoCard'
+import { LlmKeyIssueAction } from '../components/llm-key/LlmKeyIssueAction'
 import { LlmKeySettingsCard } from '../components/llm-key/LlmKeySettingsCard'
-import { RevokeKeyCard } from '../components/llm-key/RevokeKeyCard'
+import { ResourceAccessSection } from '../components/resource/ResourceAccessSection'
 import {
   Alert,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   ErrorBoundary,
   LlmKeyStatusBadge,
-  Modal,
-  PermissionNotice,
   Spinner,
   TabPanel,
   Tabs,
   type TabItem,
 } from '../components/ui'
-import { DOCS_PATH } from '../lib/brand'
-import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -40,10 +26,15 @@ import { LlmKeyBodiesSection } from '../components/llm-body/LlmKeyBodiesSection'
 // (할당 추이·VM 모니터링과 같은 규칙).
 const LlmKeyUsageSection = lazy(() => import('../components/llm-usage/LlmKeyUsageSection'))
 
-/** 상세 탭 구성. 배열 순서가 렌더 순서이고, 탭 id는 `?tab=` 링크가 쓴다. */
+/**
+ * 상세 탭 구성. 배열 순서가 렌더 순서이고, 탭 id는 `?tab=` 링크가 쓴다.
+ * VM 상세와 같은 자리에 같은 이름의 탭을 둔다.
+ */
 const KEY_TABS: TabItem[] = [
   { id: 'overview', label: '개요' },
   { id: 'usage', label: '사용량' },
+  { id: 'access', label: '접근' },
+  { id: 'settings', label: '설정' },
   // 설정은 「본문 기록」, 이 화면은 「기록된 본문」이다. 같은 말이 둘을 가리키면
   // 「본문 기록을 껐는데 본문 기록이 남아 있다」는 문장이 나온다.
   { id: 'bodies', label: '기록된 본문' },
@@ -96,11 +87,24 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   // 근거를 화면도 본다. 배지·안내·발급 가능 판정이 모두 이 값을 쓴다.
   const status = effectiveLlmKeyStatus(llmKey.status, llmKey.expiresAt)
   const terminal = status === 'REVOKED' || status === 'EXPIRED'
-  // 본문 기록을 켜는 등급 — EditSection이 쓰는 것과 같은 근거를 그대로 본다.
+  // 본문 기록을 켜는 등급 — 설정 카드가 쓰는 것과 같은 근거를 그대로 본다.
   const canEditKey = llmKey.myResourceRole === 'OWNER' || llmKey.myResourceRole === 'EDITOR'
+  // The access tab follows the grant-management right alone, whatever the
+  // status: a revoked key's grants still decide who may read its recorded
+  // bodies. The settings tab needs someone who can act on it, either the
+  // settings form (editor and up) or the revoke row (the workspace owner's
+  // standing right), and nothing on it applies to a revoked or expired key.
+  const accessVisible = llmKey.accessManageAllowed
+  const settingsVisible = !terminal && (canEditKey || llmKey.accessManageAllowed)
+  const tabs = KEY_TABS.filter((tab) => {
+    if (tab.id === 'access') return accessVisible
+    if (tab.id === 'settings') return settingsVisible
+    return true
+  })
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  const activeTab = KEY_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
+  // 잘못된/숨은 tab 값은 개요로 폴백한다(URL은 그대로 두어도 무해).
+  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
     // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
     setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
@@ -119,14 +123,23 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             {llmKey.purpose && <> · {llmKey.purpose}</>}
           </p>
         </div>
+        {/* Mounted outside the tabs so the one-time plaintext modal outlives
+            a tab switch; it draws a button only while the key is pending. */}
+        <LlmKeyIssueAction llmKey={llmKey} status={status} placement="header" />
       </div>
 
       <Tabs
-        tabs={KEY_TABS}
+        tabs={tabs}
         value={activeTab}
         onChange={selectTab}
         aria-label="LLM API 키 상세 영역"
       />
+
+      <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
+        <StatusNotice status={status} />
+        {status === 'ACTIVE' && <LlmKeyConnectionCard keyId={llmKey.id} />}
+        <LlmKeyInfoCard llmKey={llmKey} />
+      </TabPanel>
 
       <TabPanel id="usage" active={activeTab === 'usage'}>
         <ErrorBoundary label="사용량">
@@ -142,6 +155,15 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
         </ErrorBoundary>
       </TabPanel>
 
+      <TabPanel id="access" active={activeTab === 'access'} className="space-y-6">
+        <ResourceAccessSection type="LLM_API_KEY" resourceId={llmKey.id} />
+      </TabPanel>
+
+      <TabPanel id="settings" active={activeTab === 'settings'} className="space-y-6">
+        <LlmKeySettingsCard llmKey={llmKey} />
+        <LlmKeyDangerCard llmKey={llmKey} status={status} />
+      </TabPanel>
+
       <TabPanel id="bodies" active={activeTab === 'bodies'}>
         {/* 지연 로드하지 않는다 — 사용량 탭이 그러는 이유는 uPlot 하나뿐이고
             여기에는 새 의존이 없다. ErrorBoundary만 두른다: 기록된 프롬프트의
@@ -153,50 +175,9 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             status={status}
             recordBodies={llmKey.recordBodies}
             canEdit={canEditKey}
-            onGoToOverview={() => selectTab('overview')}
+            onGoToSettings={() => selectTab('settings')}
           />
         </ErrorBoundary>
-      </TabPanel>
-
-      <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
-      <StatusNotice status={status} />
-      <IssueSection llmKey={llmKey} status={status} />
-      {status === 'ACTIVE' && <LlmKeyConnectionCard keyId={llmKey.id} />}
-      <LlmKeyInfoCard llmKey={llmKey} />
-
-      {!terminal && <LlmKeySettingsCard llmKey={llmKey} />}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>접근 권한</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-neutral-600">
-            이 키에는 접근 목록에 있는 사람만 닿을 수 있습니다. 같은 워크스페이스라도
-            목록에 없으면 이름과 상태만 보입니다.
-          </p>
-          {llmKey.accessManageAllowed ? (
-            <Link
-              to={consolePaths.llmKeyAccess(llmKey.id)}
-              className="inline-flex h-9 items-center rounded-lg border border-neutral-300 px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-            >
-              접근 권한 관리
-            </Link>
-          ) : (
-            <PermissionNotice>
-              접근 권한은 이 키의 소유자 또는 워크스페이스 소유자만 관리할 수 있습니다.
-            </PermissionNotice>
-          )}
-        </CardContent>
-      </Card>
-
-      {!terminal && (
-        <RevokeKeyCard
-          keyId={llmKey.id}
-          name={llmKey.name}
-          allowed={llmKey.accessManageAllowed}
-        />
-      )}
       </TabPanel>
     </>
   )
@@ -238,153 +219,4 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
     )
   }
   return null
-}
-
-/* ─── 발급·재발급 ─── */
-
-/**
- * 평문을 만드는 자리.
- *
- * 평문은 뮤테이션 상태에만 존재한다 — 컴포넌트 상태로 옮기지 않고, 결과 모달은
- * `reset()`으로 닫아 그 자리에서 버린다 (릴레이 토큰과 같은 규칙). 서버에는
- * 해시만 남아 다시 조회할 방법이 없으므로, 창을 닫으면 정말로 끝이다.
- */
-function IssueSection({ llmKey, status }: { llmKey: LlmKeyDetail; status: LlmApiKeyStatus }) {
-  const queryClient = useQueryClient()
-  const [confirming, setConfirming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const rotation = status !== 'PENDING'
-  const actionLabel = rotation ? '키 재발급' : '키 발급'
-  // 발급은 부여받은 권한이다 — 이 키의 접근 목록에서 소유자 등급을 받은 사람만
-  // 한다. 워크스페이스 소유자의 상시 권한(폐기·목록 관리)은 여기에 닿지 않으므로
-  // accessManageAllowed로 판단하면 눌러야만 아는 403이 된다.
-  const allowed = llmKey.myResourceRole === 'OWNER'
-  // 발급이 뜻을 갖는 상태는 둘뿐이다. 서버의 발급은 '발급 전'만 활성으로 올리므로
-  // 정지·만료된 키에 발급을 걸면 쓰던 값만 죽고 새 값도 아무것도 인증하지 못한다 —
-  // 다시 볼 수 없다는 경고와 함께 쓸모없는 평문을 쥐여 주는 셈이다. 폐기와 같이 뺀다.
-  const issuable = status === 'PENDING' || status === 'ACTIVE'
-
-  const issue = useMutation({
-    // 평문이 캐시에 남지 않도록 모달을 닫는 즉시 GC 대상이 되게 한다.
-    gcTime: 0,
-    mutationFn: () => issueLlmKeyToken(llmKey.id),
-    onSuccess: async () => {
-      setConfirming(false)
-      setError(null)
-      await queryClient.invalidateQueries({ queryKey: ['llm-keys', llmKey.id] })
-      await invalidateResourceLists(queryClient)
-    },
-    onError: (err) => {
-      setConfirming(false)
-      setError(toApiError(err, 'LLM API 키를 발급하지 못했습니다.').message)
-    },
-  })
-
-  if (!issuable) return null
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{actionLabel}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {rotation && (
-          <p className="text-sm text-neutral-600">값을 잃어버렸다면 재발급합니다.</p>
-        )}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant={rotation ? 'secondary' : 'primary'}
-            disabled={!allowed}
-            onClick={() => {
-              setError(null)
-              setConfirming(true)
-            }}
-          >
-            {actionLabel}
-          </Button>
-        </div>
-        {!allowed && (
-          <PermissionNotice>
-            키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만 할 수 있습니다.
-          </PermissionNotice>
-        )}
-        {error && <Alert variant="danger">{error}</Alert>}
-
-        {/* 발급 확인 — 재발급이 무엇을 끊는지는 누르기 전에 말한다. */}
-        <Modal
-          open={confirming}
-          onClose={() => setConfirming(false)}
-          title={actionLabel}
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setConfirming(false)}>
-                돌아가기
-              </Button>
-              <Button
-                variant={rotation ? 'danger' : 'primary'}
-                loading={issue.isPending}
-                onClick={() => issue.mutate()}
-              >
-                {actionLabel}
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-3">
-            {rotation && (
-              <Alert variant="danger">
-                재발급 즉시 이전 키 값이 무효화됩니다. 그 값을 쓰고 있는 코드·배포 설정을
-                새 값으로 바꾸기 전까지 요청이 거부됩니다.
-              </Alert>
-            )}
-            <p className="text-sm text-neutral-600">
-              평문은 다음 화면에서 한 번만 볼 수 있습니다.
-            </p>
-          </div>
-        </Modal>
-
-        {/* 발급 결과 — 평문이 존재하는 유일한 화면 */}
-        <Modal
-          open={issue.isSuccess}
-          onClose={() => issue.reset()}
-          title="LLM API 키 발급 완료"
-          footer={
-            <Button variant="secondary" onClick={() => issue.reset()}>
-              확인했습니다
-            </Button>
-          }
-        >
-          {issue.data && (
-            <div className="space-y-3">
-              <Alert variant="warning" title="이 키는 다시 볼 수 없습니다">
-                창을 닫으면 평문을 다시 확인할 수 없습니다. 서버에는 해시만 저장되므로
-                지금 복사해 안전한 곳에 보관해 주세요.
-              </Alert>
-              <div className="flex items-center justify-between gap-3">
-                <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs break-all text-neutral-100">
-                  {issue.data.token}
-                </code>
-                <CopyButton value={issue.data.token} label="복사" />
-              </div>
-              {issue.data.expiresAt && (
-                <p className="text-sm text-neutral-600">
-                  만료: {formatDateTime(issue.data.expiresAt)}
-                </p>
-              )}
-              <p className="text-sm text-neutral-600">
-                호출 방법은{' '}
-                <Link
-                  to={DOCS_PATH}
-                  className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
-                >
-                  사용 가이드
-                </Link>
-                에 있습니다.
-              </p>
-            </div>
-          )}
-        </Modal>
-      </CardContent>
-    </Card>
-  )
 }

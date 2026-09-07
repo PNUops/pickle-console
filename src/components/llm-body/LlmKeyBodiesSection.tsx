@@ -45,13 +45,13 @@ export function LlmKeyBodiesSection({
   status,
   recordBodies,
   canEdit,
-  onGoToOverview,
+  onGoToSettings,
 }: {
   keyId: string
   status: LlmApiKeyStatus
   recordBodies: boolean
   canEdit: boolean
-  onGoToOverview: () => void
+  onGoToSettings: () => void
 }) {
   const [page, setPage] = useState(0)
   const [opened, setOpened] = useState<LlmKeyBodySummary | null>(null)
@@ -67,7 +67,7 @@ export function LlmKeyBodiesSection({
   if (unissued) {
     return (
       <Alert variant="info" title="아직 발급되지 않은 키입니다">
-        발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없습니다. 개요 탭에서 키를
+        발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없습니다. 위의 「키 발급」으로
         발급하면 그때부터 쌓입니다.
       </Alert>
     )
@@ -101,8 +101,8 @@ export function LlmKeyBodiesSection({
           description="이 키는 본문 기록이 꺼져 있어 프롬프트와 응답을 보관하지 않습니다."
           action={
             canEdit ? (
-              <Button variant="secondary" onClick={onGoToOverview}>
-                개요 탭에서 켜기
+              <Button variant="secondary" onClick={onGoToSettings}>
+                설정 탭에서 켜기
               </Button>
             ) : undefined
           }

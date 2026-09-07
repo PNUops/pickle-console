@@ -1,9 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { llmKeyStore } from '../test/msw/handlers/llm-keys'
+import { llmKeyDetailAs, llmKeyStore } from '../test/msw/handlers/llm-keys'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -16,9 +15,9 @@ const MEMBER_KEY = uuid(74)
 /** 상태 열은 ACTIVE인데 expiresAt이 이미 지난 키 — 서버에 EXPIRED 전이가 없다. */
 const PAST_WINDOW_KEY = uuid(75)
 
-function renderKey(keyId: string) {
+function renderKey(keyId: string, tab?: string) {
   server.use(refreshSuccessHandler('access-user'))
-  renderApp(`/console/llm-keys/${keyId}`)
+  renderApp(`/console/llm-keys/${keyId}${tab ? `?tab=${tab}` : ''}`)
 }
 
 describe('LLM API 키 상세', () => {
@@ -115,15 +114,16 @@ describe('발급 전 키', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     // 남는 것은 두 키를 구별하는 앞부분뿐이고, 평문은 어디에도 없다.
     expect(screen.queryByText(plaintext)).not.toBeInTheDocument()
-    // 발급이 끝난 키는 이제 재발급 대상이다.
-    expect(await screen.findByRole('button', { name: '키 재발급' })).toBeInTheDocument()
+    // 발급이 끝난 키의 헤더에는 더 할 일이 없고, 첫 카드는 연결 정보다.
+    expect(screen.queryByRole('button', { name: '키 발급' })).not.toBeInTheDocument()
+    expect(await screen.findByText('연결 정보')).toBeInTheDocument()
   })
 })
 
 describe('이미 발급된 키', () => {
-  test('버튼이 재발급이고, 누르기 전에 이전 값이 무효가 된다고 말한다', async () => {
+  test('재발급은 설정 탭에 있고, 누르기 전에 이전 값이 무효가 된다고 말한다', async () => {
     const user = userEvent.setup()
-    renderKey(ISSUED_KEY)
+    renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     await user.click(screen.getByRole('button', { name: '키 재발급' }))
@@ -132,6 +132,14 @@ describe('이미 발급된 키', () => {
     expect(
       within(confirm).getByText(/재발급 즉시 이전 키 값이 무효화됩니다/),
     ).toBeInTheDocument()
+  })
+
+  test('개요에는 재발급이 없다', async () => {
+    // 되돌릴 수 없고 드문 작업은 첫 화면의 버튼이 아니다.
+    renderKey(ISSUED_KEY)
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
   })
 })
 
@@ -146,6 +154,10 @@ describe('연결 정보', () => {
     // 사이드바 하단에도 같은 이름의 링크가 있으므로 본문 안에서만 찾는다.
     const main = within(screen.getByRole('main'))
     expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/docs')
+    // 모델 목록은 그 모델의 복사 버튼과 같은 줄에 선다.
+    const row = main.getByRole('button', { name: '호출할 수 있는 모델 보기' }).parentElement!
+    expect(within(row).getByText('pickle-general')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: '복사' })).toBeInTheDocument()
   })
 
   test('아직 발급 전인 키에는 연결 정보를 보여 주지 않는다', async () => {
@@ -166,29 +178,54 @@ describe('폐기된 키', () => {
     expect(screen.getByText(/폐기된 키는 다시 발급할 수 없으니/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
     expect(screen.getByText('2026-07-31 09:00')).toBeInTheDocument()
   })
 })
 
 describe('권한이 화면에 미리 보인다', () => {
-  test('참여자 등급은 발급·수정·폐기가 모두 잠기고 사유가 붙는다', async () => {
+  test('참여자 등급에는 발급·수정·폐기가 아예 없다', async () => {
     // 눌러야만 403을 알게 되는 화면이 아니라, 서버가 준 등급을 그대로 그린다.
+    // 할 수 있는 것이 하나도 없는 등급에는 설정 탭도 접근 탭도 없다.
     renderKey(MEMBER_KEY)
 
     await screen.findByRole('heading', { name: 'study-shared-key' })
-    expect(screen.getByRole('button', { name: '키 재발급' })).toBeDisabled()
-    expect(
-      screen.getByText(/키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만/),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '키 폐기' })).toBeDisabled()
-    expect(
-      screen.getByText(/키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만/),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '접근' })).not.toBeInTheDocument()
     // 접근 목록도 남의 것이다.
     expect(
       screen.queryByRole('link', { name: '접근 권한 관리' }),
     ).not.toBeInTheDocument()
+  })
+
+  test('숨은 탭 주소는 개요로 떨어진다', async () => {
+    renderKey(MEMBER_KEY, 'settings')
+
+    await screen.findByRole('heading', { name: 'study-shared-key' })
+    expect(screen.getByRole('tab', { name: '개요', selected: true })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+  })
+
+  test('편집자 등급은 설정은 고치고 발급·폐기는 잠긴 채 사유를 본다', async () => {
+    // 한쪽 권한만 있으면 탭은 열리고, 남은 카드가 잠긴 채 이유를 말한다.
+    const user = userEvent.setup()
+    server.use(llmKeyDetailAs(MEMBER_KEY, 'EDITOR', { accessManageAllowed: false }))
+    renderKey(MEMBER_KEY, 'settings')
+
+    await screen.findByRole('heading', { name: 'study-shared-key' })
+    expect(screen.getByRole('tab', { name: '설정', selected: true })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '접근' })).not.toBeInTheDocument()
+    await user.type(screen.getByDisplayValue('study-shared-key'), '-2')
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '키 재발급' })).toBeDisabled()
+    expect(
+      screen.getByText(/키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '키 폐기' })).toBeDisabled()
+    expect(
+      screen.getByText(/키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만/),
+    ).toBeInTheDocument()
   })
 
   test('접근 목록에 없으면 상세가 열리지 않고 서버 사유가 그대로 나온다', async () => {
@@ -212,8 +249,7 @@ describe('기간이 지난 키 — 상태 열은 아직 활성이다', () => {
     expect(screen.queryByText('활성')).not.toBeInTheDocument()
     expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
   })
 
   test('목록도 같은 근거로 판정해 상세와 다른 말을 하지 않는다', async () => {
@@ -229,21 +265,14 @@ describe('정지·만료된 키', () => {
   test('발급을 제안하지 않는다 — 새 값도 아무것도 인증하지 못한다', async () => {
     // 서버의 발급은 '발급 전'만 활성으로 올린다. 정지·만료 상태에서 누르면 쓰던
     // 값만 죽고 새 값은 여전히 거부되므로, 그 버튼은 애초에 없어야 한다.
-    server.use(
-      http.get(`*/api/v1/llm-keys/${MEMBER_KEY}`, () =>
-        HttpResponse.json({
-          ...llmKeyStore.find((key) => key.id === MEMBER_KEY),
-          status: 'EXPIRED',
-          myResourceRole: 'OWNER',
-          accessManageAllowed: true,
-        }),
-      ),
-    )
-    renderKey(MEMBER_KEY)
+    server.use(llmKeyDetailAs(MEMBER_KEY, 'OWNER', { status: 'EXPIRED' }))
+    renderKey(MEMBER_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'study-shared-key' })
     expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
+    // 설정 탭 자체가 없으니 주소로 열어도 개요다.
+    expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '키 폐기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   })
@@ -252,7 +281,7 @@ describe('정지·만료된 키', () => {
 describe('키 설정 수정', () => {
   test('바꾼 항목만 보낸다 — 건드리지 않은 용도는 그대로 남는다', async () => {
     const user = userEvent.setup()
-    renderKey(ISSUED_KEY)
+    renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     const name = screen.getByDisplayValue('capstone-chatbot')
@@ -269,7 +298,7 @@ describe('키 설정 수정', () => {
 
   test('공백만 덧붙인 편집은 변경으로 세지 않는다', async () => {
     const user = userEvent.setup()
-    renderKey(ISSUED_KEY)
+    renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     // 서버는 다듬어 저장하므로 돌아오는 값이 그대로다 — 이걸 변경으로 보면 폼이
@@ -280,7 +309,7 @@ describe('키 설정 수정', () => {
 
   test('이름은 비울 수 없다고 누르기 전에 말한다', async () => {
     const user = userEvent.setup()
-    renderKey(ISSUED_KEY)
+    renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     await user.clear(screen.getByDisplayValue('capstone-chatbot'))
@@ -293,7 +322,7 @@ describe('키 설정 수정', () => {
 describe('키 폐기', () => {
   test('이름을 정확히 입력해야 폐기되고, 되돌릴 수 없다고 먼저 말한다', async () => {
     const user = userEvent.setup()
-    renderKey(ISSUED_KEY)
+    renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     await user.click(screen.getByRole('button', { name: '키 폐기' }))
