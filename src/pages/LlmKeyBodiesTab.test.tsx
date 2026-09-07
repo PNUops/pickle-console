@@ -6,7 +6,7 @@ import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
-import { llmKeyStore } from '../test/msw/handlers/llm-keys'
+import { llmBodyStore, llmKeyDetailAs, llmKeyStore } from '../test/msw/handlers/llm-keys'
 
 const RECORDING_OFF_WITH_HISTORY = uuid(75)
 const RECORDED_KEY = uuid(73)
@@ -44,6 +44,19 @@ describe('기록된 본문 탭', () => {
 
     expect(await screen.findByText('기록된 본문이 없습니다')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '설정 탭에서 켜기' })).toBeInTheDocument()
+  })
+
+  test('offers no way to turn recording on for a revoked key', async () => {
+    // The settings tab is hidden for a revoked or expired key, so a button
+    // pointing there would land on the overview. The notice goes with it:
+    // there is no grade that could take the action.
+    llmBodyStore[RECORDED_KEY] = []
+    server.use(llmKeyDetailAs(RECORDED_KEY, 'OWNER', { recordBodies: false }))
+    renderBodies(RECORDED_KEY)
+
+    expect(await screen.findByText('기록된 본문이 없습니다')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '설정 탭에서 켜기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
   test('발급 전 키는 조회하지 않고 이유를 말한다', async () => {

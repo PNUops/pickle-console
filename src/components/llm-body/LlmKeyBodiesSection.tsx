@@ -57,6 +57,10 @@ export function LlmKeyBodiesSection({
   const [opened, setOpened] = useState<LlmKeyBodySummary | null>(null)
   // 발급 전 키로는 어떤 요청도 인증되지 않았으므로 물어볼 것이 없다.
   const unissued = status === 'PENDING'
+  // Recording cannot be turned on for a revoked or expired key: the settings
+  // tab is gone for it, so the empty state offers no way there and no reason
+  // why the reader could not take it.
+  const terminal = status === 'REVOKED' || status === 'EXPIRED'
   const bodies = useQuery({
     queryKey: ['llm-keys', keyId, 'bodies', { page }],
     queryFn: () => fetchLlmKeyBodies(keyId, page, PAGE_SIZE),
@@ -100,14 +104,14 @@ export function LlmKeyBodiesSection({
           title="기록된 본문이 없습니다"
           description="이 키는 본문 기록이 꺼져 있어 프롬프트와 응답을 보관하지 않습니다."
           action={
-            canEdit ? (
+            canEdit && !terminal ? (
               <Button variant="secondary" onClick={onGoToSettings}>
                 설정 탭에서 켜기
               </Button>
             ) : undefined
           }
         />
-        {!canEdit && (
+        {!canEdit && !terminal && (
           <PermissionNotice>
             본문 기록은 편집자 이상 등급을 받은 사람만 켤 수 있습니다.
           </PermissionNotice>
