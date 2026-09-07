@@ -257,8 +257,11 @@ export function VmDetailPage() {
       <Tabs tabs={tabs} value={activeTab} onChange={selectTab} aria-label="VM 상세 영역" />
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
-        <SshAccessSection vm={data} />
-        <VmPasswordSection vm={data} />
+        {/* The facts first. The page's subject is this VM, and its spec, its
+            address and its period are what tell the reader they are on the
+            right one; the ways in come after. The terminal is also a row
+            action on the lists, so putting it second costs a returning
+            reader nothing. */}
         <Card>
           <CardHeader>
             <CardTitle>VM 정보</CardTitle>
@@ -295,6 +298,8 @@ export function VmDetailPage() {
             </dl>
           </CardContent>
         </Card>
+        <SshAccessSection vm={data} />
+        <VmPasswordSection vm={data} />
       </TabPanel>
 
       <TabPanel id="monitoring" active={activeTab === 'monitoring'} className="space-y-6">
