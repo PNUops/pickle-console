@@ -181,7 +181,7 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
   return (
     <Card className="border-danger-200">
       <CardHeader>
-        <CardTitle className="text-danger-700">위험 구역</CardTitle>
+        <CardTitle className="text-danger-700">워크스페이스 삭제</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
@@ -211,7 +211,7 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
         onConfirm={() => remove.mutate()}
       >
         <Alert variant="danger">
-          이 작업은 되돌릴 수 없습니다. 같은 이름·슬러그로 새 워크스페이스를 다시 만들 수는 있지만,
+          이 작업은 되돌릴 수 없습니다. 같은 이름으로 새 워크스페이스를 다시 만들 수는 있지만,
           기존 워크스페이스의 구성원 구성은 복구되지 않습니다.
         </Alert>
       </ConfirmNameModal>

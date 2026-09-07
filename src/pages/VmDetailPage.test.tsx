@@ -637,6 +637,19 @@ describe('VM 상세 — 탭', () => {
     expect(screen.queryByText('SSH 접속')).not.toBeInTheDocument()
   })
 
+  test('draws the facts before the ways into the VM', async () => {
+    // 상세를 여는 가장 흔한 이유가 「이게 그 VM 인가」이므로 그 답을 가진 카드가
+    // 첫 카드다. 종전에는 접속과 비밀번호가 위에 있어 정보가 맨 아래였다.
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    const titles = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((node) => node.textContent)
+      .filter((text) => text === 'VM 정보' || text === '접속' || text === 'VM 비밀번호')
+    expect(titles).toEqual(['VM 정보', '접속', 'VM 비밀번호'])
+  })
+
   test('참여자(MEMBER)에게는 설정 탭 자체가 노출되지 않는다', async () => {
     server.use(vmDetailAs(uuid(56), 'MEMBER', { passwordRevealAllowed: true }))
     renderVm(uuid(56))

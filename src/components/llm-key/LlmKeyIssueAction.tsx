@@ -4,7 +4,17 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { invalidateResourceLists, issueLlmKeyToken, type LlmKeyDetail } from '../../api/queries'
 import { toApiError } from '../../api/problem'
 import { CopyButton } from '../CopyButton'
-import { Alert, Button, Modal, PermissionNotice, SettingRow } from '../ui'
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Modal,
+  PermissionNotice,
+  SettingRow,
+} from '../ui'
 import { DOCS_PATH } from '../../lib/brand'
 import { formatDateTime } from '../../lib/format'
 import type { LlmApiKeyStatus } from '../../lib/status'
@@ -16,21 +26,23 @@ import type { LlmApiKeyStatus } from '../../lib/status'
  * `reset()`으로 닫아 그 자리에서 버린다 (릴레이 토큰과 같은 규칙). 서버에는
  * 해시만 남아 다시 조회할 방법이 없으므로, 창을 닫으면 정말로 끝이다.
  *
- * Two placements share one mutation and one pair of modals. `header` is the
- * first issue of a pending key, the page's primary action; `row` is the
- * re-issue of an active key, one line in the irreversible-actions card.
- * The header instance stays mounted after the key turns active so the
- * one-time plaintext modal survives the refetch that its own success
- * triggers; it renders nothing else once the button is gone.
+ * One card on the 개요 tab holds both the first issue of a pending key and
+ * the re-issue of an active one: the reason to re-issue is that the value is
+ * lost, and the place a reader notices that is where the value should have
+ * been. It sits under 연결 정보 rather than in the page header, because a
+ * header button is for what a person does routinely and this is neither
+ * routine nor reversible.
+ *
+ * The card stays mounted across the refetch its own success triggers, so the
+ * one-time plaintext modal survives it. For a suspended or expired key it
+ * draws nothing: issuing there would mint a value that authenticates nothing.
  */
 export function LlmKeyIssueAction({
   llmKey,
   status,
-  placement,
 }: {
   llmKey: LlmKeyDetail
   status: LlmApiKeyStatus
-  placement: 'header' | 'row'
 }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
@@ -44,7 +56,7 @@ export function LlmKeyIssueAction({
   // 발급이 뜻을 갖는 상태는 둘뿐이다. 서버의 발급은 '발급 전'만 활성으로 올리므로
   // 정지·만료된 키에 발급을 걸면 쓰던 값만 죽고 새 값도 아무것도 인증하지 못한다 —
   // 다시 볼 수 없다는 경고와 함께 쓸모없는 평문을 쥐여 주는 셈이다. 폐기와 같이 뺀다.
-  const visible = placement === 'header' ? status === 'PENDING' : status === 'ACTIVE'
+  const visible = status === 'PENDING' || status === 'ACTIVE'
 
   const issue = useMutation({
     // 평문이 캐시에 남지 않도록 모달을 닫는 즉시 GC 대상이 되게 한다.
@@ -155,33 +167,33 @@ export function LlmKeyIssueAction({
 
   if (!visible) return modals
 
-  if (placement === 'header') {
-    return (
-      <div className="flex flex-col items-end gap-2">
-        <Button size="sm" disabled={!allowed} onClick={open}>
-          {actionLabel}
-        </Button>
-        {notice && <div className="max-w-sm text-right">{notice}</div>}
-        {error && <Alert variant="danger">{error}</Alert>}
-        {modals}
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-2">
-      <SettingRow
-        label={actionLabel}
-        description="이전 값이 즉시 무효화됩니다"
-        action={
-          <Button variant="secondary" size="sm" disabled={!allowed} onClick={open}>
-            {actionLabel}
-          </Button>
-        }
-      />
-      {notice}
-      {error && <Alert variant="danger">{error}</Alert>}
-      {modals}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{actionLabel}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <SettingRow
+          label={rotation ? '이전 값이 즉시 무효화됩니다' : '평문은 발급 직후 한 번만 보입니다'}
+          // 발급 전 갈래에는 설명이 없다. 이 카드 위의 StatusNotice 가 「발급 전에는
+          // 이 키로 보낸 요청이 하나도 인증되지 않습니다」를 이미 말하고 있어,
+          // 같은 사실이 한 탭에 열다섯 줄 간격으로 두 번 서게 된다.
+          description={rotation ? '값을 잃어버렸을 때만 재발급합니다.' : undefined}
+          action={
+            <Button
+              variant={rotation ? 'secondary' : 'primary'}
+              size="sm"
+              disabled={!allowed}
+              onClick={open}
+            >
+              {actionLabel}
+            </Button>
+          }
+        />
+        {notice}
+        {modals}
+      </CardContent>
+    </Card>
   )
 }

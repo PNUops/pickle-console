@@ -3,10 +3,11 @@ import { Link, useParams, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchLlmKey, type LlmKeyDetail } from '../api/queries'
 import { LlmKeyConnectionCard } from '../components/llm-key/LlmKeyConnectionCard'
-import { LlmKeyDangerCard } from '../components/llm-key/LlmKeyDangerCard'
+import { LlmKeyBodyRecordCard } from '../components/llm-key/LlmKeyBodyRecordCard'
 import { LlmKeyInfoCard } from '../components/llm-key/LlmKeyInfoCard'
 import { LlmKeyIssueAction } from '../components/llm-key/LlmKeyIssueAction'
-import { LlmKeySettingsCard } from '../components/llm-key/LlmKeySettingsCard'
+import { LlmKeyNameCard } from '../components/llm-key/LlmKeyNameCard'
+import { RevokeKeyCard } from '../components/llm-key/RevokeKeyCard'
 import { ResourceAccessSection } from '../components/resource/ResourceAccessSection'
 import {
   Alert,
@@ -112,20 +113,15 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-neutral-900">{llmKey.name}</h1>
-            <LlmKeyStatusBadge status={status} />
-          </div>
-          <p className="mt-1 text-sm text-neutral-500">
-            {llmKey.workspaceName} 소유
-            {llmKey.purpose && <> · {llmKey.purpose}</>}
-          </p>
+      {/* No action slot: this key's own actions all live in their tabs, so the
+          header is a title and a badge and the wrapper that held both sides
+          of it is gone. */}
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-neutral-900">{llmKey.name}</h1>
+          <LlmKeyStatusBadge status={status} />
         </div>
-        {/* Mounted outside the tabs so the one-time plaintext modal outlives
-            a tab switch; it draws a button only while the key is pending. */}
-        <LlmKeyIssueAction llmKey={llmKey} status={status} placement="header" />
+        <p className="mt-1 text-sm text-neutral-500">{llmKey.workspaceName} 소유</p>
       </div>
 
       <Tabs
@@ -137,8 +133,12 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
         <StatusNotice status={status} />
-        {status === 'ACTIVE' && <LlmKeyConnectionCard keyId={llmKey.id} />}
+        {/* The facts first: the page's subject is this key, and its own
+            properties are what confirm the reader is looking at the right one.
+            Then what to do with it, and last the one-off that mints a value. */}
         <LlmKeyInfoCard llmKey={llmKey} />
+        {status === 'ACTIVE' && <LlmKeyConnectionCard keyId={llmKey.id} />}
+        <LlmKeyIssueAction llmKey={llmKey} status={status} />
       </TabPanel>
 
       <TabPanel id="usage" active={activeTab === 'usage'}>
@@ -160,8 +160,17 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
       </TabPanel>
 
       <TabPanel id="settings" active={activeTab === 'settings'} className="space-y-6">
-        <LlmKeySettingsCard llmKey={llmKey} />
-        <LlmKeyDangerCard llmKey={llmKey} status={status} />
+        {/* One card per setting rather than a 「키 설정」 card holding both: the
+            tab is already called 설정, so that title named nothing the reader
+            did not know, and the two settings have nothing to do with each
+            other. Revoking stays here, where a VM keeps its deletion. */}
+        <LlmKeyNameCard llmKey={llmKey} />
+        <LlmKeyBodyRecordCard llmKey={llmKey} />
+        <RevokeKeyCard
+          keyId={llmKey.id}
+          name={llmKey.name}
+          allowed={llmKey.accessManageAllowed}
+        />
       </TabPanel>
 
       <TabPanel id="bodies" active={activeTab === 'bodies'}>

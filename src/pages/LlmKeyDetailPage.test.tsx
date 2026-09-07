@@ -89,13 +89,15 @@ describe('LLM API 키 상세', () => {
     expect(screen.getByText('이미지 생성')).toBeInTheDocument()
   })
 
-  test('states the last use as a relative time with the stamp beside it', async () => {
-    // How long ago replaces the sentence about batched reporting being late.
+  test('reads the last use as one relative time and nothing else', async () => {
+    // 「지금도 쓰이고 있나」를 묻는 값은 상대 시간 하나다. 절대 시각을 옆에 함께
+    // 두면 한 자리가 한 시각을 두 번 읽고, 목록의 같은 열과도 어긋난다.
     renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
-    const absolute = screen.getByText('2026-08-10 18:22')
-    expect(absolute.parentElement).toHaveTextContent(/^\d+(분|시간|일) 전/)
+    const cell = screen.getByText('마지막 사용').nextElementSibling!
+    expect(cell).toHaveTextContent(/^\d+(분|시간|일) 전$/)
+    expect(cell.querySelector('time')).toHaveAttribute('datetime', '2026-08-10T18:22:00+09:00')
     expect(screen.queryByText(/늦게 반영될 수 있습니다/)).not.toBeInTheDocument()
   })
 
@@ -149,9 +151,11 @@ describe('발급 전 키', () => {
 })
 
 describe('이미 발급된 키', () => {
-  test('puts re-issue on the settings tab and warns before the old value dies', async () => {
+  test('puts re-issue on the overview and warns before the old value dies', async () => {
+    // The reason to re-issue is that the value is lost, and the place a
+    // reader notices that is where the value should have been.
     const user = userEvent.setup()
-    renderKey(ISSUED_KEY, 'settings')
+    renderKey(ISSUED_KEY)
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     await user.click(screen.getByRole('button', { name: '키 재발급' }))
@@ -162,9 +166,19 @@ describe('이미 발급된 키', () => {
     ).toBeInTheDocument()
   })
 
-  test('offers no re-issue on the overview', async () => {
-    // An irreversible and rare action is not a button on the first screen.
+  test('draws the facts before the ways to use the key', async () => {
     renderKey(ISSUED_KEY)
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    const titles = [...document.querySelectorAll('main h2, main h3')]
+      .map((el) => el.textContent?.trim())
+      .filter((text) => text === '키 정보' || text === '연결 정보' || text === '키 재발급')
+    expect(titles).toEqual(['키 정보', '연결 정보', '키 재발급'])
+  })
+
+  test('offers no re-issue on the settings tab', async () => {
+    // 설정 is the two settings and the revoke, and nothing that mints a value.
+    renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
@@ -212,13 +226,17 @@ describe('폐기된 키', () => {
 })
 
 describe('권한이 화면에 미리 보인다', () => {
-  test('shows a member no issue, edit or revoke at all', async () => {
-    // The screen draws the role the server gave rather than a 403 on click.
-    // A role that can do nothing on those tabs does not get the tabs.
+  test('locks re-issue for a member and says who can', async () => {
+    // 개요는 누구나 보므로, 발급 권한이 없는 사람도 그 카드를 보고 비활성 버튼과
+    // 사유를 읽는다 (사용자 콘솔의 설명형 비활성 규칙). 아무것도 할 수 없는 탭은
+    // 그 사람에게 아예 서지 않는 것과 다른 규칙이다.
     renderKey(MEMBER_KEY)
 
     await screen.findByRole('heading', { name: 'study-shared-key' })
-    expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '키 재발급' })).toBeDisabled()
+    expect(
+      screen.getByText(/키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만/),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '접근' })).not.toBeInTheDocument()
     // 접근 목록도 남의 것이다.
@@ -246,13 +264,16 @@ describe('권한이 화면에 미리 보인다', () => {
     expect(screen.queryByRole('tab', { name: '접근' })).not.toBeInTheDocument()
     await user.type(screen.getByDisplayValue('study-shared-key'), '-2')
     expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: '키 재발급' })).toBeDisabled()
-    expect(
-      screen.getByText(/키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만/),
-    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '키 폐기' })).toBeDisabled()
     expect(
       screen.getByText(/키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만/),
+    ).toBeInTheDocument()
+    // 재발급은 개요에 서고, 편집권으로는 열리지 않는다.
+    expect(screen.queryByRole('button', { name: '키 재발급' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '개요' }))
+    expect(screen.getByRole('button', { name: '키 재발급' })).toBeDisabled()
+    expect(
+      screen.getByText(/키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만/),
     ).toBeInTheDocument()
   })
 
@@ -306,9 +327,15 @@ describe('정지·만료된 키', () => {
   })
 })
 
-describe('키 설정 수정', () => {
-  test('바꾼 항목만 보낸다 — 건드리지 않은 용도는 그대로 남는다', async () => {
+describe('키 이름 수정', () => {
+  test('sends the name alone and leaves the rest of the key standing', async () => {
+    // 이름 카드는 이름만 보낸다. 같은 요청에 나머지를 실으면, 화면이 더 이상
+    // 다루지 않는 값(용도)과 다른 카드가 가진 값(본문 기록)을 이 저장이 덮는다.
     const user = userEvent.setup()
+    // 기록을 켜 둔 채로 이름을 바꾼다. 픽스처 기본값이 꺼짐이라 그대로 두면
+    // 「덮지 않았다」는 단언이 공허해진다 — 덮어도 같은 값이 나온다.
+    const key = llmKeyStore.find((candidate) => candidate.id === ISSUED_KEY)!
+    key.recordBodies = true
     renderKey(ISSUED_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
@@ -317,11 +344,12 @@ describe('키 설정 수정', () => {
     await user.type(name, 'capstone-chatbot-v2')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('설정을 저장했습니다.')).toBeInTheDocument()
-    const stored = llmKeyStore.find((key) => key.id === ISSUED_KEY)!
+    expect(await screen.findByText('이름을 바꿨습니다.')).toBeInTheDocument()
+    const stored = llmKeyStore.find((candidate) => candidate.id === ISSUED_KEY)!
     expect(stored.name).toBe('capstone-chatbot-v2')
     // 생략한 항목은 서버가 그대로 둔다는 계약이 화면 쪽에서도 지켜져야 한다.
     expect(stored.purpose).toBe('캡스톤 챗봇 백엔드')
+    expect(stored.recordBodies).toBe(true)
   })
 
   test('공백만 덧붙인 편집은 변경으로 세지 않는다', async () => {
@@ -331,7 +359,7 @@ describe('키 설정 수정', () => {
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     // 서버는 다듬어 저장하므로 돌아오는 값이 그대로다 — 이걸 변경으로 보면 폼이
     // 영원히 미저장 상태에 갇힌다.
-    await user.type(screen.getByDisplayValue('캡스톤 챗봇 백엔드'), '   ')
+    await user.type(screen.getByDisplayValue('capstone-chatbot'), '   ')
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 

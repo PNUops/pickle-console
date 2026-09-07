@@ -127,23 +127,23 @@ describe('워크스페이스 상세 — 구성원 관리', () => {
   })
 })
 
-describe('워크스페이스 상세 — 워크스페이스 삭제(위험 구역)', () => {
-  test('OWNER는 위험 구역(워크스페이스 삭제)을 본다', async () => {
+describe('워크스페이스 상세 — 워크스페이스 삭제', () => {
+  test('OWNER는 워크스페이스 삭제 카드를 본다', async () => {
     renderWorkspace(uuid(12))
     await screen.findByRole('heading', { name: '캡스톤 3조' })
-    expect(screen.getByRole('heading', { name: '위험 구역' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '워크스페이스 삭제' })).toBeInTheDocument()
   })
 
-  test('PERSONAL 워크스페이스에는 위험 구역이 없다', async () => {
+  test('PERSONAL 워크스페이스에는 삭제 카드가 없다', async () => {
     renderWorkspace(uuid(7))
     await screen.findByRole('heading', { name: '홍길동' })
-    expect(screen.queryByRole('heading', { name: '위험 구역' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '워크스페이스 삭제' })).not.toBeInTheDocument()
   })
 
-  test('MEMBER에게는 위험 구역이 없다', async () => {
+  test('MEMBER에게는 삭제 카드가 없다', async () => {
     renderWorkspace(uuid(15))
     await screen.findByRole('heading', { name: '알고리즘 스터디' })
-    expect(screen.queryByRole('heading', { name: '위험 구역' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '워크스페이스 삭제' })).not.toBeInTheDocument()
   })
 
   test('이름을 정확히 입력해야 삭제되고, 이후 워크스페이스 목록으로 이동한다', async () => {
