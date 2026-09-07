@@ -160,9 +160,8 @@ export const resourceTypes: ResourceType[] = [
     icon: 'chip',
     title: 'LLM API 키',
     status: 'live',
-    badge: 'Beta',
     description:
-      'OpenAI 호환 API를 호출하는 키를 콘솔에서 발급합니다. 키마다 요청과 토큰 한도가 있고, 사용량을 콘솔에서 확인합니다.',
+      'OpenAI 호환 API를 호출하는 키를 콘솔에서 발급합니다. 키마다 일일 토큰 한도와 금액 한도가 있고, 사용량을 콘솔에서 확인합니다.',
     meta: 'POST /v1/chat/completions',
   },
   { icon: 'container', title: '컨테이너', status: 'planned' },
