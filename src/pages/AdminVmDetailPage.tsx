@@ -25,6 +25,7 @@ import {
   Modal,
   Pagination,
   Spinner,
+  SplitButton,
   Table,
   TabPanel,
   Tabs,
@@ -193,6 +194,9 @@ const POWER_ACTIONS: {
   label: string
   mutate: (vmId: string) => Promise<MessageResponse>
   enabledFor: (status: VmDetail['status']) => boolean
+  /** A top-level button, or an item inside the shutdown button's menu. */
+  placement: 'button' | 'menu'
+  /** Variant of the confirm modal's action button. */
   variant: 'primary' | 'secondary' | 'danger'
   confirm: string
 }[] = [
@@ -201,6 +205,7 @@ const POWER_ACTIONS: {
     label: '시작',
     mutate: adminStartVm,
     enabledFor: (status) => status === 'STOPPED',
+    placement: 'button',
     variant: 'primary',
     confirm: 'VM을 시작할까요? 만료된 VM은 먼저 기간을 연장해야 합니다.',
   },
@@ -209,6 +214,7 @@ const POWER_ACTIONS: {
     label: '종료',
     mutate: adminShutdownVm,
     enabledFor: (status) => status === 'RUNNING',
+    placement: 'button',
     variant: 'secondary',
     confirm: '정상 종료(ACPI)를 요청할까요? 정지 보호 설정과 무관하게 수행됩니다.',
   },
@@ -217,6 +223,7 @@ const POWER_ACTIONS: {
     label: '재부팅',
     mutate: adminRebootVm,
     enabledFor: (status) => status === 'RUNNING',
+    placement: 'button',
     variant: 'secondary',
     confirm: '재부팅을 요청할까요? 정지 보호 설정과 무관하게 수행됩니다.',
   },
@@ -225,6 +232,7 @@ const POWER_ACTIONS: {
     label: '강제 종료',
     mutate: adminForceStopVm,
     enabledFor: (status) => status === 'RUNNING' || status === 'REBOOTING',
+    placement: 'menu',
     variant: 'danger',
     confirm:
       '전원을 강제로 차단할까요? 정지 보호 설정과 무관하게 수행되며, 저장되지 않은 데이터는 유실될 수 있습니다.',
@@ -259,7 +267,17 @@ function PowerSection({
   })
 
   const availableActions = POWER_ACTIONS.filter((action) => action.enabledFor(vm.status))
-  if (availableActions.length === 0) return null
+  const buttonActions = availableActions.filter((action) => action.placement === 'button')
+  const menuActions = availableActions.filter((action) => action.placement === 'menu')
+  const shutdown = POWER_ACTIONS.find((action) => action.key === 'shutdown')!
+  // Same shape as the user's detail page: the shutdown split button also shows
+  // when only a menu action is allowed (REBOOTING keeps force stop), with its
+  // primary disabled, instead of a lone force-stop button.
+  const controls =
+    menuActions.length > 0 && !buttonActions.includes(shutdown)
+      ? [shutdown, ...buttonActions]
+      : buttonActions
+  if (controls.length === 0) return null
 
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
@@ -269,15 +287,32 @@ function PowerSection({
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="flex flex-wrap gap-2">
-        {availableActions.map((action) => (
-          <Button
-            key={action.key}
-            variant={action.variant}
-            onClick={() => setConfirmTarget(action)}
-          >
-            {action.label}
-          </Button>
-        ))}
+        {controls.map((action) =>
+          action.key === 'shutdown' ? (
+            <SplitButton
+              key={action.key}
+              label={action.label}
+              variant="secondary"
+              disabled={!action.enabledFor(vm.status)}
+              onClick={() => setConfirmTarget(action)}
+              menuLabel="종료 옵션"
+              items={menuActions.map((item) => ({
+                key: item.key,
+                label: item.label,
+                onSelect: () => setConfirmTarget(item),
+                danger: item.variant === 'danger',
+              }))}
+            />
+          ) : (
+            <Button
+              key={action.key}
+              variant={action.variant}
+              onClick={() => setConfirmTarget(action)}
+            >
+              {action.label}
+            </Button>
+          ),
+        )}
       </div>
       <Modal
         open={confirmTarget !== null}

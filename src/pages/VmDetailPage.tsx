@@ -50,6 +50,7 @@ import {
   Pagination,
   Select,
   Spinner,
+  SplitButton,
   Stepper,
   TabPanel,
   Tabs,
@@ -352,6 +353,8 @@ interface PowerActionConfig {
   label: string
   /** 계약의 409 조건과 정합: 이 상태에서만 버튼을 노출한다. */
   allowed: (status: VmStatus) => boolean
+  /** A top-level button, or an item inside the shutdown button's menu. */
+  placement: 'button' | 'menu'
   run: (vmId: string) => Promise<MessageResponse>
   confirmTitle: string
   confirmBody: string
@@ -364,6 +367,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
   start: {
     label: '시작',
     allowed: (status) => status === 'STOPPED',
+    placement: 'button',
     run: startVm,
     confirmTitle: 'VM 시작',
     confirmBody: '잠시 후 실행 중 상태로 바뀝니다.',
@@ -371,6 +375,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
   shutdown: {
     label: '종료',
     allowed: (status) => status === 'RUNNING',
+    placement: 'button',
     run: shutdownVm,
     confirmTitle: 'VM 종료',
     confirmBody:
@@ -379,6 +384,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
   reboot: {
     label: '재부팅',
     allowed: (status) => status === 'RUNNING',
+    placement: 'button',
     run: rebootVm,
     confirmTitle: 'VM 재부팅',
     confirmBody: '재부팅하는 동안 접속이 잠시 끊깁니다.',
@@ -386,6 +392,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
   forceStop: {
     label: '강제 종료',
     allowed: (status) => status === 'RUNNING' || status === 'REBOOTING',
+    placement: 'menu',
     run: forceStopVm,
     confirmTitle: 'VM 강제 종료',
     confirmBody:
@@ -419,23 +426,53 @@ function PowerControls({ vm }: { vm: VmDetail }) {
     },
   })
 
-  const visibleActions = (Object.keys(POWER_ACTIONS) as PowerAction[]).filter((action) =>
+  const allowedActions = (Object.keys(POWER_ACTIONS) as PowerAction[]).filter((action) =>
     POWER_ACTIONS[action].allowed(vm.status),
   )
+  const buttonActions = allowedActions.filter(
+    (action) => POWER_ACTIONS[action].placement === 'button',
+  )
+  const menuActions = allowedActions.filter((action) => POWER_ACTIONS[action].placement === 'menu')
+  // The shutdown split button is the only way into the menu, so it also shows
+  // when shutdown itself is refused but a menu action is not: REBOOTING keeps
+  // force stop available, and a lone force-stop button is the prominence this
+  // layout removes, so the split button renders with its primary disabled.
+  const controls: PowerAction[] =
+    menuActions.length > 0 && !buttonActions.includes('shutdown')
+      ? ['shutdown', ...buttonActions]
+      : buttonActions
   const active = confirming ? POWER_ACTIONS[confirming] : null
 
-  if (visibleActions.length === 0 && !error) return null
+  if (controls.length === 0 && !error) return null
 
   return (
     <div className="flex flex-col items-end gap-2">
-      {visibleActions.length > 0 && (
+      {controls.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {visibleActions.map((action) => {
+          {controls.map((action) => {
             const config = POWER_ACTIONS[action]
+            if (action === 'shutdown') {
+              return (
+                <SplitButton
+                  key={action}
+                  label={config.label}
+                  size="sm"
+                  disabled={!config.allowed(vm.status)}
+                  onClick={() => setConfirming(action)}
+                  menuLabel="종료 옵션"
+                  items={menuActions.map((item) => ({
+                    key: item,
+                    label: POWER_ACTIONS[item].label,
+                    onSelect: () => setConfirming(item),
+                    danger: POWER_ACTIONS[item].danger,
+                  }))}
+                />
+              )
+            }
             return (
               <Button
                 key={action}
-                variant={config.danger ? 'danger' : 'secondary'}
+                variant="secondary"
                 size="sm"
                 onClick={() => setConfirming(action)}
               >

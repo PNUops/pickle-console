@@ -29,6 +29,7 @@ describe('VM 상세 — 전원 제어', () => {
     expect(screen.getByRole('button', { name: '시작' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '재부팅' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료 옵션' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '시작' }))
@@ -41,14 +42,32 @@ describe('VM 상세 — 전원 제어', () => {
     expect(await screen.findByText('실행 중')).toBeInTheDocument()
   })
 
-  test('실행 중 VM은 종료·재부팅·강제 종료가 보이고 시작은 없다', async () => {
+  test('실행 중 VM은 종료·재부팅 버튼이 보이고 강제 종료는 종료 메뉴 안에만 있다', async () => {
+    const user = userEvent.setup()
     renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    expect(screen.getByRole('button', { name: '종료' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '종료' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '재부팅' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '강제 종료' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
+    // 강제 종료는 최상위 버튼이 아니라 종료 버튼의 메뉴 항목이다.
+    expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '종료 옵션' }))
+    expect(screen.getByRole('menuitem', { name: '강제 종료' })).toBeInTheDocument()
+  })
+
+  test('재부팅 중 VM은 종료가 비활성인 채로 메뉴의 강제 종료만 열린다', async () => {
+    const user = userEvent.setup()
+    server.use(vmDetailAs(uuid(56), 'MEMBER', { status: 'REBOOTING' }))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.getByRole('button', { name: '종료' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '재부팅' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '종료 옵션' }))
+    expect(screen.getByRole('menuitem', { name: '강제 종료' })).toBeInTheDocument()
+    expect(screen.getAllByRole('menuitem')).toHaveLength(1)
   })
 
   test('강제 종료 확인 모달은 데이터 손상 경고를 보여준다', async () => {
@@ -56,7 +75,8 @@ describe('VM 상세 — 전원 제어', () => {
     renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    await user.click(screen.getByRole('button', { name: '강제 종료' }))
+    await user.click(screen.getByRole('button', { name: '종료 옵션' }))
+    await user.click(screen.getByRole('menuitem', { name: '강제 종료' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'VM 강제 종료' })
     expect(
@@ -77,6 +97,7 @@ describe('VM 상세 — 전원 제어', () => {
     expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '재부팅' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료 옵션' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '강제 종료' })).not.toBeInTheDocument()
   })
 })
