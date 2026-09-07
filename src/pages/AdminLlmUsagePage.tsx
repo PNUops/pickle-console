@@ -230,15 +230,24 @@ function WindowSummary({ window, selected }: { window: LlmUsageWindow; selected:
  *
  * **일부만 가격이 붙은 행은 그 사실을 그 자리에서 말한다.** 전체 개수만 따로 세면 그 몇
  * 건이 어느 모델에서, 어느 경로에서 빠진 것인지 알 수 없다. 여기 붙이면 빠진 자리가
- * 곧 그 행이다. 한 건도 안 붙은 행은 값 자체가 없으므로 개수를 덧붙이지 않는다.
+ * 곧 그 행이다.
+ *
+ * **이 건수는 하한이다.** 축이 기록되기 전의 요청이나 축이 null 로 내려간 요청에 금액이
+ * 붙어 있으면 가격 붙은 수가 유료 축 수보다 커져 차가 음수가 되고, 그때는 아무것도 적지
+ * 않는다. 실제보다 적게 말할 수는 있어도 없는 것을 말하지는 않는 쪽으로 기운다.
+ *
+ * **빠진 건수는 전체 요청이 아니라 유료 모델 요청에서 뺀다.** 전체 요청에서 빼면 자체
+ * 서빙 요청이 전부 「금액을 모르는 요청」이 되는데, 자체 서빙에는 금액이라는 것이 아예
+ * 없으므로 모르는 것이 아니다. 카드 위의 총계 문장을 뺀 이유가 정확히 그것이었고, 행마다
+ * 같은 계산을 하면 같은 거짓을 행 수만큼 말하게 된다.
  */
 function amountCell(
   amount: number | null | undefined,
-  requests: number,
+  creditAxisRequests: number,
   priced: number,
 ): string {
-  if (amount == null) return '—'
-  const missing = requests - priced
+  const missing = creditAxisRequests - priced
+  if (amount == null) return missing > 0 ? `— (${count(missing)}건 미상)` : '—'
   return missing > 0 ? `${formatUsd(amount)} (${count(missing)}건 미상)` : formatUsd(amount)
 }
 
@@ -269,8 +278,13 @@ function ConsumersSection({
     <Card>
       <CardHeader>
         <CardTitle>주요 소비처</CardTitle>
+        {/* KEY 단계의 이름은 이 화면을 좁히지 않고 키 상세로 나간다. 종전에는
+            마지막 열이 그 목적지를 말해 줬는데 그 열을 지웠으므로, 부제가
+            단계마다 다른 말을 해야 화면이 보여 주는 것과 어긋나지 않는다. */}
         <p className="type-caption mt-1 text-foreground-muted">
-          이름을 누르면 이 화면이 그 범위로 좁혀집니다.
+          {consumers.level === 'KEY'
+            ? '이름을 누르면 그 키의 상세로 갑니다.'
+            : '이름을 누르면 이 화면이 그 범위로 좁혀집니다.'}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -311,7 +325,8 @@ function ConsumersSection({
         )}
         {consumers.truncated && (
           <MessageBar>
-            상위 {consumers.items.length.toLocaleString('ko-KR')}개만 표시합니다. 전체 소비처는{' '}
+            상위 {consumers.items.length.toLocaleString('ko-KR')}개만 표시합니다. 전체{' '}
+            {CONSUMER_LEVEL_LABELS[consumers.level]} 수는{' '}
             {consumers.totalItems.toLocaleString('ko-KR')}개입니다.
           </MessageBar>
         )}
@@ -366,7 +381,7 @@ function ConsumerRow({
       {/* 금액이 없는 것은 0이 아니다. 자체 서빙 모델에는 금액이라는 것이 아예
           없고, 축이 생기기 전의 요청은 기록되지 않았다. 둘 다 `$0.00`으로 적으면
           「공짜로 썼다」는, 서버가 한 적 없는 주장이 된다. */}
-      <TD>{amountCell(item.attributedCostUsd, item.requests, item.pricedRequests)}</TD>
+      <TD>{amountCell(item.attributedCostUsd, item.creditAxisRequests, item.pricedRequests)}</TD>
     </TR>
   )
 }
@@ -467,23 +482,101 @@ function ModelBreakdownTable({ rows }: { rows: AdminLlmUsage['breakdown']['model
         </TR>
       </THead>
       <TBody>
-        {rows.map((row) => (
-          <TR key={row.modelName ?? 'unknown'}>
-            <TD>{row.modelName ?? '모델 미상'}</TD>
-            <TD>{count(row.requests)}건</TD>
-            <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
-            {/* 값 없음과 0을 가른다. 자체 서빙 모델에는 금액이라는 것이 없다. */}
-            <TD>{amountCell(row.attributedCostUsd, row.requests, row.pricedRequests)}</TD>
-            <TD>{Math.round(row.avgLatencyMs).toLocaleString('ko-KR')}ms</TD>
-            <TD>
-              {/* percent()가 100을 곱한다. 여기서 또 곱하면 476%가 나온다. */}
-              {row.requests === 0 ? '—' : percent(row.failed / row.requests)}
-            </TD>
-          </TR>
-        ))}
+        {rows.map((row) => <ModelRows key={row.modelName ?? 'unknown'} row={row} />)}
       </TBody>
     </DataTable>
   )
+}
+
+/**
+ * 한 모델이 한 행이거나 두 행이다.
+ *
+ * **금액을 아는 요청과 모르는 요청이 한 행에 섞여 있으면 토큰 수로 아무것도 추정할 수
+ * 없다.** 87건에 $0.08이고 그중 69건이 미상이라는 표기는 「얼마나 모르는가」는 말하지만
+ * 「모르는 쪽이 얼마쯤일까」에는 답하지 않는다. 두 행으로 나누면 아는 쪽의 토큰당 단가가
+ * 나오고, 그것을 모르는 쪽 토큰에 곱하는 것이 지금 할 수 있는 유일한 추정이다.
+ *
+ * **두 행은 각각 완전한 행이다** — 모델 이름을 되풀이하고, 요청·토큰·평균 응답·실패율을
+ * 자기 몫으로 갖는다. 하위 항목으로 들여쓰면 아래 행의 숫자가 위 행에 딸린 값으로 읽힌다.
+ * 서버가 응답 시간을 가격 기준으로 나누어 주는 것도 같은 이유다. **실패한 요청에는 금액이
+ * 붙지 않으므로**(라이브 실측 0건) 실패는 전부 아래 행의 몫이고, 위 행의 실패율은 0이다.
+ *
+ * **두 행은 언제나 붙어 있고, 정렬 순위는 둘을 합한 값이 정한다.** 서버가 모델 하나를 한
+ * 행으로 내려보내며 그 합계로 정렬하고, 화면이 그 자리에서 둘로 펼친다. 나누는 것이
+ * 모델의 순위를 바꾸지 않는다.
+ *
+ * 나누는 것은 **모델별 표뿐이다.** 한 모델의 요청은 이름 하나로 묶여 있어 가격 기준으로
+ * 자르면 두 부분이 그대로 두 행이 된다. 소비처와 호출 종류 행은 모델 여럿을 묶으므로
+ * 같은 방식으로 나누면 금액이라는 것이 아예 없는 자체 서빙 요청이 「모르는 쪽」에 통째로
+ * 들어간다.
+ *
+ * **아래 행이 순수하지는 않다.** 예산 축은 요청 시점 값이고 롤업 버킷 키에 들어 있지
+ * 않으므로, 모델의 축이 바뀐 창에서는 한 이름이 두 축을 함께 단다. 한도 거부와 모델이
+ * 정해지기 전에 실패한 요청도 축이 null 인 채 이 행에 섞인다. 그래서 이 행이 말하는 것은
+ * 「전부 유료인데 금액을 못 받았다」가 아니라 **「금액이 붙지 않았다」**이고, 그 이상을
+ * 주장하지 않는 것이 이 행에 쓸 수 있는 가장 강한 문장이다.
+ */
+function ModelRows({ row }: { row: AdminLlmUsage['breakdown']['models'][number] }) {
+  const name = row.modelName ?? '모델 미상'
+  const unpriced = row.requests - row.pricedRequests
+  // **이 표의 분모는 하나다: 금액이 붙었는가.** 두 행은 이 모델의 요청을 남김없이
+  // 나눠야 하므로 축으로 자를 수 없다 — 축으로 자르면 자체 서빙과 축이 기록되기 전의
+  // 요청과 한도 거부가 어느 행에도 들어가지 않아 두 행의 합이 모델 요청 수와 달라진다.
+  // 소비처와 호출 종류 표는 행을 나눌 수 없어 그쪽 규칙이 다르다.
+  //
+  // **나눌지 말지도 축으로 정하지 않는다.** 축은 요청 시점 값이라 기록되기 전 요청과
+  // 한도 거부는 null 이고, `budget_axis` 가 TOKEN·CREDIT 이 아니면 적재가 null 로
+  // 내린다. 유료 요청이 축 없이 들어온 모델을 「유료 트래픽 없음」으로 판정하면
+  // 나뉘어야 할 행이 안 나뉜다. 가격이 붙은 것과 안 붙은 것이 둘 다 있으면 나눈다.
+  if (row.pricedRequests === 0 || unpriced <= 0) {
+    return (
+      <TR>
+        <TD>{name}</TD>
+        <TD>{count(row.requests)}건</TD>
+        <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
+        <TD>
+          {row.attributedCostUsd != null ? formatUsd(row.attributedCostUsd)
+            : row.creditAxisRequests === 0 ? '—' : '정보 없음'}
+        </TD>
+        <TD>{latency(row.avgLatencyMs)}</TD>
+        <TD>
+          {/* percent()가 100을 곱한다. 여기서 또 곱하면 476%가 나온다. */}
+          {row.requests === 0 ? '—' : percent(row.failed / row.requests)}
+        </TD>
+      </TR>
+    )
+  }
+  return (
+    <>
+      <TR>
+        <TD>{name}</TD>
+        <TD>{count(row.pricedRequests)}건</TD>
+        <TD>{tokens(row.pricedInputTokens + row.pricedOutputTokens)}</TD>
+        <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
+        <TD>{latency(row.pricedAvgLatencyMs)}</TD>
+        {/* 서버가 세어 준다. 「금액이 붙은 요청은 언제나 성공이다」는 게이트웨이의
+            불변식이지 이 화면이 보증할 수 있는 것이 아니라, 0을 적어 두지 않는다. */}
+        <TD>{percent(row.pricedFailed / row.pricedRequests)}</TD>
+      </TR>
+      <TR>
+        <TD>{name}</TD>
+        <TD>{count(unpriced)}건</TD>
+        <TD>
+          {tokens(row.inputTokens + row.outputTokens
+            - row.pricedInputTokens - row.pricedOutputTokens)}
+        </TD>
+        {/* 「—」가 아니라 말로 적는다. 자체 서빙 행의 「—」는 금액이라는 것이 없다는
+            뜻이고, 이 행은 있어야 하는데 모른다는 뜻이라 같은 부호를 쓰면 안 된다. */}
+        <TD>정보 없음</TD>
+        <TD>{latency(row.unpricedAvgLatencyMs)}</TD>
+        <TD>{percent((row.failed - row.pricedFailed) / unpriced)}</TD>
+      </TR>
+    </>
+  )
+}
+
+function latency(ms: number): string {
+  return `${Math.round(ms).toLocaleString('ko-KR')}ms`
 }
 
 function EndpointBreakdownTable({
@@ -518,7 +611,7 @@ function EndpointBreakdownTable({
             <TD>{endpointKindLabel(row.endpoint)}</TD>
             <TD>{count(row.requests)}건</TD>
             <TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
-            <TD>{amountCell(row.attributedCostUsd, row.requests, row.pricedRequests)}</TD>
+            <TD>{amountCell(row.attributedCostUsd, row.creditAxisRequests, row.pricedRequests)}</TD>
             {anyImages && <TD>{count(row.imageCount)}장</TD>}
           </TR>
         ))}

@@ -97,8 +97,26 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     expect(within(selfHosted).getByText('4.8%')).toBeInTheDocument()
     // 자체 서빙 모델에는 금액이라는 것이 없다. $0.00이 아니라 —.
     expect(within(selfHosted).getByText('—')).toBeInTheDocument()
-    const paid = within(modelTable).getByText('openai/gpt-5.6').closest('tr')!
-    expect(within(paid).getByText('$0.1245')).toBeInTheDocument()
+    // 금액을 아는 요청과 모르는 요청이 **완전한 두 행**으로 갈린다. 한 행에
+    // 「2건 미상」이라고 적으면 모르는 쪽이 얼마쯤일지 추정할 토큰 수가 없다.
+    const paidRows = within(modelTable).getAllByText('openai/gpt-5.6')
+      .map((cell) => cell.closest('tr')!)
+    expect(paidRows).toHaveLength(2)
+    const [known, unknown] = paidRows
+    // 둘은 언제나 붙어 있다 — 사이에 다른 모델이 끼면 합계로 정렬한 순위가 깨진다.
+    expect(known.nextElementSibling).toBe(unknown)
+    expect(within(known).getByText('4건')).toBeInTheDocument()
+    expect(within(known).getByText('300 토큰')).toBeInTheDocument()
+    expect(within(known).getByText('$0.1245')).toBeInTheDocument()
+    expect(within(unknown).getByText('2건')).toBeInTheDocument()
+    expect(within(unknown).getByText('150 토큰')).toBeInTheDocument()
+    // 자체 서빙의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
+    // 이쪽은 있어야 하는데 모른다.
+    expect(within(unknown).getByText('정보 없음')).toBeInTheDocument()
+    // 응답 시간은 각 행이 자기 요청의 값을 갖는다. 한 값을 되풀이하면 서로 다른
+    // 요청 수를 갖고도 같은 응답 시간을 말하게 된다.
+    expect(within(known).getByText('1,300ms')).toBeInTheDocument()
+    expect(within(unknown).getByText('1,750ms')).toBeInTheDocument()
     expect(screen.getByText('일부 토큰은 추정값입니다')).toBeInTheDocument()
     expect(adminLlmUsageQueries.some((query) => query.includes('days=7') && query.includes('top=20'))).toBe(true)
 
@@ -119,7 +137,7 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
 })
 
 describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
-  test('기관→workspace→key drill-down과 filtered key 목록 link가 scope와 days를 보존한다', async () => {
+  test('기관→workspace→key drill-down이 scope와 days를 보존하고 마지막 단계가 키 상세로 나간다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/llm/usage?days=30')
@@ -184,6 +202,37 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
       expect(adminLlmUsageQueries.some((query) => query.includes(`workspaceId=${uuid(12)}`)))
         .toBe(true))
     expect(await screen.findByRole('heading', { name: '호출 분해' })).toBeInTheDocument()
+  })
+
+  test('금액 칸이 값을 그리고, 빠진 건수를 유료 요청에서만 센다', async () => {
+    // 두 가지를 한꺼번에 지킨다. 하나는 금액이 응답에 있는데 화면에 없던 결함이
+    // 되살아나지 않는 것이고(그 자리를 보는 시험이 종전에는 하나도 없었다), 다른
+    // 하나는 「N건 미상」의 분모다. 전체 요청에서 빼면 자체 서빙 요청이 전부
+    // 「금액을 모르는 요청」이 되는데, 자체 서빙에는 알아낼 금액이 없다.
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/llm/usage')
+
+    const consumers = await screen.findByRole('table', { name: 'LLM 주요 소비처' })
+    // 유료만 쓴 기관: 여섯 건 전부 유료 축인데 넷에만 금액이 붙었다.
+    const paidOrg = within(consumers).getByText('테스트 기관').closest('tr')!
+    expect(within(paidOrg).getByText('$0.1245 (2건 미상)')).toBeInTheDocument()
+    // 자체 서빙만 쓴 기관: 스물한 건 전부인데 미상은 한 건도 아니다.
+    const selfHostedOrg = within(consumers)
+      .getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
+    expect(within(selfHostedOrg).getByText('—')).toBeInTheDocument()
+    expect(within(selfHostedOrg).queryByText(/미상/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '호출 종류별' }))
+    const kinds = await screen.findByRole('table', { name: '호출 종류별 사용' })
+    // 채팅은 스물한 건이지만 유료로 나간 것은 셋이고 그중 둘에 금액이 붙었다.
+    const chat = within(kinds).getByText('채팅').closest('tr')!
+    expect(within(chat).getByText('21건')).toBeInTheDocument()
+    expect(within(chat).getByText('$0.0623 (1건 미상)')).toBeInTheDocument()
+    // 경로가 기록되기 전의 요청에는 유료 축이 없다.
+    const unknown = within(kinds).getByText('종류 미상').closest('tr')!
+    expect(within(unknown).getByText('—')).toBeInTheDocument()
+    expect(within(unknown).queryByText(/미상 \(/)).not.toBeInTheDocument()
   })
 
   test('actual exhaustion만 danger이고 exact 5 reasons·null/0·deep link를 보존한다', async () => {
