@@ -1,7 +1,8 @@
 import { screen, within } from '@testing-library/react'
+import { http, HttpResponse, passthrough } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { asGrantManager, vmSummaryAs } from '../test/msw/handlers/vms'
+import { asGrantManager, vmStore, vmSummaryAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -79,16 +80,34 @@ describe('내 가상머신 목록', () => {
 })
 
 describe('VM 상세', () => {
-  test('생성 중 VM은 폴링으로 실행 중 전이를 자동 반영한다', async () => {
+  test('생성 중 VM은 생성 중이라고 말하고 IP 자리를 비워 둔다', async () => {
+    // **중간 상태를 잡으려고 경주하지 않는다.** 기본 목이 두 번째 상세 조회에서
+    // RUNNING 으로 넘기므로 「생성 중」 화면은 한 폴링 주기만 살고, 느린 기계에서는
+    // 단언 전에 그 창이 닫힌다. 실제로 배포 호스트에서 이 시험이 그렇게 떨어졌다.
+    //
+    // 공용 픽스처에 전이하지 않는 VM 을 더하는 대신 이 시험 안에서만 응답을
+    // 고정한다 — 픽스처를 늘리면 관리자 목록의 첫 페이지가 밀려 무관한 시험 넷이
+    // 함께 깨진다(실제로 그렇게 됐다).
+    const creating = { ...vmStore.find((vm) => vm.id === uuid(55))!, status: 'CREATING' }
+    server.use(
+      http.get('*/api/v1/vms/:vmId', ({ params }) =>
+        String(params.vmId) === uuid(55)
+          ? HttpResponse.json(creating, { status: 200 })
+          : passthrough()),
+    )
     renderVms(`/console/vms/${uuid(55)}`)
 
-    // 첫 응답: 생성 중 + 안내 배너, IP는 아직 없음
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
     expect(screen.getByText('생성 중')).toBeInTheDocument()
     expect(screen.getByText(/생성이 끝나면 상태가 자동으로 갱신됩니다/)).toBeInTheDocument()
     expect(screen.getByText('할당 전')).toBeInTheDocument()
+  })
 
-    // 폴링이 돌면 mock 프로비저닝 완료 → 실행 중으로 갱신
+  test('생성이 끝나면 폴링이 실행 중과 IP를 가져온다', async () => {
+    // 이쪽은 도착 상태만 단언하므로 언제 전이하든 상관없다.
+    renderVms(`/console/vms/${uuid(55)}`)
+
+    await screen.findByRole('heading', { name: 'capstone-team3-api' })
     expect(await screen.findByText('실행 중')).toBeInTheDocument()
     expect(screen.queryByText(/생성이 끝나면 상태가 자동으로 갱신됩니다/)).not.toBeInTheDocument()
     expect(screen.getByText('10.10.0.55')).toBeInTheDocument()
