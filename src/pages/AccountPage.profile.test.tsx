@@ -11,6 +11,12 @@ import {
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
+/** 「이름」 행의 「변경」. 같은 이름의 버튼이 비밀번호 행에도 있어 행으로 좁힌다. */
+function nameRowButton(): HTMLElement {
+  const row = screen.getByText('이름', { selector: 'p' }).closest<HTMLElement>('div.space-y-2')!
+  return within(row).getByRole('button', { name: '변경' })
+}
+
 function renderAccount() {
   server.use(refreshSuccessHandler('access-user', regularUser))
   renderApp('/console/account')
@@ -33,18 +39,20 @@ describe('계정 설정 — 프로필', () => {
     renderAccount()
     await screen.findByRole('heading', { name: '계정 설정' })
 
-    await user.click(screen.getAllByRole('button', { name: '변경' })[0])
-    const dialog = await screen.findByRole('dialog', { name: '프로필 변경' })
+    // 잠긴 셋은 채울 것이 없으므로 「입력」 버튼도 없다. 값과 잠김 표시는 행에
+    // 함께 서고, 그것을 보려고 창을 열 필요가 없다.
+    expect(screen.getAllByText('변경 불가')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: '입력' })).not.toBeInTheDocument()
 
-    // 이름만 고칠 수 있다. 세 값은 저장돼 있으므로 서버가 422로 거절하고, 화면이
+    await user.click(nameRowButton())
+    const dialog = await screen.findByRole('dialog', { name: '이름 변경' })
+
+    // 이름 창은 이름만 준다. 세 값은 저장돼 있어 서버가 422로 거절하므로, 화면이
     // 입력칸을 주면 그 거절을 사용자가 눌러서 알게 된다.
-    expect(screen.getByLabelText('이름')).toHaveValue('홍길동')
+    expect(within(dialog).getByLabelText('이름')).toHaveValue('홍길동')
     expect(screen.queryByLabelText('직책')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('학번')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('소속 학과')).not.toBeInTheDocument()
-
-    // 숨기지는 않는다. 값과 잠김 표시가 함께 있어야 왜 못 바꾸는지 알 수 있다.
-    expect(within(dialog).getAllByText('변경 불가').length).toBe(3)
   })
 
   test('이름만 보내고 잠긴 값은 본문에 담지 않는다', async () => {
@@ -59,8 +67,8 @@ describe('계정 설정 — 프로필', () => {
     renderAccount()
     await screen.findByRole('heading', { name: '계정 설정' })
 
-    await user.click(screen.getAllByRole('button', { name: '변경' })[0])
-    await screen.findByRole('heading', { name: '프로필 변경' })
+    await user.click(nameRowButton())
+    await screen.findByRole('heading', { name: '이름 변경' })
 
     await user.clear(screen.getByLabelText('이름'))
     await user.type(screen.getByLabelText('이름'), '새 이름')
@@ -92,8 +100,8 @@ describe('계정 설정 — 프로필', () => {
     renderAccount()
     await screen.findByRole('heading', { name: '계정 설정' })
 
-    await user.click(screen.getAllByRole('button', { name: '변경' })[0])
-    await screen.findByRole('heading', { name: '프로필 변경' })
+    await user.click(nameRowButton())
+    await screen.findByRole('heading', { name: '이름 변경' })
     await user.clear(screen.getByLabelText('이름'))
     await user.type(screen.getByLabelText('이름'), '연구원 새 이름')
     await user.click(screen.getByRole('button', { name: '저장' }))
@@ -130,15 +138,20 @@ describe('계정 설정 — 프로필', () => {
     renderAccount()
     await screen.findByRole('heading', { name: '계정 설정' })
 
-    await user.click(screen.getAllByRole('button', { name: '변경' })[0])
-    await screen.findByRole('heading', { name: '프로필 변경' })
+    // 비어 있는 행이 자기 「입력」 버튼을 갖는다. 종전에는 이 길이 「이름」 행의
+    // 「변경」 뒤에만 있어서, 세 값을 채우려는 사람이 그것을 찾을 수 없었다.
+    await user.click(screen.getByRole('button', { name: '입력' }))
+    await screen.findByRole('heading', { name: '프로필 입력' })
 
     // 직책은 잠겼고 소속은 비어 있다. 교수이므로 소속은 자유 입력이다.
     expect(screen.queryByLabelText('직책')).not.toBeInTheDocument()
+    // 이름 칸은 이 창에 없다 — 프로필 저장이 이름을 덮지 않는다.
+    expect(screen.queryByLabelText('이름')).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('소속'), '부설연구소')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(sent).toMatchObject({ departmentOther: '부설연구소' }))
     expect(sent).not.toHaveProperty('position')
+    expect(sent).not.toHaveProperty('name')
   })
 })
