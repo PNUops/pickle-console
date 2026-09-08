@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery, type QueryKey } from '@tanstack/react-query
 import type { MetricsTimeframe } from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
 import { ObservationMoment } from '../OpenRouterCredits'
+import { METRICS_COPY, type MetricsAudience } from './metrics-copy'
 import {
   METRICS_POLL_MS,
   METRICS_RETRY_POLL_MS,
@@ -29,6 +30,11 @@ export interface MetricsView<T> {
 
 export interface MetricsPanelProps<T extends MetricsPayload> {
   title: ReactNode
+  /**
+   * 누가 읽는 화면인지. 기본값을 두지 않는다 — 새 관리자 화면이 이 껍데기를 쓰면서
+   * 조용히 사용자 문구를 받는 것이 이 인자가 막으려는 일이다.
+   */
+  audience: MetricsAudience
   /** 조회 구간 스위처의 접근 가능한 이름 — 한 화면에 여러 개면 구분해야 한다. */
   switcherLabel?: string
   queryKey: (timeframe: MetricsTimeframe) => QueryKey
@@ -53,6 +59,7 @@ export interface MetricsPanelProps<T extends MetricsPayload> {
  */
 export function MetricsPanel<T extends MetricsPayload>({
   title,
+  audience,
   switcherLabel,
   queryKey,
   queryFn,
@@ -62,6 +69,7 @@ export function MetricsPanel<T extends MetricsPayload>({
   unavailableNotice,
   children,
 }: MetricsPanelProps<T>) {
+  const copy = METRICS_COPY[audience]
   const [timeframe, setTimeframe] = useState<MetricsTimeframe>('HOUR')
   const metrics = useQuery({
     queryKey: queryKey(timeframe),
@@ -108,18 +116,14 @@ export function MetricsPanel<T extends MetricsPayload>({
             그림이 있으면 안내와 함께 유지한다. 어느 쪽이든 조회는 계속되므로
             문구도 "다시 시도하는 중"이라고 밝힌다. */}
         {metrics.isError && !data && isHypervisorUnreadable(metrics.error) && (
-          <p className="py-2 text-sm text-neutral-500">
-            하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다. 다시 시도하는
-            중입니다.
-          </p>
+          <p className="py-2 text-sm text-neutral-500">{copy.unreadable}</p>
         )}
         {metrics.isError && !data && !isHypervisorUnreadable(metrics.error) && (
           <Alert variant="danger">{metrics.error.message}</Alert>
         )}
         {metrics.isError && data && isHypervisorUnreadable(metrics.error) && (
           <p className="py-2 text-sm text-neutral-500">
-            하이퍼바이저가 응답하지 않아 <ObservationMoment value={data.fetchedAt} /> 읽은
-            값으로 표시합니다. 다시 시도하는 중입니다.
+            {copy.unreadableStale(<ObservationMoment value={data.fetchedAt} />)}
           </p>
         )}
         {metrics.isError && data && !isHypervisorUnreadable(metrics.error) && (

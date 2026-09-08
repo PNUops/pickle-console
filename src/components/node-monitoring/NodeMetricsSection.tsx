@@ -21,6 +21,7 @@ export default function NodeMetricsSection({
 }) {
   return (
     <MetricsPanel<NodeMetrics>
+      audience="admin"
       title={`${nodeName} 사용량`}
       switcherLabel={`${nodeName} 조회 구간`}
       pendingLabel="노드 사용량 불러오는 중"

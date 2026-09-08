@@ -22,6 +22,7 @@ function notProvisionedNotice(data: VmMetrics) {
 export default function VmMonitoringSection({ vmId }: { vmId: string }) {
   return (
     <MetricsPanel<VmMetrics>
+      audience="owner"
       title="사용량"
       pendingLabel="사용량 불러오는 중"
       // ['vms'] 무효화(전원 제어 등)에 함께 걸리도록 vms 하위 키를 쓴다.
