@@ -75,7 +75,7 @@ describe('내 가상머신 목록', () => {
 
     expect(await screen.findByRole('heading', { name: 'ml-notebook' })).toBeInTheDocument()
     expect(screen.getByText(/알고리즘 스터디 소유/)).toBeInTheDocument()
-    expect(await screen.findByText(/접근 권한 \(/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '접근 권한' })).toBeInTheDocument()
   })
 })
 

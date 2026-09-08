@@ -125,7 +125,7 @@ describe('LLM API 키 접근 권한 화면', () => {
 
     expect(await screen.findByRole('heading', { name: 'db-lab-grader' })).toBeInTheDocument()
     expect(screen.getByText(/데이터베이스 실습 소유/)).toBeInTheDocument()
-    expect(await screen.findByText(/접근 권한 \(/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '접근 권한' })).toBeInTheDocument()
     // 회수 안내는 키의 것이어야 한다 — VM 비밀번호 이야기가 나오면 거짓말이다.
     expect(screen.getByText(/이 LLM API 키에는 아래 목록에 있는 사람만/)).toBeInTheDocument()
   })

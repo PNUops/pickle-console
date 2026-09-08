@@ -15,8 +15,14 @@ function renderAccessTab(vmId: string) {
 
 /** '접근 권한' 카드 요소 — 이름이 헤더·폼과 겹치므로 조회를 여기로 좁힌다. */
 async function accessCard(): Promise<HTMLElement> {
-  const title = await screen.findByText(/접근 권한 \(\d+건\)/)
+  const title = await screen.findByRole('heading', { name: '접근 권한' })
   return title.closest('div')!.parentElement as HTMLElement
+}
+
+/** 목록 행 수 — 제목에 달려 있던 「N건」을 대신해 부여·회수의 증거가 된다. */
+async function grantCount(): Promise<number> {
+  const card = await accessCard()
+  return within(card).getAllByRole('listitem').length
 }
 
 /** 목록에서 이 이름이 있는 행(li)을 찾는다. */
@@ -35,7 +41,7 @@ describe('VM 접근 탭 — 노출 조건', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(screen.getByRole('tab', { name: '접근' })).toBeInTheDocument()
-    expect(await screen.findByText(/접근 권한 \(3건\)/)).toBeInTheDocument()
+    expect(await grantCount()).toBe(3)
   })
 
   test('관리 권한이 없으면 탭이 없고 딥링크는 개요로 되돌아간다', async () => {
@@ -81,7 +87,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
     renderAccessTab(uuid(57)) // web-lab: 워크스페이스 12, 목록에는 나(소유자)만 있다
 
     await screen.findByRole('heading', { name: 'web-lab' })
-    expect(await screen.findByText(/접근 권한 \(1건\)/)).toBeInTheDocument()
+    expect(await grantCount()).toBe(1)
 
     // 후보 목록은 접근 목록 응답이 알려 준 워크스페이스를 다시 물어 채워진다 — 두 번째
     // 질의라 먼저 도착을 기다린다.
@@ -90,7 +96,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
     await user.selectOptions(screen.getByLabelText('등급'), 'EDITOR')
     await user.click(screen.getByRole('button', { name: '부여' }))
 
-    expect(await screen.findByText(/접근 권한 \(2건\)/)).toBeInTheDocument()
+    await waitFor(async () => expect(await grantCount()).toBe(2))
     const added = await grantRow('김철수')
     expect(within(added).getByRole('combobox')).toHaveValue('EDITOR')
   })
@@ -136,7 +142,7 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
     ).toBeInTheDocument()
 
     await user.click(within(dialog).getByRole('button', { name: '회수' }))
-    expect(await screen.findByText(/접근 권한 \(2건\)/)).toBeInTheDocument()
+    await waitFor(async () => expect(await grantCount()).toBe(2))
     const card = await accessCard()
     expect(within(card).queryByText('김철수')).not.toBeInTheDocument()
   })

@@ -201,7 +201,10 @@ export function ResourceAccessSection({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>접근 권한 ({rows.length}건)</CardTitle>
+          {/* 세어 둔 수를 제목에 달지 않는다. 바로 아래 목록이 그 수이고, 부여는
+              사람만이 아니라 「워크스페이스 전체」 한 줄일 수도 있어 「N건」이
+              사람 수로 읽히던 자리다. */}
+          <CardTitle>접근 권한</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-neutral-600">{kind.listIntro}</p>

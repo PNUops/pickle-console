@@ -1250,7 +1250,9 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
           </p>
         )}
         {deletion.reason && <p>사유: {deletion.reason}</p>}
-        <p>파기된 데이터는 되돌릴 수 없습니다.</p>
+        {/* 되돌릴 수 없다는 사실을 한 알림 안에서 두 번 말하고 있었다 — 위의 「취소할
+            수 없습니다」와 「영구 파기될 예정입니다」가 각 갈래에서 그것을 이미 말한다.
+            이 배너에는 누를 것이 없으므로 결정 지점 예외도 걸리지 않는다. */}
       </div>
     </Alert>
   )
@@ -1341,8 +1343,9 @@ function ProvisioningPanel({ task }: { task: ProvisioningTaskView }) {
       <CardContent className="space-y-3">
         <Stepper steps={steps} current={task.currentStep} labels="never" />
         <p className="text-sm text-neutral-700">
+          {/* 시도 횟수를 뺐다. 읽는 사람이 그 수로 할 수 있는 것이 없고, 재시도
+              중이라는 사실은 아래 알림이 말한다. 관리자 화면은 그 수를 계속 쓴다. */}
           단계 {task.currentStep + 1}/{task.totalSteps} · {task.stepLabel}
-          {task.attempts > 1 && ` (시도 ${task.attempts}회)`}
         </p>
         {task.status === 'RETRYING' && (
           <Alert variant="warning" title="일시적인 오류로 재시도 중입니다">
