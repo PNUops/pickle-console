@@ -183,10 +183,14 @@ export function LlmKeyIssueAction({
         {error && <Alert variant="danger">{error}</Alert>}
         <SettingRow
           label={rotation ? '이전 값이 즉시 무효화됩니다' : '평문은 발급 직후 한 번만 보입니다'}
-          // 발급 전 갈래에는 설명이 없다. 이 카드 위의 StatusNotice 가 「발급 전에는
-          // 이 키로 보낸 요청이 하나도 인증되지 않습니다」를 이미 말하고 있어,
-          // 같은 사실이 한 탭에 열다섯 줄 간격으로 두 번 서게 된다.
-          description={rotation ? '값을 잃어버렸을 때만 재발급합니다.' : undefined}
+          // 발급 전 갈래의 설명이 그 사실의 유일한 자리다. 종전에는 이 카드 위
+          // StatusNotice 가 같은 말을 해서 한 탭에 두 번 섰고, 알림을 걷을 때
+          // 사실이 사라지지 않게 이쪽에 남겼다 — 누르는 이유가 여기에 있다.
+          description={
+            rotation
+              ? '값을 잃어버렸을 때만 재발급합니다.'
+              : '발급하기 전까지 이 키로 보낸 요청은 인증되지 않습니다.'
+          }
           action={
             <Button
               variant={rotation ? 'secondary' : 'primary'}

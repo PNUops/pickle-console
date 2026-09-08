@@ -198,13 +198,9 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
  * 발급 전과 폐기는 서로 다른 이야기다 — 하나는 남은 한 걸음, 다른 하나는 끝.
  */
 function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
-  if (status === 'PENDING') {
-    return (
-      <Alert variant="info" title="아직 발급되지 않은 키입니다">
-        발급 전에는 이 키로 보낸 요청이 하나도 인증되지 않습니다.
-      </Alert>
-    )
-  }
+  // 발급 전에는 알림을 두지 않는다. 헤더 배지가 「발급 전」이라고 말하고, 다음 걸음은
+  // 아래 「키 발급」 카드가 자기 설명으로 말한다 — 이 자리에 알림을 두면 한 사실이
+  // 한 탭에 세 번 선다. 나머지 상태는 배지 밖의 다음 행동을 실어 남는다.
   if (status === 'REVOKED') {
     return (
       <Alert variant="warning" title="폐기된 키입니다">
