@@ -42,12 +42,9 @@ export function ResourcesPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          {/* 부제가 없다. 지금 어느 범위를 보고 있는지는 사이드바의 범위 선택이
+              말하고, 무엇이 있는지는 아래 표가 말한다. */}
           <h1 className="text-2xl font-bold text-neutral-900">전체 리소스</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {scope == null
-              ? '내가 속한 모든 워크스페이스의 리소스입니다.'
-              : '이 워크스페이스의 리소스입니다.'}
-          </p>
         </div>
         <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
       </div>

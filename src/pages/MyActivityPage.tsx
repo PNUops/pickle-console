@@ -33,7 +33,7 @@ export function MyActivityPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">내 활동</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          내 계정 활동과 로그인 기록입니다. 낯선 IP가 보이면 비밀번호를 변경해 주세요.
+          낯선 IP가 보이면 비밀번호를 변경해 주세요.
         </p>
       </div>
 

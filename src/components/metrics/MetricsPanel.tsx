@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { keepPreviousData, useQuery, type QueryKey } from '@tanstack/react-query'
 import type { MetricsTimeframe } from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Spinner } from '../ui'
-import { formatDateTime } from '../../lib/format'
+import { ObservationMoment } from '../OpenRouterCredits'
 import {
   METRICS_POLL_MS,
   METRICS_RETRY_POLL_MS,
@@ -118,14 +118,15 @@ export function MetricsPanel<T extends MetricsPayload>({
         )}
         {metrics.isError && data && isHypervisorUnreadable(metrics.error) && (
           <p className="py-2 text-sm text-neutral-500">
-            하이퍼바이저가 응답하지 않아 마지막 갱신 {formatDateTime(data.fetchedAt)}{' '}
-            기준으로 표시합니다. 다시 시도하는 중입니다.
+            하이퍼바이저가 응답하지 않아 <ObservationMoment value={data.fetchedAt} /> 읽은
+            값으로 표시합니다. 다시 시도하는 중입니다.
           </p>
         )}
         {metrics.isError && data && !isHypervisorUnreadable(metrics.error) && (
           <Alert variant="warning">
-            사용량 데이터를 일시적으로 불러오지 못했습니다. 마지막 갱신{' '}
-            {formatDateTime(data.fetchedAt)} 기준으로 표시하며 다시 시도하는 중입니다.
+            사용량 데이터를 일시적으로 불러오지 못했습니다.{' '}
+            <ObservationMoment value={data.fetchedAt} /> 읽은 값으로 표시하며 다시 시도하는
+            중입니다.
           </Alert>
         )}
 
@@ -137,8 +138,10 @@ export function MetricsPanel<T extends MetricsPayload>({
 
         {data && notice == null && data.points.length > 0 && (
           <>
+            {/* 「지금 값인가」를 묻는 신선도이므로 상대 시간이다 (Time display 규칙).
+                절대 시각은 이 질문에 답하지 않는다. */}
             <p className="text-xs text-neutral-500">
-              마지막 갱신 {formatDateTime(data.fetchedAt)}
+              <ObservationMoment value={data.fetchedAt} /> 갱신
             </p>
             {/* 구간 내내 잰 값이 없으면 차트는 빈 판이 된다 — 왜 비었는지 한 줄로
                 밝힌다(상시 캡션이 아니라 그 상태일 때만). */}

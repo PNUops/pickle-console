@@ -32,7 +32,10 @@ describe('워크스페이스 선택기', () => {
       'href',
       `/console/${uuid(15)}/vms`,
     )
-    expect(await screen.findByText('이 워크스페이스의 리소스입니다.')).toBeInTheDocument()
+    // 범위가 바뀐 것은 선택기와 목록이 말한다 — 화면 부제는 그것을 되풀이하지 않는다.
+    expect(screen.getByRole('button', { name: '워크스페이스 선택' })).toHaveTextContent(
+      /알고리즘 스터디/,
+    )
     await waitFor(() => expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument())
   })
 
@@ -45,8 +48,11 @@ describe('워크스페이스 선택기', () => {
 
     await waitFor(() => expect(currentPath()).toBe('/console/resources'))
     expect(
-      await screen.findByText('내가 속한 모든 워크스페이스의 리소스입니다.'),
+      await screen.findByRole('link', { name: 'capstone-team3-api' }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '워크스페이스 선택' })).toHaveTextContent(
+      '전체 워크스페이스',
+    )
     expect(screen.getByRole('link', { name: '가상머신' })).toHaveAttribute('href', '/console/vms')
   })
 
