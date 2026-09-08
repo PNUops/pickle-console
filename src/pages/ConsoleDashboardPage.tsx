@@ -318,6 +318,18 @@ export function ConsoleDashboardPage() {
             알림함 →
           </Link>
         </div>
+        {/* 로딩·실패 갈래가 없으면 제목만 남은 카드가 서고, 그것이 「알림이
+            없습니다」와 구별되지 않는다. 위 「내 리소스」 카드와 같은 두 갈래다. */}
+        {recentNotifications.isPending && (
+          <div className="flex justify-center py-10">
+            <Spinner label="알림 불러오는 중" />
+          </div>
+        )}
+        {recentNotifications.isError && (
+          <p className="px-5 py-8 text-center text-sm text-neutral-500">
+            알림을 불러오지 못했습니다.
+          </p>
+        )}
         {recentNotifications.isSuccess && recentNotifications.data.content.length === 0 && (
           <p className="px-5 py-8 text-center text-sm text-neutral-500">알림이 없습니다.</p>
         )}
