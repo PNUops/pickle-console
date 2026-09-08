@@ -58,6 +58,22 @@ describe('종류 고르기와 위저드의 경계', () => {
     expect(screen.queryByRole('button', { name: '다음' })).not.toBeInTheDocument()
   })
 
+  test('고르는 화면은 자기 설명도 준비 중 목록도 두지 않는다', async () => {
+    // 무엇을 고르는지는 범례가 묻고, 준비 중 일곱은 같은 화면의 사이드바가 세운다.
+    renderWizard('/console/requests/new')
+
+    expect(await screen.findByText('무엇을 신청할까요')).toBeInTheDocument()
+    expect(screen.queryByText(/자세히 묻습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/준비 중입니다/)).not.toBeInTheDocument()
+  })
+
+  test('위저드 화면도 흐름을 서술하지 않는다', async () => {
+    renderWizard('/console/requests/new?kind=LLM_API_KEY')
+
+    await screen.findByLabelText('이름')
+    expect(screen.queryByText(/관리자가 검토합니다/)).not.toBeInTheDocument()
+  })
+
   test('고르면 그 종류의 위저드로 이동한다', async () => {
     const user = userEvent.setup()
     renderWizard('/console/requests/new')

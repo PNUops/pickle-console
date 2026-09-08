@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router'
 import { Card, CardContent, PageHeader } from '../ui'
 import { CardRadioGroup } from '../ui/CardRadioGroup'
-import { REQUEST_KINDS, KIND_PICKER_FOOTNOTE } from './index'
+import { REQUEST_KINDS } from './index'
 import { useScope } from '../../lib/use-scope'
 import { consolePaths } from '../../lib/paths'
 
@@ -22,10 +22,9 @@ export function KindPicker() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <PageHeader
-        title="리소스 신청"
-        description="무엇이 필요한지 고르면 다음 화면에서 자세히 묻습니다."
-      />
+      {/* 부제가 없다. 무엇을 고르는지는 아래 범례가 묻고, 다음 화면이 무엇을 할지는
+          고른 뒤에 그 화면이 말한다. */}
+      <PageHeader title="리소스 신청" />
 
       <Card>
         <CardContent className="py-6">
@@ -40,7 +39,6 @@ export function KindPicker() {
                 description: entry.picker.description,
               }))}
             />
-            <p className="text-xs text-foreground-muted">{KIND_PICKER_FOOTNOTE}</p>
           </div>
         </CardContent>
       </Card>

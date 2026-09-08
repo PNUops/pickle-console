@@ -30,6 +30,18 @@ async function fillRequestStep(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
+  test('한도를 어떻게 계량하는지는 설명하지 않는다', async () => {
+    // 「토큰 한도로 씁니다」·「금액 한도로 씁니다」는 계량 방식이고, 그 한도 칸이
+    // 바로 아래에서 자기 설명으로 무엇을 적는지 말한다.
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    expect(document.body.textContent ?? '').not.toMatch(/한도로 씁니다/)
+    // 무엇을 고르는지는 그대로 말한다 — 지운 것은 계량 방식뿐이다.
+    expect(screen.getByText(/학교가 직접 서빙합니다/)).toBeInTheDocument()
+  })
+
   /**
    * 축은 한도와 다르다. 빈 한도는 "서비스 기본값"이지만 빈 축은 무엇을 달라는 것인지
    * 말하지 않은 것이다. 그래서 화면은 둘 다 끈 채로 열리고, 하나는 골라야 넘어간다.

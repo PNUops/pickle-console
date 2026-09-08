@@ -120,7 +120,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
           <div className="space-y-3">
             <Checkbox
               label="Pickle LLM"
-              description={`학교가 직접 서빙합니다. 돈이 들지 않고 토큰 한도로 씁니다. 모델 이름은 ${LLM_DEFAULT_MODEL}입니다.`}
+              description={`학교가 직접 서빙합니다. 돈이 들지 않습니다. 모델 이름은 ${LLM_DEFAULT_MODEL}입니다.`}
               checked={spec.useCampus}
               onChange={(event) =>
                 update({
@@ -153,7 +153,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
             <Checkbox
               label="유료 모델"
-              description="외부 유료 모델입니다. 쓴 만큼 돈이 들어 금액 한도로 씁니다."
+              description="외부 유료 모델입니다. 쓴 만큼 돈이 듭니다."
               checked={spec.useCommercial}
               onChange={(event) =>
                 update({

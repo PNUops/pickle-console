@@ -18,12 +18,11 @@ export function requestKind(type: string): RequestKindModule | undefined {
   return REQUEST_KINDS.find((kind) => kind.type === type)
 }
 
-/**
- * 종류 선택 화면 하단 안내 — 종류가 준비되면 여기서 지워진다.
- * 준비 중 라인업은 사이드바(layouts/ConsoleLayout.tsx)·랜딩 쇼케이스와 같아야 한다.
+/*
+ * 준비 중 종류를 이 화면에서 다시 열거하지 않는다. 같은 화면의 사이드바가 그 일곱을
+ * 준비 중 항목으로 세우고 있어 한 사실이 두 자리에 섰다. 라인업 자체를 어디에
+ * 보여 줄지는 사이드바와 랜딩 쇼케이스의 결정이고, 그 둘은 그대로다.
  */
-export const KIND_PICKER_FOOTNOTE =
-  '컨테이너, 컨테이너 레지스트리, 데이터베이스, 오브젝트 스토리지, GPU, 도메인, 단축 링크는 준비 중입니다.'
 
 /**
  * 신청 표의 종류별 요약 열 제목 — 승인 대기 큐와 내 신청 목록이 함께 쓴다.
@@ -64,8 +63,7 @@ const unknownKindView: RequestKindView = {
     status: 'blocked',
     gate: (
       <Alert variant="warning" title="결정할 수 없는 신청입니다">
-        지금 콘솔 버전이 알지 못하는 종류의 신청입니다. 콘솔을 새로 고치거나
-        업데이트된 버전에서 처리해 주세요.
+        콘솔을 새로 고친 뒤 다시 열어 주세요.
       </Alert>
     ),
   }),
