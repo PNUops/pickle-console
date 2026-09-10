@@ -37,6 +37,23 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     expect(screen.getByRole('button', { name: '워크스페이스 나가기' })).toBeInTheDocument()
   })
 
+  test('나가기는 구성원 표 옆이 아니라 자기 카드에 선다', async () => {
+    // 다시 초대받아야 돌아올 수 있는 동작이라 파괴적 카드의 자리다. 같은 페이지의
+    // 「워크스페이스 삭제」가 그 모양을 정해 뒀고, 이쪽은 소유자가 아니어도 선다.
+    renderWorkspace(uuid(15))
+    await screen.findByRole('heading', { name: '알고리즘 스터디' })
+
+    const heading = screen.getByRole('heading', { name: '워크스페이스 나가기' })
+    const card = heading.closest<HTMLElement>('div[class*="rounded"]')!
+    expect(within(card).getByRole('button', { name: '워크스페이스 나가기' })).toBeInTheDocument()
+    const members = screen
+      .getByRole('heading', { name: /구성원 \(/ })
+      .closest<HTMLElement>('div[class*="rounded"]')!
+    expect(
+      within(members).queryByRole('button', { name: '워크스페이스 나가기' }),
+    ).not.toBeInTheDocument()
+  })
+
   test('PERSONAL 워크스페이스는 안내 문구와 함께 구성원 관리가 비활성화된다', async () => {
     renderWorkspace(uuid(7))
     await screen.findByRole('heading', { name: '홍길동' })

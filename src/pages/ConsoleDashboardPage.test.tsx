@@ -55,6 +55,18 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     ).toBe(true)
   })
 
+  test('최근 알림도 로딩과 실패를 말한다', async () => {
+    // 갈래가 없으면 제목만 남은 카드가 서고, 그것이 「알림이 없습니다」와 구별되지
+    // 않는다. 같은 화면의 「내 리소스」 카드가 두 갈래를 이미 갖고 있었다.
+    server.use(
+      http.get('*/api/v1/notifications', () => new HttpResponse(null, { status: 500 })),
+    )
+    renderDashboard()
+
+    expect(await screen.findByText('알림을 불러오지 못했습니다.')).toBeInTheDocument()
+    expect(screen.queryByText('알림이 없습니다.')).not.toBeInTheDocument()
+  })
+
   test('공지사항 카드가 상위 공지와 게시판 링크를 보여준다', async () => {
     renderDashboard()
 

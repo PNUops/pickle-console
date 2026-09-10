@@ -268,8 +268,8 @@ export function VmDetailPage() {
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+              {/* 워크스페이스 이름은 부제가 말한다 — 키 상세도 부제 한 자리만 쓴다. */}
               <Field label="사양">{formatSpec(data.vcpu, data.memoryMb, data.diskGb)}</Field>
-              <Field label="워크스페이스">{data.workspaceName}</Field>
               <Field label="내부 IP">{data.ipAddress ?? '할당 전'}</Field>
               <Field label="SSH 계정">{data.sshUsername}</Field>
               <Field label="사용 기간">
@@ -293,8 +293,11 @@ export function VmDetailPage() {
                   </Link>
                 )}
               </Field>
+              {/* 「마지막 갱신」을 뺐다. `updatedAt` 은 전원 전이뿐 아니라 만료 알림
+                  단계나 게이트웨이 차단 같은 내부 변경에도 움직여서, 무엇이 바뀐
+                  시각인지 읽는 사람이 알 수 없었다. 「무엇이 언제」는 활동 탭이
+                  답한다. */}
               <Field label="생성일">{formatDateTime(data.createdAt)}</Field>
-              <Field label="마지막 갱신">{formatDateTime(data.updatedAt)}</Field>
             </dl>
           </CardContent>
         </Card>
@@ -874,14 +877,15 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
           </Alert>
         )}
 
-        {!vm.passwordAvailable && (
-          <Alert variant="info">
-            저장된 비밀번호가 없습니다.
-            {!canRegenerate && ' 비밀번호 재생성은 이 VM의 편집자 이상만 할 수 있습니다.'}
-          </Alert>
-        )}
+        {/* 편집 권한을 말하던 뒷절을 뺐다. 그 절이 뜨려면 위 가드를 지나야 하고,
+            지나는 경로는 페이지를 읽는 동안 서버 쪽 값이 바뀌는 레이스뿐이다. 그
+            순간에는 편집자에게도 「편집자 이상만」이라고 말할 수 있어 틀린다. */}
+        {!vm.passwordAvailable && <Alert variant="info">저장된 비밀번호가 없습니다.</Alert>}
 
-        {editable && (
+        {/* 실행 중이 아닌 VM에서는 이 행이 아예 없다. 종전에는 비활성 버튼이 서
+            있었고 왜 못 누르는지 화면에 없었다 — 사용자 콘솔 규약은 권한 부족만
+            설명형 비활성으로 두고 상태 부적합한 행동은 생략한다. */}
+        {canRegenerate && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3">
             <p className="text-sm text-neutral-600">
               분실했거나 회수가 필요하면 비밀번호를 재생성할 수 있습니다.
@@ -893,7 +897,6 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
                 setError(null)
                 setConfirmRegen(true)
               }}
-              disabled={vm.status !== 'RUNNING'}
             >
               비밀번호 재생성
             </Button>

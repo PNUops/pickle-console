@@ -127,7 +127,10 @@ export function AccountPage() {
 function ProfileSection({ user }: { user: UserProfile }) {
   const toast = useToast()
   const { refreshProfile } = useAuth()
-  const [open, setOpen] = useState(false)
+  // 이름과 프로필 셋은 서로 다른 저장이라 창도 다르다. 프로필 셋은 한 창을
+  // 공유한다 — 직책이 소속의 입력 모양과 학번 해당 여부를 정하므로 따로 열면
+  // 사용자가 조합 오류를 받는다.
+  const [open, setOpen] = useState<'name' | 'profile' | null>(null)
   const [name, setName] = useState(user.name)
   const [profile, setProfile] = useState<ProfileValues>(EMPTY_PROFILE)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -143,10 +146,14 @@ function ProfileSection({ user }: { user: UserProfile }) {
   const positionLabel = options.data?.positions.find((item) => item.code === user.position)?.label
 
   const save = useMutation({
+    // 열린 창이 보내는 것을 정한다. 이름 창은 이름만 보내고, 프로필 창은 이름을
+    // 건드리지 않는다 — 한 저장이 다른 행의 값을 덮지 않는다.
     mutationFn: () =>
-      updateMyProfile(profilePatch(user, profile, name)),
+      updateMyProfile(
+        open === 'name' ? { name: name.trim() } : profilePatch(user, profile),
+      ),
     onSuccess: async () => {
-      setOpen(false)
+      setOpen(null)
       setError(null)
       setFieldErrors({})
       toast.success('프로필을 저장했습니다.')
@@ -162,7 +169,7 @@ function ProfileSection({ user }: { user: UserProfile }) {
 
   // 열 때마다 저장된 값에서 시작한다. 지난번에 쓰다 만 값이 남아 있으면 지금
   // 저장된 것이 무엇인지 화면이 말해 주지 못한다.
-  const openEditor = () => {
+  const openEditor = (which: 'name' | 'profile') => {
     setName(user.name)
     setProfile({
       position: user.position ?? '',
@@ -172,7 +179,7 @@ function ProfileSection({ user }: { user: UserProfile }) {
     })
     setFieldErrors({})
     setError(null)
-    setOpen(true)
+    setOpen(which)
   }
 
   const locked = lockedProfileFields(user)
@@ -187,20 +194,37 @@ function ProfileSection({ user }: { user: UserProfile }) {
         label="이름"
         description={user.name}
         action={
-          <Button size="sm" variant="secondary" onClick={openEditor}>
+          <Button size="sm" variant="secondary" onClick={() => openEditor('name')}>
             변경
           </Button>
         }
       />
+      {/* 아래 셋은 값이 있으면 잠기므로, 잠기지 않은 행은 곧 비어 있는 행이다 —
+          버튼 이름이 「입력」인 것은 그래서다. 종전에는 이 셋에 버튼이 없어서 채우는
+          길이 화면에 없었고, 유일한 경로가 「이름」 행의 「변경」 뒤에 숨어 있었다. */}
       <SettingRow
         label="직책"
         description={positionLabel ?? '입력하지 않음'}
         note={locked.position ? lockedNote : undefined}
+        action={
+          locked.position ? undefined : (
+            <Button size="sm" variant="secondary" onClick={() => openEditor('profile')}>
+              입력
+            </Button>
+          )
+        }
       />
       <SettingRow
         label="소속"
         description={departmentValue ?? '입력하지 않음'}
         note={locked.department ? lockedNote : undefined}
+        action={
+          locked.department ? undefined : (
+            <Button size="sm" variant="secondary" onClick={() => openEditor('profile')}>
+              입력
+            </Button>
+          )
+        }
       />
       {/*
         학번 행은 값이 없어도 보여 준다. 숨기면 왜 못 넣는지도, 넣을 수 있다는 것도
@@ -212,11 +236,20 @@ function ProfileSection({ user }: { user: UserProfile }) {
           user.studentNo ?? (studentNoApplies(options.data?.positions, user) ? '입력하지 않음' : '해당 없음')
         }
         note={locked.studentNo ? lockedNote : undefined}
+        action={
+          locked.studentNo || !studentNoApplies(options.data?.positions, user) ? undefined : (
+            <Button size="sm" variant="secondary" onClick={() => openEditor('profile')}>
+              입력
+            </Button>
+          )
+        }
       />
       {anyLocked && (
         <p className="pt-3 text-xs text-neutral-500">변경이 필요하면 문의해 주세요.</p>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title="프로필 변경">
+      <Modal open={open != null} onClose={() => setOpen(null)} title={
+        open === 'name' ? '이름 변경' : '프로필 입력'
+      }>
         {error && (
           <Alert variant="danger" className="mb-4">
             {error}
@@ -231,23 +264,26 @@ function ProfileSection({ user }: { user: UserProfile }) {
           className="space-y-4"
           noValidate
         >
-          <FormField label="이름" required error={fieldErrors.name}>
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              maxLength={50}
-              required
+          {open === 'name' ? (
+            <FormField label="이름" required error={fieldErrors.name}>
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={50}
+                required
+              />
+            </FormField>
+          ) : (
+            <ProfileFields
+              values={profile}
+              onChange={setProfile}
+              errors={fieldErrors}
+              locked={locked}
+              disabled={save.isPending}
             />
-          </FormField>
-          <ProfileFields
-            values={profile}
-            onChange={setProfile}
-            errors={fieldErrors}
-            locked={locked}
-            disabled={save.isPending}
-          />
+          )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setOpen(null)}>
               취소
             </Button>
             <Button type="submit" loading={save.isPending}>

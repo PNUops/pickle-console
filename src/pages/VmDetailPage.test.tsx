@@ -267,6 +267,30 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
     expect(screen.queryByRole('button', { name: '비밀번호 재생성' })).not.toBeInTheDocument()
   })
 
+  test('정지된 VM에서는 재생성 행을 아예 두지 않는다', async () => {
+    // 종전에는 비활성 버튼이 서 있었고 왜 못 누르는지 화면에 없었다. 상태
+    // 부적합한 행동은 설명형 비활성이 아니라 생략이다 (사용자 콘솔 규약).
+    server.use(vmDetailAs(uuid(56), 'OWNER', { status: 'STOPPED' }))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    // 정지 상태에서도 저장된 비밀번호는 볼 수 있다 — 사라지는 것은 재생성뿐이다.
+    expect(await screen.findByRole('button', { name: '비밀번호 보기' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '비밀번호 재생성' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/분실했거나 회수가 필요하면/)).not.toBeInTheDocument()
+  })
+
+  test('저장된 비밀번호가 없다는 안내는 권한을 말하지 않는다', async () => {
+    // 그 뒷절은 위 가드를 지나야 뜨고, 지나는 경로는 레이스뿐이며 그 순간
+    // 편집자에게도 「편집자 이상만」이라고 말할 수 있어 틀린다.
+    server.use(vmDetailAs(uuid(56), 'OWNER', { passwordAvailable: false }))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(await screen.findByText('저장된 비밀번호가 없습니다.')).toBeInTheDocument()
+    expect(screen.queryByText(/편집자 이상만/)).not.toBeInTheDocument()
+  })
+
   test('편집자 이상은 비밀번호를 재생성하고 새 비밀번호를 확인할 수 있다', async () => {
     const user = userEvent.setup()
     renderVm(uuid(56))
@@ -635,6 +659,23 @@ describe('VM 상세 — 탭', () => {
     await user.click(screen.getByRole('tab', { name: '활동' }))
     expect(await screen.findByText('이벤트 이력')).toBeInTheDocument()
     expect(screen.queryByText('SSH 접속')).not.toBeInTheDocument()
+  })
+
+  test('says the workspace once and drops the meaningless stamp', async () => {
+    // 워크스페이스 이름은 부제가 답한다. 「마지막 갱신」은 전원 전이뿐 아니라 만료
+    // 알림 단계 같은 내부 변경에도 움직여서 무엇이 바뀐 시각인지 알 수 없었다.
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    // 부제는 이름과 호스트명과 워크스페이스를 여러 노드에 나눠 담으므로 텍스트
+    // 매처로는 잡히지 않는다. 단락 전체를 읽어 확인하고, 사라진 것은 「워크스페이스」
+    // 라벨을 가진 dt 하나다.
+    const subtitle = screen
+      .getAllByText((_, node) => node?.tagName === 'P')
+      .find((node) => (node.textContent ?? '').includes('알고리즘 스터디'))
+    expect(subtitle).toBeDefined()
+    expect(screen.queryByText('워크스페이스', { selector: 'dt' })).not.toBeInTheDocument()
+    expect(screen.queryByText('마지막 갱신')).not.toBeInTheDocument()
   })
 
   test('draws the facts before the ways into the VM', async () => {

@@ -26,6 +26,7 @@ import {
   Input,
   Modal,
   Select,
+  SettingRow,
   Spinner,
   Table,
   TBody,
@@ -82,6 +83,7 @@ export function WorkspaceDetailPage() {
       <WorkspaceInfoSection workspace={data} myRole={myRole} />
       <WorkspaceResourcesSection workspaceId={data.id} />
       <MembersSection workspace={data} myRole={myRole} />
+      {data.kind !== 'PERSONAL' && myRole && <LeaveWorkspaceSection workspace={data} />}
       {myRole === 'OWNER' && data.kind !== 'PERSONAL' && <DangerZoneSection workspace={data} />}
     </div>
   )
@@ -338,7 +340,6 @@ function MembersSection({
   const [actionError, setActionError] = useState<string | null>(null)
   const [transferTarget, setTransferTarget] = useState<WorkspaceMember | null>(null)
   const [removeTarget, setRemoveTarget] = useState<WorkspaceMember | null>(null)
-  const [leaveOpen, setLeaveOpen] = useState(false)
 
   const isPersonal = workspace.kind === 'PERSONAL'
   const canManage = myRole === 'OWNER' && !isPersonal
@@ -379,7 +380,6 @@ function MembersSection({
     },
     onSuccess: async (member) => {
       setRemoveTarget(null)
-      setLeaveOpen(false)
       if (member.userId === user?.id) {
         toast.success('워크스페이스에서 나갔습니다.')
         navigate('/console/workspaces')
@@ -391,7 +391,6 @@ function MembersSection({
     },
     onError: (err) => {
       setRemoveTarget(null)
-      setLeaveOpen(false)
       setActionError(toApiError(err, '구성원을 제거하지 못했습니다.').message)
     },
   })
@@ -410,13 +409,8 @@ function MembersSection({
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
+      <CardHeader>
         <CardTitle>구성원 ({workspace.members.length}명)</CardTitle>
-        {!isPersonal && myRole && (
-          <Button variant="secondary" size="sm" onClick={() => setLeaveOpen(true)}>
-            워크스페이스 나가기
-          </Button>
-        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {isPersonal && (
@@ -521,31 +515,96 @@ function MembersSection({
         </p>
       </Modal>
 
+    </Card>
+  )
+}
+
+/* ─── leave (a member acting on their own membership) ─── */
+
+/**
+ * 자기 구성원 자격을 지우는 카드.
+ *
+ * 종전에는 이 버튼이 「구성원」 카드 헤더에, 구성원 표 바로 위에 있었다. 다시
+ * 초대받아야 돌아올 수 있는 동작이므로 파괴적 카드의 자리가 맞고, 같은 페이지의
+ * 「워크스페이스 삭제」가 그 모양을 이미 정해 두었다. 삭제 카드와 달리 소유자가
+ * 아닌 구성원에게도 서고, 개인 워크스페이스에는 서지 않는다 — 나갈 곳이 없다.
+ *
+ * 뮤테이션을 「구성원」 카드와 나눠 쓰지 않는다. 같은 엔드포인트를 부르지만 그쪽은
+ * 남을 제거하는 관리 동작이고 이쪽은 자기 자격을 지우는 것이라, 성공 뒤에 하는 일도
+ * (목록으로 나감) 다르다.
+ */
+function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const leave = useMutation({
+    mutationFn: async () => {
+      const self = workspace.members.find((m) => m.userId === user?.id)
+      if (!self) throw new Error('이 워크스페이스의 구성원이 아닙니다.')
+      const { error: problem, response } = await api.DELETE(
+        '/workspaces/{workspaceId}/members/{userId}',
+        { params: { path: { workspaceId: workspace.id, userId: self.userId } } },
+      )
+      if (!response.ok) throw toApiError(problem, '워크스페이스에서 나가지 못했습니다.')
+    },
+    onSuccess: async () => {
+      setOpen(false)
+      toast.success('워크스페이스에서 나갔습니다.')
+      navigate('/console/workspaces')
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+    },
+    onError: (err) => {
+      setOpen(false)
+      setError(toApiError(err, '워크스페이스에서 나가지 못했습니다.').message)
+    },
+  })
+
+  return (
+    <Card className="border-danger-200">
+      <CardHeader>
+        <CardTitle className="text-danger-700">워크스페이스 나가기</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        {/* 되돌리는 방법은 확인 창이 말한다 — 결정 지점은 그쪽이다. */}
+        <SettingRow
+          label="이 워크스페이스의 구성원에서 빠집니다"
+          description="워크스페이스가 소유한 리소스에는 더 접근할 수 없습니다."
+          action={
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                setError(null)
+                setOpen(true)
+              }}
+            >
+              워크스페이스 나가기
+            </Button>
+          }
+        />
+      </CardContent>
+
       <Modal
-        open={leaveOpen}
-        onClose={() => setLeaveOpen(false)}
+        open={open}
+        onClose={() => setOpen(false)}
         title="워크스페이스 나가기"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setLeaveOpen(false)}>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
               취소
             </Button>
-            <Button
-              variant="danger"
-              loading={removeMember.isPending}
-              onClick={() => {
-                const self = workspace.members.find((m) => m.userId === user?.id)
-                if (self) removeMember.mutate(self)
-              }}
-            >
+            <Button variant="danger" loading={leave.isPending} onClick={() => leave.mutate()}>
               나가기
             </Button>
           </>
         }
       >
-        <p className="text-sm text-neutral-600">
-          나간 후에는 다시 초대받아야 합니다.
-        </p>
+        <p className="text-sm text-neutral-600">나간 후에는 다시 초대받아야 합니다.</p>
       </Modal>
     </Card>
   )
