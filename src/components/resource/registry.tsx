@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 import type { ResourceSummary } from '../../api/queries'
 import { consolePaths } from '../../lib/paths'
 import { TerminalRowAction } from './TerminalRowAction'
-import { LlmKeyStatusBadge, VmStatusBadge } from '../ui'
-import type { LlmApiKeyStatus, VmStatus } from '../../lib/status'
+import { DomainStatusBadge, LlmKeyStatusBadge, VmStatusBadge } from '../ui'
+import type { DomainStatus, LlmApiKeyStatus, VmStatus } from '../../lib/status'
 
 /**
  * What the type-agnostic screens need to know about each kind of resource.
@@ -36,6 +36,15 @@ export type ResourceTypeEntry = {
 }
 
 export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> = {
+  // 화면이 아직 없다. 목록에 서면 이름과 상태만 글자로 나오고 눌리지 않는다.
+  // 서버에 발급 경로도 어댑터도 없어서 지금은 이 행이 도착할 수 없지만, 어댑터가
+  // 붙는 순간 도착하므로 그때 빈 칸으로 깨지지 않도록 여기에 둔다. 화면이 생기면
+  // detailPath 와 accessPath 가 채워진다.
+  DOMAIN: {
+    label: '도메인',
+    statusBadge: (resource) => <DomainStatusBadge status={resource.status as DomainStatus} />,
+    isActive: (resource) => resource.status !== 'REMOVED',
+  },
   VM: {
     label: '가상머신',
     detailPath: (id) => consolePaths.vmDetail(id),

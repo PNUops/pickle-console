@@ -4025,7 +4025,7 @@ export interface components {
         /** @enum {string} */
         DomainDnsStatus: "NONE" | "PENDING" | "APPLIED" | "FAILED";
         /** @enum {string} */
-        DomainKind: "AUTO" | "PLATFORM" | "CUSTOM";
+        DomainKind: "AUTO" | "PLATFORM" | "CUSTOM" | "EXTERNAL";
         /** @enum {string} */
         DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
         DomainSummaryView: {
@@ -6572,7 +6572,7 @@ export interface components {
             vcpu: number;
         };
         /** @enum {string} */
-        ResourceType: "VM" | "LLM_API_KEY";
+        ResourceType: "VM" | "LLM_API_KEY" | "DOMAIN";
         Resources: {
             activeVms: components["schemas"]["VmBriefResponse"][];
             totals: components["schemas"]["ResourceTotalsResponse"];

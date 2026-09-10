@@ -121,11 +121,18 @@ export type RouteStatus = components['schemas']['RouteStatus']
 export type CertificateKind = components['schemas']['CertificateKind']
 export type CertificateStatus = components['schemas']['CertificateStatus']
 
-/** 사용자 관점 이분법(플랫폼/커스텀)을 따른다 — AUTO는 폐지된 자동 생성의 잔재 표기. */
+/**
+ * 사용자 관점 구분을 따른다 — AUTO는 폐지된 자동 생성의 잔재 표기.
+ *
+ * 여기서는 「외부」가 맞는다. 리소스 종류의 화면 라벨은 「도메인」이지만
+ * (사용자에게 종류가 하나뿐이라 「외부」를 붙이면 무엇과 대비되는지 모른다),
+ * 이 목록은 플랫폼과 커스텀이 나란히 서 있어 대비가 화면 안에 있다.
+ */
 export const DOMAIN_KIND_LABELS: Record<DomainKind, string> = {
   AUTO: '플랫폼 (자동)',
   PLATFORM: '플랫폼',
   CUSTOM: '커스텀',
+  EXTERNAL: '외부',
 }
 
 export const DOMAIN_STATUS_LABELS: Record<DomainStatus, string> = {
