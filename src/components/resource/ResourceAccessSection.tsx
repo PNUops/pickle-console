@@ -78,7 +78,17 @@ interface AccessKind {
   revokeCaveats: ReactNode
 }
 
-const ACCESS_KINDS: Record<ResourceType, AccessKind> = {
+/**
+ * 접근 목록 화면을 가진 종류. `ResourceType` 전체가 아닌 이유는, 없는 화면을
+ * 채우려면 존재하지 않는 조회와 부여 함수를 지어내야 하기 때문이다. 좁혀 두면
+ * 화면 없는 종류를 넘기는 것이 컴파일 오류가 되고, 그것이 맞는 결과다.
+ *
+ * 새 종류가 늘었는지 묻는 자리는 여기가 아니라 RESOURCE_TYPES 다 — 그쪽은
+ * 전수로 남아 있어 종류가 늘면 빌드가 깨진다.
+ */
+type AccessCapableType = Extract<ResourceType, 'VM' | 'LLM_API_KEY'>
+
+const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
   VM: {
     queryKey: 'vms',
     fetchGrants: fetchVmAccessGrants,
@@ -142,7 +152,7 @@ export function ResourceAccessSection({
   type,
   resourceId,
 }: {
-  type: ResourceType
+  type: AccessCapableType
   resourceId: string
 }) {
   const kind = ACCESS_KINDS[type]
