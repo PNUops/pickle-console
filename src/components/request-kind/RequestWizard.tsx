@@ -318,10 +318,9 @@ export function RequestWizard({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <PageHeader
-        title="리소스 신청"
-        description="필요한 것을 고르고 왜 언제까지 쓸지 적으면 관리자가 검토합니다."
-      />
+      {/* 부제가 없다. 무엇을 적는지는 아래 단계 표시가 보여 주고, 검토를 거친다는
+          것은 제출 뒤 화면과 신청 목록이 말한다. */}
+      <PageHeader title="리소스 신청" />
 
       <Stepper steps={steps.map((id) => STEP_TITLES[id])} current={steps.indexOf(step)} />
 

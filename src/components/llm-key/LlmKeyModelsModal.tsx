@@ -7,7 +7,7 @@ import {
   type PaidModel,
   type SelfServedModel,
 } from '../../api/queries'
-import { formatDateTime } from '../../lib/format'
+import { ObservationMoment } from '../OpenRouterCredits'
 import { CopyButton } from '../CopyButton'
 import { Alert, Input, LoadingBlock, Modal } from '../ui'
 
@@ -82,9 +82,10 @@ function ModelsBody({
 
   return (
     <div className="space-y-6">
+      {/* 지시문 하나만 남긴다. 뒤에 붙어 있던 「최종 판정은 호출 시점에」는 읽는
+          사람이 할 수 있는 것이 없는 한정이고, 왜 그런지는 이 파일 위 주석이 갖는다. */}
       <p className="text-sm text-neutral-600">
         요청 본문의 <code className="font-mono">model</code> 필드에 아래 이름을 그대로 넣습니다.
-        최종 판정은 호출 시점에 이뤄지므로 여기 있는 이름이 항상 응답한다는 보장은 아닙니다.
       </p>
 
       <Input
@@ -196,8 +197,9 @@ function PaidSection({
       )}
 
       {paid.catalogObservedAt && (
+        // 「지금 목록인가」를 묻는 관측이므로 상대 시간이다 (Time display 규칙).
         <p className="text-xs text-neutral-500">
-          공급자 목록 기준 {formatDateTime(paid.catalogObservedAt)}
+          <ObservationMoment value={paid.catalogObservedAt} /> 가져온 목록
         </p>
       )}
     </section>

@@ -90,6 +90,28 @@ describe('호출할 수 있는 모델', () => {
     expect(await screen.findByText(/한 번도 가져오지 못했습니다/)).toBeInTheDocument()
   })
 
+  test('지시문만 남기고 한정을 붙이지 않는다', async () => {
+    // 「최종 판정은 호출 시점에」는 읽는 사람이 할 수 있는 것이 없는 한정이었다.
+    await openModels('unrestricted')
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain('필드에 아래 이름을 그대로 넣습니다')
+    expect(screen.queryByText(/호출 시점/)).not.toBeInTheDocument()
+  })
+
+  test('목록을 언제 가져왔는지는 상대 시간으로 말한다', async () => {
+    // 「지금 목록인가」를 묻는 관측이므로 절대 시각은 그 질문에 답하지 않는다.
+    await openModels('unrestricted')
+
+    const dialog = await screen.findByRole('dialog')
+    const moment = Array.from(dialog.querySelectorAll('p')).find((node) =>
+      (node.textContent ?? '').endsWith('가져온 목록'),
+    )
+    expect(moment).toBeDefined()
+    expect(moment!.querySelector('time')).not.toBeNull()
+    expect(moment!.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/)
+  })
+
   test('낡은 목록은 그리되 단서를 붙인다', async () => {
     await openModels('stale')
 

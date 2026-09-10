@@ -108,7 +108,9 @@ describe('VM 상세 — 진행 패널', () => {
 
     await screen.findByRole('heading', { name: 'stuck-vm' })
     expect(screen.getByText('VM 생성 진행 상황')).toBeInTheDocument()
-    expect(screen.getByText(/단계 6\/10 · cloud-init 설정 중 \(시도 3회\)/)).toBeInTheDocument()
+    expect(screen.getByText(/단계 6\/10 · cloud-init 설정 중$/)).toBeInTheDocument()
+    // 시도 횟수로 사용자가 할 수 있는 것이 없다 — 재시도 중이라는 사실은 알림이 말한다.
+    expect(screen.queryByText(/시도 \d+회/)).not.toBeInTheDocument()
     expect(screen.getByText('관리자 개입이 필요합니다')).toBeInTheDocument()
     expect(
       screen.getByText(/Proxmox API 응답 시간 초과 \(qm set 5058\)/),
@@ -185,6 +187,8 @@ describe('VM 상세 — 삭제 흐름', () => {
     expect(screen.getByText('삭제 중')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()
+    // 한 알림 안에서 되돌릴 수 없다는 사실을 두 번 말하고 있었다.
+    expect(screen.queryByText('파기된 데이터는 되돌릴 수 없습니다.')).not.toBeInTheDocument()
   })
 
   test('삭제 예정 VM은 배너에 취소 버튼 없이 관리자 문의 안내만 보여준다', async () => {
@@ -198,6 +202,8 @@ describe('VM 상세 — 삭제 흐름', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()
+    // 한 알림 안에서 되돌릴 수 없다는 사실을 두 번 말하고 있었다.
+    expect(screen.queryByText('파기된 데이터는 되돌릴 수 없습니다.')).not.toBeInTheDocument()
   })
 
   test('ERROR VM은 삭제만 가능하며 접수 즉시 삭제된다', async () => {
@@ -808,12 +814,14 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.queryByRole('heading', { name: 'CPU' })).not.toBeInTheDocument()
   })
 
-  test('하이퍼바이저에 물어볼 수 없으면 오류가 아니라 차분한 안내로 알린다', async () => {
+  test('읽을 수 없으면 오류가 아니라 차분한 안내로 알리고, 내부 어휘는 쓰지 않는다', async () => {
+    // 같은 껍데기를 관리자 노드 화면이 함께 쓰고 그쪽은 「하이퍼바이저」를 쓴다.
+    // 무엇이 응답하지 않는지는 관리자의 다음 행동을 정하는 정보이고, 사용자
+    // 화면에서는 내부 어휘다 — 그래서 수신자별 문구다.
     renderVm(VM_METRICS_UNAVAILABLE_ID, 'monitoring')
 
-    const notice = await screen.findByText(
-      /하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/,
-    )
+    const notice = await screen.findByText(/지금은 사용량을 읽을 수 없습니다/)
+    expect(screen.queryByText(/하이퍼바이저/)).not.toBeInTheDocument()
     // 잴 수 없다는 사실은 장애 경보가 아니다 — 붉은 경보로 띄우지 않는다.
     expect(notice.closest('[role="alert"]')).toBeNull()
     // 대신 멈춰 있지도 않다 — 계속 물어보는 중임을 문구가 밝힌다.

@@ -11,7 +11,6 @@ import {
   CardTitle,
   ConfirmNameModal,
   PermissionNotice,
-  SettingRow,
 } from '../ui'
 
 interface RevokeKeyProps {
@@ -58,21 +57,21 @@ export function RevokeKeyAction({ keyId, name, allowed }: RevokeKeyProps) {
   })
 
   return (
-    <div className="space-y-2">
-      <SettingRow
-        label="키 폐기"
-        description="키를 폐기하면 이후 이 키로 보낸 요청이 거부됩니다."
-        action={
-          <Button
-            variant="danger"
-            size="sm"
-            disabled={!allowed}
-            onClick={() => setConfirming(true)}
-          >
-            키 폐기
-          </Button>
-        }
-      />
+    <div className="space-y-3">
+      {/* 카드 제목이 이미 「키 폐기」이므로 행 라벨로 한 번 더 말하지 않는다. VM 삭제
+          카드와 같은 모양이다 — 카드는 그 동작이 무엇을 하는지 한 줄로 말하고,
+          되돌릴 수 없다는 사실은 확인 창이 갖는다. */}
+      <p className="text-sm text-neutral-600">
+        키를 폐기하면 이후 이 키로 보낸 요청이 거부됩니다.
+      </p>
+      <Button
+        variant="danger"
+        size="sm"
+        disabled={!allowed}
+        onClick={() => setConfirming(true)}
+      >
+        키 폐기
+      </Button>
       {!allowed && (
         <PermissionNotice>
           키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만 할 수 있습니다.

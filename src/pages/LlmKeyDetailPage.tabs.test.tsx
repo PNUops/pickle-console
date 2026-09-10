@@ -64,7 +64,7 @@ describe('LLM API key detail tabs', () => {
     renderKey(ISSUED_KEY, 'access')
 
     expect(await screen.findByRole('tab', { name: '접근', selected: true })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /^접근 권한 \(/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '접근 권한' })).toBeInTheDocument()
     // The owner's name is also in the account menu, so look for the member.
     expect(screen.getByText('김철수')).toBeInTheDocument()
   })

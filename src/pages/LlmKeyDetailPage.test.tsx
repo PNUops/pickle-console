@@ -115,8 +115,13 @@ describe('발급 전 키', () => {
     renderKey(PENDING_KEY)
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
-    expect(screen.getByText('아직 발급되지 않은 키입니다')).toBeInTheDocument()
-    expect(screen.getByText(/이 키로 보낸 요청이 하나도 인증되지 않습니다/)).toBeInTheDocument()
+    // 그 사실은 누르는 자리에서 한 번만 말한다. 헤더 배지가 상태를 말하므로 개요에
+    // 알림을 두면 한 탭에 세 번 서게 된다.
+    // 「발급 전」은 헤더 배지와 키 정보의 「키 앞부분」 칸에 함께 나온다.
+    expect(screen.getAllByText('발급 전').length).toBeGreaterThan(0)
+    expect(screen.queryByText('아직 발급되지 않은 키입니다')).not.toBeInTheDocument()
+    const issued = screen.getByText(/발급하기 전까지 이 키로 보낸 요청은 인증되지 않습니다/)
+    expect(issued).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '키 발급' })).toBeEnabled()
     // 폐기 이야기는 여기 없다.
     expect(screen.queryByText('폐기된 키입니다')).not.toBeInTheDocument()
@@ -385,6 +390,17 @@ describe('키 이름 수정', () => {
 })
 
 describe('키 폐기', () => {
+  test('카드가 제 이름을 세 번 말하지 않는다', async () => {
+    // 카드 제목과 버튼이 「키 폐기」다. 종전에는 행 라벨이 한 번 더 있었다.
+    // VM 삭제 카드와 같은 모양이다 — 카드는 무엇을 하는지 한 줄로 말한다.
+    renderKey(ISSUED_KEY, 'settings')
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    expect(screen.getAllByText('키 폐기')).toHaveLength(2)
+    expect(screen.getByText(/이후 이 키로 보낸 요청이 거부됩니다/)).toBeInTheDocument()
+  })
+
+
   test('이름을 정확히 입력해야 폐기되고, 되돌릴 수 없다고 먼저 말한다', async () => {
     const user = userEvent.setup()
     renderKey(ISSUED_KEY, 'settings')
