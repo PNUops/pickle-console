@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { createDnsDomain, fetchDnsDomains, fetchWorkspaces } from '../api/queries'
 import {
   Alert,
+  Badge,
   Button,
   Card,
   DomainStatusBadge,
@@ -119,11 +120,21 @@ export function DnsDomainsPage() {
                       )}
                     </TD>
                     <TD>
-                      <DomainStatusBadge status={domain.status} />
+                      {/* Release does not move `status` on the server, so the
+                          plain badge reads 연결됨 right above the release note.
+                          The reservation is the state this cell has to carry —
+                          the detail header makes the same substitution. */}
+                      {domain.releasedAt ? (
+                        <Badge variant="neutral">예약 중</Badge>
+                      ) : (
+                        <DomainStatusBadge status={domain.status} />
+                      )}
                       {domain.releasedAt && (
                         <p className="mt-0.5 text-xs text-neutral-500">
-                          해제됨 — {domain.reservedUntil && formatDateTime(domain.reservedUntil)}
-                          까지 같은 이름으로 다시 만들 수 있습니다
+                          {domain.reservedUntil
+                            ? `${formatDateTime(domain.reservedUntil)}까지 `
+                            : '예약이 끝나기 전까지 '}
+                          같은 이름으로 다시 만들 수 있습니다
                         </p>
                       )}
                     </TD>

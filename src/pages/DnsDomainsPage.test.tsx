@@ -56,6 +56,19 @@ describe('domain list', () => {
     )
   })
 
+  test('a released row does not claim to be connected', async () => {
+    dnsDomainStore.rows[0].domain.releasedAt = '2026-09-12T13:00:00+09:00'
+    dnsDomainStore.rows[0].domain.reservedUntil = '2026-10-12T13:00:00+09:00'
+    renderDomains()
+
+    // Release leaves `status` ACTIVE on the server, so the plain badge read
+    // 연결됨 directly above 해제됨. The detail header had been fixed and this
+    // screen had not, because only the detail was under test.
+    const row = (await screen.findByText('myblog.pusan.dev')).closest('tr')!
+    expect(within(row).getByText('예약 중')).toBeInTheDocument()
+    expect(within(row).queryByText('연결됨')).not.toBeInTheDocument()
+  })
+
   test('a name this workspace is holding in reserve comes back to it', async () => {
     const user = userEvent.setup()
     dnsDomainStore.rows[0].domain.releasedAt = '2026-09-12T13:00:00+09:00'
