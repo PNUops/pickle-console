@@ -38,10 +38,9 @@ export type ResourceTypeEntry = {
 }
 
 export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> = {
-  // 화면이 아직 없다. 목록에 서면 이름과 상태만 글자로 나오고 눌리지 않는다.
-  // 서버에 발급 경로도 어댑터도 없어서 지금은 이 행이 도착할 수 없지만, 어댑터가
-  // 붙는 순간 도착하므로 그때 빈 칸으로 깨지지 않도록 여기에 둔다. 화면이 생기면
-  // detailPath 와 accessPath 가 채워진다.
+  // The screens exist but are behind a preview flag, so the paths are getters
+  // rather than plain functions: with the flag off the row still stands in a
+  // list with its name and status and simply does not link anywhere.
   GPU: {
     label: 'GPU',
     get detailPath() { return gpuPreviewEnabled() ? consolePaths.gpuDetail : undefined },
