@@ -81,7 +81,7 @@ export function RequestWizard({
     // 실제로 고른 것이다.
     workspaceId: draft.common.workspaceId ?? scope,
   }))
-  const kindApi = kind.useWizard(draft.kindType === kind.type ? draft.spec : null)
+  const kindApi = kind.useWizard(draft.kindType === kind.type ? draft.spec : null, state)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
@@ -366,7 +366,7 @@ export function RequestWizard({
                   label="이름"
                   required
                   error={shown.displayName}
-                  description="나중에 바꿀 수 있습니다."
+                  description={kind.copy.displayNameHint === null ? undefined : (kind.copy.displayNameHint ?? '나중에 바꿀 수 있습니다.')}
                 >
                   <Input
                     value={state.displayName}

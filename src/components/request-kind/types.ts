@@ -79,7 +79,7 @@ export interface RequestKindModule {
   type: CreateRequest['type']
   picker: { title: string; description: string }
   /** 종류가 언급되는 공통 단계 문구. 화면 골격은 종류 이름을 모른다. */
-  copy: { noWorkspaceNotice: string }
+  copy: { noWorkspaceNotice: string; displayNameHint?: string | null }
   /**
    * 이 종류가 422로 되돌려받을 수 있는 필드. 공통 표에 합쳐진다.
    *
@@ -88,7 +88,7 @@ export interface RequestKindModule {
    * 붙지 못한 채 목록으로만 뜬다.
    */
   fields: Record<string, FieldSlot>
-  useWizard(draftSpec: unknown): KindWizard
+  useWizard(draftSpec: unknown, common: CommonWizardState): KindWizard
 }
 
 /* ─── 신청 하나를 그리는 화면들 ─── */

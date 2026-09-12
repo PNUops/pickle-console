@@ -7,6 +7,13 @@ type SettingView = Schemas['SettingView']
 
 function initialSettings(): SettingView[] {
   return [
+    ...[
+      { key: 'gpu_unattached_review_hours', value: 12, description: 'GPU 미연결 검토 시간(시간)' },
+      { key: 'gpu_low_util_window_hours', value: 12, description: 'GPU 저사용 판단 기간(시간)' },
+      { key: 'gpu_low_util_threshold_percent', value: 5, description: 'GPU 저사용 이용률 기준(%)' },
+      { key: 'gpu_low_util_snooze_hours', value: 12, description: 'GPU 유지 결정 후 재검토 유예(시간)' },
+    ].map((setting): SettingView => ({ ...setting, valueType: setting.key === 'gpu_low_util_threshold_percent' ? 'NUMBER' : 'INTEGER', editable: true, updatedAt: '2026-09-12T00:00:00Z' })),
+    { key: 'gpu_lease_notice_hours', value: [24, 1], valueType: 'JSON', description: 'GPU 만료 사전 알림(시간 전)', editable: true, updatedAt: '2026-09-12T00:00:00Z' },
     {
       key: 'ssh_gateway_enabled',
       value: true,

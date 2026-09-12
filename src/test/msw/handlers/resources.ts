@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { components } from '../../../api/schema'
+import { gpuAllocationStore } from './gpu'
 import { llmKeyStore, toLlmKeyResourceSummary } from './llm-keys'
 import { toResourceSummary, vmStore } from './vms'
 import { isMyWorkspace } from './workspaces'
@@ -20,6 +21,7 @@ type Schemas = components['schemas']
  */
 const contributors = (): Schemas['ResourceSummaryResponse'][] => [
   ...vmStore.map(toResourceSummary),
+  ...gpuAllocationStore.map((row): Schemas['ResourceSummaryResponse'] => ({ id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName, accessLimited: row.accessLimited, accessManageAllowed: row.accessManageAllowed, ownerNames: row.ownerNames, createdAt: row.createdAt })),
   ...llmKeyStore.map(toLlmKeyResourceSummary),
 ]
 

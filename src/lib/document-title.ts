@@ -6,6 +6,7 @@ const ROOT_TITLE = 'PNU Cloud, Pickle'
 const ADMIN_TITLES: Record<string, string> = {
   requests: '신청',
   vms: '가상머신',
+  gpus: 'GPU',
   'terminal-sessions': '터미널 세션',
   users: '사용자',
   workspaces: '워크스페이스',
@@ -30,6 +31,7 @@ const CONSOLE_TITLES: Record<string, string> = {
   resources: '리소스',
   requests: '신청',
   vms: '가상머신',
+  gpus: 'GPU',
   'llm-keys': 'LLM API 키',
   workspaces: '워크스페이스',
   account: '계정 설정',

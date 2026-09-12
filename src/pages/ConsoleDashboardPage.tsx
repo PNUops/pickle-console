@@ -86,6 +86,7 @@ export function ConsoleDashboardPage() {
   const typeCounts = {
     VM: activeResources.filter((resource) => resource.type === 'VM').length,
     LLM_API_KEY: activeResources.filter((resource) => resource.type === 'LLM_API_KEY').length,
+    GPU: activeResources.filter((resource) => resource.type === 'GPU').length,
   }
 
   // 만료 임박: VM의 종료일과 LLM API 키의 만료 시각을 같은 KST 달력일로 비교한다.
@@ -135,7 +136,7 @@ export function ConsoleDashboardPage() {
           hint={
             resources.isPending
               ? undefined
-              : `가상머신 ${typeCounts.VM}개 · LLM API 키 ${typeCounts.LLM_API_KEY}개`
+              : `가상머신 ${typeCounts.VM}개 · LLM API 키 ${typeCounts.LLM_API_KEY}개${typeCounts.GPU ? ` · GPU ${typeCounts.GPU}개` : ''}`
           }
           to={consolePaths.resources(scope)}
         />

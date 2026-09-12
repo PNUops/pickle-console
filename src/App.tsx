@@ -35,6 +35,12 @@ import { AdminLlmStatusPage } from './pages/AdminLlmStatusPage'
 import { AdminLlmUsagePage } from './pages/AdminLlmUsagePage'
 import { AdminOpenRouterAccountDetailPage } from './pages/AdminOpenRouterAccountDetailPage'
 import { AdminOpenRouterAccountsPage } from './pages/AdminOpenRouterAccountsPage'
+import { GpusPage } from './pages/GpusPage'
+import { GpuDetailPage } from './pages/GpuDetailPage'
+import { GpuAccessPage } from './pages/GpuAccessPage'
+import { AdminGpusPage } from './pages/AdminGpusPage'
+import { AdminGpuDetailPage } from './pages/AdminGpuDetailPage'
+import { gpuPreviewEnabled } from './lib/gpu-preview'
 import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
 import { DocsPage } from './pages/DocsPage'
@@ -161,6 +167,12 @@ function App() {
         <Route path="llm-keys/:keyId" element={<LlmKeyDetailPage />} />
         {/* 상세와 별개 라우트 — 상세가 막힌 사람도 접근 권한은 관리할 수 있다. */}
         <Route path="llm-keys/:keyId/access" element={<LlmKeyAccessPage />} />
+        {gpuPreviewEnabled() && <>
+          <Route path="gpus" element={<GpusPage />} />
+          <Route path="gpus/:allocationId" element={<GpuDetailPage />} />
+          <Route path="gpus/:allocationId/access" element={<GpuAccessPage />} />
+          <Route path=":workspaceId/gpus" element={<GpusPage />} />
+        </>}
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
@@ -198,6 +210,10 @@ function App() {
           </RequireRole>
         }
       >
+        {gpuPreviewEnabled() && <>
+          <Route path="gpus" element={<AdminGpusPage />} />
+          <Route path="gpus/:allocationId" element={<AdminGpuDetailPage />} />
+        </>}
         <Route index element={<AdminDashboardPage />} />
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />

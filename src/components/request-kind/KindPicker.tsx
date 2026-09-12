@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router'
 import { Card, CardContent, PageHeader } from '../ui'
 import { CardRadioGroup } from '../ui/CardRadioGroup'
 import { REQUEST_KINDS } from './index'
+import { gpuRequestKind } from './gpu-wizard'
+import { gpuPreviewEnabled } from '../../lib/gpu-preview'
 import { useScope } from '../../lib/use-scope'
 import { consolePaths } from '../../lib/paths'
 
@@ -33,7 +35,7 @@ export function KindPicker() {
               legend="무엇을 신청할까요"
               value=""
               onChange={(type) => navigate(consolePaths.newRequest(scope, type))}
-              options={REQUEST_KINDS.map((entry) => ({
+              options={[...REQUEST_KINDS, ...(gpuPreviewEnabled() ? [gpuRequestKind] : [])].map((entry) => ({
                 value: entry.type,
                 title: entry.picker.title,
                 description: entry.picker.description,

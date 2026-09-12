@@ -91,3 +91,19 @@ describe('플랫폼 설정', () => {
     expect(await within(dialog).findByText('정수를 입력해 주세요.')).toBeInTheDocument()
   })
 })
+
+test('GPU review hours read the persisted value and save changes immediately', async () => {
+  const { settingStore } = await import('../test/msw/handlers/settings')
+  const user = userEvent.setup()
+  renderSettings()
+  for (const value of [24, 6]) {
+    const row = (await screen.findByText('gpu_unattached_review_hours')).closest('tr')!
+    await user.click(within(row).getByRole('button', { name: '수정' }))
+    const dialog = await screen.findByRole('dialog', { name: '설정 수정 — gpu_unattached_review_hours' })
+    await user.clear(within(dialog).getByLabelText('값'))
+    await user.type(within(dialog).getByLabelText('값'), String(value))
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+    expect(await within(row).findByText(String(value))).toBeInTheDocument()
+    expect(settingStore.find((item) => item.key === 'gpu_unattached_review_hours')?.value).toBe(value)
+  }
+})

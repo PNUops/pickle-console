@@ -15,6 +15,7 @@ import { resetNoticeFixtures } from './handlers/notices'
 import { resetNotificationFixtures } from './handlers/notifications'
 import { resetPublishingFixtures } from './handlers/publishing'
 import { resetReferenceFixtures } from './handlers/reference'
+import { resetGpuFixtures } from './handlers/gpu'
 import { resetSettingFixtures } from './handlers/settings'
 import { resetRequestFixtures } from './handlers/requests'
 import { resetVmFixtures } from './handlers/vms'
@@ -44,6 +45,7 @@ export function resetFixtures() {
   resetAdminOpsFixtures()
   resetAuditFixtures()
   resetSettingFixtures()
+  resetGpuFixtures()
   resetNotificationFixtures()
   resetNoticeFixtures()
   resetAnnouncementFixtures()

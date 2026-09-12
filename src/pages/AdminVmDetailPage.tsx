@@ -12,6 +12,7 @@ import {
   type VmDetail,
   type VmEvent,
 } from '../api/queries'
+import { VmGpuCard } from '../components/gpu/VmGpuCard'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { canOperateVm, isSysAdminOnly, isSysTier, operatesOrg } from '../auth/permissions'
@@ -159,6 +160,7 @@ export function AdminVmDetailPage() {
           </dl>
         </Card>
 
+        <VmGpuCard gpu={vm.gpu} admin orgId={activeOrgId} />
         {canOperate && <PowerSection vm={vm} onDone={setMessage} />}
         {canOperate &&
           vm.status !== 'DELETED' &&

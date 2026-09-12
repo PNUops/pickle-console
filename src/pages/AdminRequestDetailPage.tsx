@@ -296,6 +296,9 @@ function DecisionSection({
       await Promise.all([
         refresh(),
         queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'gpu-allocations'] }),
+        queryClient.invalidateQueries({ queryKey: ['gpu-allocations'] }),
+        queryClient.invalidateQueries({ queryKey: ['resources'] }),
       ])
     },
     onError: (error) => handleError(error, '신청을 승인하지 못했습니다.'),
@@ -485,8 +488,14 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
   const data = context.data
   const vm = data.type === 'VM' ? data.vm : null
   const llmKey = data.type === 'LLM_API_KEY' ? data.llmKey : null
+  const gpu = data.type === 'GPU' ? data.gpu : null
   return (
     <aside aria-label="승인 판단 참고 정보" className="space-y-4">
+      {gpu && <Card><CardHeader><CardTitle>GPU 현황</CardTitle></CardHeader><CardContent><dl className="grid grid-cols-2 gap-3">
+        <Field label="할당 가능한 GPU">{gpu.availableCards}장</Field>
+        <Field label="대기 중인 할당">{gpu.queuedAllocations}건</Field>
+        <Field label="대상 VM">{gpu.vmName ?? '나중에 선택'}</Field>
+      </dl></CardContent></Card>}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">신청자</CardTitle>

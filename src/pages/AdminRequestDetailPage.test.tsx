@@ -383,3 +383,21 @@ describe('열람 역할', () => {
     expect(screen.queryByRole('button', { name: '반려하기' })).not.toBeInTheDocument()
   })
 })
+
+test('GPU approval requires an explicit lease and normalizes days without attaching a VM', async () => {
+  const request = { ...adminRequestStore[0], id: uuid(910), type: 'GPU' as const, vm: null, llmKey: null, gpu: { vmId: null, vmName: null, leaseHours: 72 }, displayName: '학습 GPU' }
+  adminRequestStore.push(request)
+  const user = userEvent.setup()
+  renderDetail(uuid(910))
+  const duration = await screen.findByLabelText('승인 GPU 임대 기간')
+  expect(duration).toHaveValue(null)
+  const form = duration.closest('form')!
+  await user.click(within(form).getByRole('button', { name: /승인/ }))
+  expect(await screen.findByText('승인할 임대 기간을 1 이상의 정수로 입력해 주세요.')).toBeInTheDocument()
+  await user.type(duration, '2')
+  await user.selectOptions(within(form).getByLabelText('기간 단위'), 'days')
+  await user.click(within(form).getByRole('button', { name: /승인/ }))
+  const confirm = await screen.findByRole('dialog')
+  await user.click(within(confirm).getByRole('button', { name: /승인/ }))
+  await waitFor(() => expect(approveBodies.at(-1)?.body.gpu).toEqual({ leaseHours: 48 }))
+})
