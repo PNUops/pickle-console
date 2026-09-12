@@ -180,6 +180,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/gpu-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 관리자 GPU 할당 목록 */
+        get: operations["listAdminGpuAllocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-allocations/{allocationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 관리자 GPU 할당 상세 */
+        get: operations["getAdminGpuAllocation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-allocations/{allocationId}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 관리자 GPU 임대 연장 */
+        post: operations["extendAdminGpuLease"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-allocations/{allocationId}/priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GPU 대기 우선순위 변경 */
+        post: operations["updateGpuPriority"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-allocations/{allocationId}/reclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 관리자 GPU 회수 */
+        post: operations["reclaimGpu"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-allocations/{allocationId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * GPU 연결 상태 재확인
+         * @description 전원과 장치 설정을 변경하지 않고 실제 상태가 확인된 작업의 잠금만 정리합니다. GPU 점유와 회수 의도는 유지합니다.
+         */
+        post: operations["reconcileGpu"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-reclaim-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GPU 회수 검토 목록 */
+        get: operations["listGpuReclaimReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpu-reclaim-reviews/{reviewId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GPU 회수 검토 결정 */
+        post: operations["decideGpuReclaimReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 관리자 GPU 목록 */
+        get: operations["listAdminGpus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/gpus/{gpuId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** GPU 운영 상태 변경 */
+        patch: operations["updateAdminGpu"];
+        trace?: never;
+    };
     "/admin/ip-allocations": {
         parameters: {
             query?: never;
@@ -1788,6 +1961,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dns-domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 도메인 목록
+         * @description 내가 속한 워크스페이스의 도메인입니다. 접근 권한이 없는 도메인도 이름과 상태, 소유자까지는 보입니다.
+         */
+        get: operations["listDnsDomains"];
+        put?: never;
+        /**
+         * 도메인 발급
+         * @description 루트 도메인 아래 이름 하나를 발급받습니다. 승인은 필요하지 않으며, 발급한 사람이 유일한 소유자가 됩니다. 기관은 고른 루트 도메인을 따릅니다.
+         */
+        post: operations["createDnsDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dns-domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 도메인 상세 */
+        get: operations["getDnsDomain"];
+        put?: never;
+        post?: never;
+        /**
+         * 도메인 해제
+         * @description 레코드를 지우고 이름을 해제합니다. 이름은 예약 기간 동안 이 워크스페이스에 남아 있다가 회수됩니다.
+         */
+        delete: operations["deleteDnsDomain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dns-domains/{domainId}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 접근 권한 목록
+         * @description 이 도메인의 접근 권한 전체입니다. 도메인 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         */
+        get: operations["listDnsDomainAccessGrants"];
+        put?: never;
+        /**
+         * 접근 권한 부여
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 도메인의 접근 권한을 부여합니다.
+         */
+        post: operations["addDnsDomainAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dns-domains/{domainId}/access/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 접근 권한 회수
+         * @description 회수해도 이미 존에 들어간 레코드는 그대로 남습니다. 필요하면 레코드를 먼저 정리해 주세요.
+         */
+        delete: operations["removeDnsDomainAccessGrant"];
+        options?: never;
+        head?: never;
+        /** 접근 권한 등급 변경 */
+        patch: operations["updateDnsDomainAccessGrant"];
+        trace?: never;
+    };
+    "/dns-domains/{domainId}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 레코드 세트 목록 */
+        get: operations["listDnsRecordSets"];
+        /**
+         * 레코드 세트 저장
+         * @description 이 이름이 가져야 할 레코드 세트 전체를 보냅니다. 서버가 차이를 계산하므로 같은 내용을 다시 보내면 아무것도 바뀌지 않습니다. 목록에서 빠진 세트는 존에서 지워집니다.
+         */
+        put: operations["replaceDnsRecordSets"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dns-domains/{domainId}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 사용 연장
+         * @description 사용 기한을 지금부터 다시 전체 기간만큼으로 옮깁니다. 남은 기간에 더하는 것이 아니라 언제 눌러도 같은 기간을 받습니다.
+         */
+        post: operations["renewDnsDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/domains": {
         parameters: {
             query?: never;
@@ -1830,6 +2134,193 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["verifyDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GPU 할당 목록 */
+        get: operations["listGpuAllocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GPU 할당 상세 */
+        get: operations["getGpuAllocation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 접근 권한 목록
+         * @description 이 GPU의 접근 권한 전체와, 그 목록이 어느 GPU의 것인지 알려 주는 최소 정보입니다. GPU 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         */
+        get: operations["listGpuAllocationAccessGrants"];
+        put?: never;
+        /**
+         * 접근 권한 부여
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 GPU의 접근 권한을 부여합니다. 사용자는 이 GPU를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         */
+        post: operations["addGpuAllocationAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/access/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 접근 권한 회수
+         * @description 접근 권한만 회수하며 연결된 가상머신은 재시작하지 않습니다.
+         */
+        delete: operations["removeGpuAllocationAccessGrant"];
+        options?: never;
+        head?: never;
+        /** 접근 권한 등급 변경 */
+        patch: operations["updateGpuAllocationAccessGrant"];
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/attach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 가상머신에 GPU 연결
+         * @description 가상머신 중단에 동의한 뒤 연결합니다. 임대는 이미 시작되어 있으며 연결 실패로 초기화되지 않습니다.
+         */
+        post: operations["attachGpu"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/attachment-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GPU에 연결할 가상머신 */
+        get: operations["listGpuAttachmentOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/detach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * GPU 연결 해제
+         * @description 연결만 해제하며 GPU 점유와 임대 기간은 유지합니다.
+         */
+        post: operations["detachGpu"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GPU 임대 연장 */
+        post: operations["extendGpuLease"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpu-allocations/{allocationId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GPU 반납 */
+        post: operations["releaseGpu"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gpus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GPU 목록 */
+        get: operations["listGpus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3634,6 +4125,7 @@ export interface components {
             applicant: components["schemas"]["Applicant"];
             /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
+            gpu?: components["schemas"]["GpuContext"] | null;
             /** @deprecated */
             guidance: string;
             history: components["schemas"]["HistoryEntry"][];
@@ -3643,6 +4135,18 @@ export interface components {
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["VmContext"] | null;
             workspace: components["schemas"]["WorkspacePanel"];
+        };
+        ApproveGpuRequestSpec: {
+            /** Format: uuid */
+            gpuId?: string | null;
+            /**
+             * Format: int32
+             * @description 관리자가 승인하는 양의 정수 시간입니다. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않습니다.
+             */
+            leaseHours: number;
+            /** Format: int32 */
+            priority?: number | null;
+            priorityReason?: string | null;
         };
         ApproveLlmKeyRequestSpec: {
             /**
@@ -3683,6 +4187,7 @@ export interface components {
         };
         ApproveRequestRequest: {
             comment?: string | null;
+            gpu?: components["schemas"]["ApproveGpuRequestSpec"] | null;
             /** Format: date */
             grantedEndDate?: string | null;
             /** Format: date */
@@ -3702,6 +4207,11 @@ export interface components {
             grantedVcpu: number;
             /** Format: uuid */
             nodeId?: string | null;
+        };
+        AttachGpuRequest: {
+            confirmed: boolean;
+            /** Format: uuid */
+            vmId: string;
         };
         Attention: {
             /** Format: int64 */
@@ -3824,6 +4334,9 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        ConfirmGpuActionRequest: {
+            confirmed: boolean;
+        };
         ConfirmOpenRouterAccountRequest: {
             /** @description Account 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
@@ -3848,6 +4361,32 @@ export interface components {
             ports: number[];
             /** @description 신청 목적 (관리자 검토 자료) */
             purpose: string;
+        };
+        CreateDnsDomainRequest: {
+            /**
+             * @description 발급받을 이름. 루트 도메인 바로 아래 한 라벨입니다.
+             * @example myblog
+             */
+            label: string;
+            /**
+             * @description 이 이름을 둘 루트 도메인. 비우면 기본 루트를 씁니다.
+             * @example pusan.dev
+             */
+            rootDomain?: string | null;
+            /**
+             * Format: uuid
+             * @description 이 이름을 소유할 워크스페이스.
+             */
+            workspaceId: string;
+        };
+        CreateGpuRequestSpec: {
+            /**
+             * Format: int32
+             * @description 직접 입력한 양의 정수 시간입니다. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않습니다.
+             */
+            leaseHours: number;
+            /** Format: uuid */
+            vmId?: string | null;
         };
         CreateLlmKeyRequestSpec: {
             /**
@@ -3926,6 +4465,7 @@ export interface components {
         CreateRequestRequest: {
             displayName: string;
             extraNote?: string | null;
+            gpu?: components["schemas"]["CreateGpuRequestSpec"] | null;
             llmKey?: components["schemas"]["CreateLlmKeyRequestSpec"] | null;
             /** Format: uuid */
             orgId: string;
@@ -3986,10 +4526,31 @@ export interface components {
         };
         /** @enum {string} */
         CreditLimitReset: "DAILY" | "WEEKLY" | "MONTHLY";
+        DecideGpuReviewRequest: {
+            decision: components["schemas"]["GpuReviewDecision"];
+            reason: string;
+        };
         DepartmentView: {
             code: string;
             college: string;
             name: string;
+        };
+        DesiredRecordSet: {
+            /**
+             * @description 도메인 이름 기준 상대 이름. 빈 문자열은 도메인 이름 자신입니다.
+             * @example www
+             */
+            name: string;
+            /**
+             * Format: int32
+             * @description TTL(초). 60에서 86400 사이입니다.
+             * @example 300
+             */
+            ttl?: number;
+            /** @description 레코드 종류. */
+            type: components["schemas"]["DnsRecordType"];
+            /** @description 이 세트의 값 전체. 순서가 의미를 갖는 종류가 있어 그대로 보존됩니다. */
+            values: string[];
         };
         DisableMfaRequest: {
             code?: string;
@@ -3999,6 +4560,42 @@ export interface components {
         DisableUserRequest: {
             reason: string;
         };
+        DnsDomainView: {
+            accessLimited: boolean;
+            accessManageAllowed: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            fqdn: string;
+            /** Format: uuid */
+            id: string;
+            ownerNames: string[];
+            /** Format: int32 */
+            recordSetCount: number;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            renewDueAt: string;
+            /** Format: date-time */
+            reservedUntil?: string | null;
+            rootDomain: string;
+            status: components["schemas"]["DomainStatus"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+        };
+        DnsRecordSetView: {
+            /** Format: date-time */
+            appliedAt?: string | null;
+            lastError?: string | null;
+            name: string;
+            status: components["schemas"]["DomainRecordStatus"];
+            /** Format: int32 */
+            ttl: number;
+            type: components["schemas"]["DnsRecordType"];
+            values: string[];
+        };
+        /** @enum {string} */
+        DnsRecordType: "A" | "AAAA" | "CNAME" | "TXT";
         DomainDetailView: {
             /** Format: date-time */
             createdAt: string;
@@ -4026,6 +4623,8 @@ export interface components {
         DomainDnsStatus: "NONE" | "PENDING" | "APPLIED" | "FAILED";
         /** @enum {string} */
         DomainKind: "AUTO" | "PLATFORM" | "CUSTOM" | "EXTERNAL";
+        /** @enum {string} */
+        DomainRecordStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
         /** @enum {string} */
         DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
         DomainSummaryView: {
@@ -4060,7 +4659,7 @@ export interface components {
             txtVerified: boolean;
         };
         /** @enum {string} */
-        DriftFindingKind: "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH" | "OPENROUTER_ORPHAN" | "OPENROUTER_STALE";
+        DriftFindingKind: "GPU_ATTACHMENT_MISMATCH" | "MISSING_IN_PROXMOX" | "UNMANAGED_GUEST" | "SPEC_MISMATCH" | "OPENROUTER_ORPHAN" | "OPENROUTER_STALE";
         DriftFindingResponse: {
             detail?: unknown;
             /** Format: date-time */
@@ -4087,6 +4686,14 @@ export interface components {
         };
         /** @enum {string} */
         DriftFindingStatus: "OPEN" | "RESOLVED";
+        ExtendGpuLeaseRequest: {
+            /**
+             * Format: int32
+             * @description 추가할 양의 정수 시간입니다. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않습니다.
+             */
+            hours: number;
+            reason?: string | null;
+        };
         /** @description 검증 실패 필드 한 건 (422 응답의 errors[] 원소) */
         FieldValidationError: {
             /** @description 실패한 요청 필드 이름 */
@@ -4103,6 +4710,129 @@ export interface components {
         ForceDeleteVmRequest: {
             confirmName: string;
             overrideProtection?: boolean;
+        };
+        /** @enum {string} */
+        GpuAllocationStatus: "QUEUED" | "ALLOCATED" | "RELEASING" | "RELEASED" | "CANCELED";
+        GpuAllocationView: {
+            accessLimited: boolean;
+            accessManageAllowed: boolean;
+            /** Format: date-time */
+            allocatedAt?: string | null;
+            connectionStatus: components["schemas"]["GpuConnectionStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            error?: string | null;
+            gpu?: components["schemas"]["GpuView"] | null;
+            /** Format: int32 */
+            grantedLeaseHours?: number | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            leaseEndsAt?: string | null;
+            myRole?: components["schemas"]["ResourceRole"] | null;
+            name: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName?: string | null;
+            ownerNames: string[];
+            /** Format: int32 */
+            priority?: number | null;
+            /** Format: int64 */
+            queuePosition?: number | null;
+            releaseReason?: components["schemas"]["GpuReleaseReason"] | null;
+            /** Format: date-time */
+            sampleObservedAt?: string | null;
+            status: components["schemas"]["GpuAllocationStatus"];
+            /** Format: date-time */
+            unattachedSince?: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: double */
+            utilizationPercent?: number | null;
+            /** Format: uuid */
+            vmId?: string | null;
+            vmName?: string | null;
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+        };
+        GpuAttachmentOption: {
+            /** Format: uuid */
+            nodeId: string;
+            ready: boolean;
+            reason?: string | null;
+            /** Format: uuid */
+            vmId: string;
+            vmName: string;
+        };
+        /** @enum {string} */
+        GpuConnectionStatus: "NONE" | "ATTACHING" | "ATTACHED" | "DETACHING" | "ERROR";
+        GpuContext: {
+            /** Format: int64 */
+            availableCards: number;
+            /** Format: int64 */
+            queuedAllocations: number;
+            /** Format: int32 */
+            requestedLeaseHours: number;
+            vmName?: string | null;
+        };
+        GpuReasonRequest: {
+            reason: string;
+        };
+        GpuReclaimReviewView: {
+            /** Format: uuid */
+            allocationId: string;
+            allocationName: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            decidedAt?: string | null;
+            decision?: components["schemas"]["GpuReviewDecision"] | null;
+            decisionReason?: string | null;
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            id: string;
+            reason: string;
+        };
+        /** @enum {string} */
+        GpuReleaseReason: "USER_RELEASE" | "LEASE_EXPIRED" | "ADMIN_RECLAIM" | "GRANT_ENDED";
+        GpuRequestSpecResponse: {
+            /** Format: uuid */
+            grantedGpuId?: string | null;
+            /** Format: int32 */
+            grantedLeaseHours?: number | null;
+            /** Format: int32 */
+            grantedPriority?: number | null;
+            /** Format: int32 */
+            leaseHours: number;
+            /** Format: uuid */
+            vmId?: string | null;
+            vmName?: string | null;
+        };
+        /** @enum {string} */
+        GpuReviewDecision: "KEEP" | "RECLAIM";
+        /** @enum {string} */
+        GpuStatus: "ACTIVE" | "MAINTENANCE" | "RETIRED";
+        GpuView: {
+            available: boolean;
+            /** Format: uuid */
+            id: string;
+            model: string;
+            /** Format: uuid */
+            nodeId: string;
+            status: components["schemas"]["GpuStatus"];
+            /** Format: int32 */
+            vramMb: number;
+        };
+        GpuVmSummary: {
+            /** Format: uuid */
+            allocationId: string;
+            allocationName: string;
+            connectionStatus: components["schemas"]["GpuConnectionStatus"];
+            detailAccessAllowed: boolean;
+            model: string;
         };
         GrantOrgRoleRequest: {
             /** @description 이 기관에서 부여할 역할 (ORG_ADMIN, ORG_MANAGER, ORG_VIEWER) */
@@ -6106,6 +6836,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseDnsDomainView: {
+            content: components["schemas"]["DnsDomainView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseDomainSummaryView: {
             content: components["schemas"]["DomainSummaryView"][];
             /** Format: int32 */
@@ -6119,6 +6860,28 @@ export interface components {
         };
         PageResponseDriftFindingResponse: {
             content: components["schemas"]["DriftFindingResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseGpuAllocationView: {
+            content: components["schemas"]["GpuAllocationView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseGpuReclaimReviewView: {
+            content: components["schemas"]["GpuReclaimReviewView"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -6397,11 +7160,16 @@ export interface components {
             /** @description 새 동기화 토큰(64자 hex). 이 응답에서만 확인 가능하며 저장되지 않습니다 */
             token: string;
         };
+        ReplaceDnsRecordSetsRequest: {
+            /** @description 이 이름이 가져야 할 레코드 세트 전체. 빈 목록은 전부 삭제입니다. */
+            records: components["schemas"]["DesiredRecordSet"][];
+        };
         RequestDetailResponse: {
             /** Format: date-time */
             createdAt: string;
             displayName: string;
             extraNote?: string | null;
+            gpu?: components["schemas"]["GpuRequestSpecResponse"] | null;
             /** Format: uuid */
             id: string;
             llmKey?: components["schemas"]["LlmKeyRequestSpecResponse"] | null;
@@ -6572,7 +7340,7 @@ export interface components {
             vcpu: number;
         };
         /** @enum {string} */
-        ResourceType: "VM" | "LLM_API_KEY" | "DOMAIN";
+        ResourceType: "VM" | "LLM_API_KEY" | "DOMAIN" | "GPU";
         Resources: {
             activeVms: components["schemas"]["VmBriefResponse"][];
             totals: components["schemas"]["ResourceTotalsResponse"];
@@ -6763,6 +7531,15 @@ export interface components {
         UpdateDomainRequest: {
             /** Format: int32 */
             port?: number;
+        };
+        UpdateGpuPriorityRequest: {
+            /** Format: int32 */
+            priority: number;
+            reason: string;
+        };
+        UpdateGpuStatusRequest: {
+            reason: string;
+            status: components["schemas"]["GpuStatus"];
         };
         UpdateLlmKeyRequest: {
             /** @description 키 이름. 생략하면 그대로 둡니다. */
@@ -7017,6 +7794,7 @@ export interface components {
             endDate?: string | null;
             /** Format: date-time */
             expiryStoppedAt?: string | null;
+            gpu?: components["schemas"]["GpuVmSummary"] | null;
             hostname: string;
             /** Format: uuid */
             id: string;
@@ -7080,7 +7858,7 @@ export interface components {
             type: components["schemas"]["VmEventType"];
         };
         /** @enum {string} */
-        VmEventType: "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE" | "GATEWAY_BLOCK" | "GATEWAY_UNBLOCK" | "PORT_FORWARD_CREATE" | "PORT_FORWARD_DELETE";
+        VmEventType: "GPU_ATTACH" | "GPU_DETACH" | "CREATE" | "START" | "STOP" | "REBOOT" | "FORCE_STOP" | "DELETE" | "SELF_DELETE" | "FORCE_DELETE" | "REINSTALL" | "SCHEDULE_DELETE" | "CANCEL_SCHEDULED_DELETE" | "PUBLISH" | "UNPUBLISH" | "EXPIRE_STOP" | "PERIOD_UPDATE" | "GATEWAY_BLOCK" | "GATEWAY_UNBLOCK" | "PORT_FORWARD_CREATE" | "PORT_FORWARD_DELETE";
         VmFlavorResponse: {
             /** Format: int32 */
             diskGb: number;
@@ -7773,6 +8551,342 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DriftFindingResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminGpuAllocations: {
+        parameters: {
+            query?: {
+                orgId?: string;
+                workspaceId?: string;
+                status?: components["schemas"]["GpuAllocationStatus"];
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseGpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminGpuAllocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    extendAdminGpuLease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtendGpuLeaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateGpuPriority: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGpuPriorityRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reclaimGpu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GpuReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reconcileGpu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GpuReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listGpuReclaimReviews: {
+        parameters: {
+            query?: {
+                orgId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseGpuReclaimReviewView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    decideGpuReclaimReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideGpuReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminGpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminGpu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gpuId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateGpuStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -11305,6 +12419,409 @@ export interface operations {
             };
         };
     };
+    listDnsDomains: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseDnsDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createDnsDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDnsDomainRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getDnsDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteDnsDomain: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listDnsDomainAccessGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessListResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addDnsDomainAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeDnsDomainAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                domainId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateDnsDomainAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                domainId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listDnsRecordSets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsRecordSetView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replaceDnsRecordSets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceDnsRecordSetsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsRecordSetView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    renewDnsDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listDomains: {
         parameters: {
             query?: {
@@ -11454,6 +12971,438 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DomainDetailView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listGpuAllocations: {
+        parameters: {
+            query?: {
+                workspaceId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseGpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getGpuAllocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listGpuAllocationAccessGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessListResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addGpuAllocationAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeGpuAllocationAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                allocationId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateGpuAllocationAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
+                "X-Reauth-Token"?: string;
+            };
+            path: {
+                allocationId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    attachGpu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachGpuRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listGpuAttachmentOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAttachmentOption"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    detachGpu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmGpuActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    extendGpuLease: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtendGpuLeaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    releaseGpu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmGpuActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuAllocationView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listGpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["GpuView"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

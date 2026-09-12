@@ -24,6 +24,8 @@ export const VM_STATUS_LABELS: Record<VmStatus, string> = {
 export type VmEventType = components['schemas']['VmEventResponse']['type']
 
 export const VM_EVENT_LABELS: Record<VmEventType, string> = {
+  GPU_ATTACH: 'GPU 연결',
+  GPU_DETACH: 'GPU 연결 해제',
   CREATE: '생성',
   START: '시작',
   STOP: '종료',
@@ -243,6 +245,7 @@ export const TASK_STATUS_LABELS: Record<ProvisioningTaskStatus, string> = {
 }
 
 export const DRIFT_KIND_LABELS: Record<DriftFindingKind, string> = {
+  GPU_ATTACHMENT_MISMATCH: 'GPU 연결 상태 불일치',
   MISSING_IN_PROXMOX: 'Proxmox에 없음',
   UNMANAGED_GUEST: '미등록 VM',
   SPEC_MISMATCH: '사양 불일치',

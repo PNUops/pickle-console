@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import type { ResourceSummary } from '../../api/queries'
 import { consolePaths } from '../../lib/paths'
+import { GpuStatusBadge } from '../gpu/GpuStatus'
+import { gpuPreviewEnabled } from '../../lib/gpu-preview'
 import { TerminalRowAction } from './TerminalRowAction'
 import { DomainStatusBadge, LlmKeyStatusBadge, VmStatusBadge } from '../ui'
 import type { DomainStatus, LlmApiKeyStatus, VmStatus } from '../../lib/status'
@@ -40,6 +42,13 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
   // 서버에 발급 경로도 어댑터도 없어서 지금은 이 행이 도착할 수 없지만, 어댑터가
   // 붙는 순간 도착하므로 그때 빈 칸으로 깨지지 않도록 여기에 둔다. 화면이 생기면
   // detailPath 와 accessPath 가 채워진다.
+  GPU: {
+    label: 'GPU',
+    get detailPath() { return gpuPreviewEnabled() ? consolePaths.gpuDetail : undefined },
+    get accessPath() { return gpuPreviewEnabled() ? consolePaths.gpuAccess : undefined },
+    statusBadge: (resource) => <GpuStatusBadge status={resource.status} />,
+    isActive: (resource) => resource.status !== 'RELEASED' && resource.status !== 'CANCELED',
+  },
   DOMAIN: {
     label: '도메인',
     statusBadge: (resource) => <DomainStatusBadge status={resource.status as DomainStatus} />,

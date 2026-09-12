@@ -32,6 +32,7 @@ import {
   type VmStatus,
   invalidateResourceLists,
 } from '../api/queries'
+import { VmGpuCard } from '../components/gpu/VmGpuCard'
 import { toApiError } from '../api/problem'
 import {
   Alert,
@@ -301,6 +302,7 @@ export function VmDetailPage() {
             </dl>
           </CardContent>
         </Card>
+        <VmGpuCard gpu={data.gpu} />
         <SshAccessSection vm={data} />
         <VmPasswordSection vm={data} />
       </TabPanel>

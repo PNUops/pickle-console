@@ -64,3 +64,13 @@ describe('리소스 종류 레지스트리', () => {
     expect(screen.getByText('ACTIVE')).toBeInTheDocument()
   })
 })
+
+test('GPU allocation status remains readable before its screens are opened', () => {
+  const entry = resourceTypeEntry('GPU')
+  expect(entry.label).toBe('GPU')
+  expect(entry.detailPath).toBeUndefined()
+  expect(entry.isActive(resource({ type: 'GPU', status: 'ALLOCATED' }))).toBe(true)
+  expect(entry.isActive(resource({ type: 'GPU', status: 'RELEASED' }))).toBe(false)
+  render(<>{entry.statusBadge(resource({ type: 'GPU', status: 'QUEUED' }))}</>)
+  expect(screen.getByText('대기')).toBeInTheDocument()
+})

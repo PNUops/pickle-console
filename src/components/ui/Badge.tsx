@@ -282,6 +282,7 @@ export function TaskStatusBadge({
 }
 
 const DRIFT_KIND_VARIANTS: Record<DriftFindingKind, BadgeVariant> = {
+  GPU_ATTACHMENT_MISMATCH: 'danger',
   MISSING_IN_PROXMOX: 'danger',
   UNMANAGED_GUEST: 'warning',
   SPEC_MISMATCH: 'info',

@@ -242,6 +242,7 @@ export const requestHandlers: RequestHandler[] = [
               grantedPassthroughEndpoints: [],
             }
           : null,
+      gpu: body.type === 'GPU' && body.gpu ? { leaseHours: body.gpu.leaseHours, vmId: body.gpu.vmId, vmName: null } : null,
       vm: body.type !== 'VM' ? null : {
         imageId: body.vm?.imageId ?? uuid(1),
         // 서버는 카탈로그 행에서 이름을 읽어 응답에 실어 준다 — 은퇴한 행도 이름은 남는다.

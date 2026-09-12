@@ -319,6 +319,7 @@ export function invalidateResourceLists(queryClient: QueryClient): Promise<unkno
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ['vms'] }),
     queryClient.invalidateQueries({ queryKey: ['llm-keys'] }),
+    queryClient.invalidateQueries({ queryKey: ['gpu-allocations'] }),
     queryClient.invalidateQueries({ queryKey: ['resources'] }),
   ])
 }

@@ -7,6 +7,9 @@ import { vmRequestKind } from './vm-wizard'
 import { vmRequestView } from './vm-view'
 import { llmKeyRequestKind } from './llm-wizard'
 import { llmKeyRequestView } from './llm-view'
+import { gpuRequestKind } from './gpu-wizard'
+import { gpuRequestView } from './gpu-view'
+import { gpuPreviewEnabled } from '../../lib/gpu-preview'
 
 /**
  * 신청 위저드가 아는 리소스 종류 — 선택 화면에 이 순서로 나온다.
@@ -15,6 +18,7 @@ import { llmKeyRequestView } from './llm-view'
 export const REQUEST_KINDS: RequestKindModule[] = [vmRequestKind, llmKeyRequestKind]
 
 export function requestKind(type: string): RequestKindModule | undefined {
+  if (type === 'GPU' && gpuPreviewEnabled()) return gpuRequestKind
   return REQUEST_KINDS.find((kind) => kind.type === type)
 }
 
@@ -33,6 +37,7 @@ export const KIND_SUMMARY_COLUMN_TITLE = '요청 내용'
 const REQUEST_KIND_VIEWS: Record<string, RequestKindView> = {
   VM: vmRequestView,
   LLM_API_KEY: llmKeyRequestView,
+  GPU: gpuRequestView,
 }
 
 /**

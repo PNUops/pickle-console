@@ -19,6 +19,7 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
+import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { useScope } from '../lib/use-scope'
 
 /**
@@ -64,6 +65,7 @@ export function ResourcesPage() {
             <option value="">전체</option>
             <option value="VM">가상머신</option>
             <option value="LLM_API_KEY">LLM API 키</option>
+            {gpuPreviewEnabled() && <option value="GPU">GPU</option>}
           </Select>
         </label>
       </div>

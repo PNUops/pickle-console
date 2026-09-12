@@ -15,6 +15,7 @@ import {
   type VmAccessGrant,
   type VmAccessList,
 } from '../../api/queries'
+import { addGpuAccessGrant, fetchGpuAccessGrants, removeGpuAccessGrant, updateGpuAccessGrant } from '../../api/gpu'
 import { toApiError } from '../../api/problem'
 import {
   Alert,
@@ -86,9 +87,23 @@ interface AccessKind {
  * 새 종류가 늘었는지 묻는 자리는 여기가 아니라 RESOURCE_TYPES 다 — 그쪽은
  * 전수로 남아 있어 종류가 늘면 빌드가 깨진다.
  */
-type AccessCapableType = Extract<ResourceType, 'VM' | 'LLM_API_KEY'>
+type AccessCapableType = Extract<ResourceType, 'VM' | 'LLM_API_KEY' | 'GPU'>
 
 const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
+  GPU: {
+    queryKey: 'gpu-allocations',
+    fetchGrants: fetchGpuAccessGrants,
+    addGrant: addGpuAccessGrant,
+    updateGrant: updateGpuAccessGrant,
+    removeGrant: removeGpuAccessGrant,
+    roleHints: { OWNER: '접근 권한 관리와 반납까지', EDITOR: 'VM 연결·해제와 임대 연장까지', MEMBER: 'GPU 상세 조회', VIEWER: 'GPU 상세 조회' },
+    listIntro: 'GPU의 상태와 임대 정보를 볼 사람, VM 연결을 변경할 사람을 정합니다.',
+    workspaceWideWho: '이 GPU를 소유한 워크스페이스의 구성원 전원',
+    emptyList: 'GPU 접근 권한이 부여된 사람이 없습니다.',
+    grantEligibility: '같은 워크스페이스의 구성원에게 부여할 수 있습니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.',
+    revokeSentence: (who) => `${who}의 GPU 접근 권한을 회수합니다.`,
+    revokeCaveats: <p>연결된 VM은 그대로 유지됩니다. VM 접근 권한은 해당 VM에서 관리해 주세요.</p>,
+  },
   VM: {
     queryKey: 'vms',
     fetchGrants: fetchVmAccessGrants,

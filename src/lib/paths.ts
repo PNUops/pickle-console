@@ -16,6 +16,7 @@ export const consolePaths = {
   resources: (scope: Scope) => scoped(scope, 'resources'),
   vms: (scope: Scope) => scoped(scope, 'vms'),
   llmKeys: (scope: Scope) => scoped(scope, 'llm-keys'),
+  gpus: (scope: Scope) => scoped(scope, 'gpus'),
   requests: (scope: Scope) => scoped(scope, 'requests'),
   // 종류를 알고 들어오는 자리가 있다 — 가상머신 목록의 신청 버튼은 무엇을
   // 신청할지 이미 말하고 있으므로, 위저드가 그 종류로 열린다.
@@ -29,6 +30,8 @@ export const consolePaths = {
   vmAccess: (vmId: string) => `/console/vms/${vmId}/access`,
   llmKeyDetail: (keyId: string) => `/console/llm-keys/${keyId}`,
   llmKeyAccess: (keyId: string) => `/console/llm-keys/${keyId}/access`,
+  gpuDetail: (allocationId: string) => `/console/gpus/${allocationId}`,
+  gpuAccess: (allocationId: string) => `/console/gpus/${allocationId}/access`,
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
   workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,
@@ -65,6 +68,8 @@ export const adminPaths = {
     ),
   llmKeyDetail: (keyId: string, orgId?: string) =>
     adminPath(`/admin/llm/keys/${keyId}`, orgId),
+  gpus: (orgId?: string) => adminPath('/admin/gpus', orgId),
+  gpuDetail: (allocationId: string, orgId?: string) => adminPath(`/admin/gpus/${allocationId}`, orgId),
   llmUsage: (orgId?: string, workspaceId?: string | null, days?: 7 | 30 | 90) => {
     const query = new URLSearchParams()
     if (workspaceId != null) query.set('workspaceId', workspaceId)
@@ -83,7 +88,7 @@ export const adminPaths = {
 } as const
 
 /** The listings that exist under a workspace as well as unscoped. */
-const SCOPED_SECTIONS = ['resources', 'vms', 'llm-keys', 'requests', 'requests/new']
+const SCOPED_SECTIONS = ['resources', 'vms', 'llm-keys', 'gpus', 'requests', 'requests/new']
 
 /**
  * The part of a console path that survives a scope change: the list you are
