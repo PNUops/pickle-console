@@ -17,6 +17,7 @@ export const consolePaths = {
   vms: (scope: Scope) => scoped(scope, 'vms'),
   llmKeys: (scope: Scope) => scoped(scope, 'llm-keys'),
   gpus: (scope: Scope) => scoped(scope, 'gpus'),
+  dnsDomains: (scope: Scope) => scoped(scope, 'domains'),
   requests: (scope: Scope) => scoped(scope, 'requests'),
   // 종류를 알고 들어오는 자리가 있다 — 가상머신 목록의 신청 버튼은 무엇을
   // 신청할지 이미 말하고 있으므로, 위저드가 그 종류로 열린다.
@@ -32,6 +33,8 @@ export const consolePaths = {
   llmKeyAccess: (keyId: string) => `/console/llm-keys/${keyId}/access`,
   gpuDetail: (allocationId: string) => `/console/gpus/${allocationId}`,
   gpuAccess: (allocationId: string) => `/console/gpus/${allocationId}/access`,
+  dnsDomainDetail: (domainId: string) => `/console/domains/${domainId}`,
+  dnsDomainAccess: (domainId: string) => `/console/domains/${domainId}/access`,
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
   workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,

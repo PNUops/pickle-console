@@ -47,6 +47,9 @@ import { DocsPage } from './pages/DocsPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LlmKeyAccessPage } from './pages/LlmKeyAccessPage'
 import { LlmKeyDetailPage } from './pages/LlmKeyDetailPage'
+import { DnsDomainAccessPage } from './pages/DnsDomainAccessPage'
+import { DnsDomainDetailPage } from './pages/DnsDomainDetailPage'
+import { DnsDomainsPage } from './pages/DnsDomainsPage'
 import { LlmKeysPage } from './pages/LlmKeysPage'
 import { WorkspaceDetailPage } from './pages/WorkspaceDetailPage'
 import { WorkspacesPage } from './pages/WorkspacesPage'
@@ -173,6 +176,11 @@ function App() {
           <Route path="gpus/:allocationId/access" element={<GpuAccessPage />} />
           <Route path=":workspaceId/gpus" element={<GpusPage />} />
         </>}
+        <Route path="domains" element={<DnsDomainsPage />} />
+        <Route path="domains/:domainId" element={<DnsDomainDetailPage />} />
+        {/* A route of its own, separate from the detail: somebody the detail
+            refuses may still manage the access list. */}
+        <Route path="domains/:domainId/access" element={<DnsDomainAccessPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="activity" element={<MyActivityPage />} />
@@ -187,6 +195,7 @@ function App() {
         <Route path=":workspaceId/resources" element={<ResourcesPage />} />
         <Route path=":workspaceId/vms" element={<VmsPage />} />
         <Route path=":workspaceId/llm-keys" element={<LlmKeysPage />} />
+        <Route path=":workspaceId/domains" element={<DnsDomainsPage />} />
         <Route path=":workspaceId/requests" element={<RequestsPage />} />
         <Route path=":workspaceId/requests/new" element={<NewRequestPage />} />
         <Route path="*" element={<NotFoundPage />} />

@@ -50,6 +50,14 @@ export const LLM_KEY_RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
   VIEWER: '키 상세 조회',
 }
 
+/** What each grade actually opens on a domain. */
+export const DNS_DOMAIN_RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
+  OWNER: '접근 권한 관리와 해제까지',
+  EDITOR: '레코드 편집과 사용 연장까지',
+  MEMBER: '이름과 레코드 조회',
+  VIEWER: '이름과 레코드 조회',
+}
+
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   USER: '사용자',
   ORG_VIEWER: '기관 열람자',

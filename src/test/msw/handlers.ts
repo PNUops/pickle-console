@@ -20,6 +20,7 @@ import { profileOptionsHandlers } from './handlers/profile-options'
 import { mfaHandlers } from './handlers/mfa'
 import { userHandlers } from './handlers/users'
 import { workspaceHandlers } from './handlers/workspaces'
+import { dnsDomainAccessHandlers, dnsDomainHandlers } from './handlers/dns-domains'
 import { llmKeyHandlers } from './handlers/llm-keys'
 import { llmObservabilityHandlers } from './handlers/llm-observability'
 import { llmAdminUsageHandlers } from './handlers/llm-admin-usage'
@@ -51,6 +52,8 @@ export const handlers: RequestHandler[] = [
   ...workspaceHandlers,
   ...requestHandlers,
   ...vmHandlers,
+  ...dnsDomainHandlers,
+  ...dnsDomainAccessHandlers,
   ...llmKeyHandlers,
   ...openRouterAccountHandlers,
   ...llmObservabilityHandlers,

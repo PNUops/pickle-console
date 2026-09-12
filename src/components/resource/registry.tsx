@@ -51,7 +51,13 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
   },
   DOMAIN: {
     label: '도메인',
+    detailPath: (id) => consolePaths.dnsDomainDetail(id),
+    accessPath: (id) => consolePaths.dnsDomainAccess(id),
     statusBadge: (resource) => <DomainStatusBadge status={resource.status as DomainStatus} />,
+    // A released name is still this workspace's: it can be taken back during
+    // the reservation and it keeps occupying a slot against the cap, so a row
+    // that vanished from the list would leave no way to see why there is no
+    // room. It becomes past only once the name is reclaimed.
     isActive: (resource) => resource.status !== 'REMOVED',
   },
   VM: {
