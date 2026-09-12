@@ -4568,6 +4568,8 @@ export interface components {
             fqdn: string;
             /** Format: uuid */
             id: string;
+            /** @description 요청자가 이 도메인의 접근 목록에서 받은 등급. 부여가 없으면 null이고, 그런 행은 목록에만 나타납니다. 상세는 부여가 있어야 열리므로 언제나 값이 있습니다. */
+            myResourceRole?: components["schemas"]["ResourceRole"] | null;
             ownerNames: string[];
             /** Format: int32 */
             recordSetCount: number;

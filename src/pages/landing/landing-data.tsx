@@ -164,12 +164,19 @@ export const resourceTypes: ResourceType[] = [
       'OpenAI 호환 API를 호출하는 키를 콘솔에서 발급합니다. 키마다 일일 토큰 한도와 금액 한도가 있고, 사용량을 콘솔에서 확인합니다.',
     meta: 'POST /v1/chat/completions',
   },
+  {
+    icon: 'globe',
+    title: '도메인',
+    status: 'live',
+    description:
+      'VM 없이 이름만 발급받아 원하는 서버로 연결합니다. A와 AAAA, CNAME, TXT 레코드를 콘솔에서 직접 편집합니다.',
+    meta: '<이름>.pusan.dev',
+  },
   { icon: 'container', title: '컨테이너', status: 'planned' },
   { icon: 'registry', title: '컨테이너 레지스트리', status: 'planned' },
   { icon: 'database', title: '데이터베이스', status: 'planned' },
   { icon: 'storage', title: '오브젝트 스토리지', status: 'planned' },
   { icon: 'gpu', title: 'GPU', status: 'planned' },
-  { icon: 'globe', title: '도메인', status: 'planned' },
   { icon: 'link', title: '단축 링크', status: 'planned' },
 ]
 

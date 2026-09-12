@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addLlmKeyAccessGrant,
   addVmAccessGrant,
+  addDnsDomainAccessGrant,
+  fetchDnsDomainAccessGrants,
   fetchLlmKeyAccessGrants,
+  removeDnsDomainAccessGrant,
+  updateDnsDomainAccessGrant,
   fetchVmAccessGrants,
   fetchWorkspace,
   removeLlmKeyAccessGrant,
@@ -31,6 +35,7 @@ import {
   Spinner,
 } from '../ui'
 import {
+  DNS_DOMAIN_RESOURCE_ROLE_HINTS,
   LLM_KEY_RESOURCE_ROLE_HINTS,
   RESOURCE_ROLE_HINTS,
   RESOURCE_ROLE_LABELS,
@@ -87,7 +92,7 @@ interface AccessKind {
  * 새 종류가 늘었는지 묻는 자리는 여기가 아니라 RESOURCE_TYPES 다 — 그쪽은
  * 전수로 남아 있어 종류가 늘면 빌드가 깨진다.
  */
-type AccessCapableType = Extract<ResourceType, 'VM' | 'LLM_API_KEY' | 'GPU'>
+type AccessCapableType = Extract<ResourceType, 'VM' | 'LLM_API_KEY' | 'GPU' | 'DOMAIN'>
 
 const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
   GPU: {
@@ -127,6 +132,26 @@ const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
         <li>
           이미 열려 있는 SSH 세션은 끊기지 않습니다. 웹 터미널은 1분 안에 닫힙니다.
         </li>
+      </ul>
+    ),
+  },
+  DOMAIN: {
+    queryKey: 'dns-domains',
+    fetchGrants: fetchDnsDomainAccessGrants,
+    addGrant: addDnsDomainAccessGrant,
+    updateGrant: updateDnsDomainAccessGrant,
+    removeGrant: removeDnsDomainAccessGrant,
+    roleHints: DNS_DOMAIN_RESOURCE_ROLE_HINTS,
+    listIntro:
+      '이 도메인에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스라도 목록에 없으면 이름과 상태만 보입니다.',
+    workspaceWideWho: '이 도메인을 소유한 워크스페이스의 구성원 전원',
+    emptyList: '이 도메인에 닿을 수 있는 사람이 없습니다.',
+    grantEligibility:
+      '이 도메인을 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있습니다.',
+    revokeSentence: (who) => `${who}의 이 도메인 접근 권한을 회수합니다.`,
+    revokeCaveats: (
+      <ul className="list-disc space-y-1 pl-4">
+        <li>이미 존에 들어간 레코드는 그대로 남습니다. 필요하면 레코드를 먼저 정리해 주세요.</li>
       </ul>
     ),
   },

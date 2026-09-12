@@ -550,6 +550,12 @@ export function removeVmAccessGrant(vmId: string, grantId: string): Promise<void
 export type LlmKeySummary = Schemas['LlmKeySummaryResponse']
 export type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
 export type LlmKeyPage = Schemas['PageResponseLlmKeySummaryResponse']
+
+export type DnsDomain = Schemas['DnsDomainView']
+export type DnsDomainPage = Schemas['PageResponseDnsDomainView']
+export type DnsRecordSet = Schemas['DnsRecordSetView']
+export type DesiredRecordSet = Schemas['DesiredRecordSet']
+export type DnsRecordType = Schemas['DnsRecordType']
 export type LlmApiKeyStatus = Schemas['LlmApiKeyStatus']
 export type IssuedLlmKey = Schemas['IssuedLlmKeyResponse']
 export type UpdateLlmKey = Schemas['UpdateLlmKeyRequest']
@@ -831,6 +837,96 @@ export function resumeAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
   })
 }
 
+/**
+ * The names issued on their own, with no VM behind them.
+ *
+ * A row no grant opens comes back too, carrying its name, state and owners.
+ * Hiding it would leave the reader no way to learn whom to ask, which is the
+ * rule the VM and LLM key lists follow as well.
+ */
+export function fetchDnsDomains(params: {
+  page?: number
+  size?: number
+  workspaceId?: string
+}): Promise<DnsDomainPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/dns-domains', { params: { query: params } })
+    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchDnsDomain(domainId: string): Promise<DnsDomain> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/dns-domains/{domainId}', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function createDnsDomain(body: {
+  label: string
+  rootDomain?: string | null
+  workspaceId: string
+}): Promise<DnsDomain> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/dns-domains', { body })
+    if (!data) throw toApiError(error, '도메인을 발급하지 못했습니다.')
+    return data
+  })
+}
+
+export function deleteDnsDomain(domainId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/dns-domains/{domainId}', {
+      params: { path: { domainId } },
+    })
+    if (error) throw toApiError(error, '도메인을 해제하지 못했습니다.')
+  })
+}
+
+export function renewDnsDomain(domainId: string): Promise<DnsDomain> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/dns-domains/{domainId}/renew', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '사용 기간을 연장하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchDnsRecordSets(domainId: string): Promise<DnsRecordSet[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/dns-domains/{domainId}/records', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '레코드를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * Sends every record set this name should have.
+ *
+ * Not a call that adds one set: a set missing from the list is removed from the
+ * zone, so the caller must send the whole of what the screen is holding.
+ */
+export function replaceDnsRecordSets(
+  domainId: string,
+  records: DesiredRecordSet[],
+): Promise<DnsRecordSet[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/dns-domains/{domainId}/records', {
+      params: { path: { domainId } },
+      body: { records },
+    })
+    if (!data) throw toApiError(error, '레코드를 저장하지 못했습니다.')
+    return data
+  })
+}
+
 export function fetchLlmKeys(params: {
   page?: number
   size?: number
@@ -1073,6 +1169,54 @@ export function removeLlmKeyAccessGrant(keyId: string, grantId: string): Promise
   return guardNetwork(async () => {
     const { error } = await api.DELETE('/llm-keys/{keyId}/access/{grantId}', {
       params: { path: { keyId, grantId } },
+    })
+    if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
+  })
+}
+
+export function fetchDnsDomainAccessGrants(domainId: string): Promise<VmAccessList> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/dns-domains/{domainId}/access', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function addDnsDomainAccessGrant(
+  domainId: string,
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
+): Promise<VmAccessGrant> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/dns-domains/{domainId}/access', {
+      params: { path: { domainId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateDnsDomainAccessGrant(
+  domainId: string,
+  grantId: string,
+  role: ResourceRole,
+): Promise<VmAccessGrant> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/dns-domains/{domainId}/access/{grantId}', {
+      params: { path: { domainId, grantId } },
+      body: { role },
+    })
+    if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export function removeDnsDomainAccessGrant(domainId: string, grantId: string): Promise<void> {
+  return guardNetwork(async () => {
+    const { error } = await api.DELETE('/dns-domains/{domainId}/access/{grantId}', {
+      params: { path: { domainId, grantId } },
     })
     if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
   })

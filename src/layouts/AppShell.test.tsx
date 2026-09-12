@@ -100,13 +100,18 @@ describe('사이드바 리소스 목록', () => {
       'href',
       '/console/vms',
     )
+    // The domain became a link once it had screens. Leaving the coming-soon
+    // list is what "this kind has landed" means, and this assertion pins it.
+    expect(within(nav).getByRole('link', { name: '도메인' })).toHaveAttribute(
+      'href',
+      '/console/domains',
+    )
     const planned = [
       '컨테이너',
       '컨테이너 레지스트리',
       '데이터베이스',
       '오브젝트 스토리지',
       'GPU',
-      '도메인',
       '단축 링크',
     ]
     for (const label of planned) {
@@ -118,7 +123,7 @@ describe('사이드바 리소스 목록', () => {
       expect(text).toHaveClass('min-w-0', 'flex-1')
       expect(within(item as HTMLElement).getByText('준비 중')).toHaveClass('shrink-0')
     }
-    expect(within(nav).getAllByText('준비 중')).toHaveLength(7)
+    expect(within(nav).getAllByText('준비 중')).toHaveLength(6)
   })
 
   test('LLM API는 배지 없이 열려 있다', async () => {
