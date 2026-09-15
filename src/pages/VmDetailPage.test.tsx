@@ -215,6 +215,8 @@ describe('VM 상세 — 삭제 흐름', () => {
         status: 'DELETING',
         deletion: {
           kind: 'FORCE',
+          cancelable: false,
+          requestedAt: '2026-09-15T11:59:00+09:00',
           scheduledFor: '2026-09-15T12:00:00+09:00',
           reason: null,
         },
