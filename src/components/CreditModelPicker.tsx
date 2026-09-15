@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react'
 import type { OpenRouterCatalogue, OpenRouterCatalogueModel } from '../api/queries'
 import type { CreditModelListKind } from '../lib/credit-model-allowlist'
-import { matchesCreditModel, suggestCreditModelPatterns } from '../lib/credit-model-match'
+import {
+  isRouterModelName,
+  matchesCreditModel,
+  matchesDeniedCreditModel,
+  suggestCreditModelPatterns,
+} from '../lib/credit-model-match'
 
 /** 한 번에 그리는 최대 개수. 벤더 목록이 400을 넘으므로 전부 그리지는 않는다. */
 const LIMIT = 40
@@ -102,7 +107,12 @@ function PatternSuggestions({
     () =>
       suggestCreditModelPatterns(model.id).map((suggestion) => ({
         ...suggestion,
-        count: models.filter((row) => matchesCreditModel(suggestion.pattern, row.id)).length,
+        allowCount: models.filter((row) =>
+          !isRouterModelName(row.id) && matchesCreditModel(suggestion.pattern, row.id),
+        ).length,
+        denyCount: models.filter((row) =>
+          !isRouterModelName(row.id) && matchesDeniedCreditModel(suggestion.pattern, row.id),
+        ).length,
       })),
     [model.id, models],
   )
@@ -120,7 +130,7 @@ function PatternSuggestions({
           <span className="min-w-0">
             <code className="block truncate font-mono text-xs">{suggestion.pattern}</code>
             <span className="block text-xs text-neutral-500">
-              {suggestion.kind}. 이 패턴은 지금 {suggestion.count}개를 잡습니다
+              {suggestion.kind}. 허용 {suggestion.allowCount}개 · 차단 {suggestion.denyCount}개
             </span>
           </span>
           <AddButtons

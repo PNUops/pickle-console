@@ -3636,11 +3636,11 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열은 제한 없음 */
+            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열은 제한 없음 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             creditAllowedModels: string[];
             /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
             creditAxisConnected: boolean;
-            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열은 차단 없음. 허용 목록과 함께 걸리면 차단이 이긴다. */
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열은 차단 없음. 허용 목록과 함께 걸리면 차단이 이긴다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             creditDeniedModels: string[];
             creditLimit: number;
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
@@ -3691,9 +3691,9 @@ export interface components {
              * @description 동시 요청 한도. null이면 서비스 기본값을 따릅니다.
              */
             concurrency: number | null;
-            /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. */
+            /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             creditAllowedModels: string[] | null;
-            /** @description 유료 모델 차단 목록. 빈 배열이나 null이면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. */
+            /** @description 유료 모델 차단 목록. 빈 배열이나 null이면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             creditDeniedModels: string[] | null;
             /** @description 금액 한도(USD 크레딧). 0이면 유료 모델을 닫습니다. */
             creditLimit: number;
@@ -4154,9 +4154,9 @@ export interface components {
              * @description 부여 동시 요청 수. 비우면 서비스 기본값이 적용됩니다.
              */
             grantedConcurrency?: number | null;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 비우면 제한이 없고, 자체 서빙 모델은 이 목록과 무관합니다. 항목은 모델 이름 또는 벤더 프리픽스(예: openai/*)입니다. */
+            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 비우면 제한이 없고, 자체 서빙 모델은 이 목록과 무관합니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             grantedCreditAllowedModels?: string[] | null;
-            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 비우면 차단하는 모델이 없고, 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 목록과 무관합니다. */
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 비우면 차단하는 모델이 없고, 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 목록과 무관합니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             grantedCreditDeniedModels?: string[] | null;
             /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 유료 모델을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
@@ -4419,9 +4419,9 @@ export interface components {
             confirmName: string;
             /** @description 이 account를 물어볼 담당자. 없으면 null */
             contact?: string | null;
-            /** @description 승인 화면 프리필에 쓸 유료 모델 허용 목록 기본값. 비우면 제한 없음이 기본이 됩니다. */
+            /** @description 승인 화면 프리필에 쓸 유료 모델 허용 목록 기본값. 비우면 제한 없음이 기본이 됩니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. */
+            /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 승인 화면 프리필에 쓸 기능 권한 기본값. 비우면 아무 기능도 부여되지 않은 상태가 기본이 됩니다. */
             defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
@@ -5275,11 +5275,11 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열이면 제한이 없습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다. */
+            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열이면 제한이 없습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             creditAllowedModels: string[];
             /** @description 유료 모델 사용 가능 여부. 금액 한도가 부여됐지만 아직 연결 전이면 false입니다. */
             creditAxisConnected: boolean;
-            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
+            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             creditDeniedModels: string[];
             /** @description 유료 모델 한도, USD 크레딧. 0이면 유료 모델을 쓸 수 없습니다. */
             creditLimit: number;
@@ -5446,9 +5446,9 @@ export interface components {
              * @description 부여 동시 요청 수. 비어 있으면 서비스 기본값입니다.
              */
             grantedConcurrency?: number | null;
-            /** @description 부여된 유료 모델 허용 목록. 빈 배열이면 제한이 없습니다. 어떤 모델을 열지는 신청자가 요구하는 값이 아니라 승인자가 정하는 값이라 희망 쪽 짝이 없습니다. */
+            /** @description 부여된 유료 모델 허용 목록. 빈 배열이면 제한이 없습니다. 어떤 모델을 열지는 신청자가 요구하는 값이 아니라 승인자가 정하는 값이라 희망 쪽 짝이 없습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             grantedCreditAllowedModels: string[];
-            /** @description 부여된 유료 모델 차단 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
+            /** @description 부여된 유료 모델 차단 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             grantedCreditDeniedModels: string[];
             /** @description 부여 금액 한도(USD 크레딧). 비어 있거나 0이면 유료 모델을 쓸 수 없습니다. */
             grantedCreditLimit?: number | null;
@@ -6513,9 +6513,9 @@ export interface components {
             credentialAvailable: boolean;
             /** @description DB cache에서 읽은 account credits·예상·미관리 지출 관측 상태 */
             credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
-            /** @description 승인 화면이 프리필에 쓰는 유료 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
+            /** @description 승인 화면이 프리필에 쓰는 유료 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditAllowedModels: string[];
-            /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
+            /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels: string[];
             /** @description 승인 화면이 프리필에 쓰는 기능 권한 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
             defaultPassthroughEndpoints: ("images" | "embeddings")[];
@@ -7031,7 +7031,7 @@ export interface components {
         PaidModels: {
             /** @description 사용 가능 여부 */
             access: components["schemas"]["PaidAccess"];
-            /** @description 이 키의 모델 허용 목록. 비어 있으면 허용 쪽 제한이 없습니다. */
+            /** @description 이 키의 모델 허용 목록. 비어 있으면 허용 쪽 제한이 없습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             allowedPatterns: string[];
             /** @description 목록의 신선도 */
             catalogFreshness: components["schemas"]["CatalogFreshness"];
@@ -7040,13 +7040,13 @@ export interface components {
              * @description 목록을 마지막으로 가져온 시각. 한 번도 성공하지 못했으면 비어 있습니다
              */
             catalogObservedAt?: string | null;
-            /** @description 이 키의 모델 차단 목록. 비어 있으면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. */
+            /** @description 이 키의 모델 차단 목록. 비어 있으면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             deniedPatterns: string[];
             /** @description 호출할 수 있는 모델 */
             models: components["schemas"]["PaidModel"][];
-            /** @description 허용 목록에 적혀 있지만 지금 목록에서 찾지 못한 이름. 오타이거나, 벤더가 내린 모델이거나, 목록이 오래된 것입니다. */
+            /** @description 허용 목록에 적혀 있지만 지금 목록에서 찾지 못한 이름. 목록에서 사라진 모델이나 아직 없는 이름, 제한된 키에서 호출할 수 없는 라우터도 포함됩니다. */
             unmatchedAllowedPatterns: string[];
-            /** @description 차단 목록에 적혀 있지만 지금 목록에서 찾지 못한 이름. 지금은 아무 모델도 막지 않고 있다는 뜻이며, 아직 나오지 않은 모델을 미리 막아 둔 경우에도 여기에 나옵니다. */
+            /** @description 차단 목록에 적혀 있지만 지금 목록에서 찾지 못한 이름. 현재 캐시의 모델명과 별칭 중 이 패턴으로 차단되는 것이 없다는 뜻이며, 아직 나오지 않은 모델을 미리 막아 둔 경우에도 여기에 나옵니다. */
             unmatchedDeniedPatterns: string[];
         };
         PasswordResetConfirmRequest: {
@@ -7558,9 +7558,9 @@ export interface components {
         UpdateOpenRouterAccountRequest: {
             /** @description 새 담당자. 생략하면 유지하고 null이면 지웁니다. */
             contact?: string | null;
-            /** @description 새 유료 모델 허용 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
+            /** @description 새 유료 모델 허용 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
+            /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 새 기능 권한 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
             defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;

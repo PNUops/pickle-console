@@ -41,7 +41,7 @@ describe('관리 기관 scope selector', () => {
 
     await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(1)}`))
     expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
-    expect(scopes).toEqual([uuid(1)])
+    await waitFor(() => expect(scopes).toEqual([uuid(1)]))
     expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(1))
     expect(screen.getByRole('option', { name: /기관 관리자/ })).toBeInTheDocument()
     const nav = screen.getByRole('navigation', { name: '관리자 메뉴' })
@@ -75,7 +75,7 @@ describe('관리 기관 scope selector', () => {
     await user.selectOptions(selector, uuid(2))
     await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(2)}`))
     expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
-    expect(scopes).toEqual([uuid(2)])
+    await waitFor(() => expect(scopes).toEqual([uuid(2)]))
   })
 
   test('마지막 유효 ORG 선택을 복원하고 이전 기관의 workspace filter를 버린다', async () => {
@@ -99,14 +99,14 @@ describe('관리 기관 scope selector', () => {
     expect(selector.tagName).toBe('SELECT')
     expect(selector).toHaveClass('min-w-0', 'max-w-full')
     expect(selector).toHaveValue('')
-    expect(scopes).toEqual([null])
+    await waitFor(() => expect(scopes).toEqual([null]))
 
     await screen.findByRole('option', { name: '테스트 기관' })
     selector.focus()
     expect(selector).toHaveFocus()
     await user.selectOptions(selector, uuid(2))
     await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(2)}`))
-    expect(scopes.at(-1)).toBe(uuid(2))
+    await waitFor(() => expect(scopes).toEqual([null, uuid(2)]))
   })
 
   test('active 기관의 실제 역할을 nav action 의미에 사용한다', async () => {
@@ -137,7 +137,7 @@ describe('관리 기관 scope selector', () => {
 
     await waitFor(() => expect(currentPath()).toBe('/admin/requests'))
     expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
-    expect(scopes).toEqual([null])
+    await waitFor(() => expect(scopes).toEqual([null]))
   })
 
   test('SYS 기관 목록 오류는 loading에 갇히지 않고 재시도 뒤 scope를 복구한다', async () => {
