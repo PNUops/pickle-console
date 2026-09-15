@@ -48,9 +48,12 @@ describe('내 신청 목록 — 종류가 섞인 표', () => {
     // VM 신청은 OS와 사양으로 요약된다.
     expect(within(table).getAllByText('Ubuntu 24.04 LTS').length).toBeGreaterThan(0)
     expect(within(table).getAllByText('2 vCPU · 2 GiB · 20 GiB').length).toBeGreaterThan(0)
-    // LLM API 키 신청은 희망 한도로 요약되고, 적지 않은 축은 기본값이라고 말한다.
-    expect(within(table).getAllByText('분당 요청 600').length).toBeGreaterThan(0)
+    // An LLM API key request is summarized by what it asked for on each axis it
+    // asked on, and an axis left blank says so rather than going unmentioned.
+    expect(within(table).getAllByText('자체 서빙 모델').length).toBeGreaterThan(0)
     expect(within(table).getAllByText('일일 토큰 기본값').length).toBeGreaterThan(0)
+    expect(within(table).getAllByText('유료 모델').length).toBeGreaterThan(0)
+    expect(within(table).getAllByText('$50').length).toBeGreaterThan(0)
     // 설명하지 못한 채 남은 칸이 없다.
     expect(within(table).queryByText('—')).not.toBeInTheDocument()
   })

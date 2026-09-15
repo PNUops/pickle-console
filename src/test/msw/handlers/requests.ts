@@ -162,6 +162,26 @@ function initialRequests(): RequestDetail[] {
       createdAt: '2026-07-09T09:00:00+09:00',
       updatedAt: '2026-07-09T14:00:00+09:00',
     },
+    {
+      // Asks on the amount axis alone. The queue read this one as "asked for
+      // the default limits" because the summary cell knew only the per-minute
+      // fields, which the wizard no longer even asks for.
+      ...llmKeyRequest(),
+      id: uuid(106),
+      purpose: '연구실 논문 요약 파이프라인',
+      displayName: '논문 요약 키',
+      status: 'SUBMITTED',
+      review: null,
+      llmKey: {
+        ...llmKeyRequest().llmKey!,
+        reqRpm: null,
+        useCampusModels: false,
+        useCommercialModels: true,
+        reqCreditLimit: 50,
+      },
+      createdAt: '2026-07-10T09:00:00+09:00',
+      updatedAt: '2026-07-10T09:00:00+09:00',
+    },
   ]
 }
 
