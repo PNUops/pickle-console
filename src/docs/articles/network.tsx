@@ -1,3 +1,7 @@
+import { GuideFigure } from '../GuideFigure'
+import vmPublishImage from '../../assets/docs/vm-publish.png'
+import dnsRecordsImage from '../../assets/docs/dns-records.png'
+import campusIpImage from '../../assets/docs/campus-ip.png'
 import { CodeBlock } from '../../components/CodeBlock'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
@@ -14,22 +18,31 @@ export const networkArticles: GuideArticle[] = [
         id: 'choose',
         title: '어떤 연결이 필요한가요',
         body: (
-          <ul>
-            <li>
-              <strong>Pickle VM에서 웹 서비스를 실행한다면:</strong> 이 문서대로 VM 상세에서
-              도메인을 연결합니다. 플랫폼 주소를 받거나 본인이 가진 도메인을 붙일 수 있습니다.
-            </li>
-            <li>
-              <strong>플랫폼 밖 서버에 이름을 붙인다면:</strong>
-              <GuideLink slug="network/domains">외부 서버용 도메인 발급</GuideLink>을 사용합니다.
-              VM 상세의 도메인 연결과 진입 메뉴가 다릅니다.
-            </li>
-            <li>
-              <strong>웹이 아닌 TCP·UDP 서비스라면:</strong>
-              <GuideLink slug="network/ports">포트포워딩</GuideLink>을 사용합니다.
-              혼자 접속하는 서비스라면 같은 문서의 SSH 로컬 포워딩을 먼저 확인하세요.
-            </li>
-          </ul>
+          <>
+            <ul>
+              <li>
+                <strong>Pickle VM에서 웹 서비스를 실행한다면:</strong> 이 문서대로 VM 상세에서
+                도메인을 연결합니다. 플랫폼 주소를 받거나 본인이 가진 도메인을 붙일 수 있습니다.
+              </li>
+              <li>
+                <strong>플랫폼 밖 서버에 이름을 붙인다면:</strong>
+                <GuideLink slug="network/domains">외부 서버용 도메인 발급</GuideLink>을 사용합니다.
+                VM 상세의 도메인 연결과 진입 메뉴가 다릅니다.
+              </li>
+              <li>
+                <strong>웹이 아닌 TCP·UDP 서비스라면:</strong>
+                <GuideLink slug="network/ports">포트포워딩</GuideLink>을 사용합니다.
+                혼자 접속하는 서비스라면 같은 문서의 SSH 로컬 포워딩을 먼저 확인하세요.
+              </li>
+            </ul>
+            <GuideFigure
+              src={vmPublishImage}
+              alt="가상머신 도메인·포트 탭의 도메인 연결과 포트포워딩 카드"
+              caption="도메인·포트 탭에서 웹 서비스에는 도메인을 연결하고, 일반 TCP·UDP 서비스에는 포트포워딩을 설정합니다."
+              width={992}
+              height={757}
+            />
+          </>
         ),
       },
       {
@@ -211,6 +224,13 @@ export const networkArticles: GuideArticle[] = [
               접속 성공은 별개입니다. 주소가 맞더라도 대상 서버에 사이트와 HTTPS가
               준비돼 있어야 합니다.
             </p>
+            <GuideFigure
+              src={dnsRecordsImage}
+              alt="외부 도메인 상세의 레코드 탭에 있는 DNS 편집 표와 저장 버튼"
+              caption="도메인의 레코드 탭에서 이름과 종류, 값, TTL을 입력합니다. 저장 전 표 전체가 의도한 내용인지 확인합니다."
+              width={1104}
+              height={228}
+            />
           </>
         ),
       },
@@ -371,6 +391,13 @@ export const networkArticles: GuideArticle[] = [
               확인하세요. 교내 직접 접속은 SSH 접속 경로와 다르므로 서비스의 인증도
               별도로 관리해야 합니다.
             </p>
+            <GuideFigure
+              src={campusIpImage}
+              alt="가상머신 네트워크 탭의 캠퍼스 IP 신청 목적과 개방 포트 입력"
+              caption="네트워크 탭의 캠퍼스 IP에서 신청 목적과 필요한 포트를 입력합니다."
+              width={1104}
+              height={421}
+            />
           </>
         ),
       },

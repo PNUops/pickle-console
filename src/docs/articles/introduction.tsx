@@ -1,3 +1,5 @@
+import { GuideFigure } from '../GuideFigure'
+import userDashboardImage from '../../assets/docs/user-dashboard.png'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
 
@@ -85,6 +87,13 @@ export const introductionArticles: GuideArticle[] = [
               외부 서버의 웹 서비스와 HTTPS 인증서는 사용자가 준비합니다.
               <GuideLink slug="network/domains">외부 서버용 도메인 발급과 관리</GuideLink>
             </p>
+            <GuideFigure
+              src={userDashboardImage}
+              alt="사용자 대시보드의 리소스·신청·알림 요약과 리소스 신청 버튼"
+              caption="대시보드에서 사용 중인 리소스와 신청 상태를 확인하고 새 리소스 신청으로 이동합니다."
+              width={1152}
+              height={216}
+            />
           </>
         ),
       },
