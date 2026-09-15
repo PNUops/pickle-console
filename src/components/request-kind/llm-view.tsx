@@ -12,14 +12,17 @@ import {
 import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
 import { CreditModelPicker } from '../CreditModelPicker'
 import { CreditModelPreview } from '../CreditModelPreview'
+import { CreditModelRulesField } from '../CreditModelRulesField'
 import { PassthroughEndpointField } from '../PassthroughEndpointField'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
 import { adminPaths } from '../../lib/paths'
 import {
-  creditModelsError,
-  formatCreditModels,
-  parseCreditModels,
+  appendCreditModelRule,
+  creditModelFieldErrors,
+  creditModelRulesError,
+  formatCreditModelRules,
+  parseCreditModelRules,
   type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
 import {
@@ -169,8 +172,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   // 희망이 아니라 관리자가 사업 계정에 미리 정해 둔 정책이라, 채워도 검토가
   // 사라지지 않는다. 한 번이라도 손대면 그 뒤로는 계정을 바꿔도 덮지 않는다.
   // 셋은 한 계정이 정해 둔 한 벌이라 프리필도 되돌리기도 함께 움직인다.
-  const [creditModels, setCreditModels] = useState('')
-  const [creditDeniedModels, setCreditDeniedModels] = useState('')
+  const [creditModelRules, setCreditModelRules] = useState('')
   // 기능 권한만 빈 값의 뜻이 반대다. 모델 목록 둘은 비면 제한이 풀리지만 이쪽은
   // 비면 아무것도 안 열리므로, 프리필이 없으면 아무 기능도 없는 승인이 된다.
   const [passthroughEndpoints, setPassthroughEndpoints] = useState<
@@ -222,21 +224,16 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const prefillKey = effectiveAccount?.id ?? null
   if (!accountDefaultsTouched && prefillKey !== prefilledFrom) {
     setPrefilledFrom(prefillKey)
-    setCreditModels(formatCreditModels(accountDefault))
-    setCreditDeniedModels(formatCreditModels(accountDenyDefault))
+    setCreditModelRules(formatCreditModelRules(accountDefault, accountDenyDefault))
     setPassthroughEndpoints(accountPassthroughDefault)
   }
 
-  const parsedCreditModels = parseCreditModels(creditModels)
-  const parsedDeniedModels = parseCreditModels(creditDeniedModels)
-  // 선택기가 어느 목록에 넣을지는 누른 버튼이 정한다.
+  const parsedRules = parseCreditModelRules(creditModelRules)
+  const parsedCreditModels = parsedRules.allowed
+  const parsedDeniedModels = parsedRules.denied
   const addModel = (pattern: string, list: CreditModelListKind) => {
     setAccountDefaultsTouched(true)
-    if (list === 'ALLOW') {
-      setCreditModels(formatCreditModels([...parsedCreditModels, pattern]))
-    } else {
-      setCreditDeniedModels(formatCreditModels([...parsedDeniedModels, pattern]))
-    }
+    setCreditModelRules((text) => appendCreditModelRule(text, pattern, list))
   }
 
   return {
@@ -269,23 +266,14 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           errors['llmKey.openrouterAccountId'] = '어느 사업 계정으로 결제할지 선택해 주세요.'
         }
       }
-      // 모델 목록도 리셋 창과 같은 모양이다 — 금액 없이 두면 아무것도 제한하지 않는다.
-      const modelsError = creditModelsError(parsedCreditModels, 'ALLOW')
+      const modelsError = creditModelRulesError(parsedRules)
       if (modelsError) {
-        errors['llmKey.grantedCreditAllowedModels'] = modelsError
+        errors['llmKey.creditModelRules'] = modelsError
       } else if (parsedCreditModels.length > 0 && !(Number(creditLimit) > 0)) {
         errors['llmKey.grantedCreditLimit'] =
           '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
       }
-      // 차단 목록에는 같은 규칙을 걸지 않는다. 허용 목록은 돈이 없으면 아무것도
-      // 열지 않아 잘못 읽은 폼이지만, 차단은 금액이 0이어도 "이 키는 그 모델을 못
-      // 쓴다"가 참이고 나중에 누가 금액을 채워도 참으로 남는다. 여기서 막으면
-      // 승인자의 거부가 돈이 안 드는 바로 그 순간에 사라졌다가 예산이 붙는 순간
-      // 열린다. 서버도 이 규칙을 허용 목록에만 건다.
-      const deniedError = creditModelsError(parsedDeniedModels, 'DENY')
-      if (deniedError) {
-        errors['llmKey.grantedCreditDeniedModels'] = deniedError
-      }
+      // Deny-only rules remain valid without a positive credit limit.
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
       if (!rpmError && !tpmError && rpm.trim() && tpm.trim()) {
         if (Number(tpm) < Number(rpm))
@@ -421,36 +409,15 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           onChange: setOpenrouterAccountId,
           error: fieldErrors['llmKey.openrouterAccountId'],
         })}
-        <FormField
-          label="허용할 유료 모델"
-          error={fieldErrors['llmKey.grantedCreditAllowedModels']}
-          description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 유료 모델을 쓸 수 있습니다. 벤더 전체는 openai/*, 계열은 openai/gpt-5-*, 티어는 openai/*-pro 처럼 적습니다. ~로 시작하는 이름은 최신 모델을 따라가는 별칭이라 openai/* 에 포함되지 않고 ~openai/* 로 따로 열어야 합니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다."
-        >
-          <Textarea
-            rows={4}
-            value={creditModels}
-            onChange={(event) => {
-              setAccountDefaultsTouched(true)
-              setCreditModels(event.target.value)
-            }}
-            placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
-          />
-        </FormField>
-        <FormField
-          label="차단할 유료 모델"
-          error={fieldErrors['llmKey.grantedCreditDeniedModels']}
-          description="여기 적은 모델은 허용 목록에 들어 있어도 쓸 수 없습니다. 계열을 열어 두고 비싼 모델 몇 개만 빼는 자리입니다. 비우면 차단이 없습니다."
-        >
-          <Textarea
-            rows={3}
-            value={creditDeniedModels}
-            onChange={(event) => {
-              setAccountDefaultsTouched(true)
-              setCreditDeniedModels(event.target.value)
-            }}
-            placeholder={'openai/*-pro'}
-          />
-        </FormField>
+        <CreditModelRulesField
+          value={creditModelRules}
+          error={creditModelFieldErrors(fieldErrors,
+            'llmKey.grantedCreditAllowedModels', 'llmKey.grantedCreditDeniedModels')}
+          onChange={(text) => {
+            setAccountDefaultsTouched(true)
+            setCreditModelRules(text)
+          }}
+        />
         <CreditModelPicker
           catalogue={accountData.catalogue}
           failed={accountData.catalogueFailed}
@@ -463,10 +430,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           failed={accountData.catalogueFailed}
           allowed={parsedCreditModels}
           denied={parsedDeniedModels}
-          invalid={
-            creditModelsError(parsedCreditModels, 'ALLOW') != null ||
-            creditModelsError(parsedDeniedModels, 'DENY') != null
-          }
+          invalid={parsedRules.errors.length > 0}
         />
         <PassthroughEndpointField
           label="부여할 기능 권한"
@@ -489,8 +453,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               className="underline"
               onClick={() => {
                 setAccountDefaultsTouched(false)
-                setCreditModels(formatCreditModels(accountDefault))
-                setCreditDeniedModels(formatCreditModels(accountDenyDefault))
+                setCreditModelRules(formatCreditModelRules(accountDefault, accountDenyDefault))
                 setPassthroughEndpoints(accountPassthroughDefault)
               }}
             >

@@ -104,9 +104,9 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    const field = dialog.getByLabelText('허용할 유료 모델')
+    const field = dialog.getByLabelText('유료 모델 허용·차단')
     await user.clear(field)
-    await user.type(field, 'OpenAI/*{enter}anthropic/claude-sonnet-4')
+    await user.type(field, '+OpenAI/*{enter}+anthropic/claude-sonnet-4')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
@@ -122,9 +122,9 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    const denied = dialog.getByLabelText('차단할 유료 모델')
+    const denied = dialog.getByLabelText('유료 모델 허용·차단')
     await user.clear(denied)
-    await user.type(denied, 'OpenAI/*-Pro{enter}anthropic/claude-opus-*')
+    await user.paste('+openai/*\n-OpenAI/*-Pro\n-anthropic/claude-opus-*')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
@@ -145,7 +145,8 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await user.clear(credit)
     await user.type(credit, '0')
     await user.selectOptions(dialog.getByLabelText('금액 리셋 창'), '')
-    await user.clear(dialog.getByLabelText('허용할 유료 모델'))
+    await user.clear(dialog.getByLabelText('유료 모델 허용·차단'))
+    await user.type(dialog.getByLabelText('유료 모델 허용·차단'), '-openai/*-pro')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
@@ -164,7 +165,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.queryByLabelText('차단할 유료 모델')).not.toBeInTheDocument()
+    expect(dialog.queryByLabelText('유료 모델 허용·차단')).not.toBeInTheDocument()
     await user.clear(dialog.getByLabelText('RPM'))
     await user.type(dialog.getByLabelText('RPM'), '80')
     await user.click(dialog.getByRole('button', { name: '저장' }))
@@ -226,7 +227,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
     // 금액 축을 못 만지는 역할이라 목록 칸도 없다 — 창은 기존 값을 그대로
     // 되돌려 보내고, 그래서 403이 나지 않는다.
-    expect(dialog.queryByLabelText('허용할 유료 모델')).not.toBeInTheDocument()
+    expect(dialog.queryByLabelText('유료 모델 허용·차단')).not.toBeInTheDocument()
     await user.clear(dialog.getByLabelText('RPM'))
     await user.type(dialog.getByLabelText('RPM'), '80')
     await user.click(dialog.getByRole('button', { name: '저장' }))
@@ -637,4 +638,37 @@ describe('관리자 사용량 탭의 소유자에게 없는 분해', () => {
     expect(screen.queryByRole('heading', { name: '일별 금액' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '호출 종류별' })).not.toBeInTheDocument()
   })
+})
+
+
+test('binds both server model-list errors to the unified field', async () => {
+  const user = userEvent.setup()
+  server.use(http.put('*/api/v1/admin/llm/keys/:keyId/limits', () =>
+    HttpResponse.json({
+      status: 422, code: 'VALIDATION_ERROR', detail: '입력값을 확인해 주세요.',
+      errors: [
+        { field: 'creditAllowedModels[0]', message: '허용 규칙 서버 오류' },
+        { field: 'creditDeniedModels[1]', message: '차단 규칙 서버 오류' },
+      ],
+    }, { status: 422 }),
+  ))
+  renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+  await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+  await user.click(dialog.getByRole('button', { name: '저장' }))
+  const rules = dialog.getByLabelText('유료 모델 허용·차단')
+  await waitFor(() => expect(rules).toHaveAccessibleDescription(expect.stringContaining('허용 규칙 서버 오류 차단 규칙 서버 오류')))
+  expect(rules).toHaveFocus()
+})
+
+test('clearing the unified field submits two empty model lists', async () => {
+  const user = userEvent.setup()
+  renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+  await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+  expect(dialog.getByLabelText('유료 모델 허용·차단')).toHaveValue('+openai/*\n-openai/*-pro')
+  await user.clear(dialog.getByLabelText('유료 모델 허용·차단'))
+  await user.click(dialog.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+  expect(adminLlmLimitBodies[0]).toMatchObject({ creditAllowedModels: [], creditDeniedModels: [] })
 })

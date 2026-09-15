@@ -238,8 +238,8 @@ describe('LLM API 키 신청 — 승인 폼', () => {
 
     // 프리필은 계정을 고른 결과이지 신청자의 희망값이 아니다 — 채워도 검토가
     // 사라지지 않는 유일한 칸이라서 이 칸만 미리 찬다.
-    const field = screen.getByLabelText('허용할 유료 모델')
-    await waitFor(() => expect(field).toHaveValue('openai/*'))
+    const field = screen.getByLabelText('유료 모델 허용·차단')
+    await waitFor(() => expect(field).toHaveValue('+openai/*'))
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
@@ -259,11 +259,11 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    const field = screen.getByLabelText('허용할 유료 모델')
-    await waitFor(() => expect(field).toHaveValue('openai/*'))
+    const field = screen.getByLabelText('유료 모델 허용·차단')
+    await waitFor(() => expect(field).toHaveValue('+openai/*'))
 
     await user.clear(field)
-    await user.type(field, 'Anthropic/Claude-Sonnet-4')
+    await user.type(field, '+Anthropic/Claude-Sonnet-4')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
@@ -280,7 +280,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await user.type(screen.getByLabelText('허용할 유료 모델'), 'openai/*')
+    await user.type(screen.getByLabelText('유료 모델 허용·차단'), '+openai/*')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
@@ -297,7 +297,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*-pro')
+    await user.type(screen.getByLabelText('유료 모델 허용·차단'), '{enter}-openai/*-pro')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     // 되돌릴 수 없는 부여 직전 마지막 화면이 무엇을 막는지 말해야 한다. 본문만
@@ -375,9 +375,9 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    const field = screen.getByLabelText('허용할 유료 모델')
+    const field = screen.getByLabelText('유료 모델 허용·차단')
     await user.clear(field)
-    await user.type(field, 'pickle-general')
+    await user.type(field, '+pickle-general')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
@@ -527,7 +527,7 @@ describe('유료 모델 선택기', () => {
     await user.click(picker.getByRole('button', { name: 'openai/o1-pro 허용 목록에 추가' }))
 
     await waitFor(() =>
-      expect(screen.getByLabelText('허용할 유료 모델')).toHaveValue('openai/*\nopenai/o1-pro'),
+      expect(screen.getByLabelText('유료 모델 허용·차단')).toHaveValue('+openai/*\n+openai/o1-pro'),
     )
   })
 
@@ -545,10 +545,10 @@ describe('유료 모델 선택기', () => {
     await user.click(picker.getByRole('button', { name: 'openai/o1-pro 차단 목록에 추가' }))
 
     await waitFor(() =>
-      expect(screen.getByLabelText('차단할 유료 모델')).toHaveValue('openai/o1-pro'),
+      expect(screen.getByLabelText('유료 모델 허용·차단')).toHaveValue('+openai/*\n-openai/o1-pro'),
     )
-    // 두 입력란은 서로를 건드리지 않는다.
-    expect(screen.getByLabelText('허용할 유료 모델')).toHaveValue('openai/*')
+    // The picker appends a denial while preserving the allowance.
+    expect(screen.getByLabelText('유료 모델 허용·차단')).toHaveValue('+openai/*\n-openai/o1-pro')
   })
 
   // 개수는 판정 함수가 센다. 접두만 비교하면 변형이 빠진 수를 보여 주고,
@@ -576,13 +576,13 @@ describe('유료 모델 선택기', () => {
     // 티어 패턴은 openai/*-pro 이고, 반값 변형까지 둘을 잡는다. 벤더가 다른
     // claude-opus-pro 는 안 잡는다.
     const tier = picker.getByText('openai/*-pro').parentElement as HTMLElement
-    expect(tier).toHaveTextContent('티어. 이 패턴은 지금 2개를 잡습니다')
+    expect(tier).toHaveTextContent('티어. 허용 2개 · 차단 2개')
     const family = picker.getByText('openai/gpt-5-*').parentElement as HTMLElement
-    expect(family).toHaveTextContent('계열. 이 패턴은 지금 3개를 잡습니다')
+    expect(family).toHaveTextContent('계열. 허용 3개 · 차단 3개')
 
     await user.click(picker.getByRole('button', { name: 'openai/*-pro 차단 목록에 추가' }))
     await waitFor(() =>
-      expect(screen.getByLabelText('차단할 유료 모델')).toHaveValue('openai/*-pro'),
+      expect(screen.getByLabelText('유료 모델 허용·차단')).toHaveValue('+openai/*\n-openai/*-pro'),
     )
   })
 
@@ -606,7 +606,7 @@ describe('유료 모델 선택기', () => {
     )
 
     // 차단이 최고가를 걷어내면 최고가 문장이 그다음 모델로 내려간다.
-    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*-pro')
+    await user.type(screen.getByLabelText('유료 모델 허용·차단'), '{enter}-openai/*-pro')
     await waitFor(() =>
       expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument(),
     )
@@ -623,7 +623,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await user.type(screen.getByLabelText('차단할 유료 모델'), 'openai/*gpt*')
+    await user.type(screen.getByLabelText('유료 모델 허용·차단'), '-openai/*gpt*')
 
     expect(await screen.findByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
   })
@@ -647,8 +647,8 @@ describe('유료 모델 선택기', () => {
 
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
-    await user.clear(screen.getByLabelText('허용할 유료 모델'))
-    await user.type(screen.getByLabelText('허용할 유료 모델'), 'openai/gpt-4o-mini')
+    await user.clear(screen.getByLabelText('유료 모델 허용·차단'))
+    await user.type(screen.getByLabelText('유료 모델 허용·차단'), '+openai/gpt-4o-mini')
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
@@ -793,4 +793,122 @@ describe('초과 배정 경고', () => {
     await screen.findByText('검토 결과')
     expect(approved[0].llmKey).toMatchObject({ grantedCreditLimit: 5 })
   })
+})
+
+
+describe('signed paid-model policy editor', () => {
+  beforeEach(() => openRouterCatalogueStore.reset())
+  test('submits both directions from a single paste', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    const rules = screen.getByLabelText('유료 모델 허용·차단')
+    await user.clear(rules)
+    await user.paste('+OpenAI/*\n+~anthropic/*\n-*/*-pro\n-openai/o*')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey).toMatchObject({
+      grantedCreditAllowedModels: ['openai/*', '~anthropic/*'],
+      grantedCreditDeniedModels: ['*/*-pro', 'openai/o*'],
+    })
+  })
+
+  test('preserves edits across account changes and resets both directions together', async () => {
+    const user = userEvent.setup()
+    const first = openRouterAccountStore.find((account) => account.id === uuid(410))!
+    first.defaultCreditDeniedModels = ['openai/*-pro']
+    const second = openRouterAccountStore.find((account) => account.id === uuid(411))!
+    second.defaultCreditAllowedModels = ['google/*']
+    second.defaultCreditDeniedModels = ['*/*-pro']
+    renderDetail({})
+    await screen.findByRole('heading', { name: '신청 상세' })
+    const accountField = await screen.findByLabelText('OpenRouter 사업 계정')
+    const rules = screen.getByLabelText('유료 모델 허용·차단')
+    await user.selectOptions(accountField, uuid(410))
+    expect(rules).toHaveValue('+openai/*\n-openai/*-pro')
+    await user.selectOptions(accountField, uuid(411))
+    expect(rules).toHaveValue('+google/*\n-*/*-pro')
+    await user.clear(rules)
+    await user.paste('-anthropic/*')
+    await user.selectOptions(accountField, uuid(410))
+    expect(rules).toHaveValue('-anthropic/*')
+    await user.click(screen.getByRole('button', { name: /계정의 기본값으로 되돌리기/ }))
+    expect(rules).toHaveValue('+openai/*\n-openai/*-pro')
+  })
+
+  test('shows line errors while editing and preserves them when using the picker', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({})
+    await screen.findByRole('heading', { name: '신청 상세' })
+    const rules = screen.getByLabelText('유료 모델 허용·차단')
+    await user.click(rules)
+    await user.paste('+openai/*\n-')
+    expect(screen.getByText(/2행: 부호 뒤에/)).toBeInTheDocument()
+    expect(screen.getByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    await user.click(picker.getByRole('button', { name: 'openai/o1-pro 차단 목록에 추가' }))
+    expect(rules).toHaveValue('+openai/*\n-\n-openai/o1-pro')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    expect(approved).toHaveLength(0)
+    expect(screen.queryByRole('dialog', { name: '신청 승인' })).not.toBeInTheDocument()
+  })
+
+  test('counts alias denials and excludes router models from the preview', async () => {
+    const user = userEvent.setup()
+    openRouterCatalogueStore.response = {
+      ...openRouterCatalogueStore.response,
+      models: ['openai/model-pro', '~openai/model-pro:batch', 'google/model', 'openrouter/auto']
+        .map((id) => ({ id, name: id, promptPricePerMillion: 1, completionPricePerMillion: 10, contextLength: 1000 })),
+    }
+    renderDetail({})
+    await screen.findByRole('heading', { name: '신청 상세' })
+    const rules = screen.getByLabelText('유료 모델 허용·차단')
+    await user.click(rules)
+    await user.paste('+*/*\n-openai/*-pro')
+    expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument()
+    expect(screen.getByText(/차단 목록이 걷어낸 모델 2개/)).toBeInTheDocument()
+    const picker = within(screen.getByRole('list', { name: '카탈로그 유료 모델' }))
+    await user.click(picker.getByRole('button', { name: 'openai/model-pro 패턴 제안' }))
+    expect(picker.getByText('openai/*-pro').parentElement).toHaveTextContent('허용 1개 · 차단 2개')
+  })
+})
+
+
+test('explains invalid partial provider wildcards as the user edits', async () => {
+  const user = userEvent.setup()
+  renderDetail({})
+  const rules = await screen.findByLabelText('유료 모델 허용·차단')
+  await user.click(rules)
+  await user.paste('+open*/*')
+  expect(screen.getByText(/1행: 공급자는 정확한 이름/)).toHaveAttribute('role', 'alert')
+  expect(rules).toHaveAttribute('aria-invalid', 'true')
+  await user.clear(rules)
+  await user.paste('+openai/*')
+  expect(screen.queryByText(/1행: 공급자는/)).not.toBeInTheDocument()
+  expect(rules).not.toHaveAttribute('aria-invalid', 'true')
+})
+
+
+test('binds indexed server errors from both granted lists to the approval field', async () => {
+  const user = userEvent.setup()
+  renderDetail({})
+  server.use(http.post('*/api/v1/admin/requests/:requestId/approve', () =>
+    HttpResponse.json({
+      status: 422, code: 'VALIDATION_ERROR', detail: '입력값을 확인해 주세요.',
+      errors: [
+        { field: 'llmKey.grantedCreditAllowedModels[0]', message: '허용 규칙 서버 오류' },
+        { field: 'llmKey.grantedCreditDeniedModels[1]', message: '차단 규칙 서버 오류' },
+      ],
+    }, { status: 422 }),
+  ))
+  await screen.findByRole('heading', { name: '신청 상세' })
+  await user.click(screen.getByRole('button', { name: '승인하기' }))
+  const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+  await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+  const rules = screen.getByLabelText('유료 모델 허용·차단')
+  await waitFor(() => expect(rules).toHaveAccessibleDescription(expect.stringContaining('허용 규칙 서버 오류 차단 규칙 서버 오류')))
 })

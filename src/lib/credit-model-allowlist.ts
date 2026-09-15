@@ -21,38 +21,87 @@ export type CreditModelListKind = 'ALLOW' | 'DENY'
 const RESERVED_PREFIXES = ['pickle-', 'pnu-']
 
 /**
- * 서버와 DB CHECK 의 규칙과 같은 모양이다. 모델 세그먼트가 받는 네 모양은 정확한
- * 이름, 끝-별, 시작-별, 벤더 전체(`*`)다.
- *
- * 슬래시 앞(벤더)에는 별이 오지 못한다. 벤더 접두가 서로 겹쳐서(`meta` 와
- * `meta-llama`) `openai*` 같은 패턴은 고른 사람이 뜻하지 않은 벤더까지 함께 연다.
- * 슬래시 자체는 선택이라 벤더 없는 이름도 받는다.
- *
- * 선행 `~` 는 벤더가 부동 별칭(`~anthropic/claude-sonnet-latest` 처럼 그 계열의
- * 최신 모델로 따라가는 이름)에 붙이는 표시라서 받는다. `~anthropic/*` 와
- * `anthropic/*` 는 서로를 덮지 않는다.
+ * Match the API and database grammar. Provider wildcards occupy the whole segment;
+ * model wildcards remain limited to a single leading or trailing star.
+ * A concrete provider may start with the floating-alias marker, but `~*` is invalid.
  */
-const PATTERN = /^~?[a-z0-9][a-z0-9._:-]*(\/([a-z0-9][a-z0-9._:-]*\*?|\*[a-z0-9._:-]*[a-z0-9]|\*))?$/
+const PATTERN = /^(?:~?[a-z0-9][a-z0-9._:-]*(?:\/([a-z0-9][a-z0-9._:-]*\*?|\*[a-z0-9._:-]*[a-z0-9]|\*))?|\*\/([a-z0-9][a-z0-9._:-]*\*?|\*[a-z0-9._:-]*[a-z0-9]|\*))$/
 
 const ENCODER = new TextEncoder()
 
-/**
- * 줄바꿈이나 쉼표로 나눈 입력을 목록으로 만든다. 소문자로 내리고 중복을 없애되
- * 적은 순서는 유지한다 — 판정이 소문자 기준이라 대문자로 저장하면 아무것도 맞지
- * 않는다.
- */
-export function parseCreditModels(text: string): string[] {
-  const seen = new Set<string>()
-  for (const raw of text.split(/[\n,]/)) {
-    const value = raw.trim().toLowerCase()
-    if (value) seen.add(value)
-  }
-  return [...seen]
+export interface CreditModelRuleError {
+  line: number
+  message: string
 }
 
-/** 목록을 편집 가능한 텍스트로. 한 줄에 하나가 읽기 쉽다. */
-export function formatCreditModels(models: readonly string[]): string {
-  return models.join('\n')
+export interface CreditModelRules {
+  allowed: string[]
+  denied: string[]
+  errors: CreditModelRuleError[]
+}
+
+/** Parse signed lines without dropping invalid input from the editor's raw text. */
+export function parseCreditModelRules(text: string): CreditModelRules {
+  const allowed = new Set<string>()
+  const denied = new Set<string>()
+  const errors: CreditModelRuleError[] = []
+  text.split(/\r?\n/).forEach((raw, index) => {
+    const value = raw.trim()
+    if (!value) return
+    const line = index + 1
+    if (value[0] !== '+' && value[0] !== '-') {
+      errors.push({ line, message: "허용은 '+', 차단은 '-'로 시작해 주세요." })
+      return
+    }
+    const model = value.slice(1).trim().toLowerCase()
+    if (!model) {
+      errors.push({ line, message: '부호 뒤에 모델 이름이나 패턴을 적어 주세요.' })
+      return
+    }
+    const kind = value[0] === '+' ? 'ALLOW' : 'DENY'
+    const error = creditModelsError([model], kind)
+    if (error) {
+      errors.push({ line, message: error })
+      return
+    }
+    const list = kind === 'ALLOW' ? allowed : denied
+    if (!list.has(model) && list.size >= MAX_CREDIT_MODELS) {
+      errors.push({ line, message: `${kind === 'ALLOW' ? '허용' : '차단'} 모델은 최대 ${MAX_CREDIT_MODELS}개까지 적을 수 있습니다.` })
+      return
+    }
+    list.add(model)
+  })
+  return { allowed: [...allowed], denied: [...denied], errors }
+}
+
+/** Stored arrays have no cross-list ordering; format allows first for a stable round trip. */
+export function formatCreditModelRules(allowed: readonly string[], denied: readonly string[]): string {
+  return [...allowed.map((model) => `+${model}`), ...denied.map((model) => `-${model}`)].join('\n')
+}
+
+export function creditModelRulesError(rules: CreditModelRules): string | undefined {
+  return rules.errors.length ? rules.errors.map(({ line, message }) => `${line}행: ${message}`).join(' ') : undefined
+}
+
+/** API validation can target a list or one indexed entry within that list. */
+export function creditModelFieldErrors(
+  errors: Record<string, string>,
+  allowedField: string,
+  deniedField: string,
+): string | undefined {
+  const roots = [allowedField, deniedField]
+  const messages = Object.entries(errors)
+    .filter(([field]) => roots.some((root) => field === root || field.startsWith(`${root}[`)))
+    .map(([, message]) => message)
+  return [...new Set(messages)].join(' ') || undefined
+}
+
+/** Append a picker choice without rewriting unfinished or invalid lines. */
+export function appendCreditModelRule(text: string, pattern: string, kind: CreditModelListKind): string {
+  const parsed = parseCreditModelRules(text)
+  const model = pattern.trim().toLowerCase()
+  if ((kind === 'ALLOW' ? parsed.allowed : parsed.denied).includes(model)) return text
+  return `${text}${text && !text.endsWith('\n') ? '\n' : ''}${kind === 'ALLOW' ? '+' : '-'}${model}`
 }
 
 /** 첫 번째 문제 하나를 한국어로. 없으면 null. */
@@ -69,8 +118,13 @@ export function creditModelsError(
     }
     if (model === '*') {
       return kind === 'ALLOW'
-        ? "모든 모델을 허용하려면 목록을 비워 주세요. '*' 하나만 적을 수는 없습니다."
+        ? "허용 범위를 제한하지 않으려면 + 항목을 모두 지워 주세요. '*' 하나만 적을 수는 없습니다."
         : "모든 모델을 막으려면 금액 한도를 0으로 두세요. '*' 하나만 적을 수는 없습니다."
+    }
+    const slash = model.indexOf('/')
+    const provider = slash < 0 ? model : model.slice(0, slash)
+    if (provider.includes('*') && provider !== '*') {
+      return "공급자는 정확한 이름 또는 '*'만 사용할 수 있습니다. 예: openai/*, */*-pro"
     }
     // 선행 `~` 를 떼고 본다. 안 그러면 `~pickle-general` 이 한 글자 차이로
     // 이 검사를 빠져나가 자체 서빙 이름이 유료 모델 목록에 들어온다.

@@ -15,6 +15,7 @@ import {
 import { toApiError } from '../api/problem'
 import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
 import LlmKeyUsageSection from '../components/llm-usage/LlmKeyUsageSection'
+import { CreditModelRulesField } from '../components/CreditModelRulesField'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 import { useAuth } from '../auth/auth-context'
 import {
@@ -37,13 +38,14 @@ import {
   Select,
   TabPanel,
   Tabs,
-  Textarea,
 } from '../components/ui'
 import {
-  creditModelsError,
-  formatCreditModels,
-  parseCreditModels,
+  creditModelFieldErrors,
+  creditModelRulesError,
+  formatCreditModelRules,
+  parseCreditModelRules,
 } from '../lib/credit-model-allowlist'
+import { fieldErrorsOf } from '../lib/field-errors'
 import { passthroughText, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
 import { formatDateTime } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS } from '../lib/labels'
@@ -376,11 +378,8 @@ function LimitsModal({
   )
   const [creditLimit, setCreditLimit] = useState(String(llmKey.creditLimit))
   const [creditLimitReset, setCreditLimitReset] = useState(llmKey.creditLimitReset ?? '')
-  const [creditModels, setCreditModels] = useState(
-    formatCreditModels(llmKey.creditAllowedModels),
-  )
-  const [creditDeniedModels, setCreditDeniedModels] = useState(
-    formatCreditModels(llmKey.creditDeniedModels),
+  const [creditModelRules, setCreditModelRules] = useState(
+    formatCreditModelRules(llmKey.creditAllowedModels, llmKey.creditDeniedModels),
   )
   const [passthroughEndpoints, setPassthroughEndpoints] = useState<
     readonly PassthroughEndpoint[]
@@ -436,8 +435,11 @@ function LimitsModal({
   const save = useMutation({
     mutationFn: (body: AdminLlmKeyLimits) => replaceAdminLlmKeyLimits(llmKey.id, body),
     onSuccess: onSaved,
-    onError: (failure) =>
-      setError(toApiError(failure, 'LLM API 키 한도를 변경하지 못했습니다.').message),
+    onError: (failure) => {
+      const problem = toApiError(failure, 'LLM API 키 한도를 변경하지 못했습니다.')
+      setError(problem.message)
+      setFieldErrors(fieldErrorsOf(problem.problem))
+    },
   })
 
   const submit = (event: FormEvent) => {
@@ -471,23 +473,16 @@ function LimitsModal({
     if (canEditCredit && !errors.creditLimit && creditLimitReset && !(credit > 0)) {
       errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
-    const parsedModels = parseCreditModels(creditModels)
-    const modelsError = canEditCredit ? creditModelsError(parsedModels, 'ALLOW') : null
+    const parsedRules = parseCreditModelRules(creditModelRules)
+    const parsedModels = parsedRules.allowed
+    const parsedDeniedModels = parsedRules.denied
+    const modelsError = canEditCredit ? creditModelRulesError(parsedRules) : undefined
     if (modelsError) {
-      errors.creditAllowedModels = modelsError
+      errors.creditModelRules = modelsError
     } else if (canEditCredit && !errors.creditLimit && parsedModels.length > 0 && !(credit > 0)) {
       errors.creditLimit = '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
     }
-    // 차단 목록에는 금액 한도를 요구하지 않는다. 허용 목록은 돈이 없으면 아무것도
-    // 열지 않아 잘못 읽은 폼이지만, 차단은 금액이 0이어도 "이 키는 그 모델을 못
-    // 쓴다"가 참이고 나중에 금액이 붙어도 참으로 남는다. 여기서 막으면 승인자의
-    // 거부가 돈이 안 드는 순간에 사라졌다가 예산이 붙는 순간 열린다. 서버도 이
-    // 규칙을 허용 목록에만 건다.
-    const parsedDeniedModels = parseCreditModels(creditDeniedModels)
-    const deniedError = canEditCredit ? creditModelsError(parsedDeniedModels, 'DENY') : null
-    if (deniedError) {
-      errors.creditDeniedModels = deniedError
-    }
+    // Deny-only rules remain valid without a positive credit limit.
     if (canEditCredit && credit > 0 && initialBindingAllowed) {
       if (accounts.isPending) {
         errors.openrouterAccountId = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
@@ -594,32 +589,11 @@ function LimitsModal({
                 </Select>
               </FormField>
             </div>
-            <FormField
-              label="허용할 유료 모델"
-              error={fieldErrors.creditAllowedModels}
-              description="한 줄에 하나씩 적습니다. 비우면 금액 한도 안에서 모든 유료 모델을 쓸 수 있습니다. 벤더 전체는 openai/*, 계열은 openai/gpt-5-*, 티어는 openai/*-pro 처럼 적습니다. ~로 시작하는 이름은 최신 모델을 따라가는 별칭이라 openai/* 에 포함되지 않고 ~openai/* 로 따로 열어야 합니다. 자체 서빙 모델은 이 목록과 무관합니다."
-            >
-              <Textarea
-                rows={4}
-                aria-invalid={fieldErrors.creditAllowedModels != null}
-                value={creditModels}
-                onChange={(event) => setCreditModels(event.target.value)}
-                placeholder={'openai/gpt-4o-mini\nanthropic/claude-sonnet-4'}
-              />
-            </FormField>
-            <FormField
-              label="차단할 유료 모델"
-              error={fieldErrors.creditDeniedModels}
-              description="여기 적은 모델은 허용 목록에 들어 있어도 쓸 수 없습니다. 비우면 차단이 없습니다."
-            >
-              <Textarea
-                rows={3}
-                aria-invalid={fieldErrors.creditDeniedModels != null}
-                value={creditDeniedModels}
-                onChange={(event) => setCreditDeniedModels(event.target.value)}
-                placeholder={'openai/*-pro'}
-              />
-            </FormField>
+            <CreditModelRulesField
+              value={creditModelRules}
+              onChange={setCreditModelRules}
+              error={creditModelFieldErrors(fieldErrors, 'creditAllowedModels', 'creditDeniedModels')}
+            />
             <PassthroughEndpointField
               label="부여할 기능 권한"
               value={passthroughEndpoints}

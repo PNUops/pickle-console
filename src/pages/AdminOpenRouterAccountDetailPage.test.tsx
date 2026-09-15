@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
 
 import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import {
@@ -109,7 +110,8 @@ describe('사업 계정의 승인 기본 목록', () => {
     const dialog = within(
       screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
     )
-    await user.type(dialog.getByLabelText('승인 화면 기본 차단 목록'), 'openai/*-pro')
+    await user.clear(dialog.getByLabelText('승인 화면 기본 모델 허용·차단'))
+    await user.paste('+OpenAI/*\n-openai/*-pro')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => {
@@ -128,9 +130,9 @@ describe('사업 계정의 승인 기본 목록', () => {
       screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
     )
     // 앞 테스트가 남긴 값 위에 적으면 무엇을 검사하는지 흐려진다.
-    const denied = dialog.getByLabelText('승인 화면 기본 차단 목록')
+    const denied = dialog.getByLabelText('승인 화면 기본 모델 허용·차단')
     await user.clear(denied)
-    await user.type(denied, 'openai/**')
+    await user.type(denied, '-openai/**')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     expect(await dialog.findByText(/형식이 아닙니다/)).toBeInTheDocument()
@@ -195,4 +197,24 @@ describe('사업 계정 상세의 쓰임새', () => {
       expect(accountUsageQueries.some((query) => query.includes('days=7'))).toBe(true))
     expect(screen.getByRole('button', { name: '7일' })).toHaveAttribute('aria-pressed', 'true')
   })
+})
+
+
+test('binds both account model-list errors to the unified field', async () => {
+  const user = userEvent.setup()
+  server.use(http.patch('*/api/v1/admin/llm/accounts/:accountId', () =>
+    HttpResponse.json({
+      status: 422, code: 'VALIDATION_ERROR', detail: '입력값을 확인해 주세요.',
+      errors: [
+        { field: 'defaultCreditAllowedModels[0]', message: '허용 기본값 서버 오류' },
+        { field: 'defaultCreditDeniedModels[1]', message: '차단 기본값 서버 오류' },
+      ],
+    }, { status: 422 }),
+  ))
+  renderDetail(uuid(410))
+  await user.click(await screen.findByRole('button', { name: '정보 변경' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }))
+  await user.click(dialog.getByRole('button', { name: '저장' }))
+  const rules = dialog.getByLabelText('승인 화면 기본 모델 허용·차단')
+  await waitFor(() => expect(rules).toHaveAccessibleDescription(expect.stringContaining('허용 기본값 서버 오류 차단 기본값 서버 오류')))
 })

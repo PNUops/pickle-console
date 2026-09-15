@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { OpenRouterCatalogue, OpenRouterCatalogueModel } from '../api/queries'
-import { isCreditModelUsable, matchesAnyCreditModel } from '../lib/credit-model-match'
+import {
+  isCreditModelUsable,
+  isRouterModelName,
+  matchesAnyCreditModel,
+  matchesDeniedCreditModel,
+} from '../lib/credit-model-match'
 
 /** 접었을 때 보여 주는 개수. 비싼 쪽부터 보여 주므로 앞의 몇 개가 판단에 쓰인다. */
 const HEAD = 5
@@ -43,7 +48,8 @@ export function CreditModelPreview({
     // 목록이 애초에 안 잡는 모델까지 세면 차단이 한 일이 부풀려진다.
     const blockedModels = models.filter(
       (model) =>
-        matchesAnyCreditModel(denied, model.id) &&
+        !isRouterModelName(model.id) &&
+        denied.some((pattern) => matchesDeniedCreditModel(pattern, model.id)) &&
         (allowed.length === 0 || matchesAnyCreditModel(allowed, model.id)),
     )
     const priced = usableModels.filter((model) => model.completionPricePerMillion != null)

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { creditModelsError, parseCreditModels } from './credit-model-allowlist'
+import { creditModelsError } from './credit-model-allowlist'
 
 // 같은 규칙이 여러 곳에 복사돼 있다. 이 파일은 콘솔 사본이 나머지와 어긋나지
 // 않는지를 지킨다. 어긋나면 화면은 통과시키고 서버가 422 를 돌려주거나, 반대로
@@ -30,8 +30,8 @@ describe('creditModelsError', () => {
     }
   })
 
-  test('별이 둘이거나 벤더에 붙거나 꼬리가 없으면 거부한다', () => {
-    for (const model of ['openai*', 'openai/*gpt*', 'openai/**', 'openai/*-', 'openai/*.', '*/gpt-4o']) {
+  test('rejects repeated model stars, partial provider stars and unfinished suffixes', () => {
+    for (const model of ['openai*', 'openai/*gpt*', 'openai/**', 'openai/*-', 'openai/*.', 'open*/*']) {
       expect(creditModelsError([model], 'ALLOW')).not.toBeNull()
     }
   })
@@ -44,7 +44,7 @@ describe('creditModelsError', () => {
 
   // 전부 여는 것과 전부 막는 것은 다른 방법으로 하는 일이라 안내가 갈린다.
   test("'*' 하나는 목록에 따라 다른 안내를 낸다", () => {
-    expect(creditModelsError(['*'], 'ALLOW')).toContain('목록을 비워')
+    expect(creditModelsError(['*'], 'ALLOW')).toContain('+ 항목을 모두 지워')
     expect(creditModelsError(['*'], 'DENY')).toContain('금액 한도를 0')
   })
 
@@ -59,14 +59,5 @@ describe('creditModelsError', () => {
     const many = Array.from({ length: 51 }, (_, i) => `openai/model-${i}`)
     expect(creditModelsError(many, 'ALLOW')).toContain('최대 50개')
     expect(creditModelsError([`openai/${'a'.repeat(201)}`], 'ALLOW')).toContain('너무 깁니다')
-  })
-})
-
-describe('parseCreditModels', () => {
-  test('물결을 지우지 않고 소문자로 내린다', () => {
-    expect(parseCreditModels('~Anthropic/Claude-Sonnet-Latest\nOpenAI/*')).toEqual([
-      '~anthropic/claude-sonnet-latest',
-      'openai/*',
-    ])
   })
 })
