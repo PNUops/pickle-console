@@ -394,3 +394,15 @@
     forced-color-adjust: auto;
   }
 }
+
+/* Preserve shell geometry while switching between task and guide navigation. */
+@keyframes sidebar-view-enter {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.sidebar-view-enter {
+  animation: sidebar-view-enter var(--duration-normal) var(--ease-standard);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-view-enter { animation: none; }
+}

@@ -246,7 +246,7 @@ describe('사이드바 하단 참고 링크', () => {
     renderConsole()
 
     const guide = await screen.findByRole('link', { name: '사용 가이드' })
-    expect(guide).toHaveAttribute('href', '/docs')
+    expect(guide).toHaveAttribute('href', '/console/docs')
     expect(guide).not.toHaveAttribute('target')
 
     for (const name of ['1:1 문의하기', '개선 의견 남기기']) {

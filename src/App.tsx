@@ -43,7 +43,7 @@ import { AdminGpuDetailPage } from './pages/AdminGpuDetailPage'
 import { gpuPreviewEnabled } from './lib/gpu-preview'
 import { AccountPage } from './pages/AccountPage'
 import { ConsoleDashboardPage } from './pages/ConsoleDashboardPage'
-import { DocsPage } from './pages/DocsPage'
+import { parseGuidePath } from './lib/docs-paths'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LlmKeyAccessPage } from './pages/LlmKeyAccessPage'
 import { LlmKeyDetailPage } from './pages/LlmKeyDetailPage'
@@ -81,6 +81,15 @@ const LandingPage = lazy(() =>
   import('./pages/landing/LandingPage').then((m) => ({ default: m.LandingPage })),
 )
 
+const DocsPage = lazy(() => import('./pages/DocsPage').then((module) => ({ default: module.DocsPage })))
+const guidePage = (
+  <ErrorBoundary label="사용 가이드">
+    <Suspense fallback={<LoadingBlock label="사용 가이드 불러오는 중" />}>
+      <DocsPage />
+    </Suspense>
+  </ErrorBoundary>
+)
+
 const ComponentGallery = import.meta.env.DEV
   ? lazy(() =>
       import('./dev/ComponentGallery').then((module) => ({ default: module.ComponentGallery })),
@@ -93,6 +102,7 @@ const ComponentGallery = import.meta.env.DEV
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
+    if (parseGuidePath(pathname)) return
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [pathname])
   return null
@@ -142,7 +152,7 @@ function App() {
         <Route path="terms/:docType" element={<TermsPage />} />
         {/* 사용자 문서 — 로그인 없이 열려야 한다. 게이트웨이 에러를 받은 사람에게
             세션이 없을 수 있고, 주소는 서로 전달되는 물건이다. */}
-        <Route path="docs" element={<DocsPage />} />
+        <Route path="docs/*" element={guidePage} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route
@@ -156,6 +166,8 @@ function App() {
         }
       >
         <Route index element={<ConsoleDashboardPage />} />
+        <Route path="docs/*" element={guidePage} />
+        <Route path=":workspaceId/docs/*" element={guidePage} />
         <Route path="workspaces" element={<WorkspacesPage />} />
         <Route path="workspaces/:workspaceId" element={<WorkspaceDetailPage />} />
         <Route path="resources" element={<ResourcesPage />} />
@@ -224,6 +236,7 @@ function App() {
           <Route path="gpus/:allocationId" element={<AdminGpuDetailPage />} />
         </>}
         <Route index element={<AdminDashboardPage />} />
+        <Route path="docs/*" element={guidePage} />
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />

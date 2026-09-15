@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { invalidateResourceLists, issueLlmKeyToken, type LlmKeyDetail } from '../../api/queries'
 import { toApiError } from '../../api/problem'
@@ -15,7 +14,7 @@ import {
   PermissionNotice,
   SettingRow,
 } from '../ui'
-import { DOCS_PATH } from '../../lib/brand'
+import { GuideLink } from '../../docs/links'
 import { formatDateTime } from '../../lib/format'
 import type { LlmApiKeyStatus } from '../../lib/status'
 
@@ -157,14 +156,7 @@ export function LlmKeyIssueAction({
               </p>
             )}
             <p className="text-sm text-neutral-600">
-              호출 방법은{' '}
-              <Link
-                to={DOCS_PATH}
-                className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
-              >
-                사용 가이드
-              </Link>
-              에 있습니다.
+              키를 복사한 뒤 이 창을 닫고 연결 정보의 사용 가이드에서 호출 방법을 확인하세요.
             </p>
           </div>
         )}
@@ -203,6 +195,7 @@ export function LlmKeyIssueAction({
           }
         />
         {notice}
+        <p className="text-sm"><GuideLink slug="llm/start" anchor="issue">키 발급 가이드</GuideLink></p>
         {modals}
       </CardContent>
     </Card>

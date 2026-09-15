@@ -8,6 +8,7 @@ import { cn } from '../lib/cn'
 import { WORKSPACE_KIND_LABELS } from '../lib/labels'
 import { consolePathInScope } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
+import { parseGuidePath } from '../lib/docs-paths'
 
 /**
  * Picks the workspace every list on the screen is read through.
@@ -34,7 +35,8 @@ export function WorkspaceScopeSelector() {
 
   const switchTo = (next: string | null) => {
     close()
-    navigate(consolePathInScope(next, location.pathname))
+    const hash = parseGuidePath(location.pathname) ? location.hash : ''
+    navigate(consolePathInScope(next, location.pathname) + hash, { state: parseGuidePath(location.pathname) ? location.state : undefined })
   }
 
   // A scope with no option yet — the list is still loading — must not read as

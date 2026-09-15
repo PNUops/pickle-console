@@ -78,6 +78,7 @@ import { SshUsageGuide } from '../components/SshUsageGuide'
 import { VmDomainsSection } from '../components/vm-domains/VmDomainsSection'
 import { domainPollRate } from '../components/vm-domains/domain-status'
 import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
+import { GuideLink } from '../docs/links'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
 import { CopyButton } from '../components/CopyButton'
@@ -319,11 +320,13 @@ export function VmDetailPage() {
       </TabPanel>
 
       <TabPanel id="publish" active={activeTab === 'publish'} className="space-y-6">
+        <p className="text-right text-sm"><GuideLink slug="network/publish">웹 서비스 공개 가이드</GuideLink></p>
         <VmDomainsSection vm={data} />
         <VmPortForwardingSection vm={data} />
       </TabPanel>
 
       <TabPanel id="network" active={activeTab === 'network'} className="space-y-6">
+        <p className="text-right text-sm"><GuideLink slug="network/ports" anchor="campus-ip">캠퍼스 IP 가이드</GuideLink></p>
         <VmNetworkSection vm={data} />
       </TabPanel>
 
@@ -631,7 +634,10 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>접속</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>접속</CardTitle>
+          <GuideLink slug="vm/connect" anchor="ssh" className="text-sm">접속 가이드</GuideLink>
+        </div>
       </CardHeader>
       <CardContent className="space-y-5">
         {error && <Alert variant="danger">{error}</Alert>}

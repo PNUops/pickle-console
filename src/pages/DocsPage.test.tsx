@@ -8,10 +8,10 @@ import { renderApp } from '../test/render'
  * 달라지는 것을 잡지 못한다.
  */
 describe('사용 가이드', () => {
-  test('인증 없이 열리고 첫 호출에 필요한 것을 전부 보여 준다', async () => {
-    renderApp('/docs')
+  test('opens the first-call guide without authentication', async () => {
+    renderApp('/docs/llm/connect')
 
-    expect(await screen.findByRole('heading', { name: '사용 가이드' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '첫 호출과 도구 연결' })).toBeInTheDocument()
 
     const body = document.body.textContent ?? ''
     expect(body).toContain('https://llm.pcl.kr/v1')
@@ -19,8 +19,8 @@ describe('사용 가이드', () => {
     expect(body).toContain('Authorization: Bearer')
   })
 
-  test('지원 파라미터와 목록 밖 필드의 결과를 함께 말한다', async () => {
-    renderApp('/docs')
+  test('distinguishes self-served validation from paid passthrough', async () => {
+    renderApp('/docs/llm/features')
     await screen.findByRole('heading', { name: '지원 파라미터' })
 
     // 목록의 구성원은 lib/llm-api.test.ts가 얼려 둔다. 여기서는 그 목록이 실제로
@@ -50,8 +50,8 @@ describe('사용 가이드', () => {
     )
   })
 
-  test('채팅 밖 경로와 그 경로가 기능 부여를 요구한다는 것을 말한다', async () => {
-    renderApp('/docs')
+  test('lists every non-chat route and its permission requirement', async () => {
+    renderApp('/docs/llm/features')
     await screen.findByRole('heading', { name: '이미지와 임베딩' })
 
     // 경로 목록은 lib/llm-api.ts 가 갖는다. 여기서는 그것이 실제로 표에 그려지는지를
@@ -69,9 +69,9 @@ describe('사용 가이드', () => {
     expect(body).toContain('streaming_not_supported')
   })
 
-  test('base URL이 어디까지인지 주소 옆에서 말한다', async () => {
-    renderApp('/docs')
-    await screen.findByRole('heading', { name: '시작하기' })
+  test('places the version suffix next to the base URL', async () => {
+    renderApp('/docs/llm/connect')
+    await screen.findByRole('heading', { name: '첫 호출' })
 
     // 주소를 복사해 가는 자리라, 어디까지가 base URL인지가 그 옆에 있어야 한다.
     // 문장을 통째로 찾으면 안 된다. testing-library 의 매처는 직계 텍스트 노드만
@@ -80,9 +80,9 @@ describe('사용 가이드', () => {
     expect(note?.textContent ?? '').toContain('/v1까지가 base URL입니다')
   })
 
-  test('분당 한도가 자체 서빙 모델에만 적용된다고 말한다', async () => {
-    renderApp('/docs')
-    await screen.findByRole('heading', { name: '한도' })
+  test('limits rate headers to self-served responses', async () => {
+    renderApp('/docs/llm/limits')
+    await screen.findByRole('heading', { name: '분당·동시 요청 한도' })
 
     // 2026-09-02 축 분리 이후 네 한도 전부 자체 서빙 전용이다. 이 문장이 빠지면
     // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
@@ -94,8 +94,8 @@ describe('사용 가이드', () => {
     expect(body).toContain('유료 모델 응답에는 분당 요청 한도 자체가 없어')
   })
 
-  test('코딩 에이전트는 openai-compatible 프로바이더로 붙인다고 말한다', async () => {
-    renderApp('/docs')
+  test('preserves the compatible coding-agent configuration', async () => {
+    renderApp('/docs/llm/connect')
     await screen.findByRole('heading', { name: '코딩 에이전트 연결' })
 
     const body = document.body.textContent ?? ''
@@ -103,9 +103,9 @@ describe('사용 가이드', () => {
     expect(body).toContain('"baseURL": "https://llm.pcl.kr/v1"')
   })
 
-  test('기본 한도를 숫자로 말하고 일일 토큰 한도도 함께 설명한다', async () => {
-    renderApp('/docs')
-    await screen.findByRole('heading', { name: '한도' })
+  test('distinguishes defaults from the daily budget', async () => {
+    renderApp('/docs/llm/limits')
+    await screen.findByRole('heading', { name: '분당·동시 요청 한도' })
 
     expect(screen.getByText('600회')).toBeInTheDocument()
     expect(screen.getByText('1,000,000토큰')).toBeInTheDocument()
@@ -115,9 +115,9 @@ describe('사용 가이드', () => {
     expect(document.body.textContent ?? '').toContain('quota_exhausted')
   })
 
-  test('에러는 메시지가 아니라 code로 찾게 한다', async () => {
-    renderApp('/docs')
-    await screen.findByRole('heading', { name: '에러' })
+  test('pairs stable error codes with HTTP status', async () => {
+    renderApp('/docs/llm/errors')
+    await screen.findByRole('heading', { name: '오류 코드 전체 목록' })
 
     // code와 상태 코드의 짝은 lib/llm-api.test.ts가 얼려 둔다. 여기서는 표가 그 짝을
     // 실제로 한 행에 나란히 렌더하는지 확인한다.
@@ -125,7 +125,7 @@ describe('사용 가이드', () => {
     expect(row).not.toBeNull()
     expect(within(row!).getByText('429')).toBeInTheDocument()
 
-    const authRow = screen.getByText('invalid_api_key').closest('tr')
+    const authRow = within(screen.getByRole('table')).getByText('invalid_api_key').closest('tr')
     expect(within(authRow!).getByText('401')).toBeInTheDocument()
   })
 })

@@ -127,7 +127,7 @@ describe('발급 전 키', () => {
     expect(screen.queryByText('폐기된 키입니다')).not.toBeInTheDocument()
   })
 
-  test('발급하면 평문이 한 번 보이고, 창을 닫으면 화면에서 사라진다', async () => {
+  test('keeps the one-time key visible until explicitly acknowledged', async () => {
     const user = userEvent.setup()
     renderKey(PENDING_KEY)
 
@@ -144,6 +144,8 @@ describe('발급 전 키', () => {
     const result = await screen.findByRole('dialog')
     expect(within(result).getByText('이 키는 다시 볼 수 없습니다')).toBeInTheDocument()
     const plaintext = within(result).getByText(/^pk-llm-live-.*-secret$/).textContent!
+    // Navigation would unmount the only copy before the user has saved it.
+    expect(within(result).queryByRole('link')).not.toBeInTheDocument()
 
     // 이 창은 배경 클릭과 Escape 로 닫히지 않는다. 이 카드가 탭 패널 안에 있어서,
     // 닫히면 탭을 옮길 수 있게 되고 그 순간 평문이 사라진다.
@@ -207,7 +209,7 @@ describe('연결 정보', () => {
     expect(body).toContain('pickle-general')
     // 사이드바 하단에도 같은 이름의 링크가 있으므로 본문 안에서만 찾는다.
     const main = within(screen.getByRole('main'))
-    expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/docs')
+    expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/console/docs/llm/features#parameters')
     // The model list opens from the same row as that model's copy button.
     const row = main.getByRole('button', { name: '호출할 수 있는 모델 보기' }).parentElement!
     expect(within(row).getByText('pickle-general')).toBeInTheDocument()

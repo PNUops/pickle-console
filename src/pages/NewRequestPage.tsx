@@ -2,6 +2,7 @@ import { useSearchParams } from 'react-router'
 import { requestKind } from '../components/request-kind'
 import { KindPicker } from '../components/request-kind/KindPicker'
 import { RequestWizard } from '../components/request-kind/RequestWizard'
+import { GuideLink } from '../docs/links'
 
 /**
  * 리소스 신청.
@@ -20,8 +21,12 @@ export function NewRequestPage() {
   const [searchParams] = useSearchParams()
   const kind = requestKind(searchParams.get('kind') ?? '')
 
-  if (!kind) return <KindPicker />
-  // 종류가 바뀌면 위저드를 통째로 다시 마운트한다. 스펙 상태와 카탈로그 훅이
-  // 종류의 것이라, key 리마운트가 훅 순서와 상태 초기화를 함께 보장한다.
-  return <RequestWizard key={kind.type} kind={kind} />
+  const guide = kind?.type === 'VM' ? 'vm/request' : kind?.type === 'LLM_API_KEY' ? 'llm/start' : 'requests/submit'
+  return (
+    <div className="space-y-4">
+      <div className="text-right text-sm"><GuideLink slug={guide}>신청 작성 가이드</GuideLink></div>
+      {/* Changing the kind remounts its catalog hooks and specification state. */}
+      {kind ? <RequestWizard key={kind.type} kind={kind} /> : <KindPicker />}
+    </div>
+  )
 }
