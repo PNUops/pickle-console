@@ -3,8 +3,10 @@ import { accountArticles } from './articles/account'
 import { vmArticles } from './articles/vm'
 import { networkArticles } from './articles/network'
 import { llmArticles } from './articles/llm'
+import { introductionArticles } from './articles/introduction'
 
 export const guideArticles = [
+  ...introductionArticles,
   ...gettingStartedArticles,
   ...vmArticles,
   ...networkArticles,

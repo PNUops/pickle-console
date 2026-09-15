@@ -44,6 +44,9 @@ describe('guide content and navigation', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '사용 가이드' })).toBeInTheDocument()
     for (const group of guideGroups) expect(screen.getAllByRole('heading', { name: group }).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: '처음 이용하기부터 시작 →' })).toHaveAttribute('href', '/docs/start')
+    await userEvent.setup().click(screen.getByRole('link', { name: '서비스 소개 →' }))
+    expect(await screen.findByRole('heading', { level: 1, name: '서비스 소개' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: '서비스 소개' })).toHaveTextContent('부산대학교 클라우드 플랫폼')
   })
 
   test.each(guideArticles.map((article) => [article.slug, article.title]))('renders %s and resolves every guide link', async (slug, title) => {
@@ -127,14 +130,13 @@ describe('guide content and navigation', () => {
     expect(document.body.style.overflow).not.toBe('hidden')
   })
 
-  test('copies the public address without private scope or filters', async () => {
+  test('omits header sharing controls while keeping command copying', async () => {
     server.use(refreshSuccessHandler('access-user'))
-    const user = userEvent.setup()
-    const write = vi.spyOn(navigator.clipboard, 'writeText')
     renderApp(`/console/${uuid(7)}/docs/vm/connect?private=filter#files`)
-    await user.click(await screen.findByRole('button', { name: '공유 링크 복사' }))
-    expect(write).toHaveBeenCalledWith(`${window.location.origin}/docs/vm/connect#files`)
-    write.mockRestore()
+    const heading = await screen.findByRole('heading', { level: 1, name: '가상머신 접속과 파일 전송' })
+    expect(within(heading.closest('header')!).queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '공유 링크 복사' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('article', { name: '가상머신 접속과 파일 전송' })).getAllByRole('button', { name: '복사' }).length).toBeGreaterThan(0)
   })
 
   test('restores application values and step after reading a guide', async () => {

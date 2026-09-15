@@ -5,6 +5,7 @@ import { homePathFor, useAuth } from '../../auth/auth-context'
 import { HeroFallback } from './HeroFallback'
 import { HeroVisual } from './HeroVisual'
 import { Reveal } from './Reveal'
+import { DOCS_PATH } from '../../lib/brand'
 
 // Tailwind lg(64rem) 기준. CSS 숨김이 아니라 조건부 렌더로 분기해야
 // 모바일이 3D 청크(~160KB gzip)와 WebGL 컨텍스트를 아예 만들지 않는다.
@@ -84,6 +85,7 @@ export function Hero() {
                   // 세션 복원 중 — 잘못된 CTA가 잠깐 보였다 바뀌는 깜빡임 방지
                   <div aria-hidden="true" className="h-12" />
                 ) : status === 'authenticated' && user ? (
+                  <>
                   <TransitionLink
                     to={homePathFor(user.role)}
                     className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-6 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
@@ -91,18 +93,22 @@ export function Hero() {
                     콘솔로 이동
                     <span aria-hidden="true">→</span>
                   </TransitionLink>
+                  <TransitionLink
+                    to={DOCS_PATH}
+                    className="inline-flex h-12 items-center rounded-xl border border-white/15 bg-white/5 px-6 text-base font-medium text-neutral-200 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
+                  >
+                    서비스 소개
+                  </TransitionLink>
+                  </>
                 ) : (
                   <>
-                    {/* 소개 페이지(노션)는 외부 문서라 라우터를 타지 않는다 */}
-                    <a
-                      href="https://pnuops.notion.site/pickle-intro"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <TransitionLink
+                      to={DOCS_PATH}
                       className="inline-flex h-12 items-center gap-1.5 rounded-xl bg-primary-500 px-6 text-base font-semibold text-white shadow-[0_0_32px_rgb(46_139_158/0.45)] transition-colors hover:bg-primary-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"
                     >
                       서비스 소개
                       <span aria-hidden="true">→</span>
-                    </a>
+                    </TransitionLink>
                     <TransitionLink
                       to="/login"
                       className="inline-flex h-12 items-center rounded-xl border border-white/15 bg-white/5 px-6 text-base font-medium text-neutral-200 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300"

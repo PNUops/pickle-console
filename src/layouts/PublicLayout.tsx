@@ -65,12 +65,12 @@ export function PublicLayout() {
       </header>
       {guide ? (
         <div className="flex min-w-0 flex-1">
-          <aside className="sticky top-14 hidden h-[calc(100svh-3.5rem)] w-60 shrink-0 overflow-y-auto border-r border-neutral-200 bg-white p-3 md:block">
-            <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="text-sm">문서 목차 불러오는 중</p>}><GuideNavigation slug={guide.slug} /></Suspense></ErrorBoundary>
+          <aside className="sticky top-14 hidden h-[calc(100svh-3.5rem)] w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
+            <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="p-3 text-sm">문서 목차 불러오는 중</p>}><GuideNavigation slug={guide.slug} className="flex-1" /></Suspense></ErrorBoundary>
           </aside>
           <main className="min-w-0 flex-1 px-4 py-6 sm:px-6"><Outlet /></main>
-          <Drawer open={menuOpen} onClose={closeMenu} title="문서 목차" className="sm:max-w-sm">
-            <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="text-sm">문서 목차 불러오는 중</p>}><GuideNavigation slug={guide.slug} onNavigate={closeMenu} /></Suspense></ErrorBoundary>
+          <Drawer open={menuOpen} onClose={closeMenu} title="문서 목차" className="sm:max-w-sm" bodyClassName="flex min-h-0 overflow-hidden p-0">
+            <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="p-3 text-sm">문서 목차 불러오는 중</p>}><GuideNavigation slug={guide.slug} className="flex-1" onNavigate={closeMenu} /></Suspense></ErrorBoundary>
           </Drawer>
         </div>
       ) : <main className="flex-1"><Outlet /></main>}

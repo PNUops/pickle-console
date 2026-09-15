@@ -9,6 +9,8 @@ export interface DrawerProps {
   onClose: () => void
   title: string
   className?: string
+  /** Custom body spacing for panels that provide their own scroll regions. */
+  bodyClassName?: string
   children: ReactNode
   /** Action row rendered below the body. */
   footer?: ReactNode
@@ -20,7 +22,7 @@ export interface DrawerProps {
  * 열릴 때 마운트되며 진입 애니메이션은 @starting-style로 처리한다 — 미지원
  * 브라우저는 즉시 표시되고, 닫힘은 즉시 언마운트라 퇴장 애니메이션이 없다.
  */
-export function Drawer({ open, onClose, title, className, children, footer }: DrawerProps) {
+export function Drawer({ open, onClose, title, className, bodyClassName, children, footer }: DrawerProps) {
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   useFocusTrap(panelRef, { active: open, onEscape: onClose })
@@ -74,7 +76,7 @@ export function Drawer({ open, onClose, title, className, children, footer }: Dr
             </svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className={cn('flex-1 overflow-y-auto px-5 py-4', bodyClassName)}>{children}</div>
         {footer && (
           <div className="flex items-center justify-end gap-2 border-t border-stroke-subtle px-5 py-3">
             {footer}
