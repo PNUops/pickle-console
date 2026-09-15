@@ -286,6 +286,27 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
     expect(screen.queryByText(/분실했거나 회수가 필요하면/)).not.toBeInTheDocument()
   })
 
+  test('points at the settings tab only when the reader has one', async () => {
+    // The two settings that govern this card live in that tab, and a reader
+    // without it would be sent somewhere that is not on their screen.
+    server.use(vmDetailAs(uuid(56), 'OWNER'))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      await screen.findByText('비밀번호 접속 허용과 열람 권한은 설정 탭에서 바꿉니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('withholds the settings pointer from a reader who cannot edit', async () => {
+    server.use(vmDetailAs(uuid(56), 'MEMBER'))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await screen.findByRole('button', { name: '비밀번호 보기' })
+    expect(screen.queryByText(/설정 탭에서 바꿉니다/)).not.toBeInTheDocument()
+  })
+
   test('저장된 비밀번호가 없다는 안내는 권한을 말하지 않는다', async () => {
     // 그 뒷절은 위 가드를 지나야 뜨고, 지나는 경로는 레이스뿐이며 그 순간
     // 편집자에게도 「편집자 이상만」이라고 말할 수 있어 틀린다.
