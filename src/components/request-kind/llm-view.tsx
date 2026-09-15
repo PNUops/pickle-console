@@ -664,21 +664,37 @@ export const llmKeyRequestView: RequestKindView = {
 
   summaryCell: (request) => {
     const spec = request.llmKey
+    // What is being asked for comes first: until the reader knows which models
+    // the request is for, the number beneath it has no unit. The detail screen
+    // opens with the same question, though it goes on to order its own fields
+    // differently.
+    //
     // 화면 다른 곳과 같은 말을 쓴다 — 큐에서만 줄임말을 쓰면 같은 수가 두 이름을 갖는다.
+    const axes = [
+      spec?.useCampusModels ? '자체 서빙 모델' : null,
+      spec?.useCommercialModels ? '유료 모델' : null,
+    ].filter((entry) => entry !== null)
+    // One asked-for figure per axis. The per-minute limits are not here: the
+    // wizard stopped asking for them, so they are all but always empty, and
+    // they were standing where the asked-for amount should have been.
     const asked = [
-      spec?.reqRpm == null ? null : `분당 요청 ${spec.reqRpm.toLocaleString('ko-KR')}`,
-      spec?.reqTpm == null ? null : `분당 토큰 ${spec.reqTpm.toLocaleString('ko-KR')}`,
+      !spec?.useCampusModels
+        ? null
+        : spec.reqDailyTokens == null
+          ? '일일 토큰 기본값'
+          : `일일 토큰 ${spec.reqDailyTokens.toLocaleString('ko-KR')}`,
+      !spec?.useCommercialModels
+        ? null
+        : spec.reqCreditLimit == null
+          ? '금액 적지 않음'
+          : `$${spec.reqCreditLimit.toLocaleString('ko-KR')}`,
     ].filter((entry) => entry !== null)
     return (
       <>
-        <span className="block">
-          {asked.length > 0 ? asked.join(' · ') : '기본 한도로 신청'}
-        </span>
-        <span className="block text-xs text-neutral-500">
-          {spec?.reqDailyTokens == null
-            ? '일일 토큰 기본값'
-            : `일일 토큰 ${spec.reqDailyTokens.toLocaleString('ko-KR')}`}
-        </span>
+        <span className="block">{axes.length > 0 ? axes.join(' · ') : '—'}</span>
+        {asked.length > 0 && (
+          <span className="block text-xs text-neutral-500">{asked.join(' · ')}</span>
+        )}
       </>
     )
   },

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { orgAdminUser, sysAdminUser } from '../test/msw/handlers/auth'
@@ -50,7 +50,7 @@ describe('승인 대기 큐', () => {
       'aria-pressed',
       'true',
     )
-    expect(await screen.findByRole('link', { name: '홍길동' })).toBeInTheDocument()
+    expect((await screen.findAllByRole('link', { name: '홍길동' })).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: '박영희' })).toBeInTheDocument()
     // 승인/반려된 건은 기본 탭에 없다.
     expect(screen.queryByRole('link', { name: '김철수' })).not.toBeInTheDocument()
@@ -62,7 +62,7 @@ describe('승인 대기 큐', () => {
     const user = userEvent.setup()
     renderAsOrgAdmin('/admin/requests')
 
-    await screen.findByRole('link', { name: '홍길동' })
+    await screen.findAllByRole('link', { name: '홍길동' })
     await user.click(screen.getByRole('button', { name: '승인됨' }))
 
     expect(await screen.findByRole('link', { name: '김철수' })).toBeInTheDocument()
@@ -75,7 +75,7 @@ describe('승인 대기 큐', () => {
     const user = userEvent.setup()
     renderAsSysAdmin('/admin/requests')
 
-    await screen.findByRole('link', { name: '홍길동' })
+    await screen.findAllByRole('link', { name: '홍길동' })
     await user.click(screen.getByRole('button', { name: '전체' }))
 
     // 승인 대기(201·204) + 승인됨(202) + 반려됨(203)이 모두 나온다.
@@ -87,7 +87,7 @@ describe('승인 대기 큐', () => {
   test('ORG_ADMIN에게는 기관 필터가 보이지 않고 타 기관 신청도 없다', async () => {
     renderAsOrgAdmin('/admin/requests')
 
-    await screen.findByRole('link', { name: '홍길동' })
+    await screen.findAllByRole('link', { name: '홍길동' })
     // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
     // 고를 것이 없으므로 기관 필터를 보이지 않는다.
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
@@ -98,13 +98,25 @@ describe('승인 대기 큐', () => {
     const user = userEvent.setup()
     renderAsSysAdmin('/admin/requests')
 
-    await screen.findByRole('link', { name: '홍길동' })
+    await screen.findAllByRole('link', { name: '홍길동' })
     await user.selectOptions(await screen.findByLabelText('관리 기관 선택'), uuid(2))
 
     expect(await screen.findByRole('link', { name: '박영희' })).toBeInTheDocument()
     await waitFor(() =>
-      expect(screen.queryByRole('link', { name: '홍길동' })).not.toBeInTheDocument(),
+      expect(screen.queryAllByRole('link', { name: '홍길동' })).toHaveLength(0),
     )
+  })
+
+  test('shows what a waiting key request asked for on the axis it asked on', async () => {
+    // A request for paid models read as "asked for the default limits": the
+    // column knew the per-minute fields, which the wizard no longer asks for,
+    // and not the amount, which is the whole of what was written down.
+    renderAsOrgAdmin('/admin/requests')
+
+    const row = (await screen.findByText('연구실 논문 요약 파이프라인')).closest('tr')!
+    expect(within(row).getByText('유료 모델')).toBeInTheDocument()
+    expect(within(row).getByText('$50')).toBeInTheDocument()
+    expect(within(row).queryByText(/분당/)).not.toBeInTheDocument()
   })
 
   test('리소스 종류 필터로 LLM API 키 신청만 좁힌다', async () => {

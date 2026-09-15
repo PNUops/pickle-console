@@ -126,6 +126,33 @@ function initialAdminRequests(): RequestDetail[] {
       updatedAt: '2026-07-08T09:10:00+09:00',
     },
     {
+      // Waiting in the queue and asking on the amount axis alone. The summary
+      // column read it as "asked for the default limits" -- the money it did
+      // ask for appeared nowhere until the approver opened the request.
+      ...submittedAdminRequest(206),
+      type: 'LLM_API_KEY',
+      vm: null,
+      llmKey: {
+        reqRpm: null,
+        reqTpm: null,
+        reqDailyTokens: null,
+        reqCreditLimit: 50,
+        grantedRpm: null,
+        grantedTpm: null,
+        grantedDailyTokens: null,
+        grantedConcurrency: null,
+        useCampusModels: false,
+        useCommercialModels: true,
+        grantedCreditAllowedModels: [],
+        grantedCreditDeniedModels: [],
+        grantedPassthroughEndpoints: [],
+      },
+      purpose: '연구실 논문 요약 파이프라인',
+      displayName: 'paper-summary-key',
+      createdAt: '2026-08-02T09:00:00+09:00',
+      updatedAt: '2026-08-02T09:00:00+09:00',
+    },
+    {
       ...submittedAdminRequest(205),
       type: 'LLM_API_KEY',
       vm: null,

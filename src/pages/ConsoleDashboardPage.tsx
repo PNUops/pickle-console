@@ -9,7 +9,11 @@ import {
   fetchLlmKeys,
   fetchVms,
 } from '../api/queries'
-import { resourceTypeEntry } from '../components/resource/registry'
+import {
+  RESOURCE_TYPES,
+  resourceTypeEntry,
+  resourceTypesInDisplayOrder,
+} from '../components/resource/registry'
 import { consolePaths } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
 import { useAuth } from '../auth/auth-context'
@@ -83,11 +87,15 @@ export function ConsoleDashboardPage() {
   const activeResources = (resources.data?.content ?? []).filter((resource) =>
     resourceTypeEntry(resource.type).isActive(resource),
   )
-  const typeCounts = {
-    VM: activeResources.filter((resource) => resource.type === 'VM').length,
-    LLM_API_KEY: activeResources.filter((resource) => resource.type === 'LLM_API_KEY').length,
-    GPU: activeResources.filter((resource) => resource.type === 'GPU').length,
-  }
+  // Counted over every registered type rather than a list kept here: while this
+  // screen knew three of them, the headline counted a domain the breakdown
+  // beneath it left out. A type with none is left unsaid.
+  const typeCounts = resourceTypesInDisplayOrder()
+    .map((type) => ({
+      label: RESOURCE_TYPES[type].label,
+      count: activeResources.filter((resource) => resource.type === type).length,
+    }))
+    .filter((entry) => entry.count > 0)
 
   // 만료 임박: VM의 종료일과 LLM API 키의 만료 시각을 같은 KST 달력일로 비교한다.
   const expiring = [
@@ -134,9 +142,9 @@ export function ConsoleDashboardPage() {
           label="내 리소스"
           value={resources.isPending ? '—' : `${activeResources.length}개`}
           hint={
-            resources.isPending
+            resources.isPending || typeCounts.length === 0
               ? undefined
-              : `가상머신 ${typeCounts.VM}개 · LLM API 키 ${typeCounts.LLM_API_KEY}개${typeCounts.GPU ? ` · GPU ${typeCounts.GPU}개` : ''}`
+              : typeCounts.map((entry) => `${entry.label} ${entry.count}개`).join(' · ')
           }
           to={consolePaths.resources(scope)}
         />

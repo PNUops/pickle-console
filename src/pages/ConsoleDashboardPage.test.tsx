@@ -6,9 +6,9 @@ import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
-function renderDashboard() {
+function renderDashboard(path = '/console') {
   server.use(refreshSuccessHandler('access-user'))
-  renderApp('/console')
+  renderApp(path)
 }
 
 describe('콘솔 대시보드 — 합성 지표·목록', () => {
@@ -34,16 +34,36 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     ).toBe(true)
   })
 
-  test('내 리소스 카드가 종류를 가리지 않고 목록과 상세 링크를 보여준다', async () => {
+  test('breaks the resource count down over every kind it counted', async () => {
+    // The headline counts whatever the inventory serves, so a breakdown that
+    // names three kinds by hand stops adding up as soon as a fourth exists.
     renderDashboard()
+
+    const tile = await screen.findByRole('link', { name: /내 리소스/ })
+    await waitFor(() => expect(tile.textContent).toMatch(/\d+개/))
+
+    const total = Number(/내 리소스(\d+)개/.exec(tile.textContent ?? '')?.[1])
+    const parts = [...(tile.textContent ?? '').matchAll(/(\d+)개/g)].slice(1)
+    expect(parts.length).toBeGreaterThan(0)
+    expect(parts.reduce((sum, part) => sum + Number(part[1]), 0)).toBe(total)
+    // The domain is one of the kinds it breaks down.
+    expect(tile).toHaveTextContent('도메인')
+  })
+
+  test('내 리소스 카드가 종류를 가리지 않고 목록과 상세 링크를 보여준다', async () => {
+    // Scoped to one workspace: the card shows the newest five of everything,
+    // and which types those five are is a property of the whole inventory
+    // rather than of this screen. Narrowing keeps the assertion about what the
+    // card does with a VM and a key next to each other.
+    renderDashboard(`/console/${uuid(15)}`)
 
     await screen.findByRole('heading', { name: '대시보드' })
     // 인벤토리는 종류를 섞어 최신순으로 내려오고, 카드는 그 순서를 그대로 그린다.
     expect(await screen.findByRole('link', { name: 'algo-hint-writer' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'demo-web' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'algo-judge' })).toBeInTheDocument()
     // 바로가기는 종류가 정한다 — 실행 중 VM은 웹 터미널을 달고, 키는 달지 않는다.
     // 전역 개수를 세면 어느 행에 붙었는지 모르므로 행 안에서 본다.
-    const vmRow = screen.getByRole('link', { name: 'demo-web' }).closest('li')!
+    const vmRow = screen.getByRole('link', { name: 'algo-judge' }).closest('li')!
     expect(within(vmRow).getByRole('button', { name: '웹 터미널' })).toBeInTheDocument()
     const keyRow = screen.getByRole('link', { name: 'algo-hint-writer' }).closest('li')!
     expect(within(keyRow).queryByRole('button', { name: '웹 터미널' })).not.toBeInTheDocument()
@@ -51,7 +71,7 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     expect(
       screen
         .getAllByRole('link', { name: '모두 보기 →' })
-        .some((el) => el.getAttribute('href') === '/console/resources'),
+        .some((el) => el.getAttribute('href') === `/console/${uuid(15)}/resources`),
     ).toBe(true)
   })
 

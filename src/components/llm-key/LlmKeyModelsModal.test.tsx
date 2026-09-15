@@ -12,7 +12,7 @@ import { uuid } from '../../test/msw/ids'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
 
-/** 소유자 등급이 붙은 활성 키. 연결 정보 카드가 이 상태에서만 뜬다. */
+/** An active key with an owner grant, which is one state the card stands in. */
 const OWNED_ACTIVE_KEY = uuid(70)
 
 /**

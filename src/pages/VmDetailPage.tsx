@@ -182,10 +182,7 @@ export function VmDetailPage() {
 
   // 설정 탭은 편집 권한자에게만 노출(내부 섹션 가드와 일관). 잘못된/숨김 tab 값은
   // 개요로 폴백한다(URL은 그대로 두어도 무해).
-  const settingsVisible =
-    data.settingsEditAllowed &&
-    data.status !== 'DELETING' &&
-    data.status !== 'DELETED'
+  const settingsVisible = settingsTabVisible(data)
   // 접근 탭은 이 VM의 접근 권한을 관리할 수 있는 사람에게만 — 리소스 소유자와
   // 워크스페이스 소유자다.
   const accessVisible = data.accessManageAllowed && data.status !== 'DELETED'
@@ -787,6 +784,18 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
   )
 }
 
+/**
+ * Whether this reader has the settings tab at all.
+ *
+ * The tab list, the section itself and anything pointing a reader at it read
+ * the same answer: a card offering to send someone to a tab they do not have
+ * is worse than saying nothing. Edit permission alone is not it -- a vm being
+ * deleted keeps the permission and loses the tab.
+ */
+function settingsTabVisible(vm: VmDetail): boolean {
+  return vm.settingsEditAllowed && vm.status !== 'DELETING' && vm.status !== 'DELETED'
+}
+
 /* ─── VM 비밀번호 (상시 재열람 + 재생성) ─── */
 
 /** 계약상 열람이 허용되는 상태 (그 외는 409). */
@@ -904,6 +913,18 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
             </Button>
           </div>
         )}
+
+        {/* The two settings that govern this card are server-enumerated rows and
+            stay in the settings tab; the sentence calls them by the names those
+            rows carry. The pointer asks the same question
+            the tab does rather than asking about edit permission, so the two
+            cannot come apart; on a vm being deleted the card itself is already
+            gone, which is why no test can tell the two conditions apart here. */}
+        {settingsTabVisible(vm) && (
+          <p className="border-t border-neutral-100 pt-3 text-xs text-neutral-500">
+            비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿉니다.
+          </p>
+        )}
       </CardContent>
 
       {/* 열람/재생성 결과 공용 모달 */}
@@ -986,9 +1007,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
 /* ─── VM별 설정 (편집자 이상) ─── */
 
 function VmSettingsSection({ vm }: { vm: VmDetail }) {
-  // 편집 권한이 없거나 삭제 중/삭제된 VM에는 설정 영역을 노출하지 않는다.
-  if (!vm.settingsEditAllowed) return null
-  if (vm.status === 'DELETING' || vm.status === 'DELETED') return null
+  if (!settingsTabVisible(vm)) return null
   return <VmSettingsCard vm={vm} />
 }
 
@@ -1247,7 +1266,11 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
     <Alert variant="danger" title={DELETION_BANNER_TITLES[deletion.kind]}>
       <div className="space-y-1">
         {deletion.kind === 'FORCE' ? (
-          <p>보안상의 사유로 즉시 파기됩니다. 취소할 수 없습니다.</p>
+          /* No motive. The title deliberately does not tell a user console that
+             a deletion was forced, and the sentence beneath it was saying so in
+             its first two words -- while naming a reason nothing here knows: a
+             forced deletion carries no reason field at all. */
+          <p>즉시 파기됩니다. 취소할 수 없습니다.</p>
         ) : (
           <p>
             {scheduled}에 영구 파기될 예정입니다. 파기 전에 복구가 필요하면 관리자에게

@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { components } from '../../../api/schema'
+import { dnsDomainStore } from './dns-domains'
 import { gpuAllocationStore } from './gpu'
 import { llmKeyStore, toLlmKeyResourceSummary } from './llm-keys'
 import { toResourceSummary, vmStore } from './vms'
@@ -23,6 +24,7 @@ const contributors = (): Schemas['ResourceSummaryResponse'][] => [
   ...vmStore.map(toResourceSummary),
   ...gpuAllocationStore.map((row): Schemas['ResourceSummaryResponse'] => ({ id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName, accessLimited: row.accessLimited, accessManageAllowed: row.accessManageAllowed, ownerNames: row.ownerNames, createdAt: row.createdAt })),
   ...llmKeyStore.map(toLlmKeyResourceSummary),
+  ...dnsDomainStore.rows.map(({ domain }): Schemas['ResourceSummaryResponse'] => ({ id: domain.id, name: domain.fqdn, displayName: null, type: 'DOMAIN', status: domain.status, workspaceId: domain.workspaceId, workspaceName: domain.workspaceName, accessLimited: domain.accessLimited, accessManageAllowed: domain.accessManageAllowed, ownerNames: domain.ownerNames, createdAt: domain.createdAt })),
 ]
 
 export const resourceHandlers = [

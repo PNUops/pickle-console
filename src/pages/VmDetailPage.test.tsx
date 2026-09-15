@@ -206,6 +206,32 @@ describe('VM 상세 — 삭제 흐름', () => {
     expect(screen.queryByText('파기된 데이터는 되돌릴 수 없습니다.')).not.toBeInTheDocument()
   })
 
+  test('says nothing about why a forced deletion happened', async () => {
+    // The banner title already withholds that the deletion was forced, and the
+    // sentence beneath it used to open by naming a motive -- one nothing here
+    // knows, since a forced deletion carries no reason at all.
+    server.use(
+      vmDetailAs(uuid(56), 'OWNER', {
+        status: 'DELETING',
+        deletion: {
+          kind: 'FORCE',
+          cancelable: false,
+          requestedAt: '2026-09-15T11:59:00+09:00',
+          scheduledFor: '2026-09-15T12:00:00+09:00',
+          reason: null,
+        },
+      }),
+    )
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(await screen.findByText('즉시 파기됩니다. 취소할 수 없습니다.')).toBeInTheDocument()
+    expect(screen.queryByText(/보안상의 사유로/)).not.toBeInTheDocument()
+    // The title withholds it too: the same sentence an administrator deletion
+    // gets is the intended behaviour.
+    expect(screen.getByText('관리자 삭제가 접수된 VM입니다')).toBeInTheDocument()
+  })
+
   test('ERROR VM은 삭제만 가능하며 접수 즉시 삭제된다', async () => {
     const user = userEvent.setup()
     renderVm(VM_METRICS_UNAVAILABLE_ID, 'settings')
@@ -284,6 +310,27 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
     expect(await screen.findByRole('button', { name: '비밀번호 보기' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '비밀번호 재생성' })).not.toBeInTheDocument()
     expect(screen.queryByText(/분실했거나 회수가 필요하면/)).not.toBeInTheDocument()
+  })
+
+  test('points at the settings tab only when the reader has one', async () => {
+    // The two settings that govern this card live in that tab, and a reader
+    // without it would be sent somewhere that is not on their screen.
+    server.use(vmDetailAs(uuid(56), 'OWNER'))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(
+      await screen.findByText('비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿉니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('withholds the settings pointer from a reader who cannot edit', async () => {
+    server.use(vmDetailAs(uuid(56), 'MEMBER'))
+    renderVm(uuid(56))
+
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await screen.findByRole('button', { name: '비밀번호 보기' })
+    expect(screen.queryByText(/설정 탭에서 바꿉니다/)).not.toBeInTheDocument()
   })
 
   test('저장된 비밀번호가 없다는 안내는 권한을 말하지 않는다', async () => {
