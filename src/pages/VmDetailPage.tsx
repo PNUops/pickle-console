@@ -1266,7 +1266,11 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
     <Alert variant="danger" title={DELETION_BANNER_TITLES[deletion.kind]}>
       <div className="space-y-1">
         {deletion.kind === 'FORCE' ? (
-          <p>보안상의 사유로 즉시 파기됩니다. 취소할 수 없습니다.</p>
+          /* No motive. The title deliberately does not tell a user console that
+             a deletion was forced, and the sentence beneath it was saying so in
+             its first two words -- while naming a reason nothing here knows: a
+             forced deletion carries no reason field at all. */
+          <p>즉시 파기됩니다. 취소할 수 없습니다.</p>
         ) : (
           <p>
             {scheduled}에 영구 파기될 예정입니다. 파기 전에 복구가 필요하면 관리자에게
