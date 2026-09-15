@@ -87,6 +87,37 @@ export const RESOURCE_TYPES: Record<ResourceSummary['type'], ResourceTypeEntry> 
 }
 
 /**
+ * The types a filter may narrow to, derived from the registry.
+ *
+ * A screen keeping its own list of them is how a type comes to stand in the
+ * table with no way to select it: the domain round registered an entry here
+ * and the inventory served the rows, while the filter went on offering three.
+ * Deriving means adding a type is still one entry.
+ *
+ * Ordered by label, because the order of the record is the order someone
+ * happened to edit the file in.
+ */
+export function resourceTypeFilterOptions(): { value: ResourceSummary['type']; label: string }[] {
+  return resourceTypesInDisplayOrder()
+    // While the GPU screens sit behind the preview flag, the type is not one
+    // a reader can pick either.
+    .filter((type) => type !== 'GPU' || gpuPreviewEnabled())
+    .map((type) => ({ value: type, label: RESOURCE_TYPES[type].label }))
+}
+
+/**
+ * The registered types in the order a reader meets them on screen.
+ *
+ * Ordered by label: the order of the record is the order someone happened to
+ * edit the file in, which is not a rule a reader can see.
+ */
+export function resourceTypesInDisplayOrder(): ResourceSummary['type'][] {
+  return (Object.keys(RESOURCE_TYPES) as ResourceSummary['type'][]).sort((a, b) =>
+    RESOURCE_TYPES[a].label.localeCompare(RESOURCE_TYPES[b].label, 'ko'),
+  )
+}
+
+/**
  * The entry for a type this build does not know.
  *
  * The record looks total to the compiler, but the api and the console deploy

@@ -75,6 +75,39 @@ describe('전체 리소스', () => {
     await waitFor(() => expect(screen.queryByRole('link', { name: 'algo-judge' })).not.toBeInTheDocument())
   })
 
+  test('offers every registered type, the domain included', async () => {
+    // The filter used to list the types by hand, so the domain round could add
+    // an entry to the registry, have the inventory serve the rows, and still
+    // leave no way to narrow to them.
+    const user = userEvent.setup()
+    renderResources()
+
+    expect(await screen.findByRole('link', { name: 'myblog.pusan.dev' })).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), 'DOMAIN')
+
+    expect(await screen.findByRole('link', { name: 'myblog.pusan.dev' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'algo-judge' })).not.toBeInTheDocument(),
+    )
+  })
+
+  test('keeps the filter reachable when it has narrowed the list to nothing', async () => {
+    // The toolbar inside the results branch would leave the reader with an
+    // empty screen and no control to undo what emptied it.
+    const user = userEvent.setup()
+    renderResources(`/console/${uuid(15)}/resources`)
+
+    await screen.findByRole('link', { name: 'algo-judge' })
+    await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), 'DOMAIN')
+
+    expect(await screen.findByText('이 종류의 리소스가 없습니다.')).toBeInTheDocument()
+    // Not the empty-inventory sentence: this reader has resources.
+    expect(screen.queryByText(/아직 리소스가 없습니다/)).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), '')
+    expect(await screen.findByRole('link', { name: 'algo-judge' })).toBeInTheDocument()
+  })
+
   test('워크스페이스 범위 주소는 그 워크스페이스의 리소스만 보여준다', async () => {
     renderResources(`/console/${uuid(15)}/resources`)
 

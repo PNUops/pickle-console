@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchResources, type ResourceSummary } from '../api/queries'
-import { resourceTypeEntry } from '../components/resource/registry'
+import { resourceTypeEntry, resourceTypeFilterOptions } from '../components/resource/registry'
 import {
   Alert,
   Card,
+  CardHeader,
   LinkButton,
   Pagination,
   Select,
@@ -19,7 +20,6 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
-import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { useScope } from '../lib/use-scope'
 
 /**
@@ -50,121 +50,137 @@ export function ResourcesPage() {
         <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
       </div>
 
-      <div className="flex justify-end">
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          리소스 종류
-          <Select
-            aria-label="리소스 종류 필터"
-            className="w-44"
-            value={type ?? ''}
-            onChange={(event) => {
-              setType((event.target.value || undefined) as ResourceSummary['type'] | undefined)
-              setPage(0)
-            }}
-          >
-            <option value="">전체</option>
-            <option value="VM">가상머신</option>
-            <option value="LLM_API_KEY">LLM API 키</option>
-            {gpuPreviewEnabled() && <option value="GPU">GPU</option>}
-          </Select>
-        </label>
-      </div>
+      {/* The toolbar belongs to the table and stands in every state it has.
+          Inside the results branch it would vanish the moment a filter narrowed
+          the list to nothing, leaving no way back. */}
+      <Card>
+        <CardHeader className="flex justify-end">
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            리소스 종류
+            <Select
+              aria-label="리소스 종류 필터"
+              className="w-44"
+              value={type ?? ''}
+              onChange={(event) => {
+                setType((event.target.value || undefined) as ResourceSummary['type'] | undefined)
+                setPage(0)
+              }}
+            >
+              <option value="">전체</option>
+              {resourceTypeFilterOptions().map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </label>
+        </CardHeader>
 
-      {resources.isPending && (
-        <div className="flex justify-center py-12">
-          <Spinner label="리소스 목록 불러오는 중" />
-        </div>
-      )}
-      {resources.isError && <Alert variant="danger">{resources.error.message}</Alert>}
-      {resources.isSuccess && resources.data.content.length === 0 && (
-        <Card className="space-y-4 p-8 text-center text-sm text-neutral-500">
-          <p>아직 리소스가 없습니다. 신청이 승인되면 이곳에 표시됩니다.</p>
-          <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
-        </Card>
-      )}
+        {resources.isPending && (
+          <div className="flex justify-center py-12">
+            <Spinner label="리소스 목록 불러오는 중" />
+          </div>
+        )}
+        {resources.isError && (
+          <div className="px-5 py-4">
+            <Alert variant="danger">{resources.error.message}</Alert>
+          </div>
+        )}
+        {resources.isSuccess && resources.data.content.length === 0 && (
+          <div className="space-y-4 p-8 text-center text-sm text-neutral-500">
+            {/* A filtered-to-nothing list is not an empty inventory: the reader
+                has resources, just none of this kind. The way back is the
+                filter directly above, so nothing else offers one. */}
+            <p>
+              {type == null
+                ? '아직 리소스가 없습니다. 신청이 승인되면 이곳에 표시됩니다.'
+                : '이 종류의 리소스가 없습니다.'}
+            </p>
+            <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
+          </div>
+        )}
+        {resources.isSuccess && resources.data.content.length > 0 && (
+          <Table>
+            <THead>
+              <TR>
+                <TH>이름</TH>
+                <TH>종류</TH>
+                <TH>상태</TH>
+                <TH>워크스페이스</TH>
+                <TH>생성일</TH>
+                {/* 머리글은 화면에 보이지 않지만 셀은 자리를 지킨다 — `sr-only`를
+                    `th` 자체에 걸면 셀이 흐름에서 빠져 머리글 행과 본문 행의 칸
+                    수가 어긋난다. 관리자 목록들과 같은 구조이고 이름만 다르다:
+                    그쪽 열은 행에 작용하는 버튼이라 「작업」이고, 이 열은 다른
+                    화면을 여는 것이라 「바로가기」다 (glossary). */}
+                <TH>
+                  <span className="sr-only">바로가기</span>
+                </TH>
+              </TR>
+            </THead>
+            <TBody>
+              {resources.data.content.map((resource) => {
+                const entry = resourceTypeEntry(resource.type)
+                return (
+                  <TR key={`${resource.type}-${resource.id}`}>
+                    <TD>
+                      {/* 접근 권한이 없거나, 이 빌드가 모르는 종류라 상세 화면이
+                          없으면 링크 없이 이름만 보여 준다. */}
+                      {resource.accessLimited || !entry.detailPath ? (
+                        <span className="font-medium text-neutral-500">
+                          {resource.displayName || resource.name}
+                        </span>
+                      ) : (
+                        <Link
+                          to={entry.detailPath(resource.id)}
+                          className="font-medium text-primary-700 hover:underline"
+                        >
+                          {resource.displayName || resource.name}
+                        </Link>
+                      )}
+                      {resource.displayName && (
+                        <span className="ml-1 text-xs text-neutral-400">{resource.name}</span>
+                      )}
+                      {resource.accessLimited && (
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          접근 권한이 없습니다
+                          {resource.ownerNames.length > 0 &&
+                            ` — ${resource.ownerNames.join(', ')} 님에게 요청하세요`}
+                          {resource.accessManageAllowed && entry.accessPath && (
+                            <>
+                              {' '}
+                              <Link
+                                to={entry.accessPath(resource.id)}
+                                className="font-medium text-primary-700 hover:underline"
+                              >
+                                접근 권한 관리
+                              </Link>
+                            </>
+                          )}
+                        </p>
+                      )}
+                    </TD>
+                    <TD>{entry.label}</TD>
+                    <TD>{entry.statusBadge(resource)}</TD>
+                    <TD>{resource.workspaceName}</TD>
+                    <TD className="whitespace-nowrap">{formatDateTime(resource.createdAt)}</TD>
+                    {/* 대시보드 행이 이미 주는 바로가기를 이 목록도 준다.
+                        종류가 그 바로가기를 갖지 않거나 상태가 맞지 않으면 빈
+                        칸이다. */}
+                    <TD className="text-right">{entry.rowAction?.(resource)}</TD>
+                  </TR>
+                )
+              })}
+            </TBody>
+          </Table>
+        )}
+      </Card>
       {resources.isSuccess && resources.data.content.length > 0 && (
-        <>
-          <Card>
-            <Table>
-              <THead>
-                <TR>
-                  <TH>이름</TH>
-                  <TH>종류</TH>
-                  <TH>상태</TH>
-                  <TH>워크스페이스</TH>
-                  <TH>생성일</TH>
-                  {/* 머리글은 화면에 보이지 않지만 셀은 자리를 지킨다 — `sr-only`를
-                      `th` 자체에 걸면 셀이 흐름에서 빠져 머리글 행과 본문 행의 칸
-                      수가 어긋난다. 관리자 목록들과 같은 구조이고 이름만 다르다:
-                      그쪽 열은 행에 작용하는 버튼이라 「작업」이고, 이 열은 다른
-                      화면을 여는 것이라 「바로가기」다 (glossary). */}
-                  <TH>
-                    <span className="sr-only">바로가기</span>
-                  </TH>
-                </TR>
-              </THead>
-              <TBody>
-                {resources.data.content.map((resource) => {
-                  const entry = resourceTypeEntry(resource.type)
-                  return (
-                    <TR key={`${resource.type}-${resource.id}`}>
-                      <TD>
-                        {/* 접근 권한이 없거나, 이 빌드가 모르는 종류라 상세 화면이
-                            없으면 링크 없이 이름만 보여 준다. */}
-                        {resource.accessLimited || !entry.detailPath ? (
-                          <span className="font-medium text-neutral-500">
-                            {resource.displayName || resource.name}
-                          </span>
-                        ) : (
-                          <Link
-                            to={entry.detailPath(resource.id)}
-                            className="font-medium text-primary-700 hover:underline"
-                          >
-                            {resource.displayName || resource.name}
-                          </Link>
-                        )}
-                        {resource.displayName && (
-                          <span className="ml-1 text-xs text-neutral-400">{resource.name}</span>
-                        )}
-                        {resource.accessLimited && (
-                          <p className="mt-0.5 text-xs text-neutral-500">
-                            접근 권한이 없습니다
-                            {resource.ownerNames.length > 0 &&
-                              ` — ${resource.ownerNames.join(', ')} 님에게 요청하세요`}
-                            {resource.accessManageAllowed && entry.accessPath && (
-                              <>
-                                {' '}
-                                <Link
-                                  to={entry.accessPath(resource.id)}
-                                  className="font-medium text-primary-700 hover:underline"
-                                >
-                                  접근 권한 관리
-                                </Link>
-                              </>
-                            )}
-                          </p>
-                        )}
-                      </TD>
-                      <TD>{entry.label}</TD>
-                      <TD>{entry.statusBadge(resource)}</TD>
-                      <TD>{resource.workspaceName}</TD>
-                      <TD className="whitespace-nowrap">{formatDateTime(resource.createdAt)}</TD>
-                      {/* 대시보드 행이 이미 주는 바로가기를 이 목록도 준다.
-                          종류가 그 바로가기를 갖지 않거나 상태가 맞지 않으면 빈
-                          칸이다. */}
-                      <TD className="text-right">{entry.rowAction?.(resource)}</TD>
-                    </TR>
-                  )
-                })}
-              </TBody>
-            </Table>
-          </Card>
-          <Pagination
-            page={resources.data.page}
-            totalPages={resources.data.totalPages}
-            onPageChange={setPage}
-          />
-        </>
+        <Pagination
+          page={resources.data.page}
+          totalPages={resources.data.totalPages}
+          onPageChange={setPage}
+        />
       )}
     </div>
   )
