@@ -214,6 +214,18 @@ describe('연결 정보', () => {
     expect(within(row).getByRole('button', { name: '복사' })).toBeInTheDocument()
   })
 
+  test('leaves the reference in place while a key is suspended', async () => {
+    // What a suspended key loses is the calls. The base url and the model name
+    // are what its owner came here to copy, and the notice above already says
+    // the key will not answer -- so nothing here repeats it.
+    server.use(llmKeyDetailAs(ISSUED_KEY, 'OWNER', { status: 'SUSPENDED' }))
+    renderKey(ISSUED_KEY)
+
+    await screen.findByRole('heading', { name: 'capstone-chatbot' })
+    expect(await screen.findByText('연결 정보')).toBeInTheDocument()
+    expect(document.body.textContent ?? '').toContain('https://llm.pcl.kr/v1')
+  })
+
   test('아직 발급 전인 키에는 연결 정보를 보여 주지 않는다', async () => {
     renderKey(PENDING_KEY)
 

@@ -137,7 +137,15 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
             properties are what confirm the reader is looking at the right one.
             Then what to do with it, and last the one-off that mints a value. */}
         <LlmKeyInfoCard llmKey={llmKey} />
-        {status === 'ACTIVE' && <LlmKeyConnectionCard keyId={llmKey.id} />}
+        {/* A suspended key keeps this card. What its owner loses while it is
+            suspended is the calls, not the reference: the base url and the
+            model name are what they came here to copy, and the notice above
+            already says the key will not answer. Before issue, after revoke and
+            after expiry it stays hidden -- there is no value to pair it with,
+            or none that can come back. */}
+        {(status === 'ACTIVE' || status === 'SUSPENDED') && (
+          <LlmKeyConnectionCard keyId={llmKey.id} />
+        )}
         <LlmKeyIssueAction llmKey={llmKey} status={status} />
       </TabPanel>
 
