@@ -1,3 +1,8 @@
+import { GuideFigure } from '../GuideFigure'
+import llmRequestImage from '../../assets/docs/llm-request.png'
+import llmConnectionImage from '../../assets/docs/llm-connection.png'
+import llmPermissionsImage from '../../assets/docs/llm-permissions.png'
+import llmUsageImage from '../../assets/docs/llm-usage.png'
 import { CodeBlock } from '../../components/CodeBlock'
 import { CopyButton } from '../../components/CopyButton'
 import { Alert, Table, TBody, TD, TH, THead, TR } from '../../components/ui'
@@ -87,6 +92,13 @@ export const llmArticles: GuideArticle[] = [
           </ul>
           <p>필요량은 예상 요청 횟수와 한 요청의 입력·출력 길이로 계산합니다. 예를 들어 하루 100회, 요청마다 입력 1,000토큰과 출력 1,000토큰을 예상하면 하루 약 200,000토큰입니다. 대화를 이어가며 이전 메시지를 다시 보내는 양도 포함하세요.</p>
           <p>토큰 수를 비우면 서비스 기본값을 요청하고, 금액을 비우면 관리자가 정합니다. 실제 부여값은 승인 결과로 확인합니다. 분당 요청·토큰 수와 동시 요청 수는 신청 화면의 입력 항목이 아닙니다.</p>
+          <GuideFigure
+            src={llmRequestImage}
+            alt="LLM API 키 신청의 자체 서빙 모델과 유료 모델 선택 및 희망 한도 입력"
+            caption="LLM API 키의 리소스 구성에서 사용할 모델을 고르고 해당 항목의 희망 한도를 입력합니다."
+            width={768}
+            height={802}
+          />
         </>,
       },
       {
@@ -150,6 +162,13 @@ export const llmArticles: GuideArticle[] = [
             <CopyButton value={LLM_API_BASE_URL} label="base URL 복사" />
           </div>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code>까지가 base URL입니다. 인증에는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Authorization: Bearer</code> 헤더를 사용합니다.</p>
+          <GuideFigure
+            src={llmConnectionImage}
+            alt="LLM API 키 상세 개요의 base URL과 모델 이름, 첫 호출 예제"
+            caption="키 상세의 개요에서 연결 정보를 확인합니다. base URL과 모델 이름을 코드의 연결 설정에 사용합니다."
+            width={1104}
+            height={364}
+          />
         </>,
       },
       {
@@ -212,6 +231,13 @@ export const llmArticles: GuideArticle[] = [
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
           <p>유료 모델은 금액 한도가 부여된 키로 모델 이름을 그대로 보내 사용합니다. <strong>쓸 수 있는 유료 모델</strong>이 제한되어 있으면 목록에 맞는 모델만 선택합니다. 허용 목록이 비어 있으면 모델 허용 제한은 없지만 금액 한도와 <strong>쓸 수 없는 유료 모델</strong>은 적용됩니다. 차단 목록이 허용 목록보다 우선합니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_allowed</code>는 모델 권한 문제이고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_unavailable</code>는 금액 한도가 없다는 뜻입니다. 자체 서빙 모델에는 유료 모델의 허용·차단 목록을 적용하지 않습니다.</p>
+          <GuideFigure
+            src={llmPermissionsImage}
+            alt="LLM API 키 정보에 표시된 유료 모델 허용·차단 목록과 기능 권한"
+            caption="키 정보에서 사용할 수 있는 유료 모델과 차단된 모델, 이미지·임베딩 기능 권한을 확인합니다."
+            width={1104}
+            height={347}
+          />
         </>,
       },
       {
@@ -312,6 +338,13 @@ export const llmArticles: GuideArticle[] = [
           </ol>
           <p>방금 보낸 요청은 집계에 바로 나타나지 않을 수 있습니다. 화면의 보고 시점과 금액의 관측 시점을 확인하세요. 금액이 <strong>—</strong>로 보이는 것은 0원을 썼다는 뜻이 아닙니다. 아직 관측값이 없거나 요청에 금액 정보가 붙지 않은 상태를 구분해 읽습니다.</p>
           <p>첫 호출 후 정상 응답과 사용량이 반영되면 확인이 끝납니다. 계속 0이면 발급 전 키를 보고 있는지, 코드가 같은 키와 base URL을 쓰는지 확인하고 잠시 후 다시 조회합니다. 요청별 프롬프트와 응답이 필요하면 <GuideLink slug="llm/manage" anchor="recording">본문 기록</GuideLink>의 보관·공유 범위를 먼저 읽으세요.</p>
+          <GuideFigure
+            src={llmUsageImage}
+            alt="LLM API 키 사용량 탭의 기간 선택과 요청·토큰·금액 사용 현황"
+            caption="사용량 탭에서 조회 기간과 보고 시점, 요청 결과와 토큰·금액 사용 현황을 확인합니다."
+            width={1104}
+            height={420}
+          />
         </>,
       },
     ],

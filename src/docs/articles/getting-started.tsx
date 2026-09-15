@@ -1,3 +1,7 @@
+import { GuideFigure } from '../GuideFigure'
+import requestStatusesImage from '../../assets/docs/request-statuses.png'
+import workspaceMembersImage from '../../assets/docs/workspace-members.png'
+import resourceAccessImage from '../../assets/docs/resource-access.png'
 import { Link } from 'react-router'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
@@ -268,6 +272,13 @@ export const gettingStartedArticles: GuideArticle[] = [
               <GuideAction action="notifications">알림</GuideAction>과 신청 상세에서 확인합니다.
               검토 의견이 있으면 함께 읽고, 승인된 사양과 한도, 사용 종료일을 확인하세요.
             </p>
+            <GuideFigure
+              src={requestStatusesImage}
+              alt="내 신청 목록의 요청 내용과 처리 상태"
+              caption="내 신청에서 처리 상태를 확인하고 항목을 열어 검토 결과를 읽습니다."
+              width={1102}
+              height={227}
+            />
           </>
         ),
       },
@@ -382,6 +393,13 @@ export const gettingStartedArticles: GuideArticle[] = [
               권한이 생기는 것은 아닙니다. 필요한 리소스마다{' '}
               <GuideLink slug="workspaces/access">접근 권한을 부여</GuideLink>하세요.
             </p>
+            <GuideFigure
+              src={workspaceMembersImage}
+              alt="워크스페이스 상세의 구성원 목록과 역할 변경 선택"
+              caption="워크스페이스 상세에서 구성원과 현재 역할을 확인하고 필요한 사람의 역할을 변경합니다."
+              width={1104}
+              height={213}
+            />
           </>
         ),
       },
@@ -506,6 +524,13 @@ export const gettingStartedArticles: GuideArticle[] = [
               한 사람을 제외하고 공유하려면 워크스페이스 전체 권한을 두지 않고 개인별로
               부여합니다. 전체 권한이 있는 상태에서 개인 등급만 낮추어도 전체 권한은 남습니다.
             </p>
+            <GuideFigure
+              src={resourceAccessImage}
+              alt="리소스 상세의 접근 탭에 표시된 접근 목록과 등급 선택"
+              caption="리소스의 접근 탭에서 권한을 받을 대상과 부여할 등급을 확인합니다."
+              width={1104}
+              height={479}
+            />
           </>
         ),
       },

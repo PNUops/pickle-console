@@ -1,3 +1,7 @@
+import { GuideFigure } from '../GuideFigure'
+import vmRequestImage from '../../assets/docs/vm-request.png'
+import vmConnectionImage from '../../assets/docs/vm-connection.png'
+import vmMonitoringImage from '../../assets/docs/vm-monitoring.png'
 import { CodeBlock } from '../../components/CodeBlock'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
@@ -40,31 +44,40 @@ export const vmArticles: GuideArticle[] = [
         id: 'configure',
         title: '운영체제와 사양 선택하기',
         body: (
-          <ol>
-            <li>
-              <GuideAction action="vms">가상머신 목록</GuideAction>에서 신청을 시작하거나,
-              <GuideAction action="newRequest">리소스 신청</GuideAction>에서 가상머신을 고릅니다.
-            </li>
-            <li>
-              <strong>리소스 구성</strong>에서 이름을 적고 운영체제의 계열과 버전을
-              선택합니다. 이 이름은 콘솔에서 서버를 구분할 때 사용합니다.
-            </li>
-            <li>
-              준비된 <strong>사양</strong>을 고르거나 <strong>직접 입력</strong>으로
-              필요한 자원을 적습니다. vCPU는 처리 자원, 메모리는 실행 중인 프로그램이
-              쓰는 공간, 디스크는 운영체제와 파일을 저장하는 공간입니다.
-            </li>
-            <li>
-              직접 입력에서는 필요한 항목의 <strong>변경</strong>을 켜고 수치와 이유를
-              적습니다. 메모리는 GiB 단위로 입력합니다. 예를 들어 데이터를 메모리에
-              올리는 작업이라면 데이터 크기와 필요한 메모리를 함께 설명하세요.
-            </li>
-            <li>
-              <strong>호스트 이름</strong>은 선택 사항입니다. 비우면 자동으로 정해집니다.
-              직접 적을 때는 소문자·숫자·하이픈으로 3~40자를 입력합니다. SSH 접속에
-              쓰는 이름이므로 생성 후에는 바꿀 수 없습니다.
-            </li>
-          </ol>
+          <>
+            <ol>
+              <li>
+                <GuideAction action="vms">가상머신 목록</GuideAction>에서 신청을 시작하거나,
+                <GuideAction action="newRequest">리소스 신청</GuideAction>에서 가상머신을 고릅니다.
+              </li>
+              <li>
+                <strong>리소스 구성</strong>에서 이름을 적고 운영체제의 계열과 버전을
+                선택합니다. 이 이름은 콘솔에서 서버를 구분할 때 사용합니다.
+              </li>
+              <li>
+                준비된 <strong>사양</strong>을 고르거나 <strong>직접 입력</strong>으로
+                필요한 자원을 적습니다. vCPU는 처리 자원, 메모리는 실행 중인 프로그램이
+                쓰는 공간, 디스크는 운영체제와 파일을 저장하는 공간입니다.
+              </li>
+              <li>
+                직접 입력에서는 필요한 항목의 <strong>변경</strong>을 켜고 수치와 이유를
+                적습니다. 메모리는 GiB 단위로 입력합니다. 예를 들어 데이터를 메모리에
+                올리는 작업이라면 데이터 크기와 필요한 메모리를 함께 설명하세요.
+              </li>
+              <li>
+                <strong>호스트 이름</strong>은 선택 사항입니다. 비우면 자동으로 정해집니다.
+                직접 적을 때는 소문자·숫자·하이픈으로 3~40자를 입력합니다. SSH 접속에
+                쓰는 이름이므로 생성 후에는 바꿀 수 없습니다.
+              </li>
+            </ol>
+            <GuideFigure
+              src={vmRequestImage}
+              alt="가상머신 신청의 리소스 구성 단계에 있는 운영체제와 사양 선택"
+              caption="리소스 구성에서 운영체제와 사양을 선택하고 필요한 자원과 호스트 이름을 확인합니다."
+              width={768}
+              height={874}
+            />
+          </>
         ),
       },
       {
@@ -178,6 +191,13 @@ export const vmArticles: GuideArticle[] = [
               받은 파일 이름으로 바꾸고, 파일이 다른 위치에 있다면 경로도 바꾸세요.
             </p>
             <CodeBlock label="macOS · Linux" code="chmod 600 ~/.ssh/KEY_FILE" />
+            <GuideFigure
+              src={vmConnectionImage}
+              alt="가상머신 개요의 웹 터미널 버튼과 SSH 클라이언트 접속 정보"
+              caption="개요에서 웹 터미널을 열거나 SSH 키 발급 및 다운로드를 시작합니다."
+              width={1104}
+              height={292}
+            />
           </>
         ),
       },
@@ -344,6 +364,13 @@ export const vmArticles: GuideArticle[] = [
               데이터가 없거나 조회 오류가 난 상태를 사용량 0으로 해석하지 마세요.
               문제가 이어지면 발생 시각과 VM 상태를 <GuideLink slug="troubleshooting">문의에 포함</GuideLink>합니다.
             </p>
+            <GuideFigure
+              src={vmMonitoringImage}
+              alt="가상머신 모니터링 탭의 조회 기간과 자원 사용량 그래프"
+              caption="모니터링 탭에서 조회 기간을 고르고 CPU와 메모리, 네트워크와 디스크 I/O의 변화를 확인합니다."
+              width={1104}
+              height={615}
+            />
           </>
         ),
       },
