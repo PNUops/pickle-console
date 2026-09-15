@@ -227,7 +227,8 @@ describe('VM 상세 — 삭제 흐름', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(await screen.findByText('즉시 파기됩니다. 취소할 수 없습니다.')).toBeInTheDocument()
     expect(screen.queryByText(/보안상의 사유로/)).not.toBeInTheDocument()
-    // 강제 여부는 제목도 말하지 않는다 — 관리자 삭제와 같은 문구가 의도된 동작이다.
+    // The title withholds it too: the same sentence an administrator deletion
+    // gets is the intended behaviour.
     expect(screen.getByText('관리자 삭제가 접수된 VM입니다')).toBeInTheDocument()
   })
 
@@ -319,7 +320,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText('비밀번호 접속 허용과 열람 권한은 설정 탭에서 바꿉니다.'),
+      await screen.findByText('비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿉니다.'),
     ).toBeInTheDocument()
   })
 

@@ -914,15 +914,15 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
           </div>
         )}
 
-        {/* The two settings that govern this card -- whether password login is
-            allowed at all and who may read the password -- are server-enumerated
-            rows and stay in the settings tab. The pointer asks the same question
+        {/* The two settings that govern this card are server-enumerated rows and
+            stay in the settings tab; the sentence calls them by the names those
+            rows carry. The pointer asks the same question
             the tab does rather than asking about edit permission, so the two
             cannot come apart; on a vm being deleted the card itself is already
             gone, which is why no test can tell the two conditions apart here. */}
         {settingsTabVisible(vm) && (
           <p className="border-t border-neutral-100 pt-3 text-xs text-neutral-500">
-            비밀번호 접속 허용과 열람 권한은 설정 탭에서 바꿉니다.
+            비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿉니다.
           </p>
         )}
       </CardContent>
