@@ -1,9 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router'
-import { CopyButton } from '../components/CopyButton'
 import { guideArticles, guideGroups } from '../docs/catalog'
 import { GuideLink } from '../docs/links'
-import { parseGuidePath, publicGuidePath } from '../lib/docs-paths'
+import { parseGuidePath } from '../lib/docs-paths'
 import '../docs/guide.css'
 
 export function DocsPage() {
@@ -47,10 +46,7 @@ export function DocsPage() {
           <div className="mx-auto max-w-3xl">
             <header className="mb-8 border-b border-neutral-200 pb-6">
               {article && <p className="mb-2 text-sm text-neutral-500">{article.group}</p>}
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <h1 ref={headingRef} tabIndex={-1} className="scroll-mt-20 text-2xl font-semibold text-neutral-900 outline-none">{title}</h1>
-                <CopyButton value={`${window.location.origin}${publicGuidePath(slug)}${location.hash}`} label="공유 링크 복사" />
-              </div>
+              <h1 ref={headingRef} tabIndex={-1} className="scroll-mt-20 text-2xl font-semibold text-neutral-900 outline-none">{title}</h1>
               <p className="mt-3 text-sm leading-7 text-neutral-600">
                 {article?.summary ?? (slug ? '주소를 확인하거나 문서 목차에서 필요한 안내를 선택해 주세요.' : '처음 신청할 리소스를 고르고, 승인 후 연결부터 공유와 이용 종료까지 확인하세요.')}
               </p>
@@ -78,7 +74,10 @@ export function DocsPage() {
               </>
             ) : slug ? <GuideLink slug="">사용 가이드 홈으로 이동</GuideLink> : (
               <div className="space-y-8">
-                <GuideLink slug="start">처음 이용하기부터 시작 →</GuideLink>
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                  <GuideLink slug="introduction">서비스 소개 →</GuideLink>
+                  <GuideLink slug="start">처음 이용하기부터 시작 →</GuideLink>
+                </div>
                 {guideGroups.map((group) => (
                   <section key={group}>
                     <h2 className="mb-3 text-lg font-semibold text-neutral-900">{group}</h2>

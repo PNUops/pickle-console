@@ -1,6 +1,8 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 import { renderApp } from './test/render'
+import { refreshSuccessHandler } from './test/msw/handlers/auth'
+import { server } from './test/msw/server'
 
 // jsdom에는 WebGL이 없고 three 청크 로드는 무의미하게 느리다 — 정적 목업으로 대체.
 vi.mock('./pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
@@ -44,4 +46,19 @@ test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async 
 
   // 헤더 내비게이션과 푸터, 최종 CTA에 회원가입 링크가 있다
   expect(screen.getAllByRole('link', { name: /회원가입/ })).toHaveLength(3)
+})
+
+test.each([
+  [null, '로그인', '/login'],
+  ['access-user', '콘솔로 이동', '/console'],
+  ['access-sys-admin', '콘솔로 이동', '/admin'],
+] as const)('keeps two hero actions and an internal guide link for %s', async (token, action, destination) => {
+  if (token) server.use(refreshSuccessHandler(token))
+  renderApp('/')
+  const introduction = await screen.findByRole('link', { name: '서비스 소개' }, { timeout: 15_000 })
+  expect(introduction).toHaveAttribute('href', '/docs')
+  expect(introduction).not.toHaveAttribute('target')
+  const row = within(introduction.parentElement!)
+  expect(row.getAllByRole('link')).toHaveLength(2)
+  expect(row.getByRole('link', { name: new RegExp(action) })).toHaveAttribute('href', destination)
 })

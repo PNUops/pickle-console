@@ -528,7 +528,7 @@ export function AppShell({
             {!guide && sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
             {guide ? (
               <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="p-3 text-sm">문서 목차 불러오는 중</p>}>
-                <GuideNavigation slug={guide.slug} className="min-h-0 flex-1 overflow-y-auto p-3" onNavigate={closeDrawer} />
+                <GuideNavigation slug={guide.slug} className="flex-1" onNavigate={closeDrawer} />
               </Suspense></ErrorBoundary>
             ) : <ShellNav navLabel={navLabel} navSections={navSections} onNavigate={closeDrawer} />}
             <ShellFooterNav docsTo={docsTo} hideGuide={!!guide} onNavigate={closeDrawer} />
@@ -560,7 +560,7 @@ export function AppShell({
             {!guide && sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
             {guide ? (
               <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="p-3 text-sm">문서 목차 불러오는 중</p>}>
-                <GuideNavigation slug={guide.slug} className="min-h-0 flex-1 overflow-y-auto p-3" />
+                <GuideNavigation slug={guide.slug} className="flex-1" />
               </Suspense></ErrorBoundary>
             ) : <ShellNav navLabel={navLabel} navSections={navSections} />}
             <ShellFooterNav docsTo={docsTo} hideGuide={!!guide} />

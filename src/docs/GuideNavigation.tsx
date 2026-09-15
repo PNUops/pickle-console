@@ -12,17 +12,17 @@ export function GuideNavigation({ slug, onNavigate, className }: { slug: string;
   const results = searchGuideArticles(query)
   const state = guideNavigationState(location)
   return (
-    <nav aria-label="문서 목차" className={cn('space-y-3', className)}>
+    <div className={cn('flex min-h-0 flex-col', className)}>
+      <div className="shrink-0 border-b border-neutral-100 p-3">
+        <input id={searchId} type="search" aria-label="문서 검색" value={query} onChange={(event) => setQuery(event.target.value)}
+          placeholder="제목 또는 키워드 검색" className="w-full min-w-0 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-sm text-neutral-800 focus-visible:outline-2 focus-visible:outline-primary-600" />
+      </div>
+      <nav aria-label="문서 목차" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
       <h2 className="px-3 pt-2 text-sm font-semibold text-neutral-900">
         <Link to={guidePathFor(location)} state={state} onClick={onNavigate}
           className="rounded-sm hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">사용 가이드</Link>
       </h2>
-      <div className="px-3">
-        <label htmlFor={searchId} className="mb-2 block text-xs font-medium text-neutral-600">문서 검색</label>
-        <input id={searchId} type="search" value={query} onChange={(event) => setQuery(event.target.value)}
-          placeholder="제목 또는 키워드" className="w-full min-w-0 rounded-control border border-neutral-300 bg-white px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-primary-600" />
-        {query.trim() && <p role="status" className="mt-2 text-xs text-neutral-500">{results.length ? `${results.length}개 문서` : '검색 결과가 없습니다. 다른 검색어를 입력해 주세요.'}</p>}
-      </div>
+      {query.trim() && <p role="status" className="px-3 text-xs text-neutral-500">{results.length ? `${results.length}개 문서` : '검색 결과가 없습니다. 다른 검색어를 입력해 주세요.'}</p>}
       {guideGroups.map((group) => {
         const articles = results.filter((article) => article.group === group)
         if (!articles.length) return null
@@ -43,6 +43,7 @@ export function GuideNavigation({ slug, onNavigate, className }: { slug: string;
           </div>
         )
       })}
-    </nav>
+      </nav>
+    </div>
   )
 }
