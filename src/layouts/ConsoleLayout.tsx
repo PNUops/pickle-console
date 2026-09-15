@@ -75,6 +75,7 @@ export function ConsoleLayout() {
       sections={sections}
       sidebarTop={<WorkspaceScopeSelector />}
       notificationsTo={consolePaths.notifications}
+      docsTo={consolePaths.docs(scope)}
     />
   )
 }

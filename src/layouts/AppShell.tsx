@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { onMaintenanceDetected } from '../api/maintenance'
 import { isMfaEnrollmentRequired, onMfaEnrollmentRequired } from '../api/mfa-enrollment'
@@ -11,13 +11,17 @@ import { navIcons } from '../components/nav-icons'
 import { MaintenanceScreen } from '../components/MaintenanceScreen'
 import { NoticePopupHost } from '../components/NoticePopupHost'
 import { NotificationBell } from '../components/NotificationBell'
-import { Badge } from '../components/ui'
+import { Badge, ErrorBoundary } from '../components/ui'
 import { PostLoginOverlay } from '../components/PostLoginOverlay'
 import { CONTACT_URL, DOCS_PATH, FEEDBACK_URL } from '../lib/brand'
 import { cn } from '../lib/cn'
 import { adminPath } from '../lib/paths'
 import { useFocusTrap } from '../lib/use-focus-trap'
 import { UserMenu } from './UserMenu'
+import { guideNavigationState, guideReturnPath, parseGuidePath } from '../lib/docs-paths'
+import { SIDEBAR_LINK_CLASS as NAV_LINK_BASE, SIDEBAR_GROUP_CLASS, SIDEBAR_ACTIVE_CLASS, SIDEBAR_IDLE_CLASS } from '../lib/sidebar-style'
+
+const GuideNavigation = lazy(() => import('../docs/GuideNavigation').then((module) => ({ default: module.GuideNavigation })))
 
 /**
  * 2FA 등록 화면의 경로. 관리자 셸 안에 있고, 서버의 2FA 강제 필터가 면제하는
@@ -86,9 +90,6 @@ const NAV_BADGE_SLOT = 'ml-auto flex shrink-0'
 const NAV_PLANNED_BADGE =
   'ml-auto shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-xs leading-4 font-medium text-neutral-500'
 
-const NAV_LINK_BASE =
-  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600'
-
 const FOOTER_LINK_IDLE = 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
 
 const externalMark = (
@@ -120,11 +121,19 @@ const navigationMenuIcon = (
 )
 
 /** 사이드바 하단 고정 링크 — 가이드·문의·의견. */
-function ShellFooterNav({ onNavigate }: { onNavigate?: () => void }) {
+function ShellFooterNav({ docsTo, onNavigate, hideGuide }: { docsTo: string; onNavigate?: () => void; hideGuide?: boolean }) {
+  const location = useLocation()
   return (
     <div className="space-y-1 border-t border-neutral-100 p-3">
-      <NavLink
-        to={DOCS_PATH}
+      {hideGuide ? <Link
+        to={guideReturnPath(location) ?? '/console'}
+        onClick={onNavigate}
+        className={cn(NAV_LINK_BASE, FOOTER_LINK_IDLE)}
+      >
+        <span aria-hidden="true">←</span> 콘솔로 돌아가기
+      </Link> : <NavLink
+        to={docsTo}
+        state={guideNavigationState(location)}
         onClick={onNavigate}
         className={({ isActive }) =>
           cn(NAV_LINK_BASE, isActive ? 'bg-primary-50 text-primary-800' : FOOTER_LINK_IDLE)
@@ -132,7 +141,7 @@ function ShellFooterNav({ onNavigate }: { onNavigate?: () => void }) {
       >
         {navIcons.book}
         사용 가이드
-      </NavLink>
+      </NavLink>}
       <a
         href={CONTACT_URL}
         target="_blank"
@@ -172,7 +181,7 @@ function ShellNav({
       {navSections.map((section, index) => (
         <div key={section.heading ?? index} className="space-y-1">
           {section.heading && (
-            <h3 className="px-3 pt-2 pb-0.5 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">
+            <h3 className={SIDEBAR_GROUP_CLASS}>
               {section.heading}
             </h3>
           )}
@@ -200,8 +209,8 @@ function ShellNav({
                   cn(
                     NAV_LINK_BASE,
                     isActive
-                      ? 'bg-primary-50 text-primary-800'
-                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
+                      ? SIDEBAR_ACTIVE_CLASS
+                      : SIDEBAR_IDLE_CLASS,
                   )
                 }
               >
@@ -229,6 +238,7 @@ export function AppShell({
   sections,
   sidebarTop,
   notificationsTo,
+  docsTo = DOCS_PATH,
   banner,
   density = 'comfortable',
   content,
@@ -243,6 +253,8 @@ export function AppShell({
   sidebarTop?: ReactNode
   /** 알림함 경로 — 지정하면 상단 바에 알림 종을 노출한다. */
   notificationsTo?: string
+  /** Guide home within the current console and scope. */
+  docsTo?: string
   /** 시스템 공지 배너 아래, 본문 위에 놓이는 셸 배너 (2FA 권유 등). */
   banner?: ReactNode
   /** 운영 셸은 compact, 사용자 셸은 comfortable density를 사용한다. */
@@ -333,6 +345,8 @@ export function AppShell({
   // 되살아나는 방향으로 틀린다.
   const navigate = useNavigate()
   const { pathname, search } = useLocation()
+  const guide = parseGuidePath(pathname)
+  const activeNavLabel = guide ? '문서 목차' : navLabel
   const previousLocation = useRef(`${pathname}\u0000${search}`)
   const atEnrollScreen = pathname === MFA_ENROLL_PATH
   const currentAdminOrg = new URLSearchParams(search).get('org') ?? undefined
@@ -467,7 +481,7 @@ export function AppShell({
           id={drawerId}
           role="dialog"
           aria-modal="true"
-          aria-label={navLabel}
+          aria-label={activeNavLabel}
           aria-hidden={!drawerOpen || undefined}
           inert={!drawerOpen}
           tabIndex={-1}
@@ -510,9 +524,15 @@ export function AppShell({
               drawerOpen ? 'translate-x-0' : '-translate-x-full',
             )}
           >
-            {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
-            <ShellNav navLabel={navLabel} navSections={navSections} onNavigate={closeDrawer} />
-            <ShellFooterNav onNavigate={closeDrawer} />
+            <div key={guide ? 'guide' : 'console'} className="sidebar-view-enter flex min-h-0 flex-1 flex-col">
+            {!guide && sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
+            {guide ? (
+              <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="p-3 text-sm">문서 목차 불러오는 중</p>}>
+                <GuideNavigation slug={guide.slug} className="min-h-0 flex-1 overflow-y-auto p-3" onNavigate={closeDrawer} />
+              </Suspense></ErrorBoundary>
+            ) : <ShellNav navLabel={navLabel} navSections={navSections} onNavigate={closeDrawer} />}
+            <ShellFooterNav docsTo={docsTo} hideGuide={!!guide} onNavigate={closeDrawer} />
+            </div>
           </div>
         </div>
       )}
@@ -531,20 +551,25 @@ export function AppShell({
           )}
         >
           <div
+            key={guide ? 'guide' : 'console'}
             className={cn(
-              'flex h-full w-60 shrink-0 flex-col transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none',
+              'sidebar-view-enter flex h-full w-60 shrink-0 flex-col transition-opacity duration-[var(--duration-fast)] ease-standard motion-reduce:transition-none',
               sidebarCollapsed ? 'opacity-0' : 'opacity-100',
             )}
           >
-            {sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
-            <ShellNav navLabel={navLabel} navSections={navSections} />
-            <ShellFooterNav />
+            {!guide && sidebarTop && <div className="border-b border-neutral-100 p-3">{sidebarTop}</div>}
+            {guide ? (
+              <ErrorBoundary label="문서 목차"><Suspense fallback={<p className="p-3 text-sm">문서 목차 불러오는 중</p>}>
+                <GuideNavigation slug={guide.slug} className="min-h-0 flex-1 overflow-y-auto p-3" />
+              </Suspense></ErrorBoundary>
+            ) : <ShellNav navLabel={navLabel} navSections={navSections} />}
+            <ShellFooterNav docsTo={docsTo} hideGuide={!!guide} />
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           {bannerEl}
           {banner}
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
+          <main key={guide ? 'guide' : 'console'} className="sidebar-view-enter mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
             {content === undefined ? <Outlet /> : content}
           </main>
           {contactEmail && (

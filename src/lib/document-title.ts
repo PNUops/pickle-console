@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router'
+import { parseGuidePath } from './docs-paths'
 
 const ROOT_TITLE = 'PNU Cloud, Pickle'
 
@@ -55,6 +56,7 @@ const withBrand = (page: string) => `${page} · Pickle`
 
 /** URL만으로 새 문서와 deep link의 browser title을 같은 규칙으로 결정한다. */
 export function documentTitleForPath(pathname: string): string {
+  if (parseGuidePath(pathname)) return withBrand('사용 가이드')
   const segments = pathname.split('/').filter(Boolean)
   if (segments.length === 0) return ROOT_TITLE
 
@@ -89,6 +91,8 @@ export function DocumentTitle() {
   const { pathname } = useLocation()
 
   useEffect(() => {
+    // The lazy guide owns its article title once its catalog is available.
+    if (parseGuidePath(pathname)) return
     document.title = documentTitleForPath(pathname)
   }, [pathname])
 

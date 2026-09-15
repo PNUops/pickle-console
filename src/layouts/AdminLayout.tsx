@@ -23,10 +23,13 @@ import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
 import { Button, EmptyState, LoadingBlock } from '../components/ui'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { AppShell, type NavSection } from './AppShell'
+import { useLocation } from 'react-router'
+import { parseGuidePath } from '../lib/docs-paths'
 
 const iconClass = 'size-4 shrink-0'
 
 export function AdminLayout() {
+  const location = useLocation()
   const { user } = useAuth()
   const scope = useAdminScope()
   const sysTier = !!user && isSysTier(user.role)
@@ -187,8 +190,9 @@ export function AdminLayout() {
       sections={sections}
       sidebarTop={<AdminScopeSelector />}
       notificationsTo={path('/admin/notifications')}
+      docsTo={path('/admin/docs')}
       banner={<MfaNudgeBanner />}
-      content={scopeBlock}
+      content={parseGuidePath(location.pathname) ? undefined : scopeBlock}
     />
   )
 }

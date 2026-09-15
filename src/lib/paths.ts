@@ -1,5 +1,6 @@
 import type { Scope } from './scope-context'
 import { isUuid } from './validation'
+import { parseGuidePath } from './docs-paths'
 
 /**
  * Every console URL in one place.
@@ -14,6 +15,7 @@ const scoped = (scope: Scope, path: string) =>
 export const consolePaths = {
   dashboard: (scope: Scope) => (scope == null ? '/console' : `/console/${scope}`),
   resources: (scope: Scope) => scoped(scope, 'resources'),
+  docs: (scope: Scope) => scoped(scope, 'docs'),
   vms: (scope: Scope) => scoped(scope, 'vms'),
   llmKeys: (scope: Scope) => scoped(scope, 'llm-keys'),
   gpus: (scope: Scope) => scoped(scope, 'gpus'),
@@ -100,6 +102,8 @@ const SCOPED_SECTIONS = ['resources', 'vms', 'llm-keys', 'gpus', 'requests', 're
  * drops back to that scope's dashboard.
  */
 function consoleSection(pathname: string): string {
+  const guide = parseGuidePath(pathname)
+  if (guide?.surface === 'console') return guide.slug ? `docs/${guide.slug}` : 'docs'
   const rest = pathname.replace(/^\/console\/?/, '')
   const segments = rest.split('/').filter(Boolean)
   // The scope segment is a workspace UUID; a section name never looks like one.

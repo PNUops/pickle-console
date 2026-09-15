@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { GuideLink } from '../docs/links'
 import {
   useMutation,
   useQuery,
@@ -75,7 +76,10 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>포트포워딩</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>포트포워딩</CardTitle>
+          <GuideLink slug="network/ports" anchor="public-forwarding" className="text-sm">포트포워딩 가이드</GuideLink>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">

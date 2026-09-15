@@ -1,10 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { fetchOrgs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isOrgTier, isSysTier } from '../auth/permissions'
 import { adminPath } from './paths'
+import { parseGuidePath } from './docs-paths'
 import { ADMIN_ORG_SCOPE_KEY } from './storage-keys'
 import { AdminScopeContext, type AdminOrgOption, type AdminScopeValue } from './admin-scope-context'
 
@@ -26,6 +27,8 @@ function storeOrgId(orgId: string): void {
 
 export function AdminScopeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedOrgId = searchParams.get('org') ?? undefined
   const orgTier = !!user && isOrgTier(user.role)
@@ -74,9 +77,13 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       // 이전 페이지의 기관 종속 필터를 새 scope에 가져가지 않는다.
       next.delete('orgId')
       next.delete('workspaceId')
-      setSearchParams(next, { replace: true })
+      if (parseGuidePath(location.pathname)) {
+        void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: location.hash }, { replace: true, state: location.state })
+      } else {
+        setSearchParams(next, { replace: true })
+      }
     },
-    [searchParams, setSearchParams],
+    [searchParams, setSearchParams, location.pathname, location.hash, location.state, navigate],
   )
 
   useLayoutEffect(() => {

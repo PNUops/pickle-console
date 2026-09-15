@@ -5,6 +5,7 @@ import { fetchWorkspaces } from '../api/queries'
 import { consolePathInScope } from './paths'
 import { ScopeContext, type Scope } from './scope-context'
 import { isUuid } from './validation'
+import { parseGuidePath } from './docs-paths'
 
 /**
  * Publishes the workspace scope the URL asks for.
@@ -44,8 +45,9 @@ export function ScopeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!rejected) return
-    navigate(consolePathInScope(null, location.pathname), { replace: true })
-  }, [rejected, location.pathname, navigate])
+    const hash = parseGuidePath(location.pathname) ? location.hash : ''
+    navigate(consolePathInScope(null, location.pathname) + hash, { replace: true, state: location.state })
+  }, [rejected, location.pathname, location.hash, location.state, navigate])
 
   return <ScopeContext.Provider value={scope}>{children}</ScopeContext.Provider>
 }

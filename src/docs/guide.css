@@ -1,0 +1,22 @@
+/* Article typography stays local to the guide, including third-party examples. */
+.guide-prose {
+  color: var(--color-neutral-700);
+  font-size: 0.9375rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.guide-prose > * + * { margin-top: 1rem; }
+.guide-prose p + p { margin-top: 0.75rem; }
+.guide-prose ul:not(.list-none) { list-style: disc; padding-left: 1.5rem; }
+.guide-prose ol { list-style: decimal; padding-left: 1.5rem; }
+.guide-prose :not(.list-none) > li + li { margin-top: 0.5rem; }
+.guide-prose li > p { margin-top: 0.5rem; }
+.guide-prose h3 { font-size: 1rem; font-weight: 600; color: var(--color-neutral-900); }
+.guide-prose dt { margin-top: 1rem; font-weight: 600; }
+.guide-prose dd { margin-top: 0.25rem; }
+.guide-prose pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
+.guide-prose table { display: block; max-width: 100%; overflow-x: auto; font-size: 0.875rem; }
+.guide-prose th, .guide-prose td { padding: 0.625rem; border-bottom: 1px solid var(--color-neutral-200); text-align: left; }
+.guide-prose :not(pre) > code { font-size: 0.85em; background: var(--color-neutral-100); padding: 0.15em 0.3em; border-radius: 0.25rem; }
+.guide-prose a { color: var(--color-primary-700); text-decoration: underline; text-underline-offset: 0.2em; }
+.guide-prose a:focus-visible { outline: 2px solid var(--color-primary-600); outline-offset: 2px; }

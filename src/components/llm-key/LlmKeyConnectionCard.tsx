@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
 import { CodeBlock } from '../CodeBlock'
 import { CopyButton } from '../CopyButton'
 import { Button, Card, CardContent, CardHeader, CardTitle, DescriptionField } from '../ui'
-import { DOCS_PATH } from '../../lib/brand'
+import { GuideLink } from '../../docs/links'
 import { LLM_API_BASE_URL, LLM_DEFAULT_MODEL } from '../../lib/llm-api'
 import { LlmKeyModelsModal } from './LlmKeyModelsModal'
 
@@ -48,12 +47,13 @@ export function LlmKeyConnectionCard({ keyId }: { keyId: string }) {
         <CodeBlock label="curl" code={example} />
         <p className="text-sm text-neutral-600">
           지원 파라미터와 한도, 에러 코드는{' '}
-          <Link
-            to={DOCS_PATH}
+          <GuideLink
+            slug="llm/features"
+            anchor="parameters"
             className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800"
           >
             사용 가이드
-          </Link>
+          </GuideLink>
           에 있습니다.
         </p>
         <LlmKeyModelsModal

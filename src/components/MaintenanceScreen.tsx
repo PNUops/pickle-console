@@ -1,6 +1,8 @@
 import { useAuth } from '../auth/auth-context'
 import { Logo } from './Logo'
 import { ContactEmail } from './ContactEmail'
+import { Link, useLocation } from 'react-router'
+import { parseGuidePath, publicGuidePath } from '../lib/docs-paths'
 
 const DEFAULT_MESSAGE = '서비스 점검 중입니다. 잠시 후 다시 이용해 주세요.'
 
@@ -16,6 +18,8 @@ export function MaintenanceScreen({
   contactEmail: string | null | undefined
 }) {
   const { logout } = useAuth()
+  const location = useLocation()
+  const guide = parseGuidePath(location.pathname)
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
       <Logo to="/" />
@@ -42,6 +46,10 @@ export function MaintenanceScreen({
           문의: <ContactEmail email={contactEmail} />
         </p>
       )}
+      <Link to={publicGuidePath(guide?.slug) + (guide ? location.hash : '')}
+        className="text-sm font-medium text-primary-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary-600">
+        사용 가이드 읽기
+      </Link>
       <button
         type="button"
         onClick={() => void logout()}
