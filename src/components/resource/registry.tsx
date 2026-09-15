@@ -108,8 +108,10 @@ export function resourceTypeFilterOptions(): { value: ResourceSummary['type']; l
 /**
  * The registered types in the order a reader meets them on screen.
  *
- * Ordered by label: the order of the record is the order someone happened to
- * edit the file in, which is not a rule a reader can see.
+ * Ordered by label under Korean collation, which puts the Hangul names before
+ * the Latin ones: 가상머신, 도메인, GPU, LLM API 키. Any rule a reader can see
+ * beats the order of the record, which is the order someone happened to edit
+ * the file in.
  */
 export function resourceTypesInDisplayOrder(): ResourceSummary['type'][] {
   return (Object.keys(RESOURCE_TYPES) as ResourceSummary['type'][]).sort((a, b) =>

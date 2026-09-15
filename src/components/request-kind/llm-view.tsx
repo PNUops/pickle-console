@@ -666,7 +666,8 @@ export const llmKeyRequestView: RequestKindView = {
     const spec = request.llmKey
     // What is being asked for comes first: until the reader knows which models
     // the request is for, the number beneath it has no unit. The detail screen
-    // says it in the same order.
+    // opens with the same question, though it goes on to order its own fields
+    // differently.
     //
     // 화면 다른 곳과 같은 말을 쓴다 — 큐에서만 줄임말을 쓰면 같은 수가 두 이름을 갖는다.
     const axes = [

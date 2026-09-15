@@ -46,7 +46,7 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     const parts = [...(tile.textContent ?? '').matchAll(/(\d+)개/g)].slice(1)
     expect(parts.length).toBeGreaterThan(0)
     expect(parts.reduce((sum, part) => sum + Number(part[1]), 0)).toBe(total)
-    // 도메인도 그 내역에 든다.
+    // The domain is one of the kinds it breaks down.
     expect(tile).toHaveTextContent('도메인')
   })
 
