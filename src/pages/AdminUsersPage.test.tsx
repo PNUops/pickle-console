@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { userPatchBodies } from '../test/msw/handlers/admin'
 import { adminProfilePatches } from '../test/msw/handlers/users'
@@ -27,6 +28,22 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>, name: string
   await user.click(await screen.findByRole('button', { name }))
 }
 
+/**
+ * The `orgId` of every list request, in order. The spy records and returns
+ * nothing, so the request falls through to the real fixture handler — replacing
+ * it would empty the list and duplicate the fixture's filtering. `resetHandlers`
+ * between tests removes it.
+ */
+function captureUserScopes(): Array<string | null> {
+  const scopes: Array<string | null> = []
+  server.use(
+    http.get('*/api/v1/admin/users', ({ request }) => {
+      scopes.push(new URL(request.url).searchParams.get('orgId'))
+    }),
+  )
+  return scopes
+}
+
 describe('관리자 사용자 목록', () => {
   test('SYS_ADMIN은 전체 사용자를 나열하고 상태 탭이 동작한다', async () => {
     const user = userEvent.setup()
@@ -43,17 +60,114 @@ describe('관리자 사용자 목록', () => {
     expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument()
   })
 
-  test('ORG_ADMIN은 active 기관 사용자만 보고 검색한다', async () => {
+  test('org-tier search reaches an account outside the administered organisation', async () => {
+    // The server does not narrow this read by organisation, and the screen no
+    // longer narrows it either: an administrator has to be able to find someone
+    // before staffing them. Previously the active scope was pinned to the list
+    // request, and no search could leave it.
     const user = userEvent.setup()
+    const scopes = captureUserScopes()
     renderAsOrgAdmin()
 
     expect(await screen.findByText('example@pusan.ac.kr')).toBeInTheDocument()
-    // 전역 selector의 active 기관이 사용자 목록 API 기본 scope가 된다.
+    await waitFor(() => expect(scopes.at(-1)).toBeNull())
+
     await user.type(screen.getByLabelText('사용자 검색'), 'outsider')
+    expect(await screen.findByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
+    await waitFor(() => expect(scopes.at(-1)).toBeNull())
+  })
+
+  test('lists accounts that belong to no organisation, and withholds system accounts', async () => {
+    renderAsOrgAdmin()
+
+    // The account that has requested nothing is the one this directory is open
+    // for — it belongs to no derived organisation and so was visible to nobody.
+    expect(await screen.findByRole('button', { name: '박무소속' })).toBeInTheDocument()
+    expect(screen.getByText('outsider.jung@pusan.ac.kr')).toBeInTheDocument()
+    // System-tier accounts stay out: the org tier may act on every account it is
+    // shown, and it may not act on these.
+    expect(screen.queryByRole('button', { name: '이시스템' })).not.toBeInTheDocument()
+  })
+
+  test('the 기관 filter narrows the list to one organisation', async () => {
+    const user = userEvent.setup()
+    const scopes = captureUserScopes()
+    renderAsOrgAdmin()
+    await screen.findByRole('button', { name: '박무소속' })
+
+    await user.selectOptions(screen.getByLabelText('기관 필터'), uuid(1))
+
+    await waitFor(() => expect(scopes.at(-1)).toBe(uuid(1)))
     await waitFor(() =>
-      expect(screen.queryByText('example@pusan.ac.kr')).not.toBeInTheDocument(),
+      expect(screen.queryByRole('button', { name: '박무소속' })).not.toBeInTheDocument(),
     )
     expect(screen.queryByText('outsider.jung@pusan.ac.kr')).not.toBeInTheDocument()
+    expect(screen.getByText('example@pusan.ac.kr')).toBeInTheDocument()
+  })
+
+  test('the global admin scope does not narrow this list', async () => {
+    const user = userEvent.setup()
+    const scopes = captureUserScopes()
+    renderAsSysAdmin()
+    await screen.findByRole('button', { name: '박무소속' })
+    await waitFor(() => expect(scopes.at(-1)).toBeNull())
+
+    await user.selectOptions(await screen.findByLabelText('관리 기관 선택'), uuid(2))
+
+    // Every other screen re-reads itself against the new scope. This one does
+    // not: it is the one read the server answers for every organisation.
+    expect(await screen.findByRole('button', { name: '박무소속' })).toBeInTheDocument()
+    expect(scopes.every((scope) => scope === null)).toBe(true)
+  })
+
+  test('grants in every administered organisation, not just the active one', async () => {
+    // The set the server checks is `administers`, not the active scope, so an
+    // account that administers two organisations may staff either from here.
+    // With one organisation in the fixture the widened set and the old scoped
+    // one are the same list, and nothing would hold this.
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
+    renderApp(`/admin/users?org=${uuid(2)}`)
+
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관별 역할')
+
+    const orgSelect = drawer.getByLabelText('부여할 기관') as HTMLSelectElement
+    expect(
+      within(orgSelect)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['기관 선택', '정보컴퓨터공학부 실습지원센터', '테스트 기관'])
+
+    // The organisation that is not the active scope grants, and the row it
+    // creates names it.
+    await user.selectOptions(orgSelect, uuid(1))
+    await user.selectOptions(drawer.getByLabelText('부여할 역할'), 'ORG_MANAGER')
+    await user.click(drawer.getByRole('button', { name: '부여' }))
+
+    expect(await drawer.findByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
+  })
+
+  test('an org-tier admin is answered 404 for a system-tier account', async () => {
+    // The list withholds them; the detail has to withhold them too, or the id
+    // alone reopens what the exclusion closed.
+    renderAsOrgAdmin()
+    await screen.findByRole('button', { name: '박무소속' })
+
+    const detail = await fetch(`/api/v1/admin/users/${uuid(5)}`, {
+      headers: { Authorization: 'Bearer access-org-admin' },
+    })
+
+    expect(detail.status).toBe(404)
+  })
+
+  test('the role filter offers no system-tier role to the org tier', async () => {
+    renderAsOrgAdmin()
+
+    const roleFilter = (await screen.findByLabelText('역할 필터')) as HTMLSelectElement
+    expect(within(roleFilter).queryByRole('option', { name: '시스템 관리자' })).not.toBeInTheDocument()
+    expect(within(roleFilter).getByRole('option', { name: '기관 관리자' })).toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 상세에서 계정을 비활성화하고 해제할 수 있다', async () => {
@@ -195,11 +309,14 @@ describe('관리자 사용자 목록', () => {
     await drawer.findByText('기관별 역할')
     expect(drawer.getByText('관리하는 기관이 없습니다.')).toBeInTheDocument()
 
-    // 부여할 수 있는 기관은 행위자가 관리자로 있는 기관뿐이다.
+    // 부여할 수 있는 기관은 행위자가 관리자로 있는 기관뿐이다. 「없어야 한다」로 적으면
+    // 어떤 출처도 만들지 않는 이름을 세게 되므로, 선택지 전체를 고정한다.
     const orgSelect = drawer.getByLabelText('부여할 기관')
     expect(
-      within(orgSelect as HTMLSelectElement).queryByRole('option', { name: '전자공학과' }),
-    ).not.toBeInTheDocument()
+      within(orgSelect as HTMLSelectElement)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['기관 선택', '정보컴퓨터공학부 실습지원센터'])
     await user.selectOptions(orgSelect, uuid(1))
     // 역할 선택지에는 열람 역할도 있다 — 기관끼리 서로 보게 하는 부여 통로다.
     const roleSelect = drawer.getByLabelText('부여할 역할')
@@ -228,11 +345,26 @@ describe('관리자 사용자 목록', () => {
     )
   })
 
-  test('ORG active scope에서는 기관 소속이 없는 시스템 계정을 노출하지 않는다', async () => {
+  test('an org-tier admin staffs an account that belongs to no organisation', async () => {
+    // What the unscoped directory is for, end to end: the account is found, the
+    // drawer opens, and the role is granted — none of which the active scope
+    // allowed, because this person is derived into no organisation at all.
+    const user = userEvent.setup()
     renderAsOrgAdmin()
 
-    await screen.findByRole('heading', { name: '사용자 관리' })
-    expect(screen.queryByRole('button', { name: '이시스템' })).not.toBeInTheDocument()
+    await user.type(await screen.findByLabelText('사용자 검색'), 'nobody')
+    await openDetail(user, '박무소속')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관별 역할')
+
+    await user.selectOptions(drawer.getByLabelText('부여할 기관'), uuid(1))
+    await user.selectOptions(drawer.getByLabelText('부여할 역할'), 'ORG_MANAGER')
+    await user.click(drawer.getByRole('button', { name: '부여' }))
+
+    await waitFor(() =>
+      expect(drawer.queryByText('관리하는 기관이 없습니다.')).not.toBeInTheDocument(),
+    )
+    expect(drawer.getByRole('button', { name: '회수' })).toBeEnabled()
   })
 
   test('SYS_ADMIN은 상세에서 프로필을 읽고 정정한다', async () => {
