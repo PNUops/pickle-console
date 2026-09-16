@@ -139,7 +139,7 @@ export function ConsoleDashboardPage() {
       {/* 지표 타일 */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
-          label="내 리소스"
+          label="리소스"
           value={resources.isPending ? '—' : `${activeResources.length}개`}
           hint={
             resources.isPending || typeCounts.length === 0
@@ -209,10 +209,10 @@ export function ConsoleDashboardPage() {
         </Card>
       )}
 
-      {/* 내 리소스 */}
+      {/* 리소스 */}
       <Card>
         <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3.5">
-          <h2 className="font-semibold text-neutral-900">내 리소스</h2>
+          <h2 className="font-semibold text-neutral-900">리소스</h2>
           <Link
             to={consolePaths.resources(scope)}
             className="text-sm font-medium text-primary-700 hover:text-primary-800"
@@ -328,7 +328,7 @@ export function ConsoleDashboardPage() {
           </Link>
         </div>
         {/* 로딩·실패 갈래가 없으면 제목만 남은 카드가 서고, 그것이 「알림이
-            없습니다」와 구별되지 않는다. 위 「내 리소스」 카드와 같은 두 갈래다. */}
+            없습니다」와 구별되지 않는다. 위 「리소스」 카드와 같은 두 갈래다. */}
         {recentNotifications.isPending && (
           <div className="flex justify-center py-10">
             <Spinner label="알림 불러오는 중" />

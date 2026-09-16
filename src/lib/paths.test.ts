@@ -33,6 +33,10 @@ describe('consolePathInScope — 범위 세그먼트 인식', () => {
     expect(consolePathInScope(OTHER, `/console/${SCOPE}/llm-keys`)).toBe(
       `/console/${OTHER}/llm-keys`,
     )
+    // 도메인이 실제로 그렇게 빠져 있었다 — 라우트와 경로 헬퍼는 있는데 이 목록에만 없었다.
+    expect(consolePathInScope(OTHER, `/console/${SCOPE}/domains`)).toBe(
+      `/console/${OTHER}/domains`,
+    )
   })
 
   test('범위 없는 목록에서 범위를 걸면 그 목록의 범위판으로 간다', () => {

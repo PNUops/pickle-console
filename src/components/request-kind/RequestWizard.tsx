@@ -545,7 +545,7 @@ function SubmitSuccess({ request }: { request: RequestDetail }) {
           <Button variant="secondary">신청 상세 보기</Button>
         </Link>
         <Link to="/console/requests">
-          <Button>내 신청으로 이동</Button>
+          <Button>신청 내역으로 이동</Button>
         </Link>
       </div>
     </div>

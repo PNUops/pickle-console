@@ -64,8 +64,8 @@ describe('프로필 안내', () => {
 
     // 다른 화면으로 갔다 와도 마찬가지다. 라우팅마다 다시 물으면 닫기가 닫기가
     // 아니다.
-    await user.click(screen.getByRole('link', { name: '내 신청' }))
-    await screen.findByRole('heading', { name: '내 신청' })
+    await user.click(screen.getByRole('link', { name: '신청 내역' }))
+    await screen.findByRole('heading', { name: '신청 내역' })
     expect(
       screen.queryByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
     ).not.toBeInTheDocument()

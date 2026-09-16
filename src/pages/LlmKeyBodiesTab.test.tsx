@@ -70,7 +70,7 @@ describe('기록된 본문 탭', () => {
     // 부여 없는 사람에게 기록이 한 줄도 닿지 않는다는 것이다.
     renderBodies(NO_GRANT_KEY)
 
-    await screen.findByRole('link', { name: /내 LLM API 키/ })
+    await screen.findByRole('link', { name: /LLM API 키/ })
     expect(screen.queryByText(/질문입니다/)).not.toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })

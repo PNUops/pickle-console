@@ -52,7 +52,7 @@ export function RequestDetailPage() {
     <div className="space-y-6">
       <nav className="text-sm">
         <Link to="/console/requests" className="text-primary-700 hover:underline">
-          ← 내 신청
+          ← 신청 내역
         </Link>
       </nav>
 

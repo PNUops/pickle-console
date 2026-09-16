@@ -93,7 +93,15 @@ export const adminPaths = {
 } as const
 
 /** The listings that exist under a workspace as well as unscoped. */
-const SCOPED_SECTIONS = ['resources', 'vms', 'llm-keys', 'gpus', 'requests', 'requests/new']
+const SCOPED_SECTIONS = [
+  'resources',
+  'vms',
+  'llm-keys',
+  'gpus',
+  'domains',
+  'requests',
+  'requests/new',
+]
 
 /**
  * The part of a console path that survives a scope change: the list you are

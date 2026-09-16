@@ -106,7 +106,15 @@ function authed(request: Request): boolean {
 export const dnsDomainHandlers: RequestHandler[] = [
   http.get('*/api/v1/dns-domains', ({ request }) => {
     if (!authed(request)) return problemResponse({ status: 401, code: 'UNAUTHORIZED', title: '인증이 필요합니다', detail: '인증이 필요합니다' })
-    const content = dnsDomainStore.rows.map(view)
+    // 서버와 같은 범위 규칙: 워크스페이스를 지정하면 그 워크스페이스 전부(제한 행
+    // 포함), 지정하지 않으면 부여가 여는 것만. 이 핸들러는 지금까지 workspaceId를
+    // 무시했고, 그래서 도메인 목록에는 범위를 보는 시험이 하나도 없었다.
+    const workspaceId = new URL(request.url).searchParams.get('workspaceId')
+    const content = dnsDomainStore.rows
+      .filter(({ domain }) =>
+        workspaceId ? domain.workspaceId === workspaceId : !domain.accessLimited,
+      )
+      .map(view)
     return HttpResponse.json({
       content,
       page: 0,

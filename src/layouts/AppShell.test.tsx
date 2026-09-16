@@ -47,7 +47,7 @@ describe('모바일 드로어 내비게이션', () => {
     expect(panel).toHaveClass('-translate-x-full')
     expect(backdrop).toHaveClass('opacity-0')
     expect(document.activeElement).toBe(openButton)
-    expect(await screen.findByRole('heading', { name: '내 가상머신' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '가상머신' })).toBeInTheDocument()
     await waitFor(() => expect(document.getElementById(drawer.id)).not.toBeInTheDocument())
   })
 

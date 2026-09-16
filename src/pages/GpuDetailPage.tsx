@@ -58,7 +58,7 @@ function GpuDetail({ allocation }: { allocation: GpuAllocation }) {
   const active = allocation.status === 'ALLOCATED'
   const canRelease = allocation.myRole === 'OWNER' || allocation.accessManageAllowed
   return <div className="space-y-6">
-    <Link to={consolePaths.gpus(null)} className="text-sm text-primary-700 hover:underline">← 내 GPU</Link>
+    <Link to={consolePaths.gpus(null)} className="text-sm text-primary-700 hover:underline">← GPU</Link>
     <PageHeader title={allocation.name} actions={allocation.accessManageAllowed ? <Link className="text-primary-700 hover:underline" to={consolePaths.gpuAccess(allocationId)}>접근 권한 관리</Link> : undefined} />
     {notice && <Alert variant="success">{notice}</Alert>}
     {allocation.error && <Alert variant="danger">{allocation.error}</Alert>}

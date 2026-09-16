@@ -38,7 +38,11 @@ export const resourceHandlers = [
     const rows = contributors()
       // 서버와 같은 조회 범위: 내가 구성원인 워크스페이스의 리소스만 보인다.
       .filter((row) => isMyWorkspace(row.workspaceId))
-      .filter((row) => (workspaceId == null ? true : row.workspaceId === workspaceId))
+      // 그리고 서버와 같은 범위 규칙 — 워크스페이스를 지정하면 그 워크스페이스가
+      // 가진 것 전부(제한 행 포함), 지정하지 않으면 내가 열 수 있는 것만.
+      .filter((row) =>
+        workspaceId == null ? !row.accessLimited : row.workspaceId === workspaceId,
+      )
       .filter((row) => type == null || type === row.type)
       .sort(
         (a, b) =>

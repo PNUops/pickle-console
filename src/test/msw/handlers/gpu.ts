@@ -41,16 +41,19 @@ export function resetGpuFixtures() {
 }
 function notFound() { return problemResponse({ type: 'about:blank', title: '리소스를 찾을 수 없습니다', status: 404, detail: 'GPU 할당이 존재하지 않습니다.', code: 'RESOURCE_NOT_FOUND' }) }
 function find(id: unknown) { return gpuAllocationStore.find((row) => row.id === id) }
-function list(request: Request) {
+// byGrant는 사용자 목록에만 걸린다. 워크스페이스를 지정하면 그 워크스페이스 전부,
+// 지정하지 않으면 부여가 여는 것만이고, 관리자 목록의 범위는 기관이지 접근 목록이 아니다.
+function list(request: Request, byGrant = false) {
   const params = new URL(request.url).searchParams
-  const rows = gpuAllocationStore.filter((row) => (!params.get('workspaceId') || row.workspaceId === params.get('workspaceId')) && (!params.get('orgId') || row.orgId === params.get('orgId')) && (!params.get('status') || row.status === params.get('status')))
+  const workspaceId = params.get('workspaceId')
+  const rows = gpuAllocationStore.filter((row) => (workspaceId ? row.workspaceId === workspaceId : !byGrant || !row.accessLimited) && (!params.get('orgId') || row.orgId === params.get('orgId')) && (!params.get('status') || row.status === params.get('status')))
   const page = Number(params.get('page') ?? 0), size = Number(params.get('size') ?? 20)
   return HttpResponse.json({ content: rows.slice(page * size, (page + 1) * size), page, size, totalElements: rows.length, totalPages: Math.ceil(rows.length / size) })
 }
 export const gpuHandlers = [
   http.get('*/api/v1/gpus', () => HttpResponse.json(gpuStore)),
   http.get('*/api/v1/admin/gpus', () => HttpResponse.json(gpuStore)),
-  http.get('*/api/v1/gpu-allocations', ({ request }) => list(request)),
+  http.get('*/api/v1/gpu-allocations', ({ request }) => list(request, true)),
   http.get('*/api/v1/admin/gpu-allocations', ({ request }) => list(request)),
   http.get('*/api/v1/gpu-allocations/:allocationId', ({ params }) => { const row = find(params.allocationId); return row ? HttpResponse.json(row) : notFound() }),
   http.get('*/api/v1/admin/gpu-allocations/:allocationId', ({ params }) => { const row = find(params.allocationId); return row ? HttpResponse.json(row) : notFound() }),

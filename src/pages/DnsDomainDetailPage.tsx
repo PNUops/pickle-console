@@ -63,7 +63,7 @@ export function DnsDomainDetailPage() {
     <div className="space-y-6">
       <nav className="text-sm">
         <Link to={consolePaths.dnsDomains(null)} className="text-primary-700 hover:underline">
-          ← 내 도메인
+          ← 도메인
         </Link>
       </nav>
 

@@ -45,7 +45,7 @@ export function DnsDomainsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">내 도메인</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">도메인</h1>
           <p className="mt-1 text-sm text-neutral-500">
             승인 없이 바로 발급되며, 레코드는 플랫폼 밖 서버도 가리킬 수 있습니다.
           </p>
@@ -61,7 +61,11 @@ export function DnsDomainsPage() {
       {domains.isError && <Alert variant="danger">{domains.error.message}</Alert>}
       {domains.isSuccess && domains.data.content.length === 0 && (
         <Card className="space-y-4 p-8 text-center text-sm text-neutral-500">
-          <p>아직 발급받은 도메인이 없습니다.</p>
+          <p>
+            {scope == null
+              ? '접근 권한을 가진 도메인이 없습니다. 워크스페이스를 고르면 그 워크스페이스의 도메인을 볼 수 있습니다.'
+              : '이 워크스페이스에는 아직 발급받은 도메인이 없습니다.'}
+          </p>
           <div>
             <Button onClick={() => setCreating(true)}>도메인 발급</Button>
           </div>

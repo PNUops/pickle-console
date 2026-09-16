@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchVmAccessGrants } from '../api/queries'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { Alert, Spinner, VmStatusBadge } from '../components/ui'
+import { consolePaths } from '../lib/paths'
 import type { VmStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
@@ -29,8 +30,10 @@ export function VmAccessPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
-        <Link to="/console/vms" className="text-primary-700 hover:underline">
-          ← 내 VM
+        {/* 워크스페이스 목록으로 돌아간다. 이 화면에 오는 사람은 부여가 없을 수
+            있고, 그러면 그 행은 범위를 고르지 않은 목록에 없다. */}
+        <Link to={consolePaths.vms(vm?.workspaceId ?? null)} className="text-primary-700 hover:underline">
+          ← 가상머신
         </Link>
       </nav>
 

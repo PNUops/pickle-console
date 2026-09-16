@@ -97,7 +97,7 @@ export const vmArticles: GuideArticle[] = [
             </p>
             <p>
               요청한 사양과 기간은 검토 과정에서 달라질 수 있습니다.
-              <GuideAction action="requests">내 신청</GuideAction>의 검토 결과에 적힌
+              <GuideAction action="requests">신청 내역</GuideAction>의 검토 결과에 적힌
               승인 사양과 사용 기간을 확인하세요.
             </p>
           </>

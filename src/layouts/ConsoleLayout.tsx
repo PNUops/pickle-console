@@ -46,7 +46,7 @@ export function ConsoleLayout() {
       heading: '신청',
       items: [
         { to: consolePaths.newRequest(scope), label: '리소스 신청', icon: navIcons.filePlus },
-        { to: consolePaths.requests(scope), label: '내 신청', end: true, icon: navIcons.fileList },
+        { to: consolePaths.requests(scope), label: '신청 내역', end: true, icon: navIcons.fileList },
       ],
     },
     {

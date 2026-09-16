@@ -99,7 +99,7 @@ export const gettingStartedArticles: GuideArticle[] = [
               리소스 구성, 신청 정보, 검토의 세 단계를 마칩니다.
             </li>
             <li>
-              <GuideAction action="requests">내 신청</GuideAction>에서 검토 상태와 결과를 확인합니다.
+              <GuideAction action="requests">신청 내역</GuideAction>에서 검토 상태와 결과를 확인합니다.
               승인된 사양과 한도, 종료일이 신청 내용과 같은지 함께 확인하세요.
             </li>
             <li>
@@ -238,7 +238,7 @@ export const gettingStartedArticles: GuideArticle[] = [
             </p>
             <p>
               입력을 마치는 것과 신청을 제출하는 것은 다릅니다. <strong>신청이 접수되었습니다</strong>
-              화면을 확인하거나 <GuideAction action="requests">내 신청</GuideAction>에서 접수된
+              화면을 확인하거나 <GuideAction action="requests">신청 내역</GuideAction>에서 접수된
               신청이 있는지 확인하세요. 제출 중 오류가 났다면 목록을 먼저 확인해 같은 신청을
               중복 제출하지 않도록 합니다.
             </p>
@@ -264,7 +264,7 @@ export const gettingStartedArticles: GuideArticle[] = [
         body: (
           <>
             <p>
-              <GuideAction action="requests">내 신청</GuideAction>에서 신청을 선택합니다.
+              <GuideAction action="requests">신청 내역</GuideAction>에서 신청을 선택합니다.
               신청 상세에서 제출 내용과 현재 상태를 볼 수 있고, 처리된 신청에는 검토 결과가 표시됩니다.
             </p>
             <p>
@@ -274,8 +274,8 @@ export const gettingStartedArticles: GuideArticle[] = [
             </p>
             <GuideFigure
               src={requestStatusesImage}
-              alt="내 신청 목록의 요청 내용과 처리 상태"
-              caption="내 신청에서 처리 상태를 확인하고 항목을 열어 검토 결과를 읽습니다."
+              alt="신청 내역의 요청 내용과 처리 상태"
+              caption="신청 내역에서 처리 상태를 확인하고 항목을 열어 검토 결과를 읽습니다."
               width={1102}
               height={227}
             />
@@ -410,8 +410,9 @@ export const gettingStartedArticles: GuideArticle[] = [
           <>
             <p>
               사이드바 위의 워크스페이스 선택기는 현재 표시할 공간을 정합니다. 특정 공간을
-              선택하면 해당 공간의 리소스와 신청을 확인할 수 있습니다. 전체 워크스페이스를
-              선택하면 본인이 속한 공간들의 목록을 함께 봅니다.
+              선택하면 해당 공간의 리소스와 신청을 전부 확인할 수 있습니다. 전체 워크스페이스를
+              선택하면 본인이 접근 권한을 가진 리소스와 본인이 낸 신청을 공간에 관계없이 모아
+              봅니다.
             </p>
             <p>
               워크스페이스 상세의 리소스 카드에서 소속 리소스를 확인하고 전체 보기를 열 수 있습니다.

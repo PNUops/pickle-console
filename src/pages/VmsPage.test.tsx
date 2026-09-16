@@ -12,7 +12,7 @@ function renderVms(path = '/console/vms') {
   renderApp(path)
 }
 
-describe('내 가상머신 목록', () => {
+describe('가상머신 목록', () => {
   test('목록에서 바로 가상머신을 신청할 수 있다', async () => {
     renderVms()
 
@@ -37,8 +37,20 @@ describe('내 가상머신 목록', () => {
     expect(within(runningRow).getByText('알고리즘 스터디')).toBeInTheDocument()
   })
 
-  test('접근 권한이 없는 VM은 이름·상태만 나오고 누구에게 요청할지 알려 준다', async () => {
+  test('워크스페이스를 고르지 않으면 접근 권한이 있는 VM만 선다', async () => {
     renderVms()
+
+    // 부여가 있는 행은 선다.
+    await screen.findByRole('link', { name: 'algo-judge' })
+    // 같은 워크스페이스에 있지만 부여가 없는 행은 이 목록의 것이 아니다 —
+    // 아래 시험이 워크스페이스를 고르면 제한 행으로 돌아오는 것을 본다.
+    expect(screen.queryByText('ml-notebook')).not.toBeInTheDocument()
+  })
+
+  test('접근 권한이 없는 VM은 이름·상태만 나오고 누구에게 요청할지 알려 준다', async () => {
+    // 워크스페이스를 고른 목록이다. 고르지 않은 목록은 내가 열 수 있는 것만
+    // 실으므로 제한 행이 설 자리가 아니다.
+    renderVms(`/console/${uuid(15)}/vms`)
 
     // 같은 워크스페이스의 VM이지만 접근 목록에 없다 — 상세로 가는 링크도, 사양도 없다.
     const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
@@ -58,7 +70,7 @@ describe('내 가상머신 목록', () => {
     // 상세는 막혀 있으므로 목록이 유일한 진입점이고, 소유자가 떠난 VM을
     // 되살리는 길이기도 하다.
     server.use(vmSummaryAs(uuid(44), { accessManageAllowed: true }))
-    renderVms()
+    renderVms(`/console/${uuid(15)}/vms`)
 
     const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
     const manage = within(limitedRow).getByRole('link', { name: '접근 권한 관리' })
