@@ -26,7 +26,7 @@ export const networkArticles: GuideArticle[] = [
               </li>
               <li>
                 <strong>플랫폼 밖 서버에 이름을 붙인다면:</strong>{' '}
-                <GuideLink slug="network/domains">외부 서버용 도메인 발급</GuideLink>을 사용합니다.
+                <GuideLink slug="network/domains">외부 서버용 도메인 신청</GuideLink>을 사용합니다.
                 VM 상세의 도메인 연결과 진입 메뉴가 다릅니다.
               </li>
               <li>
@@ -150,10 +150,12 @@ export const networkArticles: GuideArticle[] = [
   },
   {
     slug: 'network/domains',
-    title: '외부 서버용 도메인 발급과 관리',
+    title: '외부 서버용 도메인 신청과 관리',
     group: '도메인과 네트워크',
-    summary: 'VM 없이 이름을 발급받아 외부 서버로 연결하고, 레코드와 사용 기한을 관리합니다.',
-    keywords: ['외부 도메인', 'DNS', 'A', 'AAAA', 'CNAME', 'TXT', 'TTL', '레코드', '연장', '예약'],
+    summary: 'VM 없이 이름을 신청해 발급받고 외부 서버로 연결하며, 레코드와 사용 기한을 관리합니다.',
+    // 검색은 낱말 전부를 제목·요약·키워드에서 찾으므로, 발급만 실어 두면
+    // 「도메인 신청」이 0건이 된다 — 본문 절 제목이 바로 그 말인데도.
+    keywords: ['외부 도메인', '도메인 신청', '승인', '검토', '발급', '되살리기', 'DNS', 'A', 'AAAA', 'CNAME', 'TXT', 'TTL', '레코드', '연장', '예약'],
     sections: [
       {
         id: 'before-issue',

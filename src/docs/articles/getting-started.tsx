@@ -156,8 +156,10 @@ export const gettingStartedArticles: GuideArticle[] = [
               <GuideLink slug="llm/start">LLM API 키 구성</GuideLink>을 참고하세요.
             </li>
             <li>
-              <strong>신청 정보:</strong> 기관과 워크스페이스, 사용 목적, 사용 기간을 입력합니다.
-              관리자에게 추가로 전달할 내용은 참고 사항에 적습니다.
+              <strong>신청 정보:</strong> 워크스페이스와 사용 목적을 입력합니다. 기관과 사용
+              기간은 종류에 따라 묻지 않습니다 — 외부 도메인은 고른 루트 도메인이 기관을 정하고,
+              이름 자체가 사용 기한을 따로 가집니다. 관리자에게 추가로 전달할 내용은 참고 사항에
+              적습니다.
             </li>
             <li>
               <strong>검토:</strong> 입력 내용을 확인합니다. 고칠 내용이 있으면 해당 항목의 수정
@@ -268,7 +270,9 @@ export const gettingStartedArticles: GuideArticle[] = [
               신청 상세에서 제출 내용과 현재 상태를 볼 수 있고, 처리된 신청에는 검토 결과가 표시됩니다.
             </p>
             <p>
-              승인 전에는 관리자가 신청을 검토합니다. 처리 결과는{' '}
+              대부분의 신청은 관리자가 검토한 뒤 처리됩니다. 외부 도메인은 고른 루트 도메인에
+              따라 접수와 동시에 승인되기도 하며, 그때는 검토자 없이 「자동 승인」으로 남습니다.
+              처리 결과는{' '}
               <GuideAction action="notifications">알림</GuideAction>과 신청 상세에서 확인합니다.
               검토 의견이 있으면 함께 읽고, 승인된 사양과 한도, 사용 종료일을 확인하세요.
             </p>
