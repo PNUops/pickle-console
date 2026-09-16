@@ -39,30 +39,30 @@ describe('워크스페이스 선택기', () => {
     await waitFor(() => expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument())
   })
 
-  test('전체로 되돌리면 범위 없는 같은 화면으로 간다', async () => {
+  test('내 리소스로 되돌리면 범위 없는 같은 화면으로 간다', async () => {
     const user = userEvent.setup()
     renderConsole(`/console/${uuid(15)}/resources`)
 
     await screen.findByRole('link', { name: 'algo-judge' })
-    await pick(user, '전체 워크스페이스')
+    await pick(user, '내 리소스')
 
     await waitFor(() => expect(currentPath()).toBe('/console/resources'))
     expect(
       await screen.findByRole('link', { name: 'capstone-team3-api' }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '워크스페이스 선택' })).toHaveTextContent(
-      '전체 워크스페이스',
+      '내 리소스',
     )
     expect(screen.getByRole('link', { name: '가상머신' })).toHaveAttribute('href', '/console/vms')
   })
 
-  test('내 워크스페이스가 아닌 범위에서는 전체라고 말하지 않는다', async () => {
+  test('내 워크스페이스가 아닌 범위는 범위 없는 화면과 같은 것을 말한다', async () => {
     renderConsole(`/console/${uuid(999)}/resources`)
 
     // 범위가 걸러지고 나면 선택기도 목록도 범위 없는 화면과 같은 것을 말한다.
     await waitFor(() => expect(currentPath()).toBe('/console/resources'))
     expect(screen.getByRole('button', { name: '워크스페이스 선택' })).toHaveTextContent(
-      '전체 워크스페이스',
+      '내 리소스',
     )
   })
 

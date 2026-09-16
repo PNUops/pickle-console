@@ -13,9 +13,13 @@ import { parseGuidePath } from '../lib/docs-paths'
 /**
  * Picks the workspace every list on the screen is read through.
  *
- * "전체" is the default and stays available: most people have one workspace and
- * should never think about this. It earns its place for the other case — a
- * class or club whose members each see dozens of rows they cannot open.
+ * 「내 리소스」 is the default: most people have one workspace and should never
+ * think about this. It names the reader rather than a breadth because it no
+ * longer is one — picking a workspace shows MORE rows, not fewer, since that
+ * listing carries what the workspace holds and this one carries what the
+ * reader may open. 「전체」 promised a superset it stopped being, and sat one
+ * word order away from 「워크스페이스 전체 항목」, the access-list entry that
+ * means nearly the opposite.
  *
  * Switching rewrites the current path rather than navigating home, so the
  * person stays on the screen they were reading.
@@ -42,7 +46,7 @@ export function WorkspaceScopeSelector() {
   // A scope with no option yet — the list is still loading — must not read as
   // "전체": the screen behind it is filtered, and the control would be lying.
   const current = workspaces.data?.find((workspace) => workspace.id === scope)
-  const label = scope == null ? '전체 워크스페이스' : (current?.name ?? '워크스페이스 확인 중…')
+  const label = scope == null ? '내 리소스' : (current?.name ?? '워크스페이스 확인 중…')
 
   const rowClass =
     'flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50'
@@ -97,7 +101,7 @@ export function WorkspaceScopeSelector() {
       >
         <button type="button" role="menuitem" onClick={() => switchTo(null)} className={rowClass}>
           {check(scope == null)}
-          전체 워크스페이스
+          내 리소스
         </button>
         {workspaces.data?.map((workspace) => (
           <button
