@@ -520,7 +520,11 @@ export function toLlmKeyResourceSummary(
 export function visibleLlmKeys(workspaceId?: string | null): LlmKeyDetail[] {
   return llmKeyStore
     .filter((key) => isMyWorkspace(key.workspaceId))
-    .filter((key) => !workspaceId || key.workspaceId === workspaceId)
+    // 워크스페이스를 지정하면 그 워크스페이스 전부, 지정하지 않으면 부여가
+    // 여는 것만 — 제한 행은 워크스페이스를 고른 목록에서만 선다.
+    .filter((key) =>
+      workspaceId ? key.workspaceId === workspaceId : key.myResourceRole != null,
+    )
     .sort((a, b) => b.id.localeCompare(a.id))
 }
 

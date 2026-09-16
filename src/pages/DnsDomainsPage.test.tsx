@@ -23,8 +23,17 @@ describe('domain list', () => {
     expect(within(row).getByText('캡스톤 3조')).toBeInTheDocument()
   })
 
-  test('a row no grant opens says whom to ask instead of linking', async () => {
+  test('an unscoped list carries only the names a grant opens', async () => {
     renderDomains()
+
+    await screen.findByRole('link', { name: 'myblog.pusan.dev' })
+    expect(screen.queryByText('someone-else.pusan.dev')).not.toBeInTheDocument()
+  })
+
+  test('a row no grant opens says whom to ask instead of linking', async () => {
+    // Read on the workspace's own listing: an unscoped list carries only the
+    // names a grant opens, so a closed row has no place to stand there.
+    renderDomains(`/console/${uuid(12)}/domains`)
 
     await screen.findByRole('link', { name: 'myblog.pusan.dev' })
     expect(

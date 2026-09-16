@@ -29,7 +29,7 @@ export function requestKind(type: string): RequestKindModule | undefined {
  */
 
 /**
- * 신청 표의 종류별 요약 열 제목 — 승인 대기 큐와 내 신청 목록이 함께 쓴다.
+ * 신청 표의 종류별 요약 열 제목 — 승인 대기 큐와 신청 내역이 함께 쓴다.
  * 한 표에 여러 종류가 섞이므로 제목은 어느 종류의 말도 쓰지 않는다.
  */
 export const KIND_SUMMARY_COLUMN_TITLE = '요청 내용'

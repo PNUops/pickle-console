@@ -207,7 +207,7 @@ export function VmDetailPage() {
     <div className="space-y-6">
       <nav className="text-sm">
         <Link to="/console/vms" className="text-primary-700 hover:underline">
-          ← 내 VM
+          ← 가상머신
         </Link>
       </nav>
 

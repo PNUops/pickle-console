@@ -20,13 +20,13 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     await waitFor(() => {
       expect(
         screen
-          .getAllByRole('link', { name: /내 리소스/ })
+          .getAllByRole('link', { name: /^리소스/ })
           .some((el) => /개/.test(el.textContent ?? '')),
       ).toBe(true)
     })
     expect(screen.getByRole('link', { name: '대기 중 신청' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '읽지 않은 알림' })).toHaveTextContent('2건')
-    expect(screen.getByRole('link', { name: /내 리소스/ })).toHaveTextContent(/LLM API 키/)
+    expect(screen.getByRole('link', { name: '리소스' })).toHaveTextContent(/LLM API 키/)
     expect(
       screen
         .getAllByRole('link', { name: '리소스 신청' })
@@ -39,10 +39,10 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     // names three kinds by hand stops adding up as soon as a fourth exists.
     renderDashboard()
 
-    const tile = await screen.findByRole('link', { name: /내 리소스/ })
+    const tile = await screen.findByRole('link', { name: '리소스' })
     await waitFor(() => expect(tile.textContent).toMatch(/\d+개/))
 
-    const total = Number(/내 리소스(\d+)개/.exec(tile.textContent ?? '')?.[1])
+    const total = Number(/리소스(\d+)개/.exec(tile.textContent ?? '')?.[1])
     const parts = [...(tile.textContent ?? '').matchAll(/(\d+)개/g)].slice(1)
     expect(parts.length).toBeGreaterThan(0)
     expect(parts.reduce((sum, part) => sum + Number(part[1]), 0)).toBe(total)
@@ -50,7 +50,7 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     expect(tile).toHaveTextContent('도메인')
   })
 
-  test('내 리소스 카드가 종류를 가리지 않고 목록과 상세 링크를 보여준다', async () => {
+  test('리소스 카드가 종류를 가리지 않고 목록과 상세 링크를 보여준다', async () => {
     // Scoped to one workspace: the card shows the newest five of everything,
     // and which types those five are is a property of the whole inventory
     // rather than of this screen. Narrowing keeps the assertion about what the
@@ -77,7 +77,7 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
 
   test('최근 알림도 로딩과 실패를 말한다', async () => {
     // 갈래가 없으면 제목만 남은 카드가 서고, 그것이 「알림이 없습니다」와 구별되지
-    // 않는다. 같은 화면의 「내 리소스」 카드가 두 갈래를 이미 갖고 있었다.
+    // 않는다. 같은 화면의 「리소스」 카드가 두 갈래를 이미 갖고 있었다.
     server.use(
       http.get('*/api/v1/notifications', () => new HttpResponse(null, { status: 500 })),
     )

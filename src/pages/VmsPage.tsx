@@ -39,7 +39,7 @@ export function VmsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">내 가상머신</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">가상머신</h1>
         </div>
         <LinkButton to={consolePaths.newRequest(scope, 'VM')}>가상머신 신청</LinkButton>
       </div>
@@ -52,7 +52,13 @@ export function VmsPage() {
       {vms.isError && <Alert variant="danger">{vms.error.message}</Alert>}
       {vms.isSuccess && vms.data.content.length === 0 && (
         <Card className="space-y-4 p-8 text-center text-sm text-neutral-500">
-          <p>아직 가상머신이 없습니다. 신청이 승인되면 이곳에 표시됩니다.</p>
+          {/* 범위를 고르지 않은 목록은 접근 권한을 가진 것만 싣는다. 그래서 비어 있는
+              이유가 둘이고, 읽는 사람이 할 수 있는 일도 둘이다. */}
+          <p>
+            {scope == null
+              ? '접근 권한을 가진 가상머신이 없습니다. 워크스페이스를 고르면 그 워크스페이스의 가상머신을 볼 수 있습니다.'
+              : '이 워크스페이스에는 아직 가상머신이 없습니다. 신청이 승인되면 이곳에 표시됩니다.'}
+          </p>
           <LinkButton to={consolePaths.newRequest(scope, 'VM')}>가상머신 신청</LinkButton>
         </Card>
       )}

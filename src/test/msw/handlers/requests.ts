@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse, regularUser } from './auth'
+import { ACCESS_TOKENS, problemResponse, regularUser, regularUserB } from './auth'
 import { flavorStore, osImages } from './reference'
 import { uuid } from '../ids'
 
@@ -182,6 +182,21 @@ function initialRequests(): RequestDetail[] {
       createdAt: '2026-07-10T09:00:00+09:00',
       updatedAt: '2026-07-10T09:00:00+09:00',
     },
+    {
+      // 같은 워크스페이스의 다른 사람이 낸 신청. 미선택 목록에는 안 서고
+      // 워크스페이스를 고른 목록에만 선다 — 그 두 가지를 시험이 볼 수 있어야
+      // 신청자 열이 언제 필요한지도 함께 서 있다.
+      ...baseRequest(),
+      id: uuid(107),
+      requesterId: regularUserB.id,
+      requesterName: regularUserB.name,
+      purpose: '스터디 공용 빌드 서버',
+      displayName: '스터디 빌드 서버',
+      status: 'SUBMITTED',
+      review: null,
+      createdAt: '2026-07-11T09:00:00+09:00',
+      updatedAt: '2026-07-11T09:00:00+09:00',
+    },
   ]
 }
 
@@ -213,9 +228,20 @@ export const requestHandlers: RequestHandler[] = [
     const workspaceId = url.searchParams.get('workspaceId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
+    // 서버와 같은 규칙: 워크스페이스를 지정하면 그 워크스페이스의 신청 전부,
+    // 지정하지 않으면 내가 낸 것만. 이것을 흉내 내지 않으면 화면 시험이
+    // 미선택 목록에 남의 신청을 세워 두고 초록이 된다.
+    //
+    // 「나」는 토큰이 정한다. 특정 계정을 박아 두면 다른 계정으로 인증한 시험에서
+    // 이 분기가 남의 신청을 돌려주면서도 초록이 된다.
+    const me = ACCESS_TOKENS[
+      request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+    ]?.id
     const filtered = requestStore
       .filter((r) => !status || r.status === status)
-      .filter((r) => workspaceId == null || r.workspaceId === workspaceId)
+      .filter((r) =>
+        workspaceId == null ? r.requesterId === me : r.workspaceId === workspaceId,
+      )
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),

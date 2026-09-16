@@ -127,7 +127,7 @@ export interface DecisionFormApi {
  * 위저드 밖에서 신청 하나를 그리는 데 필요한 종류별 항목 전부.
  *
  * 읽기 항목(summaryCell·contentFields·resultFields)은 **신청자와 관리자가 함께
- * 쓴다** — 내 신청 목록·신청 상세와 승인 대기 큐·관리자 신청 상세가 같은 함수를
+ * 쓴다** — 신청 내역·신청 상세와 승인 대기 큐·관리자 신청 상세가 같은 함수를
  * 부른다. 신청의 사실은 신청의 것이지 읽는 사람의 것이 아니고, 종류마다 같은
  * 표를 두 벌 쓰면 한쪽만 갱신되는 날이 온다. 읽는 목적의 차이(결재냐 확인이냐)는
  * 화면 골격이 무엇을 곁들이느냐로 갈린다 — 관리자 화면만 결정 폼과 참고 패널을
@@ -146,7 +146,7 @@ export interface RequestKindView {
     queryKey: readonly unknown[]
     queryFn: () => Promise<unknown>
   }>
-  /** 신청 표의 종류별 요약 셀 — 승인 대기 큐와 내 신청 목록이 함께 쓴다. */
+  /** 신청 표의 종류별 요약 셀 — 승인 대기 큐와 신청 내역이 함께 쓴다. */
   summaryCell(request: RequestDetail): ReactNode
   /**
    * 신청 내용 카드 본문 — 공통·종류 항목이 섞이는 순서까지 종류가 정한다.

@@ -12,7 +12,7 @@ function renderRequests(path = '/console/requests') {
   renderApp(path)
 }
 
-describe('내 신청 목록', () => {
+describe('신청 내역', () => {
   test('신청을 상태 배지와 함께 나열하고 상태 탭으로 필터링한다', async () => {
     const user = userEvent.setup()
     renderRequests()
@@ -37,7 +37,29 @@ describe('내 신청 목록', () => {
   })
 })
 
-describe('내 신청 목록 — 종류가 섞인 표', () => {
+describe('신청 내역 — 범위와 신청자', () => {
+  test('워크스페이스를 고르지 않으면 내가 낸 신청만 서고 신청자 열도 없다', async () => {
+    renderRequests()
+
+    await screen.findByRole('link', { name: '캡스톤 프로젝트 백엔드 서버 운영' })
+    const table = screen.getByRole('table')
+    // 남이 낸 신청은 그 워크스페이스의 목록에서 본다.
+    expect(within(table).queryByText('스터디 공용 빌드 서버')).not.toBeInTheDocument()
+    // 전부 내 신청이라 이름을 열로 반복하지 않는다.
+    expect(within(table).queryByRole('columnheader', { name: '신청자' })).not.toBeInTheDocument()
+  })
+
+  test('워크스페이스를 고르면 그 워크스페이스의 신청이 신청자와 함께 선다', async () => {
+    renderRequests(`/console/${uuid(12)}/requests`)
+
+    const other = (await screen.findByRole('link', { name: '스터디 공용 빌드 서버' })).closest('tr')!
+    expect(within(other).getByText('박영희')).toBeInTheDocument()
+    const table = screen.getByRole('table')
+    expect(within(table).getByRole('columnheader', { name: '신청자' })).toBeInTheDocument()
+  })
+})
+
+describe('신청 내역 — 종류가 섞인 표', () => {
   // 요약 열은 관리자 큐와 같은 함수가 그린다. VM 사양을 직접 읽던 시절 이 열은
   // VM 아닌 신청에 '—'만 찍었고, 신청자는 자기가 무엇을 냈는지 읽을 수 없었다.
   test('종류마다 자기 말로 요약을 보여준다', async () => {

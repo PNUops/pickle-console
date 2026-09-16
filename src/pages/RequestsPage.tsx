@@ -33,6 +33,12 @@ const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
   { label: REQUEST_STATUS_LABELS.CANCELED, status: 'CANCELED' },
 ]
 
+/**
+ * The requests this person filed, or a workspace's if one is picked.
+ *
+ * 신청자 열은 워크스페이스를 고른 목록에만 선다. 고르지 않은 목록은 전부 내
+ * 신청이라 같은 이름이 행마다 반복될 뿐이고, 한 사실은 한 자리에서만 말한다.
+ */
 export function RequestsPage() {
   const scope = useScope()
   const [status, setStatus] = useState<RequestStatus | undefined>(undefined)
@@ -47,7 +53,7 @@ export function RequestsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">내 신청</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">신청 내역</h1>
         <p className="mt-1 text-sm text-neutral-500">
           모든 신청은 관리자 검토 후 처리됩니다.
         </p>
@@ -97,6 +103,7 @@ export function RequestsPage() {
               <THead>
                 <TR>
                   <TH>용도</TH>
+                  {scope != null && <TH>신청자</TH>}
                   <TH>워크스페이스</TH>
                   <TH>{KIND_SUMMARY_COLUMN_TITLE}</TH>
                   <TH>상태</TH>
@@ -114,6 +121,7 @@ export function RequestsPage() {
                         {request.purpose}
                       </Link>
                     </TD>
+                    {scope != null && <TD>{request.requesterName}</TD>}
                     <TD>{request.workspaceName}</TD>
                     {/* 무엇을 신청했는지는 종류가 답한다 — 이 표는 종류를 모른다. */}
                     <TD className="whitespace-nowrap">

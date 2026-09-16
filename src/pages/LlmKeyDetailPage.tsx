@@ -62,7 +62,7 @@ export function LlmKeyDetailPage() {
     <div className="space-y-6">
       <nav className="text-sm">
         <Link to={consolePaths.llmKeys(null)} className="text-primary-700 hover:underline">
-          ← 내 LLM API 키
+          ← LLM API 키
         </Link>
       </nav>
 

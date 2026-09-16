@@ -118,7 +118,7 @@ export const llmArticles: GuideArticle[] = [
         title: '승인 후 키 발급',
         body: <>
           <ol>
-            <li><GuideAction action="requests">내 신청 확인</GuideAction>에서 승인 상태와 부여 내용을 확인합니다. 대기, 반려, 취소에 대한 설명은 <GuideLink slug="requests/status">신청 상태</GuideLink>를 참고하세요.</li>
+            <li><GuideAction action="requests">신청 내역 확인</GuideAction>에서 승인 상태와 부여 내용을 확인합니다. 대기, 반려, 취소에 대한 설명은 <GuideLink slug="requests/status">신청 상태</GuideLink>를 참고하세요.</li>
             <li><GuideAction action="llmKeys">LLM API 키 목록</GuideAction>에서 승인된 키를 엽니다. <strong>발급 전</strong>이면 아직 API를 호출할 키 값이 없습니다.</li>
             <li><strong>개요 → 키 발급</strong>을 누르고 확인 창에서 발급합니다. 본인 확인 창이 나타나면 안내에 따라 인증합니다.</li>
             <li>발급 완료 창에서 평문 키를 복사해 안전한 곳에 보관합니다. 창을 닫으면 같은 값을 다시 조회할 수 없습니다.</li>

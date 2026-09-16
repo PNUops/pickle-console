@@ -32,8 +32,10 @@ export function LlmKeyAccessPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
-        <Link to={consolePaths.llmKeys(null)} className="text-primary-700 hover:underline">
-          ← 내 LLM API 키
+        {/* 워크스페이스 목록으로 돌아간다. 이 화면에 오는 사람은 부여가 없을 수
+            있고, 그러면 그 행은 범위를 고르지 않은 목록에 없다. */}
+        <Link to={consolePaths.llmKeys(llmKey?.workspaceId ?? null)} className="text-primary-700 hover:underline">
+          ← LLM API 키
         </Link>
       </nav>
 

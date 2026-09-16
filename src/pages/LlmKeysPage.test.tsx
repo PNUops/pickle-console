@@ -12,7 +12,7 @@ function renderKeys(path = '/console/llm-keys') {
   renderApp(path)
 }
 
-describe('내 LLM API 키 목록', () => {
+describe('LLM API 키 목록', () => {
   test('키를 상태·앞부분·마지막 사용과 함께 나열한다', async () => {
     renderKeys()
 
@@ -46,8 +46,17 @@ describe('내 LLM API 키 목록', () => {
     expect(within(revokedRow).getByText('폐기됨')).toBeInTheDocument()
   })
 
-  test('접근 권한이 없는 키는 이름·상태만 나오고 누구에게 요청할지 알려 준다', async () => {
+  test('워크스페이스를 고르지 않으면 접근 권한이 있는 키만 선다', async () => {
     renderKeys()
+
+    await screen.findByRole('link', { name: 'capstone-chatbot' })
+    expect(screen.queryByText('db-lab-grader')).not.toBeInTheDocument()
+  })
+
+  test('접근 권한이 없는 키는 이름·상태만 나오고 누구에게 요청할지 알려 준다', async () => {
+    // 워크스페이스를 고른 목록이다. 고르지 않은 목록은 내가 열 수 있는 것만
+    // 실으므로 제한 행이 설 자리가 아니다.
+    renderKeys(`/console/${uuid(14)}/llm-keys`)
 
     const limitedRow = (await screen.findByText('db-lab-grader')).closest('tr')!
     expect(screen.queryByRole('link', { name: 'db-lab-grader' })).not.toBeInTheDocument()
@@ -64,7 +73,7 @@ describe('내 LLM API 키 목록', () => {
 
   test('워크스페이스 소유자는 안을 못 봐도 제한 행에서 접근 권한 관리로 갈 수 있다', async () => {
     asLlmKeyGrantManager(uuid(72))
-    renderKeys()
+    renderKeys(`/console/${uuid(14)}/llm-keys`)
 
     const limitedRow = (await screen.findByText('db-lab-grader')).closest('tr')!
     const manage = within(limitedRow).getByRole('link', { name: '접근 권한 관리' })
@@ -87,7 +96,7 @@ describe('유출된 키를 멈추는 길', () => {
     // 상세에만 폐기가 있으면 자기에게 권한을 자가 부여하는 길밖에 남지 않는다.
     const user = userEvent.setup()
     asLlmKeyGrantManager(uuid(72))
-    renderKeys()
+    renderKeys(`/console/${uuid(14)}/llm-keys`)
 
     const limitedRow = (await screen.findByText('db-lab-grader')).closest('tr')!
     await user.click(within(limitedRow).getByRole('link', { name: '접근 권한 관리' }))

@@ -31,8 +31,11 @@ export function accessOf(
   | 'accessManageAllowed'
   | 'deleteAllowed'
 > {
-  // 워크스페이스 소유자는 목록에 없어도 상시로 조회는 된다 — 서버가 열람자로 셈한다.
-  const effective: ResourceRole | null = role ?? (workspaceOwner ? 'VIEWER' : null)
+  // 상시권은 등급이 아니다. 워크스페이스 소유자라도 접근 목록에 없으면 등급이
+  // 없고(`myResourceRole: null`), 그들이 갖는 것은 아래 `manages` 하나다 — 이 목이
+  // 그 자리에 열람자를 채워 넣던 동안, 서버가 보여 주지 않는 행이 미선택 목록에 설
+  // 픽스처를 만들 수 있었다.
+  const effective: ResourceRole | null = role
   const rank = effective == null ? -1 : RESOURCE_ROLE_RANK[effective]
   const atLeastMember = rank >= RESOURCE_ROLE_RANK.MEMBER
   const atLeastEditor = rank >= RESOURCE_ROLE_RANK.EDITOR
@@ -979,7 +982,11 @@ export const vmHandlers: RequestHandler[] = [
       // 서버와 같은 조회 범위: 내가 구성원인 워크스페이스의 VM만 보인다.
       // (범위 질의는 그 위에 얹히는 필터일 뿐, 범위를 넓히지 못한다.)
       .filter((vm) => isMyWorkspace(vm.workspaceId))
-      .filter((vm) => !workspaceId || vm.workspaceId === workspaceId)
+      // 워크스페이스를 지정하면 그 워크스페이스 전부, 지정하지 않으면 부여가
+      // 여는 것만 — 제한 행은 워크스페이스를 고른 목록에서만 선다.
+      .filter((vm) =>
+        workspaceId ? vm.workspaceId === workspaceId : vm.myResourceRole != null,
+      )
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseVmSummaryResponse'] = {
       content: filtered
