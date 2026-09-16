@@ -74,8 +74,8 @@ export const vmArticles: GuideArticle[] = [
               src={vmRequestImage}
               alt="가상머신 신청의 리소스 구성 단계에 있는 운영체제와 사양 선택"
               caption="리소스 구성에서 운영체제와 사양을 선택하고 필요한 자원과 호스트 이름을 확인합니다."
-              width={768}
-              height={874}
+              width={1600}
+              height={1812}
             />
           </>
         ),
