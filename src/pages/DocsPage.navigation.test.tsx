@@ -46,7 +46,12 @@ describe('guide content and navigation', () => {
     expect(screen.getByRole('link', { name: '처음 이용하기부터 시작 →' })).toHaveAttribute('href', '/docs/start')
     await userEvent.setup().click(screen.getByRole('link', { name: '서비스 소개 →' }))
     expect(await screen.findByRole('heading', { level: 1, name: '서비스 소개' })).toBeInTheDocument()
-    expect(screen.getByRole('article', { name: '서비스 소개' })).toHaveTextContent('부산대학교 클라우드 플랫폼')
+    const introduction = screen.getByRole('article', { name: '서비스 소개' })
+    expect(introduction).toHaveTextContent('부산대학교의 컴퓨팅 리소스')
+    expect(introduction).not.toHaveTextContent('공식 명칭')
+    expect(introduction).not.toHaveTextContent('PNU Cloud라는 이름')
+    expect(introduction).not.toHaveTextContent('시스템 구성과 공개 코드')
+    expect(introduction).toHaveTextContent('테스트 계정과 이용 데이터가 삭제됩니다')
   })
 
   test.each(guideArticles.map((article) => [article.slug, article.title]))('renders %s and resolves every guide link', async (slug, title) => {
@@ -63,7 +68,10 @@ describe('guide content and navigation', () => {
       expect(target, link.href).toBeDefined()
       if (url.hash) expect(target?.sections.some((section) => section.id === decodeURIComponent(url.hash.slice(1))), link.href).toBe(true)
     }
-    await waitFor(() => expect(document.title).toBe(`${title} · 사용 가이드 · Pickle`))
+    const visibleText = (screen.getByRole('article', { name: title }).textContent ?? '')
+      .replaceAll('도메인·포트', '')
+    expect(visibleText).not.toContain('·')
+    await waitFor(() => expect(document.title).toBe(`${title} | 사용 가이드 | Pickle`))
   })
 
   test('keeps workspace context without showing task selectors in the guide', async () => {

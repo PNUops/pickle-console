@@ -27,7 +27,7 @@ export const vmArticles: GuideArticle[] = [
           <>
             <p>
               가상머신은 프로그램을 설치하고 실행할 수 있는 서버입니다. 사용할 운영체제,
-              필요한 CPU·메모리·디스크, 사용 목적과 종료일을 준비하세요. 팀이 함께 쓸
+              필요한 CPU, 메모리, 디스크, 사용 목적과 종료일을 준비하세요. 팀이 함께 쓸
               서버라면 먼저 팀 또는 프로젝트 워크스페이스를 만듭니다.
             </p>
             <p>
@@ -66,7 +66,7 @@ export const vmArticles: GuideArticle[] = [
               </li>
               <li>
                 <strong>호스트 이름</strong>은 선택 사항입니다. 비우면 자동으로 정해집니다.
-                직접 적을 때는 소문자·숫자·하이픈으로 3~40자를 입력합니다. SSH 접속에
+                직접 적을 때는 소문자, 숫자, 하이픈으로 3~40자를 입력합니다. SSH 접속에
                 쓰는 이름이므로 생성 후에는 바꿀 수 없습니다.
               </li>
             </ol>
@@ -93,7 +93,7 @@ export const vmArticles: GuideArticle[] = [
             <p>
               운영자가 제공한 기간을 고르거나 종료일을 직접 입력하세요. 계속 운영해야
               하는 서비스는 관리자와 먼저 상의한 뒤 <strong>무기한</strong>을 선택합니다.
-              마지막 <strong>검토</strong>에서 사양·소속·기간을 확인하고 제출합니다.
+              마지막 <strong>검토</strong>에서 사양, 소속, 기간을 확인하고 제출합니다.
             </p>
             <p>
               요청한 사양과 기간은 검토 과정에서 달라질 수 있습니다.
@@ -172,7 +172,7 @@ export const vmArticles: GuideArticle[] = [
               </li>
               <li>
                 개인키를 본인만 읽을 수 있는 위치에 보관합니다. 같은 영역의
-                <strong> 접속 방법 보기</strong>에서 Windows·macOS·Linux별 파일 권한
+                <strong> 접속 방법 보기</strong>에서 Windows, macOS, Linux별 파일 권한
                 설정과 이 VM의 접속 명령을 확인할 수 있습니다.
               </li>
               <li>
@@ -187,10 +187,10 @@ export const vmArticles: GuideArticle[] = [
               그대로 기준으로 삼으세요.
             </p>
             <p>
-              macOS·Linux에서는 다음처럼 개인키 권한을 제한합니다. <code>KEY_FILE</code>은
+              macOS와 Linux에서는 다음처럼 개인키 권한을 제한합니다. <code>KEY_FILE</code>은
               받은 파일 이름으로 바꾸고, 파일이 다른 위치에 있다면 경로도 바꾸세요.
             </p>
-            <CodeBlock label="macOS · Linux" code="chmod 600 ~/.ssh/KEY_FILE" />
+            <CodeBlock label="macOS / Linux" code="chmod 600 ~/.ssh/KEY_FILE" />
             <GuideFigure
               src={vmConnectionImage}
               alt="가상머신 개요의 웹 터미널 버튼과 SSH 클라이언트 접속 정보"
@@ -207,7 +207,7 @@ export const vmArticles: GuideArticle[] = [
         body: (
           <>
             <p>
-              반복 접속할 때는 SSH 설정 파일에 별칭을 등록하면 편합니다. macOS·Linux는
+              반복 접속할 때는 SSH 설정 파일에 별칭을 등록하면 편합니다. macOS와 Linux는
               <code> ~/.ssh/config</code>, Windows OpenSSH는 사용자 폴더의
               <code> .ssh\config</code>를 편집합니다. 기존 내용 아래에 다음 블록을 추가하세요.
             </p>
@@ -320,7 +320,7 @@ export const vmArticles: GuideArticle[] = [
     slug: 'vm/manage',
     title: '가상머신 관리와 사용 종료',
     group: '가상머신',
-    summary: '전원과 사용량을 확인하고, 권한·보호 설정·사용 기간·삭제를 관리합니다.',
+    summary: '전원과 사용량을 확인하고, 권한, 보호 설정, 사용 기간과 삭제를 관리합니다.',
     keywords: ['VM', '관리', '종료', '재부팅', '모니터링', '연장', '만료', '삭제', '백업', '보호'],
     sections: [
       {
@@ -355,7 +355,7 @@ export const vmArticles: GuideArticle[] = [
         body: (
           <>
             <p>
-              <strong>모니터링</strong> 탭에서 CPU·메모리·네트워크·디스크 I/O의 변화를
+              <strong>모니터링</strong> 탭에서 CPU, 메모리, 네트워크와 디스크 I/O의 변화를
               확인합니다. 느려진 시각의 그래프를 보고 VM 내부의 실행 중인 프로그램과
               함께 점검하세요. 디스크 I/O는 읽고 쓰는 양이며 남은 디스크 공간과는 다릅니다.
             </p>
@@ -394,7 +394,7 @@ export const vmArticles: GuideArticle[] = [
               </li>
               <li><strong>비밀번호 열람 최소 역할:</strong> sudo에 쓰는 비밀번호를 볼 수 있는 등급을 정합니다.</li>
               <li>
-                <strong>중지 보호:</strong> 종료·재부팅·강제 종료를 편집자 이상으로 제한합니다.
+                <strong>중지 보호:</strong> 종료, 재부팅, 강제 종료를 편집자 이상으로 제한합니다.
                 VM 내부에서 sudo로 종료하는 동작까지 막는 것은 아닙니다.
               </li>
               <li><strong>삭제 보호:</strong> 삭제 접수를 막습니다. 삭제하려면 먼저 보호를 꺼야 합니다.</li>

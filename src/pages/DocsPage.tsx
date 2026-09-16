@@ -18,7 +18,7 @@ export function DocsPage() {
   const title = article?.title ?? (slug ? '문서를 찾을 수 없습니다' : '사용 가이드')
 
   useEffect(() => {
-    document.title = slug ? `${title} · 사용 가이드 · Pickle` : '사용 가이드 · Pickle'
+    document.title = slug ? `${title} | 사용 가이드 | Pickle` : '사용 가이드 | Pickle'
   }, [slug, title])
 
   useEffect(() => {
