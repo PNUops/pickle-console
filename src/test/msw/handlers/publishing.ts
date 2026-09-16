@@ -74,10 +74,89 @@ function initialReservedDomains(): DomainDetail[] {
   ]
 }
 
+/* ─── 외부 도메인 (VM 없는 이름) ─── */
+
+/**
+ * 관리자 목록에 서는 외부 도메인 하나와 그 레코드.
+ *
+ * VM 공개에서 유도할 수 없는 유일한 종류다 — 가리키는 곳이 플랫폼 밖이라
+ * 가상머신도 라우트도 인증서도 없고, 사용 기한을 갖는 것도 이 종류뿐이다.
+ */
+function initialExternalDomains(): Schemas['AdminDomainView'][] {
+  return [
+    {
+      id: uuid(9101),
+      vmId: null,
+      vmName: null,
+      kind: 'EXTERNAL',
+      dnsStatus: 'APPLIED',
+      fqdn: 'myblog.pusan.dev',
+      rootDomain: 'pusan.dev',
+      status: 'ACTIVE',
+      verifiedAt: null,
+      releasedAt: null,
+      reservedUntil: null,
+      renewDueAt: '2027-03-11T00:00:00+09:00',
+      createdAt: '2026-09-12T10:00:00+09:00',
+      workspaceId: uuid(12),
+      workspaceName: '캡스톤 3조',
+      orgId: uuid(1),
+      orgName: '정보컴퓨터공학부 실습지원센터',
+      routeStatus: null,
+      certificateStatus: null,
+      updatedAt: '2026-09-12T10:00:00+09:00',
+    },
+  ]
+}
+
+function initialExternalRecords(): Record<string, Schemas['DnsRecordSetView'][]> {
+  return {
+    [uuid(9101)]: [
+      {
+        name: '',
+        type: 'A',
+        values: ['93.184.216.34'],
+        ttl: 300,
+        status: 'APPLIED',
+        lastError: null,
+        appliedAt: '2026-09-12T10:05:00+09:00',
+      },
+    ],
+  }
+}
+
+function initialDomainRoots(): Schemas['AdminDomainRootView'][] {
+  return [
+    {
+      rootDomain: 'pusan.dev',
+      orgId: uuid(1),
+      orgName: '정보컴퓨터공학부 실습지원센터',
+      autoApprove: true,
+      issuedNames: 1,
+    },
+    // 다른 기관의 루트. 기관 등급 관리자가 남의 정책을 못 바꾸는 것을 보려면
+    // 목록에 둘이 있어야 한다.
+    {
+      rootDomain: 'test.pusan.dev',
+      orgId: uuid(2),
+      orgName: '테스트 기관',
+      autoApprove: false,
+      issuedNames: 0,
+    },
+  ]
+}
+
+export let externalDomains = initialExternalDomains()
+let externalRecords = initialExternalRecords()
+export let domainRoots = initialDomainRoots()
+
 export function resetPublishingFixtures() {
   nextDomainId = 900
   reservedDomains = initialReservedDomains()
   removedDomains = []
+  externalDomains = initialExternalDomains()
+  externalRecords = initialExternalRecords()
+  domainRoots = initialDomainRoots()
 }
 
 /* ─── org 이름 조회 (관리자 목록의 기관 맥락) ─── */
@@ -629,6 +708,7 @@ export const publishingHandlers: RequestHandler[] = [
       ...livePublications().map(({ vm, pub }) => toAdminDomain(vm, pub)),
       ...reservedDomains.map(reservedToAdminDomain),
       ...removedDomains.map(reservedToAdminDomain),
+      ...externalDomains,
     ]
       .filter((d) => !orgId || d.orgId === orgId)
       .filter((d) => !kind || d.kind === kind)
@@ -695,6 +775,41 @@ export const publishingHandlers: RequestHandler[] = [
       { message: '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 라우트 제거가 곧 적용됩니다.' },
       { status: 200 },
     )
+  }),
+
+  /* ─── 외부 도메인: 레코드 열람과 기한 조정, 루트 정책 ─── */
+  http.get('*/api/v1/admin/domains/:domainId/records', ({ params }) => {
+    const records = externalRecords[String(params.domainId)]
+    if (!records) return notFound()
+    return HttpResponse.json(records, { status: 200 })
+  }),
+
+  http.patch('*/api/v1/admin/domains/:domainId/renewal', async ({ params, request }) => {
+    const found = externalDomains.find((d) => d.id === String(params.domainId))
+    if (!found) return notFound()
+    const body = (await request.json()) as Schemas['UpdateDomainRenewalRequest']
+    // 지난 시각은 서버가 거절한다 — 그것은 조정이 아니라 통보 없는 해제다.
+    if (new Date(body.renewDueAt).getTime() <= Date.now()) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '사용 기한을 바꿀 수 없습니다',
+        status: 422,
+        detail: '지난 시각으로는 옮길 수 없습니다.',
+        code: 'VALIDATION_FAILED',
+      })
+    }
+    found.renewDueAt = body.renewDueAt
+    return HttpResponse.json(found, { status: 200 })
+  }),
+
+  http.get('*/api/v1/admin/domain-roots', () => HttpResponse.json(domainRoots, { status: 200 })),
+
+  http.patch('*/api/v1/admin/domain-roots/:rootDomain', async ({ params, request }) => {
+    const found = domainRoots.find((r) => r.rootDomain === String(params.rootDomain))
+    if (!found) return notFound()
+    const body = (await request.json()) as Schemas['UpdateDomainRootRequest']
+    found.autoApprove = body.autoApprove
+    return HttpResponse.json(found, { status: 200 })
   }),
 
   http.post('*/api/v1/admin/domains/:domainId/verify', ({ params }) => {

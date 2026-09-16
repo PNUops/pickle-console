@@ -106,6 +106,7 @@ export function AdminRequestsPage() {
           <option value="VM">가상머신</option>
           <option value="LLM_API_KEY">LLM API 키</option>
           <option value="GPU">GPU</option>
+          <option value="DOMAIN">도메인</option>
         </Select>
       </div>
 
