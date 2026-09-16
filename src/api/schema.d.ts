@@ -100,6 +100,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/domain-roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 루트 도메인 목록
+         * @description 이름을 발급할 수 있는 루트와 그 승인 정책. 기관으로 좁히지 않습니다 — 이름 공간은 기관끼리 공유하므로, 자기 루트의 정책을 정하는 사람도 다른 루트가 있다는 것은 볼 수 있어야 합니다.
+         */
+        get: operations["listDomainRoots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/domain-roots/{rootDomain}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 루트 도메인 승인 정책 변경
+         * @description 이 루트 아래 이름 신청을 자동으로 승인할지, 승인 큐에 세울지 정합니다. 앞으로 들어오는 신청에만 적용되며 이미 발급된 이름과 이미 기다리는 신청은 건드리지 않습니다.
+         */
+        patch: operations["updateDomainRoot"];
+        trace?: never;
+    };
     "/admin/domains": {
         parameters: {
             query?: never;
@@ -130,6 +170,46 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/domains/{domainId}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 도메인 레코드 열람
+         * @description 이 이름이 지금 무엇을 가리키는지 봅니다. 읽기 전용입니다.
+         */
+        get: operations["listAdminDomainRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/domains/{domainId}/renewal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 도메인 사용 기한 조정
+         * @description 외부 도메인의 사용 기한을 옮깁니다. 미루면 그만큼 더 쓰고, 당기면 그 시점에 연장하지 않는 한 이름이 해제됩니다.
+         */
+        patch: operations["updateDomainRenewal"];
         trace?: never;
     };
     "/admin/domains/{domainId}/verify": {
@@ -1974,11 +2054,7 @@ export interface paths {
          */
         get: operations["listDnsDomains"];
         put?: never;
-        /**
-         * 도메인 발급
-         * @description 루트 도메인 아래 이름 하나를 발급받습니다. 승인은 필요하지 않으며, 발급한 사람이 유일한 소유자가 됩니다. 기관은 고른 루트 도메인을 따릅니다.
-         */
-        post: operations["createDnsDomain"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2086,6 +2162,26 @@ export interface paths {
          * @description 사용 기한을 지금부터 다시 전체 기간만큼으로 옮깁니다. 남은 기간에 더하는 것이 아니라 언제 눌러도 같은 기간을 받습니다.
          */
         post: operations["renewDnsDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dns-domains/{domainId}/revive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 해제한 도메인 되살리기
+         * @description 예약 기간 동안 이 워크스페이스가 붙잡고 있는 이름을 되찾습니다. 새로 받는 것이 아니라 이미 가진 것을 되살리는 것이므로 승인을 거치지 않습니다. 레코드는 돌아오지 않으며 다시 넣어야 합니다.
+         */
+        post: operations["reviveDnsDomain"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3546,6 +3642,26 @@ export interface components {
             scope: string;
             status: components["schemas"]["CertificateStatus"];
         };
+        AdminDomainRootView: {
+            /** @description true면 이 루트 아래 이름 신청이 접수와 동시에 승인됩니다. false면 승인 큐를 탑니다. **지금 이 값이 다스리는 것은 외부 도메인 발급뿐이고 가상머신 서브도메인 공개는 아직 아닙니다.** */
+            autoApprove: boolean;
+            /**
+             * Format: int64
+             * @description 이 루트 아래 지금 서 있는 외부 도메인 수
+             */
+            issuedNames: number;
+            /**
+             * Format: uuid
+             * @description 이 루트 아래 이름이 속하는 기관
+             */
+            orgId: string;
+            orgName: string;
+            /**
+             * @description 루트 도메인
+             * @example pusan.dev
+             */
+            rootDomain: string;
+        };
         AdminDomainView: {
             certificateStatus?: components["schemas"]["CertificateStatus"] | null;
             /** Format: date-time */
@@ -3563,6 +3679,11 @@ export interface components {
             orgName: string;
             /** Format: date-time */
             releasedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description 사용 기한. 외부 도메인만 갖습니다 — 다른 종류는 가상머신이나 소유자의 DNS가 수명을 정하므로 null입니다.
+             */
+            renewDueAt?: string | null;
             /** Format: date-time */
             reservedUntil?: string | null;
             rootDomain?: string | null;
@@ -3572,9 +3693,13 @@ export interface components {
             updatedAt?: string | null;
             /** Format: date-time */
             verifiedAt?: string | null;
-            /** Format: uuid */
-            vmId: string;
-            vmName: string;
+            /**
+             * Format: uuid
+             * @description 이 이름을 쓰는 가상머신. 외부 도메인은 가상머신에 매이지 않으므로 null입니다.
+             */
+            vmId?: string | null;
+            /** @description 이 이름을 쓰는 가상머신의 이름. 외부 도메인은 null입니다. */
+            vmName?: string | null;
             /** Format: uuid */
             workspaceId: string;
             workspaceName: string;
@@ -4133,6 +4258,7 @@ export interface components {
             applicant: components["schemas"]["Applicant"];
             /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
+            domain?: components["schemas"]["DomainContext"] | null;
             gpu?: components["schemas"]["GpuContext"] | null;
             /** @deprecated */
             guidance: string;
@@ -4370,22 +4496,17 @@ export interface components {
             /** @description 신청 목적 (관리자 검토 자료) */
             purpose: string;
         };
-        CreateDnsDomainRequest: {
+        CreateDomainRequestSpec: {
             /**
-             * @description 발급받을 이름. 루트 도메인 바로 아래 한 라벨입니다.
+             * @description 루트 도메인 바로 아래 한 라벨. 영문 소문자와 숫자, 하이픈만 쓸 수 있습니다.
              * @example myblog
              */
             label: string;
             /**
-             * @description 이 이름을 둘 루트 도메인. 비우면 기본 루트를 씁니다.
+             * @description 이름을 발급받을 루트 도메인. 이 이름이 속할 기관이 여기서 정해집니다.
              * @example pusan.dev
              */
-            rootDomain?: string | null;
-            /**
-             * Format: uuid
-             * @description 이 이름을 소유할 워크스페이스.
-             */
-            workspaceId: string;
+            rootDomain: string;
         };
         CreateGpuRequestSpec: {
             /**
@@ -4472,11 +4593,15 @@ export interface components {
         };
         CreateRequestRequest: {
             displayName: string;
+            domain?: components["schemas"]["CreateDomainRequestSpec"] | null;
             extraNote?: string | null;
             gpu?: components["schemas"]["CreateGpuRequestSpec"] | null;
             llmKey?: components["schemas"]["CreateLlmKeyRequestSpec"] | null;
-            /** Format: uuid */
-            orgId: string;
+            /**
+             * Format: uuid
+             * @description 신청할 기관. 리소스 종류가 기관을 스스로 정하지 않을 때만 필수입니다. 외부 도메인은 고른 루트 도메인이 기관을 정하므로 보내지 않습니다.
+             */
+            orgId?: string | null;
             /** Format: uuid */
             periodPresetId?: string | null;
             purpose: string;
@@ -4606,6 +4731,14 @@ export interface components {
         };
         /** @enum {string} */
         DnsRecordType: "A" | "AAAA" | "CNAME" | "TXT";
+        DomainContext: {
+            available: boolean;
+            /** Format: int32 */
+            cap: number;
+            fqdn: string;
+            /** Format: int64 */
+            held: number;
+        };
         DomainDetailView: {
             /** Format: date-time */
             createdAt: string;
@@ -4635,6 +4768,23 @@ export interface components {
         DomainKind: "AUTO" | "PLATFORM" | "CUSTOM" | "EXTERNAL";
         /** @enum {string} */
         DomainRecordStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
+        DomainRequestSpecResponse: {
+            /**
+             * @description 승인이 실제로 발급한 이름. 승인 전에는 null입니다.
+             * @example myblog.pusan.dev
+             */
+            grantedFqdn?: string | null;
+            /**
+             * @description 신청한 이름(루트 바로 아래 한 라벨)
+             * @example myblog
+             */
+            label: string;
+            /**
+             * @description 신청한 루트 도메인
+             * @example pusan.dev
+             */
+            rootDomain: string;
+        };
         /** @enum {string} */
         DomainStatus: "PENDING" | "VERIFYING" | "ACTIVE" | "FAILED" | "REMOVED";
         DomainSummaryView: {
@@ -7178,6 +7328,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             displayName: string;
+            domain?: components["schemas"]["DomainRequestSpecResponse"] | null;
             extraNote?: string | null;
             gpu?: components["schemas"]["GpuRequestSpecResponse"] | null;
             /** Format: uuid */
@@ -7253,9 +7404,10 @@ export interface components {
             grantedStartDate?: string | null;
             /**
              * Format: uuid
-             * @description 결재자. 계정 행이 사라진 경우에만 null입니다.
+             * @description 결재한 사람. 자동 승인이거나 계정 행이 사라진 경우 null입니다.
              */
             reviewerId?: string | null;
+            /** @description 결재자 이름. 자동 승인이면 「자동 승인」, 계정 행이 사라졌으면 「탈퇴 회원」입니다. 두 경우 모두 reviewerId가 null이므로 이 값으로 가릅니다. */
             reviewerName: string;
         };
         /** @enum {string} */
@@ -7538,9 +7690,22 @@ export interface components {
             /** @description 전환할 상태 (APPROVED = 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
         };
+        UpdateDomainRenewalRequest: {
+            /** @description 기한을 바꾼 이유. 감사 기록에 남습니다. */
+            reason?: string;
+            /**
+             * Format: date-time
+             * @description 이 시각까지 연장하지 않으면 레코드가 내려가고 이름이 해제됩니다.
+             */
+            renewDueAt: string;
+        };
         UpdateDomainRequest: {
             /** Format: int32 */
             port?: number;
+        };
+        UpdateDomainRootRequest: {
+            /** @description true면 자동 승인, false면 승인 필요. */
+            autoApprove: boolean;
         };
         UpdateGpuPriorityRequest: {
             /** Format: int32 */
@@ -8408,6 +8573,70 @@ export interface operations {
             };
         };
     };
+    listDomainRoots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminDomainRootView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateDomainRoot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rootDomain: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDomainRootRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminDomainRootView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminDomains: {
         parameters: {
             query?: {
@@ -8461,6 +8690,72 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminDomainRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsRecordSetView"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateDomainRenewal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDomainRenewalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminDomainView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -12462,39 +12757,6 @@ export interface operations {
             };
         };
     };
-    createDnsDomain: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateDnsDomainRequest"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DnsDomainView"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     getDnsDomain: {
         parameters: {
             query?: never;
@@ -12802,6 +13064,37 @@ export interface operations {
         };
     };
     renewDnsDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DnsDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reviveDnsDomain: {
         parameters: {
             query?: never;
             header?: never;
