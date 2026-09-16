@@ -164,10 +164,16 @@ function actorOf(request: Request) {
   return ACCESS_TOKENS[token] ?? null
 }
 
-/** 계약 v0.46.0: 조회는 전 계층이 전 기관을 본다. orgId는 좁히는 보통 필터다. */
+/**
+ * 계약 v0.46.0: 조회는 전 계층이 전 기관을 본다. orgId는 좁히는 보통 필터다.
+ *
+ * 파생 소속 쪽에는 서버와 같이 `ACTIVE` 조건이 걸린다 — 역할 행이 있는 사람은 상태와
+ * 무관하게 잡히지만, 워크스페이스로 엮인 사람은 활성 계정만 그 기관의 사람이다.
+ */
 function matchesOrg(row: AdminUserRecord, orgId: string | null): boolean {
   if (!orgId) return true
-  return row.managedOrgs.some((org) => org.orgId === orgId) || row.visibleToOrg === orgId
+  if (row.managedOrgs.some((org) => org.orgId === orgId)) return true
+  return row.status === 'ACTIVE' && row.visibleToOrg === orgId
 }
 
 /**
@@ -283,7 +289,8 @@ export const userHandlers: RequestHandler[] = [
       page,
       size,
       totalElements: filtered.length,
-      totalPages: Math.max(1, Math.ceil(filtered.length / size)),
+      // 서버와 같이 0건이면 0쪽이다. 1로 올리면 빈 목록에 1쪽짜리 페이저가 선다.
+      totalPages: Math.ceil(filtered.length / size),
     }
     return HttpResponse.json(body, { status: 200 })
   }),

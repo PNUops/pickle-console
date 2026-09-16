@@ -120,6 +120,48 @@ describe('관리자 사용자 목록', () => {
     expect(scopes.every((scope) => scope === null)).toBe(true)
   })
 
+  test('grants in every administered organisation, not just the active one', async () => {
+    // The set the server checks is `administers`, not the active scope, so an
+    // account that administers two organisations may staff either from here.
+    // With one organisation in the fixture the widened set and the old scoped
+    // one are the same list, and nothing would hold this.
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
+    renderApp(`/admin/users?org=${uuid(2)}`)
+
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관별 역할')
+
+    const orgSelect = drawer.getByLabelText('부여할 기관') as HTMLSelectElement
+    expect(
+      within(orgSelect)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['기관 선택', '정보컴퓨터공학부 실습지원센터', '테스트 기관'])
+
+    // The organisation that is not the active scope grants, and the row it
+    // creates names it.
+    await user.selectOptions(orgSelect, uuid(1))
+    await user.selectOptions(drawer.getByLabelText('부여할 역할'), 'ORG_MANAGER')
+    await user.click(drawer.getByRole('button', { name: '부여' }))
+
+    expect(await drawer.findByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
+  })
+
+  test('an org-tier admin is answered 404 for a system-tier account', async () => {
+    // The list withholds them; the detail has to withhold them too, or the id
+    // alone reopens what the exclusion closed.
+    renderAsOrgAdmin()
+    await screen.findByRole('button', { name: '박무소속' })
+
+    const detail = await fetch(`/api/v1/admin/users/${uuid(5)}`, {
+      headers: { Authorization: 'Bearer access-org-admin' },
+    })
+
+    expect(detail.status).toBe(404)
+  })
+
   test('the role filter offers no system-tier role to the org tier', async () => {
     renderAsOrgAdmin()
 

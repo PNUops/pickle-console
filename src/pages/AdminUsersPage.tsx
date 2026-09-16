@@ -121,8 +121,8 @@ export function AdminUsersPage() {
   const orgOptions = isSystemTier
     ? (orgCatalog.data ?? []).map((org) => ({ id: org.id, name: org.name }))
     : (user?.managedOrgs ?? []).map((org) => ({ id: org.orgId, name: org.orgName }))
-  // System-tier accounts are listed for every admin, but only the system tier
-  // hands those roles out, so filtering by one answers nobody else's question.
+  // The server withholds system-tier accounts from the org tier, so offering
+  // those roles here would only ever filter to nothing.
   const roleOptions = isSystemTier ? ROLE_OPTIONS : ROLE_OPTIONS.filter((r) => !isSysTier(r))
 
   const users = useQuery({
@@ -155,7 +155,7 @@ export function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">사용자 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          이 목록은 관리 범위와 무관하게 모든 기관의 계정을 보여 줍니다.
+          이 목록은 관리 범위와 무관하게 모든 기관에서 찾습니다.
         </p>
       </div>
 
