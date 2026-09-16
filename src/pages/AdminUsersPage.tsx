@@ -48,6 +48,7 @@ import {
   useToast,
   type BadgeVariant,
 } from '../components/ui'
+import { FilterBar } from '../components/FilterBar'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
@@ -93,15 +94,18 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 
 export function AdminUsersPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg } = useAdminScope()
   const viewerRole = user?.role
-  // 사용자 목록도 전역 관리 범위를 따른다. 시스템 계층의 전체 플랫폼에서는 전원을,
-  // 기관 scope에서는 그 기관과 연결된 계정을 본다. 계정 비활성화, 해제, MFA
-  // 초기화는 SYS_ADMIN 전용(§4).
-  const isSysAdmin = !!viewerRole && isSysTier(viewerRole)
+  // The account directory is the one admin read the server does not narrow by
+  // organisation. Membership is derived from the resources a workspace holds, so
+  // the people an administrator most needs to reach hold none: someone who has
+  // requested nothing belongs to no organisation at all. This screen therefore
+  // does not follow the global admin scope, and narrows only through its own
+  // 기관 filter. Account disable, enable and MFA reset stay SYS_ADMIN-only.
+  const isSystemTier = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)
   const [role, setRole] = useState<UserRole | undefined>(undefined)
+  const [filterOrgId, setFilterOrgId] = useState<string | undefined>(undefined)
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminUserSort | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -110,6 +114,17 @@ export function AdminUsersPage() {
   const debouncedQ = useDebouncedValue(qInput).trim()
   const q = debouncedQ.length > 0 ? debouncedQ : undefined
 
+  // Narrowing is a read, so the org tier may narrow to any organisation it holds
+  // a role in, viewer rows included; only granting asks for ORG_ADMIN. The system
+  // tier shares the scope provider's cache entry, so this costs no extra request.
+  const orgCatalog = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSystemTier })
+  const orgOptions = isSystemTier
+    ? (orgCatalog.data ?? []).map((org) => ({ id: org.id, name: org.name }))
+    : (user?.managedOrgs ?? []).map((org) => ({ id: org.orgId, name: org.orgName }))
+  // System-tier accounts are listed for every admin, but only the system tier
+  // hands those roles out, so filtering by one answers nobody else's question.
+  const roleOptions = isSystemTier ? ROLE_OPTIONS : ROLE_OPTIONS.filter((r) => !isSysTier(r))
+
   const users = useQuery({
     queryKey: [
       'admin',
@@ -117,7 +132,7 @@ export function AdminUsersPage() {
       {
         status: status ?? null,
         role: role ?? null,
-        orgId: activeOrgId ?? null,
+        orgId: filterOrgId ?? null,
         q: q ?? null,
         sort: sort ?? null,
         page,
@@ -125,7 +140,7 @@ export function AdminUsersPage() {
       },
     ],
     queryFn: () =>
-      fetchAdminUsers({ status, role, orgId: activeOrgId, q, sort, page, size: PAGE_SIZE }),
+      fetchAdminUsers({ status, role, orgId: filterOrgId, q, sort, page, size: PAGE_SIZE }),
   })
 
   const sortDirection = (key: SortKey) =>
@@ -140,70 +155,58 @@ export function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">사용자 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {activeOrg?.name ?? '플랫폼 전체'} 사용자를 조회하고
-          {isSysAdmin ? ' 계정 비활성화와 해제를 관리합니다.' : ' 상세 정보를 확인합니다.'}
+          이 목록은 관리 범위와 무관하게 모든 기관의 계정을 보여 줍니다.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
-        <div role="group" aria-label="계정 상태 필터" className="flex flex-wrap gap-1">
-          {STATUS_TABS.map((tab) => {
-            const isSelected = tab.status === status
-            return (
-              <button
-                key={tab.label}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => {
-                  setStatus(tab.status)
-                  setPage(0)
-                }}
-                className={cn(
-                  'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
-                  isSelected
-                    ? 'bg-primary-600 text-white'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900',
-                )}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            type="search"
-            aria-label="사용자 검색"
-            placeholder="이메일/이름 검색"
-            className="w-52"
-            value={qInput}
+      <FilterBar
+        tabs={STATUS_TABS}
+        status={status}
+        onStatus={(next) => {
+          setStatus(next)
+          setPage(0)
+        }}
+        // Unlike every other list, one option here still means a choice: 전체 기관
+        // against that one organisation.
+        showOrgFilter={orgOptions.length > 0}
+        orgId={filterOrgId}
+        onOrg={(next) => {
+          setFilterOrgId(next)
+          setPage(0)
+        }}
+        orgs={orgOptions}
+      >
+        <Input
+          type="search"
+          aria-label="사용자 검색"
+          placeholder="이메일/이름 검색"
+          className="w-52"
+          value={qInput}
+          onChange={(event) => {
+            setQInput(event.target.value)
+            setPage(0)
+          }}
+        />
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
+          역할
+          <Select
+            aria-label="역할 필터"
+            className="w-40"
+            value={role ?? ''}
             onChange={(event) => {
-              setQInput(event.target.value)
+              setRole(event.target.value ? (event.target.value as UserRole) : undefined)
               setPage(0)
             }}
-          />
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            역할
-            <Select
-              aria-label="역할 필터"
-              className="w-40"
-              value={role ?? ''}
-              onChange={(event) => {
-                setRole(event.target.value ? (event.target.value as UserRole) : undefined)
-                setPage(0)
-              }}
-            >
-              <option value="">전체 역할</option>
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r} value={r}>
-                  {USER_ROLE_LABELS[r]}
-                </option>
-              ))}
-            </Select>
-          </label>
-        </div>
-      </div>
+          >
+            <option value="">전체 역할</option>
+            {roleOptions.map((r) => (
+              <option key={r} value={r}>
+                {USER_ROLE_LABELS[r]}
+              </option>
+            ))}
+          </Select>
+        </label>
+      </FilterBar>
 
       {users.isPending && (
         <div className="flex justify-center py-12">
@@ -212,7 +215,11 @@ export function AdminUsersPage() {
       )}
       {users.isError && <Alert variant="danger">{users.error.message}</Alert>}
       {users.isSuccess && users.data.content.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">표시할 사용자가 없습니다.</Card>
+        <Card className="p-8 text-center text-sm text-neutral-500">
+          {status || role || filterOrgId || q
+            ? '조건에 맞는 사용자가 없습니다.'
+            : '표시할 사용자가 없습니다.'}
+        </Card>
       )}
       {users.isSuccess && users.data.content.length > 0 && (
         <>
@@ -665,7 +672,6 @@ function UserPermissionsSection({
  */
 function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const { user: viewer } = useAuth()
-  const scope = useAdminScope()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [error, setError] = useState<string | null>(null)
@@ -674,17 +680,18 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const [confirmRevoke, setConfirmRevoke] = useState<ManagedOrg | null>(null)
 
   const isSysAdmin = viewer?.role === 'SYS_ADMIN'
-  const canStaff = isSysAdmin || scope.activeOrgRole === 'ORG_ADMIN'
+  const administered = administeredOrgs(viewer?.managedOrgs ?? [])
+  const canStaff = isSysAdmin || administered.length > 0
   const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
-  // 시스템 관리자는 전 기관에, 기관 관리자는 자기가 관리자로 있는 기관에만 부여한다.
+  // 시스템 관리자는 전 기관에, 기관 관리자는 자기가 관리자로 있는 기관 전부에 부여한다 —
+  // 서버도 `administers()`로 판정하므로 활성 관리 범위는 여기에 걸리지 않는다. 회수 버튼도
+  // 이 집합을 쓰므로, 방금 부여한 행을 그 자리에서 되거둘 수 있다.
   const grantable = isSysAdmin
     ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
-    : administeredOrgs(viewer?.managedOrgs ?? [])
-      .filter((org) => org.orgId === scope.activeOrgId)
-      .map((org) => ({
-        id: org.orgId,
-        name: org.orgName,
-      }))
+    : administered.map((org) => ({
+      id: org.orgId,
+      name: org.orgName,
+    }))
   // 자기 자신과 시스템 계층 계정은 API가 403으로 거부하므로 변경 액션을
   // 렌더하지 않는다.
   const isSelf = viewer?.id === user.id

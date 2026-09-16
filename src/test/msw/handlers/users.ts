@@ -112,6 +112,26 @@ function initialUsers(): AdminUserRecord[] {
       statusChanges: [],
       visibleToOrg: uuid(2),
     },
+    {
+      // Has requested nothing, so belongs to no derived organisation. The
+      // account the unscoped directory exists for: an administrator has to be
+      // able to find this person to staff them.
+      id: uuid(43),
+      email: 'nobody.park@pusan.ac.kr',
+      name: '박무소속',
+      role: 'USER',
+      managedOrgs: [],
+      status: 'ACTIVE',
+      mfaEnabled: false,
+      createdAt: '2026-03-05T09:00:00+09:00',
+      withdrawnAt: null,
+      disabledAt: null,
+      disabledReason: null,
+      memberships: [],
+      activeVmCount: 0,
+      statusChanges: [],
+      visibleToOrg: null,
+    },
   ]
 }
 
@@ -148,6 +168,15 @@ function actorOf(request: Request) {
 function matchesOrg(row: AdminUserRecord, orgId: string | null): boolean {
   if (!orgId) return true
   return row.managedOrgs.some((org) => org.orgId === orgId) || row.visibleToOrg === orgId
+}
+
+/**
+ * 기관 계층에게는 시스템 계층 계정을 내주지 않는다(운영자 판단 2026-09-16). 기관
+ * 스코프와 다른 축이다 — 볼 수 있는 계정에는 조치할 수 있어야 하는데, 시스템 계정은
+ * 역할 부여도 상태 변경도 막혀 있다. 서버가 목록에서 빼고 상세는 404로 답한다.
+ */
+function visibleToActor(row: AdminUserRecord, actorRole: Schemas['UserRole']): boolean {
+  return isSysTier(actorRole) || !isSysTier(row.role)
 }
 
 function toView(row: AdminUserRecord): Schemas['UserAdminViewResponse'] {
@@ -207,7 +236,7 @@ const orgNotFound = (orgId: string) =>
 
 const ORG_NAMES: Record<string, string> = {
   [uuid(1)]: '정보컴퓨터공학부 실습지원센터',
-  [uuid(2)]: '전자공학과',
+  [uuid(2)]: '테스트 기관',
 }
 
 const orgNameOf = (orgId: string) => ORG_NAMES[orgId] ?? '알 수 없는 기관'
@@ -240,6 +269,7 @@ export const userHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
 
     const filtered = adminUserStore
+      .filter((row) => visibleToActor(row, actor.role))
       .filter((row) => matchesOrg(row, orgId))
       .filter((row) => (status ? row.status === status : true))
       .filter((row) => (role ? row.role === role : true))
@@ -262,7 +292,7 @@ export const userHandlers: RequestHandler[] = [
     const actor = actorOf(request)
     if (!actor || actor.role === 'USER') return forbidden()
     const row = adminUserStore.find((u) => u.id === String(params.userId))
-    if (!row) return notFound(String(params.userId))
+    if (!row || !visibleToActor(row, actor.role)) return notFound(String(params.userId))
     return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
   }),
 
