@@ -75,7 +75,8 @@ export const introductionArticles: GuideArticle[] = [
             <h3>도메인</h3>
             <p>
               VM 없이도 이름을 발급받아 외부 서버나 호스팅 서비스에 연결할 수 있습니다.
-              별도 승인 없이 발급되며 A, AAAA, CNAME, TXT 레코드를 직접 편집합니다.
+              다른 리소스와 같이 신청하며, 고른 루트 도메인에 따라 바로 발급되거나 검토를
+              거칩니다. 발급 뒤에는 A, AAAA, CNAME, TXT 레코드를 직접 편집합니다.
               계속 사용할 이름은 상세 화면의 사용 기한을 확인해 연장해야 합니다.
               외부 서버의 웹 서비스와 HTTPS 인증서는 사용자가 준비합니다.
               <GuideLink slug="network/domains">외부 서버용 도메인 발급과 관리</GuideLink>
