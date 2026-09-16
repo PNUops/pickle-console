@@ -30,7 +30,7 @@ function initialUsers(): AdminUserRecord[] {
       withdrawnAt: null,
       disabledAt: null,
       disabledReason: null,
-      memberships: [{ workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER' }],
+      memberships: [{ workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER', vmOrgIds: [] }],
       activeVmCount: 0,
       statusChanges: [],
       visibleToOrg: null,
@@ -47,7 +47,7 @@ function initialUsers(): AdminUserRecord[] {
       withdrawnAt: null,
       disabledAt: null,
       disabledReason: null,
-      memberships: [{ workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' }],
+      memberships: [{ workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER', vmOrgIds: [] }],
       activeVmCount: 0,
       statusChanges: [],
       visibleToOrg: uuid(1),
@@ -65,8 +65,8 @@ function initialUsers(): AdminUserRecord[] {
       disabledAt: null,
       disabledReason: null,
       memberships: [
-        { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER' },
-        { workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'TEAM', role: 'MEMBER' },
+        { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER', vmOrgIds: [] },
+        { workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'TEAM', role: 'MEMBER', vmOrgIds: [uuid(1)] },
       ],
       activeVmCount: 2,
       statusChanges: [],
@@ -107,8 +107,12 @@ function initialUsers(): AdminUserRecord[] {
       withdrawnAt: null,
       disabledAt: null,
       disabledReason: null,
-      memberships: [],
-      activeVmCount: 0,
+      // Belongs to another organisation and has machines there. The account the
+      // VM link used to lie about: reachable in the directory, not in the VM list.
+      memberships: [
+        { workspaceId: uuid(41), workspaceName: '졸업과제팀', workspaceKind: 'TEAM', role: 'MEMBER', vmOrgIds: [uuid(2)] },
+      ],
+      activeVmCount: 2,
       statusChanges: [],
       visibleToOrg: uuid(2),
     },

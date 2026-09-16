@@ -149,6 +149,22 @@ describe('관리자 사용자 목록', () => {
     expect(await drawer.findByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
   })
 
+  test('offers no VM link for a workspace outside the current scope', async () => {
+    // 정외부's machines are in another organisation. The link used to be drawn
+    // anyway and landed on an empty list, which reads as "this person has no
+    // virtual machines" rather than "not in your scope".
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await user.type(await screen.findByLabelText('사용자 검색'), 'outsider')
+    await openDetail(user, '정외부')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+
+    // The workspace is still named; only the link that cannot resolve is gone.
+    expect(await drawer.findByText('졸업과제팀')).toBeInTheDocument()
+    expect(drawer.queryByRole('link', { name: 'VM 보기' })).not.toBeInTheDocument()
+  })
+
   test('an org-tier admin is answered 404 for a system-tier account', async () => {
     // The list withholds them; the detail has to withhold them too, or the id
     // alone reopens what the exclusion closed.

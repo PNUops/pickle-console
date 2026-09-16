@@ -92,6 +92,15 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
   return <Badge variant={STATUS_VARIANT[status]}>{USER_STATUS_LABELS[status]}</Badge>
 }
 
+/**
+ * Would the VM list have anything to show for this workspace? With no active
+ * organisation the list spans the platform, so any live machine answers; with
+ * one, only a machine in that organisation does.
+ */
+function vmsReachable(vmOrgIds: string[], activeOrgId: string | undefined): boolean {
+  return activeOrgId === undefined ? vmOrgIds.length > 0 : vmOrgIds.includes(activeOrgId)
+}
+
 export function AdminUsersPage() {
   const { user } = useAuth()
   const viewerRole = user?.role
@@ -345,12 +354,22 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
                 <span className="text-neutral-400">
                   ({WORKSPACE_KIND_LABELS[m.workspaceKind]} · {m.role})
                 </span>{' '}
-                <Link
-                  to={adminPaths.vms(activeOrgId, m.workspaceId)}
-                  className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-                >
-                  VM 보기
-                </Link>
+                {/*
+                 * The directory answers for every organisation, the VM list does
+                 * not. Linking regardless lands on an empty list that reads as
+                 * "this person has no virtual machines" when the truth is "not
+                 * in your scope", so the link is offered only where it resolves:
+                 * the workspace has a live machine in the organisation this
+                 * screen would ask about.
+                 */}
+                {vmsReachable(m.vmOrgIds, activeOrgId) && (
+                  <Link
+                    to={adminPaths.vms(activeOrgId, m.workspaceId)}
+                    className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+                  >
+                    VM 보기
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
