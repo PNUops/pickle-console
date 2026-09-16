@@ -82,16 +82,18 @@ describe('사용 가이드', () => {
 
   test('limits rate headers to self-served responses', async () => {
     renderApp('/docs/llm/limits')
-    await screen.findByRole('heading', { name: '분당·동시 요청 한도' })
+    await screen.findByRole('heading', { name: '한도에 걸렸을 때' })
 
     // 2026-09-02 축 분리 이후 네 한도 전부 자체 서빙 전용이다. 이 문장이 빠지면
     // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
     const body = document.body.textContent ?? ''
-    expect(body).toContain('자체 서빙 모델에만 적용됩니다')
+    expect(body).toContain(
+      '분당 요청 수, 분당 토큰 수와 동시 요청 수 한도는 자체 서빙 모델에만 적용됩니다',
+    )
     // 헤더가 어디에 실리는지도 축을 따른다. 이 문장이 빠지면 유료 모델 사용자가
     // 오지 않는 헤더를 기다린다.
     expect(body).toContain('한도를 통과한 자체 서빙')
-    expect(body).toContain('유료 모델 응답에는 분당 요청 한도 자체가 없어')
+    expect(body).toContain('유료 모델에는 이 세 한도가 적용되지 않아')
   })
 
   test('preserves the compatible coding-agent configuration', async () => {
@@ -103,16 +105,17 @@ describe('사용 가이드', () => {
     expect(body).toContain('"baseURL": "https://llm.pcl.kr/v1"')
   })
 
-  test('distinguishes defaults from the daily budget', async () => {
+  test('keeps actionable budget guidance without hidden defaults', async () => {
     renderApp('/docs/llm/limits')
-    await screen.findByRole('heading', { name: '분당·동시 요청 한도' })
+    await screen.findByRole('heading', { name: '한도에 걸렸을 때' })
 
-    expect(screen.getByText('600회')).toBeInTheDocument()
-    expect(screen.getByText('1,000,000토큰')).toBeInTheDocument()
-    expect(screen.getByText('8건')).toBeInTheDocument()
-    // 분당 한도를 다 지켜도 429가 날 수 있는 축이라 빠지면 안 된다.
+    expect(screen.queryByText('600회')).not.toBeInTheDocument()
+    expect(screen.queryByText('1,000,000토큰')).not.toBeInTheDocument()
+    expect(screen.queryByText('8건')).not.toBeInTheDocument()
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
     expect(document.body.textContent ?? '').toContain('quota_exhausted')
+    expect(document.body.textContent ?? '').toContain('Retry-After')
+    expect(document.body.textContent ?? '').toContain('0원을 썼다는 뜻이 아닙니다')
   })
 
   test('pairs stable error codes with HTTP status', async () => {

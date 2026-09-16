@@ -30,7 +30,7 @@ export const networkArticles: GuideArticle[] = [
                 VM 상세의 도메인 연결과 진입 메뉴가 다릅니다.
               </li>
               <li>
-                <strong>웹이 아닌 TCP·UDP 서비스라면:</strong>{' '}
+                <strong>웹이 아닌 TCP/UDP 서비스라면:</strong>{' '}
                 <GuideLink slug="network/ports">포트포워딩</GuideLink>을 사용합니다.
                 혼자 접속하는 서비스라면 같은 문서의 SSH 로컬 포워딩을 먼저 확인하세요.
               </li>
@@ -38,7 +38,7 @@ export const networkArticles: GuideArticle[] = [
             <GuideFigure
               src={vmPublishImage}
               alt="가상머신 도메인·포트 탭의 도메인 연결과 포트포워딩 카드"
-              caption="도메인·포트 탭에서 웹 서비스에는 도메인을 연결하고, 일반 TCP·UDP 서비스에는 포트포워딩을 설정합니다."
+              caption="도메인·포트 탭에서 웹 서비스에는 도메인을 연결하고, 일반 TCP/UDP 서비스에는 포트포워딩을 설정합니다."
               width={992}
               height={757}
             />
@@ -84,7 +84,7 @@ export const networkArticles: GuideArticle[] = [
             <p>
               별도 관리자 승인이나 본인 DNS 설정은 필요하지 않습니다. 실행 중 또는
               중지됨 상태의 VM에 연결할 수 있지만 실제 사이트를 열려면 VM과 앱이 실행
-              중이어야 합니다. 도메인 연결·해제는 해당 VM의 편집자 이상이 할 수 있습니다.
+              중이어야 합니다. 도메인 연결과 해제는 해당 VM의 편집자 이상이 할 수 있습니다.
             </p>
             <p>
               이미 사용 중이거나 예약된 이름은 다른 이름으로 바꿔야 합니다. 플랫폼
@@ -105,14 +105,14 @@ export const networkArticles: GuideArticle[] = [
               <li>
                 접수 후 표시되는 DNS 레코드 표를 확인합니다. 도메인을 관리하는 서비스에서
                 안내된 <strong>A 레코드</strong>와 소유 확인용 <strong>TXT 레코드</strong>를
-                이름·값 그대로 등록합니다. 주소를 다른 문서에서 가져오지 말고 이 화면의 값을 사용하세요.
+                이름과 값을 그대로 등록합니다. 주소를 다른 문서에서 가져오지 말고 이 화면의 값을 사용하세요.
               </li>
               <li>DNS 확인과 인증서 발급, 연결 적용 상태가 완료될 때까지 확인합니다.</li>
               <li>표시된 HTTPS 주소를 열어 인증서 경고 없이 앱에 도달하는지 확인합니다.</li>
             </ol>
             <p>
               DNS 변경은 즉시 모든 곳에 반영되지 않을 수 있습니다. 실패 안내가 나오면
-              먼저 A·TXT 레코드의 이름과 값을 확인하고 화면의 다시 확인 동작을 사용하세요.
+              먼저 A와 TXT 레코드의 이름과 값을 확인하고 화면의 다시 확인 동작을 사용하세요.
               소유 확인에 성공해도 인증서 발급이나 연결 적용이 끝나기 전에는 사이트가
               정상적으로 열리지 않을 수 있습니다.
             </p>
@@ -121,7 +121,7 @@ export const networkArticles: GuideArticle[] = [
       },
       {
         id: 'change-and-troubleshoot',
-        title: '포트 변경·해제와 연결 문제 해결',
+        title: '포트 변경과 해제, 연결 문제 해결',
         body: (
           <>
             <p>
@@ -184,7 +184,7 @@ export const networkArticles: GuideArticle[] = [
           <>
             <ol>
               <li><GuideAction action="dnsDomains">도메인 목록</GuideAction>에서 <strong>도메인 발급</strong>을 누릅니다.</li>
-              <li>영문 소문자·숫자·하이픈으로 이름을 적고, 소유할 워크스페이스를 선택합니다.</li>
+              <li>영문 소문자, 숫자, 하이픈으로 이름을 적고, 소유할 워크스페이스를 선택합니다.</li>
               <li>발급된 전체 주소를 확인하고 상세 화면을 엽니다.</li>
               <li><strong>레코드</strong> 탭에서 연결할 대상을 등록합니다. 발급만으로 주소가 열리지는 않습니다.</li>
             </ol>
@@ -247,7 +247,7 @@ export const networkArticles: GuideArticle[] = [
             <p>
               사설 주소, 캠퍼스 주소, 플랫폼으로 되돌아가는 주소 등 허용되지 않는 대상은
               저장이 거절됩니다. 거절된 값의 안내를 읽고 외부 서버의 공인 연결 정보를
-              확인하세요. 제공되는 레코드 종류는 A·AAAA·CNAME·TXT입니다.
+              확인하세요. 제공되는 레코드 종류는 A, AAAA, CNAME, TXT입니다.
             </p>
             <p>
               인증서를 발급하면 도메인 이름이 공개 기록에 남을 수 있으므로 이름에
@@ -293,7 +293,7 @@ export const networkArticles: GuideArticle[] = [
     slug: 'network/ports',
     title: '포트포워딩과 캠퍼스 IP',
     group: '도메인과 네트워크',
-    summary: '본인 접속, TCP·UDP 공개, 교내 직접 연결 중 필요한 경로를 선택합니다.',
+    summary: '본인 접속, TCP/UDP 공개, 교내 직접 연결 중 필요한 경로를 선택합니다.',
     keywords: ['포트', 'TCP', 'UDP', '포트포워딩', 'SSH 터널', '로컬 포워딩', '캠퍼스 IP', 'NAT', '공인 IP'],
     sections: [
       {
@@ -302,8 +302,8 @@ export const networkArticles: GuideArticle[] = [
         body: (
           <ul>
             <li><strong>웹 서비스를 공개:</strong> <GuideLink slug="network/publish">VM 도메인 연결</GuideLink>로 HTTPS 주소를 만듭니다.</li>
-            <li><strong>내 컴퓨터에서만 DB·개발 서버 사용:</strong> 아래 SSH 로컬 포워딩으로 연결합니다.</li>
-            <li><strong>일반 TCP·UDP 서비스 공개:</strong> VM의 <strong>도메인·포트</strong> 탭에서 포트포워딩을 만듭니다.</li>
+            <li><strong>내 컴퓨터에서만 DB나 개발 서버 사용:</strong> 아래 SSH 로컬 포워딩으로 연결합니다.</li>
+            <li><strong>일반 TCP/UDP 서비스 공개:</strong> VM의 <strong>도메인·포트</strong> 탭에서 포트포워딩을 만듭니다.</li>
             <li><strong>교내망에서 VM으로 직접 연결:</strong> VM의 <strong>네트워크</strong> 탭에서 캠퍼스 IP를 신청합니다.</li>
           </ul>
         ),
@@ -339,7 +339,7 @@ export const networkArticles: GuideArticle[] = [
       },
       {
         id: 'public-forwarding',
-        title: 'TCP·UDP 포트 공개하기',
+        title: 'TCP/UDP 포트 공개하기',
         body: (
           <>
             <ol>
@@ -351,7 +351,7 @@ export const networkArticles: GuideArticle[] = [
             </ol>
             <p>
               VM이 실행 중이고 내부 IP가 할당되어 있어야 생성할 수 있습니다. 편집자 이상이
-              생성·삭제하며 별도 승인 단계는 없습니다. 외부에 열린 서비스이므로
+              생성하고 삭제하며 별도 승인 단계는 없습니다. 외부에 열린 서비스이므로
               앱 자체의 인증과 접근 제한을 설정하세요.
             </p>
             <p>
@@ -419,7 +419,7 @@ export const networkArticles: GuideArticle[] = [
               뒤 진행하며, 절차가 불분명하면 해당 안내의 담당 창구에 문의합니다.
             </p>
             <p>
-              일반적인 웹 공개나 TCP·UDP 공개만 필요하다면 먼저 이 문서의 도메인 연결과
+              일반적인 웹 공개나 TCP/UDP 공개만 필요하다면 먼저 이 문서의 도메인 연결과
               포트포워딩 경로로 해결되는지 확인하세요.
             </p>
           </>
