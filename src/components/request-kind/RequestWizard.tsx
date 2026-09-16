@@ -82,6 +82,15 @@ export function RequestWizard({
     workspaceId: draft.common.workspaceId ?? scope,
   }))
   const kindApi = kind.useWizard(draft.kindType === kind.type ? draft.spec : null, state)
+
+  // Which common controls this kind does not use. Read once here so the three
+  // places that have to agree — what is drawn, what is validated, what the
+  // review step lists — cannot drift apart.
+  const hidden = {
+    orgId: kind.hiddenCommonFields?.includes('orgId') ?? false,
+    period: kind.hiddenCommonFields?.includes('period') ?? false,
+    displayName: kind.hiddenCommonFields?.includes('displayName') ?? false,
+  }
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
@@ -108,7 +117,7 @@ export function RequestWizard({
 
   const validateStep = (stepId: WizardStepId): FieldErrors => {
     const next: FieldErrors = {}
-    if (stepId === 'resource') {
+    if (stepId === 'resource' && !hidden.displayName) {
       if (!state.displayName.trim()) next.displayName = '이름을 입력해 주세요.'
       else if (state.displayName.length > 100)
         next.displayName = '이름은 100자 이하로 입력해 주세요.'
@@ -117,11 +126,16 @@ export function RequestWizard({
       // 목록에 없는 id(초안에 남은, 그새 없어진 행)는 고르지 않은 것으로 본다.
       if (state.workspaceId == null || !selectedWorkspace)
         next.workspaceId = '신청할 워크스페이스를 선택해 주세요.'
-      if (state.orgId == null || !selectedOrg) next.orgId = '기관을 선택해 주세요.'
+      if (!hidden.orgId && (state.orgId == null || !selectedOrg))
+        next.orgId = '기관을 선택해 주세요.'
       if (!state.purpose.trim()) next.purpose = '사용 목적을 입력해 주세요.'
       else if (state.purpose.length > 2000)
         next.purpose = '사용 목적은 2000자 이하로 입력해 주세요.'
-      if (state.periodMode === 'preset') {
+      if (hidden.period) {
+        // Nothing to check: this kind's resource carries its own deadline and
+        // the control is not on the screen. Validating it anyway would lock the
+        // step on a field nobody can fill.
+      } else if (state.periodMode === 'preset') {
         if (!selectedPeriod) next.periodPresetId = '사용 기간을 선택해 주세요.'
       } else if (state.indefinite) {
         // 무기한은 값이 없는 상태가 아니라 고른 값이다. 검사할 날짜가 없다.
@@ -236,7 +250,7 @@ export function RequestWizard({
     },
   })
 
-  if (submitted) return <SubmitSuccess request={submitted} />
+  if (submitted) return <SubmitSuccess request={submitted} kind={kind} />
 
   if (isLoading) {
     return (
@@ -259,16 +273,24 @@ export function RequestWizard({
     goToStep(steps[Math.max(steps.indexOf(step) - 1, 0)])
   }
 
+  // The name this request wears. A kind that hides the control names the
+  // resource from its own field, and the kind's own validation is what keeps
+  // that value from arriving empty.
+  const displayName = (hidden.displayName ? (kindApi.displayName ?? '') : state.displayName).trim()
+
   const buildPayload = (): CreateRequest => ({
     workspaceId: state.workspaceId!,
-    orgId: state.orgId!,
+    // A kind that hides the control is a kind whose own form decides the
+    // organisation. Sending a guess would be sending a second answer, so the
+    // field goes empty and the server derives the one answer there is.
+    orgId: hidden.orgId ? null : state.orgId!,
     purpose: state.purpose.trim(),
     extraNote: state.extraNote.trim() || null,
     periodPresetId: state.periodMode === 'preset' ? state.periodPresetId : null,
     reqEndDate:
       state.periodMode === 'custom' && !state.indefinite ? state.reqEndDate : null,
     reqIndefinite: state.periodMode === 'custom' && state.indefinite ? true : null,
-    displayName: state.displayName.trim(),
+    displayName,
     ...kindApi.payload(),
   })
 
@@ -297,12 +319,15 @@ export function RequestWizard({
 
   const reviewRows = kindApi.reviewRows()
   const commonRows: Partial<Record<WizardStepId, [string, string][]>> = {
-    resource: [['이름', state.displayName.trim()]],
+    // 이름을 감춘 종류는 자기 칸으로 그 이름을 이미 싣는다.
+    resource: hidden.displayName ? [] : [['이름', displayName]],
+    // A hidden control contributes no row. Listing 기관 as 미선택 on a kind
+    // that never asks would read as something the applicant forgot.
     request: [
-      ['기관', selectedOrg?.name ?? '—'],
+      ...(hidden.orgId ? [] : [['기관', selectedOrg?.name ?? '—'] as [string, string]]),
       ['워크스페이스', selectedWorkspace?.name ?? '—'],
       ['사용 목적', state.purpose.trim()],
-      ['사용 기간', periodLabel],
+      ...(hidden.period ? [] : [['사용 기간', periodLabel] as [string, string]]),
       ['참고 사항', state.extraNote.trim() || '—'],
     ],
   }
@@ -362,26 +387,28 @@ export function RequestWizard({
 
             {step === 'resource' && (
               <>
-                <FormField
-                  label="이름"
-                  required
-                  error={shown.displayName}
-                  description={kind.copy.displayNameHint === null ? undefined : (kind.copy.displayNameHint ?? '나중에 바꿀 수 있습니다.')}
-                >
-                  <Input
-                    value={state.displayName}
-                    onChange={(event) => update({ displayName: event.target.value })}
-                    maxLength={100}
-                    placeholder="예: 캡스톤 백엔드 서버"
-                  />
-                </FormField>
+                {!hidden.displayName && (
+                  <FormField
+                    label="이름"
+                    required
+                    error={shown.displayName}
+                    description={kind.copy.displayNameHint === null ? undefined : (kind.copy.displayNameHint ?? '나중에 바꿀 수 있습니다.')}
+                  >
+                    <Input
+                      value={state.displayName}
+                      onChange={(event) => update({ displayName: event.target.value })}
+                      maxLength={100}
+                      placeholder="예: 캡스톤 백엔드 서버"
+                    />
+                  </FormField>
+                )}
                 {kindApi.resourceFields(shown)}
               </>
             )}
 
             {step === 'request' && (
               <>
-                {orgs.data?.length === 0 ? (
+                {hidden.orgId ? null : orgs.data?.length === 0 ? (
                   <Alert variant="warning">
                     신청할 수 있는 기관이 없습니다. 관리자에게 문의해 주세요.
                   </Alert>
@@ -428,56 +455,60 @@ export function RequestWizard({
                   />
                 </FormField>
 
-                <CardRadioGroup
-                  legend="사용 기간"
-                  required
-                  error={shown.periodPresetId}
-                  value={state.periodMode === 'custom' ? 'custom' : state.periodPresetId}
-                  onChange={(value) =>
-                    value === 'custom'
-                      ? update({ periodMode: 'custom', periodPresetId: null })
-                      : update({
-                          periodMode: 'preset',
-                          periodPresetId: value,
-                          reqEndDate: '',
-                          indefinite: false,
-                        })
-                  }
-                  columns={3}
-                  options={[
-                    ...offeredPeriods.map((period) => ({
-                      value: period.id,
-                      title: period.displayName,
-                      meta: `${period.endDate}까지`,
-                    })),
-                    { value: 'custom', title: '직접 입력', description: '날짜를 정해 적거나 무기한을 고릅니다.' },
-                  ]}
-                />
-                {state.periodMode === 'custom' && (
-                  <div className="space-y-3">
-                    <FormField
-                      label="사용 종료일"
-                      required={!state.indefinite}
-                      error={shown.reqEndDate}
-                    >
-                      <Input
-                        type="date"
-                        min={todayKstDate()}
-                        value={state.reqEndDate}
-                        disabled={state.indefinite}
-                        onChange={(event) => update({ reqEndDate: event.target.value })}
+                {!hidden.period && (
+                  <>
+                  <CardRadioGroup
+                    legend="사용 기간"
+                    required
+                    error={shown.periodPresetId}
+                    value={state.periodMode === 'custom' ? 'custom' : state.periodPresetId}
+                    onChange={(value) =>
+                      value === 'custom'
+                        ? update({ periodMode: 'custom', periodPresetId: null })
+                        : update({
+                            periodMode: 'preset',
+                            periodPresetId: value,
+                            reqEndDate: '',
+                            indefinite: false,
+                          })
+                    }
+                    columns={3}
+                    options={[
+                      ...offeredPeriods.map((period) => ({
+                        value: period.id,
+                        title: period.displayName,
+                        meta: `${period.endDate}까지`,
+                      })),
+                      { value: 'custom', title: '직접 입력', description: '날짜를 정해 적거나 무기한을 고릅니다.' },
+                    ]}
+                  />
+                  {state.periodMode === 'custom' && (
+                    <div className="space-y-3">
+                      <FormField
+                        label="사용 종료일"
+                        required={!state.indefinite}
+                        error={shown.reqEndDate}
+                      >
+                        <Input
+                          type="date"
+                          min={todayKstDate()}
+                          value={state.reqEndDate}
+                          disabled={state.indefinite}
+                          onChange={(event) => update({ reqEndDate: event.target.value })}
+                        />
+                      </FormField>
+                      <Checkbox
+                        label="무기한 (사전 승인 필요)"
+                        description="끝나지 않아야 하는 서비스만 해당합니다. 관리자와 먼저 이야기한 뒤 신청해 주세요."
+                        checked={state.indefinite}
+                        onChange={(event) =>
+                          // 종료일을 남겨 두면 화면에 없는 날짜가 함께 제출된다.
+                          update({ indefinite: event.target.checked, reqEndDate: '' })
+                        }
                       />
-                    </FormField>
-                    <Checkbox
-                      label="무기한 (사전 승인 필요)"
-                      description="끝나지 않아야 하는 서비스만 해당합니다. 관리자와 먼저 이야기한 뒤 신청해 주세요."
-                      checked={state.indefinite}
-                      onChange={(event) =>
-                        // 종료일을 남겨 두면 화면에 없는 날짜가 함께 제출된다.
-                        update({ indefinite: event.target.checked, reqEndDate: '' })
-                      }
-                    />
-                  </div>
+                    </div>
+                  )}
+                  </>
                 )}
 
                 <FormField label="참고 사항" error={shown.extraNote}>
@@ -520,7 +551,16 @@ export function RequestWizard({
   )
 }
 
-function SubmitSuccess({ request }: { request: RequestDetail }) {
+/**
+ * 제출 뒤 화면.
+ *
+ * <p>「관리자가 검토한 뒤」는 이제 언제나 참인 문장이 아니다. 루트 도메인의
+ * 정책이 자동이면 신청은 접수되는 순간 승인되어 돌아오고, 그 사람에게 검토를
+ * 기다리라고 말하면 오지 않을 알림을 기다리게 된다. 무엇이 일어났는지는 응답이
+ * 말해 주므로 그것을 읽는다.</p>
+ */
+function SubmitSuccess({ request, kind }: { request: RequestDetail; kind: RequestKindModule }) {
+  const approved = request.status === 'APPROVED'
   return (
     <div className="mx-auto max-w-lg py-12 text-center">
       <div
@@ -535,11 +575,18 @@ function SubmitSuccess({ request }: { request: RequestDetail }) {
           />
         </svg>
       </div>
-      <h1 className="mt-4 text-2xl font-bold text-foreground-primary">신청이 접수되었습니다</h1>
+      <h1 className="mt-4 text-2xl font-bold text-foreground-primary">
+        {approved ? '신청이 승인되었습니다' : '신청이 접수되었습니다'}
+      </h1>
       <p className="mt-2 text-sm text-foreground-secondary">
-        <span className="font-medium text-foreground-primary">{request.displayName}</span> 신청을
-        관리자가 검토한 뒤 결과를 확인할 수 있습니다.
+        <span className="font-medium text-foreground-primary">{request.displayName}</span>{' '}
+        {approved
+          ? '신청이 바로 승인되어 리소스가 만들어졌습니다.'
+          : '신청을 관리자가 검토한 뒤 결과를 확인할 수 있습니다.'}
       </p>
+      {approved && kind.copy.approvedNotice && (
+        <p className="mt-2 text-sm text-foreground-secondary">{kind.copy.approvedNotice}</p>
+      )}
       <div className="mt-6 flex justify-center gap-3">
         <Link to={`/console/requests/${request.id}`}>
           <Button variant="secondary">신청 상세 보기</Button>

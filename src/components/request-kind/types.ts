@@ -71,6 +71,14 @@ export interface KindWizard {
   reviewRows(): Partial<Record<WizardStepId, [string, string][]>>
   /** 확인 단계에 붙는 종류별 고지 (VM은 백업 책임 안내). */
   notice?: ReactNode
+  /**
+   * 이 신청이 달 이름. `hiddenCommonFields`에 `displayName`을 실은 종류만 채운다.
+   *
+   * 리소스의 이름이 곧 신청의 이름인 종류가 있다. 외부 도메인의 이름은 발급받는
+   * 라벨 그 자체이고, 그것을 공통 칸으로 한 번 더 물으면 한 자리에 두 이름이
+   * 남아 어느 쪽이 주소가 되는지 화면이 설명해야 한다.
+   */
+  displayName?: string
   payload(): KindCreatePayload
 }
 
@@ -78,8 +86,34 @@ export interface KindWizard {
 export interface RequestKindModule {
   type: CreateRequest['type']
   picker: { title: string; description: string }
-  /** 종류가 언급되는 공통 단계 문구. 화면 골격은 종류 이름을 모른다. */
-  copy: { noWorkspaceNotice: string; displayNameHint?: string | null }
+  /**
+   * 종류가 언급되는 공통 단계 문구. 화면 골격은 종류 이름을 모른다.
+   *
+   * `approvedNotice`는 접수와 동시에 승인된 신청의 완료 화면에만 쓰인다. 그때
+   * 사람이 다음에 할 일은 종류마다 다르고 — 도메인은 레코드를 넣어야 주소가
+   * 열린다 — 검토를 기다리는 신청에는 아직 할 일이 없다.
+   */
+  copy: {
+    noWorkspaceNotice: string
+    displayNameHint?: string | null
+    approvedNotice?: ReactNode
+  }
+  /**
+   * 공통 단계에서 이 종류가 쓰지 않는 칸.
+   *
+   * 감춘 칸은 그리지도, 검증하지도, 확인 단계에 싣지도 않는다. 셋이 함께
+   * 움직여야 하는 이유는 하나라도 빠지면 **화면이 감춘 칸에서 위저드가
+   * 막히기** 때문이다 — 채울 방법이 없는 필수 항목이 다음 단계를 잠근다.
+   *
+   * 지금 이것을 쓰는 것은 외부 도메인 하나다. 기관은 고른 루트가 정하므로
+   * 묻지 않고, 사용 기간은 이름이 자기 연장 기한을 갖고 있어 묻지 않으며,
+   * 리소스 이름은 발급받는 라벨 그 자체라 `KindWizard.displayName`이 대신
+   * 채운다. 앞의 둘은 서버가 같은 판단을 하므로 **화면만 감추는 것이 아니라
+   * 양쪽이 같은 규칙을 말한다**; 이름은 서버가 언제나 요구하므로 감추는 종류가
+   * 반드시 그 값을 돌려줘야 한다.
+   */
+  hiddenCommonFields?: ReadonlyArray<'orgId' | 'period' | 'displayName'>
+
   /**
    * 이 종류가 422로 되돌려받을 수 있는 필드. 공통 표에 합쳐진다.
    *
