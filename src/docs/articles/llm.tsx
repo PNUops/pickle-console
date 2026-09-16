@@ -96,8 +96,8 @@ export const llmArticles: GuideArticle[] = [
             src={llmRequestImage}
             alt="LLM API 키 신청의 자체 서빙 모델과 유료 모델 선택 및 희망 한도 입력"
             caption="LLM API 키의 리소스 구성에서 사용할 모델을 고르고 해당 항목의 희망 한도를 입력합니다."
-            width={768}
-            height={802}
+            width={1600}
+            height={1668}
           />
         </>,
       },

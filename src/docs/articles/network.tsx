@@ -25,12 +25,12 @@ export const networkArticles: GuideArticle[] = [
                 도메인을 연결합니다. 플랫폼 주소를 받거나 본인이 가진 도메인을 붙일 수 있습니다.
               </li>
               <li>
-                <strong>플랫폼 밖 서버에 이름을 붙인다면:</strong>
+                <strong>플랫폼 밖 서버에 이름을 붙인다면:</strong>{' '}
                 <GuideLink slug="network/domains">외부 서버용 도메인 발급</GuideLink>을 사용합니다.
                 VM 상세의 도메인 연결과 진입 메뉴가 다릅니다.
               </li>
               <li>
-                <strong>웹이 아닌 TCP·UDP 서비스라면:</strong>
+                <strong>웹이 아닌 TCP·UDP 서비스라면:</strong>{' '}
                 <GuideLink slug="network/ports">포트포워딩</GuideLink>을 사용합니다.
                 혼자 접속하는 서비스라면 같은 문서의 SSH 로컬 포워딩을 먼저 확인하세요.
               </li>

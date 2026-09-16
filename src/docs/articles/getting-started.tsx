@@ -397,8 +397,8 @@ export const gettingStartedArticles: GuideArticle[] = [
               src={workspaceMembersImage}
               alt="워크스페이스 상세의 구성원 목록과 역할 변경 선택"
               caption="워크스페이스 상세에서 구성원과 현재 역할을 확인하고 필요한 사람의 역할을 변경합니다."
-              width={1104}
-              height={213}
+              width={2208}
+              height={460}
             />
           </>
         ),
@@ -528,8 +528,8 @@ export const gettingStartedArticles: GuideArticle[] = [
               src={resourceAccessImage}
               alt="리소스 상세의 접근 탭에 표시된 접근 목록과 등급 선택"
               caption="리소스의 접근 탭에서 권한을 받을 대상과 부여할 등급을 확인합니다."
-              width={1104}
-              height={479}
+              width={2208}
+              height={958}
             />
           </>
         ),
