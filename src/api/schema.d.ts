@@ -3795,6 +3795,14 @@ export interface components {
             /** Format: date */
             to: string;
         };
+        AdminMembershipResponse: {
+            role: components["schemas"]["WorkspaceMemberRole"];
+            vmOrgIds: string[];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
         AdminNoticeView: {
             /** @description 지금 게시 창 안에 있는지. 예정·만료된 공지도 이 목록에는 함께 나옵니다. */
             active: boolean;
@@ -7672,7 +7680,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             managedOrgs: components["schemas"]["ManagedOrgResponse"][];
-            memberships: components["schemas"]["Membership"][];
+            memberships: components["schemas"]["AdminMembershipResponse"][];
             mfaEnabled: boolean;
             name: string;
             position?: components["schemas"]["UserPosition"] | null;

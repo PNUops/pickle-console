@@ -11,7 +11,7 @@ import {
   sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 
 function renderAsSysAdmin() {
@@ -121,10 +121,8 @@ describe('관리자 사용자 목록', () => {
   })
 
   test('grants in every administered organisation, not just the active one', async () => {
-    // The set the server checks is `administers`, not the active scope, so an
-    // account that administers two organisations may staff either from here.
-    // With one organisation in the fixture the widened set and the old scoped
-    // one are the same list, and nothing would hold this.
+    // The server checks `administers`, not the active scope. With a one-org
+    // fixture the widened set and the old scoped one are the same list.
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
     renderApp(`/admin/users?org=${uuid(2)}`)
@@ -147,6 +145,21 @@ describe('관리자 사용자 목록', () => {
     await user.click(drawer.getByRole('button', { name: '부여' }))
 
     expect(await drawer.findByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
+  })
+
+  test('offers no VM link for a workspace outside the current scope', async () => {
+    // Machines in another organisation. The link used to be drawn anyway and
+    // landed on an empty list, which reads as "no virtual machines".
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await user.type(await screen.findByLabelText('사용자 검색'), 'outsider')
+    await openDetail(user, '정외부')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+
+    // The workspace is still named; only the link that cannot resolve is gone.
+    expect(await drawer.findByText('졸업과제팀')).toBeInTheDocument()
+    expect(drawer.queryByRole('link', { name: 'VM 보기' })).not.toBeInTheDocument()
   })
 
   test('an org-tier admin is answered 404 for a system-tier account', async () => {
@@ -232,10 +245,11 @@ describe('관리자 사용자 목록', () => {
     const membership = (await drawer.findByText('연구팀')).closest('li')!
     await user.click(within(membership).getByRole('link', { name: 'VM 보기' }))
 
-    // 라우트 이동으로 드로어가 닫히고, 해당 워크스페이스의 VM만 조회된다 (연구팀 VM 없음)
+    // What this holds is the filter on the route, not whether the mock's VM
+    // world happens to have a row for it.
     await screen.findByRole('heading', { name: 'VM 관리' })
     expect(screen.queryByRole('dialog', { name: '사용자 상세' })).not.toBeInTheDocument()
-    expect(await screen.findByText('표시할 VM이 없습니다.')).toBeInTheDocument()
+    expect(currentPath()).toContain(`workspaceId=${uuid(11)}`)
   })
 
   test('상세는 드로어로 열리고 닫기 버튼으로 닫힌다', async () => {

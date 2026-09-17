@@ -10,9 +10,9 @@ import { Select } from './ui'
  * 기관을 지정하면 404). 고를 것이 하나뿐이면 선택기를 보이지 않는 것이 관례라
  * `showOrgFilter`는 보통 `orgOptions.length > 1`이다.
  *
- * 사용자 관리 화면만 두 가지가 다르다. 그 조회는 서버가 기관으로 좁히지 않아
- * 404가 없고, 전역 관리 범위를 따르지 않으므로 기관이 하나뿐인 관리자에게도
- * 「전체 기관 ↔ 그 기관」이라는 선택이 남는다 — 그래서 `> 0`으로 건다.
+ * The user screen is the exception: that read is not org-scoped and the screen
+ * ignores the global scope, so one option still means a choice (전체 기관 against
+ * it) and it gates on `> 0`.
  */
 export function FilterBar<S>({
   tabs,

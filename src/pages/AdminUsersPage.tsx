@@ -92,15 +92,18 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
   return <Badge variant={STATUS_VARIANT[status]}>{USER_STATUS_LABELS[status]}</Badge>
 }
 
+/** Would the VM list have anything to show for this workspace under this scope? */
+function vmsReachable(vmOrgIds: string[], activeOrgId: string | undefined): boolean {
+  return activeOrgId === undefined ? vmOrgIds.length > 0 : vmOrgIds.includes(activeOrgId)
+}
+
 export function AdminUsersPage() {
   const { user } = useAuth()
   const viewerRole = user?.role
-  // The account directory is the one admin read the server does not narrow by
-  // organisation. Membership is derived from the resources a workspace holds, so
-  // the people an administrator most needs to reach hold none: someone who has
-  // requested nothing belongs to no organisation at all. This screen therefore
-  // does not follow the global admin scope, and narrows only through its own
-  // 기관 filter. Account disable, enable and MFA reset stay SYS_ADMIN-only.
+  // The one admin read the server does not narrow by organisation, because the
+  // people an administrator most needs to reach are derived into none. So this
+  // screen ignores the global admin scope and narrows only through its 기관
+  // filter. Account disable, enable and MFA reset stay SYS_ADMIN-only.
   const isSystemTier = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
   const [status, setStatus] = useState<UserStatus | undefined>(undefined)
@@ -114,9 +117,8 @@ export function AdminUsersPage() {
   const debouncedQ = useDebouncedValue(qInput).trim()
   const q = debouncedQ.length > 0 ? debouncedQ : undefined
 
-  // Narrowing is a read, so the org tier may narrow to any organisation it holds
-  // a role in, viewer rows included; only granting asks for ORG_ADMIN. The system
-  // tier shares the scope provider's cache entry, so this costs no extra request.
+  // Narrowing is a read, so viewer rows count too; only granting asks for
+  // ORG_ADMIN. The system tier shares the scope provider's cache entry.
   const orgCatalog = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSystemTier })
   const orgOptions = isSystemTier
     ? (orgCatalog.data ?? []).map((org) => ({ id: org.id, name: org.name }))
@@ -345,12 +347,19 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
                 <span className="text-neutral-400">
                   ({WORKSPACE_KIND_LABELS[m.workspaceKind]} · {m.role})
                 </span>{' '}
-                <Link
-                  to={adminPaths.vms(activeOrgId, m.workspaceId)}
-                  className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-                >
-                  VM 보기
-                </Link>
+                {/*
+                 * The directory spans organisations, the VM list does not, so a
+                 * link that cannot resolve lands on an empty list that reads as
+                 * "no virtual machines" rather than "not yours to see".
+                 */}
+                {vmsReachable(m.vmOrgIds, activeOrgId) && (
+                  <Link
+                    to={adminPaths.vms(activeOrgId, m.workspaceId)}
+                    className="text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
+                  >
+                    VM 보기
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
