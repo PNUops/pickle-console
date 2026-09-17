@@ -37,7 +37,13 @@ import {
   Textarea,
   useToast,
 } from '../components/ui'
-import { WORKSPACE_ROLE_LABELS } from '../lib/labels'
+import {
+  CREATABLE_WORKSPACE_KINDS,
+  WORKSPACE_KIND_HINTS,
+  WORKSPACE_KIND_LABELS,
+  WORKSPACE_ROLE_LABELS,
+  type CreatableWorkspaceKind,
+} from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -269,13 +275,23 @@ function EditWorkspaceModal({
   const queryClient = useQueryClient()
   const [name, setName] = useState(workspace.name)
   const [description, setDescription] = useState(workspace.description ?? '')
+  // 개인 워크스페이스는 유형을 바꿀 수 없다. 자동 생성과 삭제 불가, 닫힌 구성원
+  // 목록이 전부 그 값으로 갈리기 때문이다.
+  const personal = workspace.kind === 'PERSONAL'
+  const [kind, setKind] = useState<CreatableWorkspaceKind | null>(
+    personal ? null : (workspace.kind as CreatableWorkspaceKind),
+  )
   const [error, setError] = useState<string | null>(null)
 
   const update = useMutation({
     mutationFn: async () => {
       const { data, error: err } = await api.PATCH('/workspaces/{workspaceId}', {
         params: { path: { workspaceId: workspace.id } },
-        body: { name, description: description || null },
+        body: {
+          name,
+          description: description || null,
+          ...(kind && kind !== workspace.kind ? { kind } : {}),
+        },
       })
       if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.')
       return data
@@ -304,6 +320,20 @@ function EditWorkspaceModal({
         <FormField label="워크스페이스 이름" required>
           <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} />
         </FormField>
+        {!personal && (
+          <FormField label="유형" required>
+            <Select
+              value={kind ?? ''}
+              onChange={(event) => setKind(event.target.value as CreatableWorkspaceKind)}
+            >
+              {CREATABLE_WORKSPACE_KINDS.map((value) => (
+                <option key={value} value={value}>
+                  {WORKSPACE_KIND_LABELS[value]} ({WORKSPACE_KIND_HINTS[value]})
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        )}
         <FormField label="설명">
           <Textarea
             value={description}

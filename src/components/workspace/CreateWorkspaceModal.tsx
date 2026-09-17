@@ -5,6 +5,12 @@ import { api } from '../../api/client'
 import { toApiError } from '../../api/problem'
 import { Alert, Button, FormField, Input, Modal, Select, Textarea } from '../ui'
 import { fieldErrorsOf } from '../../lib/field-errors'
+import {
+  CREATABLE_WORKSPACE_KINDS,
+  WORKSPACE_KIND_HINTS,
+  WORKSPACE_KIND_LABELS,
+  type CreatableWorkspaceKind,
+} from '../../lib/labels'
 
 /**
  * 새 워크스페이스 만들기 — 목록 화면과 사이드바 선택기가 함께 쓴다.
@@ -13,7 +19,9 @@ import { fieldErrorsOf } from '../../lib/field-errors'
 export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [kind, setKind] = useState<'TEAM' | 'PROJECT'>('TEAM')
+  // 기본값을 두지 않는다. 유형이 뜻을 갖게 된 뒤로는 먼저 놓인 값이 곧 그 값으로
+  // 쏠리는 자리가 된다.
+  const [kind, setKind] = useState<CreatableWorkspaceKind | ''>('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -22,7 +30,7 @@ export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose
   const create = useMutation({
     mutationFn: async () => {
       const { data, error } = await api.POST('/workspaces', {
-        body: { kind, name, description: description || null },
+        body: { kind: kind as CreatableWorkspaceKind, name, description: description || null },
       })
       if (!data) throw toApiError(error, '워크스페이스를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return data
@@ -53,6 +61,7 @@ export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose
     event.preventDefault()
     setFormError(null)
     const errors: Record<string, string> = {}
+    if (!kind) errors.kind = '워크스페이스 유형을 선택해 주세요.'
     if (!name.trim()) errors.name = '워크스페이스 이름을 입력해 주세요.'
     else if (name.length > 100) errors.name = '워크스페이스 이름은 100자 이하로 입력해 주세요.'
     if (description.length > 500) errors.description = '설명은 500자 이하로 입력해 주세요.'
@@ -65,13 +74,17 @@ export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose
     <Modal open={open} onClose={close} title="새 워크스페이스 만들기">
       <form onSubmit={submit} className="space-y-4" noValidate>
         {formError && <Alert variant="danger">{formError}</Alert>}
-        <FormField label="종류" required>
+        <FormField label="유형" required error={fieldErrors.kind}>
           <Select
             value={kind}
-            onChange={(event) => setKind(event.target.value as 'TEAM' | 'PROJECT')}
+            onChange={(event) => setKind(event.target.value as CreatableWorkspaceKind | '')}
           >
-            <option value="TEAM">팀 (동아리·스터디 등)</option>
-            <option value="PROJECT">프로젝트 (수업·캡스톤 등)</option>
+            <option value="">선택해 주세요</option>
+            {CREATABLE_WORKSPACE_KINDS.map((value) => (
+              <option key={value} value={value}>
+                {WORKSPACE_KIND_LABELS[value]} ({WORKSPACE_KIND_HINTS[value]})
+              </option>
+            ))}
           </Select>
         </FormField>
         <FormField label="워크스페이스 이름" required error={fieldErrors.name}>

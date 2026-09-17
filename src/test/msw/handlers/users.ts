@@ -69,7 +69,7 @@ function initialUsers(): AdminUserRecord[] {
       disabledReason: null,
       memberships: [
         { workspaceId: uuid(7), workspaceName: '홍길동', workspaceKind: 'PERSONAL', role: 'OWNER', vmOrgIds: [] },
-        { workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'TEAM', role: 'MEMBER', vmOrgIds: [uuid(1)] },
+        { workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'LAB', role: 'MEMBER', vmOrgIds: [uuid(1)] },
       ],
       activeVmCount: 2,
       statusChanges: [],
@@ -112,7 +112,7 @@ function initialUsers(): AdminUserRecord[] {
       disabledReason: null,
       // Machines in another organisation: the case the VM link used to lie about.
       memberships: [
-        { workspaceId: uuid(41), workspaceName: '졸업과제팀', workspaceKind: 'TEAM', role: 'MEMBER', vmOrgIds: [uuid(2)] },
+        { workspaceId: uuid(41), workspaceName: '졸업과제팀', workspaceKind: 'COMPETITION', role: 'MEMBER', vmOrgIds: [uuid(2)] },
       ],
       activeVmCount: 2,
       statusChanges: [],

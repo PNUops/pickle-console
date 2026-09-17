@@ -294,7 +294,7 @@ function initialContexts(): Record<string, ApprovalContext> {
       workspace: {
         id: uuid(21),
         name: 'AI 동아리',
-        kind: 'TEAM',
+        kind: 'CLUB',
         members: [{ userId: uuid(58), name: '박영희', role: 'OWNER' }],
         activeVms: [],
         totals: { vcpu: 0, memoryMb: 0, diskGb: 0 },

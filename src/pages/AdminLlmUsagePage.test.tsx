@@ -178,8 +178,8 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     // 누르면 이 표가 그 워크스페이스의 키 행으로 바뀌고, 그 행이 키 상세로 간다.
     // 아래 단언이 그 경로를 그대로 지키므로 「키에 닿는다」는 불변식은 살아 있다.
     expect(screen.queryByRole('link', { name: /키 목록/ })).not.toBeInTheDocument()
-    // 워크스페이스 행은 종류를 함께 말한다.
-    expect(await screen.findByText(/\(팀\)/)).toBeInTheDocument()
+    // 워크스페이스 행은 유형을 함께 말한다.
+    expect(await screen.findByText(/\(프로젝트\)/)).toBeInTheDocument()
     await user.click(workspace)
 
     const keyConsumers = (await screen.findByRole('heading', { name: '주요 소비처' })).closest('div')!

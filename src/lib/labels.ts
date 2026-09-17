@@ -1,6 +1,7 @@
 import type { components } from '../api/schema'
 
 export type WorkspaceKind = components['schemas']['WorkspaceKind']
+export type CreatableWorkspaceKind = components['schemas']['CreatableWorkspaceKind']
 export type WorkspaceMemberRole = components['schemas']['WorkspaceMemberRole']
 export type ResourceRole = components['schemas']['ResourceRole']
 export type UserRole = components['schemas']['UserRole']
@@ -10,8 +11,62 @@ export type CreditLimitReset = components['schemas']['CreditLimitReset']
 
 export const WORKSPACE_KIND_LABELS: Record<WorkspaceKind, string> = {
   PERSONAL: '개인',
-  TEAM: '팀',
+  COURSE: '교과',
+  PROGRAM: '비교과',
+  LAB: '연구실',
+  CLUB: '동아리',
+  COMPETITION: '대회',
+  STUDY: '스터디',
   PROJECT: '프로젝트',
+  TEAM: '팀',
+}
+
+/**
+ * 나열 순서. 개인이 맨 앞이고(모두가 가지며 동작이 다른 유일한 유형), 어디에도
+ * 속하지 않는 모임을 받는 프로젝트가 맨 뒤이며, 그 사이는 학교가 운영하는 것에서
+ * 스스로 모인 것 순이다. 여기가 순서의 정본이고 계약의 enum 순서가 아니다.
+ * 폐기된 팀은 이 목록에 없다 — 남은 행의 라벨은 위에서 읽는다.
+ */
+export const WORKSPACE_KIND_ORDER: WorkspaceKind[] = [
+  'PERSONAL',
+  'COURSE',
+  'PROGRAM',
+  'LAB',
+  'CLUB',
+  'COMPETITION',
+  'STUDY',
+  'PROJECT',
+]
+
+/** 만들 때 고를 수 있는 유형. 개인은 자동 생성이고 팀은 폐기됐다. */
+export const CREATABLE_WORKSPACE_KINDS: CreatableWorkspaceKind[] = [
+  'COURSE',
+  'PROGRAM',
+  'LAB',
+  'CLUB',
+  'COMPETITION',
+  'STUDY',
+  'PROJECT',
+]
+
+/** 고르는 자리에서 유형이 무엇을 뜻하는지 한 줄로 알려 주는 말. */
+export const WORKSPACE_KIND_HINTS: Record<CreatableWorkspaceKind, string> = {
+  COURSE: '학점이 부여되는 정규 교과목',
+  PROGRAM: '학점이 없는 교육 프로그램',
+  LAB: '연구실과 연구 그룹',
+  CLUB: '학생 자치 단체',
+  COMPETITION: '공모전과 해커톤에 나가는 팀',
+  STUDY: '자발적으로 모인 학습 모임',
+  PROJECT: '그 밖에 무언가를 만드는 모임',
+}
+
+/**
+ * 서버가 콘솔보다 먼저 배포되면 여기에 없는 유형이 내려온다. 그때 빈 칸을 그리는
+ * 대신 받은 값을 그대로 보여 준다 — 리소스 종류 레지스트리가 같은 이유로 같은 일을
+ * 한다.
+ */
+export function labelForWorkspaceKind(kind: string): string {
+  return WORKSPACE_KIND_LABELS[kind as WorkspaceKind] ?? kind
 }
 
 /** 워크스페이스 축 — 워크스페이스 자체에 대한 권한. 2단이다. */

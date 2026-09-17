@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
@@ -64,6 +65,54 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '워크스페이스 나가기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/역할 변경/)).not.toBeInTheDocument()
+  })
+})
+
+describe('워크스페이스 상세 — 유형', () => {
+  test('소유자는 정보 수정에서 유형을 바꿀 수 있다', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(screen.getByRole('button', { name: '정보 수정' }))
+    const dialog = await screen.findByRole('dialog', { name: '워크스페이스 정보 수정' })
+    await user.selectOptions(within(dialog).getByLabelText('유형'), 'COURSE')
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('교과')).toBeInTheDocument()
+    })
+  })
+
+  test('개인 워크스페이스에는 유형을 고르는 자리가 없다', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(7))
+    await screen.findByRole('heading', { name: '홍길동' })
+
+    await user.click(screen.getByRole('button', { name: '정보 수정' }))
+    const dialog = await screen.findByRole('dialog', { name: '워크스페이스 정보 수정' })
+    expect(within(dialog).queryByLabelText('유형')).not.toBeInTheDocument()
+  })
+
+  test('모르는 유형이 내려와도 빈 칸 대신 받은 값을 보여준다', async () => {
+    // 서버가 콘솔보다 먼저 배포되면 실제로 일어나는 일이다.
+    server.use(
+      http.get('*/api/v1/workspaces/:workspaceId', () =>
+        HttpResponse.json({
+          id: uuid(12),
+          kind: 'SOMETHING_NEW',
+          name: '캡스톤 3조',
+          description: null,
+          myRole: 'OWNER',
+          members: [],
+          createdAt: '2026-07-01T10:12:00+09:00',
+        }),
+      ),
+    )
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    expect(screen.getByText('SOMETHING_NEW')).toBeInTheDocument()
   })
 })
 

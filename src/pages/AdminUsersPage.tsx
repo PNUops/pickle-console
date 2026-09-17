@@ -52,7 +52,7 @@ import { FilterBar } from '../components/FilterBar'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
-import { WORKSPACE_KIND_LABELS, USER_ROLE_LABELS, USER_STATUS_LABELS } from '../lib/labels'
+import { labelForWorkspaceKind, USER_ROLE_LABELS, USER_STATUS_LABELS } from '../lib/labels'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { adminPaths } from '../lib/paths'
@@ -345,7 +345,7 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
               <li key={m.workspaceId}>
                 {m.workspaceName}{' '}
                 <span className="text-neutral-400">
-                  ({WORKSPACE_KIND_LABELS[m.workspaceKind]} · {m.role})
+                  ({labelForWorkspaceKind(m.workspaceKind)} · {m.role})
                 </span>{' '}
                 {/*
                  * The directory spans organisations, the VM list does not, so a

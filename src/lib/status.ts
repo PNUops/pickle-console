@@ -288,6 +288,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'auth.refresh_reuse_detected': '리프레시 토큰 재사용 감지',
   'auth.logout': '로그아웃',
   'workspace.create': '워크스페이스 생성',
+  'workspace.kind_update': '워크스페이스 유형 변경',
   'workspace.member_add': '구성원 추가',
   'workspace.member_update': '구성원 역할 변경',
   'workspace.member_remove': '구성원 제거',

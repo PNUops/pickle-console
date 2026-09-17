@@ -59,7 +59,7 @@ function initialWorkspaces(): WorkspaceRecord[] {
       // 로그인 사용자(42)가 구성원(소유자가 아님)인 두 번째 워크스페이스.
       detail: {
         id: uuid(14),
-        kind: 'PROJECT',
+        kind: 'COURSE',
         name: '데이터베이스 실습',
         description: '2026-1 데이터베이스 실습 조교팀',
         myRole: 'MEMBER',
@@ -73,7 +73,7 @@ function initialWorkspaces(): WorkspaceRecord[] {
     {
       detail: {
         id: uuid(15),
-        kind: 'TEAM',
+        kind: 'STUDY',
         name: '알고리즘 스터디',
         description: '주 1회 문제 풀이 모임',
         myRole: 'MEMBER',
@@ -173,9 +173,26 @@ export const workspaceHandlers: RequestHandler[] = [
   http.patch('*/api/v1/workspaces/:workspaceId', async ({ params, request }) => {
     const record = findWorkspace(params.workspaceId!)
     if (!record) return notFound()
-    const body = (await request.json()) as { name?: string; description?: string | null }
+    const body = (await request.json()) as {
+      name?: string
+      description?: string | null
+      kind?: Schemas['CreatableWorkspaceKind']
+    }
+    // 서버 불변식을 목이 어기면 시험이 초록으로 거짓말한다. 개인 워크스페이스의
+    // 유형 변경은 여기서도 거절한다.
+    if (body.kind !== undefined && record.detail.kind === 'PERSONAL') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '입력값을 확인해 주세요',
+        status: 422,
+        detail: '개인 워크스페이스는 유형을 바꿀 수 없습니다.',
+        code: 'VALIDATION_FAILED',
+        errors: [{ field: 'kind', message: '개인 워크스페이스는 유형을 바꿀 수 없습니다.' }],
+      })
+    }
     if (body.name !== undefined) record.detail.name = body.name
     if (body.description !== undefined) record.detail.description = body.description
+    if (body.kind !== undefined) record.detail.kind = body.kind
     return HttpResponse.json(toDetail(record), { status: 200 })
   }),
 

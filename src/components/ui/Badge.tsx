@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import {
-  WORKSPACE_KIND_LABELS,
+  labelForWorkspaceKind,
   WORKSPACE_ROLE_LABELS,
   RESOURCE_ROLE_LABELS,
   type WorkspaceKind,
@@ -230,16 +230,20 @@ export function DomainConnectionBadge({
   )
 }
 
-const WORKSPACE_KIND_VARIANTS: Record<WorkspaceKind, BadgeVariant> = {
-  PERSONAL: 'neutral',
-  TEAM: 'info',
-  PROJECT: 'primary',
+/**
+ * 색은 유형 여덟 개를 가르지 않는다. 남은 변형은 success·warning·danger처럼 상태를
+ * 뜻하는 것들이라, 「대회」를 빨갛게 칠하면 무슨 문제가 있다는 말이 된다. 시스템이
+ * 실제로 긋는 선은 개인이냐 함께 쓰는 곳이냐 하나뿐이고, 색은 그것만 말한다.
+ * 어느 유형인지는 라벨이 말한다.
+ */
+function workspaceKindVariant(kind: string): BadgeVariant {
+  return kind === 'PERSONAL' ? 'neutral' : 'primary'
 }
 
 export function WorkspaceKindBadge({ kind, className }: { kind: WorkspaceKind; className?: string }) {
   return (
-    <Badge variant={WORKSPACE_KIND_VARIANTS[kind]} className={className}>
-      {WORKSPACE_KIND_LABELS[kind]}
+    <Badge variant={workspaceKindVariant(kind)} className={className}>
+      {labelForWorkspaceKind(kind)}
     </Badge>
   )
 }
