@@ -238,8 +238,10 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
           outlive it, and the workspace is holding this name and its slot in
           the cap already. Drawn for every reader of a released name rather
           than for a rung: what the server asks is membership of the workspace,
-          and no field here reports that — the list offers it the same way, for
-          the member who holds no grant because the issuer has left. */}
+          and no field here reports that. The member who holds no grant, because
+          the issuer has left, reaches the row through the workspace's own
+          listing rather than the unscoped one — an unscoped list carries only
+          what a grant opens. */}
       {released && (
         <Card className="space-y-3 p-6">
           <h2 className="text-base font-semibold text-neutral-900">도메인 되살리기</h2>

@@ -110,8 +110,10 @@ export function DnsDomainsPage() {
                           {/* A workspace owner who cannot see inside this
                               domain may still decide who can. The detail is
                               closed to them, so this list is the only way in,
-                              and the only way to take back a name whose
-                              issuer has left. */}
+                              and the only way to take back a name whose issuer
+                              has left. A row they hold no grant on reaches them
+                              only under the workspace's own scope, since the
+                              unscoped listing carries what a grant opens. */}
                           {domain.accessManageAllowed && (
                             <>
                               {' '}
