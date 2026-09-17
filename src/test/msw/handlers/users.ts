@@ -12,8 +12,11 @@ type UserAdminDetail = Schemas['UserAdminDetailResponse']
  * {@code visibleToOrg} models derived membership so the ordinary {@code orgId}
  * filter can narrow to an org's administrators plus its derived members.
  */
-interface AdminUserRecord extends UserAdminDetail {
+interface AdminUserRecord extends Omit<UserAdminDetail, 'statusChanges'> {
   visibleToOrg: string | null
+  // Not on the contract; the mock needs it to withhold on the same ground the
+  // server does. Dropped on the way out.
+  statusChanges: (Schemas['UserStatusChangeResponse'] & { actorRole?: Schemas['UserRole'] })[]
 }
 
 function initialUsers(): AdminUserRecord[] {
@@ -107,8 +110,7 @@ function initialUsers(): AdminUserRecord[] {
       withdrawnAt: null,
       disabledAt: null,
       disabledReason: null,
-      // Belongs to another organisation and has machines there. The account the
-      // VM link used to lie about: reachable in the directory, not in the VM list.
+      // Machines in another organisation: the case the VM link used to lie about.
       memberships: [
         { workspaceId: uuid(41), workspaceName: '졸업과제팀', workspaceKind: 'TEAM', role: 'MEMBER', vmOrgIds: [uuid(2)] },
       ],
@@ -117,9 +119,7 @@ function initialUsers(): AdminUserRecord[] {
       visibleToOrg: uuid(2),
     },
     {
-      // Has requested nothing, so belongs to no derived organisation. The
-      // account the unscoped directory exists for: an administrator has to be
-      // able to find this person to staff them.
+      // Derived into no organisation: the account the unscoped directory exists for.
       id: uuid(43),
       email: 'nobody.park@pusan.ac.kr',
       name: '박무소속',
@@ -171,8 +171,7 @@ function actorOf(request: Request) {
 /**
  * 계약 v0.46.0: 조회는 전 계층이 전 기관을 본다. orgId는 좁히는 보통 필터다.
  *
- * 파생 소속 쪽에는 서버와 같이 `ACTIVE` 조건이 걸린다 — 역할 행이 있는 사람은 상태와
- * 무관하게 잡히지만, 워크스페이스로 엮인 사람은 활성 계정만 그 기관의 사람이다.
+ * Derived membership carries the server's ACTIVE condition; a role row does not.
  */
 function matchesOrg(row: AdminUserRecord, orgId: string | null): boolean {
   if (!orgId) return true
@@ -181,9 +180,8 @@ function matchesOrg(row: AdminUserRecord, orgId: string | null): boolean {
 }
 
 /**
- * 기관 계층에게는 시스템 계층 계정을 내주지 않는다(운영자 판단 2026-09-16). 기관
- * 스코프와 다른 축이다 — 볼 수 있는 계정에는 조치할 수 있어야 하는데, 시스템 계정은
- * 역할 부여도 상태 변경도 막혀 있다. 서버가 목록에서 빼고 상세는 404로 답한다.
+ * System-tier accounts are withheld from the org tier (operator, 2026-09-16):
+ * it cannot act on them. Omitted from the list, 404 from the detail.
  */
 function visibleToActor(row: AdminUserRecord, actorRole: Schemas['UserRole']): boolean {
   return isSysTier(actorRole) || !isSysTier(row.role)
@@ -202,9 +200,16 @@ function toView(row: AdminUserRecord): Schemas['UserAdminViewResponse'] {
  * 그렇게 하므로 모의도 그렇게 한다 — 여기서 채워 보내면 콘솔이 경계를 지키는지 이 테스트
  * 세계에서는 확인할 수 없다.
  */
-function toDetail(row: AdminUserRecord, actorRole: Schemas['UserRole']): UserAdminDetail {
-  const { visibleToOrg: _drop, ...detail } = row
-  if (isSysTier(actorRole)) return detail
+function toDetail(row: AdminUserRecord, readerRole: Schemas['UserRole']): UserAdminDetail {
+  const { visibleToOrg: _drop, statusChanges, ...rest } = row
+  // A system-tier actor's public id does not reach the org tier: it reopens an
+  // account withheld from it. The name and address do.
+  const visibleChanges = statusChanges.map(({ actorRole, ...change }) => ({
+    ...change,
+    actorId: !isSysTier(readerRole) && actorRole && isSysTier(actorRole) ? null : change.actorId,
+  }))
+  const detail = { ...rest, statusChanges: visibleChanges }
+  if (isSysTier(readerRole)) return detail
   return {
     ...detail,
     position: null,
@@ -293,7 +298,7 @@ export const userHandlers: RequestHandler[] = [
       page,
       size,
       totalElements: filtered.length,
-      // 서버와 같이 0건이면 0쪽이다. 1로 올리면 빈 목록에 1쪽짜리 페이저가 선다.
+      // Zero rows is zero pages, as on the server.
       totalPages: Math.ceil(filtered.length / size),
     }
     return HttpResponse.json(body, { status: 200 })
@@ -451,7 +456,7 @@ export const userHandlers: RequestHandler[] = [
     }
     const from = row.status
     row.statusChanges = [
-      { fromStatus: from, toStatus: 'DISABLED', actorId: actor.id, actorEmail: actor.email, actorName: actor.name, reason, changedAt: new Date().toISOString() },
+      { fromStatus: from, toStatus: 'DISABLED', actorId: actor.id, actorEmail: actor.email, actorName: actor.name, actorRole: actor.role, reason, changedAt: new Date().toISOString() },
       ...row.statusChanges,
     ]
     row.status = 'DISABLED'
@@ -477,7 +482,7 @@ export const userHandlers: RequestHandler[] = [
     const lastDisable = row.statusChanges.find((c) => c.toStatus === 'DISABLED')
     const restored = lastDisable?.fromStatus ?? 'ACTIVE'
     row.statusChanges = [
-      { fromStatus: 'DISABLED', toStatus: restored, actorId: actor.id, actorEmail: actor.email, actorName: actor.name, reason: null, changedAt: new Date().toISOString() },
+      { fromStatus: 'DISABLED', toStatus: restored, actorId: actor.id, actorEmail: actor.email, actorName: actor.name, actorRole: actor.role, reason: null, changedAt: new Date().toISOString() },
       ...row.statusChanges,
     ]
     row.status = restored
