@@ -91,7 +91,7 @@ function toView({ senderOrgId: _senderOrgId, ...view }: StoredAnnouncement): Ann
 const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> = {
   [uuid(12)]: {
     id: uuid(12),
-    kind: 'LAB',
+    kind: 'PROJECT',
     name: '캡스톤 3조',
     description: '캡스톤 디자인 3조',
     createdAt: '2026-06-01T10:00:00+09:00',

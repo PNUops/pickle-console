@@ -158,7 +158,7 @@ export const introductionArticles: GuideArticle[] = [
       },
       {
         id: 'sharing',
-        title: '팀과 프로젝트의 리소스 공유',
+        title: '워크스페이스의 리소스 공유',
         body: (
           <>
             <p>

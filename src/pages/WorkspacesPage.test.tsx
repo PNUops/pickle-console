@@ -18,7 +18,7 @@ async function openCreateModal() {
 }
 
 describe('내 워크스페이스 목록', () => {
-  test('워크스페이스 유형·역할 배지와 함께 내 워크스페이스를 나열한다', async () => {
+  test('lists my workspaces with their kind and role badges', async () => {
     renderWorkspaces()
 
     const row = (await screen.findByRole('link', { name: '캡스톤 3조' })).closest('tr')!
@@ -48,7 +48,7 @@ describe('워크스페이스 생성', () => {
     ).toBeInTheDocument()
   })
 
-  test('유형을 고르지 않으면 만들 수 없다', async () => {
+  test('creation refuses a form with no kind chosen', async () => {
     renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 

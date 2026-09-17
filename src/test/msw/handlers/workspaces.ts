@@ -178,8 +178,8 @@ export const workspaceHandlers: RequestHandler[] = [
       description?: string | null
       kind?: Schemas['CreatableWorkspaceKind']
     }
-    // 서버 불변식을 목이 어기면 시험이 초록으로 거짓말한다. 개인 워크스페이스의
-    // 유형 변경은 여기서도 거절한다.
+    // A mock that breaks a server invariant makes the suite lie in green, so
+    // reclassifying a personal workspace is refused here too.
     if (body.kind !== undefined && record.detail.kind === 'PERSONAL') {
       return problemResponse({
         type: 'about:blank',

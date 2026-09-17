@@ -231,10 +231,10 @@ export function DomainConnectionBadge({
 }
 
 /**
- * 색은 유형 여덟 개를 가르지 않는다. 남은 변형은 success·warning·danger처럼 상태를
- * 뜻하는 것들이라, 「대회」를 빨갛게 칠하면 무슨 문제가 있다는 말이 된다. 시스템이
- * 실제로 긋는 선은 개인이냐 함께 쓰는 곳이냐 하나뿐이고, 색은 그것만 말한다.
- * 어느 유형인지는 라벨이 말한다.
+ * Colour does not separate the eight kinds. The remaining variants mean states,
+ * so painting a competition red would claim something is wrong with it. The one
+ * line the system actually draws is personal versus shared, and that is all the
+ * colour says; which kind it is, the label says.
  */
 function workspaceKindVariant(kind: string): BadgeVariant {
   return kind === 'PERSONAL' ? 'neutral' : 'primary'

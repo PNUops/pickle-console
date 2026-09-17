@@ -275,11 +275,19 @@ function EditWorkspaceModal({
   const queryClient = useQueryClient()
   const [name, setName] = useState(workspace.name)
   const [description, setDescription] = useState(workspace.description ?? '')
-  // 개인 워크스페이스는 유형을 바꿀 수 없다. 자동 생성과 삭제 불가, 닫힌 구성원
-  // 목록이 전부 그 값으로 갈리기 때문이다.
+  // A personal workspace cannot be reclassified: automatic creation, the
+  // undeletable rule and the closed member list all decide by that value.
   const personal = workspace.kind === 'PERSONAL'
-  const [kind, setKind] = useState<CreatableWorkspaceKind | null>(
-    personal ? null : (workspace.kind as CreatableWorkspaceKind),
+  // A kind this build cannot offer (retired TEAM, or one the server shipped
+  // first) has no option to select. Starting on it would leave the select
+  // showing its first entry while the state held the old value, so saving
+  // would send nothing and the screen would claim a change it never made.
+  // Start unset instead and make the owner choose.
+  const creatable = CREATABLE_WORKSPACE_KINDS.includes(
+    workspace.kind as CreatableWorkspaceKind,
+  )
+  const [kind, setKind] = useState<CreatableWorkspaceKind | ''>(
+    personal || !creatable ? '' : (workspace.kind as CreatableWorkspaceKind),
   )
   const [error, setError] = useState<string | null>(null)
 
@@ -290,7 +298,7 @@ function EditWorkspaceModal({
         body: {
           name,
           description: description || null,
-          ...(kind && kind !== workspace.kind ? { kind } : {}),
+          ...(kind !== '' && kind !== workspace.kind ? { kind } : {}),
         },
       })
       if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.')
@@ -323,9 +331,10 @@ function EditWorkspaceModal({
         {!personal && (
           <FormField label="유형" required>
             <Select
-              value={kind ?? ''}
+              value={kind}
               onChange={(event) => setKind(event.target.value as CreatableWorkspaceKind)}
             >
+              {kind === '' && <option value="">선택해 주세요</option>}
               {CREATABLE_WORKSPACE_KINDS.map((value) => (
                 <option key={value} value={value}>
                   {WORKSPACE_KIND_LABELS[value]} ({WORKSPACE_KIND_HINTS[value]})

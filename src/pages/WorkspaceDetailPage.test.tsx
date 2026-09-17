@@ -68,8 +68,8 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
   })
 })
 
-describe('워크스페이스 상세 — 유형', () => {
-  test('소유자는 정보 수정에서 유형을 바꿀 수 있다', async () => {
+describe('workspace detail: kind', () => {
+  test('an owner reclassifies the workspace from 정보 수정', async () => {
     const user = userEvent.setup()
     renderWorkspace(uuid(12))
     await screen.findByRole('heading', { name: '캡스톤 3조' })
@@ -84,7 +84,7 @@ describe('워크스페이스 상세 — 유형', () => {
     })
   })
 
-  test('개인 워크스페이스에는 유형을 고르는 자리가 없다', async () => {
+  test('a personal workspace offers no kind select', async () => {
     const user = userEvent.setup()
     renderWorkspace(uuid(7))
     await screen.findByRole('heading', { name: '홍길동' })
@@ -94,7 +94,7 @@ describe('워크스페이스 상세 — 유형', () => {
     expect(within(dialog).queryByLabelText('유형')).not.toBeInTheDocument()
   })
 
-  test('모르는 유형이 내려와도 빈 칸 대신 받은 값을 보여준다', async () => {
+  test('an unknown kind renders its raw value rather than a blank', async () => {
     // 서버가 콘솔보다 먼저 배포되면 실제로 일어나는 일이다.
     server.use(
       http.get('*/api/v1/workspaces/:workspaceId', () =>

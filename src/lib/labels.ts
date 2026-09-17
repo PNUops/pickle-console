@@ -22,12 +22,16 @@ export const WORKSPACE_KIND_LABELS: Record<WorkspaceKind, string> = {
 }
 
 /**
- * 나열 순서. 개인이 맨 앞이고(모두가 가지며 동작이 다른 유일한 유형), 어디에도
- * 속하지 않는 모임을 받는 프로젝트가 맨 뒤이며, 그 사이는 학교가 운영하는 것에서
- * 스스로 모인 것 순이다. 여기가 순서의 정본이고 계약의 enum 순서가 아니다.
- * 폐기된 팀은 이 목록에 없다 — 남은 행의 라벨은 위에서 읽는다.
+ * The order kinds appear in, and the only place that order is decided. Personal
+ * comes first because everyone has one and it is the only kind that behaves
+ * differently; project comes last because it takes whatever fits nowhere else;
+ * in between runs from what the university operates to what people form on
+ * their own. The contract's enum order is not this and must not be relied on.
+ *
+ * Retired TEAM is absent. A row that still carries it reads its label from the
+ * table above, which is why that table has an entry the order does not.
  */
-export const WORKSPACE_KIND_ORDER: WorkspaceKind[] = [
+const WORKSPACE_KIND_ORDER: WorkspaceKind[] = [
   'PERSONAL',
   'COURSE',
   'PROGRAM',
@@ -38,18 +42,16 @@ export const WORKSPACE_KIND_ORDER: WorkspaceKind[] = [
   'PROJECT',
 ]
 
-/** 만들 때 고를 수 있는 유형. 개인은 자동 생성이고 팀은 폐기됐다. */
-export const CREATABLE_WORKSPACE_KINDS: CreatableWorkspaceKind[] = [
-  'COURSE',
-  'PROGRAM',
-  'LAB',
-  'CLUB',
-  'COMPETITION',
-  'STUDY',
-  'PROJECT',
-]
+/**
+ * What a request may name, derived so the order above is the single source
+ * rather than a second list that can drift from it. Personal is created at
+ * signup and TEAM is retired, so neither can be asked for.
+ */
+export const CREATABLE_WORKSPACE_KINDS = WORKSPACE_KIND_ORDER.filter(
+  (kind): kind is CreatableWorkspaceKind => kind !== 'PERSONAL' && kind !== 'TEAM',
+)
 
-/** 고르는 자리에서 유형이 무엇을 뜻하는지 한 줄로 알려 주는 말. */
+/** One line telling the reader what a kind means where they pick one. */
 export const WORKSPACE_KIND_HINTS: Record<CreatableWorkspaceKind, string> = {
   COURSE: '학점이 부여되는 정규 교과목',
   PROGRAM: '학점이 없는 교육 프로그램',
@@ -61,9 +63,9 @@ export const WORKSPACE_KIND_HINTS: Record<CreatableWorkspaceKind, string> = {
 }
 
 /**
- * 서버가 콘솔보다 먼저 배포되면 여기에 없는 유형이 내려온다. 그때 빈 칸을 그리는
- * 대신 받은 값을 그대로 보여 준다 — 리소스 종류 레지스트리가 같은 이유로 같은 일을
- * 한다.
+ * The server ships before the console does, so a kind this build has no label
+ * for will arrive. Show the raw value rather than an empty space: the resource
+ * type registry does the same thing for the same reason.
  */
 export function labelForWorkspaceKind(kind: string): string {
   return WORKSPACE_KIND_LABELS[kind as WorkspaceKind] ?? kind

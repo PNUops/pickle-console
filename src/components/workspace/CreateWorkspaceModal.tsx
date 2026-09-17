@@ -19,8 +19,8 @@ import {
 export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  // 기본값을 두지 않는다. 유형이 뜻을 갖게 된 뒤로는 먼저 놓인 값이 곧 그 값으로
-  // 쏠리는 자리가 된다.
+  // No default. Now that the kind means something, whichever value sits first
+  // is the one everything becomes.
   const [kind, setKind] = useState<CreatableWorkspaceKind | ''>('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')

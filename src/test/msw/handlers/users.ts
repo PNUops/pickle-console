@@ -112,7 +112,7 @@ function initialUsers(): AdminUserRecord[] {
       disabledReason: null,
       // Machines in another organisation: the case the VM link used to lie about.
       memberships: [
-        { workspaceId: uuid(41), workspaceName: '졸업과제팀', workspaceKind: 'COMPETITION', role: 'MEMBER', vmOrgIds: [uuid(2)] },
+        { workspaceId: uuid(41), workspaceName: '졸업과제팀', workspaceKind: 'PROJECT', role: 'MEMBER', vmOrgIds: [uuid(2)] },
       ],
       activeVmCount: 2,
       statusChanges: [],
