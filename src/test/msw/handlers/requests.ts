@@ -206,10 +206,21 @@ let nextRequestId = 200
 /** Bodies received by POST /requests, for payload-correctness assertions. */
 export let createdRequestBodies: Schemas['CreateRequestRequest'][] = []
 
+/**
+ * Whether the root a domain request names approves by itself.
+ *
+ * The policy lives on the root row on the server, so from the console's side it
+ * is simply what the response says happened. Both answers are modelled here
+ * because the screens differ: one comes back approved with the name already
+ * issued, the other comes back waiting for a person.
+ */
+export const domainRootPolicy = { autoApprove: true }
+
 export function resetRequestFixtures() {
   requestStore = initialRequests()
   createdRequestBodies = []
   nextRequestId = 200
+  domainRootPolicy.autoApprove = true
 }
 
 const notFound = () =>
@@ -256,6 +267,8 @@ export const requestHandlers: RequestHandler[] = [
   http.post('*/api/v1/requests', async ({ request }) => {
     const body = (await request.json()) as Schemas['CreateRequestRequest']
     createdRequestBodies.push(body)
+    // 접수와 동시에 승인되는 것은 지금 도메인뿐이고, 그것도 루트의 정책이 정한다.
+    const autoApproved = body.type === 'DOMAIN' && domainRootPolicy.autoApprove
     const created: RequestDetail = {
       ...baseRequest(),
       ...body,
@@ -289,6 +302,17 @@ export const requestHandlers: RequestHandler[] = [
             }
           : null,
       gpu: body.type === 'GPU' && body.gpu ? { leaseHours: body.gpu.leaseHours, vmId: body.gpu.vmId, vmName: null } : null,
+      domain:
+        body.type === 'DOMAIN' && body.domain
+          ? {
+              label: body.domain.label,
+              rootDomain: body.domain.rootDomain,
+              // 승인이 발급한 이름. 승인 전에는 아직 아무것도 발급되지 않았다.
+              grantedFqdn: autoApproved
+                ? `${body.domain.label}.${body.domain.rootDomain}`
+                : null,
+            }
+          : null,
       vm: body.type !== 'VM' ? null : {
         imageId: body.vm?.imageId ?? uuid(1),
         // 서버는 카탈로그 행에서 이름을 읽어 응답에 실어 준다 — 은퇴한 행도 이름은 남는다.
@@ -303,8 +327,20 @@ export const requestHandlers: RequestHandler[] = [
         // 신청서에서 도메인 축이 빠졌다 — 새 신청의 이력 필드는 항상 비어 있다.
         granted: null,
       },
-      status: 'SUBMITTED',
-      review: null,
+      status: autoApproved ? 'APPROVED' : 'SUBMITTED',
+      // 자동 승인도 검토 행을 남긴다. 결재자가 없다는 것이 기록이고, 이름은
+      // 「탈퇴 회원」이 아니라 「자동 승인」이다.
+      review: autoApproved
+        ? {
+            decision: 'APPROVE',
+            comment: null,
+            grantedStartDate: null,
+            grantedEndDate: null,
+            decidedAt: '2026-07-08T15:00:00+09:00',
+            reviewerId: null,
+            reviewerName: '자동 승인',
+          }
+        : null,
       createdAt: '2026-07-08T15:00:00+09:00',
       updatedAt: '2026-07-08T15:00:00+09:00',
     }

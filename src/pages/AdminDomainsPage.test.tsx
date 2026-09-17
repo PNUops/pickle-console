@@ -6,6 +6,7 @@ import {
   refreshSuccessHandler,
   sysAdminUser,
 } from '../test/msw/handlers/auth'
+import { externalDomains } from '../test/msw/handlers/publishing'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 
@@ -151,5 +152,69 @@ describe('공개 서비스 — 전체 재동기화·인증서 탭', () => {
 
     expect(await screen.findByText('*.pusan.dev')).toBeInTheDocument()
     expect(screen.getByLabelText('30일 이내 만료만')).toBeInTheDocument()
+  })
+})
+
+describe('공개 서비스 — 외부 도메인과 루트 정책', () => {
+  test('외부 도메인의 드로어는 라우트·인증서 대신 사용 기한과 레코드를 보여준다', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+
+    await user.click(await screen.findByRole('button', { name: 'myblog.pusan.dev' }))
+    const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
+    // 플랫폼이 트래픽을 받지 않는 이름이라 두 구획은 언제나 비어 있고,
+    // 비어 있는 구획은 무언가 잘못됐다는 뜻으로 읽힌다.
+    expect(await drawer.findByText('사용 기한')).toBeInTheDocument()
+    expect(drawer.queryByText('라우트')).not.toBeInTheDocument()
+    expect(drawer.queryByText('인증서')).not.toBeInTheDocument()
+    // 레코드는 읽기만 한다 — 값을 고치는 자리는 없다.
+    expect(await drawer.findByText('93.184.216.34')).toBeInTheDocument()
+    expect(drawer.queryByRole('button', { name: /저장/ })).not.toBeInTheDocument()
+  })
+
+  test('사용 기한을 옮기면 목록의 값이 따라 바뀐다', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+
+    await user.click(await screen.findByRole('button', { name: 'myblog.pusan.dev' }))
+    const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
+    const field = await drawer.findByLabelText('새 기한')
+    await user.clear(field)
+    await user.type(field, '2027-06-30')
+    await user.click(drawer.getByRole('button', { name: '기한 조정' }))
+
+    expect(await screen.findByText(/사용 기한을 옮겼습니다/)).toBeInTheDocument()
+    expect(externalDomains[0].renewDueAt?.startsWith('2027-06-30')).toBe(true)
+  })
+
+  test('루트 도메인 탭에서 승인 정책을 뒤집을 수 있다', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+
+    await screen.findByRole('heading', { name: '공개 서비스', level: 1 })
+    await user.click(screen.getByRole('tab', { name: '루트 도메인' }))
+
+    const row = (await screen.findByText('pusan.dev')).closest('tr')!
+    expect(within(row).getByText('자동 승인')).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: '승인 필요로' }))
+
+    expect(await within(row).findByText('승인 필요')).toBeInTheDocument()
+    // 정책이 무엇을 덮는지 그 자리가 말한다 — 켜는 사람이 범위를 모른 채
+    // 켜지 않도록.
+    expect(screen.getByText(/외부 도메인 발급뿐입니다/)).toBeInTheDocument()
+  })
+
+  test('기관 등급 관리자는 남의 기관 루트를 바꿀 수 없다', async () => {
+    const user = userEvent.setup()
+    renderDomains('access-org-admin', orgAdminUser)
+
+    await screen.findByRole('heading', { name: '공개 서비스', level: 1 })
+    await user.click(screen.getByRole('tab', { name: '루트 도메인' }))
+
+    const mine = (await screen.findByText('pusan.dev')).closest('tr')!
+    expect(within(mine).getByRole('button', { name: '승인 필요로' })).toBeInTheDocument()
+    // 서버도 같은 판정을 한다. 버튼을 그리면 눌러야만 아는 거절이 된다.
+    const theirs = screen.getByText('test.pusan.dev').closest('tr')!
+    expect(within(theirs).queryByRole('button')).not.toBeInTheDocument()
   })
 })

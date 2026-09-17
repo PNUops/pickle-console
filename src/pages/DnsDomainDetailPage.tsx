@@ -7,6 +7,7 @@ import {
   fetchDnsRecordSets,
   renewDnsDomain,
   replaceDnsRecordSets,
+  reviveDnsDomain,
   type DesiredRecordSet,
   type DnsDomain,
   type DnsRecordSet,
@@ -164,6 +165,13 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
       setReleasing(false)
     },
   })
+  const revive = useMutation({
+    mutationFn: () => reviveDnsDomain(domainId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['dns-domains'] })
+      void queryClient.invalidateQueries({ queryKey: ['resources'] })
+    },
+  })
 
   const released = domain.releasedAt != null
 
@@ -175,8 +183,7 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
           {domain.reservedUntil
             ? `${formatDateTime(domain.reservedUntil)}까지 `
             : '예약이 끝나기 전까지 '}
-          같은 이름으로 다시 만들면 되찾을 수 있고, 그 뒤에는 다른 사용자가 쓸 수 있습니다. 레코드는
-          함께 돌아오지 않습니다.
+          되살릴 수 있고, 그 뒤에는 다른 사용자가 쓸 수 있습니다. 레코드는 함께 돌아오지 않습니다.
         </Alert>
       )}
 
@@ -215,12 +222,37 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
         <Card className="space-y-3 border-danger-200 p-6">
           <h2 className="text-base font-semibold text-neutral-900">도메인 해제</h2>
           <p className="text-sm text-neutral-600">
-            레코드를 지우고 이름을 해제합니다. 예약 기간 동안은 같은 이름으로 다시 만들어 되찾을
-            수 있고, 그 기간에도 이 이름은 워크스페이스의 도메인 개수에 계속 포함됩니다.
+            레코드를 지우고 이름을 해제합니다. 예약 기간 동안은 되살릴 수 있고, 그 기간에도 이
+            이름은 워크스페이스의 도메인 개수에 계속 포함됩니다.
           </p>
           <div>
             <Button variant="danger" onClick={() => setReleasing(true)}>
               도메인 해제
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Reviving does not go through the request wizard the way a new name
+          does. The reservation runs out in 30 days and an approval queue can
+          outlive it, and the workspace is holding this name and its slot in
+          the cap already. Drawn for every reader of a released name rather
+          than for a rung: what the server asks is membership of the workspace,
+          and no field here reports that. The member who holds no grant, because
+          the issuer has left, reaches the row through the workspace's own
+          listing rather than the unscoped one — an unscoped list carries only
+          what a grant opens. */}
+      {released && (
+        <Card className="space-y-3 p-6">
+          <h2 className="text-base font-semibold text-neutral-900">도메인 되살리기</h2>
+          <p className="text-sm text-neutral-600">
+            이름을 다시 씁니다. 사용 기한은 되살린 날부터 새로 시작하고, 레코드는 돌아오지 않으니
+            다시 넣어야 합니다.
+          </p>
+          {revive.isError && <Alert variant="danger">{revive.error.message}</Alert>}
+          <div>
+            <Button onClick={() => revive.mutate()} loading={revive.isPending}>
+              되살리기
             </Button>
           </div>
         </Card>

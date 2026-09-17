@@ -37,6 +37,7 @@ import {
   useDecisionCatalogPrefetch,
 } from '../components/request-kind'
 import { Field } from '../components/request-kind/Field'
+import { RESOURCE_TYPES } from '../components/resource/registry'
 import type { RequestKindView } from '../components/request-kind/types'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
@@ -489,6 +490,7 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
   const vm = data.type === 'VM' ? data.vm : null
   const llmKey = data.type === 'LLM_API_KEY' ? data.llmKey : null
   const gpu = data.type === 'GPU' ? data.gpu : null
+  const domain = data.type === 'DOMAIN' ? data.domain : null
   return (
     <aside aria-label="승인 판단 참고 정보" className="space-y-4">
       {gpu && <Card><CardHeader><CardTitle>GPU 현황</CardTitle></CardHeader><CardContent><dl className="grid grid-cols-2 gap-3">
@@ -528,9 +530,12 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
         </CardContent>
       </Card>
 
+      {domain && <DomainApprovalContext context={domain} />}
       {vm && <VmApprovalContext vm={vm} />}
       {llmKey && <LlmKeyApprovalContext context={llmKey} />}
-      {!vm && !llmKey && (
+      {/* 종류 카드를 그린 뒤에도 이 경고가 떴다. GPU 카드가 위에 서 있는데
+          「참고 정보가 없습니다」가 그 아래 붙어 두 문장이 서로를 반박했다. */}
+      {!vm && !llmKey && !gpu && !domain && (
         <Alert variant="warning" title="종류별 참고 정보가 없습니다">
           공통 정보만 표시합니다.
         </Alert>
@@ -554,9 +559,9 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
                     >
                       {item.resourceName}
                     </Link>
-                    <Badge variant="neutral">
-                      {item.type === 'VM' ? '가상머신' : 'LLM API 키'}
-                    </Badge>
+                    {/* 셋 이상이 되면서 삼항이 거짓말을 시작했다 — GPU도
+                        도메인도 「LLM API 키」로 적혔다. 이름은 등록표가 안다. */}
+                    <Badge variant="neutral">{RESOURCE_TYPES[item.type].label}</Badge>
                     <RequestStatusBadge status={item.status} />
                   </div>
                   <p className="text-xs text-neutral-500">
@@ -571,6 +576,37 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
         </CardContent>
       </Card>
     </aside>
+  )
+}
+
+/**
+ * 이름이 지금도 비어 있는지, 이 워크스페이스에 자리가 남았는지.
+ *
+ * 신청과 승인 사이에는 아무것도 이름을 잡아 두지 않는다. 검토자가 승인을 누르는
+ * 순간에야 자물쇠 아래에서 판정되므로, 여기 값은 그 판정을 미리 보여 주는 것이지
+ * 보장이 아니다.
+ */
+function DomainApprovalContext({ context }: { context: NonNullable<ApprovalContext['domain']> }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">도메인 현황</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <dl className="grid grid-cols-2 gap-3">
+          <Field label="신청한 이름">{context.fqdn}</Field>
+          <Field label="지금 비어 있는가">{context.available ? '비어 있음' : '이미 사용 중'}</Field>
+          <Field label="워크스페이스 보유">
+            {context.held} / {context.cap}개
+          </Field>
+        </dl>
+        {!context.available && (
+          <Alert variant="warning">
+            승인해도 이 이름은 발급되지 않습니다. 신청자에게 다른 이름을 받아야 합니다.
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

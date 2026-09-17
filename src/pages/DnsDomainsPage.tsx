@@ -1,18 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createDnsDomain, fetchDnsDomains, fetchWorkspaces } from '../api/queries'
+import { fetchDnsDomains, reviveDnsDomain } from '../api/queries'
 import {
   Alert,
   Badge,
   Button,
   Card,
   DomainStatusBadge,
-  FormField,
-  Input,
-  Modal,
+  LinkButton,
   Pagination,
-  Select,
   Spinner,
   Table,
   TBody,
@@ -28,13 +25,16 @@ import { useScope } from '../lib/use-scope'
 /**
  * The names issued on their own, with no VM behind them.
  *
- * The one resource list with no request button: nothing approves these, so
- * there is no form to fill in and the name is made here.
+ * <p>Asked for through the request wizard like every other kind. It was made
+ * here for four days, and the shape was consistent — nothing approved these,
+ * so there was no form to fill in — but a person looking for how to get a name
+ * goes to where requests are made, finds no domain there, and concludes the
+ * platform does not offer one. Whether the request then waits for a reviewer
+ * is the chosen root's answer, not this screen's.</p>
  */
 export function DnsDomainsPage() {
   const scope = useScope()
   const [page, setPage] = useState(0)
-  const [creating, setCreating] = useState(false)
   const domains = useQuery({
     queryKey: ['dns-domains', { page, workspaceId: scope }],
     queryFn: () => fetchDnsDomains({ page, workspaceId: scope ?? undefined }),
@@ -47,10 +47,10 @@ export function DnsDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">도메인</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            승인 없이 바로 발급되며, 레코드는 플랫폼 밖 서버도 가리킬 수 있습니다.
+            레코드는 플랫폼 밖 서버도 가리킬 수 있습니다.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>도메인 발급</Button>
+        <LinkButton to={consolePaths.newRequest(scope, 'DOMAIN')}>도메인 신청</LinkButton>
       </div>
 
       {domains.isPending && (
@@ -67,7 +67,7 @@ export function DnsDomainsPage() {
               : '이 워크스페이스에는 아직 발급받은 도메인이 없습니다.'}
           </p>
           <div>
-            <Button onClick={() => setCreating(true)}>도메인 발급</Button>
+            <LinkButton to={consolePaths.newRequest(scope, 'DOMAIN')}>도메인 신청</LinkButton>
           </div>
         </Card>
       )}
@@ -83,6 +83,9 @@ export function DnsDomainsPage() {
                   <TH>사용 기한</TH>
                   <TH>워크스페이스</TH>
                   <TH>발급일</TH>
+                  <TH>
+                    <span className="sr-only">작업</span>
+                  </TH>
                 </TR>
               </THead>
               <TBody>
@@ -107,8 +110,10 @@ export function DnsDomainsPage() {
                           {/* A workspace owner who cannot see inside this
                               domain may still decide who can. The detail is
                               closed to them, so this list is the only way in,
-                              and the only way to take back a name whose
-                              issuer has left. */}
+                              and the only way to take back a name whose issuer
+                              has left. A row they hold no grant on reaches them
+                              only under the workspace's own scope, since the
+                              unscoped listing carries what a grant opens. */}
                           {domain.accessManageAllowed && (
                             <>
                               {' '}
@@ -138,7 +143,7 @@ export function DnsDomainsPage() {
                           {domain.reservedUntil
                             ? `${formatDateTime(domain.reservedUntil)}까지 `
                             : '예약이 끝나기 전까지 '}
-                          같은 이름으로 다시 만들 수 있습니다
+                          되살릴 수 있습니다
                         </p>
                       )}
                     </TD>
@@ -150,6 +155,11 @@ export function DnsDomainsPage() {
                     <TD className="whitespace-nowrap">{formatDateTime(domain.renewDueAt)}</TD>
                     <TD>{domain.workspaceName}</TD>
                     <TD className="whitespace-nowrap">{formatDateTime(domain.createdAt)}</TD>
+                    {/* Reviving is the one action this list carries. It is not
+                        a request: the name and the cap slot are already this
+                        workspace's, and the reservation can run out inside an
+                        approval queue. */}
+                    <TD>{domain.releasedAt && <ReviveButton domainId={domain.id} />}</TD>
                   </TR>
                 ))}
               </TBody>
@@ -162,75 +172,31 @@ export function DnsDomainsPage() {
           />
         </>
       )}
-
-      {creating && <CreateDnsDomainModal onClose={() => setCreating(false)} />}
     </div>
   )
 }
 
-function CreateDnsDomainModal({ onClose }: { onClose: () => void }) {
+function ReviveButton({ domainId }: { domainId: string }) {
   const queryClient = useQueryClient()
-  const [label, setLabel] = useState('')
-  const [workspaceId, setWorkspaceId] = useState('')
-  const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: () => fetchWorkspaces() })
-  const create = useMutation({
-    mutationFn: () => createDnsDomain({ label, workspaceId }),
+  const revive = useMutation({
+    mutationFn: () => reviveDnsDomain(domainId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['dns-domains'] })
       void queryClient.invalidateQueries({ queryKey: ['resources'] })
-      onClose()
     },
   })
 
   return (
-    <Modal
-      open
-      title="도메인 발급"
-      onClose={onClose}
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            취소
-          </Button>
-          <Button
-            onClick={() => create.mutate()}
-            loading={create.isPending}
-            disabled={label.trim() === '' || workspaceId === ''}
-          >
-            발급
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        {create.isError && <Alert variant="danger">{create.error.message}</Alert>}
-        <FormField label="이름" description="영문 소문자와 숫자, 하이픈만 쓸 수 있습니다.">
-          <Input
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="myblog"
-            autoFocus
-          />
-        </FormField>
-        <FormField
-          label="워크스페이스"
-          description="이 워크스페이스의 구성원에게만 접근 권한을 줄 수 있습니다."
-        >
-          <Select value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)}>
-            <option value="">선택해 주세요</option>
-            {workspaces.data?.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        {/* One line on what to do next. A reader who receives only a name reads
-            the silence as "the site is broken". */}
-        <p className="text-sm text-neutral-500">
-          발급한 뒤 상세 화면에서 레코드를 넣어야 주소가 열립니다.
-        </p>
-      </div>
-    </Modal>
+    <div className="space-y-1">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => revive.mutate()}
+        loading={revive.isPending}
+      >
+        되살리기
+      </Button>
+      {revive.isError && <p className="text-xs text-danger-700">{revive.error.message}</p>}
+    </div>
   )
 }

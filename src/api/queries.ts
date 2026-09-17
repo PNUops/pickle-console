@@ -102,6 +102,7 @@ export type AdminRouteView = Schemas['AdminRouteView']
 export type AdminRoutePage = Schemas['PageResponseAdminRouteView']
 export type AdminDomainView = Schemas['AdminDomainView']
 export type AdminDomainPage = Schemas['PageResponseAdminDomainView']
+export type AdminDomainRootView = Schemas['AdminDomainRootView']
 export type AdminCertificateView = Schemas['AdminCertificateView']
 export type AdminCertificatePage = Schemas['PageResponseAdminCertificateView']
 
@@ -866,14 +867,20 @@ export function fetchDnsDomain(domainId: string): Promise<DnsDomain> {
   })
 }
 
-export function createDnsDomain(body: {
-  label: string
-  rootDomain?: string | null
-  workspaceId: string
-}): Promise<DnsDomain> {
+/**
+ * Takes back a name this workspace is holding in reserve.
+ *
+ * <p>Issuing a name goes through `createRequest` like every other resource;
+ * this is the one door left on the domain itself, because the reservation
+ * expires and a recovery that waited in an approval queue could outlive the
+ * thing it was recovering.</p>
+ */
+export function reviveDnsDomain(domainId: string): Promise<DnsDomain> {
   return guardNetwork(async () => {
-    const { data, error } = await api.POST('/dns-domains', { body })
-    if (!data) throw toApiError(error, '도메인을 발급하지 못했습니다.')
+    const { data, error } = await api.POST('/dns-domains/{domainId}/revive', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인을 되살리지 못했습니다.')
     return data
   })
 }
@@ -2390,6 +2397,60 @@ export function forceReleaseDomain(domainId: string): Promise<MessageResponse> {
       params: { path: { domainId } },
     })
     if (!data) throw toApiError(error, '도메인을 강제 해제하지 못했습니다.')
+    return data
+  })
+}
+
+/**
+ * 루트 도메인과 그 승인 정책.
+ *
+ * 기관으로 좁히지 않는다. 루트는 몇 개 되지 않고, 어느 기관이 어느 루트를
+ * 가졌는지는 관리자에게 가려야 할 사실이 아니다 — 바꿀 수 있는 것은 자기 기관의
+ * 루트뿐이고 그 판정은 서버가 한다.
+ */
+export function fetchAdminDomainRoots(): Promise<AdminDomainRootView[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/domain-roots')
+    if (!data) throw toApiError(error, '루트 도메인 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminDomainRoot(
+  rootDomain: string,
+  body: Schemas['UpdateDomainRootRequest'],
+): Promise<AdminDomainRootView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/domain-roots/{rootDomain}', {
+      params: { path: { rootDomain } },
+      body,
+    })
+    if (!data) throw toApiError(error, '승인 정책을 바꾸지 못했습니다.')
+    return data
+  })
+}
+
+/** 이 이름이 지금 무엇을 가리키는지 — 관리자에게는 읽기 전용이다. */
+export function fetchAdminDomainRecords(domainId: string): Promise<DnsRecordSet[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/domains/{domainId}/records', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '레코드를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminDomainRenewal(
+  domainId: string,
+  body: Schemas['UpdateDomainRenewalRequest'],
+): Promise<AdminDomainView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/domains/{domainId}/renewal', {
+      params: { path: { domainId } },
+      body,
+    })
+    if (!data) throw toApiError(error, '사용 기한을 바꾸지 못했습니다.')
     return data
   })
 }

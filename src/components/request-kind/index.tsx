@@ -9,13 +9,19 @@ import { llmKeyRequestKind } from './llm-wizard'
 import { llmKeyRequestView } from './llm-view'
 import { gpuRequestKind } from './gpu-wizard'
 import { gpuRequestView } from './gpu-view'
+import { domainRequestKind } from './domain-wizard'
+import { domainRequestView } from './domain-view'
 import { gpuPreviewEnabled } from '../../lib/gpu-preview'
 
 /**
  * 신청 위저드가 아는 리소스 종류 — 선택 화면에 이 순서로 나온다.
  * 종류 추가 = 모듈 파일 하나 + 여기 등록 한 줄. 위저드 본체는 바뀌지 않는다.
  */
-export const REQUEST_KINDS: RequestKindModule[] = [vmRequestKind, llmKeyRequestKind]
+export const REQUEST_KINDS: RequestKindModule[] = [
+  vmRequestKind,
+  llmKeyRequestKind,
+  domainRequestKind,
+]
 
 export function requestKind(type: string): RequestKindModule | undefined {
   if (type === 'GPU' && gpuPreviewEnabled()) return gpuRequestKind
@@ -38,6 +44,7 @@ const REQUEST_KIND_VIEWS: Record<string, RequestKindView> = {
   VM: vmRequestView,
   LLM_API_KEY: llmKeyRequestView,
   GPU: gpuRequestView,
+  DOMAIN: domainRequestView,
 }
 
 /**

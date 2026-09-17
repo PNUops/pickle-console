@@ -49,20 +49,15 @@ describe('domain list', () => {
     )
   })
 
-  test('issuing is not requesting: the name exists without waiting for approval', async () => {
-    const user = userEvent.setup()
+  test('the way to a name is the request wizard, not a form of its own', async () => {
     renderDomains()
 
-    await user.click(await screen.findByRole('button', { name: '도메인 발급' }))
-    await user.type(screen.getByRole('textbox', { name: /이름/ }), 'newsite')
-    await user.selectOptions(screen.getByRole('combobox', { name: /워크스페이스/ }), [
-      screen.getByRole('option', { name: '캡스톤 3조' }),
-    ])
-    await user.click(screen.getByRole('button', { name: '발급' }))
-
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: 'newsite.pusan.dev' })).toBeInTheDocument(),
-    )
+    // The screen carried its own issue modal for four days. A person looking
+    // for how to get a name goes to where requests are made, found no domain
+    // there, and concluded the platform did not offer one.
+    const links = await screen.findAllByRole('link', { name: '도메인 신청' })
+    expect(links[0]).toHaveAttribute('href', '/console/requests/new?kind=DOMAIN')
+    expect(screen.queryByRole('button', { name: '도메인 발급' })).not.toBeInTheDocument()
   })
 
   test('a released row does not claim to be connected', async () => {
@@ -84,16 +79,17 @@ describe('domain list', () => {
     dnsDomainStore.rows[0].domain.reservedUntil = '2026-10-12T13:00:00+09:00'
     renderDomains()
 
-    // Three places on these screens promise this recovery. Nothing tested it,
-    // and the mock used to refuse a released name the way it refuses a taken one.
-    expect(await screen.findByText(/같은 이름으로 다시 만들 수 있습니다/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '도메인 발급' }))
-    await user.type(screen.getByRole('textbox', { name: /이름/ }), 'myblog')
-    await user.selectOptions(screen.getByRole('combobox', { name: /워크스페이스/ }), [
-      screen.getByRole('option', { name: '캡스톤 3조' }),
-    ])
-    await user.click(screen.getByRole('button', { name: '발급' }))
+    // Three places on these screens promise this recovery. Reviving is the one
+    // action the list carries, and it is not a request: the workspace holds the
+    // name and its slot against the cap already, and the 30-day reservation can
+    // run out inside an approval queue.
+    const row = (await screen.findByText('myblog.pusan.dev')).closest('tr')!
+    expect(within(row).getByText(/되살릴 수 있습니다/)).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: '되살리기' }))
 
     await waitFor(() => expect(dnsDomainStore.rows[0].domain.releasedAt).toBeNull())
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: '되살리기' })).not.toBeInTheDocument(),
+    )
   })
 })

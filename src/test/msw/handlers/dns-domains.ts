@@ -123,46 +123,20 @@ export const dnsDomainHandlers: RequestHandler[] = [
       totalPages: 1,
     })
   }),
-  http.post('*/api/v1/dns-domains', async ({ request }) => {
+  http.post('*/api/v1/dns-domains/:domainId/revive', ({ request, params }) => {
     if (!authed(request)) return problemResponse({ status: 401, code: 'UNAUTHORIZED', title: '인증이 필요합니다', detail: '인증이 필요합니다' })
-    const body = (await request.json()) as { label: string; workspaceId: string }
-    const fqdn = `${body.label}.pusan.dev`
-    const held = dnsDomainStore.rows.find((row) => row.domain.fqdn === fqdn)
-    if (held) {
-      // The server revives a name its own workspace is holding in reserve and
-      // refuses everybody else with the same conflict an unheld collision gets.
-      // Modelling only the refusal made the screens' recovery copy untestable.
-      if (held.domain.releasedAt == null || held.domain.workspaceId !== body.workspaceId) {
-        return problemResponse({ status: 409, code: 'DOMAIN_FQDN_TAKEN', title: '이미 사용 중인 이름입니다', detail: '이미 사용 중인 이름입니다' })
-      }
-      held.domain.releasedAt = null
-      held.domain.reservedUntil = null
-      held.domain.renewDueAt = '2027-09-12T00:00:00+09:00'
-      return HttpResponse.json(view(held), { status: 201 })
+    const row = dnsDomainStore.rows.find((r) => r.domain.id === params.domainId)
+    if (!row) return problemResponse({ status: 404, code: 'RESOURCE_NOT_FOUND', title: '해당 도메인이 존재하지 않습니다', detail: '해당 도메인이 존재하지 않습니다' })
+    // The server refuses a name that was never let go: reviving one is not a
+    // no-op, it would move the deadline of a name in use.
+    if (row.domain.releasedAt == null) {
+      return problemResponse({ status: 409, code: 'DOMAIN_NOT_ACTIVE', title: '해제한 이름이 아닙니다', detail: '이 도메인은 지금 쓰이고 있습니다.' })
     }
-    const row: Row = {
-      domain: {
-        // The new row's id is derived stably, so a test can open the detail of
-        // the name it just created.
-        id: uuid(9200 + dnsDomainStore.rows.length),
-        fqdn,
-        rootDomain: 'pusan.dev',
-        status: 'ACTIVE',
-        renewDueAt: '2027-03-11T00:00:00+09:00',
-        releasedAt: null,
-        reservedUntil: null,
-        createdAt: '2026-09-12T12:00:00+09:00',
-        workspaceId: body.workspaceId,
-        workspaceName: '캡스톤 3조',
-        accessLimited: false,
-        accessManageAllowed: true,
-        myResourceRole: 'OWNER',
-        ownerNames: [],
-      },
-      records: [],
-    }
-    dnsDomainStore.rows = [row, ...dnsDomainStore.rows]
-    return HttpResponse.json(view(row), { status: 201 })
+    row.domain.releasedAt = null
+    row.domain.reservedUntil = null
+    // The deadline starts over from the revival, as it does on the server.
+    row.domain.renewDueAt = '2027-09-12T00:00:00+09:00'
+    return HttpResponse.json(view(row))
   }),
   http.get('*/api/v1/dns-domains/:domainId', ({ request, params }) => {
     if (!authed(request)) return problemResponse({ status: 401, code: 'UNAUTHORIZED', title: '인증이 필요합니다', detail: '인증이 필요합니다' })

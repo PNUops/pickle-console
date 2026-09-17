@@ -75,10 +75,11 @@ export const introductionArticles: GuideArticle[] = [
             <h3>도메인</h3>
             <p>
               VM 없이도 이름을 발급받아 외부 서버나 호스팅 서비스에 연결할 수 있습니다.
-              별도 승인 없이 발급되며 A, AAAA, CNAME, TXT 레코드를 직접 편집합니다.
+              다른 리소스와 같이 신청하며, 고른 루트 도메인에 따라 바로 발급되거나 검토를
+              거칩니다. 발급 뒤에는 A, AAAA, CNAME, TXT 레코드를 직접 편집합니다.
               계속 사용할 이름은 상세 화면의 사용 기한을 확인해 연장해야 합니다.
               외부 서버의 웹 서비스와 HTTPS 인증서는 사용자가 준비합니다.
-              <GuideLink slug="network/domains">외부 서버용 도메인 발급과 관리</GuideLink>
+              <GuideLink slug="network/domains">외부 서버용 도메인 신청과 관리</GuideLink>
             </p>
             <GuideFigure
               src={userDashboardImage}
@@ -102,8 +103,9 @@ export const introductionArticles: GuideArticle[] = [
                 기존 공간에 참여합니다.
               </li>
               <li>
-                <strong>필요한 리소스를 신청합니다.</strong> 가상머신이나 LLM API 키를
-                선택하고 사용 목적, 필요한 자원이나 한도, 사용 기간을 적습니다.
+                <strong>필요한 리소스를 신청합니다.</strong> 가상머신, LLM API 키,
+                외부 서버용 도메인 중에서 고르고 사용 목적과 필요한 한도를 적습니다.
+                사용 기간은 종류에 따라 묻지 않습니다.
               </li>
               <li>
                 <strong>검토 결과를 확인합니다.</strong> 담당 기관의 관리자가 승인하거나
@@ -116,8 +118,10 @@ export const introductionArticles: GuideArticle[] = [
               </li>
             </ol>
             <p>
-              외부 서버용 도메인은 <GuideAction action="dnsDomains">도메인 목록</GuideAction>에서
-              바로 발급받습니다. 이름을 받은 뒤 레코드와 대상 서버를 설정해야 주소가 열립니다.
+              외부 서버용 도메인도 같은 신청으로 받습니다.{' '}
+              <GuideAction action="dnsDomains">도메인 목록</GuideAction>의 도메인 신청에서
+              시작하며, 고른 루트 도메인에 따라 바로 발급되거나 검토를 거칩니다. 이름을 받은
+              뒤 레코드와 대상 서버를 설정해야 주소가 열립니다.
             </p>
             <p>
               <GuideAction action="newRequest">리소스 신청</GuideAction>을 시작하거나,

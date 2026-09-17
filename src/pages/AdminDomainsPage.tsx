@@ -3,11 +3,16 @@ import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   applyAdminRoute,
+  fetchAdminDomainRecords,
+  fetchAdminDomainRoots,
   fetchAdminDomains,
   fetchAdminRoutes,
   forceReleaseDomain,
   resyncRoutes,
+  updateAdminDomainRenewal,
+  updateAdminDomainRoot,
   verifyAdminDomain,
+  type AdminDomainRootView,
   type AdminDomainView,
   type DomainKind,
   type DomainStatus,
@@ -34,6 +39,7 @@ import {
   DomainKindBadge,
   DomainStatusBadge,
   Drawer,
+  Input,
   Pagination,
   RouteStatusBadge,
   Select,
@@ -48,7 +54,7 @@ import {
   TR,
 } from '../components/ui'
 import { cn } from '../lib/cn'
-import { formatDateTime, kstDateString } from '../lib/format'
+import { formatDateTime, kstDateString, todayKstDate } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { adminPaths } from '../lib/paths'
@@ -58,6 +64,7 @@ const PAGE_SIZE = 20
 const SCREEN_TABS = [
   { id: 'domains', label: '도메인' },
   { id: 'certificates', label: '인증서' },
+  { id: 'roots', label: '루트 도메인' },
 ]
 
 const STATUS_TABS: { label: string; status: DomainStatus | undefined }[] = [
@@ -68,7 +75,7 @@ const STATUS_TABS: { label: string; status: DomainStatus | undefined }[] = [
   { label: DOMAIN_STATUS_LABELS.FAILED, status: 'FAILED' },
 ]
 
-const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM']
+const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM', 'EXTERNAL']
 
 /**
  * 공개 서비스 — 도메인 중심 1화면. 운영자가 실제로 겪는 단위("이 도메인이 왜
@@ -111,8 +118,8 @@ export function AdminDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {activeOrg?.name ?? '플랫폼 전체'} 가상머신의 도메인과 라우트 적용, 인증서
-            상태입니다. 행을 선택하면 라우트와 인증서 상세, 개입 작업이 열립니다.
+            {activeOrg?.name ?? '플랫폼 전체'}의 도메인과 라우트 적용, 인증서 상태입니다. 행을
+            선택하면 상세와 개입 작업이 열립니다.
           </p>
         </div>
         {canResync && <ResyncButton />}
@@ -219,7 +226,9 @@ export function AdminDomainsPage() {
                         </span>
                       </TD>
                       <TD>
-                        {domain.vmName}
+                        {/* 외부 도메인은 가상머신에 매이지 않는다. 빈 칸으로 두면
+                            이름을 못 읽은 것처럼 보이므로 없다고 적는다. */}
+                        {domain.vmName ?? <span className="text-xs text-neutral-400">—</span>}
                         <span className="block text-xs text-neutral-500">{domain.workspaceName}</span>
                       </TD>
                       <TD>{domain.orgName}</TD>
@@ -295,6 +304,10 @@ export function AdminDomainsPage() {
       <TabPanel id="certificates" active={activeTab === 'certificates'}>
         <CertificatesSection orgId={activeOrgId} />
       </TabPanel>
+
+      <TabPanel id="roots" active={activeTab === 'roots'}>
+        <DomainRootsSection />
+      </TabPanel>
     </div>
   )
 }
@@ -341,21 +354,25 @@ function DomainDrawerContent({
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="종류" value={DOMAIN_KIND_LABELS[domain.kind]} />
         <Field label="루트 도메인" value={domain.rootDomain ?? '—'} />
-        <div>
-          <dt className="text-neutral-500">VM</dt>
-          <dd className="font-medium text-neutral-900">
-            {domain.vmName ?? '—'}{' '}
-            {domain.vmId != null && (
+        {/* 외부 도메인에는 가상머신이 없다. 「VM —」을 남겨 두면 붙였어야 할
+            것이 빠진 것처럼 읽히므로, 그 자리에는 워크스페이스만 선다. */}
+        {domain.vmId != null ? (
+          <div>
+            <dt className="text-neutral-500">VM</dt>
+            <dd className="font-medium text-neutral-900">
+              {domain.vmName ?? '—'}{' '}
               <Link
                 to={adminPaths.vmDetail(domain.vmId, activeOrgId)}
                 className="text-sm font-normal text-primary-700 hover:underline"
               >
                 상세
               </Link>
-            )}
-            <span className="block text-xs font-normal text-neutral-500">{domain.workspaceName}</span>
-          </dd>
-        </div>
+              <span className="block text-xs font-normal text-neutral-500">{domain.workspaceName}</span>
+            </dd>
+          </div>
+        ) : (
+          <Field label="워크스페이스" value={domain.workspaceName} />
+        )}
         <Field label="기관" value={domain.orgName ?? '—'} />
         <Field
           label="검증일"
@@ -386,6 +403,19 @@ function DomainDrawerContent({
         </Alert>
       )}
 
+      {domain.kind === 'EXTERNAL' && (
+        <ExternalDomainSections
+          domain={domain}
+          canIntervene={canIntervene}
+          onResult={setNotice}
+        />
+      )}
+
+      {/* 라우트도 인증서도 플랫폼이 트래픽을 받는 이름의 것이다. 외부 도메인은
+          레코드가 가리키는 곳으로 바로 가므로 두 구획 모두 언제나 비어 있고,
+          비어 있는 구획은 무언가 잘못됐다는 뜻으로 읽힌다. */}
+      {domain.kind !== 'EXTERNAL' && (
+      <>
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">라우트</h3>
         {routes.isPending && <Spinner label="라우트 불러오는 중" />}
@@ -434,6 +464,8 @@ function DomainDrawerContent({
           <p className="text-sm text-neutral-500">연결된 인증서가 없습니다.</p>
         )}
       </section>
+      </>
+      )}
 
       {canIntervene && (
         <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
@@ -457,6 +489,265 @@ function DomainDrawerContent({
           }}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * 외부 도메인의 두 구획 — 사용 기한과 레코드.
+ *
+ * 관리자가 할 수 있는 것은 기한을 옮기는 것뿐이다. 레코드는 읽기만 한다:
+ * 이름 안으로 들어가 값을 고치는 것은 이름을 통째로 해제하는 것보다 깊은
+ * 개입이고, 그것을 하기로 한 적이 없다.
+ */
+function ExternalDomainSections({
+  domain,
+  canIntervene,
+  onResult,
+}: {
+  domain: AdminDomainView
+  canIntervene: boolean
+  onResult: (notice: DrawerNotice) => void
+}) {
+  const records = useQuery({
+    queryKey: ['admin', 'domains', domain.id, 'records'],
+    queryFn: () => fetchAdminDomainRecords(domain.id),
+  })
+
+  return (
+    <>
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">사용 기한</h3>
+        <p className="text-sm text-neutral-600">
+          {domain.renewDueAt ? formatDateTime(domain.renewDueAt) : '—'}까지입니다. 소유자가
+          연장하지 않으면 그 시점에 레코드가 내려가고 이름은 예약 상태로 바뀝니다.
+        </p>
+        {canIntervene && domain.releasedAt == null && (
+          <AdjustRenewalForm domain={domain} onResult={onResult} />
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-neutral-800">레코드</h3>
+        {records.isPending && <Spinner label="레코드 불러오는 중" />}
+        {records.isError && <Alert variant="danger">{records.error.message}</Alert>}
+        {records.isSuccess && records.data.length === 0 && (
+          <p className="text-sm text-neutral-500">넣은 레코드가 없습니다.</p>
+        )}
+        {records.isSuccess && records.data.length > 0 && (
+          <Table>
+            <THead>
+              <TR>
+                <TH>이름</TH>
+                <TH>종류</TH>
+                <TH>값</TH>
+                <TH>적용</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {records.data.map((record) => (
+                <TR key={`${record.name}:${record.type}`}>
+                  <TD className="font-mono text-xs">{record.name}</TD>
+                  <TD>{record.type}</TD>
+                  <TD className="font-mono text-xs">
+                    {record.values.map((value) => (
+                      <span key={value} className="block">
+                        {value}
+                      </span>
+                    ))}
+                  </TD>
+                  {/* 레코드의 상태 어휘는 도메인의 DNS 상태와 다르다(REMOVED가
+                      더 있다). 배지를 돌려 쓰지 않고 그 자리의 말로 적는다. */}
+                  <TD className="text-xs">
+                    {record.status === 'APPLIED'
+                      ? '반영됨'
+                      : record.status === 'FAILED'
+                        ? '반영 실패'
+                        : record.status === 'REMOVED'
+                          ? '삭제 대기'
+                          : '반영 대기'}
+                    {record.lastError && (
+                      <span className="mt-0.5 block text-danger-700">{record.lastError}</span>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+      </section>
+    </>
+  )
+}
+
+/**
+ * 기한 옮기기.
+ *
+ * <p>날짜만 받고 그 날 KST 끝으로 보낸다. 관리자가 읽는 기한은 날짜이고,
+ * 시각까지 물으면 답할 근거가 없는 칸이 하나 더 생긴다. 지난 시각은 서버가
+ * 거절한다 — 그것은 조정이 아니라 통보 없는 해제다.</p>
+ */
+function AdjustRenewalForm({
+  domain,
+  onResult,
+}: {
+  domain: AdminDomainView
+  onResult: (notice: DrawerNotice) => void
+}) {
+  const queryClient = useQueryClient()
+  const [date, setDate] = useState(
+    domain.renewDueAt ? kstDateString(new Date(domain.renewDueAt)) : '',
+  )
+  const [reason, setReason] = useState('')
+  const adjust = useMutation({
+    mutationFn: () =>
+      updateAdminDomainRenewal(domain.id, {
+        renewDueAt: new Date(`${date}T23:59:59+09:00`).toISOString(),
+        reason: reason.trim() || undefined,
+      }),
+    onSuccess: async () => {
+      onResult({ variant: 'info', text: '사용 기한을 옮겼습니다. 소유자에게 알렸습니다.' })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+    },
+    onError: (err) =>
+      onResult({
+        variant: 'danger',
+        text: toApiError(err, '사용 기한을 바꾸지 못했습니다.').message,
+      }),
+  })
+
+  return (
+    <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-sm text-neutral-600">
+          새 기한
+          <Input
+            type="date"
+            className="mt-1"
+            min={todayKstDate()}
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
+        </label>
+        <label className="flex-1 text-sm text-neutral-600">
+          사유 (감사 기록에 남습니다)
+          <Input
+            className="mt-1"
+            value={reason}
+            maxLength={200}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </label>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!date}
+          loading={adjust.isPending}
+          onClick={() => adjust.mutate()}
+        >
+          기한 조정
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 루트 도메인마다의 승인 정책.
+ *
+ * <p>이름 신청이 접수와 동시에 승인되는지, 사람의 검토를 기다리는지를 루트가
+ * 정한다. 기관이 아니라 루트인 것은 한 기관이 루트를 둘 가질 수 있기 때문이고,
+ * 이름이 어느 기관의 것인지도 루트가 나른다.</p>
+ */
+function DomainRootsSection() {
+  const { user } = useAuth()
+  const roots = useQuery({ queryKey: ['admin', 'domain-roots'], queryFn: fetchAdminDomainRoots })
+
+  return (
+    <div className="space-y-4">
+      <Alert variant="info">
+        지금 이 정책이 다스리는 것은 외부 도메인 발급뿐입니다. 가상머신에 서브도메인을 붙이는
+        경로는 아직 승인을 거치지 않습니다.
+      </Alert>
+      {roots.isPending && (
+        <div className="flex justify-center py-12">
+          <Spinner label="루트 도메인 불러오는 중" />
+        </div>
+      )}
+      {roots.isError && <Alert variant="danger">{roots.error.message}</Alert>}
+      {roots.isSuccess && roots.data.length === 0 && (
+        <Card className="p-8 text-center text-sm text-neutral-500">
+          등록된 루트 도메인이 없습니다. 루트는 등록 절차가 넣습니다.
+        </Card>
+      )}
+      {roots.isSuccess && roots.data.length > 0 && (
+        <Card>
+          <Table>
+            <THead>
+              <TR>
+                <TH>루트 도메인</TH>
+                <TH>기관</TH>
+                <TH>발급된 이름</TH>
+                <TH>승인</TH>
+                <TH>
+                  <span className="sr-only">작업</span>
+                </TH>
+              </TR>
+            </THead>
+            <TBody>
+              {roots.data.map((root) => (
+                <TR key={root.rootDomain}>
+                  <TD className="font-mono text-sm">{root.rootDomain}</TD>
+                  <TD>{root.orgName}</TD>
+                  <TD>{root.issuedNames}개</TD>
+                  <TD>
+                    <Badge variant={root.autoApprove ? 'success' : 'neutral'}>
+                      {root.autoApprove ? '자동 승인' : '승인 필요'}
+                    </Badge>
+                  </TD>
+                  <TD>
+                    {/* 역할이 닿아도 자기 기관의 루트만 바꿀 수 있다 — 서버가
+                        같은 판정을 하고, 못 바꿀 버튼을 그리면 눌러야만 아는
+                        거절이 된다. */}
+                    {!!user &&
+                      canInterveneDomain(user.role) &&
+                      (isSysTier(user.role) || operatesOrg(user.managedOrgs, root.orgId)) && (
+                        <ToggleRootPolicyButton root={root} />
+                      )}
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+function ToggleRootPolicyButton({ root }: { root: AdminDomainRootView }) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+  const toggle = useMutation({
+    mutationFn: () => updateAdminDomainRoot(root.rootDomain, { autoApprove: !root.autoApprove }),
+    onSuccess: async () => {
+      setError(null)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domain-roots'] })
+    },
+    onError: (err) => setError(toApiError(err, '승인 정책을 바꾸지 못했습니다.').message),
+  })
+
+  return (
+    <div className="space-y-1">
+      <Button
+        variant="secondary"
+        size="sm"
+        loading={toggle.isPending}
+        onClick={() => toggle.mutate()}
+      >
+        {root.autoApprove ? '승인 필요로' : '자동 승인으로'}
+      </Button>
+      {error && <p className="text-xs text-danger-700">{error}</p>}
     </div>
   )
 }
