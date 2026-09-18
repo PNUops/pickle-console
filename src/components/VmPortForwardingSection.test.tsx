@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { RELAY_PUBLIC_HOST } from '../test/msw/handlers/network'
 import { vmDetailAs } from '../test/msw/handlers/vms'
@@ -18,6 +18,8 @@ function renderPublishTab(
   server.use(refreshSuccessHandler(token, user))
   renderApp(`/console/vms/${vmId}?tab=publish`)
 }
+
+afterEach(() => vi.unstubAllEnvs())
 
 describe('VM 도메인·포트 탭 — 포트포워딩', () => {
   test('참여자는 목록·상태 배지를 읽기 전용으로 본다', async () => {
@@ -74,6 +76,30 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     await waitFor(() =>
       expect(screen.queryByText(`${RELAY_PUBLIC_HOST}:14000`)).not.toBeInTheDocument(),
     )
+  })
+
+  test('feature flag가 켜지면 매핑별 출발지 정책을 조회한다', async () => {
+    vi.stubEnv('VITE_PUBLIC_SOURCE_POLICY_ENABLED', '1')
+    const user = userEvent.setup()
+    server.use(
+      http.get('*/api/v1/vms/:vmId/port-forwardings/:mappingId/source-policy', () =>
+        HttpResponse.json({
+          revision: 2,
+          explicit: true,
+          allowedCidrs: ['192.0.2.7/32'],
+          applyState: 'APPLIED',
+        })),
+      http.get('*/api/v1/source-policy-presets/campus', () =>
+        HttpResponse.json({
+          key: 'CAMPUS', target: 'PORT_FORWARDING', allowedCidrs: ['198.51.100.0/24'],
+        })),
+    )
+    renderPublishTab(uuid(45))
+
+    const row = (await screen.findByText(`${RELAY_PUBLIC_HOST}:14000`)).closest('li')!
+    await user.click(within(row).getByRole('button', { name: '출발지 정책' }))
+    expect(await within(row).findByText('설정 확인')).toBeInTheDocument()
+    expect(within(row).getByLabelText('허용할 출발지')).toHaveValue('192.0.2.7/32')
   })
 
   test('대상 포트 범위 밖 입력은 왕복 없이 필드 오류로 막는다', async () => {

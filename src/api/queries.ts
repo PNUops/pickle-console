@@ -120,6 +120,10 @@ export type RelayTokenResponse = Schemas['RelayTokenResponse']
 export type AdminPortMappingView = Schemas['AdminPortMappingResponse']
 export type AdminPortMappingPage = Schemas['PageResponseAdminPortMappingResponse']
 export type UpdatePortMappingGuardsRequest = Schemas['UpdatePortMappingGuardsRequest']
+export type SourcePolicyView = Schemas['SourcePolicyView']
+export type SourcePolicyPresetView = Schemas['SourcePolicyPresetView']
+export type SourcePolicyTarget = Schemas['SourcePolicyTarget']
+export type UpdateSourcePolicyRequest = Schemas['UpdateSourcePolicyRequest']
 export type AdminCampusIpRequestView = Schemas['AdminCampusIpRequestView']
 export type AdminCampusIpRequestPage = Schemas['PageResponseAdminCampusIpRequestView']
 export type UpdateCampusIpRequestStatusRequest =
@@ -1384,6 +1388,41 @@ export function updateDomainPort(
   })
 }
 
+export function fetchDomainSourcePolicy(domainId: string): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/domains/{domainId}/source-policy', {
+      params: { path: { domainId } },
+    })
+    if (!data) throw toApiError(error, '도메인 출발지 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateDomainSourcePolicy(
+  domainId: string,
+  body: UpdateSourcePolicyRequest,
+): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/domains/{domainId}/source-policy', {
+      params: { path: { domainId } }, body,
+    })
+    if (!data) throw toApiError(error, '도메인 출발지 정책을 저장하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchCampusSourcePolicyPreset(
+  target: SourcePolicyTarget,
+): Promise<SourcePolicyPresetView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/source-policy-presets/campus', {
+      params: { query: { target } },
+    })
+    if (!data) throw toApiError(error, '교내 출발지 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 export function fetchDomains(params: {
   vmId?: string
   status?: DomainStatus
@@ -1529,6 +1568,58 @@ export function fetchAdminPortMappings(params: {
       params: { query: params },
     })
     if (!data) throw toApiError(error, '포트 매핑 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchPortForwardingSourcePolicy(
+  vmId: string,
+  portForwardingId: string,
+): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET(
+      '/vms/{vmId}/port-forwardings/{portForwardingId}/source-policy',
+      { params: { path: { vmId, portForwardingId } } },
+    )
+    if (!data) throw toApiError(error, '포트포워딩 출발지 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updatePortForwardingSourcePolicy(
+  vmId: string,
+  portForwardingId: string,
+  body: UpdateSourcePolicyRequest,
+): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT(
+      '/vms/{vmId}/port-forwardings/{portForwardingId}/source-policy',
+      { params: { path: { vmId, portForwardingId } }, body },
+    )
+    if (!data) throw toApiError(error, '포트포워딩 출발지 정책을 저장하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminPortMappingSourcePolicy(mappingId: string): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/port-mappings/{mappingId}/source-policy', {
+      params: { path: { mappingId } },
+    })
+    if (!data) throw toApiError(error, '포트 매핑 출발지 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminPortMappingSourcePolicy(
+  mappingId: string,
+  body: UpdateSourcePolicyRequest,
+): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/port-mappings/{mappingId}/source-policy', {
+      params: { path: { mappingId } }, body,
+    })
+    if (!data) throw toApiError(error, '포트 매핑 출발지 정책을 저장하지 못했습니다.')
     return data
   })
 }
@@ -1721,6 +1812,29 @@ export function fetchAdminDomains(params: {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/domains', { params: { query: params } })
     if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminRouteSourcePolicy(routeId: string): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/routes/{routeId}/source-policy', {
+      params: { path: { routeId } },
+    })
+    if (!data) throw toApiError(error, '라우트 출발지 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminRouteSourcePolicy(
+  routeId: string,
+  body: UpdateSourcePolicyRequest,
+): Promise<SourcePolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/routes/{routeId}/source-policy', {
+      params: { path: { routeId } }, body,
+    })
+    if (!data) throw toApiError(error, '라우트 출발지 정책을 저장하지 못했습니다.')
     return data
   })
 }

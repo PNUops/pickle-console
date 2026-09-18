@@ -9,13 +9,18 @@ import {
 import {
   createVmPortForwarding,
   deleteVmPortForwarding,
+  fetchCampusSourcePolicyPreset,
+  fetchPortForwardingSourcePolicy,
   fetchVmPortForwardings,
+  updatePortForwardingSourcePolicy,
   type PortForwardingView,
   type PortMappingProto,
   type VmDetail,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { SourcePolicyPanel } from './network-policy/SourcePolicyPanel'
 import { fieldErrorsOf } from '../lib/field-errors'
+import { publicSourcePolicyEnabled } from '../lib/public-source-policy'
 import {
   Alert,
   Button,
@@ -208,6 +213,8 @@ function ForwardingList({
   const queryClient = useQueryClient()
   const toast = useToast()
   const [error, setError] = useState<string | null>(null)
+  const [policyId, setPolicyId] = useState<string | null>(null)
+  const sourcePolicyEnabled = publicSourcePolicyEnabled()
 
   const remove = useMutation({
     mutationFn: (portForwardingId: string) =>
@@ -244,27 +251,47 @@ function ForwardingList({
       {error && <Alert variant="danger">{error}</Alert>}
       <ul className="space-y-2">
         {query.data.map((f) => (
-          <li key={f.id} className="flex flex-wrap items-center gap-2">
-            <code className="font-mono text-sm text-neutral-800">
-              {f.publicHost ?? '릴레이 주소 미설정'}:{f.publicPort}
-            </code>
-            <span aria-hidden="true" className="text-neutral-400">
-              →
-            </span>
-            <code className="font-mono text-sm text-neutral-800">
-              {f.targetPort}/{f.proto}
-            </code>
-            <PortForwardApplyStateBadge state={f.applyState} />
-            {f.status === 'SUSPENDED' && <PortMappingStatusBadge status={f.status} />}
-            {canMutate && (
-              <Button
-                variant="danger"
-                size="sm"
-                loading={remove.isPending && remove.variables === f.id}
-                onClick={() => remove.mutate(f.id)}
-              >
-                삭제
-              </Button>
+          <li key={f.id} className="space-y-3 rounded-lg border border-neutral-100 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="font-mono text-sm text-neutral-800">
+                {f.publicHost ?? '릴레이 주소 미설정'}:{f.publicPort}
+              </code>
+              <span aria-hidden="true" className="text-neutral-400">→</span>
+              <code className="font-mono text-sm text-neutral-800">
+                {f.targetPort}/{f.proto}
+              </code>
+              <PortForwardApplyStateBadge state={f.applyState} />
+              {f.status === 'SUSPENDED' && <PortMappingStatusBadge status={f.status} />}
+              {sourcePolicyEnabled && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPolicyId(policyId === f.id ? null : f.id)}
+                >
+                  출발지 정책
+                </Button>
+              )}
+              {canMutate && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  loading={remove.isPending && remove.variables === f.id}
+                  onClick={() => remove.mutate(f.id)}
+                >
+                  삭제
+                </Button>
+              )}
+            </div>
+            {sourcePolicyEnabled && policyId === f.id && (
+              <SourcePolicyPanel
+                queryKey={['vms', vm.id, 'port-forwardings', f.id, 'source-policy']}
+                target="PORT_FORWARDING"
+                loadPolicy={() => fetchPortForwardingSourcePolicy(vm.id, f.id)}
+                savePolicy={(body) => updatePortForwardingSourcePolicy(vm.id, f.id, body)}
+                loadPreset={fetchCampusSourcePolicyPreset}
+                canEdit={canMutate}
+                ipv4Only
+              />
             )}
           </li>
         ))}

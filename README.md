@@ -165,6 +165,18 @@ GPU 임대 기간은 신청자와 승인자가 시간 또는 일 단위로 직�
 기본 개발 모드와 production 빌드에서는 GPU 경로와 신청 선택을 열지 않습니다.
 사이드바의 GPU는 준비 중으로 유지하며 실제 서비스 개방은 별도로 진행합니다.
 
+## 공개 출발지 정책 기능 플래그
+
+도메인과 포트포워딩의 출발지 정책 화면은 `VITE_PUBLIC_SOURCE_POLICY_ENABLED=1`인
+빌드에서만 노출합니다. 변수를 지정하지 않거나 다른 값을 넣으면 화면을 표시하지 않습니다.
+이 플래그는 화면 노출만 제어하며 API 권한 검사를 대신하지 않습니다. 정책을 바꿔도 이미
+연결된 세션을 강제로 종료하지 않고 새 연결부터 적용합니다.
+서비스가 연결된 도메인은 IPv4·IPv6 주소와 CIDR을 받고, 포트포워딩은 relay 집행 범위에
+맞춰 IPv4만 받습니다. 플랫폼이 트래픽을 중계하지 않는 DNS 전용 도메인에는 이 화면을
+표시하지 않습니다. 상태는 비활성·반영 대기·설정 확인·설정 실패로 구분하며 내부 적용
+세대 숫자는 사용자 흐름에 노출하지 않습니다. 교내 preset은 현재 CIDR을 입력 목록에
+추가하는 snapshot이며 저장 뒤 자동으로 바뀌지 않습니다.
+
 ## 스택
 
 React 19, TypeScript, Vite 8, Tailwind 4, TanStack Query 5, react-router 8,
@@ -212,10 +224,14 @@ scripts/verify.sh        # lint → typecheck → test → build → 취약점 �
 
 ```bash
 npm run gen:api   # ../api/contract/openapi.yaml → src/api/schema.d.ts
+
+# 별도 checkout이나 worktree의 명세를 사용할 때
+OPENAPI_SCHEMA=/absolute/path/to/openapi.yaml npm run gen:api
 ```
 
 [pickle-api](https://github.com/PNUops/pickle-api) 레포지토리가 형제 디렉터리(`../api`)로
-체크아웃돼 있다고 가정합니다. 산출물 `src/api/schema.d.ts`는 커밋 대상입니다.
+체크아웃돼 있다고 가정합니다. `OPENAPI_SCHEMA`를 지정하면 그 파일을 입력으로 사용하며
+출력은 그대로 `src/api/schema.d.ts`입니다. 산출물은 커밋 대상입니다.
 
 ## 레포지토리 구조
 

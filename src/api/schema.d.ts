@@ -1113,6 +1113,24 @@ export interface paths {
         patch: operations["updateAdminPortMappingGuards"];
         trace?: never;
     };
+    "/admin/port-mappings/{mappingId}/source-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 포트 매핑 출발지 정책 조회 */
+        get: operations["getAdminPortMappingSourcePolicy"];
+        /** 포트 매핑 출발지 정책 저장 */
+        put: operations["updateAdminPortMappingSourcePolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/port-mappings/{mappingId}/suspend": {
         parameters: {
             query?: never;
@@ -1331,6 +1349,24 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["applyAdminRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/routes/{routeId}/source-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 라우트 출발지 정책 조회 */
+        get: operations["getAdminRouteSourcePolicy"];
+        /** 라우트 출발지 정책 저장 */
+        put: operations["updateAdminRouteSourcePolicy"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2218,6 +2254,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateDomain"];
+        trace?: never;
+    };
+    "/domains/{domainId}/source-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 도메인 출발지 정책 조회 */
+        get: operations["getDomainSourcePolicy"];
+        /** 도메인 출발지 정책 저장 */
+        put: operations["updateDomainSourcePolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/domains/{domainId}/verify": {
@@ -3116,6 +3170,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/source-policy-presets/campus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 교내 출발지 preset 조회 */
+        get: operations["getCampusSourcePolicyPreset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vm-flavors": {
         parameters: {
             query?: never;
@@ -3364,6 +3435,24 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteVmPortForwarding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vms/{vmId}/port-forwardings/{portForwardingId}/source-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 포트 포워딩 출발지 정책 조회 */
+        get: operations["getPortForwardingSourcePolicy"];
+        /** 포트 포워딩 출발지 정책 저장 */
+        put: operations["updatePortForwardingSourcePolicy"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7579,6 +7668,29 @@ export interface components {
             position?: components["schemas"]["UserPosition"] | null;
             studentNo?: string | null;
         };
+        /** @enum {string} */
+        SourcePolicyApplyState: "INACTIVE" | "PENDING" | "APPLIED" | "FAILED";
+        SourcePolicyPresetView: {
+            allowedCidrs: string[];
+            key: string;
+            target: components["schemas"]["SourcePolicyTarget"];
+        };
+        /** @enum {string} */
+        SourcePolicyTarget: "DOMAIN" | "PORT_FORWARDING";
+        SourcePolicyView: {
+            allowedCidrs: string[];
+            /** Format: int64 */
+            appliedGeneration?: number | null;
+            applyState: components["schemas"]["SourcePolicyApplyState"];
+            /** Format: int64 */
+            desiredGeneration?: number | null;
+            explicit: boolean;
+            lastError?: string | null;
+            /** Format: int64 */
+            revision: number;
+            /** Format: date-time */
+            updatedAt?: string | null;
+        };
         StageOpenRouterCredentialRequest: {
             /** @description Account 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
@@ -7802,6 +7914,11 @@ export interface components {
             /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
         };
+        UpdateSourcePolicyRequest: {
+            allowedCidrs: string[];
+            /** Format: int64 */
+            expectedRevision: number;
+        };
         UpdateUserAdminRequest: {
             role?: components["schemas"]["AdminGlobalRole"];
         };
@@ -7828,7 +7945,7 @@ export interface components {
         UpdateWorkspaceRequest: {
             description?: string | null;
             /** @description 워크스페이스 유형. PERSONAL 워크스페이스는 유형을 바꿀 수 없습니다 */
-            kind?: components["schemas"]["CreatableWorkspaceKind"] | null;
+            kind?: components["schemas"]["CreatableWorkspaceKind"];
             name?: string;
         };
         UserAdminDetailResponse: {
@@ -10691,6 +10808,72 @@ export interface operations {
             };
         };
     };
+    getAdminPortMappingSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mappingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminPortMappingSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mappingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSourcePolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     suspendAdminPortMapping: {
         parameters: {
             query?: never;
@@ -11174,6 +11357,72 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminRouteSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminRouteSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                routeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSourcePolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -13257,6 +13506,72 @@ export interface operations {
             };
         };
     };
+    getDomainSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateDomainSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSourcePolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     verifyDomain: {
         parameters: {
             query?: never;
@@ -15271,6 +15586,37 @@ export interface operations {
             };
         };
     };
+    getCampusSourcePolicyPreset: {
+        parameters: {
+            query: {
+                target: components["schemas"]["SourcePolicyTarget"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyPresetView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listVmFlavors: {
         parameters: {
             query?: never;
@@ -15976,6 +16322,74 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPortForwardingSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+                portForwardingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updatePortForwardingSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+                portForwardingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSourcePolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

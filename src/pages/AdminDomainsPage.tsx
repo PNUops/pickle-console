@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   applyAdminRoute,
+  fetchAdminRouteSourcePolicy,
+  fetchCampusSourcePolicyPreset,
   fetchAdminDomainRecords,
   fetchAdminDomainRoots,
   fetchAdminDomains,
@@ -11,6 +13,7 @@ import {
   resyncRoutes,
   updateAdminDomainRenewal,
   updateAdminDomainRoot,
+  updateAdminRouteSourcePolicy,
   verifyAdminDomain,
   type AdminDomainRootView,
   type AdminDomainView,
@@ -26,6 +29,7 @@ import {
   operatesOrg,
 } from '../auth/permissions'
 import { CertificatesSection } from '../components/CertificatesSection'
+import { SourcePolicyPanel } from '../components/network-policy/SourcePolicyPanel'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -430,7 +434,7 @@ function DomainDrawerContent({
           </Alert>
         )}
         {route && (
-          <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
+          <div className="space-y-4 rounded-lg border border-neutral-200 p-4">
             <div className="flex items-center justify-between">
               <RouteStatusBadge status={route.status} />
               {canIntervene && (route.status === 'REMOVED' || domain.status === 'ACTIVE') && (
@@ -452,6 +456,15 @@ function DomainDrawerContent({
             {route.status === 'FAILED' && route.lastError && (
               <Alert variant="danger">{route.lastError}</Alert>
             )}
+            <SourcePolicyPanel
+              queryKey={['admin', 'routes', route.id, 'source-policy']}
+              target="DOMAIN"
+              loadPolicy={() => fetchAdminRouteSourcePolicy(route.id)}
+              savePolicy={(body) => updateAdminRouteSourcePolicy(route.id, body)}
+              loadPreset={fetchCampusSourcePolicyPreset}
+              canEdit={canIntervene}
+              surface="admin"
+            />
           </div>
         )}
       </section>
