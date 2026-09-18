@@ -64,7 +64,7 @@ export function AdminWorkspacesPage() {
             <THead>
               <TR>
                 <TH>이름</TH>
-                <TH>종류</TH>
+                <TH>유형</TH>
                 <TH>구성원</TH>
                 <TH>생성일</TH>
               </TR>

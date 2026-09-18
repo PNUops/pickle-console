@@ -37,7 +37,13 @@ import {
   Textarea,
   useToast,
 } from '../components/ui'
-import { WORKSPACE_ROLE_LABELS } from '../lib/labels'
+import {
+  CREATABLE_WORKSPACE_KINDS,
+  WORKSPACE_KIND_HINTS,
+  WORKSPACE_KIND_LABELS,
+  WORKSPACE_ROLE_LABELS,
+  type CreatableWorkspaceKind,
+} from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -269,13 +275,31 @@ function EditWorkspaceModal({
   const queryClient = useQueryClient()
   const [name, setName] = useState(workspace.name)
   const [description, setDescription] = useState(workspace.description ?? '')
+  // A personal workspace cannot be reclassified: automatic creation, the
+  // undeletable rule and the closed member list all decide by that value.
+  const personal = workspace.kind === 'PERSONAL'
+  // A kind this build cannot offer (retired TEAM, or one the server shipped
+  // first) has no option to select. Starting on it would leave the select
+  // showing its first entry while the state held the old value, so saving
+  // would send nothing and the screen would claim a change it never made.
+  // Start unset instead and make the owner choose.
+  const creatable = CREATABLE_WORKSPACE_KINDS.includes(
+    workspace.kind as CreatableWorkspaceKind,
+  )
+  const [kind, setKind] = useState<CreatableWorkspaceKind | ''>(
+    personal || !creatable ? '' : (workspace.kind as CreatableWorkspaceKind),
+  )
   const [error, setError] = useState<string | null>(null)
 
   const update = useMutation({
     mutationFn: async () => {
       const { data, error: err } = await api.PATCH('/workspaces/{workspaceId}', {
         params: { path: { workspaceId: workspace.id } },
-        body: { name, description: description || null },
+        body: {
+          name,
+          description: description || null,
+          ...(kind !== '' && kind !== workspace.kind ? { kind } : {}),
+        },
       })
       if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.')
       return data
@@ -304,6 +328,21 @@ function EditWorkspaceModal({
         <FormField label="워크스페이스 이름" required>
           <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} />
         </FormField>
+        {!personal && (
+          <FormField label="유형" required>
+            <Select
+              value={kind}
+              onChange={(event) => setKind(event.target.value as CreatableWorkspaceKind)}
+            >
+              {kind === '' && <option value="">선택해 주세요</option>}
+              {CREATABLE_WORKSPACE_KINDS.map((value) => (
+                <option key={value} value={value}>
+                  {WORKSPACE_KIND_LABELS[value]} ({WORKSPACE_KIND_HINTS[value]})
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        )}
         <FormField label="설명">
           <Textarea
             value={description}

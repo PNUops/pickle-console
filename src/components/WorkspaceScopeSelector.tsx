@@ -5,7 +5,7 @@ import { fetchWorkspaces } from '../api/queries'
 import { PopoverPanel, usePopover } from './ui'
 import { CreateWorkspaceModal } from './workspace/CreateWorkspaceModal'
 import { cn } from '../lib/cn'
-import { WORKSPACE_KIND_LABELS } from '../lib/labels'
+import { labelForWorkspaceKind } from '../lib/labels'
 import { consolePathInScope } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
 import { parseGuidePath } from '../lib/docs-paths'
@@ -114,7 +114,7 @@ export function WorkspaceScopeSelector() {
             {check(workspace.id === scope)}
             <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
             <span className="shrink-0 text-xs text-neutral-400">
-              {WORKSPACE_KIND_LABELS[workspace.kind]}
+              {labelForWorkspaceKind(workspace.kind)}
             </span>
           </button>
         ))}

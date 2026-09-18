@@ -18,7 +18,7 @@ async function openCreateModal() {
 }
 
 describe('내 워크스페이스 목록', () => {
-  test('워크스페이스 종류·역할 배지와 함께 내 워크스페이스를 나열한다', async () => {
+  test('lists my workspaces with their kind and role badges', async () => {
     renderWorkspaces()
 
     const row = (await screen.findByRole('link', { name: '캡스톤 3조' })).closest('tr')!
@@ -29,9 +29,9 @@ describe('내 워크스페이스 목록', () => {
     const personalRow = screen.getByRole('link', { name: '홍길동' }).closest('tr')!
     expect(within(personalRow).getByText('개인')).toBeInTheDocument()
 
-    const teamRow = screen.getByRole('link', { name: '알고리즘 스터디' }).closest('tr')!
-    expect(within(teamRow).getByText('팀')).toBeInTheDocument()
-    expect(within(teamRow).getByText('구성원')).toBeInTheDocument()
+    const studyRow = screen.getByRole('link', { name: '알고리즘 스터디' }).closest('tr')!
+    expect(within(studyRow).getByText('스터디')).toBeInTheDocument()
+    expect(within(studyRow).getByText('구성원')).toBeInTheDocument()
   })
 })
 
@@ -40,6 +40,7 @@ describe('워크스페이스 생성', () => {
     renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 
+    await user.selectOptions(within(dialog).getByLabelText('유형'), 'PROJECT')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
     expect(
@@ -47,10 +48,23 @@ describe('워크스페이스 생성', () => {
     ).toBeInTheDocument()
   })
 
+  test('creation refuses a form with no kind chosen', async () => {
+    renderWorkspaces()
+    const { user, dialog } = await openCreateModal()
+
+    await user.type(within(dialog).getByLabelText('워크스페이스 이름'), '유형 없는 곳')
+    await user.click(within(dialog).getByRole('button', { name: '만들기' }))
+
+    expect(
+      within(dialog).getByText('워크스페이스 유형을 선택해 주세요.'),
+    ).toBeInTheDocument()
+  })
+
   test('같은 이름을 다시 써도 만들 수 있다 (이름은 키가 아니다)', async () => {
     renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 
+    await user.selectOptions(within(dialog).getByLabelText('유형'), 'PROJECT')
     await user.type(within(dialog).getByLabelText('워크스페이스 이름'), '캡스톤 3조')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))
 
@@ -63,7 +77,7 @@ describe('워크스페이스 생성', () => {
     renderWorkspaces()
     const { user, dialog } = await openCreateModal()
 
-    await user.selectOptions(within(dialog).getByLabelText('종류'), 'PROJECT')
+    await user.selectOptions(within(dialog).getByLabelText('유형'), 'COURSE')
     await user.type(within(dialog).getByLabelText('워크스페이스 이름'), '졸업과제 7조')
     await user.type(within(dialog).getByLabelText('설명'), '2026-2 졸업과제 7조')
     await user.click(within(dialog).getByRole('button', { name: '만들기' }))

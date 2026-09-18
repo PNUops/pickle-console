@@ -4490,6 +4490,8 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @enum {string} */
+        CreatableWorkspaceKind: "PROJECT" | "COURSE" | "PROGRAM" | "LAB" | "CLUB" | "COMPETITION" | "STUDY";
         CreateCampusIpRequest: {
             /** @description 교내 IP로 사용할 포트 번호 목록 (1~65535, 최대 32개) */
             ports: number[];
@@ -4650,11 +4652,8 @@ export interface components {
         };
         CreateWorkspaceRequest: {
             description?: string | null;
-            /**
-             * @description 워크스페이스 종류 — PERSONAL은 시스템 생성 전용이라 요청으로 만들 수 없습니다
-             * @enum {unknown}
-             */
-            kind: components["schemas"]["WorkspaceKind"];
+            /** @description 워크스페이스 유형. PERSONAL은 가입 시 자동 생성되고 TEAM은 폐기된 값이라 요청으로 만들 수 없습니다 */
+            kind: components["schemas"]["CreatableWorkspaceKind"];
             name: string;
         };
         /** @enum {string} */
@@ -7828,6 +7827,8 @@ export interface components {
         };
         UpdateWorkspaceRequest: {
             description?: string | null;
+            /** @description 워크스페이스 유형. PERSONAL 워크스페이스는 유형을 바꿀 수 없습니다 */
+            kind?: components["schemas"]["CreatableWorkspaceKind"] | null;
             name?: string;
         };
         UserAdminDetailResponse: {
@@ -8287,7 +8288,7 @@ export interface components {
             name: string;
         };
         /** @enum {string} */
-        WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT";
+        WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT" | "COURSE" | "PROGRAM" | "LAB" | "CLUB" | "COMPETITION" | "STUDY";
         WorkspaceMemberResponse: {
             email: string;
             name: string;

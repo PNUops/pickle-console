@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import {
-  WORKSPACE_KIND_LABELS,
+  labelForWorkspaceKind,
   WORKSPACE_ROLE_LABELS,
   RESOURCE_ROLE_LABELS,
   type WorkspaceKind,
@@ -230,16 +230,20 @@ export function DomainConnectionBadge({
   )
 }
 
-const WORKSPACE_KIND_VARIANTS: Record<WorkspaceKind, BadgeVariant> = {
-  PERSONAL: 'neutral',
-  TEAM: 'info',
-  PROJECT: 'primary',
+/**
+ * Colour does not separate the eight kinds. The remaining variants mean states,
+ * so painting a competition red would claim something is wrong with it. The one
+ * line the system actually draws is personal versus shared, and that is all the
+ * colour says; which kind it is, the label says.
+ */
+function workspaceKindVariant(kind: string): BadgeVariant {
+  return kind === 'PERSONAL' ? 'neutral' : 'primary'
 }
 
 export function WorkspaceKindBadge({ kind, className }: { kind: WorkspaceKind; className?: string }) {
   return (
-    <Badge variant={WORKSPACE_KIND_VARIANTS[kind]} className={className}>
-      {WORKSPACE_KIND_LABELS[kind]}
+    <Badge variant={workspaceKindVariant(kind)} className={className}>
+      {labelForWorkspaceKind(kind)}
     </Badge>
   )
 }

@@ -40,7 +40,7 @@ import {
 } from '../components/ui'
 import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatBytes } from '../lib/format'
-import { WORKSPACE_KIND_LABELS, type WorkspaceKind } from '../lib/labels'
+import { labelForWorkspaceKind, type WorkspaceKind } from '../lib/labels'
 import { endpointKindLabel } from '../lib/llm-endpoint-kinds'
 import { formatUsd } from '../lib/openrouter-credits'
 import { passthroughLabel } from '../lib/passthrough-endpoints'
@@ -375,7 +375,7 @@ function ConsumerRow({
   level: LlmUsageConsumerLevel
   activeOrgId?: string
   days: AdminLlmUsageDays
-  /** 워크스페이스 종류. 목록 조회가 이미 실어 오므로 서버에 더 묻지 않는다. */
+  /** 워크스페이스 유형. 목록 조회가 이미 실어 오므로 서버에 더 묻지 않는다. */
   workspaceKinds: Map<string, WorkspaceKind>
 }) {
   const name = consumerName(item, level)
@@ -398,7 +398,7 @@ function ConsumerRow({
           <span className="font-medium text-foreground-primary">{name}</span>
         )}
         {level === 'WORKSPACE' && kind && (
-          <span className="text-foreground-muted"> ({WORKSPACE_KIND_LABELS[kind]})</span>
+          <span className="text-foreground-muted"> ({labelForWorkspaceKind(kind)})</span>
         )}
         {level === 'KEY' && item.workspaceName && (
           <span className="block text-xs text-foreground-muted">{item.workspaceName}</span>

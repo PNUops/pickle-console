@@ -1,6 +1,7 @@
 import type { components } from '../api/schema'
 
 export type WorkspaceKind = components['schemas']['WorkspaceKind']
+export type CreatableWorkspaceKind = components['schemas']['CreatableWorkspaceKind']
 export type WorkspaceMemberRole = components['schemas']['WorkspaceMemberRole']
 export type ResourceRole = components['schemas']['ResourceRole']
 export type UserRole = components['schemas']['UserRole']
@@ -10,8 +11,64 @@ export type CreditLimitReset = components['schemas']['CreditLimitReset']
 
 export const WORKSPACE_KIND_LABELS: Record<WorkspaceKind, string> = {
   PERSONAL: '개인',
-  TEAM: '팀',
+  COURSE: '교과',
+  PROGRAM: '비교과',
+  LAB: '연구실',
+  CLUB: '동아리',
+  COMPETITION: '대회',
+  STUDY: '스터디',
   PROJECT: '프로젝트',
+  TEAM: '팀',
+}
+
+/**
+ * The order kinds appear in, and the only place that order is decided. Personal
+ * comes first because everyone has one and it is the only kind that behaves
+ * differently; project comes last because it takes whatever fits nowhere else;
+ * in between runs from what the university operates to what people form on
+ * their own. The contract's enum order is not this and must not be relied on.
+ *
+ * Retired TEAM is absent. A row that still carries it reads its label from the
+ * table above, which is why that table has an entry the order does not.
+ */
+const WORKSPACE_KIND_ORDER: WorkspaceKind[] = [
+  'PERSONAL',
+  'COURSE',
+  'PROGRAM',
+  'LAB',
+  'CLUB',
+  'COMPETITION',
+  'STUDY',
+  'PROJECT',
+]
+
+/**
+ * What a request may name, derived so the order above is the single source
+ * rather than a second list that can drift from it. Personal is created at
+ * signup and TEAM is retired, so neither can be asked for.
+ */
+export const CREATABLE_WORKSPACE_KINDS = WORKSPACE_KIND_ORDER.filter(
+  (kind): kind is CreatableWorkspaceKind => kind !== 'PERSONAL' && kind !== 'TEAM',
+)
+
+/** One line telling the reader what a kind means where they pick one. */
+export const WORKSPACE_KIND_HINTS: Record<CreatableWorkspaceKind, string> = {
+  COURSE: '학점이 부여되는 정규 교과목',
+  PROGRAM: '학점이 없는 교육 프로그램',
+  LAB: '연구실과 연구 그룹',
+  CLUB: '학생 자치 단체',
+  COMPETITION: '공모전과 해커톤에 나가는 팀',
+  STUDY: '자발적으로 모인 학습 모임',
+  PROJECT: '그 밖에 무언가를 만드는 모임',
+}
+
+/**
+ * The server ships before the console does, so a kind this build has no label
+ * for will arrive. Show the raw value rather than an empty space: the resource
+ * type registry does the same thing for the same reason.
+ */
+export function labelForWorkspaceKind(kind: string): string {
+  return WORKSPACE_KIND_LABELS[kind as WorkspaceKind] ?? kind
 }
 
 /** 워크스페이스 축 — 워크스페이스 자체에 대한 권한. 2단이다. */
