@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deleteAdminPortMapping,
+  fetchAdminPortMappingSourcePolicy,
+  fetchCampusSourcePolicyPreset,
   fetchAdminCampusIpRequests,
   fetchAdminPortMappings,
   fetchAdminRelays,
@@ -11,6 +13,7 @@ import {
   unsuspendAdminPortMapping,
   updateAdminCampusIpRequestStatus,
   updateAdminPortMappingGuards,
+  updateAdminPortMappingSourcePolicy,
   type AdminCampusIpRequestView,
   type AdminPortMappingView,
   type AdminRelayView,
@@ -26,6 +29,7 @@ import { useAuth } from '../auth/auth-context'
 import { canRunSysRoutine, isSysAdminOnly } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import { CopyButton } from '../components/CopyButton'
+import { SourcePolicyPanel } from '../components/network-policy/SourcePolicyPanel'
 import {
   Alert,
   Badge,
@@ -543,6 +547,17 @@ function MappingDrawerContent({
           {suspendedNote(mapping)}
         </Alert>
       )}
+
+      <SourcePolicyPanel
+        queryKey={['admin', 'port-mappings', mapping.id, 'source-policy']}
+        target="PORT_FORWARDING"
+        loadPolicy={() => fetchAdminPortMappingSourcePolicy(mapping.id)}
+        savePolicy={(body) => updateAdminPortMappingSourcePolicy(mapping.id, body)}
+        loadPreset={fetchCampusSourcePolicyPreset}
+        canEdit={canOperate}
+        surface="admin"
+        ipv4Only
+      />
 
       {canOperate && (
         <section className="space-y-3 rounded-lg border border-neutral-200 p-4">

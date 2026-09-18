@@ -2,7 +2,10 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   deleteDomain,
+  fetchCampusSourcePolicyPreset,
+  fetchDomainSourcePolicy,
   updateDomainPort,
+  updateDomainSourcePolicy,
   verifyDomain,
   type DomainSummary,
   type PublicationView,
@@ -29,6 +32,7 @@ import { ConnectionJourney } from './ConnectionJourney'
 import { DnsRecordTable } from './DnsRecordTable'
 import { foldDomainStatus } from './domain-status'
 import { portFieldError } from './domain-form'
+import { SourcePolicyPanel } from '../network-policy/SourcePolicyPanel'
 
 interface DomainDrawerProps {
   vm: VmDetail
@@ -138,6 +142,15 @@ export function LiveDomainBody({
       </div>
 
       {notice}
+
+      <SourcePolicyPanel
+        queryKey={['domains', domain.id, 'source-policy']}
+        target="DOMAIN"
+        loadPolicy={() => fetchDomainSourcePolicy(domain.id)}
+        savePolicy={(body) => updateDomainSourcePolicy(domain.id, body)}
+        loadPreset={fetchCampusSourcePolicyPreset}
+        canEdit={canMutate}
+      />
 
       {isCustom ? (
         <ConnectionJourney pub={pub} />

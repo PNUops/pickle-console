@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest'
-import { MAX_SOURCE_CIDRS, normalizeNetwork, parseSourcePolicy, parseVmRule, type VmRuleDraft } from './model'
+import {
+  MAX_SOURCE_CIDRS,
+  appendCampusPreset,
+  normalizeNetwork,
+  parseSourcePolicy,
+  parseVmRule,
+  type VmRuleDraft,
+} from './model'
 
 describe('network input normalization', () => {
   test.each([
@@ -34,26 +41,28 @@ describe('network input normalization', () => {
 
 describe('source policy input', () => {
   test('keeps an explicit empty list instead of inventing public access', () => {
-    expect(parseSourcePolicy({ cidrsText: '\n  \n', includeCampusPreset: false })).toEqual({
-      allowedCidrs: [], includeCampusPreset: false,
-    })
+    expect(parseSourcePolicy({ cidrsText: '\n  \n' })).toEqual({ allowedCidrs: [] })
   })
 
-  test('retains the managed preset separately from direct addresses', () => {
-    expect(parseSourcePolicy({ cidrsText: '192.0.2.7\r\n2001:DB8::/32', includeCampusPreset: true })).toEqual({
-      allowedCidrs: ['192.0.2.7/32', '2001:db8::/32'], includeCampusPreset: true,
+  test('snapshots normalized preset addresses without duplicating direct input', () => {
+    expect(appendCampusPreset(
+      { cidrsText: '192.0.2.7\r\n2001:DB8::/32' },
+      ['192.0.2.7/32', '10.0.0.0/8'],
+    )).toEqual({
+      cidrsText: '192.0.2.7/32\n2001:db8::/32\n10.0.0.0/8',
     })
   })
 
   test('rejects duplicates after normalization', () => {
-    expect(() => parseSourcePolicy({ cidrsText: '192.0.2.7\n192.0.2.7/32', includeCampusPreset: false })).toThrow('중복')
-    expect(() => parseSourcePolicy({ cidrsText: '2001:db8::1\n2001:DB8:0:0:0:0:0:1/128', includeCampusPreset: false })).toThrow('중복')
+    expect(() => parseSourcePolicy({ cidrsText: '192.0.2.7\n192.0.2.7/32' })).toThrow('중복')
+    expect(() => parseSourcePolicy({ cidrsText: '2001:db8::1\n2001:DB8:0:0:0:0:0:1/128' })).toThrow('중복')
   })
 
   test('enforces the same direct CIDR limit as the appliers', () => {
     const lines = Array.from({ length: MAX_SOURCE_CIDRS }, (_, i) => `192.0.2.${i}`)
-    expect(parseSourcePolicy({ cidrsText: lines.join('\n'), includeCampusPreset: false }).allowedCidrs).toHaveLength(128)
-    expect(() => parseSourcePolicy({ cidrsText: [...lines, '198.51.100.1'].join('\n'), includeCampusPreset: false })).toThrow('128')
+    expect(parseSourcePolicy({ cidrsText: lines.join('\n') }).allowedCidrs).toHaveLength(128)
+    expect(() => parseSourcePolicy({ cidrsText: [...lines, '198.51.100.1'].join('\n') })).toThrow('128')
+    expect(() => appendCampusPreset({ cidrsText: lines.join('\n') }, ['198.51.100.1'])).toThrow('128')
   })
 })
 

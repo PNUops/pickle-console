@@ -3,18 +3,16 @@ export const MAX_USER_RULES = 128
 
 export interface SourcePolicyDraft {
   cidrsText: string
-  includeCampusPreset: boolean
 }
 
 export interface SourcePolicyValue {
   allowedCidrs: string[]
-  includeCampusPreset: boolean
 }
 
 export type NetworkPolicyObservation =
-  | { state: 'NOT_CONFIGURED' }
-  | { state: 'DESIRED' }
-  | { state: 'CONFIG_CONFIRMED' }
+  | { state: 'INACTIVE' }
+  | { state: 'PENDING' }
+  | { state: 'APPLIED' }
   | { state: 'FAILED'; message: string }
 
 export type RuleDirection = 'IN' | 'OUT'
@@ -126,7 +124,32 @@ export function parseSourcePolicy(draft: SourcePolicyDraft, ipv4Only = false): S
     if (allowedCidrs.includes(cidr)) throw new Error(`${index + 1}번째 주소가 중복됩니다.`)
     allowedCidrs.push(cidr)
   }
-  return { allowedCidrs, includeCampusPreset: draft.includeCampusPreset }
+  return { allowedCidrs }
+}
+
+/** Copy the currently confirmed campus networks into the editable policy snapshot. */
+export function appendCampusPreset(
+  draft: SourcePolicyDraft,
+  campusCidrs: readonly string[],
+  ipv4Only = false,
+): SourcePolicyDraft {
+  const allowedCidrs = parseSourcePolicy(draft, ipv4Only).allowedCidrs
+  for (const value of campusCidrs) {
+    let cidr: string
+    try {
+      cidr = normalizeNetwork(value, ipv4Only).cidr
+    } catch (error) {
+      throw new Error(
+        `교내 주소 목록: ${error instanceof Error ? error.message : '주소를 확인해 주세요.'}`,
+        { cause: error },
+      )
+    }
+    if (!allowedCidrs.includes(cidr)) allowedCidrs.push(cidr)
+  }
+  if (allowedCidrs.length > MAX_SOURCE_CIDRS) {
+    throw new Error(`교내 주소를 추가하면 출발지가 ${MAX_SOURCE_CIDRS}개를 넘습니다.`)
+  }
+  return { cidrsText: allowedCidrs.join('\n') }
 }
 
 export function parseVmRule(draft: VmRuleDraft, ipv4Only = false): VmRuleValue {

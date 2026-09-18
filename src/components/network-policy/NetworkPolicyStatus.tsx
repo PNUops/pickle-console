@@ -2,9 +2,9 @@ import { Alert, Badge, type BadgeVariant } from '../ui'
 import type { NetworkPolicyObservation } from './model'
 
 const PRESENTATION: Record<NetworkPolicyObservation['state'], { label: string; variant: BadgeVariant }> = {
-  NOT_CONFIGURED: { label: '미설정', variant: 'neutral' },
-  DESIRED: { label: '반영 대기', variant: 'info' },
-  CONFIG_CONFIRMED: { label: '설정 확인', variant: 'success' },
+  INACTIVE: { label: '비활성', variant: 'neutral' },
+  PENDING: { label: '반영 대기', variant: 'info' },
+  APPLIED: { label: '설정 확인', variant: 'success' },
   FAILED: { label: '설정 실패', variant: 'danger' },
 }
 

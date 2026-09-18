@@ -5,9 +5,9 @@ import type { NetworkPolicyObservation } from './model'
 
 describe('network policy observation', () => {
   test.each([
-    [{ state: 'NOT_CONFIGURED' }, '미설정'],
-    [{ state: 'DESIRED' }, '반영 대기'],
-    [{ state: 'CONFIG_CONFIRMED' }, '설정 확인'],
+    [{ state: 'INACTIVE' }, '비활성'],
+    [{ state: 'PENDING' }, '반영 대기'],
+    [{ state: 'APPLIED' }, '설정 확인'],
     [{ state: 'FAILED', message: '설정을 확인하지 못했습니다.' }, '설정 실패'],
   ] satisfies [NetworkPolicyObservation, string][])('renders each observation separately', (observation, label) => {
     render(<NetworkPolicyStatus observation={observation} />)

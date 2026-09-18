@@ -16,7 +16,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:api": "openapi-typescript ../api/contract/openapi.yaml -o src/api/schema.d.ts"
+    "gen:api": "openapi-typescript \"${OPENAPI_SCHEMA:-../api/contract/openapi.yaml}\" -o src/api/schema.d.ts"
   },
   "overrides": {
     "openapi-typescript": {
