@@ -1,8 +1,10 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   orgAdminUser,
+  orgManagerUser,
   orgViewerUser,
   refreshSuccessHandler,
   sysAdminUser,
@@ -13,10 +15,38 @@ import { uuid } from '../test/msw/ids'
 
 function renderAsSysAdmin(path: string) {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-  renderApp(path)
+  return renderApp(path)
 }
 
+afterEach(() => vi.unstubAllEnvs())
+
 describe('관리자 VM 상세', () => {
+  test('allows scoped ORG_MANAGER edits and keeps ORG_VIEWER read-only', async () => {
+    vi.stubEnv('VITE_VM_NETWORK_POLICY_ENABLED', '1')
+    server.use(refreshSuccessHandler('access-org-manager', orgManagerUser))
+    const first = renderApp(`/admin/vms/${uuid(56)}?tab=network-policy`)
+    expect(await screen.findByRole('button', { name: '통신 정책 저장' })).toBeEnabled()
+    first.unmount()
+
+    server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+    renderApp(`/admin/vms/${uuid(57)}?tab=network-policy`)
+    await screen.findByRole('region', { name: 'VM 통신 정책' })
+    expect(screen.queryByRole('button', { name: '통신 정책 저장' })).not.toBeInTheDocument()
+    expect(screen.getByText('192.0.2.0/24 · 443')).toBeInTheDocument()
+  })
+
+  test('hides the policy tab and skips its query while the feature is off', async () => {
+    let requests = 0
+    server.use(http.get('*/api/v1/admin/vms/:vmId/network-policy', () => {
+      requests += 1
+      return HttpResponse.json({})
+    }))
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}?tab=network-policy`)
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.queryByRole('tab', { name: '통신 정책' })).not.toBeInTheDocument()
+    expect(requests).toBe(0)
+  })
+
   test('개요 탭에 요약과 상태에 맞는 전원 버튼이 보인다', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin(`/admin/vms/${uuid(56)}`)

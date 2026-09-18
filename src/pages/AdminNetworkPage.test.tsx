@@ -100,6 +100,21 @@ describe('네트워크 — 릴레이 탭', () => {
 })
 
 describe('네트워크 — 포트포워딩 탭', () => {
+  test('shows transitional states without duplicate intervention actions', async () => {
+    const user = userEvent.setup()
+    renderNetwork('forwardings')
+    const pendingRow = (await screen.findByText(':14001 → 8080/TCP')).closest('tr')!
+    expect(within(pendingRow).getByText('활성화 대기')).toBeInTheDocument()
+    const removingRow = (await screen.findByText(':14002 → 5353/UDP')).closest('tr')!
+    expect(within(removingRow).getByText('삭제 진행 중')).toBeInTheDocument()
+    await user.click(within(pendingRow).getByRole('button', { name: 'web-lab' }))
+    const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
+    expect(within(drawer).getByText(/relay 설정 확인을 기다리고 있습니다/)).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '정지' })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '재개' })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+  })
+
   test('행 선택 → 드로어에서 사유와 함께 정지하고 목록에 반영된다', async () => {
     const user = userEvent.setup()
     renderNetwork('forwardings')

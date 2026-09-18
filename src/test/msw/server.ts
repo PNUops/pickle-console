@@ -21,6 +21,7 @@ import { resetRequestFixtures } from './handlers/requests'
 import { resetVmFixtures } from './handlers/vms'
 import { resetTerminalFixtures } from './handlers/terminal'
 import { resetVmSshKeyFixtures } from './handlers/vm-ssh-key'
+import { resetVmNetworkPolicyFixtures } from './handlers/vm-network-policy'
 
 export { handlers }
 
@@ -38,6 +39,7 @@ export function resetFixtures() {
   resetAdminLlmUsageFixtures()
   resetTerminalFixtures()
   resetVmSshKeyFixtures()
+  resetVmNetworkPolicyFixtures()
   resetPublishingFixtures()
   resetNetworkFixtures()
   resetCampusIpFixtures()

@@ -177,6 +177,24 @@ GPU 임대 기간은 신청자와 승인자가 시간 또는 일 단위로 직�
 세대 숫자는 사용자 흐름에 노출하지 않습니다. 교내 preset은 현재 CIDR을 입력 목록에
 추가하는 snapshot이며 저장 뒤 자동으로 바뀌지 않습니다.
 
+## VM 통신 정책 기능 플래그
+
+VM별 수신·송신 규칙 화면은 `VITE_VM_NETWORK_POLICY_ENABLED=1`인 빌드에서만 노출하고,
+기본값은 off입니다. 사용자 VM 상세의 네트워크 탭에서는 VIEWER 이상이 저장된 정책을
+읽고 EDITOR 이상이 변경합니다. 관리자 VM 상세에서는 기관 scope 안의 ORG_MANAGER·
+ORG_ADMIN과 SYS_MANAGER·SYS_ADMIN이 변경하며 viewer 역할은 읽기만 합니다. 이 UI
+플래그와 역할 판정은 화면 제어이고 최종 권한은 API가 검사합니다.
+
+사용자 규칙은 순서가 유지되는 최대 128개의 IPv4 CIDR 규칙입니다. 방향은 수신·송신,
+처리는 허용·차단, 프로토콜은 전체·TCP·UDP·ICMP이며 TCP/UDP만 단일 포트나 범위를
+가질 수 있습니다. 플랫폼 SSH, 웹 터미널과 공개 경로에 필요한 system rule은 목적과
+설명만 읽을 수 있고 편집할 수 없습니다. 저장은 revision CAS를 사용하므로 충돌 시 작성
+중인 규칙을 보존하고 명시적으로 최신 정책을 불러와야 합니다.
+
+상태의 `설정 확인됨`은 서버가 방화벽 설정 반영을 다시 확인한 상태이며 실제 연결 성공을 뜻하지
+않습니다. `실패(차단 설정 확인)`은 변경 적용은 실패했지만 fail-closed 차단 설정의 반영을
+확인한 상태입니다. 준비되지 않았거나 API가 unavailable인 VM은 편집기를 표시하지 않습니다.
+
 ## 스택
 
 React 19, TypeScript, Vite 8, Tailwind 4, TanStack Query 5, react-router 8,

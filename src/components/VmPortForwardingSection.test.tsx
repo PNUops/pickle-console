@@ -22,6 +22,14 @@ function renderPublishTab(
 afterEach(() => vi.unstubAllEnvs())
 
 describe('VM 도메인·포트 탭 — 포트포워딩', () => {
+  test('does not offer another delete while removal is pending', async () => {
+    server.use(vmDetailAs(uuid(58), 'EDITOR'))
+    renderPublishTab(uuid(58))
+    const row = (await screen.findByText(`${RELAY_PUBLIC_HOST}:14002`)).closest('li')!
+    expect(within(row).getByText('삭제 진행 중')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+  })
+
   test('참여자는 목록·상태 배지를 읽기 전용으로 본다', async () => {
     // 접근 목록에서 참여자면 설정을 바꿀 수 없다(settingsEditAllowed=false).
     server.use(vmDetailAs(uuid(56), 'MEMBER'))
@@ -58,7 +66,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     const row = (await screen.findByText(`${RELAY_PUBLIC_HOST}:15000`)).closest('li')!
     expect(within(row).getByText('대기')).toBeInTheDocument()
     // 폴링(테스트 50ms)으로 릴레이 수렴을 반영해 활성으로 바뀐다.
-    await within(row).findByText('활성')
+    await waitFor(() => expect(within(row).getAllByText('활성')).toHaveLength(2))
   })
 
   test('편집자도 생성 폼을 보고 매핑을 삭제할 수 있다', async () => {

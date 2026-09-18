@@ -103,6 +103,20 @@ function initialForwardings(): ForwardingRecord[] {
       createdBy: uuid(42),
       createdAt: '2026-07-11T12:00:00+09:00',
     },
+    {
+      id: uuid(104), vmId: uuid(57), relayId: uuid(1), proto: 'TCP',
+      publicPort: 14001, targetPort: 8080, status: 'PENDING',
+      suspendedReason: null, suspendedBy: null, applyFailed: false,
+      fetchesSincePending: 0, guards: defaultGuards(), createdBy: uuid(42),
+      createdAt: '2026-07-11T12:10:00+09:00',
+    },
+    {
+      id: uuid(105), vmId: uuid(58), relayId: uuid(1), proto: 'UDP',
+      publicPort: 14002, targetPort: 5353, status: 'REMOVING',
+      suspendedReason: null, suspendedBy: null, applyFailed: false,
+      fetchesSincePending: null, guards: defaultGuards(), createdBy: uuid(42),
+      createdAt: '2026-07-11T12:20:00+09:00',
+    },
   ]
 }
 
@@ -244,6 +258,7 @@ function advancePending(records: ForwardingRecord[]) {
     record.fetchesSincePending += 1
     if (record.fetchesSincePending >= FORWARDING_ACTIVE_AFTER_FETCHES) {
       record.fetchesSincePending = null
+      record.status = 'ACTIVE'
     }
   }
 }
@@ -300,7 +315,7 @@ export const networkHandlers: RequestHandler[] = [
       proto: body.proto,
       publicPort: nextPublicPort++,
       targetPort: body.targetPort,
-      status: 'ACTIVE',
+      status: 'PENDING',
       suspendedReason: null,
       suspendedBy: null,
       applyFailed: false,

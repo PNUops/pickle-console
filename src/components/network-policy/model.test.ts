@@ -82,7 +82,6 @@ describe('VM rule input', () => {
   test('matches ICMP to its address family and refuses ports', () => {
     expect(() => parseVmRule({ ...rule, protocol: 'ANY' })).toThrow('TCP와 UDP')
     expect(() => parseVmRule({ ...rule, protocol: 'ICMP', cidr: '2001:db8::/32', ports: '' })).toThrow('ICMP')
-    expect(() => parseVmRule({ ...rule, protocol: 'ICMPV6', ports: '' })).toThrow('ICMP')
-    expect(parseVmRule({ ...rule, protocol: 'ICMPV6', cidr: '2001:db8::/32', ports: '' })).toMatchObject({ protocol: 'ICMPV6', portStart: null, portEnd: null })
+    expect(parseVmRule({ ...rule, protocol: 'ICMP', ports: '' })).toMatchObject({ protocol: 'ICMP', portStart: null, portEnd: null })
   })
 })

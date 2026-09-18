@@ -18,6 +18,7 @@ import { useAuth } from '../auth/auth-context'
 import { canOperateVm, isSysAdminOnly, isSysTier, operatesOrg } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
+import { VmNetworkPolicyPanel } from '../components/network-policy/VmNetworkPolicyPanel'
 import {
   Alert,
   Badge,
@@ -42,9 +43,11 @@ import { isUuid } from '../lib/validation'
 import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/status'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { vmNetworkPolicyEnabled } from '../lib/vm-network-policy'
 
 const TABS = [
   { id: 'overview', label: '개요' },
+  { id: 'network-policy', label: '통신 정책' },
   { id: 'events', label: '이벤트' },
 ]
 
@@ -61,9 +64,11 @@ export function AdminVmDetailPage() {
   const { user } = useAuth()
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const roleCanOperate = !!user && canOperateVm(user.role)
+  const policyEnabled = vmNetworkPolicyEnabled()
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  const activeTab = TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
+  const tabs = TABS.filter((tab) => tab.id !== 'network-policy' || policyEnabled)
+  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const [message, setMessage] = useState<string | null>(null)
 
   const detail = useQuery({
@@ -120,7 +125,7 @@ export function AdminVmDetailPage() {
 
       <Tabs
         aria-label="VM 상세 탭"
-        tabs={TABS}
+        tabs={tabs}
         value={activeTab}
         onChange={(id) => {
           const next = new URLSearchParams(searchParams)
@@ -170,6 +175,12 @@ export function AdminVmDetailPage() {
           <VmGatewayBlockSection vm={vm} canManage onDone={setMessage} />
         )}
       </TabPanel>
+
+      {policyEnabled && (
+        <TabPanel id="network-policy" active={activeTab === 'network-policy'} className="space-y-4">
+          <VmNetworkPolicyPanel vmId={vm.id} canEdit={canOperate} surface="admin" />
+        </TabPanel>
+      )}
 
       <TabPanel id="events" active={activeTab === 'events'} className="space-y-4">
         <EventsSection vmId={vmId} />

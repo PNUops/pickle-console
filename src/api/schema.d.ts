@@ -1757,6 +1757,24 @@ export interface paths {
         patch: operations["updateVmGatewayBlock"];
         trace?: never;
     };
+    "/admin/vms/{vmId}/network-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 관리자 VM 통신 정책 조회 */
+        get: operations["getAdminVmNetworkPolicy"];
+        /** 관리자 VM 통신 정책 변경 */
+        put: operations["updateAdminVmNetworkPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/vms/{vmId}/period": {
         parameters: {
             query?: never;
@@ -3376,6 +3394,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/network-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** VM 통신 정책 조회 */
+        get: operations["getVmNetworkPolicy"];
+        /** VM 통신 정책 변경 */
+        put: operations["updateVmNetworkPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/password": {
         parameters: {
             query?: never;
@@ -3656,6 +3692,8 @@ export interface components {
     schemas: {
         /** @enum {string} */
         AccessGranteeType: "USER" | "WORKSPACE";
+        /** @enum {string} */
+        Action: "ACCEPT" | "DROP";
         ActivateMfaRequest: {
             code: string;
         };
@@ -4773,6 +4811,8 @@ export interface components {
             /** @description 이 세트의 값 전체. 순서가 의미를 갖는 종류가 있어 그대로 보존됩니다. */
             values: string[];
         };
+        /** @enum {string} */
+        Direction: "IN" | "OUT";
         DisableMfaRequest: {
             code?: string;
             password: string;
@@ -7331,7 +7371,7 @@ export interface components {
         /** @enum {string} */
         PortMappingProto: "TCP" | "UDP";
         /** @enum {string} */
-        PortMappingStatus: "ACTIVE" | "SUSPENDED";
+        PortMappingStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REMOVING";
         PositionView: {
             code: string;
             label: string;
@@ -7361,6 +7401,8 @@ export interface components {
             departments: components["schemas"]["DepartmentView"][];
             positions: components["schemas"]["PositionView"][];
         };
+        /** @enum {string} */
+        Protocol: "ANY" | "TCP" | "UDP" | "ICMP";
         /** @enum {string} */
         ProvisioningTaskKind: "PROVISION" | "DELETE" | "REINSTALL";
         ProvisioningTaskResponse: {
@@ -7618,6 +7660,16 @@ export interface components {
         };
         /** @enum {string} */
         RrdTimeframe: "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+        Rule: {
+            action: components["schemas"]["Action"];
+            direction: components["schemas"]["Direction"];
+            peer: string;
+            /** Format: int32 */
+            portEnd?: number | null;
+            /** Format: int32 */
+            portStart?: number | null;
+            protocol: components["schemas"]["Protocol"];
+        };
         ScheduleVmDeletionRequest: {
             reason: string;
             /** Format: date-time */
@@ -7939,6 +7991,11 @@ export interface components {
             /** Format: int32 */
             vcpu?: number | null;
         };
+        UpdateVmNetworkPolicyRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            rules: components["schemas"]["Rule"][];
+        };
         UpdateWorkspaceMemberRequest: {
             role: components["schemas"]["WorkspaceMemberRole"];
         };
@@ -8227,6 +8284,36 @@ export interface components {
             timeframe: string;
             /** @description NOT_PROVISIONED = 아직 프로비저닝되지 않았거나 삭제된 VM */
             unavailableReason?: string | null;
+        };
+        /** @enum {string} */
+        VmNetworkPolicyApplyState: "INACTIVE" | "PENDING" | "APPLIED" | "FAILED" | "FAILED_CLOSED";
+        VmNetworkPolicyRuleView: {
+            action: components["schemas"]["Action"];
+            direction: components["schemas"]["Direction"];
+            peer: string;
+            /** Format: int32 */
+            portEnd?: number | null;
+            /** Format: int32 */
+            portStart?: number | null;
+            protocol: components["schemas"]["Protocol"];
+        };
+        VmNetworkPolicyView: {
+            /** Format: int64 */
+            appliedGeneration?: number | null;
+            applyState: components["schemas"]["VmNetworkPolicyApplyState"];
+            /** Format: int64 */
+            desiredGeneration?: number | null;
+            lastError?: string | null;
+            /** Format: int64 */
+            revision: number;
+            rules: components["schemas"]["VmNetworkPolicyRuleView"][];
+            systemRules: components["schemas"]["VmNetworkSystemRuleView"][];
+            /** Format: date-time */
+            updatedAt?: string | null;
+        };
+        VmNetworkSystemRuleView: {
+            description: string;
+            key: string;
         };
         VmPasswordResponse: {
             password: string;
@@ -12320,6 +12407,72 @@ export interface operations {
             };
         };
     };
+    getAdminVmNetworkPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmNetworkPolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminVmNetworkPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVmNetworkPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmNetworkPolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     updateVmPeriod: {
         parameters: {
             query?: never;
@@ -16138,6 +16291,72 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmMetricsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getVmNetworkPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmNetworkPolicyView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateVmNetworkPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVmNetworkPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["VmNetworkPolicyView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
