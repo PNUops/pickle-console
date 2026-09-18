@@ -261,7 +261,7 @@ function ForwardingList({
                 {f.targetPort}/{f.proto}
               </code>
               <PortForwardApplyStateBadge state={f.applyState} />
-              {f.status === 'SUSPENDED' && <PortMappingStatusBadge status={f.status} />}
+              <PortMappingStatusBadge status={f.status} />
               {sourcePolicyEnabled && (
                 <Button
                   variant="secondary"
@@ -271,7 +271,7 @@ function ForwardingList({
                   출발지 정책
                 </Button>
               )}
-              {canMutate && (
+              {canMutate && f.status !== 'REMOVING' && (
                 <Button
                   variant="danger"
                   size="sm"
@@ -289,7 +289,7 @@ function ForwardingList({
                 loadPolicy={() => fetchPortForwardingSourcePolicy(vm.id, f.id)}
                 savePolicy={(body) => updatePortForwardingSourcePolicy(vm.id, f.id, body)}
                 loadPreset={fetchCampusSourcePolicyPreset}
-                canEdit={canMutate}
+                canEdit={canMutate && f.status !== 'REMOVING'}
                 ipv4Only
               />
             )}
@@ -297,7 +297,8 @@ function ForwardingList({
         ))}
       </ul>
       <p className="text-xs text-neutral-500">
-        정지됨 상태는 관리자 개입에 의한 것이니 관리자에게 문의해 주세요.
+        활성화 대기 중에는 relay 확인 전까지 전달되지 않습니다. 정지됨 상태는 관리자에게 문의해 주세요.
+        삭제 진행 중인 매핑에는 작업을 다시 요청할 수 없습니다.
       </p>
     </div>
   )

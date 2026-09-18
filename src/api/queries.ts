@@ -124,6 +124,10 @@ export type SourcePolicyView = Schemas['SourcePolicyView']
 export type SourcePolicyPresetView = Schemas['SourcePolicyPresetView']
 export type SourcePolicyTarget = Schemas['SourcePolicyTarget']
 export type UpdateSourcePolicyRequest = Schemas['UpdateSourcePolicyRequest']
+export type VmNetworkPolicyView = Schemas['VmNetworkPolicyView']
+export type VmNetworkPolicyRuleView = Schemas['VmNetworkPolicyRuleView']
+export type VmNetworkSystemRuleView = Schemas['VmNetworkSystemRuleView']
+export type UpdateVmNetworkPolicyRequest = Schemas['UpdateVmNetworkPolicyRequest']
 export type AdminCampusIpRequestView = Schemas['AdminCampusIpRequestView']
 export type AdminCampusIpRequestPage = Schemas['PageResponseAdminCampusIpRequestView']
 export type UpdateCampusIpRequestStatusRequest =
@@ -1394,6 +1398,52 @@ export function fetchDomainSourcePolicy(domainId: string): Promise<SourcePolicyV
       params: { path: { domainId } },
     })
     if (!data) throw toApiError(error, '도메인 출발지 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchVmNetworkPolicy(vmId: string): Promise<VmNetworkPolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/vms/{vmId}/network-policy', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 통신 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateVmNetworkPolicy(
+  vmId: string,
+  body: UpdateVmNetworkPolicyRequest,
+): Promise<VmNetworkPolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/vms/{vmId}/network-policy', {
+      params: { path: { vmId } }, body,
+    })
+    if (!data) throw toApiError(error, 'VM 통신 정책을 저장하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminVmNetworkPolicy(vmId: string): Promise<VmNetworkPolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/vms/{vmId}/network-policy', {
+      params: { path: { vmId } },
+    })
+    if (!data) throw toApiError(error, 'VM 통신 정책을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function updateAdminVmNetworkPolicy(
+  vmId: string,
+  body: UpdateVmNetworkPolicyRequest,
+): Promise<VmNetworkPolicyView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/vms/{vmId}/network-policy', {
+      params: { path: { vmId } }, body,
+    })
+    if (!data) throw toApiError(error, 'VM 통신 정책을 저장하지 못했습니다.')
     return data
   })
 }

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { problemResponse, refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { vmMetricsFixture } from '../test/msw/handlers/metrics'
 import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
@@ -14,11 +14,32 @@ import { VM_METRICS_UNAVAILABLE_ID, VM_NOT_PROVISIONED_ID, uuid } from '../test/
 /** VM 상세를 연다. tab을 주면 해당 탭 딥링크(?tab=)로 진입한다. */
 function renderVm(
   vmId: string,
-  tab?: 'publish' | 'settings' | 'activity' | 'monitoring',
+  tab?: 'publish' | 'network' | 'settings' | 'activity' | 'monitoring',
 ) {
   server.use(refreshSuccessHandler('access-user'))
-  renderApp(`/console/vms/${vmId}${tab ? `?tab=${tab}` : ''}`)
+  return renderApp(`/console/vms/${vmId}${tab ? `?tab=${tab}` : ''}`)
 }
+
+afterEach(() => vi.unstubAllEnvs())
+
+describe('VM detail network policy permissions', () => {
+  test('allows EDITOR changes and keeps MEMBER read-only', async () => {
+    vi.stubEnv('VITE_VM_NETWORK_POLICY_ENABLED', '1')
+    const user = userEvent.setup()
+    server.use(vmDetailAs(uuid(56), 'EDITOR'))
+    const first = renderVm(uuid(56), 'network')
+    expect(await screen.findByRole('button', { name: '통신 정책 저장' })).toBeEnabled()
+    first.unmount()
+
+    server.use(vmDetailAs(uuid(57), 'MEMBER'))
+    renderVm(uuid(57), 'network')
+    await screen.findByRole('region', { name: 'VM 통신 정책' })
+    expect(screen.queryByRole('button', { name: '통신 정책 저장' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('출발지 IP/CIDR')).toBeDisabled()
+    expect(await screen.findByText('설정 확인됨')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '개요' }))
+  })
+})
 
 describe('VM 상세 — 전원 제어', () => {
   test('중지된 VM은 시작 버튼만 보이고, 확인 후 실행 중으로 갱신된다', async () => {

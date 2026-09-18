@@ -4,6 +4,7 @@ import { NetworkSystemRules } from './NetworkPolicyStatus'
 import {
   ACTION_LABELS, DIRECTION_LABELS, MAX_USER_RULES, PROTOCOL_LABELS, parseVmRule,
   type RuleAction, type RuleDirection, type RuleProtocol, type VmRuleDraft, type VmRuleValue,
+  type VmSystemRule,
 } from './model'
 
 export interface VmPolicyFormProps {
@@ -14,14 +15,15 @@ export interface VmPolicyFormProps {
   canEdit: boolean
   surface?: 'user' | 'admin'
   ipv4Only?: boolean
-  systemRules: readonly string[]
+  systemRules: readonly VmSystemRule[]
   busy?: boolean
+  submitBlocked?: boolean
   error?: string
 }
 
 export function VmPolicyForm({
   value, onChange, onSubmit, canEdit, surface = 'user', ipv4Only = false,
-  systemRules, busy = false, error,
+  systemRules, busy = false, submitBlocked = false, error,
 }: VmPolicyFormProps) {
   const [ruleErrors, setRuleErrors] = useState<Record<string, string>>({})
   const [validation, setValidation] = useState<string>()
@@ -41,7 +43,7 @@ export function VmPolicyForm({
   }
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (disabled) return
+    if (disabled || submitBlocked) return
     setValidation(undefined)
     setRuleErrors({})
     if (value.length > MAX_USER_RULES) {
@@ -50,11 +52,12 @@ export function VmPolicyForm({
     }
     const next: VmRuleValue[] = []
     const errors: Record<string, string> = {}
-    for (const rule of value) {
+    for (const [index, rule] of value.entries()) {
       try {
         next.push(parseVmRule(rule, ipv4Only))
       } catch (failure) {
-        errors[rule.id] = failure instanceof Error ? failure.message : '규칙을 확인해 주세요.'
+        const message = failure instanceof Error ? failure.message : '규칙을 확인해 주세요.'
+        errors[rule.id] = `${index + 1}번째 규칙: ${message}`
       }
     }
     setRuleErrors(errors)
@@ -62,7 +65,7 @@ export function VmPolicyForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate aria-label="VM 통신 정책">
+    <form onSubmit={submit} className="space-y-4" noValidate aria-label="VM 통신 정책 규칙">
       <DescriptionList items={[
         { term: '기본 수신', description: '차단' },
         { term: '기본 송신', description: '허용' },
@@ -107,7 +110,6 @@ export function VmPolicyForm({
                   <option value="TCP">TCP</option>
                   <option value="UDP">UDP</option>
                   <option value="ICMP">ICMP</option>
-                  {!ipv4Only && <option value="ICMPV6">ICMPv6</option>}
                 </Select>
               </FormField>
             </div>
@@ -137,8 +139,8 @@ export function VmPolicyForm({
             onChange([...value, { id: crypto.randomUUID(), direction: 'IN', action: 'ACCEPT', protocol: 'TCP', cidr: '', ports: '' }])
           }}>규칙 추가</Button>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" loading={busy}>통신 정책 저장</Button>
-            <p className="text-xs text-foreground-muted">변경은 새 연결부터 적용됩니다.</p>
+            <Button type="submit" loading={busy} disabled={submitBlocked}>통신 정책 저장</Button>
+            <p className="text-xs text-foreground-muted">저장 후 설정 반영을 기다립니다.</p>
           </div>
         </div>
       ) : surface === 'user' ? (

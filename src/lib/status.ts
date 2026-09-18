@@ -185,10 +185,12 @@ export const PORT_FORWARD_APPLY_STATE_LABELS: Record<PortForwardApplyState, stri
   FAILED: '실패',
 }
 
-/** 매핑 상태 — SUSPENDED는 관리자·자동 정지 ('적용' 접두 없이 '정지됨'). */
+/** 매핑 상태 — relay 확인 전에는 활성으로 표시하지 않는다. */
 export const PORT_MAPPING_STATUS_LABELS: Record<PortMappingStatus, string> = {
+	PENDING: '활성화 대기',
   ACTIVE: '활성',
   SUSPENDED: '정지됨',
+	REMOVING: '삭제 진행 중',
 }
 
 /**

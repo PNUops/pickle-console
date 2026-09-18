@@ -17,7 +17,7 @@ export type NetworkPolicyObservation =
 
 export type RuleDirection = 'IN' | 'OUT'
 export type RuleAction = 'ACCEPT' | 'DROP'
-export type RuleProtocol = 'ANY' | 'TCP' | 'UDP' | 'ICMP' | 'ICMPV6'
+export type RuleProtocol = 'ANY' | 'TCP' | 'UDP' | 'ICMP'
 
 export interface VmRuleDraft {
   id: string
@@ -37,10 +37,15 @@ export interface VmRuleValue {
   portEnd: number | null
 }
 
+export interface VmSystemRule {
+  key: string
+  description: string
+}
+
 export const DIRECTION_LABELS: Record<RuleDirection, string> = { IN: '수신', OUT: '송신' }
 export const ACTION_LABELS: Record<RuleAction, string> = { ACCEPT: '허용', DROP: '차단' }
 export const PROTOCOL_LABELS: Record<RuleProtocol, string> = {
-  ANY: '전체', TCP: 'TCP', UDP: 'UDP', ICMP: 'ICMP', ICMPV6: 'ICMPv6',
+  ANY: '전체', TCP: 'TCP', UDP: 'UDP', ICMP: 'ICMP',
 }
 
 /** Convert user-entered addresses to wire CIDRs without silently widening them. */
@@ -154,9 +159,7 @@ export function appendCampusPreset(
 
 export function parseVmRule(draft: VmRuleDraft, ipv4Only = false): VmRuleValue {
   const peer = normalizeNetwork(draft.cidr, ipv4Only)
-  if (draft.protocol === 'ICMP' && peer.family !== 4 || draft.protocol === 'ICMPV6' && peer.family !== 6) {
-    throw new Error('주소 종류에 맞는 ICMP 프로토콜을 선택해 주세요.')
-  }
+  if (draft.protocol === 'ICMP' && peer.family !== 4) throw new Error('ICMP에는 IPv4 주소를 입력해 주세요.')
   let portStart: number | null = null
   let portEnd: number | null = null
   const ports = draft.ports.trim()

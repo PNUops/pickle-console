@@ -13,7 +13,9 @@ function mount(overrides: Partial<VmPolicyFormProps> = {}) {
   const { value: initial, ...props } = overrides
   function Form() {
     const [value, setValue] = useState<readonly VmRuleDraft[]>(initial ?? [])
-    return <VmPolicyForm value={value} onChange={setValue} onSubmit={save} canEdit systemRules={['SSH와 웹 터미널 접속 허용']} {...props} />
+    return <VmPolicyForm value={value} onChange={setValue} onSubmit={save} canEdit systemRules={[
+      { key: 'SSH_GATEWAY', description: 'SSH와 웹 터미널 접속 허용' },
+    ]} {...props} />
   }
   render(<Form />)
   return save
@@ -75,7 +77,7 @@ describe('VM communication policy form', () => {
     const user = userEvent.setup()
     const save = mount({ value: [first, { ...second, ports: '99999' }] })
     await user.click(screen.getByRole('button', { name: '통신 정책 저장' }))
-    expect(within(screen.getByRole('group', { name: '규칙 2' })).getByRole('alert')).toHaveTextContent('1–65535')
+    expect(within(screen.getByRole('group', { name: '규칙 2' })).getByRole('alert')).toHaveTextContent('2번째 규칙: 포트 범위는 1–65535')
     expect(save).not.toHaveBeenCalled()
   })
 
@@ -97,20 +99,37 @@ describe('VM communication policy form', () => {
   test('bounds user rules independently of immutable system rules', async () => {
     const user = userEvent.setup()
     const value = Array.from({ length: MAX_USER_RULES }, (_, index) => ({ ...first, id: `rule-${index}` }))
-    const save = mount({ value, systemRules: ['SSH와 웹 터미널 접속 허용', '주소 위조 차단'] })
+    const save = mount({ value, systemRules: [
+      { key: 'SSH_GATEWAY', description: 'SSH와 웹 터미널 접속 허용' },
+      { key: 'ANTI_SPOOF', description: '주소 위조 차단' },
+    ] })
     expect(screen.getByRole('button', { name: '규칙 추가' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: '통신 정책 저장' }))
     expect(save.mock.calls[0][0]).toHaveLength(MAX_USER_RULES)
   })
 
-  test('does not expose ICMPv6 on IPv4-only networks', () => {
+  test('exposes only the protocols accepted by the IPv4 API', () => {
     mount({ value: [first], ipv4Only: true })
     expect(screen.queryByRole('option', { name: 'ICMPv6' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(
+      expect.arrayContaining(['전체', 'TCP', 'UDP', 'ICMP']),
+    )
   })
 
   test('blocks submissions while the parent mutation is pending', () => {
     const save = mount({ value: [first], busy: true })
     expect(screen.getByLabelText('출발지 IP/CIDR')).toBeDisabled()
+    fireEvent.submit(screen.getByRole('form'))
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  test('keeps the draft editable but blocks form submission during a conflict', async () => {
+    const user = userEvent.setup()
+    const save = mount({ value: [first], submitBlocked: true })
+    const peer = screen.getByLabelText('출발지 IP/CIDR')
+    await user.clear(peer)
+    await user.type(peer, '198.51.100.0/24')
+    expect(peer).toHaveValue('198.51.100.0/24')
     fireEvent.submit(screen.getByRole('form'))
     expect(save).not.toHaveBeenCalled()
   })

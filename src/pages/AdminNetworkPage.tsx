@@ -336,8 +336,10 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
 
 const MAPPING_STATUS_TABS: { label: string; status: PortMappingStatus | undefined }[] = [
   { label: '전체', status: undefined },
+  { label: PORT_MAPPING_STATUS_LABELS.PENDING, status: 'PENDING' },
   { label: PORT_MAPPING_STATUS_LABELS.ACTIVE, status: 'ACTIVE' },
   { label: PORT_MAPPING_STATUS_LABELS.SUSPENDED, status: 'SUSPENDED' },
+  { label: PORT_MAPPING_STATUS_LABELS.REMOVING, status: 'REMOVING' },
 ]
 
 function ForwardingsTab({
@@ -488,6 +490,7 @@ function MappingDrawerContent({
   const [notice, setNotice] = useState<DrawerNotice | null>(null)
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const stableStatus = mapping.status === 'ACTIVE' || mapping.status === 'SUSPENDED'
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
@@ -547,6 +550,8 @@ function MappingDrawerContent({
           {suspendedNote(mapping)}
         </Alert>
       )}
+      {mapping.status === 'PENDING' && <Alert variant="info">relay 설정 확인을 기다리고 있습니다.</Alert>}
+      {mapping.status === 'REMOVING' && <Alert variant="info">기존 연결 정리와 relay 확인을 기다리고 있습니다. 작업을 다시 요청할 수 없습니다.</Alert>}
 
       <SourcePolicyPanel
         queryKey={['admin', 'port-mappings', mapping.id, 'source-policy']}
@@ -554,12 +559,12 @@ function MappingDrawerContent({
         loadPolicy={() => fetchAdminPortMappingSourcePolicy(mapping.id)}
         savePolicy={(body) => updateAdminPortMappingSourcePolicy(mapping.id, body)}
         loadPreset={fetchCampusSourcePolicyPreset}
-        canEdit={canOperate}
+        canEdit={canOperate && stableStatus}
         surface="admin"
         ipv4Only
       />
 
-      {canOperate && (
+      {canOperate && stableStatus && (
         <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
           <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
           <div className="flex flex-wrap gap-2">
@@ -584,7 +589,7 @@ function MappingDrawerContent({
         </section>
       )}
 
-      {isSysAdmin && <GuardsSection mapping={mapping} onNotice={setNotice} />}
+      {isSysAdmin && stableStatus && <GuardsSection mapping={mapping} onNotice={setNotice} />}
 
       {suspendOpen && (
         <SuspendMappingModal

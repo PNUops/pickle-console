@@ -413,8 +413,10 @@ export function PortForwardApplyStateBadge({
 }
 
 const PORT_MAPPING_STATUS_VARIANTS: Record<PortMappingStatus, BadgeVariant> = {
+	PENDING: 'info',
   ACTIVE: 'success',
   SUSPENDED: 'warning',
+	REMOVING: 'neutral',
 }
 
 /** 매핑 상태 배지 — 관리자·자동 정지(SUSPENDED)를 경고 톤으로 표시한다. */

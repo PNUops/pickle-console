@@ -37,6 +37,7 @@ import { requestHandlers } from './handlers/requests'
 import { vmHandlers } from './handlers/vms'
 import { terminalHandlers } from './handlers/terminal'
 import { vmSshKeyHandlers } from './handlers/vm-ssh-key'
+import { vmNetworkPolicyHandlers } from './handlers/vm-network-policy'
 
 /** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
@@ -61,6 +62,7 @@ export const handlers: RequestHandler[] = [
   ...resourceHandlers,
   ...terminalHandlers,
   ...vmSshKeyHandlers,
+  ...vmNetworkPolicyHandlers,
   ...publishingHandlers,
   ...networkHandlers,
   ...campusIpHandlers,
@@ -73,4 +75,3 @@ export const handlers: RequestHandler[] = [
   ...noticeHandlers,
   ...announcementHandlers,
 ]
-

@@ -81,6 +81,7 @@ import { VmPortForwardingSection } from '../components/VmPortForwardingSection'
 import { GuideLink } from '../docs/links'
 import { VmAccessSection } from '../components/VmAccessSection'
 import { VmNetworkSection } from '../components/VmNetworkSection'
+import { VmNetworkPolicyPanel } from '../components/network-policy/VmNetworkPolicyPanel'
 import { CopyButton } from '../components/CopyButton'
 import { savePem } from '../lib/download'
 import { useOpenTerminalWindow } from '../terminal/useOpenTerminalWindow'
@@ -328,6 +329,7 @@ export function VmDetailPage() {
       <TabPanel id="network" active={activeTab === 'network'} className="space-y-6">
         <p className="text-right text-sm"><GuideLink slug="network/ports" anchor="campus-ip">캠퍼스 IP 가이드</GuideLink></p>
         <VmNetworkSection vm={data} />
+        <VmNetworkPolicyPanel vmId={data.id} canEdit={data.settingsEditAllowed} />
       </TabPanel>
 
       <TabPanel id="access" active={activeTab === 'access'} className="space-y-6">
