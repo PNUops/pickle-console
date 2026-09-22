@@ -464,7 +464,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter 사업 계정 등록
-         * @description 기관에 사업별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
+         * @description 기관에 사업별 account metadata를 등록합니다. 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
          */
         post: operations["createAdminLlmAccount"];
         delete?: never;
@@ -548,7 +548,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter credential 교체 되돌리기
-         * @description 재인증과 이름 확인 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌립니다. Vendor credential은 API가 폐기하지 않습니다.
+         * @description 이름 확인 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌립니다. Vendor credential은 API가 폐기하지 않습니다.
          */
         post: operations["rollbackAdminLlmAccountCredential"];
         delete?: never;
@@ -568,7 +568,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter 관리 credential 검증 및 대기 등록
-         * @description 재인증과 account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. 평문과 credential 조각은 응답하지 않습니다.
+         * @description account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. 평문과 credential 조각은 응답하지 않습니다.
          */
         post: operations["stageAdminLlmAccountCredential"];
         delete?: never;
@@ -588,7 +588,7 @@ export interface paths {
         put?: never;
         /**
          * 대기 중 OpenRouter credential 활성화
-         * @description 재인증과 이름 확인 뒤 STAGED credential을 다시 검증합니다. 교체 시 기존 ACTIVE가 만든 disposable key를 새 credential로 조회·수정·삭제한 뒤 두 상태를 원자적으로 ACTIVE와 RETIRING으로 전환합니다.
+         * @description 이름 확인 뒤 STAGED credential을 다시 검증합니다. 교체 시 기존 ACTIVE가 만든 disposable key를 새 credential로 조회·수정·삭제한 뒤 두 상태를 원자적으로 ACTIVE와 RETIRING으로 전환합니다.
          */
         post: operations["activateAdminLlmAccountCredential"];
         delete?: never;
@@ -608,7 +608,7 @@ export interface paths {
         put?: never;
         /**
          * 대기 중 OpenRouter credential 취소
-         * @description 재인증과 이름 확인 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제합니다. ACTIVE credential에는 영향을 주지 않습니다.
+         * @description 이름 확인 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제합니다. ACTIVE credential에는 영향을 주지 않습니다.
          */
         post: operations["cancelAdminLlmAccountCredential"];
         delete?: never;

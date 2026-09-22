@@ -24,8 +24,8 @@ export function renderApp(route = '/') {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-              <App />
-              <PathnameProbe />
+            <App />
+            <PathnameProbe />
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>

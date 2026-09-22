@@ -100,7 +100,7 @@ async function sendWithRefresh(input: Request): Promise<Response> {
   return retryResponse
 }
 
-/** Auth-aware fetch: the 401-refresh retry, plus the two 403 signals. */
+/** Auth-aware fetch: the 401-refresh retry, plus the maintenance and MFA signals. */
 async function fetchWithAuth(input: Request): Promise<Response> {
   const response = await sendWithRefresh(input)
   signalMaintenance(response)
