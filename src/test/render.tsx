@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router'
 import App from '../App'
 import { PathnameProbe } from './PathnameProbe'
 import { AuthProvider } from '../auth/AuthProvider'
-import { ReauthProvider } from '../auth/ReauthProvider'
 import { ToastProvider } from '../components/ui'
 
 /** 현재 경로 (renderApp으로 그린 화면에서만). */
@@ -25,10 +24,8 @@ export function renderApp(route = '/') {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-            <ReauthProvider>
               <App />
               <PathnameProbe />
-            </ReauthProvider>
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>

@@ -47,8 +47,8 @@ export const accountArticles: GuideArticle[] = [
             </ul>
             <p>
               Google로 가입한 계정은 처음에 Pickle 비밀번호가 없습니다. 비밀번호 로그인을 함께
-              쓰려면 계정 설정의 비밀번호 행에서 <strong>설정</strong>을 누르고 새 비밀번호를
-              입력한 뒤 본인 확인을 마칩니다. 화면에 표시되는 비밀번호 규칙과 확인 입력을 모두 확인하세요.
+              쓰려면 계정 설정의 비밀번호 행에서 <strong>메일 받기</strong>를 누르고, 가입 이메일로
+              온 링크에서 비밀번호를 설정합니다.
             </p>
             <p>
               로그인 수단의 연동된 계정에서 Google 연동 상태를 확인할 수 있습니다.
@@ -92,23 +92,6 @@ export const accountArticles: GuideArticle[] = [
               복구 코드를 재발급하면 기존 코드는 모두 무효가 됩니다. 인증 앱과 복구 코드를 모두
               사용할 수 없으면 <GuideLink slug="troubleshooting" anchor="contact">문의 창구</GuideLink>로
               계정 복구를 요청하세요.
-            </p>
-          </>
-        ),
-      },
-      {
-        id: 'reauthentication',
-        title: '작업 중 본인 확인',
-        body: (
-          <>
-            <p>
-              비밀번호 열람, 키 발급, 접근 권한 변경이나 삭제를 할 때 본인 확인 창이 나올 수 있습니다.
-              로그인에 사용하는 비밀번호 또는 화면에서 제공하는 Google 본인 확인으로 진행합니다.
-              Google 확인 후 콘솔로 돌아오면 하려던 작업을 다시 눌러야 할 수 있습니다.
-            </p>
-            <p>
-              본인 확인을 마쳐도 리소스 접근 권한이 새로 생기지는 않습니다. 권한이 없다는 안내가
-              계속되면 <GuideLink slug="workspaces/access">리소스 소유자에게 필요한 등급을 요청</GuideLink>하세요.
             </p>
           </>
         ),

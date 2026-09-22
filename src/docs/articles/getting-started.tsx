@@ -390,7 +390,7 @@ export const gettingStartedArticles: GuideArticle[] = [
             <ol>
               <li>추가할 사람이 Pickle 가입과 이메일 인증을 마쳤는지 확인합니다.</li>
               <li>워크스페이스 소유자가 상세 화면의 <strong>구성원 추가</strong>에 그 사람의 가입 이메일을 입력합니다.</li>
-              <li><strong>추가</strong>를 누르고 본인 확인이 요청되면 안내에 따라 진행합니다.</li>
+              <li><strong>추가</strong>를 누릅니다.</li>
               <li>구성원 목록에 추가된 이름과 이메일이 맞는지 확인합니다.</li>
             </ol>
             <p>
@@ -524,7 +524,7 @@ export const gettingStartedArticles: GuideArticle[] = [
               <li>함께 사용할 사람을 리소스가 속한 워크스페이스의 구성원으로 추가합니다.</li>
               <li>리소스 소유자 또는 워크스페이스 소유자가 해당 리소스의 <strong>접근 권한</strong> 화면을 엽니다.</li>
               <li><strong>접근 권한 부여</strong>에서 대상과 등급을 선택하고 <strong>부여</strong>를 누릅니다.</li>
-              <li>본인 확인을 마친 뒤 접근 목록에 대상과 등급이 올바르게 반영됐는지 확인합니다.</li>
+              <li>접근 목록에 대상과 등급이 올바르게 반영됐는지 확인합니다.</li>
             </ol>
             <p>
               <strong>워크스페이스 전체</strong>를 선택하면 현재와 이후의 모든 구성원에게 적용됩니다.

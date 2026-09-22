@@ -12,7 +12,6 @@ import '@fontsource/pretendard/800.css'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider.tsx'
-import { ReauthProvider } from './auth/ReauthProvider.tsx'
 import { ToastProvider } from './components/ui'
 import { parseTerminalWindowVmId } from './lib/paths'
 import { TerminalWindowRoot } from './terminal/TerminalWindowRoot'
@@ -57,9 +56,7 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-            <ReauthProvider>
               <App />
-            </ReauthProvider>
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>

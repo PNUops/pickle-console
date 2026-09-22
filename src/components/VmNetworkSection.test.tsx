@@ -5,7 +5,6 @@ import { MemoryRouter } from 'react-router'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { AuthProvider } from '../auth/AuthProvider'
-import { ReauthProvider } from '../auth/ReauthProvider'
 import { orgManagerUser, refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { vmDetailAs, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
@@ -43,9 +42,7 @@ function renderSection(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ToastProvider>
-            <ReauthProvider>
               <VmNetworkSection vm={vm} />
-            </ReauthProvider>
           </ToastProvider>
         </AuthProvider>
       </QueryClientProvider>

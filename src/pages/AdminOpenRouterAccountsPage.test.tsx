@@ -7,11 +7,9 @@ import {
   orgManagerUser,
   orgViewerUser,
   refreshSuccessHandler,
-  reauthGateHandlers,
   sysAdminUser,
   sysManagerUser,
   sysViewerUser,
-  USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { openRouterAccountStore } from '../test/msw/handlers/openrouter-accounts'
 import { uuid } from '../test/msw/ids'
@@ -76,12 +74,9 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
     expect(screen.queryByRole('heading', { name: '테스트 유료 모델 사업' })).not.toBeInTheDocument()
   })
 
-  test('계정 등록은 정확한 이름과 전역 재인증을 요구한다', async () => {
+  test('계정 등록은 정확한 이름을 요구한다', async () => {
     const user = userEvent.setup()
-    server.use(
-      refreshSuccessHandler('access-org-manager', orgManagerUser),
-      ...reauthGateHandlers('POST /admin/llm/accounts'),
-    )
+    server.use(refreshSuccessHandler('access-org-manager', orgManagerUser))
     renderApp('/admin/llm/accounts')
     await user.click(await screen.findByRole('button', { name: '사업 계정 등록' }))
     const dialog = within(screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 등록' }))
@@ -93,9 +88,6 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
     await user.clear(dialog.getByLabelText(/계속하려면 이름/))
     await user.type(dialog.getByLabelText(/계속하려면 이름/), '신규 교육 사업')
     await user.click(dialog.getByRole('button', { name: '등록' }))
-    const reauth = within(await screen.findByRole('dialog', { name: '본인 확인' }))
-    await user.type(reauth.getByLabelText('비밀번호'), USER_PASSWORD)
-    await user.click(reauth.getByRole('button', { name: '확인' }))
     expect(await screen.findByText('신규 교육 사업 사업 계정을 등록했습니다.')).toBeInTheDocument()
   })
 
@@ -296,13 +288,10 @@ describe('OpenRouter credential lifecycle', () => {
     }
   })
 
-  test('stage는 평문을 cache·DOM·fixture에 남기지 않고 재인증 뒤 STAGED만 표시한다', async () => {
+  test('stage는 평문을 cache·DOM·fixture에 남기지 않고 STAGED만 표시한다', async () => {
     const user = userEvent.setup()
     const secret = 'test-management-secret-never-store'
-    server.use(
-      refreshSuccessHandler('access-org-manager', orgManagerUser),
-      ...reauthGateHandlers('POST /admin/llm/accounts/:accountId/credentials/staged'),
-    )
+    server.use(refreshSuccessHandler('access-org-manager', orgManagerUser))
     renderApp(`/admin/llm/accounts/${uuid(410)}`)
     await user.click(await screen.findByRole('button', { name: '관리용 키 등록·교체' }))
     const stage = within(screen.getByRole('dialog', { name: '관리용 키 등록·교체' }))
@@ -311,9 +300,6 @@ describe('OpenRouter credential lifecycle', () => {
     await user.click(stage.getByRole('button', { name: '검증 후 대기 등록' }))
 
     expect(screen.queryByDisplayValue(secret)).not.toBeInTheDocument()
-    const reauth = within(await screen.findByRole('dialog', { name: '본인 확인' }))
-    await user.type(reauth.getByLabelText('비밀번호'), USER_PASSWORD)
-    await user.click(reauth.getByRole('button', { name: '확인' }))
     expect(await screen.findByText('관리용 키를 확인해 교체 대기로 등록했습니다.')).toBeInTheDocument()
     expect(screen.getByText('교체 대기')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent(secret)

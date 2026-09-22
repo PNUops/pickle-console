@@ -12,7 +12,7 @@ const RESIZE_DEBOUNCE_MS = 150
  * 웹 터미널 팝업 창 — `/terminal/:vmId`.
  *
  * 콘솔 SPA의 라우트가 아니라 `main.tsx`가 주소를 보고 가르는 **별도 문서**다.
- * AuthProvider·QueryClient·ReauthProvider 중 무엇도 마운트하지 않으므로 이 창은
+ * AuthProvider·QueryClient 중 무엇도 마운트하지 않으므로 이 창은
  * HTTP 요청을 한 건도 하지 않는다 — 접속 티켓도 VM 이름도 콘솔 탭이 postMessage로
  * 건네준다. 이유는 리프레시 토큰이 회전+재사용 탐지 방식이라, 팝업이 스스로
  * `/auth/refresh`를 치면 부모 탭과의 레이스에서 체인 전체가 폐기되어 모든 탭이

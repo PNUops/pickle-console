@@ -6,7 +6,6 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import App from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
-import { ReauthProvider } from '../auth/ReauthProvider'
 import { ToastProvider } from '../components/ui'
 import { guideArticles, guideGroups } from '../docs/catalog'
 import { parseGuidePath } from '../lib/docs-paths'
@@ -31,9 +30,9 @@ function renderHistory(route: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <MemoryRouter initialEntries={[route]}>
-      <QueryClientProvider client={client}><AuthProvider><ToastProvider><ReauthProvider>
+      <QueryClientProvider client={client}><AuthProvider><ToastProvider>
         <App /><HistoryControls />
-      </ReauthProvider></ToastProvider></AuthProvider></QueryClientProvider>
+      </ToastProvider></AuthProvider></QueryClientProvider>
     </MemoryRouter>,
   )
 }

@@ -6,7 +6,6 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
-import { ReauthProvider } from '../auth/ReauthProvider'
 import { ToastProvider } from '../components/ui'
 import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { gpuAllocationFixture, gpuAllocationStore } from '../test/msw/handlers/gpu'
@@ -19,7 +18,7 @@ afterEach(() => vi.unstubAllEnvs())
 function renderRoute(route: string, admin = false) {
   server.use(admin ? refreshSuccessHandler('access-sys-admin', sysAdminUser) : refreshSuccessHandler('access-user'))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  const router = createMemoryRouter([{ path: '*', element: <QueryClientProvider client={client}><AuthProvider><ToastProvider><ReauthProvider><App /></ReauthProvider></ToastProvider></AuthProvider></QueryClientProvider> }], { initialEntries: [route] })
+  const router = createMemoryRouter([{ path: '*', element: <QueryClientProvider client={client}><AuthProvider><ToastProvider><App /></ToastProvider></AuthProvider></QueryClientProvider> }], { initialEntries: [route] })
   render(<RouterProvider router={router} />)
   return { router, client }
 }

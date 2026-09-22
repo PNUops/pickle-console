@@ -2,7 +2,6 @@ import createClient from 'openapi-fetch'
 import { notifyMaintenanceDetected } from './maintenance'
 import { notifyMfaEnrollmentRequired } from './mfa-enrollment'
 import { isProblem } from './problem'
-import { clearReauthToken, getReauthToken, requestReauth } from './reauth'
 import type { components, paths } from './schema'
 import {
   clearAccessToken,
@@ -62,26 +61,17 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight
 }
 
-/**
- * Attaches the bearer token and, while a sudo-mode grant is held, the
- * `X-Reauth-Token` header the 11 sensitive operations demand (계약 v0.24.0).
- * Sending it on the other endpoints is harmless and keeps the grant multi-use
- * for its full 10 minutes. /auth/* is excluded: those endpoints authenticate on
- * their own (reverify/login/refresh) and never consume a grant.
- */
+/** Attaches the bearer token. */
 function withAuthHeader(request: Request): Request {
   const token = getAccessToken()
-  const reauthToken = isAuthEndpoint(request.url) ? null : getReauthToken()
-  if (!token && !reauthToken) return request
+  if (!token) return request
   const headers = new Headers(request.headers)
-  if (token) headers.set('Authorization', `Bearer ${token}`)
-  if (reauthToken) headers.set('X-Reauth-Token', reauthToken)
+  headers.set('Authorization', `Bearer ${token}`)
   return new Request(request, { headers })
 }
 
 function expireSession(): void {
   clearAccessToken()
-  clearReauthToken()
   notifySessionExpired()
 }
 
@@ -110,44 +100,9 @@ async function sendWithRefresh(input: Request): Promise<Response> {
   return retryResponse
 }
 
-/**
- * A 403 REAUTH_REQUIRED means the operation is sensitive and the sudo-mode
- * grant is missing or expired. Read off a clone so the caller's body stays
- * intact. /auth/* is excluded so the reverify call itself (and its own 403
- * AUTH_PASSWORD_MISMATCH) can never re-enter this flow.
- */
-async function isReauthRequired(response: Response, url: string): Promise<boolean> {
-  if (response.status !== 403 || isAuthEndpoint(url)) return false
-  try {
-    const body: unknown = await response.clone().json()
-    return isProblem(body) && body.code === 'REAUTH_REQUIRED'
-  } catch {
-    return false
-  }
-}
-
-/**
- * Auth-aware fetch: the 401-refresh retry (sendWithRefresh) wrapped in at most
- * one sudo-mode retry. On 403 REAUTH_REQUIRED the UI is asked for the password;
- * once a token is issued the original request is replayed exactly once — the
- * replay may itself refresh on a 401, but it can never trigger a second reauth
- * prompt, so the two paths compose sequentially instead of nesting forever.
- */
+/** Auth-aware fetch: the 401-refresh retry, plus the two 403 signals. */
 async function fetchWithAuth(input: Request): Promise<Response> {
-  const reauthCopy = input.clone()
   const response = await sendWithRefresh(input)
-
-  if (await isReauthRequired(response, input.url)) {
-    // 서버가 거부한 이상 손에 든 토큰(있다면)은 이미 무효다.
-    clearReauthToken()
-    if (await requestReauth()) {
-      const retryResponse = await sendWithRefresh(reauthCopy)
-      signalMaintenance(retryResponse)
-      signalMfaEnrollment(retryResponse)
-      return retryResponse
-    }
-  }
-
   signalMaintenance(response)
   signalMfaEnrollment(response)
   return response
