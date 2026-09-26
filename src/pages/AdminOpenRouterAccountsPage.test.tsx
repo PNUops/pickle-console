@@ -288,13 +288,13 @@ describe('OpenRouter credential lifecycle', () => {
     }
   })
 
-  test('stage는 평문을 cache·DOM·fixture에 남기지 않고 STAGED만 표시한다', async () => {
+  test('교체는 평문을 cache·DOM·fixture에 남기지 않고 STAGED만 표시한다', async () => {
     const user = userEvent.setup()
     const secret = 'test-management-secret-never-store'
     server.use(refreshSuccessHandler('access-org-manager', orgManagerUser))
     renderApp(`/admin/llm/accounts/${uuid(410)}`)
-    await user.click(await screen.findByRole('button', { name: '관리용 키 등록·교체' }))
-    const stage = within(screen.getByRole('dialog', { name: '관리용 키 등록·교체' }))
+    await user.click(await screen.findByRole('button', { name: '관리용 키 교체' }))
+    const stage = within(screen.getByRole('dialog', { name: '관리용 키 교체' }))
     await user.type(stage.getByLabelText('OpenRouter 관리용 키'), secret)
     await user.type(stage.getByLabelText(/계속하려면 이름/), 'AI 교육 사업 A')
     await user.click(stage.getByRole('button', { name: '검증 후 대기 등록' }))
@@ -302,6 +302,25 @@ describe('OpenRouter credential lifecycle', () => {
     expect(screen.queryByDisplayValue(secret)).not.toBeInTheDocument()
     expect(await screen.findByText('관리용 키를 확인해 교체 대기로 등록했습니다.')).toBeInTheDocument()
     expect(screen.getByText('교체 대기')).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(secret)
+    expect(JSON.stringify(openRouterAccountStore)).not.toContain(secret)
+  })
+
+  test('credential이 없는 계정의 등록은 한 번에 사용 중이 되고 대기를 거치지 않는다', async () => {
+    const user = userEvent.setup()
+    const secret = 'first-management-secret-never-store'
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/llm/accounts/${uuid(412)}`)
+    await user.click(await screen.findByRole('button', { name: '관리용 키 등록' }))
+    const register = within(screen.getByRole('dialog', { name: '관리용 키 등록' }))
+    await user.type(register.getByLabelText('OpenRouter 관리용 키'), secret)
+    await user.type(register.getByLabelText(/계속하려면 이름/), '테스트 유료 모델 사업')
+    await user.click(register.getByRole('button', { name: '검증 후 등록' }))
+
+    expect(await screen.findByText('관리용 키를 확인해 활성화했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('사용 중')).toBeInTheDocument()
+    expect(screen.queryByText('교체 대기')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '대기 중인 키 활성화' })).not.toBeInTheDocument()
     expect(document.body).not.toHaveTextContent(secret)
     expect(JSON.stringify(openRouterAccountStore)).not.toContain(secret)
   })
@@ -333,7 +352,7 @@ describe('OpenRouter credential lifecycle', () => {
     expect(
       screen.getByText('새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있습니다.'),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '관리용 키 등록·교체' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '관리용 키 교체' })).not.toBeInTheDocument()
   })
 
   test('reconciliation 뒤 finalize는 vendor 폐기 확인과 정확한 이름을 모두 요구한다', async () => {

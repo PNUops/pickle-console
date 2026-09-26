@@ -480,6 +480,33 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     return HttpResponse.json(found.account, { status: 200 })
   }),
 
+  http.post('*/api/v1/admin/llm/accounts/:accountId/credentials', async ({ params, request }) => {
+    const found = accountFor(request, String(params.accountId))
+    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    // 평문은 요청 검증에만 쓰고 어떤 fixture나 기록에도 보존하지 않는다.
+    const body = (await request.json()) as Schemas['RegisterOpenRouterCredentialRequest']
+    const mismatch = confirm(found.account, body.confirmName)
+    if (mismatch) return mismatch
+    if (found.account.activeCredential || found.account.rotationCredential) {
+      return invalidState('이미 등록된 credential이 있습니다.')
+    }
+    found.account.activeCredential = {
+      status: 'ACTIVE',
+      createdAt: now,
+      verifiedAt: now,
+      lastVerificationAttemptAt: now,
+      activatedAt: now,
+      retiringAt: null,
+      lastUsedAt: now,
+      lastReconciledAt: null,
+      verificationError: null,
+      retiringOverdue: false,
+    }
+    found.account.credentialAvailable = true
+    found.account.eligibleForBinding = true
+    return HttpResponse.json(found.account, { status: 201 })
+  }),
+
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
     if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
@@ -487,6 +514,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     const body = (await request.json()) as Schemas['StageOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
+    // The server refuses a rotation with nothing to replace; a mock that
+    // accepted it would let a console test pass against behaviour the API
+    // does not have.
+    if (!found.account.activeCredential) {
+      return invalidState('이 account에는 교체할 ACTIVE credential이 없습니다.')
+    }
     if (found.account.rotationCredential) return invalidState('이미 진행 중인 credential rotation이 있습니다.')
     found.account.rotationCredential = {
       status: 'STAGED',
