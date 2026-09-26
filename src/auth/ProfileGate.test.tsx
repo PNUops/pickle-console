@@ -25,53 +25,102 @@ function withEmptyProfile() {
   )
 }
 
-describe('프로필 안내', () => {
+describe('프로필 게이트', () => {
   beforeEach(() => {
-    // 세션 복원으로 로그인 상태를 만든다. withEmptyProfile 이 /me 를 덮으므로
-    // 순서가 중요하다.
+    // Session restore produces the signed-in state. withEmptyProfile overrides
+    // /me, so the order matters.
     server.use(refreshSuccessHandler('access-user'))
     withEmptyProfile()
     sessionStorage.clear()
   })
 
-  test('프로필이 비어 있으면 콘솔 위에 안내가 뜬다', async () => {
+  test('프로필이 비어 있으면 콘솔 대신 게이트가 뜬다', async () => {
     renderApp('/console')
     expect(
       await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
     ).toBeInTheDocument()
-    // 게이트가 아니다. 셸은 뒤에 그대로 있다.
-    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+    // A gate, not a prompt: the shell is not rendered behind it.
+    expect(screen.queryByRole('heading', { name: '대시보드' })).not.toBeInTheDocument()
+    // Nothing closes it for the session any more.
+    expect(screen.queryByRole('button', { name: '나중에 입력' })).not.toBeInTheDocument()
   })
 
-  test('닫으면 콘솔을 그대로 쓸 수 있다', async () => {
+  test('다른 화면으로 가도 게이트가 먼저 뜬다', async () => {
+    renderApp('/console/requests')
+    await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
+    expect(screen.queryByRole('heading', { name: '신청 내역' })).not.toBeInTheDocument()
+  })
+
+  test('로그아웃으로 나갈 수 있다', async () => {
+    // A gate that replaces the shell with no exit traps whoever opened someone
+    // else's session on a shared machine.
     const user = userEvent.setup()
     renderApp('/console')
     await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
-
-    await user.click(screen.getByRole('button', { name: '나중에 입력' }))
-
-    expect(
-      screen.queryByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
-    ).not.toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '로그아웃' }))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
+      ).not.toBeInTheDocument(),
+    )
   })
 
-  test('한 번 닫으면 이 세션에서 다시 뜨지 않는다', async () => {
-    const user = userEvent.setup()
+  test('게이트에 문의처가 있다', async () => {
+    // A student whose 학번 another account saved first cannot pass on their own,
+    // and this is the only screen they can reach.
+    server.use(
+      http.get('*/api/v1/meta/status', () =>
+        HttpResponse.json({
+          maintenance: false,
+          maintenanceMessage: null,
+          bannerMessage: null,
+          contactEmail: 'help@pusan.ac.kr',
+        }),
+      ),
+    )
     renderApp('/console')
     await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
-    await user.click(screen.getByRole('button', { name: '나중에 입력' }))
-
-    // 다른 화면으로 갔다 와도 마찬가지다. 라우팅마다 다시 물으면 닫기가 닫기가
-    // 아니다.
-    await user.click(screen.getByRole('link', { name: '신청 내역' }))
-    await screen.findByRole('heading', { name: '신청 내역' })
-    expect(
-      screen.queryByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
-    ).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'help@pusan.ac.kr' })).toHaveAttribute(
+      'href',
+      'mailto:help@pusan.ac.kr',
+    )
   })
 
-  test('저장하면 안내가 사라진다', async () => {
+  test('다른 계정이 쓰는 학번이면 학번 칸에 오류가 붙고 게이트가 남는다', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.put('*/api/v1/me/profile', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값을 확인해 주세요',
+            status: 422,
+            code: 'VALIDATION_FAILED',
+            detail: '입력값을 확인해 주세요.',
+            errors: [
+              {
+                field: 'studentNo',
+                message: '이미 다른 계정에 등록된 학번입니다. 학번이 맞다면 문의해 주세요.',
+              },
+            ],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    renderApp('/console')
+    await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
+    await screen.findByRole('option', { name: '학부생' })
+    await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
+    await user.type(screen.getByLabelText('학번'), '202012345')
+    await user.selectOptions(screen.getByLabelText('소속 학과'), 'COMPUTER_SCIENCE')
+    await user.click(screen.getByRole('button', { name: '저장하고 계속하기' }))
+
+    expect(await screen.findByText(/이미 다른 계정에 등록된 학번입니다/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '직책과 소속을 입력해 주세요' })).toBeInTheDocument()
+  })
+
+  test('저장하면 게이트가 사라지고 콘솔이 열린다', async () => {
     const user = userEvent.setup()
     renderApp('/console')
     await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' })
@@ -86,12 +135,13 @@ describe('프로필 안내', () => {
     server.use(
       http.put('*/api/v1/me/profile', () => HttpResponse.json(regularProfile, { status: 200 })),
     )
-    await user.click(screen.getByRole('button', { name: '저장' }))
+    await user.click(screen.getByRole('button', { name: '저장하고 계속하기' }))
     await waitFor(() =>
       expect(
         screen.queryByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
       ).not.toBeInTheDocument(),
     )
+    expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 
   test('직책을 비학생으로 바꾸면 학번 입력이 사라진다', async () => {
@@ -165,10 +215,10 @@ describe('프로필 안내', () => {
     await user.selectOptions(screen.getByLabelText('직책'), 'PROFESSOR')
 
     // 저장 버튼이 열려 있으면 안 된다. 소속이 비었으니까.
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '저장하고 계속하기' })).toBeDisabled()
 
     await user.type(screen.getByLabelText('소속'), '부설연구소')
-    await user.click(screen.getByRole('button', { name: '저장' }))
+    await user.click(screen.getByRole('button', { name: '저장하고 계속하기' }))
 
     await waitFor(() => expect(sent).toMatchObject({ departmentOther: '부설연구소' }))
     expect(sent).not.toHaveProperty('departmentCode')
@@ -186,10 +236,10 @@ describe('프로필 안내', () => {
     await user.selectOptions(screen.getByLabelText('직책'), 'STUDENT_UNDERGRAD')
     await user.type(screen.getByLabelText('학번'), '202012345')
     await user.selectOptions(screen.getByLabelText('소속 학과'), 'OTHER')
-    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '저장하고 계속하기' })).toBeDisabled()
 
     await user.type(screen.getByLabelText('소속 학과 직접 입력'), '융합학부')
-    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '저장하고 계속하기' })).toBeEnabled()
   })
 
   test('반쯤 채운 계정에는 저장된 값이 채워져 있고 잠긴 칸은 입력칸이 아니다', async () => {
@@ -225,7 +275,7 @@ describe('프로필 안내', () => {
 
     // 남은 것은 소속뿐이고, 학생이므로 카탈로그에서 고른다.
     await user.selectOptions(screen.getByLabelText('소속 학과'), 'COMPUTER_SCIENCE')
-    await user.click(screen.getByRole('button', { name: '저장' }))
+    await user.click(screen.getByRole('button', { name: '저장하고 계속하기' }))
 
     await waitFor(() => expect(sent).toMatchObject({ departmentCode: 'COMPUTER_SCIENCE' }))
     // 잠긴 값을 실으면 서버가 잠금 규칙으로 판정한다. 보내지 않는 것이 옳다.

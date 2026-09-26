@@ -111,10 +111,12 @@ describe('계정 설정 — 프로필', () => {
     expect(sent).not.toHaveProperty('departmentOther')
   })
 
-  test('비어 있는 필드는 채울 수 있다', async () => {
-    // 잠금은 필드 단위다. 직책만 답하고 닫은 계정이 나중에 학번을 채울 수 있어야
-    // 하므로 첫 저장이 프로필 전체를 잠그지 않는다.
-    const user = userEvent.setup()
+  test('프로필이 미완성인 계정은 계정 화면 대신 게이트를 만난다', async () => {
+    // Filling the remaining fields later used to happen here, after the prompt
+    // was dismissed. The gate now meets the account first and starts from the
+    // stored values, so the field-level fill is pinned in ProfileGate.test.tsx
+    // ("반쯤 채운 계정"). What this pins is that the account screen is not
+    // reachable around it.
     const halfFilled = {
       ...regularProfile,
       position: 'PROFESSOR' as const,
@@ -124,34 +126,11 @@ describe('계정 설정 — 프로필', () => {
       departmentOther: null,
       profileComplete: false,
     }
-    let sent: Record<string, unknown> | null = null
-    server.use(
-      http.get('*/api/v1/me', () => HttpResponse.json(halfFilled, { status: 200 })),
-      http.put('*/api/v1/me/profile', async ({ request }) => {
-        sent = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json(halfFilled, { status: 200 })
-      }),
-    )
-    // 프로필이 미완성이라 안내 모달도 뜬다. 그쪽에도 같은 라벨의 칸이 있으므로
-    // 닫힌 상태로 두고 계정 화면만 본다.
-    sessionStorage.setItem('pickle.profile-prompt-dismissed', '1')
+    server.use(http.get('*/api/v1/me', () => HttpResponse.json(halfFilled, { status: 200 })))
     renderAccount()
-    await screen.findByRole('heading', { name: '계정 설정' })
-
-    // 비어 있는 행이 자기 「입력」 버튼을 갖는다. 종전에는 이 길이 「이름」 행의
-    // 「변경」 뒤에만 있어서, 세 값을 채우려는 사람이 그것을 찾을 수 없었다.
-    await user.click(screen.getByRole('button', { name: '입력' }))
-    await screen.findByRole('heading', { name: '프로필 입력' })
-
-    // 직책은 잠겼고 소속은 비어 있다. 교수이므로 소속은 자유 입력이다.
-    expect(screen.queryByLabelText('직책')).not.toBeInTheDocument()
-    // 이름 칸은 이 창에 없다 — 프로필 저장이 이름을 덮지 않는다.
-    expect(screen.queryByLabelText('이름')).not.toBeInTheDocument()
-    await user.type(screen.getByLabelText('소속'), '부설연구소')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-
-    await waitFor(() => expect(sent).toMatchObject({ departmentOther: '부설연구소' }))
-    expect(sent).not.toHaveProperty('position')
-    expect(sent).not.toHaveProperty('name')
+    expect(
+      await screen.findByRole('heading', { name: '직책과 소속을 입력해 주세요' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '계정 설정' })).not.toBeInTheDocument()
   })
 })

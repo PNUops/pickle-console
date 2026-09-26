@@ -116,8 +116,10 @@ export function AccountPage() {
 /**
  * 이름과 직책과 학번과 소속.
  *
- * 프로필은 선택 입력이라 비어 있는 것이 정상이고, 그래서 값이 없는 행도 숨기지 않고
- * 「입력하지 않음」으로 남긴다. 없는 줄은 채울 수 있다는 사실도 함께 감춘다.
+ * Rows with no value stay visible as 「입력하지 않음」 rather than being hidden.
+ * The profile gate (v0.87.0) means an account reaching this screen has
+ * answered the required fields, but an optional one can still be empty, and a
+ * missing row would also hide that it can be filled.
  *
  * 직책과 학번과 소속은 한 번 입력하면 잠긴다(v0.51.0). 그래서 이 카드의 「변경」은
  * **이름과 아직 비어 있는 필드**를 위한 것이고, 잠긴 행은 값과 함께 문의 안내를
