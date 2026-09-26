@@ -25,7 +25,7 @@ interface ProfileFieldsProps {
 }
 
 /**
- * 직책, 학번, 소속 입력. 프로필 안내 모달과 계정 화면이 함께 쓴다.
+ * Inputs for 직책, 학번 and 소속, shared by the profile gate and the account screen.
  *
  * 학번 필드를 띄울지는 서버가 직책마다 함께 내려보내는 `requiresStudentNo`로만 판단한다.
  * 코드 이름에서 유도하면 직책이 하나 늘 때마다 콘솔 배포가 있어야 서버와 일치한다.

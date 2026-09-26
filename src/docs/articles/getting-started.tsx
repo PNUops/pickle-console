@@ -33,9 +33,8 @@ export const gettingStartedArticles: GuideArticle[] = [
               </li>
             </ul>
             <p>
-              직책과 학번, 소속은 가입 후 입력할 수 있습니다. 프로필을 입력하지 않아도 리소스를
-              신청할 수 있습니다. 로그인에 문제가 있으면 <GuideLink slug="account">계정 안내</GuideLink>를
-              확인하세요.
+              직책과 학번, 소속은 가입 후 처음 콘솔에 들어올 때 입력합니다. 로그인에 문제가 있으면{' '}
+              <GuideLink slug="account">계정 안내</GuideLink>를 확인하세요.
             </p>
           </>
         ),
