@@ -497,6 +497,26 @@ export interface paths {
         patch: operations["updateAdminLlmAccount"];
         trace?: never;
     };
+    "/admin/llm/accounts/{accountId}/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * OpenRouter 관리 credential 최초 등록
+         * @description credential이 하나도 없는 account에 관리용 키를 등록합니다. account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고, 같은 요청에서 billing identity marker를 만들어 ACTIVE 상태로 저장합니다. 이미 credential이 있으면 거절하며 교체는 대기 등록을 거칩니다.
+         */
+        post: operations["registerAdminLlmAccountCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/llm/accounts/{accountId}/credentials/active/delete": {
         parameters: {
             query?: never;
@@ -567,8 +587,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * OpenRouter 관리 credential 검증 및 대기 등록
-         * @description account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. 평문과 credential 조각은 응답하지 않습니다.
+         * OpenRouter 관리 credential 교체 대기 등록
+         * @description 쓰고 있는 ACTIVE credential을 교체할 후보를 등록합니다. account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. ACTIVE credential이 없으면 거절하며 최초 등록은 별도 경로를 씁니다. 평문과 credential 조각은 응답하지 않습니다.
          */
         post: operations["stageAdminLlmAccountCredential"];
         delete?: never;
@@ -7425,6 +7445,12 @@ export interface components {
             code: string;
             password: string;
         };
+        RegisterOpenRouterCredentialRequest: {
+            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            confirmName: string;
+            /** @description OpenRouter management key. 응답에는 반환되지 않습니다. */
+            managementKey: string;
+        };
         RejectRequestRequest: {
             comment: string;
         };
@@ -9529,6 +9555,41 @@ export interface operations {
         responses: {
             /** @description OK */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OpenRouterAccountResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    registerAdminLlmAccountCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterOpenRouterCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

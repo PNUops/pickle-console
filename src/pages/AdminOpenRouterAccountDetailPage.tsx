@@ -5,6 +5,7 @@ import {
   confirmOpenRouterCredentialAction,
   fetchOpenRouterAccount,
   revokeOpenRouterCredential,
+  registerOpenRouterCredential,
   stageOpenRouterCredential,
   updateOpenRouterAccount,
   type OpenRouterAccount,
@@ -189,7 +190,7 @@ export function AdminOpenRouterAccountDetailPage() {
           primary={
             <>
               {canManage && <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>정보 변경</Button>}
-              {canStage && <Button size="sm" variant="secondary" onClick={() => setStageOpen(true)}>관리용 키 등록·교체</Button>}
+              {canStage && <Button size="sm" variant="secondary" onClick={() => setStageOpen(true)}>{account.activeCredential ? '관리용 키 교체' : '관리용 키 등록'}</Button>}
               {canActivate && <Button size="sm" onClick={() => setConfirmAction('activate')}>대기 중인 키 활성화</Button>}
               {canCancel && <Button size="sm" variant="secondary" onClick={() => setConfirmAction('cancel')}>대기 취소</Button>}
               {canRollback && <Button size="sm" variant="secondary" onClick={() => setConfirmAction('rollback')}>교체 되돌리기</Button>}
@@ -290,8 +291,11 @@ export function AdminOpenRouterAccountDetailPage() {
       {stageOpen && (
         <StageCredentialModal
           account={account}
+          replacing={!!account.activeCredential}
           onClose={() => setStageOpen(false)}
-          onSaved={(updated) => applyUpdated(updated, '관리용 키를 확인해 교체 대기로 등록했습니다.')}
+          onSaved={(updated) => applyUpdated(updated, account.activeCredential
+            ? '관리용 키를 확인해 교체 대기로 등록했습니다.'
+            : '관리용 키를 확인해 활성화했습니다.')}
           onError={(message) => {
             setStageOpen(false)
             setError(message)
@@ -430,11 +434,13 @@ function EditAccountModal({
 
 function StageCredentialModal({
   account,
+  replacing,
   onClose,
   onSaved,
   onError,
 }: {
   account: OpenRouterAccount
+  replacing: boolean
   onClose: () => void
   onSaved: (account: OpenRouterAccount) => void
   onError: (message: string) => void
@@ -452,7 +458,9 @@ function StageCredentialModal({
     const oneUseKey = managementKey
     setManagementKey('')
     try {
-      const updated = await stageOpenRouterCredential(account.id, oneUseKey, confirmName)
+      const updated = replacing
+        ? await stageOpenRouterCredential(account.id, oneUseKey, confirmName)
+        : await registerOpenRouterCredential(account.id, oneUseKey, confirmName)
       onSaved(updated)
     } catch (failure) {
       onError(toApiError(failure, '관리용 키를 확인하지 못했습니다.').message)
@@ -462,7 +470,7 @@ function StageCredentialModal({
   }
 
   return (
-    <Modal open onClose={onClose} title="관리용 키 등록·교체">
+    <Modal open onClose={onClose} title={replacing ? '관리용 키 교체' : '관리용 키 등록'}>
       <form className="space-y-4" onSubmit={(event) => void submit(event)} noValidate>
         <MessageBar>
           입력한 키로 일회용 키를 하나 만들었다 지워 보면서 권한과 계정을 확인합니다. 입력값은 응답이나 화면 기록에 남기지 않습니다.
@@ -485,7 +493,7 @@ function StageCredentialModal({
         </FormField>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>취소</Button>
-          <Button type="submit" loading={pending}>검증 후 대기 등록</Button>
+          <Button type="submit" loading={pending}>{replacing ? '검증 후 대기 등록' : '검증 후 등록'}</Button>
         </div>
       </form>
     </Modal>

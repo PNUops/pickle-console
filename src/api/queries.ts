@@ -671,6 +671,26 @@ export function updateOpenRouterAccount(
 }
 
 /**
+ * The first management key on an account that has none. It lands ACTIVE in
+ * this one request; the staged flow below is the rotation path and rejects an
+ * account with nothing to replace. Same plaintext handling as staging.
+ */
+export function registerOpenRouterCredential(
+  accountId: string,
+  managementKey: string,
+  confirmName: string,
+): Promise<OpenRouterAccount> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/llm/accounts/{accountId}/credentials', {
+      params: { path: { accountId } },
+      body: { managementKey, confirmName },
+    })
+    if (!data) throw toApiError(error, '관리용 키를 확인하지 못했습니다.')
+    return data
+  })
+}
+
+/**
  * managementKey는 TanStack mutation 변수로 넘기지 않는다. 호출 화면이 입력 state를
  * 먼저 비운 뒤 이 직접 요청을 기다려, mutation cache·toast·snapshot 어느 곳에도
  * credential 평문이 남지 않게 한다.
