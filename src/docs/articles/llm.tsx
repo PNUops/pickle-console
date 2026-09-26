@@ -120,7 +120,7 @@ export const llmArticles: GuideArticle[] = [
           <ol>
             <li><GuideAction action="requests">신청 내역 확인</GuideAction>에서 승인 상태와 부여 내용을 확인합니다. 대기, 반려, 취소에 대한 설명은 <GuideLink slug="requests/status">신청 상태</GuideLink>를 참고하세요.</li>
             <li><GuideAction action="llmKeys">LLM API 키 목록</GuideAction>에서 승인된 키를 엽니다. <strong>발급 전</strong>이면 아직 API를 호출할 키 값이 없습니다.</li>
-            <li><strong>개요 → 키 발급</strong>을 누르고 확인 창에서 발급합니다. 본인 확인 창이 나타나면 안내에 따라 인증합니다.</li>
+            <li><strong>개요 → 키 발급</strong>을 누르고 확인 창에서 발급합니다.</li>
             <li>발급 완료 창에서 평문 키를 복사해 안전한 곳에 보관합니다. 창을 닫으면 같은 값을 다시 조회할 수 없습니다.</li>
           </ol>
           <Alert variant="info" title="키 발급 권한">
@@ -366,7 +366,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'bodies',
         title: '기록된 본문 읽기',
         body: <>
-          <p><strong>기록된 본문</strong> 탭에서 시각과 프롬프트 및 응답의 앞부분을 확인하고 <strong>전문 보기</strong>를 누릅니다. 전문 열람에는 본인 확인이 필요할 수 있습니다.</p>
+          <p><strong>기록된 본문</strong> 탭에서 시각과 프롬프트 및 응답의 앞부분을 확인하고 <strong>전문 보기</strong>를 누릅니다.</p>
           <p><strong>프롬프트 잘림</strong> 또는 <strong>응답 잘림</strong>이 표시되면 전체 내용이 보관되지 않은 기록입니다. <strong>읽을 수 없음</strong>은 정상적인 빈 응답과 다릅니다. 기록이 비어 있다면 요청 당시 본문 기록이 켜져 있었는지, 보고가 반영되었는지, 보관 기간 30일이 지났는지 확인합니다.</p>
           <p>기록을 끄거나 키를 폐기한 후에도 보관 기간 내의 기존 본문은 이 탭에서 볼 수 있습니다. 현재 키 접근 권한은 <GuideLink slug="workspaces/access">리소스 접근 목록</GuideLink>으로 관리합니다.</p>
         </>,
@@ -378,7 +378,7 @@ export const llmArticles: GuideArticle[] = [
           <p>평문은 발급 직후 한 번만 보이고 다시 조회할 수 없습니다. 값을 잃어버렸거나 유출되어 기존 값을 바꿔야 하면 재발급합니다.</p>
           <ol>
             <li>이 키를 쓰는 프로그램과 배포 설정을 확인하고 새 값으로 교체할 준비를 합니다.</li>
-            <li><strong>개요 → 키 재발급</strong>에서 이전 값이 무효화된다는 안내를 읽고 재발급합니다. 본인 확인 창이 나오면 인증합니다.</li>
+            <li><strong>개요 → 키 재발급</strong>에서 이전 값이 무효화된다는 안내를 읽고 재발급합니다.</li>
             <li>새 키를 복사해 실행 환경에 넣고, 이전 값을 사용하는 모든 프로그램의 설정을 바꿉니다.</li>
             <li><GuideLink slug="llm/connect" anchor="first-call">첫 호출 예제</GuideLink>로 새 키가 정상 응답하는지 확인합니다.</li>
           </ol>
@@ -394,7 +394,7 @@ export const llmArticles: GuideArticle[] = [
           <ol>
             <li>키를 사용하는 작업을 종료하고, 계속 필요한 키인지 확인합니다.</li>
             <li><strong>설정 → 키 폐기</strong>를 누르고 확인 창에 키 이름을 입력합니다.</li>
-            <li><strong>폐기</strong>를 누르고 본인 확인이 나타나면 인증합니다. 목록이나 개요의 상태가 <strong>폐기됨</strong>으로 바뀌었는지 확인합니다.</li>
+            <li><strong>폐기</strong>를 누르고 목록이나 개요의 상태가 <strong>폐기됨</strong>으로 바뀌었는지 확인합니다.</li>
           </ol>
           <Alert variant="danger" title="폐기는 되돌릴 수 없습니다">
             폐기한 키는 다시 발급할 수 없으며 이후 요청은 거부됩니다. 계속 쓰려면 새로 신청해야 합니다. 지금까지의 사용 기록은 남습니다.

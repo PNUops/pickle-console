@@ -6,12 +6,10 @@ import {
   orgAdminUser,
   orgManagerUser,
   orgViewerUser,
-  reauthGateHandlers,
   refreshSuccessHandler,
   sysAdminUser,
   sysManagerUser,
   sysViewerUser,
-  USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { adminLlmLimitBodies } from '../test/msw/handlers/llm-keys'
 import { uuid } from '../test/msw/ids'
@@ -360,18 +358,14 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     expect(screen.getByRole('button', { name: '키 정지' })).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN revoke는 기존 본인 확인 flow를 거쳐 재시도한다', async () => {
+  test('ORG_ADMIN revoke는 이름 확인을 거쳐 폐기한다', async () => {
     const user = userEvent.setup()
-    server.use(...reauthGateHandlers('POST /llm-keys/:keyId/revoke'))
     renderDetail('access-org-admin', orgAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '키 폐기' }))
     const confirm = within(screen.getByRole('dialog', { name: 'LLM API 키 폐기' }))
     await user.type(confirm.getByLabelText(/active-admin-key/), 'active-admin-key')
     await user.click(confirm.getByRole('button', { name: '폐기' }))
 
-    const reauth = within(await screen.findByRole('dialog', { name: '본인 확인' }))
-    await user.type(reauth.getByLabelText('비밀번호'), USER_PASSWORD)
-    await user.click(reauth.getByRole('button', { name: '확인' }))
     expect(await screen.findByText('LLM API 키를 폐기했습니다.')).toBeInTheDocument()
   })
 

@@ -167,8 +167,7 @@ export const vmArticles: GuideArticle[] = [
             <ol>
               <li>
                 VM의 <strong>개요 → 접속 → SSH 클라이언트</strong>에서
-                <strong> SSH 키 발급 및 다운로드</strong>를 누릅니다. 본인 확인이
-                나타나면 완료한 뒤 개인키 파일을 받습니다.
+                <strong> SSH 키 발급 및 다운로드</strong>를 눌러 개인키 파일을 받습니다.
               </li>
               <li>
                 개인키를 본인만 읽을 수 있는 위치에 보관합니다. 같은 영역의

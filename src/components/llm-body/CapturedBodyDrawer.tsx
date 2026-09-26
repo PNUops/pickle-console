@@ -13,8 +13,7 @@ import { readPrompt, type PromptView } from './prompt-view'
  * 자리이기 때문이다. 별도 주소로 빼지 않는 이유는 따로 있다 — 본문은 남에게
  * 링크로 던질 것이 아니라 개인의 프롬프트다.
  *
- * 전문 조회에는 본인 확인이 붙는다. 열 때 물어보고, 토큰이 살아 있는 동안
- * 연달아 열면 다시 묻지 않는다.
+ * 전문은 열 때 한 번 부르고, 같은 건을 다시 열면 캐시에서 온다.
  */
 export function CapturedBodyDrawer({
   keyId,

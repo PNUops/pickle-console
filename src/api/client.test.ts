@@ -1,3 +1,4 @@
+import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { api, getCsrfToken } from './client'
 import type { Problem } from './problem'
@@ -91,6 +92,31 @@ describe('api client auth behavior', () => {
     const problemError: Problem | undefined = error
     expect(problemError?.code).toBe('AUTH_INVALID_CREDENTIALS')
     expect(refreshCalls).not.toHaveBeenCalled()
+  })
+
+  // 재시도는 원 요청이 아니라 미리 떠 둔 clone 을 보낸다. 본문을 이미 읽은
+  // 스트림은 두 번 못 보내므로, clone 이 사라지면 GET 은 멀쩡한데 본문 있는
+  // 요청만 조용히 빈 몸으로 나간다. 이 스위트의 나머지가 전부 GET 이라
+  // 그 회귀를 잡는 것은 이 한 건뿐이다.
+  test('본문이 있는 요청도 401 갱신 재시도에서 본문이 보존된다', async () => {
+    const seen: unknown[] = []
+    server.use(
+      refreshSuccessHandler('access-user'),
+      http.put('*/api/v1/me/profile', async ({ request }) => {
+        const auth = request.headers.get('Authorization')
+        seen.push(await request.json())
+        if (auth !== 'Bearer access-user') {
+          return HttpResponse.json({ code: 'AUTH_TOKEN_EXPIRED' }, { status: 401 })
+        }
+        return HttpResponse.json(regularProfile, { status: 200 })
+      }),
+    )
+
+    setAccessToken('stale-token')
+    const { error } = await api.PUT('/me/profile', { body: { name: '홍길동' } })
+
+    expect(error).toBeUndefined()
+    expect(seen).toEqual([{ name: '홍길동' }, { name: '홍길동' }])
   })
 })
 

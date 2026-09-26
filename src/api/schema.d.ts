@@ -464,7 +464,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter 사업 계정 등록
-         * @description 기관에 사업별 account metadata를 등록합니다. 재인증과 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
+         * @description 기관에 사업별 account metadata를 등록합니다. 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
          */
         post: operations["createAdminLlmAccount"];
         delete?: never;
@@ -548,7 +548,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter credential 교체 되돌리기
-         * @description 재인증과 이름 확인 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌립니다. Vendor credential은 API가 폐기하지 않습니다.
+         * @description 이름 확인 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌립니다. Vendor credential은 API가 폐기하지 않습니다.
          */
         post: operations["rollbackAdminLlmAccountCredential"];
         delete?: never;
@@ -568,7 +568,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter 관리 credential 검증 및 대기 등록
-         * @description 재인증과 account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. 평문과 credential 조각은 응답하지 않습니다.
+         * @description account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. 평문과 credential 조각은 응답하지 않습니다.
          */
         post: operations["stageAdminLlmAccountCredential"];
         delete?: never;
@@ -588,7 +588,7 @@ export interface paths {
         put?: never;
         /**
          * 대기 중 OpenRouter credential 활성화
-         * @description 재인증과 이름 확인 뒤 STAGED credential을 다시 검증합니다. 교체 시 기존 ACTIVE가 만든 disposable key를 새 credential로 조회·수정·삭제한 뒤 두 상태를 원자적으로 ACTIVE와 RETIRING으로 전환합니다.
+         * @description 이름 확인 뒤 STAGED credential을 다시 검증합니다. 교체 시 기존 ACTIVE가 만든 disposable key를 새 credential로 조회·수정·삭제한 뒤 두 상태를 원자적으로 ACTIVE와 RETIRING으로 전환합니다.
          */
         post: operations["activateAdminLlmAccountCredential"];
         delete?: never;
@@ -608,7 +608,7 @@ export interface paths {
         put?: never;
         /**
          * 대기 중 OpenRouter credential 취소
-         * @description 재인증과 이름 확인 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제합니다. ACTIVE credential에는 영향을 주지 않습니다.
+         * @description 이름 확인 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제합니다. ACTIVE credential에는 영향을 주지 않습니다.
          */
         post: operations["cancelAdminLlmAccountCredential"];
         delete?: never;
@@ -2047,22 +2047,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/reverify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["reverify"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/signup": {
         parameters: {
             query?: never;
@@ -2613,7 +2597,7 @@ export interface paths {
         };
         /**
          * 기록된 본문 상세
-         * @description 기록 한 건의 전문입니다. `request`는 보통 보낸 messages 배열 그대로이고, 길이 제한에 걸린 경우에는 앞부분을 담은 문자열입니다. 저장된 본문을 그대로 돌려주므로 **재인증이 필요합니다** (X-Reauth-Token). 목록 조회에는 필요하지 않습니다.
+         * @description 기록 한 건의 전문입니다. `request`는 보통 보낸 messages 배열 그대로이고, 길이 제한에 걸린 경우에는 앞부분을 담은 문자열입니다.
          */
         get: operations["getLlmKeyBody"];
         put?: never;
@@ -2841,7 +2825,7 @@ export interface paths {
         };
         get?: never;
         put: operations["changePassword"];
-        post: operations["setPassword"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6648,7 +6632,7 @@ export interface components {
             kind: "LINKED";
         };
         /** @enum {string} */
-        OauthPurpose: "LOGIN" | "REVERIFY" | "LINK";
+        OauthPurpose: "LOGIN" | "LINK";
         OauthRegistrationResponse: {
             email: string;
             /** Format: date-time */
@@ -7637,14 +7621,6 @@ export interface components {
             activeVms: components["schemas"]["VmBriefResponse"][];
             totals: components["schemas"]["ResourceTotalsResponse"];
         };
-        ReverifyRequest: {
-            password: string;
-        };
-        ReverifyResponse: {
-            /** Format: date-time */
-            expiresAt: string;
-            reauthToken: string;
-        };
         /** @enum {string} */
         ReviewDecision: "APPROVE" | "REJECT";
         /** @enum {string} */
@@ -7692,9 +7668,6 @@ export interface components {
              * @example pickle-general
              */
             name: string;
-        };
-        SetPasswordRequest: {
-            newPassword: string;
         };
         SettingUpdateRequest: {
             value: unknown;
@@ -9478,10 +9451,7 @@ export interface operations {
     createAdminLlmAccount: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -9498,15 +9468,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -9589,10 +9550,7 @@ export interface operations {
     deleteActiveAdminLlmAccountCredential: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 accountId: string;
             };
@@ -9611,15 +9569,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -9636,10 +9585,7 @@ export interface operations {
     finalizeAdminLlmAccountCredential: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 accountId: string;
             };
@@ -9660,15 +9606,6 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -9683,10 +9620,7 @@ export interface operations {
     rollbackAdminLlmAccountCredential: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 accountId: string;
             };
@@ -9707,15 +9641,6 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -9730,10 +9655,7 @@ export interface operations {
     stageAdminLlmAccountCredential: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 accountId: string;
             };
@@ -9754,15 +9676,6 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -9777,10 +9690,7 @@ export interface operations {
     activateAdminLlmAccountCredential: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 accountId: string;
             };
@@ -9799,15 +9709,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -9824,10 +9725,7 @@ export interface operations {
     cancelAdminLlmAccountCredential: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 accountId: string;
             };
@@ -9846,15 +9744,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -11059,10 +10948,7 @@ export interface operations {
     issueAdminRelayToken: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 relayId: string;
             };
@@ -11077,15 +10963,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RelayTokenResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -12809,13 +12686,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 토큰 발급 / 2FA 챌린지 / 가입 필요 / 재인증 토큰 / 연동 완료 */
+            /** @description 토큰 발급 / 2FA 챌린지 / 가입 필요 / 연동 완료 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["ReverifyResponse"] | components["schemas"]["OauthLinkedResponse"];
+                    "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["OauthLinkedResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -13028,39 +12905,6 @@ export interface operations {
             };
         };
     };
-    reverify: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReverifyRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ReverifyResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     signup: {
         parameters: {
             query?: never;
@@ -13194,10 +13038,7 @@ export interface operations {
     deleteDnsDomain: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 domainId: string;
             };
@@ -13211,15 +13052,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
@@ -13266,10 +13098,7 @@ export interface operations {
     addDnsDomainAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 domainId: string;
             };
@@ -13290,15 +13119,6 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -13313,10 +13133,7 @@ export interface operations {
     removeDnsDomainAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 domainId: string;
                 grantId: string;
@@ -13332,15 +13149,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -13355,10 +13163,7 @@ export interface operations {
     updateDnsDomainAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 domainId: string;
                 grantId: string;
@@ -13378,15 +13183,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -13854,10 +13650,7 @@ export interface operations {
     addGpuAllocationAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 allocationId: string;
             };
@@ -13878,15 +13671,6 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -13901,10 +13685,7 @@ export interface operations {
     removeGpuAllocationAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 allocationId: string;
                 grantId: string;
@@ -13920,15 +13701,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -13943,10 +13715,7 @@ export interface operations {
     updateGpuAllocationAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 allocationId: string;
                 grantId: string;
@@ -13966,15 +13735,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -14319,10 +14079,7 @@ export interface operations {
     addLlmKeyAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 keyId: string;
             };
@@ -14343,15 +14100,6 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -14366,10 +14114,7 @@ export interface operations {
     removeLlmKeyAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 keyId: string;
                 grantId: string;
@@ -14385,15 +14130,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -14408,10 +14144,7 @@ export interface operations {
     updateLlmKeyAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 keyId: string;
                 grantId: string;
@@ -14431,15 +14164,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -14491,10 +14215,7 @@ export interface operations {
     getLlmKeyBody: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 keyId: string;
                 bodyId: string;
@@ -14510,15 +14231,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LlmKeyBodyDetailResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -14566,10 +14278,7 @@ export interface operations {
     revokeLlmKey: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 keyId: string;
             };
@@ -14583,15 +14292,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
@@ -14607,10 +14307,7 @@ export interface operations {
     issueLlmKeyToken: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 keyId: string;
             };
@@ -14625,15 +14322,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["IssuedLlmKeyResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -14810,10 +14498,7 @@ export interface operations {
     unlinkIdentity: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 provider: components["schemas"]["IdentityProvider"];
             };
@@ -14827,15 +14512,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
@@ -15000,51 +14676,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    setPassword: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetPasswordRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -15866,10 +15497,7 @@ export interface operations {
     deleteVm: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -15884,15 +15512,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmDeletionResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -15940,10 +15559,7 @@ export interface operations {
     addVmAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -15964,15 +15580,6 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -15987,10 +15594,7 @@ export interface operations {
     removeVmAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
                 grantId: string;
@@ -16006,15 +15610,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -16029,10 +15624,7 @@ export interface operations {
     updateVmAccessGrant: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
                 grantId: string;
@@ -16052,15 +15644,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -16373,10 +15956,7 @@ export interface operations {
     revealVmPassword: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16391,15 +15971,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmPasswordResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -16416,10 +15987,7 @@ export interface operations {
     regenerateVmPassword: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16434,15 +16002,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmPasswordResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -16687,10 +16246,7 @@ export interface operations {
     updateVmSettings: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16709,15 +16265,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmSettingView"][];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -16796,10 +16343,7 @@ export interface operations {
     issueVmSshKey: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16816,15 +16360,6 @@ export interface operations {
                     "*/*": components["schemas"]["VmSshKeyIssueResponse"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -16839,10 +16374,7 @@ export interface operations {
     deleteVmSshKey: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16856,15 +16388,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
@@ -16880,10 +16403,7 @@ export interface operations {
     downloadVmSshKey: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16898,15 +16418,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmSshKeyIssueResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -16923,10 +16434,7 @@ export interface operations {
     reissueVmSshKey: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 vmId: string;
             };
@@ -16941,15 +16449,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmSshKeyIssueResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -17185,10 +16684,7 @@ export interface operations {
     addWorkspaceMember: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 workspaceId: string;
             };
@@ -17209,15 +16705,6 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceMemberResponse"];
                 };
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -17232,10 +16719,7 @@ export interface operations {
     removeWorkspaceMember: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 workspaceId: string;
                 userId: string;
@@ -17251,15 +16735,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
@@ -17274,10 +16749,7 @@ export interface operations {
     updateWorkspaceMember: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description 재인증(sudo-mode) 토큰 — POST /auth/reverify가 발급 (10분 유효, 다회용). 없거나 만료·무효면 403 REAUTH_REQUIRED. */
-                "X-Reauth-Token"?: string;
-            };
+            header?: never;
             path: {
                 workspaceId: string;
                 userId: string;
@@ -17297,15 +16769,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WorkspaceMemberResponse"];
-                };
-            };
-            /** @description 재인증 필요 — 유효한 X-Reauth-Token 없음 (`REAUTH_REQUIRED`) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

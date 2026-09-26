@@ -4,7 +4,7 @@ import type { TerminalSessionTicket } from '../api/queries'
 /**
  * 콘솔 탭 ↔ 터미널 팝업 창 사이의 postMessage 규약.
  *
- * 팝업은 콘솔의 인증 스택(AuthProvider·ReauthProvider·QueryClient)을 마운트하지
+ * 팝업은 콘솔의 인증 스택(AuthProvider·QueryClient)을 마운트하지
  * 않는 별도 문서다 — 스스로 `/auth/refresh`를 칠 수 없고, 쳐서도 안 된다(리프레시
  * 토큰 회전+재사용 탐지가 부모 탭과 레이스를 일으키면 체인 전체가 폐기되어 모든
  * 탭이 로그아웃된다). 그래서 접속 티켓은 액세스 토큰을 쥔 콘솔 탭이 mint해서

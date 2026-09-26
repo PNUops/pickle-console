@@ -515,7 +515,7 @@ export function fetchVmAccessGrants(vmId: string): Promise<VmAccessList> {
   })
 }
 
-/** 사용자 지정 부여 또는 워크스페이스 전체 부여. 재인증은 클라이언트가 알아서 붙인다. */
+/** 사용자 지정 부여 또는 워크스페이스 전체 부여. */
 export function addVmAccessGrant(
   vmId: string,
   body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
@@ -1124,11 +1124,7 @@ export function fetchLlmKeyBodies(
   })
 }
 
-/**
- * 기록 한 건의 전문. 재인증이 필요하다 — 저장된 본문을 그대로 돌려주는
- * 호출이라 VM 초기 비밀번호 열람과 같은 자리이고, 비밀번호와 달리 프롬프트는
- * 새어 나간 뒤에 바꿀 수 없다.
- */
+/** 기록 한 건의 전문. 저장된 본문을 그대로 돌려준다. */
 export function fetchLlmKeyBody(keyId: string, bodyId: string): Promise<LlmKeyBodyDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/llm-keys/{keyId}/bodies/{bodyId}', {
@@ -2216,20 +2212,9 @@ export function changeMyPassword(body: {
   })
 }
 
-/**
- * 비밀번호가 없는 계정의 최초 설정. 현재 비밀번호를 묻지 않는다.
- *
- * 그 자리를 재인증이 대신하므로 서버는 `X-Reauth-Token` 없이 403 으로 답하고,
- * fetch 래퍼가 확인 모달을 띄운 뒤 이 요청을 다시 보낸다. 대상 계정은 비밀번호가
- * 없으므로 그 모달은 구글로 통과한다.
- */
-export function setMyPassword(body: { newPassword: string }): Promise<AuthTokenResponse> {
-  return guardNetwork(async () => {
-    const { data, error } = await api.POST('/me/password', { body })
-    if (!data) throw toApiError(error, '비밀번호를 설정하지 못했습니다.')
-    return data
-  })
-}
+// 비밀번호가 없는 계정의 최초 설정은 여기에 없다. 물을 현재 비밀번호가 없어 세션만으로
+// 비밀번호를 심을 수 있게 되므로 서버가 엔드포인트를 폐지했고, 그런 계정은
+// `requestPasswordReset` 이 보내는 메일로 설정한다.
 
 export function withdrawMyAccount(body: {
   password: string
@@ -2327,11 +2312,7 @@ export function updateMyProfile(
 
 export type LinkedIdentity = Schemas['LinkedIdentity']
 
-/**
- * 외부 로그인 연동 해제. 재인증 대상이라 fetch 래퍼가 sudo 모달을 태운다.
- * `/auth/*` 가 아니라 `/me/*` 아래인 이유가 여기에 있다 — 래퍼는 `/api/v1/auth/*`
- * 경로에 재인증 토큰을 붙이지 않으므로 거기 있으면 재인증을 걸 수 없다.
- */
+/** 외부 로그인 연동 해제. */
 export function unlinkIdentity(provider: Schemas['IdentityProvider']): Promise<void> {
   return guardNetwork(async () => {
     const { error } = await api.DELETE('/me/identities/{provider}', {

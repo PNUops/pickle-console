@@ -101,34 +101,23 @@ describe('계정 화면의 연동 관리', () => {
     expect(await screen.findByLabelText('현재 비밀번호')).toBeInTheDocument()
   })
 
-  test('비밀번호 없는 계정이 직접 설정한다', async () => {
+  test('비밀번호 없는 계정은 이 화면에서 정하지 않고 메일을 받는다', async () => {
     const user = userEvent.setup()
     let sent: unknown = null
     meReturns({ hasPassword: false, identities: [GOOGLE] })
     server.use(
-      http.post('*/api/v1/me/password', async ({ request }) => {
+      http.post('*/api/v1/auth/password-reset', async ({ request }) => {
         sent = await request.json()
-        return HttpResponse.json(
-          { accessToken: 'access-user', user: regularProfile },
-          { status: 200 },
-        )
+        return HttpResponse.json({ message: '발송했습니다.' }, { status: 202 })
       }),
     )
     renderApp('/console/account')
-    await openSection(user, '비밀번호')
 
-    // 현재 비밀번호를 묻지 않는다. 물을 것이 없기 때문이고, 그 자리는 저장할 때의
-    // 본인 확인이 대신한다.
-    expect(await screen.findByRole('heading', { name: '비밀번호 설정' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('현재 비밀번호')).not.toBeInTheDocument()
+    // 여기서 직접 정하게 하면 로그인한 세션 하나가 비밀번호를 심을 수 있는 것이 된다.
+    // 물을 현재 비밀번호가 없기 때문이다. 그래서 입력 칸이 아니라 메일이다.
+    await user.click(await screen.findByRole('button', { name: '메일 받기' }))
+    expect(screen.queryByLabelText('새 비밀번호')).not.toBeInTheDocument()
 
-    const dialog = within(screen.getByRole('dialog'))
-    await user.type(screen.getByLabelText('새 비밀번호'), 'brand-new-pass-9!')
-    await user.type(screen.getByLabelText('새 비밀번호 확인'), 'brand-new-pass-9!')
-    // 구글 연동이 풀린 사람에게 남는 유일한 길이라 메일 경로도 함께 둔다.
-    expect(dialog.getByRole('button', { name: '메일로 받기' })).toBeInTheDocument()
-    await user.click(dialog.getByRole('button', { name: '설정' }))
-
-    await waitFor(() => expect(sent).toEqual({ newPassword: 'brand-new-pass-9!' }))
+    await waitFor(() => expect(sent).toEqual({ email: regularProfile.email }))
   })
 })

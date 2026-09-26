@@ -42,18 +42,18 @@ describe('2FA 등록 요구 403 감지', () => {
     off()
   })
 
-  // 재인증 요구도 같은 403이고 같은 자리를 지난다. 코드를 보지 않고 상태만
-  // 보면 비밀번호를 다시 묻는 자리에서 사용자가 2FA 등록 화면으로 끌려간다.
-  test('같은 403이라도 REAUTH_REQUIRED는 발화하지 않는다', async () => {
+  // 권한 거절도 같은 403이고 같은 자리를 지난다. 코드를 보지 않고 상태만
+  // 보면 등급이 모자라 거절된 사용자가 2FA 등록 화면으로 끌려간다.
+  test('같은 403이라도 다른 코드는 발화하지 않는다', async () => {
     setAccessToken('access-admin')
     server.use(
       http.get('*/api/v1/notifications/unread-count', () =>
         HttpResponse.json(
           {
             type: 'about:blank',
-            title: '재인증이 필요합니다',
+            title: '권한이 없습니다',
             status: 403,
-            code: 'REAUTH_REQUIRED',
+            code: 'WORKSPACE_ROLE_INSUFFICIENT',
           },
           { status: 403 },
         ),

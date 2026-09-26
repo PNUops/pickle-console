@@ -22,12 +22,12 @@ type SessionExpiredListener = () => void
 
 /**
  * More than one part of the shell reacts to an expired session (AuthProvider
- * routes back to /login, ReauthProvider closes its password modal), so the
+ * routes back to /login), so the
  * notifier keeps a set of listeners rather than a single slot.
  */
 const sessionExpiredListeners = new Set<SessionExpiredListener>()
 
-/** Registered by AuthProvider/ReauthProvider; fired when a refresh fails after a 401. */
+/** Registered by AuthProvider; fired when a refresh fails after a 401. */
 export function onSessionExpired(listener: SessionExpiredListener): () => void {
   sessionExpiredListeners.add(listener)
   return () => {

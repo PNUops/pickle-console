@@ -10,7 +10,6 @@ import {
   fetchProfileOptions,
   regenerateRecoveryCodes,
   requestPasswordReset,
-  setMyPassword,
   startGoogleOauth,
   type LinkedIdentity,
   type MfaRecoveryCodesResponse,
@@ -468,62 +467,12 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
 /**
  * 비밀번호가 없는 계정이 처음 설정하는 길.
  *
- * 현재 비밀번호를 묻지 않는다. 물을 것이 없기 때문이고, 그 자리를 재인증이 대신한다.
- * 재인증은 구글로 통과할 수 있으므로 이 계정이 실제로 도달한다.
- *
- * 메일 경로도 남는다. 구글 연동이 풀렸거나 구글 계정을 잃은 사람에게는 그것이 유일한
- * 길이고, 그 사람은 여기까지 오지도 못하므로 화면에 두는 것으로 족하지 않지만 최소한
- * 길이 있다는 것은 말해 준다.
+ * 이 화면에서 직접 정하지 않고 메일을 보낸다. 물을 현재 비밀번호가 없으므로 이 자리에서
+ * 정하게 하면 로그인한 세션 하나가 비밀번호를 심을 수 있는 것이 되고, 그것은 남의 브라우저를
+ * 잠깐 빌린 사람이 계정을 계속 갖는 길이다. 메일은 메일함을 쥐고 있다는 것을 증명한다.
  */
 function PasswordSetupSection({ email }: { email: string }) {
   const toast = useToast()
-  const { refreshProfile } = useAuth()
-  const [open, setOpen] = useState(false)
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-
-  const close = () => {
-    setOpen(false)
-    setNewPassword('')
-    setConfirmPassword('')
-    setError(null)
-    setFieldErrors({})
-  }
-
-  const save = useMutation({
-    mutationFn: () => setMyPassword({ newPassword }),
-    onSuccess: async (data) => {
-      // 다른 기기의 세션은 서버가 끊는다. 이 세션은 응답이 준 토큰으로 이어진다.
-      setAccessToken(data.accessToken)
-      close()
-      toast.success('비밀번호를 설정했습니다. 다른 기기의 세션은 로그아웃됩니다.')
-      await refreshProfile()
-    },
-    onError: (err) => {
-      const apiError = toApiError(err, '비밀번호를 설정하지 못했습니다.')
-      const fields = fieldErrorsOf(apiError.problem)
-      setFieldErrors(fields)
-      setError(Object.keys(fields).length > 0 ? null : apiError.message)
-    },
-  })
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setError(null)
-    setFieldErrors({})
-    const ruleError = passwordRuleError(newPassword)
-    if (ruleError) {
-      setFieldErrors({ newPassword: ruleError })
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setFieldErrors({ confirmPassword: '비밀번호가 일치하지 않습니다.' })
-      return
-    }
-    save.mutate()
-  }
 
   const mail = useMutation({
     mutationFn: () => requestPasswordReset(email),
@@ -532,75 +481,26 @@ function PasswordSetupSection({ email }: { email: string }) {
   })
 
   return (
-    <>
-      <SettingRow
-        label="비밀번호"
-        description="설정되지 않음"
-        note="구글 계정으로만 로그인할 수 있습니다. 비밀번호를 설정하면 두 가지 모두로 로그인합니다."
-        action={
-          <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-            설정
-          </Button>
-        }
-      />
-      <Modal open={open} onClose={close} title="비밀번호 설정">
-        {error && (
-          <Alert variant="danger" className="mb-4">
-            {error}
-          </Alert>
-        )}
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <p className="text-sm text-neutral-600">
-            현재 비밀번호는 묻지 않습니다. 대신 저장할 때 본인 확인을 한 번 거칩니다.
-          </p>
-          <FormField label="새 비밀번호" required error={fieldErrors.newPassword}>
-            <Input
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              aria-describedby={GUIDANCE_ID}
-              required
-            />
-            <PasswordGuidance password={newPassword} id={GUIDANCE_ID} className="mt-1" />
-          </FormField>
-          <FormField label="새 비밀번호 확인" required error={fieldErrors.confirmPassword}>
-            <Input
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-            />
-          </FormField>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <button
-              type="button"
-              className="text-sm text-neutral-500 underline underline-offset-2"
-              onClick={() => mail.mutate()}
-            >
-              메일로 받기
-            </button>
-            <div className="flex gap-2">
-              <Button type="button" variant="secondary" onClick={close}>
-                취소
-              </Button>
-              <Button type="submit" loading={save.isPending}>
-                설정
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Modal>
-    </>
+    <SettingRow
+      label="비밀번호"
+      description="설정되지 않음"
+      note="구글 계정으로만 로그인할 수 있습니다. 메일로 받은 링크에서 비밀번호를 설정하면 두 가지 모두로 로그인합니다."
+      action={
+        <Button
+          size="sm"
+          variant="secondary"
+          loading={mail.isPending}
+          onClick={() => mail.mutate()}
+        >
+          메일 받기
+        </Button>
+      }
+    />
   )
 }
 
 /**
  * 연동된 외부 로그인 관리.
- *
- * 해제는 재인증 대상이다. 로그인 수단을 없애는 일이고 붙이는 일의 반대편이라, 탈취된
- * 세션이 진짜 소유자의 제공자를 조용히 뗄 수 있으면 소유자가 잠긴다.
  *
  * 마지막 수단은 버튼을 숨기지 않고 비활성으로 두고 사유를 적는다. 숨기면 왜 못 하는지
  * 알 길이 없다. 판단은 서버가 하고(409) 여기는 그 답을 미리 보여줄 뿐이다.
@@ -618,9 +518,8 @@ function LinkedAccountsSection({
   // 띄우면 "연동된 계정이 없습니다"와 "유일한 로그인 수단입니다"가 같이 나온다.
   const lastMethod = !hasPassword && identities.length === 1
 
-  // 연동은 전체 페이지 이동이라 재인증(sudo) 승인이 살아남지 못한다. 서버가 연동에
-  // 재인증을 요구하지 않는 이유가 그것이다 — 왕복 자체가 구글 계정의 소유를 증명하고,
-  // 어느 계정에 붙일지는 세션이 flow 행에 박혀 결정된다.
+  // 연동은 전체 페이지 이동이다. 왕복 자체가 구글 계정의 소유를 증명하고, 어느 계정에
+  // 붙일지는 시작 시점의 세션이 flow 행에 박혀 결정된다.
   const link = useMutation({
     mutationFn: () => startGoogleOauth({ purpose: 'LINK' }),
     onSuccess: (started) => navigateExternal(started.authorizationUrl),
