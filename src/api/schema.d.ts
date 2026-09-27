@@ -3658,7 +3658,23 @@ export interface paths {
         patch: operations["updateWorkspace"];
         trace?: never;
     };
-    "/workspaces/{workspaceId}/members": {
+    "/workspaces/{workspaceId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listWorkspaceInvitations"];
+        put?: never;
+        post: operations["inviteWorkspaceMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/invitations/{invitationId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3667,8 +3683,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["addWorkspaceMember"];
-        delete?: never;
+        post?: never;
+        delete: operations["cancelWorkspaceInvitation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3725,11 +3741,6 @@ export interface components {
              * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 워크스페이스의 구성원이어야 합니다.
              */
             userId?: string | null;
-        };
-        AddWorkspaceMemberRequest: {
-            /** Format: email */
-            email: string;
-            role: components["schemas"]["WorkspaceMemberRole"];
         };
         AdminCampusIpRequestView: {
             adminNote?: string | null;
@@ -8492,6 +8503,42 @@ export interface components {
         };
         /** @enum {string} */
         WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT" | "COURSE" | "PROGRAM" | "LAB" | "CLUB" | "COMPETITION" | "STUDY";
+        InviteWorkspaceMembersRequest: {
+            entries: components["schemas"]["WorkspaceInvitationEntry"][];
+        };
+        InviteWorkspaceMembersResponse: {
+            results: components["schemas"]["WorkspaceInvitationResult"][];
+        };
+        WorkspaceInvitationEntry: {
+            email?: string | null;
+            studentNo?: string | null;
+        };
+        WorkspaceInvitationInviter: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @enum {string} */
+        WorkspaceInvitationOutcome: "ADDED" | "INVITED" | "ALREADY_MEMBER" | "ALREADY_INVITED" | "DUPLICATE_IN_REQUEST";
+        WorkspaceInvitationResponse: {
+            email?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            invitedAt: string;
+            invitedBy: components["schemas"]["WorkspaceInvitationInviter"];
+            role: components["schemas"]["WorkspaceMemberRole"];
+            studentNo?: string | null;
+        };
+        WorkspaceInvitationResult: {
+            email?: string | null;
+            /** Format: uuid */
+            invitationId?: string | null;
+            outcome: components["schemas"]["WorkspaceInvitationOutcome"];
+            studentNo?: string | null;
+            /** Format: uuid */
+            userId?: string | null;
+        };
         WorkspaceMemberResponse: {
             email: string;
             name: string;
@@ -16742,7 +16789,37 @@ export interface operations {
             };
         };
     };
-    addWorkspaceMember: {
+    cancelWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    inviteWorkspaceMembers: {
         parameters: {
             query?: never;
             header?: never;
@@ -16753,17 +16830,48 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AddWorkspaceMemberRequest"];
+                "application/json": components["schemas"]["InviteWorkspaceMembersRequest"];
             };
         };
         responses: {
-            /** @description Created */
-            201: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                    "*/*": components["schemas"]["InviteWorkspaceMembersResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

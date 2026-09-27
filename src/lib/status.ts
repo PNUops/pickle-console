@@ -294,6 +294,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'workspace.member_add': '구성원 추가',
   'workspace.member_update': '구성원 역할 변경',
   'workspace.member_remove': '구성원 제거',
+  'workspace.invitation_create': '구성원 초대',
+  'workspace.invitation_cancel': '초대 취소',
   'request.create': '신청 제출',
   'request.cancel': '신청 취소',
   'request.approve': '신청 승인',
