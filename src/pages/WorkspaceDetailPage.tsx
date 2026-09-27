@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
-import { toApiError } from '../api/problem'
+import { toApiError, type Problem } from '../api/problem'
 import type { components } from '../api/schema'
 import {
   fetchResources,
@@ -694,24 +694,51 @@ function outcomeVariant(outcome: string): BadgeVariant {
 }
 
 /** One line is one person: a line containing `@` is an email, anything else a student number. */
-function parseInviteLines(text: string): WorkspaceInvitationEntry[] {
+interface InviteLine {
+  /** 1-based line number in the textarea, counting blank lines. */
+  line: number
+  text: string
+  entry: WorkspaceInvitationEntry
+}
+
+function parseInviteLines(text: string): InviteLine[] {
   return text
     .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => (line.includes('@') ? { email: line } : { studentNo: line }))
+    .map((raw, index) => ({ line: index + 1, text: raw.trim() }))
+    .filter(({ text: value }) => value.length > 0)
+    .map(({ line, text: value }) => ({
+      line,
+      text: value,
+      entry: value.includes('@') ? { email: value } : { studentNo: value },
+    }))
+}
+
+/**
+ * The server names a bad entry by its index in the request (`entries[3]`,
+ * `entries[3].email`). Blank lines are dropped before sending, so the index
+ * is not the line number the owner sees; this maps it back.
+ */
+function lineErrorsOf(problem: Problem | null | undefined, lines: InviteLine[]): string[] {
+  const messages: string[] = []
+  for (const error of problem?.errors ?? []) {
+    const match = /^entries\[(\d+)\]/.exec(error.field)
+    const target = match ? lines[Number(match[1])] : undefined
+    if (target) messages.push(`${target.line}번째 줄 (${target.text}): ${error.message}`)
+  }
+  return messages
 }
 
 function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; onInvited: () => void }) {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [lineErrors, setLineErrors] = useState<string[]>([])
   const [results, setResults] = useState<WorkspaceInvitationResult[] | null>(null)
 
   const invite = useMutation({
-    mutationFn: async (entries: WorkspaceInvitationEntry[]) => {
+    mutationFn: async (lines: InviteLine[]) => {
       const { data, error: err } = await api.POST('/workspaces/{workspaceId}/invitations', {
         params: { path: { workspaceId } },
-        body: { entries },
+        body: { entries: lines.map((line) => line.entry) },
       })
       if (!data) throw toApiError(err, '구성원을 초대하지 못했습니다.')
       return data
@@ -722,12 +749,17 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
       onInvited()
     },
     // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
-    onError: (err) => setError(toApiError(err, '구성원을 초대하지 못했습니다.').message),
+    onError: (err, lines) => {
+      const apiError = toApiError(err, '구성원을 초대하지 못했습니다.')
+      setError(apiError.message)
+      setLineErrors(lineErrorsOf(apiError.problem, lines))
+    },
   })
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setError(null)
+    setLineErrors([])
     const entries = parseInviteLines(text)
     if (entries.length === 0) {
       setError('초대할 사람의 이메일이나 학번을 입력해 주세요.')
@@ -746,7 +778,18 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
   return (
     <form onSubmit={submit} className="space-y-3 rounded-lg bg-neutral-50 p-4" noValidate>
       <h3 className="text-sm font-semibold text-neutral-800">구성원 초대</h3>
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && (
+        <Alert variant="danger">
+          {error}
+          {lineErrors.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {lineErrors.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          )}
+        </Alert>
+      )}
       <FormField label="이메일 또는 학번" description="한 줄에 한 명씩 입력합니다." required>
         <Textarea
           rows={6}

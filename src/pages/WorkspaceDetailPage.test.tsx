@@ -292,6 +292,33 @@ describe('workspace detail: invitations', () => {
     expect(screen.queryByRole('region', { name: '초대 결과' })).not.toBeInTheDocument()
   })
 
+  test('a 422 names the line the owner typed, not the request index', async () => {
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값을 확인해 주세요',
+            status: 422,
+            detail: '요청 값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [{ field: 'entries[1].studentNo', message: '학번 형식이 아닙니다.' }],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    // Entry 1 is on line 3: the blank line 2 is not sent.
+    await user.type(inviteField(), 'a@pusan.ac.kr{enter}{enter}x')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(await screen.findByText('3번째 줄 (x): 학번 형식이 아닙니다.')).toBeInTheDocument()
+  })
+
   test('an outcome this build does not know renders its raw value', async () => {
     server.use(
       http.post('*/api/v1/workspaces/:workspaceId/invitations', () =>
