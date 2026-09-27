@@ -3658,7 +3658,31 @@ export interface paths {
         patch: operations["updateWorkspace"];
         trace?: never;
     };
-    "/workspaces/{workspaceId}/members": {
+    "/workspaces/{workspaceId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 대기 중인 초대 목록
+         * @description 아직 받지 않은 초대만 오래된 순서로 돌려줍니다. 소유자(OWNER)만 볼 수 있습니다.
+         */
+        get: operations["listWorkspaceInvitations"];
+        put?: never;
+        /**
+         * 구성원 초대
+         * @description 이메일이나 학번으로 한 번에 1명에서 200명까지 초대합니다. 활성 계정이 있으면 바로 구성원(MEMBER)이 되고, 없으면 초대가 대기하다가 그 사람이 가입하거나 학번을 등록하면 자동으로 구성원이 됩니다. 초대는 만료되지 않으며 소유자가 취소할 수 있습니다. 결과는 항목마다 요청과 같은 순서로 옵니다. 소유자(OWNER)만 호출할 수 있고 개인 워크스페이스에는 초대할 수 없습니다.
+         */
+        post: operations["inviteWorkspaceMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/invitations/{invitationId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3667,8 +3691,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["addWorkspaceMember"];
-        delete?: never;
+        post?: never;
+        /**
+         * 초대 취소
+         * @description 대기 중인 초대를 취소합니다. 이미 받았거나 취소한 초대는 찾을 수 없음(404)으로 답합니다. 소유자(OWNER)만 호출할 수 있습니다.
+         */
+        delete: operations["cancelWorkspaceInvitation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3725,11 +3753,6 @@ export interface components {
              * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 워크스페이스의 구성원이어야 합니다.
              */
             userId?: string | null;
-        };
-        AddWorkspaceMemberRequest: {
-            /** Format: email */
-            email: string;
-            role: components["schemas"]["WorkspaceMemberRole"];
         };
         AdminCampusIpRequestView: {
             adminNote?: string | null;
@@ -5151,6 +5174,14 @@ export interface components {
         };
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
+        InviteWorkspaceMembersRequest: {
+            /** @description 초대할 사람 목록. 1명에서 200명까지이며, 한 항목에는 이메일과 학번 중 하나만 씁니다. */
+            entries: components["schemas"]["WorkspaceInvitationEntry"][];
+        };
+        InviteWorkspaceMembersResponse: {
+            /** @description 요청 항목마다 한 건씩, 요청과 같은 순서입니다. */
+            results: components["schemas"]["WorkspaceInvitationResult"][];
+        };
         IpAllocationResponse: {
             /** Format: date-time */
             allocatedAt: string;
@@ -8489,6 +8520,67 @@ export interface components {
             members: components["schemas"]["WorkspaceMemberResponse"][];
             myRole: components["schemas"]["WorkspaceMemberRole"];
             name: string;
+        };
+        WorkspaceInvitationEntry: {
+            /**
+             * @description 초대할 사람의 이메일. 학번과 함께 쓸 수 없습니다.
+             * @example student@pusan.ac.kr
+             */
+            email?: string | null;
+            /**
+             * @description 초대할 사람의 학번. 학번은 학생 직책 계정에만 등록되므로 교수·연구원·직원은 이메일로 초대합니다. 이메일과 함께 쓸 수 없습니다.
+             * @example 202612345
+             */
+            studentNo?: string | null;
+        };
+        WorkspaceInvitationInviter: {
+            /**
+             * Format: uuid
+             * @description 계정 공개 식별자
+             */
+            id: string;
+            /** @description 이름 */
+            name: string;
+        };
+        /** @enum {string} */
+        WorkspaceInvitationOutcome: "ADDED" | "INVITED" | "ALREADY_MEMBER" | "ALREADY_INVITED" | "DUPLICATE_IN_REQUEST";
+        WorkspaceInvitationResponse: {
+            /** @description 초대한 이메일. 학번으로 초대했으면 null입니다. */
+            email?: string | null;
+            /**
+             * Format: uuid
+             * @description 초대 식별자
+             */
+            id: string;
+            /**
+             * Format: date-time
+             * @description 초대한 시각
+             */
+            invitedAt: string;
+            /** @description 초대한 사람 */
+            invitedBy: components["schemas"]["WorkspaceInvitationInviter"];
+            /** @description 구성원이 되었을 때 받을 역할 */
+            role: components["schemas"]["WorkspaceMemberRole"];
+            /** @description 초대한 학번. 이메일로 초대했으면 null입니다. */
+            studentNo?: string | null;
+        };
+        WorkspaceInvitationResult: {
+            /** @description 요청에 쓴 이메일(정규화한 값). 학번 항목이면 null입니다. */
+            email?: string | null;
+            /**
+             * Format: uuid
+             * @description 대기 중인 초대의 식별자. INVITED와 ALREADY_INVITED일 때만 있습니다.
+             */
+            invitationId?: string | null;
+            /** @description 처리 결과. */
+            outcome: components["schemas"]["WorkspaceInvitationOutcome"];
+            /** @description 요청에 쓴 학번(앞뒤 공백 제거). 이메일 항목이면 null입니다. */
+            studentNo?: string | null;
+            /**
+             * Format: uuid
+             * @description 구성원이 된 계정의 공개 식별자. ADDED일 때만 있습니다.
+             */
+            userId?: string | null;
         };
         /** @enum {string} */
         WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT" | "COURSE" | "PROGRAM" | "LAB" | "CLUB" | "COMPETITION" | "STUDY";
@@ -16742,7 +16834,38 @@ export interface operations {
             };
         };
     };
-    addWorkspaceMember: {
+    listWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    inviteWorkspaceMembers: {
         parameters: {
             query?: never;
             header?: never;
@@ -16753,18 +16876,48 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AddWorkspaceMemberRequest"];
+                "application/json": components["schemas"]["InviteWorkspaceMembersRequest"];
             };
         };
         responses: {
-            /** @description Created */
-            201: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                    "*/*": components["schemas"]["InviteWorkspaceMembersResponse"];
                 };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {

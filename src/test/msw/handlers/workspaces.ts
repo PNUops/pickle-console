@@ -14,6 +14,11 @@ export const knownUsers: Schemas['WorkspaceMemberResponse'][] = [
   { userId: uuid(60), name: '최수진', email: 'sujin.choi@pusan.ac.kr', role: 'MEMBER' },
 ]
 
+/** Student numbers of the fixture users that have one, keyed by user id. */
+export const knownStudentNumbers: Record<string, string> = {
+  [uuid(58)]: '202312345',
+}
+
 interface WorkspaceRecord {
   detail: Omit<Schemas['WorkspaceDetailResponse'], 'members'>
   members: Schemas['WorkspaceMemberResponse'][]
@@ -90,9 +95,55 @@ function initialWorkspaces(): WorkspaceRecord[] {
 export let workspaceStore: WorkspaceRecord[] = initialWorkspaces()
 let nextWorkspaceId = 100
 
+function initialInvitations(): Map<string, Schemas['WorkspaceInvitationResponse'][]> {
+  return new Map([
+    [
+      uuid(12),
+      [
+        {
+          id: uuid(3101),
+          email: 'jiwoo.han@pusan.ac.kr',
+          studentNo: null,
+          role: 'MEMBER',
+          invitedAt: '2026-09-20T14:30:00+09:00',
+          invitedBy: { id: regularUser.id, name: regularUser.name },
+        },
+      ],
+    ],
+  ])
+}
+
+let invitationStore = initialInvitations()
+let nextInvitationId = 3150
+
 export function resetWorkspaceFixtures() {
   workspaceStore = initialWorkspaces()
   nextWorkspaceId = 100
+  invitationStore = initialInvitations()
+  nextInvitationId = 3150
+}
+
+/** Pending invitations of a workspace, created on first use so handlers can push into it. */
+function invitationsOf(workspaceId: string): Schemas['WorkspaceInvitationResponse'][] {
+  let list = invitationStore.get(workspaceId)
+  if (!list) {
+    list = []
+    invitationStore.set(workspaceId, list)
+  }
+  return list
+}
+
+/** Member management is for an OWNER of a non-personal workspace, as on the server. */
+function requireOwner(record: WorkspaceRecord): Response | null {
+  const myRole = record.members.find((m) => m.userId === regularUser.id)?.role
+  if (myRole === 'OWNER' && record.detail.kind !== 'PERSONAL') return null
+  return problemResponse({
+    type: 'about:blank',
+    title: '구성원을 관리할 수 없습니다',
+    status: 403,
+    detail: '워크스페이스 소유자만 구성원을 관리할 수 있습니다.',
+    code: 'WORKSPACE_MEMBER_MANAGE_FORBIDDEN',
+  })
 }
 
 function toSummary(record: WorkspaceRecord): Schemas['WorkspaceSummaryResponse'] {
@@ -213,32 +264,76 @@ export const workspaceHandlers: RequestHandler[] = [
     return new HttpResponse(null, { status: 204 })
   }),
 
-  http.post('*/api/v1/workspaces/:workspaceId/members', async ({ params, request }) => {
+  http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ params, request }) => {
     const record = findWorkspace(params.workspaceId!)
     if (!record) return notFound()
-    const body = (await request.json()) as { email: string; role: Schemas['WorkspaceMemberRole'] }
-    const user = knownUsers.find((u) => u.email === body.email)
-    if (!user) {
+    const forbidden = requireOwner(record)
+    if (forbidden) return forbidden
+    const body = (await request.json()) as Schemas['InviteWorkspaceMembersRequest']
+    const pending = invitationsOf(record.detail.id)
+    const seen = new Set<string>()
+    const results = body.entries.map((entry): Schemas['WorkspaceInvitationResult'] => {
+      const email = entry.email?.trim().toLowerCase() || null
+      const studentNo = entry.studentNo?.trim() || null
+      const echo = email ? { email } : { studentNo }
+      const key = email ? `e:${email}` : `s:${studentNo?.toUpperCase()}`
+      if (seen.has(key)) return { ...echo, outcome: 'DUPLICATE_IN_REQUEST' }
+      seen.add(key)
+      // Like the server: only an active account resolves; anything else is reserved.
+      const user = email
+        ? knownUsers.find((u) => u.email === email)
+        : knownUsers.find((u) => knownStudentNumbers[u.userId]?.toUpperCase() === studentNo?.toUpperCase())
+      if (user) {
+        if (record.members.some((m) => m.userId === user.userId)) {
+          return { ...echo, outcome: 'ALREADY_MEMBER' }
+        }
+        record.members.push({ ...user, role: 'MEMBER' })
+        return { ...echo, outcome: 'ADDED', userId: user.userId }
+      }
+      const existing = pending.find((i) =>
+        email ? i.email === email : i.studentNo?.toUpperCase() === studentNo?.toUpperCase(),
+      )
+      if (existing) return { ...echo, outcome: 'ALREADY_INVITED', invitationId: existing.id }
+      const invitation: Schemas['WorkspaceInvitationResponse'] = {
+        id: uuid(nextInvitationId++),
+        email,
+        studentNo,
+        role: 'MEMBER',
+        invitedAt: '2026-09-27T10:00:00+09:00',
+        invitedBy: { id: regularUser.id, name: regularUser.name },
+      }
+      pending.push(invitation)
+      return { ...echo, outcome: 'INVITED', invitationId: invitation.id }
+    })
+    return HttpResponse.json({ results }, { status: 200 })
+  }),
+
+  http.get('*/api/v1/workspaces/:workspaceId/invitations', ({ params }) => {
+    const record = findWorkspace(params.workspaceId!)
+    if (!record) return notFound()
+    const forbidden = requireOwner(record)
+    if (forbidden) return forbidden
+    return HttpResponse.json(invitationsOf(record.detail.id), { status: 200 })
+  }),
+
+  http.delete('*/api/v1/workspaces/:workspaceId/invitations/:invitationId', ({ params }) => {
+    const record = findWorkspace(params.workspaceId!)
+    if (!record) return notFound()
+    const forbidden = requireOwner(record)
+    if (forbidden) return forbidden
+    const pending = invitationsOf(record.detail.id)
+    const index = pending.findIndex((i) => i.id === String(params.invitationId))
+    if (index < 0) {
       return problemResponse({
         type: 'about:blank',
-        title: '사용자를 찾을 수 없습니다',
+        title: '초대를 찾을 수 없습니다',
         status: 404,
-        detail: '해당 이메일로 가입된 사용자가 없습니다. 가입 후 다시 시도해 주세요.',
-        code: 'WORKSPACE_MEMBER_USER_NOT_FOUND',
+        detail: '대기 중인 초대가 아닙니다.',
+        code: 'WORKSPACE_INVITATION_NOT_FOUND',
       })
     }
-    if (record.members.some((m) => m.userId === user.userId)) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '이미 워크스페이스 구성원입니다',
-        status: 409,
-        detail: '해당 사용자는 이미 이 워크스페이스의 구성원입니다.',
-        code: 'WORKSPACE_MEMBER_ALREADY_EXISTS',
-      })
-    }
-    const member: Schemas['WorkspaceMemberResponse'] = { ...user, role: body.role }
-    record.members.push(member)
-    return HttpResponse.json(member, { status: 201 })
+    pending.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.patch('*/api/v1/workspaces/:workspaceId/members/:userId', async ({ params, request }) => {

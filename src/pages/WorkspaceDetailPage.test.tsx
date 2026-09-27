@@ -13,7 +13,7 @@ function renderWorkspace(workspaceId: string) {
 }
 
 describe('워크스페이스 상세 — 역할별 UI', () => {
-  test('OWNER는 정보 수정·구성원 추가·역할 변경·제거 UI를 본다', async () => {
+  test('OWNER는 정보 수정·구성원 초대·역할 변경·제거 UI를 본다', async () => {
     renderWorkspace(uuid(12))
     await screen.findByRole('heading', { name: '캡스톤 3조' })
 
@@ -21,7 +21,7 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     expect(await screen.findByRole('link', { name: 'capstone-team3-api' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'capstone-chatbot' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '정보 수정' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '구성원 추가' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '구성원 초대' })).toBeInTheDocument()
     expect(screen.getByLabelText('김철수 역할 변경')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: '제거' })).toHaveLength(3)
     expect(screen.getByRole('button', { name: '워크스페이스 나가기' })).toBeInTheDocument()
@@ -32,7 +32,8 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     await screen.findByRole('heading', { name: '알고리즘 스터디' })
 
     expect(screen.queryByRole('button', { name: '정보 수정' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '구성원 초대' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /대기 중인 초대/ })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/역할 변경/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '제거' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '워크스페이스 나가기' })).toBeInTheDocument()
@@ -62,7 +63,8 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     expect(
       screen.getByText(/개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없습니다/),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '구성원 추가' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '구성원 초대' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /대기 중인 초대/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '워크스페이스 나가기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/역할 변경/)).not.toBeInTheDocument()
   })
@@ -143,26 +145,7 @@ describe('워크스페이스 상세 — 구성원 관리', () => {
     const myRow = screen.getByText('(나)').closest('tr')!
     expect(within(myRow).getByText('소유자')).toBeInTheDocument()
     // 내가 여전히 소유자이므로 관리 UI도 남는다.
-    expect(screen.getByRole('heading', { name: '구성원 추가' })).toBeInTheDocument()
-  })
-
-  test('이메일로 구성원을 추가하고, 미가입 이메일이면 안내를 보여준다', async () => {
-    const user = userEvent.setup()
-    renderWorkspace(uuid(12))
-    await screen.findByRole('heading', { name: '캡스톤 3조' })
-
-    await user.type(screen.getByLabelText('이메일'), 'nobody@pusan.ac.kr')
-    await user.click(screen.getByRole('button', { name: '추가' }))
-    expect(
-      await screen.findByText('해당 이메일로 가입된 사용자가 없습니다. 가입 후 다시 시도해 주세요.'),
-    ).toBeInTheDocument()
-
-    await user.clear(screen.getByLabelText('이메일'))
-    await user.type(screen.getByLabelText('이메일'), 'sujin.choi@pusan.ac.kr')
-    await user.click(screen.getByRole('button', { name: '추가' }))
-    expect(await screen.findByText('최수진')).toBeInTheDocument()
-    // 성공 확인은 토스트로 노출된다
-    expect(screen.getByText('최수진 님을 구성원으로 추가했습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '구성원 초대' })).toBeInTheDocument()
   })
 
   test('유일한 OWNER가 나가려 하면 409 안내를 보여준다', async () => {
@@ -190,6 +173,185 @@ describe('워크스페이스 상세 — 구성원 관리', () => {
 
     expect(await screen.findByRole('heading', { name: '내 워크스페이스' })).toBeInTheDocument()
     expect(screen.queryByText('알고리즘 스터디')).not.toBeInTheDocument()
+  })
+})
+
+describe('workspace detail: invitations', () => {
+  const inviteField = () => screen.getByLabelText(/이메일 또는 학번/)
+
+  test('each line gets its own outcome, in the order it was typed', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.type(
+      inviteField(),
+      [
+        'sujin.choi@pusan.ac.kr',
+        '',
+        'newcomer@pusan.ac.kr',
+        'cheolsu.kim@pusan.ac.kr',
+        'jiwoo.han@pusan.ac.kr',
+        'newcomer@pusan.ac.kr',
+        '202312345',
+      ].join('{Enter}'),
+    )
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    const results = await screen.findByRole('region', { name: '초대 결과' })
+    const rows = within(results).getAllByRole('listitem')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'sujin.choi@pusan.ac.kr구성원으로 추가됨',
+      'newcomer@pusan.ac.kr초대함, 가입하면 자동으로 구성원이 됩니다',
+      'cheolsu.kim@pusan.ac.kr이미 구성원',
+      'jiwoo.han@pusan.ac.kr이미 초대함',
+      'newcomer@pusan.ac.kr같은 입력이 두 번 있음',
+      '202312345이미 구성원',
+    ])
+    expect(inviteField()).toHaveValue('')
+
+    // The member list and the pending list are both refetched.
+    const members = screen.getByRole('heading', { name: /구성원 \(/ }).closest('div[class*="rounded"]')!
+    expect(await within(members as HTMLElement).findByText('최수진')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '대기 중인 초대 (2건)' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'newcomer@pusan.ac.kr 초대 취소' })).toBeInTheDocument()
+  })
+
+  test('the request sends a line with @ as an email and anything else as a student number', async () => {
+    let sent: unknown = null
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json({ results: [] })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.type(inviteField(), '  a@pusan.ac.kr  {Enter}{Enter}   {Enter}202399999')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    await waitFor(() =>
+      expect(sent).toEqual({ entries: [{ email: 'a@pusan.ac.kr' }, { studentNo: '202399999' }] }),
+    )
+  })
+
+  test('an empty field and more than 200 lines are refused before any request', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', () => {
+        calls += 1
+        return HttpResponse.json({ results: [] })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(screen.getByRole('button', { name: '초대' }))
+    expect(
+      await screen.findByText('초대할 사람의 이메일이나 학번을 입력해 주세요.'),
+    ).toBeInTheDocument()
+
+    const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+    expect(
+      await screen.findByText('한 번에 200명까지 초대할 수 있습니다. 지금 201명이 입력되어 있습니다.'),
+    ).toBeInTheDocument()
+    expect(calls).toBe(0)
+  })
+
+  test('a 429 shows the server message', async () => {
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '요청이 너무 많습니다',
+            status: 429,
+            detail: '초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+            code: 'RATE_LIMITED',
+          },
+          { status: 429, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.type(inviteField(), 'someone@pusan.ac.kr')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(
+      await screen.findByText('초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '초대 결과' })).not.toBeInTheDocument()
+  })
+
+  test('a 422 names the line the owner typed, not the request index', async () => {
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값을 확인해 주세요',
+            status: 422,
+            detail: '요청 값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [{ field: 'entries[1].studentNo', message: '학번 형식이 아닙니다.' }],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    // Entry 1 is on line 3: the blank line 2 is not sent.
+    await user.type(inviteField(), 'a@pusan.ac.kr{enter}{enter}x')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(await screen.findByText('3번째 줄 (x): 학번 형식이 아닙니다.')).toBeInTheDocument()
+  })
+
+  test('an outcome this build does not know renders its raw value', async () => {
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', () =>
+        HttpResponse.json({ results: [{ email: 'x@pusan.ac.kr', outcome: 'SOMETHING_NEW' }] }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.type(inviteField(), 'x@pusan.ac.kr')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    const results = await screen.findByRole('region', { name: '초대 결과' })
+    expect(within(results).getByText('SOMETHING_NEW')).toBeInTheDocument()
+  })
+
+  test('pending invitations show who invited and when, and cancel after a confirm', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '대기 중인 초대 (1건)' })
+
+    const row = screen.getByText('jiwoo.han@pusan.ac.kr').closest('tr')!
+    expect(within(row).getByText('2026-09-20 14:30')).toBeInTheDocument()
+    expect(within(row).getByText('홍길동')).toBeInTheDocument()
+
+    await user.click(within(row).getByRole('button', { name: 'jiwoo.han@pusan.ac.kr 초대 취소' }))
+    const dialog = await screen.findByRole('dialog', { name: '초대 취소' })
+    expect(within(dialog).getByText('jiwoo.han@pusan.ac.kr 초대를 취소합니다.')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '초대 취소' }))
+
+    expect(await screen.findByText('대기 중인 초대가 없습니다.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '대기 중인 초대 (0건)' })).toBeInTheDocument()
   })
 })
 

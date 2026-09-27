@@ -10,6 +10,9 @@ export type WorkspaceSummary = Schemas['WorkspaceSummaryResponse']
 export type WorkspaceDetail = Schemas['WorkspaceDetailResponse']
 export type WorkspaceMember = Schemas['WorkspaceMemberResponse']
 export type WorkspaceMemberRole = Schemas['WorkspaceMemberRole']
+export type WorkspaceInvitation = Schemas['WorkspaceInvitationResponse']
+export type WorkspaceInvitationEntry = Schemas['WorkspaceInvitationEntry']
+export type WorkspaceInvitationResult = Schemas['WorkspaceInvitationResult']
 export type ResourceRole = Schemas['ResourceRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
 export type OsImage = Schemas['OsImageResponse']
@@ -222,6 +225,16 @@ export function fetchWorkspace(workspaceId: string): Promise<WorkspaceDetail> {
       params: { path: { workspaceId } },
     })
     if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchWorkspaceInvitations(workspaceId: string): Promise<WorkspaceInvitation[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/workspaces/{workspaceId}/invitations', {
+      params: { path: { workspaceId } },
+    })
+    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
     return data
   })
 }
