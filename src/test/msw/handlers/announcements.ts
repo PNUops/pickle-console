@@ -119,6 +119,8 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
 }
 
 export const announcementHandlers: RequestHandler[] = [
+  // No pending invitations unless a test overrides this.
+  http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', () => HttpResponse.json([])),
   http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => {
     const detail = workspaceDetails[String(params.workspaceId)]
     if (!detail) {

@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
 import type { components } from '../api/schema'
 import { adminRequestStore, retriedRecipients } from '../test/msw/handlers/admin'
 import {
@@ -118,6 +119,32 @@ describe('bulk request from the administration area', () => {
     expect(await screen.findByRole('radio', { name: /가상머신/ })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /LLM API 키/ })).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: /도메인/ })).not.toBeInTheDocument()
+  })
+
+  test('an approver can also name people who were invited but have not joined', async () => {
+    const user = userEvent.setup()
+    server.use(
+      refreshSuccessHandler('access-org-admin', orgAdminUser),
+      http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', () =>
+        HttpResponse.json([
+          {
+            id: uuid(77),
+            email: 'newcomer@pusan.ac.kr',
+            role: 'MEMBER',
+            invitedAt: '2026-09-27T00:00:00Z',
+            invitedBy: { id: uuid(1), name: '초대한 사람' },
+          },
+        ]),
+      ),
+    )
+    renderApp(`/admin/requests/new?kind=VM&org=${uuid(1)}`)
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+
+    const group = await waitFor(() => recipientsFieldset())
+    expect(await within(group).findByRole('checkbox', { name: /newcomer@pusan.ac.kr/ })).toBeInTheDocument()
   })
 
   test('submits for chosen members and approves in the same step', async () => {

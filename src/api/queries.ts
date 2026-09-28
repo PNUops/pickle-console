@@ -242,6 +242,17 @@ export function fetchWorkspaceInvitations(workspaceId: string): Promise<Workspac
   })
 }
 
+/** Pending invitations as an approver of the workspace's organisation sees them. */
+export function fetchAdminWorkspaceInvitations(workspaceId: string): Promise<WorkspaceInvitation[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/workspaces/{workspaceId}/invitations', {
+      params: { path: { workspaceId } },
+    })
+    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
+    return data
+  })
+}
+
 export function fetchOrgs(): Promise<OrgSummary[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/orgs')

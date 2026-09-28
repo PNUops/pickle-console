@@ -5,6 +5,7 @@ import { api } from '../../api/client'
 import { toApiError } from '../../api/problem'
 import {
   fetchAdminWorkspace,
+  fetchAdminWorkspaceInvitations,
   fetchAdminWorkspaces,
   fetchOrgs,
   fetchRequestPeriods,
@@ -175,10 +176,24 @@ export function RequestWizard({
     queryFn: () => fetchAdminWorkspace(state.workspaceId!),
     enabled: adminMode && recipientsOffered,
   })
+  // People invited but not yet joined get their resource when they join, so
+  // the approver has to be able to name them too.
+  const adminInvitations = useQuery({
+    queryKey: ['admin', 'workspaces', 'detail', state.workspaceId, 'invitations'],
+    queryFn: () => fetchAdminWorkspaceInvitations(state.workspaceId!),
+    enabled: adminMode && recipientsOffered,
+  })
   const candidates: RecipientCandidate[] = adminMode
-    ? (adminMembers.data?.members ?? [])
-        .filter((member) => member.userStatus === 'ACTIVE')
-        .map((member) => ({ key: `u:${member.userId}`, label: member.name, description: member.email }))
+    ? [
+        ...(adminMembers.data?.members ?? [])
+          .filter((member) => member.userStatus === 'ACTIVE')
+          .map((member) => ({ key: `u:${member.userId}`, label: member.name, description: member.email })),
+        ...(adminInvitations.data ?? []).map((invitation) => ({
+          key: `i:${invitation.id}`,
+          label: invitation.email ?? invitation.studentNo ?? '—',
+          description: '가입하면 만들어집니다.',
+        })),
+      ]
     : [
         ...(members.data?.members ?? []).map((member) => ({
           key: `u:${member.userId}`,
@@ -192,10 +207,12 @@ export function RequestWizard({
         })),
       ]
   const candidatesLoading = adminMode
-    ? adminMembers.isPending
+    ? adminMembers.isPending || adminInvitations.isPending
     : members.isPending || (ownsWorkspace && invitations.isPending)
   const candidatesError =
-    (adminMode ? adminMembers.error : (members.error ?? (ownsWorkspace ? invitations.error : null)))
+    (adminMode
+      ? (adminMembers.error ?? adminInvitations.error)
+      : (members.error ?? (ownsWorkspace ? invitations.error : null)))
       ?.message ?? null
   // A key left over from a draft or from another workspace names no one on the
   // list, so it is not chosen.

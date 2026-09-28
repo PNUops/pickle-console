@@ -224,7 +224,11 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
 
     confirmBody: (
       <div className="space-y-2 text-sm text-neutral-600">
-        <p>아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.</p>
+        <p>
+          {bulk
+            ? '아래 사양으로 승인하시겠습니까? 대상자별 VM은 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.'
+            : '아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.'}
+        </p>
         <p className="font-medium text-neutral-800">
           {formatSpec(Number(vcpu), Number(memoryGb) * 1024, Number(diskGb))} ·{' '}
           {images.find((t) => t.id === imageId)?.displayName}
