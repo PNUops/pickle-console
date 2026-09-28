@@ -12842,6 +12842,8 @@ export interface operations {
         parameters: {
             query?: {
                 orgId?: string;
+                /** @description true면 기관 필터와 무관하게 삭제되지 않은 모든 워크스페이스를 돌려줍니다. 관리자가 대상자를 골라 신청할 워크스페이스를 고를 때 씁니다. */
+                all?: boolean;
             };
             header?: never;
             path?: never;

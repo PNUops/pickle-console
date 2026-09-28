@@ -140,14 +140,15 @@ export function RequestWizard({
         },
   )
 
+  // Every live workspace, personal ones included: an approver may file into
+  // any of them for the organisation it decides for.
   const adminWorkspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: state.orgId }],
-    queryFn: () => fetchAdminWorkspaces({ orgId: state.orgId! }),
+    queryKey: ['admin', 'workspaces', { all: true }],
+    queryFn: () => fetchAdminWorkspaces({ all: true }),
     enabled: adminMode && state.orgId != null,
   })
   const eligibleWorkspaces: WorkspaceOption[] = adminMode
-    ? // A personal workspace has no one to file for but its owner.
-      (adminWorkspaces.data ?? []).filter((workspace) => workspace.kind !== 'PERSONAL')
+    ? (adminWorkspaces.data ?? [])
     : (workspaces.data ?? [])
   const selectedWorkspace = eligibleWorkspaces.find((w) => w.id === state.workspaceId)
 
@@ -158,8 +159,9 @@ export function RequestWizard({
   const recipientsOffered =
     !!kind.supportsRecipients &&
     selectedWorkspace != null &&
-    selectedWorkspace.kind !== 'PERSONAL' &&
-    (adminMode || ownsWorkspace || approver)
+    // A personal workspace holds only its owner, who files for themselves;
+    // an approver filing into it names that owner.
+    (adminMode || (selectedWorkspace.kind !== 'PERSONAL' && (ownsWorkspace || approver)))
   const members = useQuery({
     queryKey: ['workspaces', state.workspaceId],
     queryFn: () => fetchWorkspace(state.workspaceId!),

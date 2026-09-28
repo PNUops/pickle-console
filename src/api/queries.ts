@@ -2096,7 +2096,9 @@ export function retryRequestRecipient(requestId: string, recipientId: string): P
   })
 }
 
-export function fetchAdminWorkspaces(params: { orgId?: string } = {}): Promise<AdminWorkspaceOption[]> {
+export function fetchAdminWorkspaces(
+  params: { orgId?: string; all?: boolean } = {},
+): Promise<AdminWorkspaceOption[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/workspaces', { params: { query: params } })
     if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')
