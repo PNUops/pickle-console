@@ -216,6 +216,15 @@ function integerOrDefault(raw: string, min: 0 | 1): number | null {
   return value
 }
 
+/**
+ * A `datetime-local` value (`YYYY-MM-DDTHH:mm`, seconds optional) read as KST.
+ * Seconds are added only when the value has none.
+ */
+export function kstLocalToIso(local: string): string {
+  const withSeconds = /T\d{2}:\d{2}$/.test(local) ? `${local}:00` : local
+  return new Date(`${withSeconds}+09:00`).toISOString()
+}
+
 export type BuildResult =
   | { change: AdminBulkChangeSpec; errors: null }
   | { change: null; errors: Record<string, string> }
@@ -269,7 +278,7 @@ export function buildChange(kind: AdminBulkChangeKind, draft: BulkDraft): BuildR
         kind,
         vmDeletion: {
           action,
-          scheduledFor: new Date(`${scheduledFor}:00+09:00`).toISOString(),
+          scheduledFor: kstLocalToIso(scheduledFor),
           reason: reason.trim(),
         },
       })
@@ -349,13 +358,19 @@ function buildLimits(limits: BulkDraft['limits']): BuildResult {
 }
 
 /** Does the draft replace a list with nothing — the edit that clears every key? */
-export function clearingLists(draft: BulkDraft['limits']): { models: boolean; passthrough: boolean } {
+export function clearingLists(draft: BulkDraft['limits']): {
+  allowed: boolean
+  denied: boolean
+  passthrough: boolean
+} {
   const chosen = new Set(draft.chosen)
+  // Replacing sends both model lists, so each side the lines leave empty is
+  // emptied on every key, not only when the whole text is blank.
+  const replacingModels = chosen.has('creditModels') && draft.modelsOp === 'REPLACE'
+  const rules = parseCreditModelRules(draft.modelRules)
   return {
-    models:
-      chosen.has('creditModels') &&
-      draft.modelsOp === 'REPLACE' &&
-      draft.modelRules.trim() === '',
+    allowed: replacingModels && rules.allowed.length === 0,
+    denied: replacingModels && rules.denied.length === 0,
     passthrough:
       chosen.has('passthroughEndpoints') &&
       draft.passthroughOp === 'REPLACE' &&
@@ -370,7 +385,7 @@ export function clearingLists(draft: BulkDraft['limits']): { models: boolean; pa
  * `values`, and the two model lists share one input here.
  */
 export function formFieldOf(field: string): string {
-  const path = field.replace(/\.values$/, '')
+  const path = field.replace(/\.values(\[\d+\])?$/, '')
   if (path === `${LIMITS}.creditAllowedModels` || path === `${LIMITS}.creditDeniedModels`) {
     return `${LIMITS}.creditModels`
   }

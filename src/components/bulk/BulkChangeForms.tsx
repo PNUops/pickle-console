@@ -182,9 +182,13 @@ export function LimitsForm({
             error={error('creditModels')}
             description={MODEL_RULE_DESCRIPTIONS[draft.modelsOp]}
           />
-          {clearing.models && (
+          {(clearing.allowed || clearing.denied) && (
             <MessageBar variant="warning">
-              선택한 모든 키의 유료 모델 허용·차단 목록이 비워집니다.
+              {clearing.allowed && clearing.denied
+                ? '선택한 모든 키의 유료 모델 허용·차단 목록이 비워집니다.'
+                : clearing.allowed
+                  ? '선택한 모든 키의 유료 모델 허용 목록이 비워집니다.'
+                  : '선택한 모든 키의 유료 모델 차단 목록이 비워집니다.'}
             </MessageBar>
           )}
         </div>
