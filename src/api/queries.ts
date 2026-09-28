@@ -893,6 +893,58 @@ export function resumeAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
   })
 }
 
+export function updateAdminLlmKeyExpiry(
+  keyId: string,
+  endDate: string,
+): Promise<AdminLlmKeyDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PATCH('/admin/llm/keys/{keyId}/expiry', {
+      params: { path: { keyId } },
+      body: { endDate },
+    })
+    if (!data) throw toApiError(error, 'LLM API 키 만료일을 변경하지 못했습니다.')
+    return data
+  })
+}
+
+export type AdminBulkChangeRequest = Schemas['AdminBulkChangeRequest']
+export type AdminBulkChangeSpec = Schemas['AdminBulkChangeSpec']
+export type AdminBulkChangeKind = Schemas['AdminBulkChangeKind']
+export type AdminBulkChangeTargetType = Schemas['AdminBulkChangeTargetType']
+export type AdminBulkChangePreview = Schemas['AdminBulkChangePreviewResponse']
+export type AdminBulkChangePreviewItem = Schemas['AdminBulkChangePreviewItem']
+export type AdminBulkChangeApply = Schemas['AdminBulkChangeApplyResponse']
+export type AdminBulkChangeApplyItem = Schemas['AdminBulkChangeApplyItem']
+export type AdminBulkChangeFieldDiff = Schemas['AdminBulkChangeFieldDiff']
+export type AdminBulkChangeReason = Schemas['AdminBulkChangeReason']
+export type AdminBulkChangeResult = Schemas['AdminBulkChangeResult']
+export type AdminBulkListOp = Schemas['AdminBulkListOp']
+export type AdminBulkAccessAction = Schemas['AdminBulkAccessAction']
+export type AdminBulkLlmKeyStatusAction = Schemas['AdminBulkLlmKeyStatusAction']
+export type VmPowerAction = Schemas['VmPowerAction']
+
+/** What one change would do to each target. Writes nothing. */
+export function previewAdminBulkChange(
+  body: AdminBulkChangeRequest,
+): Promise<AdminBulkChangePreview> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/bulk-changes/preview', { body })
+    if (!data) throw toApiError(error, '일괄 변경 미리보기를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** Applies the previewed change; `body.fingerprints` must carry every target's value. */
+export function applyAdminBulkChange(
+  body: AdminBulkChangeRequest,
+): Promise<AdminBulkChangeApply> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/bulk-changes', { body })
+    if (!data) throw toApiError(error, '일괄 변경을 적용하지 못했습니다.')
+    return data
+  })
+}
+
 /**
  * The names issued on their own, with no VM behind them.
  *

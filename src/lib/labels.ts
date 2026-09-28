@@ -142,3 +142,37 @@ export const CREDIT_LIMIT_RESET_LABELS: Record<CreditLimitReset, string> = {
   WEEKLY: '주간 (UTC 자정)',
   MONTHLY: '월간 (UTC 자정)',
 }
+
+export type AdminBulkChangeReason = components['schemas']['AdminBulkChangeReason']
+export type AdminBulkChangeResult = components['schemas']['AdminBulkChangeResult']
+
+/** Why one target of a bulk change was not changed. */
+export const BULK_CHANGE_REASON_LABELS: Record<AdminBulkChangeReason, string> = {
+  NOT_FOUND: '찾을 수 없음',
+  FORBIDDEN: '권한 없음',
+  INVALID_STATE: '지금 상태에서 할 수 없음',
+  EXPIRED: '기간 만료',
+  PROTECTED: '삭제 보호 중',
+  INELIGIBLE: '대상 아님',
+  NOT_MEMBER: '워크스페이스 구성원 아님',
+  NO_GRANT: '바꿀 접근 권한 없음',
+  ALREADY_GRANTED: '이미 부여됨',
+  VALIDATION: '값 오류',
+}
+
+/** What the apply did to one target. */
+export const BULK_CHANGE_RESULT_LABELS: Record<AdminBulkChangeResult, string> = {
+  APPLIED: '적용됨',
+  UNCHANGED: '변경 없음',
+  SKIPPED: '건너뜀',
+  STALE: '그사이 바뀜',
+}
+
+/** A code this build has no label for renders as itself, as the kind labels do. */
+export function labelForBulkReason(reason: string): string {
+  return BULK_CHANGE_REASON_LABELS[reason as AdminBulkChangeReason] ?? reason
+}
+
+export function labelForBulkResult(result: string): string {
+  return BULK_CHANGE_RESULT_LABELS[result as AdminBulkChangeResult] ?? result
+}
