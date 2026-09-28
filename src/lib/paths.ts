@@ -75,6 +75,10 @@ export const adminPaths = {
     ),
   llmKeyDetail: (keyId: string, orgId?: string) =>
     adminPath(`/admin/llm/keys/${keyId}`, orgId),
+  // Bulk change screens: reached from a list's selection toolbar with the
+  // targets in router state, never from the sidebar.
+  bulkLlmKeys: (orgId?: string) => adminPath('/admin/bulk/llm-keys', orgId),
+  bulkVms: (orgId?: string) => adminPath('/admin/bulk/vms', orgId),
   gpus: (orgId?: string) => adminPath('/admin/gpus', orgId),
   gpuDetail: (allocationId: string, orgId?: string) => adminPath(`/admin/gpus/${allocationId}`, orgId),
   llmUsage: (orgId?: string, workspaceId?: string | null, days?: 7 | 30 | 90) => {

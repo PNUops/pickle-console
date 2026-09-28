@@ -47,6 +47,12 @@ import { VM_STATUS_LABELS } from '../lib/status'
 import { isUuid } from '../lib/validation'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { useBulkSelection } from '../lib/bulk-selection'
+import {
+  BulkSelectionBar,
+  SelectPageHeader,
+  SelectRowCell,
+} from '../components/bulk/BulkSelection'
 
 /** 정렬 가능한 컬럼 키 (계약 sort 화이트리스트의 축). */
 type SortKey = 'name' | 'endDate' | 'createdAt'
@@ -80,6 +86,9 @@ export function AdminVmsPage() {
   const canDelete = !!effectiveRole && canManageVmDeletion(effectiveRole)
   const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
   const canForceDelete = !!effectiveRole && isSysAdminOnly(effectiveRole)
+  // Every bulk kind on a VM needs at least an operating role.
+  const canSelect = canOperate
+  const selection = useBulkSelection('vms', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
   // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
   // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
   // 되돌려 쓰지 않는다(의도된 절단).
@@ -146,6 +155,10 @@ export function AdminVmsPage() {
   })
 
   const selected = vms.data?.content.find((vm) => vm.id === selectedId) ?? null
+  const pageTargets = (vms.data?.content ?? []).map((vm) => ({
+    id: vm.id,
+    name: vm.displayName || vm.name,
+  }))
 
   return (
     <div className="space-y-6">
@@ -219,6 +232,15 @@ export function AdminVmsPage() {
         </div>
       </div>
 
+      {canSelect && (
+        <BulkSelectionBar
+          selected={selection.selected}
+          capped={selection.capped}
+          onClear={selection.clear}
+          to={adminPaths.bulkVms(activeOrgId)}
+        />
+      )}
+
       {vms.isPending && (
         <div className="flex justify-center py-12">
           <Spinner label="VM 목록 불러오는 중" />
@@ -235,6 +257,13 @@ export function AdminVmsPage() {
           <DataTable caption="관리자 가상머신 목록">
               <THead>
                 <TR>
+                  {canSelect && (
+                    <SelectPageHeader
+                      rows={pageTargets}
+                      selected={selection.selected}
+                      onToggle={(on) => selection.togglePage(pageTargets, on)}
+                    />
+                  )}
                   <SortableTH direction={sortDirection('name')} onSort={onSort('name')}>
                     이름
                   </SortableTH>
@@ -263,6 +292,15 @@ export function AdminVmsPage() {
                     )}
                     onClick={() => selectVm(vm.id)}
                   >
+                    {canSelect && (
+                      <SelectRowCell
+                        target={{ id: vm.id, name: vm.displayName || vm.name }}
+                        checked={selection.selected.some((item) => item.id === vm.id)}
+                        onToggle={(on) =>
+                          selection.toggle({ id: vm.id, name: vm.displayName || vm.name }, on)
+                        }
+                      />
+                    )}
                     <TD>
                       {/* 키보드 사용자도 관리 작업 패널을 열 수 있게 이름은 버튼으로 */}
                       <button

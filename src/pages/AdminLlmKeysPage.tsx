@@ -29,6 +29,14 @@ import { effectiveLlmKeyStatus, LLM_KEY_STATUS_LABELS } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { KeyCreditObservation } from '../components/OpenRouterCredits'
+import { useAuth } from '../auth/auth-context'
+import { canOperateLlmKey } from '../auth/permissions'
+import { useBulkSelection } from '../lib/bulk-selection'
+import {
+  BulkSelectionBar,
+  SelectPageHeader,
+  SelectRowCell,
+} from '../components/bulk/BulkSelection'
 
 const PAGE_SIZE = 20
 
@@ -47,6 +55,12 @@ function limitText(value: number | null | undefined): string {
 export function AdminLlmKeysPage() {
   const scope = useAdminScope()
   const { activeOrgId } = scope
+  const { user } = useAuth()
+  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
+  // Every bulk kind on a key needs at least an operating role, so viewers get
+  // no selection at all.
+  const canSelect = !!role && canOperateLlmKey(role)
+  const selection = useBulkSelection('llm-keys', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState<LlmApiKeyStatus | undefined>(undefined)
   const workspaceId = searchParams.get('workspaceId') ?? undefined
@@ -91,6 +105,8 @@ export function AdminLlmKeysPage() {
     queryFn: () => fetchOpenRouterAccounts(activeOrgId),
     enabled: scope.ready,
   })
+
+  const pageTargets = (keys.data?.content ?? []).map((key) => ({ id: key.id, name: key.name }))
 
   return (
     <div className="space-y-5">
@@ -163,6 +179,15 @@ export function AdminLlmKeysPage() {
         </Select>
       </div>
 
+      {canSelect && (
+        <BulkSelectionBar
+          selected={selection.selected}
+          capped={selection.capped}
+          onClear={selection.clear}
+          to={adminPaths.bulkLlmKeys(activeOrgId)}
+        />
+      )}
+
       {keys.isPending && <LoadingBlock label="LLM API 키 목록 불러오는 중" />}
       {keys.isError && <MessageBar variant="danger">{keys.error.message}</MessageBar>}
       {keys.isSuccess && keys.data.content.length === 0 && (
@@ -176,6 +201,13 @@ export function AdminLlmKeysPage() {
           <DataTable caption="관리자 LLM API 키 목록">
             <THead>
               <TR>
+                {canSelect && (
+                  <SelectPageHeader
+                    rows={pageTargets}
+                    selected={selection.selected}
+                    onToggle={(on) => selection.togglePage(pageTargets, on)}
+                  />
+                )}
                 <TH>키</TH>
                 <TH>상태</TH>
                 <TH>워크스페이스</TH>
@@ -191,6 +223,13 @@ export function AdminLlmKeysPage() {
                 const effectiveStatus = effectiveLlmKeyStatus(key.status, key.expiresAt)
                 return (
                   <TR key={key.id}>
+                    {canSelect && (
+                      <SelectRowCell
+                        target={{ id: key.id, name: key.name }}
+                        checked={selection.selected.some((item) => item.id === key.id)}
+                        onToggle={(on) => selection.toggle({ id: key.id, name: key.name }, on)}
+                      />
+                    )}
                     <TD>
                       <Link
                         to={adminPaths.llmKeyDetail(key.id, activeOrgId)}
