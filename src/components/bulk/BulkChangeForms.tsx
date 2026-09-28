@@ -255,14 +255,22 @@ export function DateForm({
   value,
   onChange,
   error,
+  description,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   error?: string
+  description?: string
 }) {
   return (
-    <FormField label={label} required error={error} className="w-full sm:w-56">
+    <FormField
+      label={label}
+      required
+      error={error}
+      description={description}
+      className="w-full sm:w-56"
+    >
       <Input
         type="date"
         min={todayKstDate()}

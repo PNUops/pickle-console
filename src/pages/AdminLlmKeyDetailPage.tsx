@@ -50,7 +50,7 @@ import {
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passthroughText, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
 import { formatDateTime, todayKstDate } from '../lib/format'
-import { CREDIT_LIMIT_RESET_LABELS } from '../lib/labels'
+import { CREDIT_LIMIT_RESET_LABELS, PAID_KEY_EXPIRY_NOTE } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
@@ -748,8 +748,8 @@ function ExpiryModal({
     mutationFn: () => updateAdminLlmKeyExpiry(llmKey.id, endDate),
     onSuccess: onSaved,
     onError: (failure) => {
-      // A key with a paid-model account behind it answers 409; its message
-      // says why, so it is shown as the server wrote it.
+      // Extending a key with a paid-model half answers 409; its message says
+      // why, so it is shown as the server wrote it.
       const problem = toApiError(failure, 'LLM API 키 만료일을 변경하지 못했습니다.')
       const fields = fieldErrorsOf(problem.problem)
       setFieldError(fields.endDate)
@@ -771,7 +771,12 @@ function ExpiryModal({
         }}
       >
         {error && <MessageBar variant="danger">{error}</MessageBar>}
-        <FormField label="새 만료일" required error={missing ?? fieldError}>
+        <FormField
+          label="새 만료일"
+          required
+          error={missing ?? fieldError}
+          description={llmKey.creditAxisConnected ? PAID_KEY_EXPIRY_NOTE : undefined}
+        >
           <Input
             type="date"
             min={todayKstDate()}

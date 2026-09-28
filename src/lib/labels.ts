@@ -146,6 +146,13 @@ export const CREDIT_LIMIT_RESET_LABELS: Record<CreditLimitReset, string> = {
 export type AdminBulkChangeReason = components['schemas']['AdminBulkChangeReason']
 export type AdminBulkChangeResult = components['schemas']['AdminBulkChangeResult']
 
+/**
+ * A key with a paid-model (OpenRouter) half may only have its expiry brought
+ * forward: the vendor fixes that key's expiry when it is issued. The bulk form
+ * always carries this line; the single dialog only for a connected key.
+ */
+export const PAID_KEY_EXPIRY_NOTE = '유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'
+
 /** Why one target of a bulk change was not changed. */
 export const BULK_CHANGE_REASON_LABELS: Record<AdminBulkChangeReason, string> = {
   NOT_FOUND: '찾을 수 없음',

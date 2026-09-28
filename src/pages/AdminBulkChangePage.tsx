@@ -55,7 +55,7 @@ import {
 } from '../lib/bulk-change'
 import { BULK_SELECTION_CAP, clearStoredSelection, type BulkTarget } from '../lib/bulk-selection'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { labelForBulkReason, labelForBulkResult } from '../lib/labels'
+import { PAID_KEY_EXPIRY_NOTE, labelForBulkReason, labelForBulkResult } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 
@@ -311,6 +311,7 @@ function BulkChangeFlow({
               value={draft.expiry.endDate}
               onChange={(endDate) => setDraft({ ...draft, expiry: { endDate } })}
               error={fieldErrors['change.llmKeyExpiry.endDate']}
+              description={PAID_KEY_EXPIRY_NOTE}
             />
           )}
           {kind === 'VM_PERIOD' && (
