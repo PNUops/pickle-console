@@ -125,7 +125,7 @@ export const regularProfile: Schemas['UserProfileResponse'] = {
 export const orgAdminProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgAdminUser,
-  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const }],
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const, requestMail: false }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -141,8 +141,8 @@ export const orgAdminProfile: Schemas['UserProfileResponse'] = {
 export const orgAdminDualProfile: Schemas['UserProfileResponse'] = {
   ...orgAdminProfile,
   managedOrgs: [
-    { orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const },
-    { orgId: uuid(2), orgName: '테스트 기관', role: 'ORG_ADMIN' as const },
+    { orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' as const, requestMail: false },
+    { orgId: uuid(2), orgName: '테스트 기관', role: 'ORG_ADMIN' as const, requestMail: false },
   ],
 }
 
@@ -161,7 +161,7 @@ export const sysAdminProfile: Schemas['UserProfileResponse'] = {
 export const orgManagerProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgManagerUser,
-  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_MANAGER' as const }],
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_MANAGER' as const, requestMail: false }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(12), workspaceName: '최운영', workspaceKind: 'PERSONAL', role: 'OWNER' },
@@ -185,7 +185,7 @@ export const sysManagerProfile: Schemas['UserProfileResponse'] = {
 export const orgViewerProfile: Schemas['UserProfileResponse'] = {
   ...filledProfile,
   ...orgViewerUser,
-  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_VIEWER' as const }],
+  managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_VIEWER' as const, requestMail: false }],
   status: 'ACTIVE',
   memberships: [
     { workspaceId: uuid(14), workspaceName: '송열람', workspaceKind: 'PERSONAL', role: 'OWNER' },

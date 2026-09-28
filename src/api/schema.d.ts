@@ -1617,6 +1617,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{userId}/org-roles/{orgId}/request-mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateOrgRequestMail"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/users/{userId}/profile": {
         parameters: {
             query?: never;
@@ -6444,6 +6460,8 @@ export interface components {
             orgId: string;
             /** @description 기관 이름 */
             orgName: string;
+            /** @description 이 기관의 신청 접수 메일을 받는 담당자인지 */
+            requestMail: boolean;
             /** @description 이 기관에서의 역할 */
             role: components["schemas"]["UserRole"];
         };
@@ -7942,6 +7960,10 @@ export interface components {
             hidden?: boolean;
             name?: string;
             status?: components["schemas"]["OrgStatus"];
+        };
+        UpdateOrgRequestMailRequest: {
+            /** @description 이 기관의 신청 접수 메일을 받을지. 신청을 승인할 수 있는 역할(ORG_ADMIN, ORG_MANAGER)만 켤 수 있다. 기관에 켠 사람이 한 명도 없으면 기관 관리자 전원이 받는다. */
+            enabled: boolean;
         };
         UpdateOsImageStatusRequest: {
             /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 VM 무영향) */
@@ -12056,6 +12078,42 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateOrgRequestMail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrgRequestMailRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ManagedOrgResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

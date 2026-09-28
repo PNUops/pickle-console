@@ -2781,6 +2781,29 @@ export function grantOrgRole(
   })
 }
 
+/**
+ * Marks or clears an account as one of an org's request-mail recipients.
+ * Unlike the role grant it may target the caller; only approving roles
+ * (ORG_ADMIN, ORG_MANAGER) may turn it on.
+ */
+export function updateOrgRequestMail(
+  userId: string,
+  orgId: string,
+  enabled: boolean,
+): Promise<Schemas['ManagedOrgResponse']> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT(
+      '/admin/users/{userId}/org-roles/{orgId}/request-mail',
+      {
+        params: { path: { userId, orgId } },
+        body: { enabled },
+      },
+    )
+    if (!data) throw toApiError(error, '신청 접수 메일 설정을 바꾸지 못했습니다.')
+    return data
+  })
+}
+
 /** 한 기관에서의 역할 회수. 마지막 기관이었다면 계정은 일반 사용자가 된다. */
 export function revokeOrgRole(userId: string, orgId: string): Promise<UserSummary> {
   return guardNetwork(async () => {

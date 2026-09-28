@@ -11,6 +11,7 @@ import {
   grantOrgRole,
   resetUserMfa,
   revokeOrgRole,
+  updateOrgRequestMail,
   updateUserProfile,
   updateUserRole,
   type AdminGlobalRole,
@@ -725,6 +726,22 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
     onError: (err) => setError(toApiError(err, '기관 역할을 부여하지 못했습니다.').message),
   })
 
+  const requestMail = useMutation({
+    mutationFn: ({ orgId, enabled }: { orgId: string; enabled: boolean }) =>
+      updateOrgRequestMail(user.id, orgId, enabled),
+    onSuccess: async (updated) => {
+      setError(null)
+      toast.success(
+        updated.requestMail
+          ? `${user.name}님이 ${updated.orgName} 신청 접수 메일을 받습니다.`
+          : `${user.name}님이 ${updated.orgName} 신청 접수 메일을 받지 않습니다.`,
+      )
+      await invalidate()
+    },
+    onError: (err) =>
+      setError(toApiError(err, '신청 접수 메일 설정을 바꾸지 못했습니다.').message),
+  })
+
   const revoke = useMutation({
     mutationFn: (orgId: string) => revokeOrgRole(user.id, orgId),
     onSuccess: async (updated) => {
@@ -745,6 +762,14 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
 
   const alreadyHeld = new Set(user.managedOrgs.map((org) => org.orgId))
   const addable = grantable.filter((org) => !alreadyHeld.has(org.id))
+  // Request mail changes what reaches a mailbox, not what anyone may do, so an
+  // admin sets it on itself too: the self and sys-tier blocks on role changes
+  // do not apply here.
+  const canSetRequestMail = (org: ManagedOrg) =>
+    canStaff &&
+    grantable.some((option) => option.id === org.orgId) &&
+    (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER')
+  const showsRequestMail = user.managedOrgs.some(canSetRequestMail)
 
   return (
     <div className="space-y-3">
@@ -765,16 +790,43 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
                 <span>
                   <span className="font-medium text-neutral-900">{org.orgName}</span>{' '}
                   <Badge variant="neutral">{USER_ROLE_LABELS[org.role]}</Badge>
+                  {org.requestMail && !canSetRequestMail(org) && (
+                    <>
+                      {' '}
+                      <Badge variant="info">신청 접수 메일</Badge>
+                    </>
+                  )}
                 </span>
-                {canStaff && mine && blockedReason == null && (
-                  <Button size="sm" variant="secondary" onClick={() => setConfirmRevoke(org)}>
-                    회수
-                  </Button>
-                )}
+                <span className="flex items-center gap-3">
+                  {canSetRequestMail(org) && (
+                    <label className="flex cursor-pointer items-center gap-1.5 text-sm text-neutral-700">
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-brand-fill"
+                        checked={org.requestMail}
+                        disabled={requestMail.isPending}
+                        onChange={(event) =>
+                          requestMail.mutate({ orgId: org.orgId, enabled: event.target.checked })
+                        }
+                      />
+                      신청 접수 메일 받기
+                    </label>
+                  )}
+                  {canStaff && mine && blockedReason == null && (
+                    <Button size="sm" variant="secondary" onClick={() => setConfirmRevoke(org)}>
+                      회수
+                    </Button>
+                  )}
+                </span>
               </li>
             )
           })}
         </ul>
+      )}
+      {showsRequestMail && (
+        <p className="text-xs text-neutral-500">
+          신청 접수 메일을 받는 사람이 없거나 모두 비활성인 기관은 기관 관리자 전원이 받습니다.
+        </p>
       )}
 
       {canStaff && blockedReason == null && (
