@@ -43,7 +43,7 @@ function initialUsers(): AdminUserRecord[] {
       email: 'admin.kim@pusan.ac.kr',
       name: '김관리',
       role: 'ORG_ADMIN',
-      managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN' }],
+      managedOrgs: [{ orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_ADMIN', requestMail: false }],
       status: 'ACTIVE',
       mfaEnabled: false,
       createdAt: '2026-01-03T09:00:00+09:00',
@@ -394,10 +394,58 @@ export const userHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as { role: Schemas['UserRole'] }
     const held = row.managedOrgs.filter((org) => org.orgId !== orgId)
-    row.managedOrgs = [...held, { orgId, orgName: orgNameOf(orgId), role: body.role }]
+    // A viewer role cannot keep the request-mail choice (V133 check).
+    const previous = row.managedOrgs.find((org) => org.orgId === orgId)
+    const requestMail =
+      (previous?.requestMail ?? false) &&
+      (body.role === 'ORG_ADMIN' || body.role === 'ORG_MANAGER')
+    row.managedOrgs = [...held, { orgId, orgName: orgNameOf(orgId), role: body.role, requestMail }]
     row.role = effectiveRole(row.managedOrgs)
     return HttpResponse.json(summaryOf(row), { status: 200 })
   }),
+
+  /**
+   * Contract v0.89.0: marks or clears a request-mail recipient. Same org scope
+   * as the grant, but the actor may target itself; only approving roles may
+   * turn it on.
+   */
+  http.put(
+    '*/api/v1/admin/users/:userId/org-roles/:orgId/request-mail',
+    async ({ request, params }) => {
+      const actor = actorOf(request)
+      if (!actor || (actor.role !== 'ORG_ADMIN' && actor.role !== 'SYS_ADMIN')) return forbidden()
+      const orgId = String(params.orgId)
+      if (
+        actor.role === 'ORG_ADMIN' &&
+        !actor.managedOrgs.some((org) => org.orgId === orgId && org.role === 'ORG_ADMIN')
+      ) {
+        return orgNotFound(orgId)
+      }
+      const row = adminUserStore.find((u) => u.id === String(params.userId))
+      const held = row?.managedOrgs.find((org) => org.orgId === orgId)
+      if (!row || !held) return notFound(String(params.userId))
+      const body = (await request.json()) as { enabled: boolean }
+      if (body.enabled && held.role !== 'ORG_ADMIN' && held.role !== 'ORG_MANAGER') {
+        return HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값이 올바르지 않습니다',
+            status: 422,
+            code: 'VALIDATION_FAILED',
+            errors: [
+              {
+                field: 'enabled',
+                message: '신청 접수 메일은 신청을 승인할 수 있는 기관 관리자와 기관 운영자만 받을 수 있습니다.',
+              },
+            ],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        )
+      }
+      held.requestMail = body.enabled
+      return HttpResponse.json(held, { status: 200 })
+    },
+  ),
 
   http.delete('*/api/v1/admin/users/:userId/org-roles/:orgId', ({ request, params }) => {
     const actor = actorOf(request)

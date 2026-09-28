@@ -359,6 +359,44 @@ describe('관리자 사용자 목록', () => {
     )
   })
 
+  test('an org admin turns request mail on for itself, which a role change may not do', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await openDetail(user, '김관리')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관별 역할')
+    // the role itself is locked for the actor's own account...
+    expect(drawer.queryByRole('button', { name: '회수' })).not.toBeInTheDocument()
+    // ...but what reaches its mailbox is not
+    const toggle = drawer.getByRole('checkbox', { name: '신청 접수 메일 받기' })
+    expect(toggle).not.toBeChecked()
+    expect(
+      drawer.getByText('신청 접수 메일을 받는 사람이 없거나 모두 비활성인 기관은 기관 관리자 전원이 받습니다.'),
+    ).toBeInTheDocument()
+
+    await user.click(toggle)
+
+    await waitFor(() =>
+      expect(drawer.getByRole('checkbox', { name: '신청 접수 메일 받기' })).toBeChecked(),
+    )
+  })
+
+  test('a viewer row offers no request-mail switch', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await drawer.findByText('기관별 역할')
+    await user.selectOptions(drawer.getByLabelText('부여할 기관'), uuid(1))
+    await user.selectOptions(drawer.getByLabelText('부여할 역할'), 'ORG_VIEWER')
+    await user.click(drawer.getByRole('button', { name: '부여' }))
+
+    await waitFor(() => expect(drawer.getByRole('button', { name: '회수' })).toBeEnabled())
+    expect(drawer.queryByRole('checkbox', { name: '신청 접수 메일 받기' })).not.toBeInTheDocument()
+  })
+
   test('an org-tier admin staffs an account that belongs to no organisation', async () => {
     // What the unscoped directory is for, end to end: the account is found, the
     // drawer opens, and the role is granted — none of which the active scope
