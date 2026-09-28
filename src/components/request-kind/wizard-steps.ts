@@ -37,9 +37,9 @@ export function parseStepId(value: string | null, steps: WizardStepId[]): Wizard
 }
 
 /** 422가 가리킬 수 있는 필드 하나. 한국어 이름과 그 값을 입력한 단계. */
-export interface FieldSlot {
+export interface FieldSlot<S extends string = WizardStepId> {
   label: string
-  step: WizardStepId
+  step: S
 }
 
 /**
@@ -67,11 +67,11 @@ export const COMMON_FIELDS: Record<string, FieldSlot> = {
  * 이 표에 없으면 null을 돌려주고, 그때 메시지는 요약 목록에 남는다. 새 서버가
  * 콘솔이 모르는 필드를 보내는 경우가 그것이다.
  */
-export function routeServerErrors(
+export function routeServerErrors<S extends string = WizardStepId>(
   fieldErrors: Record<string, string>,
-  fields: Record<string, FieldSlot>,
-  steps: WizardStepId[],
-): WizardStepId | null {
+  fields: Record<string, FieldSlot<S>>,
+  steps: S[],
+): S | null {
   let best: number | null = null
   for (const field of Object.keys(fieldErrors)) {
     const slot = fields[field]
@@ -84,13 +84,18 @@ export function routeServerErrors(
 }
 
 /** 이 단계에 입력 자리가 있는 필드 키. `ErrorSummary`가 무엇을 숨길지 정한다. */
-export function slotsFor(step: WizardStepId, fields: Record<string, FieldSlot>): string[] {
+export function slotsFor<S extends string = WizardStepId>(
+  step: S,
+  fields: Record<string, FieldSlot<S>>,
+): string[] {
   return Object.entries(fields)
     .filter(([, slot]) => slot.step === step)
     .map(([field]) => field)
 }
 
 /** 422 필드 경로 → 한국어 이름. 요약 목록이 원시 경로를 새지 않게 한다. */
-export function fieldLabels(fields: Record<string, FieldSlot>): Record<string, string> {
+export function fieldLabels<S extends string>(
+  fields: Record<string, FieldSlot<S>>,
+): Record<string, string> {
   return Object.fromEntries(Object.entries(fields).map(([key, slot]) => [key, slot.label]))
 }

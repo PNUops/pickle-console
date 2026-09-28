@@ -17,6 +17,7 @@ import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
 import LlmKeyUsageSection from '../components/llm-usage/LlmKeyUsageSection'
 import { CreditModelRulesField } from '../components/CreditModelRulesField'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
+import { LimitField } from '../components/llm-key/LimitField'
 import { useAuth } from '../auth/auth-context'
 import {
   canAdminRevokeLlmKey,
@@ -707,36 +708,6 @@ function OpenRouterBindingField({
         <option value="">사업 계정 선택</option>
         {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
       </Select>
-    </FormField>
-  )
-}
-
-function LimitField({
-  label,
-  min,
-  value,
-  onChange,
-  error,
-}: {
-  label: string
-  min: 0 | 1
-  value: string
-  onChange: (value: string) => void
-  error?: string
-}) {
-  return (
-    <FormField
-      label={label}
-      error={error}
-      description={min === 0 ? '0이면 토큰 축을 닫고, 비우면 무제한입니다.' : '비우면 서비스 기본값을 따릅니다.'}
-    >
-      <Input
-        type="number"
-        min={min}
-        aria-invalid={error != null}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
     </FormField>
   )
 }

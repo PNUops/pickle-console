@@ -32,6 +32,7 @@ import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AdminLlmKeyDetailPage } from './pages/AdminLlmKeyDetailPage'
 import { AdminLlmKeysPage } from './pages/AdminLlmKeysPage'
+import { AdminBulkChangePage } from './pages/AdminBulkChangePage'
 import { AdminLlmStatusPage } from './pages/AdminLlmStatusPage'
 import { AdminLlmUsagePage } from './pages/AdminLlmUsagePage'
 import { AdminOpenRouterAccountDetailPage } from './pages/AdminOpenRouterAccountDetailPage'
@@ -246,6 +247,24 @@ function App() {
         <Route path="llm/keys" element={<AdminLlmKeysPage />} />
         <Route path="llm/keys/:keyId" element={<AdminLlmKeyDetailPage />} />
         <Route path="llm/usage" element={<AdminLlmUsagePage />} />
+        {/* Bulk changes need an operating role; which kinds each role gets is
+            decided on the page. Reached from a list's selection, not the sidebar. */}
+        <Route
+          path="bulk/llm-keys"
+          element={
+            <RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}>
+              <AdminBulkChangePage key="llm-keys" family="llm-keys" />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="bulk/vms"
+          element={
+            <RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}>
+              <AdminBulkChangePage key="vms" family="vms" />
+            </RequireRole>
+          }
+        />
         <Route path="llm/accounts" element={<AdminOpenRouterAccountsPage />} />
         <Route path="llm/accounts/:accountId" element={<AdminOpenRouterAccountDetailPage />} />
         <Route path="llm/status" element={<AdminLlmStatusPage />} />
