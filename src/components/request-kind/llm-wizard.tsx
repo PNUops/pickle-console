@@ -265,5 +265,6 @@ export const llmKeyRequestKind: RequestKindModule = {
     'llmKey.reqTpm': { label: '희망 분당 토큰 수', step: 'resource' },
     'llmKey.reqDailyTokens': { label: '희망 일일 토큰 수', step: 'resource' },
   },
+  supportsRecipients: true,
   useWizard: useLlmKeyWizard,
 }

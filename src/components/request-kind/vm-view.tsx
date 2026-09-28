@@ -79,6 +79,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const [imageId, setImageId] = useState(String(request.vm?.imageId))
   const [endDate, setEndDate] = useState(request.reqEndDate ?? '')
   const [grantedSlug, setGrantedSlug] = useState(request.vm?.desiredSlug ?? '')
+  // A request for several people creates one VM per recipient, each with a
+  // generated name, so there is no single host name to settle here.
+  const bulk = (request.recipients?.length ?? 0) > 0
   const [nodeId, setNodeId] = useState('')
   const [approveComment, setApproveComment] = useState('')
 
@@ -104,7 +107,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
       if (nodeId.trim() && !isUuid(nodeId.trim()))
         errors['vm.nodeId'] = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
-      if (grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
+      if (!bulk && grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
         errors['vm.grantedSlug'] =
           '소문자와 숫자, 하이픈만 써서 3~40자로 입력해 주세요.'
       return errors
@@ -126,7 +129,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         grantedMemoryMb: Number(memoryGb) * 1024,
         grantedDiskGb: Number(diskGb),
         grantedImageId: imageId,
-        grantedSlug: grantedSlug.trim() || null,
+        grantedSlug: bulk ? null : grantedSlug.trim() || null,
         nodeId: nodeId.trim() || null,
       },
     }),
@@ -185,7 +188,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             onChange={(event) => setEndDate(event.target.value)}
           />
         </FormField>
-        <FormField
+        {!bulk && <FormField
           label="호스트 이름 확정"
           error={fieldErrors['vm.grantedSlug']}
           description="SSH 접속과 게스트 OS의 호스트 이름으로 쓰입니다. 신청자의 희망값이 채워져 있고, 비우면 자동으로 정해집니다."
@@ -196,7 +199,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             placeholder="비우면 자동 생성"
             maxLength={40}
           />
-        </FormField>
+        </FormField>}
         <FormField
           label="배치 노드 ID"
           error={fieldErrors['vm.nodeId']}
@@ -221,7 +224,11 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
 
     confirmBody: (
       <div className="space-y-2 text-sm text-neutral-600">
-        <p>아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.</p>
+        <p>
+          {bulk
+            ? '아래 사양으로 승인하시겠습니까? 대상자별 VM은 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.'
+            : '아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.'}
+        </p>
         <p className="font-medium text-neutral-800">
           {formatSpec(Number(vcpu), Number(memoryGb) * 1024, Number(diskGb))} ·{' '}
           {images.find((t) => t.id === imageId)?.displayName}
@@ -230,7 +237,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       </div>
     ),
 
-    successMessage: '신청을 승인했습니다. VM 생성이 시작되었습니다.',
+    successMessage: bulk
+      ? '신청을 승인했습니다. 대상자별 VM이 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.'
+      : '신청을 승인했습니다. VM 생성이 시작되었습니다.',
   }
 }
 

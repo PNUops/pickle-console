@@ -1311,6 +1311,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/requests/{requestId}/recipients/{recipientId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 대상자 생성 다시 시도
+         * @description 여러 사람에게 리소스를 만드는 신청에서 생성에 실패한 대상자를 다시 생성 대기로 돌립니다. 실패한 대상자만 다시 시도할 수 있습니다.
+         */
+        post: operations["retryRequestRecipient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/requests/{requestId}/reject": {
         parameters: {
             query?: never;
@@ -1915,6 +1935,26 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getAdminWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 워크스페이스의 대기 중인 초대 목록
+         * @description 신청을 승인할 수 있는 관리자가 아직 가입하지 않은 사람을 신청 대상자로 고를 때 씁니다. 대기 중인 초대만 오래된 순서로 돌려줍니다.
+         */
+        get: operations["listAdminWorkspaceInvitations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4763,7 +4803,22 @@ export interface components {
             endDate: string;
             name: string;
         };
+        /** @description 리소스를 받을 대상자 한 명. userId와 invitationId 중 정확히 하나를 보냅니다. */
+        CreateRequestRecipient: {
+            /**
+             * Format: uuid
+             * @description 워크스페이스의 대기 중인 초대. 초대받은 사람이 가입하면 그때 리소스를 만듭니다.
+             */
+            invitationId?: string | null;
+            /**
+             * Format: uuid
+             * @description 워크스페이스의 활성 구성원.
+             */
+            userId?: string | null;
+        };
         CreateRequestRequest: {
+            /** @description 제출과 동시에 승인할 때의 승인 내용. 이 기관의 신청을 승인할 수 있는 관리자만 보낼 수 있습니다. 승인 화면에서 보내는 내용과 같습니다. */
+            approval?: components["schemas"]["ApproveRequestRequest"] | null;
             displayName: string;
             domain?: components["schemas"]["CreateDomainRequestSpec"] | null;
             extraNote?: string | null;
@@ -4777,6 +4832,8 @@ export interface components {
             /** Format: uuid */
             periodPresetId?: string | null;
             purpose: string;
+            /** @description 리소스를 받을 대상자. 비우면 신청자 본인이 받는 일반 신청입니다. VM과 LLM API 키에만 쓸 수 있고, 워크스페이스 소유자나 이 기관의 신청을 승인할 수 있는 관리자만 지정할 수 있습니다. 대상자마다 리소스를 하나씩 만들며, 가입 전인 초대 대상자는 가입할 때 만듭니다. */
+            recipients?: components["schemas"]["CreateRequestRecipient"][] | null;
             /** Format: date */
             reqEndDate?: string | null;
             /** @description true면 종료일 없이 신청합니다. reqEndDate·periodPresetId와 함께 보낼 수 없습니다. */
@@ -7535,6 +7592,8 @@ export interface components {
              */
             periodName?: string | null;
             purpose: string;
+            /** @description 여러 사람에게 리소스를 만드는 신청의 대상자. 신청자 본인이 받는 일반 신청은 빈 배열입니다. */
+            recipients: components["schemas"]["RequestRecipientResponse"][];
             /**
              * Format: date
              * @description 신청한 사용 종료일. 값이 없으면 무기한을 요청한 것입니다.
@@ -7582,6 +7641,29 @@ export interface components {
              */
             id: string;
         };
+        RequestRecipientResponse: {
+            /** Format: uuid */
+            id: string;
+            /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 승인 권한이 있는 관리자에게만 보입니다. */
+            invitee?: string | null;
+            /** @description 대상 계정의 이름. 가입 전인 초대 대상자는 null입니다. */
+            name?: string | null;
+            /** @description 만들지 않았거나 실패한 이유. */
+            reason?: string | null;
+            /**
+             * Format: uuid
+             * @description 만든 리소스. 종류는 신청의 type을 따릅니다. 만들기 전에는 null입니다.
+             */
+            resourceId?: string | null;
+            status: components["schemas"]["RequestRecipientStatus"];
+            /**
+             * Format: uuid
+             * @description 대상 계정. 가입 전인 초대 대상자는 null입니다.
+             */
+            userId?: string | null;
+        };
+        /** @enum {string} */
+        RequestRecipientStatus: "PENDING_JOIN" | "QUEUED" | "CREATING" | "CREATED" | "SKIPPED_EXPIRED" | "SKIPPED_INELIGIBLE" | "FAILED" | "CANCELED";
         RequestReviewResponse: {
             comment?: string | null;
             /** Format: date-time */
@@ -11380,6 +11462,38 @@ export interface operations {
             };
         };
     };
+    retryRequestRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                recipientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     rejectRequest: {
         parameters: {
             query?: never;
@@ -12728,6 +12842,8 @@ export interface operations {
         parameters: {
             query?: {
                 orgId?: string;
+                /** @description true면 기관 필터와 무관하게 삭제되지 않은 모든 워크스페이스를 돌려줍니다. 관리자가 대상자를 골라 신청할 워크스페이스를 고를 때 씁니다. */
+                all?: boolean;
             };
             header?: never;
             path?: never;
@@ -12773,6 +12889,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminWorkspaceDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

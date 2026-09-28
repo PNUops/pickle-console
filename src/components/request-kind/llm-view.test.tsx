@@ -19,6 +19,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
   return {
     id: REQUEST_ID,
     workspaceId: uuid(12),
+    recipients: [],
     workspaceName: '캡스톤 3조',
     orgId: uuid(1),
     orgName: '정보컴퓨터공학부 실습지원센터',
@@ -57,8 +58,11 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
  * 공유 픽스처(승인 대기 큐의 시드)를 건드리지 않고 이 파일 안에서만 응답을
  * 갈아끼운다 — 큐의 건수를 세는 다른 테스트가 함께 흔들리지 않게 한다.
  */
-function renderDetail(spec: Partial<NonNullable<RequestDetail['llmKey']>> = {}) {
-  const detail = { current: llmKeyRequest(spec) }
+function renderDetail(
+  spec: Partial<NonNullable<RequestDetail['llmKey']>> = {},
+  overrides: Partial<RequestDetail> = {},
+) {
+  const detail = { current: { ...llmKeyRequest(spec), ...overrides } }
   const approved: ApproveRequest[] = []
   server.use(
     refreshSuccessHandler('access-org-admin', orgAdminUser),
@@ -774,6 +778,61 @@ describe('초과 배정 경고', () => {
     const reopened = await screen.findByRole('dialog', { name: '신청 승인' })
     expect(within(reopened).getByRole('button', { name: '승인 확정' })).toBeDisabled()
     expect(within(reopened).getByLabelText('초과 배정임을 확인했습니다')).not.toBeChecked()
+  })
+
+  test('a bulk request weighs the limit once per recipient still waiting for a key', async () => {
+    const user = userEvent.setup()
+    const recipient = (n: number, status: NonNullable<RequestDetail['recipients']>[number]['status']) => ({
+      id: uuid(n),
+      userId: uuid(n + 100),
+      name: `대상자 ${n}`,
+      invitee: null,
+      status,
+      resourceId: null,
+      reason: null,
+    })
+    renderDetail(
+      {},
+      {
+        recipients: [
+          recipient(9301, 'QUEUED'),
+          recipient(9302, 'QUEUED'),
+          recipient(9303, 'PENDING_JOIN'),
+          // Neither of these will receive a key from this approval.
+          recipient(9304, 'SKIPPED_INELIGIBLE'),
+          recipient(9305, 'CANCELED'),
+        ],
+      },
+    )
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    // $30 alone fits the $87.50 balance beside $10 remaining; three keys do not.
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '30')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    expect(await screen.findByText(/× 3명/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).getByRole('button', { name: '승인 확정' })).toBeDisabled()
+    expect(within(dialog).getByText(/평문 키는 대상자가 각자 발급받습니다/)).toBeInTheDocument()
+    expect(within(dialog).queryByText(/신청자가 직접/)).not.toBeInTheDocument()
+    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    expect(
+      await screen.findByText('신청을 승인했습니다. 대상자별 LLM API 키가 차례로 만들어집니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('the same limit on an ordinary request stays within the balance', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '30')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    expect(within(dialog).queryByLabelText('초과 배정임을 확인했습니다')).not.toBeInTheDocument()
   })
 
   /** 넘지 않으면 경고도 확인도 없다. 평범한 승인이 느려지면 안 된다. */

@@ -6,6 +6,7 @@ import { gpuRequestKind } from './gpu-wizard'
 import { gpuPreviewEnabled } from '../../lib/gpu-preview'
 import { useScope } from '../../lib/use-scope'
 import { consolePaths } from '../../lib/paths'
+import type { RequestKindModule } from './types'
 
 /**
  * 무엇을 신청할지 고르는 화면.
@@ -18,9 +19,18 @@ import { consolePaths } from '../../lib/paths'
  * 화면 밖으로 나가는 것은 주소 하나뿐이다. 고르면 `?kind=`를 실은 같은 경로로
  * 이동하고, 그 뒤로는 어느 진입이든 똑같은 3단계 위저드다.
  */
-export function KindPicker() {
+export function KindPicker({
+  kinds,
+  pathFor,
+}: {
+  /** The kinds offered; the applicant's full list when absent. */
+  kinds?: RequestKindModule[]
+  /** Where choosing a kind goes; the applicant's wizard when absent. */
+  pathFor?: (type: string) => string
+} = {}) {
   const navigate = useNavigate()
   const scope = useScope()
+  const offered = kinds ?? [...REQUEST_KINDS, ...(gpuPreviewEnabled() ? [gpuRequestKind] : [])]
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -34,8 +44,8 @@ export function KindPicker() {
             <CardRadioGroup
               legend="무엇을 신청할까요"
               value=""
-              onChange={(type) => navigate(consolePaths.newRequest(scope, type))}
-              options={[...REQUEST_KINDS, ...(gpuPreviewEnabled() ? [gpuRequestKind] : [])].map((entry) => ({
+              onChange={(type) => navigate(pathFor ? pathFor(type) : consolePaths.newRequest(scope, type))}
+              options={offered.map((entry) => ({
                 value: entry.type,
                 title: entry.picker.title,
                 description: entry.picker.description,

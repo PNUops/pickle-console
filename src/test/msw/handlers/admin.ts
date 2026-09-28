@@ -26,6 +26,7 @@ export function submittedAdminRequest(n: number): RequestDetail {
   return {
     id: uuid(n),
     workspaceId: uuid(12),
+    recipients: [],
     workspaceName: '캡스톤 3조',
     orgId: uuid(1),
     orgName: '정보컴퓨터공학부 실습지원센터',
@@ -435,6 +436,7 @@ let nextOrgId = 100
 /** Bodies received by decision endpoints, for payload-correctness assertions. */
 export let approveBodies: { requestId: string; body: Schemas['ApproveRequestRequest'] }[] = []
 export let rejectBodies: { requestId: string; body: { comment: string } }[] = []
+export let retriedRecipients: { requestId: string; recipientId: string }[] = []
 export let userPatchBodies: {
   userId: string
   body: { role?: Schemas['AdminGlobalRole'] }
@@ -445,6 +447,7 @@ export function resetAdminFixtures() {
   approvalContexts = initialContexts()
   approveBodies = []
   rejectBodies = []
+  retriedRecipients = []
   userPatchBodies = []
   nextOrgId = 100
   adminOsImages = initialAdminOsImages()
@@ -736,6 +739,27 @@ export const adminHandlers: RequestHandler[] = [
       decidedAt: '2026-07-08T17:00:00+09:00',
     }
     found.updatedAt = '2026-07-08T17:00:00+09:00'
+    return HttpResponse.json(found, { status: 200 })
+  }),
+
+  http.post('*/api/v1/admin/requests/:requestId/recipients/:recipientId/retry', ({ params }) => {
+    const requestId = String(params.requestId)
+    const found = adminRequestStore.find((r) => r.id === requestId)
+    const recipient = found?.recipients?.find((r) => r.id === String(params.recipientId))
+    if (!found || !recipient) return notFound()
+    // Like the server: only a failed recipient goes back into the queue.
+    if (recipient.status !== 'FAILED') {
+      return problemResponse({
+        type: 'about:blank',
+        title: '다시 시도할 수 없습니다',
+        status: 409,
+        detail: '실패한 대상자만 다시 시도할 수 있습니다.',
+        code: 'REQUEST_RECIPIENT_NOT_RETRYABLE',
+      })
+    }
+    retriedRecipients.push({ requestId, recipientId: recipient.id })
+    recipient.status = 'QUEUED'
+    recipient.reason = null
     return HttpResponse.json(found, { status: 200 })
   }),
 

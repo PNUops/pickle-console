@@ -119,6 +119,8 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
 }
 
 export const announcementHandlers: RequestHandler[] = [
+  // No pending invitations unless a test overrides this.
+  http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', () => HttpResponse.json([])),
   http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => {
     const detail = workspaceDetails[String(params.workspaceId)]
     if (!detail) {
@@ -137,6 +139,10 @@ export const announcementHandlers: RequestHandler[] = [
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
+    // all=true: every workspace to any admin role (the admin request screen).
+    if (url.searchParams.get('all') === 'true') {
+      return HttpResponse.json(Object.values(workspaceOptionsByOrg).flat(), { status: 200 })
+    }
     const orgId = url.searchParams.get('orgId')
     // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다. 보유하지 않은
     // 기관이나 없는 기관을 지정하면 404 (존재 비공개).

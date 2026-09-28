@@ -27,6 +27,9 @@ export type CreateRequest = Schemas['CreateRequestRequest']
 export type RequestDetail = Schemas['RequestDetailResponse']
 export type RequestPage = Schemas['PageResponseRequestDetailResponse']
 export type RequestStatus = Schemas['RequestStatus']
+export type RequestRecipient = Schemas['RequestRecipientResponse']
+export type RequestRecipientStatus = Schemas['RequestRecipientStatus']
+export type CreateRequestRecipient = Schemas['CreateRequestRecipient']
 export type ResourceType = Schemas['ResourceType']
 export type VmSummary = Schemas['VmSummaryResponse']
 export type VmDetail = Schemas['VmDetailResponse']
@@ -232,6 +235,17 @@ export function fetchWorkspace(workspaceId: string): Promise<WorkspaceDetail> {
 export function fetchWorkspaceInvitations(workspaceId: string): Promise<WorkspaceInvitation[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/workspaces/{workspaceId}/invitations', {
+      params: { path: { workspaceId } },
+    })
+    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+/** Pending invitations as an approver of the workspace's organisation sees them. */
+export function fetchAdminWorkspaceInvitations(workspaceId: string): Promise<WorkspaceInvitation[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/workspaces/{workspaceId}/invitations', {
       params: { path: { workspaceId } },
     })
     if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
@@ -2071,7 +2085,20 @@ export function resendAdminNotification(notificationId: string): Promise<Message
   })
 }
 
-export function fetchAdminWorkspaces(params: { orgId?: string } = {}): Promise<AdminWorkspaceOption[]> {
+/** Moves a failed recipient of a bulk request back into the creation queue. */
+export function retryRequestRecipient(requestId: string, recipientId: string): Promise<RequestDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/requests/{requestId}/recipients/{recipientId}/retry', {
+      params: { path: { requestId, recipientId } },
+    })
+    if (!data) throw toApiError(error, '다시 시도하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminWorkspaces(
+  params: { orgId?: string; all?: boolean } = {},
+): Promise<AdminWorkspaceOption[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/workspaces', { params: { query: params } })
     if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')

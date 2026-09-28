@@ -1,12 +1,29 @@
 import type { components } from '../api/schema'
 
 export type RequestStatus = components['schemas']['RequestStatus']
+export type RequestRecipientStatus = components['schemas']['RequestRecipientStatus']
 export type VmStatus = components['schemas']['VmStatus']
 
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   SUBMITTED: '승인 대기',
   APPROVED: '승인됨',
   REJECTED: '반려됨',
+  CANCELED: '취소됨',
+}
+
+/**
+ * Per-recipient creation state of a request filed for several people. The
+ * value is typed as a plain string at the lookup site so a status this build
+ * does not know falls back to the raw value instead of an empty badge.
+ */
+export const REQUEST_RECIPIENT_STATUS_LABELS: Record<RequestRecipientStatus, string> = {
+  PENDING_JOIN: '가입 대기',
+  QUEUED: '생성 대기',
+  CREATING: '생성 중',
+  CREATED: '생성됨',
+  SKIPPED_EXPIRED: '기간 지나 생성 안 함',
+  SKIPPED_INELIGIBLE: '대상 아님',
+  FAILED: '실패',
   CANCELED: '취소됨',
 }
 
