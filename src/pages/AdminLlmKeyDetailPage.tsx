@@ -9,6 +9,7 @@ import {
   resumeAdminLlmKey,
   revokeLlmKey,
   suspendAdminLlmKey,
+  updateAdminLlmKeyExpiry,
   type AdminLlmKeyDetail,
   type AdminLlmKeyLimits,
 } from '../api/queries'
@@ -48,7 +49,7 @@ import {
 } from '../lib/credit-model-allowlist'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { passthroughText, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
-import { formatDateTime } from '../lib/format'
+import { formatDateTime, todayKstDate } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
@@ -85,6 +86,7 @@ export function AdminLlmKeyDetailPage() {
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [resumeOpen, setResumeOpen] = useState(false)
   const [revokeOpen, setRevokeOpen] = useState(false)
+  const [expiryOpen, setExpiryOpen] = useState(false)
   const [modelsOpen, setModelsOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -129,7 +131,9 @@ export function AdminLlmKeyDetailPage() {
   const canSuspend = canOperate && status === 'ACTIVE'
   const canResume = canOperate && status === 'SUSPENDED'
   const canRevoke = !!role && canAdminRevokeLlmKey(role) && REVOKABLE_STATUSES.has(status)
-  const hasActions = canEditLimits || canSuspend || canResume || canRevoke
+  // An expired key takes a later date and comes back; a revoked one never does.
+  const canChangeExpiry = canOperate && status !== 'REVOKED'
+  const hasActions = canEditLimits || canChangeExpiry || canSuspend || canResume || canRevoke
 
   const updateCached = (updated: AdminLlmKeyDetail, message: string) => {
     queryClient.setQueryData(
@@ -166,6 +170,11 @@ export function AdminLlmKeyDetailPage() {
               {canEditLimits && (
                 <Button size="sm" variant="secondary" onClick={() => setLimitsOpen(true)}>
                   한도 변경
+                </Button>
+              )}
+              {canChangeExpiry && (
+                <Button size="sm" variant="secondary" onClick={() => setExpiryOpen(true)}>
+                  만료일 변경
                 </Button>
               )}
               {canSuspend && (
@@ -309,6 +318,16 @@ export function AdminLlmKeyDetailPage() {
           onSaved={(updated) => {
             setLimitsOpen(false)
             updateCached(updated, 'LLM API 키 한도를 변경했습니다.')
+          }}
+        />
+      )}
+      {expiryOpen && (
+        <ExpiryModal
+          llmKey={key}
+          onClose={() => setExpiryOpen(false)}
+          onSaved={(updated) => {
+            setExpiryOpen(false)
+            updateCached(updated, 'LLM API 키 만료일을 변경했습니다.')
           }}
         />
       )}
@@ -709,6 +728,63 @@ function OpenRouterBindingField({
         {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
       </Select>
     </FormField>
+  )
+}
+
+function ExpiryModal({
+  llmKey,
+  onClose,
+  onSaved,
+}: {
+  llmKey: AdminLlmKeyDetail
+  onClose: () => void
+  onSaved: (updated: AdminLlmKeyDetail) => void
+}) {
+  const [endDate, setEndDate] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | undefined>(undefined)
+  const save = useMutation({
+    mutationFn: () => updateAdminLlmKeyExpiry(llmKey.id, endDate),
+    onSuccess: onSaved,
+    onError: (failure) => {
+      // A key with a paid-model account behind it answers 409; its message
+      // says why, so it is shown as the server wrote it.
+      const problem = toApiError(failure, 'LLM API 키 만료일을 변경하지 못했습니다.')
+      const fields = fieldErrorsOf(problem.problem)
+      setFieldError(fields.endDate)
+      setError(fields.endDate ? null : problem.message)
+    },
+  })
+  const missing = submitted && !endDate ? '새 만료일을 선택해 주세요.' : undefined
+  return (
+    <Modal open onClose={onClose} title="LLM API 키 만료일 변경">
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault()
+          setSubmitted(true)
+          setError(null)
+          setFieldError(undefined)
+          if (endDate) save.mutate()
+        }}
+      >
+        {error && <MessageBar variant="danger">{error}</MessageBar>}
+        <FormField label="새 만료일" required error={missing ?? fieldError}>
+          <Input
+            type="date"
+            min={todayKstDate()}
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+          />
+        </FormField>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>취소</Button>
+          <Button type="submit" loading={save.isPending}>변경</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
