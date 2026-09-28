@@ -12,6 +12,7 @@ import {
   sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { adminLlmLimitBodies } from '../test/msw/handlers/llm-keys'
+import { expiryBodies } from '../test/msw/handlers/bulk-changes'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -27,7 +28,7 @@ function renderDetail(
 }
 
 function expectNoActions() {
-  for (const name of ['한도 변경', '키 정지', '정지 해제', '키 폐기']) {
+  for (const name of ['한도 변경', '만료일 변경', '키 정지', '정지 해제', '키 폐기']) {
     expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
   }
 }
@@ -253,10 +254,14 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await waitFor(() => expect(rpm).toHaveFocus())
   })
 
-  test('EXPIRED와 REVOKED는 SYS_ADMIN에게도 읽기 전용이다', async () => {
+  test('EXPIRED는 만료일 변경만, REVOKED는 아무 action도 없다', async () => {
     const expired = renderDetail('access-sys-admin', sysAdminUser, uuid(173))
     await screen.findByRole('heading', { name: 'expired-admin-key' })
-    expectNoActions()
+    // A later end date brings an expired key back, so that one action stays.
+    expect(screen.getByRole('button', { name: '만료일 변경' })).toBeInTheDocument()
+    for (const name of ['한도 변경', '키 정지', '정지 해제', '키 폐기']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+    }
 
     expired.unmount()
     renderDetail('access-sys-admin', sysAdminUser, uuid(174))
@@ -665,4 +670,35 @@ test('clearing the unified field submits two empty model lists', async () => {
   await user.click(dialog.getByRole('button', { name: '저장' }))
   await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
   expect(adminLlmLimitBodies[0]).toMatchObject({ creditAllowedModels: [], creditDeniedModels: [] })
+})
+
+describe('관리자 LLM API 키 만료일 변경', () => {
+  test('유료 모델이 연결된 키는 서버의 409 문구를 그대로 보여 준다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-org-manager', orgManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
+    const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
+    await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
+    await user.click(within(dialog).getByRole('button', { name: '변경' }))
+    expect(
+      await within(dialog).findByText('OpenRouter 키가 발급된 키는 만료일을 바꿀 수 없습니다.'),
+    ).toBeInTheDocument()
+    expect(expiryBodies).toEqual([{ keyId: uuid(171), endDate: '2030-01-01' }])
+  })
+
+  test('연결되지 않은 키의 만료일을 바꾼다', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(170))
+    await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
+    const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
+    await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
+    await user.click(within(dialog).getByRole('button', { name: '변경' }))
+    expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()
+  })
+
+  test('폐기된 키에는 만료일 변경이 없다', async () => {
+    renderDetail('access-sys-admin', sysAdminUser, uuid(174))
+    expect(await screen.findByRole('heading', { name: 'revoked-admin-key' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '만료일 변경' })).not.toBeInTheDocument()
+  })
 })

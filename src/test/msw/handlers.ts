@@ -7,6 +7,7 @@
  */
 import type { RequestHandler } from 'msw'
 import { gpuHandlers } from './handlers/gpu'
+import { bulkChangeHandlers } from './handlers/bulk-changes'
 import { accountHandlers } from './handlers/account'
 import { adminHandlers } from './handlers/admin'
 import { adminOpsHandlers } from './handlers/admin-ops'
@@ -56,6 +57,7 @@ export const handlers: RequestHandler[] = [
   ...dnsDomainHandlers,
   ...dnsDomainAccessHandlers,
   ...llmKeyHandlers,
+  ...bulkChangeHandlers,
   ...openRouterAccountHandlers,
   ...llmObservabilityHandlers,
   ...llmAdminUsageHandlers,

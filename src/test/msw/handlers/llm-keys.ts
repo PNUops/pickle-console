@@ -853,12 +853,12 @@ function usageTrend(keyId: string, days: number): Schemas['LlmKeyUsageTrendRespo
   }
 }
 
-function adminActor(request: Request): Schemas['UserProfileResponse'] | undefined {
+export function adminActor(request: Request): Schemas['UserProfileResponse'] | undefined {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
   return ACCESS_TOKENS[token]
 }
 
-function activeAdminRole(
+export function activeAdminRole(
   profile: Schemas['UserProfileResponse'],
   orgId: string | null | undefined,
 ): Schemas['UserRole'] | undefined {

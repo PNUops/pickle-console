@@ -8,6 +8,7 @@ import { resetCampusIpFixtures } from './handlers/campusip'
 import { resetUserFixtures } from './handlers/users'
 import { resetWorkspaceFixtures } from './handlers/workspaces'
 import { resetLlmKeyFixtures } from './handlers/llm-keys'
+import { resetBulkChangeFixtures } from './handlers/bulk-changes'
 import { resetAdminLlmUsageFixtures } from './handlers/llm-admin-usage'
 import { resetOpenRouterAccountFixtures } from './handlers/openrouter-accounts'
 import { resetNetworkFixtures } from './handlers/network'
@@ -35,6 +36,7 @@ export function resetFixtures() {
   resetRequestFixtures()
   resetVmFixtures()
   resetLlmKeyFixtures()
+  resetBulkChangeFixtures()
   resetOpenRouterAccountFixtures()
   resetAdminLlmUsageFixtures()
   resetTerminalFixtures()
