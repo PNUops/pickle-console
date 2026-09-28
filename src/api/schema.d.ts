@@ -3998,7 +3998,7 @@ export interface components {
             /** @description 금액 한도(USD 크레딧). 생략하면 그대로 둡니다. null은 허용하지 않고, 유료 모델을 닫으려면 0을 보냅니다. */
             creditLimit?: number;
             /** @description 금액 한도 리셋 창. 생략하면 그대로 두고, null이면 리셋 없는 총액 상한입니다. */
-            creditLimitReset?: components["schemas"]["CreditLimitReset"];
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
              * @description 일일 토큰 한도. 생략하면 그대로 두고, null이면 무제한이며 0이면 토큰 축을 닫습니다.

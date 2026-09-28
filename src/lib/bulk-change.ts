@@ -21,7 +21,6 @@ import { formatDateTime } from './format'
 import {
   CREDIT_LIMIT_RESET_LABELS,
   RESOURCE_ROLE_LABELS,
-  type CreditLimitReset,
   type ResourceRole,
 } from './labels'
 import { passthroughText, type PassthroughEndpoint } from './passthrough-endpoints'
@@ -208,14 +207,7 @@ export function emptyDraft(): BulkDraft {
 
 const LIMITS = 'change.llmKeyLimits'
 
-/**
- * The contract still types the reset window as non-nullable, though the
- * server reads `null` there as "no reset" (its description says so). Only
- * that member is widened; the integer limits are nullable in the contract.
- */
-type LimitsBody = Omit<NonNullable<AdminBulkChangeSpec['llmKeyLimits']>, 'creditLimitReset'> & {
-  creditLimitReset?: CreditLimitReset | null
-}
+type LimitsBody = NonNullable<AdminBulkChangeSpec['llmKeyLimits']>
 
 function integerOrDefault(raw: string, min: 0 | 1): number | null {
   if (raw.trim() === '') return null
@@ -320,7 +312,7 @@ function buildLimits(limits: BulkDraft['limits']): BuildResult {
     }
   }
   if (chosen.has('creditLimitReset')) {
-    body.creditLimitReset = (limits.creditLimitReset || null) as CreditLimitReset | null
+    body.creditLimitReset = (limits.creditLimitReset || null) as LimitsBody['creditLimitReset']
   }
   if (chosen.has('creditModels')) {
     const rules = parseCreditModelRules(limits.modelRules)
