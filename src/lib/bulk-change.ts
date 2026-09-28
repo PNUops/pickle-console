@@ -209,18 +209,11 @@ export function emptyDraft(): BulkDraft {
 const LIMITS = 'change.llmKeyLimits'
 
 /**
- * The contract types the four integer limits and the reset window as
- * non-nullable, but the server reads `null` on them as "back to the default"
- * (its descriptions say so). The body is built as this wider shape.
+ * The contract still types the reset window as non-nullable, though the
+ * server reads `null` there as "no reset" (its description says so). Only
+ * that member is widened; the integer limits are nullable in the contract.
  */
-type LimitsBody = Omit<
-  NonNullable<AdminBulkChangeSpec['llmKeyLimits']>,
-  'rpm' | 'tpm' | 'dailyTokens' | 'concurrency' | 'creditLimitReset'
-> & {
-  rpm?: number | null
-  tpm?: number | null
-  dailyTokens?: number | null
-  concurrency?: number | null
+type LimitsBody = Omit<NonNullable<AdminBulkChangeSpec['llmKeyLimits']>, 'creditLimitReset'> & {
   creditLimitReset?: CreditLimitReset | null
 }
 
