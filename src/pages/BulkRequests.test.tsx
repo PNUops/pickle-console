@@ -67,6 +67,40 @@ describe('bulk request wizard for a workspace owner', () => {
     expect(body.approval).toBeUndefined()
   })
 
+  test('a rejected recipient returns to the request step on the recipients field', async () => {
+    const user = userEvent.setup()
+    server.use(
+      refreshSuccessHandler('access-user'),
+      http.post('*/api/v1/requests', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값을 확인해 주세요',
+            status: 422,
+            detail: '입력값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [{ field: 'recipients[0]', message: '이 워크스페이스의 구성원이 아닙니다.' }],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    renderApp('/console/requests/new?kind=VM')
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.click(screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습 수업 서버')
+    await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
+    await user.click(await within(await waitFor(() => recipientsFieldset())).findByRole('checkbox', { name: /김철수/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(await screen.findByRole('button', { name: '신청 제출' }))
+
+    const group = await waitFor(() => recipientsFieldset())
+    expect(within(group).getByText('이 워크스페이스의 구성원이 아닙니다.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다음' })).toBeInTheDocument()
+  })
+
   test('a request with no one chosen carries no recipients', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-user'))
@@ -213,6 +247,31 @@ describe('bulk request from the administration area', () => {
     expect(body.recipients).toEqual([{ userId: uuid(42) }])
     expect(body.approval).toBeTruthy()
   })
+
+  test('the credit limit is weighed once per chosen recipient', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp(`/admin/requests/new?kind=LLM_API_KEY&org=${uuid(1)}`)
+
+    await user.type(await screen.findByLabelText('이름'), '실습 키')
+    await user.click(screen.getByRole('checkbox', { name: /Pickle LLM/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(await screen.findByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습 수업')
+    await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
+    const all = await within(await waitFor(() => recipientsFieldset())).findByRole('checkbox', {
+      name: /전체 선택/,
+    })
+    const count = /\((\d+)명\)/.exec(all.closest('label')!.textContent ?? '')![1]
+    await user.click(all)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
+    // Large enough to exceed the balance, so the warning names the multiplication.
+    await user.type(await screen.findByLabelText('부여 금액 한도 (USD)'), '80')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+    expect(await screen.findByText(new RegExp(`× ${count}명`))).toBeInTheDocument()
+  })
 })
 
 function recipient(overrides: Partial<Recipient> & Pick<Recipient, 'id' | 'status'>): Recipient {
@@ -303,6 +362,27 @@ describe('recipients on the administrator request detail', () => {
 
     expect(await screen.findByLabelText('vCPU')).toBeInTheDocument()
     expect(screen.queryByLabelText('호스트 이름 확정')).not.toBeInTheDocument()
+  })
+
+  test('approving a bulk VM request says each VM is created in turn', async () => {
+    const user = userEvent.setup()
+    adminRequestStore.push({
+      ...adminRequestStore[0],
+      id: uuid(297),
+      recipients: [recipient({ id: uuid(9102), userId: uuid(57), name: '김철수', status: 'QUEUED' })],
+    })
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp(`/admin/requests/${uuid(297)}`)
+
+    await screen.findByLabelText('vCPU')
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    expect(
+      await screen.findByText(
+        '신청을 승인했습니다. 대상자별 VM이 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.',
+      ),
+    ).toBeInTheDocument()
   })
 })
 

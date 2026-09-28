@@ -521,7 +521,12 @@ export function RequestWizard({
             grantedPassthroughEndpoints: [],
           }
         : null,
-      recipients: selectedRecipients.map((candidate) => ({ id: candidate.key, status: 'QUEUED' })),
+      // Approval puts a member in the creation queue and an invitation in wait
+      // for its person to join, as the server does.
+      recipients: selectedRecipients.map((candidate) => ({
+        id: candidate.key,
+        status: candidate.key.startsWith('i:') ? 'PENDING_JOIN' : 'QUEUED',
+      })),
     }
   }
 

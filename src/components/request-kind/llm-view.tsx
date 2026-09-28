@@ -148,6 +148,19 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
   }
 }
 
+/**
+ * How many keys approving this request will make, or null for an ordinary
+ * request that makes one. A recipient counts while it is still in line for a
+ * key: waiting to be created or waiting for its person to join.
+ */
+function bulkKeyCount(request: RequestDetail): number | null {
+  const recipients = request.recipients ?? []
+  if (recipients.length === 0) return null
+  return recipients.filter(
+    (recipient) => recipient.status === 'QUEUED' || recipient.status === 'PENDING_JOIN',
+  ).length
+}
+
 function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionFormApi {
   const spec = request.llmKey
   const accountData = value as LlmAccountDecisionData
@@ -196,7 +209,15 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
   // 초과 배정 판정. 계정과 금액이 정해졌을 때만 의미가 있고, 판정 자체는 화면
   // 넷이 공유하는 순수 함수 하나가 한다.
-  const pendingCredit = creditValue(creditLimit) ?? 0
+  // A request for several people makes one key per recipient still in line for
+  // one, and each key carries the full limit.
+  const keyCount = bulkKeyCount(request)
+  const bulk = keyCount != null
+  const perKeyCredit = creditValue(creditLimit) ?? 0
+  const pendingCredit = perKeyCredit * (keyCount ?? 1)
+  const pendingLabel = bulk
+    ? `${creditText(pendingCredit)} (${creditText(perKeyCredit)} × ${keyCount}명)`
+    : creditText(pendingCredit)
   const judgement =
     effectiveAccount && pendingCredit > 0
       ? evaluateAllocation({
@@ -462,7 +483,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           </p>
         ) : null}
         {judgement ? (
-          <AllocationWarning judgement={judgement} pendingLabel={creditText(pendingCredit)} />
+          <AllocationWarning judgement={judgement} pendingLabel={pendingLabel} />
         ) : null}
         <FormField
           label="사용 종료일"
@@ -531,7 +552,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           </Alert>
         ) : null}
         {judgement ? (
-          <AllocationWarning judgement={judgement} pendingLabel={creditText(pendingCredit)} />
+          <AllocationWarning judgement={judgement} pendingLabel={pendingLabel} />
         ) : null}
         {judgement?.needsAcknowledgement ? (
           <Checkbox
@@ -542,16 +563,25 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             label="초과 배정임을 확인했습니다"
           />
         ) : null}
-        <p>
-          승인하면 키가 만들어지지만 아직 쓸 수 없습니다. 평문 키는 신청자가 직접
-          발급받습니다.
-        </p>
+        {bulk ? (
+          <p>
+            대상자별 키는 차례로 만들어지고, 가입하지 않은 대상자의 키는 가입할 때
+            만들어집니다. 평문 키는 대상자가 각자 발급받습니다.
+          </p>
+        ) : (
+          <p>
+            승인하면 키가 만들어지지만 아직 쓸 수 없습니다. 평문 키는 신청자가 직접
+            발급받습니다.
+          </p>
+        )}
       </div>
     ),
 
     confirmReady: !judgement?.needsAcknowledgement || acknowledged === acknowledgementKey,
 
-    successMessage: '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
+    successMessage: bulk
+      ? '신청을 승인했습니다. 대상자별 LLM API 키가 차례로 만들어집니다.'
+      : '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
   }
 }
 

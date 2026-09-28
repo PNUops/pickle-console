@@ -52,6 +52,7 @@ export interface FieldSlot {
 export const COMMON_FIELDS: Record<string, FieldSlot> = {
   orgId: { label: '기관', step: 'request' },
   workspaceId: { label: '워크스페이스', step: 'request' },
+  recipients: { label: '대상자', step: 'request' },
   purpose: { label: '사용 목적', step: 'request' },
   extraNote: { label: '참고 사항', step: 'request' },
   periodPresetId: { label: '사용 기간', step: 'request' },
