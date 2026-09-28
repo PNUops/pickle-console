@@ -3990,7 +3990,7 @@ export interface components {
              * Format: int32
              * @description 동시 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
              */
-            concurrency?: number;
+            concurrency?: number | null;
             /** @description 유료 모델 허용 목록에 적용할 변경. 생략하면 그대로 둡니다. */
             creditAllowedModels?: components["schemas"]["AdminBulkListChange"];
             /** @description 유료 모델 차단 목록에 적용할 변경. 생략하면 그대로 둡니다. */
@@ -4003,19 +4003,19 @@ export interface components {
              * Format: int64
              * @description 일일 토큰 한도. 생략하면 그대로 두고, null이면 무제한이며 0이면 토큰 축을 닫습니다.
              */
-            dailyTokens?: number;
+            dailyTokens?: number | null;
             /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 값은 images와 embeddings입니다. */
             passthroughEndpoints?: components["schemas"]["AdminBulkListChange"];
             /**
              * Format: int32
              * @description 분당 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
              */
-            rpm?: number;
+            rpm?: number | null;
             /**
              * Format: int32
              * @description 분당 토큰 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
              */
-            tpm?: number;
+            tpm?: number | null;
         };
         /** @enum {string} */
         AdminBulkLlmKeyStatusAction: "SUSPEND" | "RESUME" | "REVOKE";
@@ -9100,7 +9100,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 대상별 결과와 이 적용의 batchId */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9133,7 +9133,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 대상별 판정과 fingerprint */
             200: {
                 headers: {
                     [name: string]: unknown;
