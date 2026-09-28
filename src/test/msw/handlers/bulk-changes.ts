@@ -1,11 +1,11 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { isSysTier } from '../../../auth/permissions'
 import { kstDateString } from '../../../lib/format'
 import { problemResponse } from './auth'
 import { activeAdminRole, adminActor, adminLlmKeyStore } from './llm-keys'
 import { adminUserStore } from './users'
 import { vmStore } from './vms'
+import { workspaceMembersOf } from './workspaces'
 
 type Schemas = components['schemas']
 type Request_ = Schemas['AdminBulkChangeRequest']
@@ -92,9 +92,16 @@ function reachVm(profile: Profile, vm: Vm, change: Schemas['AdminBulkChangeSpec'
   return OPERATE.includes(role) ? null : 'NOT_FOUND'
 }
 
-function judgeAccess(targetId: string, change: Schemas['AdminBulkAccessChange']): Judgement {
+function judgeAccess(
+  targetId: string,
+  workspaceId: string | null | undefined,
+  change: Schemas['AdminBulkAccessChange'],
+): Judgement {
   const user = adminUserStore.find((row) => row.id === change.userId && row.status === 'ACTIVE')
   if (!user) return refused('INELIGIBLE')
+  if (!workspaceMembersOf(workspaceId).some((member) => member.userId === change.userId)) {
+    return refused('NOT_MEMBER')
+  }
   const key = `${targetId}:${change.userId}`
   const current = grants[key] ?? null
   const next = change.role ?? null
@@ -177,7 +184,7 @@ function judgeKey(profile: Profile, key: AdminKey, change: Schemas['AdminBulkCha
       }
     }
     case 'ACCESS':
-      return judgeAccess(key.id, change.access!)
+      return judgeAccess(key.id, key.workspaceId, change.access!)
     default:
       return refused('INELIGIBLE')
   }
@@ -229,7 +236,7 @@ function judgeVm(vm: Vm, change: Schemas['AdminBulkChangeSpec']): Judgement {
       }
     }
     case 'ACCESS':
-      return judgeAccess(vm.id, change.access!)
+      return judgeAccess(vm.id, vm.workspaceId, change.access!)
     default:
       return refused('INELIGIBLE')
   }
@@ -249,11 +256,22 @@ function nextDayKst(endDate: string): string {
   return new Date(start.getTime() + 86_400_000).toISOString()
 }
 
-/** Changes whenever anything on the target changes, like the server's hash. */
-function fingerprintOf(target: AdminKey | Vm): string {
+/**
+ * Changes whenever anything on the target changes, like the server's hash.
+ * An access change also covers the grantee's current grant on the target.
+ */
+function fingerprintOf(target: AdminKey | Vm, change: Schemas['AdminBulkChangeSpec']): string {
+  const grant =
+    change.kind === 'ACCESS' ? (grants[`${target.id}:${change.access?.userId}`] ?? null) : null
   let hash = 7
-  for (const char of JSON.stringify(target)) hash = (hash * 31 + char.charCodeAt(0)) | 0
+  for (const char of JSON.stringify([target, grant])) hash = (hash * 31 + char.charCodeAt(0)) | 0
   return `${target.id}:${hash}`
+}
+
+/** Seeds or clears one grant, as another administrator would between preview and apply. */
+export function setBulkGrant(targetId: string, userId: string, role: Schemas['ResourceRole'] | null) {
+  if (role) grants[`${targetId}:${userId}`] = role
+  else delete grants[`${targetId}:${userId}`]
 }
 
 function validate(body: Request_): { field: string; message: string }[] {
@@ -305,7 +323,7 @@ function resolve(profile: Profile, body: Request_): Resolved[] {
     const judgement = isKey
       ? judgeKey(profile, target as AdminKey, body.change)
       : judgeVm(target as Vm, body.change)
-    return { targetId, name, reach: null, judgement, fingerprint: fingerprintOf(target) }
+    return { targetId, name, reach: null, judgement, fingerprint: fingerprintOf(target, body.change) }
   })
 }
 
@@ -367,7 +385,7 @@ export const bulkChangeHandlers: RequestHandler[] = [
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
     const role = profile && key ? activeAdminRole(profile, key.orgId) : undefined
     const instance = `/api/v1/admin/llm/keys/${String(params.keyId)}/expiry`
-    if (!profile || !key || !role || (!isSysTier(profile.role) && !OPERATE.includes(role))) {
+    if (!profile || !key || !role || !OPERATE.includes(role)) {
       return problemResponse({
         type: 'about:blank',
         title: '리소스를 찾을 수 없습니다',
