@@ -2,11 +2,17 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
-import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import {
+  orgAdminUser,
+  orgViewerUser,
+  refreshSuccessHandler,
+  sysAdminUser,
+  sysViewerUser,
+} from '../test/msw/handlers/auth'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
-import { adminLlmListQueries } from '../test/msw/handlers/llm-keys'
+import { adminLlmKeyStore, adminLlmListQueries } from '../test/msw/handlers/llm-keys'
 
 describe('관리자 LLM API 키 목록', () => {
   test('active 기관 범위의 키를 상태·워크스페이스·한도와 함께 나열한다', async () => {
@@ -122,5 +128,77 @@ describe('관리자 LLM API 키 목록', () => {
     )
     renderApp('/admin/llm/keys')
     expect(await screen.findByRole('alert')).toHaveTextContent('목록 오류')
+  })
+})
+
+/** Adds `count` keys to the org-1 fixture, named `bulk-key-<n>`. */
+function seedKeys(count: number) {
+  const template = adminLlmKeyStore.find((key) => key.id === uuid(171))!
+  for (let n = 0; n < count; n += 1) {
+    adminLlmKeyStore.push({ ...template, id: uuid(5000 + n), name: `bulk-key-${n}`, requestId: null })
+  }
+}
+
+describe('AdminLlmKeysPage row selection', () => {
+  test('keeps the selection across pages and filters with a page header checkbox', async () => {
+    const user = userEvent.setup()
+    seedKeys(25)
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/llm/keys')
+
+    await user.click(await screen.findByRole('checkbox', { name: 'bulk-key-24 선택' }))
+    const header = screen.getByRole('checkbox', { name: '이 페이지 전체 선택' })
+    expect(header).not.toBeChecked()
+    expect((header as HTMLInputElement).indeterminate).toBe(true)
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(await screen.findByRole('checkbox', { name: 'active-admin-key 선택' }))
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('2개 선택됨')
+
+    await user.selectOptions(screen.getByLabelText('LLM API 키 상태 필터'), 'SUSPENDED')
+    expect(await screen.findByText('suspended-admin-key')).toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('2개 선택됨')
+    await user.click(screen.getByRole('checkbox', { name: '이 페이지 전체 선택' }))
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('3개 선택됨')
+    expect(screen.getByRole('checkbox', { name: '이 페이지 전체 선택' })).toBeChecked()
+
+    await user.click(screen.getByRole('button', { name: '선택 해제' }))
+    expect(screen.queryByRole('toolbar', { name: '선택한 항목 동작' })).not.toBeInTheDocument()
+  })
+
+  test('stops at 200 targets and says so', async () => {
+    const user = userEvent.setup()
+    seedKeys(215)
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/llm/keys')
+
+    await screen.findByRole('checkbox', { name: 'bulk-key-214 선택' })
+    for (let page = 0; page < 11; page += 1) {
+      await user.click(screen.getByRole('checkbox', { name: '이 페이지 전체 선택' }))
+      if (page < 10) {
+        await user.click(screen.getByRole('button', { name: '다음' }))
+        await waitFor(() =>
+          expect(screen.getByRole('checkbox', { name: '이 페이지 전체 선택' })).not.toBeChecked(),
+        )
+      }
+    }
+    const toolbar = screen.getByRole('toolbar', { name: '선택한 항목 동작' })
+    expect(toolbar).toHaveTextContent('200개 선택됨')
+    expect(screen.getByText('한 번에 200개까지 선택할 수 있습니다.')).toBeInTheDocument()
+  })
+
+  test('renders no selection for viewer roles', async () => {
+    for (const [token, profile] of [
+      ['access-org-viewer', orgViewerUser],
+      ['access-sys-viewer', sysViewerUser],
+    ] as const) {
+      server.use(refreshSuccessHandler(token, profile))
+      const view = renderApp('/admin/llm/keys')
+      expect(await screen.findByText('active-admin-key')).toBeInTheDocument()
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '일괄 변경' })).not.toBeInTheDocument()
+      view.unmount()
+    }
   })
 })

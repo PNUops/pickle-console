@@ -36,6 +36,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/bulk-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 관리자 일괄 변경 적용
+         * @description 미리보기와 같은 본문에 fingerprint를 더해 적용합니다. 서버는 미리보기를 믿지 않고 적용 시점에 대상마다 다시 판정하며, 미리보기 뒤 바뀐 대상은 STALE로 답하고 쓰지 않습니다. 한 대상의 실패가 다른 대상을 되돌리지 않고, 되돌리기는 없습니다. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담습니다.
+         */
+        post: operations["applyAdminBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 관리자 일괄 변경 미리보기
+         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 답합니다. 아무것도 쓰지 않습니다. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 답합니다. 대상마다 fingerprint를 주며 적용 요청에 그대로 돌려보냅니다. 대상은 최대 200개입니다.
+         */
+        post: operations["previewAdminBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/campus-ip-requests": {
         parameters: {
             query?: never;
@@ -695,6 +735,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/keys/{keyId}/expiry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 관리자 LLM API 키 만료일 변경
+         * @description 키가 만료되는 날을 바꿉니다. 종료일은 KST 기준 그날까지 포함이고 승인 때와 같은 계산입니다. 이미 만료된 키에 앞날의 종료일을 주면 다시 활성화됩니다. 폐기된 키는 바꿀 수 없고, OpenRouter 키가 발급된 키는 만료일을 앞당기는 것만 할 수 있습니다.
+         */
+        patch: operations["updateAdminLlmKeyExpiry"];
         trace?: never;
     };
     "/admin/llm/keys/{keyId}/limits": {
@@ -3810,6 +3870,187 @@ export interface components {
              */
             userId?: string | null;
         };
+        /** @enum {string} */
+        AdminBulkAccessAction: "GRANT" | "CHANGE" | "REVOKE";
+        AdminBulkAccessChange: {
+            /** @description GRANT는 없는 권한을 만들고, CHANGE는 있는 권한의 등급을 바꾸며, REVOKE는 권한을 지웁니다. */
+            action: components["schemas"]["AdminBulkAccessAction"];
+            /** @description 부여하거나 바꿀 등급. GRANT와 CHANGE에서 필수입니다. */
+            role?: components["schemas"]["ResourceRole"] | null;
+            /**
+             * Format: uuid
+             * @description 접근 권한을 받거나 잃을 사용자
+             */
+            userId: string;
+        };
+        AdminBulkChangeApplyItem: {
+            /** @description APPLIED면 바뀐 필드, 아니면 빈 배열 */
+            fields: components["schemas"]["AdminBulkChangeFieldDiff"][];
+            /** @description 대상 이름. 범위 밖이면 없습니다. */
+            name?: string | null;
+            /** @description SKIPPED인 이유 */
+            reason?: components["schemas"]["AdminBulkChangeReason"] | null;
+            result: components["schemas"]["AdminBulkChangeResult"];
+            /** Format: uuid */
+            targetId: string;
+        };
+        AdminBulkChangeApplyResponse: {
+            /**
+             * Format: uuid
+             * @description 이 적용의 식별자. 대상별 감사 기록과 요약 기록이 같은 값을 담습니다.
+             */
+            batchId: string;
+            items: components["schemas"]["AdminBulkChangeApplyItem"][];
+        };
+        AdminBulkChangeFieldDiff: {
+            /** @description 필드 이름 */
+            field: string;
+            /** @description 바뀔 값. 문자열이나 숫자, 배열, null입니다. */
+            newValue: unknown;
+            /** @description 현재 값. 문자열이나 숫자, 배열, null입니다. */
+            oldValue: unknown;
+        };
+        /** @enum {string} */
+        AdminBulkChangeKind: "LLM_KEY_LIMITS" | "LLM_KEY_STATUS" | "LLM_KEY_EXPIRY" | "VM_PERIOD" | "VM_POWER" | "VM_DELETION" | "ACCESS";
+        AdminBulkChangePreviewItem: {
+            /** @description true면 적용할 수 있습니다. fields가 비어 있으면 이미 그 값이라 바뀌지 않습니다. */
+            applicable: boolean;
+            /** @description 바뀔 필드만 */
+            fields: components["schemas"]["AdminBulkChangeFieldDiff"][];
+            /** @description 이 대상의 현재 값을 요약한 값. 적용 요청에 그대로 돌려보냅니다. */
+            fingerprint: string;
+            /** @description 대상 이름. 범위 밖이면 없습니다. */
+            name?: string | null;
+            /** @description applicable이 false인 이유 */
+            reason?: components["schemas"]["AdminBulkChangeReason"] | null;
+            /** Format: uuid */
+            targetId: string;
+        };
+        AdminBulkChangePreviewResponse: {
+            items: components["schemas"]["AdminBulkChangePreviewItem"][];
+        };
+        /**
+         * @description 대상 하나가 변경되지 않은 이유. NOT_FOUND: 대상이 없거나 이 계정의 범위 밖입니다. FORBIDDEN: 이 역할은 이 변경을 할 수 없습니다. INVALID_STATE: 현재 상태에서는 할 수 없는 변경입니다. EXPIRED: 사용 기간이 만료되어 먼저 기간을 연장해야 합니다. PROTECTED: 삭제 보호가 켜져 있습니다. INELIGIBLE: 대상이나 지정한 사용자가 이 변경의 대상이 될 수 없습니다. NOT_MEMBER: 지정한 사용자가 소유 워크스페이스의 구성원이 아닙니다. NO_GRANT: 지정한 사용자에게 바꾸거나 회수할 접근 권한이 없습니다. ALREADY_GRANTED: 지정한 사용자가 이미 다른 등급의 접근 권한을 갖고 있습니다. VALIDATION: 합쳐진 결과가 한도 규칙에 어긋납니다.
+         * @enum {string}
+         */
+        AdminBulkChangeReason: "NOT_FOUND" | "FORBIDDEN" | "INVALID_STATE" | "EXPIRED" | "PROTECTED" | "INELIGIBLE" | "NOT_MEMBER" | "NO_GRANT" | "ALREADY_GRANTED" | "VALIDATION";
+        AdminBulkChangeRequest: {
+            change: components["schemas"]["AdminBulkChangeSpec"];
+            /** @description 적용에서만 씁니다. 미리보기가 준 대상별 fingerprint를 전부 담습니다. 서버는 적용 시점의 값을 다시 계산해 다른 대상은 STALE로 답하고 쓰지 않습니다. */
+            fingerprints?: {
+                [key: string]: string;
+            } | null;
+            /** @description 대상의 공개 ID. 1개 이상 200개 이하, 중복 없이. */
+            targetIds: string[];
+            /** @description 대상의 종류. 변경 종류와 맞아야 합니다. */
+            targetType: components["schemas"]["AdminBulkChangeTargetType"];
+        };
+        /**
+         * @description APPLIED: 변경됨. UNCHANGED: 이미 그 값이라 쓰지 않음. SKIPPED: reason의 이유로 건너뜀. STALE: 미리보기 뒤 대상이 바뀌어 쓰지 않음.
+         * @enum {string}
+         */
+        AdminBulkChangeResult: "APPLIED" | "UNCHANGED" | "SKIPPED" | "STALE";
+        AdminBulkChangeSpec: {
+            /** @description kind가 ACCESS일 때 */
+            access?: components["schemas"]["AdminBulkAccessChange"] | null;
+            /** @description 변경 종류. 같은 이름의 멤버 하나만 채웁니다. */
+            kind: components["schemas"]["AdminBulkChangeKind"];
+            /** @description kind가 LLM_KEY_EXPIRY일 때 */
+            llmKeyExpiry?: components["schemas"]["AdminBulkLlmKeyExpiryChange"] | null;
+            /** @description kind가 LLM_KEY_LIMITS일 때 */
+            llmKeyLimits?: components["schemas"]["AdminBulkLlmKeyLimitsChange"] | null;
+            /** @description kind가 LLM_KEY_STATUS일 때 */
+            llmKeyStatus?: components["schemas"]["AdminBulkLlmKeyStatusChange"] | null;
+            /** @description kind가 VM_DELETION일 때 */
+            vmDeletion?: components["schemas"]["AdminBulkVmDeletionChange"] | null;
+            /** @description kind가 VM_PERIOD일 때 */
+            vmPeriod?: components["schemas"]["AdminBulkVmPeriodChange"] | null;
+            /** @description kind가 VM_POWER일 때 */
+            vmPower?: components["schemas"]["AdminBulkVmPowerChange"] | null;
+        };
+        /** @enum {string} */
+        AdminBulkChangeTargetType: "LLM_KEY" | "VM" | "DOMAIN" | "GPU_ALLOCATION";
+        AdminBulkListChange: {
+            /** @description REPLACE는 목록을 통째로 바꾸고, ADD는 없는 값을 더하며, REMOVE는 있는 값을 뺍니다. 비우려면 REPLACE에 빈 배열을 보냅니다. */
+            op: components["schemas"]["AdminBulkListOp"];
+            /** @description 적용할 값. 각 키의 현재 목록과 합친 결과가 단일 변경과 같은 규칙으로 검사됩니다. */
+            values: string[];
+        };
+        /** @enum {string} */
+        AdminBulkListOp: "REPLACE" | "ADD" | "REMOVE";
+        AdminBulkLlmKeyExpiryChange: {
+            /**
+             * Format: date
+             * @description 새 종료일(KST, 이 날까지 포함). 키는 다음 날 0시에 만료됩니다. 오늘 이후여야 합니다.
+             */
+            endDate: string;
+        };
+        AdminBulkLlmKeyLimitsChange: {
+            /**
+             * Format: int32
+             * @description 동시 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
+             */
+            concurrency?: number | null;
+            /** @description 유료 모델 허용 목록에 적용할 변경. 생략하면 그대로 둡니다. */
+            creditAllowedModels?: components["schemas"]["AdminBulkListChange"];
+            /** @description 유료 모델 차단 목록에 적용할 변경. 생략하면 그대로 둡니다. */
+            creditDeniedModels?: components["schemas"]["AdminBulkListChange"];
+            /** @description 금액 한도(USD 크레딧). 생략하면 그대로 둡니다. null은 허용하지 않고, 유료 모델을 닫으려면 0을 보냅니다. */
+            creditLimit?: number;
+            /** @description 금액 한도 리셋 창. 생략하면 그대로 두고, null이면 리셋 없는 총액 상한입니다. */
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            /**
+             * Format: int64
+             * @description 일일 토큰 한도. 생략하면 그대로 두고, null이면 무제한이며 0이면 토큰 축을 닫습니다.
+             */
+            dailyTokens?: number | null;
+            /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 값은 images와 embeddings입니다. */
+            passthroughEndpoints?: components["schemas"]["AdminBulkListChange"];
+            /**
+             * Format: int32
+             * @description 분당 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
+             */
+            rpm?: number | null;
+            /**
+             * Format: int32
+             * @description 분당 토큰 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
+             */
+            tpm?: number | null;
+        };
+        /** @enum {string} */
+        AdminBulkLlmKeyStatusAction: "SUSPEND" | "RESUME" | "REVOKE";
+        AdminBulkLlmKeyStatusChange: {
+            /** @description SUSPEND는 활성 키를 정지하고, RESUME은 정지된 키를 되살리며, REVOKE는 폐기합니다. 이미 그 상태인 키는 UNCHANGED로 답합니다. */
+            action: components["schemas"]["AdminBulkLlmKeyStatusAction"];
+            /** @description 정지 사유. SUSPEND에서는 필수이고 감사 기록에 남습니다. */
+            reason?: string | null;
+        };
+        /** @enum {string} */
+        AdminBulkVmDeletionAction: "SCHEDULE" | "CANCEL";
+        AdminBulkVmDeletionChange: {
+            /** @description SCHEDULE은 관리자 삭제를 예약하고, CANCEL은 접수된 삭제를 취소합니다. */
+            action: components["schemas"]["AdminBulkVmDeletionAction"];
+            /** @description 삭제 사유. SCHEDULE에서는 필수이고 워크스페이스에 안내됩니다. */
+            reason?: string | null;
+            /**
+             * Format: date-time
+             * @description 삭제 예정 시각. SCHEDULE에서는 필수이고 미래여야 합니다.
+             */
+            scheduledFor?: string | null;
+        };
+        AdminBulkVmPeriodChange: {
+            /** @description true면 종료일을 지워 무기한으로 만듭니다. endDate와 함께 보낼 수 없습니다. */
+            clearEndDate?: boolean | null;
+            /**
+             * Format: date
+             * @description 새 종료일(KST, 이 날까지 포함). 무기한으로 바꾸려면 clearEndDate를 씁니다.
+             */
+            endDate?: string | null;
+        };
+        AdminBulkVmPowerChange: {
+            /** @description 관리자 전원 개입과 같은 네 가지입니다. 시작은 STOPPED에서만, 종료와 재부팅은 RUNNING에서만, 강제 종료는 RUNNING 또는 REBOOTING에서만 받습니다. */
+            action: components["schemas"]["VmPowerAction"];
+        };
         AdminCampusIpRequestView: {
             adminNote?: string | null;
             /** Format: date-time */
@@ -4019,6 +4260,13 @@ export interface components {
             /** Format: uuid */
             workspaceId?: string | null;
             workspaceName: string;
+        };
+        AdminLlmKeyExpiryRequest: {
+            /**
+             * Format: date
+             * @description 새 종료일(KST, 이 날까지 포함). 키는 다음 날 0시에 만료됩니다. 오늘 이후여야 합니다.
+             */
+            endDate: string;
         };
         AdminLlmKeyLimitsRequest: {
             /**
@@ -8467,6 +8715,8 @@ export interface components {
             /** Format: date */
             startDate?: string | null;
         };
+        /** @enum {string} */
+        VmPowerAction: "START" | "SHUTDOWN" | "REBOOT" | "FORCE_STOP";
         VmRequestSpecResponse: {
             desiredSlug?: string | null;
             /** Format: uuid */
@@ -8824,6 +9074,72 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseAuditLogViewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    applyAdminBulkChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminBulkChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description 대상별 결과와 이 적용의 batchId */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangeApplyResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminBulkChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminBulkChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description 대상별 판정과 fingerprint */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangePreviewResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -10106,6 +10422,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminLlmKeyExpiry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminLlmKeyExpiryRequest"];
+            };
+        };
+        responses: {
+            /** @description 변경된 LLM API 키 상세 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

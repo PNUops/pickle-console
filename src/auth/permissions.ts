@@ -144,6 +144,13 @@ export function canAdminRevokeLlmKey(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
 }
 
+/** An administrator's edit of a resource's access list (bulk change kind
+ *  ACCESS). SYS_ADMIN everywhere, ORG_ADMIN in the organisations it
+ *  administers — the same tier that schedules a VM's deletion. */
+export function canAdminManageAccess(role: UserRole): boolean {
+  return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+}
+
 /** Domain force-release / reverification and route re-apply (§3.16). Same
  *  operating roles as VM control; the org tier acts in its operated orgs only. */
 export function canInterveneDomain(role: UserRole): boolean {

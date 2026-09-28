@@ -4,10 +4,12 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  orgViewerUser,
   problemResponse,
   refreshSuccessHandler,
   sysAdminUser,
   sysManagerUser,
+  sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -462,5 +464,34 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
     expect(
       screen.getByText('강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.'),
     ).toBeInTheDocument()
+  })
+})
+
+describe('AdminVmsPage row selection', () => {
+  test('selects without opening the drawer and keeps the selection across pages', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+    await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'algo-judge 선택' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+  })
+
+  test('renders no selection for viewer roles', async () => {
+    for (const [token, profile] of [
+      ['access-org-viewer', orgViewerUser],
+      ['access-sys-viewer', sysViewerUser],
+    ] as const) {
+      server.use(refreshSuccessHandler(token, profile))
+      const view = renderApp('/admin/vms')
+      expect(await screen.findByText('algo-judge')).toBeInTheDocument()
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '일괄 변경' })).not.toBeInTheDocument()
+      view.unmount()
+    }
   })
 })
