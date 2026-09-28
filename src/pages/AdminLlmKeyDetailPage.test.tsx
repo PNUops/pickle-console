@@ -254,7 +254,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await waitFor(() => expect(rpm).toHaveFocus())
   })
 
-  test('EXPIRED는 만료일 변경만, REVOKED는 아무 action도 없다', async () => {
+  test('offers only the expiry change on EXPIRED and nothing on REVOKED', async () => {
     const expired = renderDetail('access-sys-admin', sysAdminUser, uuid(173))
     await screen.findByRole('heading', { name: 'expired-admin-key' })
     // A later end date brings an expired key back, so that one action stays.
@@ -672,8 +672,8 @@ test('clearing the unified field submits two empty model lists', async () => {
   expect(adminLlmLimitBodies[0]).toMatchObject({ creditAllowedModels: [], creditDeniedModels: [] })
 })
 
-describe('관리자 LLM API 키 만료일 변경', () => {
-  test('유료 모델 키의 만료 연장은 서버의 409 문구를 그대로 보여 준다', async () => {
+describe('AdminLlmKeyDetailPage expiry change', () => {
+  test('shows the server 409 message when extending a paid-model key', async () => {
     const user = userEvent.setup()
     adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2029-12-31T15:00:00Z'
     renderDetail('access-org-manager', orgManagerUser, uuid(171))
@@ -690,7 +690,7 @@ describe('관리자 LLM API 키 만료일 변경', () => {
     expect(expiryBodies).toEqual([{ keyId: uuid(171), endDate: '2030-06-01' }])
   })
 
-  test('유료 모델 키의 만료일을 앞당긴다', async () => {
+  test('brings a paid-model key expiry forward', async () => {
     const user = userEvent.setup()
     adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2030-06-30T15:00:00Z'
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))
@@ -701,7 +701,7 @@ describe('관리자 LLM API 키 만료일 변경', () => {
     expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()
   })
 
-  test('연결되지 않은 키는 안내 없이 만료일을 바꾼다', async () => {
+  test('changes an unconnected key expiry without the paid-model note', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(170))
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
@@ -714,7 +714,7 @@ describe('관리자 LLM API 키 만료일 변경', () => {
     expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()
   })
 
-  test('폐기된 키에는 만료일 변경이 없다', async () => {
+  test('offers no expiry change on a revoked key', async () => {
     renderDetail('access-sys-admin', sysAdminUser, uuid(174))
     expect(await screen.findByRole('heading', { name: 'revoked-admin-key' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '만료일 변경' })).not.toBeInTheDocument()

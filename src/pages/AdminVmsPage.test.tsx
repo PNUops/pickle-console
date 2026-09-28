@@ -467,8 +467,8 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
   })
 })
 
-describe('관리자 VM 목록 선택', () => {
-  test('선택 칸을 눌러도 드로어가 열리지 않고 선택이 페이지를 넘어 남는다', async () => {
+describe('AdminVmsPage row selection', () => {
+  test('selects without opening the drawer and keeps the selection across pages', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
     await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
@@ -481,7 +481,7 @@ describe('관리자 VM 목록 선택', () => {
     expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
   })
 
-  test('열람 역할에게는 선택 칸도 일괄 변경도 없다', async () => {
+  test('renders no selection for viewer roles', async () => {
     for (const [token, profile] of [
       ['access-org-viewer', orgViewerUser],
       ['access-sys-viewer', sysViewerUser],

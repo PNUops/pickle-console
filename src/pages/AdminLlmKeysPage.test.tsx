@@ -139,8 +139,8 @@ function seedKeys(count: number) {
   }
 }
 
-describe('관리자 LLM API 키 목록 선택', () => {
-  test('선택은 페이지와 필터를 넘어 유지되고 머리 칸이 현재 페이지를 가리킨다', async () => {
+describe('AdminLlmKeysPage row selection', () => {
+  test('keeps the selection across pages and filters with a page header checkbox', async () => {
     const user = userEvent.setup()
     seedKeys(25)
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -167,7 +167,7 @@ describe('관리자 LLM API 키 목록 선택', () => {
     expect(screen.queryByRole('toolbar', { name: '선택한 항목 동작' })).not.toBeInTheDocument()
   })
 
-  test('200개에서 멈추고 그 사실을 알린다', async () => {
+  test('stops at 200 targets and says so', async () => {
     const user = userEvent.setup()
     seedKeys(215)
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -188,7 +188,7 @@ describe('관리자 LLM API 키 목록 선택', () => {
     expect(screen.getByText('한 번에 200개까지 선택할 수 있습니다.')).toBeInTheDocument()
   })
 
-  test('열람 역할에게는 선택 칸도 일괄 변경도 없다', async () => {
+  test('renders no selection for viewer roles', async () => {
     for (const [token, profile] of [
       ['access-org-viewer', orgViewerUser],
       ['access-sys-viewer', sysViewerUser],

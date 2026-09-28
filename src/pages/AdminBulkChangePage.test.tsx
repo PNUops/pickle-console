@@ -10,7 +10,11 @@ import {
   sysAdminUser,
   sysManagerUser,
 } from '../test/msw/handlers/auth'
-import { bulkApplyBodies, bulkPreviewBodies } from '../test/msw/handlers/bulk-changes'
+import {
+  bulkApplyBodies,
+  bulkPreviewBodies,
+  setBulkGrant,
+} from '../test/msw/handlers/bulk-changes'
 import { adminLlmKeyStore } from '../test/msw/handlers/llm-keys'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
@@ -41,8 +45,8 @@ async function chooseKind(user: User, title: string) {
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 
-describe('관리자 일괄 변경', () => {
-  test('선택 없이 들어오면 목록으로 돌아가는 길만 보여 준다', async () => {
+describe('AdminBulkChangePage', () => {
+  test('shows only the way back to the list without selected targets', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/bulk/llm-keys')
     expect(await screen.findByText('목록에서 바꿀 키를 선택해 주세요.')).toBeInTheDocument()
@@ -53,7 +57,7 @@ describe('관리자 일괄 변경', () => {
     expect(screen.queryByRole('button', { name: '미리보기' })).not.toBeInTheDocument()
   })
 
-  test('고른 한도만 보내고, 미리보기의 fingerprint를 모두 담아 적용한다', async () => {
+  test('sends only the chosen limits and applies with every preview fingerprint', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-admin', orgAdminUser, [
       'active-admin-key',
@@ -92,13 +96,13 @@ describe('관리자 일괄 변경', () => {
     expect(screen.getByLabelText('적용 결과 요약')).toHaveTextContent('적용됨 2개, 건너뜀 1개')
     expect(adminLlmKeyStore.find((key) => key.id === uuid(171))?.rpm).toBe(120)
 
-    // The selection is spent: back on the list, nothing is selected.
+    // One target was skipped, so the list keeps the selection for another try.
     await user.click(screen.getByRole('link', { name: 'LLM API 키 목록으로' }))
-    expect(await screen.findByRole('checkbox', { name: 'active-admin-key 선택' })).not.toBeChecked()
-    expect(screen.queryByRole('button', { name: '일괄 변경' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('checkbox', { name: 'active-admin-key 선택' })).toBeChecked()
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('3개 선택됨')
   })
 
-  test('목록 변경 방식이 허용·차단 목록의 op로 갈린다', async () => {
+  test('maps the list operation onto the allow and deny lists', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key'])
     await chooseKind(user, '한도·모델·기능 권한')
@@ -127,9 +131,26 @@ describe('관리자 일괄 변경', () => {
       creditAllowedModels: { op: 'REMOVE', values: ['openai/*'] },
     })
 
-    // Replacing with nothing clears both lists, and says so first.
+    // Replacing with only allow lines empties the deny list on every key.
     await user.click(screen.getByRole('button', { name: '이전' }))
     await user.selectOptions(screen.getByRole('combobox', { name: '유료 모델 목록 변경 방식' }), 'REPLACE')
+    expect(
+      screen.getByText('선택한 모든 키의 유료 모델 차단 목록이 비워집니다.'),
+    ).toBeInTheDocument()
+    await user.clear(screen.getByRole('textbox', { name: '유료 모델 허용·차단' }))
+    await user.type(screen.getByRole('textbox', { name: '유료 모델 허용·차단' }), '-*/*-pro')
+    expect(
+      screen.getByText('선택한 모든 키의 유료 모델 허용 목록이 비워집니다.'),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies[2].change.llmKeyLimits).toEqual({
+      creditAllowedModels: { op: 'REPLACE', values: [] },
+      creditDeniedModels: { op: 'REPLACE', values: ['*/*-pro'] },
+    })
+
+    // Replacing with nothing clears both lists, and says so first.
+    await user.click(screen.getByRole('button', { name: '이전' }))
     await user.clear(screen.getByRole('textbox', { name: '유료 모델 허용·차단' }))
     expect(
       screen.getByText('선택한 모든 키의 유료 모델 허용·차단 목록이 비워집니다.'),
@@ -140,14 +161,14 @@ describe('관리자 일괄 변경', () => {
     expect(screen.getByText('모든 기능 권한이 회수됩니다')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '미리보기' }))
     await screen.findByRole('table', { name: '일괄 변경 미리보기' })
-    expect(bulkPreviewBodies[2].change.llmKeyLimits).toEqual({
+    expect(bulkPreviewBodies[3].change.llmKeyLimits).toEqual({
       creditAllowedModels: { op: 'REPLACE', values: [] },
       creditDeniedModels: { op: 'REPLACE', values: [] },
       passthroughEndpoints: { op: 'REPLACE', values: [] },
     })
   })
 
-  test('SYS_MANAGER에게는 금액 축 항목이 없다', async () => {
+  test('offers no money fields to SYS_MANAGER', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-manager', sysManagerUser, ['active-admin-key'])
     await chooseKind(user, '한도·모델·기능 권한')
@@ -157,7 +178,7 @@ describe('관리자 일괄 변경', () => {
     }
   })
 
-  test('폐기와 접근 권한은 관리자 계층에게만 있다', async () => {
+  test('offers revoke and access only to the administrator tier', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['active-admin-key'])
     expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
@@ -167,7 +188,7 @@ describe('관리자 일괄 변경', () => {
     expect(screen.queryByRole('radio', { name: '폐기' })).not.toBeInTheDocument()
   })
 
-  test('폐기는 되돌릴 수 없다는 경고를 적용 버튼 앞에 둔다', async () => {
+  test('warns that revoking is irreversible before applying and spends the selection', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-admin', orgAdminUser, ['active-admin-key'])
     expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
@@ -181,9 +202,14 @@ describe('관리자 일괄 변경', () => {
     })
     await user.click(screen.getByRole('button', { name: '1개에 적용' }))
     expect(await screen.findByRole('table', { name: '일괄 변경 결과' })).toHaveTextContent('적용됨')
+
+    // Every target applied, so the selection is spent.
+    await user.click(screen.getByRole('link', { name: 'LLM API 키 목록으로' }))
+    expect(await screen.findByRole('checkbox', { name: 'active-admin-key 선택' })).not.toBeChecked()
+    expect(screen.queryByRole('button', { name: '일괄 변경' })).not.toBeInTheDocument()
   })
 
-  test('정지는 사유 없이 미리보기로 가지 않는다', async () => {
+  test('does not preview a suspension without a reason', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-admin', orgAdminUser, ['active-admin-key'])
     await chooseKind(user, '상태')
@@ -192,7 +218,7 @@ describe('관리자 일괄 변경', () => {
     expect(bulkPreviewBodies).toHaveLength(0)
   })
 
-  test('서버 422는 값 입력 단계의 그 칸으로 돌아간다', async () => {
+  test('routes a server 422 back to its field on the values step', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key'])
     await chooseKind(user, '만료일')
@@ -215,7 +241,7 @@ describe('관리자 일괄 변경', () => {
     expect(screen.getByRole('button', { name: '미리보기' })).toBeInTheDocument()
   })
 
-  test('유료 모델 키의 만료 연장은 대상 아님으로 건너뛴다', async () => {
+  test('shows extending a paid-model key expiry as ineligible', async () => {
     const user = userEvent.setup()
     adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2029-12-31T15:00:00Z'
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key', 'pending-admin-key'])
@@ -228,7 +254,7 @@ describe('관리자 일괄 변경', () => {
     expect(within(preview).getByRole('row', { name: /pending-admin-key/ })).toHaveTextContent('적용')
   })
 
-  test('그사이 바뀐 대상과 모르는 코드를 그대로 보여 준다', async () => {
+  test('reports a target changed since the preview as stale and previews it again', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, [
       'pending-admin-key',
@@ -249,6 +275,24 @@ describe('관리자 일괄 변경', () => {
       '적용됨',
     )
 
+    await user.click(screen.getByRole('button', { name: '다시 미리보기' }))
+    const again = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies).toHaveLength(2)
+    expect(bulkPreviewBodies[1]).toEqual(bulkPreviewBodies[0])
+    expect(within(again).getByRole('row', { name: /pending-admin-key/ })).toHaveTextContent(
+      '변경 없음',
+    )
+    await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+    expect(
+      within(await screen.findByRole('table', { name: '일괄 변경 결과' })).getByRole('row', {
+        name: /initial-binding-key/,
+      }),
+    ).toHaveTextContent('적용됨')
+    expect(bulkApplyBodies[1].fingerprints).not.toEqual(bulkApplyBodies[0].fingerprints)
+  })
+
+  test('renders result and reason codes it does not know as themselves', async () => {
+    const user = userEvent.setup()
     server.use(
       http.post('*/api/v1/admin/bulk-changes', () =>
         HttpResponse.json({
@@ -265,9 +309,7 @@ describe('관리자 일괄 변경', () => {
         }),
       ),
     )
-    await user.click(screen.getByRole('link', { name: 'LLM API 키 목록으로' }))
-    await user.click(await screen.findByRole('checkbox', { name: 'pending-admin-key 선택' }))
-    await user.click(screen.getByRole('button', { name: '일괄 변경' }))
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['pending-admin-key'])
     await chooseKind(user, '만료일')
     await user.type(screen.getByLabelText(/새 만료일/), '2031-01-01')
     await user.click(screen.getByRole('button', { name: '미리보기' }))
@@ -277,7 +319,38 @@ describe('관리자 일괄 변경', () => {
     expect(unknown).toHaveTextContent('QUOTA_HELD')
   })
 
-  test('VM 전원 변경을 보내고, 삭제와 접근 권한은 운영자에게 없다', async () => {
+  test('refuses a grantee outside the workspace and reports a grant changed since the preview', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key'])
+    await chooseKind(user, '접근 권한')
+    await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '정외부')
+    await user.click(
+      within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
+    )
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(
+      within(await screen.findByRole('table', { name: '일괄 변경 미리보기' })).getByRole('row', {
+        name: /active-admin-key/,
+      }),
+    ).toHaveTextContent('워크스페이스 구성원 아님')
+
+    await user.click(screen.getByRole('button', { name: '이전' }))
+    await user.click(screen.getByRole('button', { name: '다시 고르기' }))
+    await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '홍길동')
+    await user.click(
+      within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
+    )
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('button', { name: '1개에 적용' })
+    // Another administrator grants the same person meanwhile.
+    setBulkGrant(uuid(171), uuid(42), 'VIEWER')
+    await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+    expect(await screen.findByRole('table', { name: '일괄 변경 결과' })).toHaveTextContent(
+      '그사이 바뀜',
+    )
+  })
+
+  test('sends a VM power change and offers no deletion or access to an org manager', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['algo-judge'], 'vms')
     expect(screen.getByRole('radio', { name: '기간' })).toBeInTheDocument()
@@ -294,7 +367,7 @@ describe('관리자 일괄 변경', () => {
     })
   })
 
-  test('VM 삭제 예약은 시각과 사유를 KST로 보낸다', async () => {
+  test('sends a VM deletion schedule read as KST with its reason', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['algo-judge'], 'vms')
     await chooseKind(user, '삭제 예약·취소')
@@ -312,7 +385,7 @@ describe('관리자 일괄 변경', () => {
     })
   })
 
-  test('접근 권한은 검색해서 고른 사용자와 등급을 보낸다', async () => {
+  test('sends the searched user and chosen role for an access grant', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['algo-judge'], 'vms')
     await chooseKind(user, '접근 권한')

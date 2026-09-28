@@ -2,9 +2,11 @@ import { describe, expect, test } from 'vitest'
 import {
   bulkKindsFor,
   buildChange,
+  clearingLists,
   emptyDraft,
   formFieldOf,
   formatDiffValue,
+  kstLocalToIso,
   limitFieldsFor,
 } from './bulk-change'
 import { BULK_SELECTION_CAP, togglePage, toggleTarget } from './bulk-selection'
@@ -62,6 +64,18 @@ describe('bulk change body', () => {
     })
   })
 
+  test('reads a datetime-local value as KST with or without seconds', () => {
+    expect(kstLocalToIso('2030-01-01T09:30')).toBe('2030-01-01T00:30:00.000Z')
+    expect(kstLocalToIso('2030-01-01T09:30:15')).toBe('2030-01-01T00:30:15.000Z')
+  })
+
+  test('warns per model list that a replace would empty', () => {
+    const limits = { ...emptyDraft().limits, chosen: ['creditModels' as const], modelsOp: 'REPLACE' as const }
+    expect(clearingLists({ ...limits, modelRules: '+openai/*' })).toMatchObject({ allowed: false, denied: true })
+    expect(clearingLists({ ...limits, modelRules: '' })).toMatchObject({ allowed: true, denied: true })
+    expect(clearingLists({ ...limits, modelsOp: 'ADD', modelRules: '' })).toMatchObject({ allowed: false, denied: false })
+  })
+
   test('revoking access sends no role', () => {
     const draft = emptyDraft()
     draft.access = { userId: 'u', userLabel: 'x', action: 'REVOKE', role: 'EDITOR' }
@@ -74,6 +88,12 @@ describe('bulk change body', () => {
   test('server list errors land on the one model input', () => {
     expect(formFieldOf('change.llmKeyLimits.creditDeniedModels.values')).toBe(
       'change.llmKeyLimits.creditModels',
+    )
+    expect(formFieldOf('change.llmKeyLimits.creditAllowedModels.values[3]')).toBe(
+      'change.llmKeyLimits.creditModels',
+    )
+    expect(formFieldOf('change.llmKeyLimits.passthroughEndpoints.values[0]')).toBe(
+      'change.llmKeyLimits.passthroughEndpoints',
     )
     expect(formFieldOf('change.llmKeyLimits.passthroughEndpoints.values')).toBe(
       'change.llmKeyLimits.passthroughEndpoints',
