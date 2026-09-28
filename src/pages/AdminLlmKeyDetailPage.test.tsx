@@ -11,7 +11,7 @@ import {
   sysManagerUser,
   sysViewerUser,
 } from '../test/msw/handlers/auth'
-import { adminLlmLimitBodies } from '../test/msw/handlers/llm-keys'
+import { adminLlmKeyStore, adminLlmLimitBodies } from '../test/msw/handlers/llm-keys'
 import { expiryBodies } from '../test/msw/handlers/bulk-changes'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
@@ -673,24 +673,42 @@ test('clearing the unified field submits two empty model lists', async () => {
 })
 
 describe('관리자 LLM API 키 만료일 변경', () => {
-  test('유료 모델이 연결된 키는 서버의 409 문구를 그대로 보여 준다', async () => {
+  test('유료 모델 키의 만료 연장은 서버의 409 문구를 그대로 보여 준다', async () => {
     const user = userEvent.setup()
+    adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2029-12-31T15:00:00Z'
     renderDetail('access-org-manager', orgManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
+    const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
+    expect(
+      within(dialog).getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'),
+    ).toBeInTheDocument()
+    await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-06-01')
+    await user.click(within(dialog).getByRole('button', { name: '변경' }))
+    expect(
+      await within(dialog).findByText(/유료 모델 키의 만료 연장은 아직 지원하지 않습니다/),
+    ).toBeInTheDocument()
+    expect(expiryBodies).toEqual([{ keyId: uuid(171), endDate: '2030-06-01' }])
+  })
+
+  test('유료 모델 키의 만료일을 앞당긴다', async () => {
+    const user = userEvent.setup()
+    adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2030-06-30T15:00:00Z'
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))
-    expect(
-      await within(dialog).findByText('OpenRouter 키가 발급된 키는 만료일을 바꿀 수 없습니다.'),
-    ).toBeInTheDocument()
-    expect(expiryBodies).toEqual([{ keyId: uuid(171), endDate: '2030-01-01' }])
+    expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()
   })
 
-  test('연결되지 않은 키의 만료일을 바꾼다', async () => {
+  test('연결되지 않은 키는 안내 없이 만료일을 바꾼다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(170))
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
+    expect(
+      within(dialog).queryByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'),
+    ).not.toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))
     expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()

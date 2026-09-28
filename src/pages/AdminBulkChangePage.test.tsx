@@ -215,6 +215,19 @@ describe('관리자 일괄 변경', () => {
     expect(screen.getByRole('button', { name: '미리보기' })).toBeInTheDocument()
   })
 
+  test('유료 모델 키의 만료 연장은 대상 아님으로 건너뛴다', async () => {
+    const user = userEvent.setup()
+    adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2029-12-31T15:00:00Z'
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key', 'pending-admin-key'])
+    await chooseKind(user, '만료일')
+    expect(screen.getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.')).toBeInTheDocument()
+    await user.type(screen.getByLabelText(/새 만료일/), '2030-06-01')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(within(preview).getByRole('row', { name: /active-admin-key/ })).toHaveTextContent('대상 아님')
+    expect(within(preview).getByRole('row', { name: /pending-admin-key/ })).toHaveTextContent('적용')
+  })
+
   test('그사이 바뀐 대상과 모르는 코드를 그대로 보여 준다', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, [

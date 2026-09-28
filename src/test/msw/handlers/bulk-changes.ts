@@ -164,8 +164,9 @@ function judgeKey(profile: Profile, key: AdminKey, change: Schemas['AdminBulkCha
       }
     }
     case 'LLM_KEY_EXPIRY': {
-      if (status === 'REVOKED' || key.creditAxisConnected) return refused('INVALID_STATE')
+      if (status === 'REVOKED') return refused('INVALID_STATE')
       const expiresAt = nextDayKst(change.llmKeyExpiry!.endDate)
+      if (extendsPaidKey(key, expiresAt)) return refused('INELIGIBLE')
       if (key.expiresAt === expiresAt) return { reason: null, fields: [] }
       return {
         reason: null,
@@ -232,6 +233,14 @@ function judgeVm(vm: Vm, change: Schemas['AdminBulkChangeSpec']): Judgement {
     default:
       return refused('INELIGIBLE')
   }
+}
+
+/**
+ * The server's rule for a key with an OpenRouter half: it may be shortened,
+ * never extended. The mock reads the connected flag as that half.
+ */
+function extendsPaidKey(key: AdminKey, next: string): boolean {
+  return key.creditAxisConnected && key.expiresAt != null && Date.parse(next) > Date.parse(key.expiresAt)
 }
 
 /** The day after `endDate` at 00:00 KST, as the server stores an expiry. */
@@ -370,20 +379,23 @@ export const bulkChangeHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as Schemas['AdminLlmKeyExpiryRequest']
     expiryBodies.push({ keyId: key.id, endDate: body.endDate })
-    if (key.status === 'REVOKED' || key.creditAxisConnected) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '요청을 처리할 수 없습니다',
-        status: 409,
-        detail: 'OpenRouter 키가 발급된 키는 만료일을 바꿀 수 없습니다.',
-        instance,
-        code: 'LLM_KEY_EXPIRY_LOCKED',
-      })
-    }
     if (body.endDate < kstDateString()) {
       return validation(instance, [{ field: 'endDate', message: '종료일은 오늘 이후여야 합니다.' }])
     }
-    key.expiresAt = nextDayKst(body.endDate)
+    const expiresAt = nextDayKst(body.endDate)
+    if (key.status === 'REVOKED' || extendsPaidKey(key, expiresAt)) {
+      return problemResponse({
+        type: 'about:blank',
+        title: '키 상태가 올바르지 않습니다',
+        status: 409,
+        detail: key.status === 'REVOKED'
+          ? '폐기된 키의 만료일은 바꿀 수 없습니다.'
+          : '유료 모델 키의 만료 연장은 아직 지원하지 않습니다. 공급자가 키의 만료일을 발급 시점에 고정하기 때문이며, 앞당기는 것은 가능합니다.',
+        instance,
+        code: 'LLM_KEY_INVALID_STATE',
+      })
+    }
+    key.expiresAt = expiresAt
     if (key.status === 'EXPIRED') key.status = 'ACTIVE'
     return HttpResponse.json(key)
   }),
