@@ -269,7 +269,7 @@ describe('AdminBulkChangePage', () => {
     await user.click(screen.getByRole('button', { name: '2개에 적용' }))
     const result = await screen.findByRole('table', { name: '일괄 변경 결과' })
     expect(within(result).getByRole('row', { name: /initial-binding-key/ })).toHaveTextContent(
-      '그사이 바뀜',
+      '미리보기 이후 변경됨',
     )
     expect(within(result).getByRole('row', { name: /pending-admin-key/ })).toHaveTextContent(
       '적용됨',
@@ -346,7 +346,7 @@ describe('AdminBulkChangePage', () => {
     setBulkGrant(uuid(171), uuid(42), 'VIEWER')
     await user.click(screen.getByRole('button', { name: '1개에 적용' }))
     expect(await screen.findByRole('table', { name: '일괄 변경 결과' })).toHaveTextContent(
-      '그사이 바뀜',
+      '미리보기 이후 변경됨',
     )
   })
 

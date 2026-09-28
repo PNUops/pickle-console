@@ -172,7 +172,7 @@ export const BULK_CHANGE_RESULT_LABELS: Record<AdminBulkChangeResult, string> = 
   APPLIED: '적용됨',
   UNCHANGED: '변경 없음',
   SKIPPED: '건너뜀',
-  STALE: '그사이 바뀜',
+  STALE: '미리보기 이후 변경됨',
 }
 
 /** A code this build has no label for renders as itself, as the kind labels do. */
