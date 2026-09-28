@@ -207,14 +207,25 @@ function BulkChangeFlow({
           judged.items.map((item) => [item.targetId, item.fingerprint]),
         ),
       }),
-    onSuccess: async (data) => {
+    onSuccess: async (data, { change }) => {
       setResult(data)
       setError(null)
       setStep('result')
-      clearStoredSelection(family)
-      await queryClient.invalidateQueries({
-        queryKey: family === 'llm-keys' ? ['admin', 'llm-keys'] : ['admin', 'vms'],
-      })
+      // The selection is spent only when every target ended where it was
+      // asked to; anything skipped or stale may still need the same list.
+      if (data.items.every((item) => item.result === 'APPLIED' || item.result === 'UNCHANGED')) {
+        clearStoredSelection(family)
+      }
+      const invalidations = [
+        queryClient.invalidateQueries({
+          queryKey: family === 'llm-keys' ? ['admin', 'llm-keys'] : ['admin', 'vms'],
+        }),
+      ]
+      // Limits move what a paid-model account has allocated.
+      if (change.kind === 'LLM_KEY_LIMITS') {
+        invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
+      }
+      await Promise.all(invalidations)
     },
     onError: (failure) => fail(failure, '일괄 변경을 적용하지 못했습니다.'),
   })
@@ -233,6 +244,7 @@ function BulkChangeFlow({
 
   const valuesSlots = slotsFor('values', BULK_FIELDS)
   const changes = preview?.items.filter((item) => item.applicable && item.fields.length > 0) ?? []
+  const notApplicable = preview?.items.filter((item) => !item.applicable).length ?? 0
 
   return (
     <>
@@ -354,9 +366,11 @@ function BulkChangeFlow({
       {step === 'preview' && preview && sent && (
         <section className="space-y-4">
           {error && <MessageBar variant="danger">{error}</MessageBar>}
-          <p className="text-sm text-foreground-secondary">
-            {targets.length}개 중 {changes.length}개가 바뀝니다.
-          </p>
+          {notApplicable > 0 && (
+            <p className="text-sm text-foreground-secondary">
+              적용되지 않는 대상 {notApplicable}개
+            </p>
+          )}
           <DataTable caption="일괄 변경 미리보기">
             <THead>
               <TR>
@@ -385,7 +399,11 @@ function BulkChangeFlow({
           </DataTable>
           <IrreversibleNotice change={sent} />
           <div className="flex justify-between gap-2">
-            <Button variant="secondary" onClick={() => setStep('values')}>
+            <Button
+              variant="secondary"
+              disabled={applyMutation.isPending}
+              onClick={() => setStep('values')}
+            >
               이전
             </Button>
             {changes.length > 0 ? (
@@ -408,6 +426,7 @@ function BulkChangeFlow({
 
       {step === 'result' && result && (
         <section className="space-y-4">
+          {error && <MessageBar variant="danger">{error}</MessageBar>}
           <p className="text-sm text-foreground-secondary" aria-label="적용 결과 요약">
             {RESULT_ORDER.map((code) => ({
               code,
@@ -441,7 +460,19 @@ function BulkChangeFlow({
               ))}
             </TBody>
           </DataTable>
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {sent && result.items.some((item) => item.result === 'STALE') && (
+              <Button
+                variant="secondary"
+                loading={previewMutation.isPending}
+                onClick={() => {
+                  setError(null)
+                  previewMutation.mutate(sent)
+                }}
+              >
+                다시 미리보기
+              </Button>
+            )}
             <Link to={listPath} className="text-sm font-semibold text-brand-foreground underline">
               {copy.back} 목록으로
             </Link>
