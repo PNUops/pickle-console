@@ -27,6 +27,9 @@ export type CreateRequest = Schemas['CreateRequestRequest']
 export type RequestDetail = Schemas['RequestDetailResponse']
 export type RequestPage = Schemas['PageResponseRequestDetailResponse']
 export type RequestStatus = Schemas['RequestStatus']
+export type RequestRecipient = Schemas['RequestRecipientResponse']
+export type RequestRecipientStatus = Schemas['RequestRecipientStatus']
+export type CreateRequestRecipient = Schemas['CreateRequestRecipient']
 export type ResourceType = Schemas['ResourceType']
 export type VmSummary = Schemas['VmSummaryResponse']
 export type VmDetail = Schemas['VmDetailResponse']
@@ -2067,6 +2070,17 @@ export function resendAdminNotification(notificationId: string): Promise<Message
       params: { path: { notificationId } },
     })
     if (!data) throw toApiError(error, '알림 재발송을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+/** Moves a failed recipient of a bulk request back into the creation queue. */
+export function retryRequestRecipient(requestId: string, recipientId: string): Promise<RequestDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/requests/{requestId}/recipients/{recipientId}/retry', {
+      params: { path: { requestId, recipientId } },
+    })
+    if (!data) throw toApiError(error, '다시 시도하지 못했습니다.')
     return data
   })
 }

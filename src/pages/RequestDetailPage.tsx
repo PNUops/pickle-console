@@ -18,6 +18,11 @@ import {
 } from '../components/ui'
 import { requestKindView } from '../components/request-kind'
 import { Field } from '../components/request-kind/Field'
+import { RequestRecipientsCard } from '../components/request-kind/RecipientsCard'
+import { recipientPollInterval } from '../components/request-kind/recipients'
+import { useAuth } from '../auth/auth-context'
+import { approvesForOrg } from '../auth/permissions'
+import { consolePaths } from '../lib/paths'
 import { formatDateTime } from '../lib/format'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
@@ -26,11 +31,13 @@ export function RequestDetailPage() {
   const requestId = params.requestId ?? ''
   const idValid = isUuid(requestId)
   const [cancelError, setCancelError] = useState<string | null>(null)
+  const { user } = useAuth()
   const request = useQuery({
     queryKey: ['requests', requestId],
     queryFn: () => fetchRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
+    refetchInterval: (query) => recipientPollInterval(query.state.data),
   })
   if (!idValid) {
     return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
@@ -78,6 +85,21 @@ export function RequestDetailPage() {
       )}
 
       {data.review && <ReviewCard request={data} review={data.review} />}
+
+      <RequestRecipientsCard
+        request={data}
+        canRetry={approvesForOrg(user, data.orgId)}
+        // Each resource belongs to its recipient; the requester opens only their own.
+        resourceHref={(recipient) =>
+          recipient.resourceId == null || recipient.userId == null || recipient.userId !== user?.id
+            ? null
+            : data.type === 'VM'
+              ? consolePaths.vmDetail(recipient.resourceId)
+              : data.type === 'LLM_API_KEY'
+                ? consolePaths.llmKeyDetail(recipient.resourceId)
+                : null
+        }
+      />
 
       <Card>
         <CardHeader>

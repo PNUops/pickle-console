@@ -31,6 +31,18 @@ export interface CommonWizardState {
   indefinite: boolean
   reqEndDate: string
   displayName: string
+  /**
+   * Chosen recipients of a request filed for several people, as `u:<userId>`
+   * for a member and `i:<invitationId>` for a pending invitation. Empty means
+   * the request is for the requester, as it always was.
+   */
+  recipients: string[]
+}
+
+/** What the wizard knows about this request that the kind's own form may depend on. */
+export interface WizardContext {
+  /** The request names recipients, so each gets a resource of their own. */
+  bulk: boolean
 }
 
 /** CreateRequest에서 종류가 채우는 조각 — 판별자(type)와 종류별 스펙 멤버. */
@@ -43,6 +55,8 @@ export type KindCreatePayload = Omit<
   | 'periodPresetId'
   | 'reqEndDate'
   | 'displayName'
+  | 'recipients'
+  | 'approval'
 >
 
 /** useWizard가 돌려주는, 마운트된 위저드 한 판에서의 종류별 동작. */
@@ -122,7 +136,9 @@ export interface RequestKindModule {
    * 붙지 못한 채 목록으로만 뜬다.
    */
   fields: Record<string, FieldSlot>
-  useWizard(draftSpec: unknown, common: CommonWizardState): KindWizard
+  /** The kind can be requested for several people at once. */
+  supportsRecipients?: boolean
+  useWizard(draftSpec: unknown, common: CommonWizardState, context: WizardContext): KindWizard
 }
 
 /* ─── 신청 하나를 그리는 화면들 ─── */

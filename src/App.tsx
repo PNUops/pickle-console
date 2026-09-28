@@ -23,6 +23,7 @@ import { AdminSettingsPage } from './pages/AdminSettingsPage'
 import { AdminTasksPage } from './pages/AdminTasksPage'
 import { AdminTerminalSessionsPage } from './pages/AdminTerminalSessionsPage'
 import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
+import { AdminNewRequestPage } from './pages/AdminNewRequestPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AdminWorkspacesPage } from './pages/AdminWorkspacesPage'
@@ -238,6 +239,7 @@ function App() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="docs/*" element={guidePage} />
         <Route path="requests" element={<AdminRequestsPage />} />
+        <Route path="requests/new" element={<AdminNewRequestPage />} />
         <Route path="requests/:requestId" element={<AdminRequestDetailPage />} />
         <Route path="vms" element={<AdminVmsPage />} />
         <Route path="vms/:vmId" element={<AdminVmDetailPage />} />

@@ -9,6 +9,7 @@ import {
 import {
   Alert,
   Card,
+  LinkButton,
   Pagination,
   RequestStatusBadge,
   Select,
@@ -29,6 +30,8 @@ import { formatDateTime } from '../lib/format'
 import { REQUEST_STATUS_LABELS } from '../lib/status'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { useAuth } from '../auth/auth-context'
+import { approvesAnywhere } from '../auth/permissions'
 
 const PAGE_SIZE = 10
 
@@ -44,6 +47,7 @@ const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
 export function AdminRequestsPage() {
   const navigate = useNavigate()
   const { activeOrgId } = useAdminScope()
+  const { user } = useAuth()
   const [status, setStatus] = useState<RequestStatus | undefined>('SUBMITTED')
   const [type, setType] = useState<ResourceType | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -60,11 +64,16 @@ export function AdminRequestsPage() {
   })
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          제출된 리소스 신청을 검토하고 승인 또는 반려합니다.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            제출된 리소스 신청을 검토하고 승인 또는 반려합니다.
+          </p>
+        </div>
+        {approvesAnywhere(user) && (
+          <LinkButton to={adminPaths.newRequest(activeOrgId)}>새 신청</LinkButton>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

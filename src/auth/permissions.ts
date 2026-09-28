@@ -81,6 +81,28 @@ export function canDecideRequest(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'ORG_MANAGER' || role === 'SYS_ADMIN'
 }
 
+/**
+ * May this account decide requests filed to organisation `orgId`? The decision
+ * roles act only in the organisations they operate; SYS_ADMIN acts in all.
+ * The same question decides who may file a request for other people and who
+ * may submit one already approved.
+ */
+export function approvesForOrg(
+  user: { role: UserRole; managedOrgs: readonly ManagedOrg[] } | null | undefined,
+  orgId: string | null | undefined,
+): boolean {
+  if (!user || orgId == null || !canDecideRequest(user.role)) return false
+  return user.role === 'SYS_ADMIN' || operatesOrg(user.managedOrgs, orgId)
+}
+
+/** Does this account decide requests in at least one organisation? */
+export function approvesAnywhere(
+  user: { role: UserRole; managedOrgs: readonly ManagedOrg[] } | null | undefined,
+): boolean {
+  if (!user || !canDecideRequest(user.role)) return false
+  return user.role === 'SYS_ADMIN' || operatedOrgs(user.managedOrgs).length > 0
+}
+
 /** Schedule / cancel a VM deletion (§3.11). ORG_ADMIN + SYS_ADMIN only. */
 export function canManageVmDeletion(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'

@@ -19,6 +19,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
   return {
     id: REQUEST_ID,
     workspaceId: uuid(12),
+    recipients: [],
     workspaceName: '캡스톤 3조',
     orgId: uuid(1),
     orgName: '정보컴퓨터공학부 실습지원센터',

@@ -1311,6 +1311,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/requests/{requestId}/recipients/{recipientId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryRequestRecipient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/requests/{requestId}/reject": {
         parameters: {
             query?: never;
@@ -4763,7 +4779,14 @@ export interface components {
             endDate: string;
             name: string;
         };
+        CreateRequestRecipient: {
+            /** Format: uuid */
+            invitationId?: string | null;
+            /** Format: uuid */
+            userId?: string | null;
+        };
         CreateRequestRequest: {
+            approval?: components["schemas"]["ApproveRequestRequest"] | null;
             displayName: string;
             domain?: components["schemas"]["CreateDomainRequestSpec"] | null;
             extraNote?: string | null;
@@ -4777,6 +4800,7 @@ export interface components {
             /** Format: uuid */
             periodPresetId?: string | null;
             purpose: string;
+            recipients?: components["schemas"]["CreateRequestRecipient"][] | null;
             /** Format: date */
             reqEndDate?: string | null;
             /** @description true면 종료일 없이 신청합니다. reqEndDate·periodPresetId와 함께 보낼 수 없습니다. */
@@ -7535,6 +7559,7 @@ export interface components {
              */
             periodName?: string | null;
             purpose: string;
+            recipients: components["schemas"]["RequestRecipientResponse"][];
             /**
              * Format: date
              * @description 신청한 사용 종료일. 값이 없으면 무기한을 요청한 것입니다.
@@ -7582,6 +7607,20 @@ export interface components {
              */
             id: string;
         };
+        RequestRecipientResponse: {
+            /** Format: uuid */
+            id: string;
+            invitee?: string | null;
+            name?: string | null;
+            reason?: string | null;
+            /** Format: uuid */
+            resourceId?: string | null;
+            status: components["schemas"]["RequestRecipientStatus"];
+            /** Format: uuid */
+            userId?: string | null;
+        };
+        /** @enum {string} */
+        RequestRecipientStatus: "PENDING_JOIN" | "QUEUED" | "CREATING" | "CREATED" | "SKIPPED_EXPIRED" | "SKIPPED_INELIGIBLE" | "FAILED" | "CANCELED";
         RequestReviewResponse: {
             comment?: string | null;
             /** Format: date-time */
@@ -11367,6 +11406,38 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApprovalContextResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    retryRequestRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                recipientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestDetailResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

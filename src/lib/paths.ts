@@ -58,6 +58,8 @@ export function adminPath(path: string, orgId: string | undefined): string {
 export const adminPaths = {
   dashboard: (orgId?: string) => adminPath('/admin', orgId),
   requests: (orgId?: string) => adminPath('/admin/requests', orgId),
+  newRequest: (orgId?: string, kind?: string) =>
+    adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),
   requestDetail: (requestId: string, orgId?: string) =>
     adminPath(`/admin/requests/${requestId}`, orgId),
   vms: (orgId?: string, workspaceId?: string | null) =>

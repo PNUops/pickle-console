@@ -12,7 +12,14 @@ import { SSH_GATEWAY_HOST } from '../../lib/hosts'
 import { formatMemory, formatSpec } from '../../lib/format'
 import { SUBDOMAIN_RE } from '../../lib/validation'
 import { RaisedAxis } from './RaisedAxis'
-import type { FieldErrors, KindWizard, RequestKindModule, WizardStepId } from './types'
+import type {
+  CommonWizardState,
+  FieldErrors,
+  KindWizard,
+  RequestKindModule,
+  WizardContext,
+  WizardStepId,
+} from './types'
 
 /** 사양을 고르는 세 갈래. `custom`이면 신청 본문의 flavorId가 없다. */
 const CUSTOM_SPEC = 'custom'
@@ -136,7 +143,11 @@ function composeSpecReason(spec: VmSpecState): string {
   return lines.join('\n')
 }
 
-function useVmWizard(draftSpec: unknown): KindWizard {
+function useVmWizard(
+  draftSpec: unknown,
+  _common: CommonWizardState,
+  { bulk }: WizardContext,
+): KindWizard {
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
   const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
@@ -251,7 +262,9 @@ function useVmWizard(draftSpec: unknown): KindWizard {
     const next: FieldErrors = {}
     if (step !== 'resource') return next
 
-    const slugError = checkSlug(spec.desiredSlug, options.data?.reservedSubdomains)
+    // A request for several people names no host: each VM's name is generated,
+    // and the field is not on the screen to be corrected.
+    const slugError = bulk ? null : checkSlug(spec.desiredSlug, options.data?.reservedSubdomains)
     if (slugError) next['vm.desiredSlug'] = slugError
     // 목록에 없는 id(초안에 남은 은퇴 항목)는 고르지 않은 것으로 본다. 그대로 두면
     // 요약이 빈 자리를 보여주고 제출이 422로 튕긴다.
@@ -307,21 +320,25 @@ function useVmWizard(draftSpec: unknown): KindWizard {
 
     resourceFields: (errors) => (
       <>
-        <FormField
-          label="호스트 이름"
-          error={errors['vm.desiredSlug'] ?? checkSlug(spec.desiredSlug, reservedSlugs) ?? undefined}
-          description="SSH로 접속할 때 쓰는 이름입니다. 만든 뒤에는 바꿀 수 없습니다. 소문자와 숫자, 하이픈만 쓸 수 있고 3~40자입니다."
-        >
-          <Input
-            value={spec.desiredSlug}
-            onChange={(event) => update({ desiredSlug: event.target.value })}
-            placeholder="비우면 자동으로 정해집니다"
-            maxLength={40}
-          />
-        </FormField>
-        <p className="-mt-2 text-xs text-foreground-muted">
-          {`ssh ${spec.desiredSlug || '<호스트 이름>'}@${options.data?.sshHost ?? SSH_GATEWAY_HOST}`}
-        </p>
+        {!bulk && (
+          <>
+            <FormField
+              label="호스트 이름"
+              error={errors['vm.desiredSlug'] ?? checkSlug(spec.desiredSlug, reservedSlugs) ?? undefined}
+              description="SSH로 접속할 때 쓰는 이름입니다. 만든 뒤에는 바꿀 수 없습니다. 소문자와 숫자, 하이픈만 쓸 수 있고 3~40자입니다."
+            >
+              <Input
+                value={spec.desiredSlug}
+                onChange={(event) => update({ desiredSlug: event.target.value })}
+                placeholder="비우면 자동으로 정해집니다"
+                maxLength={40}
+              />
+            </FormField>
+            <p className="-mt-2 text-xs text-foreground-muted">
+              {`ssh ${spec.desiredSlug || '<호스트 이름>'}@${options.data?.sshHost ?? SSH_GATEWAY_HOST}`}
+            </p>
+          </>
+        )}
 
         {images.length === 0 ? (
           <Alert variant="warning">
@@ -464,7 +481,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
         ...(composeSpecReason(spec)
           ? ([['늘린 이유', composeSpecReason(spec)]] as [string, string][])
           : []),
-        ['호스트 이름', spec.desiredSlug || '자동 생성'],
+        ...(bulk ? [] : ([['호스트 이름', spec.desiredSlug || '자동 생성']] as [string, string][])),
       ],
     }),
 
@@ -484,7 +501,7 @@ function useVmWizard(draftSpec: unknown): KindWizard {
         reqMemoryMb: spec.reqMemoryMb,
         reqDiskGb: spec.reqDiskGb,
         specReason: composeSpecReason(spec) || null,
-        desiredSlug: spec.desiredSlug || null,
+        desiredSlug: bulk ? null : spec.desiredSlug || null,
       },
     }),
   }
@@ -511,5 +528,6 @@ export const vmRequestKind: RequestKindModule = {
     'vm.reqDiskGb': { label: '디스크', step: 'resource' },
     'vm.desiredSlug': { label: '호스트 이름', step: 'resource' },
   },
+  supportsRecipients: true,
   useWizard: useVmWizard,
 }

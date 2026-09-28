@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canDecideRequest, isSysTier, operatesOrg } from '../auth/permissions'
+import { approvesForOrg } from '../auth/permissions'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
@@ -37,6 +37,8 @@ import {
   useDecisionCatalogPrefetch,
 } from '../components/request-kind'
 import { Field } from '../components/request-kind/Field'
+import { RequestRecipientsCard } from '../components/request-kind/RecipientsCard'
+import { recipientPollInterval } from '../components/request-kind/recipients'
 import { RESOURCE_TYPES } from '../components/resource/registry'
 import type { RequestKindView } from '../components/request-kind/types'
 import { cn } from '../lib/cn'
@@ -59,16 +61,13 @@ export function AdminRequestDetailPage() {
   const idValid = isUuid(requestId)
   const [notice, setNotice] = useState<Notice | null>(null)
   const { user } = useAuth()
-  // 승인과 반려는 기관 운영 역할 + SYS_ADMIN만 — SYS_MANAGER와 열람 역할은
-  // 조회만(§3.9 †15). 역할이 닿아도 이 신청의 기관에서 행위할 수 있어야 한다:
-  // 열람 역할로만 보이는 기관의 신청에 승인을 시도하면 API가 404로 거부한다.
-  const roleCanDecide = !!user && canDecideRequest(user.role)
 
   const request = useQuery({
     queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null }],
     queryFn: () => fetchAdminRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
+    refetchInterval: (query) => recipientPollInterval(query.state.data),
   })
   // 결정 폼이 열릴 때 종류별 카탈로그가 이미 와 있도록 진입 즉시 당겨 둔다.
   useDecisionCatalogPrefetch()
@@ -99,11 +98,11 @@ export function AdminRequestDetailPage() {
   }
   // 신청 내용·검토 결과·결정 폼의 종류별 부분은 전부 이 모듈이 답한다.
   const kind = requestKindView(data.type)
-  const canDecide =
-    roleCanDecide &&
-    !!user &&
-    (isSysTier(user.role) ||
-      (data.orgId != null && operatesOrg(user.managedOrgs, data.orgId)))
+  // 승인과 반려는 기관 운영 역할 + SYS_ADMIN만 — SYS_MANAGER와 열람 역할은
+  // 조회만(§3.9 †15). 역할이 닿아도 이 신청의 기관에서 행위할 수 있어야 한다:
+  // 열람 역할로만 보이는 기관의 신청에 승인을 시도하면 API가 404로 거부한다.
+  const canDecide = approvesForOrg(user, data.orgId)
+  const bulk = (data.recipients?.length ?? 0) > 0
 
   return (
     <div className="space-y-6">
@@ -121,7 +120,8 @@ export function AdminRequestDetailPage() {
       />
 
       {notice && <Alert variant={notice.variant}>{notice.message}</Alert>}
-      {data.type === 'LLM_API_KEY' && data.status === 'APPROVED' && (
+      {/* A request for several people made one key per person; the table below links each. */}
+      {data.type === 'LLM_API_KEY' && data.status === 'APPROVED' && !bulk && (
         <ApprovedLlmKeyLink requestId={data.id} orgId={data.orgId ?? undefined} />
       )}
 
@@ -139,6 +139,20 @@ export function AdminRequestDetailPage() {
               </dl>
             </CardContent>
           </Card>
+
+          <RequestRecipientsCard
+            request={data}
+            canRetry={canDecide}
+            resourceHref={(recipient) =>
+              recipient.resourceId == null
+                ? null
+                : data.type === 'VM'
+                  ? adminPaths.vmDetail(recipient.resourceId, activeOrgId)
+                  : data.type === 'LLM_API_KEY'
+                    ? adminPaths.llmKeyDetail(recipient.resourceId, activeOrgId)
+                    : null
+            }
+          />
 
           {data.status === 'SUBMITTED' && canDecide && (
             <DecisionArea

@@ -3,6 +3,7 @@ import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, regularUser, regularUserB } from './auth'
 import { flavorStore, osImages } from './reference'
 import { uuid } from '../ids'
+import { workspaceMembersOf } from './workspaces'
 
 type Schemas = components['schemas']
 type RequestDetail = Schemas['RequestDetailResponse']
@@ -18,6 +19,7 @@ function baseRequest(): Omit<
   'id' | 'purpose' | 'status' | 'review' | 'createdAt' | 'updatedAt'
 > {
   return {
+    recipients: [],
     workspaceId: uuid(12),
     workspaceName: '캡스톤 3조',
     orgId: uuid(1),
@@ -267,11 +269,32 @@ export const requestHandlers: RequestHandler[] = [
   http.post('*/api/v1/requests', async ({ request }) => {
     const body = (await request.json()) as Schemas['CreateRequestRequest']
     createdRequestBodies.push(body)
+    const { recipients: recipientBodies, approval, ...fields } = body
+    const actor = ACCESS_TOKENS[request.headers.get('Authorization')?.replace('Bearer ', '') ?? '']
     // 접수와 동시에 승인되는 것은 지금 도메인뿐이고, 그것도 루트의 정책이 정한다.
     const autoApproved = body.type === 'DOMAIN' && domainRootPolicy.autoApprove
+    // Like the server: named recipients become rows, a member waits in the
+    // creation queue and an invitation waits for its person to join.
+    const recipients: Schemas['RequestRecipientResponse'][] = (recipientBodies ?? []).map(
+      (entry, index) => {
+        const member = entry.userId
+          ? workspaceMembersOf(body.workspaceId).find((m) => m.userId === entry.userId)
+          : undefined
+        return {
+          id: uuid(5000 + nextRequestId * 10 + index),
+          userId: entry.userId ?? null,
+          name: member?.name ?? null,
+          invitee: entry.invitationId ? 'invitee@pusan.ac.kr' : null,
+          status: entry.userId ? 'QUEUED' : 'PENDING_JOIN',
+          resourceId: null,
+          reason: null,
+        }
+      },
+    )
     const created: RequestDetail = {
       ...baseRequest(),
-      ...body,
+      ...fields,
+      recipients,
       id: uuid(nextRequestId++),
       workspaceName: '캡스톤 3조',
       orgName: '정보컴퓨터공학부 실습지원센터',
@@ -327,10 +350,20 @@ export const requestHandlers: RequestHandler[] = [
         // 신청서에서 도메인 축이 빠졌다 — 새 신청의 이력 필드는 항상 비어 있다.
         granted: null,
       },
-      status: autoApproved ? 'APPROVED' : 'SUBMITTED',
+      status: autoApproved || approval ? 'APPROVED' : 'SUBMITTED',
       // 자동 승인도 검토 행을 남긴다. 결재자가 없다는 것이 기록이고, 이름은
       // 「탈퇴 회원」이 아니라 「자동 승인」이다.
-      review: autoApproved
+      review: approval
+        ? {
+            decision: 'APPROVE',
+            comment: approval.comment ?? null,
+            grantedStartDate: approval.grantedStartDate ?? null,
+            grantedEndDate: approval.grantedEndDate ?? null,
+            decidedAt: '2026-07-08T15:00:00+09:00',
+            reviewerId: actor?.id ?? null,
+            reviewerName: actor?.name ?? '',
+          }
+        : autoApproved
         ? {
             decision: 'APPROVE',
             comment: null,
