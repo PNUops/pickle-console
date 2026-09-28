@@ -122,7 +122,7 @@ describe('bulk change offers and labels', () => {
   test('unknown codes and values render as themselves', () => {
     expect(labelForBulkReason('NOT_MEMBER')).toBe('워크스페이스 구성원 아님')
     expect(labelForBulkReason('SOMETHING_NEW')).toBe('SOMETHING_NEW')
-    expect(labelForBulkResult('STALE')).toBe('그사이 바뀜')
+    expect(labelForBulkResult('STALE')).toBe('미리보기 이후 변경됨')
     expect(labelForBulkResult('LATER')).toBe('LATER')
     expect(formatDiffValue('rpm', null)).toBe('서비스 기본값')
     expect(formatDiffValue('passthroughEndpoints', [])).toBe('부여 안 됨')
