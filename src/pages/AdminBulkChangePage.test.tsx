@@ -474,7 +474,7 @@ describe('AdminBulkChangePage on domains', () => {
     expect(bulkPreviewBodies[0].change.domainRenewal?.reason).toBeNull()
   })
 
-  test('routes the server refusing a past deadline back to the renewal input', async () => {
+  test('shows the server refusing a past deadline beside the renewal input', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')
     await chooseKind(user, '사용 기한')
@@ -544,7 +544,9 @@ describe('AdminBulkChangePage on domains', () => {
       '상태 연결됨 → 해제됨',
     )
     expect(screen.getByText('되돌릴 수 없습니다')).toBeInTheDocument()
-    expect(screen.getByText(/DNS 존에서 레코드가 지워집니다/)).toBeInTheDocument()
+    expect(
+      screen.getByText('이름이 즉시 회수되어 다른 사용자가 사용할 수 있게 됩니다.'),
+    ).toBeInTheDocument()
 
     const apply = screen.getByRole('button', { name: '2개에 적용' })
     const count = screen.getByRole('textbox', { name: '적용 대상 수(2)를 입력해 주세요' })
@@ -610,6 +612,32 @@ describe('AdminBulkChangePage on domains', () => {
     expect(screen.getByRole('button', { name: '1개에 적용' })).toBeDisabled()
   })
 
+  test('names non-external domains ineligible for an access change', async () => {
+    const user = userEvent.setup()
+    await openBulk(
+      user,
+      'access-sys-admin',
+      sysAdminUser,
+      ['myblog.pusan.dev', 'ai-team.pusan.dev', 'demo.example.com'],
+      'domains',
+    )
+    await chooseKind(user, '접근 권한')
+    await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '홍길동')
+    await user.click(
+      within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
+    )
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    for (const name of [/ai-team\.pusan\.dev/, /demo\.example\.com/]) {
+      const row = within(preview).getByRole('row', { name })
+      expect(row).toHaveTextContent('적용 안 됨')
+      expect(row).toHaveTextContent('대상 아님')
+    }
+    expect(within(preview).getByRole('row', { name: /myblog\.pusan\.dev/ })).not.toHaveTextContent(
+      '대상 아님',
+    )
+  })
+
   test('sends an access grant on domains with the domain grade hints', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')
@@ -627,5 +655,24 @@ describe('AdminBulkChangePage on domains', () => {
       targetIds: [EXTERNAL_DOMAIN_ID],
       change: { kind: 'ACCESS', access: { userId: uuid(42), action: 'GRANT', role: 'EDITOR' } },
     })
+  })
+
+  test('the mock refuses a change whose members do not match its kind', async () => {
+    const preview = (change: object) =>
+      fetch('/api/v1/admin/bulk-changes/preview', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer access-sys-admin', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetType: 'DOMAIN', targetIds: [EXTERNAL_DOMAIN_ID], change }),
+      })
+    const extra = await preview({ kind: 'DOMAIN_VERIFY', domainVerify: {}, domainForceRelease: {} })
+    expect(extra.status).toBe(422)
+    expect((await extra.json()).errors).toEqual([
+      { field: 'change.domainForceRelease', message: '변경 종류와 다른 내용은 보낼 수 없습니다.' },
+    ])
+    const missing = await preview({ kind: 'DOMAIN_FORCE_RELEASE' })
+    expect(missing.status).toBe(422)
+    expect((await missing.json()).errors).toEqual([
+      { field: 'change.domainForceRelease', message: '이 변경 종류의 내용을 채워 주세요.' },
+    ])
   })
 })

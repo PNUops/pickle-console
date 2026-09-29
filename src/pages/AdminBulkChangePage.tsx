@@ -93,10 +93,11 @@ function listPathOf(family: BulkFamily, orgId: string | undefined): string {
 const FAMILY_QUERY_KEYS: Record<BulkFamily, string[][]> = {
   'llm-keys': [['admin', 'llm-keys']],
   vms: [['admin', 'vms']],
-  // A release also takes the name's route down.
+  // A release also takes the name's route down and revokes its certificates.
   domains: [
     ['admin', 'domains'],
     ['admin', 'routes'],
+    ['admin', 'certificates'],
   ],
 }
 
@@ -593,7 +594,7 @@ function IrreversibleNotice({ change }: { change: AdminBulkChangeSpec }) {
   if (change.kind === 'DOMAIN_FORCE_RELEASE') {
     return (
       <MessageBar variant="danger" title="되돌릴 수 없습니다">
-        도메인이 삭제되고 DNS 존에서 레코드가 지워집니다. 이름은 즉시 회수됩니다.
+        이름이 즉시 회수되어 다른 사용자가 사용할 수 있게 됩니다.
       </MessageBar>
     )
   }
