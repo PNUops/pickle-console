@@ -28,6 +28,11 @@ import {
   isSysTier,
   operatesOrg,
 } from '../auth/permissions'
+import {
+  BulkSelectionBar,
+  SelectPageHeader,
+  SelectRowCell,
+} from '../components/bulk/BulkSelection'
 import { CertificatesSection } from '../components/CertificatesSection'
 import { SourcePolicyPanel } from '../components/network-policy/SourcePolicyPanel'
 import { FilterBar } from '../components/FilterBar'
@@ -61,6 +66,7 @@ import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString, todayKstDate } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { useBulkSelection } from '../lib/bulk-selection'
 import { adminPaths } from '../lib/paths'
 
 const PAGE_SIZE = 20
@@ -88,9 +94,14 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM', 'EXTERNAL']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg } = useAdminScope()
+  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
+  // Every bulk kind on a domain needs the role the drawer's intervention
+  // section needs; access is a narrower subset of it.
+  const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
+  const canSelect = !!effectiveRole && canInterveneDomain(effectiveRole)
+  const selection = useBulkSelection('domains', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
@@ -115,6 +126,10 @@ export function AdminDomainsPage() {
       fetchAdminDomains({ status, kind, orgId: activeOrgId, page, size: PAGE_SIZE }),
   })
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
+  const pageTargets = (domains.data?.content ?? []).map((domain) => ({
+    id: domain.id,
+    name: domain.fqdn,
+  }))
 
   return (
     <div className="space-y-6">
@@ -175,6 +190,15 @@ export function AdminDomainsPage() {
           </label>
         </FilterBar>
 
+        {canSelect && (
+          <BulkSelectionBar
+            selected={selection.selected}
+            capped={selection.capped}
+            onClear={selection.clear}
+            to={adminPaths.bulkDomains(activeOrgId)}
+          />
+        )}
+
         {message && <Alert variant="info">{message}</Alert>}
 
         {domains.isPending && (
@@ -194,6 +218,13 @@ export function AdminDomainsPage() {
               <Table>
                 <THead>
                   <TR>
+                    {canSelect && (
+                      <SelectPageHeader
+                        rows={pageTargets}
+                        selected={selection.selected}
+                        onToggle={(on) => selection.togglePage(pageTargets, on)}
+                      />
+                    )}
                     <TH>도메인</TH>
                     <TH>VM / 워크스페이스</TH>
                     <TH>기관</TH>
@@ -214,6 +245,15 @@ export function AdminDomainsPage() {
                       )}
                       onClick={() => selectDomain(domain.id)}
                     >
+                      {canSelect && (
+                        <SelectRowCell
+                          target={{ id: domain.id, name: domain.fqdn }}
+                          checked={selection.selected.some((item) => item.id === domain.id)}
+                          onToggle={(on) =>
+                            selection.toggle({ id: domain.id, name: domain.fqdn }, on)
+                          }
+                        />
+                      )}
                       <TD>
                         <button
                           type="button"

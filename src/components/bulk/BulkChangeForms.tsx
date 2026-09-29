@@ -20,6 +20,7 @@ import {
 import { isShortNotice, kstDateString, todayKstDate } from '../../lib/format'
 import {
   CREDIT_LIMIT_RESET_LABELS,
+  DNS_DOMAIN_RESOURCE_ROLE_HINTS,
   LLM_KEY_RESOURCE_ROLE_HINTS,
   RESOURCE_ROLE_HINTS,
   RESOURCE_ROLE_LABELS,
@@ -404,6 +405,38 @@ export function DeletionForm({
   )
 }
 
+/**
+ * A new renewal deadline for external domains. Like the drawer's form it asks
+ * for a date and sends the end of that KST day.
+ */
+export function DomainRenewalForm({
+  draft,
+  onChange,
+  errors,
+}: {
+  draft: BulkDraft['domainRenewal']
+  onChange: (next: BulkDraft['domainRenewal']) => void
+  errors: Errors
+}) {
+  return (
+    <div className="space-y-4">
+      <DateForm
+        label="새 사용 기한"
+        value={draft.date}
+        onChange={(date) => onChange({ ...draft, date })}
+        error={errors['change.domainRenewal.renewDueAt']}
+      />
+      <FormField label="사유 (감사 기록에 남습니다)" error={errors['change.domainRenewal.reason']}>
+        <Input
+          value={draft.reason}
+          maxLength={200}
+          onChange={(event) => onChange({ ...draft, reason: event.target.value })}
+        />
+      </FormField>
+    </div>
+  )
+}
+
 export function AccessForm({
   family,
   orgId,
@@ -424,7 +457,12 @@ export function AccessForm({
     queryFn: () => fetchAdminUsers({ q, orgId, status: 'ACTIVE', size: 10 }),
     enabled: q.length > 0 && draft.userId === '',
   })
-  const hints = family === 'llm-keys' ? LLM_KEY_RESOURCE_ROLE_HINTS : RESOURCE_ROLE_HINTS
+  const hints =
+    family === 'llm-keys'
+      ? LLM_KEY_RESOURCE_ROLE_HINTS
+      : family === 'domains'
+        ? DNS_DOMAIN_RESOURCE_ROLE_HINTS
+        : RESOURCE_ROLE_HINTS
 
   return (
     <div className="space-y-4">

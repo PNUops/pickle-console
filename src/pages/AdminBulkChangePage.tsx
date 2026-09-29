@@ -10,6 +10,7 @@ import {
   type AdminBulkChangePreview,
   type AdminBulkChangeRequest,
   type AdminBulkChangeSpec,
+  type AdminBulkChangeTargetType,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -17,6 +18,7 @@ import {
   AccessForm,
   DateForm,
   DeletionForm,
+  DomainRenewalForm,
   LimitsForm,
   PeriodForm,
   PowerForm,
@@ -29,6 +31,8 @@ import {
   CardRadioGroup,
   DataTable,
   ErrorSummary,
+  FormField,
+  Input,
   MessageBar,
   PageHeader,
   Stepper,
@@ -49,6 +53,7 @@ import {
   emptyDraft,
   formFieldErrors,
   formatDiffValue,
+  kindTakesValues,
   type BulkDraft,
   type BulkFamily,
   type BulkStep,
@@ -59,9 +64,41 @@ import { PAID_KEY_EXPIRY_NOTE, labelForBulkReason, labelForBulkResult } from '..
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 
-const FAMILY_COPY: Record<BulkFamily, { title: string; back: string; noun: string }> = {
-  'llm-keys': { title: 'LLM API 키 일괄 변경', back: 'LLM API 키', noun: '키' },
-  vms: { title: 'VM 일괄 변경', back: 'VM 관리', noun: 'VM' },
+const FAMILY_COPY: Record<BulkFamily, { title: string; back: string; pick: string }> = {
+  'llm-keys': {
+    title: 'LLM API 키 일괄 변경',
+    back: 'LLM API 키',
+    pick: '목록에서 바꿀 키를 선택해 주세요.',
+  },
+  vms: { title: 'VM 일괄 변경', back: 'VM 관리', pick: '목록에서 바꿀 VM을 선택해 주세요.' },
+  domains: {
+    title: '도메인 일괄 변경',
+    back: '공개 서비스',
+    pick: '목록에서 바꿀 도메인을 선택해 주세요.',
+  },
+}
+
+function listPathOf(family: BulkFamily, orgId: string | undefined): string {
+  switch (family) {
+    case 'llm-keys':
+      return adminPaths.llmKeys(orgId)
+    case 'vms':
+      return adminPaths.vms(orgId)
+    case 'domains':
+      return adminPaths.domains(orgId)
+  }
+}
+
+/** Query keys a family's apply leaves stale. */
+const FAMILY_QUERY_KEYS: Record<BulkFamily, string[][]> = {
+  'llm-keys': [['admin', 'llm-keys']],
+  vms: [['admin', 'vms']],
+  // A release also takes the name's route down and revokes its certificates.
+  domains: [
+    ['admin', 'domains'],
+    ['admin', 'routes'],
+    ['admin', 'certificates'],
+  ],
 }
 
 const RESULT_ORDER = ['APPLIED', 'UNCHANGED', 'SKIPPED', 'STALE'] as const
@@ -84,8 +121,7 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
   const scope = useAdminScope()
   const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
   const copy = FAMILY_COPY[family]
-  const listPath =
-    family === 'llm-keys' ? adminPaths.llmKeys(scope.activeOrgId) : adminPaths.vms(scope.activeOrgId)
+  const listPath = listPathOf(family, scope.activeOrgId)
   const targets = targetsOf(location.state)
   const kinds = role ? bulkKindsFor(family, role) : []
 
@@ -109,7 +145,7 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
             </Link>
           }
         >
-          목록에서 바꿀 {copy.noun}를 선택해 주세요.
+          {copy.pick}
         </MessageBar>
       </div>
     )
@@ -165,6 +201,8 @@ function BulkChangeFlow({
   const [sent, setSent] = useState<AdminBulkChangeSpec | null>(null)
   const [preview, setPreview] = useState<AdminBulkChangePreview | null>(null)
   const [result, setResult] = useState<AdminBulkChangeApply | null>(null)
+  /** The typed target count that unlocks an irreversible apply. */
+  const [confirmation, setConfirmation] = useState('')
   const copy = FAMILY_COPY[family]
   const names = new Map(targets.map((target) => [target.id, target.name]))
   const nameOf = (id: string, name?: string | null) => name ?? names.get(id) ?? id
@@ -192,6 +230,7 @@ function BulkChangeFlow({
     onSuccess: (data, change) => {
       setSent(change)
       setPreview(data)
+      setConfirmation('')
       setError(null)
       setFieldErrors({})
       setStep('preview')
@@ -216,11 +255,9 @@ function BulkChangeFlow({
       if (data.items.every((item) => item.result === 'APPLIED' || item.result === 'UNCHANGED')) {
         clearStoredSelection(family)
       }
-      const invalidations = [
-        queryClient.invalidateQueries({
-          queryKey: family === 'llm-keys' ? ['admin', 'llm-keys'] : ['admin', 'vms'],
-        }),
-      ]
+      const invalidations = FAMILY_QUERY_KEYS[family].map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      )
       // Limits move what a paid-model account has allocated.
       if (change.kind === 'LLM_KEY_LIMITS') {
         invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
@@ -245,6 +282,9 @@ function BulkChangeFlow({
   const valuesSlots = slotsFor('values', BULK_FIELDS)
   const changes = preview?.items.filter((item) => item.applicable && item.fields.length > 0) ?? []
   const notApplicable = preview?.items.filter((item) => !item.applicable).length ?? 0
+  const targetType = BULK_TARGET_TYPES[family]
+  const needsConfirmation = sent != null && requiresTypedCount(sent)
+  const confirmed = !needsConfirmation || confirmation.trim() === String(changes.length)
 
   return (
     <>
@@ -263,6 +303,7 @@ function BulkChangeFlow({
 
       {step === 'kind' && (
         <section className="space-y-4">
+          {error && <MessageBar variant="danger">{error}</MessageBar>}
           <CardRadioGroup
             legend="변경 항목"
             required
@@ -277,6 +318,7 @@ function BulkChangeFlow({
           />
           <div className="flex justify-end">
             <Button
+              loading={previewMutation.isPending}
               onClick={() => {
                 if (!kind) {
                   setKindError('바꿀 항목을 골라 주세요.')
@@ -284,10 +326,11 @@ function BulkChangeFlow({
                 }
                 setFieldErrors({})
                 setError(null)
-                setStep('values')
+                if (kindTakesValues(kind)) setStep('values')
+                else runPreview()
               }}
             >
-              다음
+              {!kind || kindTakesValues(kind) ? '다음' : '미리보기'}
             </Button>
           </div>
         </section>
@@ -343,6 +386,13 @@ function BulkChangeFlow({
               errors={fieldErrors}
             />
           )}
+          {kind === 'DOMAIN_RENEWAL' && (
+            <DomainRenewalForm
+              draft={draft.domainRenewal}
+              onChange={(domainRenewal) => setDraft({ ...draft, domainRenewal })}
+              errors={fieldErrors}
+            />
+          )}
           {kind === 'ACCESS' && (
             <AccessForm
               family={family}
@@ -390,7 +440,7 @@ function BulkChangeFlow({
                     {!item.applicable ? '적용 안 됨' : item.fields.length === 0 ? '변경 없음' : '적용'}
                   </TD>
                   <TD>
-                    <DiffList fields={item.fields} />
+                    <DiffList fields={item.fields} targetType={targetType} />
                   </TD>
                   <TD>{item.reason ? labelForBulkReason(item.reason) : '—'}</TD>
                 </TR>
@@ -398,17 +448,31 @@ function BulkChangeFlow({
             </TBody>
           </DataTable>
           <IrreversibleNotice change={sent} />
+          {needsConfirmation && changes.length > 0 && (
+            <FormField
+              label={`적용 대상 수(${changes.length})를 입력해 주세요`}
+              className="w-full sm:w-64"
+            >
+              <Input
+                inputMode="numeric"
+                autoComplete="off"
+                value={confirmation}
+                onChange={(event) => setConfirmation(event.target.value)}
+              />
+            </FormField>
+          )}
           <div className="flex justify-between gap-2">
             <Button
               variant="secondary"
               disabled={applyMutation.isPending}
-              onClick={() => setStep('values')}
+              onClick={() => setStep(kindTakesValues(sent.kind) ? 'values' : 'kind')}
             >
               이전
             </Button>
             {changes.length > 0 ? (
               <Button
                 variant={isDestructive(sent) ? 'danger' : 'primary'}
+                disabled={!confirmed}
                 loading={applyMutation.isPending}
                 onClick={() => {
                   setError(null)
@@ -453,7 +517,7 @@ function BulkChangeFlow({
                   </TD>
                   <TD className="whitespace-nowrap">{labelForBulkResult(item.result)}</TD>
                   <TD>
-                    <DiffList fields={item.fields} />
+                    <DiffList fields={item.fields} targetType={targetType} />
                   </TD>
                   <TD>{item.reason ? labelForBulkReason(item.reason) : '—'}</TD>
                 </TR>
@@ -483,14 +547,21 @@ function BulkChangeFlow({
   )
 }
 
-function DiffList({ fields }: { fields: AdminBulkChangeFieldDiff[] }) {
+function DiffList({
+  fields,
+  targetType,
+}: {
+  fields: AdminBulkChangeFieldDiff[]
+  targetType: AdminBulkChangeTargetType
+}) {
   if (fields.length === 0) return <span className="text-foreground-muted">—</span>
   return (
     <ul className="space-y-0.5">
       {fields.map((diff) => (
         <li key={diff.field}>
           <span className="text-foreground-muted">{diffFieldLabel(diff.field)}</span>{' '}
-          {formatDiffValue(diff.field, diff.oldValue)} → {formatDiffValue(diff.field, diff.newValue)}
+          {formatDiffValue(diff.field, diff.oldValue, targetType)} →{' '}
+          {formatDiffValue(diff.field, diff.newValue, targetType)}
         </li>
       ))}
     </ul>
@@ -501,8 +572,14 @@ function isDestructive(change: AdminBulkChangeSpec): boolean {
   return (
     change.llmKeyStatus?.action === 'REVOKE' ||
     change.vmPower?.action === 'FORCE_STOP' ||
-    change.vmDeletion?.action === 'SCHEDULE'
+    change.vmDeletion?.action === 'SCHEDULE' ||
+    change.kind === 'DOMAIN_FORCE_RELEASE'
   )
+}
+
+/** Changes whose apply waits for the administrator to type the target count. */
+function requiresTypedCount(change: AdminBulkChangeSpec): boolean {
+  return change.kind === 'DOMAIN_FORCE_RELEASE'
 }
 
 /** The warning for a change that cannot be taken back, at the button that makes it. */
@@ -511,6 +588,13 @@ function IrreversibleNotice({ change }: { change: AdminBulkChangeSpec }) {
     return (
       <MessageBar variant="danger" title="되돌릴 수 없습니다">
         폐기한 키로 보낸 모든 요청이 거부되고, 다시 쓸 수 없습니다.
+      </MessageBar>
+    )
+  }
+  if (change.kind === 'DOMAIN_FORCE_RELEASE') {
+    return (
+      <MessageBar variant="danger" title="되돌릴 수 없습니다">
+        이름이 즉시 회수되어 다른 사용자가 사용할 수 있게 됩니다.
       </MessageBar>
     )
   }

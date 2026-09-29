@@ -265,6 +265,14 @@ function App() {
             </RequireRole>
           }
         />
+        <Route
+          path="bulk/domains"
+          element={
+            <RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}>
+              <AdminBulkChangePage key="domains" family="domains" />
+            </RequireRole>
+          }
+        />
         <Route path="llm/accounts" element={<AdminOpenRouterAccountsPage />} />
         <Route path="llm/accounts/:accountId" element={<AdminOpenRouterAccountDetailPage />} />
         <Route path="llm/status" element={<AdminLlmStatusPage />} />

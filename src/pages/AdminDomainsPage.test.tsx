@@ -3,8 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
+  orgManagerUser,
+  orgViewerUser,
   refreshSuccessHandler,
   sysAdminUser,
+  sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { externalDomains } from '../test/msw/handlers/publishing'
 import { server } from '../test/msw/server'
@@ -216,5 +219,46 @@ describe('공개 서비스 — 외부 도메인과 루트 정책', () => {
     // 서버도 같은 판정을 한다. 버튼을 그리면 눌러야만 아는 거절이 된다.
     const theirs = screen.getByText('test.pusan.dev').closest('tr')!
     expect(within(theirs).queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+describe('AdminDomainsPage row selection', () => {
+  test('selects without opening the drawer and leads into the domain bulk change', async () => {
+    const user = userEvent.setup()
+    renderDomains('access-org-manager', orgManagerUser)
+    await user.click(await screen.findByRole('checkbox', { name: 'myblog.pusan.dev 선택' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+    await user.click(screen.getByRole('button', { name: '일괄 변경' }))
+    expect(await screen.findByRole('heading', { name: '도메인 일괄 변경' })).toBeInTheDocument()
+    expect(screen.getByText('대상 1개')).toBeInTheDocument()
+  })
+
+  test('selects every row of the page from the header', async () => {
+    const user = userEvent.setup()
+    renderDomains()
+    await user.click(await screen.findByRole('checkbox', { name: '이 페이지 전체 선택' }))
+    const rows = screen
+      .getAllByRole('checkbox')
+      .filter((box) => box.getAttribute('aria-label') !== '이 페이지 전체 선택')
+    expect(rows.length).toBeGreaterThan(1)
+    expect(rows.every((box) => (box as HTMLInputElement).checked)).toBe(true)
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent(
+      `${rows.length}개 선택됨`,
+    )
+  })
+
+  test('renders no selection for viewer roles', async () => {
+    for (const [token, profile] of [
+      ['access-org-viewer', orgViewerUser],
+      ['access-sys-viewer', sysViewerUser],
+    ] as const) {
+      server.use(refreshSuccessHandler(token, profile))
+      const view = renderApp('/admin/domains')
+      expect(await screen.findByText('myblog.pusan.dev')).toBeInTheDocument()
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '일괄 변경' })).not.toBeInTheDocument()
+      view.unmount()
+    }
   })
 })
