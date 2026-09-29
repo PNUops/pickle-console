@@ -3911,7 +3911,7 @@ export interface components {
             oldValue: unknown;
         };
         /** @enum {string} */
-        AdminBulkChangeKind: "LLM_KEY_LIMITS" | "LLM_KEY_STATUS" | "LLM_KEY_EXPIRY" | "VM_PERIOD" | "VM_POWER" | "VM_DELETION" | "ACCESS";
+        AdminBulkChangeKind: "LLM_KEY_LIMITS" | "LLM_KEY_STATUS" | "LLM_KEY_EXPIRY" | "VM_PERIOD" | "VM_POWER" | "VM_DELETION" | "DOMAIN_RENEWAL" | "DOMAIN_FORCE_RELEASE" | "DOMAIN_VERIFY" | "ACCESS";
         AdminBulkChangePreviewItem: {
             /** @description true면 적용할 수 있습니다. fields가 비어 있으면 이미 그 값이라 바뀌지 않습니다. */
             applicable: boolean;
@@ -3953,6 +3953,12 @@ export interface components {
         AdminBulkChangeSpec: {
             /** @description kind가 ACCESS일 때 */
             access?: components["schemas"]["AdminBulkAccessChange"] | null;
+            /** @description kind가 DOMAIN_FORCE_RELEASE일 때 */
+            domainForceRelease?: components["schemas"]["AdminBulkDomainForceReleaseChange"] | null;
+            /** @description kind가 DOMAIN_RENEWAL일 때 */
+            domainRenewal?: components["schemas"]["AdminBulkDomainRenewalChange"] | null;
+            /** @description kind가 DOMAIN_VERIFY일 때 */
+            domainVerify?: components["schemas"]["AdminBulkDomainVerifyChange"] | null;
             /** @description 변경 종류. 같은 이름의 멤버 하나만 채웁니다. */
             kind: components["schemas"]["AdminBulkChangeKind"];
             /** @description kind가 LLM_KEY_EXPIRY일 때 */
@@ -3970,6 +3976,19 @@ export interface components {
         };
         /** @enum {string} */
         AdminBulkChangeTargetType: "LLM_KEY" | "VM" | "DOMAIN" | "GPU_ALLOCATION";
+        /** @description 빈 객체. 강제 해제는 되돌릴 수 없고 이름을 즉시 회수합니다. */
+        AdminBulkDomainForceReleaseChange: Record<string, never>;
+        AdminBulkDomainRenewalChange: {
+            /** @description 기한을 바꾼 이유. 대상마다 감사 기록에 남습니다. */
+            reason?: string | null;
+            /**
+             * Format: date-time
+             * @description 새 사용 기한. 미래 시각이어야 하며, 이 시각까지 연장하지 않으면 레코드가 내려가고 이름이 해제됩니다.
+             */
+            renewDueAt: string;
+        };
+        /** @description 빈 객체. 커스텀 도메인마다 소유권 재검증을 접수합니다. */
+        AdminBulkDomainVerifyChange: Record<string, never>;
         AdminBulkListChange: {
             /** @description REPLACE는 목록을 통째로 바꾸고, ADD는 없는 값을 더하며, REMOVE는 있는 값을 뺍니다. 비우려면 REPLACE에 빈 배열을 보냅니다. */
             op: components["schemas"]["AdminBulkListOp"];
