@@ -2,6 +2,7 @@ import type {
   AdminBulkAccessAction,
   AdminBulkChangeKind,
   AdminBulkChangeSpec,
+  AdminBulkChangeTargetType,
   AdminBulkListOp,
   AdminBulkLlmKeyStatusAction,
   VmPowerAction,
@@ -10,6 +11,7 @@ import type { UserRole } from '../auth/auth-context'
 import {
   canAdminManageAccess,
   canAdminRevokeLlmKey,
+  canInterveneDomain,
   canManageLlmCredit,
   canManageVmDeletion,
   canOperateLlmKey,
@@ -24,7 +26,13 @@ import {
   type ResourceRole,
 } from './labels'
 import { passthroughText, type PassthroughEndpoint } from './passthrough-endpoints'
-import { LLM_KEY_STATUS_LABELS, VM_EVENT_LABELS, VM_STATUS_LABELS } from './status'
+import {
+  DOMAIN_STATUS_LABELS,
+  LLM_KEY_STATUS_LABELS,
+  ROUTE_STATUS_LABELS,
+  VM_EVENT_LABELS,
+  VM_STATUS_LABELS,
+} from './status'
 
 /**
  * The bulk change screen's pure half: which kinds a role is offered, how the
@@ -42,13 +50,14 @@ export const BULK_STEP_TITLES: Record<BulkStep, string> = {
   result: '결과',
 }
 
-/** The two lists that lead into the bulk screen. */
-export type BulkFamily = 'llm-keys' | 'vms'
+/** The lists that lead into the bulk screen. */
+export type BulkFamily = 'llm-keys' | 'vms' | 'domains'
 
 export const BULK_TARGET_TYPES = {
   'llm-keys': 'LLM_KEY',
   vms: 'VM',
-} as const
+  domains: 'DOMAIN',
+} as const satisfies Record<BulkFamily, AdminBulkChangeTargetType>
 
 export interface BulkKindOption {
   kind: AdminBulkChangeKind
@@ -62,25 +71,48 @@ const KIND_TITLES: Record<AdminBulkChangeKind, string> = {
   VM_PERIOD: '기간',
   VM_POWER: '전원',
   VM_DELETION: '삭제 예약·취소',
+  DOMAIN_RENEWAL: '사용 기한',
+  DOMAIN_VERIFY: '재검증',
+  DOMAIN_FORCE_RELEASE: '강제 해제',
   ACCESS: '접근 권한',
 }
 
 /** The kinds this role may run on a family, in the order they are offered. */
 export function bulkKindsFor(family: BulkFamily, role: UserRole): BulkKindOption[] {
-  const offered: AdminBulkChangeKind[] =
-    family === 'llm-keys'
-      ? [
-          ...(canOperateLlmKey(role)
-            ? (['LLM_KEY_LIMITS', 'LLM_KEY_STATUS', 'LLM_KEY_EXPIRY'] as const)
-            : []),
-          ...(canAdminManageAccess(role) ? (['ACCESS'] as const) : []),
-        ]
-      : [
-          ...(canOperateVm(role) ? (['VM_PERIOD', 'VM_POWER'] as const) : []),
-          ...(canManageVmDeletion(role) ? (['VM_DELETION'] as const) : []),
-          ...(canAdminManageAccess(role) ? (['ACCESS'] as const) : []),
-        ]
+  const access = canAdminManageAccess(role) ? (['ACCESS'] as const) : []
+  let offered: AdminBulkChangeKind[]
+  switch (family) {
+    case 'llm-keys':
+      offered = [
+        ...(canOperateLlmKey(role)
+          ? (['LLM_KEY_LIMITS', 'LLM_KEY_STATUS', 'LLM_KEY_EXPIRY'] as const)
+          : []),
+        ...access,
+      ]
+      break
+    case 'vms':
+      offered = [
+        ...(canOperateVm(role) ? (['VM_PERIOD', 'VM_POWER'] as const) : []),
+        ...(canManageVmDeletion(role) ? (['VM_DELETION'] as const) : []),
+        ...access,
+      ]
+      break
+    case 'domains':
+      // The same gate as the domain drawer's intervention section.
+      offered = [
+        ...(canInterveneDomain(role)
+          ? (['DOMAIN_RENEWAL', 'DOMAIN_VERIFY', 'DOMAIN_FORCE_RELEASE'] as const)
+          : []),
+        ...access,
+      ]
+      break
+  }
   return offered.map((kind) => ({ kind, title: KIND_TITLES[kind] }))
+}
+
+/** Kinds whose body is empty go from the kind step straight to the preview. */
+export function kindTakesValues(kind: AdminBulkChangeKind): boolean {
+  return kind !== 'DOMAIN_FORCE_RELEASE' && kind !== 'DOMAIN_VERIFY'
 }
 
 // ── limits ─────────────────────────────────────────────────────────────────
@@ -179,6 +211,8 @@ export interface BulkDraft {
   /** `scheduledFor` is a `datetime-local` value read as KST. */
   deletion: { action: 'SCHEDULE' | 'CANCEL'; scheduledFor: string; reason: string }
   access: { userId: string; userLabel: string; action: AdminBulkAccessAction; role: ResourceRole }
+  /** `date` is a KST date; the deadline is the end of that day, as the single form sends. */
+  domainRenewal: { date: string; reason: string }
 }
 
 export function emptyDraft(): BulkDraft {
@@ -202,6 +236,7 @@ export function emptyDraft(): BulkDraft {
     power: { action: 'START' },
     deletion: { action: 'SCHEDULE', scheduledFor: '', reason: '' },
     access: { userId: '', userLabel: '', action: 'GRANT', role: 'MEMBER' },
+    domainRenewal: { date: '', reason: '' },
   }
 }
 
@@ -283,6 +318,23 @@ export function buildChange(kind: AdminBulkChangeKind, draft: BulkDraft): BuildR
         },
       })
     }
+    case 'DOMAIN_RENEWAL': {
+      const { date, reason } = draft.domainRenewal
+      if (!date) {
+        return failed({ 'change.domainRenewal.renewDueAt': '새 사용 기한을 선택해 주세요.' })
+      }
+      return built({
+        kind,
+        domainRenewal: {
+          renewDueAt: new Date(`${date}T23:59:59+09:00`).toISOString(),
+          reason: reason.trim() || null,
+        },
+      })
+    }
+    case 'DOMAIN_FORCE_RELEASE':
+      return built({ kind, domainForceRelease: {} })
+    case 'DOMAIN_VERIFY':
+      return built({ kind, domainVerify: {} })
     case 'ACCESS': {
       const { userId, action, role } = draft.access
       if (!userId) return failed({ 'change.access.userId': '대상 사용자를 골라 주세요.' })
@@ -413,6 +465,8 @@ export const BULK_FIELDS: Record<string, FieldSlot<BulkStep>> = {
   'change.vmPeriod.endDate': valuesSlot('종료일'),
   'change.vmDeletion.scheduledFor': valuesSlot('삭제 예정 시각'),
   'change.vmDeletion.reason': valuesSlot('삭제 사유'),
+  'change.domainRenewal.renewDueAt': valuesSlot('새 사용 기한'),
+  'change.domainRenewal.reason': valuesSlot('사유'),
   'change.access.userId': valuesSlot('대상 사용자'),
   'change.access.role': valuesSlot('등급'),
 }
@@ -436,10 +490,18 @@ const DIFF_FIELD_LABELS: Record<string, string> = {
   deleteKind: '삭제 종류',
   deleteScheduledFor: '삭제 예정',
   role: '접근 권한',
+  renewDueAt: '사용 기한',
+  releasedAt: '해제 시각',
+  routeStatus: '라우트',
+  verification: '소유권 검증',
 }
 
 export function diffFieldLabel(field: string): string {
   return DIFF_FIELD_LABELS[field] ?? field
+}
+
+const VERIFICATION_LABELS: Record<string, string> = {
+  REQUESTED: '재검증 접수',
 }
 
 const DELETE_KIND_LABELS: Record<string, string> = {
@@ -452,8 +514,16 @@ function lookup(table: Record<string, string>, value: string): string {
   return table[value] ?? value
 }
 
-/** One side of a diff as a reader sees it. Unknown shapes fall back to their text. */
-export function formatDiffValue(field: string, value: unknown): string {
+/**
+ * One side of a diff as a reader sees it. Unknown shapes fall back to their
+ * text. The target type settles words two types share (a domain's ACTIVE is
+ * not a key's).
+ */
+export function formatDiffValue(
+  field: string,
+  value: unknown,
+  targetType?: AdminBulkChangeTargetType,
+): string {
   if (value == null) {
     switch (field) {
       case 'rpm':
@@ -469,7 +539,10 @@ export function formatDiffValue(field: string, value: unknown): string {
       case 'endDate':
         return '종료일 없음'
       case 'role':
+      case 'releasedAt':
         return '없음'
+      case 'renewDueAt':
+        return '기한 없음'
       default:
         return '—'
     }
@@ -488,7 +561,12 @@ export function formatDiffValue(field: string, value: unknown): string {
       case 'creditLimitReset':
         return lookup(CREDIT_LIMIT_RESET_LABELS, value)
       case 'status':
+        if (targetType === 'DOMAIN') return lookup(DOMAIN_STATUS_LABELS, value)
         return lookup({ ...LLM_KEY_STATUS_LABELS, ...VM_STATUS_LABELS }, value)
+      case 'routeStatus':
+        return lookup(ROUTE_STATUS_LABELS, value)
+      case 'verification':
+        return lookup(VERIFICATION_LABELS, value)
       case 'pendingPowerAction':
         return lookup({ ...VM_EVENT_LABELS, ...POWER_ACTION_LABELS }, value)
       case 'deleteKind':
@@ -497,6 +575,8 @@ export function formatDiffValue(field: string, value: unknown): string {
         return lookup(RESOURCE_ROLE_LABELS, value)
       case 'expiresAt':
       case 'deleteScheduledFor':
+      case 'renewDueAt':
+      case 'releasedAt':
         return Number.isNaN(Date.parse(value)) ? value : formatDateTime(value)
       default:
         return value

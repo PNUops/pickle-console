@@ -79,6 +79,8 @@ export const adminPaths = {
   // targets in router state, never from the sidebar.
   bulkLlmKeys: (orgId?: string) => adminPath('/admin/bulk/llm-keys', orgId),
   bulkVms: (orgId?: string) => adminPath('/admin/bulk/vms', orgId),
+  bulkDomains: (orgId?: string) => adminPath('/admin/bulk/domains', orgId),
+  domains: (orgId?: string) => adminPath('/admin/domains', orgId),
   gpus: (orgId?: string) => adminPath('/admin/gpus', orgId),
   gpuDetail: (allocationId: string, orgId?: string) => adminPath(`/admin/gpus/${allocationId}`, orgId),
   llmUsage: (orgId?: string, workspaceId?: string | null, days?: 7 | 30 | 90) => {

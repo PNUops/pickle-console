@@ -3,9 +3,11 @@ import {
   bulkKindsFor,
   buildChange,
   clearingLists,
+  diffFieldLabel,
   emptyDraft,
   formFieldOf,
   formatDiffValue,
+  kindTakesValues,
   kstLocalToIso,
   limitFieldsFor,
 } from './bulk-change'
@@ -116,6 +118,13 @@ describe('bulk change offers and labels', () => {
       'ACCESS',
     ])
     expect(bulkKindsFor('llm-keys', 'ORG_VIEWER')).toEqual([])
+    expect(bulkKindsFor('domains', 'SYS_MANAGER').map((k) => k.kind)).toEqual([
+      'DOMAIN_RENEWAL',
+      'DOMAIN_VERIFY',
+      'DOMAIN_FORCE_RELEASE',
+    ])
+    expect(bulkKindsFor('domains', 'SYS_ADMIN').map((k) => k.kind)).toContain('ACCESS')
+    expect(bulkKindsFor('domains', 'SYS_VIEWER')).toEqual([])
     expect(limitFieldsFor('SYS_MANAGER')).toEqual(['rpm', 'tpm', 'dailyTokens', 'concurrency'])
   })
 
@@ -127,5 +136,46 @@ describe('bulk change offers and labels', () => {
     expect(formatDiffValue('rpm', null)).toBe('서비스 기본값')
     expect(formatDiffValue('passthroughEndpoints', [])).toBe('부여 안 됨')
     expect(formatDiffValue('mystery', { a: 1 })).toBe('{"a":1}')
+  })
+})
+
+describe('bulk change on domains', () => {
+  test('builds the three domain bodies and skips the values step for the empty ones', () => {
+    const draft = emptyDraft()
+    expect(buildChange('DOMAIN_RENEWAL', draft).errors).toEqual({
+      'change.domainRenewal.renewDueAt': '새 사용 기한을 선택해 주세요.',
+    })
+    draft.domainRenewal = { date: '2030-03-01', reason: '  ' }
+    expect(buildChange('DOMAIN_RENEWAL', draft).change).toEqual({
+      kind: 'DOMAIN_RENEWAL',
+      domainRenewal: { renewDueAt: '2030-03-01T14:59:59.000Z', reason: null },
+    })
+    expect(buildChange('DOMAIN_FORCE_RELEASE', draft).change).toEqual({
+      kind: 'DOMAIN_FORCE_RELEASE',
+      domainForceRelease: {},
+    })
+    expect(buildChange('DOMAIN_VERIFY', draft).change).toEqual({
+      kind: 'DOMAIN_VERIFY',
+      domainVerify: {},
+    })
+    expect(kindTakesValues('DOMAIN_RENEWAL')).toBe(true)
+    expect(kindTakesValues('DOMAIN_FORCE_RELEASE')).toBe(false)
+    expect(kindTakesValues('DOMAIN_VERIFY')).toBe(false)
+  })
+
+  test('labels the domain diff fields and reads status by target type', () => {
+    expect(diffFieldLabel('renewDueAt')).toBe('사용 기한')
+    expect(diffFieldLabel('releasedAt')).toBe('해제 시각')
+    expect(diffFieldLabel('routeStatus')).toBe('라우트')
+    expect(diffFieldLabel('verification')).toBe('소유권 검증')
+    expect(diffFieldLabel('somethingNew')).toBe('somethingNew')
+    expect(formatDiffValue('status', 'ACTIVE', 'DOMAIN')).toBe('연결됨')
+    expect(formatDiffValue('status', 'REMOVED', 'DOMAIN')).toBe('해제됨')
+    expect(formatDiffValue('status', 'ACTIVE', 'LLM_KEY')).toBe('활성')
+    expect(formatDiffValue('routeStatus', 'REMOVED', 'DOMAIN')).toBe('제거됨')
+    expect(formatDiffValue('releasedAt', null, 'DOMAIN')).toBe('없음')
+    expect(formatDiffValue('verification', null, 'DOMAIN')).toBe('—')
+    expect(formatDiffValue('verification', 'REQUESTED', 'DOMAIN')).toBe('재검증 접수')
+    expect(formatDiffValue('verification', 'QUEUED', 'DOMAIN')).toBe('QUEUED')
   })
 })
