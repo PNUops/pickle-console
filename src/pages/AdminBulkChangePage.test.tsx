@@ -16,6 +16,7 @@ import {
   setBulkGrant,
 } from '../test/msw/handlers/bulk-changes'
 import { adminLlmKeyStore } from '../test/msw/handlers/llm-keys'
+import { externalDomains } from '../test/msw/handlers/publishing'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
@@ -27,18 +28,24 @@ async function openBulk(
   token: string,
   profile: typeof sysAdminUser,
   names: string[],
-  list: 'llm-keys' | 'vms' = 'llm-keys',
+  list: keyof typeof LISTS = 'llm-keys',
 ) {
   server.use(refreshSuccessHandler(token, profile))
-  renderApp(list === 'llm-keys' ? '/admin/llm/keys' : '/admin/vms')
+  renderApp(LISTS[list].path)
   for (const name of names) {
     await user.click(await screen.findByRole('checkbox', { name: `${name} 선택` }))
   }
   await user.click(screen.getByRole('button', { name: '일괄 변경' }))
-  await screen.findByRole('heading', {
-    name: list === 'llm-keys' ? 'LLM API 키 일괄 변경' : 'VM 일괄 변경',
-  })
+  await screen.findByRole('heading', { name: LISTS[list].heading })
 }
+
+const LISTS = {
+  'llm-keys': { path: '/admin/llm/keys', heading: 'LLM API 키 일괄 변경' },
+  vms: { path: '/admin/vms', heading: 'VM 일괄 변경' },
+  domains: { path: '/admin/domains', heading: '도메인 일괄 변경' },
+} as const
+
+const EXTERNAL_DOMAIN_ID = uuid(9101)
 
 async function chooseKind(user: User, title: string) {
   await user.click(screen.getByRole('radio', { name: title }))
@@ -398,6 +405,201 @@ describe('AdminBulkChangePage', () => {
     expect(bulkPreviewBodies[0].change).toEqual({
       kind: 'ACCESS',
       access: { userId: uuid(42), action: 'GRANT', role: 'EDITOR' },
+    })
+  })
+})
+
+describe('AdminBulkChangePage on domains', () => {
+  test('offers the domain kinds to an org manager and access only to the administrator tier', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-org-manager', orgManagerUser, ['myblog.pusan.dev'], 'domains')
+    for (const title of ['사용 기한', '재검증', '강제 해제']) {
+      expect(screen.getByRole('radio', { name: title })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+  })
+
+  test('sends a renewal as the end of the chosen KST day and marks other kinds ineligible', async () => {
+    const user = userEvent.setup()
+    await openBulk(
+      user,
+      'access-sys-admin',
+      sysAdminUser,
+      ['myblog.pusan.dev', 'ai-team.pusan.dev'],
+      'domains',
+    )
+    await chooseKind(user, '사용 기한')
+    await user.type(screen.getByLabelText(/새 사용 기한/), '2030-01-01')
+    await user.type(screen.getByRole('textbox', { name: /사유/ }), '학기 연장')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    const platformId = bulkPreviewBodies[0].targetIds[1]
+    expect(bulkPreviewBodies[0]).toEqual({
+      targetType: 'DOMAIN',
+      targetIds: [EXTERNAL_DOMAIN_ID, platformId],
+      change: {
+        kind: 'DOMAIN_RENEWAL',
+        domainRenewal: { renewDueAt: '2030-01-01T14:59:59.000Z', reason: '학기 연장' },
+      },
+    })
+    expect(within(preview).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent(
+      /사용 기한 .+ → .+/,
+    )
+    expect(within(preview).getByRole('row', { name: /ai-team\.pusan\.dev/ })).toHaveTextContent(
+      '대상 아님',
+    )
+
+    await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+    expect(
+      within(await screen.findByRole('table', { name: '일괄 변경 결과' })).getByRole('row', {
+        name: /myblog\.pusan\.dev/,
+      }),
+    ).toHaveTextContent('적용됨')
+    expect(externalDomains.find((domain) => domain.id === EXTERNAL_DOMAIN_ID)?.renewDueAt).toBe(
+      '2030-01-01T14:59:59.000Z',
+    )
+  })
+
+  test('sends no reason when the renewal reason is blank', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-org-manager', orgManagerUser, ['myblog.pusan.dev'], 'domains')
+    await chooseKind(user, '사용 기한')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(await screen.findByText('새 사용 기한을 선택해 주세요.')).toBeInTheDocument()
+    expect(bulkPreviewBodies).toHaveLength(0)
+    await user.type(screen.getByLabelText(/새 사용 기한/), '2030-01-01')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies[0].change.domainRenewal?.reason).toBeNull()
+  })
+
+  test('routes the server refusing a past deadline back to the renewal input', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')
+    await chooseKind(user, '사용 기한')
+    await user.type(screen.getByLabelText(/새 사용 기한/), '2020-01-01')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('지난 시각으로는 옮길 수 없습니다.')
+    expect(screen.getByLabelText(/새 사용 기한/)).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: '일괄 변경 미리보기' })).not.toBeInTheDocument()
+  })
+
+  test('reports a renewal target changed since the preview as stale', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')
+    await chooseKind(user, '사용 기한')
+    await user.type(screen.getByLabelText(/새 사용 기한/), '2030-01-01')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    // The owner extends the name between preview and apply.
+    externalDomains.find((domain) => domain.id === EXTERNAL_DOMAIN_ID)!.renewDueAt =
+      '2028-01-01T00:00:00+09:00'
+    await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+    expect(await screen.findByRole('table', { name: '일괄 변경 결과' })).toHaveTextContent(
+      '미리보기 이후 변경됨',
+    )
+  })
+
+  test('goes from the kind straight to the preview for a verify and names non-custom domains ineligible', async () => {
+    const user = userEvent.setup()
+    await openBulk(
+      user,
+      'access-org-admin',
+      orgAdminUser,
+      ['demo.example.com', 'myblog.pusan.dev'],
+      'domains',
+    )
+    await user.click(screen.getByRole('radio', { name: '재검증' }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies[0].change).toEqual({ kind: 'DOMAIN_VERIFY', domainVerify: {} })
+    expect(within(preview).getByRole('row', { name: /demo\.example\.com/ })).toHaveTextContent(
+      '소유권 검증 — → 재검증 접수',
+    )
+    expect(within(preview).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent(
+      '대상 아님',
+    )
+    await user.click(screen.getByRole('button', { name: '이전' }))
+    expect(screen.getByRole('radio', { name: '재검증' })).toBeChecked()
+  })
+
+  test('applies a force release only after the applicable count is typed', async () => {
+    const user = userEvent.setup()
+    await openBulk(
+      user,
+      'access-sys-admin',
+      sysAdminUser,
+      ['demo.example.com', 'myblog.pusan.dev'],
+      'domains',
+    )
+    await user.click(screen.getByRole('radio', { name: '강제 해제' }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies[0].change).toEqual({
+      kind: 'DOMAIN_FORCE_RELEASE',
+      domainForceRelease: {},
+    })
+    expect(within(preview).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent(
+      '상태 연결됨 → 해제됨',
+    )
+    expect(screen.getByText('되돌릴 수 없습니다')).toBeInTheDocument()
+    expect(screen.getByText(/DNS 존에서 레코드가 지워집니다/)).toBeInTheDocument()
+
+    const apply = screen.getByRole('button', { name: '2개에 적용' })
+    const count = screen.getByRole('textbox', { name: '적용 대상 수(2)를 입력해 주세요' })
+    expect(apply).toBeDisabled()
+    await user.type(count, '1')
+    expect(apply).toBeDisabled()
+    await user.clear(count)
+    await user.type(count, '2')
+    expect(apply).toBeEnabled()
+    await user.click(apply)
+
+    const result = await screen.findByRole('table', { name: '일괄 변경 결과' })
+    expect(bulkApplyBodies).toHaveLength(1)
+    expect(within(result).getByRole('row', { name: /demo\.example\.com/ })).toHaveTextContent('적용됨')
+    expect(within(result).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent('적용됨')
+
+    await user.click(screen.getByRole('link', { name: '공개 서비스 목록으로' }))
+    await screen.findByRole('checkbox', { name: 'ai-team.pusan.dev 선택' })
+    expect(screen.queryByText('demo.example.com')).not.toBeInTheDocument()
+    expect(screen.queryByText('myblog.pusan.dev')).not.toBeInTheDocument()
+  })
+
+  test('asks for the count again after a fresh preview', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')
+    await user.click(screen.getByRole('radio', { name: '강제 해제' }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await user.type(
+      await screen.findByRole('textbox', { name: '적용 대상 수(1)를 입력해 주세요' }),
+      '1',
+    )
+    await user.click(screen.getByRole('button', { name: '이전' }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    expect(
+      await screen.findByRole('textbox', { name: '적용 대상 수(1)를 입력해 주세요' }),
+    ).toHaveValue('')
+    expect(screen.getByRole('button', { name: '1개에 적용' })).toBeDisabled()
+  })
+
+  test('sends an access grant on domains with the domain grade hints', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')
+    await chooseKind(user, '접근 권한')
+    await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '홍길동')
+    await user.click(
+      within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
+    )
+    await user.selectOptions(screen.getByRole('combobox', { name: /등급/ }), 'EDITOR')
+    expect(screen.getByText('레코드 편집과 사용 연장까지')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies[0]).toEqual({
+      targetType: 'DOMAIN',
+      targetIds: [EXTERNAL_DOMAIN_ID],
+      change: { kind: 'ACCESS', access: { userId: uuid(42), action: 'GRANT', role: 'EDITOR' } },
     })
   })
 })
