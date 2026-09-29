@@ -494,7 +494,12 @@ const DIFF_FIELD_LABELS: Record<string, string> = {
   releasedAt: '해제 시각',
   routeStatus: '라우트',
   verification: '소유권 검증',
+  records: 'DNS 레코드',
+  activeCertificates: '유효한 인증서',
 }
+
+/** Diff fields that are counts of things rather than values. */
+const COUNT_FIELDS: ReadonlySet<string> = new Set(['records', 'activeCertificates'])
 
 export function diffFieldLabel(field: string): string {
   return DIFF_FIELD_LABELS[field] ?? field
@@ -552,6 +557,7 @@ export function formatDiffValue(
     return value.length === 0 ? '없음' : value.map(String).join(', ')
   }
   if (typeof value === 'number') {
+    if (COUNT_FIELDS.has(field)) return `${value.toLocaleString('ko-KR')}개`
     return field === 'creditLimit' ? `$${value.toLocaleString('ko-KR')}` : value.toLocaleString('ko-KR')
   }
   if (typeof value === 'string') {

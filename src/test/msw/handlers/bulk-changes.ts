@@ -3,7 +3,12 @@ import type { components } from '../../../api/schema'
 import { kstDateString } from '../../../lib/format'
 import { problemResponse } from './auth'
 import { activeAdminRole, adminActor, adminLlmKeyStore } from './llm-keys'
-import { findAdminDomain, releaseAdminDomain, setExternalRenewal } from './publishing'
+import {
+  findAdminDomain,
+  releaseAdminDomain,
+  releaseTeardownCounts,
+  setExternalRenewal,
+} from './publishing'
 import { adminUserStore } from './users'
 import { vmStore } from './vms'
 import { workspaceMembersOf } from './workspaces'
@@ -293,6 +298,10 @@ function judgeDomain(domain: Domain, change: Schemas['AdminBulkChangeSpec']): Ju
       if (domain.routeStatus && domain.routeStatus !== 'REMOVED') {
         fields.push(diff('routeStatus', domain.routeStatus, 'REMOVED'))
       }
+      // Counts appear only when there is something to take down.
+      const { records, activeCertificates } = releaseTeardownCounts(domain.id)
+      if (records > 0) fields.push(diff('records', records, 0))
+      if (activeCertificates > 0) fields.push(diff('activeCertificates', activeCertificates, 0))
       return { reason: null, fields, write: () => void releaseAdminDomain(domain.id) }
     }
     case 'DOMAIN_VERIFY':

@@ -567,6 +567,32 @@ describe('AdminBulkChangePage on domains', () => {
     expect(screen.queryByText('myblog.pusan.dev')).not.toBeInTheDocument()
   })
 
+  test('shows the records and certificates a force release takes down as counts', async () => {
+    const user = userEvent.setup()
+    await openBulk(
+      user,
+      'access-sys-admin',
+      sysAdminUser,
+      ['ai-team.pusan.dev', 'shop.example.com', 'myblog.pusan.dev', 'demo.example.com'],
+      'domains',
+    )
+    await user.click(screen.getByRole('radio', { name: '강제 해제' }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    const row = (name: RegExp) => within(preview).getByRole('row', { name })
+
+    // A served platform name owes its one A record; the shared wildcard is not its own.
+    expect(row(/ai-team\.pusan\.dev/)).toHaveTextContent('DNS 레코드 1개 → 0개')
+    expect(row(/ai-team\.pusan\.dev/)).not.toHaveTextContent('유효한 인증서')
+    // A custom name's DNS is not ours; its own certificate is.
+    expect(row(/shop\.example\.com/)).toHaveTextContent('유효한 인증서 1개 → 0개')
+    expect(row(/shop\.example\.com/)).not.toHaveTextContent('DNS 레코드')
+    expect(row(/myblog\.pusan\.dev/)).toHaveTextContent('DNS 레코드 1개 → 0개')
+    // Nothing to take down, so neither count appears.
+    expect(row(/demo\.example\.com/)).not.toHaveTextContent('DNS 레코드')
+    expect(row(/demo\.example\.com/)).not.toHaveTextContent('유효한 인증서')
+  })
+
   test('asks for the count again after a fresh preview', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['myblog.pusan.dev'], 'domains')

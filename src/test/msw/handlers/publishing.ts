@@ -485,6 +485,33 @@ export function findAdminDomain(domainId: string): Schemas['AdminDomainView'] | 
   return externalDomains.find((d) => d.id === domainId)
 }
 
+/**
+ * What a force release takes down beyond the row, as the server counts it:
+ * the record sets leaving a zone the platform writes (an external name's live
+ * sets, or the one A record of a served platform name whose DNS was written)
+ * and the name's own certificates not yet revoked. The shared wildcard is not
+ * any one name's certificate.
+ */
+export function releaseTeardownCounts(domainId: string): {
+  records: number
+  activeCertificates: number
+} {
+  const external = externalDomains.find((d) => d.id === domainId)
+  if (external) {
+    const records = (externalRecords[domainId] ?? []).filter((r) => r.status !== 'REMOVED')
+    return { records: records.length, activeCertificates: 0 }
+  }
+  const live = findLive(domainId)
+  if (!live) return { records: 0, activeCertificates: 0 }
+  const { domain, route, certificate } = live.pub
+  const served = domain.kind === 'AUTO' || domain.kind === 'PLATFORM'
+  const liveRoute = route != null && route.status !== 'REMOVED'
+  const records = served && liveRoute && domain.dnsStatus !== 'NONE' ? 1 : 0
+  const ownCertificate =
+    certificate != null && certificate.kind !== 'ORIGIN_CA_WILDCARD' && certificate.status !== 'REVOKED'
+  return { records, activeCertificates: ownCertificate ? 1 : 0 }
+}
+
 /** Moves an external name's renewal deadline, as the single renewal path does. */
 export function setExternalRenewal(domainId: string, renewDueAt: string): void {
   const found = externalDomains.find((d) => d.id === domainId)
