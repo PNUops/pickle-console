@@ -6,6 +6,7 @@ import { activeAdminRole, adminActor, adminLlmKeyStore } from './llm-keys'
 import {
   findAdminDomain,
   releaseAdminDomain,
+  releaseFingerprintParts,
   releaseTeardownCounts,
   setExternalRenewal,
 } from './publishing'
@@ -308,6 +309,9 @@ function judgeDomain(domain: Domain, change: Schemas['AdminBulkChangeSpec']): Ju
       if (domain.kind !== 'CUSTOM') return refused('INELIGIBLE')
       return { reason: null, fields: [diff('verification', null, 'REQUESTED')] }
     case 'ACCESS':
+      // Grants exist only on external names; any other reachable name is
+      // refused by kind, with its name shown.
+      if (domain.kind !== 'EXTERNAL') return refused('INELIGIBLE')
       return judgeAccess(domain.id, domain.workspaceId, change.access!)
     default:
       return refused('INELIGIBLE')
@@ -335,9 +339,32 @@ function nextDayKst(endDate: string): string {
 function fingerprintOf(target: Target, change: Schemas['AdminBulkChangeSpec']): string {
   const grant =
     change.kind === 'ACCESS' ? (grants[`${target.id}:${change.access?.userId}`] ?? null) : null
+  return hashed(target.id, [target, grant])
+}
+
+function hashed(id: string, values: unknown): string {
   let hash = 7
-  for (const char of JSON.stringify([target, grant])) hash = (hash * 31 + char.charCodeAt(0)) | 0
-  return `${target.id}:${hash}`
+  for (const char of JSON.stringify(values)) hash = (hash * 31 + char.charCodeAt(0)) | 0
+  return `${id}:${hash}`
+}
+
+/**
+ * A domain's fingerprint, per kind, from the values the server hashes: kind
+ * and status always, and what each kind's judgment reads besides. Access reads
+ * only the grantee's current grant.
+ */
+function domainFingerprintOf(domain: Domain, change: Schemas['AdminBulkChangeSpec']): string {
+  if (change.kind === 'ACCESS') {
+    return hashed(domain.id, grants[`${domain.id}:${change.access?.userId}`] ?? null)
+  }
+  const values: Record<string, unknown> = { kind: domain.kind, status: domain.status }
+  if (change.kind === 'DOMAIN_RENEWAL') {
+    values.releasedAt = domain.releasedAt ?? null
+    values.renewDueAt = domain.renewDueAt ?? null
+  } else if (change.kind === 'DOMAIN_FORCE_RELEASE') {
+    Object.assign(values, releaseFingerprintParts(domain.id))
+  }
+  return hashed(domain.id, values)
 }
 
 /** Seeds or clears one grant, as another administrator would between preview and apply. */
@@ -360,7 +387,25 @@ const KIND_TARGETS: Record<Schemas['AdminBulkChangeKind'], Schemas['AdminBulkCha
   ACCESS: ['LLM_KEY', 'VM', 'DOMAIN', 'GPU_ALLOCATION'],
 }
 
-function validate(body: Request_): { field: string; message: string }[] {
+/** The spec member each kind fills, as the server names it. */
+const KIND_MEMBERS: Record<Schemas['AdminBulkChangeKind'], keyof Schemas['AdminBulkChangeSpec']> = {
+  LLM_KEY_LIMITS: 'llmKeyLimits',
+  LLM_KEY_STATUS: 'llmKeyStatus',
+  LLM_KEY_EXPIRY: 'llmKeyExpiry',
+  VM_PERIOD: 'vmPeriod',
+  VM_POWER: 'vmPower',
+  VM_DELETION: 'vmDeletion',
+  DOMAIN_RENEWAL: 'domainRenewal',
+  DOMAIN_FORCE_RELEASE: 'domainForceRelease',
+  DOMAIN_VERIFY: 'domainVerify',
+  ACCESS: 'access',
+}
+
+/**
+ * The checks the server makes on the request as a whole. The kind's own
+ * checks run only when these pass, as the server skips them otherwise.
+ */
+function validateRequest(body: Request_): { field: string; message: string }[] {
   const errors: { field: string; message: string }[] = []
   const change = body.change
   if (!KIND_TARGETS[change.kind]?.includes(body.targetType)) {
@@ -369,6 +414,23 @@ function validate(body: Request_): { field: string; message: string }[] {
       message: `이 변경 종류는 ${body.targetType} 대상에 쓸 수 없습니다.`,
     })
   }
+  if (new Set(body.targetIds).size !== body.targetIds.length) {
+    errors.push({ field: 'targetIds', message: '같은 대상을 두 번 지정했습니다.' })
+  }
+  for (const [kind, member] of Object.entries(KIND_MEMBERS)) {
+    const present = change[member] != null
+    if (kind === change.kind && !present) {
+      errors.push({ field: `change.${member}`, message: '이 변경 종류의 내용을 채워 주세요.' })
+    } else if (kind !== change.kind && present) {
+      errors.push({ field: `change.${member}`, message: '변경 종류와 다른 내용은 보낼 수 없습니다.' })
+    }
+  }
+  return errors
+}
+
+function validate(body: Request_): { field: string; message: string }[] {
+  const errors: { field: string; message: string }[] = []
+  const change = body.change
   if (change.kind === 'DOMAIN_RENEWAL') {
     const due = change.domainRenewal?.renewDueAt
     if (!due) {
@@ -419,6 +481,7 @@ function resolve(profile: Profile, body: Request_): Resolved[] {
     let name: string | undefined
     let reach: Reason | null = null
     let judge: () => Judgement
+    let fingerprint = () => fingerprintOf(target!, body.change)
     if (body.targetType === 'LLM_KEY') {
       const key = adminLlmKeyStore.find((item) => item.id === targetId)
       if (!key) return missing
@@ -440,6 +503,7 @@ function resolve(profile: Profile, body: Request_): Resolved[] {
       name = domain.fqdn
       reach = reachDomain(profile, domain, body.change)
       judge = () => judgeDomain(domain, body.change)
+      fingerprint = () => domainFingerprintOf(domain, body.change)
     } else {
       return missing
     }
@@ -450,7 +514,7 @@ function resolve(profile: Profile, body: Request_): Resolved[] {
       name: shown,
       reach: null,
       judgement: judge(),
-      fingerprint: fingerprintOf(target, body.change),
+      fingerprint: fingerprint(),
     }
   })
 }
@@ -462,7 +526,8 @@ export const bulkChangeHandlers: RequestHandler[] = [
     if (!OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes/preview')
     const body = (await request.json()) as Request_
     bulkPreviewBodies.push(body)
-    const errors = validate(body)
+    const errors = validateRequest(body)
+    if (errors.length === 0) errors.push(...validate(body))
     if (errors.length > 0) return validation('/api/v1/admin/bulk-changes/preview', errors)
     const items: Schemas['AdminBulkChangePreviewItem'][] = resolve(profile, body).map((entry) => {
       const reason = entry.reach ?? entry.judgement?.reason ?? null
@@ -484,13 +549,14 @@ export const bulkChangeHandlers: RequestHandler[] = [
     if (!OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes')
     const body = (await request.json()) as Request_
     bulkApplyBodies.push(body)
-    const errors = validate(body)
+    const errors = validateRequest(body)
     if (!body.fingerprints || body.targetIds.some((id) => body.fingerprints?.[id] == null)) {
       errors.push({
         field: 'fingerprints',
         message: '모든 대상의 fingerprint를 미리보기에서 받은 대로 보내 주세요.',
       })
     }
+    if (errors.length === 0) errors.push(...validate(body))
     if (errors.length > 0) return validation('/api/v1/admin/bulk-changes', errors)
     const items: Schemas['AdminBulkChangeApplyItem'][] = resolve(profile, body).map((entry) => {
       const base = { targetId: entry.targetId, name: entry.name, fields: [] as Diff[] }

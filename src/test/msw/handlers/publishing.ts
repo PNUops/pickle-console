@@ -512,6 +512,32 @@ export function releaseTeardownCounts(domainId: string): {
   return { records, activeCertificates: ownCertificate ? 1 : 0 }
 }
 
+/**
+ * The force release fingerprint's parts beyond kind and status, the same
+ * values the server hashes: the VM, DNS status, live record sets, the live
+ * route and the name's own certificates. The mock has no records generation
+ * and names record sets by name and type, as it has no record ids.
+ */
+export function releaseFingerprintParts(domainId: string): Record<string, unknown> {
+  const domain = findAdminDomain(domainId)
+  const live = findLive(domainId)
+  const route = live?.pub.route
+  const certificate = live?.pub.certificate
+  return {
+    releasedAt: domain?.releasedAt ?? null,
+    vmId: domain?.vmId ?? null,
+    dnsStatus: domain?.dnsStatus ?? null,
+    records: (externalRecords[domainId] ?? [])
+      .filter((r) => r.status !== 'REMOVED')
+      .map((r) => `${r.name}/${r.type}:${r.status}`),
+    liveRoute: route && route.status !== 'REMOVED' ? `${domainId}:${route.status}` : null,
+    certificates:
+      certificate && certificate.kind !== 'ORIGIN_CA_WILDCARD'
+        ? [`${certificate.kind}:${certificate.status}`]
+        : [],
+  }
+}
+
 /** Moves an external name's renewal deadline, as the single renewal path does. */
 export function setExternalRenewal(domainId: string, renewDueAt: string): void {
   const found = externalDomains.find((d) => d.id === domainId)
@@ -524,7 +550,7 @@ export function setExternalRenewal(domainId: string, renewDueAt: string): void {
  * name is not found.
  */
 export function releaseAdminDomain(domainId: string): string | null {
-  // 예약 중 행의 강제 해제 = 즉시 반납 (행은 REMOVED로 남는다).
+  // Releasing a held name gives it back at once; the row stays as REMOVED.
   const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
   if (reservedIdx >= 0) {
     const [reserved] = reservedDomains.splice(reservedIdx, 1)
@@ -539,7 +565,7 @@ export function releaseAdminDomain(domainId: string): string | null {
   }
   const found = findLive(domainId)
   if (!found) return null
-  // 강제 해제는 이름을 즉시 회수한다 — 예약 없이 REMOVED 묘비만 남는다.
+  // A force release takes the name back at once: no grace, only a REMOVED row.
   found.vm.publications = found.vm.publications.filter((p) => p.domain.id !== domainId)
   retireDomain(found.pub.domain)
   return '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 라우트 제거가 곧 적용됩니다.'
