@@ -426,11 +426,7 @@ export function DomainRenewalForm({
         onChange={(date) => onChange({ ...draft, date })}
         error={errors['change.domainRenewal.renewDueAt']}
       />
-      <FormField
-        label="사유"
-        description="감사 기록에 남습니다."
-        error={errors['change.domainRenewal.reason']}
-      >
+      <FormField label="사유 (감사 기록에 남습니다)" error={errors['change.domainRenewal.reason']}>
         <Input
           value={draft.reason}
           maxLength={200}
