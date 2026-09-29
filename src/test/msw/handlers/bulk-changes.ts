@@ -3,6 +3,7 @@ import type { components } from '../../../api/schema'
 import { kstDateString } from '../../../lib/format'
 import { problemResponse } from './auth'
 import { activeAdminRole, adminActor, adminLlmKeyStore } from './llm-keys'
+import { findAdminDomain, releaseAdminDomain, setExternalRenewal } from './publishing'
 import { adminUserStore } from './users'
 import { vmStore } from './vms'
 import { workspaceMembersOf } from './workspaces'
@@ -14,6 +15,8 @@ type Diff = Schemas['AdminBulkChangeFieldDiff']
 type Profile = Schemas['UserProfileResponse']
 type AdminKey = (typeof adminLlmKeyStore)[number]
 type Vm = (typeof vmStore)[number]
+type Domain = Schemas['AdminDomainView']
+type Target = AdminKey | Vm | Domain
 
 /** Every body the two endpoints received, in order. Tests read these. */
 export let bulkPreviewBodies: Request_[] = []
@@ -41,6 +44,17 @@ const validation = (instance: string, errors: { field: string; message: string }
     instance,
     code: 'VALIDATION_FAILED',
     errors,
+  })
+
+/** The endpoint's class gate: only the four write roles may call it. */
+const forbidden = (instance: string) =>
+  problemResponse({
+    type: 'about:blank',
+    title: '접근 권한이 없습니다',
+    status: 403,
+    detail: '이 작업을 수행할 권한이 없습니다.',
+    instance,
+    code: 'ACCESS_DENIED',
   })
 
 interface Judgement {
@@ -90,6 +104,20 @@ function reachVm(profile: Profile, vm: Vm, change: Schemas['AdminBulkChangeSpec'
     return role === 'SYS_ADMIN' || role === 'ORG_ADMIN' ? null : 'FORBIDDEN'
   }
   return OPERATE.includes(role) ? null : 'NOT_FOUND'
+}
+
+/**
+ * The domain paths' reach: the system tier everywhere, the organisation tier on
+ * the names of an institution it operates, anything else not found. Access
+ * keeps its own rule, the administrator tier's.
+ */
+function reachDomain(profile: Profile, domain: Domain, change: Schemas['AdminBulkChangeSpec']): Reason | null {
+  const role = activeAdminRole(profile, domain.orgId)
+  if (change.kind === 'ACCESS') {
+    if (!role) return 'NOT_FOUND'
+    return role === 'SYS_ADMIN' || role === 'ORG_ADMIN' ? null : 'FORBIDDEN'
+  }
+  return role && OPERATE.includes(role) ? null : 'NOT_FOUND'
 }
 
 function judgeAccess(
@@ -242,6 +270,41 @@ function judgeVm(vm: Vm, change: Schemas['AdminBulkChangeSpec']): Judgement {
   }
 }
 
+function judgeDomain(domain: Domain, change: Schemas['AdminBulkChangeSpec']): Judgement {
+  switch (change.kind) {
+    case 'DOMAIN_RENEWAL': {
+      // Only an external name has a deadline; a released one can no longer move it.
+      if (domain.kind !== 'EXTERNAL') return refused('INELIGIBLE')
+      if (domain.releasedAt) return refused('INVALID_STATE')
+      const next = change.domainRenewal!.renewDueAt
+      if (domain.renewDueAt && Date.parse(domain.renewDueAt) === Date.parse(next)) {
+        return { reason: null, fields: [] }
+      }
+      return {
+        reason: null,
+        fields: [diff('renewDueAt', domain.renewDueAt ?? null, next)],
+        write: () => setExternalRenewal(domain.id, next),
+      }
+    }
+    case 'DOMAIN_FORCE_RELEASE': {
+      // The single path refuses no name it can find, so neither does this.
+      const fields = [diff('status', domain.status, 'REMOVED')]
+      if (domain.releasedAt) fields.push(diff('releasedAt', domain.releasedAt, null))
+      if (domain.routeStatus && domain.routeStatus !== 'REMOVED') {
+        fields.push(diff('routeStatus', domain.routeStatus, 'REMOVED'))
+      }
+      return { reason: null, fields, write: () => void releaseAdminDomain(domain.id) }
+    }
+    case 'DOMAIN_VERIFY':
+      if (domain.kind !== 'CUSTOM') return refused('INELIGIBLE')
+      return { reason: null, fields: [diff('verification', null, 'REQUESTED')] }
+    case 'ACCESS':
+      return judgeAccess(domain.id, domain.workspaceId, change.access!)
+    default:
+      return refused('INELIGIBLE')
+  }
+}
+
 /**
  * The server's rule for a key with an OpenRouter half: it may be shortened,
  * never extended. The mock reads the connected flag as that half.
@@ -260,7 +323,7 @@ function nextDayKst(endDate: string): string {
  * Changes whenever anything on the target changes, like the server's hash.
  * An access change also covers the grantee's current grant on the target.
  */
-function fingerprintOf(target: AdminKey | Vm, change: Schemas['AdminBulkChangeSpec']): string {
+function fingerprintOf(target: Target, change: Schemas['AdminBulkChangeSpec']): string {
   const grant =
     change.kind === 'ACCESS' ? (grants[`${target.id}:${change.access?.userId}`] ?? null) : null
   let hash = 7
@@ -274,9 +337,40 @@ export function setBulkGrant(targetId: string, userId: string, role: Schemas['Re
   else delete grants[`${targetId}:${userId}`]
 }
 
+/** The target types each kind accepts, as the server's enum declares them. */
+const KIND_TARGETS: Record<Schemas['AdminBulkChangeKind'], Schemas['AdminBulkChangeTargetType'][]> = {
+  LLM_KEY_LIMITS: ['LLM_KEY'],
+  LLM_KEY_STATUS: ['LLM_KEY'],
+  LLM_KEY_EXPIRY: ['LLM_KEY'],
+  VM_PERIOD: ['VM'],
+  VM_POWER: ['VM'],
+  VM_DELETION: ['VM'],
+  DOMAIN_RENEWAL: ['DOMAIN'],
+  DOMAIN_FORCE_RELEASE: ['DOMAIN'],
+  DOMAIN_VERIFY: ['DOMAIN'],
+  ACCESS: ['LLM_KEY', 'VM', 'DOMAIN', 'GPU_ALLOCATION'],
+}
+
 function validate(body: Request_): { field: string; message: string }[] {
   const errors: { field: string; message: string }[] = []
   const change = body.change
+  if (!KIND_TARGETS[change.kind]?.includes(body.targetType)) {
+    errors.push({
+      field: 'targetType',
+      message: `이 변경 종류는 ${body.targetType} 대상에 쓸 수 없습니다.`,
+    })
+  }
+  if (change.kind === 'DOMAIN_RENEWAL') {
+    const due = change.domainRenewal?.renewDueAt
+    if (!due) {
+      errors.push({ field: 'change.domainRenewal.renewDueAt', message: '새 사용 기한을 지정해 주세요.' })
+    } else if (Date.parse(due) <= Date.now()) {
+      errors.push({
+        field: 'change.domainRenewal.renewDueAt',
+        message: '지난 시각으로는 옮길 수 없습니다. 지금 회수하려면 강제 해제를 쓰세요.',
+      })
+    }
+  }
   if (change.kind === 'LLM_KEY_LIMITS') {
     const limits = change.llmKeyLimits
     if (!limits || Object.keys(limits).length === 0) {
@@ -305,25 +399,50 @@ interface Resolved {
 
 function resolve(profile: Profile, body: Request_): Resolved[] {
   return body.targetIds.map((targetId) => {
-    const target =
-      body.targetType === 'LLM_KEY'
-        ? adminLlmKeyStore.find((key) => key.id === targetId)
-        : body.targetType === 'VM'
-          ? vmStore.find((vm) => vm.id === targetId)
-          : undefined
-    if (!target) {
-      return { targetId, name: null, reach: 'NOT_FOUND', judgement: null, fingerprint: 'none' }
+    const missing: Resolved = {
+      targetId,
+      name: null,
+      reach: 'NOT_FOUND',
+      judgement: null,
+      fingerprint: 'none',
     }
-    const isKey = body.targetType === 'LLM_KEY'
-    const reach = isKey
-      ? reachKey(profile, target as AdminKey, body.change)
-      : reachVm(profile, target as Vm, body.change)
-    const name = reach === 'NOT_FOUND' ? null : target.name
-    if (reach) return { targetId, name, reach, judgement: null, fingerprint: 'none' }
-    const judgement = isKey
-      ? judgeKey(profile, target as AdminKey, body.change)
-      : judgeVm(target as Vm, body.change)
-    return { targetId, name, reach: null, judgement, fingerprint: fingerprintOf(target, body.change) }
+    let target: Target | undefined
+    let name: string | undefined
+    let reach: Reason | null = null
+    let judge: () => Judgement
+    if (body.targetType === 'LLM_KEY') {
+      const key = adminLlmKeyStore.find((item) => item.id === targetId)
+      if (!key) return missing
+      target = key
+      name = key.name
+      reach = reachKey(profile, key, body.change)
+      judge = () => judgeKey(profile, key, body.change)
+    } else if (body.targetType === 'VM') {
+      const vm = vmStore.find((item) => item.id === targetId)
+      if (!vm) return missing
+      target = vm
+      name = vm.name
+      reach = reachVm(profile, vm, body.change)
+      judge = () => judgeVm(vm, body.change)
+    } else if (body.targetType === 'DOMAIN') {
+      const domain = findAdminDomain(targetId)
+      if (!domain) return missing
+      target = domain
+      name = domain.fqdn
+      reach = reachDomain(profile, domain, body.change)
+      judge = () => judgeDomain(domain, body.change)
+    } else {
+      return missing
+    }
+    const shown = reach === 'NOT_FOUND' ? null : name
+    if (reach) return { targetId, name: shown, reach, judgement: null, fingerprint: 'none' }
+    return {
+      targetId,
+      name: shown,
+      reach: null,
+      judgement: judge(),
+      fingerprint: fingerprintOf(target, body.change),
+    }
   })
 }
 
@@ -331,6 +450,7 @@ export const bulkChangeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => {
     const profile = adminActor(request)
     if (!profile) return new HttpResponse(null, { status: 401 })
+    if (!OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes/preview')
     const body = (await request.json()) as Request_
     bulkPreviewBodies.push(body)
     const errors = validate(body)
@@ -352,6 +472,7 @@ export const bulkChangeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/bulk-changes', async ({ request }) => {
     const profile = adminActor(request)
     if (!profile) return new HttpResponse(null, { status: 401 })
+    if (!OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes')
     const body = (await request.json()) as Request_
     bulkApplyBodies.push(body)
     const errors = validate(body)

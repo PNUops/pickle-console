@@ -472,6 +472,52 @@ function paginate<T>(items: T[], page: number, size: number): Schemas['PageRespo
   }
 }
 
+/**
+ * Every name the admin list shows as a row an administrator can act on: live,
+ * held in its release grace, and external. REMOVED rows are not found, as the
+ * server resolves them.
+ */
+export function findAdminDomain(domainId: string): Schemas['AdminDomainView'] | undefined {
+  const live = findLive(domainId)
+  if (live) return toAdminDomain(live.vm, live.pub)
+  const reserved = reservedDomains.find((d) => d.id === domainId)
+  if (reserved) return reservedToAdminDomain(reserved)
+  return externalDomains.find((d) => d.id === domainId)
+}
+
+/** Moves an external name's renewal deadline, as the single renewal path does. */
+export function setExternalRenewal(domainId: string, renewDueAt: string): void {
+  const found = externalDomains.find((d) => d.id === domainId)
+  if (found) found.renewDueAt = renewDueAt
+}
+
+/**
+ * The single force release: the name is taken back at once and only a REMOVED
+ * row stays; an external name's records leave the zone with it. Null when the
+ * name is not found.
+ */
+export function releaseAdminDomain(domainId: string): string | null {
+  // 예약 중 행의 강제 해제 = 즉시 반납 (행은 REMOVED로 남는다).
+  const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
+  if (reservedIdx >= 0) {
+    const [reserved] = reservedDomains.splice(reservedIdx, 1)
+    retireDomain(reserved!)
+    return '예약된 이름을 즉시 회수했습니다.'
+  }
+  const externalIdx = externalDomains.findIndex((d) => d.id === domainId)
+  if (externalIdx >= 0) {
+    externalDomains.splice(externalIdx, 1)
+    delete externalRecords[domainId]
+    return '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 레코드가 삭제됩니다.'
+  }
+  const found = findLive(domainId)
+  if (!found) return null
+  // 강제 해제는 이름을 즉시 회수한다 — 예약 없이 REMOVED 묘비만 남는다.
+  found.vm.publications = found.vm.publications.filter((p) => p.domain.id !== domainId)
+  retireDomain(found.pub.domain)
+  return '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 라우트 제거가 곧 적용됩니다.'
+}
+
 export const publishingHandlers: RequestHandler[] = [
   /* ─── 도메인 연결 (사용자) ─── */
   http.post('*/api/v1/vms/:vmId/domains', async ({ params, request }) => {
@@ -744,19 +790,8 @@ export const publishingHandlers: RequestHandler[] = [
 
   /* ─── 관리자 사후 개입 ─── */
   http.post('*/api/v1/admin/domains/:domainId/force-release', ({ params }) => {
-    const domainId = String(params.domainId)
-    // 예약 중 행의 강제 해제 = 즉시 반납 (행은 REMOVED로 남는다).
-    const reservedIdx = reservedDomains.findIndex((d) => d.id === domainId)
-    if (reservedIdx >= 0) {
-      const [reserved] = reservedDomains.splice(reservedIdx, 1)
-      retireDomain(reserved!)
-      return HttpResponse.json(
-        { message: '예약된 이름을 즉시 회수했습니다.' },
-        { status: 200 },
-      )
-    }
-    const found = findLive(domainId)
-    if (!found) {
+    const message = releaseAdminDomain(String(params.domainId))
+    if (!message) {
       // 이미 REMOVED인 행도 실서버처럼 같은 404로 가린다.
       return problemResponse({
         type: 'about:blank',
@@ -766,15 +801,7 @@ export const publishingHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     }
-    // 강제 해제는 이름을 즉시 회수한다 — 예약 없이 REMOVED 묘비만 남는다.
-    found.vm.publications = found.vm.publications.filter(
-      (p) => p.domain.id !== domainId,
-    )
-    retireDomain(found.pub.domain)
-    return HttpResponse.json(
-      { message: '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 라우트 제거가 곧 적용됩니다.' },
-      { status: 200 },
-    )
+    return HttpResponse.json({ message }, { status: 200 })
   }),
 
   /* ─── 외부 도메인: 레코드 열람과 기한 조정, 루트 정책 ─── */
