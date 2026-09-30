@@ -1,9 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import { orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import { http, HttpResponse } from 'msw'
+import { orgAdminDualProfile, orgAdminUser, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import { adminRequestStore } from '../test/msw/handlers/admin'
+import { notificationStore } from '../test/msw/handlers/notifications'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 
 describe('알림 종(bell)', () => {
@@ -76,6 +79,32 @@ describe('알림 종(bell)', () => {
 })
 
 describe('알림함', () => {
+  test.each(['bell', 'inbox'])('legacy request notification opens its institution from the %s', async (surface) => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
+    server.use(http.get('*/api/v1/me', () => HttpResponse.json(orgAdminDualProfile)))
+    adminRequestStore.find((request) => request.id === uuid(201))!.orgId = uuid(2)
+    renderApp(`/admin${surface === 'inbox' ? '/notifications' : ''}?org=${uuid(1)}`)
+    if (surface === 'bell') {
+      await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 1개' }))
+    }
+    await user.click(await screen.findByText('새 VM 신청'))
+    await waitFor(() => expect(currentPath()).toBe(`/admin/requests/${uuid(201)}?org=${uuid(2)}`))
+    expect(screen.queryByText('현재 관리 범위에서 이 신청을 찾을 수 없습니다.')).not.toBeInTheDocument()
+    await waitFor(() => expect(notificationStore.find((row) => row.id === uuid(310))?.readAt).not.toBeNull())
+  })
+
+  test('a failed target lookup keeps the inbox open and reports the navigation failure', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    server.use(http.get('*/api/v1/admin/requests/:requestId', () => HttpResponse.json({
+      type: 'about:blank', title: '찾을 수 없습니다', status: 404, code: 'RESOURCE_NOT_FOUND', detail: '알림 신청을 찾을 수 없습니다.',
+    }, { status: 404 })))
+    renderApp(`/admin/notifications?org=${uuid(1)}`)
+    await user.click(await screen.findByText('새 VM 신청'))
+    await screen.findByText('알림 신청을 찾을 수 없습니다.')
+    expect(currentPath()).toBe(`/admin/notifications?org=${uuid(1)}`)
+  })
   test('알림을 누르면 읽음 처리되어 종 배지 수가 줄어든다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-user'))

@@ -5,17 +5,37 @@
  */
 
 let accessToken: string | null = null
+let sessionGeneration = 0
+
+/** Changes on credential transitions, but not on access-token refresh. */
+export function getSessionGeneration(): number {
+  return sessionGeneration
+}
+
+/** Invalidate previous responses while preserving the Bearer used by linking. */
+export function advanceSessionGeneration(): number {
+  sessionGeneration += 1
+  return sessionGeneration
+}
 
 export function getAccessToken(): string | null {
   return accessToken
 }
 
 export function setAccessToken(token: string | null): void {
+  advanceSessionGeneration()
   accessToken = token
 }
 
 export function clearAccessToken(): void {
-  accessToken = null
+  setAccessToken(null)
+}
+
+/** A late refresh must not replace a newer login or restore a logged-out token. */
+export function setRefreshedAccessToken(token: string, generation: number): boolean {
+  if (generation !== sessionGeneration) return false
+  accessToken = token
+  return true
 }
 
 type SessionExpiredListener = () => void

@@ -78,6 +78,14 @@ describe('네트워크 — 릴레이 탭', () => {
 })
 
 describe('네트워크 — 포트포워딩 탭', () => {
+  test('global port mappings link to global VM detail while another institution is selected', async () => {
+    const user = userEvent.setup()
+    renderNetwork(`forwardings&org=${uuid(2)}`)
+    await screen.findByText('전체 플랫폼')
+    await user.click(await screen.findByRole('button', { name: 'expiring-api' }))
+    const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
+    expect(within(drawer).getByRole('link', { name: '상세' }).getAttribute('href')).toMatch(/^\/admin\/vms\/[^?]+$/)
+  })
   test('shows transitional states without duplicate intervention actions', async () => {
     const user = userEvent.setup()
     renderNetwork('forwardings')
@@ -175,6 +183,13 @@ describe('네트워크 — 포트포워딩 탭', () => {
 })
 
 describe('네트워크 — 캠퍼스 IP 탭', () => {
+  test('campus request VM links carry the target institution rather than the selected scope', async () => {
+    const user = userEvent.setup()
+    renderNetwork(`campus&org=${uuid(2)}`)
+    await user.click(await screen.findByRole('button', { name: 'shop-app' }))
+    const drawer = await screen.findByRole('dialog', { name: '캠퍼스 IP 신청 상세' })
+    expect(within(drawer).getByRole('link', { name: '상세' }).getAttribute('href')).toContain(`?org=${uuid(1)}`)
+  })
   test('SYS_ADMIN은 승인 → 할당(IPv4 필수) 전환을 진행한다', async () => {
     const user = userEvent.setup()
     renderNetwork('campus')

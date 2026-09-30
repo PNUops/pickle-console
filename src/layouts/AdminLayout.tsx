@@ -23,7 +23,7 @@ import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
 import { Button, EmptyState, LoadingBlock } from '../components/ui'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { AppShell, type NavSection } from './AppShell'
-import { useLocation } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { parseGuidePath } from '../lib/docs-paths'
 
 const iconClass = 'size-4 shrink-0'
@@ -182,6 +182,11 @@ export function AdminLayout() {
         )
     : undefined
 
+  const scopeKey = `${user?.id}:${new URLSearchParams(location.search).get('org') ?? scope.activeOrgId ?? 'all'}:${effectiveRole}`
+  const content = parseGuidePath(location.pathname) || scope.ready
+    ? <Outlet key={scopeKey} />
+    : scopeBlock
+
   return (
     <AppShell
       home={path('/admin')}
@@ -192,7 +197,7 @@ export function AdminLayout() {
       notificationsTo={path('/admin/notifications')}
       docsTo={path('/admin/docs')}
       banner={<MfaNudgeBanner />}
-      content={parseGuidePath(location.pathname) ? undefined : scopeBlock}
+      content={content}
     />
   )
 }

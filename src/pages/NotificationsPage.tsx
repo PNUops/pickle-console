@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchNotifications,
@@ -12,7 +11,7 @@ import { FilterBar } from '../components/FilterBar'
 import { Alert, Badge, Button, Card, Pagination, Spinner } from '../components/ui'
 import { cn } from '../lib/cn'
 import { formatRelative } from '../lib/format'
-import { adminPath } from '../lib/paths'
+import { useNotificationNavigation } from '../lib/use-notification-navigation'
 
 const PAGE_SIZE = 20
 
@@ -23,9 +22,7 @@ const TABS: { label: string; status: true | undefined }[] = [
 
 /** 알림함 — 사용자 콘솔·관리자 콘솔이 같은 화면을 공유한다 (본인 알림만 조회). */
 export function NotificationsPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const activeAdminOrg = new URLSearchParams(location.search).get('org') ?? undefined
+  const { openNotification, navigationError } = useNotificationNavigation()
   const queryClient = useQueryClient()
   const [unreadOnly, setUnreadOnly] = useState<true | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -58,13 +55,7 @@ export function NotificationsPage() {
 
   function onItemClick(notification: NotificationView) {
     if (!notification.readAt) markRead.mutate(notification.id)
-    if (notification.linkPath) {
-      navigate(
-        notification.linkPath.startsWith('/admin')
-          ? adminPath(notification.linkPath, activeAdminOrg)
-          : notification.linkPath,
-      )
-    }
+    void openNotification(notification.linkPath)
   }
 
   return (
@@ -96,6 +87,7 @@ export function NotificationsPage() {
       />
 
       {error && <Alert variant="danger">{error}</Alert>}
+      {navigationError && <Alert variant="danger">{navigationError}</Alert>}
 
       {notifications.isPending && (
         <div className="flex justify-center py-12">

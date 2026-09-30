@@ -55,6 +55,12 @@ export function adminPath(path: string, orgId: string | undefined): string {
   return `${url.pathname}${url.search}${url.hash}`
 }
 
+/** A notification's explicit target scope takes precedence over a resolved fallback. */
+export function adminNotificationPath(path: string, targetOrgId?: string): string {
+  const url = new URL(path, 'https://pickle.invalid')
+  return adminPath(path, url.searchParams.get('org') ?? targetOrgId)
+}
+
 export const adminPaths = {
   dashboard: (orgId?: string) => adminPath('/admin', orgId),
   requests: (orgId?: string) => adminPath('/admin/requests', orgId),

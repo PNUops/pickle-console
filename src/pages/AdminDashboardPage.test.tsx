@@ -11,6 +11,12 @@ import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 
 describe('관리자 대시보드', () => {
+  test('global SSH counts link to the global VM list under an institution scope', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin?org=${uuid(1)}`)
+    const summary = await screen.findByRole('region', { name: '시스템 요약' })
+    expect(within(summary).getByRole('link', { name: '비밀번호 SSH 허용' })).toHaveAttribute('href', '/admin/vms')
+  })
   test('ORG_ADMIN은 기관 요약 타일과 가상머신 할당 현황을 보고 시스템 요약은 없다', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin')

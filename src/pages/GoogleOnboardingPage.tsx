@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
-import { api } from '../api/client'
+import { api, withSessionCookieOrder } from '../api/client'
 import { isProblem } from '../api/problem'
 import { fetchCurrentTerms } from '../api/queries'
-import { setAccessToken } from '../api/token'
-import { homePathFor, useAuth } from '../auth/auth-context'
+import { getSessionGeneration, setAccessToken } from '../api/token'
+import { homePathFor, useAuth, type CredentialExchange } from '../auth/auth-context'
 import { ConsentCheckboxes } from '../components/auth/ConsentCheckboxes'
 import { allConsented } from '../components/auth/consent-values'
 import { TransitionLink } from '../components/TransitionLink'
@@ -39,7 +39,7 @@ const FIELDS = ['name'] as const
 export function GoogleOnboardingPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { refreshProfile } = useAuth()
+  const { refreshProfile, beginCredentialExchange } = useAuth()
   const registration = (location.state as { registration?: RegistrationState } | null)?.registration
 
   const terms = useQuery({ queryKey: ['terms'], queryFn: fetchCurrentTerms })
@@ -50,6 +50,11 @@ export function GoogleOnboardingPage() {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<(typeof FIELDS)[number], string>>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   // 새로고침이나 직접 진입이면 토큰이 없다. 이 화면만으로는 아무것도 할 수 없으므로
   // 처음부터 다시 시작하게 한다.
@@ -71,17 +76,29 @@ export function GoogleOnboardingPage() {
     }
 
     setSubmitting(true)
+    let generation = getSessionGeneration()
+    const lifecycle: { exchange?: CredentialExchange } = {}
+    const isCurrent = () => mounted.current && generation === getSessionGeneration()
     try {
-      const { data, error } = await api.POST('/auth/oauth/google/complete', {
-        body: {
-          registrationToken: registration.registrationToken,
-          name: name.trim(),
-          consents: currentTerms.map((doc) => ({ docType: doc.docType, version: doc.version })),
-        },
+      const result = await withSessionCookieOrder(() => {
+        if (!isCurrent()) return Promise.resolve(null)
+        lifecycle.exchange = beginCredentialExchange()
+        generation = lifecycle.exchange.generation
+        return api.POST('/auth/oauth/google/complete', {
+          body: {
+            registrationToken: registration.registrationToken,
+            name: name.trim(),
+            consents: currentTerms.map((doc) => ({ docType: doc.docType, version: doc.version })),
+          },
+        })
       })
+      if (!isCurrent() || !result) return
+      const { data, error } = result
       if (data) {
         setAccessToken(data.accessToken)
+        generation = getSessionGeneration()
         await refreshProfile()
+        if (!isCurrent()) return
         schedulePostLoginOverlay()
         navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(data.user.role), { replace: true })
         return
@@ -101,9 +118,10 @@ export function GoogleOnboardingPage() {
     } catch {
       // 네트워크가 끊기면 여기로 온다. catch 가 없으면 스피너만 멈추고 화면은 아무
       // 말도 하지 않아, 방금 쓴 가입 토큰이 살아 있는지 죽었는지 알 수 없게 된다.
-      setFormError('가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      if (isCurrent()) setFormError('가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.')
     } finally {
-      setSubmitting(false)
+      lifecycle.exchange?.settle(generation)
+      if (mounted.current) setSubmitting(false)
     }
   }
 

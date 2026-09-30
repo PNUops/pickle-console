@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { api } from '../api/client'
+import { api, withSessionCookieOrder } from '../api/client'
 import { isProblem } from '../api/problem'
-import { setAccessToken } from '../api/token'
-import type { UserRole } from '../auth/auth-context'
+import { getSessionGeneration, setAccessToken } from '../api/token'
+import type { CredentialExchange, UserRole } from '../auth/auth-context'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { TransitionLink } from '../components/TransitionLink'
 import { Alert, Spinner, useToast } from '../components/ui'
@@ -31,12 +31,18 @@ const GOOGLE_ERRORS: Record<string, string> = {
 export function GoogleCallbackPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { refreshProfile } = useAuth()
+  const { refreshProfile, beginCredentialExchange } = useAuth()
   const toast = useToast()
   const [error, setError] = useState<string | null>(null)
   // StrictMode 의 이중 실행에서 코드를 두 번 쓰지 않게 한다. state 는 단회 소비라
   // 두 번째 호출은 410 을 받는다.
   const attempted = useRef(false)
+  const mounted = useRef(false)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   useEffect(() => {
     if (attempted.current) return
@@ -54,11 +60,19 @@ export function GoogleCallbackPage() {
       return
     }
 
+    let generation = getSessionGeneration()
+    const lifecycle: { exchange?: CredentialExchange } = {}
+    const isCurrent = () => mounted.current && generation === getSessionGeneration()
     void (async () => {
       try {
-        const { data, error: problem } = await api.POST('/auth/oauth/google/callback', {
-          body: { code, state },
+        const result = await withSessionCookieOrder(() => {
+          if (!isCurrent()) return Promise.resolve(null)
+          lifecycle.exchange = beginCredentialExchange()
+          generation = lifecycle.exchange.generation
+          return api.POST('/auth/oauth/google/callback', { body: { code, state } })
         })
+        if (!isCurrent() || !result) return
+        const { data, error: problem } = result
         if (!data) {
           setError(
             (isProblem(problem) ? (problem.detail ?? problem.title) : null) ??
@@ -71,7 +85,8 @@ export function GoogleCallbackPage() {
         if (outcome.kind === 'LINKED') {
           // 계정 화면에서 시작한 연동. 토큰은 안 나온다 — 이 왕복이 증명한 것은 구글
           // 계정의 소유이지 이 계정의 소유가 아니고, 호출자는 이미 로그인되어 있다.
-          navigate('/console/account?linked=google', { replace: true })
+          await refreshProfile()
+          if (isCurrent()) navigate('/console/account?linked=google', { replace: true })
           return
         }
         if (typeof outcome.registrationToken === 'string') {
@@ -85,7 +100,9 @@ export function GoogleCallbackPage() {
         }
         if (typeof outcome.accessToken === 'string') {
           setAccessToken(outcome.accessToken)
+          generation = getSessionGeneration()
           await refreshProfile()
+          if (!isCurrent()) return
           // 다크 인증에서 라이트 콘솔로 넘어가는 1회 연출. 비밀번호 로그인만 이걸
           // 예약하면 구글 로그인에서만 화면이 툭 바뀐다.
           schedulePostLoginOverlay()
@@ -95,10 +112,12 @@ export function GoogleCallbackPage() {
         }
         setError('구글 로그인 응답을 이해하지 못했습니다.')
       } catch {
-        setError('구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+        if (isCurrent()) setError('구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      } finally {
+        lifecycle.exchange?.settle(generation)
       }
     })()
-  }, [params, navigate, refreshProfile, toast])
+  }, [params, navigate, refreshProfile, beginCredentialExchange, toast])
 
   return (
     <div className="w-full">

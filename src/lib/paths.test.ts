@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   adminPath,
+  adminNotificationPath,
   adminPaths,
   consolePathInScope,
   consolePaths,
@@ -75,6 +76,13 @@ describe('consolePaths — 상세 주소', () => {
 })
 
 describe('adminPaths — 기관 query scope', () => {
+  test('notification target scope wins and unscoped system targets stay global', () => {
+    expect(adminNotificationPath(`/admin/requests/${OTHER}?org=${OTHER}&tab=details#result`, SCOPE))
+      .toBe(`/admin/requests/${OTHER}?org=${OTHER}&tab=details#result`)
+    expect(adminNotificationPath(`/admin/requests/${OTHER}`, OTHER))
+      .toBe(`/admin/requests/${OTHER}?org=${OTHER}`)
+    expect(adminNotificationPath(`/admin/requests/${OTHER}`)).toBe(`/admin/requests/${OTHER}`)
+  })
   test('기존 query를 보존하고 정확히 org key 하나로 scope를 전달한다', () => {
     expect(adminPath('/admin/nodes?tab=ips', SCOPE)).toBe(
       `/admin/nodes?tab=ips&org=${SCOPE}`,

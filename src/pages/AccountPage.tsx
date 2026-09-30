@@ -19,7 +19,7 @@ import {
   withdrawMyAccount,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
-import { setAccessToken } from '../api/token'
+import { getSessionGeneration, setAccessToken } from '../api/token'
 import { useAuth, type UserProfile } from '../auth/auth-context'
 import { PasswordGuidance } from '../components/PasswordGuidance'
 import {
@@ -312,8 +312,12 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
   const [open, setOpen] = useState(false)
 
   const change = useMutation({
-    mutationFn: () => changeMyPassword({ currentPassword, newPassword }),
-    onSuccess: (data) => {
+    mutationFn: (input: { currentPassword: string; newPassword: string; generation: number }) => {
+      if (input.generation !== getSessionGeneration()) return Promise.resolve(null)
+      return changeMyPassword({ currentPassword: input.currentPassword, newPassword: input.newPassword })
+    },
+    onSuccess: (data, input) => {
+      if (!data || input.generation !== getSessionGeneration()) return
       // 새 토큰쌍으로 교체해 현재 세션을 유지한다(다른 세션은 서버가 무효화).
       setAccessToken(data.accessToken)
       setCurrentPassword('')
@@ -324,7 +328,8 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
       setOpen(false)
       toast.success('비밀번호를 변경했습니다. 다른 기기의 세션은 로그아웃됩니다.')
     },
-    onError: (err) => {
+    onError: (err, input) => {
+      if (input.generation !== getSessionGeneration()) return
       const apiError = toApiError(err, '비밀번호를 변경하지 못했습니다.')
       const fields = fieldErrorsOf(apiError.problem)
       setFieldErrors(fields)
@@ -347,7 +352,7 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
       setFieldErrors({ confirmPassword: '새 비밀번호가 일치하지 않습니다.' })
       return
     }
-    change.mutate()
+    change.mutate({ currentPassword, newPassword, generation: getSessionGeneration() })
   }
 
   if (!hasPassword) {

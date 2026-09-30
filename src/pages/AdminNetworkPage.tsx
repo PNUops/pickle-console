@@ -24,7 +24,6 @@ import {
 import { toApiError } from '../api/problem'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { adminPaths } from '../lib/paths'
-import { useAdminScope } from '../lib/use-admin-scope'
 import { useAuth } from '../auth/auth-context'
 import { canRunSysRoutine, isSysAdminOnly } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
@@ -88,7 +87,10 @@ export function AdminNetworkPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">네트워크</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-neutral-900">네트워크</h1>
+          <Badge>전체 플랫폼</Badge>
+        </div>
         <p className="mt-1 text-sm text-neutral-500">
           릴레이 상태는 에이전트의 자기 보고에서 파생된 값입니다.
         </p>
@@ -484,7 +486,6 @@ function MappingDrawerContent({
   canOperate: boolean
   onDone: (message: string) => void
 }) {
-  const { activeOrgId } = useAdminScope()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [notice, setNotice] = useState<DrawerNotice | null>(null)
@@ -532,7 +533,7 @@ function MappingDrawerContent({
           <dd className="font-medium text-neutral-900">
             {mapping.vmName ?? '이름 미상 VM'}{' '}
             <Link
-              to={adminPaths.vmDetail(mapping.vmId, activeOrgId)}
+              to={adminPaths.vmDetail(mapping.vmId)}
               className="text-sm font-normal text-primary-700 hover:underline"
             >
               상세
@@ -960,7 +961,6 @@ function CampusDrawerContent({
   request: AdminCampusIpRequestView
   isSysAdmin: boolean
 }) {
-  const { activeOrgId } = useAdminScope()
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -976,7 +976,7 @@ function CampusDrawerContent({
           <dd className="font-medium text-neutral-900">
             {request.vmName ?? '이름 미상 VM'}{' '}
             <Link
-              to={adminPaths.vmDetail(request.vmId, activeOrgId)}
+              to={adminPaths.vmDetail(request.vmId, request.orgId ?? undefined)}
               className="text-sm font-normal text-primary-700 hover:underline"
             >
               상세
