@@ -25,7 +25,7 @@ import {
 } from '../components/ui'
 import { formatBytes, formatDateTime, formatMemory } from '../lib/format'
 import { useAdminScope } from '../lib/use-admin-scope'
-import { adminPath } from '../lib/paths'
+import { adminPath, adminPaths } from '../lib/paths'
 
 // 할당 추이 카드는 uPlot을 끌어오므로 대시보드 진입 번들과 분리한다.
 const OrgAllocationTrendCard = lazy(
@@ -161,7 +161,7 @@ export function AdminDashboardPage() {
               label="비밀번호 SSH 허용"
               value={`${system.data.sshPasswordEnabledVmCount}대`}
               hint="VM별 설정으로 허용된 VM"
-              to={path('/admin/vms')}
+              to={adminPaths.vms()}
               tone={system.data.sshPasswordEnabledVmCount > 0 ? 'danger' : 'normal'}
             />
           </div>

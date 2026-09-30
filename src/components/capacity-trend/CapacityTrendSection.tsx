@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { fetchCapacityTrend, fetchOrgs } from '../../api/queries'
 import { Alert, Card, CardContent, CardHeader, CardTitle, Select, Spinner } from '../ui'
 import { formatBytes } from '../../lib/format'
@@ -41,7 +41,10 @@ export default function CapacityTrendSection({
   const trend = useQuery({
     queryKey: ['admin', 'capacity-trend', { days, orgId: orgId ?? null }],
     queryFn: () => fetchCapacityTrend({ days, orgId }),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) => {
+      const previousScope = previousQuery?.queryKey[2] as { orgId: string | null } | undefined
+      return previousScope?.orgId === (orgId ?? null) ? previousData : undefined
+    },
   })
 
   const data = trend.data

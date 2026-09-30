@@ -75,6 +75,16 @@ const KEY_DETAIL_TABS = [
 ]
 
 export function AdminLlmKeyDetailPage() {
+  const { keyId } = useParams()
+  return <AdminLlmKeyDetailContent key={keyId} />
+}
+
+function AdminLlmKeyDetailContent() {
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
   const { keyId: keyIdParam } = useParams()
   const keyId = keyIdParam ?? ''
   const idValid = isUuid(keyId)
@@ -136,15 +146,21 @@ export function AdminLlmKeyDetailPage() {
   const hasActions = canEditLimits || canChangeExpiry || canSuspend || canResume || canRevoke
 
   const updateCached = (updated: AdminLlmKeyDetail, message: string) => {
-    queryClient.setQueryData(
-      ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null }],
-      updated,
-    )
+    // A completed save may outlive its target or account. Refresh lists, but
+    // never repopulate the detail cache or messages from the abandoned editor.
+    if (mounted.current) {
+      queryClient.setQueryData(
+        ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null }],
+        updated,
+      )
+    }
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] })
     // 한도 변경은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] })
-    setError(null)
-    setNotice(message)
+    if (mounted.current) {
+      setError(null)
+      setNotice(message)
+    }
   }
 
   return (

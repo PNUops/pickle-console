@@ -100,8 +100,8 @@ describe('관리자 LLM API 키 목록', () => {
     expect(workspace).toHaveValue(uuid(12))
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
 
-    await waitFor(() => expect(workspace).toHaveValue(''))
-    expect(account).toHaveValue('')
+    await waitFor(() => expect(screen.getByLabelText('LLM API 키 워크스페이스 필터')).toHaveValue(''))
+    expect(screen.getByLabelText('OpenRouter 사업 계정 필터')).toHaveValue('')
     expect(await screen.findByText('other-org-key')).toBeInTheDocument()
     expect(screen.queryByText('active-admin-key')).not.toBeInTheDocument()
   })

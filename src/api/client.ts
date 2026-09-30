@@ -6,8 +6,9 @@ import type { components, paths } from './schema'
 import {
   clearAccessToken,
   getAccessToken,
+  getSessionGeneration,
   notifySessionExpired,
-  setAccessToken,
+  setRefreshedAccessToken,
 } from './token'
 
 // jsdom/undici cannot fetch relative URLs, so anchor the base to the page origin.
@@ -20,7 +21,15 @@ function isAuthEndpoint(url: string): boolean {
   return new URL(url).pathname.startsWith('/api/v1/auth/')
 }
 
-let refreshInFlight: Promise<boolean> | null = null
+let refreshInFlight: { generation: number; promise: Promise<boolean> } | null = null
+let sessionCookieQueue: Promise<void> = Promise.resolve()
+
+/** Keep cookie issuance, rotation and revocation in request order on this tab. */
+export function withSessionCookieOrder<T>(operation: () => Promise<T>): Promise<T> {
+  const pending = sessionCookieQueue.then(operation)
+  sessionCookieQueue = pending.then(() => {}, () => {})
+  return pending
+}
 
 /**
  * CSRF 이중 제출 토큰: 로그인/갱신 시 발급되는 `__Host-pickle_csrf` 쿠키
@@ -41,8 +50,11 @@ export function getCsrfToken(): string {
  * success. Concurrent callers share a single request (single-flight).
  */
 export function refreshSession(): Promise<boolean> {
-  refreshInFlight ??= (async () => {
+  const generation = getSessionGeneration()
+  if (refreshInFlight?.generation === generation) return refreshInFlight.promise
+  const promise: Promise<boolean> = withSessionCookieOrder(async () => {
     try {
+      if (generation !== getSessionGeneration()) return false
       const response = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
@@ -50,15 +62,15 @@ export function refreshSession(): Promise<boolean> {
       })
       if (!response.ok) return false
       const body = (await response.json()) as components['schemas']['AuthTokenResponse']
-      setAccessToken(body.accessToken)
-      return true
+      return setRefreshedAccessToken(body.accessToken, generation)
     } catch {
       return false
     } finally {
-      refreshInFlight = null
+      if (refreshInFlight?.generation === generation) refreshInFlight = null
     }
-  })()
-  return refreshInFlight
+  })
+  refreshInFlight = { generation, promise }
+  return promise
 }
 
 /** Attaches the bearer token. */
@@ -75,6 +87,16 @@ function expireSession(): void {
   notifySessionExpired()
 }
 
+function sendRequest(request: Request, generation: number): Promise<Response> {
+  if (new URL(request.url).pathname !== '/api/v1/me/password') return fetch(withAuthHeader(request))
+  return withSessionCookieOrder(() => {
+    if (request.signal.aborted || generation !== getSessionGeneration()) {
+      throw new DOMException('The session changed before request issuance.', 'AbortError')
+    }
+    return fetch(withAuthHeader(request))
+  })
+}
+
 /**
  * Sends the request and, on a 401 (outside /auth/*), refreshes the session once
  * and retries. If the refresh fails the auth state is cleared and AuthProvider
@@ -82,18 +104,21 @@ function expireSession(): void {
  * consumed `input`'s body — this clones it up front for the retry.
  */
 async function sendWithRefresh(input: Request): Promise<Response> {
+  const generation = getSessionGeneration()
   const retryCopy = input.clone()
-  const response = await fetch(withAuthHeader(input))
+  const response = await sendRequest(input, generation)
 
   if (response.status !== 401 || isAuthEndpoint(input.url)) return response
+  if (input.signal.aborted || generation !== getSessionGeneration()) return response
 
   const refreshed = await refreshSession()
+  if (input.signal.aborted || generation !== getSessionGeneration()) return response
   if (!refreshed) {
     expireSession()
     return response
   }
-  const retryResponse = await fetch(withAuthHeader(retryCopy))
-  if (retryResponse.status === 401) {
+  const retryResponse = await sendRequest(retryCopy, generation)
+  if (retryResponse.status === 401 && !input.signal.aborted && generation === getSessionGeneration()) {
     // The server rejects even a freshly refreshed token — treat as expired.
     expireSession()
   }
@@ -102,9 +127,12 @@ async function sendWithRefresh(input: Request): Promise<Response> {
 
 /** Auth-aware fetch: the 401-refresh retry, plus the maintenance and MFA signals. */
 async function fetchWithAuth(input: Request): Promise<Response> {
+  const generation = getSessionGeneration()
   const response = await sendWithRefresh(input)
-  signalMaintenance(response)
-  signalMfaEnrollment(response)
+  if (!input.signal.aborted && generation === getSessionGeneration()) {
+    signalMaintenance(response, generation, input.signal)
+    signalMfaEnrollment(response, generation, input.signal)
+  }
   return response
 }
 
@@ -118,12 +146,13 @@ async function fetchWithAuth(input: Request): Promise<Response> {
  * query keeps hitting it — so the subscriber, not this function, is where the
  * repeat is absorbed.
  */
-function signalMfaEnrollment(response: Response): void {
+function signalMfaEnrollment(response: Response, generation: number, signal: AbortSignal): void {
   if (response.status !== 403) return
   void response
     .clone()
     .json()
     .then((body: unknown) => {
+      if (signal.aborted || generation !== getSessionGeneration()) return
       if (isProblem(body) && body.code === 'MFA_ENROLLMENT_REQUIRED') {
         notifyMfaEnrollmentRequired()
       }
@@ -136,12 +165,13 @@ function signalMfaEnrollment(response: Response): void {
  * non-admin is routed to the maintenance screen at once. Read off a clone so
  * the caller's body stays intact; fire-and-forget so it never blocks the call.
  */
-function signalMaintenance(response: Response): void {
+function signalMaintenance(response: Response, generation: number, signal: AbortSignal): void {
   if (response.status !== 503) return
   void response
     .clone()
     .json()
     .then((body: unknown) => {
+      if (signal.aborted || generation !== getSessionGeneration()) return
       if (isProblem(body) && body.code === 'MAINTENANCE_MODE') notifyMaintenanceDetected()
     })
     .catch(() => {})

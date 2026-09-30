@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -7,10 +7,10 @@ import {
   markNotificationRead,
 } from '../api/queries'
 import type { components } from '../api/schema'
-import { PopoverPanel, Spinner, usePopover } from './ui'
+import { Alert, PopoverPanel, Spinner, usePopover } from './ui'
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
-import { adminPath } from '../lib/paths'
+import { useNotificationNavigation } from '../lib/use-notification-navigation'
 
 type NotificationView = components['schemas']['NotificationView']
 
@@ -19,10 +19,9 @@ type NotificationView = components['schemas']['NotificationView']
  * 팝오버를 연다(항목 클릭=읽음 처리+이동, 모두 읽음, 알림함 전체 보기).
  */
 export function NotificationBell({ to }: { to: string }) {
-  const navigate = useNavigate()
+  const { openNotification, navigationError } = useNotificationNavigation()
   const queryClient = useQueryClient()
   const { open, toggle, close, rootRef, triggerRef } = usePopover()
-  const adminOrgId = new URL(to, 'https://pickle.invalid').searchParams.get('org') ?? undefined
 
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
@@ -48,18 +47,9 @@ export function NotificationBell({ to }: { to: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   })
 
-  function onItemClick(notification: NotificationView) {
+  async function onItemClick(notification: NotificationView) {
     if (!notification.readAt) markRead.mutate(notification.id)
-    // 같은 pathname으로의 이동(이미 그 화면)에서는 라우트 변경 안전망이 발동하지
-    // 않으므로 명시적으로 닫는다.
-    close()
-    if (notification.linkPath) {
-      navigate(
-        notification.linkPath.startsWith('/admin')
-          ? adminPath(notification.linkPath, adminOrgId)
-          : notification.linkPath,
-      )
-    }
+    if (await openNotification(notification.linkPath)) close()
   }
 
   return (
@@ -91,6 +81,7 @@ export function NotificationBell({ to }: { to: string }) {
       </button>
 
       <PopoverPanel open={open} aria-label="알림" className="w-80 sm:w-96">
+        {navigationError && <Alert variant="danger">{navigationError}</Alert>}
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
           <span className="text-sm font-semibold text-neutral-900">알림</span>
           <button

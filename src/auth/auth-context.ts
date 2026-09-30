@@ -8,6 +8,12 @@ export type ManagedOrg = components['schemas']['ManagedOrgResponse']
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
+export interface CredentialExchange {
+  generation: number
+  /** Settle an abandoned initial restore after this exchange's last generation. */
+  settle: (generation: number) => void
+}
+
 /**
  * Login stage-1 result: either fully authenticated, or a 2FA challenge the
  * caller completes with {@link AuthContextValue.completeMfa}.
@@ -25,6 +31,8 @@ export interface AuthContextValue {
   completeMfa: (input: { mfaToken: string; code?: string; recoveryCode?: string }) => Promise<UserProfile>
   /** Re-fetch /me and update the cached profile (after 2FA enrol/disable, consent). */
   refreshProfile: () => Promise<void>
+  /** Own a queued external credential exchange while preserving its Bearer. */
+  beginCredentialExchange: () => CredentialExchange
   logout: () => Promise<void>
 }
 

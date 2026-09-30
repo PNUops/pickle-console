@@ -52,8 +52,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
 
   const activeOrg = useMemo(() => {
     if (systemTier) return options.find((org) => org.id === requestedOrgId)
-    const requested = options.find((org) => org.id === requestedOrgId)
-    if (requested) return requested
+    if (requestedOrgId != null) return options.find((org) => org.id === requestedOrgId)
     const stored = storedOrgId()
     const restored = options.find((org) => org.id === stored)
     if (restored) return restored
@@ -126,9 +125,9 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       ready,
       retry,
       setActiveOrgId,
-      path: (path) => adminPath(path, activeOrg?.id),
+      path: (path) => adminPath(path, activeOrg?.id ?? (systemTier ? requestedOrgId : undefined)),
     }),
-    [activeOrg, options, orgTier, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId],
+    [activeOrg, options, orgTier, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId, systemTier, requestedOrgId],
   )
 
   return <AdminScopeContext.Provider value={value}>{children}</AdminScopeContext.Provider>
