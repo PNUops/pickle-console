@@ -71,7 +71,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     : orgTier && activeOrg != null
 
   const replaceScope = useCallback(
-    (orgId: string | undefined) => {
+    (orgId: string | undefined, preserveSelectedUser = false) => {
       const next = new URLSearchParams(searchParams)
       if (orgId == null) next.delete('org')
       else next.set('org', orgId)
@@ -80,7 +80,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       next.delete('workspaceId')
       next.delete('page')
       next.delete('returnTo')
-      next.delete('selected')
+      if (!preserveSelectedUser) next.delete('selected')
       next.delete('targetOrgId')
       next.delete('targetType')
       next.delete('targetId')
@@ -100,8 +100,9 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     }
     if (!orgTier || activeOrg == null) return
     storeOrgId(activeOrg.id)
-    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id)
-  }, [activeOrg, invalidSystemScope, orgTier, replaceScope, requestedOrgId])
+    // User details are global reads; restoring their implicit scope keeps the target.
+    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, location.pathname === '/admin/users')
+  }, [activeOrg, invalidSystemScope, location.pathname, orgTier, replaceScope, requestedOrgId])
 
   const setActiveOrgId = useCallback(
     (orgId: string | undefined) => {

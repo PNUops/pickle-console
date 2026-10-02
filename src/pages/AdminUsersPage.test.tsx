@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
@@ -586,6 +586,26 @@ describe('관리자 사용자 목록', () => {
 })
 
 describe('Organization assignment snapshot and late results', () => {
+  test('an unscoped user deep link survives automatic institution restoration', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp(`/admin/users?selected=${uuid(42)}`)
+    await waitFor(() => expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('org')).toBe(uuid(1)))
+    expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('selected')).toBe(uuid(42))
+    const drawer = await screen.findByRole('dialog', { name: '사용자 상세' })
+    await within(drawer).findByText('워크스페이스 멤버십')
+    await waitFor(() => expect(currentPath()).toBe(`/admin/users?selected=${uuid(42)}&org=${uuid(1)}`))
+    expect(screen.getByRole('dialog', { name: '사용자 상세' })).toBe(drawer)
+  })
+
+  test('an explicit institution switch still discards a selected user', async () => {
+    server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
+    renderApp(`/admin/users?org=${uuid(1)}&selected=${uuid(42)}`)
+    await screen.findByRole('dialog', { name: '사용자 상세' })
+    fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
+    await waitFor(() => expect(currentPath()).toBe(`/admin/users?org=${uuid(2)}`))
+    expect(screen.queryByRole('dialog', { name: '사용자 상세' })).not.toBeInTheDocument()
+  })
+
   test('uses the designation and revision from the same current operation snapshot', async () => {
     const user = userEvent.setup()
     let captured: unknown
