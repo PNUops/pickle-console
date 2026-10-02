@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toApiError } from '../api/problem'
 import { createOrg, fetchAdminOrgs, updateOrg, type OrgDetail } from '../api/queries'
@@ -23,6 +24,7 @@ import {
 } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { ORG_STATUS_LABELS } from '../lib/labels'
+import { adminPaths } from '../lib/paths'
 
 export function AdminOrgsPage() {
   const [createOpen, setCreateOpen] = useState(false)
@@ -69,6 +71,7 @@ export function AdminOrgsPage() {
                 <TR key={org.id}>
                   <TD className="font-medium text-neutral-900">{org.name}</TD>
                   <TD>
+                    <Link className="mr-3 text-sm text-primary-700 hover:underline" to={adminPaths.orgOperations(org.id)}>기관 운영</Link>
                     <Badge variant={org.status === 'ACTIVE' ? 'success' : 'danger'}>
                       {ORG_STATUS_LABELS[org.status]}
                     </Badge>
@@ -277,4 +280,3 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
     </Modal>
   )
 }
-

@@ -1,15 +1,18 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { fetchAuditLogs } from '../api/queries'
+import { fetchAuditLogs, type AuditLogView } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { canViewAudit } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
   Badge,
+  Button,
   Card,
   EmptyState,
   Input,
+  Modal,
   Pagination,
   Select,
   Spinner,
@@ -26,6 +29,10 @@ import { formatDateTime } from '../lib/format'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { AUDIT_ACTION_LABELS, labelForAuditAction } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { useListUrl } from '../lib/use-list-url'
+import { listPage } from '../lib/list-url'
+import { adminPaths } from '../lib/paths'
+import { isUuid } from '../lib/validation'
 
 const PAGE_SIZE = 20
 
@@ -50,16 +57,23 @@ function isKnownRole(role: string): role is UserRole {
 /** 감사 로그 — 관리자가 행위자·동작·기간으로 활동 기록을 추적한다. */
 export function AdminAuditPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
+  const { activeOrgId, activeOrg, activeOrgRole, tier, options } = useAdminScope()
   const canReadActive = !!user && canViewAudit(tier === 'org' ? (activeOrgRole ?? user.role) : user.role)
   // 감사 로그의 범위는 조회 화면 중 가장 좁다: 역할을 보유한 기관이 아니라
   // 행위할 수 있는(관리자나 운영자인) 기관만이다 — 로그인 IP는 운영 데이터가
   // 아니라 증거다. 기관 선택기도 그 기관들만 담는다.
-  const [action, setAction] = useState<string | undefined>(undefined)
-  const [actorEmail, setActorEmail] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const [page, setPage] = useState(0)
+  const [params, change] = useListUrl()
+  const action = params.get('action') || undefined
+  const actorEmail = params.get('actorEmail') ?? ''
+  const from = params.get('from') ?? ''
+  const to = params.get('to') ?? ''
+  const page = listPage(params.get('page'))
+  const rawTargetOrgId = params.get('targetOrgId') || undefined
+  const targetOrgId = rawTargetOrgId && isUuid(rawTargetOrgId) ? rawTargetOrgId.toLowerCase() : rawTargetOrgId
+  const targetType = params.get('targetType') || undefined
+  const targetId = params.get('targetId') || undefined
+  const [selected, setSelected] = useState<AuditLogView | null>(null)
+  const targetAllowed = !targetOrgId || (isUuid(targetOrgId) && (tier === 'system' || targetOrgId === activeOrgId))
 
   // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
   // 요청이 나가지 않게 한다.
@@ -75,6 +89,7 @@ export function AdminAuditPage() {
         from: from || null,
         to: to || null,
         orgId: activeOrgId ?? null,
+        targetOrgId: targetOrgId ?? null, targetType: targetType ?? null, targetId: targetId ?? null,
         page,
       },
     ],
@@ -85,13 +100,14 @@ export function AdminAuditPage() {
         from: from || undefined,
         to: to || undefined,
         orgId: activeOrgId,
+        targetOrgId, targetType, targetId,
         page,
         size: PAGE_SIZE,
       }),
-    enabled: canReadActive,
+    enabled: canReadActive && targetAllowed,
   })
 
-  if (!canReadActive) {
+  if (!canReadActive || !targetAllowed) {
     return (
       <EmptyState
         title="이 기관의 감사 로그를 볼 수 없습니다"
@@ -126,8 +142,7 @@ export function AdminAuditPage() {
             className="w-44"
             value={action ?? ''}
             onChange={(event) => {
-              setAction(event.target.value || undefined)
-              setPage(0)
+              change({ action: event.target.value }, true)
             }}
           >
             <option value="">전체 동작</option>
@@ -144,8 +159,7 @@ export function AdminAuditPage() {
           className="w-52"
           value={actorEmail}
           onChange={(event) => {
-            setActorEmail(event.target.value)
-            setPage(0)
+            change({ actorEmail: event.target.value }, true)
           }}
         />
         <label className="flex items-center gap-2 text-sm text-neutral-600">
@@ -156,8 +170,7 @@ export function AdminAuditPage() {
             className="w-40"
             value={from}
             onChange={(event) => {
-              setFrom(event.target.value)
-              setPage(0)
+              change({ from: event.target.value }, true)
             }}
           />
           ~
@@ -167,11 +180,17 @@ export function AdminAuditPage() {
             className="w-40"
             value={to}
             onChange={(event) => {
-              setTo(event.target.value)
-              setPage(0)
+              change({ to: event.target.value }, true)
             }}
           />
         </label>
+        <label className="flex items-center gap-2 text-sm">변경 대상 기관
+          <Select aria-label="변경 대상 기관" value={targetOrgId ?? ''} onChange={(event) => change({ targetOrgId: event.target.value }, true)}>
+            <option value="">모든 대상 기관</option>{options.filter((org) => tier === 'system' || org.id === activeOrgId).map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}
+          </Select>
+        </label>
+        <Input aria-label="감사 대상 종류" placeholder="대상 종류 (org, user 등)" value={targetType ?? ''} onChange={(event) => change({ targetType: event.target.value }, true)} className="w-44" />
+        <Input aria-label="감사 대상 ID" placeholder="대상 ID" value={targetId ?? ''} onChange={(event) => change({ targetId: event.target.value }, true)} className="w-52" />
       </FilterBar>
 
       {logs.isPending && (
@@ -193,10 +212,12 @@ export function AdminAuditPage() {
                 <TR>
                   <TH>시각</TH>
                   <TH>행위자</TH>
-                  <TH>기관</TH>
+                  <TH>행위자 현재 기관</TH>
+                  <TH>변경 대상 기관</TH>
                   <TH>동작</TH>
                   <TH>대상</TH>
                   <TH>IP</TH>
+                  <TH>상세</TH>
                 </TR>
               </THead>
               <TBody>
@@ -234,11 +255,13 @@ export function AdminAuditPage() {
                       )}
                     </TD>
                     <TD className="text-sm text-neutral-600">{log.orgName ?? '—'}</TD>
+                    <TD>{log.targetOrgId ? <Link className="text-primary-700 hover:underline" to={adminPaths.orgOperations(log.targetOrgId)}>{log.targetOrgName ?? log.targetOrgId}</Link> : '—'}</TD>
                     <TD>{labelForAuditAction(log.action)}</TD>
                     <TD className="font-mono text-xs">
                       {log.targetType ? `${log.targetType}:${log.targetId ?? '—'}` : '—'}
                     </TD>
                     <TD className="font-mono text-xs">{log.ip ?? '—'}</TD>
+                    <TD><Button size="sm" variant="secondary" onClick={() => setSelected(log)}>상세 보기</Button></TD>
                   </TR>
                 ))}
               </TBody>
@@ -247,10 +270,37 @@ export function AdminAuditPage() {
           <Pagination
             page={logs.data.page}
             totalPages={logs.data.totalPages}
-            onPageChange={setPage}
+            onPageChange={(nextPage) => change({ page: nextPage })}
           />
         </>
       )}
+      {selected && <Modal open title="감사 기록 상세" onClose={() => setSelected(null)} className="max-w-3xl"><div className="space-y-4">
+        <p className="text-sm">{formatDateTime(selected.createdAt)} · {labelForAuditAction(selected.action)} · {selected.actorName ?? '시스템'}</p>
+        <p className="break-all text-sm">대상: {selected.targetType ?? '—'} {selected.targetId ?? ''} · 변경 대상 기관: {selected.targetOrgName ?? selected.targetOrgId ?? '—'}</p>
+        {selected.targetOrgId && <Link className="text-primary-700 hover:underline" to={adminPaths.orgOperations(selected.targetOrgId)}>기관 운영으로 이동</Link>}
+        <AuditDetail detail={selected.detail} orgId={selected.targetOrgId ?? activeOrgId} />
+      </div></Modal>}
     </div>
   )
+}
+
+function AuditDetail({ detail, orgId }: { detail: unknown; orgId?: string | null }) {
+  if (detail == null) return <p className="text-sm text-neutral-500">추가 기록이 없습니다.</p>
+  const object = typeof detail === 'object' && detail !== null ? detail as Record<string, unknown> : null
+  return <div className="space-y-4">{object && typeof object.reason === 'string' && <p className="text-sm">변경 사유: {object.reason || '기록 없음'}</p>}
+    {object && ['before', 'after'].map((key) => {
+      const value = object[key]
+      if (typeof value !== 'object' || value === null) return null
+      const snapshot = value as Record<string, unknown>
+      return <section key={key} className="space-y-2"><h3 className="font-semibold">{key === 'before' ? '변경 전' : '변경 후'}</h3>
+        <p className="text-sm">설정 버전: {String(snapshot.revision ?? '—')} · 메일 방식: {String(snapshot.mailMode ?? '—')}</p>
+        {Array.isArray(snapshot.members) && <Table><THead><TR><TH>사용자 ID</TH><TH>기관 역할</TH><TH>메일 지정</TH></TR></THead><TBody>{snapshot.members.map((member, index) => {
+          const row = member as Record<string, unknown>
+          const userId = typeof row.userId === 'string' ? row.userId : ''
+          return <TR key={userId || index}><TD className="break-all">{isUuid(userId) ? <Link className="text-primary-700 hover:underline" to={adminPaths.users(orgId ?? undefined, userId)}>{userId}</Link> : userId || '—'}</TD><TD>{USER_ROLE_LABELS[row.role as UserRole] ?? String(row.role ?? '—')}</TD><TD>{row.requestMail === true ? '지정됨' : '미지정'}</TD></TR>
+        })}</TBody></Table>}
+      </section>
+    })}
+    <details><summary className="cursor-pointer text-sm">전체 기록 값</summary><pre className="whitespace-pre-wrap break-all rounded bg-neutral-50 p-3 text-xs">{typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2)}</pre></details>
+  </div>
 }

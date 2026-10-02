@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
-import { fetchOrgs } from '../api/queries'
+import { fetchAdminOrgs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isOrgTier, isSysTier } from '../auth/permissions'
 import { adminPath } from './paths'
@@ -36,8 +36,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
   const orgTier = !!user && isOrgTier(user.role)
   const systemTier = !!user && isSysTier(user.role)
   const orgs = useQuery({
-    queryKey: ['orgs'],
-    queryFn: fetchOrgs,
+    queryKey: ['admin', 'orgs'],
+    queryFn: fetchAdminOrgs,
     enabled: systemTier,
   })
 
@@ -49,7 +49,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
         role: org.role,
       }))
     }
-    return (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
+    return (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name, status: org.status }))
   }, [orgTier, orgs.data, user?.managedOrgs])
 
   const activeOrg = useMemo(() => {
@@ -71,7 +71,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     : orgTier && activeOrg != null
 
   const replaceScope = useCallback(
-    (orgId: string | undefined) => {
+    (orgId: string | undefined, preserveSelectedUser = false) => {
       const next = new URLSearchParams(searchParams)
       if (orgId == null) next.delete('org')
       else next.set('org', orgId)
@@ -80,6 +80,10 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       next.delete('workspaceId')
       next.delete('page')
       next.delete('returnTo')
+      if (!preserveSelectedUser) next.delete('selected')
+      next.delete('targetOrgId')
+      next.delete('targetType')
+      next.delete('targetId')
       if (parseGuidePath(location.pathname)) {
         void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: location.hash }, { replace: true, state: location.state })
       } else {
@@ -96,8 +100,9 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     }
     if (!orgTier || activeOrg == null) return
     storeOrgId(activeOrg.id)
-    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id)
-  }, [activeOrg, invalidSystemScope, orgTier, replaceScope, requestedOrgId])
+    // User details are global reads; restoring their implicit scope keeps the target.
+    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, location.pathname === '/admin/users')
+  }, [activeOrg, invalidSystemScope, location.pathname, orgTier, replaceScope, requestedOrgId])
 
   const setActiveOrgId = useCallback(
     (orgId: string | undefined) => {
@@ -125,13 +130,14 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       options,
       requiresSelection,
       resolving,
+      catalogPending: systemTier && orgs.isPending,
       error: scopeError,
       ready,
       retry,
       setActiveOrgId,
       path: (path) => adminPath(path, activeOrg?.id ?? (systemTier ? requestedOrgId : undefined)),
     }),
-    [activeOrg, options, orgTier, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId, systemTier, requestedOrgId],
+    [activeOrg, options, orgTier, orgs.isPending, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId, systemTier, requestedOrgId],
   )
 
   return <AdminScopeContext.Provider value={value}>{children}</AdminScopeContext.Provider>

@@ -1,9 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { userPatchBodies } from '../test/msw/handlers/admin'
-import { adminProfilePatches } from '../test/msw/handlers/users'
+import { adminProfilePatches, adminUserStore } from '../test/msw/handlers/users'
+import { orgOperationRevisions } from '../test/msw/handlers/org-operations'
 import {
   orgAdminUser,
   refreshSuccessHandler,
@@ -372,7 +373,7 @@ describe('관리자 사용자 목록', () => {
     const toggle = drawer.getByRole('checkbox', { name: '신청 접수 메일 받기' })
     expect(toggle).not.toBeChecked()
     expect(
-      drawer.getByText('신청 접수 메일을 받는 사람이 없거나 모두 비활성인 기관은 기관 관리자 전원이 받습니다.'),
+      drawer.getByText('지정 설정과 실제 수신자는 기관의 수신 방식에 따라 다릅니다. 기관 운영에서 현재 수신자와 제외 사유를 확인할 수 있습니다.'),
     ).toBeInTheDocument()
 
     await user.click(toggle)
@@ -581,5 +582,91 @@ describe('관리자 사용자 목록', () => {
         '목록에서 고른 소속과 직접 입력한 소속 중 하나만 보낼 수 있습니다.',
       ),
     ).toBeInTheDocument()
+  })
+})
+
+describe('Organization assignment snapshot and late results', () => {
+  test('an unscoped user deep link survives automatic institution restoration', async () => {
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp(`/admin/users?selected=${uuid(42)}`)
+    await waitFor(() => expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('org')).toBe(uuid(1)))
+    expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('selected')).toBe(uuid(42))
+    const drawer = await screen.findByRole('dialog', { name: '사용자 상세' })
+    await within(drawer).findByText('워크스페이스 멤버십')
+    await waitFor(() => expect(currentPath()).toBe(`/admin/users?selected=${uuid(42)}&org=${uuid(1)}`))
+    expect(screen.getByRole('dialog', { name: '사용자 상세' })).toBe(drawer)
+  })
+
+  test('an explicit institution switch still discards a selected user', async () => {
+    server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
+    renderApp(`/admin/users?org=${uuid(1)}&selected=${uuid(42)}`)
+    await screen.findByRole('dialog', { name: '사용자 상세' })
+    fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
+    await waitFor(() => expect(currentPath()).toBe(`/admin/users?org=${uuid(2)}`))
+    expect(screen.queryByRole('dialog', { name: '사용자 상세' })).not.toBeInTheDocument()
+  })
+
+  test('uses the designation and revision from the same current operation snapshot', async () => {
+    const user = userEvent.setup()
+    let captured: unknown
+    server.use(
+      http.get('*/api/v1/admin/orgs/:orgId/operations', async () => {
+        await delay(30)
+        const account = adminUserStore.find((row) => row.id === uuid(7))!
+        account.managedOrgs[0].requestMail = true
+        orgOperationRevisions[uuid(1)] = 1
+      }),
+      http.put('*/api/v1/admin/users/:userId/org-roles/:orgId/request-mail', async ({ request }) => { captured = await request.clone().json() }),
+    )
+    renderAsSysAdmin()
+    await openDetail(user, '김관리')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    const toggle = await drawer.findByRole('checkbox', { name: '신청 접수 메일 받기' })
+    await waitFor(() => expect(toggle).toBeEnabled())
+    expect(toggle).toBeChecked()
+    await user.click(toggle)
+    await waitFor(() => expect(captured).toEqual({ enabled: false, expectedRevision: 1 }))
+  })
+
+  test('a late revoke does not close a reopened confirmation for another institution', async () => {
+    const account = adminUserStore.find((row) => row.id === uuid(42))!
+    account.managedOrgs = [
+      { orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터', role: 'ORG_MANAGER', requestMail: false },
+      { orgId: uuid(2), orgName: '테스트 기관', role: 'ORG_MANAGER', requestMail: false },
+    ]
+    let completed = false
+    server.use(http.delete('*/api/v1/admin/users/:userId/org-roles/:orgId', async () => {
+      await delay(300)
+      completed = true
+      return HttpResponse.json({ id: account.id, email: account.email, name: account.name, role: 'ORG_MANAGER', managedOrgs: account.managedOrgs })
+    }))
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await waitFor(() => expect(drawer.getAllByRole('button', { name: '회수' })[0]).toBeEnabled())
+    await user.click(drawer.getAllByRole('button', { name: '회수' })[0])
+    const old = screen.getByRole('dialog', { name: '기관 역할 회수' })
+    await user.click(within(old).getByRole('button', { name: '회수' }))
+    await user.click(within(old).getByRole('button', { name: '취소' }))
+    await user.click(drawer.getAllByRole('button', { name: '회수' })[1])
+    const next = screen.getByRole('dialog', { name: '기관 역할 회수' })
+    expect(within(next).getByText(/테스트 기관 기관에서/)).toBeInTheDocument()
+    await waitFor(() => expect(completed).toBe(true))
+    await waitFor(() => expect(within(next).getByRole('button', { name: '회수' })).toBeEnabled())
+    expect(screen.getByRole('dialog', { name: '기관 역할 회수' })).toBe(next)
+  })
+
+  test('an in-flight grant locks its target and role until its response is handled', async () => {
+    server.use(http.put('*/api/v1/admin/users/:userId/org-roles/:orgId', async () => { await delay(200); return HttpResponse.json({ id: uuid(42), email: 'example@pusan.ac.kr', name: '홍길동', role: 'ORG_MANAGER', managedOrgs: [] }) }))
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+    await openDetail(user, '홍길동')
+    const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
+    await user.selectOptions(drawer.getByLabelText('부여할 기관'), uuid(1))
+    await waitFor(() => expect(drawer.getByRole('button', { name: '부여' })).toBeEnabled())
+    await user.click(drawer.getByRole('button', { name: '부여' }))
+    expect(drawer.getByLabelText('부여할 기관')).toBeDisabled()
+    expect(drawer.getByLabelText('부여할 역할')).toBeDisabled()
   })
 })

@@ -63,6 +63,9 @@ export function adminNotificationPath(path: string, targetOrgId?: string): strin
 
 export const adminPaths = {
   dashboard: (orgId?: string) => adminPath('/admin', orgId),
+  orgOperations: (orgId?: string) => adminPath('/admin/org-operations', orgId),
+  users: (orgId?: string, userId?: string) => adminPath(userId ? `/admin/users?selected=${userId}` : '/admin/users', orgId),
+  orgAudit: (orgId: string) => adminPath(`/admin/audit?targetOrgId=${orgId}`, orgId),
   requests: (orgId?: string) => adminPath('/admin/requests', orgId),
   newRequest: (orgId?: string, kind?: string) =>
     adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),

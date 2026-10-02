@@ -22,7 +22,7 @@ test('capacity placeholders preserve periods but discard data from another insti
   }))
   const scope: AdminScopeValue = {
     tier: 'system', activeOrgId: undefined, activeOrg: undefined, activeOrgRole: undefined,
-    options: [], requiresSelection: false, resolving: false, error: false, ready: true,
+    options: [], requiresSelection: false, resolving: false, catalogPending: false, error: false, ready: true,
     retry: () => {}, setActiveOrgId: () => {}, path: (path) => path,
   }
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>

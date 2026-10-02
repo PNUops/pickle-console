@@ -145,7 +145,7 @@ describe('관리 기관 scope selector', () => {
     let calls = 0
     server.use(
       refreshSuccessHandler('access-sys-admin', sysAdminUser),
-      http.get('*/api/v1/orgs', () => {
+      http.get('*/api/v1/admin/orgs', () => {
         calls += 1
         return calls === 1
           ? HttpResponse.json(
