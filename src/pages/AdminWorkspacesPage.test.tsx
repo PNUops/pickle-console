@@ -29,9 +29,11 @@ describe('관리자 워크스페이스 관리', () => {
 
     await user.click(await screen.findByRole('button', { name: '캡스톤 3조' }))
     const drawer = within(await screen.findByRole('dialog', { name: '워크스페이스 상세' }))
+    await user.click(await drawer.findByRole('tab', { name: '구성원' }))
     expect(await drawer.findByText('홍길동')).toBeInTheDocument()
     expect(drawer.getByText('박탈퇴')).toBeInTheDocument()
     expect(drawer.getByText('탈퇴')).toBeInTheDocument()
+    await user.click(drawer.getByRole('tab', { name: '개요' }))
     expect(drawer.getByRole('link', { name: 'VM 보기' })).toHaveAttribute(
       'href',
       `/admin/vms?workspaceId=${uuid(12)}`,

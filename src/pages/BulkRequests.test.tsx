@@ -142,7 +142,7 @@ describe('bulk request from the administration area', () => {
 
     server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
     renderApp('/admin/requests')
-    await screen.findByRole('heading', { name: '승인 대기' })
+    await screen.findByRole('heading', { name: '신청 검토' })
     expect(screen.queryByRole('link', { name: '새 신청' })).not.toBeInTheDocument()
   })
 

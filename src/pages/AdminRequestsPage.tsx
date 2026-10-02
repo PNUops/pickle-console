@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
-  type ResourceType,
   type RequestStatus,
 } from '../api/queries'
 import {
@@ -32,6 +31,8 @@ import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { useAuth } from '../auth/auth-context'
 import { approvesAnywhere } from '../auth/permissions'
+import { requestListParams, requestListState, withListReturn } from '../lib/list-url'
+import { useListUrl } from '../lib/use-list-url'
 
 const PAGE_SIZE = 10
 
@@ -41,6 +42,7 @@ const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
   { label: REQUEST_STATUS_LABELS.SUBMITTED, status: 'SUBMITTED' },
   { label: REQUEST_STATUS_LABELS.APPROVED, status: 'APPROVED' },
   { label: REQUEST_STATUS_LABELS.REJECTED, status: 'REJECTED' },
+  { label: REQUEST_STATUS_LABELS.CANCELED, status: 'CANCELED' },
   { label: '전체', status: undefined },
 ]
 
@@ -48,9 +50,14 @@ export function AdminRequestsPage() {
   const navigate = useNavigate()
   const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
-  const [status, setStatus] = useState<RequestStatus | undefined>('SUBMITTED')
-  const [type, setType] = useState<ResourceType | undefined>(undefined)
-  const [page, setPage] = useState(0)
+  const [searchParams, change, normalize] = useListUrl()
+  const state = requestListState(searchParams)
+  const { status, type, page } = state
+  const canonical = requestListParams(state, activeOrgId).toString()
+  useEffect(() => {
+    normalize(canonical)
+  }, [canonical, normalize])
+  const listPath = `/admin/requests${canonical ? `?${canonical}` : ''}`
 
   const requests = useQuery({
     queryKey: [
@@ -62,11 +69,16 @@ export function AdminRequestsPage() {
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
+  useEffect(() => {
+    if (!requests.isSuccess) return
+    const lastPage = Math.max(0, requests.data.totalPages - 1)
+    if (page > lastPage) normalize(requestListParams({ ...state, page: lastPage }, activeOrgId).toString())
+  }, [page, requests.data, requests.isSuccess, normalize, state, activeOrgId])
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">승인 대기</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">신청 검토</h1>
           <p className="mt-1 text-sm text-neutral-500">
             제출된 리소스 신청을 검토하고 승인 또는 반려합니다.
           </p>
@@ -87,8 +99,7 @@ export function AdminRequestsPage() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => {
-                  setStatus(tab.status)
-                  setPage(0)
+                  change({ status: tab.status ?? 'all' }, true)
                 }}
                 className={cn(
                   'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
@@ -107,8 +118,7 @@ export function AdminRequestsPage() {
           className="w-full sm:w-44"
           value={type ?? ''}
           onChange={(event) => {
-            setType((event.target.value || undefined) as ResourceType | undefined)
-            setPage(0)
+            change({ type: event.target.value }, true)
           }}
         >
           <option value="">전체 리소스</option>
@@ -118,6 +128,7 @@ export function AdminRequestsPage() {
           <option value="DOMAIN">도메인</option>
         </Select>
       </div>
+      <p className="text-sm text-foreground-muted">최신 신청순</p>
 
       {requests.isPending && (
         <div className="flex justify-center py-12">
@@ -147,11 +158,11 @@ export function AdminRequestsPage() {
                   <TR
                     key={request.id}
                     className="cursor-pointer hover:bg-neutral-50"
-                    onClick={() => navigate(adminPaths.requestDetail(request.id, activeOrgId))}
+                    onClick={() => navigate(withListReturn(adminPaths.requestDetail(request.id, request.orgId ?? activeOrgId), listPath))}
                   >
                     <TD>
                       <Link
-                        to={adminPaths.requestDetail(request.id, activeOrgId)}
+                        to={withListReturn(adminPaths.requestDetail(request.id, request.orgId ?? activeOrgId), listPath)}
                         className="font-medium text-primary-700 hover:underline"
                         onClick={(event) => event.stopPropagation()}
                       >
@@ -161,7 +172,10 @@ export function AdminRequestsPage() {
                         {request.purpose}
                       </span>
                     </TD>
-                    <TD>{request.workspaceName}</TD>
+                    <TD>
+                      {request.workspaceName}
+                      {activeOrgId == null && <span className="block text-xs text-foreground-muted">{request.orgName}</span>}
+                    </TD>
                     {/* 종류별 요약(OS·사양 등)은 그 종류의 모듈이 그린다. */}
                     <TD className="whitespace-nowrap">
                       {requestKindView(request.type).summaryCell(request)}
@@ -177,7 +191,7 @@ export function AdminRequestsPage() {
           <Pagination
             page={requests.data.page}
             totalPages={requests.data.totalPages}
-            onPageChange={setPage}
+            onPageChange={(next) => change({ page: next })}
           />
         </>
       )}
