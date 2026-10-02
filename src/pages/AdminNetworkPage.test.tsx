@@ -117,7 +117,7 @@ describe('네트워크 — 포트포워딩 탭', () => {
     await user.click(submit)
 
     // 성공 피드백은 토스트 — 상태 필터로 행이 빠져 드로어가 닫혀도 남는다.
-    expect(await screen.findByText(/포트 매핑을 정지했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/포트 매핑 정지 설정을 저장했습니다/)).toBeInTheDocument()
     // 목록 재조회로 드로어의 상태 배지도 정지됨으로 바뀐다.
     expect(await within(drawer).findByText('정지됨')).toBeInTheDocument()
     // 정지된 매핑은 재개 버튼을 노출한다.
@@ -142,12 +142,14 @@ describe('네트워크 — 포트포워딩 탭', () => {
     expect(within(drawer).queryByText(/자동 정지/)).not.toBeInTheDocument()
   })
 
-  test('가드 조정은 SYS_ADMIN 전용이라 SYS_MANAGER에게 보이지 않는다', async () => {
+  test('SYS_MANAGER reads stored guards without edit actions', async () => {
     const user = userEvent.setup()
     renderNetwork('forwardings', 'access-sys-manager', sysManagerUser)
 
     await user.click(await screen.findByRole('button', { name: 'expiring-api' }))
     const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
+    expect(within(drawer).getByText('저장된 연결 가드')).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '가드 편집' })).not.toBeInTheDocument()
     expect(within(drawer).queryByLabelText('동시 연결 상한')).not.toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '가드 저장' })).not.toBeInTheDocument()
   })
@@ -166,12 +168,14 @@ describe('네트워크 — 포트포워딩 탭', () => {
 
     await user.click(await screen.findByRole('button', { name: 'expiring-api' }))
     const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
-    expect(within(drawer).getByText('빈칸 = 릴레이 기본값, 0 = 해당 가드 해제.')).toBeInTheDocument()
+    await user.click(within(drawer).getByRole('button', { name: '가드 편집' }))
+    const editor = within(await screen.findByRole('dialog', { name: '연결 가드 편집' }))
+    expect(editor.getByText('빈칸 = 릴레이 기본값, 0 = 해당 가드 해제.')).toBeInTheDocument()
 
-    await user.type(within(drawer).getByLabelText('동시 연결 상한'), '2048')
-    await user.type(within(drawer).getByLabelText('출발지별 초당 신규'), '0')
-    await user.click(within(drawer).getByRole('button', { name: '가드 저장' }))
-    expect(await screen.findByText(/연결 가드를 조정했습니다/)).toBeInTheDocument()
+    await user.type(editor.getByLabelText('동시 연결 상한'), '2048')
+    await user.type(editor.getByLabelText('출발지별 초당 신규'), '0')
+    await user.click(editor.getByRole('button', { name: '가드 저장' }))
+    expect(await screen.findByText(/연결 가드가 저장되었습니다/)).toBeInTheDocument()
     expect(captured).toEqual({
       ctMax: 2048,
       newConnRate: null,
@@ -201,7 +205,7 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
 
     // REQUESTED → 승인
     await user.click(within(drawer).getByRole('button', { name: '승인' }))
-    expect(await screen.findByText(/'승인됨' 상태로 전환했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/'승인됨' 처리 기록을 저장했습니다/)).toBeInTheDocument()
 
     // APPROVED → 할당: 주소 없이 누르면 클라이언트 검증이 막는다.
     const grant = await within(drawer).findByRole('button', { name: '할당' })
@@ -221,7 +225,7 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
     await user.clear(address)
     await user.type(address, '10.20.30.40')
     await user.click(grant)
-    expect(await screen.findByText(/'할당됨' 상태로 전환했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/'할당됨' 처리 기록을 저장했습니다/)).toBeInTheDocument()
     expect(await within(drawer).findByText('10.20.30.40')).toBeInTheDocument()
     // GRANTED → 회수만 가능하다.
     expect(await within(drawer).findByRole('button', { name: '회수' })).toBeInTheDocument()

@@ -6,6 +6,7 @@ import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { approvesForOrg, isSysTier } from '../auth/permissions'
 import { requestListReturn } from '../lib/list-url'
+import { OperationResult } from '../components/OperationResult'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
@@ -127,7 +128,9 @@ function AdminRequestDetailContent() {
         actions={<RequestStatusBadge status={data.status} />}
       />
 
-      {notice && <Alert variant={notice.variant}>{notice.message}</Alert>}
+      {notice && (notice.variant === 'success'
+        ? <OperationResult stage="stored">{notice.message}</OperationResult>
+        : <Alert variant={notice.variant}>{notice.message}</Alert>)}
       {/* A request for several people made one key per person; the table below links each. */}
       {data.type === 'LLM_API_KEY' && data.status === 'APPROVED' && !bulk && (
         <ApprovedLlmKeyLink requestId={data.id} orgId={data.orgId ?? undefined} />
@@ -150,14 +153,15 @@ function AdminRequestDetailContent() {
 
           <RequestRecipientsCard
             request={data}
+            admin
             canRetry={canDecide}
             resourceHref={(recipient) =>
               recipient.resourceId == null
                 ? null
                 : data.type === 'VM'
-                  ? adminPaths.vmDetail(recipient.resourceId, activeOrgId)
+                  ? adminPaths.vmDetail(recipient.resourceId, data.orgId ?? undefined)
                   : data.type === 'LLM_API_KEY'
-                    ? adminPaths.llmKeyDetail(recipient.resourceId, activeOrgId)
+                    ? adminPaths.llmKeyDetail(recipient.resourceId, data.orgId ?? undefined)
                     : null
             }
           />
@@ -180,7 +184,6 @@ function AdminRequestDetailContent() {
 }
 
 function ApprovedLlmKeyLink({ requestId, orgId }: { requestId: string; orgId?: string }) {
-  const { activeOrgId } = useAdminScope()
   const key = useQuery({
     queryKey: ['admin', 'llm-keys', 'request', requestId, { orgId: orgId ?? null }],
     queryFn: async () => {
@@ -192,7 +195,7 @@ function ApprovedLlmKeyLink({ requestId, orgId }: { requestId: string; orgId?: s
   return (
     <Alert variant="success" title="승인된 LLM API 키">
       <Link
-        to={adminPaths.llmKeyDetail(key.data.id, activeOrgId)}
+        to={adminPaths.llmKeyDetail(key.data.id, orgId)}
         className="font-semibold underline underline-offset-2"
       >
         {key.data.name} 상세 보기
@@ -216,6 +219,10 @@ function DecisionResultCard({
         <Badge variant={approved ? 'success' : 'danger'}>{approved ? '승인' : '반려'}</Badge>
       </CardHeader>
       <CardContent>
+        <OperationResult stage="stored">
+          {approved ? '승인과 부여 내용이 저장되었습니다. 리소스의 외부 적용과 실제 완료는 해당 리소스 상세에서 확인해 주세요.'
+            : '반려 결정과 의견이 저장되었습니다. 알림 전달 완료를 확인한 결과는 아닙니다.'}
+        </OperationResult>
         <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
           <Field label="검토자">{review.reviewerName}</Field>
           <Field label="처리 시각">{formatDateTime(review.decidedAt)}</Field>
@@ -340,7 +347,7 @@ function DecisionSection({
       setConfirm(null)
       onNotice({
         variant: 'success',
-        message: '신청을 반려했습니다. 반려 사유가 신청자에게 전달됩니다.',
+        message: '반려 결정과 사유를 저장했습니다. 알림 전달 완료는 별도로 확인해야 합니다.',
       })
       await refresh()
     },

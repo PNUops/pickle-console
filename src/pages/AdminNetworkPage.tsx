@@ -27,6 +27,8 @@ import { adminPaths } from '../lib/paths'
 import { useAuth } from '../auth/auth-context'
 import { canRunSysRoutine, isSysAdminOnly } from '../auth/permissions'
 import { FilterBar } from '../components/FilterBar'
+import { OperationResult } from '../components/OperationResult'
+import { useActiveResult } from '../lib/use-active-result'
 import { CopyButton } from '../components/CopyButton'
 import { SourcePolicyPanel } from '../components/network-policy/SourcePolicyPanel'
 import {
@@ -37,11 +39,9 @@ import {
   Card,
   Drawer,
   FormField,
-  InfoTip,
   Input,
   Modal,
   Pagination,
-  PortForwardApplyStateBadge,
   PortMappingStatusBadge,
   Spinner,
   StatTile,
@@ -379,7 +379,7 @@ function ForwardingsTab({
         orgs={[]}
       />
 
-      {message && <Alert variant="info">{message}</Alert>}
+      {message && <OperationResult stage="accepted">{message}</OperationResult>}
 
       {mappings.isPending && (
         <div className="flex justify-center py-12">
@@ -401,7 +401,7 @@ function ForwardingsTab({
                   <TH>VM</TH>
                   <TH>릴레이</TH>
                   <TH>매핑</TH>
-                  <TH>적용</TH>
+                  <TH>릴레이 반영 보고</TH>
                   <TH>상태</TH>
                   <TH>생성일</TH>
                 </TR>
@@ -434,7 +434,7 @@ function ForwardingsTab({
                       :{mapping.publicPort} → {mapping.targetPort}/{mapping.proto}
                     </TD>
                     <TD>
-                      <PortForwardApplyStateBadge state={mapping.applyState} />
+                      <MappingApplyBadge state={mapping.applyState} />
                     </TD>
                     <TD>
                       <PortMappingStatusBadge status={mapping.status} />
@@ -473,6 +473,12 @@ function ForwardingsTab({
   )
 }
 
+function MappingApplyBadge({ state }: { state: AdminPortMappingView['applyState'] }) {
+  return <Badge variant={state === 'FAILED' ? 'danger' : state === 'ACTIVE' ? 'success' : 'info'}>
+    {state === 'ACTIVE' ? '반영 보고됨' : state === 'FAILED' ? '반영 실패' : '보고 대기'}
+  </Badge>
+}
+
 type DrawerNotice = { variant: 'info' | 'danger'; text: string }
 
 function MappingDrawerContent({
@@ -486,6 +492,7 @@ function MappingDrawerContent({
   canOperate: boolean
   onDone: (message: string) => void
 }) {
+  const active = useActiveResult()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [notice, setNotice] = useState<DrawerNotice | null>(null)
@@ -501,7 +508,7 @@ function MappingDrawerContent({
     // 성공 피드백은 토스트로 — 상태 필터 활성 시 행이 목록에서 빠지면 드로어가
     // 닫혀 드로어 내부 알림은 소실되기 때문이다.
     onSuccess: async () => {
-      toast.success('포트 매핑 정지를 해제했습니다. 다음 릴레이 동기화에서 전달이 복원됩니다.')
+      if (active.current) toast.success('정지 해제 설정을 저장했습니다. 릴레이 반영 보고를 확인해 주세요.')
       await invalidate()
     },
     onError: async (err) => {
@@ -521,11 +528,17 @@ function MappingDrawerContent({
           :{mapping.publicPort} → {mapping.targetPort}/{mapping.proto}
         </h3>
         <span className="flex items-center gap-1.5">
-          <PortForwardApplyStateBadge state={mapping.applyState} />
+          <MappingApplyBadge state={mapping.applyState} />
           <PortMappingStatusBadge status={mapping.status} />
         </span>
       </div>
       {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}
+      <OperationResult stage="reported" variant={mapping.applyState === 'FAILED' ? 'danger' : 'info'}>
+        {mapping.applyState === 'ACTIVE' ? '릴레이가 매핑 설정의 반영을 보고했습니다.'
+          : mapping.applyState === 'FAILED' ? '릴레이가 매핑 설정의 반영 실패를 보고했습니다.'
+            : '릴레이의 매핑 설정 반영 보고를 기다리고 있습니다.'}
+        {' '}이 보고는 실제 서비스 접속 성공이나 새로 저장한 연결 가드의 반영 완료를 보장하지 않습니다.
+      </OperationResult>
 
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <div>
@@ -590,7 +603,7 @@ function MappingDrawerContent({
         </section>
       )}
 
-      {isSysAdmin && stableStatus && <GuardsSection mapping={mapping} onNotice={setNotice} />}
+      <GuardsSection mapping={mapping} canEdit={isSysAdmin && stableStatus} />
 
       {suspendOpen && (
         <SuspendMappingModal
@@ -627,14 +640,17 @@ function SuspendMappingModal({
   onClose: () => void
   onDone: (message: string) => void
 }) {
+  const active = useActiveResult()
   const queryClient = useQueryClient()
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const suspend = useMutation({
     mutationFn: () => suspendAdminPortMapping(mapping.id, reason.trim()),
-    onSuccess: () =>
-      onDone('포트 매핑을 정지했습니다. 다음 릴레이 동기화에서 공인 포트가 닫힙니다.'),
+    onSuccess: async () => {
+      if (active.current) onDone('포트 매핑 정지 설정을 저장했습니다. 릴레이 반영 보고를 확인해 주세요.')
+      else await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
+    },
     onError: async (err) => {
       const apiError = toApiError(err, '포트 매핑을 정지하지 못했습니다.')
       setError(apiError.message)
@@ -696,11 +712,15 @@ function DeleteMappingModal({
   onClose: () => void
   onDone: (message: string) => void
 }) {
+  const active = useActiveResult()
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const remove = useMutation({
     mutationFn: () => deleteAdminPortMapping(mapping.id),
-    onSuccess: (data) => onDone(data.message),
+    onSuccess: async () => {
+      if (active.current) onDone('포트 매핑 삭제가 접수되었습니다. 이 응답만으로 실제 연결 정리 완료를 확인할 수 없습니다.')
+      else await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
+    },
     onError: async (err) => {
       const apiError = toApiError(err, '포트 매핑 삭제를 접수하지 못했습니다.')
       setError(apiError.message)
@@ -748,13 +768,30 @@ const GUARD_FIELDS: { key: keyof UpdatePortMappingGuardsRequest; label: string }
   { key: 'perSourceBurst', label: '출발지별 버스트' },
 ]
 
-function GuardsSection({
-  mapping,
-  onNotice,
-}: {
+function GuardsSection({ mapping, canEdit }: {
   mapping: AdminPortMappingView
-  onNotice: (notice: DrawerNotice) => void
+  canEdit: boolean
 }) {
+  const [editing, setEditing] = useState(false)
+  return <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
+    <div className="flex items-center justify-between gap-2">
+      <h3 className="text-sm font-semibold text-neutral-800">저장된 연결 가드</h3>
+      {canEdit && <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>가드 편집</Button>}
+    </div>
+    <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+      {GUARD_FIELDS.map(({ key, label }) => <Field key={key} label={label}
+        value={mapping[key] == null ? '릴레이 기본값 사용' : mapping[key] === 0 ? '해제 (0)' : String(mapping[key])} />)}
+    </dl>
+    <p className="text-xs text-neutral-500">기본값의 실제 숫자는 이 화면에서 확인할 수 없습니다. 저장값과 릴레이 반영 보고는 별도입니다.</p>
+    {editing && canEdit && <GuardsEditor mapping={mapping} onClose={() => setEditing(false)} />}
+  </section>
+}
+
+function GuardsEditor({ mapping, onClose }: {
+  mapping: AdminPortMappingView
+  onClose: () => void
+}) {
+  const active = useActiveResult()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [values, setValues] = useState<Record<string, string>>(() =>
@@ -769,14 +806,12 @@ function GuardsSection({
       updateAdminPortMappingGuards(mapping.id, body),
     // 성공은 토스트 — 상태 필터에 따라 드로어가 닫혀도 피드백이 남게 한다.
     onSuccess: async () => {
-      toast.success('연결 가드를 조정했습니다. 다음 동기화에서 수렴합니다.')
+      if (active.current) {
+        toast.success('연결 가드가 저장되었습니다. 이 응답은 릴레이 반영 완료를 뜻하지 않습니다.')
+        onClose()
+      }
       await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
     },
-    onError: (err) =>
-      onNotice({
-        variant: 'danger',
-        text: toApiError(err, '연결 가드를 조정하지 못했습니다.').message,
-      }),
   })
 
   const submit = (event: FormEvent) => {
@@ -793,19 +828,20 @@ function GuardsSection({
         setFieldError(`${label}: 0 이상의 정수를 입력해 주세요.`)
         return
       }
-      body[key] = Number(raw)
+      const value = Number(raw)
+      if (!Number.isSafeInteger(value) || value > 1000000) {
+        setFieldError(`${label}: 1000000 이하의 정수를 입력해 주세요.`)
+        return
+      }
+      body[key] = value
     }
     save.mutate(body)
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
-        연결 가드 조정
-        <InfoTip label="연결 가드 도움말">
-          매핑별 남용 방지 한도입니다. 양수를 넣으면 이 매핑에만 적용됩니다.
-        </InfoTip>
-      </h3>
+    <Modal open title="연결 가드 편집" onClose={() => { if (!save.isPending) onClose() }}>
+      <Alert variant="info" title="저장 후 반영 대기">저장하면 다음 릴레이 동기화에서 전달됩니다. 새 값의 외부 반영 완료는 이 화면의 매핑 보고만으로 확인할 수 없습니다.</Alert>
+      {save.isError && <Alert variant="danger">{toApiError(save.error, '연결 가드를 저장하지 못했습니다.').message}</Alert>}
       {fieldError && <Alert variant="danger">{fieldError}</Alert>}
       <form onSubmit={submit} className="space-y-3" noValidate>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -831,8 +867,9 @@ function GuardsSection({
         >
           가드 저장
         </Button>
+        <Button variant="secondary" disabled={save.isPending} onClick={onClose}>취소</Button>
       </form>
-    </section>
+    </Modal>
   )
 }
 
@@ -970,6 +1007,14 @@ function CampusDrawerContent({
         <CampusIpStatusBadge status={request.status} />
       </div>
 
+      <OperationResult stage="stored">
+        {request.status === 'GRANTED' ? '관리자가 교내 IP 할당과 연결을 기록한 상태입니다.'
+          : request.status === 'REVOKED' ? '관리자가 교내 IP 회수를 기록한 상태입니다.'
+            : request.status === 'APPROVED' ? '신청 수락이 저장되었습니다. 주소 할당 기록을 기다리고 있습니다.'
+              : '신청과 마지막 처리 상태가 저장되어 있습니다.'}
+        {' '}실제 외부 연결 상태를 자동으로 측정한 결과는 아닙니다.
+      </OperationResult>
+
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-neutral-500">VM</dt>
@@ -987,11 +1032,11 @@ function CampusDrawerContent({
         <Field label="개방 포트" value={request.ports.join(', ')} />
         <Field label="신청일" value={formatDateTime(request.createdAt)} />
         {request.processedAt && (
-          <Field label="처리일" value={formatDateTime(request.processedAt)} />
+          <Field label="마지막 처리 기록" value={formatDateTime(request.processedAt)} />
         )}
         {request.grantedAddress && (
           <Field
-            label="연결된 교내 IP"
+            label={request.status === 'REVOKED' ? '이전 할당 주소' : '기록된 할당 주소'}
             value={<code className="font-mono">{request.grantedAddress}</code>}
           />
         )}
@@ -1048,6 +1093,7 @@ function CampusTransitionSection({
 }: {
   request: AdminCampusIpRequestView
 }) {
+  const active = useActiveResult()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [grantedAddress, setGrantedAddress] = useState('')
@@ -1067,7 +1113,7 @@ function CampusTransitionSection({
       }),
     onSuccess: async (updated) => {
       setError(null)
-      toast.success(`신청을 '${CAMPUS_IP_STATUS_LABELS[updated.status]}' 상태로 전환했습니다.`)
+      if (active.current) toast.success(`'${CAMPUS_IP_STATUS_LABELS[updated.status]}' 처리 기록을 저장했습니다. 실제 연결 상태는 별도로 확인해 주세요.`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'campus-ip-requests'] })
     },
     onError: (err) => {

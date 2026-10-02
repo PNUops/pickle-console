@@ -202,7 +202,7 @@ describe('승인 폼', () => {
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     expect(
-      await screen.findByText('신청을 승인했습니다. VM 생성이 시작되었습니다.'),
+      await screen.findByText('승인 내용이 저장되었습니다. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.'),
     ).toBeInTheDocument()
     expect(await screen.findByText('검토 결과')).toBeInTheDocument()
 
@@ -361,7 +361,7 @@ describe('반려 폼', () => {
     await user.click(within(dialog).getByRole('button', { name: '반려 확정' }))
 
     expect(
-      await screen.findByText('신청을 반려했습니다. 반려 사유가 신청자에게 전달됩니다.'),
+      await screen.findByText('반려 결정과 사유를 저장했습니다. 알림 전달 완료는 별도로 확인해야 합니다.'),
     ).toBeInTheDocument()
     expect(rejectBodies).toEqual([
       {

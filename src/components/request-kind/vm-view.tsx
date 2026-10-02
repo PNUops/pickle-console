@@ -238,8 +238,8 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
     ),
 
     successMessage: bulk
-      ? '신청을 승인했습니다. 대상자별 VM이 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.'
-      : '신청을 승인했습니다. VM 생성이 시작되었습니다.',
+      ? '승인 내용이 저장되었습니다. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.'
+      : '승인 내용이 저장되었습니다. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.',
   }
 }
 
