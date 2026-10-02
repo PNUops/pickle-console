@@ -44,7 +44,7 @@ describe('승인 대기 큐', () => {
     // 전 기관이 보이는 시스템 계층으로 확인한다 — 기관 계층은 보유 기관 것만 본다.
     renderAsSysAdmin('/admin/requests')
 
-    await screen.findByRole('heading', { name: '승인 대기' })
+    await screen.findByRole('heading', { name: '신청 검토' })
     expect(await screen.findByText('관리자 신청 목록')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '승인 대기' })).toHaveAttribute(
       'aria-pressed',

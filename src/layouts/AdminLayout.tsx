@@ -182,7 +182,7 @@ export function AdminLayout() {
         )
     : undefined
 
-  const scopeKey = `${user?.id}:${new URLSearchParams(location.search).get('org') ?? scope.activeOrgId ?? 'all'}:${effectiveRole}`
+  const scopeKey = `${user?.id}:${scope.activeOrgId ?? new URLSearchParams(location.search).get('org')?.toLowerCase() ?? 'all'}:${effectiveRole}`
   const content = parseGuidePath(location.pathname) || scope.ready
     ? <Outlet key={scopeKey} />
     : scopeBlock

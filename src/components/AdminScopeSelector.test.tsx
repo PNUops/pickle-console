@@ -40,7 +40,7 @@ describe('관리 기관 scope selector', () => {
     renderApp('/admin/requests')
 
     await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(1)}`))
-    expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
     await waitFor(() => expect(scopes).toEqual([uuid(1)]))
     expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(1))
     expect(screen.getByRole('option', { name: /기관 관리자/ })).toBeInTheDocument()
@@ -68,13 +68,13 @@ describe('관리 기관 scope selector', () => {
     renderApp('/admin/requests')
 
     expect(await screen.findByRole('heading', { name: '관리 기관을 선택하세요' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '승인 대기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '신청 검토' })).not.toBeInTheDocument()
     expect(scopes).toEqual([])
 
     const selector = screen.getByLabelText('관리 기관 선택')
     await user.selectOptions(selector, uuid(2))
     await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(2)}`))
-    expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
     await waitFor(() => expect(scopes).toEqual([uuid(2)]))
   })
 
@@ -136,7 +136,7 @@ describe('관리 기관 scope selector', () => {
     renderApp(`/admin/requests?org=${uuid(999)}`)
 
     await waitFor(() => expect(currentPath()).toBe('/admin/requests'))
-    expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
     await waitFor(() => expect(scopes).toEqual([null]))
   })
 
@@ -163,7 +163,7 @@ describe('관리 기관 scope selector', () => {
     expect(screen.queryByText('관리 범위 확인 중')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '관리 범위 다시 시도' }))
 
-    expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
     expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(1))
   })
 })

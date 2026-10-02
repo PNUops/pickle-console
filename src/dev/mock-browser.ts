@@ -1,5 +1,5 @@
 import { setupWorker } from 'msw/browser'
-import { refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
+import { refreshSuccessHandler, orgAdminUser, orgManagerUser, orgViewerUser, sysAdminUser, sysManagerUser, sysViewerUser } from '../test/msw/handlers/auth'
 import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { seedGpuPreviewFixtures } from '../test/msw/handlers/gpu'
 import { handlers } from '../test/msw/handlers'
@@ -24,10 +24,16 @@ export async function startMockApi(): Promise<void> {
   // 시스템 계층으로 연다. 사양과 사용 기간 카탈로그가 그 계층의 화면이라, 기관
   // 관리자로는 그 화면에 닿지 못한다.
   if (gpuPreviewEnabled()) seedGpuPreviewFixtures()
-  const asAdmin = import.meta.env.VITE_MOCK_USER === 'admin'
-  const session = asAdmin
-    ? refreshSuccessHandler('access-sys-admin', sysAdminUser)
-    : refreshSuccessHandler('access-user')
+  const profiles = {
+    admin: ['access-sys-admin', sysAdminUser],
+    'sys-manager': ['access-sys-manager', sysManagerUser],
+    'sys-viewer': ['access-sys-viewer', sysViewerUser],
+    'org-admin': ['access-org-admin', orgAdminUser],
+    'org-manager': ['access-org-manager', orgManagerUser],
+    'org-viewer': ['access-org-viewer', orgViewerUser],
+  } as const
+  const selected = profiles[import.meta.env.VITE_MOCK_USER as keyof typeof profiles]
+  const session = selected ? refreshSuccessHandler(selected[0], selected[1]) : refreshSuccessHandler('access-user')
   const worker = setupWorker(session, ...handlers)
   await worker.start({
     onUnhandledRequest: gpuPreviewEnabled()

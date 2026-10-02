@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { approvesForOrg } from '../auth/permissions'
+import { approvesForOrg, isSysTier } from '../auth/permissions'
+import { requestListReturn } from '../lib/list-url'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
@@ -55,12 +56,19 @@ interface Notice {
 }
 
 export function AdminRequestDetailPage() {
+  const { requestId } = useParams()
+  return <AdminRequestDetailContent key={requestId} />
+}
+
+function AdminRequestDetailContent() {
   const { activeOrgId } = useAdminScope()
   const params = useParams()
   const requestId = params.requestId ?? ''
   const idValid = isUuid(requestId)
   const [notice, setNotice] = useState<Notice | null>(null)
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const returnPath = requestListReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
 
   const request = useQuery({
     queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null }],
@@ -90,7 +98,7 @@ export function AdminRequestDetailPage() {
   if (activeOrgId != null && data.orgId !== activeOrgId) {
     return (
       <Alert variant="danger" title="선택한 관리 범위의 신청이 아닙니다">
-        <Link to={adminPaths.requests(activeOrgId)} className="font-medium underline">
+        <Link to={returnPath} className="font-medium underline">
           신청 목록으로 돌아가기
         </Link>
       </Alert>
@@ -107,8 +115,8 @@ export function AdminRequestDetailPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
-        <Link to={adminPaths.requests(activeOrgId)} className="text-primary-700 hover:underline">
-          ← 승인 대기
+        <Link to={returnPath} className="text-primary-700 hover:underline">
+          ← 신청 목록
         </Link>
       </nav>
 

@@ -7,6 +7,7 @@ import { isOrgTier, isSysTier } from '../auth/permissions'
 import { adminPath } from './paths'
 import { parseGuidePath } from './docs-paths'
 import { ADMIN_ORG_SCOPE_KEY } from './storage-keys'
+import { isUuid } from './validation'
 import { AdminScopeContext, type AdminOrgOption, type AdminScopeValue } from './admin-scope-context'
 
 function storedOrgId(): string | undefined {
@@ -30,7 +31,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const requestedOrgId = searchParams.get('org') ?? undefined
+  const rawOrgId = searchParams.get('org') ?? undefined
+  const requestedOrgId = rawOrgId && isUuid(rawOrgId) ? rawOrgId.toLowerCase() : rawOrgId
   const orgTier = !!user && isOrgTier(user.role)
   const systemTier = !!user && isSysTier(user.role)
   const orgs = useQuery({
@@ -76,6 +78,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       // 이전 페이지의 기관 종속 필터를 새 scope에 가져가지 않는다.
       next.delete('orgId')
       next.delete('workspaceId')
+      next.delete('page')
+      next.delete('returnTo')
       if (parseGuidePath(location.pathname)) {
         void navigate({ pathname: location.pathname, search: next.size ? `?${next}` : '', hash: location.hash }, { replace: true, state: location.state })
       } else {
