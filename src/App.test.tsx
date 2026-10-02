@@ -7,7 +7,7 @@ import { server } from './test/msw/server'
 // jsdom에는 WebGL이 없고 three 청크 로드는 무의미하게 느리다 — 정적 목업으로 대체.
 vi.mock('./pages/landing/HeroVisual', () => ({ HeroVisual: () => null }))
 
-test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async () => {
+test('shows resource introductions, usage, sharing and the preserved process', async () => {
   renderApp('/')
 
   // 히어로 (랜딩 청크는 lazy — findBy로 로드를 기다린다).
@@ -28,7 +28,7 @@ test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async 
 
   // 본문 섹션 헤딩
   expect(
-    screen.getByRole('heading', { name: '지금 쓸 수 있는 것, 준비 중인 것' }),
+    screen.getByRole('heading', { name: '지금 신청할 수 있는 리소스' }),
   ).toBeInTheDocument()
   expect(
     screen.getByRole('heading', { name: '네 단계면 리소스가 준비됩니다' }),
@@ -37,15 +37,16 @@ test('랜딩 페이지가 히어로·본문 섹션·CTA를 보여준다', async 
     screen.getByRole('heading', { name: '익숙한 도구 그대로' }),
   ).toBeInTheDocument()
   expect(
-    screen.getByRole('heading', { name: '리소스만 주고 끝나지 않습니다' }),
+    screen.getByRole('heading', { name: /워크스페이스에서.*함께 관리합니다/ }),
   ).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: '만료돼도 데이터는 안전' })).not.toBeInTheDocument()
 
   // 이용 절차 4단계
   expect(screen.getByRole('heading', { name: '신청' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: '사용' })).toBeInTheDocument()
 
-  // 헤더 내비게이션과 푸터, 최종 CTA에 회원가입 링크가 있다
-  expect(screen.getAllByRole('link', { name: /회원가입/ })).toHaveLength(3)
+  // Signup remains available in the header and final action.
+  expect(screen.getAllByRole('link', { name: /회원가입/ })).toHaveLength(2)
 })
 
 test.each([
@@ -56,9 +57,23 @@ test.each([
   if (token) server.use(refreshSuccessHandler(token))
   renderApp('/')
   const introduction = await screen.findByRole('link', { name: '서비스 소개' }, { timeout: 15_000 })
-  expect(introduction).toHaveAttribute('href', '/docs')
+  expect(introduction).toHaveAttribute('href', '/docs/introduction')
   expect(introduction).not.toHaveAttribute('target')
   const row = within(introduction.parentElement!)
   expect(row.getAllByRole('link')).toHaveLength(2)
   expect(row.getByRole('link', { name: new RegExp(action) })).toHaveAttribute('href', destination)
+})
+
+test('closes mobile navigation with Escape and restores its toggle focus', async () => {
+  const { default: userEvent } = await import('@testing-library/user-event')
+  renderApp('/')
+  await screen.findByRole('heading', { name: /서비스가 시작되는 곳/ }, { timeout: 15_000 })
+  const toggle = screen.getByRole('button', { name: '메뉴' })
+  await userEvent.click(toggle)
+  const navigation = screen.getByRole('navigation', { name: '모바일 랜딩 메뉴' })
+  const guide = within(navigation).getByRole('link', { name: '사용 가이드' })
+  guide.focus()
+  await userEvent.keyboard('{Escape}')
+  expect(screen.queryByRole('navigation', { name: '모바일 랜딩 메뉴' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '메뉴' })).toHaveFocus()
 })
