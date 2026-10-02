@@ -177,7 +177,7 @@ function AdminRequestDetailContent() {
           )}
         </div>
 
-        <ApprovalContextPanel requestId={requestId} />
+        <ApprovalContextPanel requestId={requestId} canDecide={canDecide && data.status === 'SUBMITTED'} />
       </div>
     </div>
   )
@@ -493,7 +493,7 @@ function DecisionSection({
 
 /* ─── 승인 판단 참고 패널 ─── */
 
-function ApprovalContextPanel({ requestId }: { requestId: string }) {
+function ApprovalContextPanel({ requestId, canDecide }: { requestId: string; canDecide: boolean }) {
   const { activeOrgId } = useAdminScope()
   const context = useQuery({
     queryKey: ['admin', 'requests', requestId, 'context', { orgId: activeOrgId ?? null }],
@@ -510,7 +510,8 @@ function ApprovalContextPanel({ requestId }: { requestId: string }) {
   if (context.isError) {
     return (
       <Alert variant="warning" title="승인 참고 정보를 불러오지 못했습니다">
-        참고 정보 없이도 승인 또는 반려할 수 있습니다.
+        {canDecide ? '참고 정보 없이도 승인 또는 반려할 수 있습니다.'
+          : '신청 내용은 계속 확인할 수 있습니다. 잠시 후 다시 조회해 주세요.'}
       </Alert>
     )
   }

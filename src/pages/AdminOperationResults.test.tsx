@@ -227,3 +227,13 @@ test('a dismissed delete request cannot close a newly selected mapping', async (
   await waitFor(() => expect(screen.queryByText('작업 접수')).not.toBeInTheDocument())
   expect(within(screen.getByRole('dialog', { name: '포트 매핑 상세' })).getByText('stuck-vm')).toBeInTheDocument()
 })
+
+
+test.each([sysManagerUser, sysViewerUser, orgViewerUser])('$role context errors do not suggest decision authority', async (role) => {
+  server.use(refreshSuccessHandler(`access-${role.role.toLowerCase().replace('_', '-')}`, role),
+    http.get('*/api/v1/admin/requests/:id/context', () => HttpResponse.json({ status: 503, detail: '합성 참고 조회 실패' }, { status: 503 })))
+  renderApp(`/admin/requests/${uuid(201)}`)
+  await screen.findByText('승인 참고 정보를 불러오지 못했습니다')
+  expect(screen.queryByText('참고 정보 없이도 승인 또는 반려할 수 있습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument()
+})
