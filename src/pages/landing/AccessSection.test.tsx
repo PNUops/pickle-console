@@ -1,20 +1,46 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, test } from 'vitest'
 import { AccessSection } from './AccessSection'
 import { LLM_GATEWAY_HOST, SSH_GATEWAY_HOST } from '../../lib/hosts'
+import { LLM_DEFAULT_MODEL } from '../../lib/llm-api'
 
-// 랜딩은 비인증 화면이라 서버에서 호스트를 받아 올 수 없고 상수를 그대로 렌더한다.
-// 도메인이 바뀔 때 여기만 옛 값으로 남아 있어도 지금까지는 아무 테스트도 실패하지
-// 않았다(터미널 목업도 같은 상수를 쓴다 — 타이핑 연출이라 여기서 단언하지 않고
-// 상수 공유로 묶는다). LLM 쪽도 같은 이유로 요청 목업의 호스트를 단언한다.
-describe('랜딩 사용 방식 안내', () => {
-  test('가상머신 카드가 현재 SSH 게이트웨이 호스트를 안내한다', () => {
-    render(<AccessSection />)
-    expect(screen.getByText(`ssh <vm-slug>@${SSH_GATEWAY_HOST}`)).toBeInTheDocument()
+function renderAccess() {
+  render(<MemoryRouter><AccessSection /></MemoryRouter>)
+}
+
+describe('Landing connection examples', () => {
+  test('uses the VM private key and current SSH gateway in the connection command', () => {
+    renderAccess()
+    const example = screen.getByLabelText('가상머신 접속 명령 예시')
+    expect(example).toHaveTextContent('ssh -i ~/.ssh/pickle-my-vm.pem')
+    expect(example).toHaveTextContent('-o IdentitiesOnly=yes')
+    expect(example).toHaveTextContent(`my-vm@${SSH_GATEWAY_HOST}`)
   })
 
-  test('LLM API 요청 목업이 현재 게이트웨이 호스트를 안내한다', () => {
-    render(<AccessSection />)
-    expect(screen.getByText(LLM_GATEWAY_HOST)).toBeInTheDocument()
+  test('shows a JSON request with the current LLM endpoint and model', () => {
+    renderAccess()
+    const command = screen.getByLabelText('LLM API 호출 명령 예시').textContent ?? ''
+    expect(command).toContain(`curl https://${LLM_GATEWAY_HOST}/v1/chat/completions`)
+    expect(command).toContain('Authorization: Bearer $PICKLE_API_KEY')
+    expect(command).toContain('Content-Type: application/json')
+    const payload = command.match(/-d '(.+)'$/)?.[1]
+    expect(payload).toBeDefined()
+    expect(JSON.parse(payload!)).toEqual({
+      model: LLM_DEFAULT_MODEL,
+      messages: [{ role: 'user', content: '안녕하세요' }],
+    })
+  })
+
+  test('opens the connection guides without an iframe target', () => {
+    renderAccess()
+    for (const [name, destination] of [
+      ['접속과 파일 전송 가이드', '/docs/vm/connect'],
+      ['LLM API 연결 가이드', '/docs/llm/connect'],
+    ]) {
+      const link = screen.getByRole('link', { name: new RegExp(name) })
+      expect(link).toHaveAttribute('href', destination)
+      expect(link).not.toHaveAttribute('target')
+    }
   })
 })

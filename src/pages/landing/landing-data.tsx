@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react'
-import { SSH_GATEWAY_HOST } from '../../lib/hosts'
 
 /**
- * 랜딩 본문 섹션의 데이터(리소스/절차/기능)와 스트로크 아이콘 모음.
- * 카피는 제품 표준 용어(가상머신/LLM API 키/준비 중/신청서/검토/승인 등)를
- * 따르며, 목록은 현재 구현 현황을 기준으로 한다.
+ * Shared resource lineup, application steps, and stroke icons for the landing page.
  */
 
 // 컴포넌트가 아니라 모듈 로드 시 한 번 호출되는 팩토리 — 데이터 파일이므로
@@ -68,12 +65,6 @@ export const icons = {
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </>)
   ),
-  clock: (
-    icon(<>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" />
-    </>)
-  ),
   // 아래 리소스 아이콘들은 콘솔 사이드바(components/nav-icons.tsx)와 같은 도형을
   // 이 파일의 팩토리로 다시 그린 것 — navIcons는 사이드바 크기(size-4.5)에 고정돼
   // 있어 엘리먼트를 직접 재사용하지 못한다. 도형이 바뀌면 양쪽을 같이 고친다.
@@ -131,46 +122,67 @@ export const icons = {
   ),
 } satisfies Record<string, ReactNode>
 
-/* ─── 리소스 종류 (서비스 중 + 준비 중) ─── */
+/* Resource lineup */
 
-export interface ResourceType {
+interface ResourceIdentity {
   icon: keyof typeof icons
   title: string
-  status: 'live' | 'planned'
-  badge?: string
-  description?: string
-  meta?: string
 }
 
+export type ResourceType = ResourceIdentity & (
+  | {
+    status: 'live'
+    description: string
+    details: string[]
+    guide: string
+    guideLabel: string
+  }
+  | { status: 'planned' }
+)
+
 /**
- * 라인업은 콘솔 사이드바(layouts/ConsoleLayout.tsx)와 같게 유지한다 — 사이드바의
- * 준비 중 항목이 바뀌면 여기도 같이 바뀐다(ResourceShowcase.test.tsx가 9종을 고정
- * 단언한다). 이름도 양쪽이 같다.
+ * Names and display order match the console sidebar. Keep live cards and planned
+ * items in one list so a resource launch cannot leave a separate list behind.
  */
 export const resourceTypes: ResourceType[] = [
   {
     icon: 'server',
     title: '가상머신',
     status: 'live',
-    description:
-      '신청한 사양대로 만들어지는 리눅스 서버입니다. SSH와 웹 터미널로 접속하고, 무료 서브도메인으로 웹 서비스를 공개합니다.',
-    meta: `ssh <vm-slug>@${SSH_GATEWAY_HOST}`,
+    description: '리눅스 서버를 신청하고, 접속과 서비스 공개를 콘솔에서 관리합니다.',
+    details: [
+      'SSH와 웹 터미널 접속',
+      '서브도메인과 커스텀 도메인, 자동 TLS',
+      '포트포워딩과 시작, 종료, 재부팅',
+    ],
+    guide: '/docs/vm/request',
+    guideLabel: '가상머신 이용 가이드',
   },
   {
     icon: 'chip',
     title: 'LLM API 키',
     status: 'live',
-    description:
-      'OpenAI 호환 API를 호출하는 키를 콘솔에서 발급합니다. 키마다 일일 토큰 한도와 금액 한도가 있고, 사용량을 콘솔에서 확인합니다.',
-    meta: 'POST /v1/chat/completions',
+    description: 'OpenAI 호환 API로 모델을 호출하고, 키와 사용량을 콘솔에서 관리합니다.',
+    details: [
+      '자체 서빙 모델의 일일 토큰 한도',
+      '유료 모델의 승인된 금액 한도',
+      '콘솔에서 키 발급과 사용량 조회',
+    ],
+    guide: '/docs/llm/start',
+    guideLabel: 'LLM API 이용 가이드',
   },
   {
     icon: 'globe',
     title: '도메인',
     status: 'live',
-    description:
-      'VM 없이 이름만 발급받아 원하는 서버로 연결합니다. A와 AAAA, CNAME, TXT 레코드를 콘솔에서 직접 편집합니다.',
-    meta: '<이름>.pusan.dev',
+    description: 'VM 없이 이름을 발급받아 외부 서버나 호스팅 서비스에 연결합니다.',
+    details: [
+      'A, AAAA, CNAME, TXT 레코드 편집',
+      '워크스페이스에서 이름과 사용 기한 관리',
+      '변경한 레코드의 적용 상태 확인',
+    ],
+    guide: '/docs/network/domains',
+    guideLabel: '도메인 이용 가이드',
   },
   { icon: 'container', title: '컨테이너', status: 'planned' },
   { icon: 'registry', title: '컨테이너 레지스트리', status: 'planned' },
@@ -203,72 +215,5 @@ export const steps: Step[] = [
   {
     title: '사용',
     description: '가상머신은 SSH나 웹 터미널로 접속하고, LLM API 키는 발급된 키로 바로 호출합니다.',
-  },
-]
-
-/* ─── 신뢰 스트립 ─── */
-
-export const trustItems: string[] = [
-  '승인 즉시 자동 준비',
-  'SSH와 웹 터미널 접속',
-  'OpenAI 호환 LLM API',
-  '무료 서브도메인 할당',
-]
-
-/* ─── 주요 기능 (현재 구현) ─── */
-
-export interface Feature {
-  icon: keyof typeof icons
-  title: string
-  description: string
-}
-
-/** 벤토 그리드의 대형 카드 2장 — 제품의 가장 강한 축. */
-export const featuredCards: Feature[] = [
-  {
-    icon: 'zap',
-    title: '신청하고 승인되면, 나머지는 자동',
-    description:
-      '리소스 준비부터 완료 알림까지 자동으로 이어집니다. 가상머신도 보통 몇 분이면 접속할 수 있습니다.',
-  },
-  {
-    icon: 'chip',
-    title: 'LLM API 키도 콘솔에서',
-    description:
-      '발급한 키를 OpenAI 호환 SDK에 그대로 넣어 씁니다. 키마다 일일 토큰 한도와 금액 한도가 있고, 사용량도 콘솔에서 확인합니다.',
-  },
-]
-
-export const features: Feature[] = [
-  {
-    icon: 'terminal',
-    title: '웹 터미널',
-    description: 'SSH 클라이언트 없이 브라우저에서 바로 셸을 엽니다.',
-  },
-  {
-    icon: 'globe',
-    title: 'HTTP(S) 퍼블리싱',
-    description: '서브도메인을 무료로 할당받아 웹 서비스를 인터넷에 공개합니다. TLS는 자동입니다.',
-  },
-  {
-    icon: 'link',
-    title: '커스텀 도메인',
-    description: '보유한 도메인도 소유권 확인을 거쳐 그대로 연결할 수 있습니다.',
-  },
-  {
-    icon: 'users',
-    title: '워크스페이스와 역할',
-    description:
-      '워크스페이스 단위로 리소스를 함께 쓰고, 멤버마다 권한을 다르게 줄 수 있습니다. 함께 쓰는 가상머신이라도 각자 자기 SSH 키로 접속합니다.',
-  },
-  {
-    icon: 'power',
-    title: '전원 제어',
-    description: '시작과 종료, 재부팅을 콘솔에서 바로 실행합니다.',
-  },
-  {
-    icon: 'clock',
-    title: '만료돼도 데이터는 안전',
-    description: '만료 전에 미리 알리고, 만료돼도 삭제가 아니라 종료됩니다. 삭제에도 7일의 유예가 있습니다.',
   },
 ]
