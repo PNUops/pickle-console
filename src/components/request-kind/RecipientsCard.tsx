@@ -36,11 +36,11 @@ const RECIPIENT_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 }
 
 /** A status this build does not know is shown as the raw value rather than dropped. */
-export function RecipientStatusBadge({ status }: { status: string }) {
+export function RecipientStatusBadge({ status, admin = false }: { status: string; admin?: boolean }) {
   const labels: Record<string, string> = REQUEST_RECIPIENT_STATUS_LABELS
   return (
     <Badge variant={RECIPIENT_STATUS_VARIANTS[status] ?? 'neutral'}>
-      {labels[status] ?? status}
+      {admin && status === 'CREATED' ? '리소스 등록됨' : labels[status] ?? status}
     </Badge>
   )
 }
@@ -57,11 +57,13 @@ export function RequestRecipientsCard({
   request,
   resourceHref,
   canRetry,
+  admin = false,
 }: {
   request: RequestDetail
   /** Where the created resource opens for this viewer, or null when it is not theirs to open. */
   resourceHref: (recipient: RequestRecipient) => string | null
   canRetry: boolean
+  admin?: boolean
 }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +90,10 @@ export function RequestRecipientsCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {error && <Alert variant="danger">{error}</Alert>}
+        {admin && <Alert variant="info" title="리소스 등록과 실제 완료">
+          등록됨은 리소스와 권한 기록이 만들어진 상태입니다. VM 프로비저닝 완료를 뜻하지 않습니다.
+          실제 진행과 실패 사유는 각 리소스의 상세 보기에서 확인해 주세요.
+        </Alert>}
         <DataTable caption="대상자">
           <THead>
             <TR>
@@ -109,7 +115,7 @@ export function RequestRecipientsCard({
                 <TR key={recipient.id}>
                   <TD>{recipientLabel(recipient)}</TD>
                   <TD>
-                    <RecipientStatusBadge status={recipient.status} />
+                    <RecipientStatusBadge status={recipient.status} admin={admin} />
                   </TD>
                   <TD>
                     {href ? (

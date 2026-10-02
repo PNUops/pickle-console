@@ -318,7 +318,7 @@ describe('recipients on the administrator request detail', () => {
 
     const table = await screen.findByRole('table', { name: '대상자' })
     const rows = within(table).getAllByRole('row')
-    expect(within(rows[1]).getByText('생성됨')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('리소스 등록됨')).toBeInTheDocument()
     expect(within(rows[1]).getByRole('link', { name: '상세 보기' })).toHaveAttribute(
       'href',
       `/admin/vms/${uuid(8801)}?org=${uuid(1)}`,
@@ -380,7 +380,7 @@ describe('recipients on the administrator request detail', () => {
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
     expect(
       await screen.findByText(
-        '신청을 승인했습니다. 대상자별 VM이 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.',
+        '승인 내용이 저장되었습니다. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.',
       ),
     ).toBeInTheDocument()
   })
