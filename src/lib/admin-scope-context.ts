@@ -6,6 +6,7 @@ export interface AdminOrgOption {
   name: string
   /** ORG 계층 계정이 이 기관에서 실제로 가진 역할. SYS 계층은 전역 역할을 쓴다. */
   role?: UserRole
+  status?: 'ACTIVE' | 'DISABLED'
 }
 
 export interface AdminScopeValue {
@@ -18,6 +19,7 @@ export interface AdminScopeValue {
   requiresSelection: boolean
   /** SYS URL 기관이 실제 카탈로그에 있는지 확인하는 동안 true. */
   resolving: boolean
+  catalogPending: boolean
   /** SYS 기관 카탈로그 조회가 실패한 상태. */
   error: boolean
   /** route page를 마운트해도 범위 없는 API가 나가지 않는 상태. */

@@ -7,6 +7,7 @@
  */
 import type { RequestHandler } from 'msw'
 import { gpuHandlers } from './handlers/gpu'
+import { orgOperationHandlers } from './handlers/org-operations'
 import { bulkChangeHandlers } from './handlers/bulk-changes'
 import { accountHandlers } from './handlers/account'
 import { adminHandlers } from './handlers/admin'
@@ -42,6 +43,7 @@ import { vmNetworkPolicyHandlers } from './handlers/vm-network-policy'
 
 /** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
+  ...orgOperationHandlers,
   ...authHandlers,
   ...gpuHandlers,
   ...accountHandlers,

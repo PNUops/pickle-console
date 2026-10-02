@@ -147,7 +147,7 @@ test('upper-case institution and workspace UUIDs retain the requested target and
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
   const rows = workspaceFixture()
   rows[0].id = id
-  server.use(http.get('*/api/v1/orgs', () => HttpResponse.json([{ id: org, name: '시험 기관' }])))
+  server.use(http.get('*/api/v1/admin/orgs', () => HttpResponse.json([{ id: org, name: '시험 기관', status: 'ACTIVE', hidden: false, createdAt: '2026-10-03T00:00:00Z' }])))
   renderApp(`/admin/workspaces?org=${org.toUpperCase()}&workspaceId=${id.toUpperCase()}`)
   const drawer = await screen.findByRole('dialog', { name: '워크스페이스 상세' })
   await within(drawer).findByRole('heading', { name: '수업01' })

@@ -19,6 +19,7 @@ import { AdminNodesPage } from './pages/AdminNodesPage'
 import { AdminNoticesPage } from './pages/AdminNoticesPage'
 import { AdminNotificationLogPage } from './pages/AdminNotificationLogPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
+import { AdminOrgOperationsPage } from './pages/AdminOrgOperationsPage'
 import { AdminSettingsPage } from './pages/AdminSettingsPage'
 import { AdminTasksPage } from './pages/AdminTasksPage'
 import { AdminTerminalSessionsPage } from './pages/AdminTerminalSessionsPage'
@@ -278,6 +279,7 @@ function App() {
         <Route path="llm/status" element={<AdminLlmStatusPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="org-operations" element={<AdminOrgOperationsPage />} />
         <Route path="workspaces" element={<AdminWorkspacesPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />

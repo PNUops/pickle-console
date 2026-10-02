@@ -1113,6 +1113,41 @@ export interface paths {
         patch: operations["updateOrg"];
         trace?: never;
     };
+    "/admin/orgs/{orgId}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 기관 역할 명단과 현재 신청 메일 수신자 조회 */
+        get: operations["getAdminOrgOperations"];
+        /** 기관 명단과 수신 설정의 원자 저장 */
+        put: operations["saveAdminOrgOperations"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orgs/{orgId}/operations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 기관 명단과 수신 설정의 변경안 미리보기 */
+        post: operations["previewAdminOrgOperations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/os-images": {
         parameters: {
             query?: never;
@@ -4454,6 +4489,38 @@ export interface components {
             /** Format: uuid */
             userId: string;
         };
+        AdminOrgOperationsResponse: {
+            /** Format: int32 */
+            activeAdminCount: number;
+            /** Format: int32 */
+            activeApproverCount: number;
+            /** Format: int32 */
+            currentMailRecipientCount: number;
+            legacyFallback: boolean;
+            mailMode?: components["schemas"]["RequestMailMode"] | null;
+            members: components["schemas"]["AdminOrgRoleMemberView"][];
+            /** Format: date-time */
+            observedAt: string;
+            org: components["schemas"]["OrgDetailResponse"];
+            /** Format: uuid */
+            requesterId?: string | null;
+            /** Format: int64 */
+            revision: number;
+        };
+        AdminOrgRoleMemberView: {
+            currentMailRecipient: boolean;
+            email: string;
+            exclusionReason?: string | null;
+            inAppRecipient: boolean;
+            name: string;
+            requestMail: boolean;
+            /** @description 이 기관에서 보유한 역할. 계정의 최고 역할과 구분합니다. */
+            role: components["schemas"]["UserRole"];
+            selectionReason?: string | null;
+            status: components["schemas"]["UserStatus"];
+            /** Format: uuid */
+            userId: string;
+        };
         AdminOsImageResponse: {
             displayName: string;
             /** Format: uuid */
@@ -4819,6 +4886,12 @@ export interface components {
             /** Format: uuid */
             nodeId?: string | null;
         };
+        Assignment: {
+            requestMail?: boolean;
+            role: components["schemas"]["UserRole"];
+            /** Format: uuid */
+            userId: string;
+        };
         AttachGpuRequest: {
             confirmed: boolean;
             /** Format: uuid */
@@ -4850,6 +4923,9 @@ export interface components {
             ip?: string | null;
             orgName?: string | null;
             targetId?: string | null;
+            /** Format: uuid */
+            targetOrgId?: string | null;
+            targetOrgName?: string | null;
             targetType?: string | null;
         };
         AuthTokenResponse: {
@@ -5490,6 +5566,8 @@ export interface components {
             model: string;
         };
         GrantOrgRoleRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
             /** @description 이 기관에서 부여할 역할 (ORG_ADMIN, ORG_MANAGER, ORG_VIEWER) */
             role: components["schemas"]["UserRole"];
         };
@@ -7344,6 +7422,12 @@ export interface components {
             vcpuOvercommitRatio: number;
             warnings: string[];
         };
+        OrgOperationsPreviewResponse: {
+            after: components["schemas"]["AdminOrgOperationsResponse"];
+            before: components["schemas"]["AdminOrgOperationsResponse"];
+            createsStaffVacancy: boolean;
+            warnings: string[];
+        };
         /** @enum {string} */
         OrgStatus: "ACTIVE" | "DISABLED";
         OrgSummaryResponse: {
@@ -7885,6 +7969,8 @@ export interface components {
             workspaceId?: string | null;
             workspaceName: string;
         };
+        /** @enum {string} */
+        RequestMailMode: "ALL_APPROVERS" | "DESIGNATED";
         RequestOptionsResponse: {
             allowedRootDomains: string[];
             reservedSubdomains: string[];
@@ -8069,6 +8155,16 @@ export interface components {
             /** Format: int32 */
             portStart?: number | null;
             protocol: components["schemas"]["Protocol"];
+        };
+        SaveOrgOperationsRequest: {
+            allowVacancy?: boolean;
+            /** Format: uuid */
+            confirmedOrgId?: string | null;
+            /** Format: int64 */
+            expectedRevision: number;
+            mailMode?: components["schemas"]["RequestMailMode"] | null;
+            members: components["schemas"]["Assignment"][];
+            reason?: string | null;
         };
         ScheduleVmDeletionRequest: {
             reason: string;
@@ -8311,8 +8407,10 @@ export interface components {
             status?: components["schemas"]["OrgStatus"];
         };
         UpdateOrgRequestMailRequest: {
-            /** @description 이 기관의 신청 접수 메일을 받을지. 신청을 승인할 수 있는 역할(ORG_ADMIN, ORG_MANAGER)만 켤 수 있다. 기관에 켠 사람이 한 명도 없으면 기관 관리자 전원이 받는다. */
+            /** @description 이 기관의 신청 접수 메일을 받을지. 신청을 승인할 수 있는 역할(ORG_ADMIN, ORG_MANAGER)만 켤 수 있다. 실제 수신자는 기관의 현재 수신 방식과 지정 명단을 따릅니다. */
             enabled: boolean;
+            /** Format: int64 */
+            expectedRevision: number;
         };
         UpdateOsImageStatusRequest: {
             /** @description ACTIVE = 신청 위저드에 노출, DISABLED = 은퇴 (기존 VM 무영향) */
@@ -9077,6 +9175,7 @@ export interface operations {
                 from?: string;
                 to?: string;
                 orgId?: string;
+                targetOrgId?: string;
                 page?: number;
                 size?: number;
             };
@@ -11246,6 +11345,109 @@ export interface operations {
             };
         };
     };
+    getAdminOrgOperations: {
+        parameters: {
+            query?: {
+                requesterId?: string;
+            };
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOrgOperationsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveAdminOrgOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOrgOperationsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOrgOperationsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminOrgOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOrgOperationsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrgOperationsPreviewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminOsImages: {
         parameters: {
             query?: never;
@@ -12545,7 +12747,9 @@ export interface operations {
     };
     revokeOrgRole: {
         parameters: {
-            query?: never;
+            query: {
+                expectedRevision: number;
+            };
             header?: never;
             path: {
                 userId: string;

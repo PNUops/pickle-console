@@ -160,6 +160,9 @@ export const auditHandlers: RequestHandler[] = [
     const from = url.searchParams.get('from')
     const to = url.searchParams.get('to')
     const orgId = url.searchParams.get('orgId')
+    const targetOrgId = url.searchParams.get('targetOrgId')
+    const targetType = url.searchParams.get('targetType')
+    const targetId = url.searchParams.get('targetId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
 
@@ -171,7 +174,10 @@ export const auditHandlers: RequestHandler[] = [
     if (scope.notFound) return scope.notFound
 
     const filtered = auditStore
-      .filter((row) => scope.matches(row.actorOrgId))
+      .filter((row) => scope.matches(row.targetOrgId ?? row.actorOrgId))
+      .filter((row) => !targetOrgId || row.targetOrgId === targetOrgId)
+      .filter((row) => !targetType || row.targetType === targetType)
+      .filter((row) => !targetId || row.targetId === targetId)
       .filter((row) => !action || row.action === action)
       .filter((row) => !actorEmail || (row.actorEmail ?? '').includes(actorEmail))
       .filter((row) => !from || row.createdAt.slice(0, 10) >= from)

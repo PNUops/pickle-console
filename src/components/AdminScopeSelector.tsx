@@ -34,6 +34,7 @@ export function AdminScopeSelector() {
           <option key={org.id} value={org.id}>
             {org.name}
             {org.role ? ` · ${USER_ROLE_LABELS[org.role]}` : ''}
+            {org.status === 'DISABLED' ? ' · 비활성' : ''}
           </option>
         ))}
       </Select>

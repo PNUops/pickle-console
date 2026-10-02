@@ -83,6 +83,7 @@ export function AdminLayout() {
     {
       heading: '사용자·워크스페이스',
       items: [
+        { to: path('/admin/org-operations'), label: '기관 운영', icon: <Organization24Regular className={iconClass} /> },
         { to: path('/admin/users'), label: '사용자', icon: <People24Regular className={iconClass} /> },
         {
           to: path('/admin/workspaces'),

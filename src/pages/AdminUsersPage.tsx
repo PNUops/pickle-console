@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   disableUser,
   enableUser,
   fetchAdminUser,
   fetchAdminUsers,
   fetchOrgs,
+  fetchAdminOrgs,
+  fetchOrgOperations,
   fetchProfileOptions,
   grantOrgRole,
   resetUserMfa,
@@ -57,6 +59,9 @@ import { labelForWorkspaceKind, USER_ROLE_LABELS, USER_STATUS_LABELS } from '../
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { adminPaths } from '../lib/paths'
+import { useListUrl } from '../lib/use-list-url'
+import { isUuid } from '../lib/validation'
+import { useActiveResult } from '../lib/use-active-result'
 
 type SortKey = 'name' | 'email' | 'createdAt'
 
@@ -113,7 +118,10 @@ export function AdminUsersPage() {
   const [qInput, setQInput] = useState('')
   const [sort, setSort] = useState<AdminUserSort | undefined>(undefined)
   const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [urlParams, changeUrl] = useListUrl()
+  const rawSelectedId = urlParams.get('selected')
+  const selectedId = rawSelectedId && isUuid(rawSelectedId) ? rawSelectedId.toLowerCase() : null
+  const setSelectedId = (id: string | null) => changeUrl({ selected: id ?? undefined })
 
   const debouncedQ = useDebouncedValue(qInput).trim()
   const q = debouncedQ.length > 0 ? debouncedQ : undefined
@@ -684,15 +692,20 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const { user: viewer } = useAuth()
   const queryClient = useQueryClient()
   const toast = useToast()
+  const active = useActiveResult()
   const [error, setError] = useState<string | null>(null)
   const [addOrgId, setAddOrgId] = useState('')
+  const [addRevision, setAddRevision] = useState<number | null>(null)
   const [addRole, setAddRole] = useState<UserRole>('ORG_MANAGER')
   const [confirmRevoke, setConfirmRevoke] = useState<ManagedOrg | null>(null)
+  const [revokeRevision, setRevokeRevision] = useState<number | null>(null)
+  const revokeSurface = useRef(0)
+  const closeRevoke = () => { revokeSurface.current += 1; setConfirmRevoke(null) }
 
   const isSysAdmin = viewer?.role === 'SYS_ADMIN'
   const administered = administeredOrgs(viewer?.managedOrgs ?? [])
   const canStaff = isSysAdmin || administered.length > 0
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
+  const orgs = useQuery({ queryKey: ['admin', 'orgs'], queryFn: fetchAdminOrgs, enabled: isSysAdmin })
   // 시스템 관리자는 전 기관에, 기관 관리자는 자기가 관리자로 있는 기관 전부에 부여한다 —
   // 서버도 `administers()`로 판정하므로 활성 관리 범위는 여기에 걸리지 않는다. 회수 버튼도
   // 이 집합을 쓰므로, 방금 부여한 행을 그 자리에서 되거둘 수 있다.
@@ -702,6 +715,28 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
       id: org.orgId,
       name: org.orgName,
     }))
+  const readOrgIds = [...new Set([
+    ...user.managedOrgs.filter((org) => grantable.some((option) => option.id === org.orgId)).map((org) => org.orgId),
+    ...(addOrgId ? [addOrgId] : []),
+  ])]
+  const revisionReads = useQueries({ queries: readOrgIds.map((orgId) => ({
+    queryKey: ['admin', 'org-operations', orgId, null],
+    queryFn: () => fetchOrgOperations(orgId),
+  })) })
+  const operationsFor = (orgId: string) => revisionReads[readOrgIds.indexOf(orgId)]?.data
+  const revisionFor = (orgId: string) => operationsFor(orgId)?.revision
+  // The displayed assignment and write version come from one response.
+  const displayedRoles: ManagedOrg[] = user.managedOrgs.filter((org) => !operationsFor(org.orgId))
+  for (const read of revisionReads) {
+    const snapshot = read.data
+    const member = snapshot?.members.find((row) => row.userId === user.id)
+    if (snapshot && member) displayedRoles.push({ orgId: snapshot.org.id, orgName: snapshot.org.name, role: member.role, requestMail: member.requestMail })
+  }
+  const requireRevision = (orgId: string) => {
+    const revision = revisionFor(orgId)
+    if (revision == null) throw new Error('기관의 현재 명단을 조회한 뒤 다시 시도해 주세요.')
+    return revision
+  }
   // 자기 자신과 시스템 계층 계정은 API가 403으로 거부하므로 변경 액션을
   // 렌더하지 않는다.
   const isSelf = viewer?.id === user.id
@@ -712,39 +747,43 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
       ? '시스템 관리자 계정의 기관 역할은 변경할 수 없습니다.'
       : null
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+  const invalidate = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    queryClient.invalidateQueries({ queryKey: ['admin', 'org-operations'] }),
+    queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] }),
+  ])
 
   const grant = useMutation({
-    mutationFn: () => grantOrgRole(user.id, addOrgId, addRole),
+    mutationFn: () => grantOrgRole(user.id, addOrgId, addRole, addRevision ?? requireRevision(addOrgId)),
     onSuccess: async (updated) => {
-      setError(null)
-      setAddOrgId('')
-      toast.success(`${updated.name}님에게 기관 역할을 부여했습니다.`)
       await invalidate()
+      if (active.current) { setError(null); setAddOrgId(''); toast.success(`${updated.name}님에게 기관 역할을 부여했습니다.`) }
     },
-    onError: (err) => setError(toApiError(err, '기관 역할을 부여하지 못했습니다.').message),
+    onError: (err) => { if (active.current) setError(toApiError(err, '기관 역할을 부여하지 못했습니다.').message) },
   })
 
   const requestMail = useMutation({
-    mutationFn: ({ orgId, enabled }: { orgId: string; enabled: boolean }) =>
-      updateOrgRequestMail(user.id, orgId, enabled),
+    mutationFn: ({ orgId, enabled, expectedRevision }: { orgId: string; enabled: boolean; expectedRevision: number }) =>
+      updateOrgRequestMail(user.id, orgId, enabled, expectedRevision),
     onSuccess: async (updated) => {
+      await invalidate()
+      if (!active.current) return
       setError(null)
       toast.success(
         updated.requestMail
-          ? `${user.name}님이 ${updated.orgName} 신청 접수 메일을 받습니다.`
-          : `${user.name}님이 ${updated.orgName} 신청 접수 메일을 받지 않습니다.`,
+          ? `${user.name}님의 ${updated.orgName} 메일 수신자 지정을 저장했습니다.`
+          : `${user.name}님의 ${updated.orgName} 메일 수신자 지정을 해제했습니다.`,
       )
-      await invalidate()
     },
     onError: (err) =>
-      setError(toApiError(err, '신청 접수 메일 설정을 바꾸지 못했습니다.').message),
+      { if (active.current) setError(toApiError(err, '신청 접수 메일 설정을 바꾸지 못했습니다.').message) },
   })
 
   const revoke = useMutation({
-    mutationFn: (orgId: string) => revokeOrgRole(user.id, orgId),
-    onSuccess: async (updated) => {
+    mutationFn: ({ orgId, revision }: { orgId: string; revision: number; surface: number }) => revokeOrgRole(user.id, orgId, revision),
+    onSuccess: async (updated, variables) => {
+      await invalidate()
+      if (!active.current || variables.surface !== revokeSurface.current) return
       setError(null)
       setConfirmRevoke(null)
       toast.success(
@@ -752,15 +791,15 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
           ? `${updated.name}님의 마지막 관리 기관을 회수했습니다. 이제 일반 사용자입니다.`
           : `${updated.name}님의 기관 역할을 회수했습니다.`,
       )
-      await invalidate()
     },
-    onError: (err) => {
+    onError: (err, variables) => {
+      if (!active.current || variables.surface !== revokeSurface.current) return
       setConfirmRevoke(null)
       setError(toApiError(err, '기관 역할을 회수하지 못했습니다.').message)
     },
   })
 
-  const alreadyHeld = new Set(user.managedOrgs.map((org) => org.orgId))
+  const alreadyHeld = new Set(displayedRoles.map((org) => org.orgId))
   const addable = grantable.filter((org) => !alreadyHeld.has(org.id))
   // Request mail changes what reaches a mailbox, not what anyone may do, so an
   // admin sets it on itself too: the self and sys-tier blocks on role changes
@@ -769,18 +808,18 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
     canStaff &&
     grantable.some((option) => option.id === org.orgId) &&
     (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER')
-  const showsRequestMail = user.managedOrgs.some(canSetRequestMail)
+  const showsRequestMail = displayedRoles.some(canSetRequestMail)
 
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-neutral-800">기관별 역할</h4>
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && <Alert variant="danger">{error}<Button size="sm" variant="secondary" onClick={() => void invalidate()}>기관 명단 다시 조회</Button></Alert>}
 
-      {user.managedOrgs.length === 0 ? (
+      {displayedRoles.length === 0 ? (
         <p className="text-sm text-neutral-500">관리하는 기관이 없습니다.</p>
       ) : (
         <ul className="space-y-2">
-          {user.managedOrgs.map((org) => {
+          {displayedRoles.map((org) => {
             const mine = grantable.some((option) => option.id === org.orgId)
             return (
               <li
@@ -790,6 +829,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
                 <span>
                   <span className="font-medium text-neutral-900">{org.orgName}</span>{' '}
                   <Badge variant="neutral">{USER_ROLE_LABELS[org.role]}</Badge>
+                  {viewer && (isSysTier(viewer.role) || viewer.managedOrgs.some((held) => held.orgId === org.orgId)) && <>{' '}<Link className="text-primary-700 hover:underline" to={adminPaths.orgOperations(org.orgId)}>기관 운영</Link></>}
                   {org.requestMail && !canSetRequestMail(org) && (
                     <>
                       {' '}
@@ -804,16 +844,16 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
                         type="checkbox"
                         className="size-4 cursor-pointer accent-brand-fill"
                         checked={org.requestMail}
-                        disabled={requestMail.isPending}
+                        disabled={requestMail.isPending || revisionFor(org.orgId) == null}
                         onChange={(event) =>
-                          requestMail.mutate({ orgId: org.orgId, enabled: event.target.checked })
+                          requestMail.mutate({ orgId: org.orgId, enabled: event.target.checked, expectedRevision: requireRevision(org.orgId) })
                         }
                       />
                       신청 접수 메일 받기
                     </label>
                   )}
                   {canStaff && mine && blockedReason == null && (
-                    <Button size="sm" variant="secondary" onClick={() => setConfirmRevoke(org)}>
+                    <Button size="sm" variant="secondary" disabled={revisionFor(org.orgId) == null} onClick={() => { revokeSurface.current += 1; setRevokeRevision(requireRevision(org.orgId)); setConfirmRevoke(org) }}>
                       회수
                     </Button>
                   )}
@@ -825,7 +865,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
       )}
       {showsRequestMail && (
         <p className="text-xs text-neutral-500">
-          신청 접수 메일을 받는 사람이 없거나 모두 비활성인 기관은 기관 관리자 전원이 받습니다.
+          지정 설정과 실제 수신자는 기관의 수신 방식에 따라 다릅니다. 기관 운영에서 현재 수신자와 제외 사유를 확인할 수 있습니다.
         </p>
       )}
 
@@ -835,8 +875,8 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
             <Select
               className="w-56"
               value={addOrgId}
-              disabled={addable.length === 0}
-              onChange={(event) => setAddOrgId(event.target.value)}
+              disabled={addable.length === 0 || grant.isPending}
+              onChange={(event) => { setAddOrgId(event.target.value); setAddRevision(revisionFor(event.target.value) ?? null) }}
             >
               <option value="">기관 선택</option>
               {addable.map((org) => (
@@ -850,6 +890,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
             <Select
               className="w-40"
               value={addRole}
+              disabled={grant.isPending}
               onChange={(event) => setAddRole(event.target.value as UserRole)}
             >
               <option value="ORG_VIEWER">{USER_ROLE_LABELS.ORG_VIEWER}</option>
@@ -858,7 +899,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
             </Select>
           </FormField>
           <Button
-            disabled={!addOrgId}
+            disabled={!addOrgId || alreadyHeld.has(addOrgId) || revisionFor(addOrgId) == null}
             loading={grant.isPending}
             onClick={() => grant.mutate()}
           >
@@ -869,7 +910,7 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
 
       <Modal
         open={confirmRevoke != null}
-        onClose={() => setConfirmRevoke(null)}
+        onClose={closeRevoke}
         title="기관 역할 회수"
       >
         <p className="text-sm text-neutral-600">
@@ -885,13 +926,13 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
           )}
         </p>
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setConfirmRevoke(null)}>
+          <Button variant="secondary" onClick={closeRevoke}>
             취소
           </Button>
           <Button
             variant="danger"
             loading={revoke.isPending}
-            onClick={() => confirmRevoke && revoke.mutate(confirmRevoke.orgId)}
+            onClick={() => confirmRevoke && revoke.mutate({ orgId: confirmRevoke.orgId, revision: revokeRevision ?? requireRevision(confirmRevoke.orgId), surface: revokeSurface.current })}
           >
             회수
           </Button>

@@ -3,6 +3,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { uuid } from '../ids'
+import { advanceOrgRevision, orgRevisionConflict } from './org-operations'
 
 type Schemas = components['schemas']
 type UserAdminDetail = Schemas['UserAdminDetailResponse']
@@ -392,7 +393,9 @@ export const userHandlers: RequestHandler[] = [
     if (row.id === actor.id || isSysTier(row.role)) {
       return forbidden()
     }
-    const body = (await request.json()) as { role: Schemas['UserRole'] }
+    const body = (await request.json()) as { role: Schemas['UserRole']; expectedRevision: number }
+    const conflict = orgRevisionConflict(orgId, body.expectedRevision)
+    if (conflict) return conflict
     const held = row.managedOrgs.filter((org) => org.orgId !== orgId)
     // A viewer role cannot keep the request-mail choice (V133 check).
     const previous = row.managedOrgs.find((org) => org.orgId === orgId)
@@ -401,6 +404,7 @@ export const userHandlers: RequestHandler[] = [
       (body.role === 'ORG_ADMIN' || body.role === 'ORG_MANAGER')
     row.managedOrgs = [...held, { orgId, orgName: orgNameOf(orgId), role: body.role, requestMail }]
     row.role = effectiveRole(row.managedOrgs)
+    advanceOrgRevision(orgId)
     return HttpResponse.json(summaryOf(row), { status: 200 })
   }),
 
@@ -424,7 +428,9 @@ export const userHandlers: RequestHandler[] = [
       const row = adminUserStore.find((u) => u.id === String(params.userId))
       const held = row?.managedOrgs.find((org) => org.orgId === orgId)
       if (!row || !held) return notFound(String(params.userId))
-      const body = (await request.json()) as { enabled: boolean }
+      const body = (await request.json()) as { enabled: boolean; expectedRevision: number }
+      const conflict = orgRevisionConflict(orgId, body.expectedRevision)
+      if (conflict) return conflict
       if (body.enabled && held.role !== 'ORG_ADMIN' && held.role !== 'ORG_MANAGER') {
         return HttpResponse.json(
           {
@@ -443,6 +449,7 @@ export const userHandlers: RequestHandler[] = [
         )
       }
       held.requestMail = body.enabled
+      advanceOrgRevision(orgId)
       return HttpResponse.json(held, { status: 200 })
     },
   ),
@@ -463,8 +470,11 @@ export const userHandlers: RequestHandler[] = [
     if (row.id === actor.id || isSysTier(row.role)) {
       return forbidden()
     }
+    const conflict = orgRevisionConflict(orgId, Number(new URL(request.url).searchParams.get('expectedRevision')))
+    if (conflict) return conflict
     row.managedOrgs = row.managedOrgs.filter((org) => org.orgId !== orgId)
     row.role = effectiveRole(row.managedOrgs)
+    advanceOrgRevision(orgId)
     return HttpResponse.json(summaryOf(row), { status: 200 })
   }),
 

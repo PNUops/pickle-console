@@ -203,7 +203,7 @@ describe('guide content and navigation', () => {
   })
 
   test('reads administrator documentation even when institution loading fails', async () => {
-    server.use(refreshSuccessHandler('access-sys-admin'), http.get('*/api/v1/orgs', () => HttpResponse.json({}, { status: 503 })))
+    server.use(refreshSuccessHandler('access-sys-admin'), http.get('*/api/v1/admin/orgs', () => HttpResponse.json({}, { status: 503 })))
     renderApp(`/admin/docs/start?org=${uuid(1)}`)
     expect(await screen.findByRole('heading', { level: 1, name: '처음 시작하기' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '리소스 신청' })).not.toBeInTheDocument()

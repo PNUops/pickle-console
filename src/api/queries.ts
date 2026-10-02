@@ -41,6 +41,10 @@ export type AdminVmSort = NonNullable<
 export type ApprovalContext = Schemas['ApprovalContextResponse']
 export type ApproveRequest = Schemas['ApproveRequestRequest']
 export type OrgDetail = Schemas['OrgDetailResponse']
+export type OrgOperations = Schemas['AdminOrgOperationsResponse']
+export type OrgOperationsMember = Schemas['AdminOrgRoleMemberView']
+export type OrgOperationsPreview = Schemas['OrgOperationsPreviewResponse']
+export type SaveOrgOperations = Schemas['SaveOrgOperationsRequest']
 export type OrgStatus = Schemas['OrgStatus']
 export type UserSummary = Schemas['UserSummaryResponse']
 export type UserRole = Schemas['UserRole']
@@ -2244,6 +2248,7 @@ export function fetchAuditLogs(params: {
   action?: string
   targetType?: string
   targetId?: string
+  targetOrgId?: string
   from?: string
   to?: string
   orgId?: string
@@ -2849,11 +2854,12 @@ export function grantOrgRole(
   userId: string,
   orgId: string,
   role: UserRole,
+  expectedRevision: number,
 ): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/admin/users/{userId}/org-roles/{orgId}', {
       params: { path: { userId, orgId } },
-      body: { role },
+      body: { role, expectedRevision },
     })
     if (!data) throw toApiError(error, '기관 역할을 부여하지 못했습니다.')
     return data
@@ -2869,13 +2875,14 @@ export function updateOrgRequestMail(
   userId: string,
   orgId: string,
   enabled: boolean,
+  expectedRevision: number,
 ): Promise<Schemas['ManagedOrgResponse']> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT(
       '/admin/users/{userId}/org-roles/{orgId}/request-mail',
       {
         params: { path: { userId, orgId } },
-        body: { enabled },
+        body: { enabled, expectedRevision },
       },
     )
     if (!data) throw toApiError(error, '신청 접수 메일 설정을 바꾸지 못했습니다.')
@@ -2884,12 +2891,42 @@ export function updateOrgRequestMail(
 }
 
 /** 한 기관에서의 역할 회수. 마지막 기관이었다면 계정은 일반 사용자가 된다. */
-export function revokeOrgRole(userId: string, orgId: string): Promise<UserSummary> {
+export function revokeOrgRole(userId: string, orgId: string, expectedRevision: number): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/admin/users/{userId}/org-roles/{orgId}', {
-      params: { path: { userId, orgId } },
+      params: { path: { userId, orgId }, query: { expectedRevision } },
     })
     if (!data) throw toApiError(error, '기관 역할을 회수하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchOrgOperations(orgId: string, requesterId?: string): Promise<OrgOperations> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/orgs/{orgId}/operations', {
+      params: { path: { orgId }, query: { requesterId } },
+    })
+    if (!data) throw toApiError(error, '기관 운영 설정을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function previewOrgOperations(orgId: string, body: SaveOrgOperations): Promise<OrgOperationsPreview> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/orgs/{orgId}/operations/preview', {
+      params: { path: { orgId } }, body,
+    })
+    if (!data) throw toApiError(error, '기관 운영 변경안을 확인하지 못했습니다.')
+    return data
+  })
+}
+
+export function saveOrgOperations(orgId: string, body: SaveOrgOperations): Promise<OrgOperations> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/admin/orgs/{orgId}/operations', {
+      params: { path: { orgId } }, body,
+    })
+    if (!data) throw toApiError(error, '기관 운영 설정을 저장하지 못했습니다.')
     return data
   })
 }
