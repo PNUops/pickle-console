@@ -22,6 +22,29 @@ function renderPublishTab(
 afterEach(() => vi.unstubAllEnvs())
 
 describe('VM 도메인·포트 탭 — 포트포워딩', () => {
+  test.each([
+    ['null', null],
+    ['empty', ''],
+    ['whitespace', '   '],
+  ])('shows no copyable SSH forwarding command when the gateway is %s', async (_, sshHost) => {
+    server.use(vmDetailAs(uuid(56), 'OWNER', { sshHost: sshHost as string }))
+    renderPublishTab(uuid(56))
+
+    expect(await screen.findByText(
+      'SSH 게이트웨이 주소가 준비되지 않아 로컬 포워딩 명령을 표시할 수 없습니다.',
+    )).toBeInTheDocument()
+    expect(screen.queryByText(/ssh -L/)).not.toBeInTheDocument()
+  })
+
+  test('keeps the SSH forwarding command when the gateway is available', async () => {
+    server.use(vmDetailAs(uuid(56), 'OWNER', { sshHost: 'ssh.example.test' }))
+    renderPublishTab(uuid(56))
+
+    expect(await screen.findByText(
+      'ssh -L <로컬포트>:localhost:<VM포트> algo-judge@ssh.example.test',
+    )).toBeInTheDocument()
+  })
+
   test('does not offer another delete while removal is pending', async () => {
     server.use(vmDetailAs(uuid(58), 'EDITOR'))
     renderPublishTab(uuid(58))

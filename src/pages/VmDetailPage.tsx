@@ -559,11 +559,13 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
   })
   const key = keyQuery.data?.key ?? null
   const keyFile = key?.fileName ?? `pickle-${vm.hostname}.pem`
+  const sshHost = vm.sshHost?.trim()
   // IdentitiesOnly belongs on the one-liner too, not only in the config block:
   // -i adds a key, it does not stop the agent's keys being offered first, and a
   // person with several VMs has several keys.
-  const command =
-    `ssh -i ~/.ssh/${keyFile} -o IdentitiesOnly=yes ${vm.hostname}@${vm.sshHost}`
+  const command = sshHost
+    ? `ssh -i ~/.ssh/${keyFile} -o IdentitiesOnly=yes ${vm.hostname}@${sshHost}`
+    : null
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['vms', vm.id, 'ssh-key'] })
 
@@ -692,12 +694,18 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
                 <dd>{key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음'}</dd>
               </dl>
 
-              <div className="flex items-center justify-between gap-3">
-                <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
-                  {command}
-                </code>
-                <CopyButton value={command} label="복사" />
-              </div>
+              {command ? (
+                <div className="flex items-center justify-between gap-3">
+                  <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
+                    {command}
+                  </code>
+                  <CopyButton value={command} label="복사" />
+                </div>
+              ) : (
+                <Alert variant="warning">
+                  SSH 게이트웨이 주소가 준비되지 않아 접속 명령을 표시할 수 없습니다.
+                </Alert>
+              )}
 
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" disabled={busy}
@@ -725,14 +733,16 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
             </div>
           )}
 
-          <details className="workspace">
-            <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
-              접속 방법 보기
-            </summary>
-            <div className="mt-3">
-              <SshUsageGuide hostname={vm.hostname} sshHost={vm.sshHost} keyFile={keyFile} />
-            </div>
-          </details>
+          {sshHost && (
+            <details className="workspace">
+              <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
+                접속 방법 보기
+              </summary>
+              <div className="mt-3">
+                <SshUsageGuide hostname={vm.hostname} sshHost={sshHost} keyFile={keyFile} />
+              </div>
+            </details>
+          )}
         </div>
       </CardContent>
 
