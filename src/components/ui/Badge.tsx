@@ -331,9 +331,11 @@ export function DriftStatusBadge({
 
 const DELIVERY_STATUS_VARIANTS: Record<NotificationDeliveryStatus, BadgeVariant> = {
   PENDING: 'info',
+  SENDING: 'info',
   SENT: 'success',
   FAILED: 'danger',
   SKIPPED: 'neutral',
+  UNKNOWN: 'warning',
 }
 
 export function DeliveryStatusBadge({

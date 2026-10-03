@@ -15,6 +15,7 @@ import { resetOpenRouterAccountFixtures } from './handlers/openrouter-accounts'
 import { resetNetworkFixtures } from './handlers/network'
 import { resetNoticeFixtures } from './handlers/notices'
 import { resetNotificationFixtures } from './handlers/notifications'
+import { resetMailDeliveryFixtures } from './handlers/mail-deliveries'
 import { resetPublishingFixtures } from './handlers/publishing'
 import { resetReferenceFixtures } from './handlers/reference'
 import { resetGpuFixtures } from './handlers/gpu'
@@ -53,6 +54,7 @@ export function resetFixtures() {
   resetSettingFixtures()
   resetGpuFixtures()
   resetNotificationFixtures()
+  resetMailDeliveryFixtures()
   resetNoticeFixtures()
   resetAnnouncementFixtures()
 }
