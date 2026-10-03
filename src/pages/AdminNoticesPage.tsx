@@ -1,10 +1,11 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createAdminNotice,
   deleteAdminNotice,
   deleteAdminNoticeImage,
   fetchAdminNotices,
+  fetchAdminNotice,
   updateAdminNotice,
   uploadAdminNoticeImage,
   type AdminNoticeView,
@@ -15,6 +16,9 @@ import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { canManageNotice } from '../auth/permissions'
 import { NoticeImage } from '../components/NoticeImage'
+import { NoticeContent } from '../components/NoticeContent'
+import { NoticePopupCard } from '../components/NoticePopupCard'
+import { OperationResult } from '../components/OperationResult'
 import {
   Alert,
   Badge,
@@ -39,7 +43,11 @@ import {
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
-import { useAdminScope } from '../lib/use-admin-scope'
+import { useListUrl } from '../lib/use-list-url'
+import { listPage } from '../lib/list-url'
+import { useActiveResult } from '../lib/use-active-result'
+import { isUuid } from '../lib/validation'
+import { NOTICE_WINDOW_LABELS, noticeWindowState } from '../lib/notice-window'
 
 const PAGE_SIZE = 10
 
@@ -50,6 +58,9 @@ const MAX_IMAGES = 5
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+function sameSavedNotice(a: AdminNoticeView, b: AdminNoticeView): boolean {
+  return (['title', 'body', 'pinned', 'popup', 'startsAt', 'endsAt'] as const).every((key) => (a[key] ?? null) === (b[key] ?? null))
+}
 
 /** ISO 시각 → `datetime-local` 입력값. 콘솔의 시각 표기는 KST 고정이다. */
 function toDateTimeInput(iso: string | null | undefined): string {
@@ -67,139 +78,74 @@ function fromDateTimeInput(value: string): string | null {
  */
 export function AdminNoticesPage() {
   const { user } = useAuth()
-  const scope = useAdminScope()
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  const canManage = !!role && canManageNotice(role)
-  const [page, setPage] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
-
-  const notices = useQuery({
-    queryKey: ['admin', 'notices', page],
-    queryFn: () => fetchAdminNotices({ page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
-  })
-
-  // 드로어 본문은 목록 캐시에서 다시 찾는다 — 이미지 업로드처럼 드로어 안에서
-  // 일어난 변화가 목록 무효화만으로 그대로 비친다.
-  const selected = notices.data?.content.find((notice) => notice.id === selectedId) ?? null
-  const drawerOpen = creating || selectedId !== null
-
+  const canManage = !!user && canManageNotice(user.role)
+  const [createdResult, setCreatedResult] = useState<AdminNoticeView | null>(null)
+  const createdSurfaceEntered = useRef(false)
+  const [params, change, normalize] = useListUrl()
+  const page = listPage(params.get('page'))
+  const rawSelected = params.get('selected')
+  const selectedId = rawSelected && isUuid(rawSelected) ? rawSelected.toLowerCase() : null
+  const creating = !rawSelected && params.get('create') === '1'
+  const invalidSelected = !!rawSelected && !isUuid(rawSelected)
+  const listRef = useRef<HTMLDivElement>(null)
+  const createRef = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => {
+    if (!createdResult) { createdSurfaceEntered.current = false; return }
+    if (selectedId === createdResult.id) createdSurfaceEntered.current = true
+    else if (createdSurfaceEntered.current) setCreatedResult(null)
+  }, [createdResult, selectedId])
+  useLayoutEffect(() => {
+    const next = new URLSearchParams(params)
+    if (page === 0) next.delete('page')
+    else next.set('page', String(page))
+    if (selectedId) { next.set('selected', selectedId); next.delete('create') }
+    else if (!creating) next.delete('create')
+    normalize(next.toString())
+  }, [creating, normalize, page, params, selectedId])
+  const notices = useQuery({ queryKey: ['admin', 'notices', 'list', page], queryFn: () => fetchAdminNotices({ page, size: PAGE_SIZE }) })
   const closeDrawer = () => {
-    setCreating(false)
-    setSelectedId(null)
+    const former = selectedId
+    setCreatedResult(null)
+    change({ selected: undefined, create: undefined })
+    requestAnimationFrame(() => {
+      const row = listRef.current?.querySelector<HTMLButtonElement>(`[data-notice-id="${former}"]`)
+      ;(row ?? createRef.current)?.focus()
+    })
   }
+  return <div className="space-y-6">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div>
+      <h1 className="text-2xl font-bold text-neutral-900">공지사항 관리</h1>
+      <p className="mt-1 text-sm text-neutral-500">플랫폼 전체의 공지 본문과 이미지, 게시 기간을 관리합니다. 팝업 설정은 로그인하지 않은 방문자에게도 공개되는 비차단 카드입니다.</p>
+    </div>{canManage && <Button ref={createRef} onClick={() => change({ selected: undefined, create: '1' })}>공지 등록</Button>}</div>
+    {invalidSelected && <Alert variant="danger">공지 ID가 올바르지 않습니다.<Button variant="secondary" onClick={closeDrawer}>상세 선택 지우기</Button></Alert>}
+    {creating && !canManage && <Alert variant="danger">이 역할은 공지를 등록할 수 없습니다.</Alert>}
+    {notices.isPending && <Spinner label="공지사항 목록 불러오는 중" />}
+    {notices.isError && <Alert variant="danger">{notices.error.message}<Button variant="secondary" onClick={() => void notices.refetch()}>목록 다시 조회</Button></Alert>}
+    {notices.isSuccess && <><div ref={listRef}><Card><Table><THead><TR><TH>제목</TH><TH>게시 상태</TH><TH>게시 시작</TH><TH>게시 종료</TH></TR></THead><TBody>
+      {notices.data.content.map((notice) => <TR key={notice.id} className={cn('cursor-pointer', notice.id === selectedId && 'bg-primary-50')} onClick={() => change({ selected: notice.id, create: undefined })}>
+        <TD><button type="button" data-notice-id={notice.id} onClick={(event) => { event.stopPropagation(); change({ selected: notice.id, create: undefined }) }} className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600">{notice.title}</button>
+          <span className="mt-1 flex flex-wrap gap-1.5">{notice.pinned && <Badge variant="warning">고정</Badge>}{notice.popup && <Badge variant="info">팝업</Badge>}</span>
+        </TD><TD><NoticeWindowBadge notice={notice} /></TD><TD className="whitespace-nowrap">{formatDateTime(notice.startsAt)}</TD><TD className="whitespace-nowrap">{notice.endsAt ? formatDateTime(notice.endsAt) : '계속 게시'}</TD>
+      </TR>)}
+    </TBody></Table>{notices.data.content.length === 0 && <p className="p-8 text-center text-sm text-neutral-500">등록된 공지가 없습니다.</p>}</Card></div>
+    <Pagination page={notices.data.page} totalPages={notices.data.totalPages} onPageChange={(nextPage) => change({ page: nextPage, selected: undefined, create: undefined })} /></>}
+    <Drawer open={!!selectedId || (creating && canManage)} onClose={closeDrawer} title={creating ? '공지 등록' : '공지 상세'}>
+      {creating && canManage ? <NoticeDetailBody key="new" notice={null} canManage onCreated={(created) => { createdSurfaceEntered.current = false; setCreatedResult(created); change({ selected: created.id, create: undefined }) }} onDeleted={closeDrawer} /> : selectedId && <ExistingNotice key={selectedId} noticeId={selectedId} canManage={canManage} initialStored={createdResult?.id === selectedId ? createdResult : null} onDraftChanged={() => setCreatedResult(null)} onDeleted={closeDrawer} />}
+    </Drawer>
+  </div>
+}
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">공지사항 관리</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            콘솔 공지사항에 게시되는 공지를 등록하고 게시 기간을 관리합니다.
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            onClick={() => {
-              setSelectedId(null)
-              setCreating(true)
-            }}
-          >
-            공지 등록
-          </Button>
-        )}
-      </div>
+function NoticeWindowBadge({ notice }: { notice: Pick<AdminNoticeView, 'startsAt' | 'endsAt'> }) {
+  const state = noticeWindowState(notice.startsAt, notice.endsAt)
+  return <Badge variant={state === 'published' ? 'success' : state === 'scheduled' ? 'info' : 'neutral'}>{NOTICE_WINDOW_LABELS[state]}</Badge>
+}
 
-      {notices.isPending && (
-        <div className="flex justify-center py-12">
-          <Spinner label="공지사항 목록 불러오는 중" />
-        </div>
-      )}
-      {notices.isError && <Alert variant="danger">{notices.error.message}</Alert>}
-      {notices.isSuccess && notices.data.content.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">등록된 공지가 없습니다.</Card>
-      )}
-      {notices.isSuccess && notices.data.content.length > 0 && (
-        <>
-          <Card>
-            <Table>
-              <THead>
-                <TR>
-                  <TH>제목</TH>
-                  <TH>게시 상태</TH>
-                  <TH>게시 시작</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {notices.data.content.map((notice) => (
-                  <TR
-                    key={notice.id}
-                    className={cn(
-                      'cursor-pointer',
-                      notice.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
-                    )}
-                    onClick={() => {
-                      setCreating(false)
-                      setSelectedId(notice.id)
-                    }}
-                  >
-                    <TD>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setCreating(false)
-                          setSelectedId(notice.id)
-                        }}
-                        className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
-                      >
-                        {notice.title}
-                      </button>
-                      <span className="mt-1 flex flex-wrap gap-1.5">
-                        {notice.pinned && <Badge variant="warning">고정</Badge>}
-                        {notice.popup && <Badge variant="info">팝업</Badge>}
-                      </span>
-                    </TD>
-                    <TD>
-                      <Badge variant={notice.active ? 'success' : 'neutral'}>
-                        {notice.active ? '게시 중' : '게시 안 함'}
-                      </Badge>
-                    </TD>
-                    <TD className="whitespace-nowrap">{formatDateTime(notice.startsAt)}</TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </Card>
-          <Pagination
-            page={notices.data.page}
-            totalPages={notices.data.totalPages}
-            onPageChange={setPage}
-          />
-        </>
-      )}
-
-      <Drawer
-        open={drawerOpen}
-        onClose={closeDrawer}
-        title={creating ? '공지 등록' : '공지 상세'}
-      >
-        {drawerOpen && (
-          <NoticeDetailBody
-            key={selectedId ?? 'new'}
-            notice={selected}
-            canManage={canManage}
-            onCreated={(created) => {
-              setCreating(false)
-              setSelectedId(created.id)
-            }}
-            onDeleted={closeDrawer}
-          />
-        )}
-      </Drawer>
-    </div>
-  )
+function ExistingNotice({ noticeId, canManage, initialStored, onDraftChanged, onDeleted }: { noticeId: string; canManage: boolean; initialStored: AdminNoticeView | null; onDraftChanged: () => void; onDeleted: () => void }) {
+  const detail = useQuery({ queryKey: ['admin', 'notices', 'detail', noticeId], queryFn: () => fetchAdminNotice(noticeId) })
+  if (detail.isPending) return <Spinner label="공지 상세 불러오는 중" />
+  if (detail.isError) return <Alert variant="danger">{detail.error.message}<Button variant="secondary" onClick={() => void detail.refetch()}>상세 다시 조회</Button></Alert>
+  const matches = initialStored && sameSavedNotice(initialStored, detail.data)
+  return <NoticeDetailBody key={`${noticeId}:${canManage}`} notice={detail.data} canManage={canManage} initialStored={matches ? initialStored : null} onDraftChanged={onDraftChanged} onCreated={() => {}} onDeleted={onDeleted} />
 }
 
 /* ─── 드로어 본문 — 등록 폼이자 상세 편집 폼 ─── */
@@ -207,18 +153,25 @@ export function AdminNoticesPage() {
 function NoticeDetailBody({
   notice,
   canManage,
+  initialStored,
+  onDraftChanged,
   onCreated,
   onDeleted,
 }: {
   /** null이면 등록 모드. */
   notice: AdminNoticeView | null
   canManage: boolean
+  initialStored?: AdminNoticeView | null
+  onDraftChanged?: () => void
   /** 보고 있는 사람이 관리자인 기관들 — 기관 공지를 쓸 수 있는 곳 전부. */
   onCreated: (created: AdminNoticeView) => void
   onDeleted: () => void
 }) {
   const queryClient = useQueryClient()
   const toast = useToast()
+  const active = useActiveResult()
+  const [saved, setSaved] = useState<AdminNoticeView | null>(initialStored ?? null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const [title, setTitle] = useState(notice?.title ?? '')
   const [body, setBody] = useState(notice?.body ?? '')
@@ -231,6 +184,7 @@ function NoticeDetailBody({
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [deleting, setDeleting] = useState(false)
+  const edit = () => { setSaved(null); onDraftChanged?.() }
 
 
   /** 등록과 수정이 함께 보내는 부분 — 계약의 수정 요청이 받는 필드 전부다. */
@@ -254,6 +208,7 @@ function NoticeDetailBody({
   const shownFields = ['title', 'body', 'startsAt', 'endsAt']
 
   const onMutationError = (fallback: string) => (err: unknown) => {
+    if (!active.current) return
     const apiError = toApiError(err, fallback)
     const mapped = fieldErrorsOf(apiError.problem)
     setFieldErrors(mapped)
@@ -271,10 +226,13 @@ function NoticeDetailBody({
   const create = useMutation({
     mutationFn: () => createAdminNotice(createBody()),
     onSuccess: async (created) => {
+      queryClient.setQueryData(['admin', 'notices', 'detail', created.id], created)
+      await invalidate()
+      if (!active.current) return
+      setSaved(created)
       setError(null)
       setFieldErrors({})
       toast.success('공지를 등록했습니다. 이어서 이미지를 첨부할 수 있습니다.')
-      await invalidate()
       onCreated(created)
     },
     onError: onMutationError('공지를 등록하지 못했습니다.'),
@@ -282,11 +240,14 @@ function NoticeDetailBody({
 
   const update = useMutation({
     mutationFn: () => updateAdminNotice(notice!.id, updateBody()),
-    onSuccess: async () => {
+    onSuccess: async (updated) => {
+      queryClient.setQueryData(['admin', 'notices', 'detail', updated.id], updated)
+      await invalidate()
+      if (!active.current) return
+      setSaved(updated)
       setError(null)
       setFieldErrors({})
       toast.success('공지를 수정했습니다.')
-      await invalidate()
     },
     onError: onMutationError('공지를 수정하지 못했습니다.'),
   })
@@ -294,23 +255,29 @@ function NoticeDetailBody({
   const remove = useMutation({
     mutationFn: () => deleteAdminNotice(notice!.id),
     onSuccess: async () => {
+      await invalidate()
+      if (!active.current) return
       setDeleting(false)
       toast.success('공지를 삭제했습니다.')
-      await invalidate()
       onDeleted()
     },
     onError: (err) => {
+      if (!active.current) return
       setDeleting(false)
       setError(toApiError(err, '공지를 삭제하지 못했습니다.').message)
     },
   })
 
+  const busy = create.isPending || update.isPending || remove.isPending
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setError(null)
+    setSaved(null)
     const errors: Record<string, string> = {}
     if (!title.trim()) errors.title = '제목을 입력해 주세요.'
+    else if (title.length > 200) errors.title = '제목은 200자 이하여야 합니다.'
     if (!body.trim()) errors.body = '본문을 입력해 주세요.'
+    else if (body.length > 20_000) errors.body = '본문은 20,000자 이하여야 합니다.'
     if (!startsAt) errors.startsAt = '게시 시작 시각을 입력해 주세요.'
     if (startsAt && endsAt && endsAt <= startsAt) {
       errors.endsAt = '게시 종료는 시작보다 뒤여야 합니다.'
@@ -329,9 +296,7 @@ function NoticeDetailBody({
             <h3 className="text-lg font-semibold text-neutral-900">{notice.title}</h3>
             {notice.pinned && <Badge variant="warning">고정</Badge>}
             {notice.popup && <Badge variant="info">팝업</Badge>}
-            <Badge variant={notice.active ? 'success' : 'neutral'}>
-              {notice.active ? '게시 중' : '게시 안 함'}
-            </Badge>
+            <NoticeWindowBadge notice={notice} />
           </div>
           <p className="text-sm text-neutral-500">
             작성자 {notice.createdByName} · 등록 {formatDateTime(notice.createdAt)}
@@ -349,8 +314,7 @@ function NoticeDetailBody({
             </dd>
           </div>
         </dl>
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">{notice.body}</p>
-        <NoticeImageSection notice={notice} canManage={false} onChanged={invalidate} />
+        <NoticeContent body={notice.body} images={notice.images} />
       </div>
     )
   }
@@ -363,13 +327,15 @@ function NoticeDetailBody({
         </p>
       )}
       {error && <Alert variant="danger">{error}</Alert>}
+      {saved && (!notice || sameSavedNotice(saved, notice)) && <OperationResult stage="stored">공지 제목과 본문, 게시 기간을 저장했습니다. {NOTICE_WINDOW_LABELS[noticeWindowState(saved.startsAt, saved.endsAt)]} 설정이며 실제 독자의 조회와 팝업 노출은 게시 기간과 공개 설정을 따릅니다.</OperationResult>}
 
       <form onSubmit={submit} className="space-y-4" noValidate>
         <FormField label="제목" required error={fieldErrors.title}>
           <Input
             value={title}
-            disabled={!canManage}
-            onChange={(event) => setTitle(event.target.value)}
+            maxLength={200}
+            disabled={!canManage || busy}
+            onChange={(event) => { edit(); setTitle(event.target.value) }}
             placeholder="예: 8월 정기 점검 안내"
           />
         </FormField>
@@ -383,8 +349,9 @@ function NoticeDetailBody({
           <Textarea
             rows={8}
             value={body}
-            disabled={!canManage}
-            onChange={(event) => setBody(event.target.value)}
+            maxLength={20_000}
+            disabled={!canManage || busy}
+            onChange={(event) => { edit(); setBody(event.target.value) }}
           />
         </FormField>
 
@@ -393,15 +360,15 @@ function NoticeDetailBody({
             label="목록 상단 고정"
             description="공지사항 목록과 대시보드에서 먼저 보입니다."
             checked={pinned}
-            disabled={!canManage}
-            onChange={(event) => setPinned(event.target.checked)}
+            disabled={!canManage || busy}
+            onChange={(event) => { edit(); setPinned(event.target.checked) }}
           />
           <Checkbox
             label="팝업으로 표시"
-            description="콘솔·랜딩·로그인 화면에 모달로 한 번 띄웁니다. 로그인하지 않은 방문자에게도 보입니다."
+            description="게시 기간 동안 콘솔·랜딩·로그인 화면에 비차단 카드로 표시됩니다. 로그인하지 않은 방문자에게도 공개됩니다."
             checked={popup}
-            disabled={!canManage}
-            onChange={(event) => setPopup(event.target.checked)}
+            disabled={!canManage || busy}
+            onChange={(event) => { edit(); setPopup(event.target.checked) }}
           />
         </div>
 
@@ -411,8 +378,8 @@ function NoticeDetailBody({
               type="datetime-local"
               className="w-56"
               value={startsAt}
-              disabled={!canManage}
-              onChange={(event) => setStartsAt(event.target.value)}
+              disabled={!canManage || busy}
+              onChange={(event) => { edit(); setStartsAt(event.target.value) }}
             />
           </FormField>
           <FormField
@@ -424,21 +391,22 @@ function NoticeDetailBody({
               type="datetime-local"
               className="w-56"
               value={endsAt}
-              disabled={!canManage}
-              onChange={(event) => setEndsAt(event.target.value)}
+              disabled={!canManage || busy}
+              onChange={(event) => { edit(); setEndsAt(event.target.value) }}
             />
           </FormField>
         </div>
 
         <div className="flex justify-end gap-2">
           {notice && (
-            <Button variant="danger" disabled={!canManage} onClick={() => setDeleting(true)}>
+            <Button variant="danger" disabled={!canManage || busy} onClick={() => setDeleting(true)}>
               삭제
             </Button>
           )}
+          <Button variant="secondary" disabled={busy} onClick={() => setPreviewOpen((value) => !value)}>내용 미리보기</Button>
           <Button
             type="submit"
-            disabled={!canManage}
+            disabled={!canManage || busy}
             loading={create.isPending || update.isPending}
           >
             {notice ? '저장' : '등록'}
@@ -446,7 +414,12 @@ function NoticeDetailBody({
         </div>
       </form>
 
-      <NoticeImageSection notice={notice} canManage={canManage} onChanged={invalidate} />
+      {previewOpen && <section aria-label="공지 내용 미리보기" className="space-y-4 rounded border p-4"><h3 className="font-semibold">저장 전 내용 미리보기</h3><h4 className="text-lg font-semibold">{title.trim()}</h4>
+        <p className="text-xs">{startsAt ? NOTICE_WINDOW_LABELS[noticeWindowState(fromDateTimeInput(startsAt)!, fromDateTimeInput(endsAt))] : '게시 시작 미지정'} · {popup ? '로그인하지 않은 방문자에게도 공개' : '로그인한 독자에게 게시'}</p>
+        <NoticeContent body={body.trim()} images={notice?.images ?? []} />
+        {popup && <div className="space-y-2"><h4 className="text-sm font-semibold">팝업 카드 미리보기</h4><NoticePopupCard title={title.trim() || '공지 제목'} onClose={() => setPreviewOpen(false)} footer={<Button variant="secondary" onClick={() => setPreviewOpen(false)}>미리보기 닫기</Button>}><NoticeContent body={body.trim()} images={notice?.images ?? []} variant="popup" /></NoticePopupCard></div>}
+      </section>}
+      <NoticeImageSection notice={notice} canManage={canManage && !busy} onChanged={invalidate} />
 
       <Modal
         open={deleting}

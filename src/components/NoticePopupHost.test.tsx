@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -7,6 +8,8 @@ import { makeNotice, noticeImage, seedNotices } from '../test/msw/handlers/notic
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { AuthProvider } from '../auth/AuthProvider'
+import { NoticePopupHost } from './NoticePopupHost'
 import {
   NOTICE_POPUP_DISMISSED_KEY,
   NOTICE_POPUP_SEEN_KEY,
@@ -357,5 +360,113 @@ describe('팝업 공지', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.queryByText(/공지사항을 불러오지 못했습니다/)).not.toBeInTheDocument()
+  })
+})
+
+function renderPopupHost() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const result = render(<QueryClientProvider client={queryClient}><AuthProvider><NoticePopupHost /></AuthProvider></QueryClientProvider>)
+  return { ...result, queryClient }
+}
+
+describe('Popup completeness and live version boundaries', () => {
+  beforeEach(() => localStorage.removeItem(NOTICE_POPUP_DISMISSED_KEY))
+
+  test('signed-in readers find a popup after more than twenty ordinary notices', async () => {
+    seedNotices([
+      ...Array.from({ length: 120 }, (_, index) => makeNotice({ id: uuid(1000 + index), title: `ordinary ${index}`, pinned: true })),
+      makeNotice({ id: uuid(1200), title: 'popup beyond the regular feed', popup: true }),
+    ])
+    const calls: URL[] = []
+    server.use(http.get('*/api/v1/notices', ({ request }) => { calls.push(new URL(request.url)) }))
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    expect(await screen.findByRole('dialog', { name: 'popup beyond the regular feed' })).toBeInTheDocument()
+    const popupCalls = calls.filter((url) => url.searchParams.get('popup') === 'true')
+    expect(popupCalls.length).toBeGreaterThan(0)
+    expect(popupCalls.every((url) => url.searchParams.get('size') === '100')).toBe(true)
+  })
+
+  test('all popup pages are read and repeated boundary identifiers render only once', async () => {
+    const popups = Array.from({ length: 105 }, (_, index) => makeNotice({ id: uuid(2000 + index), title: `paged popup ${index}`, popup: true }))
+    seedNotices(popups)
+    server.use(http.get('*/api/v1/notices', ({ request }) => {
+      if (new URL(request.url).searchParams.get('page') !== '1') return
+      // An insertion between offset reads may repeat an earlier page's identifier.
+      return HttpResponse.json({ content: [popups[104], ...popups.slice(0, 5)], page: 1, size: 100, totalElements: 106, totalPages: 2 })
+    }))
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    await screen.findByRole('dialog', { name: 'paged popup 0' })
+    expect(screen.getAllByRole('dialog')).toHaveLength(105)
+    expect(screen.getAllByRole('dialog', { name: 'paged popup 104' })).toHaveLength(1)
+  })
+
+  test('a failed later page does not publish a partial popup collection', async () => {
+    seedNotices(Array.from({ length: 105 }, (_, index) => makeNotice({ id: uuid(3000 + index), title: `partial popup ${index}`, popup: true })))
+    let failedPage = false
+    server.use(http.get('*/api/v1/notices', ({ request }) => {
+      if (new URL(request.url).searchParams.get('page') !== '1') return
+      failedPage = true
+      return HttpResponse.json({ status: 503, code: 'UPSTREAM_ERROR', detail: 'synthetic second page failure' }, { status: 503 })
+    }))
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console')
+
+    await waitFor(() => expect(failedPage).toBe(true))
+    await settle()
+    expect(screen.queryByRole('dialog', { name: /partial popup/ })).not.toBeInTheDocument()
+  })
+
+  test('an edited version reappears after closing the prior version without remounting', async () => {
+    seedSinglePopup('2026-08-01T09:00:00+09:00')
+    server.use(refreshSuccessHandler('access-user'))
+    const mounted = renderPopupHost()
+    const old = await screen.findByRole('dialog', { name: '점검 팝업' })
+    fireEvent.click(within(old).getByRole('button', { name: '확인' }))
+    expect(screen.queryByRole('dialog', { name: '점검 팝업' })).not.toBeInTheDocument()
+    seedSinglePopup('2026-08-25T09:00:00+09:00')
+    await act(async () => { await mounted.queryClient.invalidateQueries({ queryKey: ['notices', 'popup'] }) })
+
+    expect(await screen.findByRole('dialog', { name: '점검 팝업' })).toBeInTheDocument()
+  })
+
+  test('either suppression store can suppress the matching current version', async () => {
+    localStorage.setItem(NOTICE_POPUP_DISMISSED_KEY, JSON.stringify({ [uuid(320)]: '2026-08-25T09:00:00+09:00' }))
+    sessionStorage.setItem(NOTICE_POPUP_SEEN_KEY, JSON.stringify({ [uuid(320)]: '2026-08-01T09:00:00+09:00' }))
+    seedSinglePopup('2026-08-25T09:00:00+09:00')
+    server.use(refreshSuccessHandler('access-user'))
+    let read = false
+    server.use(http.get('*/api/v1/notices', () => { read = true }))
+    renderPopupHost()
+    await waitFor(() => expect(read).toBe(true))
+    await settle()
+
+    expect(screen.queryByRole('dialog', { name: '점검 팝업' })).not.toBeInTheDocument()
+  })
+
+  test('publication start and end are reflected while the same host stays mounted', async () => {
+    const now = Date.now()
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(now)
+    seedNotices([
+      makeNotice({ id: uuid(4000), title: 'expiring popup', popup: true, startsAt: new Date(now - 1000).toISOString(), endsAt: new Date(now + 10_000).toISOString() }),
+      makeNotice({ id: uuid(4001), title: 'scheduled popup', popup: true, startsAt: new Date(now + 10_000).toISOString() }),
+    ])
+    server.use(refreshSuccessHandler('access-user'))
+    const mounted = renderPopupHost()
+    try {
+      await screen.findByRole('dialog', { name: 'expiring popup' })
+      expect(screen.queryByRole('dialog', { name: 'scheduled popup' })).not.toBeInTheDocument()
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
+      expect(await screen.findByRole('dialog', { name: 'scheduled popup' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: 'expiring popup' })).not.toBeInTheDocument()
+    } finally {
+      mounted.unmount()
+      mounted.queryClient.clear()
+      vi.useRealTimers()
+    }
   })
 })
