@@ -494,6 +494,21 @@ describe('VM 상세 — 만료 VM 시작 거부 (409 VM_EXPIRED)', () => {
 /* ─── 접속 카드 (웹 터미널 + VM별 SSH 키) ─── */
 
 describe('VM 상세 — 접속', () => {
+  test.each([
+    ['null', null],
+    ['empty', ''],
+  ])('hides the SSH command when the gateway is %s', async (_, sshHost) => {
+    seedVmSshKey(uuid(56))
+    server.use(vmDetailAs(uuid(56), 'OWNER', { sshHost: sshHost as string }))
+    renderVm(uuid(56))
+
+    expect(await screen.findByText(
+      'SSH 게이트웨이 주소가 준비되지 않아 접속 명령을 표시할 수 없습니다.',
+    )).toBeInTheDocument()
+    expect(screen.queryByText(/ssh -i .*@/)).not.toBeInTheDocument()
+    expect(screen.queryByText('접속 방법 보기')).not.toBeInTheDocument()
+  })
+
   test('키를 발급받기 전에는 발급 버튼을 보여준다', async () => {
     renderVm(uuid(56))
 

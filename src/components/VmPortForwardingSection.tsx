@@ -64,6 +64,7 @@ function targetPortError(raw: string): string | null {
  */
 export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
   const canMutate = vm.settingsEditAllowed
+  const sshHost = vm.sshHost?.trim()
   const forwardings = useQuery({
     queryKey: ['vms', vm.id, 'port-forwardings'],
     queryFn: () => fetchVmPortForwardings(vm.id),
@@ -91,11 +92,17 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
           VM 내부 포트를 외부에 공개합니다.
         </p>
 
-        <Alert variant="info" title="본인만 접속한다면 SSH 로컬 포워딩으로 충분합니다">
-          <code className="block overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
-            {`ssh -L <로컬포트>:localhost:<VM포트> ${vm.hostname}@${vm.sshHost}`}
-          </code>
-        </Alert>
+        {sshHost ? (
+          <Alert variant="info" title="본인만 접속한다면 SSH 로컬 포워딩으로 충분합니다">
+            <code className="block overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
+              {`ssh -L <로컬포트>:localhost:<VM포트> ${vm.hostname}@${sshHost}`}
+            </code>
+          </Alert>
+        ) : (
+          <Alert variant="warning">
+            SSH 게이트웨이 주소가 준비되지 않아 로컬 포워딩 명령을 표시할 수 없습니다.
+          </Alert>
+        )}
 
         {canMutate ? (
           <CreateForwardingForm vm={vm} />
