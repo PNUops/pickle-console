@@ -2,7 +2,6 @@ import { icons, resourceTypes } from './landing-data'
 import { TransitionLink } from '../../components/TransitionLink'
 
 const live = resourceTypes.filter((resource) => resource.status === 'live')
-const planned = resourceTypes.filter((resource) => resource.status === 'planned')
 
 export function ResourceShowcase() {
   return (
@@ -61,17 +60,6 @@ export function ResourceShowcase() {
           ))}
         </div>
 
-        <div className="mt-9 border-t border-white/10 pt-6">
-          <h3 className="text-sm font-semibold text-neutral-300">준비 중인 리소스</h3>
-          <ul aria-label="준비 중인 리소스" className="mt-4 flex flex-wrap gap-2">
-            {planned.map((resource) => (
-              <li key={resource.title} className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-neutral-300">
-                <span>{resource.title}</span>
-                <span className="text-xs text-neutral-400">준비 중</span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </section>
   )
