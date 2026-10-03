@@ -10,6 +10,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
+import { adminUserStore } from '../test/msw/handlers/users'
 
 describe('알림 발송 이력', () => {
   test('SYS_ADMIN은 발송 로그와 실패 사유를 보고, FAILED만 재발송할 수 있다', async () => {
@@ -62,8 +63,8 @@ describe('알림 보내기', () => {
     await user.click(screen.getByRole('radio', { name: '특정 워크스페이스' }))
     // 조회는 전 기관에 닿지만 발송 대상은 관리 기관으로 좁힌다 — 계약 v0.46.0에서
     // 목록 자체가 넓어졌으므로 이 좁힘을 화면이 해야 한다.
-    expect(await screen.findByRole('option', { name: '캡스톤 3조 (4명)' })).toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: 'AI 동아리 (5명)' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('option', { name: '캡스톤 3조' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'AI 동아리' })).not.toBeInTheDocument()
   })
 
   test('발송 한도 초과(429)면 문제 상세를 인라인 경고로 보여준다', async () => {
@@ -87,7 +88,9 @@ describe('알림 보내기', () => {
     await screen.findByRole('heading', { name: '알림 보내기' })
     await user.type(screen.getByLabelText(/제목/), '한도 초과 테스트')
     await user.type(screen.getByLabelText(/내용/), '본문')
-    await user.click(screen.getByRole('button', { name: '알림 발송' }))
+    await user.click(screen.getByRole('radio', { name: '전체' }))
+    await user.click(screen.getByRole('button', { name: '발송 대상 미리보기' }))
+    await user.click(await screen.findByRole('button', { name: '검토한 알림 발송' }))
     const dialog = await screen.findByRole('dialog', { name: '알림 발송 확인' })
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
 
@@ -104,15 +107,17 @@ describe('알림 보내기', () => {
     await screen.findByRole('heading', { name: '알림 보내기' })
     await user.type(screen.getByLabelText(/제목/), '8월 서비스 업데이트')
     await user.type(screen.getByLabelText(/내용/), '새 기능이 추가되었습니다.')
-    // 기본 대상이 '전체'다.
-    expect(screen.getByRole('radio', { name: '전체' })).toBeChecked()
-    await user.click(screen.getByRole('button', { name: '알림 발송' }))
+    expect(screen.getByRole('radio', { name: '전체' })).not.toBeChecked()
+    const expected = adminUserStore.filter((account) => account.status === 'ACTIVE').length
+    await user.click(screen.getByRole('radio', { name: '전체' }))
+    await user.click(screen.getByRole('button', { name: '발송 대상 미리보기' }))
+    await user.click(await screen.findByRole('button', { name: '검토한 알림 발송' }))
 
     const dialog = await screen.findByRole('dialog', { name: '알림 발송 확인' })
     expect(within(dialog).getByText('전체 사용자')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
 
-    expect(await screen.findByText(/알림을 발송했습니다\. 480명에게/)).toBeInTheDocument()
+    expect(await screen.findByText(new RegExp(`${expected}명의 콘솔 알림을 저장하고 이메일 큐에 접수했습니다`))).toBeInTheDocument()
     // 폼이 초기화되고 최근 발송 목록에 추가된다.
     await waitFor(() =>
       expect(screen.getByText('8월 서비스 업데이트')).toBeInTheDocument(),

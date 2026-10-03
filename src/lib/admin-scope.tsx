@@ -71,7 +71,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     : orgTier && activeOrg != null
 
   const replaceScope = useCallback(
-    (orgId: string | undefined, preserveSelectedUser = false) => {
+    (orgId: string | undefined, preserveGlobalSelection = false) => {
       const next = new URLSearchParams(searchParams)
       if (orgId == null) next.delete('org')
       else next.set('org', orgId)
@@ -80,7 +80,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       next.delete('workspaceId')
       next.delete('page')
       next.delete('returnTo')
-      if (!preserveSelectedUser) next.delete('selected')
+      if (!preserveGlobalSelection) next.delete('selected')
       next.delete('targetOrgId')
       next.delete('targetType')
       next.delete('targetId')
@@ -100,8 +100,9 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     }
     if (!orgTier || activeOrg == null) return
     storeOrgId(activeOrg.id)
-    // User details are global reads; restoring their implicit scope keeps the target.
-    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, location.pathname === '/admin/users')
+    // These read surfaces resolve targets independently of the chosen institution.
+    const globalReadSelection = ['/admin/users', '/admin/notices', '/admin/announcements'].includes(location.pathname)
+    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, globalReadSelection)
   }, [activeOrg, invalidSystemScope, location.pathname, orgTier, replaceScope, requestedOrgId])
 
   const setActiveOrgId = useCallback(

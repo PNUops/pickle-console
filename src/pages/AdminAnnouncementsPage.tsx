@@ -1,356 +1,173 @@
-import { useState, type FormEvent } from 'react'
+import { useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  createAnnouncement,
-  fetchAdminWorkspaces,
-  fetchAnnouncements,
-  fetchOrgs,
-  type AnnouncementCreateRequest,
-} from '../api/queries'
+import { createAnnouncement, fetchAnnouncement, fetchAdminWorkspace, fetchAdminWorkspaces, fetchAnnouncements, previewAnnouncement, type AnnouncementCreateRequest, type AnnouncementPreview, type AnnouncementView } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { administeredOrgs, canBroadcast, isSysTier } from '../auth/permissions'
-import {
-  Alert,
-  AnnouncementScopeBadge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  FormField,
-  Input,
-  Modal,
-  Select,
-  Spinner,
-  Textarea,
-} from '../components/ui'
+import { administeredOrgs, canBroadcast, canViewAudit, isOrgTier, isSysTier } from '../auth/permissions'
+import { OperationResult } from '../components/OperationResult'
+import { Alert, AnnouncementScopeBadge, Button, Card, Drawer, FormField, Input, Modal, Pagination, Select, Spinner, Table, TBody, TD, TH, THead, TR, Textarea } from '../components/ui'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
 import { useAdminScope } from '../lib/use-admin-scope'
-import { adminPaths } from '../lib/paths'
+import { adminPath, adminPaths } from '../lib/paths'
+import { useListUrl } from '../lib/use-list-url'
+import { listPage } from '../lib/list-url'
+import { useActiveResult } from '../lib/use-active-result'
+import { isUuid } from '../lib/validation'
 
-/** 대상 선택 옵션 — 역할에 따라 노출이 다르다. */
-type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'WORKSPACE'
+type TargetKind = 'NONE' | 'ALL' | 'ORG' | 'WORKSPACE'
+interface Reviewed { body: AnnouncementCreateRequest; preview: AnnouncementPreview }
 
-/**
- * 알림 보내기 — 범위(전체/기관/워크스페이스)를 골라 발송하고 최근 발송 내역을
- * 확인한다. 상시 게시되는 공지사항 게시판과는 다른 기능이라 이름을 나눠 둔다:
- * 이쪽은 한 번 나가고 끝나는 팬아웃이다.
- */
 export function AdminAnnouncementsPage() {
   const { user } = useAuth()
   const scope = useAdminScope()
-  const isSysAdmin = user?.role === 'SYS_ADMIN'
-  // 알림 발송은 기관 관리자와 시스템 관리자만 — 운영자는 발송 내역 조회만(§3.13).
-  const effectiveRole = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  const canSend = !!effectiveRole && canBroadcast(effectiveRole)
-  // 발송 대상은 자기가 관리자로 있는 기관뿐이고, 워크스페이스 대상도 그 기관에
-  // 연결된 것으로 제한된다. 조회는 역할을 보유한 기관 전체에 닿으므로(열람이나
-  // 운영 역할까지) 선택기를 관리 기관으로 좁히지 않으면 보낼 수 없는 대상이
-  // 목록에 뜬다 (계약 v0.46.0).
-  const administered = administeredOrgs(user?.managedOrgs ?? []).filter(
-    (org) => scope.tier === 'system' || org.orgId === scope.activeOrgId,
-  )
-  const defaultTarget: TargetKind = isSysAdmin
-    ? 'ALL'
-    : administered.length === 1
-      ? 'ORG_ALL'
-      : 'ORG_PICK'
-  const queryClient = useQueryClient()
+  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
+  const canSend = !!role && canBroadcast(role)
+  const [params, change, normalize] = useListUrl()
+  const page = listPage(params.get('page'))
+  const rawSelected = params.get('selected')
+  const selected = rawSelected && isUuid(rawSelected) ? rawSelected.toLowerCase() : null
+  const listRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const next = new URLSearchParams(params)
+    if (page === 0) next.delete('page')
+    else next.set('page', String(page))
+    if (selected) next.set('selected', selected)
+    normalize(next.toString())
+  }, [normalize, page, params, selected])
+  const recent = useQuery({ queryKey: ['admin', 'announcements', 'list', page], queryFn: () => fetchAnnouncements({ page, size: 10 }) })
+  const close = () => {
+    change({ selected: undefined })
+    requestAnimationFrame(() => listRef.current?.querySelector<HTMLButtonElement>(`[data-announcement-id="${selected}"]`)?.focus())
+  }
+  return <div className="space-y-6"><div><h1 className="text-2xl font-bold text-neutral-900">알림 보내기</h1><p className="mt-1 text-sm text-neutral-500">대상 미리보기 후 발송건과 콘솔 알림을 저장하고 이메일 큐에 접수합니다. SMTP 인계 결과는 발송 이력에서 확인합니다.</p></div>
+    {canSend && <AnnouncementEditor onSelected={(id) => change({ selected: id })} />}
+    <section className="space-y-4" ref={listRef}><h2 className="font-semibold">발송한 알림</h2>
+      {recent.isPending && <Spinner label="발송 목록 불러오는 중" />}
+      {recent.isError && <Alert variant="danger">{recent.error.message}<Button variant="secondary" onClick={() => void recent.refetch()}>발송 목록 다시 조회</Button></Alert>}
+      {recent.isSuccess && <><Card><Table><THead><TR><TH>제목</TH><TH>저장된 대상</TH><TH>발송 당시 인원</TH><TH>저장 시각</TH><TH>결과</TH></TR></THead><TBody>{recent.data.content.map((announcement) => <TR key={announcement.id}>
+        <TD><button type="button" data-announcement-id={announcement.id} className="cursor-pointer text-left font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring" onClick={() => change({ selected: announcement.id })}>{announcement.title}</button></TD>
+        <TD><AnnouncementScopeBadge scope={announcement.scope} /></TD><TD>{announcement.recipientCount}명</TD><TD className="text-xs">{formatDateTime(announcement.createdAt)}</TD>
+        <TD>{user && isSysTier(user.role) && <Link className="text-primary-700 hover:underline" to={adminPaths.mailDeliveries({ announcementId: announcement.id })}>수신자별 발송 결과</Link>}</TD>
+      </TR>)}</TBody></Table>{recent.data.content.length === 0 && <p className="p-5 text-sm text-neutral-500">발송한 알림이 없습니다.</p>}</Card><Pagination page={recent.data.page} totalPages={recent.data.totalPages} onPageChange={(nextPage) => change({ page: nextPage, selected: undefined })} /></>}
+    </section>
+    {rawSelected && !selected && <Alert variant="danger">발송건 ID가 올바르지 않습니다.<Button variant="secondary" onClick={close}>상세 선택 지우기</Button></Alert>}
+    <Drawer open={!!selected} onClose={close} title="알림 발송건 상세">{selected && <AnnouncementDetail key={selected} announcementId={selected} />}</Drawer>
+  </div>
+}
 
+function AnnouncementEditor({ onSelected }: { onSelected: (id: string) => void }) {
+  const { user } = useAuth()
+  const scope = useAdminScope()
+  const active = useActiveResult()
+  const isSysAdmin = user?.role === 'SYS_ADMIN'
+  const administered = administeredOrgs(user?.managedOrgs ?? []).filter((org) => scope.tier === 'system' || org.orgId === scope.activeOrgId)
+  const orgOptions = isSysAdmin ? scope.options : administered.map((org) => ({ id: org.orgId, name: org.orgName }))
+  const initialOrgId = scope.activeOrgId ?? (orgOptions.length === 1 ? orgOptions[0].id : '')
+  const [target, setTarget] = useState<TargetKind>(initialOrgId ? 'ORG' : 'NONE')
+  const [orgId, setOrgId] = useState(initialOrgId)
+  const [workspaceId, setWorkspaceId] = useState('')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [target, setTarget] = useState<TargetKind>(defaultTarget)
-  const [orgId, setOrgId] = useState<string | undefined>(undefined)
-  const [workspaceId, setWorkspaceId] = useState<string | undefined>(undefined)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState(false)
-
-  const orgs = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSysAdmin })
-  const orgOptions = isSysAdmin
-    ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
-    : administered.map((org) => ({ id: org.orgId, name: org.orgName }))
-  // 관리 기관이 하나뿐인 기관 관리자는 고를 것이 없으므로 그 기관이 곧 대상이다.
-  const soleOrgId = !isSysAdmin && orgOptions.length === 1 ? orgOptions[0].id : undefined
-  // 워크스페이스 대상: 기관을 먼저 정한 뒤 그 기관 워크스페이스를 불러온다.
-  const workspaceOrgId = orgId ?? soleOrgId
-  const workspacesEnabled = target === 'WORKSPACE' && workspaceOrgId != null
-  const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: workspaceOrgId ?? null }],
-    queryFn: () => fetchAdminWorkspaces({ orgId: workspaceOrgId }),
-    enabled: workspacesEnabled,
-  })
-  const recent = useQuery({
-    queryKey: ['admin', 'announcements', { page: 0 }],
-    queryFn: () => fetchAnnouncements({ page: 0, size: 10 }),
-  })
-
-  const send = useMutation({
-    mutationFn: (request: AnnouncementCreateRequest) => createAnnouncement(request),
-    onSuccess: async (created) => {
-      setConfirming(false)
-      setSuccess(
-        `알림을 발송했습니다. ${created.recipientCount}명에게 인앱 알림이 전달되고 이메일은 순차 발송됩니다.`,
-      )
-      setTitle('')
-      setBody('')
-      setTarget(defaultTarget)
-      setOrgId(undefined)
-      setWorkspaceId(undefined)
-      setFieldErrors({})
-      setError(null)
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'announcements'] })
-    },
-    onError: (err) => {
-      setConfirming(false)
-      const apiError = toApiError(err, '알림을 발송하지 못했습니다.')
-      setFieldErrors(fieldErrorsOf(apiError.problem))
-      setError(apiError.message)
-    },
-  })
-
-  function requestOf(): AnnouncementCreateRequest {
-    if (target === 'ALL') return { title, body, scope: 'ALL' }
-    if (target === 'ORG_ALL') return { title, body, scope: 'ORG', orgId: soleOrgId }
-    if (target === 'ORG_PICK') return { title, body, scope: 'ORG', orgId }
-    return { title, body, scope: 'WORKSPACE', workspaceId }
-  }
-
-  /** 확인 모달에 다시 보여줄 대상 설명. */
-  function targetLabel(): string {
-    if (target === 'ALL') return '전체 사용자'
-    if (target === 'ORG_ALL') return `기관 '${orgOptions[0]?.name ?? ''}' 소속 사용자`
-    if (target === 'ORG_PICK') {
-      const org = orgOptions.find((o) => o.id === orgId)
-      return `기관 '${org?.name ?? ''}' 소속 사용자`
-    }
-    const workspace = (workspaces.data ?? []).find((g) => g.id === workspaceId)
-    return `워크스페이스 '${workspace?.name ?? ''}' 구성원`
-  }
-
+  const [reviewed, setReviewed] = useState<Reviewed | null>(null)
+  const [confirming, setConfirming] = useState<Reviewed | null>(null)
+  const [saved, setSaved] = useState<AnnouncementView | null>(null)
+  const generation = useRef(0)
+  const edit = () => { generation.current += 1; setReviewed(null); setConfirming(null); setSaved(null); setError(null) }
+  const workspaces = useQuery({ queryKey: ['admin', 'workspaces', { orgId: orgId || null }], queryFn: () => fetchAdminWorkspaces({ orgId: orgId || undefined }), enabled: target === 'WORKSPACE' && !!orgId })
+  const preview = useMutation({ mutationFn: ({ request }: { request: AnnouncementCreateRequest; generation: number }) => previewAnnouncement(request), onSuccess: (result, variables) => {
+    if (!active.current || variables.generation !== generation.current) return
+    setReviewed({ body: variables.request, preview: result }); setError(null)
+  }, onError: (err, variables) => {
+    if (!active.current || variables.generation !== generation.current) return
+    const problem = toApiError(err, '발송 대상을 확인하지 못했습니다.')
+    setFieldErrors(fieldErrorsOf(problem.problem)); setError(problem.message)
+  } })
+  const targetLabel = (request: AnnouncementCreateRequest) => request.scope === 'ALL' ? '전체 사용자' : request.scope === 'ORG' ? `기관 '${orgOptions.find((org) => org.id === request.orgId)?.name ?? request.orgId}'` : `워크스페이스 '${workspaces.data?.find((workspace) => workspace.id === request.workspaceId)?.name ?? request.workspaceId}'`
   const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setError(null)
-    setSuccess(null)
+    event.preventDefault(); setError(null); setSaved(null)
     const errors: Record<string, string> = {}
     if (!title.trim()) errors.title = '제목을 입력해 주세요.'
+    else if (title.length > 200) errors.title = '제목은 200자 이하여야 합니다.'
     if (!body.trim()) errors.body = '내용을 입력해 주세요.'
-    if (target === 'ORG_PICK' && orgId == null) errors.orgId = '대상 기관을 선택해 주세요.'
-    if (target === 'WORKSPACE' && workspaceId == null) errors.workspaceId = '대상 워크스페이스를 선택해 주세요.'
+    else if (body.length > 10_000) errors.body = '본문은 10,000자 이하여야 합니다.'
+    if (target === 'NONE') errors.target = '발송 대상을 선택해 주세요.'
+    if ((target === 'ORG' || target === 'WORKSPACE') && !orgId) errors.orgId = '대상 기관을 선택해 주세요.'
+    if (target === 'WORKSPACE' && !workspaceId) errors.workspaceId = '대상 워크스페이스를 선택해 주세요.'
     setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
-    setConfirming(true)
+    if (Object.keys(errors).length) return
+    const request: AnnouncementCreateRequest = target === 'ALL' ? { title: title.trim(), body: body.trim(), scope: 'ALL' } : target === 'ORG' ? { title: title.trim(), body: body.trim(), scope: 'ORG', orgId } : { title: title.trim(), body: body.trim(), scope: 'WORKSPACE', workspaceId }
+    preview.mutate({ request, generation: generation.current })
   }
+  return <Card className="space-y-5 p-5">
+    {saved && <OperationResult stage="stored">발송건 '{saved.title}'과 {saved.recipientCount}명의 콘솔 알림을 저장하고 이메일 큐에 접수했습니다. SMTP 인계 완료를 뜻하지 않습니다. <Button size="sm" variant="secondary" onClick={() => onSelected(saved.id)}>저장한 발송건 보기</Button>{user && isSysTier(user.role) && <Link className="ml-3 text-primary-700 underline" to={adminPaths.mailDeliveries({ announcementId: saved.id })}>수신자별 발송 결과</Link>}</OperationResult>}
+    {error && <Alert variant="danger">{error}</Alert>}
+    <form className="space-y-4" onSubmit={submit} noValidate>
+      <FormField label="제목" required error={fieldErrors.title}><Input value={title} maxLength={200} onChange={(event) => { edit(); setTitle(event.target.value) }} placeholder="예: 서비스 점검 안내" /></FormField>
+      <FormField label="내용" required error={fieldErrors.body} description="서식 없는 평문으로 콘솔 알림과 이메일에 사용됩니다."><Textarea value={body} maxLength={10_000} rows={5} onChange={(event) => { edit(); setBody(event.target.value) }} /></FormField>
+      <fieldset className="space-y-2"><legend className="text-sm font-medium">대상</legend><div className="flex flex-wrap gap-4">
+        {isSysAdmin && <label className="text-sm"><input type="radio" name="announcement-target" checked={target === 'ALL'} onChange={() => { edit(); setTarget('ALL'); setWorkspaceId('') }} /> 전체</label>}
+        <label className="text-sm"><input type="radio" name="announcement-target" checked={target === 'ORG'} onChange={() => { edit(); setTarget('ORG'); setWorkspaceId('') }} /> {isSysAdmin || orgOptions.length !== 1 ? '특정 기관' : `${orgOptions[0].name} 전체`}</label>
+        <label className="text-sm"><input type="radio" name="announcement-target" checked={target === 'WORKSPACE'} onChange={() => { edit(); setTarget('WORKSPACE'); setWorkspaceId('') }} /> 특정 워크스페이스</label>
+      </div>{fieldErrors.target && <p role="alert" className="text-sm text-danger-700">{fieldErrors.target}</p>}</fieldset>
+      {(target === 'ORG' || target === 'WORKSPACE') && <FormField label="대상 기관" required error={fieldErrors.orgId}><Select value={orgId} onChange={(event) => { edit(); setOrgId(event.target.value); setWorkspaceId('') }}><option value="">기관 선택</option>{orgOptions.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</Select></FormField>}
+      {target === 'WORKSPACE' && <FormField label="대상 워크스페이스" required error={fieldErrors.workspaceId}><Select value={workspaceId} disabled={!orgId || workspaces.isPending} onChange={(event) => { edit(); setWorkspaceId(event.target.value) }}><option value="">워크스페이스 선택</option>{workspaces.data?.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</Select>{workspaces.isError && <Alert variant="danger">{workspaces.error.message}</Alert>}</FormField>}
+      <Button type="submit" loading={preview.isPending}>발송 대상 미리보기</Button>
+    </form>
+    {reviewed && <section className="space-y-3 rounded border p-4"><h2 className="font-semibold">발송 전 대상 확인</h2><p className="text-sm">{targetLabel(reviewed.body)} · 예상 {reviewed.preview.recipientCount}명 · 조회 {formatDateTime(reviewed.preview.observedAt)}</p>
+      <p className="text-xs text-neutral-600">미리보기는 현재 예상 대상입니다. 실제 발송건 저장 시 활성 명단과 주소를 다시 선정하므로 인원은 달라질 수 있습니다. 큐 접수 후에는 수신자와 주소를 유지합니다.</p>
+      <h3 className="font-medium">{reviewed.body.title}</h3><p className="whitespace-pre-line text-sm">{reviewed.body.body}</p>
+      {reviewed.preview.warnings.map((warning) => <Alert key={warning} variant="warning">{warning}</Alert>)}
+      {reviewed.preview.sample.length > 0 && <Table><THead><TR><TH>예상 수신자</TH><TH>현재 이메일</TH></TR></THead><TBody>{reviewed.preview.sample.map((recipient) => <TR key={recipient.userId}><TD>{recipient.name}</TD><TD className="break-all">{recipient.email}</TD></TR>)}</TBody></Table>}
+      {reviewed.preview.truncated && <p className="text-xs">조회 가능한 수신자 일부를 표시합니다.</p>}
+      <Button onClick={() => setConfirming(reviewed)}>검토한 알림 발송</Button>
+    </section>}
+    {confirming && <AnnouncementSendConfirmation key={generation.current} reviewed={confirming} label={targetLabel(confirming.body)} onClose={() => setConfirming(null)} onStored={(created) => { setConfirming(null); setReviewed(null); setSaved(created); setTitle(''); setBody('') }} />}
+  </Card>
+}
 
-  const targetOptions: { kind: TargetKind; label: string }[] = isSysAdmin
-    ? [
-        { kind: 'ALL', label: '전체' },
-        { kind: 'ORG_PICK', label: '특정 기관' },
-        { kind: 'WORKSPACE', label: '특정 워크스페이스' },
-      ]
-    : soleOrgId != null
-      ? [
-          { kind: 'ORG_ALL', label: `${orgOptions[0].name} 전체` },
-          { kind: 'WORKSPACE', label: '특정 워크스페이스' },
-        ]
-      : [
-          { kind: 'ORG_PICK', label: '특정 기관' },
-          { kind: 'WORKSPACE', label: '특정 워크스페이스' },
-        ]
+function AnnouncementSendConfirmation({ reviewed, label, onClose, onStored }: { reviewed: Reviewed; label: string; onClose: () => void; onStored: (created: AnnouncementView) => void }) {
+  const active = useActiveResult()
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+  const send = useMutation({ mutationFn: () => createAnnouncement(reviewed.body), onSuccess: async (created) => {
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'announcements'] })
+    if (active.current) onStored(created)
+  }, onError: (err) => { if (active.current) setError(toApiError(err, '알림을 발송하지 못했습니다.').message) } })
+  return <Modal open onClose={onClose} title="알림 발송 확인" footer={<><Button variant="secondary" onClick={onClose}>취소</Button><Button loading={send.isPending} onClick={() => send.mutate()}>발송</Button></>}>
+    <div className="space-y-3"><p className="text-sm"><strong>{label}</strong>에게 <strong>{reviewed.body.title}</strong> 발송건을 저장합니다. 예상 대상 {reviewed.preview.recipientCount}명이며 실제 저장 시 인원과 주소를 확정합니다. 발송 후 이메일을 회수할 수 없습니다.</p>{error && <Alert variant="danger">{error}</Alert>}</div>
+  </Modal>
+}
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">알림 보내기</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          알림은 대상 사용자에게 인앱 알림으로 즉시 전달되고, 이메일로도 발송됩니다.
-        </p>
-      </div>
-
-      {success && <Alert variant="success">{success}</Alert>}
-      {error && Object.keys(fieldErrors).length === 0 && (
-        <Alert variant="danger">{error}</Alert>
-      )}
-
-      {canSend && (
-        <Card>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-4" noValidate>
-            <FormField label="제목" required error={fieldErrors.title}>
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="예: 7월 정기 점검 안내"
-              />
-            </FormField>
-            <FormField label="내용" required error={fieldErrors.body}>
-              <Textarea
-                rows={5}
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                placeholder="알림·이메일 본문에 그대로 포함됩니다."
-              />
-            </FormField>
-
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium text-neutral-700">대상</legend>
-              <div className="flex flex-wrap gap-4">
-                {targetOptions.map((option) => (
-                  <label
-                    key={option.kind}
-                    className="flex cursor-pointer items-center gap-2 text-sm text-neutral-700"
-                  >
-                    <input
-                      type="radio"
-                      name="announcement-target"
-                      className="size-4 accent-primary-600"
-                      checked={target === option.kind}
-                      onChange={() => {
-                        setTarget(option.kind)
-                        setWorkspaceId(undefined)
-                      }}
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            {target === 'ORG_PICK' && (
-              <FormField label="대상 기관" required error={fieldErrors.orgId}>
-                <Select
-                  className="w-72"
-                  value={orgId ?? ''}
-                  onChange={(event) => {
-                    setOrgId(event.target.value || undefined)
-                  }}
-                >
-                  <option value="">기관 선택</option>
-                  {orgOptions.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-            )}
-
-            {target === 'WORKSPACE' && (
-              <div className="flex flex-wrap gap-4">
-                {orgOptions.length > 1 && (
-                  <FormField label="워크스페이스의 기관" required>
-                    <Select
-                      className="w-64"
-                      value={orgId ?? ''}
-                      onChange={(event) => {
-                        setOrgId(event.target.value || undefined)
-                        setWorkspaceId(undefined)
-                      }}
-                    >
-                      <option value="">기관 선택</option>
-                      {orgOptions.map((org) => (
-                        <option key={org.id} value={org.id}>
-                          {org.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                )}
-                <FormField label="대상 워크스페이스" required error={fieldErrors.workspaceId}>
-                  <Select
-                    className="w-64"
-                    value={workspaceId ?? ''}
-                    disabled={!workspacesEnabled || workspaces.isPending}
-                    onChange={(event) => {
-                      setWorkspaceId(event.target.value || undefined)
-                    }}
-                  >
-                    <option value="">워크스페이스 선택</option>
-                    {(workspaces.data ?? []).map((workspace) => (
-                      <option key={workspace.id} value={workspace.id}>
-                        {workspace.name} ({workspace.memberCount}명)
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
-            )}
-
-            <div className="flex justify-end">
-              <Button type="submit">알림 발송</Button>
-            </div>
-          </form>
-        </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>최근 발송</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recent.isPending && (
-            <div className="flex justify-center py-6">
-              <Spinner label="최근 발송 내역 불러오는 중" />
-            </div>
-          )}
-          {recent.isError && <Alert variant="danger">{recent.error.message}</Alert>}
-          {recent.isSuccess && recent.data.content.length === 0 && (
-            <p className="py-4 text-center text-sm text-neutral-500">
-              발송한 알림이 없습니다.
-            </p>
-          )}
-          {recent.isSuccess && recent.data.content.length > 0 && (
-            <ul className="divide-y divide-neutral-100">
-              {recent.data.content.map((announcement) => (
-                <li
-                  key={announcement.id}
-                  className="flex items-center justify-between gap-4 py-3"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-neutral-900">
-                      {announcement.title}
-                    </span>
-                    <span className="mt-0.5 flex items-center gap-2 text-xs text-neutral-500">
-                      <AnnouncementScopeBadge scope={announcement.scope} />
-                      수신 {announcement.recipientCount}명
-                      {user && isSysTier(user.role) && <Link className="text-primary-700 hover:underline" to={adminPaths.mailDeliveries({ announcementId: announcement.id })}>수신자별 발송 결과</Link>}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-neutral-400">
-                    {formatDateTime(announcement.createdAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Modal
-        open={confirming}
-        onClose={() => setConfirming(false)}
-        title="알림 발송 확인"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setConfirming(false)}>
-              취소
-            </Button>
-            <Button loading={send.isPending} onClick={() => send.mutate(requestOf())}>
-              발송
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-neutral-700">
-          <strong>{targetLabel()}</strong>에게 알림 <strong>{title}</strong>을(를)
-          발송합니다. 발송 후에는 취소할 수 없습니다. 계속할까요?
-        </p>
-      </Modal>
-    </div>
-  )
+function AnnouncementDetail({ announcementId }: { announcementId: string }) {
+  const { user } = useAuth()
+  const scope = useAdminScope()
+  const query = useQuery({ queryKey: ['admin', 'announcements', 'detail', announcementId], queryFn: () => fetchAnnouncement(announcementId) })
+  const workspaceId = query.data?.workspaceId
+  const workspace = useQuery({ queryKey: ['admin', 'workspaces', 'detail', workspaceId ?? null], queryFn: () => fetchAdminWorkspace(workspaceId!), enabled: !!workspaceId && !!user && (isSysTier(user.role) || isOrgTier(user.role)) })
+  if (query.isPending) return <Spinner label="발송건 상세 불러오는 중" />
+  if (query.isError) return <Alert variant="danger">{query.error.message}<Button variant="secondary" onClick={() => void query.refetch()}>발송건 상세 다시 조회</Button></Alert>
+  const saved = query.data
+  const sys = !!user && isSysTier(user.role)
+  const mayReadOrg = !!saved.orgId && (sys || !!user?.managedOrgs.some((org) => org.orgId === saved.orgId))
+  const auditRole = scope.tier === 'org' ? scope.activeOrgRole : user?.role
+  const orgName = scope.options.find((org) => org.id === saved.orgId)?.name
+  return <div className="space-y-5"><h3 className="text-lg font-semibold">{saved.title}</h3><AnnouncementScopeBadge scope={saved.scope} />
+    <p className="text-sm">발송 당시 수신자 {saved.recipientCount}명 · 저장 {formatDateTime(saved.createdAt)}</p>
+    <dl className="space-y-2 text-sm">
+      {saved.orgId && <div><dt className="text-neutral-500">대상 기관</dt><dd>{orgName ?? '이름 확인 불가'}</dd></div>}
+      {saved.workspaceId && <div><dt className="text-neutral-500">대상 워크스페이스</dt><dd>{!workspace.isError && workspace.data?.name ? workspace.data.name : workspace.isPending ? '이름 조회 중' : '이름 확인 불가'}</dd></div>}
+    </dl>
+    <p className="whitespace-pre-line text-sm leading-relaxed">{saved.body}</p>
+    <p className="text-xs text-neutral-600">저장된 발송 대상과 인원입니다. 현재 명단으로 다시 계산하지 않으며 SMTP 인계 결과는 별도 이력입니다.</p>
+    <nav aria-label="발송건 관련 업무" className="flex flex-wrap gap-3 text-sm text-primary-700">
+      {sys && <Link to={adminPaths.mailDeliveries({ announcementId: saved.id })}>수신자별 발송 결과</Link>}
+      {mayReadOrg && <Link to={adminPaths.orgOperations(saved.orgId!)}>대상 기관 운영</Link>}
+      {saved.workspaceId && <Link to={adminPath(`/admin/workspaces?workspaceId=${saved.workspaceId}`, saved.orgId ?? undefined)}>대상 워크스페이스</Link>}
+      {auditRole && canViewAudit(auditRole) && <Link to={adminPath(adminPaths.auditTarget('announcement', saved.id), sys ? undefined : scope.activeOrgId)}>발송건 감사</Link>}
+    </nav>
+  </div>
 }

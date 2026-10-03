@@ -1,8 +1,8 @@
 import { Link, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchNotice } from '../api/queries'
-import { NoticeImage } from '../components/NoticeImage'
-import { Alert, Badge, Card, Spinner } from '../components/ui'
+import { NoticeContent } from '../components/NoticeContent'
+import { Alert, Badge, Spinner } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 
@@ -50,20 +50,7 @@ export function NoticeDetailPage() {
             </p>
           </header>
 
-          <div className="mt-6 text-sm/7 whitespace-pre-line text-neutral-800">
-            {notice.data.body}
-          </div>
-
-          {notice.data.images.length > 0 && (
-            <section className="mt-8 space-y-4">
-              <h2 className="text-sm font-semibold text-neutral-800">첨부 이미지</h2>
-              {notice.data.images.map((image) => (
-                <Card key={image.id} className="overflow-hidden p-2">
-                  <NoticeImage image={image} className="mx-auto h-auto w-full max-w-xl rounded" />
-                </Card>
-              ))}
-            </section>
-          )}
+          <div className="mt-6"><NoticeContent body={notice.data.body} images={notice.data.images} /></div>
         </article>
       )}
     </div>

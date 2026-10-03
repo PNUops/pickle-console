@@ -20,6 +20,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/announcements/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 알림 발송 대상 미리보기
+         * @description 현재 활성 대상자의 예상 인원과 최대 20명 예시를 조회합니다. 발송은 생성 요청 시 다시 대상을 선정하며 이 응답은 발송 예약이 아닙니다.
+         */
+        post: operations["previewAnnouncement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/announcements/{announcementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 알림 발송건 상세 조회
+         * @description 저장된 내용과 대상, 발송 당시 선정 인원을 조회합니다. 기관 계층의 열람 범위는 발송 목록과 같은 작성자 현재 기관 역할 기준입니다.
+         */
+        get: operations["getAnnouncement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/audit": {
         parameters: {
             query?: never;
@@ -1056,7 +1096,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getAdminNotice"];
         put?: never;
         post?: never;
         delete: operations["deleteAdminNotice"];
@@ -4505,7 +4545,7 @@ export interface components {
             workspaceName: string;
         };
         AdminNoticeView: {
-            /** @description 지금 게시 창 안에 있는지. 예정·만료된 공지도 이 목록에는 함께 나옵니다. */
+            /** @description 지금 게시 기간 안에 있는지. 관리 화면에는 예정·종료된 공지도 나옵니다. */
             active: boolean;
             body: string;
             /** Format: date-time */
@@ -4833,6 +4873,41 @@ export interface components {
             title: string;
             /** Format: uuid */
             workspaceId?: string | null;
+        };
+        AnnouncementDetailResponse: {
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            /** Format: int32 */
+            recipientCount: number;
+            scope: components["schemas"]["AnnouncementScope"];
+            title: string;
+            /** Format: uuid */
+            workspaceId?: string | null;
+        };
+        AnnouncementPreviewResponse: {
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            /** Format: int32 */
+            recipientCount: number;
+            sample: components["schemas"]["AnnouncementRecipientSample"][];
+            scope: components["schemas"]["AnnouncementScope"];
+            truncated: boolean;
+            warnings: string[];
+            /** Format: uuid */
+            workspaceId?: string | null;
+        };
+        AnnouncementRecipientSample: {
+            email: string;
+            name: string;
+            /** Format: uuid */
+            userId: string;
         };
         /** @enum {string} */
         AnnouncementScope: "ALL" | "ORG" | "WORKSPACE";
@@ -9320,6 +9395,70 @@ export interface operations {
             };
         };
     };
+    previewAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AnnouncementPreviewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAnnouncement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                announcementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AnnouncementDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAuditLogs: {
         parameters: {
             query?: {
@@ -11289,6 +11428,37 @@ export interface operations {
         responses: {
             /** @description Created */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminNoticeView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16125,6 +16295,8 @@ export interface operations {
     listNotices: {
         parameters: {
             query?: {
+                /** @description true이면 기존 열람 범위 안에서 팝업 공지만 조회합니다. 생략하거나 false이면 기존 목록을 반환합니다. */
+                popup?: boolean;
                 page?: number;
                 size?: number;
             };

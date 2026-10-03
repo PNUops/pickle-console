@@ -151,7 +151,7 @@ function isActive(notice: StoredNotice, now = Date.now()): boolean {
 /** 계약 순서 — 고정 먼저, 그 안에서 게시 시작 최신순. */
 function inFeedOrder(a: StoredNotice, b: StoredNotice): number {
   if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-  return Date.parse(b.startsAt) - Date.parse(a.startsAt)
+  return Date.parse(b.startsAt) - Date.parse(a.startsAt) || b.id.localeCompare(a.id)
 }
 
 /** 공개 뷰는 관리 뷰에서 운영자만 볼 것(게시 여부·작성자)을 뺀 것이다. */
@@ -174,6 +174,17 @@ function notFound(instance: string) {
   })
 }
 
+function noticeReadForbidden(request: Request) {
+  return problemResponse({
+    type: 'about:blank',
+    title: '접근 권한이 없습니다',
+    status: 403,
+    detail: '이 작업을 수행할 권한이 없습니다.',
+    instance: new URL(request.url).pathname,
+    code: 'ACCESS_DENIED',
+  })
+}
+
 function paged<T>(rows: T[], url: URL) {
   const page = Number(url.searchParams.get('page') ?? '0')
   const size = Number(url.searchParams.get('size') ?? '20')
@@ -182,7 +193,7 @@ function paged<T>(rows: T[], url: URL) {
     page,
     size,
     totalElements: rows.length,
-    totalPages: Math.max(1, Math.ceil(rows.length / size)),
+    totalPages: Math.ceil(rows.length / size),
   }
 }
 
@@ -216,7 +227,9 @@ export const noticeHandlers: RequestHandler[] = [
     return HttpResponse.arrayBuffer(PIXEL_PNG.buffer as ArrayBuffer, {
       headers: {
         'Content-Type': image.contentType,
-        'Cache-Control': publiclyReadable ? 'public, immutable' : 'private, immutable',
+        'Cache-Control': publiclyReadable
+          ? 'public, max-age=31536000, s-maxage=3600'
+          : 'private, max-age=31536000, immutable',
       },
     })
   }),
@@ -232,17 +245,28 @@ export const noticeHandlers: RequestHandler[] = [
   }),
 
   http.get('*/api/v1/notices', ({ request }) => {
-    // 대상 판정은 서버의 몫 — 익명은 전역 공개만, 로그인 사용자는 자기 기관 공지까지.
+    // Anonymous readers see active popups; signed-in readers see all active notices.
     const profile = profileOf(request)
+    const url = new URL(request.url)
     const visible = noticeStore
       .filter((notice) => visibleOnBoard(notice, profile))
+      .filter((notice) => url.searchParams.get('popup') !== 'true' || notice.popup)
       .sort(inFeedOrder)
-    return HttpResponse.json(paged(visible.map(toPublicView), new URL(request.url)), {
+    return HttpResponse.json(paged(visible.map(toPublicView), url), {
       status: 200,
     })
   }),
 
   /* ─── 관리 ─── */
+
+  http.get('*/api/v1/admin/notices/:noticeId', ({ params, request }) => {
+    const profile = profileOf(request)
+    if (!profile) return problemResponse(unauthorizedProblem)
+    if (!manageableBy(profile)) return noticeReadForbidden(request)
+    const notice = noticeStore.find((row) => row.id === String(params.noticeId))
+    if (!notice) return notFound(`/api/v1/admin/notices/${String(params.noticeId)}`)
+    return HttpResponse.json(toAdminView(notice))
+  }),
 
   /**
    * 관리 목록에는 **범위가 없다** — 공지가 기관에 속하지 않으므로, 컨트롤러 게이트를
@@ -254,6 +278,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/notices', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
+    if (!manageableBy(profile)) return noticeReadForbidden(request)
     const visible = [...noticeStore].sort(inFeedOrder)
     return HttpResponse.json(paged(visible.map(toAdminView), new URL(request.url)), {
       status: 200,

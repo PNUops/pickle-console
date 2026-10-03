@@ -67,6 +67,7 @@ export const adminPaths = {
   users: (orgId?: string, userId?: string) => adminPath(userId ? `/admin/users?selected=${userId}` : '/admin/users', orgId),
   orgAudit: (orgId: string) => adminPath(`/admin/audit?targetOrgId=${orgId}`, orgId),
   auditTarget: (targetType: string, targetId: string) => `/admin/audit?${new URLSearchParams({ targetType, targetId })}`,
+  announcementDetail: (announcementId: string) => `/admin/announcements?${new URLSearchParams({ selected: announcementId })}`,
   requests: (orgId?: string) => adminPath('/admin/requests', orgId),
   newRequest: (orgId?: string, kind?: string) =>
     adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),

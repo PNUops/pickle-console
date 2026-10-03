@@ -12,12 +12,24 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchNotices, type NoticeView } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { NOTICE_POPUP_DISMISSED_KEY, NOTICE_POPUP_SEEN_KEY } from '../lib/storage-keys'
-import { NoticeImage } from './NoticeImage'
+import { NoticeContent } from './NoticeContent'
 import { NoticePopupCard } from './NoticePopupCard'
 import { Button } from './ui'
 
-/** 팝업 후보를 찾기 위해 훑는 공개 목록의 크기(고정 먼저 최신순 첫 페이지). */
-const POPUP_SCAN_SIZE = 20
+const POPUP_PAGE_SIZE = 100
+const POPUP_REFRESH_INTERVAL = 60_000
+
+async function fetchPopupNotices(): Promise<NoticeView[]> {
+  const notices = new Map<string, NoticeView>()
+  const first = await fetchNotices({ popup: true, page: 0, size: POPUP_PAGE_SIZE })
+  for (const notice of first.content) notices.set(notice.id, notice)
+  for (let page = 1; page < first.totalPages; page += 1) {
+    const next = await fetchNotices({ popup: true, page, size: POPUP_PAGE_SIZE })
+    for (const notice of next.content) notices.set(notice.id, notice)
+  }
+  // Publish only a complete successful read, including when a later page fails.
+  return [...notices.values()]
+}
 
 /**
  * 배치 상수. `CARD_WIDTH` 는 `NoticePopupCard` 의 `w-80` 과 같아야 하고,
@@ -123,19 +135,25 @@ export function NoticePopupHost() {
   const { status } = useAuth()
   const notices = useQuery({
     queryKey: ['notices', 'popup', status === 'authenticated'],
-    queryFn: () => fetchNotices({ page: 0, size: POPUP_SCAN_SIZE }),
+    queryFn: fetchPopupNotices,
     enabled: status !== 'loading',
     staleTime: 5 * 60_000,
+    refetchInterval: POPUP_REFRESH_INTERVAL,
   })
 
   // 억제 기록은 마운트 시점의 한 장면만 쓴다. StrictMode는 초기화 함수를 두 번
   // 부르므로 여기서는 읽기만 하고, 쓰기는 모두 이벤트 핸들러에서 한다.
-  const [suppressed] = useState<Record<string, string>>(() => ({
-    ...readSuppressionMap(localStorage, NOTICE_POPUP_DISMISSED_KEY),
-    ...readSuppressionMap(sessionStorage, NOTICE_POPUP_SEEN_KEY),
+  const [suppressed] = useState(() => ({
+    permanent: readSuppressionMap(localStorage, NOTICE_POPUP_DISMISSED_KEY),
+    session: readSuppressionMap(sessionStorage, NOTICE_POPUP_SEEN_KEY),
   }))
   // 저장소와 별개로 둔다 — 저장소가 막힌 브라우저에서도 닫기는 동작해야 한다.
-  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set())
+  const [closed, setClosed] = useState<Record<string, string>>({})
+  const [clock, setClock] = useState(Date.now)
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), POPUP_REFRESH_INTERVAL)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const cardRefs = useRef(new Map<string, HTMLDivElement>())
   const [rowTops, setRowTops] = useState<readonly number[]>([])
@@ -183,13 +201,14 @@ export function NoticePopupHost() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const content = notices.data?.content
+  const content = notices.data
   const queue = useMemo(() => {
-    const now = Date.now()
+    const now = Math.max(clock, Date.now())
     return (content ?? [])
       .filter((notice) => notice.popup && isActive(notice, now))
-      .filter((notice) => suppressed[notice.id] !== notice.updatedAt)
-  }, [content, suppressed])
+      .filter((notice) => suppressed.permanent[notice.id] !== notice.updatedAt
+        && suppressed.session[notice.id] !== notice.updatedAt)
+  }, [content, suppressed, clock])
 
   // 목록은 고정 먼저 최신순이다. 뒤집어 놓아 왼쪽 위가 가장 오래된 것이 되고,
   // 뒤에 오는 것이 위에 포개지므로 최신과 고정 공지가 맨 위에 온다.
@@ -219,12 +238,12 @@ export function NoticePopupHost() {
   }, [ordered, perRow])
 
   const slotIndex = new Map(ordered.map((notice, index) => [notice.id, index]))
-  const visible = ordered.filter((notice) => !closed.has(notice.id))
+  const visible = ordered.filter((notice) => closed[notice.id] !== notice.updatedAt)
   if (visible.length === 0) return null
 
   const dismiss = (notice: NoticeView, storage: Storage, key: string) => {
     recordSuppression(storage, key, notice)
-    setClosed((previous) => new Set(previous).add(notice.id))
+    setClosed((previous) => ({ ...previous, [notice.id]: notice.updatedAt }))
   }
 
   return createPortal(
@@ -235,7 +254,6 @@ export function NoticePopupHost() {
       style={{ top: TOP_INSET }}
     >
       {visible.map((notice) => {
-        const firstImage = notice.images[0]
         const slot = slotOf(slotIndex.get(notice.id) ?? 0, perRow, rowTops, viewport)
         const offset = moved[notice.id]
         return (
@@ -268,15 +286,7 @@ export function NoticePopupHost() {
               </>
             }
           >
-            <div className="space-y-3">
-              {firstImage && (
-                <NoticeImage
-                  image={firstImage}
-                  className="max-h-40 w-full rounded-lg object-cover"
-                />
-              )}
-              <p className="text-sm/6 whitespace-pre-line text-neutral-700">{notice.body}</p>
-            </div>
+            <NoticeContent body={notice.body} images={notice.images} variant="popup" />
           </NoticePopupCard>
         )
       })}

@@ -177,6 +177,8 @@ export type AnnouncementScope = Schemas['AnnouncementScope']
 export type AnnouncementCreateRequest = Schemas['AnnouncementCreateRequest']
 export type AnnouncementView = Schemas['AnnouncementView']
 export type AnnouncementPage = Schemas['PageResponseAnnouncementView']
+export type AnnouncementPreview = Schemas['AnnouncementPreviewResponse']
+export type AnnouncementDetail = Schemas['AnnouncementDetailResponse']
 export type OrgDashboardSummary = Schemas['OrgDashboardSummaryResponse']
 export type SystemDashboardSummary = Schemas['SystemDashboardSummaryResponse']
 export type NodeLive = Schemas['NodeLiveResponse']
@@ -2235,6 +2237,22 @@ export function createAnnouncement(
   })
 }
 
+export function previewAnnouncement(body: AnnouncementCreateRequest): Promise<AnnouncementPreview> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/announcements/preview', { body })
+    if (!data) throw toApiError(error, '알림 발송 대상을 확인하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAnnouncement(announcementId: string): Promise<AnnouncementDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/announcements/{announcementId}', { params: { path: { announcementId } } })
+    if (!data) throw toApiError(error, '발송건을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 /* ─── 드리프트·IP 할당 (SYS_ADMIN) ─── */
 
 export function fetchDriftFindings(params: {
@@ -3018,11 +3036,8 @@ export type AdminNoticePage = Schemas['PageResponseAdminNoticeView']
 export type NoticeCreateRequest = Schemas['NoticeCreateRequest']
 export type NoticeUpdateRequest = Schemas['NoticeUpdateRequest']
 
-/**
- * 공개 목록 — 게시 기간 안에 있는 공지만, 고정 먼저 최신순으로 온다. 대상
- * (PUBLIC/USERS) 판정은 서버가 호출자의 인증 상태를 보고 하므로 화면은 거르지 않는다.
- */
-export function fetchNotices(params: { page?: number; size?: number }): Promise<NoticePage> {
+/** Active notices retain server visibility; popup=true only narrows that result. */
+export function fetchNotices(params: { page?: number; size?: number; popup?: boolean }): Promise<NoticePage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/notices', { params: { query: params } })
     if (!data) throw toApiError(error, '공지사항을 불러오지 못했습니다.')
@@ -3048,6 +3063,14 @@ export function fetchAdminNotices(params: {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/notices', { params: { query: params } })
     if (!data) throw toApiError(error, '공지사항 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminNotice(noticeId: string): Promise<AdminNoticeView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/notices/{noticeId}', { params: { path: { noticeId } } })
+    if (!data) throw toApiError(error, '관리 공지 상세를 불러오지 못했습니다.')
     return data
   })
 }

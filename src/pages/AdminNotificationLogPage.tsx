@@ -122,7 +122,7 @@ function MailDeliveryDetail({ deliveryId, canOperate, onResend }: { deliveryId: 
       {delivery.requestId && <Link to={adminPaths.requestDetail(delivery.requestId, delivery.orgId ?? undefined)}>관련 신청</Link>}
       {delivery.orgId && <><Link to={adminPaths.orgOperations(delivery.orgId)}>현재 기관 명단</Link><Link to={adminPaths.orgAudit(delivery.orgId)}>기관 변경 감사</Link></>}
       {delivery.userId && <Link to={adminPaths.users(delivery.orgId ?? undefined, delivery.userId)}>사용자 상세</Link>}
-      {delivery.announcementId && <Link to="/admin/announcements">알림 발송 목록</Link>}
+      {delivery.announcementId && <Link to={adminPaths.announcementDetail(delivery.announcementId)}>알림 발송건 상세</Link>}
       {delivery.notificationId && <Link to={adminPaths.auditTarget('notification', delivery.notificationId)}>재발송 감사</Link>}
       {resourcePath && <Link to={resourcePath}>관련 리소스 상세</Link>}
     </nav>
