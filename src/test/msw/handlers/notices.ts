@@ -288,11 +288,16 @@ export const noticeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/notices', async ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
+    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
     const body = (await request.json()) as Schemas['NoticeCreateRequest']
     // 정할 것이 남지 않았다 — 공지는 어느 기관에도 속하지 않고, 노출은 popup 하나가
     // 정한다. 게이트를 통과한 사람이 보낸 것을 그대로 세운다.
+    const now = new Date().toISOString()
     const created = makeNotice({
       ...body,
+      createdAt: now,
+      updatedAt: now,
+      createdByName: profile.name,
       id: uuid(nextNoticeId++),
       // 계약: 게시 시작을 생략하면 즉시 게시한다.
       startsAt: body.startsAt ?? new Date().toISOString(),
@@ -305,6 +310,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.patch('*/api/v1/admin/notices/:noticeId', async ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
+    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
@@ -322,6 +328,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.delete('*/api/v1/admin/notices/:noticeId', ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
+    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
@@ -332,6 +339,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/notices/:noticeId/images', async ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
+    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}/images`)
@@ -398,6 +406,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.delete('*/api/v1/admin/notices/:noticeId/images/:imageId', ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
+    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const imageId = String(params.imageId)
     const existing = noticeStore.find((row) => row.id === noticeId)

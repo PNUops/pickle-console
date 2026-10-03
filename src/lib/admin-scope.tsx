@@ -8,6 +8,7 @@ import { adminPath } from './paths'
 import { parseGuidePath } from './docs-paths'
 import { ADMIN_ORG_SCOPE_KEY } from './storage-keys'
 import { isUuid } from './validation'
+import { noticeListReturn } from './notice-paths'
 import { AdminScopeContext, type AdminOrgOption, type AdminScopeValue } from './admin-scope-context'
 
 function storedOrgId(): string | undefined {
@@ -71,7 +72,7 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     : orgTier && activeOrg != null
 
   const replaceScope = useCallback(
-    (orgId: string | undefined, preserveGlobalSelection = false) => {
+    (orgId: string | undefined, preserveGlobalSelection = false, preserveNoticeReturn = false) => {
       const next = new URLSearchParams(searchParams)
       if (orgId == null) next.delete('org')
       else next.set('org', orgId)
@@ -79,7 +80,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       next.delete('orgId')
       next.delete('workspaceId')
       next.delete('page')
-      next.delete('returnTo')
+      if (preserveNoticeReturn && next.has('returnTo')) next.set('returnTo', noticeListReturn(next.get('returnTo'), orgId))
+      else next.delete('returnTo')
       if (!preserveGlobalSelection) next.delete('selected')
       next.delete('targetOrgId')
       next.delete('targetType')
@@ -102,7 +104,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     storeOrgId(activeOrg.id)
     // These read surfaces resolve targets independently of the chosen institution.
     const globalReadSelection = ['/admin/users', '/admin/notices', '/admin/announcements'].includes(location.pathname)
-    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, globalReadSelection)
+    const noticeAuthoring = location.pathname === '/admin/notices/new' || /^\/admin\/notices\/[^/]+\/edit$/.test(location.pathname)
+    if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, globalReadSelection, noticeAuthoring)
   }, [activeOrg, invalidSystemScope, location.pathname, orgTier, replaceScope, requestedOrgId])
 
   const setActiveOrgId = useCallback(

@@ -68,6 +68,14 @@ export const adminPaths = {
   orgAudit: (orgId: string) => adminPath(`/admin/audit?targetOrgId=${orgId}`, orgId),
   auditTarget: (targetType: string, targetId: string) => `/admin/audit?${new URLSearchParams({ targetType, targetId })}`,
   announcementDetail: (announcementId: string) => `/admin/announcements?${new URLSearchParams({ selected: announcementId })}`,
+  notices: (orgId?: string, page = 0, selected?: string) => {
+    const query = new URLSearchParams()
+    if (page > 0) query.set('page', String(page))
+    if (selected) query.set('selected', selected)
+    return adminPath(`/admin/notices${query.size ? `?${query}` : ''}`, orgId)
+  },
+  newNotice: (orgId?: string, returnTo?: string) => adminPath(`/admin/notices/new${returnTo ? `?${new URLSearchParams({ returnTo })}` : ''}`, orgId),
+  editNotice: (noticeId: string, orgId?: string, returnTo?: string) => adminPath(`/admin/notices/${noticeId}/edit${returnTo ? `?${new URLSearchParams({ returnTo })}` : ''}`, orgId),
   requests: (orgId?: string) => adminPath('/admin/requests', orgId),
   newRequest: (orgId?: string, kind?: string) =>
     adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),

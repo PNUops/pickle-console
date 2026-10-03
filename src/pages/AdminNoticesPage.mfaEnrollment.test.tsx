@@ -59,7 +59,7 @@ describe('공지 관리와 2FA 등록 가로채기', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     await user.type(within(drawer).getByLabelText('제목'), '거절될 공지')
     await user.type(within(drawer).getByLabelText('본문'), '권한이 없어 거절된다.')
     await user.click(within(drawer).getByRole('button', { name: '등록' }))

@@ -9,6 +9,29 @@ function get(path: string, token?: string) {
 }
 
 describe('Notice handler contract boundaries', () => {
+  test.each(['access-org-viewer', 'access-org-manager', 'access-sys-viewer', 'access-sys-manager', 'access-user'])('all existing notice writes deny %s', async (token) => {
+    for (const [method, path, body] of [
+      ['POST', '/admin/notices', JSON.stringify({ title: 'Forbidden', body: 'Body' })],
+      ['PATCH', `/admin/notices/${uuid(201)}`, JSON.stringify({ title: 'Forbidden' })],
+      ['DELETE', `/admin/notices/${uuid(201)}`, undefined],
+      ['POST', `/admin/notices/${uuid(201)}/images`, undefined],
+      ['DELETE', `/admin/notices/${uuid(201)}/images/${uuid(211)}`, undefined],
+    ] as const) {
+      const response = await fetch(`http://localhost/api/v1${path}`, { method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body })
+      expect(response.status).toBe(403)
+      expect((await response.json()).code).toBe('ACCESS_DENIED')
+    }
+  })
+
+  test('creation records the current author and current creation time', async () => {
+    const before = Date.now()
+    const response = await fetch('http://localhost/api/v1/admin/notices', { method: 'POST', headers: { Authorization: 'Bearer access-org-admin', 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Now', body: 'Body' }) })
+    expect(response.status).toBe(201)
+    const created = await response.json()
+    expect(created.createdByName).toBe('김관리')
+    expect(Date.parse(created.createdAt)).toBeGreaterThanOrEqual(before)
+    expect(created.updatedAt).toBe(created.createdAt)
+  })
   test.each([
     'access-org-viewer', 'access-org-manager', 'access-org-admin',
     'access-sys-viewer', 'access-sys-manager', 'access-sys-admin',
