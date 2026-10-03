@@ -32,6 +32,7 @@ import { networkHandlers } from './handlers/network'
 import { resourceHandlers } from './handlers/resources'
 import { noticeHandlers } from './handlers/notices'
 import { notificationHandlers } from './handlers/notifications'
+import { mailDeliveryHandlers } from './handlers/mail-deliveries'
 import { publishingHandlers } from './handlers/publishing'
 import { referenceHandlers } from './handlers/reference'
 import { settingHandlers } from './handlers/settings'
@@ -76,6 +77,7 @@ export const handlers: RequestHandler[] = [
   ...auditHandlers,
   ...settingHandlers,
   ...notificationHandlers,
+  ...mailDeliveryHandlers,
   ...noticeHandlers,
   ...announcementHandlers,
 ]

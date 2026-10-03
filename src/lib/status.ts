@@ -279,9 +279,11 @@ export const DRIFT_STATUS_LABELS: Record<DriftFindingStatus, string> = {
 
 export const DELIVERY_STATUS_LABELS: Record<NotificationDeliveryStatus, string> = {
   PENDING: '발송 대기',
-  SENT: '발송됨',
+  SENDING: 'SMTP 처리 중',
+  SENT: 'SMTP 인계',
   FAILED: '발송 실패',
-  SKIPPED: '미발송',
+  SKIPPED: '발송 생략',
+  UNKNOWN: '결과 확인 필요',
 }
 
 export const IP_ALLOCATION_STATUS_LABELS: Record<IpAllocationStatus, string> = {

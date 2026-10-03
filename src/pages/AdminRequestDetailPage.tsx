@@ -11,6 +11,7 @@ import {
   fetchAdminRequest,
   fetchApprovalContext,
   fetchAdminLlmKeys,
+  fetchRequestMailSelection,
   type ApprovalContext,
   type LlmKeyBrief,
   type RequestDetail,
@@ -50,6 +51,7 @@ import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { effectiveLlmKeyStatus } from '../lib/status'
+import { RequestMailSelectionSnapshot } from './AdminNotificationLogPage'
 
 interface Notice {
   variant: 'success' | 'warning' | 'danger'
@@ -127,6 +129,8 @@ function AdminRequestDetailContent() {
         description={`${formatDateTime(data.createdAt)} 제출 · 신청자 ${data.requesterName} · ${data.orgName}`}
         actions={<RequestStatusBadge status={data.status} />}
       />
+      {user && isSysTier(user.role) && <Link className="inline-block text-sm text-primary-700 hover:underline" to={adminPaths.mailDeliveries({ requestId: data.id })}>신청 알림 발송 이력</Link>}
+      {user && isSysTier(user.role) && <RequestMailSelectionCard requestId={data.id} />}
 
       {notice && (notice.variant === 'success'
         ? <OperationResult stage="stored">{notice.message}</OperationResult>
@@ -181,6 +185,16 @@ function AdminRequestDetailContent() {
       </div>
     </div>
   )
+}
+
+function RequestMailSelectionCard({ requestId }: { requestId: string }) {
+  const selection = useQuery({ queryKey: ['admin', 'request-mail-selection', requestId], queryFn: () => fetchRequestMailSelection(requestId) })
+  return <Card className="space-y-3 p-5">
+    {selection.isPending && <Spinner label="신청 알림 선정 기록 불러오는 중" />}
+    {selection.isError && <Alert variant="danger">{selection.error.message}<Button variant="secondary" onClick={() => void selection.refetch()}>선정 기록 다시 조회</Button></Alert>}
+    {selection.data?.selection && <RequestMailSelectionSnapshot selection={selection.data.selection} />}
+    {selection.isSuccess && !selection.data.selection && <p className="text-sm text-neutral-500">이 신청의 접수 당시 기관 알림 선정 명단은 기록되지 않았습니다. 현재 명단으로 과거 수신자를 추정하지 않습니다.</p>}
+  </Card>
 }
 
 function ApprovedLlmKeyLink({ requestId, orgId }: { requestId: string; orgId?: string }) {

@@ -19,10 +19,10 @@ describe('알림 발송 이력', () => {
     await screen.findByRole('heading', { name: '알림 발송 이력' })
     const failedRow = (await screen.findByText('younghee.park@pusan.ac.kr')).closest('tr')!
     expect(within(failedRow).getByText('발송 실패')).toBeInTheDocument()
-    expect(within(failedRow).getByText(/SMTP 연결 실패/)).toBeInTheDocument()
+    expect(within(failedRow).getByText('메일 서버 연결 실패')).toBeInTheDocument()
     expect(within(failedRow).getByRole('button', { name: '재발송' })).toBeInTheDocument()
     // SENT 행에는 재발송 버튼이 없다.
-    const sentRow = screen.getByText('vm.create.done').closest('tr')!
+    const sentRow = screen.getByRole('button', { name: 'VM 생성 완료' }).closest('tr')!
     expect(within(sentRow).queryByRole('button', { name: '재발송' })).not.toBeInTheDocument()
   })
 
@@ -39,7 +39,7 @@ describe('알림 발송 이력', () => {
     await user.click(within(dialog).getByRole('button', { name: '재발송' }))
 
     expect(
-      await screen.findByText('알림 재발송을 접수했습니다. 잠시 후 발송 상태가 갱신됩니다.'),
+      await screen.findByText(/의 재발송을 접수했습니다. 큐 상태와 SMTP 인계 결과는 다시 조회해 확인합니다/),
     ).toBeInTheDocument()
     const updated = screen.getByText('younghee.park@pusan.ac.kr').closest('tr')!
     expect(within(updated).getByText('발송 대기')).toBeInTheDocument()

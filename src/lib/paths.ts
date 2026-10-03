@@ -66,6 +66,7 @@ export const adminPaths = {
   orgOperations: (orgId?: string) => adminPath('/admin/org-operations', orgId),
   users: (orgId?: string, userId?: string) => adminPath(userId ? `/admin/users?selected=${userId}` : '/admin/users', orgId),
   orgAudit: (orgId: string) => adminPath(`/admin/audit?targetOrgId=${orgId}`, orgId),
+  auditTarget: (targetType: string, targetId: string) => `/admin/audit?${new URLSearchParams({ targetType, targetId })}`,
   requests: (orgId?: string) => adminPath('/admin/requests', orgId),
   newRequest: (orgId?: string, kind?: string) =>
     adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),
@@ -107,6 +108,11 @@ export const adminPaths = {
   workspaces: (orgId?: string) => adminPath('/admin/workspaces', orgId),
   account: (orgId?: string) => adminPath('/admin/account', orgId),
   notifications: (orgId?: string) => adminPath('/admin/notifications', orgId),
+  mailDeliveries: (filters: { requestId?: string; announcementId?: string; orgId?: string; selected?: string } = {}) => {
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(filters)) if (value) query.set(key, value)
+    return `/admin/notification-log${query.size ? `?${query}` : ''}`
+  },
 } as const
 
 /** The listings that exist under a workspace as well as unscoped. */

@@ -937,6 +937,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/mail-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminMailDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/mail-deliveries/{deliveryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminMailDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/mail-deliveries/{deliveryId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resendAdminMailDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/nodes": {
         parameters: {
             query?: never;
@@ -1398,6 +1446,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getApprovalContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests/{requestId}/notification-selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminRequestNotificationSelection"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4458,7 +4522,7 @@ export interface components {
             images: components["schemas"]["NoticeImageView"][];
             /** @description 목록 상단 고정 여부 */
             pinned: boolean;
-            /** @description 콘솔이 모달로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
+            /** @description 콘솔이 화면을 막지 않는 카드로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
             popup: boolean;
             /** Format: date-time */
             startsAt: string;
@@ -6854,6 +6918,61 @@ export interface components {
             email: string;
             password: string;
         };
+        MailDeliveryAttemptView: {
+            /** Format: int32 */
+            attemptNo: number;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: uuid */
+            dispatchId: string;
+            failureCode?: string | null;
+            outcome: string;
+            /** Format: date-time */
+            startedAt: string;
+        };
+        MailDeliveryDetailResponse: {
+            attemptHistory: components["schemas"]["MailDeliveryAttemptView"][];
+            delivery: components["schemas"]["MailDeliveryView"];
+            selection?: components["schemas"]["RequestMailSelectionView"] | null;
+        };
+        MailDeliveryView: {
+            /** Format: uuid */
+            announcementId?: string | null;
+            /** Format: int32 */
+            attempts: number;
+            canResend: boolean;
+            cannotResendReason?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            currentUserEmail?: string | null;
+            event: string;
+            failureCode?: string | null;
+            /** Format: uuid */
+            id: string;
+            legacyAddressUnknown: boolean;
+            linkPath?: string | null;
+            mailMode?: string | null;
+            /** Format: date-time */
+            nextAttemptAt?: string | null;
+            /** Format: uuid */
+            notificationId?: string | null;
+            /** Format: uuid */
+            orgId?: string | null;
+            /** Format: int64 */
+            policyRevision?: number | null;
+            processingUnconfirmed: boolean;
+            queueState: string;
+            recipientEmail?: string | null;
+            /** Format: uuid */
+            requestId?: string | null;
+            /** Format: date-time */
+            sentAt?: string | null;
+            sourceKind: string;
+            status: string;
+            title: string;
+            /** Format: uuid */
+            userId?: string | null;
+        };
         ManagedOrgResponse: {
             /**
              * Format: uuid
@@ -7010,7 +7129,7 @@ export interface components {
             endsAt?: string | null;
             /** @description 목록 상단 고정 여부. 생략하면 고정하지 않습니다. */
             pinned?: boolean;
-            /** @description 콘솔이 모달로 띄울지. 켜면 로그인하지 않은 방문자에게도 보입니다. 생략하면 둘 다 하지 않습니다. */
+            /** @description 콘솔이 화면을 막지 않는 카드로 띄울지. 켜면 로그인하지 않은 방문자에게도 보입니다. 생략하면 둘 다 하지 않습니다. */
             popup?: boolean;
             /**
              * Format: date-time
@@ -7058,7 +7177,7 @@ export interface components {
             images: components["schemas"]["NoticeImageView"][];
             /** @description 목록 상단 고정 여부 */
             pinned: boolean;
-            /** @description 콘솔이 모달로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
+            /** @description 콘솔이 화면을 막지 않는 카드로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
             popup: boolean;
             /** Format: date-time */
             startsAt: string;
@@ -7071,7 +7190,7 @@ export interface components {
         /** @enum {string} */
         NotificationImportance: "NORMAL" | "HIGH";
         /** @enum {string} */
-        NotificationStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+        NotificationStatus: "PENDING" | "SENDING" | "SENT" | "FAILED" | "SKIPPED" | "UNKNOWN";
         NotificationView: {
             body: string;
             /** Format: date-time */
@@ -7673,6 +7792,17 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseMailDeliveryView: {
+            content: components["schemas"]["MailDeliveryView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         PageResponseNoticeView: {
             content: components["schemas"]["NoticeView"][];
             /** Format: int32 */
@@ -7971,6 +8101,31 @@ export interface components {
         };
         /** @enum {string} */
         RequestMailMode: "ALL_APPROVERS" | "DESIGNATED";
+        RequestMailRequesterView: {
+            email: string;
+            name: string;
+            status: string;
+            /** Format: uuid */
+            userId: string;
+        };
+        RequestMailSelectionResponse: {
+            /** Format: uuid */
+            requestId: string;
+            selection?: components["schemas"]["RequestMailSelectionView"] | null;
+        };
+        RequestMailSelectionView: {
+            mailMode: string;
+            /** Format: uuid */
+            orgId: string;
+            /** Format: int64 */
+            policyRevision: number;
+            /** Format: uuid */
+            requestId: string;
+            requester: components["schemas"]["RequestMailRequesterView"];
+            /** Format: date-time */
+            selectedAt: string;
+            staff: components["schemas"]["AdminOrgRoleMemberView"][];
+        };
         RequestOptionsResponse: {
             allowedRootDomains: string[];
             reservedSubdomains: string[];
@@ -10887,6 +11042,108 @@ export interface operations {
             };
         };
     };
+    listAdminMailDeliveries: {
+        parameters: {
+            query?: {
+                sourceKind?: string;
+                status?: string;
+                queueState?: string;
+                event?: string;
+                email?: string;
+                requestId?: string;
+                announcementId?: string;
+                orgId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseMailDeliveryView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminMailDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliveryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MailDeliveryDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resendAdminMailDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliveryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminNodes: {
         parameters: {
             query?: never;
@@ -12021,6 +12278,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApprovalContextResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminRequestNotificationSelection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestMailSelectionResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

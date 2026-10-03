@@ -164,6 +164,11 @@ export type IpAllocationView = Schemas['IpAllocationResponse']
 export type IpAllocationPage = Schemas['PageResponseIpAllocationResponse']
 export type IpAllocationStatus = Schemas['AllocationStatus']
 export type AdminNotificationView = Schemas['AdminNotificationResponse']
+export type MailDelivery = Schemas['MailDeliveryView']
+export type MailDeliveryDetail = Schemas['MailDeliveryDetailResponse']
+export type MailDeliveryPage = Schemas['PageResponseMailDeliveryView']
+export type RequestMailSelection = Schemas['RequestMailSelectionView']
+export type RequestMailSelectionResponse = Schemas['RequestMailSelectionResponse']
 export type AdminNotificationPage = Schemas['PageResponseAdminNotificationResponse']
 export type NotificationDeliveryStatus = Schemas['NotificationStatus']
 export type AdminWorkspaceOption = Schemas['AdminWorkspaceOptionResponse']
@@ -2114,6 +2119,41 @@ export function fetchCapacityTrend(
 }
 
 /* ─── 알림 발송 로그·알림 보내기 ─── */
+
+export function fetchMailDeliveries(params: {
+  sourceKind?: string; status?: string; queueState?: string; event?: string; email?: string
+  requestId?: string; announcementId?: string; orgId?: string; page?: number; size?: number
+} = {}): Promise<MailDeliveryPage> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/mail-deliveries', { params: { query: params } })
+    if (!data) throw toApiError(error, '메일 발송 이력을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchMailDelivery(deliveryId: string): Promise<MailDeliveryDetail> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/mail-deliveries/{deliveryId}', { params: { path: { deliveryId } } })
+    if (!data) throw toApiError(error, '메일 발송 상세를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function resendMailDelivery(deliveryId: string): Promise<MessageResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/admin/mail-deliveries/{deliveryId}/resend', { params: { path: { deliveryId } } })
+    if (!data) throw toApiError(error, '메일 재발송을 접수하지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchRequestMailSelection(requestId: string): Promise<RequestMailSelectionResponse> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/requests/{requestId}/notification-selection', { params: { path: { requestId } } })
+    if (!data) throw toApiError(error, '신청 알림 선정 기록을 불러오지 못했습니다.')
+    return data
+  })
+}
 
 export function fetchAdminNotifications(params: {
   status?: NotificationDeliveryStatus

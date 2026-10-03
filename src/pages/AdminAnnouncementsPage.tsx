@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createAnnouncement,
@@ -9,7 +10,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { administeredOrgs, canBroadcast } from '../auth/permissions'
+import { administeredOrgs, canBroadcast, isSysTier } from '../auth/permissions'
 import {
   Alert,
   AnnouncementScopeBadge,
@@ -28,6 +29,7 @@ import {
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatDateTime } from '../lib/format'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { adminPaths } from '../lib/paths'
 
 /** 대상 선택 옵션 — 역할에 따라 노출이 다르다. */
 type TargetKind = 'ALL' | 'ORG_ALL' | 'ORG_PICK' | 'WORKSPACE'
@@ -316,6 +318,7 @@ export function AdminAnnouncementsPage() {
                     <span className="mt-0.5 flex items-center gap-2 text-xs text-neutral-500">
                       <AnnouncementScopeBadge scope={announcement.scope} />
                       수신 {announcement.recipientCount}명
+                      {user && isSysTier(user.role) && <Link className="text-primary-700 hover:underline" to={adminPaths.mailDeliveries({ announcementId: announcement.id })}>수신자별 발송 결과</Link>}
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-neutral-400">
