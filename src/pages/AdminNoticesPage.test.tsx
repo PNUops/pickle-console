@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
 import { describe, expect, test } from 'vitest'
@@ -36,7 +36,9 @@ describe('공지사항 관리', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const reading = await screen.findByRole('dialog', { name: '공지 상세' })
+    await user.click(await within(reading).findByRole('link', { name: '공지 수정' }))
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
 
     const oversized = new File([new Uint8Array(3 * 1024 * 1024)], 'big.png', {
       type: 'image/png',
@@ -55,7 +57,9 @@ describe('공지사항 관리', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const reading = await screen.findByRole('dialog', { name: '공지 상세' })
+    await user.click(await within(reading).findByRole('link', { name: '공지 수정' }))
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
 
     const wrongType = new File(['plain'], 'notes.txt', { type: 'text/plain' })
     await user.upload(within(drawer).getByLabelText('이미지 추가'), wrongType)
@@ -71,7 +75,7 @@ describe('공지사항 관리', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
 
     // 등록 전에는 이미지를 붙일 수 없다 — 업로드가 두 번째 호출이기 때문이다.
     expect(
@@ -85,7 +89,8 @@ describe('공지사항 관리', () => {
     expect(
       await screen.findByText('공지를 등록했습니다. 이어서 이미지를 첨부할 수 있습니다.'),
     ).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: '스토리지 증설 안내' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: '공지 수정', level: 1 })
+    expect(await screen.findByDisplayValue('스토리지 증설 안내')).toBeInTheDocument()
     expect(await screen.findByLabelText('이미지 추가')).toBeEnabled()
   })
 
@@ -95,13 +100,14 @@ describe('공지사항 관리', () => {
     const admin = renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     await user.type(within(drawer).getByLabelText('제목'), '학부 서버실 이전 안내')
     await user.type(within(drawer).getByLabelText('본문'), '9월 첫째 주에 이전합니다.')
     await user.click(within(drawer).getByRole('checkbox', { name: /팝업으로 표시/ }))
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
 
-    expect(await screen.findByRole('button', { name: '학부 서버실 이전 안내' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: '공지 수정', level: 1 })
+    expect(await screen.findByDisplayValue('학부 서버실 이전 안내')).toBeInTheDocument()
     admin.unmount()
 
     // **세션을 실제로 끊는다.** 앞의 refresh 핸들러는 테스트가 끝날 때까지 살아
@@ -137,12 +143,13 @@ describe('공지사항 관리', () => {
     const admin = renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     await user.type(within(drawer).getByLabelText('제목'), '실습실 이용 안내')
     await user.type(within(drawer).getByLabelText('본문'), '기관과 무관하게 모두에게 갑니다.')
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
 
-    expect(await screen.findByRole('button', { name: '실습실 이용 안내' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: '공지 수정', level: 1 })
+    expect(await screen.findByDisplayValue('실습실 이용 안내')).toBeInTheDocument()
     admin.unmount()
 
     // 읽는이는 `managedOrgs`가 비어 있고 어느 기관에도 걸리지 않은 계정이다.
@@ -175,7 +182,7 @@ describe('공지사항 관리', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '공지 등록' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 등록' })
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     await user.type(within(drawer).getByLabelText('제목'), '슬롯 없는 거절')
     await user.type(within(drawer).getByLabelText('본문'), '거절이 보여야 한다.')
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
@@ -253,7 +260,9 @@ describe('공지사항 관리', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const reading = await screen.findByRole('dialog', { name: '공지 상세' })
+    await user.click(await within(reading).findByRole('link', { name: '공지 수정' }))
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     const small = new File([new Uint8Array(64)], 'small.png', { type: 'image/png' })
     await user.upload(within(drawer).getByLabelText('이미지 추가'), small)
 
@@ -271,11 +280,15 @@ describe('공지사항 관리', () => {
     // 않으므로 작성자와 고치는 사람의 역할을 맞춰 볼 것이 없다 — 게이트를 통과한
     // 사람은 모든 행에 쓴다. 종전에는 이것이 403이었다.
     await user.click(await screen.findByRole('button', { name: '데이터센터 정기 점검 안내' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const reading = await screen.findByRole('dialog', { name: '공지 상세' })
+    await user.click(await within(reading).findByRole('link', { name: '공지 수정' }))
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     await user.clear(within(drawer).getByLabelText('제목'))
     await user.type(within(drawer).getByLabelText('제목'), '점검 일정이 바뀌었습니다')
     await user.click(within(drawer).getByRole('button', { name: '저장' }))
 
+    expect(await screen.findByText('공지를 수정했습니다.')).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: '목록으로 돌아가기' }))
     expect(await screen.findByRole('button', { name: '점검 일정이 바뀌었습니다' })).toBeInTheDocument()
   })
 
@@ -285,13 +298,15 @@ describe('공지사항 관리', () => {
     renderApp('/admin/notices')
 
     await user.click(await screen.findByRole('button', { name: '지난 점검 공지' }))
-    const drawer = await screen.findByRole('dialog', { name: '공지 상세' })
+    const reading = await screen.findByRole('dialog', { name: '공지 상세' })
+    await user.click(await within(reading).findByRole('link', { name: '공지 수정' }))
+    const drawer = await screen.findByRole('region', { name: '공지 작성' })
     await user.click(within(drawer).getByRole('button', { name: '삭제' }))
 
     const confirm = await screen.findByRole('dialog', { name: '공지 삭제' })
     await user.click(within(confirm).getByRole('button', { name: '삭제' }))
 
     expect(await screen.findByText('공지를 삭제했습니다.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '지난 점검 공지' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: '지난 점검 공지' })).not.toBeInTheDocument())
   })
 })

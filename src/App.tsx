@@ -16,7 +16,7 @@ import { AdminDriftPage } from './pages/AdminDriftPage'
 import { AdminExpiryPage } from './pages/AdminExpiryPage'
 import { AdminNetworkPage } from './pages/AdminNetworkPage'
 import { AdminNodesPage } from './pages/AdminNodesPage'
-import { AdminNoticesPage } from './pages/AdminNoticesPage'
+import { AdminNoticeEditorPage, AdminNoticesPage } from './pages/AdminNoticesPage'
 import { AdminNotificationLogPage } from './pages/AdminNotificationLogPage'
 import { AdminOrgsPage } from './pages/AdminOrgsPage'
 import { AdminOrgOperationsPage } from './pages/AdminOrgOperationsPage'
@@ -300,6 +300,8 @@ function App() {
         />
         <Route path="announcements" element={<AdminAnnouncementsPage />} />
         <Route path="notices" element={<AdminNoticesPage />} />
+        <Route path="notices/new" element={<RequireRole roles={['ORG_ADMIN', 'SYS_ADMIN']}><AdminNoticeEditorPage /></RequireRole>} />
+        <Route path="notices/:noticeId/edit" element={<RequireRole roles={['ORG_ADMIN', 'SYS_ADMIN']}><AdminNoticeEditorPage /></RequireRole>} />
         <Route path="domains" element={<AdminDomainsPage />} />
         <Route
           path="notification-log"

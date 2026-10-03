@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   createAdminNotice,
   deleteAdminNotice,
@@ -14,7 +15,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageNotice } from '../auth/permissions'
+import { canManageNotice, isSysTier } from '../auth/permissions'
 import { NoticeImage } from '../components/NoticeImage'
 import { NoticeContent } from '../components/NoticeContent'
 import { NoticePopupCard } from '../components/NoticePopupCard'
@@ -48,6 +49,9 @@ import { listPage } from '../lib/list-url'
 import { useActiveResult } from '../lib/use-active-result'
 import { isUuid } from '../lib/validation'
 import { NOTICE_WINDOW_LABELS, noticeWindowState } from '../lib/notice-window'
+import { useAdminScope } from '../lib/use-admin-scope'
+import { adminPaths } from '../lib/paths'
+import { noticeListReturn, noticeListWithoutSelection, noticeListWithSelection } from '../lib/notice-paths'
 
 const PAGE_SIZE = 10
 
@@ -79,46 +83,41 @@ function fromDateTimeInput(value: string): string | null {
 export function AdminNoticesPage() {
   const { user } = useAuth()
   const canManage = !!user && canManageNotice(user.role)
-  const [createdResult, setCreatedResult] = useState<AdminNoticeView | null>(null)
-  const createdSurfaceEntered = useRef(false)
+  const scope = useAdminScope()
+  const navigate = useNavigate()
   const [params, change, normalize] = useListUrl()
   const page = listPage(params.get('page'))
   const rawSelected = params.get('selected')
   const selectedId = rawSelected && isUuid(rawSelected) ? rawSelected.toLowerCase() : null
-  const creating = !rawSelected && params.get('create') === '1'
+  const legacyCreate = !selectedId && params.get('create') === '1'
   const invalidSelected = !!rawSelected && !isUuid(rawSelected)
   const listRef = useRef<HTMLDivElement>(null)
   const createRef = useRef<HTMLButtonElement>(null)
-  useLayoutEffect(() => {
-    if (!createdResult) { createdSurfaceEntered.current = false; return }
-    if (selectedId === createdResult.id) createdSurfaceEntered.current = true
-    else if (createdSurfaceEntered.current) setCreatedResult(null)
-  }, [createdResult, selectedId])
   useLayoutEffect(() => {
     const next = new URLSearchParams(params)
     if (page === 0) next.delete('page')
     else next.set('page', String(page))
     if (selectedId) { next.set('selected', selectedId); next.delete('create') }
-    else if (!creating) next.delete('create')
+    else if (!legacyCreate) next.delete('create')
     normalize(next.toString())
-  }, [creating, normalize, page, params, selectedId])
+  }, [legacyCreate, normalize, page, params, selectedId])
   const notices = useQuery({ queryKey: ['admin', 'notices', 'list', page], queryFn: () => fetchAdminNotices({ page, size: PAGE_SIZE }) })
   const closeDrawer = () => {
     const former = selectedId
-    setCreatedResult(null)
     change({ selected: undefined, create: undefined })
     requestAnimationFrame(() => {
       const row = listRef.current?.querySelector<HTMLButtonElement>(`[data-notice-id="${former}"]`)
       ;(row ?? createRef.current)?.focus()
     })
   }
+  const listPath = adminPaths.notices(scope.activeOrgId, page, selectedId ?? undefined)
+  if (legacyCreate) return <Navigate replace to={adminPaths.newNotice(scope.activeOrgId, noticeListWithoutSelection(listPath))} />
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div>
       <h1 className="text-2xl font-bold text-neutral-900">공지사항 관리</h1>
       <p className="mt-1 text-sm text-neutral-500">플랫폼 전체의 공지 본문과 이미지, 게시 기간을 관리합니다. 팝업 설정은 로그인하지 않은 방문자에게도 공개되는 비차단 카드입니다.</p>
-    </div>{canManage && <Button ref={createRef} onClick={() => change({ selected: undefined, create: '1' })}>공지 등록</Button>}</div>
+    </div>{canManage && <Button ref={createRef} onClick={() => void navigate(adminPaths.newNotice(scope.activeOrgId, noticeListWithoutSelection(listPath)))}>공지 등록</Button>}</div>
     {invalidSelected && <Alert variant="danger">공지 ID가 올바르지 않습니다.<Button variant="secondary" onClick={closeDrawer}>상세 선택 지우기</Button></Alert>}
-    {creating && !canManage && <Alert variant="danger">이 역할은 공지를 등록할 수 없습니다.</Alert>}
     {notices.isPending && <Spinner label="공지사항 목록 불러오는 중" />}
     {notices.isError && <Alert variant="danger">{notices.error.message}<Button variant="secondary" onClick={() => void notices.refetch()}>목록 다시 조회</Button></Alert>}
     {notices.isSuccess && <><div ref={listRef}><Card><Table><THead><TR><TH>제목</TH><TH>게시 상태</TH><TH>게시 시작</TH><TH>게시 종료</TH></TR></THead><TBody>
@@ -129,8 +128,8 @@ export function AdminNoticesPage() {
       </TR>)}
     </TBody></Table>{notices.data.content.length === 0 && <p className="p-8 text-center text-sm text-neutral-500">등록된 공지가 없습니다.</p>}</Card></div>
     <Pagination page={notices.data.page} totalPages={notices.data.totalPages} onPageChange={(nextPage) => change({ page: nextPage, selected: undefined, create: undefined })} /></>}
-    <Drawer open={!!selectedId || (creating && canManage)} onClose={closeDrawer} title={creating ? '공지 등록' : '공지 상세'}>
-      {creating && canManage ? <NoticeDetailBody key="new" notice={null} canManage onCreated={(created) => { createdSurfaceEntered.current = false; setCreatedResult(created); change({ selected: created.id, create: undefined }) }} onDeleted={closeDrawer} /> : selectedId && <ExistingNotice key={selectedId} noticeId={selectedId} canManage={canManage} initialStored={createdResult?.id === selectedId ? createdResult : null} onDraftChanged={() => setCreatedResult(null)} onDeleted={closeDrawer} />}
+    <Drawer open={!!selectedId} onClose={closeDrawer} title="공지 상세">
+      {selectedId && <ExistingNotice key={selectedId} noticeId={selectedId} canManage={canManage} editPath={adminPaths.editNotice(selectedId, scope.activeOrgId, listPath)} />}
     </Drawer>
   </div>
 }
@@ -140,30 +139,71 @@ function NoticeWindowBadge({ notice }: { notice: Pick<AdminNoticeView, 'startsAt
   return <Badge variant={state === 'published' ? 'success' : state === 'scheduled' ? 'info' : 'neutral'}>{NOTICE_WINDOW_LABELS[state]}</Badge>
 }
 
-function ExistingNotice({ noticeId, canManage, initialStored, onDraftChanged, onDeleted }: { noticeId: string; canManage: boolean; initialStored: AdminNoticeView | null; onDraftChanged: () => void; onDeleted: () => void }) {
+function ExistingNotice({ noticeId, canManage, editPath }: { noticeId: string; canManage: boolean; editPath: string }) {
   const detail = useQuery({ queryKey: ['admin', 'notices', 'detail', noticeId], queryFn: () => fetchAdminNotice(noticeId) })
   if (detail.isPending) return <Spinner label="공지 상세 불러오는 중" />
   if (detail.isError) return <Alert variant="danger">{detail.error.message}<Button variant="secondary" onClick={() => void detail.refetch()}>상세 다시 조회</Button></Alert>
-  const matches = initialStored && sameSavedNotice(initialStored, detail.data)
-  return <NoticeDetailBody key={`${noticeId}:${canManage}`} notice={detail.data} canManage={canManage} initialStored={matches ? initialStored : null} onDraftChanged={onDraftChanged} onCreated={() => {}} onDeleted={onDeleted} />
+  return <div className="space-y-5">{canManage && <Link className="inline-block text-sm font-semibold text-primary-700 hover:underline" to={editPath}>공지 수정</Link>}<NoticeReader notice={detail.data} /></div>
 }
 
-/* ─── 드로어 본문 — 등록 폼이자 상세 편집 폼 ─── */
+function NoticeReader({ notice }: { notice: AdminNoticeView }) {
+  return <div className="space-y-6"><div className="space-y-2"><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-semibold">{notice.title}</h3>{notice.pinned && <Badge variant="warning">고정</Badge>}{notice.popup && <Badge variant="info">팝업</Badge>}<NoticeWindowBadge notice={notice} /></div><p className="text-sm text-neutral-500">작성자 {notice.createdByName} · 등록 {formatDateTime(notice.createdAt)}</p></div>
+    <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2"><div><dt className="text-neutral-500">게시 시작</dt><dd>{formatDateTime(notice.startsAt)}</dd></div><div><dt className="text-neutral-500">게시 종료</dt><dd>{notice.endsAt ? formatDateTime(notice.endsAt) : '계속 게시'}</dd></div></dl><NoticeContent body={notice.body} images={notice.images} />
+  </div>
+}
 
-function NoticeDetailBody({
+export function AdminNoticeEditorPage() {
+  const { noticeId: rawId } = useParams()
+  const creating = rawId == null
+  const noticeId = rawId && isUuid(rawId) ? rawId.toLowerCase() : null
+  return <NoticeAuthoringSurface key={creating ? 'new' : rawId} noticeId={noticeId} creating={creating} />
+}
+
+function NoticeAuthoringSurface({ noticeId, creating }: { noticeId: string | null; creating: boolean }) {
+  const { user } = useAuth()
+  const scope = useAdminScope()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const canManage = !!user && canManageNotice(user.role)
+  const returnPath = noticeListReturn(params.get('returnTo'), scope.activeOrgId, !!user && isSysTier(user.role))
+  const [creationReceipt] = useState<AdminNoticeView | null>(() => {
+    const state = location.state as { createdNotice?: AdminNoticeView } | null
+    return state?.createdNotice?.id === noticeId ? state.createdNotice : null
+  })
+  useLayoutEffect(() => {
+    if (typeof location.state === 'object' && location.state !== null && 'createdNotice' in location.state) void navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null })
+  }, [location.pathname, location.search, location.state, navigate])
+  const detail = useQuery({ queryKey: ['admin', 'notices', 'detail', noticeId], queryFn: () => fetchAdminNotice(noticeId!), enabled: canManage && !creating && !!noticeId })
+  const invalid = !creating && !noticeId
+  const returnWithoutSelection = noticeListWithoutSelection(returnPath)
+  return <div className="space-y-6">
+    <nav><Link className="text-sm font-medium text-primary-700 hover:underline" to={returnPath}>← 공지사항 목록</Link></nav>
+    <div><h1 className="text-2xl font-bold">{creating ? '공지 등록' : '공지 수정'}</h1><p className="mt-1 text-sm text-neutral-500">평문 본문과 이미지, 게시 기간을 설정하고 저장 전 내용을 미리봅니다.</p></div>
+    {!canManage && <Alert variant="danger">이 역할은 공지를 등록하거나 수정할 수 없습니다.</Alert>}
+    {invalid && <Alert variant="danger">공지 ID가 올바르지 않습니다.</Alert>}
+    {!creating && detail.isPending && !invalid && canManage && <Spinner label="공지 편집 정보 불러오는 중" />}
+    {!creating && detail.isError && <Alert variant="danger">{detail.error.message}<Button variant="secondary" onClick={() => void detail.refetch()}>편집 정보 다시 조회</Button></Alert>}
+    {canManage && (creating || detail.isSuccess) && <section aria-label="공지 작성"><Card className="p-5"><NoticeEditor key={noticeId ?? 'new'} notice={creating ? null : detail.data!} initialStored={creationReceipt && detail.data && sameSavedNotice(creationReceipt, detail.data) ? creationReceipt : null}
+      onCreated={(created) => { void navigate(adminPaths.editNotice(created.id, scope.activeOrgId, noticeListWithSelection(returnWithoutSelection, created.id)), { replace: true, state: { createdNotice: created } }) }}
+      onDeleted={() => { void navigate(returnWithoutSelection, { replace: true }) }} />
+    </Card></section>}
+    <div><Link className="text-sm text-primary-700 hover:underline" to={returnPath}>목록으로 돌아가기</Link></div>
+  </div>
+}
+
+/** Shared full-page authoring form; its route owns the exact target. */
+
+function NoticeEditor({
   notice,
-  canManage,
   initialStored,
-  onDraftChanged,
   onCreated,
   onDeleted,
 }: {
   /** null이면 등록 모드. */
   notice: AdminNoticeView | null
-  canManage: boolean
   initialStored?: AdminNoticeView | null
-  onDraftChanged?: () => void
-  /** 보고 있는 사람이 관리자인 기관들 — 기관 공지를 쓸 수 있는 곳 전부. */
+  /** Opens the exact created notice so image attachments can continue. */
   onCreated: (created: AdminNoticeView) => void
   onDeleted: () => void
 }) {
@@ -184,7 +224,7 @@ function NoticeDetailBody({
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [deleting, setDeleting] = useState(false)
-  const edit = () => { setSaved(null); onDraftChanged?.() }
+  const edit = () => { setSaved(null) }
 
 
   /** 등록과 수정이 함께 보내는 부분 — 계약의 수정 요청이 받는 필드 전부다. */
@@ -288,36 +328,6 @@ function NoticeDetailBody({
     else create.mutate()
   }
 
-  if (!canManage && notice) {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-semibold text-neutral-900">{notice.title}</h3>
-            {notice.pinned && <Badge variant="warning">고정</Badge>}
-            {notice.popup && <Badge variant="info">팝업</Badge>}
-            <NoticeWindowBadge notice={notice} />
-          </div>
-          <p className="text-sm text-neutral-500">
-            작성자 {notice.createdByName} · 등록 {formatDateTime(notice.createdAt)}
-          </p>
-        </div>
-        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-neutral-500">게시 시작</dt>
-            <dd className="font-medium text-neutral-900">{formatDateTime(notice.startsAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">게시 종료</dt>
-            <dd className="font-medium text-neutral-900">
-              {notice.endsAt ? formatDateTime(notice.endsAt) : '계속 게시'}
-            </dd>
-          </div>
-        </dl>
-        <NoticeContent body={notice.body} images={notice.images} />
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -334,7 +344,7 @@ function NoticeDetailBody({
           <Input
             value={title}
             maxLength={200}
-            disabled={!canManage || busy}
+            disabled={busy}
             onChange={(event) => { edit(); setTitle(event.target.value) }}
             placeholder="예: 8월 정기 점검 안내"
           />
@@ -350,7 +360,7 @@ function NoticeDetailBody({
             rows={8}
             value={body}
             maxLength={20_000}
-            disabled={!canManage || busy}
+            disabled={busy}
             onChange={(event) => { edit(); setBody(event.target.value) }}
           />
         </FormField>
@@ -360,14 +370,14 @@ function NoticeDetailBody({
             label="목록 상단 고정"
             description="공지사항 목록과 대시보드에서 먼저 보입니다."
             checked={pinned}
-            disabled={!canManage || busy}
+            disabled={busy}
             onChange={(event) => { edit(); setPinned(event.target.checked) }}
           />
           <Checkbox
             label="팝업으로 표시"
             description="게시 기간 동안 콘솔·랜딩·로그인 화면에 비차단 카드로 표시됩니다. 로그인하지 않은 방문자에게도 공개됩니다."
             checked={popup}
-            disabled={!canManage || busy}
+            disabled={busy}
             onChange={(event) => { edit(); setPopup(event.target.checked) }}
           />
         </div>
@@ -378,7 +388,7 @@ function NoticeDetailBody({
               type="datetime-local"
               className="w-56"
               value={startsAt}
-              disabled={!canManage || busy}
+              disabled={busy}
               onChange={(event) => { edit(); setStartsAt(event.target.value) }}
             />
           </FormField>
@@ -391,7 +401,7 @@ function NoticeDetailBody({
               type="datetime-local"
               className="w-56"
               value={endsAt}
-              disabled={!canManage || busy}
+              disabled={busy}
               onChange={(event) => { edit(); setEndsAt(event.target.value) }}
             />
           </FormField>
@@ -399,14 +409,14 @@ function NoticeDetailBody({
 
         <div className="flex justify-end gap-2">
           {notice && (
-            <Button variant="danger" disabled={!canManage || busy} onClick={() => setDeleting(true)}>
+            <Button variant="danger" disabled={busy} onClick={() => setDeleting(true)}>
               삭제
             </Button>
           )}
           <Button variant="secondary" disabled={busy} onClick={() => setPreviewOpen((value) => !value)}>내용 미리보기</Button>
           <Button
             type="submit"
-            disabled={!canManage || busy}
+            disabled={busy}
             loading={create.isPending || update.isPending}
           >
             {notice ? '저장' : '등록'}
@@ -419,7 +429,7 @@ function NoticeDetailBody({
         <NoticeContent body={body.trim()} images={notice?.images ?? []} />
         {popup && <div className="space-y-2"><h4 className="text-sm font-semibold">팝업 카드 미리보기</h4><NoticePopupCard title={title.trim() || '공지 제목'} onClose={() => setPreviewOpen(false)} footer={<Button variant="secondary" onClick={() => setPreviewOpen(false)}>미리보기 닫기</Button>}><NoticeContent body={body.trim()} images={notice?.images ?? []} variant="popup" /></NoticePopupCard></div>}
       </section>}
-      <NoticeImageSection notice={notice} canManage={canManage && !busy} onChanged={invalidate} />
+      <NoticeImageSection notice={notice} canManage={!busy} onChanged={invalidate} />
 
       <Modal
         open={deleting}
