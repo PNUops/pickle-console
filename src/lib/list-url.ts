@@ -35,7 +35,9 @@ export function requestListState(params: URLSearchParams) {
       ? rawStatus as RequestStatus
       : 'SUBMITTED'
   const type = REQUEST_TYPES.find((item) => item === params.get('type'))
-  return { status, type, page: listPage(params.get('page')) }
+  const rawWorkspaceId = params.get('workspaceId')
+  const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
+  return { status, type, workspaceId, page: listPage(params.get('page')) }
 }
 
 export function requestListParams(
@@ -47,6 +49,7 @@ export function requestListParams(
   if (state.status == null) params.set('status', 'all')
   else if (state.status !== 'SUBMITTED') params.set('status', state.status)
   if (state.type) params.set('type', state.type)
+  if (state.workspaceId) params.set('workspaceId', state.workspaceId)
   if (state.page > 0) params.set('page', String(state.page))
   return params
 }

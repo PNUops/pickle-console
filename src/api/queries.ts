@@ -399,6 +399,7 @@ export function fetchVm(vmId: string): Promise<VmDetail> {
 /* ─── admin ─── */
 
 export function fetchAdminRequests(params: {
+  workspaceId?: string
   status?: RequestStatus
   type?: ResourceType
   orgId?: string
@@ -1959,6 +1960,7 @@ export function fetchAdminRoutes(params: {
 }
 
 export function fetchAdminDomains(params: {
+  workspaceId?: string
   orgId?: string
   kind?: DomainKind
   status?: DomainStatus

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { decideGpuReview, fetchAdminGpuAllocations, fetchAdminGpus, fetchGpuReviews, updateAdminGpu, type Gpu, type GpuReview } from '../api/gpu'
 import { useAuth } from '../auth/auth-context'
 import { canRunSysRoutine } from '../auth/permissions'
@@ -11,6 +11,7 @@ import { gpuListPollInterval } from '../lib/gpu-polling'
 import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { isUuid } from '../lib/validation'
 
 const GPU_STATUS_LABELS: Record<Gpu['status'], string> = { ACTIVE: '활성', MAINTENANCE: '점검 중', RETIRED: '사용 종료' }
 const REVIEW_REASONS: Record<string, string> = { UNATTACHED: '장시간 미연결', LOW_UTILIZATION: '낮은 이용률', LEASE_EXPIRED: '임대 만료', CONNECTION_ERROR: '연결 오류' }
@@ -18,6 +19,9 @@ const REVIEW_REASONS: Record<string, string> = { UNATTACHED: '장시간 미연�
 export function AdminGpusPage() {
   const { user } = useAuth()
   const scope = useAdminScope()
+  const [params] = useSearchParams()
+  const rawWorkspaceId = params.get('workspaceId')
+  const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
   const [pagination, setPagination] = useState({ orgId: scope.activeOrgId, page: 0, reviewPage: 0 })
   const page = pagination.orgId === scope.activeOrgId ? pagination.page : 0
   const reviewPage = pagination.orgId === scope.activeOrgId ? pagination.reviewPage : 0
@@ -29,8 +33,8 @@ export function AdminGpusPage() {
   const [review, setReview] = useState<GpuReview | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const allocations = useQuery({
-    queryKey: ['admin', 'gpu-allocations', { orgId: scope.activeOrgId, page, queuedOnly }],
-    queryFn: () => fetchAdminGpuAllocations({ orgId: scope.activeOrgId, page, status: queuedOnly ? 'QUEUED' : undefined }), enabled: scope.ready,
+    queryKey: ['admin', 'gpu-allocations', { orgId: scope.activeOrgId, workspaceId: workspaceId ?? null, page, queuedOnly }],
+    queryFn: () => fetchAdminGpuAllocations({ orgId: scope.activeOrgId, workspaceId, page, status: queuedOnly ? 'QUEUED' : undefined }), enabled: scope.ready,
     refetchInterval: (result) => gpuListPollInterval(result.state.data?.content),
   })
   const inventory = useQuery({ queryKey: ['admin', 'gpus'], queryFn: fetchAdminGpus, enabled: canManage })

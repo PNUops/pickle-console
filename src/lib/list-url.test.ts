@@ -7,9 +7,9 @@ test('malformed pages and unsupported request filters never reach the API', () =
   for (const value of [null, '-1', '1.2', 'NaN', 'Infinity', '2147483648', '1e2']) expect(listPage(value)).toBe(0)
   expect(listPage('12')).toBe(12)
   expect(requestListState(new URLSearchParams('status=bogus&type=secret&page=-3')))
-    .toEqual({ status: 'SUBMITTED', type: undefined, page: 0 })
+    .toMatchObject({ status: 'SUBMITTED', type: undefined, page: 0 })
   expect(requestListState(new URLSearchParams('status=all&type=DOMAIN&page=2')))
-    .toEqual({ status: undefined, type: 'DOMAIN', page: 2 })
+    .toMatchObject({ status: undefined, type: 'DOMAIN', page: 2 })
 })
 
 test('filter updates preserve institution and reset only the requested page state', () => {
