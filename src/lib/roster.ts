@@ -25,12 +25,15 @@ const MIN_STUDENT_NO_DIGITS = 7
 const STUDENT_NO_HEADER = /^학\s*번/
 const NAME_HEADER = /^(이\s*름|성\s*명)/
 
-function cellsOf(line: string): string[] {
-  const separator = line.includes('\t') ? '\t' : line.includes(',') ? ',' : /\s+/
-  return line
-    .trim()
-    .split(separator)
-    .map((cell) => cell.trim())
+/**
+ * A line's cells. Tab and comma lines keep their empty cells, leading ones
+ * included, so a merged cell copied from a sheet does not shift the columns.
+ * A line with neither is split on spaces, whose positions mean nothing.
+ */
+function cellsOf(line: string): { cells: string[]; spaced: boolean } {
+  const separator = line.includes('\t') ? '\t' : line.includes(',') ? ',' : null
+  if (separator) return { cells: line.split(separator).map((cell) => cell.trim()), spaced: false }
+  return { cells: line.trim().split(/\s+/), spaced: true }
 }
 
 function looksLikeStudentNo(cell: string): boolean {
@@ -56,7 +59,7 @@ export function parseRoster(text: string, { allowEmail = false }: { allowEmail?:
     const line = index + 1
     const raw = source.trim()
     if (raw.length === 0) return
-    const cells = cellsOf(source)
+    const { cells, spaced } = cellsOf(source)
     const header = cells.findIndex((cell) => STUDENT_NO_HEADER.test(cell))
     if (header >= 0) {
       studentNoColumn = header
@@ -65,9 +68,14 @@ export function parseRoster(text: string, { allowEmail = false }: { allowEmail?:
       return
     }
 
-    const name = nameColumn != null ? cells[nameColumn] || undefined : undefined
-    const fromHeader = studentNoColumn != null ? cells[studentNoColumn] : undefined
-    if (fromHeader) {
+    // A space-split line has no columns to speak of: a name such as 홍 길동
+    // or John Smith takes two cells, so the header's positions do not apply.
+    const fromHeader = !spaced && studentNoColumn != null ? cells[studentNoColumn] : undefined
+    // A header cell holding no digit means this row does not follow the
+    // header, so its name column is no better a guess.
+    const followsHeader = fromHeader != null && /\d/.test(fromHeader)
+    const name = followsHeader && nameColumn != null ? cells[nameColumn] || undefined : undefined
+    if (followsHeader) {
       rows.push({ line, raw, studentNo: fromHeader, name })
       return
     }

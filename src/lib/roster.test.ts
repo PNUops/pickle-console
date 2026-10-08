@@ -80,6 +80,26 @@ describe('parseRoster', () => {
     expect(parseRoster(text)).toEqual([{ line: 1, raw: text, error: ROSTER_NO_STUDENT_NO }])
   })
 
+  test('an empty leading cell keeps the header columns in place', () => {
+    expect(parseRoster('번호\t학번\t이름\n\t202312345\t김철수\n2\t202312346\t')).toEqual([
+      { line: 2, raw: '202312345\t김철수', studentNo: '202312345', name: '김철수' },
+      { line: 3, raw: '2\t202312346', studentNo: '202312346' },
+    ])
+  })
+
+  test('a space-split line ignores the header positions and finds the student number itself', () => {
+    expect(parseRoster('번호\t이름\t학번\n홍 길동 202312345\nJohn Smith 202312346')).toEqual([
+      { line: 2, raw: '홍 길동 202312345', studentNo: '202312345' },
+      { line: 3, raw: 'John Smith 202312346', studentNo: '202312346' },
+    ])
+  })
+
+  test('a header cell holding no digits falls back to finding the student number', () => {
+    expect(parseRoster('번호\t학번\t이름\n1\t김철수\t202312345')).toEqual([
+      { line: 2, raw: '1\t김철수\t202312345', studentNo: '202312345' },
+    ])
+  })
+
   test('CRLF line endings and blank lines keep the original line numbers', () => {
     expect(parseRoster('202312345\r\n\r\n202312346\r\n')).toEqual([
       { line: 1, raw: '202312345', studentNo: '202312345' },
