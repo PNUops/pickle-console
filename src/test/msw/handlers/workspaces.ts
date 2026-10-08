@@ -21,8 +21,8 @@ export const knownStudentNumbers: Record<string, string> = {
   [uuid(60)]: '202312346',
 }
 
-/** Student numbers the resolve mock calls well formed. */
-const STUDENT_NO = /^[0-9A-Za-z]{6,20}$/
+/** Student numbers the resolve mock calls well formed, as the server does. */
+const STUDENT_NO = /^[A-Za-z0-9-]{4,20}$/
 
 /** Bodies sent to the roster resolve mock, one per call. */
 export const rosterResolveCalls: Schemas['ResolveRosterRequest'][] = []
