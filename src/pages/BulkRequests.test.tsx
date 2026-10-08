@@ -11,6 +11,7 @@ import {
   regularUser,
 } from '../test/msw/handlers/auth'
 import { createdRequestBodies, requestStore } from '../test/msw/handlers/requests'
+import { rosterResolveCalls } from '../test/msw/handlers/workspaces'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -28,6 +29,31 @@ async function fillResourceStep(user: User) {
 
 function recipientsFieldset() {
   return screen.getByRole('group', { name: /대상자/ })
+}
+
+const ATTENDANCE_SHEET = [
+  '번호\t학과\t학번\t이름\t학년',
+  '1\t정보컴퓨터공학부\t202312345\t이영희\t3',
+  '2\t정보컴퓨터공학부\t202312346\t최수진\t3',
+  '3\t정보컴퓨터공학부\t202399999\t한새봄\t2',
+  '4\t정보컴퓨터공학부\t\t이름만\t2',
+].join('\r\n')
+
+/** Pastes the sheet, previews it and adds what it names to the recipients. */
+async function addRoster(user: User) {
+  await user.click(screen.getByRole('button', { name: '명단 붙여넣기' }))
+  await user.click(screen.getByLabelText('명단'))
+  await user.paste(ATTENDANCE_SHEET)
+  await user.click(screen.getByRole('button', { name: '미리보기' }))
+  const table = await screen.findByRole('table', { name: '명단 미리보기' })
+  const rows = within(table).getAllByRole('row')
+  expect(within(rows[1]).getByText('구성원')).toBeInTheDocument()
+  expect(within(rows[2]).getByText('가입한 계정')).toBeInTheDocument()
+  expect(within(rows[3]).getByText('새 초대')).toBeInTheDocument()
+  expect(within(rows[4]).getByText('학번 없음')).toBeInTheDocument()
+  expect(screen.getByText('1줄 제외')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '대상자에 추가 (3명)' }))
+  expect(screen.queryByRole('table', { name: '명단 미리보기' })).not.toBeInTheDocument()
 }
 
 describe('bulk request wizard for a workspace owner', () => {
@@ -116,6 +142,82 @@ describe('bulk request wizard for a workspace owner', () => {
 
     await screen.findByText('신청이 접수되었습니다')
     expect(createdRequestBodies.at(-1)).not.toHaveProperty('recipients')
+  })
+
+  test('a pasted roster adds members, accounts and new students to the request', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/requests/new?kind=VM')
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.click(screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습 수업 서버')
+    await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
+    await waitFor(() => recipientsFieldset())
+    await addRoster(user)
+
+    const group = recipientsFieldset()
+    expect(within(group).getByRole('checkbox', { name: /이영희/ })).toBeChecked()
+    expect(within(group).getByRole('checkbox', { name: /202312346 최수진/ })).toBeChecked()
+    const fresh = within(group).getByRole('checkbox', { name: /202399999 한새봄/ })
+    expect(fresh).toBeChecked()
+    expect(fresh.closest('label')).toHaveTextContent('가입하면 만들어집니다.')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
+    expect(
+      await screen.findByText('3명 (이영희, 202312346 최수진, 202399999 한새봄)'),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    expect(await screen.findByText('신청이 접수되었습니다')).toBeInTheDocument()
+    expect(createdRequestBodies.at(-1)!.recipients).toEqual([
+      { userId: uuid(58) },
+      { studentNo: '202312346' },
+      { studentNo: '202399999' },
+    ])
+  })
+
+  test('a roster that would pass 200 recipients is refused with the excess', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/requests/new?kind=VM')
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.click(screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await user.click(await within(await waitFor(() => recipientsFieldset())).findByRole('checkbox', { name: /김철수/ }))
+
+    await user.click(screen.getByRole('button', { name: '명단 붙여넣기' }))
+    await user.click(screen.getByLabelText('명단'))
+    await user.paste(Array.from({ length: 200 }, (_, i) => String(202300000 + i)).join('\n'))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await user.click(await screen.findByRole('button', { name: '대상자에 추가 (200명)' }))
+
+    expect(
+      screen.getByText(
+        '대상자는 한 번에 200명까지 지정할 수 있습니다. 명단을 더하면 201명이 되어 1명이 넘습니다.',
+      ),
+    ).toBeInTheDocument()
+    expect(within(recipientsFieldset()).queryByRole('checkbox', { name: /202300000/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('table', { name: '명단 미리보기' })).toBeInTheDocument()
+  })
+
+  test('a pasted roster is dropped with the workspace it was resolved for', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-user'))
+    renderApp('/console/requests/new?kind=VM')
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.click(screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await waitFor(() => recipientsFieldset())
+    await addRoster(user)
+    expect(within(recipientsFieldset()).getByRole('checkbox', { name: /202399999/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: '홍길동' }))
+    await user.click(screen.getByRole('radio', { name: '캡스톤 3조' }))
+    const group = await waitFor(() => recipientsFieldset())
+    expect(within(group).queryByRole('checkbox', { name: /202399999/ })).not.toBeInTheDocument()
   })
 
   test('a plain member who approves nowhere is not offered recipients', async () => {
@@ -219,6 +321,40 @@ describe('bulk request from the administration area', () => {
     expect(body.approval?.vm?.grantedVcpu).toBe(2)
     expect(body.approval?.vm?.grantedSlug).toBeNull()
     expect(body.approval?.grantedStartDate).toBeTruthy()
+  })
+
+  test('an approver pastes a roster and approves for everyone it names', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
+    renderApp(`/admin/requests/new?kind=VM&org=${uuid(1)}`)
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.type(screen.getByLabelText('사용 목적'), '실습 수업 서버')
+    await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
+    await waitFor(() => recipientsFieldset())
+    await addRoster(user)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+
+    expect(await screen.findByRole('heading', { name: '승인 내용' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '제출하고 승인' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    await user.click(within(dialog).getByRole('button', { name: '제출하고 승인' }))
+
+    expect(await screen.findByText('신청을 승인했습니다')).toBeInTheDocument()
+    const body = createdRequestBodies.at(-1)!
+    expect(body.recipients).toHaveLength(3)
+    expect(body.recipients).toEqual(
+      expect.arrayContaining([
+        { userId: uuid(58) },
+        { studentNo: '202312346' },
+        { studentNo: '202399999' },
+      ]),
+    )
+    expect(body.approval).toBeTruthy()
+    // An approver names the organisation it files for.
+    expect(rosterResolveCalls.at(-1)!.orgId).toBe(uuid(1))
   })
 
   test('an LLM key request reaches the same approval form', async () => {
