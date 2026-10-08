@@ -364,6 +364,52 @@ describe('workspace detail: invitations', () => {
     expect(inviteField()).toHaveValue(lines.split('\n').slice(200).join('\n'))
   })
 
+  test('text edited while the run is out is left as the owner wrote it', async () => {
+    let calls = 0
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        if (calls > 1) {
+          await held
+          return HttpResponse.json(
+            {
+              type: 'about:blank',
+              title: '요청이 너무 많습니다',
+              status: 429,
+              detail: '초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+              code: 'RATE_LIMITED',
+            },
+            { status: 429, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+    await waitFor(() => expect(calls).toBe(2))
+    await user.type(inviteField(), '{Enter}late@pusan.ac.kr')
+    release()
+
+    expect(
+      await screen.findByText('초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
+    expect(inviteField()).toHaveValue(`${lines}\nlate@pusan.ac.kr`)
+  })
+
   test('a network failure in a later call keeps the earlier results', async () => {
     let calls = 0
     server.use(

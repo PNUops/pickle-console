@@ -672,8 +672,10 @@ const MAX_INVITE_ENTRIES = 200
 
 /**
  * Entries one owner may send in an hour. Every entry counts, an already
- * invited one included, so a list longer than this is sent as far as the
- * budget goes and the rest stays in the field.
+ * invited one included. The server refuses a whole call that would pass the
+ * budget, so a longer list stops at the first refused call of
+ * MAX_INVITE_ENTRIES and that call's lines and the ones after it stay in
+ * the field.
  */
 const HOURLY_INVITE_ENTRIES = 500
 
@@ -781,16 +783,22 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
         setResults(done)
         onInvited()
       }
+      // Text the owner changed while the run was out is theirs, and stays.
+      const edited = text !== sentText
       if (!failure) {
-        setText('')
+        if (!edited) setText('')
+        return
+      }
+      // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
+      setError(failure.error.message)
+      if (edited) {
+        setLineErrors(lineErrorsOf(failure.error.problem, failure.lines))
         return
       }
       // The lines already sent leave the field, so sending again starts where
       // this run stopped instead of spending the hourly budget twice.
       const remaining = withoutLines(sentText, new Set(lines.slice(0, failure.sent).map((line) => line.line)))
       setText(remaining.text)
-      // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
-      setError(failure.error.message)
       setLineErrors(
         lineErrorsOf(
           failure.error.problem,
