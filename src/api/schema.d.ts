@@ -8407,7 +8407,7 @@ export interface components {
              * @description 그 학번으로 대기 중인 초대. INVITED일 때만 있습니다.
              */
             invitationId?: string | null;
-            /** @description 그 계정의 이름. MEMBER와 REGISTERED일 때만 있습니다. */
+            /** @description 그 구성원의 이름. MEMBER일 때만 있고, 구성원이 아닌 REGISTERED에는 없습니다. */
             name?: string | null;
             /** @description 확인 결과. */
             status: components["schemas"]["RosterEntryStatus"];
@@ -8415,7 +8415,7 @@ export interface components {
             studentNo: string;
             /**
              * Format: uuid
-             * @description 그 학번의 활성 계정. MEMBER와 REGISTERED일 때만 있습니다.
+             * @description 그 학번의 구성원 계정. MEMBER일 때만 있고, 구성원이 아닌 REGISTERED에는 없습니다.
              */
             userId?: string | null;
         };
