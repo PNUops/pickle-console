@@ -13,6 +13,7 @@ export type WorkspaceMemberRole = Schemas['WorkspaceMemberRole']
 export type WorkspaceInvitation = Schemas['WorkspaceInvitationResponse']
 export type WorkspaceInvitationEntry = Schemas['WorkspaceInvitationEntry']
 export type WorkspaceInvitationResult = Schemas['WorkspaceInvitationResult']
+export type RosterResolution = Schemas['RosterEntryResult']
 export type ResourceRole = Schemas['ResourceRole']
 export type OrgSummary = Schemas['OrgSummaryResponse']
 export type OsImage = Schemas['OsImageResponse']
@@ -250,6 +251,26 @@ export function fetchWorkspaceInvitations(workspaceId: string): Promise<Workspac
     })
     if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
     return data
+  })
+}
+
+/**
+ * What the server knows about each pasted student number, in the order they
+ * were sent. An approver names the organisation the request goes to; a
+ * workspace owner sends none.
+ */
+export function resolveWorkspaceRoster(
+  workspaceId: string,
+  studentNos: string[],
+  orgId?: string | null,
+): Promise<RosterResolution[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.POST('/workspaces/{workspaceId}/roster/resolve', {
+      params: { path: { workspaceId } },
+      body: { studentNos, orgId: orgId ?? null },
+    })
+    if (!data) throw toApiError(error, '명단을 확인하지 못했습니다.')
+    return data.results
   })
 }
 

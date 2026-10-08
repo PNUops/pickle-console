@@ -3,7 +3,7 @@ import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, regularUser, regularUserB } from './auth'
 import { flavorStore, osImages } from './reference'
 import { uuid } from '../ids'
-import { workspaceMembersOf } from './workspaces'
+import { knownStudentNumbers, knownUsers, workspaceMembersOf } from './workspaces'
 
 type Schemas = components['schemas']
 type RequestDetail = Schemas['RequestDetailResponse']
@@ -274,18 +274,24 @@ export const requestHandlers: RequestHandler[] = [
     // 접수와 동시에 승인되는 것은 지금 도메인뿐이고, 그것도 루트의 정책이 정한다.
     const autoApproved = body.type === 'DOMAIN' && domainRootPolicy.autoApprove
     // Like the server: named recipients become rows, a member waits in the
-    // creation queue and an invitation waits for its person to join.
+    // creation queue and an invitation waits for its person to join. A student
+    // number held by an account joins that account to the workspace; any other
+    // becomes an invitation.
     const recipients: Schemas['RequestRecipientResponse'][] = (recipientBodies ?? []).map(
       (entry, index) => {
-        const member = entry.userId
-          ? workspaceMembersOf(body.workspaceId).find((m) => m.userId === entry.userId)
+        const account = entry.studentNo
+          ? knownUsers.find((u) => knownStudentNumbers[u.userId] === entry.studentNo)
+          : undefined
+        const userId = entry.userId ?? account?.userId ?? null
+        const member = userId
+          ? (workspaceMembersOf(body.workspaceId).find((m) => m.userId === userId) ?? account)
           : undefined
         return {
           id: uuid(5000 + nextRequestId * 10 + index),
-          userId: entry.userId ?? null,
+          userId,
           name: member?.name ?? null,
-          invitee: entry.invitationId ? 'invitee@pusan.ac.kr' : null,
-          status: entry.userId ? 'QUEUED' : 'PENDING_JOIN',
+          invitee: entry.invitationId ? 'invitee@pusan.ac.kr' : userId ? null : (entry.studentNo ?? null),
+          status: userId ? 'QUEUED' : 'PENDING_JOIN',
           resourceId: null,
           reason: null,
         }

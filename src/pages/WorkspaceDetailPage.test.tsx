@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { rosterResolveCalls } from '../test/msw/handlers/workspaces'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
@@ -237,7 +238,7 @@ describe('workspace detail: invitations', () => {
     )
   })
 
-  test('an empty field and more than 200 lines are refused before any request', async () => {
+  test('an empty field is refused before any request', async () => {
     let calls = 0
     server.use(
       http.post('*/api/v1/workspaces/:workspaceId/invitations', () => {
@@ -253,15 +254,333 @@ describe('workspace detail: invitations', () => {
     expect(
       await screen.findByText('초대할 사람의 이메일이나 학번을 입력해 주세요.'),
     ).toBeInTheDocument()
+    expect(calls).toBe(0)
+  })
+
+  test('a line with no student number is named and nothing is sent', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', () => {
+        calls += 1
+        return HttpResponse.json({ results: [] })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(inviteField())
+    await user.paste('1\t정보컴퓨터공학부\t202399999\t김학생\n2\t정보컴퓨터공학부\t이름만')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(await screen.findByText('2번째 줄 (2 정보컴퓨터공학부 이름만): 학번을 찾지 못했습니다.')).toBeInTheDocument()
+    expect(calls).toBe(0)
+  })
+
+  test('attendance rows send only the student number', async () => {
+    let sent: unknown = null
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json({ results: [] })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(inviteField())
+    await user.paste('번호\t학과\t학번\t이름\r\n1\t정보컴퓨터공학부\t202399999\t김학생\r\n')
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    await waitFor(() => expect(sent).toEqual({ entries: [{ studentNo: '202399999' }] }))
+  })
+
+  test('more than 200 lines go in consecutive calls of at most 200', async () => {
+    const sizes: number[] = []
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        const body = (await request.json()) as { entries: { email: string }[] }
+        sizes.push(body.entries.length)
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
 
     const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
     await user.click(inviteField())
     await user.paste(lines)
     await user.click(screen.getByRole('button', { name: '초대' }))
+
+    const results = await screen.findByRole('region', { name: '초대 결과' })
+    expect(within(results).getAllByRole('listitem')).toHaveLength(201)
+    expect(sizes).toEqual([200, 1])
+    expect(inviteField()).toHaveValue('')
+  })
+
+  test('a 429 stops the run and leaves only the unsent lines in the field', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        if (calls > 1) {
+          return HttpResponse.json(
+            {
+              type: 'about:blank',
+              title: '요청이 너무 많습니다',
+              status: 429,
+              detail: '초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+              code: 'RATE_LIMITED',
+            },
+            { status: 429, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const lines = Array.from({ length: 401 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
     expect(
-      await screen.findByText('한 번에 200명까지 초대할 수 있습니다. 지금 201명이 입력되어 있습니다.'),
+      await screen.findByText('초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'),
     ).toBeInTheDocument()
-    expect(calls).toBe(0)
+    const results = screen.getByRole('region', { name: '초대 결과' })
+    expect(within(results).getAllByRole('listitem')).toHaveLength(200)
+    expect(calls).toBe(2)
+    // What was sent leaves the field, so sending again starts from line 201.
+    expect(inviteField()).toHaveValue(lines.split('\n').slice(200).join('\n'))
+  })
+
+  test('text edited while the run is out is left as the owner wrote it', async () => {
+    let calls = 0
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        if (calls > 1) {
+          await held
+          return HttpResponse.json(
+            {
+              type: 'about:blank',
+              title: '요청이 너무 많습니다',
+              status: 429,
+              detail: '초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+              code: 'RATE_LIMITED',
+            },
+            { status: 429, headers: { 'Content-Type': 'application/problem+json' } },
+          )
+        }
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+    await waitFor(() => expect(calls).toBe(2))
+    await user.type(inviteField(), '{Enter}late@pusan.ac.kr')
+    release()
+
+    expect(
+      await screen.findByText('초대 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
+    expect(inviteField()).toHaveValue(`${lines}\nlate@pusan.ac.kr`)
+  })
+
+  test('a network failure in a later call keeps the earlier results', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        if (calls > 1) return HttpResponse.error()
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(await screen.findByText('구성원을 초대하지 못했습니다.')).toBeInTheDocument()
+    const results = screen.getByRole('region', { name: '초대 결과' })
+    expect(within(results).getAllByRole('listitem')).toHaveLength(200)
+    expect(inviteField()).toHaveValue('user200@pusan.ac.kr')
+  })
+
+  test('more than 500 people get a notice of the hourly limit but are not refused', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(inviteField())
+    await user.paste(Array.from({ length: 500 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n'))
+    const notice = '한 시간에 500명까지 초대할 수 있습니다. 나머지는 한 시간 뒤에 보내 주세요.'
+    expect(screen.queryByText(notice)).not.toBeInTheDocument()
+    await user.type(inviteField(), '{Enter}late@pusan.ac.kr')
+    expect(screen.getByText(notice)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '초대' }))
+    await screen.findByRole('region', { name: '초대 결과' })
+    expect(calls).toBe(3)
+  })
+
+  test('a 422 in a later call names the line in what is left of the field', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        const body = (await request.json()) as { entries: { email: string }[] }
+        if (calls === 1) {
+          return HttpResponse.json({
+            results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+          })
+        }
+        return HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값을 확인해 주세요',
+            status: 422,
+            detail: '요청 값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [{ field: 'entries[0].email', message: '이메일 형식이 아닙니다.' }],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        )
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(
+      await screen.findByText('1번째 줄 (user200@pusan.ac.kr): 이메일 형식이 아닙니다.'),
+    ).toBeInTheDocument()
+  })
+
+  test('the preview resolves student numbers in calls of at most 500 and lists every line', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const numbers = Array.from({ length: 501 }, (_, i) => String(202300000 + i))
+    numbers[0] = '202312345'
+    numbers[1] = '202312346'
+    await user.click(inviteField())
+    await user.paste([...numbers, 'someone@pusan.ac.kr', '202312345', 'x'].join('\n'))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    const table = await screen.findByRole('table', { name: '명단 미리보기' })
+    expect(rosterResolveCalls.map((call) => call.studentNos.length)).toEqual([500, 2])
+    expect(rosterResolveCalls[0].orgId).toBeNull()
+    expect(within(table).getByRole('columnheader', { name: '이메일 또는 학번' })).toBeInTheDocument()
+    const rows = within(table).getAllByRole('row')
+    expect(rows).toHaveLength(1 + 504)
+    expect(within(rows[1]).getByText('구성원')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('이영희')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('가입한 계정')).toBeInTheDocument()
+    // Only a member's account is named.
+    expect(within(rows[2]).queryByText('최수진')).not.toBeInTheDocument()
+    expect(within(rows[3]).getByText('새 초대')).toBeInTheDocument()
+    expect(within(rows[502]).getByText('이메일')).toBeInTheDocument()
+    // A repeat is marked here, not sent again in a later call.
+    expect(within(rows[503]).getByText('중복')).toBeInTheDocument()
+    expect(within(rows[504]).getByText('형식 오류')).toBeInTheDocument()
+    expect(
+      screen.getByText('구성원 1명, 가입한 계정 1명, 새 초대 499명, 형식 오류 1명, 중복 1명, 이메일 1명'),
+    ).toHaveAttribute('role', 'status')
+
+    // Editing the text drops a preview made from the old one.
+    await user.type(inviteField(), '{Enter}202399999')
+    expect(screen.queryByRole('table', { name: '명단 미리보기' })).not.toBeInTheDocument()
+  })
+
+  test('a student number too long for the server is judged here and not sent', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(inviteField())
+    await user.paste(`${'1'.repeat(65)}\n202399999`)
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    const table = await screen.findByRole('table', { name: '명단 미리보기' })
+    const rows = within(table).getAllByRole('row')
+    expect(within(rows[1]).getByText('형식 오류')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('새 초대')).toBeInTheDocument()
+    expect(rosterResolveCalls.map((call) => call.studentNos)).toEqual([['202399999']])
+  })
+
+  test('a 429 from the preview shows the server message', async () => {
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/roster/resolve', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '요청이 너무 많습니다',
+            status: 429,
+            detail: '명단 확인 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+            code: 'RATE_LIMITED',
+          },
+          { status: 429, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.type(inviteField(), '202399999')
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    expect(
+      await screen.findByText('명단 확인 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: '명단 미리보기' })).not.toBeInTheDocument()
   })
 
   test('a 429 shows the server message', async () => {

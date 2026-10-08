@@ -43,7 +43,13 @@ import { adminPaths, consolePaths } from '../../lib/paths'
 import { useScope } from '../../lib/use-scope'
 import { ReviewStep, type ReviewSection } from './ReviewStep'
 import { RecipientPicker } from './RecipientPicker'
-import { recipientBody, type RecipientCandidate } from './recipients'
+import {
+  MAX_RECIPIENTS,
+  MAX_RECIPIENTS_MESSAGE,
+  recipientBody,
+  type RecipientCandidate,
+} from './recipients'
+import { RosterRecipients } from './RosterRecipients'
 import { SubmitApproval } from './SubmitApproval'
 import {
   COMMON_FIELDS,
@@ -74,6 +80,7 @@ const INITIAL_COMMON: CommonWizardState = {
   reqEndDate: '',
   displayName: '',
   recipients: [],
+  roster: null,
 }
 
 /** A workspace the wizard can file into, whichever list it came from. */
@@ -133,6 +140,7 @@ export function RequestWizard({
           ...INITIAL_COMMON,
           ...draft.common,
           recipients: draft.common.recipients ?? [],
+          roster: draft.common.roster ?? null,
           // 스코프에서 들어왔다면 그 워크스페이스를 채운다. 초안이 이미 답한 경우에는
           // 덮지 않는다. 스코프는 지금 무엇을 보고 있었는지일 뿐이고 초안은 사용자가
           // 실제로 고른 것이다.
@@ -185,7 +193,7 @@ export function RequestWizard({
     queryFn: () => fetchAdminWorkspaceInvitations(state.workspaceId!),
     enabled: adminMode && recipientsOffered,
   })
-  const candidates: RecipientCandidate[] = adminMode
+  const listed: RecipientCandidate[] = adminMode
     ? [
         ...(adminMembers.data?.members ?? [])
           .filter((member) => member.userStatus === 'ACTIVE')
@@ -208,6 +216,37 @@ export function RequestWizard({
           description: '가입하면 만들어집니다.',
         })),
       ]
+  const listedKeys = new Set(listed.map((candidate) => candidate.key))
+  const candidates: RecipientCandidate[] = [
+    ...listed,
+    ...(state.roster?.workspaceId === state.workspaceId ? state.roster.candidates : []).filter(
+      (candidate) => !listedKeys.has(candidate.key),
+    ),
+  ]
+  /** Adds a roster's people already chosen, or says by how many it would pass the limit. */
+  const addRoster = (workspaceId: string, added: RecipientCandidate[]): string | null => {
+    const chosen = new Set(selectedRecipients.map((candidate) => candidate.key))
+    const total = chosen.size + added.filter((candidate) => !chosen.has(candidate.key)).length
+    if (total > MAX_RECIPIENTS) {
+      return `${MAX_RECIPIENTS_MESSAGE} 명단을 더하면 ${total}명으로 ${total - MAX_RECIPIENTS}명이 많습니다.`
+    }
+    setState((prev) => {
+      const kept = prev.roster?.workspaceId === workspaceId ? prev.roster.candidates : []
+      const keptKeys = new Set(kept.map((candidate) => candidate.key))
+      return {
+        ...prev,
+        roster: {
+          workspaceId,
+          candidates: [...kept, ...added.filter((candidate) => !keptKeys.has(candidate.key))],
+        },
+        recipients: [
+          ...prev.recipients,
+          ...added.map((candidate) => candidate.key).filter((key) => !prev.recipients.includes(key)),
+        ],
+      }
+    })
+    return null
+  }
   const candidatesLoading = adminMode
     ? adminMembers.isPending || adminInvitations.isPending
     : members.isPending || (ownsWorkspace && invitations.isPending)
@@ -278,6 +317,8 @@ export function RequestWizard({
         next.orgId = '기관을 선택해 주세요.'
       if (adminMode && selectedRecipients.length === 0)
         next.recipients = '대상자를 한 명 이상 선택해 주세요.'
+      else if (selectedRecipients.length > MAX_RECIPIENTS)
+        next.recipients = MAX_RECIPIENTS_MESSAGE
       if (!state.purpose.trim()) next.purpose = '사용 목적을 입력해 주세요.'
       else if (state.purpose.length > 2000)
         next.purpose = '사용 목적은 2000자 이하로 입력해 주세요.'
@@ -462,7 +503,7 @@ export function RequestWizard({
     ...kindApi.payload(),
     // Left out rather than sent empty: a request without recipients is the
     // ordinary request it always was.
-    ...(bulk ? { recipients: selectedRecipients.map((candidate) => recipientBody(candidate.key)) } : {}),
+    ...(bulk ? { recipients: selectedRecipients.map(recipientBody) } : {}),
   })
 
   const requestedEndDate =
@@ -524,10 +565,11 @@ export function RequestWizard({
           }
         : null,
       // Approval puts a member in the creation queue and an invitation in wait
-      // for its person to join, as the server does.
+      // for its person to join, as the server does. A pasted student number
+      // waits too unless an account already holds it.
       recipients: selectedRecipients.map((candidate) => ({
         id: candidate.key,
-        status: candidate.key.startsWith('i:') ? 'PENDING_JOIN' : 'QUEUED',
+        status: candidate.key.startsWith('i:') || candidate.awaitsJoin ? 'PENDING_JOIN' : 'QUEUED',
       })),
     }
   }
@@ -685,7 +727,11 @@ export function RequestWizard({
                     onChange={(value) =>
                       // The administrator's workspace list is the organisation's,
                       // so a new organisation clears the workspace and its people.
-                      update(adminMode ? { orgId: value, workspaceId: null, recipients: [] } : { orgId: value })
+                      update(
+                        adminMode
+                          ? { orgId: value, workspaceId: null, recipients: [], roster: null }
+                          : { orgId: value },
+                      )
                     }
                     options={offeredOrgs.map((org) => ({
                       value: org.id,
@@ -716,7 +762,7 @@ export function RequestWizard({
                       required
                       error={shown.workspaceId}
                       value={state.workspaceId}
-                      onChange={(value) => update({ workspaceId: value, recipients: [] })}
+                      onChange={(value) => update({ workspaceId: value, recipients: [], roster: null })}
                       options={eligibleWorkspaces.map((workspace) => ({
                         value: workspace.id,
                         title: workspace.name,
@@ -735,6 +781,15 @@ export function RequestWizard({
                     required={adminMode}
                     description={adminMode ? undefined : '고르지 않으면 본인에게 신청합니다.'}
                     fieldError={shown.recipients}
+                  />
+                )}
+                {/* A personal workspace takes no one in, so it has no roster to paste. */}
+                {recipientsOffered && selectedWorkspace.kind !== 'PERSONAL' && (
+                  <RosterRecipients
+                    key={selectedWorkspace.id}
+                    workspaceId={selectedWorkspace.id}
+                    orgId={approver ? state.orgId : null}
+                    onAdd={(added) => addRoster(selectedWorkspace.id, added)}
                   />
                 )}
 

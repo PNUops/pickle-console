@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { ApproveRequest, CreateRequest, RequestDetail } from '../../api/queries'
+import type { RecipientCandidate } from './recipients'
 
 /**
  * 리소스 신청이 종류(kind)별로 갈라지는 지점의 계약.
@@ -33,10 +34,17 @@ export interface CommonWizardState {
   displayName: string
   /**
    * Chosen recipients of a request filed for several people, as `u:<userId>`
-   * for a member and `i:<invitationId>` for a pending invitation. Empty means
-   * the request is for the requester, as it always was.
+   * for a member, `i:<invitationId>` for a pending invitation and
+   * `s:<STUDENTNO>` for a pasted student number. Empty means the request is
+   * for the requester, as it always was.
    */
   recipients: string[]
+  /**
+   * People added from a pasted roster, kept for the workspace they were
+   * resolved against. They are not on the member or invitation lists, so
+   * the draft has to carry them for their `s:` keys to survive a reload.
+   */
+  roster: { workspaceId: string; candidates: RecipientCandidate[] } | null
 }
 
 /** What the wizard knows about this request that the kind's own form may depend on. */
