@@ -3973,6 +3973,26 @@ export interface paths {
         patch: operations["updateWorkspaceMember"];
         trace?: never;
     };
+    "/workspaces/{workspaceId}/roster/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 학번 명단 확인
+         * @description 신청 대상자로 지정할 학번 명단을 제출하기 전에 확인합니다. 학번마다 이미 구성원인지, 활성 계정이 있지만 구성원이 아닌지, 대기 중인 초대가 있는지, 계정도 초대도 없는지를 요청과 같은 순서로 돌려줍니다. 아무것도 기록하지 않으며, 구성원 추가와 초대는 학번 대상자로 신청을 제출할 때 일어납니다. 워크스페이스 소유자나, orgId로 지정한 기관의 신청을 승인할 수 있는 관리자만 호출할 수 있고 개인 워크스페이스에는 쓸 수 없습니다. 한 번에 500건까지, 1분에 10번까지입니다.
+         */
+        post: operations["resolveWorkspaceRoster"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5285,13 +5305,18 @@ export interface components {
             endDate: string;
             name: string;
         };
-        /** @description 리소스를 받을 대상자 한 명. userId와 invitationId 중 정확히 하나를 보냅니다. */
+        /** @description 리소스를 받을 대상자 한 명. userId, invitationId, studentNo 중 정확히 하나를 보냅니다. */
         CreateRequestRecipient: {
             /**
              * Format: uuid
              * @description 워크스페이스의 대기 중인 초대. 초대받은 사람이 가입하면 그때 리소스를 만듭니다.
              */
             invitationId?: string | null;
+            /**
+             * @description 대상자의 학번. 그 학번의 활성 계정이 구성원이면 그 사람이 대상자가 되고, 구성원이 아니면 제출할 때 구성원으로 추가합니다. 계정이 없으면 대기 중인 초대를 쓰거나 제출할 때 새로 초대하며, 그 사람이 가입하면 리소스를 만듭니다. 추가와 초대는 신청이 나중에 반려되거나 취소되어도 남고, 신청자의 시간당 초대 인원 한도에 포함됩니다. 개인 워크스페이스에는 쓸 수 없습니다.
+             * @example 202612345
+             */
+            studentNo?: string | null;
             /**
              * Format: uuid
              * @description 워크스페이스의 활성 구성원.
@@ -5314,7 +5339,7 @@ export interface components {
             /** Format: uuid */
             periodPresetId?: string | null;
             purpose: string;
-            /** @description 리소스를 받을 대상자. 비우면 신청자 본인이 받는 일반 신청입니다. VM과 LLM API 키에만 쓸 수 있고, 워크스페이스 소유자나 이 기관의 신청을 승인할 수 있는 관리자만 지정할 수 있습니다. 대상자마다 리소스를 하나씩 만들며, 가입 전인 초대 대상자는 가입할 때 만듭니다. */
+            /** @description 리소스를 받을 대상자. 비우면 신청자 본인이 받는 일반 신청입니다. VM과 LLM API 키에만 쓸 수 있고, 워크스페이스 소유자나 이 기관의 신청을 승인할 수 있는 관리자만 지정할 수 있습니다. 대상자마다 리소스를 하나씩 만들며, 가입 전인 초대 대상자는 가입할 때 만듭니다. 한 신청에 500명까지입니다. */
             recipients?: components["schemas"]["CreateRequestRecipient"][] | null;
             /** Format: date */
             reqEndDate?: string | null;
@@ -8277,6 +8302,19 @@ export interface components {
         ResolveDriftFindingRequest: {
             note?: string;
         };
+        ResolveRosterRequest: {
+            /**
+             * Format: uuid
+             * @description 신청을 낼 기관. 워크스페이스 소유자가 아니라 이 기관의 신청을 승인할 수 있는 관리자로서 확인할 때 보냅니다.
+             */
+            orgId?: string | null;
+            /** @description 확인할 학번 목록. 1건에서 500건까지이며, 결과는 같은 순서로 옵니다. */
+            studentNos: string[];
+        };
+        ResolveRosterResponse: {
+            /** @description 요청한 학번마다 한 건씩, 요청과 같은 순서입니다. */
+            results: components["schemas"]["RosterEntryResult"][];
+        };
         Resource: {
             /** Format: int64 */
             allocatedDiskGb: number;
@@ -8363,6 +8401,35 @@ export interface components {
         };
         /** @enum {string} */
         ReviewDecision: "APPROVE" | "REJECT";
+        RosterEntryResult: {
+            /**
+             * Format: uuid
+             * @description 그 학번으로 대기 중인 초대. INVITED일 때만 있습니다.
+             */
+            invitationId?: string | null;
+            /** @description 그 계정의 이름. MEMBER와 REGISTERED일 때만 있습니다. */
+            name?: string | null;
+            /** @description 확인 결과. */
+            status: components["schemas"]["RosterEntryStatus"];
+            /** @description 요청에 쓴 학번(앞뒤 공백 제거). */
+            studentNo: string;
+            /**
+             * Format: uuid
+             * @description 그 학번의 활성 계정. MEMBER와 REGISTERED일 때만 있습니다.
+             */
+            userId?: string | null;
+        };
+        /**
+         * @description 명단의 학번 한 건이 워크스페이스에서 어떤 상태인지.
+         *     MEMBER: 그 학번의 활성 계정이 이미 구성원입니다.
+         *     REGISTERED: 그 학번의 활성 계정이 있지만 구성원이 아닙니다. 대상자로 신청하면 구성원으로 추가됩니다.
+         *     INVITED: 그 학번으로 대기 중인 초대가 있습니다.
+         *     NEW: 계정도 대기 중인 초대도 없습니다. 대상자로 신청하면 초대를 만듭니다.
+         *     INVALID: 학번 형식이 아닙니다.
+         *     DUPLICATE: 같은 학번이 앞에 이미 있습니다.
+         * @enum {string}
+         */
+        RosterEntryStatus: "MEMBER" | "REGISTERED" | "INVITED" | "NEW" | "INVALID" | "DUPLICATE";
         /** @enum {string} */
         RouteStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
         RouteView: {
@@ -9279,7 +9346,7 @@ export interface components {
             studentNo?: string | null;
             /**
              * Format: uuid
-             * @description 구성원이 된 계정의 공개 식별자. ADDED일 때만 있습니다.
+             * @description 구성원 계정의 공개 식별자. ADDED와 ALREADY_MEMBER일 때만 있습니다.
              */
             userId?: string | null;
         };
@@ -18222,6 +18289,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resolveWorkspaceRoster: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveRosterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResolveRosterResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
