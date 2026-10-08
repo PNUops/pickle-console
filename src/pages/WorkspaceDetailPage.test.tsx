@@ -493,6 +493,22 @@ describe('workspace detail: invitations', () => {
     expect(screen.queryByRole('table', { name: '명단 미리보기' })).not.toBeInTheDocument()
   })
 
+  test('a student number too long for the server is judged here and not sent', async () => {
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(inviteField())
+    await user.paste(`${'1'.repeat(65)}\n202399999`)
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+
+    const table = await screen.findByRole('table', { name: '명단 미리보기' })
+    const rows = within(table).getAllByRole('row')
+    expect(within(rows[1]).getByText('형식 오류')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('새 초대')).toBeInTheDocument()
+    expect(rosterResolveCalls.map((call) => call.studentNos)).toEqual([['202399999']])
+  })
+
   test('a 429 from the preview shows the server message', async () => {
     server.use(
       http.post('*/api/v1/workspaces/:workspaceId/roster/resolve', () =>

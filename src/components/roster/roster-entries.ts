@@ -5,6 +5,12 @@ import type { RosterRow } from '../../lib/roster'
 /** The server takes at most this many student numbers per resolve call. */
 export const ROSTER_RESOLVE_CHUNK = 500
 
+/**
+ * The longest student number the server accepts. A longer one would fail the
+ * whole call it rides in, so it is judged here and never sent.
+ */
+const MAX_STUDENT_NO_LENGTH = 64
+
 /** What became of one pasted line: the server's verdict, or why it was never asked. */
 export type RosterStatus = RosterResolution['status'] | 'EMAIL' | 'NO_STUDENT_NO'
 
@@ -62,6 +68,7 @@ export async function resolveRosterRows(
   const entries: RosterEntry[] = rows.map((row, index) => {
     if (row.error) return { row, status: 'NO_STUDENT_NO' }
     if (row.email != null) return { row, status: 'EMAIL' }
+    if (row.studentNo!.length > MAX_STUDENT_NO_LENGTH) return { row, status: 'INVALID' }
     const key = normalized(row.studentNo!)
     if (seen.has(key)) return { row, status: 'DUPLICATE' }
     seen.add(key)
