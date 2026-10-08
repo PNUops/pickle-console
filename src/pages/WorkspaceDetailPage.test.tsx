@@ -417,6 +417,7 @@ describe('workspace detail: invitations', () => {
     const table = await screen.findByRole('table', { name: '명단 미리보기' })
     expect(rosterResolveCalls.map((call) => call.studentNos.length)).toEqual([500, 2])
     expect(rosterResolveCalls[0].orgId).toBeNull()
+    expect(within(table).getByRole('columnheader', { name: '이메일 또는 학번' })).toBeInTheDocument()
     const rows = within(table).getAllByRole('row')
     expect(rows).toHaveLength(1 + 504)
     expect(within(rows[1]).getByText('구성원')).toBeInTheDocument()
@@ -430,7 +431,7 @@ describe('workspace detail: invitations', () => {
     expect(within(rows[503]).getByText('중복')).toBeInTheDocument()
     expect(within(rows[504]).getByText('형식 오류')).toBeInTheDocument()
     expect(
-      screen.getByText('구성원 1명 · 가입한 계정 1명 · 새 초대 499명 · 형식 오류 1명 · 중복 1명 · 이메일 1명'),
+      screen.getByText('구성원 1명, 가입한 계정 1명, 새 초대 499명, 형식 오류 1명, 중복 1명, 이메일 1명'),
     ).toHaveAttribute('role', 'status')
 
     // Editing the text drops a preview made from the old one.

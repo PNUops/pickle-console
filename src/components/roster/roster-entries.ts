@@ -85,7 +85,7 @@ export async function resolveRosterRows(
   return entries
 }
 
-/** `구성원 2명 · 새 초대 3명`, in label order, for the live summary. */
+/** `구성원 2명, 새 초대 3명`, in label order, for the live summary. */
 export function rosterSummary(entries: RosterEntry[]): string {
   const counts = new Map<string, number>()
   for (const entry of entries) {
@@ -100,5 +100,5 @@ export function rosterSummary(entries: RosterEntry[]): string {
       return (ia < 0 ? order.length : ia) - (ib < 0 ? order.length : ib)
     })
     .map(([label, count]) => `${label} ${count}명`)
-    .join(' · ')
+    .join(', ')
 }

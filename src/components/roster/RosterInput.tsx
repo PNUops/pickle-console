@@ -104,7 +104,7 @@ export function RosterInput({
             <THead>
               <TR>
                 <TH>줄</TH>
-                <TH>{allowEmail ? '학번·이메일' : '학번'}</TH>
+                <TH>{allowEmail ? '이메일 또는 학번' : '학번'}</TH>
                 <TH>출석부 이름</TH>
                 <TH>계정 이름</TH>
                 <TH>상태</TH>
