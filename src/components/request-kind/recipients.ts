@@ -1,5 +1,5 @@
 import type { RequestDetail } from '../../api/queries'
-import type { RosterEntry } from '../roster/roster-entries'
+import { ROSTER_STATUS_LABELS, type RosterEntry } from '../roster/roster-entries'
 
 /** One person the request can be filed for. */
 export interface RecipientCandidate {
@@ -67,7 +67,8 @@ export function rosterCandidates(entries: RosterEntry[]): {
     } else if (status === 'INVITED' && resolution?.invitationId) {
       candidate = { key: `i:${resolution.invitationId}`, label, description: JOIN_DESCRIPTION, awaitsJoin: true }
     } else if (status === 'REGISTERED') {
-      candidate = { key: `s:${studentNo}`, label, description: resolution?.name ?? null }
+      // The server names only a member's account, so this one carries its status.
+      candidate = { key: `s:${studentNo}`, label, description: ROSTER_STATUS_LABELS.REGISTERED }
     } else if (status === 'NEW') {
       candidate = { key: `s:${studentNo}`, label, description: JOIN_DESCRIPTION, awaitsJoin: true }
     }

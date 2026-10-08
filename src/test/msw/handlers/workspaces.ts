@@ -341,7 +341,8 @@ export const workspaceHandlers: RequestHandler[] = [
       if (user && record.members.some((m) => m.userId === user.userId)) {
         return { studentNo, status: 'MEMBER' as const, userId: user.userId, name: user.name }
       }
-      if (user) return { studentNo, status: 'REGISTERED' as const, userId: user.userId, name: user.name }
+      // An account outside the workspace is not named to the caller.
+      if (user) return { studentNo, status: 'REGISTERED' as const }
       const invitation = pending.find((i) => i.studentNo?.toUpperCase() === key)
       if (invitation) return { studentNo, status: 'INVITED' as const, invitationId: invitation.id }
       return { studentNo, status: 'NEW' as const }

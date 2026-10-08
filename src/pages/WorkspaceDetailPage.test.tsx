@@ -422,6 +422,8 @@ describe('workspace detail: invitations', () => {
     expect(within(rows[1]).getByText('구성원')).toBeInTheDocument()
     expect(within(rows[1]).getByText('이영희')).toBeInTheDocument()
     expect(within(rows[2]).getByText('가입한 계정')).toBeInTheDocument()
+    // Only a member's account is named.
+    expect(within(rows[2]).queryByText('최수진')).not.toBeInTheDocument()
     expect(within(rows[3]).getByText('새 초대')).toBeInTheDocument()
     expect(within(rows[502]).getByText('이메일')).toBeInTheDocument()
     // A repeat is marked here, not sent again in a later call.

@@ -159,7 +159,9 @@ describe('bulk request wizard for a workspace owner', () => {
 
     const group = recipientsFieldset()
     expect(within(group).getByRole('checkbox', { name: /이영희/ })).toBeChecked()
-    expect(within(group).getByRole('checkbox', { name: /202312346 최수진/ })).toBeChecked()
+    const registered = within(group).getByRole('checkbox', { name: /202312346 최수진/ })
+    expect(registered).toBeChecked()
+    expect(registered.closest('label')).toHaveTextContent('가입한 계정')
     const fresh = within(group).getByRole('checkbox', { name: /202399999 한새봄/ })
     expect(fresh).toBeChecked()
     expect(fresh.closest('label')).toHaveTextContent('가입하면 만들어집니다.')
