@@ -5,22 +5,26 @@ import { ROSTER_STATUS_LABELS, type RosterEntry } from '../roster/roster-entries
 export interface RecipientCandidate {
   /**
    * `u:<userId>` for a member, `i:<invitationId>` for a pending invitation,
-   * `s:<studentNo>` for a pasted student number the server turns into a
-   * membership or an invitation when the request is submitted.
+   * `s:<STUDENTNO>` for a pasted student number the server turns into a
+   * membership or an invitation when the request is submitted. The student
+   * number in the key is upper-cased so two spellings make one key.
    */
   key: string
+  /** The student number as pasted, sent for an `s:` key. */
+  studentNo?: string
   label: string
   description: string | null
   /** Whether the resource waits for the person to join. True for every `i:` key. */
   awaitsJoin?: boolean
 }
 
-/** Turns a chosen candidate key into the request body entry the server takes. */
-export function recipientBody(
-  key: string,
-): { userId: string } | { invitationId: string } | { studentNo: string } {
+/** Turns a chosen candidate into the request body entry the server takes. */
+export function recipientBody({
+  key,
+  studentNo,
+}: RecipientCandidate): { userId: string } | { invitationId: string } | { studentNo: string } {
   if (key.startsWith('i:')) return { invitationId: key.slice(2) }
-  if (key.startsWith('s:')) return { studentNo: key.slice(2) }
+  if (key.startsWith('s:')) return { studentNo: studentNo ?? key.slice(2) }
   return { userId: key.slice(2) }
 }
 
@@ -68,9 +72,15 @@ export function rosterCandidates(entries: RosterEntry[]): {
       candidate = { key: `i:${resolution.invitationId}`, label, description: JOIN_DESCRIPTION, awaitsJoin: true }
     } else if (status === 'REGISTERED') {
       // The server names only a member's account, so this one carries its status.
-      candidate = { key: `s:${studentNo}`, label, description: ROSTER_STATUS_LABELS.REGISTERED }
+      candidate = { key: `s:${studentNo.toUpperCase()}`, studentNo, label, description: ROSTER_STATUS_LABELS.REGISTERED }
     } else if (status === 'NEW') {
-      candidate = { key: `s:${studentNo}`, label, description: JOIN_DESCRIPTION, awaitsJoin: true }
+      candidate = {
+        key: `s:${studentNo.toUpperCase()}`,
+        studentNo,
+        label,
+        description: JOIN_DESCRIPTION,
+        awaitsJoin: true,
+      }
     }
     if (!candidate) {
       excluded += 1

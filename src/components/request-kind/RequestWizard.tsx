@@ -501,7 +501,7 @@ export function RequestWizard({
     ...kindApi.payload(),
     // Left out rather than sent empty: a request without recipients is the
     // ordinary request it always was.
-    ...(bulk ? { recipients: selectedRecipients.map((candidate) => recipientBody(candidate.key)) } : {}),
+    ...(bulk ? { recipients: selectedRecipients.map(recipientBody) } : {}),
   })
 
   const requestedEndDate =
