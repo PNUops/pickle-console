@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse, regularUser } from './auth'
+import { approvesAnywhere } from '../../../auth/permissions'
+import { ACCESS_TOKENS, problemResponse, regularUser } from './auth'
 import { uuid } from '../ids'
 
 type Schemas = components['schemas']
@@ -17,7 +18,14 @@ export const knownUsers: Schemas['WorkspaceMemberResponse'][] = [
 /** Student numbers of the fixture users that have one, keyed by user id. */
 export const knownStudentNumbers: Record<string, string> = {
   [uuid(58)]: '202312345',
+  [uuid(60)]: '202312346',
 }
+
+/** Student numbers the resolve mock calls well formed. */
+const STUDENT_NO = /^[0-9A-Za-z]{6,20}$/
+
+/** Bodies sent to the roster resolve mock, one per call. */
+export const rosterResolveCalls: Schemas['ResolveRosterRequest'][] = []
 
 interface WorkspaceRecord {
   detail: Omit<Schemas['WorkspaceDetailResponse'], 'members'>
@@ -121,6 +129,7 @@ export function resetWorkspaceFixtures() {
   nextWorkspaceId = 100
   invitationStore = initialInvitations()
   nextInvitationId = 3150
+  rosterResolveCalls.length = 0
 }
 
 /** Pending invitations of a workspace, created on first use so handlers can push into it. */
@@ -304,6 +313,38 @@ export const workspaceHandlers: RequestHandler[] = [
       }
       pending.push(invitation)
       return { ...echo, outcome: 'INVITED', invitationId: invitation.id }
+    })
+    return HttpResponse.json({ results }, { status: 200 })
+  }),
+
+  // Like the server: a workspace owner may ask, and so may an approver naming
+  // the organisation the request goes to. The answer keeps the request order.
+  http.post('*/api/v1/workspaces/:workspaceId/roster/resolve', async ({ params, request }) => {
+    const record = findWorkspace(params.workspaceId!)
+    if (!record) return notFound()
+    const profile = ACCESS_TOKENS[request.headers.get('Authorization')?.replace('Bearer ', '') ?? '']
+    const body = (await request.json()) as Schemas['ResolveRosterRequest']
+    if (!(approvesAnywhere(profile) && body.orgId)) {
+      const forbidden = requireOwner(record)
+      if (forbidden) return forbidden
+    }
+    rosterResolveCalls.push(body)
+    const pending = invitationsOf(record.detail.id)
+    const seen = new Set<string>()
+    const results = body.studentNos.map((raw) => {
+      const studentNo = raw.trim()
+      const key = studentNo.toUpperCase()
+      if (!STUDENT_NO.test(studentNo)) return { studentNo, status: 'INVALID' as const }
+      if (seen.has(key)) return { studentNo, status: 'DUPLICATE' as const }
+      seen.add(key)
+      const user = knownUsers.find((u) => knownStudentNumbers[u.userId]?.toUpperCase() === key)
+      if (user && record.members.some((m) => m.userId === user.userId)) {
+        return { studentNo, status: 'MEMBER' as const, userId: user.userId, name: user.name }
+      }
+      if (user) return { studentNo, status: 'REGISTERED' as const, userId: user.userId, name: user.name }
+      const invitation = pending.find((i) => i.studentNo?.toUpperCase() === key)
+      if (invitation) return { studentNo, status: 'INVITED' as const, invitationId: invitation.id }
+      return { studentNo, status: 'NEW' as const }
     })
     return HttpResponse.json({ results }, { status: 200 })
   }),
