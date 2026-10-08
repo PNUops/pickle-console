@@ -204,6 +204,24 @@ describe('bulk request wizard for a workspace owner', () => {
     expect(screen.getByRole('table', { name: '명단 미리보기' })).toBeInTheDocument()
   })
 
+  test('pasted recipients come back with the draft after a reload', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-user'))
+    const first = renderApp('/console/requests/new?kind=VM')
+
+    await fillResourceStep(user)
+    await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
+    await user.click(screen.getByRole('radio', { name: '정보컴퓨터공학부 실습지원센터' }))
+    await waitFor(() => recipientsFieldset())
+    await addRoster(user)
+    first.unmount()
+
+    renderApp('/console/requests/new?kind=VM&step=request')
+    const group = await waitFor(() => recipientsFieldset())
+    expect(await within(group).findByRole('checkbox', { name: /202399999 한새봄/ })).toBeChecked()
+    expect(within(group).getByRole('checkbox', { name: /202312346 최수진/ })).toBeChecked()
+  })
+
   test('a pasted roster is dropped with the workspace it was resolved for', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-user'))

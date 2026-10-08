@@ -80,6 +80,7 @@ const INITIAL_COMMON: CommonWizardState = {
   reqEndDate: '',
   displayName: '',
   recipients: [],
+  roster: null,
 }
 
 /** A workspace the wizard can file into, whichever list it came from. */
@@ -139,6 +140,7 @@ export function RequestWizard({
           ...INITIAL_COMMON,
           ...draft.common,
           recipients: draft.common.recipients ?? [],
+          roster: draft.common.roster ?? null,
           // 스코프에서 들어왔다면 그 워크스페이스를 채운다. 초안이 이미 답한 경우에는
           // 덮지 않는다. 스코프는 지금 무엇을 보고 있었는지일 뿐이고 초안은 사용자가
           // 실제로 고른 것이다.
@@ -191,8 +193,6 @@ export function RequestWizard({
     queryFn: () => fetchAdminWorkspaceInvitations(state.workspaceId!),
     enabled: adminMode && recipientsOffered,
   })
-  // People added from a pasted roster, kept for the workspace they were resolved against.
-  const [roster, setRoster] = useState<{ workspaceId: string; candidates: RecipientCandidate[] } | null>(null)
   const listed: RecipientCandidate[] = adminMode
     ? [
         ...(adminMembers.data?.members ?? [])
@@ -219,7 +219,7 @@ export function RequestWizard({
   const listedKeys = new Set(listed.map((candidate) => candidate.key))
   const candidates: RecipientCandidate[] = [
     ...listed,
-    ...(roster?.workspaceId === state.workspaceId ? roster.candidates : []).filter(
+    ...(state.roster?.workspaceId === state.workspaceId ? state.roster.candidates : []).filter(
       (candidate) => !listedKeys.has(candidate.key),
     ),
   ]
@@ -230,19 +230,21 @@ export function RequestWizard({
     if (total > MAX_RECIPIENTS) {
       return `${MAX_RECIPIENTS_MESSAGE} 명단을 더하면 ${total}명이 되어 ${total - MAX_RECIPIENTS}명이 넘습니다.`
     }
-    const kept = roster?.workspaceId === workspaceId ? roster.candidates : []
-    const keptKeys = new Set(kept.map((candidate) => candidate.key))
-    setRoster({
-      workspaceId,
-      candidates: [...kept, ...added.filter((candidate) => !keptKeys.has(candidate.key))],
+    setState((prev) => {
+      const kept = prev.roster?.workspaceId === workspaceId ? prev.roster.candidates : []
+      const keptKeys = new Set(kept.map((candidate) => candidate.key))
+      return {
+        ...prev,
+        roster: {
+          workspaceId,
+          candidates: [...kept, ...added.filter((candidate) => !keptKeys.has(candidate.key))],
+        },
+        recipients: [
+          ...prev.recipients,
+          ...added.map((candidate) => candidate.key).filter((key) => !prev.recipients.includes(key)),
+        ],
+      }
     })
-    setState((prev) => ({
-      ...prev,
-      recipients: [
-        ...prev.recipients,
-        ...added.map((candidate) => candidate.key).filter((key) => !prev.recipients.includes(key)),
-      ],
-    }))
     return null
   }
   const candidatesLoading = adminMode
@@ -722,12 +724,15 @@ export function RequestWizard({
                     error={shown.orgId}
                     description="이 기관이 자원을 제공하고 신청을 검토합니다."
                     value={state.orgId}
-                    onChange={(value) => {
+                    onChange={(value) =>
                       // The administrator's workspace list is the organisation's,
                       // so a new organisation clears the workspace and its people.
-                      if (adminMode) setRoster(null)
-                      update(adminMode ? { orgId: value, workspaceId: null, recipients: [] } : { orgId: value })
-                    }}
+                      update(
+                        adminMode
+                          ? { orgId: value, workspaceId: null, recipients: [], roster: null }
+                          : { orgId: value },
+                      )
+                    }
                     options={offeredOrgs.map((org) => ({
                       value: org.id,
                       title: org.name,
@@ -757,10 +762,7 @@ export function RequestWizard({
                       required
                       error={shown.workspaceId}
                       value={state.workspaceId}
-                      onChange={(value) => {
-                        setRoster(null)
-                        update({ workspaceId: value, recipients: [] })
-                      }}
+                      onChange={(value) => update({ workspaceId: value, recipients: [], roster: null })}
                       options={eligibleWorkspaces.map((workspace) => ({
                         value: workspace.id,
                         title: workspace.name,
