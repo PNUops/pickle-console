@@ -273,7 +273,7 @@ describe('workspace detail: invitations', () => {
     await user.paste('1\t정보컴퓨터공학부\t202399999\t김학생\n2\t정보컴퓨터공학부\t이름만')
     await user.click(screen.getByRole('button', { name: '초대' }))
 
-    expect(await screen.findByText('2번째 줄 (2 정보컴퓨터공학부 이름만)')).toBeInTheDocument()
+    expect(await screen.findByText('2번째 줄 (2 정보컴퓨터공학부 이름만): 학번을 찾지 못했습니다.')).toBeInTheDocument()
     expect(calls).toBe(0)
   })
 

@@ -60,7 +60,7 @@ export function RosterInput({
   const [failure, setFailure] = useState<{ text: string; message: string } | null>(null)
 
   const resolve = useMutation({
-    mutationFn: (text: string) => resolveRosterRows(workspaceId, parseRoster(text), orgId),
+    mutationFn: (text: string) => resolveRosterRows(workspaceId, parseRoster(text, { allowEmail }), orgId),
     onSuccess: (entries, text) => setPreview({ text, entries }),
     // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
     onError: (err, text) =>
@@ -72,7 +72,7 @@ export function RosterInput({
   const runPreview = () => {
     setPreview(null)
     setFailure(null)
-    if (parseRoster(value).length === 0) {
+    if (parseRoster(value, { allowEmail }).length === 0) {
       setFailure({ text: value, message: '명단을 붙여넣어 주세요.' })
       return
     }

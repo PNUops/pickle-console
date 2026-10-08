@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { parseRoster, ROSTER_NO_STUDENT_NO } from './roster'
+import { parseRoster, ROSTER_AMBIGUOUS_STUDENT_NO, ROSTER_NO_STUDENT_NO } from './roster'
 
 describe('parseRoster', () => {
   test('reads the student number out of tab-separated attendance rows', () => {
@@ -40,6 +40,44 @@ describe('parseRoster', () => {
     expect(parseRoster('1\t정보컴퓨터공학부\t김철수')).toEqual([
       { line: 1, raw: '1\t정보컴퓨터공학부\t김철수', error: ROSTER_NO_STUDENT_NO },
     ])
+  })
+
+  test('a header cell may carry spaces or a trailing note', () => {
+    expect(parseRoster('번호\t학 번(9자리)\t성 명\n1\t202312345\t김철수')).toEqual([
+      { line: 2, raw: '1\t202312345\t김철수', studentNo: '202312345', name: '김철수' },
+    ])
+  })
+
+  test('without a header, one hyphenated number of seven digits or more is the student number', () => {
+    expect(parseRoster('1\t정보컴퓨터공학부\t2023-12345\t김철수')).toEqual([
+      { line: 1, raw: '1\t정보컴퓨터공학부\t2023-12345\t김철수', studentNo: '2023-12345' },
+    ])
+  })
+
+  test('without a header, two cells that could be the student number make an error row', () => {
+    expect(parseRoster('202312345\t김철수\t20230301')).toEqual([
+      { line: 1, raw: '202312345\t김철수\t20230301', error: ROSTER_AMBIGUOUS_STUDENT_NO },
+    ])
+  })
+
+  test('a phone number is not taken for a student number', () => {
+    expect(parseRoster('1\t김철수\t010-1234-5678')).toEqual([
+      { line: 1, raw: '1\t김철수\t010-1234-5678', error: ROSTER_NO_STUDENT_NO },
+    ])
+  })
+
+  test('a line with neither tab nor comma splits on spaces', () => {
+    expect(parseRoster('김철수  202312345')).toEqual([
+      { line: 1, raw: '김철수  202312345', studentNo: '202312345' },
+    ])
+  })
+
+  test('with emails allowed, a row without a student number falls back to its email cell', () => {
+    const text = '1\t김교수\tprof.kim@pusan.ac.kr'
+    expect(parseRoster(text, { allowEmail: true })).toEqual([
+      { line: 1, raw: text, email: 'prof.kim@pusan.ac.kr' },
+    ])
+    expect(parseRoster(text)).toEqual([{ line: 1, raw: text, error: ROSTER_NO_STUDENT_NO }])
   })
 
   test('CRLF line endings and blank lines keep the original line numbers', () => {

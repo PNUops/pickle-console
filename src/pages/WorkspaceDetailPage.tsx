@@ -54,7 +54,7 @@ import {
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
-import { parseRoster, ROSTER_NO_STUDENT_NO, type RosterRow } from '../lib/roster'
+import { parseRoster, type RosterRow } from '../lib/roster'
 import { RosterInput } from '../components/roster/RosterInput'
 
 type Schemas = components['schemas']
@@ -771,15 +771,17 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
     event.preventDefault()
     setError(null)
     setLineErrors([])
-    const rows = parseRoster(text)
+    const rows = parseRoster(text, { allowEmail: true })
     if (rows.length === 0) {
       setError('초대할 사람의 이메일이나 학번을 입력해 주세요.')
       return
     }
     const unreadable = rows.filter((row) => row.error)
     if (unreadable.length > 0) {
-      setError(ROSTER_NO_STUDENT_NO)
-      setLineErrors(unreadable.map((row) => `${row.line}번째 줄 (${row.raw.replace(/\s+/g, ' ')})`))
+      setError('읽지 못한 줄이 있습니다.')
+      setLineErrors(
+        unreadable.map((row) => `${row.line}번째 줄 (${row.raw.replace(/\s+/g, ' ')}): ${row.error}`),
+      )
       return
     }
     setResults(null)
