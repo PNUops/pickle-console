@@ -1,5 +1,5 @@
 import type { RequestDetail } from '../../api/queries'
-import { ROSTER_STATUS_LABELS, type RosterEntry } from '../roster/roster-entries'
+import type { RosterEntry } from '../roster/roster-entries'
 
 /** One person the request can be filed for. */
 export interface RecipientCandidate {
@@ -71,8 +71,8 @@ export function rosterCandidates(entries: RosterEntry[]): {
     } else if (status === 'INVITED' && resolution?.invitationId) {
       candidate = { key: `i:${resolution.invitationId}`, label, description: JOIN_DESCRIPTION, awaitsJoin: true }
     } else if (status === 'REGISTERED') {
-      // The server names only a member's account, so this one carries its status.
-      candidate = { key: `s:${studentNo.toUpperCase()}`, studentNo, label, description: ROSTER_STATUS_LABELS.REGISTERED }
+      // The server names only a member's account, so this one says what submitting does.
+      candidate = { key: `s:${studentNo.toUpperCase()}`, studentNo, label, description: '제출하면 구성원으로 추가됩니다.' }
     } else if (status === 'NEW') {
       candidate = {
         key: `s:${studentNo.toUpperCase()}`,

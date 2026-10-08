@@ -228,7 +228,7 @@ export function RequestWizard({
     const chosen = new Set(selectedRecipients.map((candidate) => candidate.key))
     const total = chosen.size + added.filter((candidate) => !chosen.has(candidate.key)).length
     if (total > MAX_RECIPIENTS) {
-      return `${MAX_RECIPIENTS_MESSAGE} 명단을 더하면 ${total}명이 되어 ${total - MAX_RECIPIENTS}명이 넘습니다.`
+      return `${MAX_RECIPIENTS_MESSAGE} 명단을 더하면 ${total}명으로 ${total - MAX_RECIPIENTS}명이 많습니다.`
     }
     setState((prev) => {
       const kept = prev.roster?.workspaceId === workspaceId ? prev.roster.candidates : []

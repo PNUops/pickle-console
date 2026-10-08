@@ -161,7 +161,7 @@ describe('bulk request wizard for a workspace owner', () => {
     expect(within(group).getByRole('checkbox', { name: /이영희/ })).toBeChecked()
     const registered = within(group).getByRole('checkbox', { name: /202312346 최수진/ })
     expect(registered).toBeChecked()
-    expect(registered.closest('label')).toHaveTextContent('가입한 계정')
+    expect(registered.closest('label')).toHaveTextContent('제출하면 구성원으로 추가됩니다.')
     const fresh = within(group).getByRole('checkbox', { name: /202399999 한새봄/ })
     expect(fresh).toBeChecked()
     expect(fresh.closest('label')).toHaveTextContent('가입하면 만들어집니다.')
@@ -197,7 +197,7 @@ describe('bulk request wizard for a workspace owner', () => {
 
     expect(
       screen.getByText(
-        '대상자는 한 번에 200명까지 지정할 수 있습니다. 명단을 더하면 201명이 되어 1명이 넘습니다.',
+        '대상자는 한 번에 200명까지 지정할 수 있습니다. 명단을 더하면 201명으로 1명이 많습니다.',
       ),
     ).toBeInTheDocument()
     expect(within(recipientsFieldset()).queryByRole('checkbox', { name: /202300000/ })).not.toBeInTheDocument()
