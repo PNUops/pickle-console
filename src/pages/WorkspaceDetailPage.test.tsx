@@ -322,7 +322,7 @@ describe('workspace detail: invitations', () => {
     expect(inviteField()).toHaveValue('')
   })
 
-  test('a 429 stops the run and keeps what the earlier calls did', async () => {
+  test('a 429 stops the run and leaves only the unsent lines in the field', async () => {
     let calls = 0
     server.use(
       http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
@@ -360,11 +360,65 @@ describe('workspace detail: invitations', () => {
     const results = screen.getByRole('region', { name: '초대 결과' })
     expect(within(results).getAllByRole('listitem')).toHaveLength(200)
     expect(calls).toBe(2)
-    // The text stays so the rest can be sent again.
-    expect(inviteField()).not.toHaveValue('')
+    // What was sent leaves the field, so sending again starts from line 201.
+    expect(inviteField()).toHaveValue(lines.split('\n').slice(200).join('\n'))
   })
 
-  test('a 422 in a later call names the line the owner typed', async () => {
+  test('a network failure in a later call keeps the earlier results', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        if (calls > 1) return HttpResponse.error()
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    const lines = Array.from({ length: 201 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n')
+    await user.click(inviteField())
+    await user.paste(lines)
+    await user.click(screen.getByRole('button', { name: '초대' }))
+
+    expect(await screen.findByText('구성원을 초대하지 못했습니다.')).toBeInTheDocument()
+    const results = screen.getByRole('region', { name: '초대 결과' })
+    expect(within(results).getAllByRole('listitem')).toHaveLength(200)
+    expect(inviteField()).toHaveValue('user200@pusan.ac.kr')
+  })
+
+  test('more than 500 people get a notice of the hourly limit but are not refused', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
+        calls += 1
+        const body = (await request.json()) as { entries: { email: string }[] }
+        return HttpResponse.json({
+          results: body.entries.map((entry) => ({ email: entry.email, outcome: 'INVITED' })),
+        })
+      }),
+    )
+    const user = userEvent.setup()
+    renderWorkspace(uuid(12))
+    await screen.findByRole('heading', { name: '캡스톤 3조' })
+
+    await user.click(inviteField())
+    await user.paste(Array.from({ length: 500 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n'))
+    const notice = '한 시간에 500명까지 초대할 수 있습니다. 나머지는 한 시간 뒤에 보내 주세요.'
+    expect(screen.queryByText(notice)).not.toBeInTheDocument()
+    await user.type(inviteField(), '{Enter}late@pusan.ac.kr')
+    expect(screen.getByText(notice)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '초대' }))
+    await screen.findByRole('region', { name: '초대 결과' })
+    expect(calls).toBe(3)
+  })
+
+  test('a 422 in a later call names the line in what is left of the field', async () => {
     let calls = 0
     server.use(
       http.post('*/api/v1/workspaces/:workspaceId/invitations', async ({ request }) => {
@@ -398,7 +452,7 @@ describe('workspace detail: invitations', () => {
     await user.click(screen.getByRole('button', { name: '초대' }))
 
     expect(
-      await screen.findByText('201번째 줄 (user200@pusan.ac.kr): 이메일 형식이 아닙니다.'),
+      await screen.findByText('1번째 줄 (user200@pusan.ac.kr): 이메일 형식이 아닙니다.'),
     ).toBeInTheDocument()
   })
 

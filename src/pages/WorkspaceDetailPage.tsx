@@ -670,6 +670,13 @@ function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
 /** The server takes at most this many entries per call; a longer list goes in consecutive calls. */
 const MAX_INVITE_ENTRIES = 200
 
+/**
+ * Entries one owner may send in an hour. Every entry counts, an already
+ * invited one included, so a list longer than this is sent as far as the
+ * budget goes and the rest stays in the field.
+ */
+const HOURLY_INVITE_ENTRIES = 500
+
 const INVITATION_OUTCOME_LABELS: Record<Schemas['WorkspaceInvitationOutcome'], string> = {
   ADDED: '구성원으로 추가됨',
   INVITED: '초대함, 가입하면 자동으로 구성원이 됩니다',
@@ -727,6 +734,18 @@ function lineErrorsOf(problem: Problem | null | undefined, lines: InviteLine[]):
   return messages
 }
 
+/** The text without the given 1-based lines, and where each kept line now sits. */
+function withoutLines(text: string, drop: Set<number>): { text: string; lineOf: Map<number, number> } {
+  const kept: string[] = []
+  const lineOf = new Map<number, number>()
+  text.split(/\r?\n/).forEach((source, index) => {
+    if (drop.has(index + 1)) return
+    kept.push(source)
+    lineOf.set(index + 1, kept.length)
+  })
+  return { text: kept.join('\n'), lineOf }
+}
+
 function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; onInvited: () => void }) {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -734,35 +753,50 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
   const [results, setResults] = useState<WorkspaceInvitationResult[] | null>(null)
 
   const invite = useMutation({
-    // Consecutive calls of at most MAX_INVITE_ENTRIES. The first refusal (a 429
+    // Consecutive calls of at most MAX_INVITE_ENTRIES. The first failure (a 429
     // among them) stops the run; what the earlier calls did has already happened.
-    mutationFn: async (lines: InviteLine[]) => {
+    mutationFn: async ({ lines }: { text: string; lines: InviteLine[] }) => {
       const done: WorkspaceInvitationResult[] = []
       for (let start = 0; start < lines.length; start += MAX_INVITE_ENTRIES) {
         const chunk = lines.slice(start, start + MAX_INVITE_ENTRIES)
-        const { data, error: err } = await api.POST('/workspaces/{workspaceId}/invitations', {
-          params: { path: { workspaceId } },
-          body: { entries: chunk.map((line) => line.entry) },
+        const fail = (err: unknown) => ({
+          results: done,
+          failure: { error: toApiError(err, '구성원을 초대하지 못했습니다.'), sent: start, lines: chunk },
         })
-        if (!data) {
-          return { results: done, failure: { error: toApiError(err, '구성원을 초대하지 못했습니다.'), lines: chunk } }
+        try {
+          const { data, error: err } = await api.POST('/workspaces/{workspaceId}/invitations', {
+            params: { path: { workspaceId } },
+            body: { entries: chunk.map((line) => line.entry) },
+          })
+          if (!data) return fail(err)
+          done.push(...data.results)
+        } catch (err) {
+          return fail(err)
         }
-        done.push(...data.results)
       }
       return { results: done, failure: null }
     },
-    onSuccess: ({ results: done, failure }) => {
+    onSuccess: ({ results: done, failure }, { text: sentText, lines }) => {
       if (done.length > 0) {
         setResults(done)
         onInvited()
       }
-      if (failure) {
-        // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
-        setError(failure.error.message)
-        setLineErrors(lineErrorsOf(failure.error.problem, failure.lines))
+      if (!failure) {
+        setText('')
         return
       }
-      setText('')
+      // The lines already sent leave the field, so sending again starts where
+      // this run stopped instead of spending the hourly budget twice.
+      const remaining = withoutLines(sentText, new Set(lines.slice(0, failure.sent).map((line) => line.line)))
+      setText(remaining.text)
+      // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
+      setError(failure.error.message)
+      setLineErrors(
+        lineErrorsOf(
+          failure.error.problem,
+          failure.lines.map((line) => ({ ...line, line: remaining.lineOf.get(line.line) ?? line.line })),
+        ),
+      )
     },
     onError: (err) => setError(toApiError(err, '구성원을 초대하지 못했습니다.').message),
   })
@@ -785,8 +819,11 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
       return
     }
     setResults(null)
-    invite.mutate(inviteLinesOf(rows))
+    invite.mutate({ text, lines: inviteLinesOf(rows) })
   }
+
+  const overBudget =
+    parseRoster(text, { allowEmail: true }).filter((row) => !row.error).length > HOURLY_INVITE_ENTRIES
 
   return (
     <form onSubmit={submit} className="space-y-3 rounded-lg bg-neutral-50 p-4" noValidate>
@@ -812,6 +849,11 @@ function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; on
         allowEmail
         placeholder={'cheolsu.kim@pusan.ac.kr\n202312345'}
       />
+      {overBudget && (
+        <Alert variant="info">
+          한 시간에 {HOURLY_INVITE_ENTRIES}명까지 초대할 수 있습니다. 나머지는 한 시간 뒤에 보내 주세요.
+        </Alert>
+      )}
       <p className="text-xs text-foreground-muted">
         학번은 학생 직책 계정에만 등록되므로 교수, 연구원, 직원은 이메일로 초대해 주세요.
       </p>
