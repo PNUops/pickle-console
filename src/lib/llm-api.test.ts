@@ -6,6 +6,8 @@ import {
   LLM_ERROR_CODES,
   LLM_PAID_ONLY_PARAMS,
   LLM_PAID_PARAMS,
+  LLM_PASSTHROUGH_ROUTES,
+  LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
 
@@ -71,8 +73,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 33개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(33)
+  test('에러 표는 사용자에게 도달하는 36개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(36)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -94,7 +96,10 @@ describe('LLM API 사실 사본', () => {
       invalid_parameter_value: 400,
       missing_parameter: 400,
       invalid_json: 400,
+      preset_not_supported: 400,
       request_too_large: 400,
+      request_body_incomplete: 400,
+      large_request_busy: 429,
       input_too_long: 400,
       output_limit_exceeded: 400,
       unknown_endpoint: 404,
@@ -109,6 +114,31 @@ describe('LLM API 사실 사본', () => {
       request_deadline_exceeded: 200,
       upstream_stream_interrupted: 200,
     })
+  })
+
+  test('codes that arrive with two statuses carry the second one', () => {
+    // upstream_rejected keeps the upstream's 400 or 422; the response cap is
+    // 502 for a whole answer and an in-stream event (200) for a chat stream.
+    const also = Object.fromEntries(
+      LLM_ERROR_CODES.filter((e) => e.alsoStatus !== undefined).map((e) => [
+        e.code,
+        e.alsoStatus,
+      ]),
+    )
+    expect(also).toEqual({ upstream_rejected: 422, upstream_response_too_large: 200 })
+  })
+
+  test('request body bounds are the gateway values', () => {
+    expect(LLM_REQUEST_BODY_MIB).toEqual({ max: 25, largeAbove: 2 })
+  })
+
+  test('the OpenAI SDK image path is listed beside the vendor one', () => {
+    expect(LLM_PASSTHROUGH_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'POST /v1/images',
+      'POST /v1/images/generations',
+      'GET /v1/images/models',
+      'POST /v1/embeddings',
+    ])
   })
 
   test('내부에서만 쓰는 sentinel은 표에 실리지 않는다', () => {

@@ -13,6 +13,7 @@ import {
   LLM_ERROR_CODES,
   LLM_PAID_ONLY_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
+  LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from '../../lib/llm-api'
 import { GuideAction, GuideLink } from '../links'
@@ -218,7 +219,7 @@ export const llmArticles: GuideArticle[] = [
     title: '모델과 지원 기능',
     group: 'LLM API',
     summary: '모델 권한, 이미지와 임베딩, 지원 파라미터와 스트리밍 범위를 확인합니다.',
-    keywords: ['모델', '허용', '차단', '이미지', '임베딩', '스트리밍', '도구 호출', '파라미터'],
+    keywords: ['모델', '허용', '차단', '이미지', '임베딩', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기'],
     sections: [
       {
         id: 'models',
@@ -248,7 +249,8 @@ export const llmArticles: GuideArticle[] = [
             <THead><TR><TH>경로</TH><TH>기능</TH></TR></THead>
             <TBody>{LLM_PASSTHROUGH_ROUTES.map((route) => <TR key={`${route.method} ${route.path}`}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{route.method} {route.path}</code></TD><TD>{route.summary}</TD></TR>)}</TBody>
           </Table>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code>는 공급자가 정한 경로이며 OpenAI의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>와 다릅니다. 이미지 모델 목록을 조회한 뒤 사용할 모델이 요구하는 요청 본문으로 이미지 경로를 호출합니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>는 OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.generate</code>가 부르는 경로이고 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code>와 같은 요청을 처리합니다. 이미지 모델 목록을 조회한 뒤 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model</code>을 반드시 지정해 호출합니다.</p>
+          <p>이미지는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>으로만 돌아옵니다. 응답에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">url</code>이 아니라 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>을 읽습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>로 보낼 때 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>은 빼거나 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>으로 두고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">style</code>과 최상위 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">moderation</code>은 보내지 않습니다. 보내면 이유를 담은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>로 거절됩니다. OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.edit</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.create_variation</code>은 지원하지 않습니다.</p>
           <p>이미지와 임베딩 경로는 스트리밍을 지원하지 않습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code> 필드를 보내면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">streaming_not_supported</code>로 거절되므로 필드를 빼고 요청합니다.</p>
           <p>이미지 응답은 base64라 원본보다 커집니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_response_too_large</code>가 나오면 한 번에 만드는 개수(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">n</code>)나 요청한 크기를 줄입니다. 정상 응답의 이미지 데이터 또는 임베딩 결과를 받았는지 확인한 후 애플리케이션에 연결하세요.</p>
         </>,
@@ -260,6 +262,7 @@ export const llmArticles: GuideArticle[] = [
           <p>채팅 요청 본문에 넣을 수 있는 최상위 필드는 모델 종류에 따라 다릅니다.</p>
           <div className="space-y-2"><h3 className="font-medium">두 종류에 공통</h3><ul className="flex list-none flex-wrap gap-1.5 p-0">{LLM_SELF_SERVED_PARAMS.map((param) => <li key={param} className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-xs text-neutral-700">{param}</li>)}</ul></div>
           <div className="space-y-2"><h3 className="font-medium">유료 모델에만</h3><ul className="flex list-none flex-wrap gap-1.5 p-0">{LLM_PAID_ONLY_PARAMS.map((param) => <li key={param} className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-xs text-neutral-700">{param}</li>)}</ul></div>
+          <p>채팅 요청 본문은 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. {LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 요청은 동시에 처리하는 수가 정해져 있어, 몰리면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>(429)로 거절됩니다. base64로 넣는 파일과 이미지는 가능하면 URL로 보냅니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">reasoning_effort</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 자체 서빙 모델에 보내면 거절됩니다. 사용하는 도구가 필드를 자동으로 붙인다면 자체 서빙 모델을 호출할 때 해당 설정을 끕니다.</p>
           <Alert variant="info" title="자체 서빙 모델은 목록에 없는 필드를 거부합니다">
             모르는 필드를 무시하고 전달하지 않고 요청 전체를 HTTP 400으로 되돌립니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>이며 메시지에 해당 필드가 나옵니다. 유료 모델은 공급자가 받는 요청을 그대로 보내므로 위 목록이 거부의 기준이 아닙니다.
@@ -272,7 +275,7 @@ export const llmArticles: GuideArticle[] = [
         body: <>
           <p><GuideLink slug="llm/connect" anchor="first-call">첫 채팅 호출</GuideLink>이 성공한 뒤 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{'"stream": true'}</code>를 넣으면 응답을 조각으로 받습니다. 토큰 사용량도 받으려면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{'"stream_options": {"include_usage": true}'}</code>를 함께 보냅니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">tools</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">tool_choice</code>를 사용하는 도구 호출도 지원합니다. 스트리밍에서는 도구 호출 인자도 조각으로 도착하므로 클라이언트에서 합친 뒤 처리합니다.</p>
-          <p>응답이 시작됐다는 사실만으로 성공을 판단하지 마세요. HTTP 200으로 시작한 스트림도 중간에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">request_deadline_exceeded</code>나 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_stream_interrupted</code> 오류로 끝날 수 있습니다. 스트림의 종료와 오류 이벤트까지 확인합니다.</p>
+          <p>응답이 시작됐다는 사실만으로 성공을 판단하지 마세요. HTTP 200으로 시작한 스트림도 중간에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">request_deadline_exceeded</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_stream_interrupted</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_response_too_large</code> 오류로 끝날 수 있습니다. 스트림의 종료와 오류 이벤트까지 확인합니다.</p>
           <p>거절이나 중단이 반복되면 <GuideLink slug="llm/errors">오류 해결</GuideLink>을, 긴 대화에서만 실패하면 <GuideLink slug="llm/connect" anchor="opencode">컨텍스트 길이 설정</GuideLink>을 확인하세요.</p>
         </>,
       },
@@ -302,7 +305,7 @@ export const llmArticles: GuideArticle[] = [
         title: '한도에 걸렸을 때',
         body: <>
           <p>분당 요청 수, 분당 토큰 수와 동시 요청 수 한도는 자체 서빙 모델에만 적용됩니다. 이 한도를 넘긴 HTTP 429 응답에는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Retry-After</code> 헤더가 붙습니다. 이 시간이 지난 뒤 재시도하고, 동시에 보내는 작업 수나 한 요청의 길이를 줄입니다. 반복적으로 거절되면 키 이름과 오류 코드를 관리자에게 알려 주세요.</p>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Retry-After</code>가 붙는 응답은 위 세 한도와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_pending</code>(503)입니다. 일일 토큰 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">quota_exhausted</code>), 금액 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_exhausted</code>), 서버 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">server_busy</code>)에는 붙지 않습니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Retry-After</code>가 붙는 응답은 위 세 한도와 큰 요청 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>, 429), <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_pending</code>(503)입니다. 일일 토큰 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">quota_exhausted</code>), 금액 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_exhausted</code>), 서버 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">server_busy</code>)에는 붙지 않습니다.</p>
           <p>일일 토큰을 소진했다면 KST 자정까지 기다리거나 필요한 사용량을 설명해 관리자에게 한도 조정을 문의합니다. 금액은 부여된 초기화 주기를 확인하고, 총액을 소진했다면 관리자에게 문의합니다. 서버 혼잡은 잠시 기다린 뒤 재시도하며 반복 간격을 늘립니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-RateLimit-Limit-Requests</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-RateLimit-Remaining-Requests</code> 헤더는 <strong>한도를 통과한 자체 서빙 모델 응답에만</strong> 포함됩니다. 유료 모델에는 이 세 한도가 적용되지 않아 이 헤더가 오지 않고, 한도에 걸린 429 응답에도 오지 않습니다.</p>
         </>,
@@ -422,7 +425,7 @@ export const llmArticles: GuideArticle[] = [
     title: 'LLM API 오류 해결',
     group: 'LLM API',
     summary: '인증, 모델 권한, 한도와 요청 형식을 구분해 실패 원인을 찾습니다.',
-    keywords: ['오류', '에러', '401', '403', '404', '429', '503', 'error.code', '문의', 'X-Request-Id'],
+    keywords: ['오류', '에러', '401', '403', '404', '422', '429', '503', 'error.code', '문의', 'X-Request-Id'],
     sections: [
       {
         id: 'diagnose',
@@ -455,7 +458,8 @@ export const llmArticles: GuideArticle[] = [
         title: '요청 형식과 재시도',
         body: <>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>는 <GuideLink slug="llm/features" anchor="parameters">지원 파라미터</GuideLink>를 확인하고 메시지에 나온 필드를 제거합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">invalid_json</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">missing_parameter</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">invalid_parameter_value</code>는 요청 JSON과 필수 필드 및 값을 확인합니다.</p>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">request_too_large</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_too_long</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">output_limit_exceeded</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_rejected</code>는 입력 길이, 누적 대화, 출력 설정을 확인합니다. 이미지 경로의 응답 크기 오류는 생성 수나 크기를 줄입니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">request_too_large</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_too_long</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">output_limit_exceeded</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_rejected</code>는 입력 길이, 누적 대화, 출력 설정을 확인합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_rejected</code>는 HTTP 400이나 422로 오고, 모델 서버가 보낸 이유가 있으면 메시지의 「모델 서버 메시지:」 뒤에 붙습니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_response_too_large</code>는 채팅이면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code>으로 받거나 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">max_tokens</code>를 줄이고, 이미지면 생성 수나 크기를 줄입니다. 채팅의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">request_body_incomplete</code>는 업로드가 도중에 끊긴 것이므로 같은 요청을 다시 보냅니다.</p>
           <p>429나 금액 관련 오류는 <GuideLink slug="llm/limits" anchor="retry">한도에 걸렸을 때</GuideLink>의 재시도 기준을 따릅니다. 점검이나 서버 오류는 <GuideAction action="notices">공지사항</GuideAction>을 확인하고 잠시 후 다시 시도합니다.</p>
           <p>스트리밍 요청은 HTTP 200이어도 도중 오류가 있을 수 있습니다. 끝까지 받은 뒤 완료 여부를 판단하고, 실패 시 일부만 받은 답변을 완성된 결과로 저장하지 않습니다.</p>
         </>,
@@ -466,7 +470,7 @@ export const llmArticles: GuideArticle[] = [
         body: <>
           <Table>
             <THead><TR><TH>code</TH><TH>HTTP</TH><TH>뜻</TH></TR></THead>
-            <TBody>{LLM_ERROR_CODES.map((entry) => <TR key={entry.code}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{entry.code}</code></TD><TD>{entry.status}</TD><TD>{entry.meaning}</TD></TR>)}</TBody>
+            <TBody>{LLM_ERROR_CODES.map((entry) => <TR key={entry.code}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{entry.code}</code></TD><TD>{entry.alsoStatus === undefined ? entry.status : `${entry.status}, ${entry.alsoStatus}`}</TD><TD>{entry.meaning}</TD></TR>)}</TBody>
           </Table>
         </>,
       },
