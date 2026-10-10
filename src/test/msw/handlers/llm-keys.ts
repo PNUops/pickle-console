@@ -925,6 +925,24 @@ const PAID_ROWS = [
     promptPricePerMillion: 3,
     completionPricePerMillion: 15,
     contextLength: 200000,
+    pricing: {
+      axes: [
+        { axis: 'prompt', unit: 'PER_MILLION_TOKENS' as const, price: 3 },
+        { axis: 'completion', unit: 'PER_MILLION_TOKENS' as const, price: 15 },
+        { axis: 'input_cache_read', unit: 'PER_MILLION_TOKENS' as const, price: 0.3 },
+        { axis: 'input_cache_write', unit: 'PER_MILLION_TOKENS' as const, price: 3.75 },
+      ],
+      tiers: [
+        {
+          minPromptTokens: null,
+          utcDays: ['saturday', 'sunday'],
+          utcStartMinute: 960,
+          utcEndMinute: 1440,
+          otherConditions: [],
+          axes: [{ axis: 'prompt', unit: 'PER_MILLION_TOKENS' as const, price: 1.5 }],
+        },
+      ],
+    },
   },
 ]
 

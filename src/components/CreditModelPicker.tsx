@@ -7,6 +7,8 @@ import {
   matchesDeniedCreditModel,
   suggestCreditModelPatterns,
 } from '../lib/credit-model-match'
+import { hasPriceDetail, priceDetailSummary } from '../lib/model-pricing'
+import { ModelPriceDetail } from './ModelPriceDetail'
 
 /** 한 번에 그리는 최대 개수. 벤더 목록이 400을 넘으므로 전부 그리지는 않는다. */
 const LIMIT = 40
@@ -161,6 +163,7 @@ export function CreditModelPicker({
 }) {
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [pricesOpen, setPricesOpen] = useState<string | null>(null)
 
   const { shown, matched } = useMemo(() => {
     const models: OpenRouterCatalogueModel[] = catalogue?.models ?? []
@@ -207,48 +210,66 @@ export function CreditModelPicker({
           aria-label="카탈로그 유료 모델"
           className="max-h-56 divide-y divide-neutral-200 overflow-y-auto rounded border border-neutral-200"
         >
-          {shown.map((model) => (
-            <li key={model.id}>
-              <div className="flex items-center justify-between gap-2 px-2 py-1">
-                <span className="min-w-0">
-                  <span className="block truncate text-sm">{model.id}</span>
-                  <span className="block truncate text-xs text-neutral-500">
-                    출력 {priceText(model.completionPricePerMillion)} / 1M
-                    {', 입력 '}
-                    {priceText(model.promptPricePerMillion)} / 1M
-                    {isAlias(model.id) ? ', 최신 모델을 따라가는 별칭' : ''}
+          {shown.map((model) => {
+            const detail = priceDetailSummary(model.pricing)
+            return (
+              <li key={model.id}>
+                <div className="flex items-center justify-between gap-2 px-2 py-1">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm">{model.id}</span>
+                    <span className="block truncate text-xs text-neutral-500">
+                      출력 {priceText(model.completionPricePerMillion)} / 1M
+                      {', 입력 '}
+                      {priceText(model.promptPricePerMillion)} / 1M
+                      {detail ? `, ${detail}` : ''}
+                      {isAlias(model.id) ? ', 최신 모델을 따라가는 별칭' : ''}
+                    </span>
                   </span>
-                </span>
-                <span className="flex shrink-0 items-center gap-1">
-                  <AddButtons
-                    value={model.id}
-                    label={model.id}
+                  <span className="flex shrink-0 items-center gap-1">
+                    <AddButtons
+                      value={model.id}
+                      label={model.id}
+                      allowed={allowed}
+                      denied={denied}
+                      onAdd={onAdd}
+                    />
+                    <button
+                      type="button"
+                      aria-expanded={expanded === model.id}
+                      aria-label={`${model.id} 패턴 제안`}
+                      onClick={() => setExpanded(expanded === model.id ? null : model.id)}
+                      className="rounded border border-neutral-300 px-2 py-0.5 text-xs"
+                    >
+                      패턴
+                    </button>
+                    {hasPriceDetail(model.pricing) ? (
+                      <button
+                        type="button"
+                        aria-expanded={pricesOpen === model.id}
+                        aria-label={`${model.id} 가격 상세`}
+                        onClick={() => setPricesOpen(pricesOpen === model.id ? null : model.id)}
+                        className="rounded border border-neutral-300 px-2 py-0.5 text-xs"
+                      >
+                        가격
+                      </button>
+                    ) : null}
+                  </span>
+                </div>
+                {pricesOpen === model.id && model.pricing ? (
+                  <ModelPriceDetail modelId={model.id} pricing={model.pricing} />
+                ) : null}
+                {expanded === model.id ? (
+                  <PatternSuggestions
+                    model={model}
+                    models={models}
                     allowed={allowed}
                     denied={denied}
                     onAdd={onAdd}
                   />
-                  <button
-                    type="button"
-                    aria-expanded={expanded === model.id}
-                    aria-label={`${model.id} 패턴 제안`}
-                    onClick={() => setExpanded(expanded === model.id ? null : model.id)}
-                    className="rounded border border-neutral-300 px-2 py-0.5 text-xs"
-                  >
-                    패턴
-                  </button>
-                </span>
-              </div>
-              {expanded === model.id ? (
-                <PatternSuggestions
-                  model={model}
-                  models={models}
-                  allowed={allowed}
-                  denied={denied}
-                  onAdd={onAdd}
-                />
-              ) : null}
-            </li>
-          ))}
+                ) : null}
+              </li>
+            )
+          })}
           {shown.length === 0 ? (
             <li className="px-2 py-1 text-sm text-neutral-500">검색 결과가 없습니다.</li>
           ) : null}
