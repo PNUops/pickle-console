@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminRequests,
+  fetchAdminWorkspace,
   type RequestStatus,
 } from '../api/queries'
 import {
@@ -52,7 +53,8 @@ export function AdminRequestsPage() {
   const { user } = useAuth()
   const [searchParams, change, normalize] = useListUrl()
   const state = requestListState(searchParams)
-  const { status, type, page } = state
+  const { status, type, page, workspaceId } = state
+  const workspace = useQuery({ queryKey: ['admin', 'workspaces', 'detail', workspaceId], queryFn: () => fetchAdminWorkspace(workspaceId!), enabled: workspaceId != null })
   const canonical = requestListParams(state, activeOrgId).toString()
   useEffect(() => {
     normalize(canonical)
@@ -63,9 +65,9 @@ export function AdminRequestsPage() {
     queryKey: [
       'admin',
       'requests',
-      { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, page, size: PAGE_SIZE },
+      { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page, size: PAGE_SIZE },
     ],
-    queryFn: () => fetchAdminRequests({ status, type, orgId: activeOrgId, page, size: PAGE_SIZE }),
+    queryFn: () => fetchAdminRequests({ status, type, workspaceId, orgId: activeOrgId, page, size: PAGE_SIZE }),
     // 승인 큐를 띄워둔 관리자가 새 신청을 놓치지 않게 알림 벨과 같은 주기로 갱신.
     refetchInterval: 30_000,
   })
@@ -129,6 +131,10 @@ export function AdminRequestsPage() {
         </Select>
       </div>
       <p className="text-sm text-foreground-muted">최신 신청순</p>
+      {workspaceId && <p className="text-sm text-neutral-600">
+        워크스페이스: <Link className="text-primary-700 hover:underline" to={adminPaths.workspaceDetail(workspaceId, activeOrgId)}>{workspace.data?.name ?? workspaceId}</Link>{' '}
+        <button type="button" className="text-primary-700 hover:underline" onClick={() => change({ workspaceId: undefined }, true)}>워크스페이스 필터 해제</button>
+      </p>}
 
       {requests.isPending && (
         <div className="flex justify-center py-12">

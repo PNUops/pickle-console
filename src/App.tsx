@@ -27,6 +27,7 @@ import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminNewRequestPage } from './pages/AdminNewRequestPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
+import { AdminUserSupportPage } from './pages/AdminUserSupportPage'
 import { AdminWorkspacesPage } from './pages/AdminWorkspacesPage'
 import { AdminOsImagesPage } from './pages/AdminOsImagesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
@@ -279,6 +280,7 @@ function App() {
         <Route path="llm/status" element={<AdminLlmStatusPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:userId" element={<AdminUserSupportPage />} />
         <Route path="org-operations" element={<AdminOrgOperationsPage />} />
         <Route path="workspaces" element={<AdminWorkspacesPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />

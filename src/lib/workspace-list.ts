@@ -20,7 +20,8 @@ export function workspaceListState(params: URLSearchParams) {
     sort: WORKSPACE_SORTS.find((option) => option.value === params.get('sort'))?.value ?? 'name-asc',
     page: listPage(params.get('page')),
     selectedId: rawId && isUuid(rawId) ? rawId.toLowerCase() : rawId,
-    tab: params.get('tab') === 'members' ? 'members' : 'overview',
+    tab: ['members', 'invitations', 'resources'].includes(params.get('tab') ?? '') ? params.get('tab')! : 'overview',
+    inspect: params.get('inspect') === '1',
   }
 }
 
@@ -36,7 +37,8 @@ export function workspaceListParams(
   if (state.page > 0) params.set('page', String(state.page))
   if (state.selectedId != null) {
     params.set('workspaceId', state.selectedId)
-    if (state.tab === 'members') params.set('tab', state.tab)
+    if (state.tab !== 'overview') params.set('tab', state.tab)
+    if (state.inspect) params.set('inspect', '1')
   }
   return params
 }

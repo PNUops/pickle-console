@@ -680,6 +680,7 @@ export const adminHandlers: RequestHandler[] = [
     const status = url.searchParams.get('status')
     const type = url.searchParams.get('type')
     const orgId = url.searchParams.get('orgId')
+    const workspaceId = url.searchParams.get('workspaceId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다 (밖은 404 마스킹).
@@ -690,6 +691,7 @@ export const adminHandlers: RequestHandler[] = [
       .filter((r) => (scope ? scope.matches(r.orgId) : !orgId || r.orgId === orgId))
       .filter((r) => !status || r.status === status)
       .filter((r) => !type || r.type === type)
+      .filter((r) => !workspaceId || r.workspaceId === workspaceId)
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),

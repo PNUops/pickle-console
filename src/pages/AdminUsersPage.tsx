@@ -1,5 +1,5 @@
-import { useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useLocation } from 'react-router'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   disableUser,
@@ -24,6 +24,8 @@ import {
   type UserStatus,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
+import { previewUserProfileImpact, type ProfileImpact, type AdminProfileUpdate } from '../api/admin-user-support'
+import { ProfileImpactView, UserChangeOutcome } from '../components/UserSupport'
 import { OTHER_DEPARTMENT } from '../components/profile/profile-values'
 import type { components } from '../api/schema'
 import { useAuth, type ManagedOrg } from '../auth/auth-context'
@@ -60,7 +62,9 @@ import { useDebouncedValue } from '../lib/use-debounced-value'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { adminPaths } from '../lib/paths'
 import { useListUrl } from '../lib/use-list-url'
-import { isUuid } from '../lib/validation'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { userListParams, userListState } from '../lib/user-list'
+import { withListReturn } from '../lib/list-url'
 import { useActiveResult } from '../lib/use-active-result'
 
 type SortKey = 'name' | 'email' | 'createdAt'
@@ -112,16 +116,31 @@ export function AdminUsersPage() {
   // filter. Account disable, enable and MFA reset stay SYS_ADMIN-only.
   const isSystemTier = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
-  const [status, setStatus] = useState<UserStatus | undefined>(undefined)
-  const [role, setRole] = useState<UserRole | undefined>(undefined)
-  const [filterOrgId, setFilterOrgId] = useState<string | undefined>(undefined)
-  const [qInput, setQInput] = useState('')
-  const [sort, setSort] = useState<AdminUserSort | undefined>(undefined)
-  const [page, setPage] = useState(0)
-  const [urlParams, changeUrl] = useListUrl()
-  const rawSelectedId = urlParams.get('selected')
-  const selectedId = rawSelectedId && isUuid(rawSelectedId) ? rawSelectedId.toLowerCase() : null
+  const { activeOrgId } = useAdminScope()
+  const location = useLocation()
+  const [urlParams, changeUrl, normalize] = useListUrl()
+  const state = userListState(urlParams)
+  const { status, role, filterOrgId, sort, page, selectedId } = state
+  const qInput = state.q
+  const setStatus = (value: UserStatus | undefined) => changeUrl({ status: value, selected: undefined }, true)
+  const setRole = (value: UserRole | undefined) => changeUrl({ role: value, selected: undefined }, true)
+  const setFilterOrgId = (value: string | undefined) => changeUrl({ filterOrg: value, selected: undefined }, true)
+  const setQInput = (value: string) => changeUrl({ q: value, selected: undefined }, true, true)
+  const setSort = (value: AdminUserSort | undefined) => changeUrl({ sort: value, selected: undefined }, true)
+  const setPage = (value: number) => changeUrl({ page: value })
   const setSelectedId = (id: string | null) => changeUrl({ selected: id ?? undefined })
+  const searchRef = useRef<HTMLInputElement>(null)
+  const close = () => {
+    changeUrl({ selected: undefined }, false, true)
+    requestAnimationFrame(() => {
+      const trigger = selectedId && isUuid(selectedId)
+        ? document.querySelector<HTMLButtonElement>(`[data-user-id="${selectedId}"]`)
+        : null
+      ;(trigger ?? searchRef.current)?.focus()
+    })
+  }
+  const canonical = userListParams(state, activeOrgId).toString()
+  useEffect(() => { normalize(canonical) }, [canonical, normalize])
 
   const debouncedQ = useDebouncedValue(qInput).trim()
   const q = debouncedQ.length > 0 ? debouncedQ : undefined
@@ -153,6 +172,11 @@ export function AdminUsersPage() {
     queryFn: () =>
       fetchAdminUsers({ status, role, orgId: filterOrgId, q, sort, page, size: PAGE_SIZE }),
   })
+  useEffect(() => {
+    if (!users.isSuccess) return
+    const lastPage = Math.max(0, users.data.totalPages - 1)
+    if (page > lastPage) normalize(userListParams({ ...state, page: lastPage }, activeOrgId).toString())
+  }, [users.data, users.isSuccess, page, state, activeOrgId, normalize])
 
   const sortDirection = (key: SortKey) =>
     sort === key ? ('asc' as const) : sort === `-${key}` ? ('desc' as const) : null
@@ -188,7 +212,9 @@ export function AdminUsersPage() {
         orgs={orgOptions}
       >
         <Input
+          ref={searchRef}
           type="search"
+          maxLength={200}
           aria-label="사용자 검색"
           placeholder="이메일/이름 검색"
           className="w-52"
@@ -266,6 +292,7 @@ export function AdminUsersPage() {
                     <TD>
                       <button
                         type="button"
+                        data-user-id={row.id}
                         onClick={(event) => {
                           event.stopPropagation()
                           setSelectedId(row.id)
@@ -295,11 +322,13 @@ export function AdminUsersPage() {
 
       <Drawer
         open={selectedId !== null}
-        onClose={() => setSelectedId(null)}
+        onClose={close}
         title="사용자 상세"
       >
         {selectedId !== null && (
-          <UserDetailBody key={selectedId} userId={selectedId} canManage={canManageAccounts} />
+          !isUuid(selectedId) ? <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+            : <UserDetailBody key={selectedId} userId={selectedId} canManage={canManageAccounts}
+                supportPath={withListReturn(adminPaths.userSupport(selectedId, activeOrgId), `${location.pathname}${location.search}`)} />
         )}
       </Drawer>
     </div>
@@ -308,7 +337,8 @@ export function AdminUsersPage() {
 
 /* ─── 상세 드로어 본문 (행 선택 시) ─── */
 
-function UserDetailBody({ userId, canManage }: { userId: string; canManage: boolean }) {
+export function UserDetailBody({ userId, canManage, supportPath, children }: { userId: string; canManage: boolean; supportPath?: string; children?: ReactNode }) {
+  const [changeResult, setChangeResult] = useState<{ impact: ProfileImpact; status: UserStatus } | null>(null)
   const { activeOrgId } = useAdminScope()
   const detail = useQuery({
     queryKey: ['admin', 'users', 'detail', userId],
@@ -328,9 +358,9 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
 
   const user = detail.data
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900">{user.name}</h3>
+    <div className="space-y-6 [overflow-wrap:anywhere]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="min-w-0 text-lg font-semibold text-neutral-900">{user.name}</h3>
         <UserStatusBadge status={user.status} />
       </div>
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
@@ -342,9 +372,12 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
         {user.disabledReason && <Field label="비활성화 사유" value={user.disabledReason} />}
       </dl>
 
-      <UserProfileSection user={user} canManage={canManage} />
+      {supportPath && <Link to={supportPath} className="inline-flex text-sm font-medium text-primary-700 hover:underline">관계와 지원 상세 열기</Link>}
+      {canManage && changeResult && <UserChangeOutcome key={`${changeResult.impact.observedAt}-${changeResult.impact.action}`} impact={changeResult.impact} actualStatus={changeResult.status} />}
+      {children}
+      <UserProfileSection user={user} canManage={canManage} onChanged={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
 
-      <section className="space-y-2">
+      {!children && <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">워크스페이스 멤버십</h3>
         {user.memberships.length === 0 ? (
           <p className="text-sm text-neutral-500">소속된 워크스페이스가 없습니다.</p>
@@ -373,7 +406,7 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
             ))}
           </ul>
         )}
-      </section>
+      </section>}
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">상태 변경 이력</h3>
@@ -402,7 +435,7 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
       <UserPermissionsSection user={user} canManageGlobal={canManage} />
 
       {canManage && (
-        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} />
+        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} onEnabled={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
       )}
     </div>
   )
@@ -426,11 +459,14 @@ function UserDetailBody({ userId, canManage }: { userId: string; canManage: bool
 function UserProfileSection({
   user,
   canManage,
+  onChanged,
 }: {
   user: UserAdminDetail
   canManage: boolean
+  onChanged: (updated: UserAdminDetail, impact: ProfileImpact) => void
 }) {
   const queryClient = useQueryClient()
+  const active = useActiveResult()
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const viewer = useAuth().user
@@ -477,9 +513,11 @@ function UserProfileSection({
         <UserProfileCorrectionModal
           user={user}
           onClose={() => setOpen(false)}
-          onSaved={async (updated) => {
-            toast.success(`${updated.name}님의 프로필을 정정했습니다.`)
+          onSaved={async (updated, impact) => {
+            if (active.current) onChanged(updated, impact)
             await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+            if (!active.current) return
+            toast.success(`${updated.name}님의 프로필을 정정했습니다. 관계와 신청 결과를 갱신했습니다.`)
             setOpen(false)
           }}
         />
@@ -507,7 +545,7 @@ function UserProfileCorrectionModal({
 }: {
   user: UserAdminDetail
   onClose: () => void
-  onSaved: (updated: UserAdminDetail) => Promise<void> | void
+  onSaved: (updated: UserAdminDetail, impact: ProfileImpact) => Promise<void> | void
 }) {
   const [position, setPosition] = useState(user.position ?? '')
   const [studentNo, setStudentNo] = useState(user.studentNo ?? '')
@@ -537,21 +575,29 @@ function UserProfileCorrectionModal({
     (departmentCode || null) === (user.departmentCode ?? null) &&
     (departmentOther.trim() || null) === (user.departmentOther ?? null)
 
+  const profile = {
+    position: (position || null) as components['schemas']['UserPosition'] | null,
+    studentNo: studentNo.trim() || null,
+    departmentCode: departmentCode || null,
+    departmentOther: departmentOther.trim() || null,
+    reason: reason.trim() || null,
+  }
+  const profileText = JSON.stringify(profile)
+  const debouncedProfile = useDebouncedValue(profileText)
+  const impact = useQuery({
+    queryKey: ['admin', 'users', 'profile-impact', user.id, debouncedProfile],
+    queryFn: () => previewUserProfileImpact(user.id, 'PROFILE', JSON.parse(debouncedProfile)),
+    enabled: !unchanged && !departmentIncomplete,
+  })
+  const impactReady = impact.isSuccess && !impact.isFetching && profileText === debouncedProfile
+  const impactFields = impact.isError ? fieldErrorsOf(toApiError(impact.error, '프로필 변경 영향을 확인하지 못했습니다.').problem) : {}
+
   const save = useMutation({
-    mutationFn: () =>
-      updateUserProfile(user.id, {
-        // 빈 문자열은 null 로 보낸다. 관리자 경로에서 비우기는 허용되고, 애초에
-        // 들어가면 안 됐던 값은 교체가 아니라 제거가 필요하다.
-        position: (position || null) as components['schemas']['UserPosition'] | null,
-        studentNo: studentNo.trim() || null,
-        departmentCode: departmentCode || null,
-        departmentOther: departmentOther.trim() || null,
-        reason: reason.trim() || null,
-      }),
-    onSuccess: async (updated) => {
+    mutationFn: (submitted: { profile: AdminProfileUpdate; impact: ProfileImpact }) => updateUserProfile(user.id, submitted.profile),
+    onSuccess: async (updated, submitted) => {
       setError(null)
       setFieldErrors({})
-      await onSaved(updated)
+      await onSaved(updated, submitted.impact)
     },
     onError: (err) => {
       const apiError = toApiError(err, '프로필을 정정하지 못했습니다.')
@@ -562,7 +608,7 @@ function UserProfileCorrectionModal({
   })
 
   return (
-    <Modal open onClose={onClose} title="프로필 정정">
+    <Modal open onClose={() => { if (!save.isPending) onClose() }} title="프로필 정정">
       <form
           onSubmit={(event) => {
           event.preventDefault()
@@ -571,16 +617,17 @@ function UserProfileCorrectionModal({
             onClose()
             return
           }
-          save.mutate()
+          if (impactReady) save.mutate({ profile, impact: impact.data })
         }}
         className="space-y-4"
         noValidate
       >
+        <fieldset disabled={save.isPending} className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <p className="text-sm text-neutral-600">
           문의로 접수된 내용을 확인한 뒤 정정해 주세요. 변경 사실은 본인에게 알림으로 갑니다.
         </p>
-        <FormField label="직책" error={fieldErrors.position}>
+        <FormField label="직책" error={fieldErrors.position ?? impactFields.position}>
           <Select value={position} onChange={(event) => setPosition(event.target.value)}>
             <option value="">비움</option>
             {options.data?.positions.map((item) => (
@@ -590,7 +637,7 @@ function UserProfileCorrectionModal({
             ))}
           </Select>
         </FormField>
-        <FormField label="학번" error={fieldErrors.studentNo}>
+        <FormField label="학번" error={fieldErrors.studentNo ?? impactFields.studentNo}>
           <Input
             value={studentNo}
             maxLength={20}
@@ -598,7 +645,7 @@ function UserProfileCorrectionModal({
             onChange={(event) => setStudentNo(event.target.value)}
           />
         </FormField>
-        <FormField label="소속 학과 코드" error={fieldErrors.departmentCode}>
+        <FormField label="소속 학과 코드" error={fieldErrors.departmentCode ?? impactFields.departmentCode}>
           <Select
             value={departmentCode}
             onChange={(event) => setDepartmentCode(event.target.value)}
@@ -611,7 +658,7 @@ function UserProfileCorrectionModal({
             ))}
           </Select>
         </FormField>
-        <FormField label="소속 직접 입력" error={fieldErrors.departmentOther}>
+        <FormField label="소속 직접 입력" error={fieldErrors.departmentOther ?? impactFields.departmentOther}>
           <Input
             value={departmentOther}
             maxLength={100}
@@ -629,7 +676,7 @@ function UserProfileCorrectionModal({
           감사 기록은 학번을 값이 아니라 있음/없음으로만 남긴다. 사유에 값을 적으면
           그 보장이 습관 하나로 깨진다.
         */}
-        <FormField label="사유" error={fieldErrors.reason}>
+        <FormField label="사유" error={fieldErrors.reason ?? impactFields.reason}>
           <Input
             value={reason}
             maxLength={200}
@@ -641,14 +688,18 @@ function UserProfileCorrectionModal({
             감사 기록에 남습니다. 학번이나 그 밖의 값 자체는 적지 마세요.
           </p>
         </FormField>
+        {!unchanged && impact.isFetching && <Spinner label="프로필 변경 영향 확인 중" />}
+        {!unchanged && impact.isError && Object.keys(impactFields).length === 0 && <Alert variant="danger">{impact.error.message}<Button variant="secondary" size="sm" onClick={() => void impact.refetch()}>변경 영향 다시 조회</Button></Alert>}
+        {!unchanged && impactReady && <ProfileImpactView impact={impact.data} />}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" loading={save.isPending} disabled={departmentIncomplete}>
+          <Button type="submit" loading={save.isPending} disabled={departmentIncomplete || (!unchanged && !impactReady)}>
             저장
           </Button>
         </div>
+        </fieldset>
       </form>
     </Modal>
   )
@@ -1041,18 +1092,28 @@ function UserStatusActions({
   userId,
   status,
   mfaEnabled,
+  onEnabled,
 }: {
   userId: string
   status: UserStatus
   mfaEnabled: boolean
+  onEnabled: (updated: UserAdminDetail, impact: ProfileImpact) => void
 }) {
   const queryClient = useQueryClient()
+  const active = useActiveResult()
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [mfaResetOpen, setMfaResetOpen] = useState(false)
+  const [enableOpen, setEnableOpen] = useState(false)
+  const enableImpact = useQuery({
+    queryKey: ['admin', 'users', 'enable-impact', userId, status],
+    queryFn: () => previewUserProfileImpact(userId, 'ENABLE'),
+    enabled: enableOpen && status === 'DISABLED',
+    staleTime: 0,
+  })
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
@@ -1061,10 +1122,11 @@ function UserStatusActions({
   const mfaReset = useMutation({
     mutationFn: () => resetUserMfa(userId),
     onSuccess: async (data) => {
+      await invalidate()
+      if (!active.current) return
       setMfaResetOpen(false)
       setError(null)
       toast.success(data.message)
-      await invalidate()
     },
     onError: (err) => {
       setMfaResetOpen(false)
@@ -1075,11 +1137,12 @@ function UserStatusActions({
   const disable = useMutation({
     mutationFn: () => disableUser(userId, reason.trim()),
     onSuccess: async () => {
+      await invalidate()
+      if (!active.current) return
       setOpen(false)
       setReason('')
       setError(null)
       setFieldErrors({})
-      await invalidate()
     },
     onError: (err) => {
       const apiError = toApiError(err, '사용자를 비활성화하지 못했습니다.')
@@ -1090,8 +1153,8 @@ function UserStatusActions({
   })
 
   const enable = useMutation({
-    mutationFn: () => enableUser(userId),
-    onSuccess: invalidate,
+    mutationFn: (_impact: ProfileImpact) => enableUser(userId),
+    onSuccess: async (updated, submittedImpact) => { if (active.current) onEnabled(updated, submittedImpact); await invalidate(); if (active.current) { setEnableOpen(false); toast.success('재활성화 결과와 연결된 신청 상태를 갱신했습니다.') } },
     onError: (err) => setError(toApiError(err, '사용자를 활성화하지 못했습니다.').message),
   })
 
@@ -1109,11 +1172,12 @@ function UserStatusActions({
         <>
           <p className="text-sm text-neutral-500">
             비활성화 직전 상태로 복원합니다. 미인증 상태였던 계정은 다시 인증 대기로 돌아갑니다.
+            별도로 회수한 기관 역할과 자원 권한은 재활성화해도 복원되지 않습니다.
           </p>
           <Button
             variant="secondary"
             loading={enable.isPending}
-            onClick={() => enable.mutate()}
+            onClick={() => setEnableOpen(true)}
           >
             비활성화 해제
           </Button>
@@ -1121,13 +1185,22 @@ function UserStatusActions({
       ) : (
         <>
           <p className="text-sm text-neutral-500">
-            워크스페이스·VM은 유지되며 해제 시 원상 복귀됩니다.
+            워크스페이스와 자원, 구성원과 기관 역할, 자원에 부여된 권한은 유지됩니다.
+            필요한 권한 회수는 별도로 처리합니다.
           </p>
           <Button variant="danger" onClick={() => setOpen(true)}>
             계정 비활성화
           </Button>
         </>
       )}
+
+      <Modal open={enableOpen} onClose={() => { if (!enable.isPending) setEnableOpen(false) }} title="계정 재활성화 영향 확인"
+        footer={<><Button variant="secondary" disabled={enable.isPending} onClick={() => setEnableOpen(false)}>취소</Button>
+          <Button loading={enable.isPending} disabled={!enableImpact.isSuccess || enableImpact.isFetching} onClick={() => { if (enableImpact.data) enable.mutate(enableImpact.data) }}>영향 확인 후 재활성화</Button></>}>
+        {enableImpact.isPending || enableImpact.isFetching ? <Spinner label="재활성화 영향 확인 중" />
+          : enableImpact.isError ? <Alert variant="danger">{enableImpact.error.message}<Button variant="secondary" size="sm" onClick={() => void enableImpact.refetch()}>변경 영향 다시 조회</Button></Alert>
+            : <ProfileImpactView impact={enableImpact.data} />}
+      </Modal>
 
       <Modal
         open={open}

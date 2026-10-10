@@ -1868,6 +1868,66 @@ export interface paths {
         patch: operations["updateUserProfile"];
         trace?: never;
     };
+    "/admin/users/{userId}/profile-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 프로필 정정과 계정 활성화의 초대 영향 미리보기
+         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
+         */
+        post: operations["previewAdminUserProfileImpact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 사용자의 관계와 실제 신청 결과 조회
+         * @description 구성원 관계는 사용자 상세의 조회 범위를 따릅니다. 리소스와 신청 결과는 조회 가능한 기관으로 제한하며 초대는 승인 권한자에게만 보입니다. 저장된 학번으로 대기 초대를 계정과 연결하는 조회는 시스템 관리자에게만 허용됩니다. 생성 대기와 리소스의 실제 상태를 구분합니다.
+         */
+        get: operations["getAdminUserSupport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/support/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 사용자와 리소스의 공통 접근 조건 조회
+         * @description 관리자가 조회할 수 있는 기관의 지정 리소스에 대해 구성원과 부여, 계정 및 리소스 상태를 설명합니다. 실제 사용자 인가와 연결 상태는 변경하지 않으며 종류별 작업 성공을 보장하지 않습니다.
+         */
+        get: operations["getAdminUserResourceAccess"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/vm-flavors": {
         parameters: {
             query?: never;
@@ -4032,7 +4092,7 @@ export interface components {
         /** @enum {string} */
         AdminBulkAccessAction: "GRANT" | "CHANGE" | "REVOKE";
         AdminBulkAccessChange: {
-            /** @description GRANT는 없는 권한을 만들고, CHANGE는 있는 권한의 등급을 바꾸며, REVOKE는 권한을 지웁니다. */
+            /** @description GRANT는 없는 권한을 만들고, CHANGE는 있는 권한의 등급을 바꿉니다. 둘은 활성 구성원에게만 허용됩니다. REVOKE는 기존 개인 권한을 지우며 비활성 계정과 구성원 해제 후에도 가능합니다. 회수할 개인 권한이 없으면 NO_GRANT로 거부합니다. 워크스페이스 전체 부여는 그대로 둡니다. */
             action: components["schemas"]["AdminBulkAccessAction"];
             /** @description 부여하거나 바꿀 등급. GRANT와 CHANGE에서 필수입니다. */
             role?: components["schemas"]["ResourceRole"] | null;
@@ -4848,6 +4908,141 @@ export interface components {
             position?: components["schemas"]["UserPosition"] | null;
             reason?: string | null;
             studentNo?: string | null;
+        };
+        /** @enum {string} */
+        AdminUserProfileImpactAction: "PROFILE" | "ENABLE";
+        AdminUserProfileImpactRequest: {
+            action: components["schemas"]["AdminUserProfileImpactAction"];
+            profile?: components["schemas"]["AdminUpdateProfileRequest"] | null;
+        };
+        AdminUserProfileImpactResponse: {
+            action: components["schemas"]["AdminUserProfileImpactAction"];
+            candidateStatus: components["schemas"]["UserStatus"];
+            claimsPossible: boolean;
+            invitations: components["schemas"]["AdminUserProfileInvitationImpact"][];
+            /** Format: date-time */
+            observedAt: string;
+            studentNoWillChange: boolean;
+            /** Format: uuid */
+            userId: string;
+        };
+        AdminUserProfileInvitationImpact: {
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            alreadyMember: boolean;
+            /** Format: uuid */
+            id: string;
+            matchedBy: string;
+            recipients: components["schemas"]["AdminUserProfileRecipientImpact"][];
+            role: components["schemas"]["WorkspaceMemberRole"];
+            status: components["schemas"]["WorkspaceInvitationStatus"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
+        AdminUserProfileRecipientImpact: {
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: uuid */
+            orgId: string;
+            projectedStatus: components["schemas"]["RequestRecipientStatus"];
+            /** Format: uuid */
+            requestId: string;
+            requestStatus: components["schemas"]["RequestStatus"];
+            status: components["schemas"]["RequestRecipientStatus"];
+            type: components["schemas"]["ResourceType"];
+        };
+        AdminUserResourceAccessResponse: {
+            /** @description 활성 계정, 소유 워크스페이스 구성원과 리소스 부여의 공통 조건만 충족했는지. 종류별 작업이나 실제 연결 성공을 보장하지 않습니다. */
+            baseConditionsSatisfied: boolean;
+            /** @description 현재 관리자가 기존 일괄 접근 변경으로 이 사용자의 개인 부여를 회수할 수 있는지 */
+            canRevoke: boolean;
+            effectiveRole?: components["schemas"]["ResourceRole"] | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            personalGrantRole?: components["schemas"]["ResourceRole"] | null;
+            /** @description 공통 진단 사유. ACCOUNT_INACTIVE, NOT_WORKSPACE_MEMBER, NO_RESOURCE_GRANT, RESOURCE_ENDED, RESOURCE_NOT_READY. 종류별 상세 조건은 별도 확인이 필요합니다. */
+            reasons: string[];
+            /** Format: uuid */
+            requestId?: string | null;
+            /** @description 회수 조건. ALLOWED, FORBIDDEN, RESOURCE_NOT_FOUND, NO_PERSONAL_GRANT. 기존 개인 부여의 회수는 계정 비활성이나 구성원 해제 이후에도 가능합니다. */
+            revokeReason: string;
+            standingRights: boolean;
+            status: string;
+            type: components["schemas"]["ResourceType"];
+            userStatus: components["schemas"]["UserStatus"];
+            workspaceGrantRole?: components["schemas"]["ResourceRole"] | null;
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+            workspaceRole?: components["schemas"]["WorkspaceMemberRole"] | null;
+        };
+        AdminUserSupportInvitation: {
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            matchedBy: string;
+            role: components["schemas"]["WorkspaceMemberRole"];
+            status: components["schemas"]["WorkspaceInvitationStatus"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
+        AdminUserSupportMembership: {
+            resourceCounts: components["schemas"]["AdminUserSupportResourceCount"][];
+            role: components["schemas"]["WorkspaceMemberRole"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
+        AdminUserSupportRelatedRequest: {
+            applicant: boolean;
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            reason?: string | null;
+            /** Format: uuid */
+            recipientId?: string | null;
+            recipientStatus?: components["schemas"]["RequestRecipientStatus"] | null;
+            /** Format: uuid */
+            resourceId?: string | null;
+            status: components["schemas"]["RequestStatus"];
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+        };
+        AdminUserSupportResourceCount: {
+            /**
+             * Format: int64
+             * @description 조회 가능한 기관의 종류별 행 수. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
+             */
+            count: number;
+            type: components["schemas"]["ResourceType"];
+        };
+        AdminUserSupportResponse: {
+            invitations: components["schemas"]["AdminUserSupportInvitation"][];
+            invitationsVisible: boolean;
+            memberships: components["schemas"]["AdminUserSupportMembership"][];
+            /** Format: date-time */
+            observedAt: string;
+            requests: components["schemas"]["AdminUserSupportRelatedRequest"][];
+            /** @description 조회 가능한 기관의 접근 목록형 리소스. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
+            resources: components["schemas"]["AdminUserResourceAccessResponse"][];
+            /** Format: uuid */
+            userId: string;
         };
         AdminWorkspaceDetailResponse: {
             /** Format: date-time */
@@ -9351,6 +9546,8 @@ export interface components {
             userId?: string | null;
         };
         /** @enum {string} */
+        WorkspaceInvitationStatus: "PENDING" | "ACCEPTED" | "CANCELED";
+        /** @enum {string} */
         WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT" | "COURSE" | "PROGRAM" | "LAB" | "CLUB" | "COMPETITION" | "STUDY";
         WorkspaceMemberResponse: {
             email: string;
@@ -9836,6 +10033,7 @@ export interface operations {
         parameters: {
             query?: {
                 orgId?: string;
+                workspaceId?: string;
                 kind?: components["schemas"]["DomainKind"];
                 status?: components["schemas"]["DomainStatus"];
                 page?: number;
@@ -12402,6 +12600,7 @@ export interface operations {
                 status?: components["schemas"]["RequestStatus"];
                 type?: components["schemas"]["ResourceType"];
                 orgId?: string;
+                workspaceId?: string;
                 page?: number;
                 size?: number;
             };
@@ -13362,6 +13561,109 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserAdminDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminUserProfileImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUserProfileImpactRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUserProfileImpactResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminUserSupport: {
+        parameters: {
+            query?: {
+                orgId?: string;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUserSupportResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminUserResourceAccess: {
+        parameters: {
+            query: {
+                orgId?: string;
+                type: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUserResourceAccessResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
