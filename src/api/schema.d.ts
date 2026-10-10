@@ -7118,6 +7118,60 @@ export interface components {
             otpauthUri: string;
             secret: string;
         };
+        /** @description 가격 축 하나. */
+        ModelPriceAxis: {
+            /**
+             * @description 벤더가 쓰는 축 이름.
+             * @example input_cache_read
+             */
+            axis: string;
+            /** @description 가격(USD). 단위는 unit을 따릅니다. */
+            price: number;
+            /** @description 가격 단위. */
+            unit: components["schemas"]["ModelPriceUnit"];
+        };
+        /** @description 구간 가격 하나. 값이 있는 조건이 모두 맞을 때 적용됩니다. */
+        ModelPriceTier: {
+            /** @description 이 구간에서 바뀌는 가격 축. */
+            axes: components["schemas"]["ModelPriceAxis"][];
+            /**
+             * Format: int32
+             * @description 입력 토큰이 이 값을 넘는 요청에 적용됩니다.
+             */
+            minPromptTokens?: number | null;
+            /** @description 해석하지 못한 조건의 벤더 이름. 비어 있지 않으면 위 조건만으로는 적용 범위를 다 알 수 없습니다. */
+            otherConditions: string[];
+            /**
+             * @description 적용 요일(UTC, 영어 소문자). 비어 있으면 요일 조건이 없습니다.
+             * @example [
+             *       "saturday",
+             *       "sunday"
+             *     ]
+             */
+            utcDays: string[];
+            /**
+             * Format: int32
+             * @description 적용 끝 시각(제외). UTC 자정부터 센 분이고 1440은 자정입니다.
+             */
+            utcEndMinute?: number | null;
+            /**
+             * Format: int32
+             * @description 적용 시작 시각. UTC 자정부터 센 분입니다.
+             */
+            utcStartMinute?: number | null;
+        };
+        /**
+         * @description 가격 단위. PER_MILLION_TOKENS는 100만 토큰당, PER_CALL은 그 축이 세는 호출 1회당 USD입니다(web_search는 검색 1회, request는 API 요청 1회). UNKNOWN은 단위를 알 수 없어 벤더 값을 그대로 담은 것입니다.
+         * @enum {string}
+         */
+        ModelPriceUnit: "PER_MILLION_TOKENS" | "PER_CALL" | "UNKNOWN";
+        /** @description 모델의 가격 축 전체. 벤더가 공시한 축을 모두 담으며 입력과 출력도 포함합니다. */
+        ModelPricing: {
+            /** @description 기본 가격 축. 0은 그 축이 무료라는 뜻입니다. */
+            axes: components["schemas"]["ModelPriceAxis"][];
+            /** @description 조건이 맞을 때 기본 가격 대신 적용되는 구간 가격. 없으면 비어 있습니다. */
+            tiers: components["schemas"]["ModelPriceTier"][];
+        };
         NodeLiveResponse: {
             /** Format: date-time */
             checkedAt?: string | null;
@@ -7522,6 +7576,8 @@ export interface components {
             id: string;
             /** @description 벤더가 표시하는 이름. */
             name: string;
+            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다. */
+            pricing?: components["schemas"]["ModelPricing"] | null;
             /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
             promptPricePerMillion?: number | null;
         };
@@ -8001,6 +8057,8 @@ export interface components {
             id: string;
             /** @description 표시 이름 */
             name: string;
+            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다 */
+            pricing?: components["schemas"]["ModelPricing"] | null;
             /** @description 입력 100만 토큰당 USD. 모르면 비어 있습니다 */
             promptPricePerMillion?: number | null;
         };

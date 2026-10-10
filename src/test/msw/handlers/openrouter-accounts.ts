@@ -299,6 +299,28 @@ const defaultCatalogue = (): Schemas['OpenRouterCatalogueResponse'] => ({
       promptPricePerMillion: 150,
       completionPricePerMillion: 600,
       contextLength: 200000,
+      pricing: {
+        axes: [
+          { axis: 'prompt', unit: 'PER_MILLION_TOKENS', price: 150 },
+          { axis: 'completion', unit: 'PER_MILLION_TOKENS', price: 600 },
+          { axis: 'input_cache_read', unit: 'PER_MILLION_TOKENS', price: 0 },
+          { axis: 'internal_reasoning', unit: 'PER_MILLION_TOKENS', price: 600 },
+          { axis: 'web_search', unit: 'PER_CALL', price: 0.0025 },
+        ],
+        tiers: [
+          {
+            minPromptTokens: 128000,
+            utcDays: [],
+            utcStartMinute: null,
+            utcEndMinute: null,
+            otherConditions: [],
+            axes: [
+              { axis: 'prompt', unit: 'PER_MILLION_TOKENS', price: 300 },
+              { axis: 'completion', unit: 'PER_MILLION_TOKENS', price: 1200 },
+            ],
+          },
+        ],
+      },
     },
   ],
   freshness: 'FRESH',

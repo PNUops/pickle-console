@@ -671,6 +671,9 @@ export type UpdateOpenRouterAccount = Schemas['UpdateOpenRouterAccountRequest']
 
 export type OpenRouterCatalogue = Schemas['OpenRouterCatalogueResponse']
 export type OpenRouterCatalogueModel = Schemas['OpenRouterCatalogueModel']
+export type ModelPricing = Schemas['ModelPricing']
+export type ModelPriceAxis = Schemas['ModelPriceAxis']
+export type ModelPriceTier = Schemas['ModelPriceTier']
 
 /**
  * 유료 모델 카탈로그 캐시. 서버가 캐시만 읽으므로 이 호출은 벤더를 부르지 않는다.

@@ -535,6 +535,39 @@ describe('유료 모델 선택기', () => {
     )
   })
 
+  // Input and output are two axes of many. A model whose search fee or
+  // long-context band is hidden reads cheaper than it bills.
+  test('입력과 출력 밖의 가격 축과 구간 가격을 펼쳐 보여 준다', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    // A zero axis is not counted: only the reasoning and search charges are.
+    expect(picker.getByText('openai/o1-pro').parentElement).toHaveTextContent(
+      '외 2개 축, 구간 가격 1개',
+    )
+    // A row with nothing beyond input and output has nothing to unfold.
+    expect(
+      picker.queryByRole('button', { name: 'openai/gpt-4o-mini 가격 상세' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(picker.getByRole('button', { name: 'openai/o1-pro 가격 상세' }))
+
+    const axes = within(picker.getByLabelText('openai/o1-pro 가격 축'))
+    expect(axes.getByText('추론')).toBeInTheDocument()
+    expect(axes.getByText('$600 / 1M')).toBeInTheDocument()
+    expect(axes.getByText('웹 검색')).toBeInTheDocument()
+    expect(axes.getByText('$0.0025 / 회')).toBeInTheDocument()
+    expect(axes.queryByText('캐시 읽기')).not.toBeInTheDocument()
+    expect(picker.getByRole('list', { name: 'openai/o1-pro 구간 가격' })).toHaveTextContent(
+      '입력 128,000 토큰 초과: 입력 $300 / 1M, 출력 $1,200 / 1M',
+    )
+  })
+
   // 같은 행에서 두 목록으로 갈라 넣는다. 갈래가 하나였을 때는 차단할 모델을
   // 손으로 옮겨 적어야 했고, 옮겨 적는 자리가 곧 오타 자리다.
   test('같은 행에서 차단 목록으로도 넣는다', async () => {

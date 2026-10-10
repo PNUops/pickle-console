@@ -44,6 +44,25 @@ describe('호출할 수 있는 모델', () => {
     expect(await screen.findByText('openai/gpt-5.6-luna')).toBeInTheDocument()
   })
 
+  test('가격 축과 구간 가격을 펼쳐 보여 준다', async () => {
+    const user = userEvent.setup()
+    await openModels('unrestricted')
+
+    expect(await screen.findByText('외 2개 축, 구간 가격 1개')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'openai/gpt-5.6-luna 가격 상세' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'anthropic/claude-sonnet-4 가격 상세' }))
+
+    const axes = screen.getByLabelText('anthropic/claude-sonnet-4 가격 축')
+    expect(axes).toHaveTextContent('캐시 읽기$0.3 / 1M')
+    expect(axes).toHaveTextContent('캐시 쓰기$3.75 / 1M')
+    expect(screen.getByLabelText('anthropic/claude-sonnet-4 구간 가격')).toHaveTextContent(
+      '토·일, UTC 16:00~24:00: 입력 $1.5 / 1M',
+    )
+  })
+
   test('한도를 적용하는 중이면 기다리면 된다고 말한다', async () => {
     await openModels('pending')
     expect(await screen.findByText(/적용하는 중입니다/)).toBeInTheDocument()
