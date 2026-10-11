@@ -11,8 +11,11 @@ import {
   LLM_API_BASE_URL,
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
+  LLM_FORWARDED_HEADER_MAX_BYTES,
+  LLM_FORWARDED_REQUEST_HEADERS,
   LLM_PAID_ONLY_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
+  LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from '../../lib/llm-api'
@@ -218,8 +221,8 @@ export const llmArticles: GuideArticle[] = [
     slug: 'llm/features',
     title: '모델과 지원 기능',
     group: 'LLM API',
-    summary: '모델 권한, 이미지와 임베딩, 지원 파라미터와 스트리밍 범위를 확인합니다.',
-    keywords: ['모델', '허용', '차단', '이미지', '임베딩', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기'],
+    summary: '모델 권한, 이미지와 임베딩, 지원 파라미터와 스트리밍 범위, 주고받는 헤더를 확인합니다.',
+    keywords: ['모델', '허용', '차단', '이미지', '임베딩', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
     sections: [
       {
         id: 'models',
@@ -279,6 +282,23 @@ export const llmArticles: GuideArticle[] = [
           <p>거절이나 중단이 반복되면 <GuideLink slug="llm/errors">오류 해결</GuideLink>을, 긴 대화에서만 실패하면 <GuideLink slug="llm/connect" anchor="opencode">컨텍스트 길이 설정</GuideLink>을 확인하세요.</p>
         </>,
       },
+      {
+        id: 'headers',
+        title: '요청 헤더와 응답 헤더',
+        body: <>
+          <p>유료 모델에 보내는 채팅 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. 자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다.</p>
+          <Table>
+            <THead><TR><TH>요청 헤더</TH><TH>쓰임</TH></TR></THead>
+            <TBody>{LLM_FORWARDED_REQUEST_HEADERS.map((header) => <TR key={header.name}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{header.name}</code></TD><TD>{header.use}</TD></TR>)}</TBody>
+          </Table>
+          <p>같은 헤더를 여러 줄 보내면 첫 줄의 값만 넘기고, {LLM_FORWARDED_HEADER_MAX_BYTES}바이트를 넘는 값은 넘기지 않습니다. 앱 표시 헤더(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">HTTP-Referer</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-Title</code> 등)와 응답 캐시 헤더는 넘기지 않으므로 보내도 효과가 없습니다.</p>
+          <p>유료 모델 공급자가 보낸 응답 헤더 가운데 아래 둘은 그대로 돌려줍니다.</p>
+          <Table>
+            <THead><TR><TH>응답 헤더</TH><TH>쓰임</TH></TR></THead>
+            <TBody>{LLM_RELAYED_RESPONSE_HEADERS.map((header) => <TR key={header.name}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{header.name}</code></TD><TD>{header.use}</TD></TR>)}</TBody>
+          </Table>
+        </>,
+      },
     ],
   },
   {
@@ -305,7 +325,7 @@ export const llmArticles: GuideArticle[] = [
         title: '한도에 걸렸을 때',
         body: <>
           <p>분당 요청 수, 분당 토큰 수와 동시 요청 수 한도는 자체 서빙 모델에만 적용됩니다. 이 한도를 넘긴 HTTP 429 응답에는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Retry-After</code> 헤더가 붙습니다. 이 시간이 지난 뒤 재시도하고, 동시에 보내는 작업 수나 한 요청의 길이를 줄입니다. 반복적으로 거절되면 키 이름과 오류 코드를 관리자에게 알려 주세요.</p>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Retry-After</code>가 붙는 응답은 위 세 한도와 큰 요청 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>, 429), <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_pending</code>(503)입니다. 일일 토큰 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">quota_exhausted</code>), 금액 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_exhausted</code>), 서버 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">server_busy</code>)에는 붙지 않습니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Retry-After</code>가 붙는 응답은 위 세 한도와 큰 요청 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>, 429), <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_pending</code>(503)입니다. 유료 모델 공급자가 대기 시간을 주며 429나 503으로 답한 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">server_busy</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_error</code>에도 붙습니다. 일일 토큰 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">quota_exhausted</code>), 금액 소진(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_exhausted</code>), 자체 서빙 모델의 서버 혼잡(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">server_busy</code>)에는 붙지 않습니다.</p>
           <p>일일 토큰을 소진했다면 KST 자정까지 기다리거나 필요한 사용량을 설명해 관리자에게 한도 조정을 문의합니다. 금액은 부여된 초기화 주기를 확인하고, 총액을 소진했다면 관리자에게 문의합니다. 서버 혼잡은 잠시 기다린 뒤 재시도하며 반복 간격을 늘립니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-RateLimit-Limit-Requests</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-RateLimit-Remaining-Requests</code> 헤더는 <strong>한도를 통과한 자체 서빙 모델 응답에만</strong> 포함됩니다. 유료 모델에는 이 세 한도가 적용되지 않아 이 헤더가 오지 않고, 한도에 걸린 429 응답에도 오지 않습니다.</p>
         </>,
@@ -425,7 +445,7 @@ export const llmArticles: GuideArticle[] = [
     title: 'LLM API 오류 해결',
     group: 'LLM API',
     summary: '인증, 모델 권한, 한도와 요청 형식을 구분해 실패 원인을 찾습니다.',
-    keywords: ['오류', '에러', '401', '403', '404', '422', '429', '503', 'error.code', '문의', 'X-Request-Id'],
+    keywords: ['오류', '에러', '401', '403', '404', '422', '429', '503', 'error.code', '문의', 'X-Request-Id', 'X-Generation-Id'],
     sections: [
       {
         id: 'diagnose',
@@ -478,7 +498,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'contact',
         title: '해결되지 않을 때 문의',
         body: <>
-          <p><a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href={CONTACT_URL}>문의 창구</a>에 키 이름, 발생 시각, 요청 모델과 경로, HTTP 상태와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>, 응답 헤더의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-Request-Id</code>를 함께 전달하면 실패한 요청을 확인할 수 있습니다. 키의 평문이나 민감한 프롬프트는 보내지 마세요.</p>
+          <p><a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href={CONTACT_URL}>문의 창구</a>에 키 이름, 발생 시각, 요청 모델과 경로, HTTP 상태와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>, 응답 헤더의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-Request-Id</code>를 함께 전달하면 실패한 요청을 확인할 수 있습니다. 유료 모델이 정상 응답한 결과나 금액을 문의할 때는 응답 헤더의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">X-Generation-Id</code>도 알려 주세요. 키의 평문이나 민감한 프롬프트는 보내지 마세요.</p>
           <p>개선 의견은 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href={FEEDBACK_URL}>의견 창구</a>로 보낼 수 있습니다. 로그인이나 리소스 표시 문제는 <GuideLink slug="troubleshooting">계정과 리소스 문제 해결</GuideLink>에서 확인합니다.</p>
           <p>설정을 고친 뒤 동일한 최소 요청이 정상 응답하고 <GuideLink slug="llm/limits" anchor="usage">사용량</GuideLink>에 반영되는지 확인하면 점검이 끝납니다.</p>
         </>,

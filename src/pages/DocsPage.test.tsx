@@ -72,6 +72,23 @@ describe('사용 가이드', () => {
     expect(body).toContain('streaming_not_supported')
   })
 
+  test('scopes forwarded headers to paid-model chat', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: '요청 헤더와 응답 헤더' })
+
+    // The names come from lib/llm-api.ts; here the two tables must render them.
+    expect(screen.getByText('x-session-id')).toBeInTheDocument()
+    expect(screen.getByText('X-OpenRouter-Metadata')).toBeInTheDocument()
+    expect(screen.getByText('X-Generation-Id')).toBeInTheDocument()
+
+    // Without the scope a student sends the headers to the self-hosted model
+    // and reads the missing effect as a bug.
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다')
+    expect(body).toContain('1024바이트를 넘는 값은 넘기지 않습니다')
+    expect(body).toContain('HTTP-Referer')
+  })
+
   test('places the version suffix next to the base URL', async () => {
     renderApp('/docs/llm/connect')
     await screen.findByRole('heading', { name: '첫 호출' })
