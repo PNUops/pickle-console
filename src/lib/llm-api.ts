@@ -122,6 +122,49 @@ export const LLM_REQUEST_BODY_MIB = {
   largeAbove: 2,
 } as const
 
+/**
+ * Client request headers the gateway forwards to the vendor, on a paid-model
+ * chat request only. Self-hosted, image and embedding requests forward none.
+ * Of repeated lines only the first is forwarded, and a value longer than
+ * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
+ * headers (`HTTP-Referer`, `X-Title`, ...) and response-cache headers are not
+ * forwarded.
+ */
+export const LLM_FORWARDED_REQUEST_HEADERS = [
+  {
+    name: 'x-session-id',
+    use: '같은 값을 보낸 요청이 같은 공급자로 가도록 요청합니다. 한 대화에 같은 값을 쓰면 프롬프트 캐시가 맞을 가능성이 높아집니다.',
+  },
+  {
+    name: 'x-anthropic-beta',
+    use: 'Anthropic 모델의 베타 기능을 켭니다. 값은 Anthropic 문서의 기능 이름이고, 여러 개는 쉼표로 이어 한 줄에 적습니다.',
+  },
+  {
+    name: 'X-OpenRouter-Metadata',
+    use: '이 요청을 처리한 공급자와 시도 순서를 응답 본문에 함께 받습니다.',
+  },
+] as const
+
+export const LLM_FORWARDED_HEADER_MAX_BYTES = 1024
+
+/**
+ * Vendor response headers the gateway relays when the vendor sends them.
+ * `X-Generation-Id` comes on a successful paid-model answer, image and
+ * embedding answers included.
+ * `Retry-After` comes when the vendor answered 429 or 503 with a wait; after a
+ * fallback, it is the longest wait any upstream asked for.
+ */
+export const LLM_RELAYED_RESPONSE_HEADERS = [
+  {
+    name: 'X-Generation-Id',
+    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
+  },
+  {
+    name: 'Retry-After',
+    use: '유료 모델 공급자가 429나 503으로 답하며 대기 시간을 준 경우 붙습니다. 대체 경로까지 시도했다면 그중 가장 긴 시간입니다. 이 시간이 지난 뒤 재시도합니다.',
+  },
+] as const
+
 export interface LlmErrorEntry {
   /** 응답 본문의 `error.code`. 메시지 문구와 달리 바뀌지 않는 식별자다. */
   code: string

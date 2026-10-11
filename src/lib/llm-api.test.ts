@@ -4,9 +4,12 @@ import {
   LLM_DEFAULT_LIMITS,
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
+  LLM_FORWARDED_HEADER_MAX_BYTES,
+  LLM_FORWARDED_REQUEST_HEADERS,
   LLM_PAID_ONLY_PARAMS,
   LLM_PAID_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
+  LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
@@ -130,6 +133,19 @@ describe('LLM API 사실 사본', () => {
 
   test('request body bounds are the gateway values', () => {
     expect(LLM_REQUEST_BODY_MIB).toEqual({ max: 25, largeAbove: 2 })
+  })
+
+  test('forwarded and relayed headers are the gateway allowlists', () => {
+    expect(LLM_FORWARDED_REQUEST_HEADERS.map((h) => h.name)).toEqual([
+      'x-session-id',
+      'x-anthropic-beta',
+      'X-OpenRouter-Metadata',
+    ])
+    expect(LLM_FORWARDED_HEADER_MAX_BYTES).toBe(1024)
+    expect(LLM_RELAYED_RESPONSE_HEADERS.map((h) => h.name)).toEqual([
+      'X-Generation-Id',
+      'Retry-After',
+    ])
   })
 
   test('the OpenAI SDK image path is listed beside the vendor one', () => {
