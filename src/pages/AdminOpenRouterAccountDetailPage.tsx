@@ -37,14 +37,12 @@ import {
   parseCreditModelRules,
 } from '../lib/credit-model-allowlist'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { passthroughLabel, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
 import { formatDateTime } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { AccountUsageSection } from '../components/llm-usage/AccountUsageSection'
 import { AccountAllocationSection, AccountCreditsSection } from '../components/OpenRouterCredits'
-import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 
 const ACCOUNT_CACHE_REFETCH_MS = 2 * 60 * 1000
 
@@ -228,13 +226,6 @@ export function AdminOpenRouterAccountDetailPage() {
                 ? '없음. 승인 폼이 비어서 열립니다'
                 : account.defaultCreditDeniedModels.join(', '),
           },
-          {
-            term: '승인 기본 기능 권한',
-            description:
-              account.defaultPassthroughEndpoints.length === 0
-                ? '없음. 승인 폼이 아무것도 체크되지 않은 채로 열립니다'
-                : account.defaultPassthroughEndpoints.map(passthroughLabel).join(', '),
-          },
           { term: '연결된 키', description: `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
           { term: '관리용 키', description: account.credentialAvailable ? '사용 가능' : '사용 불가' },
           { term: '유료 모델 연결', description: account.eligibleForBinding ? '가능' : '불가' },
@@ -357,9 +348,6 @@ function EditAccountModal({
   const [defaultRules, setDefaultRules] = useState(
     formatCreditModelRules(account.defaultCreditAllowedModels, account.defaultCreditDeniedModels),
   )
-  const [defaultPassthrough, setDefaultPassthrough] = useState<
-    readonly PassthroughEndpoint[]
-  >(account.defaultPassthroughEndpoints)
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const save = useMutation({
@@ -387,7 +375,6 @@ function EditAccountModal({
       status,
       defaultCreditAllowedModels: parsedRules.allowed,
       defaultCreditDeniedModels: parsedRules.denied,
-      defaultPassthroughEndpoints: [...defaultPassthrough],
     })
   }
   return (
@@ -411,12 +398,6 @@ function EditAccountModal({
           이 계정으로 승인할 때 규칙을 미리 채웁니다. 승인자가 고칠 수 있으며,
           기본값을 바꿔도 이미 발급된 키에는 적용되지 않습니다.
         </p>
-        <PassthroughEndpointField
-          label="승인 화면 기본 기능 권한"
-          value={defaultPassthrough}
-          onChange={setDefaultPassthrough}
-          description="위 규칙과 함께 승인 폼에 채워집니다. 비워 두면 승인 폼이 아무것도 체크되지 않은 채로 열립니다."
-        />
         <FormField label="상태" description="활성 또는 미만료 key가 연결되어 있으면 보관할 수 없습니다.">
           <Select value={status} onChange={(event) => setStatus(event.target.value as OpenRouterAccount['status'])}>
             <option value="ACTIVE">활성</option>

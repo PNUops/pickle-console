@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { Alert, Checkbox, FormField, Input } from '../ui'
 import { LLM_DEFAULT_MODEL } from '../../lib/llm-api'
+import { PassthroughEndpointField } from '../PassthroughEndpointField'
+import {
+  PASSTHROUGH_ENDPOINTS,
+  isCreditOnly,
+  passthroughText,
+  requestedFeaturesText,
+  withoutCreditOnly,
+  type PassthroughEndpoint,
+} from '../../lib/passthrough-endpoints'
 import type { FieldErrors, KindWizard, RequestKindModule, WizardStepId } from './types'
 
 /**
@@ -18,6 +27,12 @@ interface LlmKeySpecState {
   useCommercial: boolean
   reqDailyTokens: string
   reqCreditLimit: string
+  /**
+   * The features ticked, paid-only ones included even while paid models are
+   * off: those rows hide rather than clear, so turning paid models back on
+   * brings the choice back. The payload drops them while hidden.
+   */
+  features: PassthroughEndpoint[]
 }
 
 const INITIAL_SPEC: LlmKeySpecState = {
@@ -27,7 +42,26 @@ const INITIAL_SPEC: LlmKeySpecState = {
   useCommercial: false,
   reqDailyTokens: '',
   reqCreditLimit: '',
+  // Chat alone starts ticked. The rest cost per request or have an obvious
+  // user, so the requester asks for them; the approver decides either way.
+  features: ['chat'],
 }
+
+/** The rows offered: paid-only features exist only with paid models on. */
+function featureRows(useCommercial: boolean): readonly PassthroughEndpoint[] {
+  return useCommercial
+    ? PASSTHROUGH_ENDPOINTS
+    : PASSTHROUGH_ENDPOINTS.filter((entry) => !isCreditOnly(entry))
+}
+
+/** The features the request carries: what the requester can see ticked. */
+function requestedFeatures(spec: LlmKeySpecState): PassthroughEndpoint[] {
+  return spec.useCommercial ? [...spec.features] : withoutCreditOnly(spec.features)
+}
+
+const PAID_FEATURES_HINT = `${PASSTHROUGH_ENDPOINTS.filter(isCreditOnly)
+  .map((entry) => passthroughText([entry]))
+  .join(', ')}은 유료 모델을 선택하면 고를 수 있습니다.`
 
 /** 요청 금액의 상한. 계약이 정한 수의 폭이다. */
 const MAX_CREDIT = 100_000
@@ -185,6 +219,14 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
           </div>
         </fieldset>
 
+        <PassthroughEndpointField
+          label="필요한 기능"
+          value={spec.features}
+          onChange={(features) => update({ features })}
+          rows={featureRows(spec.useCommercial)}
+          description={spec.useCommercial ? '' : PAID_FEATURES_HINT}
+          error={errors['llmKey.reqPassthroughEndpoints']}
+        />
       </>
     ),
 
@@ -213,6 +255,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
               ],
             ] as [string, string][])
           : []),
+        ['필요한 기능', requestedFeaturesText(requestedFeatures(spec))],
       ],
     }),
 
@@ -241,6 +284,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
         reqRpm: null,
         reqTpm: null,
         reqDailyTokens: spec.useCampus ? limitValue(spec.reqDailyTokens) : null,
+        reqPassthroughEndpoints: requestedFeatures(spec),
       },
     }),
   }
@@ -264,6 +308,7 @@ export const llmKeyRequestKind: RequestKindModule = {
     'llmKey.reqRpm': { label: '희망 분당 요청 수', step: 'resource' },
     'llmKey.reqTpm': { label: '희망 분당 토큰 수', step: 'resource' },
     'llmKey.reqDailyTokens': { label: '희망 일일 토큰 수', step: 'resource' },
+    'llmKey.reqPassthroughEndpoints': { label: '필요한 기능', step: 'resource' },
   },
   supportsRecipients: true,
   useWizard: useLlmKeyWizard,

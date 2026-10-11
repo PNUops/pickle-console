@@ -4422,8 +4422,8 @@ export interface components {
             /** Format: uuid */
             orgId?: string | null;
             orgName: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음. 모델 목록 둘과 반대로 채워야 열린다. */
-            passthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음(chat 포함). 모델 목록 둘과 반대로 채워야 열린다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             purpose?: string | null;
             quotaExhausted: boolean;
             /** Format: uuid */
@@ -4470,8 +4470,8 @@ export interface components {
              * @description 유료 모델을 결제할 사업 계정. 생략하거나 null이면 기존 연결을 유지합니다.
              */
             openrouterAccountId?: string | null;
-            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 값에 영향을 받지 않습니다. */
-            passthroughEndpoints: ("images" | "embeddings")[] | null;
+            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 값에 영향을 받지 않습니다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
@@ -5004,8 +5004,8 @@ export interface components {
              * @description 부여 일일 토큰 수. 비우면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 이 키에 부여할 기능 권한. 비우면 기능을 하나도 쓸 수 없습니다. 모델 목록과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            grantedPassthroughEndpoints?: ("images" | "embeddings")[] | null;
+            /** @description 이 키에 부여할 기능 권한. 생략하면 신청자가 고른 목록(reqPassthroughEndpoints)으로 승인하고, 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat도 포함). 모델 목록과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 목록과 무관합니다. */
+            grantedPassthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비우면 서비스 기본값이 적용됩니다.
@@ -5242,6 +5242,8 @@ export interface components {
              * @description 희망 일일 토큰 수. 비우면 서비스 기본값을 받습니다.
              */
             reqDailyTokens?: number | null;
+            /** @description 신청자가 고른 기능 권한. 필수이며 빈 배열도 받습니다. 승인 화면의 초깃값이 되고, 무엇을 부여할지는 승인자가 정합니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고 나머지는 422로 거절합니다. web_search와 pdf_ocr은 chat과 함께 골라야 합니다. */
+            reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 희망 분당 요청 수. 비우면 서비스 기본값을 받습니다.
@@ -5266,8 +5268,6 @@ export interface components {
             defaultCreditAllowedModels?: string[] | null;
             /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 승인 화면 프리필에 쓸 기능 권한 기본값. 비우면 아무 기능도 부여되지 않은 상태가 기본이 됩니다. */
-            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
@@ -6209,8 +6209,8 @@ export interface components {
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             /** @description 키 이름 */
             name: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            passthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 모델 조회는 이 목록과 무관합니다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /** @description 용도 */
             purpose?: string | null;
             /** @description 프롬프트·응답 본문 기록 여부 */
@@ -6362,8 +6362,8 @@ export interface components {
              * @description 부여 일일 토큰 수. 비어 있으면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. */
-            grantedPassthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. 검토 전 신청은 빈 배열입니다. */
+            grantedPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비어 있으면 서비스 기본값입니다.
@@ -6381,6 +6381,8 @@ export interface components {
              * @description 희망 일일 토큰 수
              */
             reqDailyTokens?: number | null;
+            /** @description 신청자가 고른 기능 권한. 승인 화면의 초깃값입니다. 이 항목이 생기기 전의 신청은 ["chat"]으로 이관되었습니다. */
+            reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 희망 분당 요청 수
@@ -6899,7 +6901,7 @@ export interface components {
             unpricedAvgLatencyMs: number;
         };
         LlmUsagePassthroughGrantResponse: {
-            /** @description 기능 권한 값. images 또는 embeddings입니다. */
+            /** @description 기능 권한 값. chat, images, embeddings 중 하나입니다. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행이 없습니다. */
             capability: string;
             /**
              * Format: int64
@@ -7531,8 +7533,6 @@ export interface components {
             defaultCreditAllowedModels: string[];
             /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels: string[];
-            /** @description 승인 화면이 프리필에 쓰는 기능 권한 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
-            defaultPassthroughEndpoints: ("images" | "embeddings")[];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
             /**
@@ -8746,8 +8746,6 @@ export interface components {
             defaultCreditAllowedModels?: string[] | null;
             /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 새 기능 권한 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
-            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
             /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */

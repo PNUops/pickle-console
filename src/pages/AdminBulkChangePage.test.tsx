@@ -175,14 +175,71 @@ describe('AdminBulkChangePage', () => {
     })
   })
 
+  test('warns when replacing the features leaves Chat out', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-org-admin', orgAdminUser, ['active-admin-key'])
+    await chooseKind(user, '한도·모델·기능 권한')
+    await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: '기능 권한 변경 방식' }), 'REPLACE')
+    await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
+    await user.click(screen.getByRole('checkbox', { name: /이미지 생성/ }))
+    expect(screen.queryByText('새 목록에 Chat이 없습니다')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
+    expect(screen.getByText('새 목록에 Chat이 없습니다')).toBeInTheDocument()
+  })
+
+  // A bulk add or remove lists names to apply to each key; the api checks the
+  // hierarchy on every key's result, so web search is not held behind Chat.
+  test('removes web search alone, and replacing brings the hierarchy back', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-org-admin', orgAdminUser, ['active-admin-key'])
+    await chooseKind(user, '한도·모델·기능 권한')
+    await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
+    const op = screen.getByRole('combobox', { name: '기능 권한 변경 방식' })
+    await user.selectOptions(op, 'REMOVE')
+    await user.click(screen.getByRole('checkbox', { name: /웹 검색/ }))
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).toBeChecked()
+    await user.selectOptions(op, 'REPLACE')
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).toBeDisabled()
+    await user.selectOptions(op, 'REMOVE')
+    await user.click(screen.getByRole('checkbox', { name: /웹 검색/ }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies.at(-1)!.change.llmKeyLimits).toEqual({
+      passthroughEndpoints: { op: 'REMOVE', values: ['web_search'] },
+    })
+  })
+
   test('offers no money fields to SYS_MANAGER', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-manager', sysManagerUser, ['active-admin-key'])
     await chooseKind(user, '한도·모델·기능 권한')
     expect(screen.getByRole('checkbox', { name: 'RPM' })).toBeInTheDocument()
-    for (const name of ['금액 한도 (USD)', '금액 리셋 창', '유료 모델 허용·차단', '기능 권한']) {
+    for (const name of ['금액 한도 (USD)', '금액 리셋 창', '유료 모델 허용·차단']) {
       expect(screen.queryByRole('checkbox', { name })).not.toBeInTheDocument()
     }
+  })
+
+  // Chat works on both axes, so a role without money may add or remove it in
+  // bulk as it may on a single key; replacing the list is not offered.
+  test('offers SYS_MANAGER adding or removing Chat alone', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-manager', sysManagerUser, ['active-admin-key'])
+    await chooseKind(user, '한도·모델·기능 권한')
+    await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
+    const op = screen.getByRole('combobox', { name: '기능 권한 변경 방식' })
+    expect(within(op).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '추가',
+      '빼기',
+    ])
+    expect(screen.queryByRole('checkbox', { name: /이미지 생성/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies.at(-1)!.change.llmKeyLimits).toEqual({
+      passthroughEndpoints: { op: 'ADD', values: ['chat'] },
+    })
   })
 
   test('offers revoke and access only to the administrator tier', async () => {
