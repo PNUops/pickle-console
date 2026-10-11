@@ -1080,15 +1080,29 @@ export const llmKeyHandlers: RequestHandler[] = [
     // 없는 200을 내고, 그 위의 화면 테스트가 초록으로 거짓말한다.
     const nextModels = body.creditAllowedModels ?? []
     const nextDenied = body.creditDeniedModels ?? []
-    // 기능 권한도 같은 게이트 뒤에 있다. 셋 중 유일하게 부여하는 축이라, 빠뜨리면
-    // 목이 서버보다 헐거워지는 정도가 아니라 반대 방향으로 헐거워진다.
+    // Feature grants other than Chat sit behind the same gate. Leaving them
+    // out would make the mock looser than the server in the granting direction.
     const nextPassthrough = body.passthroughEndpoints ?? []
+    // The server checks the grant's hierarchy before the money gate, so a
+    // feature of Chat without Chat is 422 for every role.
+    const orphan = orphanedChatFeature(nextPassthrough)
+    if (orphan) {
+      return validationProblem(
+        `/api/v1/admin/llm/keys/${key.id}/limits`,
+        'passthroughEndpoints',
+        `${orphan} 기능은 chat 기능과 함께 부여해야 합니다.`,
+      )
+    }
     const listChanged = (next: string[], current: string[]) =>
       next.length !== current.length || next.some((model, index) => model !== current[index])
+    // Chat works on both axes, so the server leaves a Chat-only change out of
+    // the money gate and compares the rest as sets.
+    const withoutChat = (entries: string[]) =>
+      [...new Set(entries.filter((entry) => entry !== 'chat'))].sort()
     const modelsChanged =
       listChanged(nextModels, key.creditAllowedModels) ||
       listChanged(nextDenied, key.creditDeniedModels) ||
-      listChanged(nextPassthrough, key.passthroughEndpoints)
+      listChanged(withoutChat(nextPassthrough), withoutChat(key.passthroughEndpoints))
     if (
       role === 'SYS_MANAGER' &&
       (body.creditLimit !== key.creditLimit ||
@@ -1515,6 +1529,12 @@ const alreadyListedProblem = () =>
       '이 대상은 이미 이 LLM API 키의 접근 목록에 있습니다. 등급을 바꾸려면 기존 항목을 수정해 주세요.',
     code: 'LLM_KEY_ACCESS_GRANT_EXISTS',
   })
+
+/** A feature of Chat in a grant without Chat, which the server refuses. */
+export function orphanedChatFeature(entries: readonly string[]): string | undefined {
+  if (entries.includes('chat')) return undefined
+  return entries.find((entry) => ['web_search', 'pdf_ocr', 'containers'].includes(entry))
+}
 
 const validationProblem = (instance: string, field: string, message: string) =>
   problemResponse({

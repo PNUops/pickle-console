@@ -19,6 +19,11 @@ import {
   LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from '../../lib/llm-api'
+import {
+  PASSTHROUGH_ENDPOINTS,
+  passthroughDescription,
+  passthroughLabel,
+} from '../../lib/passthrough-endpoints'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
 
@@ -95,6 +100,10 @@ export const llmArticles: GuideArticle[] = [
           </ul>
           <p>필요량은 예상 요청 횟수와 한 요청의 입력 및 출력 길이로 계산합니다. 예를 들어 하루 100회, 요청마다 입력 1,000토큰과 출력 1,000토큰을 예상하면 하루 약 200,000토큰입니다. 대화를 이어가며 이전 메시지를 다시 보내는 양도 포함하세요.</p>
           <p>토큰 수를 비우면 서비스 기본값을 요청하고, 금액을 비우면 관리자가 정합니다. 실제 부여값은 승인 결과로 확인합니다. 분당 요청 수, 분당 토큰 수와 동시 요청 수는 신청서의 입력 항목이 아닙니다.</p>
+          <p><strong>필요한 기능</strong>에서 이 키로 쓸 기능을 고릅니다. Chat은 미리 선택되어 있습니다. Chat 밖의 기능은 유료 모델에서만 동작하므로 <strong>유료 모델</strong>을 선택해야 고를 수 있고, 웹 검색과 PDF OCR은 Chat 요청 안에서 쓰는 기능이라 Chat을 선택해야 고를 수 있습니다. 실제로 부여할 기능은 관리자가 승인할 때 정합니다.</p>
+          <ul>
+            {PASSTHROUGH_ENDPOINTS.map((feature) => <li key={feature}><strong>{passthroughLabel(feature)}</strong>: {passthroughDescription(feature)}.</li>)}
+          </ul>
           <GuideFigure
             src={llmRequestImage}
             alt="LLM API 키 신청의 자체 서빙 모델과 유료 모델 선택 및 희망 한도 입력"
@@ -109,12 +118,12 @@ export const llmArticles: GuideArticle[] = [
         title: '신청서 제출',
         body: <>
           <ol>
-            <li><strong>리소스 구성</strong>에서 이름, 쓸 모델과 필요한 한도를 입력합니다.</li>
+            <li><strong>리소스 구성</strong>에서 이름, 쓸 모델, 필요한 한도와 기능을 입력합니다.</li>
             <li><strong>신청 정보</strong>에서 기관과 워크스페이스, 사용 목적, 사용 기간을 선택하고 필요한 추가 설명을 적습니다.</li>
             <li><strong>검토</strong>에서 신청 내용을 읽고 제출합니다.</li>
           </ol>
           <p>사용 목적에는 어떤 작업에 누가 얼마나 쓰는지 적습니다. 예: “수업 팀 프로젝트의 문서 검색 기능을 개발합니다. 팀원 4명이 하루 약 100회 테스트하며 입력과 출력 합계 200,000토큰을 예상합니다.”</p>
-          <p>특정 유료 모델, 이미지 생성 또는 임베딩이 필요하면 모델 이름과 기능, 필요한 이유를 추가 설명에 적습니다. 모델을 쓸 권한과 이미지 및 임베딩의 기능 권한은 별도로 부여됩니다.</p>
+          <p>특정 유료 모델이 필요하면 모델 이름과 필요한 이유를 추가 설명에 적습니다. 모델을 쓸 권한과 기능 권한은 별도로 부여됩니다.</p>
         </>,
       },
       {
@@ -232,11 +241,12 @@ export const llmArticles: GuideArticle[] = [
           <p>아래 요청은 자체 서빙 모델 목록을 반환합니다. 유료 모델은 이 목록에 나오지 않습니다.</p>
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
           <p>유료 모델은 금액 한도가 부여된 키로 모델 이름을 그대로 보내 사용합니다. <strong>쓸 수 있는 유료 모델</strong>이 제한되어 있으면 목록에 맞는 모델만 선택합니다. 허용 목록이 비어 있으면 모델 허용 제한은 없지만 금액 한도와 <strong>쓸 수 없는 유료 모델</strong>은 적용됩니다. 차단 목록이 허용 목록보다 우선합니다.</p>
+          <p>키 정보의 <strong>기능 권한</strong>은 이 키로 쓸 수 있는 기능입니다. Chat이 없는 키는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/chat/completions</code> 호출이 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">endpoint_not_allowed</code>로 거절됩니다. 웹 검색(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">plugins</code>의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">web</code>, 모델 이름 끝의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">:online</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">openrouter:web_search</code> 도구)과 유료 OCR 엔진 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">mistral-ocr</code>을 지정한 PDF 변환, 채팅 응답의 이미지 출력(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">modalities</code>의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">image</code>)도 각각 웹 검색, PDF OCR, 이미지 생성 권한이 있어야 합니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_allowed</code>는 모델 권한 문제이고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_unavailable</code>는 금액 한도가 없다는 뜻입니다. 자체 서빙 모델에는 유료 모델의 허용 목록과 차단 목록을 적용하지 않습니다.</p>
           <GuideFigure
             src={llmPermissionsImage}
             alt="LLM API 키 정보에 표시된 유료 모델 허용 목록과 차단 목록 및 기능 권한"
-            caption="키 정보에서 사용할 수 있는 유료 모델과 차단된 모델, 이미지 및 임베딩 기능 권한을 확인합니다."
+            caption="키 정보에서 사용할 수 있는 유료 모델과 차단된 모델, 기능 권한을 확인합니다."
             width={1104}
             height={347}
           />
@@ -247,10 +257,10 @@ export const llmArticles: GuideArticle[] = [
         title: '이미지와 임베딩',
         body: <>
           <p>먼저 키 정보의 <strong>기능 권한</strong>에 필요한 기능이 있는지 확인합니다. 이미지 생성과 임베딩은 기능별로 부여되며, 부여되지 않은 경로는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">endpoint_not_allowed</code>로 거절됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code> 본문의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_references</code>에 입력 이미지를 넣어 편집하는 요청과 이미지 모델 목록 조회도 이미지 기능에 포함됩니다.</p>
-          <p>필요한 기능이 없다면 <GuideLink slug="llm/start" anchor="submit">신청서의 추가 설명</GuideLink>에 필요한 기능과 모델, 용도를 적어 승인을 받습니다. 이미 쓰는 키의 권한 변경이 필요하면 관리자에게 키 이름과 필요한 기능을 알려 주세요.</p>
+          <p>필요한 기능이 없다면 <GuideLink slug="llm/start" anchor="choose-models">신청서의 필요한 기능</GuideLink>에서 골라 승인을 받습니다. 이미 쓰는 키의 권한 변경이 필요하면 관리자에게 키 이름과 필요한 기능을 알려 주세요.</p>
           <Table>
             <THead><TR><TH>경로</TH><TH>기능</TH></TR></THead>
-            <TBody>{LLM_PASSTHROUGH_ROUTES.map((route) => <TR key={`${route.method} ${route.path}`}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{route.method} {route.path}</code></TD><TD>{route.summary}</TD></TR>)}</TBody>
+            <TBody>{LLM_PASSTHROUGH_ROUTES.filter((route) => route.capability !== 'chat').map((route) => <TR key={`${route.method} ${route.path}`}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{route.method} {route.path}</code></TD><TD>{route.summary}</TD></TR>)}</TBody>
           </Table>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>는 OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.generate</code>가 부르는 경로이고 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code>와 같은 요청을 처리합니다. 이미지 모델 목록을 조회한 뒤 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model</code>을 반드시 지정해 호출합니다.</p>
           <p>이미지는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>으로만 돌아옵니다. 응답에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">url</code>이 아니라 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>을 읽습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>로 보낼 때 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>은 빼거나 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>으로 두고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">style</code>과 최상위 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">moderation</code>은 보내지 않습니다. 보내면 이유를 담은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>로 거절됩니다. OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.edit</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.create_variation</code>은 지원하지 않습니다.</p>

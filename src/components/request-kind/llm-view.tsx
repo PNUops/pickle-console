@@ -26,7 +26,9 @@ import {
   type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
 import {
+  grantPayload,
   passthroughText,
+  requestedFeaturesText,
   type PassthroughEndpoint,
 } from '../../lib/passthrough-endpoints'
 import { todayKstDate } from '../../lib/format'
@@ -184,13 +186,15 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   // 계정 기본값만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
   // 희망이 아니라 관리자가 사업 계정에 미리 정해 둔 정책이라, 채워도 검토가
   // 사라지지 않는다. 한 번이라도 손대면 그 뒤로는 계정을 바꿔도 덮지 않는다.
-  // 셋은 한 계정이 정해 둔 한 벌이라 프리필도 되돌리기도 함께 움직인다.
+  // 둘은 한 계정이 정해 둔 한 벌이라 프리필도 되돌리기도 함께 움직인다.
   const [creditModelRules, setCreditModelRules] = useState('')
-  // 기능 권한만 빈 값의 뜻이 반대다. 모델 목록 둘은 비면 제한이 풀리지만 이쪽은
-  // 비면 아무것도 안 열리므로, 프리필이 없으면 아무 기능도 없는 승인이 된다.
+  // Features start from what the requester ticked. An empty grant opens
+  // nothing, so starting empty would make every untouched approval a key that
+  // cannot even chat. A request submitted before the field existed comes back
+  // from the api as ["chat"].
   const [passthroughEndpoints, setPassthroughEndpoints] = useState<
     readonly PassthroughEndpoint[]
-  >([])
+  >(() => spec?.reqPassthroughEndpoints ?? [])
   const [accountDefaultsTouched, setAccountDefaultsTouched] = useState(false)
   const [prefilledFrom, setPrefilledFrom] = useState<string | null>(null)
   // 기간은 종류를 가리지 않는 공통 축이라 VM과 마찬가지로 신청 기간에서 시작한다.
@@ -199,6 +203,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   // 확인한 내용을 통째로 들고 있다가 지금 값과 대조한다. boolean으로 들면 확인 뒤
   // 모달을 닫고 금액이나 계정을 고쳐 다시 열었을 때 확인이 살아남는다.
   const [acknowledged, setAcknowledged] = useState<string | null>(null)
+  // Held as the grant it was given for, for the same reason: unticking Chat
+  // again after a confirmation must ask again.
+  const [chatlessAcknowledged, setChatlessAcknowledged] = useState<string | null>(null)
+  const chatless = !passthroughEndpoints.includes('chat')
+  const chatlessKey = JSON.stringify(passthroughEndpoints)
 
   // 검증과 제출 본문과 확인 창이 같은 계정을 근거로 삼아야 한다 — 자동 선택 규칙을
   // 세 번 다시 쓰면 한 곳만 고쳤을 때 서로 다른 계정을 말하게 된다.
@@ -239,14 +248,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
   const accountDefault = effectiveAccount?.defaultCreditAllowedModels ?? []
   const accountDenyDefault = effectiveAccount?.defaultCreditDeniedModels ?? []
-  const accountPassthroughDefault = effectiveAccount?.defaultPassthroughEndpoints ?? []
-  const hasAccountDefaults =
-    accountDefault.length + accountDenyDefault.length + accountPassthroughDefault.length > 0
+  const hasAccountDefaults = accountDefault.length + accountDenyDefault.length > 0
   const prefillKey = effectiveAccount?.id ?? null
   if (!accountDefaultsTouched && prefillKey !== prefilledFrom) {
     setPrefilledFrom(prefillKey)
     setCreditModelRules(formatCreditModelRules(accountDefault, accountDenyDefault))
-    setPassthroughEndpoints(accountPassthroughDefault)
   }
 
   const parsedRules = parseCreditModelRules(creditModelRules)
@@ -324,7 +330,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         grantedCreditAllowedModels: parsedCreditModels,
         grantedCreditDeniedModels: parsedDeniedModels,
         // 금액과 무관한 축이라 금액이 0인 승인에서도 그대로 실어 보낸다.
-        grantedPassthroughEndpoints: [...passthroughEndpoints],
+        grantedPassthroughEndpoints: grantPayload(passthroughEndpoints),
         openrouterAccountId: Number(creditLimit) > 0 ? effectiveAccount?.id ?? null : null,
       },
     }),
@@ -333,7 +339,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       <>
         <p className="text-sm text-neutral-500">
           부여 한도를 정해 주세요. 비워 둔 항목은 서비스 기본 한도로 발급되며, 그것이
-          보통의 승인입니다. 신청자의 희망값은 각 항목 아래에 적어 두었습니다.
+          보통의 승인입니다. 신청자의 희망값은 각 한도 아래에 적어 두었습니다.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
@@ -457,8 +463,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           label="부여할 기능 권한"
           value={passthroughEndpoints}
           onChange={(next) => {
-            setAccountDefaultsTouched(true)
             setPassthroughEndpoints(next)
+            setChatlessAcknowledged(null)
           }}
         />
         {!accountDefaultsTouched && hasAccountDefaults ? (
@@ -475,7 +481,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               onClick={() => {
                 setAccountDefaultsTouched(false)
                 setCreditModelRules(formatCreditModelRules(accountDefault, accountDenyDefault))
-                setPassthroughEndpoints(accountPassthroughDefault)
               }}
             >
               {effectiveAccount?.name} 계정의 기본값으로 되돌리기
@@ -554,6 +559,20 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         {judgement ? (
           <AllocationWarning judgement={judgement} pendingLabel={pendingLabel} />
         ) : null}
+        {chatless ? (
+          <>
+            <Alert variant="warning">
+              Chat 없이 승인하면 이 키로 텍스트 생성과 에이전트 연결을 쓸 수 없습니다.
+            </Alert>
+            <Checkbox
+              checked={chatlessAcknowledged === chatlessKey}
+              onChange={(event) =>
+                setChatlessAcknowledged(event.target.checked ? chatlessKey : null)
+              }
+              label="Chat 없이 승인합니다"
+            />
+          </>
+        ) : null}
         {judgement?.needsAcknowledgement ? (
           <Checkbox
             checked={acknowledged === acknowledgementKey}
@@ -577,7 +596,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       </div>
     ),
 
-    confirmReady: !judgement?.needsAcknowledgement || acknowledged === acknowledgementKey,
+    confirmReady:
+      (!judgement?.needsAcknowledgement || acknowledged === acknowledgementKey) &&
+      (!chatless || chatlessAcknowledged === chatlessKey),
 
     successMessage: bulk
       ? '신청을 승인했습니다. 대상자별 LLM API 키가 차례로 만들어집니다.'
@@ -719,6 +740,9 @@ export const llmKeyRequestView: RequestKindView = {
       <Field label="희망 분당 요청 수">{limitText(data.llmKey?.reqRpm)}</Field>
       <Field label="희망 분당 토큰 수">{limitText(data.llmKey?.reqTpm)}</Field>
       <Field label="희망 일일 토큰 수">{limitText(data.llmKey?.reqDailyTokens)}</Field>
+      <Field label="필요한 기능">
+        {requestedFeaturesText(data.llmKey?.reqPassthroughEndpoints ?? [])}
+      </Field>
       <Field label="기타 참고">{data.extraNote ?? '—'}</Field>
       <Field label="표시명">{data.displayName}</Field>
     </>

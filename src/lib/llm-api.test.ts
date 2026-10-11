@@ -13,6 +13,7 @@ import {
   LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
+import { PASSTHROUGH_ENDPOINTS } from './passthrough-endpoints'
 
 /**
  * 이 파일의 값은 게이트웨이 설정의 사본이고, 사본은 조용히 틀어진다. 화면에 그 값이
@@ -150,11 +151,20 @@ describe('LLM API 사실 사본', () => {
 
   test('the OpenAI SDK image path is listed beside the vendor one', () => {
     expect(LLM_PASSTHROUGH_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'POST /v1/chat/completions',
       'POST /v1/images',
       'POST /v1/images/generations',
       'GET /v1/images/models',
       'POST /v1/embeddings',
     ])
+  })
+
+  // A route whose feature cannot be granted would tell a reader to ask for
+  // something no approver can give.
+  test('every listed route needs a feature that can be granted', () => {
+    for (const route of LLM_PASSTHROUGH_ROUTES) {
+      expect(PASSTHROUGH_ENDPOINTS).toContain(route.capability)
+    }
   })
 
   test('내부에서만 쓰는 sentinel은 표에 실리지 않는다', () => {

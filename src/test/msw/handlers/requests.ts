@@ -70,6 +70,7 @@ function llmKeyRequest(): Omit<
       grantedCreditAllowedModels: [],
       grantedCreditDeniedModels: [],
       grantedPassthroughEndpoints: [],
+      reqPassthroughEndpoints: ['chat'],
     },
   }
 }
@@ -328,6 +329,7 @@ export const requestHandlers: RequestHandler[] = [
               grantedCreditAllowedModels: [],
               grantedCreditDeniedModels: [],
               grantedPassthroughEndpoints: [],
+              reqPassthroughEndpoints: body.llmKey?.reqPassthroughEndpoints ?? ['chat'],
             }
           : null,
       gpu: body.type === 'GPU' && body.gpu ? { leaseHours: body.gpu.leaseHours, vmId: body.gpu.vmId, vmName: null } : null,

@@ -48,7 +48,12 @@ import {
   parseCreditModelRules,
 } from '../lib/credit-model-allowlist'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { passthroughText, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
+import {
+  grantPayload,
+  holdsChatChildren,
+  passthroughText,
+  type PassthroughEndpoint,
+} from '../lib/passthrough-endpoints'
 import { formatDateTime, todayKstDate } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS, PAID_KEY_EXPIRY_NOTE } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
@@ -551,12 +556,11 @@ function LimitsModal({
       // 일어나고, 테스트가 지키는 것은 그쪽이다. 정리하려거든 그 사실을 알고 해라.
       creditAllowedModels: canEditCredit ? parsedModels : llmKey.creditAllowedModels,
       creditDeniedModels: canEditCredit ? parsedDeniedModels : llmKey.creditDeniedModels,
-      // 서버가 이 목록을 금액과 같은 쪽 게이트에 두었다 — 시스템 운영자가 바꾸면
-      // 403이다. 그래서 두 모델 목록과 똑같이 현재 값을 그대로 되돌려 보낸다.
-      // 빠뜨리면 422이고, 빈 배열을 보내면 부여된 기능이 통째로 없어진다.
-      passthroughEndpoints: canEditCredit
-        ? [...passthroughEndpoints]
-        : llmKey.passthroughEndpoints,
+      // A role that cannot change money may still turn Chat on or off, since
+      // Chat works on both axes; the field below offers it Chat alone, so the
+      // rest of the list goes back as it came. Leaving the field out is 422,
+      // and an empty list would revoke every feature.
+      passthroughEndpoints: grantPayload(passthroughEndpoints),
       openrouterAccountId:
         llmKey.openrouterAccountId ??
         (canEditCredit && initialBindingAllowed && credit > 0
@@ -598,6 +602,22 @@ function LimitsModal({
             error={fieldErrors.concurrency}
           />
         </div>
+        {!canEditCredit && (
+          <PassthroughEndpointField
+            label="Chat 권한"
+            value={passthroughEndpoints}
+            onChange={setPassthroughEndpoints}
+            rows={['chat']}
+            // Unticking Chat would drop web search or PDF OCR with it, a change
+            // on the money side this role cannot make.
+            locked={holdsChatChildren(passthroughEndpoints) ? ['chat'] : []}
+            description={
+              holdsChatChildren(passthroughEndpoints)
+                ? 'Chat 아래 기능이 부여된 키라 Chat을 회수할 수 없습니다.'
+                : ''
+            }
+          />
+        )}
         {canEditCredit && (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

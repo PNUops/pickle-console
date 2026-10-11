@@ -92,9 +92,14 @@ interface WorkspaceOption {
   myRole?: WorkspaceMemberRole
 }
 
-/** Server paths `recipients[3]` and `recipients[3].userId` belong to the one picker. */
+/**
+ * Server paths `recipients[3]` and `recipients[3].userId` belong to the one
+ * picker, and `llmKey.reqPassthroughEndpoints[2]` to the one checklist.
+ */
 function normalizeFieldKey(field: string): string {
-  return /^recipients(\[|\.|$)/.test(field) ? 'recipients' : field
+  if (/^recipients(\[|\.|$)/.test(field)) return 'recipients'
+  if (/^llmKey\.reqPassthroughEndpoints\[/.test(field)) return 'llmKey.reqPassthroughEndpoints'
+  return field
 }
 
 /** 직접 적는 종료일의 상한. 서버와 같은 값이다. */
@@ -559,6 +564,7 @@ export function RequestWizard({
             reqCreditLimit: payload.llmKey.reqCreditLimit ?? null,
             useCampusModels: payload.llmKey.useCampusModels ?? false,
             useCommercialModels: payload.llmKey.useCommercialModels ?? false,
+            reqPassthroughEndpoints: payload.llmKey.reqPassthroughEndpoints,
             grantedCreditAllowedModels: [],
             grantedCreditDeniedModels: [],
             grantedPassthroughEndpoints: [],

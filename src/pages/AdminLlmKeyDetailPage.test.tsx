@@ -189,6 +189,42 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['images'])
   })
 
+  // Chat works on both axes, so the server does not count a Chat-only change
+  // as a money change; the manager is offered that one box and nothing else.
+  test('a role that cannot change money can grant Chat alone', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-manager', sysManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.getAllByRole('checkbox')).toHaveLength(1)
+    await user.click(dialog.getByRole('checkbox', { name: /Chat/ }))
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['chat', 'images'])
+  })
+
+  // Unticking Chat would take web search with it, a money-side change this
+  // role cannot make, so the box is locked rather than left to end in 403.
+  test('a role that cannot change money cannot take Chat from a key with web search', async () => {
+    const key = adminLlmKeyStore.find((item) => item.id === uuid(171))!
+    key.passthroughEndpoints = ['chat', 'web_search']
+    const user = userEvent.setup()
+    renderDetail('access-sys-manager', sysManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.getByRole('checkbox', { name: /Chat/ })).toBeDisabled()
+    expect(dialog.getByText('Chat 아래 기능이 부여된 키라 Chat을 회수할 수 없습니다.')).toBeInTheDocument()
+  })
+
+  test('web search waits for Chat on a key without it', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.getByRole('checkbox', { name: /웹 검색/ })).toBeDisabled()
+  })
+
   test('한도 창에서 기능 체크를 풀면 빈 목록으로 나간다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-admin', sysAdminUser, uuid(171))

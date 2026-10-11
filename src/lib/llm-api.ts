@@ -18,10 +18,13 @@ export const LLM_API_BASE_URL = `https://${LLM_GATEWAY_HOST}/v1`
 export const LLM_DEFAULT_MODEL = 'pickle-general'
 
 /**
- * 채팅 외에 이 게이트웨이가 중계하는 경로.
+ * The routes a key reaches only with the matching feature granted, Chat
+ * included. A key without it gets 403 `endpoint_not_allowed`, never 404:
+ * a route that does not exist and a route this key may not use are different
+ * states. `GET /v1/models` costs nothing and needs no feature.
  *
- * 기능 단위로 부여되고, 부여받지 않은 키는 403 `endpoint_not_allowed`로 답한다. 경로가
- * 없는 것과 키에 허용되지 않은 것은 다른 상태이므로 404로 감추지 않는다.
+ * Web search and PDF OCR are Chat's children and have no route of their own;
+ * the gateway reads them from the Chat request body.
  *
  * `/v1/images/generations` is the OpenAI SDK's path for the same handler as
  * `/v1/images`. Request and response pass through unchanged, so the SDK gets
@@ -31,6 +34,7 @@ export const LLM_DEFAULT_MODEL = 'pickle-general'
  * The SDK's edit and variation paths stay 404.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
+  { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
   { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
   {
     capability: 'images',
