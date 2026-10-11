@@ -69,6 +69,9 @@ describe('사용 가이드', () => {
     // an empty value without an error, so the page has to say which field to read.
     expect(body).toContain('images.generate')
     expect(body).toContain('b64_json')
+    // Editing is offered through the vendor path's body field while the SDK's
+    // images.edit is not; without the field name the two read as a contradiction.
+    expect(body).toContain('input_references')
     expect(body).toContain('streaming_not_supported')
   })
 
