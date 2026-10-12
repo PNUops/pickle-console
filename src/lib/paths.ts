@@ -79,6 +79,7 @@ export const adminPaths = {
   newNotice: (orgId?: string, returnTo?: string) => adminPath(`/admin/notices/new${returnTo ? `?${new URLSearchParams({ returnTo })}` : ''}`, orgId),
   editNotice: (noticeId: string, orgId?: string, returnTo?: string) => adminPath(`/admin/notices/${noticeId}/edit${returnTo ? `?${new URLSearchParams({ returnTo })}` : ''}`, orgId),
   requests: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/requests?${new URLSearchParams({ status: 'all', workspaceId })}` : '/admin/requests', orgId),
+  userRequests: (userId: string, orgId?: string) => adminPath(`/admin/requests?${new URLSearchParams({ status: 'all', relatedUserId: userId })}`, orgId),
   newRequest: (orgId?: string, kind?: string) =>
     adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),
   requestDetail: (requestId: string, orgId?: string) =>
@@ -102,6 +103,7 @@ export const adminPaths = {
   bulkVms: (orgId?: string) => adminPath('/admin/bulk/vms', orgId),
   bulkDomains: (orgId?: string) => adminPath('/admin/bulk/domains', orgId),
   domains: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/domains?workspaceId=${workspaceId}` : '/admin/domains', orgId),
+  domainDetail: (id: string, orgId?: string) => adminPath(`/admin/domains?domainId=${id}`, orgId),
   gpus: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/gpus?workspaceId=${workspaceId}` : '/admin/gpus', orgId),
   gpuDetail: (allocationId: string, orgId?: string) => adminPath(`/admin/gpus/${allocationId}`, orgId),
   llmUsage: (orgId?: string, workspaceId?: string | null, days?: 7 | 30 | 90) => {

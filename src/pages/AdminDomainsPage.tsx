@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -8,6 +8,7 @@ import {
   fetchAdminDomainRecords,
   fetchAdminDomainRoots,
   fetchAdminDomains,
+  fetchAdminDomain,
   fetchAdminRoutes,
   forceReleaseDomain,
   resyncRoutes,
@@ -69,6 +70,9 @@ import { useAdminScope } from '../lib/use-admin-scope'
 import { isUuid } from '../lib/validation'
 import { useBulkSelection } from '../lib/bulk-selection'
 import { adminPaths } from '../lib/paths'
+import { requestDetailReturn } from '../lib/list-url'
+import { requestReaderKey } from '../api/request-review'
+import { useActiveResult } from '../lib/use-active-result'
 
 const PAGE_SIZE = 20
 
@@ -95,6 +99,12 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM', 'EXTERNAL']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminDomainsContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminDomainsContent() {
+  const { user } = useAuth()
   const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
@@ -112,11 +122,21 @@ export function AdminDomainsPage() {
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const rawSelectedId = searchParams.get('domainId')
+  const selectedId = rawSelectedId && isUuid(rawSelectedId) ? rawSelectedId.toLowerCase() : rawSelectedId
+  const selectedValid = !!selectedId && isUuid(selectedId)
+  const selectedRef = useRef(selectedId)
+  selectedRef.current = selectedId
+  const active = useActiveResult()
+  const requestReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  useEffect(() => { if (selectedId) setMessage(null) }, [selectedId])
 
-  const selectDomain = (id: string) => {
+  const selectDomain = (id: string | null) => {
     if (id !== selectedId) setMessage(null) // 다른 도메인의 결과가 남아 오독되지 않게
-    setSelectedId(id)
+    const next = new URLSearchParams(searchParams)
+    if (id) next.set('domainId', id)
+    else next.delete('domainId')
+    setSearchParams(next, { replace: true })
   }
 
   const domains = useQuery({
@@ -128,14 +148,17 @@ export function AdminDomainsPage() {
     queryFn: () =>
       fetchAdminDomains({ status, kind, workspaceId, orgId: activeOrgId, page, size: PAGE_SIZE }),
   })
-  const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
+  const selectedQuery = useQuery({ queryKey: ['admin', 'domains', 'detail', selectedId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchAdminDomain(selectedId!), enabled: selectedValid })
+  const selectedInScope = selectedQuery.isSuccess && (!activeOrgId || selectedQuery.data.orgId === activeOrgId)
+  const selected = selectedInScope ? selectedQuery.data : null
   const pageTargets = (domains.data?.content ?? []).map((domain) => ({
     id: domain.id,
     name: domain.fqdn,
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [overflow-wrap:anywhere]">
+      {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
@@ -331,17 +354,22 @@ export function AdminDomainsPage() {
         )}
 
         <Drawer
-          open={selected !== null}
-          onClose={() => setSelectedId(null)}
+          open={selectedId !== null}
+          onClose={() => selectDomain(null)}
           title="도메인 상세"
         >
+          {!selectedValid && <Alert variant="danger">도메인 ID를 확인해 주세요.</Alert>}
+          {selectedValid && selectedQuery.isPending && <Spinner label="도메인 상세 불러오는 중" />}
+          {selectedValid && selectedQuery.isError && <Alert variant="danger">{selectedQuery.error.message}</Alert>}
+          {selectedQuery.isSuccess && !selectedInScope && <Alert variant="danger">선택한 관리 범위의 도메인이 아닙니다.</Alert>}
           {selected && (
             <DomainDrawerContent
               key={selected.id}
               domain={selected}
               onDone={(text) => {
+                if (!active.current || selectedRef.current !== selected.id) return
+                selectDomain(null)
                 setMessage(text)
-                setSelectedId(null) // 강제 해제된 도메인의 드로어를 확정적으로 닫는다
               }}
             />
           )}
@@ -392,9 +420,9 @@ function DomainDrawerContent({
     routes.isSuccess && routes.data.totalElements > routes.data.content.length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-mono text-lg font-semibold text-neutral-900">{domain.fqdn}</h3>
+    <div className="space-y-6 [overflow-wrap:anywhere]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="min-w-0 font-mono text-lg font-semibold text-neutral-900">{domain.fqdn}</h3>
         <DomainStatusBadge status={domain.status} />
       </div>
       {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}

@@ -1,7 +1,8 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgs, requestOptions } from './reference'
-import { problemResponse } from './auth'
+import { ACCESS_TOKENS, problemResponse } from './auth'
+import { adminReadScope } from './org-scope'
 import { recordVmEvent, vmStore } from './vms'
 import { uuid } from '../ids'
 
@@ -799,6 +800,9 @@ export const publishingHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/domains', ({ request }) => {
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
+    const profile = ACCESS_TOKENS[request.headers.get('Authorization')?.replace('Bearer ', '') ?? '']
+    const scope = profile ? adminReadScope(profile, orgId, '/api/v1/admin/domains') : null
+    if (scope?.notFound) return scope.notFound
     const workspaceId = url.searchParams.get('workspaceId')
     const kind = url.searchParams.get('kind')
     const status = url.searchParams.get('status')
@@ -811,12 +815,21 @@ export const publishingHandlers: RequestHandler[] = [
       ...externalDomains,
     ]
       .filter((d) => !orgId || d.orgId === orgId)
+      .filter((d) => !scope || scope.matches(d.orgId))
       .filter((d) => !workspaceId || d.workspaceId === workspaceId)
       .filter((d) => !kind || d.kind === kind)
       // 실서버 규칙: REMOVED는 기본 숨김, status=REMOVED 명시 때만 노출.
       .filter((d) => (status ? d.status === status : d.status !== 'REMOVED'))
       .sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(paginate(items, page, size), { status: 200 })
+  }),
+
+  http.get('*/api/v1/admin/domains/:domainId', ({ params, request }) => {
+    const domain = findAdminDomain(String(params.domainId))
+    const profile = ACCESS_TOKENS[request.headers.get('Authorization')?.replace('Bearer ', '') ?? '']
+    const scope = profile ? adminReadScope(profile, null, request.url) : null
+    if (!domain || domain.status === 'REMOVED' || scope && !scope.matches(domain.orgId)) return problemResponse({ type: 'about:blank', title: '리소스를 찾을 수 없습니다', status: 404, detail: '해당 도메인을 찾을 수 없습니다.', code: 'RESOURCE_NOT_FOUND' })
+    return HttpResponse.json(domain)
   }),
 
   http.get('*/api/v1/admin/certificates', ({ request }) => {

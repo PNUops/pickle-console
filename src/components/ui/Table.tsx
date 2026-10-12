@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 
 export function Table({ className, ...rest }: ComponentPropsWithRef<'table'>) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className={cn('w-full border-collapse text-sm', className)} {...rest} />
     </div>
   )

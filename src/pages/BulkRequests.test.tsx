@@ -360,6 +360,13 @@ describe('bulk request from the administration area', () => {
     expect(await screen.findByRole('heading', { name: '승인 내용' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '제출하고 승인' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    const confirmation = within(dialog)
+    expect(confirmation.getByText(/제출 전 미리보기입니다/)).toBeInTheDocument()
+    expect(confirmation.getByText(/신청 대상 3명.*조회된 구성원 대상 0명.*가입 대기 1명.*조건 미확인 2명/)).toBeInTheDocument()
+    await user.click(confirmation.getByText('실제 대상 확인 (3명)'))
+    expect(confirmation.getByText('202312346 최수진 / 제출 시 구성원 추가 예정 / 서버 재확인')).toBeInTheDocument()
+    expect(confirmation.getByText('202399999 한새봄 / 제출 시 초대 예정 / 가입 대기')).toBeInTheDocument()
+    expect(createdRequestBodies).toHaveLength(0)
     await user.click(within(dialog).getByRole('button', { name: '제출하고 승인' }))
 
     expect(await screen.findByText('신청을 승인했습니다')).toBeInTheDocument()
@@ -474,7 +481,7 @@ describe('recipients on the administrator request detail', () => {
 
     const table = await screen.findByRole('table', { name: '대상자' })
     const rows = within(table).getAllByRole('row')
-    expect(within(rows[1]).getByText('리소스 등록됨')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('자원 등록됨')).toBeInTheDocument()
     expect(within(rows[1]).getByRole('link', { name: '상세 보기' })).toHaveAttribute(
       'href',
       `/admin/vms/${uuid(8801)}?org=${uuid(1)}`,

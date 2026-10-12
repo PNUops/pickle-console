@@ -421,6 +421,11 @@ export function fetchVm(vmId: string): Promise<VmDetail> {
 
 export function fetchAdminRequests(params: {
   workspaceId?: string
+  q?: string
+  requestedEndFrom?: string
+  requestedEndTo?: string
+  reqIndefinite?: boolean
+  relatedUserId?: string
   status?: RequestStatus
   type?: ResourceType
   orgId?: string
@@ -1994,6 +1999,14 @@ export function fetchAdminDomains(params: {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/domains', { params: { query: params } })
     if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminDomain(domainId: string): Promise<AdminDomainView> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/domains/{domainId}', { params: { path: { domainId } } })
+    if (!data) throw toApiError(error, '도메인 상세를 불러오지 못했습니다.')
     return data
   })
 }

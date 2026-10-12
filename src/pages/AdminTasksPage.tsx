@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router'
 import {
   fetchAdminTasks,
   retryAdminTask,
@@ -27,6 +28,9 @@ import {
 } from '../components/ui'
 import { formatDateTime } from '../lib/format'
 import { PROVISIONING_KIND_LABELS, TASK_STATUS_LABELS } from '../lib/status'
+import { isUuid } from '../lib/validation'
+import { adminPaths } from '../lib/paths'
+import { requestDetailReturn } from '../lib/list-url'
 
 const PAGE_SIZE = 20
 
@@ -42,7 +46,18 @@ const STATUS_TABS: { label: string; status: ProvisioningTaskStatus | undefined }
 
 /** 작업(태스크) 큐 — SYS_ADMIN이 NEEDS_ADMIN 작업의 원인을 확인하고 재시도한다. */
 export function AdminTasksPage() {
+  const [params] = useSearchParams()
+  const vmId = params.get('vmId')
+  if (vmId && !isUuid(vmId)) return <Alert variant="danger">VM ID를 확인해 주세요.</Alert>
+  return <AdminTasksContent key={vmId ?? 'all'} />
+}
+
+function AdminTasksContent() {
   const { user } = useAuth()
+  const [params] = useSearchParams()
+  const rawVmId = params.get('vmId')
+  const vmId = rawVmId && isUuid(rawVmId) ? rawVmId.toLowerCase() : undefined
+  const requestReturn = requestDetailReturn(params.get('returnTo'), undefined, true)
   // 재시도는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canRetry = !!user && canRunSysRoutine(user.role)
   const [status, setStatus] = useState<ProvisioningTaskStatus | undefined>(undefined)
@@ -51,9 +66,8 @@ export function AdminTasksPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const tasks = useQuery({
-    queryKey: ['admin', 'tasks', { status: status ?? null, page }],
-    queryFn: () => fetchAdminTasks({ status, page, size: PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+    queryKey: ['admin', 'tasks', { status: status ?? null, vmId: vmId ?? null, page }],
+    queryFn: () => fetchAdminTasks({ status, vmId, page, size: PAGE_SIZE }),
     // 진행 계열 작업이 보이는 동안만 폴링 (VM 목록의 전이 중 폴링과 같은 패턴).
     refetchInterval: (query) =>
       query.state.data?.content.some((task) =>
@@ -65,6 +79,7 @@ export function AdminTasksPage() {
 
   return (
     <div className="space-y-6">
+      {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">작업 큐</h1>
         <p className="mt-1 text-sm text-neutral-500">
@@ -72,6 +87,7 @@ export function AdminTasksPage() {
           필요)은 원인 해결 후 재시도할 수 있습니다.
         </p>
       </div>
+      {vmId && <p className="break-all text-sm text-neutral-600">현재 VM의 작업만 조회합니다. <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vmId, params.get('org') ?? undefined)}>VM 상세 보기</Link></p>}
 
       <FilterBar
         tabs={STATUS_TABS}
