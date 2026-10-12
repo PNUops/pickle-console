@@ -10,6 +10,7 @@ import {
   POWER_ACTIONS,
   POWER_ACTION_LABELS,
   STATUS_ACTION_LABELS,
+  chatOnlyFeatures,
   clearingLists,
   limitFieldsFor,
   statusActionsFor,
@@ -25,6 +26,7 @@ import {
   RESOURCE_ROLE_HINTS,
   RESOURCE_ROLE_LABELS,
 } from '../../lib/labels'
+import { withHierarchy } from '../../lib/passthrough-endpoints'
 import { useDebouncedValue } from '../../lib/use-debounced-value'
 import { CreditModelRulesField } from '../CreditModelRulesField'
 import { LimitField } from '../llm-key/LimitField'
@@ -63,15 +65,17 @@ function ListOpSelect({
   label,
   value,
   onChange,
+  ops = ['ADD', 'REMOVE', 'REPLACE'],
 }: {
   label: string
   value: AdminBulkListOp
   onChange: (op: AdminBulkListOp) => void
+  ops?: readonly AdminBulkListOp[]
 }) {
   return (
     <FormField label={label} className="w-full sm:w-40">
       <Select value={value} onChange={(event) => onChange(event.target.value as AdminBulkListOp)}>
-        {(['ADD', 'REMOVE', 'REPLACE'] as const).map((op) => (
+        {ops.map((op) => (
           <option key={op} value={op}>
             {LIST_OP_LABELS[op]}
           </option>
@@ -93,6 +97,7 @@ export function LimitsForm({
   errors: Errors
 }) {
   const fields = limitFieldsFor(role)
+  const chatOnly = chatOnlyFeatures(role)
   const chosen = new Set(draft.chosen)
   const set = <K extends keyof BulkDraft['limits']>(key: K, value: BulkDraft['limits'][K]) =>
     onChange({ ...draft, [key]: value })
@@ -200,20 +205,35 @@ export function LimitsForm({
           <ListOpSelect
             label="기능 권한 변경 방식"
             value={draft.passthroughOp}
-            onChange={(op) => set('passthroughOp', op)}
+            onChange={(op) =>
+              // A bulk add or remove may list a child alone; a replacement is a
+              // whole grant again, so it gets the hierarchy back.
+              onChange({
+                ...draft,
+                passthroughOp: op,
+                passthrough: op === 'REPLACE' ? withHierarchy(draft.passthrough) : draft.passthrough,
+              })
+            }
+            ops={chatOnly ? ['ADD', 'REMOVE'] : undefined}
           />
           <PassthroughEndpointField
+            rows={chatOnly ? ['chat'] : undefined}
+            flat={draft.passthroughOp !== 'REPLACE'}
             label={`${LIST_OP_LABELS[draft.passthroughOp]}할 기능 권한`}
             value={draft.passthrough}
             onChange={(next) => set('passthrough', next)}
             error={error('passthroughEndpoints')}
             description={PASSTHROUGH_DESCRIPTIONS[draft.passthroughOp]}
           />
-          {clearing.passthrough && (
+          {clearing.passthrough ? (
             <MessageBar variant="warning" title="모든 기능 권한이 회수됩니다">
-              선택한 모든 키에서 이미지 생성과 임베딩을 쓸 수 없게 됩니다.
+              선택한 모든 키에서 Chat을 포함한 모든 기능을 쓸 수 없게 됩니다.
             </MessageBar>
-          )}
+          ) : clearing.chat ? (
+            <MessageBar variant="warning" title="새 목록에 Chat이 없습니다">
+              선택한 모든 키에서 텍스트 생성과 에이전트 연결을 쓸 수 없게 됩니다.
+            </MessageBar>
+          ) : null}
         </div>
       )}
     </div>

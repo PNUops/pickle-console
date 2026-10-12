@@ -74,12 +74,16 @@ export function ProfileImpactView({ impact }: { impact: ProfileImpact }) {
 export function UserChangeOutcome({ impact, actualStatus }: { impact: ProfileImpact; actualStatus: keyof typeof USER_STATUS_LABELS }) {
   const invitationIds = new Set(impact.invitations.map((invitation) => invitation.id))
   const requestIds = new Set(impact.invitations.flatMap((invitation) => invitation.recipients.map((recipient) => recipient.requestId)))
+  const [pollUntil] = useState(() => Date.now() + 10 * 60_000)
   const results = useQuery({
     queryKey: ['admin', 'users', 'change-result', impact.userId, impact.observedAt],
     queryFn: () => fetchUserSupport(impact.userId),
     enabled: invitationIds.size > 0,
-    refetchInterval: (query) => query.state.data?.requests.some((request) => requestIds.has(request.id) && (request.recipientStatus === 'QUEUED' || request.recipientStatus === 'CREATING'))
-      || query.state.data?.resources.some((resource) => resource.requestId && requestIds.has(resource.requestId) && resource.status === 'CREATING') ? 5_000 : false,
+    refetchInterval: (query) => Date.now() < pollUntil && (
+      query.state.data?.requests.some((request) => requestIds.has(request.id)
+        && (request.recipientStatus === 'CREATING' || (request.status === 'APPROVED' && request.recipientStatus === 'QUEUED')))
+      || query.state.data?.resources.some((resource) => resource.requestId && requestIds.has(resource.requestId) && resource.status === 'CREATING')
+    ) ? 15_000 : false,
   })
   const requests = results.data?.requests.filter((request) => requestIds.has(request.id)) ?? []
   return <Card className="space-y-3 p-4 text-sm [overflow-wrap:anywhere]">
@@ -119,8 +123,6 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
   const support = useQuery({
     queryKey: ['admin', 'users', 'support', userId, activeOrgId ?? null],
     queryFn: () => fetchUserSupport(userId, activeOrgId),
-    refetchInterval: (query) => query.state.data?.requests.some((request) => request.recipientStatus === 'QUEUED' || request.recipientStatus === 'CREATING')
-      || query.state.data?.resources.some((resource) => resource.status === 'CREATING' || resource.status === 'DELETING') ? 5_000 : false,
   })
   if (support.isPending) return <><GrantReceiptCard receipt={receipt} /><Spinner label="사용자 관계와 신청 결과 불러오는 중" /></>
   if (support.isError) return <><GrantReceiptCard receipt={receipt} /><Alert variant="danger">{support.error.message}<Button variant="secondary" size="sm" onClick={() => void support.refetch()}>다시 조회</Button></Alert></>

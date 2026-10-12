@@ -43,6 +43,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
       grantedCreditAllowedModels: [],
       grantedCreditDeniedModels: [],
       grantedPassthroughEndpoints: [],
+      reqPassthroughEndpoints: ['chat'],
       ...spec,
     },
     status: 'SUBMITTED',
@@ -86,6 +87,7 @@ function renderDetail(
           grantedCreditAllowedModels: body.llmKey?.grantedCreditAllowedModels ?? [],
           grantedCreditDeniedModels: body.llmKey?.grantedCreditDeniedModels ?? [],
           grantedPassthroughEndpoints: body.llmKey?.grantedPassthroughEndpoints ?? [],
+          reqPassthroughEndpoints: detail.current.llmKey?.reqPassthroughEndpoints ?? ['chat'],
         },
         review: {
           reviewerId: orgAdminUser.id,
@@ -189,7 +191,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
           grantedCreditLimitReset: null,
           grantedCreditAllowedModels: [],
           grantedCreditDeniedModels: [],
-          grantedPassthroughEndpoints: [],
+          grantedPassthroughEndpoints: ['chat'],
           openrouterAccountId: null,
         },
       },
@@ -321,55 +323,82 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(screen.getByText('openai/*-pro')).toBeInTheDocument()
   })
 
-  // 기능 권한은 세 목록 중 유일하게 비움이 '제한 없음'이 아니라 '아무것도 없음'이다.
-  // 승인자가 그 차이를 읽을 자리는 확인 모달뿐이고, 그 줄이 없으면 아무 기능도 안 준
-  // 승인과 안 물어본 승인이 화면에서 구별되지 않는다.
-  test('기능을 하나도 고르지 않으면 부여되지 않았다고 확인 모달이 말한다', async () => {
+  // An empty grant opens nothing, Chat included. The approver reads that on
+  // the confirmation, and approving a key that cannot chat takes a tick.
+  test('approving without Chat asks for a confirmation', async () => {
     const user = userEvent.setup()
-    const approved = renderDetail({})
+    const approved = renderDetail({ reqPassthroughEndpoints: [] })
 
     await screen.findByRole('heading', { name: '신청 상세' })
+    expect(screen.getByRole('checkbox', { name: /Chat/ })).not.toBeChecked()
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText(/기능 권한 부여 안 됨/)).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
+    expect(dialog.getByText(/기능 권한 부여 안 됨/)).toBeInTheDocument()
+    expect(dialog.getByRole('button', { name: '승인 확정' })).toBeDisabled()
+    await user.click(dialog.getByRole('checkbox', { name: 'Chat 없이 승인합니다' }))
+    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
     expect(approved[0].llmKey).toMatchObject({ grantedPassthroughEndpoints: [] })
   })
 
-  test('체크한 기능만 부여값으로 나가고 결과 카드에 남는다', async () => {
+  test('starts from what the requester ticked and sends what is ticked', async () => {
     const user = userEvent.setup()
-    const approved = renderDetail({})
+    const approved = renderDetail({ reqPassthroughEndpoints: ['chat', 'web_search'] })
 
     await screen.findByRole('heading', { name: '신청 상세' })
+    expect(screen.getByRole('checkbox', { name: /Chat/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).toBeChecked()
     await user.click(screen.getByRole('checkbox', { name: /이미지 생성/ }))
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText(/기능 권한 이미지 생성/)).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
+    expect(dialog.getByText(/기능 권한 Chat, 웹 검색, 이미지 생성/)).toBeInTheDocument()
+    expect(dialog.queryByRole('checkbox', { name: 'Chat 없이 승인합니다' })).not.toBeInTheDocument()
+    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
-    expect(approved[0].llmKey).toMatchObject({ grantedPassthroughEndpoints: ['images'] })
+    expect(approved[0].llmKey).toMatchObject({
+      grantedPassthroughEndpoints: ['chat', 'web_search', 'images'],
+    })
     const granted = screen.getByText('기능 권한').closest('div')!
-    expect(within(granted).getByText('이미지 생성')).toBeInTheDocument()
+    expect(within(granted).getByText('Chat, 웹 검색, 이미지 생성')).toBeInTheDocument()
   })
 
-  // 「이미지 생성」은 토큰이 실제로 여는 범위보다 좁게 읽힌다. 그 이름만 보고 부여한
-  // 승인자는 편집까지 준 줄 모르고, 이 축은 준 것과 열리는 것이 같아야 뜻이 있다.
-  test('이미지 체크 옆에 편집과 목록 조회까지 열린다고 적는다', async () => {
-    renderDetail({})
+  test('turning Chat off drops web search and disables it', async () => {
+    const user = userEvent.setup()
+    renderDetail({ reqPassthroughEndpoints: ['chat', 'web_search'] })
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    expect(
-      screen.getByText('편집과 이미지 모델 목록 조회가 함께 들어 있습니다.'),
-    ).toBeInTheDocument()
-    // 임베딩은 경로가 하나라 붙일 말이 없다. 둘 다 달면 이 줄이 경고가 아니라
-    // 장식이 된다.
-    const embeddings = screen.getByRole('checkbox', { name: /임베딩/ }).closest('label')!
-    expect(within(embeddings).queryByText(/들어 있습니다/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /Chat/ }))
+    const webSearch = screen.getByRole('checkbox', { name: /웹 검색/ })
+    expect(webSearch).not.toBeChecked()
+    expect(webSearch).toBeDisabled()
+  })
+
+  // A name this build was not generated with must survive the approval: the
+  // grant is sent whole, and dropping it would refuse what the requester asked.
+  test('keeps a feature name it does not know', async () => {
+    const user = userEvent.setup()
+    const approved = renderDetail({
+      reqPassthroughEndpoints: ['chat', 'future_feature'] as unknown as NonNullable<
+        RequestDetail['llmKey']
+      >['reqPassthroughEndpoints'],
+    })
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.click(screen.getByRole('checkbox', { name: /임베딩/ }))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
+    await user.click(dialog.getByRole('button', { name: '승인 확정' }))
+
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey?.grantedPassthroughEndpoints).toEqual([
+      'chat',
+      'embeddings',
+      'future_feature',
+    ])
   })
 
   test('자체 서빙 접두를 적으면 유료 모델 목록이 아니라고 막는다', async () => {
@@ -479,7 +508,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       grantedCreditLimitReset: null,
       grantedCreditAllowedModels: [],
       grantedCreditDeniedModels: [],
-      grantedPassthroughEndpoints: [],
+      grantedPassthroughEndpoints: ['chat'],
       openrouterAccountId: null,
     })
 
@@ -532,6 +561,39 @@ describe('유료 모델 선택기', () => {
 
     await waitFor(() =>
       expect(screen.getByLabelText('유료 모델 허용·차단')).toHaveValue('+openai/*\n+openai/o1-pro'),
+    )
+  })
+
+  // Input and output are two axes of many. A model whose search fee or
+  // long-context band is hidden reads cheaper than it bills.
+  test('입력과 출력 밖의 가격 축과 구간 가격을 펼쳐 보여 준다', async () => {
+    const user = userEvent.setup()
+    renderDetail({})
+
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
+    await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+
+    const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
+    // A zero axis is not counted: only the reasoning and search charges are.
+    expect(picker.getByText('openai/o1-pro').parentElement).toHaveTextContent(
+      '외 2개 축, 구간 가격 1개',
+    )
+    // A row with nothing beyond input and output has nothing to unfold.
+    expect(
+      picker.queryByRole('button', { name: 'openai/gpt-4o-mini 가격 상세' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(picker.getByRole('button', { name: 'openai/o1-pro 가격 상세' }))
+
+    const axes = within(picker.getByLabelText('openai/o1-pro 가격 축'))
+    expect(axes.getByText('추론')).toBeInTheDocument()
+    expect(axes.getByText('$600 / 1M')).toBeInTheDocument()
+    expect(axes.getByText('웹 검색')).toBeInTheDocument()
+    expect(axes.getByText('$0.0025 / 회')).toBeInTheDocument()
+    expect(axes.queryByText('캐시 읽기')).not.toBeInTheDocument()
+    expect(picker.getByRole('list', { name: 'openai/o1-pro 구간 가격' })).toHaveTextContent(
+      '입력 128,000 토큰 초과: 입력 $300 / 1M, 출력 $1,200 / 1M',
     )
   })
 

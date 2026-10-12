@@ -257,7 +257,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     await user.click(screen.getByRole('button', { name: '호출 종류별' }))
     const kinds = await screen.findByRole('table', { name: '호출 종류별 사용' })
     // 채팅은 스물한 건이지만 유료로 나간 것은 셋이고 그중 둘에 금액이 붙었다.
-    const chat = within(kinds).getByText('채팅').closest('tr')!
+    const chat = within(kinds).getByText('Chat').closest('tr')!
     expect(within(chat).getByText('21건')).toBeInTheDocument()
     expect(within(chat).getByText('$0.0623 (1건 미상)')).toBeInTheDocument()
     // 경로가 기록되기 전의 요청에는 유료 축이 없다.

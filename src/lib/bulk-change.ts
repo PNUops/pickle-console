@@ -130,13 +130,25 @@ export const LIMIT_FIELDS = [
 
 export type LimitFieldKey = (typeof LIMIT_FIELDS)[number]
 
-/** Fields only a role that manages money may change (SYS_MANAGER may not). */
+/**
+ * Fields only a role that manages money may change (SYS_MANAGER may not).
+ * The feature list is not here: Chat works on both axes, so a role without
+ * money may add or remove Chat alone (see `chatOnlyFeatures`).
+ */
 const MONEY_LIMIT_FIELDS: ReadonlySet<LimitFieldKey> = new Set([
   'creditLimit',
   'creditLimitReset',
   'creditModels',
-  'passthroughEndpoints',
 ])
+
+/**
+ * Does this role edit features as Chat alone? It is then offered adding and
+ * removing Chat and nothing else: replacing the list could change the
+ * paid-only features the server counts as a money change.
+ */
+export function chatOnlyFeatures(role: UserRole): boolean {
+  return !canManageLlmCredit(role)
+}
 
 export const LIMIT_FIELD_LABELS: Record<LimitFieldKey, string> = {
   rpm: 'RPM',
@@ -414,6 +426,8 @@ export function clearingLists(draft: BulkDraft['limits']): {
   allowed: boolean
   denied: boolean
   passthrough: boolean
+  /** Replacing the features with a list that has no Chat in it. */
+  chat: boolean
 } {
   const chosen = new Set(draft.chosen)
   // Replacing sends both model lists, so each side the lines leave empty is
@@ -427,6 +441,10 @@ export function clearingLists(draft: BulkDraft['limits']): {
       chosen.has('passthroughEndpoints') &&
       draft.passthroughOp === 'REPLACE' &&
       draft.passthrough.length === 0,
+    chat:
+      chosen.has('passthroughEndpoints') &&
+      draft.passthroughOp === 'REPLACE' &&
+      !draft.passthrough.includes('chat'),
   }
 }
 

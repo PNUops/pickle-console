@@ -1,5 +1,6 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import { refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { createdRequestBodies } from '../../test/msw/handlers/requests'
@@ -112,6 +113,7 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
         reqRpm: null,
         reqTpm: null,
         reqDailyTokens: null,
+        reqPassthroughEndpoints: ['chat'],
       },
     })
   })
@@ -183,6 +185,103 @@ describe('LLM API 키 신청 위저드 — 쓸 모델', () => {
   })
 })
 
+describe('LLM API 키 신청 위저드 — 필요한 기능', () => {
+  test('Chat alone starts ticked, and paid-only rows need paid models', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    expect(screen.getByRole('checkbox', { name: /^Chat/ })).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /웹 검색/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/은 유료 모델을 선택하면 고를 수 있습니다/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    for (const name of [/웹 검색/, /PDF OCR/, /이미지 생성/, /임베딩/]) {
+      expect(screen.getByRole('checkbox', { name })).not.toBeChecked()
+    }
+    expect(screen.queryByRole('checkbox', { name: /파일 업로드/ })).not.toBeInTheDocument()
+  })
+
+  // Turning paid models off hides the paid-only rows rather than clearing
+  // them: the choice comes back when they are turned on again, and nothing
+  // the requester cannot see is submitted meanwhile.
+  test('hides paid-only choices with paid models off and brings them back', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    await user.click(screen.getByRole('checkbox', { name: /Pickle LLM/ }))
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    await user.click(screen.getByRole('checkbox', { name: /웹 검색/ }))
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    expect(screen.queryByRole('checkbox', { name: /웹 검색/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).toBeChecked()
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('Chat')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    expect(createdRequestBodies.at(-1)!.llmKey).toMatchObject({
+      reqPassthroughEndpoints: ['chat'],
+    })
+  })
+
+  test('sends the ticked features with paid models on', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await reachSpecStep(user)
+
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    await user.click(screen.getByRole('checkbox', { name: /PDF OCR/ }))
+    await user.click(screen.getByRole('checkbox', { name: /임베딩/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('Chat, PDF OCR, 임베딩')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    expect(createdRequestBodies.at(-1)!.llmKey).toMatchObject({
+      reqPassthroughEndpoints: ['chat', 'pdf_ocr', 'embeddings'],
+    })
+  })
+  test('a refused feature returns to the checklist', async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    server.use(
+      http.post('*/api/v1/requests', () =>
+        HttpResponse.json(
+          {
+            type: 'about:blank',
+            title: '입력값을 확인해 주세요',
+            status: 422,
+            detail: '입력값을 확인해 주세요.',
+            code: 'VALIDATION_FAILED',
+            errors: [
+              { field: 'llmKey.reqPassthroughEndpoints[0]', message: '아직 부여할 수 없는 기능입니다.' },
+            ],
+          },
+          { status: 422, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    )
+    await reachSpecStep(user)
+    await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+
+    // The review step also shows the label, so wait for the message first.
+    const message = await screen.findByText('아직 부여할 수 없는 기능입니다.')
+    const checklist = message.closest('fieldset')!
+    expect(within(checklist).getByText('필요한 기능', { selector: 'legend' })).toBeInTheDocument()
+  })
+})
+
 describe('LLM API 키 신청 위저드 — 한도 검증', () => {
   test('0과 계약 범위 밖의 값은 제출 전에 걸린다', async () => {
     const user = userEvent.setup()
@@ -241,6 +340,7 @@ describe('LLM API 키 신청 위저드 — 초안', () => {
       reqRpm: null,
       reqTpm: null,
       reqDailyTokens: null,
+      reqPassthroughEndpoints: ['chat'],
     })
   })
 

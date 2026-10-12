@@ -268,7 +268,9 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
               {workspace.members.map((member) => (
                 <TR key={member.userId}>
                   <TD>
-                    <Link to={withListReturn(adminPaths.userSupport(member.userId, activeOrgId), `${location.pathname}${location.search}`)} className="text-primary-700 hover:underline">{member.name}</Link>
+                    {member.supportDetailVisible
+                      ? <Link to={withListReturn(adminPaths.userSupport(member.userId, activeOrgId), `${location.pathname}${location.search}`)} className="text-primary-700 hover:underline">{member.name}</Link>
+                      : <span>{member.name}</span>}
                     <span className="block text-xs text-neutral-500">{member.email}</span>
                   </TD>
                   <TD>{WORKSPACE_ROLE_LABELS[member.workspaceRole]}</TD>

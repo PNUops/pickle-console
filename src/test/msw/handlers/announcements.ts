@@ -114,6 +114,7 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
         email: 'example@pusan.ac.kr',
         workspaceRole: 'OWNER',
         userStatus: 'ACTIVE',
+        supportDetailVisible: true,
         joinedAt: '2026-06-01T10:00:00+09:00',
       },
       {
@@ -122,6 +123,7 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
         email: 'left.park@pusan.ac.kr',
         workspaceRole: 'MEMBER',
         userStatus: 'WITHDRAWN',
+        supportDetailVisible: true,
         joinedAt: '2026-06-02T10:00:00+09:00',
       },
     ],

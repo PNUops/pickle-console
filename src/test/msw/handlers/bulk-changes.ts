@@ -2,7 +2,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { kstDateString } from '../../../lib/format'
 import { problemResponse } from './auth'
-import { activeAdminRole, adminActor, adminLlmKeyStore } from './llm-keys'
+import { activeAdminRole, adminActor, adminLlmKeyStore, orphanedChatFeature } from './llm-keys'
 import {
   findAdminDomain,
   releaseAdminDomain,
@@ -170,6 +170,8 @@ function judgeKey(profile: Profile, key: AdminKey, change: Schemas['AdminBulkCha
         creditDeniedModels: applyList(key.creditDeniedModels, limits.creditDeniedModels),
         passthroughEndpoints: applyList(key.passthroughEndpoints, limits.passthroughEndpoints),
       }
+      // The server validates each key's merged grant before the money gate.
+      if (orphanedChatFeature(next.passthroughEndpoints)) return refused('VALIDATION')
       const fields: Diff[] = []
       for (const field of Object.keys(next) as (keyof typeof next)[]) {
         const before = key[field]
@@ -179,9 +181,15 @@ function judgeKey(profile: Profile, key: AdminKey, change: Schemas['AdminBulkCha
           : before === after
         if (!same) fields.push(diff(field, before, after))
       }
-      const money = fields.some((entry) =>
-        ['creditLimit', 'creditLimitReset', 'creditAllowedModels', 'creditDeniedModels', 'passthroughEndpoints'].includes(entry.field),
-      )
+      // As the server does, per key: a feature change that only adds or
+      // removes Chat is not a money change, since Chat works on both axes.
+      const withoutChat = (entries: string[]) =>
+        [...new Set(entries.filter((entry) => entry !== 'chat'))].sort()
+      const money =
+        fields.some((entry) =>
+          ['creditLimit', 'creditLimitReset', 'creditAllowedModels', 'creditDeniedModels'].includes(entry.field),
+        ) ||
+        !sameList(withoutChat(key.passthroughEndpoints), withoutChat(next.passthroughEndpoints))
       if (money && activeAdminRole(profile, key.orgId) === 'SYS_MANAGER') return refused('FORBIDDEN')
       return {
         reason: null,

@@ -4033,6 +4033,26 @@ export interface paths {
         patch: operations["updateWorkspaceMember"];
         trace?: never;
     };
+    "/workspaces/{workspaceId}/roster/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 학번 명단 확인
+         * @description 신청 대상자로 지정할 학번 명단을 제출하기 전에 확인합니다. 학번마다 이미 구성원인지, 활성 계정이 있지만 구성원이 아닌지, 대기 중인 초대가 있는지, 계정도 초대도 없는지를 요청과 같은 순서로 돌려줍니다. 아무것도 기록하지 않으며, 구성원 추가와 초대는 학번 대상자로 신청을 제출할 때 일어납니다. 워크스페이스 소유자나, orgId로 지정한 기관의 신청을 승인할 수 있는 관리자만 호출할 수 있고 개인 워크스페이스에는 쓸 수 없습니다. 한 번에 500건까지, 1분에 10번까지, 한 시간에 2000건까지입니다.
+         */
+        post: operations["resolveWorkspaceRoster"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4462,8 +4482,8 @@ export interface components {
             /** Format: uuid */
             orgId?: string | null;
             orgName: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음. 모델 목록 둘과 반대로 채워야 열린다. */
-            passthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음(chat 포함). 모델 목록 둘과 반대로 채워야 열린다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             purpose?: string | null;
             quotaExhausted: boolean;
             /** Format: uuid */
@@ -4510,8 +4530,8 @@ export interface components {
              * @description 유료 모델을 결제할 사업 계정. 생략하거나 null이면 기존 연결을 유지합니다.
              */
             openrouterAccountId?: string | null;
-            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 값에 영향을 받지 않습니다. */
-            passthroughEndpoints: ("images" | "embeddings")[] | null;
+            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 값에 영향을 받지 않습니다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
@@ -5043,6 +5063,8 @@ export interface components {
             /** Format: date-time */
             joinedAt: string;
             name: string;
+            /** @description 현재 관리자에게 이 구성원의 사용자 관계·지원 상세를 열람할 권한이 있는지 여부 */
+            supportDetailVisible: boolean;
             /** Format: uuid */
             userId: string;
             userStatus: components["schemas"]["UserStatus"];
@@ -5179,8 +5201,8 @@ export interface components {
              * @description 부여 일일 토큰 수. 비우면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 이 키에 부여할 기능 권한. 비우면 기능을 하나도 쓸 수 없습니다. 모델 목록과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            grantedPassthroughEndpoints?: ("images" | "embeddings")[] | null;
+            /** @description 이 키에 부여할 기능 권한. 생략하면 신청자가 고른 목록(reqPassthroughEndpoints)으로 승인하고, 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat도 포함). 모델 목록과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 목록과 무관합니다. */
+            grantedPassthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비우면 서비스 기본값이 적용됩니다.
@@ -5417,6 +5439,8 @@ export interface components {
              * @description 희망 일일 토큰 수. 비우면 서비스 기본값을 받습니다.
              */
             reqDailyTokens?: number | null;
+            /** @description 신청자가 고른 기능 권한. 필수이며 빈 배열도 받습니다. 승인 화면의 초깃값이 되고, 무엇을 부여할지는 승인자가 정합니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고 나머지는 422로 거절합니다. web_search와 pdf_ocr은 chat과 함께 골라야 합니다. */
+            reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 희망 분당 요청 수. 비우면 서비스 기본값을 받습니다.
@@ -5441,8 +5465,6 @@ export interface components {
             defaultCreditAllowedModels?: string[] | null;
             /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 승인 화면 프리필에 쓸 기능 권한 기본값. 비우면 아무 기능도 부여되지 않은 상태가 기본이 됩니다. */
-            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
@@ -5480,13 +5502,18 @@ export interface components {
             endDate: string;
             name: string;
         };
-        /** @description 리소스를 받을 대상자 한 명. userId와 invitationId 중 정확히 하나를 보냅니다. */
+        /** @description 리소스를 받을 대상자 한 명. userId, invitationId, studentNo 중 정확히 하나를 보냅니다. */
         CreateRequestRecipient: {
             /**
              * Format: uuid
              * @description 워크스페이스의 대기 중인 초대. 초대받은 사람이 가입하면 그때 리소스를 만듭니다.
              */
             invitationId?: string | null;
+            /**
+             * @description 대상자의 학번. 그 학번의 활성 계정이 구성원이면 그 사람이 대상자가 되고, 구성원이 아니면 제출할 때 구성원으로 추가합니다. 계정이 없으면 대기 중인 초대를 쓰거나 제출할 때 새로 초대하며, 그 사람이 가입하면 리소스를 만듭니다. 추가와 초대는 신청이 나중에 반려되거나 취소되어도 남고, 신청자의 시간당 초대 인원 한도에 포함됩니다. 개인 워크스페이스에는 쓸 수 없습니다.
+             * @example 209900001
+             */
+            studentNo?: string | null;
             /**
              * Format: uuid
              * @description 워크스페이스의 활성 구성원.
@@ -6379,8 +6406,8 @@ export interface components {
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             /** @description 키 이름 */
             name: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            passthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 모델 조회는 이 목록과 무관합니다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /** @description 용도 */
             purpose?: string | null;
             /** @description 프롬프트·응답 본문 기록 여부 */
@@ -6532,8 +6559,8 @@ export interface components {
              * @description 부여 일일 토큰 수. 비어 있으면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. */
-            grantedPassthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. 검토 전 신청은 빈 배열입니다. */
+            grantedPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비어 있으면 서비스 기본값입니다.
@@ -6551,6 +6578,8 @@ export interface components {
              * @description 희망 일일 토큰 수
              */
             reqDailyTokens?: number | null;
+            /** @description 신청자가 고른 기능 권한. 승인 화면의 초깃값입니다. 이 항목이 생기기 전의 신청은 ["chat"]으로 이관되었습니다. */
+            reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 희망 분당 요청 수
@@ -7069,7 +7098,7 @@ export interface components {
             unpricedAvgLatencyMs: number;
         };
         LlmUsagePassthroughGrantResponse: {
-            /** @description 기능 권한 값. images 또는 embeddings입니다. */
+            /** @description 기능 권한 값. chat, images, embeddings 중 하나입니다. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행이 없습니다. */
             capability: string;
             /**
              * Format: int64
@@ -7287,6 +7316,60 @@ export interface components {
         MfaSetupResponse: {
             otpauthUri: string;
             secret: string;
+        };
+        /** @description 가격 축 하나. */
+        ModelPriceAxis: {
+            /**
+             * @description 벤더가 쓰는 축 이름.
+             * @example input_cache_read
+             */
+            axis: string;
+            /** @description 가격(USD). 단위는 unit을 따릅니다. */
+            price: number;
+            /** @description 가격 단위. */
+            unit: components["schemas"]["ModelPriceUnit"];
+        };
+        /** @description 구간 가격 하나. 값이 있는 조건이 모두 맞을 때 적용됩니다. */
+        ModelPriceTier: {
+            /** @description 이 구간에서 바뀌는 가격 축. */
+            axes: components["schemas"]["ModelPriceAxis"][];
+            /**
+             * Format: int32
+             * @description 입력 토큰이 이 값을 넘는 요청에 적용됩니다.
+             */
+            minPromptTokens?: number | null;
+            /** @description 해석하지 못한 조건의 벤더 이름. 비어 있지 않으면 위 조건만으로는 적용 범위를 다 알 수 없습니다. */
+            otherConditions: string[];
+            /**
+             * @description 적용 요일(UTC, 영어 소문자). 비어 있으면 요일 조건이 없습니다.
+             * @example [
+             *       "saturday",
+             *       "sunday"
+             *     ]
+             */
+            utcDays: string[];
+            /**
+             * Format: int32
+             * @description 적용 끝 시각(제외). UTC 자정부터 센 분이고 1440은 자정입니다.
+             */
+            utcEndMinute?: number | null;
+            /**
+             * Format: int32
+             * @description 적용 시작 시각. UTC 자정부터 센 분입니다.
+             */
+            utcStartMinute?: number | null;
+        };
+        /**
+         * @description 가격 단위. PER_MILLION_TOKENS는 100만 토큰당, PER_CALL은 그 축이 세는 호출 1회당 USD입니다(web_search는 검색 1회, request는 API 요청 1회). UNKNOWN은 단위를 알 수 없어 벤더 값을 그대로 담은 것입니다.
+         * @enum {string}
+         */
+        ModelPriceUnit: "PER_MILLION_TOKENS" | "PER_CALL" | "UNKNOWN";
+        /** @description 모델의 가격 축 전체. 벤더가 공시한 축을 모두 담으며 입력과 출력도 포함합니다. */
+        ModelPricing: {
+            /** @description 기본 가격 축. 0은 그 축이 무료라는 뜻입니다. */
+            axes: components["schemas"]["ModelPriceAxis"][];
+            /** @description 조건이 맞을 때 기본 가격 대신 적용되는 구간 가격. 없으면 비어 있습니다. */
+            tiers: components["schemas"]["ModelPriceTier"][];
         };
         NodeLiveResponse: {
             /** Format: date-time */
@@ -7647,8 +7730,6 @@ export interface components {
             defaultCreditAllowedModels: string[];
             /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels: string[];
-            /** @description 승인 화면이 프리필에 쓰는 기능 권한 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
-            defaultPassthroughEndpoints: ("images" | "embeddings")[];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
             /**
@@ -7692,6 +7773,8 @@ export interface components {
             id: string;
             /** @description 벤더가 표시하는 이름. */
             name: string;
+            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다. */
+            pricing?: components["schemas"]["ModelPricing"] | null;
             /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
             promptPricePerMillion?: number | null;
         };
@@ -8171,6 +8254,8 @@ export interface components {
             id: string;
             /** @description 표시 이름 */
             name: string;
+            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다 */
+            pricing?: components["schemas"]["ModelPricing"] | null;
             /** @description 입력 100만 토큰당 USD. 모르면 비어 있습니다 */
             promptPricePerMillion?: number | null;
         };
@@ -8472,6 +8557,19 @@ export interface components {
         ResolveDriftFindingRequest: {
             note?: string;
         };
+        ResolveRosterRequest: {
+            /**
+             * Format: uuid
+             * @description 신청을 낼 기관. 워크스페이스 소유자가 아니라 이 기관의 신청을 승인할 수 있는 관리자로서 확인할 때 보냅니다.
+             */
+            orgId?: string | null;
+            /** @description 확인할 학번 목록. 1건에서 500건까지이며, 결과는 같은 순서로 옵니다. 한 시간에 확인할 수 있는 학번은 모두 합쳐 2000건입니다. */
+            studentNos: string[];
+        };
+        ResolveRosterResponse: {
+            /** @description 요청한 학번마다 한 건씩, 요청과 같은 순서입니다. */
+            results: components["schemas"]["RosterEntryResult"][];
+        };
         Resource: {
             /** Format: int64 */
             allocatedDiskGb: number;
@@ -8558,6 +8656,35 @@ export interface components {
         };
         /** @enum {string} */
         ReviewDecision: "APPROVE" | "REJECT";
+        RosterEntryResult: {
+            /**
+             * Format: uuid
+             * @description 그 학번으로 대기 중인 초대. INVITED일 때만 있습니다.
+             */
+            invitationId?: string | null;
+            /** @description 그 구성원의 이름. MEMBER일 때만 있고, 구성원이 아닌 REGISTERED에는 없습니다. */
+            name?: string | null;
+            /** @description 확인 결과. */
+            status: components["schemas"]["RosterEntryStatus"];
+            /** @description 요청에 쓴 학번(앞뒤 공백 제거). */
+            studentNo: string;
+            /**
+             * Format: uuid
+             * @description 그 학번의 구성원 계정. MEMBER일 때만 있고, 구성원이 아닌 REGISTERED에는 없습니다.
+             */
+            userId?: string | null;
+        };
+        /**
+         * @description 명단의 학번 한 건이 워크스페이스에서 어떤 상태인지.
+         *     MEMBER: 그 학번의 활성 계정이 이미 구성원입니다.
+         *     REGISTERED: 그 학번의 활성 계정이 있지만 구성원이 아닙니다. 대상자로 신청하면 구성원으로 추가됩니다.
+         *     INVITED: 그 학번으로 대기 중인 초대가 있습니다.
+         *     NEW: 계정도 대기 중인 초대도 없습니다. 대상자로 신청하면 초대를 만듭니다.
+         *     INVALID: 학번 형식이 아닙니다.
+         *     DUPLICATE: 같은 학번이 앞에 이미 있습니다.
+         * @enum {string}
+         */
+        RosterEntryStatus: "MEMBER" | "REGISTERED" | "INVITED" | "NEW" | "INVALID" | "DUPLICATE";
         /** @enum {string} */
         RouteStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
         RouteView: {
@@ -8816,8 +8943,6 @@ export interface components {
             defaultCreditAllowedModels?: string[] | null;
             /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 새 기능 권한 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
-            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
             /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */
@@ -9474,7 +9599,7 @@ export interface components {
             studentNo?: string | null;
             /**
              * Format: uuid
-             * @description 구성원이 된 계정의 공개 식별자. ADDED일 때만 있습니다.
+             * @description 구성원 계정의 공개 식별자. ADDED와 ALREADY_MEMBER일 때만 있습니다.
              */
             userId?: string | null;
         };
@@ -18524,6 +18649,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resolveWorkspaceRoster: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveRosterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResolveRosterResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
