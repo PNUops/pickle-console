@@ -1,3 +1,4 @@
+import { canMountConsole } from './lib/hosts'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
@@ -43,7 +44,7 @@ async function startMockApiIfRequested(): Promise<void> {
   await startMockApi()
 }
 
-if (import.meta.env.PROD && window.location.hostname !== PICKLE_PUBLIC_HOST) {
+if (import.meta.env.PROD && !canMountConsole(window.location.hostname)) {
   document.getElementById('root')!.textContent = '배포 대상 주소가 일치하지 않아 화면을 시작할 수 없습니다.'
 } else {
   await startMockApiIfRequested()

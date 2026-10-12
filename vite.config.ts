@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import { loadEnv } from 'vite'
+import { resolve } from 'node:path'
+import { scanDevelopmentOutput } from './scripts/scan-development-output.ts'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -46,11 +48,26 @@ export default defineConfig(({ command, mode }) => {
   const sshHost = target === 'production' ? PRODUCTION_SSH_HOST : devHost(env.VITE_DEV_SSH_HOST || '', 'VITE_DEV_SSH_HOST')
   const llmBaseUrl = target === 'production' ? PRODUCTION_LLM_BASE_URL : devLlmBaseUrl(env.VITE_DEV_LLM_BASE_URL || '')
 
+  let outputDirectory = ''
+  let writeOutput = true
+
   return {
     plugins: [react(), tailwindcss(), {
       name: 'deployment-social-preview-origin',
       transformIndexHtml(html) {
         return html.replaceAll('PICKLE_PUBLIC_HOST', publicHost)
+      },
+    }, {
+      name: 'reject-production-hosts-in-development',
+      apply: 'build',
+      configResolved(config) {
+        outputDirectory = resolve(config.root, config.build.outDir)
+        writeOutput = config.build.write
+      },
+      closeBundle() {
+        if (target === 'development' && writeOutput) {
+          scanDevelopmentOutput(outputDirectory, [PRODUCTION_HOST, PRODUCTION_SSH_HOST, 'llm.pcl.kr'])
+        }
       },
     }],
     define: {
@@ -58,23 +75,6 @@ export default defineConfig(({ command, mode }) => {
       PICKLE_PUBLIC_HOST: JSON.stringify(publicHost),
       PICKLE_SSH_GATEWAY_HOST: JSON.stringify(sshHost),
       PICKLE_LLM_API_BASE_URL: JSON.stringify(llmBaseUrl),
-    },
-    build: {
-      rollupOptions: {
-        plugins: [{
-          name: 'reject-production-hosts-in-development',
-          generateBundle(_options, bundle) {
-            if (target !== 'development') return
-            const forbidden = [PRODUCTION_HOST, PRODUCTION_SSH_HOST, 'llm.pcl.kr']
-            for (const [name, output] of Object.entries(bundle)) {
-              const content = output.type === 'chunk' ? output.code : typeof output.source === 'string' ? output.source : ''
-              if (forbidden.some((host) => content.includes(host))) {
-                throw new Error(`Development bundle ${name} contains a production service hostname`)
-              }
-            }
-          },
-        }],
-      },
     },
     server: {
       proxy: {

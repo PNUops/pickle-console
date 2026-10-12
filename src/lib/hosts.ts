@@ -24,3 +24,9 @@ export function displaySshGatewayHost(value?: string | null): string | null {
   }
   return host || null
 }
+
+/** Local previews may mount either target without weakening deployed-host checks. */
+export function canMountConsole(hostname: string): boolean {
+  return hostname === PICKLE_PUBLIC_HOST
+    || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname)
+}
