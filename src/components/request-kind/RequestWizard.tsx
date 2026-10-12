@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useActiveResult } from '../../lib/use-active-result'
 import { api } from '../../api/client'
 import { toApiError } from '../../api/problem'
 import {
@@ -117,6 +118,7 @@ export function RequestWizard({
    */
   admin?: { orgId?: string }
 }) {
+  const active = useActiveResult()
   const scope = useScope()
   const { user } = useAuth()
   const adminMode = admin != null
@@ -420,10 +422,11 @@ export function RequestWizard({
       return data
     },
     onSuccess: (data) => {
-      setConfirmOpen(false)
-      if (!adminMode) clearDraft()
       void queryClient.invalidateQueries({ queryKey: ['requests'] })
       void queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] })
+      if (!active.current) return
+      setConfirmOpen(false)
+      if (!adminMode) clearDraft()
       // `step`만 뺀다. 통째로 비우면 `kind`가 함께 날아가고, 종류를 잃은 주소는
       // 위저드가 아니라 종류 고르기 화면이라 성공 화면이 마운트되지도 못한다.
       setSearchParams(
@@ -437,6 +440,7 @@ export function RequestWizard({
       setSubmitted(data)
     },
     onError: (err) => {
+      if (!active.current) return
       setConfirmOpen(false)
       const apiError = toApiError(err, '신청을 제출하지 못했습니다.')
       // The approval half answers under `approval.`; its form uses the same keys

@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -15,7 +16,7 @@ import {
 import { VmGpuCard } from '../components/gpu/VmGpuCard'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canOperateVm, isSysAdminOnly, isSysTier, operatesOrg } from '../auth/permissions'
+import { canOperateVm, canReadSupportMetadata, isSysAdminOnly, isSysTier, managesOrg, operatesOrg } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import { VmNetworkPolicyPanel } from '../components/network-policy/VmNetworkPolicyPanel'
@@ -58,6 +59,13 @@ const TABS = [
  * 한정 — 서버 강제), 열람 역할은 조회만, 차단 토글은 SYS_ADMIN.
  */
 export function AdminVmDetailPage() {
+  const { vmId } = useParams()
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminVmDetailPageContent key={`${vmId ?? 'none'}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminVmDetailPageContent() {
   const { activeOrgId } = useAdminScope()
   const { vmId: vmIdParam } = useParams()
   const vmId = vmIdParam ?? ''
@@ -68,15 +76,17 @@ export function AdminVmDetailPage() {
   const policyEnabled = vmNetworkPolicyEnabled()
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  const tabs = TABS.filter((tab) => tab.id !== 'network-policy' || policyEnabled)
-  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const [message, setMessage] = useState<string | null>(null)
 
   const detail = useQuery({
-    queryKey: ['admin', 'vms', 'detail', vmId, { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'vms', 'detail', vmId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchAdminVm(vmId),
     enabled: idValid,
   })
+
+  const canReadPolicy = !!user && (isSysTier(user.role) || detail.data?.orgId != null && managesOrg(user.managedOrgs, detail.data.orgId))
+  const tabs = TABS.filter((tab) => tab.id !== 'network-policy' || policyEnabled && canReadPolicy)
+  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
 
   if (!idValid) {
     return <Alert variant="danger">잘못된 VM 주소입니다.</Alert>
@@ -108,12 +118,12 @@ export function AdminVmDetailPage() {
     roleCanOperate &&
     !!user &&
     (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
-  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && canReadSupportMetadata(user.role))
   const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
   const actualOrgId = vm.orgId && isUuid(vm.orgId) ? vm.orgId.toLowerCase() : undefined
   const returnedOrg = returnedUrl?.searchParams.get('org')
   const exactRequest = actualOrgId && returnedUrl?.pathname === `/admin/requests/${vm.requestId?.toLowerCase()}`
-  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && isSysTier(user.role))
+  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && canReadSupportMetadata(user.role))
     ? returnedOrg ? proposedReturn : withListReturn(adminPaths.requestDetail(vm.requestId!, actualOrgId), returnedUrl!.searchParams.get('returnTo')!) : null
   return (
     <div className="space-y-6">
@@ -187,7 +197,7 @@ export function AdminVmDetailPage() {
         )}
       </TabPanel>
 
-      {policyEnabled && (
+      {policyEnabled && canReadPolicy && (
         <TabPanel id="network-policy" active={activeTab === 'network-policy'} className="space-y-4">
           <VmNetworkPolicyPanel vmId={vm.id} canEdit={canOperate} surface="admin" />
         </TabPanel>

@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -52,6 +53,12 @@ const STATUS_TABS: { label: string; status: RequestStatus | undefined }[] = [
 ]
 
 export function AdminRequestsPage() {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminRequestsPageContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminRequestsPageContent() {
   const navigate = useNavigate()
   const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
@@ -60,8 +67,8 @@ export function AdminRequestsPage() {
   const { status, type, page, workspaceId, relatedUserId, requestedEndFrom, requestedEndTo, reqIndefinite } = state
   const q = useDebouncedValue(state.q).trim() || undefined
   const dateConflict = !!requestedEndFrom && !!requestedEndTo && requestedEndFrom > requestedEndTo
-  const relatedUser = useQuery({ queryKey: ['admin', 'users', 'detail', relatedUserId], queryFn: () => fetchAdminUser(relatedUserId!), enabled: relatedUserId != null })
-  const workspace = useQuery({ queryKey: ['admin', 'workspaces', 'detail', workspaceId], queryFn: () => fetchAdminWorkspace(workspaceId!), enabled: workspaceId != null })
+  const relatedUser = useQuery({ queryKey: ['admin', 'users', 'detail', relatedUserId, requestReaderKey(user)], queryFn: () => fetchAdminUser(relatedUserId!), enabled: relatedUserId != null })
+  const workspace = useQuery({ queryKey: ['admin', 'workspaces', 'detail', workspaceId, requestReaderKey(user)], queryFn: () => fetchAdminWorkspace(workspaceId!), enabled: workspaceId != null })
   const canonical = requestListParams(state, activeOrgId).toString()
   useEffect(() => {
     normalize(canonical)
@@ -72,7 +79,7 @@ export function AdminRequestsPage() {
     queryKey: [
       'admin',
       'requests',
-      { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, relatedUserId: relatedUserId ?? null, q, requestedEndFrom, requestedEndTo, reqIndefinite, page, size: PAGE_SIZE },
+      { status: status ?? null, type: type ?? null, orgId: activeOrgId ?? null, reader: requestReaderKey(user), workspaceId: workspaceId ?? null, relatedUserId: relatedUserId ?? null, q, requestedEndFrom, requestedEndTo, reqIndefinite, page, size: PAGE_SIZE },
     ],
     queryFn: () => fetchAdminRequests({ status, type, workspaceId, relatedUserId, q, requestedEndFrom, requestedEndTo, reqIndefinite, orgId: activeOrgId, page, size: PAGE_SIZE }),
     enabled: !dateConflict,

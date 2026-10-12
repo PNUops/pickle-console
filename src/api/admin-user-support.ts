@@ -1,3 +1,4 @@
+import { canReadSupportMetadata } from '../auth/permissions'
 import { api } from './client'
 import { toApiError } from './problem'
 import { guardNetwork, type ResourceType, type UserRole } from './queries'
@@ -34,5 +35,5 @@ export function previewUserProfileImpact(userId: string, action: 'PROFILE' | 'EN
 }
 
 export function supportsInvitationRead(role?: UserRole): boolean {
-  return role === 'ORG_MANAGER' || role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+  return role != null && canReadSupportMetadata(role)
 }

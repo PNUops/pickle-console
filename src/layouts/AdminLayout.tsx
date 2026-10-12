@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import {
   AppsListDetail24Regular,
   ClipboardTaskListLtr24Regular,
@@ -183,7 +184,7 @@ export function AdminLayout() {
         )
     : undefined
 
-  const scopeKey = `${user?.id}:${scope.activeOrgId ?? new URLSearchParams(location.search).get('org')?.toLowerCase() ?? 'all'}:${effectiveRole}`
+  const scopeKey = `${requestReaderKey(user)}:${scope.activeOrgId ?? new URLSearchParams(location.search).get('org')?.toLowerCase() ?? 'all'}:${effectiveRole}`
   const content = parseGuidePath(location.pathname) || scope.ready
     ? <Outlet key={scopeKey} />
     : scopeBlock

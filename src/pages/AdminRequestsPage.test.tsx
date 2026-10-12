@@ -84,14 +84,13 @@ describe('승인 대기 큐', () => {
     expect(screen.getAllByRole('link', { name: '홍길동' }).length).toBeGreaterThan(1)
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 보이지 않고 타 기관 신청도 없다', async () => {
+  test('an assigned institution administrator reads foreign request metadata', async () => {
     renderAsOrgAdmin('/admin/requests')
 
     await screen.findAllByRole('link', { name: '홍길동' })
-    // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
-    // 고를 것이 없으므로 기관 필터를 보이지 않는다.
+    // Support metadata is global; institution selection is a read filter.
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '박영희' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '박영희' })).toBeInTheDocument()
   })
 
   test('SYS_ADMIN은 전역 관리 범위로 특정 기관의 신청만 볼 수 있다', async () => {

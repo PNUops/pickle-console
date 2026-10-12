@@ -31,7 +31,7 @@ async function openBulk(
   list: keyof typeof LISTS = 'llm-keys',
 ) {
   server.use(refreshSuccessHandler(token, profile))
-  renderApp(LISTS[list].path)
+  renderApp(`${LISTS[list].path}${profile.role.startsWith('ORG_') ? `?org=${uuid(1)}` : ''}`)
   for (const name of names) {
     await user.click(await screen.findByRole('checkbox', { name: `${name} 선택` }))
   }

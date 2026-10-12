@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { requestReaderKey } from '../api/request-review'
+import { useAuth } from '../auth/auth-context'
 import { fetchUserResourceAccess, fetchUserSupport, type ProfileImpact, type UserResourceAccess } from '../api/admin-user-support'
 import { applyAdminBulkChange, fetchAdminUser, previewAdminBulkChange, type AdminBulkChangeApply, type AdminBulkChangePreview, type AdminBulkChangeRequest, type ResourceType } from '../api/queries'
 import { Alert, Badge, Button, Card, DataTable, DomainStatusBadge, FormField, Input, LlmKeyStatusBadge, Modal, Select, Spinner, TBody, TD, TH, THead, TR, VmStatusBadge } from './ui'
@@ -72,11 +74,12 @@ export function ProfileImpactView({ impact }: { impact: ProfileImpact }) {
 }
 
 export function UserChangeOutcome({ impact, actualStatus }: { impact: ProfileImpact; actualStatus: keyof typeof USER_STATUS_LABELS }) {
+  const viewer = useAuth().user
   const invitationIds = new Set(impact.invitations.map((invitation) => invitation.id))
   const requestIds = new Set(impact.invitations.flatMap((invitation) => invitation.recipients.map((recipient) => recipient.requestId)))
   const [pollUntil] = useState(() => Date.now() + 10 * 60_000)
   const results = useQuery({
-    queryKey: ['admin', 'users', 'change-result', impact.userId, impact.observedAt],
+    queryKey: ['admin', 'users', 'change-result', impact.userId, impact.observedAt, requestReaderKey(viewer)],
     queryFn: () => fetchUserSupport(impact.userId),
     enabled: invitationIds.size > 0,
     refetchInterval: (query) => Date.now() < pollUntil && (
@@ -116,12 +119,13 @@ export function UserChangeOutcome({ impact, actualStatus }: { impact: ProfileImp
 }
 
 export function UserSupportRelationships({ userId }: { userId: string }) {
+  const viewer = useAuth().user
   const { activeOrgId, activeOrg } = useAdminScope()
   const location = useLocation()
   const returnPath = `${location.pathname}${location.search}`
   const [receipt, setReceipt] = useState<GrantReceipt | null>(null)
   const support = useQuery({
-    queryKey: ['admin', 'users', 'support', userId, activeOrgId ?? null],
+    queryKey: ['admin', 'users', 'support', userId, activeOrgId ?? null, requestReaderKey(viewer)],
     queryFn: () => fetchUserSupport(userId, activeOrgId),
   })
   if (support.isPending) return <><GrantReceiptCard receipt={receipt} /><Spinner label="사용자 관계와 신청 결과 불러오는 중" /></>
@@ -230,7 +234,8 @@ function RevokeUserGrant({ resource, userId, onResult }: { resource: UserResourc
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<AdminBulkChangePreview | null>(null)
   const [result, setResult] = useState<AdminBulkChangeApply | null>(null)
-  const user = useQuery({ queryKey: ['admin', 'users', 'detail', userId], queryFn: () => fetchAdminUser(userId), enabled: open })
+  const viewer = useAuth().user
+  const user = useQuery({ queryKey: ['admin', 'users', 'detail', userId, requestReaderKey(viewer)], queryFn: () => fetchAdminUser(userId), enabled: open })
   const request: AdminBulkChangeRequest = {
     targetType: resource.type === 'LLM_API_KEY' ? 'LLM_KEY' : resource.type === 'GPU' ? 'GPU_ALLOCATION' : resource.type,
     targetIds: [resource.id], change: { kind: 'ACCESS', access: { action: 'REVOKE', userId } },
@@ -285,6 +290,7 @@ function RevokeUserGrant({ resource, userId, onResult }: { resource: UserResourc
 }
 
 export function UserAccessDiagnostic({ userId }: { userId: string }) {
+  const viewer = useAuth().user
   const { activeOrgId } = useAdminScope()
   const [params, change] = useListUrl()
   const targetType = Object.keys(RESOURCE_TYPES).find((type) => type === params.get('resourceType')) as ResourceType | undefined
@@ -293,7 +299,7 @@ export function UserAccessDiagnostic({ userId }: { userId: string }) {
   const [inputId, setInputId] = useState(targetId)
   const [validation, setValidation] = useState(false)
   const diagnostic = useQuery({
-    queryKey: ['admin', 'users', 'access', userId, activeOrgId ?? null, targetType, targetId],
+    queryKey: ['admin', 'users', 'access', userId, activeOrgId ?? null, targetType, targetId, requestReaderKey(viewer)],
     queryFn: () => fetchUserResourceAccess(userId, targetType!, targetId, activeOrgId),
     enabled: !!targetType && isUuid(targetId),
   })

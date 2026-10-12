@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -17,9 +18,10 @@ type AdminAction = 'priority' | 'extend' | 'reclaim' | 'reconcile'
 const TITLES: Record<AdminAction, string> = { priority: '대기 우선순위 변경', extend: 'GPU 임대 연장', reclaim: 'GPU 회수', reconcile: 'GPU 상태 다시 확인' }
 
 export function AdminGpuDetailPage() {
+  const { user } = useAuth()
   const allocationId = useParams().allocationId ?? ''
   const scope = useAdminScope()
-  const allocation = useQuery({ queryKey: ['admin', 'gpu-allocations', allocationId, { orgId: scope.activeOrgId }], queryFn: () => fetchAdminGpuAllocation(allocationId), enabled: isUuid(allocationId) && scope.ready,
+  const allocation = useQuery({ queryKey: ['admin', 'gpu-allocations', allocationId, { orgId: scope.activeOrgId, reader: requestReaderKey(user) }], queryFn: () => fetchAdminGpuAllocation(allocationId), enabled: isUuid(allocationId) && scope.ready,
     refetchInterval: (result) => gpuDetailPollInterval(result.state.data),
   })
   if (!isUuid(allocationId)) return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
@@ -27,7 +29,7 @@ export function AdminGpuDetailPage() {
   if (allocation.isError) return <Alert variant="danger">{allocation.error.message}</Alert>
   const data = allocation.data
   if (scope.activeOrgId && data.orgId !== scope.activeOrgId) return <Alert variant="danger">선택한 기관의 GPU 할당이 아닙니다.</Alert>
-  return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}`} data={data} />
+  return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}:${requestReaderKey(user)}`} data={data} />
 }
 
 /** A route or scope change discards all local mutation feedback for the previous target. */

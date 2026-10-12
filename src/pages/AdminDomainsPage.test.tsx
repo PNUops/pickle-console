@@ -11,6 +11,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { externalDomains } from '../test/msw/handlers/publishing'
 import { server } from '../test/msw/server'
+import { uuid } from '../test/msw/ids'
 import { renderApp } from '../test/render'
 
 function renderDomains(token = 'access-sys-admin', user = sysAdminUser) {
@@ -225,7 +226,8 @@ describe('공개 서비스 — 외부 도메인과 루트 정책', () => {
 describe('AdminDomainsPage row selection', () => {
   test('selects without opening the drawer and leads into the domain bulk change', async () => {
     const user = userEvent.setup()
-    renderDomains('access-org-manager', orgManagerUser)
+    server.use(refreshSuccessHandler('access-org-manager', orgManagerUser))
+    renderApp(`/admin/domains?org=${uuid(1)}`)
     await user.click(await screen.findByRole('checkbox', { name: 'myblog.pusan.dev 선택' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')

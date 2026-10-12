@@ -11,6 +11,7 @@ export interface AdminOrgOption {
 
 export interface AdminScopeValue {
   tier: 'org' | 'system'
+  globalSupport: boolean
   activeOrgId: string | undefined
   activeOrg: AdminOrgOption | undefined
   activeOrgRole: UserRole | undefined

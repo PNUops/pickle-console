@@ -17,12 +17,12 @@ import { orgAdminUser, orgManagerUser, orgViewerUser, refreshSuccessHandler, sys
 
 test.each([
   ['access-sys-admin', sysAdminUser, true, true, true],
-  ['access-sys-manager', sysManagerUser, true, false, false],
-  ['access-sys-viewer', sysViewerUser, true, false, false],
-  ['access-org-admin', orgAdminUser, false, false, true],
-  ['access-org-manager', orgManagerUser, false, false, true],
-  ['access-org-viewer', orgViewerUser, false, false, false],
-] as const)('support direct URL preserves existing capabilities for %s', async (token, profile, seesProfile, correctsProfile, seesInvitations) => {
+  ['access-sys-manager', sysManagerUser, true, false, true],
+  ['access-sys-viewer', sysViewerUser, true, false, true],
+  ['access-org-admin', orgAdminUser, true, true, true],
+  ['access-org-manager', orgManagerUser, true, true, true],
+  ['access-org-viewer', orgViewerUser, true, false, true],
+] as const)('support direct URL aligns global support capabilities for %s', async (token, profile, seesProfile, correctsProfile, seesInvitations) => {
   server.use(refreshSuccessHandler(token, profile))
   renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
   await screen.findByRole('heading', { name: '사용자 관계와 지원' })

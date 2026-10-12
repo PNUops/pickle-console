@@ -396,7 +396,7 @@ describe('bulk request from the administration area', () => {
     await user.click(await screen.findByRole('radio', { name: '캡스톤 3조' }))
     await user.type(screen.getByLabelText('사용 목적'), '실습 수업')
     await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
-    await user.click(await within(await waitFor(() => recipientsFieldset())).findByRole('checkbox', { name: /전체 선택/ }))
+    await user.click(await within(await waitFor(() => recipientsFieldset())).findByRole('checkbox', { name: /홍길동/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     expect(await screen.findByRole('heading', { name: '승인 내용' })).toBeInTheDocument()

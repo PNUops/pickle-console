@@ -22,9 +22,11 @@ import { LimitField } from '../components/llm-key/LimitField'
 import { useAuth } from '../auth/auth-context'
 import {
   canAdminRevokeLlmKey,
+  canReadSupportMetadata,
   canManageLlmCredit,
   canOperateLlmKey,
   isSysTier,
+  managesOrg,
 } from '../auth/permissions'
 import {
   Button,
@@ -101,7 +103,6 @@ function AdminLlmKeyDetailContent() {
   const { user } = useAuth()
   const scope = useAdminScope()
   const reader = requestReaderKey(user)
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
   const queryClient = useQueryClient()
   const [limitsOpen, setLimitsOpen] = useState(false)
   const [suspendOpen, setSuspendOpen] = useState(false)
@@ -150,13 +151,15 @@ function AdminLlmKeyDetailContent() {
 
   const key = detail.data
   const actualOrgId = key.orgId && isUuid(key.orgId) ? key.orgId.toLowerCase() : undefined
-  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && isSysTier(user.role))
+  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && canReadSupportMetadata(user.role))
   const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
   const returnedOrg = returnedUrl?.searchParams.get('org')
   const exactRequest = actualOrgId && returnedUrl?.pathname === `/admin/requests/${key.requestId?.toLowerCase()}`
-  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && isSysTier(user.role))
+  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && canReadSupportMetadata(user.role))
     ? returnedOrg ? proposedReturn : withListReturn(adminPaths.requestDetail(key.requestId!, actualOrgId), returnedUrl!.searchParams.get('returnTo')!) : null
   const status = effectiveLlmKeyStatus(key.status, key.expiresAt)
+  const accountReadable = !!user && (isSysTier(user.role) || key.orgId != null && managesOrg(user.managedOrgs, key.orgId))
+  const role = user && isSysTier(user.role) ? user.role : user?.managedOrgs.find((org) => org.orgId === key.orgId)?.role
   const canOperate = !!role && canOperateLlmKey(role)
   const canEditLimits = canOperate && EDITABLE_STATUSES.has(status)
   const canEditCredit = !!role && canManageLlmCredit(role)
@@ -274,13 +277,13 @@ function AdminLlmKeyDetailContent() {
           { term: '유료 모델 연결', description: key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
           {
             term: 'OpenRouter 사업 계정',
-            description: key.openrouterAccountId && key.openrouterAccountName ? (
+            description: key.openrouterAccountId && key.openrouterAccountName ? (accountReadable ?
               <Link
-                to={adminPaths.llmAccountDetail(key.openrouterAccountId, scope.activeOrgId)}
+                to={adminPaths.llmAccountDetail(key.openrouterAccountId, key.orgId ?? undefined)}
                 className="font-medium text-brand-foreground hover:underline"
               >
                 {key.openrouterAccountName}
-              </Link>
+              </Link> : <span>{key.openrouterAccountName}</span>
             ) : '미결합',
           },
         ]}

@@ -33,58 +33,58 @@ function captureRequestScopes(scopes: Array<string | null>) {
 }
 
 describe('관리 기관 scope selector', () => {
-  test('단일 ORG 기관은 자동 선택하고 API와 모든 nav link에 scope를 전달한다', async () => {
+  test('global support defaults to all institutions even for one assigned role', async () => {
     const scopes: Array<string | null> = []
     captureRequestScopes(scopes)
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/admin/requests')
 
-    await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(1)}`))
+    await waitFor(() => expect(currentPath()).toBe('/admin/requests'))
     expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
-    await waitFor(() => expect(scopes).toEqual([uuid(1)]))
-    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(1))
+    await waitFor(() => expect(scopes).toEqual([null]))
+    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue('')
     expect(screen.getByRole('option', { name: /기관 관리자/ })).toBeInTheDocument()
     const nav = screen.getByRole('navigation', { name: '관리자 메뉴' })
     expect(within(nav).getByRole('link', { name: '가상머신' })).toHaveAttribute(
       'href',
-      `/admin/vms?org=${uuid(1)}`,
+      '/admin/vms',
     )
     for (const link of within(nav).getAllByRole('link')) {
       expect(new URL(link.getAttribute('href')!, 'https://pickle.invalid').searchParams.get('org')).toBe(
-        uuid(1),
+        null,
       )
     }
     expect(within(nav).getByRole('link', { name: 'LLM API 키' })).toHaveAttribute(
       'href',
-      `/admin/llm/keys?org=${uuid(1)}`,
+      '/admin/llm/keys',
     )
   })
 
-  test('다기관 ORG는 선택 전 route page를 마운트하지 않고 선택 뒤에만 호출한다', async () => {
+  test('global support includes foreign institutions without requiring selection', async () => {
     const user = userEvent.setup()
     const scopes: Array<string | null> = []
     captureRequestScopes(scopes)
     server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
     renderApp('/admin/requests')
 
-    expect(await screen.findByRole('heading', { name: '관리 기관을 선택하세요' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '신청 검토' })).not.toBeInTheDocument()
-    expect(scopes).toEqual([])
+    expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
+    await waitFor(() => expect(scopes).toEqual([null]))
+    await screen.findByRole('option', { name: '테스트 기관 · 기관 관리자' })
 
     const selector = screen.getByLabelText('관리 기관 선택')
     await user.selectOptions(selector, uuid(2))
     await waitFor(() => expect(currentPath()).toBe(`/admin/requests?org=${uuid(2)}`))
     expect(await screen.findByRole('heading', { name: '신청 검토' })).toBeInTheDocument()
-    await waitFor(() => expect(scopes).toEqual([uuid(2)]))
+    await waitFor(() => expect(scopes).toEqual([null, uuid(2)]))
   })
 
-  test('마지막 유효 ORG 선택을 복원하고 이전 기관의 workspace filter를 버린다', async () => {
+  test('global support URLs retain their own target filters independently of stored institution', async () => {
     localStorage.setItem(ADMIN_ORG_SCOPE_KEY, uuid(2))
     server.use(refreshSuccessHandler('access-org-admin-dual', orgAdminUser))
     renderApp(`/admin/vms?workspaceId=${uuid(12)}`)
 
-    await waitFor(() => expect(currentPath()).toBe(`/admin/vms?org=${uuid(2)}`))
-    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(2))
+    await waitFor(() => expect(currentPath()).toBe(`/admin/vms?workspaceId=${uuid(12)}`))
+    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue('')
     expect(await screen.findByRole('heading', { name: 'VM 관리' })).toBeInTheDocument()
   })
 
@@ -145,7 +145,7 @@ describe('관리 기관 scope selector', () => {
     let calls = 0
     server.use(
       refreshSuccessHandler('access-sys-admin', sysAdminUser),
-      http.get('*/api/v1/admin/orgs', () => {
+      http.get('*/api/v1/admin/support-orgs', () => {
         calls += 1
         return calls === 1
           ? HttpResponse.json(

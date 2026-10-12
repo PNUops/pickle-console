@@ -45,8 +45,7 @@ export const userSupportHandlers: RequestHandler[] = [
     if (!user) return missing()
     const actor = actorOf(request)!
     const rawOrg = new URL(request.url).searchParams.get('orgId') ?? undefined
-    if (!isSysTier(actor.role) && rawOrg && !actor.managedOrgs.some((org) => org.orgId === rawOrg)) return missing()
-    const orgId = rawOrg ?? (isSysTier(actor.role) ? undefined : actor.managedOrgs[0]?.orgId)
+    const orgId = rawOrg
     return HttpResponse.json(supportFixture(user.id, orgId, actor.role))
   }),
   http.get('*/api/v1/admin/users/:userId/support/access', ({ request, params }) => {
@@ -55,16 +54,16 @@ export const userSupportHandlers: RequestHandler[] = [
     const actor = actorOf(request)!
     const url = new URL(request.url)
     const rawOrg = url.searchParams.get('orgId') ?? undefined
-    if (!isSysTier(actor.role) && rawOrg && !actor.managedOrgs.some((org) => org.orgId === rawOrg)) return missing()
-    const resource = supportFixture(user.id, rawOrg ?? (isSysTier(actor.role) ? undefined : actor.managedOrgs[0]?.orgId), actor.role).resources.find((row) => row.id === url.searchParams.get('resourceId') && row.type === url.searchParams.get('type'))
+    const resource = supportFixture(user.id, rawOrg, actor.role).resources.find((row) => row.id === url.searchParams.get('resourceId') && row.type === url.searchParams.get('type'))
     return resource ? HttpResponse.json(resource) : missing()
   }),
   http.post('*/api/v1/admin/users/:userId/profile-impact', async ({ request, params }) => {
     const actor = actorOf(request)
-    if (!actor || actor.role !== 'SYS_ADMIN') return forbidden()
+    if (!actor) return forbidden()
     const user = readUser(request, String(params.userId))
     if (!user) return missing()
     const body = await request.json() as { action: 'PROFILE' | 'ENABLE'; profile?: AdminProfileUpdate }
+    if (body.action === 'ENABLE' ? actor.role !== 'SYS_ADMIN' : !(actor.role === 'SYS_ADMIN' || (actor.role === 'ORG_ADMIN' || actor.role === 'ORG_MANAGER') && !isSysTier(user.role))) return forbidden()
     const profile = body.profile ?? {}
     const candidate = { ...user, ...profile }
     if (profile.departmentOther && profile.departmentCode && profile.departmentCode !== 'OTHER') return problemResponse({ type: 'about:blank', title: '입력값이 올바르지 않습니다', status: 422, detail: '소속은 한 가지 방식으로만 보낼 수 있습니다.', code: 'VALIDATION_FAILED', errors: [{ field: 'departmentOther', message: '목록에서 고른 소속과 직접 입력한 소속 중 하나만 보낼 수 있습니다.' }] })

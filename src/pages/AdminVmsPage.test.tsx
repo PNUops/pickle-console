@@ -148,16 +148,15 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 보이지 않는다', async () => {
+  test('global VM metadata retains actual institution actions and hides system deletion', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await screen.findByRole('heading', { name: 'VM 관리' })
-    // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
-    // 고를 것이 없으므로 기관 필터를 보이지 않고, 타 기관 VM도 목록에 없다.
+    // Foreign metadata does not grant operations on that foreign institution.
     expect(await screen.findByText('algo-judge')).toBeInTheDocument()
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
-    expect(screen.queryByText('ai-train')).not.toBeInTheDocument()
+    expect(screen.getByText('ai-train')).toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
     expect(screen.getByRole('button', { name: '삭제 예약' })).toBeEnabled()

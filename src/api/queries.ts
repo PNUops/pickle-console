@@ -2725,6 +2725,14 @@ export function fetchAdminOrgs(): Promise<OrgDetail[]> {
   })
 }
 
+export function fetchSupportOrgs(): Promise<{ id: string; name: string; status: 'ACTIVE' | 'DISABLED' }[]> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/support-orgs')
+    if (!data) throw toApiError(error, '지원 조회 기관 목록을 불러오지 못했습니다.')
+    return data
+  })
+}
+
 export function createOrg(body: {
   name: string
   description: string | null

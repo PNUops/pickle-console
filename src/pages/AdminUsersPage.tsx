@@ -6,7 +6,6 @@ import {
   enableUser,
   fetchAdminUser,
   fetchAdminUsers,
-  fetchOrgs,
   fetchAdminOrgs,
   fetchOrgOperations,
   fetchProfileOptions,
@@ -23,6 +22,7 @@ import {
   type UserRole,
   type UserStatus,
 } from '../api/queries'
+import { requestReaderKey } from '../api/request-review'
 import { toApiError } from '../api/problem'
 import { previewUserProfileImpact, type ProfileImpact, type AdminProfileUpdate } from '../api/admin-user-support'
 import { ProfileImpactView, UserChangeOutcome } from '../components/UserSupport'
@@ -116,7 +116,7 @@ export function AdminUsersPage() {
   // filter. Account disable, enable and MFA reset stay SYS_ADMIN-only.
   const isSystemTier = !!viewerRole && isSysTier(viewerRole)
   const canManageAccounts = !!viewerRole && isSysAdminOnly(viewerRole)
-  const { activeOrgId } = useAdminScope()
+  const { activeOrgId, options: orgOptions } = useAdminScope()
   const location = useLocation()
   const [urlParams, changeUrl, normalize] = useListUrl()
   const state = userListState(urlParams)
@@ -145,12 +145,6 @@ export function AdminUsersPage() {
   const debouncedQ = useDebouncedValue(qInput).trim()
   const q = debouncedQ.length > 0 ? debouncedQ : undefined
 
-  // Narrowing is a read, so viewer rows count too; only granting asks for
-  // ORG_ADMIN. The system tier shares the scope provider's cache entry.
-  const orgCatalog = useQuery({ queryKey: ['orgs'], queryFn: fetchOrgs, enabled: isSystemTier })
-  const orgOptions = isSystemTier
-    ? (orgCatalog.data ?? []).map((org) => ({ id: org.id, name: org.name }))
-    : (user?.managedOrgs ?? []).map((org) => ({ id: org.orgId, name: org.orgName }))
   // The server withholds system-tier accounts from the org tier, so offering
   // those roles here would only ever filter to nothing.
   const roleOptions = isSystemTier ? ROLE_OPTIONS : ROLE_OPTIONS.filter((r) => !isSysTier(r))
@@ -167,6 +161,7 @@ export function AdminUsersPage() {
         sort: sort ?? null,
         page,
         size: PAGE_SIZE,
+        reader: requestReaderKey(user),
       },
     ],
     queryFn: () =>
@@ -327,7 +322,7 @@ export function AdminUsersPage() {
       >
         {selectedId !== null && (
           !isUuid(selectedId) ? <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
-            : <UserDetailBody key={selectedId} userId={selectedId} canManage={canManageAccounts}
+            : <UserDetailBody key={`${selectedId}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} userId={selectedId} canManage={canManageAccounts}
                 supportPath={withListReturn(adminPaths.userSupport(selectedId, activeOrgId), `${location.pathname}${location.search}`)} />
         )}
       </Drawer>
@@ -338,10 +333,11 @@ export function AdminUsersPage() {
 /* ─── 상세 드로어 본문 (행 선택 시) ─── */
 
 export function UserDetailBody({ userId, canManage, supportPath, children }: { userId: string; canManage: boolean; supportPath?: string; children?: ReactNode }) {
+  const viewer = useAuth().user
   const [changeResult, setChangeResult] = useState<{ impact: ProfileImpact; status: UserStatus } | null>(null)
   const { activeOrgId } = useAdminScope()
   const detail = useQuery({
-    queryKey: ['admin', 'users', 'detail', userId],
+    queryKey: ['admin', 'users', 'detail', userId, activeOrgId ?? null, requestReaderKey(viewer)],
     queryFn: () => fetchAdminUser(userId),
   })
 
@@ -357,6 +353,7 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
   }
 
   const user = detail.data
+  const canCorrectProfile = user.supportCapabilities?.canCorrectProfile === true
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -373,9 +370,9 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
       </dl>
 
       {supportPath && <Link to={supportPath} className="inline-flex text-sm font-medium text-primary-700 hover:underline">관계와 지원 상세 열기</Link>}
-      {canManage && changeResult && <UserChangeOutcome key={`${changeResult.impact.observedAt}-${changeResult.impact.action}`} impact={changeResult.impact} actualStatus={changeResult.status} />}
+      {(canCorrectProfile || canManage) && changeResult && <UserChangeOutcome key={`${changeResult.impact.observedAt}-${changeResult.impact.action}`} impact={changeResult.impact} actualStatus={changeResult.status} />}
       {children}
-      <UserProfileSection user={user} canManage={canManage} onChanged={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
+      <UserProfileSection user={user} canManage={canCorrectProfile} onChanged={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
 
       {!children && <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">워크스페이스 멤버십</h3>
@@ -435,27 +432,13 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
       <UserPermissionsSection user={user} canManageGlobal={canManage} />
 
       {canManage && (
-        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} onEnabled={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
+        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} canEnable={user.supportCapabilities?.canEnableAccount === true} onEnabled={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
       )}
     </div>
   )
 }
 
-/* ─── 프로필 (조회는 시스템 계층, 정정은 SYS_ADMIN) ─── */
-
-/**
- * 직책·학번·소속의 표시와 정정.
- *
- * 본인은 이 세 값을 한 번만 쓸 수 있으므로(v0.51.0) 그 뒤의 변경은 여기가 유일한
- * 경로다. 잠금과 이 폼은 한 쌍이다 — 처음 입력한 값이 오타여도 되돌릴 사람이 없으면
- * 잠금은 함정이다.
- *
- * **값은 시스템 계층에만 온다.** 이 엔드포인트는 기관이 다른 기관 직원에게 주는
- * ORG_VIEWER 까지 받고 기관 범위로 좁히지도 않으므로, 학번을 기관 계층에 채워 보내면
- * 모든 기관의 직원이 모든 계정의 식별자를 읽는다. 그래서 서버가 비워서 보내고, 화면은
- * **값이 없는 것과 볼 권한이 없는 것을 구분해서** 적는다. 「입력하지 않음」으로 찍으면
- * 거짓말이 된다.
- */
+/** Profile metadata and correction use the common support boundary. */
 function UserProfileSection({
   user,
   canManage,
@@ -469,8 +452,7 @@ function UserProfileSection({
   const active = useActiveResult()
   const toast = useToast()
   const [open, setOpen] = useState(false)
-  const viewer = useAuth().user
-  const visible = !!viewer && isSysTier(viewer.role)
+  const visible = user.supportCapabilities?.profileVisible === true
   const options = useQuery({
     queryKey: ['meta', 'profile-options'],
     queryFn: fetchProfileOptions,
@@ -483,7 +465,7 @@ function UserProfileSection({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">프로필</h3>
         <p className="text-sm text-neutral-500">
-          직책·학번·소속은 시스템 계층에서만 조회할 수 있습니다.
+          프로필을 조회할 지원 권한이 없습니다.
         </p>
       </section>
     )
@@ -547,6 +529,7 @@ function UserProfileCorrectionModal({
   onClose: () => void
   onSaved: (updated: UserAdminDetail, impact: ProfileImpact) => Promise<void> | void
 }) {
+  const viewer = useAuth().user
   const [position, setPosition] = useState(user.position ?? '')
   const [studentNo, setStudentNo] = useState(user.studentNo ?? '')
   const [departmentCode, setDepartmentCode] = useState(user.departmentCode ?? '')
@@ -585,7 +568,7 @@ function UserProfileCorrectionModal({
   const profileText = JSON.stringify(profile)
   const debouncedProfile = useDebouncedValue(profileText)
   const impact = useQuery({
-    queryKey: ['admin', 'users', 'profile-impact', user.id, debouncedProfile],
+    queryKey: ['admin', 'users', 'profile-impact', user.id, requestReaderKey(viewer), debouncedProfile],
     queryFn: () => previewUserProfileImpact(user.id, 'PROFILE', JSON.parse(debouncedProfile)),
     enabled: !unchanged && !departmentIncomplete,
   })
@@ -1089,6 +1072,7 @@ function Field({ label, value }: { label: string; value: string }) {
 /* ─── 비활성화/해제 (수행은 SYS_ADMIN 전용, 표시는 전 관리자) ─── */
 
 function UserStatusActions({
+  canEnable,
   userId,
   status,
   mfaEnabled,
@@ -1097,6 +1081,7 @@ function UserStatusActions({
   userId: string
   status: UserStatus
   mfaEnabled: boolean
+  canEnable: boolean
   onEnabled: (updated: UserAdminDetail, impact: ProfileImpact) => void
 }) {
   const queryClient = useQueryClient()
@@ -1107,11 +1092,12 @@ function UserStatusActions({
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [mfaResetOpen, setMfaResetOpen] = useState(false)
+  const viewer = useAuth().user
   const [enableOpen, setEnableOpen] = useState(false)
   const enableImpact = useQuery({
-    queryKey: ['admin', 'users', 'enable-impact', userId, status],
+    queryKey: ['admin', 'users', 'enable-impact', userId, status, requestReaderKey(viewer)],
     queryFn: () => previewUserProfileImpact(userId, 'ENABLE'),
-    enabled: enableOpen && status === 'DISABLED',
+    enabled: canEnable && enableOpen && status === 'DISABLED',
     staleTime: 0,
   })
 
@@ -1177,6 +1163,7 @@ function UserStatusActions({
           <Button
             variant="secondary"
             loading={enable.isPending}
+            disabled={!canEnable}
             onClick={() => setEnableOpen(true)}
           >
             비활성화 해제

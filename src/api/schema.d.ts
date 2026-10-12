@@ -245,7 +245,7 @@ export interface paths {
         };
         /**
          * 도메인 단건 열람
-         * @description 관리자에게 허용된 기관 범위에서 정확한 도메인 ID의 현재 저장 상태를 봅니다. 목록과 같은 기간·해제·DNS 상태를 반환하며 외부 조회나 변경을 실행하지 않습니다. 삭제된 도메인과 접근할 수 없는 도메인은 404입니다.
+         * @description 학생 지원 권한으로 정확한 도메인 ID의 현재 저장 metadata를 전역 조회합니다. 목록과 같은 기간·해제·DNS 상태를 반환하며 외부 조회나 변경을 실행하지 않습니다. 삭제된 도메인과 기관·워크스페이스의 필수 식별 정보를 확인할 수 없는 도메인은 404입니다.
          */
         get: operations["getAdminDomain"];
         put?: never;
@@ -766,7 +766,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 목록
-         * @description 기관과 워크스페이스, 발급 신청, 상태, 검색어로 키를 조회합니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
+         * @description 학생 지원 권한으로 키 metadata를 전역 조회하며 기관과 워크스페이스, 발급 신청, 상태, 검색어는 필터입니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
          */
         get: operations["listAdminLlmKeys"];
         put?: never;
@@ -786,7 +786,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 상세
-         * @description 기관 범위 안의 키 운영 상태와 한도를 조회합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
+         * @description 학생 지원 권한으로 키 운영 상태와 한도 metadata를 전역 조회합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
          */
         get: operations["getAdminLlmKey"];
         put?: never;
@@ -846,7 +846,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키로 호출할 수 있는 모델
-         * @description 이 키로 부를 수 있는 모델입니다. 키 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
+         * @description 학생 지원 권한으로 전역 조회하는 이 키로 부를 수 있는 모델입니다. 키 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
          */
         get: operations["listAdminLlmKeyModels"];
         put?: never;
@@ -906,7 +906,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 사용량
-         * @description 이 키의 일별 사용량과, 키 소유자 화면에는 없는 분해 셋입니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         * @description 학생 지원 권한으로 전역 조회하는 이 키의 일별 사용량과, 키 소유자 화면에는 없는 분해 셋입니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
          */
         get: operations["getAdminLlmKeyUsage"];
         put?: never;
@@ -1680,6 +1680,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/support-orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 학생 지원 조회의 기관 필터 목록
+         * @description 비활성 기관을 포함한 기관 ID·이름·상태만 조회합니다. 기관 설정이나 자격증명, 배정·운영 권한을 제공하지 않습니다.
+         */
+        get: operations["listAdminSupportOrgs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/system-summary": {
         parameters: {
             query?: never;
@@ -1885,6 +1905,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * 사용자 프로필 정정
+         * @description 기관 운영자·관리자는 시스템 계층 계정을 제외한 사용자의 프로필을 전역 정정하며 시스템 관리자는 모든 계정을 정정합니다. 기존 프로필 변경 로직으로 초대 연결과 알림, 감사를 처리합니다. 계정 상태와 MFA, 기관 역할은 변경하지 않습니다.
+         */
         patch: operations["updateUserProfile"];
         trace?: never;
     };
@@ -1899,7 +1923,7 @@ export interface paths {
         put?: never;
         /**
          * 프로필 정정과 계정 활성화의 초대 영향 미리보기
-         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
+         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 프로필 정정은 기관 관리자·운영자와 시스템 관리자가, 계정 활성화 미리보기는 시스템 관리자만 수행합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
          */
         post: operations["previewAdminUserProfileImpact"];
         delete?: never;
@@ -1917,7 +1941,7 @@ export interface paths {
         };
         /**
          * 사용자의 관계와 실제 신청 결과 조회
-         * @description 구성원 관계는 사용자 상세의 조회 범위를 따릅니다. 리소스와 신청 결과는 조회 가능한 기관으로 제한하며 초대는 승인 권한자에게만 보입니다. 저장된 학번으로 대기 초대를 계정과 연결하는 조회는 시스템 관리자에게만 허용됩니다. 생성 대기와 리소스의 실제 상태를 구분합니다.
+         * @description 학생 지원 권한으로 구성원·초대·신청·리소스 관계를 전역 조회합니다. 기관은 선택 필터입니다. 저장된 학번과 대기 초대의 연결, 생성 대기와 실제 리소스 상태를 구분합니다.
          */
         get: operations["getAdminUserSupport"];
         put?: never;
@@ -1937,7 +1961,7 @@ export interface paths {
         };
         /**
          * 사용자와 리소스의 공통 접근 조건 조회
-         * @description 관리자가 조회할 수 있는 기관의 지정 리소스에 대해 구성원과 부여, 계정 및 리소스 상태를 설명합니다. 실제 사용자 인가와 연결 상태는 변경하지 않으며 종류별 작업 성공을 보장하지 않습니다.
+         * @description 학생 지원 권한으로 지정 리소스의 구성원과 부여, 계정 및 리소스 상태를 설명합니다. 실제 사용자 인가와 연결 상태는 변경하지 않으며 종류별 작업 성공을 보장하지 않습니다.
          */
         get: operations["getAdminUserResourceAccess"];
         put?: never;
@@ -2251,7 +2275,7 @@ export interface paths {
         };
         /**
          * 워크스페이스의 대기 중인 초대 목록
-         * @description 신청을 승인할 수 있는 관리자가 아직 가입하지 않은 사람을 신청 대상자로 고를 때 씁니다. 대기 중인 초대만 오래된 순서로 돌려줍니다.
+         * @description 학생 지원 권한으로 아직 가입하지 않은 대상의 초대 정보를 조회합니다. 대기 중인 초대만 오래된 순서로 돌려줍니다.
          */
         get: operations["listAdminWorkspaceInvitations"];
         put?: never;
@@ -4956,6 +4980,12 @@ export interface components {
             workspaceId: string;
             workspaceName: string;
         };
+        AdminSupportOrgOptionResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            status: components["schemas"]["OrgStatus"];
+        };
         AdminTaskResponse: {
             /** Format: int32 */
             attempts: number;
@@ -5063,6 +5093,14 @@ export interface components {
             workspaceName: string;
             workspaceRole?: components["schemas"]["WorkspaceMemberRole"] | null;
         };
+        AdminUserSupportCapabilitiesResponse: {
+            /** @description 프로필 정정과 정정 영향 미리보기 가능 여부 */
+            canCorrectProfile: boolean;
+            /** @description 계정 활성화와 활성화 영향 미리보기 가능 여부 */
+            canEnableAccount: boolean;
+            /** @description 학생 지원 프로필 조회 가능 여부 */
+            profileVisible: boolean;
+        };
         AdminUserSupportInvitation: {
             /** Format: date-time */
             acceptedAt?: string | null;
@@ -5108,7 +5146,7 @@ export interface components {
         AdminUserSupportResourceCount: {
             /**
              * Format: int64
-             * @description 조회 가능한 기관의 종류별 행 수. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
+             * @description 기관 필터를 적용한 종류별 행 수. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
              */
             count: number;
             type: components["schemas"]["ResourceType"];
@@ -5120,7 +5158,7 @@ export interface components {
             /** Format: date-time */
             observedAt: string;
             requests: components["schemas"]["AdminUserSupportRelatedRequest"][];
-            /** @description 조회 가능한 기관의 접근 목록형 리소스. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
+            /** @description 학생 지원 권한으로 전역 조회한 접근 목록형 리소스. 기관 선택은 필터입니다. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
             resources: components["schemas"]["AdminUserResourceAccessResponse"][];
             /** Format: uuid */
             userId: string;
@@ -8642,7 +8680,7 @@ export interface components {
         RequestRecipientResponse: {
             /** Format: uuid */
             id: string;
-            /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 승인 권한이 있는 관리자에게만 보입니다. */
+            /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 학생 지원 권한이 있는 관리자에게만 보입니다. */
             invitee?: string | null;
             /** @description 대상 계정의 이름. 가입 전인 초대 대상자는 null입니다. */
             name?: string | null;
@@ -9212,6 +9250,7 @@ export interface components {
             status: components["schemas"]["UserStatus"];
             statusChanges: components["schemas"]["UserStatusChangeResponse"][];
             studentNo?: string | null;
+            supportCapabilities: components["schemas"]["AdminUserSupportCapabilitiesResponse"];
             /** Format: date-time */
             withdrawnAt?: string | null;
         };
@@ -13301,6 +13340,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrgDashboardSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminSupportOrgs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminSupportOrgOptionResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

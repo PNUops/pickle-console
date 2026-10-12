@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router'
@@ -19,6 +20,12 @@ const REVIEW_REASONS: Record<string, string> = { UNATTACHED: '장시간 미연�
 export function AdminGpusPage() {
   const { user } = useAuth()
   const scope = useAdminScope()
+  return <AdminGpusContent key={`${scope.activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminGpusContent() {
+  const { user } = useAuth()
+  const scope = useAdminScope()
   const [params] = useSearchParams()
   const rawWorkspaceId = params.get('workspaceId')
   const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
@@ -33,7 +40,7 @@ export function AdminGpusPage() {
   const [review, setReview] = useState<GpuReview | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const allocations = useQuery({
-    queryKey: ['admin', 'gpu-allocations', { orgId: scope.activeOrgId, workspaceId: workspaceId ?? null, page, queuedOnly }],
+    queryKey: ['admin', 'gpu-allocations', { orgId: scope.activeOrgId, reader: requestReaderKey(user), workspaceId: workspaceId ?? null, page, queuedOnly }],
     queryFn: () => fetchAdminGpuAllocations({ orgId: scope.activeOrgId, workspaceId, page, status: queuedOnly ? 'QUEUED' : undefined }), enabled: scope.ready,
     refetchInterval: (result) => gpuListPollInterval(result.state.data?.content),
   })

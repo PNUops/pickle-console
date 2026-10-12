@@ -480,7 +480,7 @@ test('a direct domain target outside the managed scope or malformed ID never ope
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
   const view = renderApp(`/admin/domains?org=${uuid(1)}&domainId=${target.id}`)
   const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
-  await drawer.findByText('해당 도메인을 찾을 수 없습니다.')
+  await drawer.findByText('선택한 관리 범위의 도메인이 아닙니다.')
   expect(drawer.queryByRole('heading', { name: target.fqdn })).not.toBeInTheDocument()
   expect(drawer.queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
   view.unmount()

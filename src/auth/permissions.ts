@@ -16,9 +16,8 @@ import type { ManagedOrg, UserRole } from './auth-context'
  */
 
 /**
- * ORG_VIEWER, ORG_MANAGER or ORG_ADMIN. Reads stay inside the organisations the
- * account holds any role in (naming another answers 404); writes stay inside
- * the organisations it operates or administers.
+ * ORG_VIEWER, ORG_MANAGER or ORG_ADMIN. Support metadata reads are global;
+ * institution administration and direct operations use actual assigned roles.
  */
 export function isOrgTier(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'ORG_MANAGER' || role === 'ORG_VIEWER'
@@ -32,6 +31,17 @@ export function isSysTier(role: UserRole): boolean {
 /** Any admin-area tier (everything above the plain USER). */
 export function isAdminTier(role: UserRole): boolean {
   return role !== 'USER'
+}
+
+/** Student support metadata is global; choosing an institution only filters it. */
+export function canReadSupportMetadata(role: UserRole): boolean {
+  return isSysTier(role) || isOrgTier(role)
+}
+
+/** Only existing student support routes use the global institution picker. */
+export function usesGlobalSupportScope(pathname: string): boolean {
+  return /^\/admin\/(users|workspaces|requests|vms|domains|gpus)(\/|$)/.test(pathname)
+    || /^\/admin\/llm\/keys(\/|$)/.test(pathname)
 }
 
 // ── per-organisation scope ──────────────────────────────────────────────────
