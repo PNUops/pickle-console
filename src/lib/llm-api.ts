@@ -1,5 +1,3 @@
-import { LLM_GATEWAY_HOST } from './hosts'
-
 /**
  * 사용 안내 화면이 보여 주는 LLM API 사실들.
  *
@@ -12,7 +10,7 @@ import { LLM_GATEWAY_HOST } from './hosts'
  */
 
 /** OpenAI 호환 API의 base URL. */
-export const LLM_API_BASE_URL = `https://${LLM_GATEWAY_HOST}/v1`
+export const LLM_API_BASE_URL = PICKLE_LLM_API_BASE_URL
 
 /** 자체 서빙 모델의 공개 이름. 실제 모델과 분리되어 있어 업스트림이 바뀌어도 유지된다. */
 export const LLM_DEFAULT_MODEL = 'pickle-general'

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
+import { displaySshGatewayHost } from '../lib/hosts'
 import { Link, useParams, useSearchParams } from 'react-router'
 import {
   keepPreviousData,
@@ -559,7 +560,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
   })
   const key = keyQuery.data?.key ?? null
   const keyFile = key?.fileName ?? `pickle-${vm.hostname}.pem`
-  const sshHost = vm.sshHost?.trim()
+  const sshHost = displaySshGatewayHost(vm.sshHost)
   // IdentitiesOnly belongs on the one-liner too, not only in the config block:
   // -i adds a key, it does not stop the agent's keys being offered first, and a
   // person with several VMs has several keys.

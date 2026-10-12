@@ -156,8 +156,9 @@ SPA이고, 데이터는 전부 백엔드 API에서 받아옵니다.
 
 ## 동작 방식
 
-API는 항상 자기 오리진의 `/api`로 호출합니다. 로컬에서는 Vite 프록시가, 운영에서는
-nginx가 같은 경로를 백엔드로 넘기므로 런타임 설정이 필요 없습니다.
+API는 항상 자기 오리진의 `/api`로 호출합니다. 로컬에서는 Vite 프록시가, 배포된 환경에서는
+각 환경의 nginx가 같은 경로를 해당 백엔드로 넘깁니다. 빌드는 배포 대상 호스트를 고정하고,
+다른 호스트에서 열리면 화면을 시작하지 않습니다. 로컬 미리보기는 loopback 호스트에서 허용합니다.
 
 TypeScript 타입은 백엔드가 생성한 OpenAPI 스펙에서 만들어 레포지토리에 커밋합니다. 명세가
 바뀌면 diff에 드러나고, 스펙과 어긋난 코드는 타입 검사가 잡아냅니다.
@@ -316,6 +317,30 @@ scripts/verify.sh        # lint → typecheck → test → build → 취약점 �
 승인에 필요한 기관과 OS, 사양 프리셋도 같이 들어오므로 화면을 처음부터 따라갈 수
 있습니다. 이 계정들은 dev 전용이고, 운영 환경에서는 운영자 부트스트랩 절차가 관리자
 계정을 만듭니다.
+
+## 빌드 대상
+
+배포용 빌드는 대상 브랜치와 함께 `VITE_DEPLOY_TARGET`을 명시합니다.
+`production`은 `pickle.pusan.ac.kr`, `development`는 `pickle.pnuops.com`에서만
+화면을 시작합니다. 빌드 결과의 로컬 미리보기는 `localhost`, `127.0.0.1`,
+`[::1]`에서도 시작합니다. 로컬 Vite 개발 서버는 기본적으로 `development`를 사용하며
+호스트 검사는 적용하지 않습니다.
+
+| 변수 | 값 | 역할 |
+|---|---|---|
+| `VITE_DEPLOY_TARGET` | `production` 또는 `development` | 배포 호스트와 사용 안내의 외부 접속 주소를 선택합니다. 일반 로컬 빌드의 기본값은 `production`입니다. |
+| `VITE_DEV_SSH_HOST` | 개발 전용 `*.pnuops.com` 호스트, 선택 | 없으면 개발 화면의 SSH 예시를 비활성화합니다. |
+| `VITE_DEV_LLM_BASE_URL` | 개발 전용 `https://*.pnuops.com/v1`, 선택 | 없으면 개발 화면의 LLM 연결 정보와 예시를 비활성화합니다. |
+
+```bash
+VITE_DEPLOY_TARGET=development npm run build
+VITE_DEPLOY_TARGET=production npm run build
+```
+
+개발 빌드에 외부 접속 주소를 설정하면 해당 개발 서비스가 실제로 준비된 뒤에만 사용합니다.
+운영 서비스 주소가 개발 빌드의 최종 출력 파일에 들어가면 빌드가 실패합니다.
+이 검사는 `public/`에서 복사한 파일과 바이너리 asset도 포함합니다. 개발 API와 DNS, 메일 연동의
+대상은 콘솔 번들이 아니라 같은 오리진의 개발 API 설정에서 결정합니다.
 
 ## API 타입 생성
 

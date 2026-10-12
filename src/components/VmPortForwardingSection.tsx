@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { displaySshGatewayHost } from '../lib/hosts'
 import { GuideLink } from '../docs/links'
 import {
   useMutation,
@@ -64,7 +65,7 @@ function targetPortError(raw: string): string | null {
  */
 export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
   const canMutate = vm.settingsEditAllowed
-  const sshHost = vm.sshHost?.trim()
+  const sshHost = displaySshGatewayHost(vm.sshHost)
   const forwardings = useQuery({
     queryKey: ['vms', vm.id, 'port-forwardings'],
     queryFn: () => fetchVmPortForwardings(vm.id),

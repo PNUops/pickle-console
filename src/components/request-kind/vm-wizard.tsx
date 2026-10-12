@@ -8,7 +8,7 @@ import {
   type VmFlavor,
 } from '../../api/queries'
 import { Alert, CardRadioGroup, FormField, Input } from '../ui'
-import { SSH_GATEWAY_HOST } from '../../lib/hosts'
+import { displaySshGatewayHost, SSH_GATEWAY_HOST } from '../../lib/hosts'
 import { formatMemory, formatSpec } from '../../lib/format'
 import { SUBDOMAIN_RE } from '../../lib/validation'
 import { RaisedAxis } from './RaisedAxis'
@@ -151,6 +151,7 @@ function useVmWizard(
   const osImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const flavors = useQuery({ queryKey: ['vm-flavors'], queryFn: fetchVmFlavors })
   const options = useQuery({ queryKey: ['request-options'], queryFn: fetchRequestOptions })
+  const sshHost = displaySshGatewayHost(options.data?.sshHost) ?? SSH_GATEWAY_HOST
 
   const [spec, setSpec] = useState<VmSpecState>(() => ({
     ...INITIAL_SPEC,
@@ -335,7 +336,9 @@ function useVmWizard(
               />
             </FormField>
             <p className="-mt-2 text-xs text-foreground-muted">
-              {`ssh ${spec.desiredSlug || '<호스트 이름>'}@${options.data?.sshHost ?? SSH_GATEWAY_HOST}`}
+              {sshHost
+                ? `ssh ${spec.desiredSlug || '<호스트 이름>'}@${sshHost}`
+                : '개발 환경에서 SSH 접속 비활성'}
             </p>
           </>
         )}
