@@ -26,6 +26,7 @@ import {
   TR,
 } from '../ui'
 import { fieldErrorsOf } from '../../lib/field-errors'
+import { filterCatalogue, orderedPeriods, type CatalogueStatus } from '../../lib/admin-catalogue'
 
 const SLOTS = ['name', 'displayName', 'endDate', 'displayOrder']
 
@@ -36,7 +37,7 @@ const SLOTS = ['name', 'displayName', 'endDate', 'displayOrder']
  * 학기마다 갱신해야 하는데, 지난 항목이 보이지 않으면 이번 학기 항목이 빠졌다는 것을
  * 알아챌 방법이 없다.
  */
-export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
+export function AdminRequestPeriods({ isSysAdmin, q = '', status = 'ALL' }: { isSysAdmin: boolean; q?: string; status?: CatalogueStatus }) {
   const periods = useQuery({
     queryKey: ['admin', 'request-periods'],
     queryFn: fetchAdminRequestPeriods,
@@ -44,6 +45,7 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<AdminRequestPeriod | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const rows = filterCatalogue(orderedPeriods(periods.data ?? []), q, status)
 
   const done = (message: string) => {
     setNotice(message)
@@ -68,6 +70,7 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
           </Button>
         )}
       </div>
+      <p className="text-sm text-foreground-muted">종료일과 은퇴 설정은 이후 신청의 선택지에 적용됩니다. 이미 신청에 저장된 요청 종료일과 부여 기간은 바뀌지 않습니다. 표시명을 수정하면 기존 신청에 보이는 기간 이름도 현재 이름으로 표시됩니다.</p>
 
       {notice && <Alert variant="success">{notice}</Alert>}
       {periods.isPending && (
@@ -76,12 +79,12 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
         </div>
       )}
       {periods.isError && <Alert variant="danger">{periods.error.message}</Alert>}
-      {periods.isSuccess && periods.data.length === 0 && (
+      {periods.isSuccess && rows.length === 0 && (
         <Card className="p-8 text-center text-sm text-foreground-muted">
-          등록된 사용 기간이 없습니다. 신청자는 날짜를 직접 적게 됩니다.
+          {periods.data.length === 0 ? '등록된 사용 기간이 없습니다. 신청자는 날짜를 직접 적게 됩니다.' : '검색 조건에 맞는 사용 기간이 없습니다.'}
         </Card>
       )}
-      {periods.isSuccess && periods.data.length > 0 && (
+      {periods.isSuccess && rows.length > 0 && (
         <Card>
           <Table>
             <THead>
@@ -99,7 +102,7 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
               </TR>
             </THead>
             <TBody>
-              {periods.data.map((period) => (
+              {rows.map((period) => (
                 <TR key={period.id}>
                   <TD className="font-medium text-foreground-primary">{period.displayName}</TD>
                   <TD className="font-mono text-xs text-foreground-muted">{period.name}</TD>
@@ -126,8 +129,8 @@ export function AdminRequestPeriods({ isSysAdmin }: { isSysAdmin: boolean }) {
         </Card>
       )}
 
-      {createOpen && <CreatePeriodModal onClose={() => setCreateOpen(false)} onDone={done} />}
-      {editTarget && (
+      {isSysAdmin && createOpen && <CreatePeriodModal onClose={() => setCreateOpen(false)} onDone={done} />}
+      {isSysAdmin && editTarget && (
         <EditPeriodModal
           period={editTarget}
           onClose={() => setEditTarget(null)}
@@ -291,10 +294,11 @@ function EditPeriodModal({
         </FormField>
         <Checkbox
           label="은퇴"
-          description="신청 화면에서 감춥니다. 이미 낸 신청은 그대로입니다."
+          description="새 신청 선택지에서 감춥니다. 이미 저장된 요청 종료일과 부여 기간은 유지됩니다."
           checked={retired}
           onChange={(e) => setRetired(e.target.checked)}
         />
+        <p className="text-sm text-foreground-muted">표시명 변경은 기존 신청에 표시되는 기간 이름에도 반영됩니다. 종료일 변경은 이미 저장된 신청 날짜를 바꾸지 않습니다.</p>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={save.isPending}>
             취소

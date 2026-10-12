@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import {
   fetchOpenRouterAccounts,
   fetchOpenRouterCatalogue,
+  fetchApprovalContext,
   type ApproveRequest,
   type OpenRouterCatalogue,
   type OpenRouterAccount,
@@ -17,6 +18,11 @@ import { PassthroughEndpointField } from '../PassthroughEndpointField'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
 import { adminPaths } from '../../lib/paths'
+import { requestReaderKey } from '../../api/request-review'
+import { useAuth } from '../../auth/auth-context'
+import { useAdminScope } from '../../lib/use-admin-scope'
+import { isUuid } from '../../lib/validation'
+import { approvalTargetCounts, type ApprovalTargetFacts } from './approval-confirmation'
 import {
   appendCreditModelRule,
   creditModelFieldErrors,
@@ -101,13 +107,7 @@ function limitValue(raw: string): number | null {
   return value ? Number(value) : null
 }
 
-/**
- * 이 종류의 결정에는 사전 조회가 없다.
- *
- * VM은 부여 OS를 고르려면 이미지 목록이 있어야 하지만, LLM API 키의 부여 항목은
- * 전부 승인자가 직접 적는 수다. 참조할 카탈로그가 없으니 로딩도 오류도 없고,
- * 결정 카드는 신청 응답만으로 곧바로 열린다.
- */
+/** Reference failures remain independent from the approver's declared limits. */
 interface LlmAccountDecisionData {
   accounts: OpenRouterAccount[]
   loading: boolean
@@ -116,9 +116,18 @@ interface LlmAccountDecisionData {
   // 카탈로그는 별도로 실패할 수 있고, 실패해도 승인은 진행된다.
   catalogue: OpenRouterCatalogue | undefined
   catalogueFailed: boolean
+  targetFacts?: ApprovalTargetFacts[]
+  targetFactsKnown?: boolean
 }
 
 function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  const context = useQuery({ queryKey: ['admin', 'requests', request.id, 'context', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchApprovalContext(request.id), enabled: isUuid(request.id) })
+  const targetFacts = context.isSuccess ? context.data.workspace.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true })) : []
+  if (context.isSuccess) for (const recipient of request.recipients ?? []) {
+    if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', userStatus: 'ACTIVE', member: false })
+  }
   const accounts = useQuery({
     queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null }],
     queryFn: () => fetchOpenRouterAccounts(request.orgId ?? undefined),
@@ -146,6 +155,8 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
       retry: () => void accounts.refetch(),
       catalogue: catalogue.data,
       catalogueFailed: catalogue.isError,
+      targetFacts,
+      targetFactsKnown: context.isSuccess,
     } satisfies LlmAccountDecisionData,
   }
 }
@@ -220,7 +231,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   // 넷이 공유하는 순수 함수 하나가 한다.
   // A request for several people makes one key per recipient still in line for
   // one, and each key carries the full limit.
-  const keyCount = bulkKeyCount(request)
+  const declaredKeyCount = bulkKeyCount(request)
+  const counts = approvalTargetCounts(request, accountData.targetFacts, accountData.targetFactsKnown)
+  const keyCount = declaredKeyCount == null ? null : counts.ready + counts.waiting + counts.unknown
   const bulk = keyCount != null
   const perKeyCredit = creditValue(creditLimit) ?? 0
   const pendingCredit = perKeyCredit * (keyCount ?? 1)
@@ -516,11 +529,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       <div className="space-y-2 text-sm text-neutral-600">
         <p>아래 한도로 승인하시겠습니까?</p>
         <ul className="space-y-0.5 font-medium text-neutral-800">
-          <li>분당 요청 수 {limitText(limitValue(rpm))}</li>
-          <li>분당 토큰 수 {limitText(limitValue(tpm))}</li>
-          <li>일일 토큰 수 {limitText(limitValue(dailyTokens))}</li>
-          <li>동시 요청 수 {limitText(limitValue(concurrency))}</li>
-          <li>금액 한도 {creditText(creditValue(creditLimit))}</li>
           {creditValue(creditLimit) ? <li>리셋 창 {creditResetText(creditReset || null)}</li> : null}
           {creditValue(creditLimit) ? (
             <li>사업 계정 {effectiveAccount?.name ?? '선택 필요'}</li>
@@ -777,8 +785,8 @@ export const llmKeyRequestView: RequestKindView = {
           {passthroughText(spec?.grantedPassthroughEndpoints ?? [])}
         </Field>
         <Field label="부여 기간">
-          {data.review.grantedStartDate ?? '미지정'} ~{' '}
-          {data.review.grantedEndDate ?? '미지정'}
+          {data.review.grantedStartDate ?? '시작일 기록 없음'} ~{' '}
+          {data.review.grantedEndDate ?? '무기한'}
         </Field>
       </>
     )

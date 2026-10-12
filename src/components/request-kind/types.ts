@@ -13,6 +13,7 @@ import type { RecipientCandidate } from './recipients'
 
 export type { WizardStepId } from './wizard-steps'
 import type { FieldSlot, WizardStepId } from './wizard-steps'
+import type { ApprovalComparison } from './approval-confirmation'
 export type { FieldSlot }
 
 export type FieldErrors = Partial<Record<string, string>>
@@ -168,6 +169,10 @@ export interface DecisionFormApi {
   body(): ApproveRequest
   /** 승인 확인 모달 본문. */
   confirmBody: ReactNode
+  /** Kind-specific declared values extend the shared target and period comparison. */
+  comparisons?: ApprovalComparison[]
+  /** The selected placement is read by name, separately from the stored node id. */
+  nodeName?: string
   /**
    * 확인 모달의 확정 버튼을 열어도 되는가. 생략하면 열려 있다.
    *

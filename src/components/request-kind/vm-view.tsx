@@ -15,8 +15,10 @@ import {
   Spinner,
   Textarea,
 } from '../ui'
-import { formatSpec, todayKstDate } from '../../lib/format'
-import { SUBDOMAIN_RE, isUuid } from '../../lib/validation'
+import { formatDateTime, formatSpec, todayKstDate } from '../../lib/format'
+import { previewVmPlacement } from '../../api/request-review'
+import { useDebouncedValue } from '../../lib/use-debounced-value'
+import { isUuid, SUBDOMAIN_RE } from '../../lib/validation'
 import { Field } from './Field'
 import { periodText } from './period-text'
 import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
@@ -84,6 +86,24 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const bulk = (request.recipients?.length ?? 0) > 0
   const [nodeId, setNodeId] = useState('')
   const [approveComment, setApproveComment] = useState('')
+  const placementBody = { orgId: request.orgId ?? '', imageId, vcpu: Number(vcpu), memoryMb: Number(memoryGb) * 1024, diskGb: Number(diskGb) }
+  const placementText = JSON.stringify(placementBody)
+  const debouncedPlacement = useDebouncedValue(placementText)
+  const validPlacement = !!request.orgId && isUuid(imageId)
+    && Number.isInteger(Number(vcpu)) && Number(vcpu) > 0
+    && Number.isInteger(Number(memoryGb)) && Number(memoryGb) > 0
+    && Number.isInteger(Number(diskGb)) && Number(diskGb) > 0
+  const placement = useQuery({
+    queryKey: ['admin', 'vm-placement', request.orgId, debouncedPlacement],
+    queryFn: () => previewVmPlacement(JSON.parse(debouncedPlacement)),
+    enabled: validPlacement && placementText === debouncedPlacement,
+  })
+  const observedPlacement = placement.isSuccess && placementText === debouncedPlacement
+    && placement.data.orgId === request.orgId && placement.data.inputImageId === imageId ? placement.data : undefined
+  const selectedNode = observedPlacement?.candidates.find((candidate) => candidate.nodeId === nodeId)
+  const selectedImage = images.find((image) => image.id === imageId)
+  const aliasImage = !selectedImage && imageId === request.vm?.imageId && observedPlacement?.image.selectableNow
+    ? observedPlacement.image : null
 
   return {
     /**
@@ -105,8 +125,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         errors['vm.grantedDiskGb'] = '디스크는 1 GiB 이상으로 입력해 주세요.'
       else if (image && Number(diskGb) < image.minDiskGb)
         errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
-      if (nodeId.trim() && !isUuid(nodeId.trim()))
-        errors['vm.nodeId'] = '노드 ID는 UUID 형식으로 입력하거나 비워 두세요.'
+      if (!image && !aliasImage || observedPlacement?.image.selectableNow === false) errors['vm.grantedImageId'] = '현재 신청 가능한 OS 이미지를 선택해 주세요.'
+      if (nodeId && (!placement.isSuccess || placementText !== debouncedPlacement || !selectedNode))
+        errors['vm.nodeId'] = '현재 배치 후보를 조회한 뒤 노드를 다시 확인해 주세요.'
       if (!bulk && grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
         errors['vm.grantedSlug'] =
           '소문자와 숫자, 하이픈만 써서 3~40자로 입력해 주세요.'
@@ -170,6 +191,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             value={imageId}
             onChange={(event) => setImageId(event.target.value)}
           >
+            {!selectedImage && <option value={imageId} disabled={!aliasImage}>{request.vm?.imageName ?? '신청 이미지'} (현재 선택 목록에 없음{aliasImage && ' / 현재 신청 가능'})</option>}
             {images.map((image) => (
               <option key={image.id} value={image.id}>
                 {image.displayName}
@@ -200,17 +222,21 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             maxLength={40}
           />
         </FormField>}
-        <FormField
-          label="배치 노드 ID"
-          error={fieldErrors['vm.nodeId']}
-          description="비워 두면 자동 배치됩니다."
-        >
-          <Input
-            value={nodeId}
-            onChange={(event) => setNodeId(event.target.value)}
-            placeholder="자동 배치"
-          />
+        <FormField label="배치 노드" error={fieldErrors['vm.nodeId']} description="자동 배치 또는 현재 활성 노드의 선택 OS 이미지 후보를 고릅니다.">
+          <Select value={nodeId} onChange={(event) => setNodeId(event.target.value)} disabled={placement.isFetching || placementText !== debouncedPlacement}>
+            <option value="">자동 배치</option>
+            {nodeId && !selectedNode && <option value={nodeId} disabled>이전 선택 노드 (현재 후보 확인 필요)</option>}
+            {observedPlacement?.candidates.map((candidate) => <option key={candidate.nodeId} value={candidate.nodeId}>
+              {candidate.nodeName} / {candidate.fitsOneNow ? '현재 1대 배치 가능' : '현재 1대 배치 조건 미충족'}
+            </option>)}
+          </Select>
         </FormField>
+        {placement.isFetching && <Spinner label="배치 후보 확인 중" />}
+        {placement.isError && <Alert variant="warning">{placement.error.message}<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
+        {placement.isSuccess && placementText === debouncedPlacement && !observedPlacement && <Alert variant="warning">현재 입력의 배치 정보를 확인할 수 없습니다.<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
+        {observedPlacement && <p className="text-xs text-neutral-500">{observedPlacement.image.name} revision {observedPlacement.image.version} / {formatDateTime(observedPlacement.observedAt)} 조회. 한 대 기준의 현재 조건이며 대상 전체의 용량을 예약하지 않습니다.</p>}
+        {observedPlacement && !observedPlacement.image.selectableNow && <Alert variant="warning">현재 선택한 OS 이미지는 신청 불가로 조회되었습니다. 다른 이미지를 선택해 주세요.</Alert>}
+        {observedPlacement?.image.selectableNow && !observedPlacement.fitsAnyOneNow && <Alert variant="warning">현재 한 대를 배치할 수 있는 후보가 없습니다. 실제 배치 시점에 다시 확인하며 대상자별 생성이 실패할 수 있습니다.</Alert>}
         <FormField label="승인 의견" description="신청자에게 전달됩니다. (선택)">
           <Textarea
             value={approveComment}
@@ -222,20 +248,12 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       </>
     ),
 
-    confirmBody: (
-      <div className="space-y-2 text-sm text-neutral-600">
-        <p>
-          {bulk
-            ? '아래 사양으로 승인하시겠습니까? 대상자별 VM은 차례로 생성되고, 가입하지 않은 대상자의 VM은 가입할 때 생성됩니다.'
-            : '아래 사양으로 승인하시겠습니까? 승인 즉시 VM 생성이 시작됩니다.'}
-        </p>
-        <p className="font-medium text-neutral-800">
-          {formatSpec(Number(vcpu), Number(memoryGb) * 1024, Number(diskGb))} ·{' '}
-          {images.find((t) => t.id === imageId)?.displayName}
-        </p>
-        <p>{nodeId.trim() ? `지정한 노드에 배치` : '자동 배치'}</p>
-      </div>
-    ),
+    comparisons: [
+      { label: 'OS 이미지', requested: request.vm?.imageName || images.find((image) => image.id === request.vm?.imageId)?.displayName || '희망 이미지 확인 필요', granted: selectedImage ? `${selectedImage.displayName} (revision ${selectedImage.version})` : aliasImage ? `${aliasImage.name} (revision ${aliasImage.version})` : '현재 신청 가능한 이미지 선택 필요' },
+      { label: '호스트 이름', requested: bulk ? '대상자별 자동 생성' : request.vm?.desiredSlug ?? '자동 생성', granted: bulk ? '대상자별 자동 생성' : grantedSlug.trim() || '자동 생성' },
+    ],
+    nodeName: nodeId ? selectedNode?.nodeName ?? '현재 후보 확인 필요' : '자동 배치',
+    confirmBody: <p className="text-sm text-neutral-600">승인과 부여 내용이 저장된 뒤 대상자별 등록과 실제 VM 생성 상태를 확인할 수 있습니다.</p>,
 
     successMessage: bulk
       ? '승인 내용이 저장되었습니다. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.'
@@ -303,7 +321,7 @@ export const vmRequestView: RequestKindView = {
           )}
         <Field label="부여 OS 이미지">{granted?.grantedImageName ?? '—'}</Field>
         <Field label="부여 기간">
-          {data.review.grantedStartDate ?? '미지정'} ~ {data.review.grantedEndDate ?? '미지정'}
+          {data.review.grantedStartDate ?? '시작일 기록 없음'} ~ {data.review.grantedEndDate ?? '무기한'}
         </Field>
         <Field label="배치 노드">
           {granted?.nodeName ?? (granted?.nodeId == null ? '자동 배치' : '노드 지정 배치')}

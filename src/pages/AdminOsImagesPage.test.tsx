@@ -1,13 +1,18 @@
-import { screen, within } from '@testing-library/react'
+import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
 import {
   refreshSuccessHandler,
   sysAdminUser,
   sysManagerUser,
+  sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { renderApp, currentPath } from '../test/render'
+import { ubuntuOsImage, flavorStore } from '../test/msw/handlers/reference'
+import { adminOsImages } from '../test/msw/handlers/admin'
+import { uuid } from '../test/msw/ids'
 
 /** 사양 표를 표시명 셀 기준으로 찾는다 (OS 표와 열 구성이 달라 행 단위로 본다). */
 function flavorRow(displayName: string) {
@@ -24,7 +29,7 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images')
 
-    await screen.findByRole('heading', { name: 'OS 이미지·사양 관리' })
+    await screen.findByRole('heading', { name: '신청 카탈로그' })
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     expect(within(active).getByText('활성')).toBeInTheDocument()
     // 기본 사양 대신 OS 축의 최소 디스크가 보인다.
@@ -48,13 +53,14 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
   test('마지막 ACTIVE OS 이미지 은퇴 시 경고를 띄우고 전환한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    server.use(http.get('*/api/v1/os-images', () => HttpResponse.json([ubuntuOsImage])))
     renderApp('/admin/os-images')
 
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     await user.click(within(active).getByRole('button', { name: '은퇴' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'OS 이미지 은퇴' })
-    expect(within(dialog).getByText(/마지막 활성 OS 이미지입니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/마지막으로 선택 가능한 OS revision입니다/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
     expect(await screen.findByText('OS 이미지를 은퇴시켰습니다.')).toBeInTheDocument()
@@ -66,16 +72,113 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/os-images')
 
-    await screen.findByRole('heading', { name: 'OS 이미지·사양 관리' })
+    await screen.findByRole('heading', { name: '신청 카탈로그' })
     const active = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     expect(within(active).queryByRole('button', { name: '은퇴' })).not.toBeInTheDocument()
+  })
+})
+
+describe('catalogue navigation and selection impact', () => {
+  test('keeps tab and status in direct URLs and supports keyboard tab navigation', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images?tab=flavors&status=DISABLED&q=구형')
+    expect(await screen.findByText('구형 사양')).toBeInTheDocument()
+    expect(screen.queryByText('컴퓨팅 최적화')).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '사양' })).toHaveAttribute('aria-selected', 'true')
+    await user.click(screen.getByRole('tab', { name: 'OS 이미지' }))
+    expect(currentPath()).toContain('tab=images')
+    expect(currentPath()).not.toContain('status=')
+    await user.keyboard('{End}')
+    expect(await screen.findByText('지난 학기')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('tab', { name: '사용 기간' })).toHaveFocus())
+    expect(currentPath()).toContain('tab=periods')
+  })
+
+  test('shows a disabled physical canonical row as logically selectable when a compatible replica remains', async () => {
+    const user = userEvent.setup()
+    const original = { ...adminOsImages[0], status: 'DISABLED' as const }
+    const replica = { ...adminOsImages[0], id: uuid(501), nodeId: uuid(501), displayName: 'Ubuntu replica', proxmoxVmid: 1001 }
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/admin/os-images', () => HttpResponse.json([original, replica])),
+      http.get('*/api/v1/os-images', () => HttpResponse.json([ubuntuOsImage])),
+      http.get('*/api/v1/admin/nodes', () => HttpResponse.json([
+        { id: uuid(1), name: 'first', status: 'ACTIVE' }, { id: uuid(501), name: 'second', status: 'ACTIVE' },
+      ])))
+    renderApp('/admin/os-images')
+    const row = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
+    expect(within(row).getByText('은퇴')).toBeInTheDocument()
+    expect(await within(row).findByText('선택 가능')).toBeInTheDocument()
+    const activeReplica = screen.getByText('Ubuntu replica').closest('tr')!
+    await user.click(within(activeReplica).getByRole('button', { name: '은퇴' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/마지막으로 선택 가능한 OS revision/)).toBeInTheDocument()
+  })
+
+  test('does not promise removal of a logical choice when another compatible active replica remains', async () => {
+    const user = userEvent.setup()
+    const original = adminOsImages[0]
+    const replica = { ...original, id: uuid(501), nodeId: uuid(501), displayName: 'Ubuntu replica', proxmoxVmid: 1001 }
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/admin/os-images', () => HttpResponse.json([original, replica])),
+      http.get('*/api/v1/os-images', () => HttpResponse.json([ubuntuOsImage])),
+      http.get('*/api/v1/admin/nodes', () => HttpResponse.json([
+        { id: uuid(1), name: 'first', status: 'ACTIVE' }, { id: uuid(501), name: 'second', status: 'ACTIVE' },
+      ])))
+    renderApp('/admin/os-images')
+    const row = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
+    await within(row).findByText('선택 가능')
+    await user.click(within(row).getByRole('button', { name: '은퇴' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/선택 가능 여부는 유지/)).toBeInTheDocument()
+    expect(within(dialog).queryByText(/마지막으로 선택 가능한/)).not.toBeInTheDocument()
+  })
+
+  test('persists flavor display order and keeps SYS_VIEWER read only', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    server.use(http.patch('*/api/v1/admin/vm-flavors/:flavorId', async ({ params, request }) => {
+      const body = await request.json() as { displayOrder: number }
+      const flavor = flavorStore.find((row) => row.id === String(params.flavorId))!
+      flavor.displayOrder = body.displayOrder
+      return HttpResponse.json(flavor)
+    }))
+    const app = renderApp('/admin/os-images?tab=flavors')
+    await user.click(within(await findFlavorRow('메모리 최적화')).getByRole('button', { name: '수정' }))
+    const dialog = await screen.findByRole('dialog')
+    const order = within(dialog).getByLabelText('표시 순서')
+    await user.clear(order); await user.type(order, '-10')
+    await user.click(within(dialog).getByRole('button', { name: '저장' }))
+    await screen.findByText('사양을 수정했습니다.')
+    expect(within(await findFlavorRow('메모리 최적화')).getByText('-10')).toBeInTheDocument()
+    app.unmount()
+    server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
+    renderApp('/admin/os-images?tab=flavors')
+    await findFlavorRow('메모리 최적화')
+    expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '사양 추가' })).not.toBeInTheDocument()
+  })
+
+  test('filters periods and explains current labels separately from snapshotted dates', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images?tab=periods&q=지난')
+    expect(await screen.findByText('지난 학기')).toBeInTheDocument()
+    expect(screen.queryByText('이번 학기')).not.toBeInTheDocument()
+    expect(screen.getByText(/표시명을 수정하면 기존 신청/)).toBeInTheDocument()
+  })
+
+  test('keeps empty filter results distinct from missing catalogs', async () => {
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp('/admin/os-images?tab=flavors&q=no-matching-choice')
+    expect(await screen.findByText('검색 조건에 맞는 사양이 없습니다.')).toBeInTheDocument()
+    await waitFor(() => expect(currentPath()).toContain('q=no-matching-choice'))
   })
 })
 
 describe('관리자 OS 이미지·사양 관리 — 사양', () => {
   test('전 상태의 사양을 수치와 함께 나열하고 은퇴한 행에 배지를 붙인다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     await screen.findByRole('heading', { name: '사양' })
     const basic = await findFlavorRow('컴퓨팅 최적화')
@@ -90,7 +193,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
   test('수정 모달에서 값을 바꾸면 표에 반영된다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     await user.click(
       within(await findFlavorRow('메모리 최적화')).getByRole('button', { name: '수정' }),
@@ -115,7 +218,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
   test('비고를 비우고 저장하면 실제로 지워진다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     const before = await findFlavorRow('메모리 최적화')
     expect(within(before).getByText('메모리를 많이 쓰는 작업에 맞습니다.')).toBeInTheDocument()
@@ -137,7 +240,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
   test('마지막 ACTIVE 사양이 아니면 경고 없이 은퇴시킨다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     await user.click(
       within(await findFlavorRow('메모리 최적화')).getByRole('button', { name: '은퇴' }),
@@ -154,7 +257,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
   test('사양을 추가하고, 이름이 중복되면 422 필드 오류를 보여준다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     await findFlavorRow('컴퓨팅 최적화')
     await user.click(screen.getByRole('button', { name: '사양 추가' }))
@@ -187,7 +290,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
   test('이름 형식이 어긋나면 서버 호출 없이 막는다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     await findFlavorRow('컴퓨팅 최적화')
     await user.click(screen.getByRole('button', { name: '사양 추가' }))
@@ -204,7 +307,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
 
   test('SYS_MANAGER에게는 사양 변경 액션이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=flavors')
 
     const basic = await findFlavorRow('컴퓨팅 최적화')
     expect(screen.queryByRole('button', { name: '사양 추가' })).not.toBeInTheDocument()
@@ -225,7 +328,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
    */
   test('신청 화면이 감추는 지난 기간까지 배지와 함께 나열한다', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=periods')
 
     const past = await findPeriodRow('지난 학기')
     expect(within(past).getByText('기간 지남')).toBeInTheDocument()
@@ -237,7 +340,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
   test('기간을 추가하면 신청 화면의 선택지가 된다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=periods')
 
     await findPeriodRow('이번 학기')
     await user.click(screen.getByRole('button', { name: '기간 추가' }))
@@ -256,7 +359,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
   test('이름이 중복되면 서버 422가 이름 칸에 붙는다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=periods')
 
     await findPeriodRow('이번 학기')
     await user.click(screen.getByRole('button', { name: '기간 추가' }))
@@ -273,7 +376,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
   test('기간 수정에는 무기한이 없고 날짜만 옮긴다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=periods')
 
     const row = await findPeriodRow('이번 방학')
     await user.click(within(row).getByRole('button', { name: '수정' }))
@@ -292,7 +395,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
 
   test('SYS_MANAGER에게는 기간 변경 액션이 보이지 않는다', async () => {
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
-    renderApp('/admin/os-images')
+    renderApp('/admin/os-images?tab=periods')
 
     await findPeriodRow('이번 학기')
     expect(screen.queryByRole('button', { name: '기간 추가' })).not.toBeInTheDocument()

@@ -236,6 +236,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 도메인 단건 열람
+         * @description 관리자에게 허용된 기관 범위에서 정확한 도메인 ID의 현재 저장 상태를 봅니다. 목록과 같은 기간·해제·DNS 상태를 반환하며 외부 조회나 변경을 실행하지 않습니다. 삭제된 도메인과 접근할 수 없는 도메인은 404입니다.
+         */
+        get: operations["getAdminDomain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/domains/{domainId}/force-release": {
         parameters: {
             query?: never;
@@ -1958,6 +1978,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateAdminVmFlavor"];
+        trace?: never;
+    };
+    "/admin/vm-placement/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 제안 VM 사양의 현재 한 VM 배치 조건 조회
+         * @description 신청 저장 전과 승인 검토에서 같은 이미지 revision과 한 VM 사양을 조회합니다. 호환 ACTIVE replica와 ACTIVE 노드, 실제 배치 용량 계산을 재사용합니다. 용량을 예약하거나 승인 규칙을 바꾸지 않으며 다인 전체 생성이나 외부 적용 완료를 보장하지 않습니다.
+         */
+        post: operations["previewAdminVmPlacement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/vms": {
@@ -4089,6 +4129,15 @@ export interface components {
              */
             userId?: string | null;
         };
+        AdminApprovalImageReference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description 동일 revision의 호환 ACTIVE replica가 ACTIVE 노드에 있는지. 이 값은 개별 VM 용량이나 실제 생성 완료를 보장하지 않습니다. */
+            selectableNow: boolean;
+            /** Format: int32 */
+            version: number;
+        };
         /** @enum {string} */
         AdminBulkAccessAction: "GRANT" | "CHANGE" | "REVOKE";
         AdminBulkAccessChange: {
@@ -4828,6 +4877,38 @@ export interface components {
             /** @description 동기화 토큰 발급 여부 (미발급이면 에이전트 인증이 항상 실패) */
             tokenIssued: boolean;
         };
+        AdminRequestGeneratedResourceResponse: {
+            /** @description 현재 종류별 관리자 상세 조회 가능 여부. 도메인의 REMOVED 이력은 목록 범위에서 관측하되 상세는 열리지 않습니다. */
+            canReadDetail: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            nodeId?: string | null;
+            nodeName?: string | null;
+            /** Format: uuid */
+            orgId: string;
+            /** Format: uuid */
+            recipientId?: string | null;
+            /**
+             * Format: date-time
+             * @description 서버 기록이 갱신된 시각. 외부 시스템 적용이나 연결 성공을 측정한 시각이 아닙니다.
+             */
+            recordUpdatedAt: string;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            renewDueAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
+            /** @description 종류별 서버 상태. VM은 CREATING/ERROR/RUNNING 등 VM 상태, LLM 키는 만료를 반영한 상태, GPU는 할당 상태, 도메인은 원래 행의 상태입니다. 서로 다른 상태를 완료 하나로 합치지 않습니다. */
+            state: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+        };
         AdminRequestPeriodResponse: {
             displayName: string;
             /**
@@ -5044,6 +5125,40 @@ export interface components {
             /** Format: uuid */
             userId: string;
         };
+        AdminVmPlacementCandidate: {
+            fitsOneNow: boolean;
+            /** Format: uuid */
+            nodeId: string;
+            nodeName: string;
+        };
+        AdminVmPlacementPreviewRequest: {
+            /** Format: int32 */
+            diskGb: number;
+            /** Format: uuid */
+            imageId: string;
+            /** Format: int32 */
+            memoryMb: number;
+            /** Format: uuid */
+            orgId: string;
+            /** Format: int32 */
+            vcpu: number;
+        };
+        AdminVmPlacementPreviewResponse: {
+            candidates: components["schemas"]["AdminVmPlacementCandidate"][];
+            /** @description 현재 한 VM의 제안 사양이 맞는 노드가 있는지. N명 전체 용량 예약이나 승인 성공을 보장하지 않습니다. */
+            fitsAnyOneNow: boolean;
+            /** @description 입력 이미지와 같은 논리 revision의 canonical 이미지 정보. 입력 식별자는 inputImageId로 확인합니다. */
+            image: components["schemas"]["AdminApprovalImageReference"];
+            /**
+             * Format: uuid
+             * @description 검증한 입력 이미지 식별자. 호환 replica를 입력하면 아래 image.id의 canonical 식별자와 다를 수 있습니다.
+             */
+            inputImageId: string;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: uuid */
+            orgId: string;
+        };
         AdminWorkspaceDetailResponse: {
             /** Format: date-time */
             createdAt: string;
@@ -5145,6 +5260,7 @@ export interface components {
         Applicant: {
             /** Format: int64 */
             approvedCount: number;
+            canReadDetail: boolean;
             email: string;
             /** Format: uuid */
             id: string;
@@ -5159,13 +5275,24 @@ export interface components {
             /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
             domain?: components["schemas"]["DomainContext"] | null;
+            /** @description 이 신청의 실제 request_id로 연결된 자원의 기록과 상태. 자원 행 등록은 VM 프로비저닝 완료가 아닙니다. 신청 FK가 없는 과거 도메인 이름에서 현재 자원 ID를 추론하지 않습니다. */
+            generatedResources: components["schemas"]["AdminRequestGeneratedResourceResponse"][];
             gpu?: components["schemas"]["GpuContext"] | null;
             /** @deprecated */
             guidance: string;
             history: components["schemas"]["HistoryEntry"][];
             llmKey?: components["schemas"]["LlmKeyContext"] | null;
+            /** Format: date-time */
+            observedAt: string;
             /** @deprecated */
             orgHeadroom: components["schemas"]["OrgHeadroom"];
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            /** @description 저장된 실제 대상 계정별 관리자 사용자 상세 조회 허용 여부. 현재 디렉터리 권한과 교집합이며, 워크스페이스를 떠난 계정도 포함합니다. 가입 전 식별자로 계정을 추정하지 않습니다. */
+            recipientUserReadFlags: {
+                [key: string]: boolean;
+            };
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["VmContext"] | null;
             workspace: components["schemas"]["WorkspacePanel"];
@@ -5940,8 +6067,11 @@ export interface components {
             userId: string;
         };
         HistoryEntry: {
+            canReadDetail: boolean;
             comment?: string | null;
             decision?: components["schemas"]["ReviewDecision"] | null;
+            /** Format: uuid */
+            orgId: string;
             /** Format: uuid */
             requestId: string;
             resourceName: string;
@@ -6312,6 +6442,7 @@ export interface components {
             responseTruncated: boolean;
         };
         LlmKeyBrief: {
+            canReadDetail: boolean;
             /** Format: int32 */
             concurrency?: number | null;
             creditAxisConnected: boolean;
@@ -6324,6 +6455,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: uuid */
+            orgId: string;
             /** Format: int32 */
             rpm?: number | null;
             status: components["schemas"]["LlmApiKeyStatus"];
@@ -7286,10 +7419,12 @@ export interface components {
             role: components["schemas"]["UserRole"];
         };
         MemberBrief: {
+            canReadDetail: boolean;
             name: string;
             role: components["schemas"]["WorkspaceMemberRole"];
             /** Format: uuid */
             userId: string;
+            userStatus: components["schemas"]["UserStatus"];
         };
         Membership: {
             role: components["schemas"]["WorkspaceMemberRole"];
@@ -9142,6 +9277,7 @@ export interface components {
         /** @enum {string} */
         VmActorKind: "SYSTEM" | "MEMBER" | "ADMIN" | "UNKNOWN";
         VmBriefResponse: {
+            canReadDetail: boolean;
             /** Format: int32 */
             diskGb: number;
             /** Format: date */
@@ -9151,6 +9287,8 @@ export interface components {
             /** Format: int32 */
             memoryMb: number;
             name: string;
+            /** Format: uuid */
+            orgId: string;
             status: components["schemas"]["VmStatus"];
             /** Format: int32 */
             vcpu: number;
@@ -9161,6 +9299,7 @@ export interface components {
             guidance: string;
             /** @deprecated */
             orgHeadroom: components["schemas"]["OrgHeadroom"];
+            requestedImage?: components["schemas"]["AdminApprovalImageReference"] | null;
             workspaceResources: components["schemas"]["Resources"];
         };
         /** @enum {string} */
@@ -9622,6 +9761,7 @@ export interface components {
              * @description 호환용 VM 목록. 새 클라이언트는 vm.workspaceResources.activeVms를 사용합니다.
              */
             activeVms: components["schemas"]["VmBriefResponse"][];
+            canReadDetail: boolean;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
@@ -10110,6 +10250,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseAdminDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminDomainView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -12659,6 +12830,11 @@ export interface operations {
                 type?: components["schemas"]["ResourceType"];
                 orgId?: string;
                 workspaceId?: string;
+                q?: string;
+                requestedEndFrom?: string;
+                requestedEndTo?: string;
+                reqIndefinite?: boolean;
+                relatedUserId?: string;
                 page?: number;
                 size?: number;
             };
@@ -13819,6 +13995,39 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmFlavorResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminVmPlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminVmPlacementPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminVmPlacementPreviewResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

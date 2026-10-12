@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { listPage, requestListReturn, requestListState, updateListParams } from './list-url'
+import { listPage, requestDetailReturn, requestListParams, requestListReturn, requestListState, updateListParams } from './list-url'
 import { filterWorkspaces, workspaceListState } from './workspace-list'
 import { uuid } from '../test/msw/ids'
 
@@ -17,6 +17,16 @@ test('filter updates preserve institution and reset only the requested page stat
     .toBe(`org=${uuid(1)}&sort=name-desc&q=${encodeURIComponent('수업')}`)
 })
 
+test('request search and stored end-date filters obey their exact API limits', () => {
+  const state = requestListState(new URLSearchParams(`q=${'a'.repeat(101)}&requestedEndFrom=2026-02-30&requestedEndTo=2026-12-31&reqIndefinite=false&relatedUserId=${uuid(42)}`))
+  expect(state.q).toHaveLength(100)
+  expect(state.requestedEndFrom).toBeUndefined()
+  expect(state.requestedEndTo).toBe('2026-12-31')
+  expect(state.reqIndefinite).toBe(false)
+  expect(state.relatedUserId).toBe(uuid(42))
+  expect(requestListState(new URLSearchParams('reqIndefinite=maybe&relatedUserId=not-a-user')).relatedUserId).toBeUndefined()
+})
+
 test('return links accept only request lists in the current scope or a SYS global origin', () => {
   const fallback = `/admin/requests?org=${uuid(1)}`
   for (const value of ['https://evil.invalid', '//evil.invalid', '/\\evil.invalid', '/admin/users', `/admin/requests?org=${uuid(2)}`]) {
@@ -28,6 +38,25 @@ test('return links accept only request lists in the current scope or a SYS globa
   const org = 'deadbeef-0000-4000-8000-000000000001'
   expect(requestListReturn(`/admin/requests?org=${org.toUpperCase()}&status=APPROVED`, org, false))
     .toBe(`/admin/requests?org=${org}&status=APPROVED`)
+})
+
+test('indefinite request filters discard conflicting bounds in state, serialization and returns', () => {
+  const mixed = `org=${uuid(1)}&requestedEndFrom=2026-12-31&requestedEndTo=2026-12-01&reqIndefinite=true`
+  const state = requestListState(new URLSearchParams(mixed))
+  expect(state).toMatchObject({ reqIndefinite: true, requestedEndFrom: undefined, requestedEndTo: undefined })
+  const expected = `org=${uuid(1)}&reqIndefinite=true`
+  expect(requestListParams({ ...state, requestedEndFrom: '2026-12-31', requestedEndTo: '2026-12-01' }, uuid(1)).toString()).toBe(expected)
+  expect(requestListReturn(`/admin/requests?${mixed}`, uuid(1), false)).toBe(`/admin/requests?${expected}`)
+})
+
+test('resource return paths preserve only readable request destinations and canonical list filters', () => {
+  const list = `/admin/requests?org=${uuid(1)}&q=course&status=all`
+  const request = `/admin/requests/${uuid(201)}?org=${uuid(1)}&returnTo=${encodeURIComponent(list)}`
+  const returned = new URL(requestDetailReturn(request, uuid(1), false)!, 'https://pickle.invalid')
+  expect(returned.pathname).toBe(`/admin/requests/${uuid(201)}`)
+  expect(returned.searchParams.get('returnTo')).toBe(`/admin/requests?org=${uuid(1)}&status=all&q=course`)
+  expect(requestDetailReturn(request, uuid(2), false)).toBeNull()
+  for (const value of ['https://evil.invalid', `/admin/requests/${uuid(201)}?org=bad`, '/admin/vms', `/admin/requests/${uuid(201)}#unexpected`]) expect(requestDetailReturn(value, uuid(1), true)).toBeNull()
 })
 
 test('valid UUID target casing is canonical while malformed targets remain visible for rejection', () => {
