@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -14,7 +15,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, canOperateVm, isSysAdminOnly } from '../auth/permissions'
+import { canManageVmDeletion, canOperateVm, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import {
@@ -77,13 +78,18 @@ function idParam(value: string | null): string | undefined {
 
 export function AdminVmsPage() {
   const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminVmsPageContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminVmsPageContent() {
+  const { user } = useAuth()
   const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   const role = user?.role
   const effectiveRole = tier === 'org' ? activeOrgRole : role
   // 조회 범위: 시스템 계층은 전 기관, 기관 계층은 역할을 보유한 기관(계약
   // v0.46.0). 삭제 라이프사이클(예약과 취소)은 대상 VM 기관의 ORG_ADMIN과
   // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
-  const canDelete = !!effectiveRole && canManageVmDeletion(effectiveRole)
   const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
   const canForceDelete = !!effectiveRole && isSysAdminOnly(effectiveRole)
   // Every bulk kind on a VM needs at least an operating role.
@@ -129,7 +135,7 @@ export function AdminVmsPage() {
       'vms',
       {
         status: status ?? null,
-        orgId: activeOrgId ?? null,
+        orgId: activeOrgId ?? null, reader: requestReaderKey(user),
         workspaceId: workspaceId ?? null,
         q: q ?? null,
         sort: sort ?? null,
@@ -149,12 +155,13 @@ export function AdminVmsPage() {
   }
   // active scope가 있으면 해당 기관의 워크스페이스만 2차 필터로 제공한다.
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () =>
       fetchAdminWorkspaces(activeOrgId !== undefined ? { orgId: activeOrgId } : {}),
   })
 
   const selected = vms.data?.content.find((vm) => vm.id === selectedId) ?? null
+  const selectedRole = user && isSysTier(user.role) ? user.role : user?.managedOrgs.find((org) => org.orgId === selected?.orgId)?.role
   const pageTargets = (vms.data?.content ?? []).map((vm) => ({
     id: vm.id,
     name: vm.displayName || vm.name,
@@ -358,8 +365,8 @@ export function AdminVmsPage() {
           <VmDrawerContent
             key={selected.id}
             vm={selected}
-            canDelete={canDelete}
-            canOperate={canOperate}
+            canDelete={!!selectedRole && canManageVmDeletion(selectedRole)}
+            canOperate={!!selectedRole && canOperateVm(selectedRole)}
             canForceDelete={canForceDelete}
             notice={feedback?.vmId === selected.id ? feedback.text : null}
             onDone={(text) => setFeedback({ vmId: selected.id, text })}
@@ -414,7 +421,7 @@ function VmDrawerContent({
       </div>
       {notice && <Alert variant="success">{notice}</Alert>}
       <Link
-        to={adminPaths.vmDetail(vm.id, activeOrgId)}
+        to={adminPaths.vmDetail(vm.id, vm.orgId ?? activeOrgId)}
         className="inline-block text-sm text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
       >
         상세 페이지로 (이벤트·전원 제어)

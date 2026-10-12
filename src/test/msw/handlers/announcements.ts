@@ -126,6 +126,11 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
         supportDetailVisible: true,
         joinedAt: '2026-06-02T10:00:00+09:00',
       },
+      {
+        userId: uuid(5), name: '이시스템', email: 'sysadmin.lee@pusan.ac.kr',
+        workspaceRole: 'MEMBER', userStatus: 'ACTIVE', supportDetailVisible: false,
+        joinedAt: '2026-10-01T10:00:00+09:00',
+      },
     ],
   },
 }
@@ -133,7 +138,7 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
 export const announcementHandlers: RequestHandler[] = [
   // No pending invitations unless a test overrides this.
   http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', () => HttpResponse.json([])),
-  http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => {
+  http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params, request }) => {
     const detail = workspaceDetails[String(params.workspaceId)]
     if (!detail) {
       return problemResponse({
@@ -144,7 +149,8 @@ export const announcementHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     }
-    return HttpResponse.json(detail, { status: 200 })
+    const actor = profileOf(request)
+    return HttpResponse.json({ ...detail, members: detail.members.map((member) => ({ ...member, supportDetailVisible: isSysTier(actor?.role ?? 'USER') || !isSysTier(adminUserStore.find((user) => user.id === member.userId)?.role ?? 'USER') })) }, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/workspaces', ({ request }) => {

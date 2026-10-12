@@ -27,6 +27,7 @@ import {
   canInterveneDomain,
   canRunSysRoutine,
   isSysTier,
+  managesOrg,
   operatesOrg,
 } from '../auth/permissions'
 import {
@@ -143,7 +144,7 @@ function AdminDomainsContent() {
     queryKey: [
       'admin',
       'domains',
-      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page },
+      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page, reader: requestReaderKey(user) },
     ],
     queryFn: () =>
       fetchAdminDomains({ status, kind, workspaceId, orgId: activeOrgId, page, size: PAGE_SIZE }),
@@ -404,6 +405,7 @@ function DomainDrawerContent({
     !!user &&
     canInterveneDomain(user.role) &&
     (isSysTier(user.role) || operatesOrg(user.managedOrgs, domain.orgId))
+  const canReadContent = !!user && (isSysTier(user.role) || managesOrg(user.managedOrgs, domain.orgId))
   const [releaseOpen, setReleaseOpen] = useState(false)
   // 드로어 안에서 실행하는 액션(재검증·재적용)의 결과는 드로어 안에 보여야
   // 한다 — 페이지 레벨 알림은 열린 드로어의 배경에 가려 보이지 않는다.
@@ -412,8 +414,8 @@ function DomainDrawerContent({
   // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
   // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
   const routes = useQuery({
-    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: activeOrgId ?? null }],
-    queryFn: () => fetchAdminRoutes({ orgId: activeOrgId, page: 0, size: 100 }),
+    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: domain.orgId, reader: requestReaderKey(user) }],
+    queryFn: () => fetchAdminRoutes({ orgId: domain.orgId, page: 0, size: 100 }),
   })
   const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
   const routesTruncated =
@@ -482,6 +484,7 @@ function DomainDrawerContent({
         <ExternalDomainSections
           domain={domain}
           canIntervene={canIntervene}
+          canReadRecords={canReadContent}
           onResult={setNotice}
         />
       )}
@@ -527,15 +530,15 @@ function DomainDrawerContent({
             {route.status === 'FAILED' && route.lastError && (
               <Alert variant="danger">{route.lastError}</Alert>
             )}
-            <SourcePolicyPanel
-              queryKey={['admin', 'routes', route.id, 'source-policy']}
+            {canReadContent ? <SourcePolicyPanel
+              queryKey={['admin', 'routes', route.id, 'source-policy', requestReaderKey(user)]}
               target="DOMAIN"
               loadPolicy={() => fetchAdminRouteSourcePolicy(route.id)}
               savePolicy={(body) => updateAdminRouteSourcePolicy(route.id, body)}
               loadPreset={fetchCampusSourcePolicyPreset}
               canEdit={canIntervene}
               surface="admin"
-            />
+            /> : <p className="text-sm text-neutral-500">연결 정책 원문은 담당 기관의 역할로 조회합니다.</p>}
           </div>
         )}
       </section>
@@ -587,15 +590,19 @@ function DomainDrawerContent({
 function ExternalDomainSections({
   domain,
   canIntervene,
+  canReadRecords,
   onResult,
 }: {
   domain: AdminDomainView
   canIntervene: boolean
+  canReadRecords: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
+  const { user } = useAuth()
   const records = useQuery({
-    queryKey: ['admin', 'domains', domain.id, 'records'],
+    queryKey: ['admin', 'domains', domain.id, 'records', requestReaderKey(user)],
     queryFn: () => fetchAdminDomainRecords(domain.id),
+    enabled: canReadRecords,
   })
 
   return (
@@ -613,7 +620,8 @@ function ExternalDomainSections({
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">레코드</h3>
-        {records.isPending && <Spinner label="레코드 불러오는 중" />}
+        {!canReadRecords && <p className="text-sm text-neutral-500">레코드 원문은 담당 기관의 역할로 조회합니다.</p>}
+        {canReadRecords && records.isPending && <Spinner label="레코드 불러오는 중" />}
         {records.isError && <Alert variant="danger">{records.error.message}</Alert>}
         {records.isSuccess && records.data.length === 0 && (
           <p className="text-sm text-neutral-500">넣은 레코드가 없습니다.</p>

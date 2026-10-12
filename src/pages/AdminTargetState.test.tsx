@@ -29,7 +29,7 @@ describe('administrator target state', () => {
   test('an explicit unmanaged institution cannot restore the previous institution', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(2)}`)
-    await screen.findByText('관리 기관을 선택하세요')
+    await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.')
     expect(screen.queryByRole('heading', { name: 'active-admin-key' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '한도 변경' })).not.toBeInTheDocument()
   })

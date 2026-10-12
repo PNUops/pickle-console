@@ -1033,7 +1033,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     const query = url.searchParams.get('query')?.toLocaleLowerCase('ko-KR')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    let filtered = adminLlmKeyStore.filter((key) => canReadAdminKey(profile, key))
+    let filtered = profile.role === 'USER' ? [] : [...adminLlmKeyStore]
     if (orgId) filtered = filtered.filter((key) => key.orgId === orgId)
     if (workspaceId) filtered = filtered.filter((key) => key.workspaceId === workspaceId)
     if (requestId) filtered = filtered.filter((key) => key.requestId === requestId)
@@ -1062,7 +1062,7 @@ export const llmKeyHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/llm/keys/:keyId', ({ params, request }) => {
     const profile = adminActor(request)
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
-    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    if (!profile || !key || profile.role === 'USER') return notFoundProblem()
     return HttpResponse.json(key, { status: 200 })
   }),
 

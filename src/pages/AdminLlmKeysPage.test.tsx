@@ -25,7 +25,7 @@ describe('관리자 LLM API 키 목록', () => {
       `/admin/llm/keys/${uuid(171)}?org=${uuid(1)}`,
     )
     expect(screen.getByText('suspended-admin-key')).toBeInTheDocument()
-    expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
+    expect(screen.getByText('other-org-key')).toBeInTheDocument()
     expect(screen.getAllByText(/RPM 60 · TPM 40,000/).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' }).length).toBeGreaterThan(0)
     expect(screen.getAllByText('미결합').length).toBeGreaterThan(0)
@@ -50,7 +50,7 @@ describe('관리자 LLM API 키 목록', () => {
     )).toBe(true)
     expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' })[0]).toHaveAttribute(
       'href',
-      `/admin/llm/accounts/${uuid(410)}`,
+      `/admin/llm/accounts/${uuid(410)}?org=${uuid(1)}`,
     )
   })
 

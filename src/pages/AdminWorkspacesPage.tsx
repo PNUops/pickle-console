@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useQueries, useQuery } from '@tanstack/react-query'
@@ -47,6 +48,13 @@ import {
  * 워크스페이스 변경(생성·역할 조정·삭제)은 다음 단계.
  */
 export function AdminWorkspacesPage() {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminWorkspacesPageContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminWorkspacesPageContent() {
+  const { user } = useAuth()
   const { activeOrgId, activeOrg } = useAdminScope()
   const [searchParams, change, normalize] = useListUrl()
   const state = workspaceListState(searchParams)
@@ -54,7 +62,7 @@ export function AdminWorkspacesPage() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchAdminWorkspaces(activeOrgId !== undefined ? { orgId: activeOrgId } : {}),
   })
   const filtered = filterWorkspaces(workspaces.data ?? [], state)
@@ -206,7 +214,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
   const location = useLocation()
   const canReadInvitations = supportsInvitationRead(user?.role)
   const detail = useQuery({
-    queryKey: ['admin', 'workspaces', 'detail', workspaceId],
+    queryKey: ['admin', 'workspaces', 'detail', workspaceId, activeOrgId ?? null, requestReaderKey(user)],
     queryFn: () => fetchAdminWorkspace(workspaceId),
   })
 
@@ -309,6 +317,7 @@ function Field({ label, value }: { label: string; value: string }) {
 
 
 function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
+  const { user } = useAuth()
   const { activeOrgId } = useAdminScope()
   const kinds = [
     { type: 'VM', label: '가상머신', to: adminPaths.vms(activeOrgId, workspaceId), read: async () => (await fetchAdminVms({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
@@ -316,7 +325,7 @@ function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
     { type: 'DOMAIN', label: '도메인', to: adminPaths.domains(activeOrgId, workspaceId), read: async () => (await fetchAdminDomains({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
     { type: 'GPU', label: 'GPU', to: gpuPreviewEnabled() ? adminPaths.gpus(activeOrgId, workspaceId) : undefined, read: async () => (await fetchAdminGpuAllocations({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
   ]
-  const counts = useQueries({ queries: kinds.map((kind) => ({ queryKey: ['admin', 'workspace-resources', workspaceId, activeOrgId ?? null, kind.type], queryFn: kind.read })) })
+  const counts = useQueries({ queries: kinds.map((kind) => ({ queryKey: ['admin', 'workspace-resources', workspaceId, activeOrgId ?? null, kind.type, requestReaderKey(user)], queryFn: kind.read })) })
   return <div className="space-y-3 text-sm">
     <p className="text-neutral-500">자원과 신청은 현재 관리 기관의 범위에서 조회합니다.</p>
     <p className="text-neutral-500">개수는 연결된 목록의 조회 조건을 따릅니다. 종료 이력을 포함한 개수와 다를 수 있습니다.</p>
@@ -329,7 +338,9 @@ function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
 }
 
 function WorkspaceInvitations({ workspaceId }: { workspaceId: string }) {
-  const invitations = useQuery({ queryKey: ['admin', 'workspace-invitations', workspaceId], queryFn: () => fetchAdminWorkspaceInvitations(workspaceId) })
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  const invitations = useQuery({ queryKey: ['admin', 'workspace-invitations', workspaceId, activeOrgId ?? null, requestReaderKey(user)], queryFn: () => fetchAdminWorkspaceInvitations(workspaceId) })
   return <div className="space-y-3 text-sm [overflow-wrap:anywhere]">
     {invitations.isPending ? <Spinner label="대기 초대 불러오는 중" /> : invitations.isError ? <Alert variant="danger">{invitations.error.message}</Alert>
       : invitations.data.length === 0 ? <p className="text-neutral-500">대기 중인 초대가 없습니다.</p>

@@ -2,6 +2,7 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './auth'
 import { adminLlmKeyStore } from './llm-keys'
+import { isSysTier, managesOrg } from '../../../auth/permissions'
 import { adminReadScope } from './org-scope'
 import { adminUserStore } from './users'
 import { flavorStore, orgs, osImages, resetFlavorStore } from './reference'
@@ -701,6 +702,7 @@ export const requestPeriodHandlers: RequestHandler[] = [
 ]
 
 export const adminHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/support-orgs', () => HttpResponse.json([{ id: uuid(1), name: '정보컴퓨터공학부 실습지원센터', status: 'ACTIVE' }, { id: uuid(2), name: '테스트 기관', status: 'ACTIVE' }, { id: uuid(3), name: '비활성 기관', status: 'DISABLED' }])),
   ...requestPeriodHandlers,
   http.get('*/api/v1/admin/requests', ({ request }) => {
     const url = new URL(request.url)
@@ -1175,13 +1177,14 @@ export const adminHandlers: RequestHandler[] = [
 
   /* ─── VM 사용 기간 변경 — 만료 연장 ─── */
 
-  http.get('*/api/v1/admin/vms/:vmId', ({ params }) => {
+  http.get('*/api/v1/admin/vms/:vmId', ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
-    // 관리자 조회의 권한은 기관 스코프라 이 VM의 접근 목록과 무관하다 — 서버도
-    // myResourceRole을 null로 두고 능력 불리언을 모두 false로 내려준다.
+    const actor = actorProfileOf(request)
+    const contentVisible = !!actor && (isSysTier(actor.role) || vm.orgId != null && managesOrg(actor.managedOrgs, vm.orgId))
+    // Global support metadata excludes foreign institution verification proofs.
     return HttpResponse.json(
-      { ...vm, ...accessOf(null), passwordRevealAllowed: false },
+      { ...vm, ...accessOf(null), passwordRevealAllowed: false, publications: vm.publications.map((publication) => ({ ...publication, domain: publication.domain ? { ...publication.domain, verification: contentVisible ? publication.domain.verification : null } : publication.domain })) },
       { status: 200 },
     )
   }),

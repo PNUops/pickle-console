@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { approvesForOrg, isSysTier } from '../auth/permissions'
+import { approvesForOrg, canReadSupportMetadata, isSysTier } from '../auth/permissions'
 import { requestListReturn, withListReturn } from '../lib/list-url'
 import { OperationResult } from '../components/OperationResult'
 import {
@@ -66,9 +66,9 @@ interface Notice {
 
 export function AdminRequestDetailPage() {
   const { requestId } = useParams()
-  const { activeOrgId, activeOrgRole } = useAdminScope()
+  const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
-  return <AdminRequestDetailContent key={`${requestId}:${activeOrgId ?? 'all'}:${user?.id}:${activeOrgRole ?? user?.role}`} />
+  return <AdminRequestDetailContent key={`${requestId}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
 }
 
 function AdminRequestDetailContent() {
@@ -80,10 +80,10 @@ function AdminRequestDetailContent() {
   const { user } = useAuth()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const returnPath = requestListReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  const returnPath = requestListReturn(searchParams.get('returnTo'), activeOrgId, !!user && canReadSupportMetadata(user.role))
 
   const request = useQuery({
-    queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchAdminRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
@@ -199,7 +199,9 @@ function AdminRequestDetailContent() {
 }
 
 function RequestMailSelectionCard({ requestId }: { requestId: string }) {
-  const selection = useQuery({ queryKey: ['admin', 'request-mail-selection', requestId], queryFn: () => fetchRequestMailSelection(requestId) })
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  const selection = useQuery({ queryKey: ['admin', 'request-mail-selection', requestId, activeOrgId ?? null, requestReaderKey(user)], queryFn: () => fetchRequestMailSelection(requestId) })
   return <Card className="space-y-3 p-5">
     {selection.isPending && <Spinner label="신청 알림 선정 기록 불러오는 중" />}
     {selection.isError && <Alert variant="danger">{selection.error.message}<Button variant="secondary" onClick={() => void selection.refetch()}>선정 기록 다시 조회</Button></Alert>}

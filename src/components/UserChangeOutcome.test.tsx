@@ -5,6 +5,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { fetchUserSupport, type ProfileImpact, type UserSupport } from '../api/admin-user-support'
 import { supportFixture } from '../test/msw/handlers/user-support'
 import { uuid } from '../test/msw/ids'
+import { AuthContext, type AuthContextValue } from '../auth/auth-context'
+import { ACCESS_TOKENS } from '../test/msw/handlers/auth'
 import { UserChangeOutcome } from './UserSupport'
 
 vi.mock('../api/admin-user-support', async (importOriginal) => ({
@@ -45,9 +47,10 @@ function renderOutcome(data: UserSupport) {
         status: 'PENDING_JOIN', projectedStatus: 'QUEUED', grantedEndDate: null }],
     }],
   }
-  render(<MemoryRouter><QueryClientProvider client={queryClient}>
+  const auth: AuthContextValue = { status: 'authenticated', user: ACCESS_TOKENS['access-sys-admin'], login: async () => { throw new Error('Unused login') }, completeMfa: async () => { throw new Error('Unused MFA') }, refreshProfile: async () => {}, logout: async () => {}, beginCredentialExchange: () => { throw new Error('Unused exchange') } }
+  render(<MemoryRouter><QueryClientProvider client={queryClient}><AuthContext.Provider value={auth}>
     <UserChangeOutcome impact={impact} actualStatus="ACTIVE" />
-  </QueryClientProvider></MemoryRouter>)
+  </AuthContext.Provider></QueryClientProvider></MemoryRouter>)
 }
 
 async function advance(milliseconds: number) {

@@ -48,12 +48,16 @@ function scopeOf(
   }
 }
 
-/** 관리자 조회의 기관 스코프 — 역할을 보유한 기관 전부. */
+/** Support metadata uses a filter; ordinary institution reads use assigned scope. */
 export function adminReadScope(
   profile: Profile,
   orgId: string | null,
   instance: string,
 ): OrgScopeResult {
+  const pathname = new URL(instance, 'https://pickle.invalid').pathname.replace('/api/v1', '')
+  if (/^\/admin\/(requests|vms|workspaces|domains|gpu-allocations)(\/|$)/.test(pathname) || /^\/admin\/llm\/keys(\/|$)/.test(pathname)) {
+    return { notFound: null, matches: (rowOrgId) => !orgId || rowOrgId === orgId }
+  }
   return scopeOf(
     profile,
     profile.managedOrgs.map((org) => org.orgId),

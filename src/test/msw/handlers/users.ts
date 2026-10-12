@@ -13,7 +13,7 @@ type UserAdminDetail = Schemas['UserAdminDetailResponse']
  * {@code visibleToOrg} models derived membership so the ordinary {@code orgId}
  * filter can narrow to an org's administrators plus its derived members.
  */
-interface AdminUserRecord extends Omit<UserAdminDetail, 'statusChanges'> {
+interface AdminUserRecord extends Omit<UserAdminDetail, 'statusChanges' | 'supportCapabilities'> {
   visibleToOrg: string | null
   // Not on the contract; the mock needs it to withhold on the same ground the
   // server does. Dropped on the way out.
@@ -193,14 +193,7 @@ function toView(row: AdminUserRecord): Schemas['UserAdminViewResponse'] {
   return view
 }
 
-/**
- * 상세 응답. **프로필 다섯 필드는 시스템 계층에만 실린다.**
- *
- * 이 엔드포인트는 기관이 다른 기관 직원에게 주는 ORG_VIEWER 까지 받고 기관 범위로
- * 좁히지도 않으므로, 채워 보내면 모든 기관의 직원이 모든 계정의 학번을 읽는다. 서버가
- * 그렇게 하므로 모의도 그렇게 한다 — 여기서 채워 보내면 콘솔이 경계를 지키는지 이 테스트
- * 세계에서는 확인할 수 없다.
- */
+/** Profile support metadata is visible to assigned support readers. */
 function toDetail(row: AdminUserRecord, readerRole: Schemas['UserRole']): UserAdminDetail {
   const { visibleToOrg: _drop, statusChanges, ...rest } = row
   // A system-tier actor's public id does not reach the org tier: it reopens an
@@ -209,16 +202,8 @@ function toDetail(row: AdminUserRecord, readerRole: Schemas['UserRole']): UserAd
     ...change,
     actorId: !isSysTier(readerRole) && actorRole && isSysTier(actorRole) ? null : change.actorId,
   }))
-  const detail = { ...rest, statusChanges: visibleChanges }
-  if (isSysTier(readerRole)) return detail
-  return {
-    ...detail,
-    position: null,
-    studentNo: null,
-    departmentCode: null,
-    departmentName: null,
-    departmentOther: null,
-  }
+  const detail = { ...rest, statusChanges: visibleChanges, supportCapabilities: { profileVisible: readerRole !== 'USER', canCorrectProfile: readerRole === 'SYS_ADMIN' || (readerRole === 'ORG_ADMIN' || readerRole === 'ORG_MANAGER') && !isSysTier(row.role), canEnableAccount: readerRole === 'SYS_ADMIN' } }
+  return detail
 }
 
 const notFound = (userId: string) =>
@@ -321,9 +306,9 @@ export const userHandlers: RequestHandler[] = [
    */
   http.patch('*/api/v1/admin/users/:userId/profile', async ({ request, params }) => {
     const actor = actorOf(request)
-    if (!actor || actor.role !== 'SYS_ADMIN') return forbidden()
     const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
+    if (!(actor && (actor.role === 'SYS_ADMIN' || (actor.role === 'ORG_ADMIN' || actor.role === 'ORG_MANAGER') && !isSysTier(row.role)))) return forbidden()
     const body = (await request.json()) as Schemas['AdminUpdateProfileRequest']
     adminProfilePatches.push({ userId: String(params.userId), body })
 

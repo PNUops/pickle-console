@@ -64,12 +64,12 @@ test('an exact SYS global return is normalized with the actual key organization 
   expect(returned.searchParams.get('returnTo')).toBe(list)
 })
 
-test('an ORG return with no institution cannot infer an origin from the currently selected institution', async () => {
+test('a global support origin survives the actual key institution link', async () => {
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
   const origin = `/admin/requests/${uuid(206)}`
   renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(1)}&returnTo=${encodeURIComponent(origin)}`)
   await screen.findByRole('heading', { name: 'active-admin-key' })
-  expect(screen.queryByRole('link', { name: '← 신청 상세' })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '← 신청 상세' })).toHaveAttribute('href', expect.stringContaining(`/admin/requests/${uuid(206)}?org=${uuid(1)}`))
 })
 
 test('a late LLM limit save cannot replace another institution view or reopen the abandoned editor', async () => {
