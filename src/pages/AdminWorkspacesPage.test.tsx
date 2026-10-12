@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
@@ -38,6 +39,28 @@ describe('관리자 워크스페이스 관리', () => {
       'href',
       `/admin/vms?workspaceId=${uuid(12)}`,
     )
+  })
+
+  test('workspace members link only to support details the actor can read', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
+      http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({
+        id: uuid(12), kind: 'PROJECT', name: '캡스톤 3조', description: null,
+        createdAt: '2026-06-01T10:00:00+09:00', memberCount: 2, vmCount: 0,
+        members: [
+          { userId: uuid(42), name: '학생 구성원', email: 'student@pusan.ac.kr', workspaceRole: 'OWNER', userStatus: 'ACTIVE', supportDetailVisible: true, joinedAt: '2026-06-01T10:00:00+09:00' },
+          { userId: uuid(77), name: '시스템 구성원', email: 'system@pusan.ac.kr', workspaceRole: 'MEMBER', userStatus: 'ACTIVE', supportDetailVisible: false, joinedAt: '2026-06-02T10:00:00+09:00' },
+        ],
+      })),
+    )
+    renderApp('/admin/workspaces')
+
+    await user.click(await screen.findByRole('button', { name: '캡스톤 3조' }))
+    const drawer = within(await screen.findByRole('dialog', { name: '워크스페이스 상세' }))
+    await user.click(await drawer.findByRole('tab', { name: '구성원' }))
+    expect(drawer.getByRole('link', { name: '학생 구성원' })).toHaveAttribute('href', expect.stringContaining(`/admin/users/${uuid(42)}`))
+    expect(drawer.getByText('시스템 구성원')).toBeInTheDocument()
+    expect(drawer.queryByRole('link', { name: '시스템 구성원' })).not.toBeInTheDocument()
   })
 
   test('ORG_ADMIN은 보유 기관 워크스페이스만 보고 기관 필터가 없다', async () => {

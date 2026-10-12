@@ -799,6 +799,7 @@ export const publishingHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/domains', ({ request }) => {
     const url = new URL(request.url)
     const orgId = url.searchParams.get('orgId')
+    const workspaceId = url.searchParams.get('workspaceId')
     const kind = url.searchParams.get('kind')
     const status = url.searchParams.get('status')
     const page = Number(url.searchParams.get('page') ?? '0')
@@ -810,6 +811,7 @@ export const publishingHandlers: RequestHandler[] = [
       ...externalDomains,
     ]
       .filter((d) => !orgId || d.orgId === orgId)
+      .filter((d) => !workspaceId || d.workspaceId === workspaceId)
       .filter((d) => !kind || d.kind === kind)
       // 실서버 규칙: REMOVED는 기본 숨김, status=REMOVED 명시 때만 노출.
       .filter((d) => (status ? d.status === status : d.status !== 'REMOVED'))

@@ -21,6 +21,7 @@ import { googleOauthHandlers } from './handlers/google-oauth'
 import { profileOptionsHandlers } from './handlers/profile-options'
 import { mfaHandlers } from './handlers/mfa'
 import { userHandlers } from './handlers/users'
+import { userSupportHandlers } from './handlers/user-support'
 import { workspaceHandlers } from './handlers/workspaces'
 import { dnsDomainAccessHandlers, dnsDomainHandlers } from './handlers/dns-domains'
 import { llmKeyHandlers } from './handlers/llm-keys'
@@ -53,6 +54,7 @@ export const handlers: RequestHandler[] = [
   ...profileOptionsHandlers,
   ...googleOauthHandlers,
   ...userHandlers,
+  ...userSupportHandlers,
   ...referenceHandlers,
   ...workspaceHandlers,
   ...requestHandlers,

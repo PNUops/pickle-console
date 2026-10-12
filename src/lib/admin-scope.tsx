@@ -9,6 +9,7 @@ import { parseGuidePath } from './docs-paths'
 import { ADMIN_ORG_SCOPE_KEY } from './storage-keys'
 import { isUuid } from './validation'
 import { noticeListReturn } from './notice-paths'
+import { userSupportReturn } from './user-list'
 import { AdminScopeContext, type AdminOrgOption, type AdminScopeValue } from './admin-scope-context'
 
 function storedOrgId(): string | undefined {
@@ -79,10 +80,16 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       // 이전 페이지의 기관 종속 필터를 새 scope에 가져가지 않는다.
       next.delete('orgId')
       next.delete('workspaceId')
-      next.delete('page')
-      if (preserveNoticeReturn && next.has('returnTo')) next.set('returnTo', noticeListReturn(next.get('returnTo'), orgId))
+      if (!(preserveGlobalSelection && location.pathname === '/admin/users')) next.delete('page')
+      if (preserveNoticeReturn && next.has('returnTo')) next.set('returnTo', location.pathname.startsWith('/admin/users/')
+        ? userSupportReturn(next.get('returnTo'), orgId)
+        : noticeListReturn(next.get('returnTo'), orgId))
       else next.delete('returnTo')
       if (!preserveGlobalSelection) next.delete('selected')
+      if (!preserveGlobalSelection) {
+        next.delete('resourceType')
+        next.delete('resourceId')
+      }
       next.delete('targetOrgId')
       next.delete('targetType')
       next.delete('targetId')
@@ -103,8 +110,8 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     if (!orgTier || activeOrg == null) return
     storeOrgId(activeOrg.id)
     // These read surfaces resolve targets independently of the chosen institution.
-    const globalReadSelection = ['/admin/users', '/admin/notices', '/admin/announcements'].includes(location.pathname)
-    const noticeAuthoring = location.pathname === '/admin/notices/new' || /^\/admin\/notices\/[^/]+\/edit$/.test(location.pathname)
+    const globalReadSelection = ['/admin/users', '/admin/notices', '/admin/announcements'].includes(location.pathname) || location.pathname.startsWith('/admin/users/')
+    const noticeAuthoring = location.pathname === '/admin/notices/new' || /^\/admin\/notices\/[^/]+\/edit$/.test(location.pathname) || location.pathname.startsWith('/admin/users/')
     if (requestedOrgId !== activeOrg.id) replaceScope(activeOrg.id, globalReadSelection, noticeAuthoring)
   }, [activeOrg, invalidSystemScope, location.pathname, orgTier, replaceScope, requestedOrgId])
 
