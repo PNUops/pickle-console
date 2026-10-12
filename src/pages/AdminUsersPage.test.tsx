@@ -203,6 +203,8 @@ describe('관리자 사용자 목록', () => {
     // 상세가 갱신돼 해제 버튼이 나타난다
     expect(await screen.findByRole('button', { name: '비활성화 해제' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '비활성화 해제' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '영향 확인 후 재활성화' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '영향 확인 후 재활성화' }))
     expect(await screen.findByRole('button', { name: '계정 비활성화' })).toBeInTheDocument()
   })
 
@@ -435,6 +437,7 @@ describe('관리자 사용자 목록', () => {
     await user.clear(screen.getByLabelText('학번'))
     await user.type(screen.getByLabelText('학번'), '202054321')
     await user.type(screen.getByLabelText('사유'), '본인 확인 후 정정')
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
@@ -468,6 +471,7 @@ describe('관리자 사용자 목록', () => {
     await openDetail(user, '홍길동')
     await user.click(screen.getByRole('button', { name: '정정' }))
     await screen.findByRole('heading', { name: '프로필 정정' })
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() =>
@@ -487,6 +491,7 @@ describe('관리자 사용자 목록', () => {
     await screen.findByRole('heading', { name: '프로필 정정' })
     await user.clear(screen.getByLabelText('학번'))
     await user.type(screen.getByLabelText('학번'), '202054321')
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
@@ -509,7 +514,6 @@ describe('관리자 사용자 목록', () => {
     await user.click(screen.getByRole('button', { name: '정정' }))
     await screen.findByRole('heading', { name: '프로필 정정' })
     await user.clear(screen.getByLabelText('학번'))
-    await user.click(screen.getByRole('button', { name: '저장' }))
 
     expect(await screen.findByText('학번을 입력해 주세요.')).toBeInTheDocument()
   })
@@ -529,7 +533,7 @@ describe('관리자 사용자 목록', () => {
     expect(screen.getByText(/소속이 「기타」라는 값으로 굳습니다/)).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('소속 직접 입력'), '융합학부')
-    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
   })
 
   test('정정이 두 번이면 알림도 두 번이다', async () => {
@@ -544,7 +548,8 @@ describe('관리자 사용자 목록', () => {
       await screen.findByRole('heading', { name: '프로필 정정' })
       await user.clear(screen.getByLabelText('학번'))
       await user.type(screen.getByLabelText('학번'), value)
-      await user.click(screen.getByRole('button', { name: '저장' }))
+      await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '저장' }))
       await waitFor(() =>
         expect(screen.queryByRole('heading', { name: '프로필 정정' })).not.toBeInTheDocument(),
       )
@@ -575,7 +580,6 @@ describe('관리자 사용자 목록', () => {
 
     // 소속의 두 모양은 대안이다. 목록에 없는 학과의 학생만 둘을 함께 쓴다.
     await user.type(screen.getByLabelText('소속 직접 입력'), '부설연구소')
-    await user.click(screen.getByRole('button', { name: '저장' }))
 
     expect(
       await screen.findByText(
@@ -593,7 +597,7 @@ describe('Organization assignment snapshot and late results', () => {
     expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('selected')).toBe(uuid(42))
     const drawer = await screen.findByRole('dialog', { name: '사용자 상세' })
     await within(drawer).findByText('워크스페이스 멤버십')
-    await waitFor(() => expect(currentPath()).toBe(`/admin/users?selected=${uuid(42)}&org=${uuid(1)}`))
+    await waitFor(() => expect(currentPath()).toBe(`/admin/users?org=${uuid(1)}&selected=${uuid(42)}`))
     expect(screen.getByRole('dialog', { name: '사용자 상세' })).toBe(drawer)
   })
 

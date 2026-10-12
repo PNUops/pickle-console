@@ -66,6 +66,7 @@ import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString, todayKstDate } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { isUuid } from '../lib/validation'
 import { useBulkSelection } from '../lib/bulk-selection'
 import { adminPaths } from '../lib/paths'
 
@@ -103,6 +104,8 @@ export function AdminDomainsPage() {
   const canSelect = !!effectiveRole && canInterveneDomain(effectiveRole)
   const selection = useBulkSelection('domains', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
+  const rawWorkspaceId = searchParams.get('workspaceId')
+  const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
   const rawTab = searchParams.get('tab')
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
@@ -120,10 +123,10 @@ export function AdminDomainsPage() {
     queryKey: [
       'admin',
       'domains',
-      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, page },
+      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page },
     ],
     queryFn: () =>
-      fetchAdminDomains({ status, kind, orgId: activeOrgId, page, size: PAGE_SIZE }),
+      fetchAdminDomains({ status, kind, workspaceId, orgId: activeOrgId, page, size: PAGE_SIZE }),
   })
   const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
   const pageTargets = (domains.data?.content ?? []).map((domain) => ({
