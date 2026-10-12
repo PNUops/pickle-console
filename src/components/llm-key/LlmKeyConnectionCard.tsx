@@ -14,6 +14,14 @@ import { LlmKeyModelsModal } from './LlmKeyModelsModal'
  */
 export function LlmKeyConnectionCard({ keyId }: { keyId: string }) {
   const [modelsOpen, setModelsOpen] = useState(false)
+  if (!LLM_API_BASE_URL) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>연결 정보</CardTitle></CardHeader>
+        <CardContent>개발 환경에서 LLM API 연결이 비활성화되어 있습니다.</CardContent>
+      </Card>
+    )
+  }
   const example = `curl ${LLM_API_BASE_URL}/chat/completions \\
   -H "Authorization: Bearer $PICKLE_API_KEY" \\
   -H "Content-Type: application/json" \\

@@ -43,24 +43,28 @@ async function startMockApiIfRequested(): Promise<void> {
   await startMockApi()
 }
 
-await startMockApiIfRequested()
+if (import.meta.env.PROD && window.location.hostname !== PICKLE_PUBLIC_HOST) {
+  document.getElementById('root')!.textContent = '배포 대상 주소가 일치하지 않아 화면을 시작할 수 없습니다.'
+} else {
+  await startMockApiIfRequested()
 
-createRoot(document.getElementById('root')!).render(
-  terminalVmId !== null ? (
-    <StrictMode>
-      <TerminalWindowRoot vmId={terminalVmId} />
-    </StrictMode>
-  ) : (
-  <StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
-  </StrictMode>
-  ),
-)
+  createRoot(document.getElementById('root')!).render(
+    terminalVmId !== null ? (
+      <StrictMode>
+        <TerminalWindowRoot vmId={terminalVmId} />
+      </StrictMode>
+    ) : (
+      <StrictMode>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ToastProvider>
+                <App />
+              </ToastProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </BrowserRouter>
+      </StrictMode>
+    ),
+  )
+}
