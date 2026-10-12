@@ -5,6 +5,7 @@ import {
   retryRequestRecipient,
   type RequestDetail,
   type RequestRecipient,
+  type RequestStatus,
 } from '../../api/queries'
 import {
   Alert,
@@ -23,6 +24,9 @@ import {
   type BadgeVariant,
 } from '../ui'
 import { REQUEST_RECIPIENT_STATUS_LABELS } from '../../lib/status'
+import { requestRecipientStatusLabel } from '../../lib/request-recipient-status'
+import { useActiveResult } from '../../lib/use-active-result'
+import { adminPaths } from '../../lib/paths'
 
 const RECIPIENT_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   PENDING_JOIN: 'neutral',
@@ -36,11 +40,11 @@ const RECIPIENT_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 }
 
 /** A status this build does not know is shown as the raw value rather than dropped. */
-export function RecipientStatusBadge({ status, admin = false }: { status: string; admin?: boolean }) {
+export function RecipientStatusBadge({ status, admin = false, requestStatus }: { status: string; admin?: boolean; requestStatus?: RequestStatus }) {
   const labels: Record<string, string> = REQUEST_RECIPIENT_STATUS_LABELS
   return (
     <Badge variant={RECIPIENT_STATUS_VARIANTS[status] ?? 'neutral'}>
-      {admin && status === 'CREATED' ? '리소스 등록됨' : labels[status] ?? status}
+      {requestStatus ? requestRecipientStatusLabel(requestStatus, status, admin) : admin && status === 'CREATED' ? '리소스 등록됨' : labels[status] ?? status}
     </Badge>
   )
 }
@@ -58,30 +62,34 @@ export function RequestRecipientsCard({
   resourceHref,
   canRetry,
   admin = false,
+  userReadable,
 }: {
   request: RequestDetail
   /** Where the created resource opens for this viewer, or null when it is not theirs to open. */
   resourceHref: (recipient: RequestRecipient) => string | null
   canRetry: boolean
   admin?: boolean
+  userReadable?: (recipient: RequestRecipient) => boolean
 }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
+  const active = useActiveResult()
   const retry = useMutation({
     mutationFn: (recipientId: string) => retryRequestRecipient(request.id, recipientId),
     onSuccess: async () => {
-      setError(null)
+      if (active.current) setError(null)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] }),
         queryClient.invalidateQueries({ queryKey: ['requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
       ])
     },
-    onError: (err) => setError(err.message),
+    onError: (err) => { if (active.current) setError(err.message) },
   })
 
   const recipients = request.recipients ?? []
   if (recipients.length === 0) return null
-  const retryable = canRetry && recipients.some((recipient) => recipient.status === 'FAILED')
+  const retryable = canRetry && request.status === 'APPROVED' && recipients.some((recipient) => recipient.status === 'FAILED')
 
   return (
     <Card>
@@ -113,9 +121,11 @@ export function RequestRecipientsCard({
               const href = recipient.resourceId ? resourceHref(recipient) : null
               return (
                 <TR key={recipient.id}>
-                  <TD>{recipientLabel(recipient)}</TD>
+                  <TD>{admin && recipient.userId && userReadable?.(recipient)
+                    ? <Link className="text-primary-700 hover:underline" to={adminPaths.userSupport(recipient.userId, request.orgId ?? undefined)}>{recipientLabel(recipient)}</Link>
+                    : recipientLabel(recipient)}</TD>
                   <TD>
-                    <RecipientStatusBadge status={recipient.status} admin={admin} />
+                    <RecipientStatusBadge status={recipient.status} admin={admin} requestStatus={request.status} />
                   </TD>
                   <TD>
                     {href ? (
@@ -133,6 +143,7 @@ export function RequestRecipientsCard({
                         <Button
                           size="sm"
                           variant="secondary"
+                          disabled={retry.isPending}
                           loading={retry.isPending && retry.variables === recipient.id}
                           onClick={() => retry.mutate(recipient.id)}
                         >

@@ -189,7 +189,7 @@ export function RequestWizard({
   const adminMembers = useQuery({
     queryKey: ['admin', 'workspaces', 'detail', state.workspaceId],
     queryFn: () => fetchAdminWorkspace(state.workspaceId!),
-    enabled: adminMode && recipientsOffered,
+    enabled: adminMode && state.workspaceId != null,
   })
   // People invited but not yet joined get their resource when they join, so
   // the approver has to be able to name them too.
@@ -575,6 +575,9 @@ export function RequestWizard({
       // waits too unless an account already holds it.
       recipients: selectedRecipients.map((candidate) => ({
         id: candidate.key,
+        userId: candidate.key.startsWith('u:') ? candidate.key.slice(2) : null,
+        name: candidate.key.startsWith('u:') ? candidate.label : null,
+        invitee: candidate.key.startsWith('u:') ? null : candidate.label,
         status: candidate.key.startsWith('i:') || candidate.awaitsJoin ? 'PENDING_JOIN' : 'QUEUED',
       })),
     }
@@ -887,6 +890,9 @@ export function RequestWizard({
                 onCloseConfirm={() => setConfirmOpen(false)}
                 onConfirm={submitApproved}
                 pending={submit.isPending}
+                targetFacts={adminMembers.data?.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true }))}
+                targetFactsKnown={adminMembers.isSuccess}
+                workspaceReadable={adminMembers.isSuccess}
               />
             )}
 

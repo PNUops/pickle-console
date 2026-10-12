@@ -168,7 +168,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText('분당 요청 수 서비스 기본값')).toBeInTheDocument()
+    expect(within(within(dialog).getByRole('row', { name: /분당 요청 수 \(키당\)/ })).getByText('서비스 기본값')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     expect(
@@ -209,7 +209,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText('금액 한도 $5')).toBeInTheDocument()
+    expect(within(within(dialog).getByRole('row', { name: /금액 한도 \(키당\)/ })).getByText('$5')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
@@ -493,8 +493,8 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText('분당 요청 수 600')).toBeInTheDocument()
-    expect(within(dialog).getByText('분당 토큰 수 서비스 기본값')).toBeInTheDocument()
+    expect(within(within(dialog).getByRole('row', { name: /분당 요청 수 \(키당\)/ })).getByText('600')).toBeInTheDocument()
+    expect(within(within(dialog).getByRole('row', { name: /분당 토큰 수 \(키당\)/ })).getByText('서비스 기본값')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')

@@ -154,6 +154,7 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     </Card>
     <Card className="space-y-3 p-4">
       <h2 className="font-semibold">신청과 대상자별 결과</h2>
+      <Link className="inline-flex text-sm text-primary-700 hover:underline" to={adminPaths.userRequests(userId, activeOrgId)}>이 사용자의 관련 신청 보기</Link>
       {data.requests.length === 0 ? <p className="text-sm text-neutral-500">현재 관리 범위에서 연결된 신청이 없습니다.</p> : <DataTable caption="사용자 관련 신청 결과">
         <THead><TR><TH>신청</TH><TH>관계</TH><TH>검토</TH><TH>생성 결과</TH><TH>기간</TH></TR></THead>
         <TBody>{data.requests.map((request) => <TR key={`${request.id}-${request.recipientId ?? 'applicant'}`}>

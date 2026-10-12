@@ -44,6 +44,7 @@ import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/sta
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { vmNetworkPolicyEnabled } from '../lib/vm-network-policy'
+import { requestDetailReturn, withListReturn } from '../lib/list-url'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -107,9 +108,17 @@ export function AdminVmDetailPage() {
     roleCanOperate &&
     !!user &&
     (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
+  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
+  const actualOrgId = vm.orgId && isUuid(vm.orgId) ? vm.orgId.toLowerCase() : undefined
+  const returnedOrg = returnedUrl?.searchParams.get('org')
+  const exactRequest = actualOrgId && returnedUrl?.pathname === `/admin/requests/${vm.requestId?.toLowerCase()}`
+  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && isSysTier(user.role))
+    ? returnedOrg ? proposedReturn : withListReturn(adminPaths.requestDetail(vm.requestId!, actualOrgId), returnedUrl!.searchParams.get('returnTo')!) : null
   return (
     <div className="space-y-6">
       <div>
+        {requestReturn && <Link to={requestReturn} className="mb-2 block text-sm text-primary-700 hover:underline">← 신청 상세</Link>}
         <Link to={adminPaths.vms(activeOrgId)} className="text-sm text-primary-700 hover:underline">
           ← VM 관리
         </Link>
@@ -161,7 +170,9 @@ export function AdminVmDetailPage() {
               value={`${vm.startDate ?? '—'} ~ ${vm.endDate ?? '—'}`}
             />
             <Field label="생성일" value={formatDateTime(vm.createdAt)} />
-            <Field label="신청 ID" value={String(vm.requestId)} />
+            <div><dt className="text-neutral-500">승인 신청</dt><dd className="font-medium text-neutral-900">
+              {vm.requestId && isUuid(vm.requestId) ? <Link className="text-primary-700 hover:underline" to={adminPaths.requestDetail(vm.requestId, vm.orgId ?? undefined)}>정확한 신청 보기</Link> : '연결된 신청 기록 없음'}
+            </dd></div>
           </dl>
         </Card>
 

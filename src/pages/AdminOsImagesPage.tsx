@@ -5,10 +5,13 @@ import {
   fetchAdminNodes,
   fetchAdminOsImages,
   fetchAdminVmFlavors,
+  fetchOsImages,
   updateAdminOsImage,
   updateAdminVmFlavor,
   type AdminOsImage,
   type VmFlavor,
+  type OsImage,
+  type NodeSummary,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -22,6 +25,9 @@ import {
   Input,
   Modal,
   Spinner,
+  Select,
+  Tabs,
+  TabPanel,
   Table,
   TBody,
   TD,
@@ -33,6 +39,8 @@ import {
 import { fieldErrorsOf } from '../lib/field-errors'
 import { formatSpec } from '../lib/format'
 import { AdminRequestPeriods } from '../components/request-period/AdminRequestPeriods'
+import { useListUrl } from '../lib/use-list-url'
+import { CATALOGUE_TABS, catalogueState, filterCatalogue, logicalChoice, orderedFlavors, retirementImpact, type CatalogueStatus } from '../lib/admin-catalogue'
 
 /** 사양 이름 규칙 — 소문자·숫자·하이픈 (서버 검증과 동일). */
 const FLAVOR_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
@@ -49,20 +57,24 @@ export function AdminOsImagesPage() {
   const [flavorToggleTarget, setFlavorToggleTarget] = useState<VmFlavor | null>(null)
   const [flavorEditTarget, setFlavorEditTarget] = useState<VmFlavor | null>(null)
   const [flavorCreateOpen, setFlavorCreateOpen] = useState(false)
+  const [params, change] = useListUrl()
+  const state = catalogueState(params)
 
   const osImages = useQuery({ queryKey: ['admin', 'os-images'], queryFn: fetchAdminOsImages })
   const flavors = useQuery({ queryKey: ['admin', 'vm-flavors'], queryFn: fetchAdminVmFlavors })
   // 이미지가 올라가 있는 노드는 id가 아니라 이름으로 읽는다 — 노드 id는 UUID다.
   const nodes = useQuery({ queryKey: ['admin', 'nodes'], queryFn: fetchAdminNodes })
+  const logicalImages = useQuery({ queryKey: ['os-images'], queryFn: fetchOsImages })
   const nodeName = (nodeId: string) => nodes.data?.find((n) => n.id === nodeId)?.name ?? '—'
 
-  const activeCount = osImages.data?.filter((t) => t.status === 'ACTIVE').length ?? 0
   const activeFlavorCount = flavors.data?.filter((f) => f.status === 'ACTIVE').length ?? 0
+  const imageRows = filterCatalogue(osImages.data ?? [], state.q, state.status)
+  const flavorRows = filterCatalogue(orderedFlavors(flavors.data ?? []), state.q, state.status)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">OS 이미지·사양 관리</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">신청 카탈로그</h1>
         <p className="mt-1 text-sm text-neutral-500">
           신청 화면이 제공하는 OS 이미지와 사양, 사용 기간입니다.
         </p>
@@ -70,8 +82,19 @@ export function AdminOsImagesPage() {
 
       {message && <Alert variant="info">{message}</Alert>}
 
+      <Tabs tabs={CATALOGUE_TABS} value={state.tab} onChange={(tab) => change({ tab, q: undefined, status: undefined })} aria-label="신청 카탈로그 종류" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label="카탈로그 검색"><Input value={state.q} onChange={(event) => change({ q: event.target.value || undefined })} placeholder="표시명 또는 이름" /></FormField>
+        <FormField label="상태 필터"><Select value={state.status} onChange={(event) => change({ status: event.target.value === 'ALL' ? undefined : event.target.value })}>
+          <option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="DISABLED">은퇴</option>
+        </Select></FormField>
+      </div>
+
+      <TabPanel id="images" active={state.tab === 'images'}>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-neutral-900">OS 이미지</h2>
+        <p className="text-sm text-neutral-600">아래 상태는 노드별 이미지 행의 상태입니다. 신청 가능 여부는 동일 revision의 호환 replica와 활성 노드를 함께 확인한 신청 목록을 따릅니다.</p>
+        {logicalImages.isError && <Alert variant="warning">신청 가능한 이미지 목록을 확인하지 못했습니다. 개별 행 상태만으로 선택 가능 여부를 판단하지 마세요.</Alert>}
 
         {osImages.isPending && (
           <div className="flex justify-center py-12">
@@ -79,12 +102,12 @@ export function AdminOsImagesPage() {
           </div>
         )}
         {osImages.isError && <Alert variant="danger">{osImages.error.message}</Alert>}
-        {osImages.isSuccess && osImages.data.length === 0 && (
+        {osImages.isSuccess && imageRows.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            등록된 OS 이미지가 없습니다.
+            {osImages.data.length === 0 ? '등록된 OS 이미지가 없습니다.' : '검색 조건에 맞는 OS 이미지가 없습니다.'}
           </Card>
         )}
-        {osImages.isSuccess && osImages.data.length > 0 && (
+        {osImages.isSuccess && imageRows.length > 0 && (
           <Card>
             <Table>
               <THead>
@@ -92,6 +115,7 @@ export function AdminOsImagesPage() {
                   <TH>표시명</TH>
                   <TH>이름 / 버전</TH>
                   <TH>상태</TH>
+                  <TH>신청 가능 여부</TH>
                   <TH>노드 / VMID</TH>
                   <TH>최소 디스크</TH>
                   <TH>비고</TH>
@@ -103,7 +127,7 @@ export function AdminOsImagesPage() {
                 </TR>
               </THead>
               <TBody>
-                {osImages.data.map((image) => (
+                {imageRows.map((image) => (
                   <TR key={image.id}>
                     <TD className="font-medium text-neutral-900">{image.displayName}</TD>
                     <TD className="font-mono text-xs text-neutral-500">
@@ -114,6 +138,7 @@ export function AdminOsImagesPage() {
                         {image.status === 'ACTIVE' ? '활성' : '은퇴'}
                       </Badge>
                     </TD>
+                    <TD className="whitespace-nowrap text-sm">{logicalImages.isSuccess ? (logicalChoice(image, logicalImages.data) ? '선택 가능' : '선택 불가') : '확인 중'}</TD>
                     <TD className="whitespace-nowrap text-xs text-neutral-500">
                       {nodeName(image.nodeId)} / {image.proxmoxVmid}
                     </TD>
@@ -139,7 +164,9 @@ export function AdminOsImagesPage() {
           </Card>
         )}
       </section>
+      </TabPanel>
 
+      <TabPanel id="flavors" active={state.tab === 'flavors'}>
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -151,6 +178,7 @@ export function AdminOsImagesPage() {
             </Button>
           )}
         </div>
+        <p className="text-sm text-neutral-600">표시 순서가 작을수록 신청 화면 앞에 옵니다. 은퇴와 수치 변경은 이후 신청의 선택 기준만 바꾸며 이미 요청한 사양과 부여값은 보존됩니다.</p>
 
         {flavors.isPending && (
           <div className="flex justify-center py-12">
@@ -158,12 +186,12 @@ export function AdminOsImagesPage() {
           </div>
         )}
         {flavors.isError && <Alert variant="danger">{flavors.error.message}</Alert>}
-        {flavors.isSuccess && flavors.data.length === 0 && (
+        {flavors.isSuccess && flavorRows.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            등록된 사양이 없습니다.
+            {flavors.data.length === 0 ? '등록된 사양이 없습니다.' : '검색 조건에 맞는 사양이 없습니다.'}
           </Card>
         )}
-        {flavors.isSuccess && flavors.data.length > 0 && (
+        {flavors.isSuccess && flavorRows.length > 0 && (
           <Card>
             <Table>
               <THead>
@@ -172,6 +200,7 @@ export function AdminOsImagesPage() {
                   <TH>이름</TH>
                   <TH>사양</TH>
                   <TH>상태</TH>
+                  <TH>표시 순서</TH>
                   <TH>비고</TH>
                   {isSysAdmin && (
                     <TH>
@@ -181,7 +210,7 @@ export function AdminOsImagesPage() {
                 </TR>
               </THead>
               <TBody>
-                {flavors.data.map((flavor) => (
+                {flavorRows.map((flavor) => (
                   <TR key={flavor.id}>
                     <TD className="font-medium text-neutral-900">{flavor.displayName}</TD>
                     <TD className="font-mono text-xs text-neutral-500">{flavor.name}</TD>
@@ -193,6 +222,7 @@ export function AdminOsImagesPage() {
                         {flavor.status === 'ACTIVE' ? '활성' : '은퇴'}
                       </Badge>
                     </TD>
+                    <TD>{flavor.displayOrder}</TD>
                     <TD className="max-w-xs truncate text-xs text-neutral-500">
                       {flavor.notes ?? '—'}
                     </TD>
@@ -221,11 +251,14 @@ export function AdminOsImagesPage() {
           </Card>
         )}
       </section>
+      </TabPanel>
 
-      {toggleTarget && (
+      {isSysAdmin && toggleTarget && (
         <ToggleOsImageModal
           image={toggleTarget}
-          lastActive={toggleTarget.status === 'ACTIVE' && activeCount <= 1}
+          inventory={osImages.data ?? []}
+          logicalImages={logicalImages.data}
+          nodes={nodes.data}
           onClose={() => setToggleTarget(null)}
           onDone={(text) => {
             setToggleTarget(null)
@@ -234,9 +267,9 @@ export function AdminOsImagesPage() {
         />
       )}
 
-      <AdminRequestPeriods isSysAdmin={isSysAdmin} />
+      <TabPanel id="periods" active={state.tab === 'periods'}><AdminRequestPeriods isSysAdmin={isSysAdmin} q={state.q} status={state.status as CatalogueStatus} /></TabPanel>
 
-      {flavorToggleTarget && (
+      {isSysAdmin && flavorToggleTarget && (
         <ToggleFlavorModal
           flavor={flavorToggleTarget}
           lastActive={flavorToggleTarget.status === 'ACTIVE' && activeFlavorCount <= 1}
@@ -248,7 +281,7 @@ export function AdminOsImagesPage() {
         />
       )}
 
-      {flavorEditTarget && (
+      {isSysAdmin && flavorEditTarget && (
         <EditFlavorModal
           flavor={flavorEditTarget}
           onClose={() => setFlavorEditTarget(null)}
@@ -259,7 +292,7 @@ export function AdminOsImagesPage() {
         />
       )}
 
-      {flavorCreateOpen && (
+      {isSysAdmin && flavorCreateOpen && (
         <CreateFlavorModal
           onClose={() => setFlavorCreateOpen(false)}
           onDone={(text) => {
@@ -283,18 +316,23 @@ function useFlavorInvalidation() {
 
 function ToggleOsImageModal({
   image,
-  lastActive,
+  inventory,
+  logicalImages,
+  nodes,
   onClose,
   onDone,
 }: {
   image: AdminOsImage
-  lastActive: boolean
+  inventory: AdminOsImage[]
+  logicalImages: OsImage[] | undefined
+  nodes: NodeSummary[] | undefined
   onClose: () => void
   onDone: (message: string) => void
 }) {
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const retiring = image.status === 'ACTIVE'
+  const impact = logicalImages && nodes ? retirementImpact(image, inventory, logicalImages, nodes) : null
 
   const toggle = useMutation({
     mutationFn: () =>
@@ -331,18 +369,20 @@ function ToggleOsImageModal({
       <div className="space-y-3">
         {retiring ? (
           <p className="text-sm text-neutral-600">
-            <strong>{image.displayName}</strong> (v{image.version})을(를) 은퇴시키면 새 신청에서
-            선택할 수 없습니다. 기존 VM은 영향받지 않으며, 언제든 다시 활성화할 수 있습니다.
+            <strong>{image.displayName}</strong> (v{image.version})의 이 노드 replica를 은퇴시킵니다.
+            다른 활성 노드에 동일 revision의 호환 ACTIVE replica가 있으면 신청 선택지는 유지됩니다.
+            기존 VM의 clone 기록은 바뀌지 않습니다. 아직 생성하지 않은 신청은 실제 생성 시점의 이미지 사용 가능 조건을 다시 확인합니다.
           </p>
         ) : (
           <p className="text-sm text-neutral-600">
-            <strong>{image.displayName}</strong> (v{image.version})을(를) 다시 신청
-            위저드에 노출합니다.
+            <strong>{image.displayName}</strong> (v{image.version})의 이 replica를 활성화합니다. 신청 목록에 노출되는지는 호환 revision과 노드 상태를 서버에서 다시 확인합니다.
           </p>
         )}
-        {lastActive && (
+        {retiring && !impact && <Alert variant="warning">신청 목록에 미치는 영향을 현재 확인하지 못했습니다. 저장 후 실제 신청 목록을 다시 확인해 주세요.</Alert>}
+        {retiring && impact?.removesChoice === false && <Alert variant="info">이 행을 은퇴해도 현재 신청용 revision의 선택 가능 여부는 유지됩니다.</Alert>}
+        {retiring && impact?.removesLastChoice && (
           <Alert variant="warning">
-            마지막 활성 OS 이미지입니다. 은퇴시키면 신규 VM 신청이 불가능해집니다.
+            마지막으로 선택 가능한 OS revision입니다. 이 replica를 은퇴하면 현재 신청 가능한 이미지 선택지가 없어집니다.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}
@@ -411,7 +451,7 @@ function ToggleFlavorModal({
         )}
         {lastActive && (
           <Alert variant="warning">
-            마지막 활성 사양입니다. 은퇴시키면 신규 VM 신청이 불가능해집니다.
+            마지막 활성 사양 프리셋입니다. 은퇴하면 프리셋 선택지가 없어지며 사양을 직접 입력하는 경로는 유지됩니다.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}
@@ -447,6 +487,8 @@ function SpecFields({
   notes,
   setNotes,
   fieldErrors,
+  displayOrder,
+  setDisplayOrder,
 }: {
   displayName: string
   setDisplayName: (value: string) => void
@@ -459,6 +501,8 @@ function SpecFields({
   notes: string
   setNotes: (value: string) => void
   fieldErrors: Record<string, string>
+  displayOrder: string
+  setDisplayOrder: (value: string) => void
 }) {
   return (
     <>
@@ -505,6 +549,9 @@ function SpecFields({
           maxLength={500}
         />
       </FormField>
+      <FormField label="표시 순서" error={fieldErrors.displayOrder} description="작을수록 신청 화면 앞에 옵니다.">
+        <Input type="number" step={1} value={displayOrder} onChange={(event) => setDisplayOrder(event.target.value)} />
+      </FormField>
     </>
   )
 }
@@ -524,6 +571,7 @@ function EditFlavorModal({
   const [memoryMb, setMemoryMb] = useState(String(flavor.memoryMb))
   const [diskGb, setDiskGb] = useState(String(flavor.diskGb))
   const [notes, setNotes] = useState(flavor.notes ?? '')
+  const [displayOrder, setDisplayOrder] = useState(String(flavor.displayOrder))
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -537,6 +585,7 @@ function EditFlavorModal({
         // 부분 수정에서 null은 "변경 없음"이다 — 비고를 지우려면 빈 문자열을
         // 보내야 서버가 null로 저장한다.
         notes: notes.trim(),
+        displayOrder: Number(displayOrder),
       }),
     onSuccess: async () => {
       onDone('사양을 수정했습니다.')
@@ -557,6 +606,7 @@ function EditFlavorModal({
     event.preventDefault()
     setFormError(null)
     const errors = validateSpecFields({ displayName, vcpu, memoryMb, diskGb })
+    if (!Number.isInteger(Number(displayOrder))) errors.displayOrder = '표시 순서는 정수로 입력해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     update.mutate()
@@ -581,6 +631,8 @@ function EditFlavorModal({
           notes={notes}
           setNotes={setNotes}
           fieldErrors={fieldErrors}
+          displayOrder={displayOrder}
+          setDisplayOrder={setDisplayOrder}
         />
         <p className="text-sm text-neutral-500">
           이후 신청의 기준선만 바뀌고 기존 VM과 접수된 신청은 그대로입니다.
@@ -612,6 +664,7 @@ function CreateFlavorModal({
   const [memoryMb, setMemoryMb] = useState('2048')
   const [diskGb, setDiskGb] = useState('20')
   const [notes, setNotes] = useState('')
+  const [displayOrder, setDisplayOrder] = useState('0')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -624,6 +677,7 @@ function CreateFlavorModal({
         memoryMb: Number(memoryMb),
         diskGb: Number(diskGb),
         notes: notes.trim() || null,
+        displayOrder: Number(displayOrder),
       }),
     onSuccess: async () => {
       onDone('사양을 추가했습니다.')
@@ -644,6 +698,7 @@ function CreateFlavorModal({
     event.preventDefault()
     setFormError(null)
     const errors = validateSpecFields({ displayName, vcpu, memoryMb, diskGb })
+    if (!Number.isInteger(Number(displayOrder))) errors.displayOrder = '표시 순서는 정수로 입력해 주세요.'
     if (!name) errors.name = '사양 이름을 입력해 주세요.'
     else if (!FLAVOR_NAME_RE.test(name))
       errors.name =
@@ -682,6 +737,8 @@ function CreateFlavorModal({
           notes={notes}
           setNotes={setNotes}
           fieldErrors={fieldErrors}
+          displayOrder={displayOrder}
+          setDisplayOrder={setDisplayOrder}
         />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={create.isPending}>
