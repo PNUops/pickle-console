@@ -8,7 +8,7 @@ import { todayKstDate } from '../lib/format'
 import { useActiveResult } from '../lib/use-active-result'
 
 /**
- * VM 사용 기간 연장 모달. 만료 관리 목록과 VM 관리 드로어가 공유한다.
+ * VM period extension shared by the expiry list and administrator detail route.
  * 연장은 운영 역할만 수행 가능 — 열람 역할은 조회만이고, 기관 계층은 자기가
  * 운영하는 기관의 VM 한정이다 (서버 강제).
  */
