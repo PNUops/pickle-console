@@ -23,9 +23,30 @@ export const MFA_NUDGE_DISMISS_KEY = 'pickle.mfa-nudge-dismissed'
  */
 export function schedulePostLoginOverlay(): void {
   try {
-    sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, '1')
+    sessionStorage.setItem(POST_LOGIN_OVERLAY_KEY, String(Date.now()))
   } catch {
     // 연출만 건너뛴다.
+  }
+}
+
+/** Ignore an old welcome after spending time in consent or profile gates. */
+export function hasPendingPostLoginOverlay(): boolean {
+  try {
+    const scheduled = Number(sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY))
+    const age = Date.now() - scheduled
+    return scheduled > 0 && age >= 0 && age < 10_000
+  } catch {
+    return false
+  }
+}
+
+/** Storage restrictions must never interrupt entry to the console. */
+export function clearPostLoginOverlay(): boolean {
+  try {
+    sessionStorage.removeItem(POST_LOGIN_OVERLAY_KEY)
+    return true
+  } catch {
+    return false
   }
 }
 

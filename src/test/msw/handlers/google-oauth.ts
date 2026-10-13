@@ -1,6 +1,6 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { problemResponse, regularUser } from './auth'
+import { MFA_CHALLENGE_TOKEN, problemResponse, regularUser } from './auth'
 
 type Schemas = components['schemas']
 
@@ -18,7 +18,7 @@ export const LINK_CODE = 'code-link'
 
 /** 2FA 를 켠 계정. 콜백이 토큰이 아니라 챌린지를 답한다. */
 export const MFA_ACCOUNT_CODE = 'code-mfa-account'
-export const MFA_TOKEN = 'mfa-token-google-1'
+export const MFA_TOKEN = MFA_CHALLENGE_TOKEN
 
 export const googleOauthHandlers: RequestHandler[] = [
   http.post('*/api/v1/auth/oauth/google/start', () =>
