@@ -1,7 +1,7 @@
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   adminForceStopVm,
@@ -17,7 +17,8 @@ import {
 import { VmGpuCard } from '../components/gpu/VmGpuCard'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canOperateVm, canReadSupportMetadata, isSysAdminOnly, isSysTier, managesOrg, operatesOrg } from '../auth/permissions'
+import { canManageVmDeletion, canOperateVm, canReadSupportMetadata, isSysAdminOnly, isSysTier, managesOrg, operatesOrg } from '../auth/permissions'
+import { AdminVmDeletionSections } from '../components/admin-vm/AdminVmDeletionSections'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import { VmNetworkPolicyPanel } from '../components/network-policy/VmNetworkPolicyPanel'
@@ -47,6 +48,8 @@ import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { vmNetworkPolicyEnabled } from '../lib/vm-network-policy'
 import { requestDetailReturn, withListReturn } from '../lib/list-url'
+import { vmListReturn } from '../lib/vm-list-return'
+import { clearStoredSelection } from '../lib/bulk-selection'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -72,6 +75,8 @@ function AdminVmDetailPageContent() {
   const vmId = vmIdParam ?? ''
   const idValid = isUuid(vmId)
   const { user } = useAuth()
+  const location = useLocation()
+  const listReturn = vmListReturn(location.state?.vmList, requestReaderKey(user), activeOrgId, !!user && canReadSupportMetadata(user.role))
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const roleCanOperate = !!user && canOperateVm(user.role)
   const policyEnabled = vmNetworkPolicyEnabled()
@@ -119,6 +124,11 @@ function AdminVmDetailPageContent() {
     roleCanOperate &&
     !!user &&
     (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
+  // Global support reads do not grant deletion rights in the target institution.
+  const deletionRole = user && isSysTier(user.role)
+    ? user.role
+    : user?.managedOrgs.find((org) => org.orgId === vm.orgId)?.role
+  const canDelete = !!deletionRole && canManageVmDeletion(deletionRole)
   const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && canReadSupportMetadata(user.role))
   const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
   const actualOrgId = vm.orgId && isUuid(vm.orgId) ? vm.orgId.toLowerCase() : undefined
@@ -130,7 +140,10 @@ function AdminVmDetailPageContent() {
     <div className="space-y-6">
       <div>
         {requestReturn && <Link to={requestReturn} className="mb-2 block text-sm text-primary-700 hover:underline">← 신청 상세</Link>}
-        <Link to={adminPaths.vms(activeOrgId)} className="text-sm text-primary-700 hover:underline">
+        <Link to={listReturn?.path ?? adminPaths.vms(activeOrgId)}
+          state={listReturn ? { vmList: listReturn } : undefined}
+          onClick={() => { if (location.state?.vmList != null && !listReturn) clearStoredSelection('vms') }}
+          className="text-sm text-primary-700 hover:underline">
           ← VM 관리
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -152,7 +165,7 @@ function AdminVmDetailPageContent() {
           const next = new URLSearchParams(searchParams)
           if (id === 'overview') next.delete('tab')
           else next.set('tab', id)
-          setSearchParams(next, { replace: true })
+          setSearchParams(next, { replace: true, state: location.state })
         }}
       />
 
@@ -197,6 +210,7 @@ function AdminVmDetailPageContent() {
         {isSysAdmin && vm.status !== 'DELETED' && (
           <VmGatewayBlockSection vm={vm} canManage onDone={setMessage} />
         )}
+        <AdminVmDeletionSections vm={vm} canDelete={canDelete} canForceDelete={isSysAdmin} onDone={setMessage} />
       </TabPanel>
 
       {policyEnabled && canReadPolicy && (
