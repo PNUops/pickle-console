@@ -19,7 +19,7 @@ export function AuthLayout() {
     <div
       data-theme="auth-dark"
       data-density="comfortable"
-      className="relative flex min-h-svh flex-col overflow-hidden break-keep bg-surface-canvas"
+      className="relative flex min-h-svh flex-col overflow-hidden break-keep bg-surface-canvas text-foreground-primary"
     >
       {/* 배경: 랜딩 히어로와 같은 문법의 그리드 + 틸 글로우(절제) */}
       <div

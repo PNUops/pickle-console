@@ -1,6 +1,9 @@
 import userEvent from '@testing-library/user-event'
 import { screen } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { getAccessToken } from '../api/token'
+import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
 import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
 import {
   EXISTING_ACCOUNT_CODE,
@@ -9,9 +12,9 @@ import {
   NEW_ACCOUNT_CODE,
   OUTSIDE_DOMAIN_CODE,
 } from '../test/msw/handlers/google-oauth'
-import { refreshSuccessHandler } from '../test/msw/handlers/auth'
+import { MFA_VALID_CODE, refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 
 const callback = (code: string) => `/auth/google/callback?code=${code}&state=state-1`
 
@@ -90,4 +93,70 @@ describe('구글 온보딩 폼', () => {
     expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument()
   })
 
+})
+
+describe('Google login completion and return path', () => {
+  const failProfile = (status = 503) => {
+    server.use(http.get('*/api/v1/me', () => HttpResponse.json({
+      type: 'about:blank', title: 'Profile unavailable', status,
+      code: 'INTERNAL_ERROR', detail: '사용자 정보를 불러올 수 없습니다.',
+    }, { status, headers: { 'Content-Type': 'application/problem+json' } })))
+  }
+
+  test('shows a profile error without a welcome or console navigation', async () => {
+    failProfile()
+    renderApp(callback(EXISTING_ACCOUNT_CODE))
+    await screen.findByRole('heading', { name: '로그인하지 못했습니다' })
+    expect(screen.getByRole('alert')).toHaveTextContent('사용자 정보를 불러올 수 없습니다.')
+    expect(currentPath()).toBe(callback(EXISTING_ACCOUNT_CODE))
+    expect(getAccessToken()).toBeNull()
+    expect(sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY)).toBeNull()
+  })
+
+  test('ends pending login visibly when the new session expires during profile loading', async () => {
+    failProfile(401)
+    renderApp(callback(EXISTING_ACCOUNT_CODE))
+    await screen.findByRole('heading', { name: '로그인하지 못했습니다' })
+    expect(screen.getByRole('alert')).toHaveTextContent('로그인 세션이 만료되었습니다.')
+    expect(getAccessToken()).toBeNull()
+    expect(sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY)).toBeNull()
+  })
+
+  test('retains the original destination through Google MFA completion', async () => {
+    const user = userEvent.setup()
+    sessionStorage.setItem(OAUTH_RETURN_TO_KEY, '/console/vms')
+    renderApp(callback(MFA_ACCOUNT_CODE))
+    await user.type(await screen.findByLabelText('인증 코드'), MFA_VALID_CODE)
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('link', { name: '가상머신 신청' })
+    expect(currentPath()).toBe('/console/vms')
+    expect(sessionStorage.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
+  })
+
+  test('retains the original destination when cancelling Google MFA and using a password', async () => {
+    const { regularUser, USER_PASSWORD } = await import('../test/msw/handlers/auth')
+    const user = userEvent.setup()
+    sessionStorage.setItem(OAUTH_RETURN_TO_KEY, '/console/vms')
+    renderApp(callback(MFA_ACCOUNT_CODE))
+    await screen.findByLabelText('인증 코드')
+    await user.click(screen.getByRole('button', { name: '처음으로' }))
+    await user.type(screen.getByLabelText('이메일'), regularUser.email)
+    await user.type(screen.getByLabelText('비밀번호'), USER_PASSWORD)
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    await screen.findByRole('link', { name: '가상머신 신청' })
+    expect(currentPath()).toBe('/console/vms')
+  })
+
+  test('does not enter the console when onboarding succeeds but its profile fails', async () => {
+    const user = userEvent.setup()
+    failProfile()
+    renderApp(callback(NEW_ACCOUNT_CODE))
+    await screen.findByRole('heading', { name: '가입 정보 입력' })
+    for (const box of await screen.findAllByRole('checkbox')) await user.click(box)
+    await user.click(screen.getByRole('button', { name: '가입 완료' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('사용자 정보를 불러올 수 없습니다.')
+    expect(currentPath()).toBe('/google-onboarding')
+    expect(getAccessToken()).toBeNull()
+    expect(sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY)).toBeNull()
+  })
 })

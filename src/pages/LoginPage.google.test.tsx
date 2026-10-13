@@ -1,6 +1,7 @@
 import userEvent from '@testing-library/user-event'
 import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { MFA_ACCOUNT_CODE } from '../test/msw/handlers/google-oauth'
 import { OAUTH_RETURN_TO_KEY } from '../lib/google-oauth'
 import { renderApp } from '../test/render'
 
@@ -146,4 +147,15 @@ describe('로그인 화면의 구글 1차 동선', () => {
     await user.click(screen.getByRole('button', { name: 'Google 계정으로 가입하기' }))
     await waitFor(() => expect(navigateExternal).toHaveBeenCalled())
   })
+})
+
+test('preserves the destination when restarting Google after cancelling its MFA step', async () => {
+  const user = userEvent.setup()
+  sessionStorage.setItem(OAUTH_RETURN_TO_KEY, '/console/vms')
+  renderApp(`/auth/google/callback?code=${MFA_ACCOUNT_CODE}&state=state-1`)
+  await screen.findByLabelText('인증 코드')
+  await user.click(screen.getByRole('button', { name: '처음으로' }))
+  await user.click(screen.getByRole('button', { name: 'Google 계정으로 로그인' }))
+  await waitFor(() => expect(navigateExternal).toHaveBeenCalled())
+  expect(sessionStorage.getItem(OAUTH_RETURN_TO_KEY)).toBe('/console/vms')
 })

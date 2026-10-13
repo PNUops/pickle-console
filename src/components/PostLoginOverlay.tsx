@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/auth-context'
-import { POST_LOGIN_OVERLAY_KEY } from '../lib/storage-keys'
+import { clearPostLoginOverlay, hasPendingPostLoginOverlay } from '../lib/storage-keys'
 import { Logo } from './Logo'
 
 /**
@@ -13,13 +13,13 @@ export function PostLoginOverlay() {
   // 초기화 함수는 순수하게 판정만 한다 — StrictMode는 초기화를 2회 호출하므로
   // 여기서 removeItem(부수효과)을 하면 dev에서 오버레이가 절대 뜨지 않는다.
   const [visible, setVisible] = useState(() => {
-    if (sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY) == null) return false
+    if (!hasPendingPostLoginOverlay()) return false
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   })
 
   // 플래그 소거는 mount 이후(부수효과 자리)에서 수행한다.
   useEffect(() => {
-    sessionStorage.removeItem(POST_LOGIN_OVERLAY_KEY)
+    if (!clearPostLoginOverlay()) setVisible(false)
   }, [])
 
   // animationend가 오지 않는 환경(jsdom 등) 대비 타이머 폴백.
@@ -29,16 +29,35 @@ export function PostLoginOverlay() {
     return () => clearTimeout(timer)
   }, [visible])
 
+  // Reveal the console immediately when the user starts interacting with it.
+  useEffect(() => {
+    if (!visible) return
+    const dismiss = () => setVisible(false)
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const onMotionChange = (event: MediaQueryListEvent) => {
+      if (event.matches) dismiss()
+    }
+    document.addEventListener('pointerdown', dismiss, true)
+    document.addEventListener('keydown', dismiss, true)
+    reducedMotion.addEventListener('change', onMotionChange)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss, true)
+      document.removeEventListener('keydown', dismiss, true)
+      reducedMotion.removeEventListener('change', onMotionChange)
+    }
+  }, [visible])
+
   if (!visible) return null
 
   return (
     <div
       aria-hidden="true"
+      inert
       onAnimationEnd={() => setVisible(false)}
-      className="post-login-overlay pointer-events-none fixed inset-0 z-[70] flex flex-col items-center justify-center gap-4 bg-neutral-950"
+      className="post-login-overlay pointer-events-none fixed inset-0 z-[70] flex flex-col items-center justify-center gap-4 bg-neutral-950 px-6 text-center"
     >
       <Logo tone="inverse" className="pointer-events-none" />
-      <p className="text-lg font-semibold text-white">
+      <p className="max-w-full break-words text-lg font-semibold text-white">
         환영합니다{user ? `, ${user.name}님` : ''}
       </p>
     </div>
