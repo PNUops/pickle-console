@@ -30,6 +30,21 @@ type Target = AdminKey | Vm | Domain
 export let bulkPreviewBodies: Request_[] = []
 export let bulkApplyBodies: Request_[] = []
 export let expiryBodies: { keyId: string; endDate: string }[] = []
+export const bulkSavedPreviews = new Map<string, { actorId: string; request: Request_; response: Schemas['AdminBulkChangePreviewResponse'] }>()
+export const bulkSavedOperations = new Map<string, { actorId: string; request: Request_; response: Schemas['AdminBulkChangeOperationResponse'] }>()
+let applyFailure: 'BEFORE_COMMIT' | 'AFTER_COMMIT' | null = null
+let applyHold: { ready: () => void; wait: Promise<void> } | null = null
+
+export function failNextBulkResponse(point: 'BEFORE_COMMIT' | 'AFTER_COMMIT') { applyFailure = point }
+
+export function holdNextBulkApply() {
+  let ready!: () => void
+  let release!: () => void
+  const started = new Promise<void>((notifyStarted) => { ready = notifyStarted })
+  const wait = new Promise<void>((resumeApply) => { release = resumeApply })
+  applyHold = { ready, wait }
+  return { started, release }
+}
 
 /** Access grants the mock holds, keyed `${targetId}:${userId}`. */
 let grants: Record<string, Schemas['ResourceRole']> = {}
@@ -39,6 +54,10 @@ export function resetBulkChangeFixtures() {
   bulkApplyBodies = []
   expiryBodies = []
   grants = {}
+  bulkSavedPreviews.clear()
+  bulkSavedOperations.clear()
+  applyFailure = null
+  applyHold = null
 }
 
 const OPERATE = ['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']
@@ -80,7 +99,7 @@ const diff = (field: string, oldValue: unknown, newValue: unknown): Diff => ({
 
 function applyList(
   current: readonly string[],
-  change: Schemas['AdminBulkListChange'] | undefined,
+  change: Schemas['AdminBulkListChange'] | null | undefined,
 ): string[] {
   if (!change) return [...current]
   if (change.op === 'REPLACE') return [...change.values]
@@ -529,6 +548,44 @@ function resolve(profile: Profile, body: Request_): Resolved[] {
   })
 }
 
+export function savedBulkPreview(body: Request_, items: Schemas['AdminBulkChangePreviewItem'][], previewId = crypto.randomUUID()): Schemas['AdminBulkChangePreviewResponse'] {
+  return { previewId, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString(), targetType: body.targetType, change: structuredClone(body.change), items, consumedOperationId: null }
+}
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(',')}}`
+  return JSON.stringify(value)
+}
+
+function bulkNotFound() {
+  return problemResponse({ type: 'about:blank', title: '리소스를 찾을 수 없습니다', status: 404, detail: '현재 계정으로 조회할 수 있는 일괄 변경 기록이 없습니다.', code: 'RESOURCE_NOT_FOUND' })
+}
+
+function currentOperation(profile: Profile, saved: { request: Request_; response: Schemas['AdminBulkChangeOperationResponse'] }): Schemas['AdminBulkChangeOperationResponse'] {
+  const resolved = resolve(profile, saved.request)
+  const denied = new Map(resolved.filter((entry) => entry.reach).map((entry) => [entry.targetId, entry.reach!]))
+  return { ...structuredClone(saved.response), change: denied.size ? null : saved.response.change,
+    result: { ...saved.response.result, items: saved.response.result.items.map((item) => denied.has(item.targetId) ? { ...item, name: null, fields: [] } : item) },
+    effects: saved.response.effects.map((effect) => effect.targetId && denied.has(effect.targetId) ? { ...effect, externalReference: null, queueState: null, queueObservedAt: null } : effect),
+    observations: resolved.map((entry) => {
+      const values: Record<string, unknown> = {}
+      const key = adminLlmKeyStore.find((item) => item.id === entry.targetId)
+      const vm = vmStore.find((item) => item.id === entry.targetId)
+      const domain = findAdminDomain(entry.targetId)
+      if (!entry.reach) {
+        if (saved.request.change.kind === 'ACCESS') {
+          if (domain && domain.kind !== 'EXTERNAL') values.listed = false
+          else values.granteeRole = grants[`${entry.targetId}:${saved.request.change.access?.userId}`] ?? null
+        } else if (key) { values.status = key.status; values.expiresAt = key.expiresAt }
+        else if (vm) { values.status = vm.status; values.endDate = vm.endDate }
+        else if (domain) { values.kind = domain.kind; values.status = domain.status; if (saved.request.change.kind === 'DOMAIN_RENEWAL') values.renewDueAt = domain.renewDueAt }
+      }
+      return { targetId: entry.targetId, observedAt: new Date().toISOString(), refusal: entry.reach, values }
+    }),
+  }
+}
+
 export const bulkChangeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => {
     const profile = adminActor(request)
@@ -550,7 +607,9 @@ export const bulkChangeHandlers: RequestHandler[] = [
         fingerprint: entry.fingerprint,
       }
     })
-    return HttpResponse.json({ items } satisfies Schemas['AdminBulkChangePreviewResponse'])
+    const response = savedBulkPreview(body, items)
+    bulkSavedPreviews.set(response.previewId, { actorId: profile.id, request: structuredClone(body), response })
+    return HttpResponse.json(response)
   }),
 
   http.post('*/api/v1/admin/bulk-changes', async ({ request }) => {
@@ -559,6 +618,23 @@ export const bulkChangeHandlers: RequestHandler[] = [
     if (!OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes')
     const body = (await request.json()) as Request_
     bulkApplyBodies.push(body)
+    const failure = applyFailure
+    applyFailure = null
+    if (failure === 'BEFORE_COMMIT') return HttpResponse.error()
+    const held = applyHold
+    applyHold = null
+    if (held) { held.ready(); await held.wait }
+    if (!body.previewId || !body.operationId) return validation('/api/v1/admin/bulk-changes', [{ field: 'operationId', message: '미리보기 식별자와 적용 식별자를 보내 주세요.' }])
+    const repeated = bulkSavedOperations.get(body.operationId)
+    if (repeated) {
+      if (repeated.actorId !== profile.id) return bulkNotFound()
+      if (canonical(repeated.request) !== canonical(body)) return problemResponse({ type: 'about:blank', status: 409, title: '일괄 변경 확인이 필요합니다', detail: '같은 적용 식별자에 다른 요청을 보낼 수 없습니다.', code: 'ADMIN_BULK_CHANGE_CONFLICT' })
+      return HttpResponse.json(currentOperation(profile, repeated).result)
+    }
+    const saved = bulkSavedPreviews.get(body.previewId)
+    if (!saved || saved.actorId !== profile.id) return bulkNotFound()
+    if (saved.response.consumedOperationId || canonical(saved.request.change) !== canonical(body.change) || canonical(saved.request.targetIds) !== canonical(body.targetIds) || saved.request.targetType !== body.targetType) return problemResponse({ type: 'about:blank', status: 409, title: '일괄 변경 확인이 필요합니다', detail: '저장된 미리보기와 다른 요청이거나 이미 사용된 미리보기입니다.', code: 'ADMIN_BULK_CHANGE_CONFLICT' })
+    if (!(Date.now() < Date.parse(saved.response.expiresAt))) return validation('/api/v1/admin/bulk-changes', [{ field: 'previewId', message: '미리보기의 새 적용 가능 시간이 지났습니다.' }])
     const errors = validateRequest(body)
     if (!body.fingerprints || body.targetIds.some((id) => body.fingerprints?.[id] == null)) {
       errors.push({
@@ -580,10 +656,39 @@ export const bulkChangeHandlers: RequestHandler[] = [
       judgement.write?.()
       return { ...base, result: 'APPLIED', reason: null, fields: judgement.fields }
     })
-    return HttpResponse.json({
-      batchId: '00000000-0000-4000-8000-00000000b001',
-      items,
-    } satisfies Schemas['AdminBulkChangeApplyResponse'])
+    const result: Schemas['AdminBulkChangeApplyResponse'] = { batchId: body.operationId, items }
+    const committedAt = new Date().toISOString()
+    const response: Schemas['AdminBulkChangeOperationResponse'] = { operationId: body.operationId, previewId: body.previewId, committedAt, status: 'COMMITTED', targetType: body.targetType, change: structuredClone(body.change), result, effects: [], observations: [] }
+    for (const item of items.filter((row) => row.result === 'APPLIED')) {
+      response.effects.push({ id: crypto.randomUUID(), targetId: item.targetId, kind: 'AUDIT', outcome: 'COMPLETED', registeredAt: committedAt, observedAt: committedAt, externalReference: null, queueState: null, queueObservedAt: null })
+      if (body.change.kind === 'VM_POWER' || body.change.kind === 'DOMAIN_VERIFY') response.effects.push({ id: crypto.randomUUID(), targetId: item.targetId, kind: 'QUEUE', outcome: 'ACCEPTED', externalReference: crypto.randomUUID(), registeredAt: committedAt, observedAt: committedAt, queueState: 'ENQUEUED', queueObservedAt: committedAt })
+    }
+    bulkSavedOperations.set(body.operationId, { actorId: profile.id, request: structuredClone(body), response })
+    saved.response.consumedOperationId = body.operationId
+    if (failure === 'AFTER_COMMIT') return HttpResponse.error()
+    return HttpResponse.json(result)
+  }),
+
+  http.get('*/api/v1/admin/bulk-changes/previews/:previewId', ({ request, params }) => {
+    const profile = adminActor(request)
+    if (!profile || !OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes/previews')
+    const saved = bulkSavedPreviews.get(String(params.previewId))
+    if (!saved || saved.actorId !== profile.id) return bulkNotFound()
+    const resolved = resolve(profile, saved.request)
+    const denied = new Map(resolved.filter((entry) => entry.reach).map((entry) => [entry.targetId, entry.reach!]))
+    return HttpResponse.json({ ...saved.response, change: denied.size ? null : saved.response.change, items: saved.response.items.map((item) => denied.has(item.targetId) ? { ...item, name: null, applicable: false, reason: denied.get(item.targetId), fields: [], fingerprint: '', actorAccessImpact: null } : item) })
+  }),
+  http.get('*/api/v1/admin/bulk-changes/operations/:operationId', ({ request, params }) => {
+    const profile = adminActor(request)
+    if (!profile || !OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes/operations')
+    const saved = bulkSavedOperations.get(String(params.operationId))
+    if (!saved || saved.actorId !== profile.id) return bulkNotFound()
+    return HttpResponse.json(currentOperation(profile, saved))
+  }),
+  http.get('*/api/v1/admin/bulk-changes/operations', ({ request }) => {
+    const profile = adminActor(request)
+    if (!profile || !OPERATE.includes(profile.role)) return forbidden('/api/v1/admin/bulk-changes/operations')
+    return HttpResponse.json([...bulkSavedOperations.values()].filter((saved) => saved.actorId === profile.id).slice(-20).reverse().map((saved) => currentOperation(profile, saved)))
   }),
 
   http.patch('*/api/v1/admin/llm/keys/:keyId/expiry', async ({ params, request }) => {

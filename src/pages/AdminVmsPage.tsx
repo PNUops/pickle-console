@@ -463,6 +463,7 @@ function VmDrawerContent({
           </Button>
           {extendOpen && (
             <ExtendVmPeriodModal
+              key={vm.id}
               vm={vm}
               onClose={() => setExtendOpen(false)}
               onDone={(text) => {

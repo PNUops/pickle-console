@@ -1,5 +1,6 @@
 import type { Scope } from './scope-context'
 import type { ResourceType } from '../api/queries'
+import type { BulkFamily } from './bulk-change'
 import { isUuid } from './validation'
 import { parseGuidePath } from './docs-paths'
 
@@ -105,6 +106,9 @@ export const adminPaths = {
   bulkLlmKeys: (orgId?: string) => adminPath('/admin/bulk/llm-keys', orgId),
   bulkVms: (orgId?: string) => adminPath('/admin/bulk/vms', orgId),
   bulkDomains: (orgId?: string) => adminPath('/admin/bulk/domains', orgId),
+  bulkPreview: (family: BulkFamily, previewId: string, orgId?: string) => adminPath(`/admin/bulk/${family}?${new URLSearchParams({ previewId })}`, orgId),
+  bulkOperation: (family: BulkFamily, operationId: string, orgId?: string, previewId?: string) => adminPath(`/admin/bulk/${family}?${new URLSearchParams({ operationId, ...(previewId ? { previewId } : {}) })}`, orgId),
+  bulkReceipt: (operationId: string, orgId?: string) => adminPath(`/admin/bulk/operations/${operationId}`, orgId),
   domains: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/domains?workspaceId=${workspaceId}` : '/admin/domains', orgId),
   domainDetail: (id: string, orgId?: string) => adminPath(`/admin/domains?domainId=${id}`, orgId),
   gpus: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/gpus?workspaceId=${workspaceId}` : '/admin/gpus', orgId),

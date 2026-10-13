@@ -63,7 +63,7 @@ describe('만료 관리', () => {
     await user.click(within(dialog).getByRole('button', { name: '연장' }))
 
     expect(
-      await screen.findByText('연장되었습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'),
+      await screen.findByText('새 종료일을 저장했습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'),
     ).toBeInTheDocument()
     // 연장되어 endDate가 미래가 되었으니 만료됨 탭에서 사라진다.
     await waitFor(() => expect(screen.queryByText('expired-lab')).not.toBeInTheDocument())
@@ -89,7 +89,7 @@ describe('만료 관리', () => {
 
     expect(
       await screen.findByText(
-        '무기한으로 바꿨습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.',
+        '종료일을 지워 무기한으로 저장했습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.',
       ),
     ).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('expired-lab')).not.toBeInTheDocument())

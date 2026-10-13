@@ -323,7 +323,7 @@ export function PeriodForm({
         onChange={(mode) => onChange({ ...draft, mode })}
         options={[
           { value: 'date', title: '종료일 지정' },
-          { value: 'clear', title: '종료일 없음' },
+          { value: 'clear', title: '무기한', description: '종료일을 지웁니다. 만료로 자동 중지되지 않습니다.' },
         ]}
         columns={2}
       />

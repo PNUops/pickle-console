@@ -87,9 +87,49 @@ export interface paths {
         put?: never;
         /**
          * 관리자 일괄 변경 적용
-         * @description 미리보기와 같은 본문에 fingerprint를 더해 적용합니다. 서버는 미리보기를 믿지 않고 적용 시점에 대상마다 다시 판정하며, 미리보기 뒤 바뀐 대상은 STALE로 답하고 쓰지 않습니다. 한 대상의 실패가 다른 대상을 되돌리지 않고, 되돌리기는 없습니다. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담습니다.
+         * @description 저장된 미리보기와 같은 변경·대상·fingerprint에 previewId와 클라이언트가 한 번 생성한 operationId를 더해 적용합니다. operationId는 결과의 batchId와 같습니다. 새 적용은 미리보기 저장 후 24시간까지만 허용합니다. 같은 수행자가 같은 식별자·본문으로 재시도하면 현재 접근 범위로 가린 저장 결과만 반환하며 변경이나 후속 작업을 다시 실행하지 않습니다. 이 재시도는 미리보기 만료 뒤에도 가능합니다. 같은 수행자의 식별자에 다른 본문을 결합하면 409, 타인의 기록은 404로 거절합니다. 새 적용은 대상마다 다시 판정하고 바뀐 확인값은 STALE, 업무상 거절은 SKIPPED로 저장합니다. 예기치 않은 트랜잭션 오류는 전체 변경과 결과를 롤백합니다. 커밋 후 callback 오류는 이미 커밋된 결과를 되돌리지 않으며 effects에서 관측합니다. APPLIED는 DB 커밋을 뜻하고 외부 완료를 보장하지 않습니다. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담습니다.
          */
         post: operations["applyAdminBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 본인의 최근 일괄 변경 결과 조회
+         * @description 본인의 최근 커밋 결과 최대 20개를 현재 접근 범위로 가려서 조회합니다. 대상과 후속 작업을 변경하지 않습니다.
+         */
+        get: operations["listAdminBulkChangeOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 저장된 일괄 변경 결과 조회
+         * @description 본인의 커밋된 적용 결과와 callback 접수 관측을 조회합니다. 재실행하지 않으며 DB 커밋, queue 접수와 외부 완료는 별개입니다.
+         */
+        get: operations["getAdminBulkChangeOperation"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -107,9 +147,29 @@ export interface paths {
         put?: never;
         /**
          * 관리자 일괄 변경 미리보기
-         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 답합니다. 아무것도 쓰지 않습니다. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 답합니다. 대상마다 fingerprint를 주며 적용 요청에 그대로 돌려보냅니다. 대상은 최대 200개입니다.
+         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 답합니다. 미리보기 기록만 저장하며 대상은 변경하지 않습니다. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 답합니다. 대상마다 fingerprint를 주며 적용 요청에 그대로 돌려보냅니다. 대상은 최대 200개입니다.
          */
         post: operations["previewAdminBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/previews/{previewId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 저장된 일괄 변경 미리보기 조회
+         * @description 본인의 미리보기를 현재 대상별 변경 권한으로 다시 조회합니다. 접근할 수 없는 대상의 이름, 값, 확인값과 변경 내용은 가립니다.
+         */
+        get: operations["getAdminBulkChangePreview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4393,6 +4453,34 @@ export interface components {
             batchId: string;
             items: components["schemas"]["AdminBulkChangeApplyItem"][];
         };
+        AdminBulkChangeCurrentObservation: {
+            /** Format: date-time */
+            observedAt: string;
+            refusal?: components["schemas"]["AdminBulkChangeReason"] | null;
+            /** Format: uuid */
+            targetId: string;
+            /** @description 현재 DB가 알고 있는 대상 값입니다. 요청과 값이 같아도 이 적용의 외부 완료를 증명하지 않습니다. */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        AdminBulkChangeEffect: {
+            externalReference?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            observedAt?: string | null;
+            outcome: string;
+            /** Format: date-time */
+            queueObservedAt?: string | null;
+            /** @description 현재 JobRunr 상태 관측. SUCCEEDED도 외부 자원의 물리적 완료를 뜻하지 않습니다. */
+            queueState?: string | null;
+            /** Format: date-time */
+            registeredAt: string;
+            /** Format: uuid */
+            targetId?: string | null;
+        };
         AdminBulkChangeFieldDiff: {
             /** @description 필드 이름 */
             field: string;
@@ -4403,6 +4491,21 @@ export interface components {
         };
         /** @enum {string} */
         AdminBulkChangeKind: "LLM_KEY_LIMITS" | "LLM_KEY_STATUS" | "LLM_KEY_EXPIRY" | "VM_PERIOD" | "VM_POWER" | "VM_DELETION" | "DOMAIN_RENEWAL" | "DOMAIN_FORCE_RELEASE" | "DOMAIN_VERIFY" | "ACCESS";
+        AdminBulkChangeOperationResponse: {
+            change?: components["schemas"]["AdminBulkChangeSpec"] | null;
+            /** Format: date-time */
+            committedAt: string;
+            effects: components["schemas"]["AdminBulkChangeEffect"][];
+            observations: components["schemas"]["AdminBulkChangeCurrentObservation"][];
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            previewId: string;
+            result: components["schemas"]["AdminBulkChangeApplyResponse"];
+            /** @description COMMITTED는 DB 변경과 결과의 커밋입니다. 큐 접수나 외부 완료를 뜻하지 않습니다. */
+            status: string;
+            targetType: components["schemas"]["AdminBulkChangeTargetType"];
+        };
         AdminBulkChangePreviewItem: {
             actorAccessImpact?: components["schemas"]["ActorAccessImpact"] | null;
             /** @description true면 적용할 수 있습니다. fields가 비어 있으면 이미 그 값이라 바뀌지 않습니다. */
@@ -4419,7 +4522,20 @@ export interface components {
             targetId: string;
         };
         AdminBulkChangePreviewResponse: {
+            change?: components["schemas"]["AdminBulkChangeSpec"] | null;
+            /**
+             * Format: uuid
+             * @description 이 미리보기로 이미 커밋된 본인 적용의 ID. 새 적용을 만들지 않고 기존 결과를 여는 데 씁니다.
+             */
+            consumedOperationId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
             items: components["schemas"]["AdminBulkChangePreviewItem"][];
+            /** Format: uuid */
+            previewId: string;
+            targetType: components["schemas"]["AdminBulkChangeTargetType"];
         };
         /**
          * @description 대상 하나가 변경되지 않은 이유. NOT_FOUND: 대상이 없거나 이 계정의 범위 밖입니다. FORBIDDEN: 이 역할은 이 변경을 할 수 없습니다. INVALID_STATE: 현재 상태에서는 할 수 없는 변경입니다. EXPIRED: 사용 기간이 만료되어 먼저 기간을 연장해야 합니다. PROTECTED: 삭제 보호가 켜져 있습니다. INELIGIBLE: 대상이나 지정한 사용자가 이 변경의 대상이 될 수 없습니다. NOT_MEMBER: 지정한 사용자가 소유 워크스페이스의 구성원이 아닙니다. NO_GRANT: 지정한 사용자에게 바꾸거나 회수할 접근 권한이 없습니다. ALREADY_GRANTED: 지정한 사용자가 이미 다른 등급의 접근 권한을 갖고 있습니다. VALIDATION: 합쳐진 결과가 한도 규칙에 어긋납니다.
@@ -4435,6 +4551,16 @@ export interface components {
             fingerprints?: {
                 [key: string]: string;
             } | null;
+            /**
+             * Format: uuid
+             * @description 적용에서 필수. 응답 유실 재시도에도 유지하는 클라이언트 생성 ID. batchId와 같습니다.
+             */
+            operationId?: string | null;
+            /**
+             * Format: uuid
+             * @description 적용에서 필수인 저장 미리보기 ID
+             */
+            previewId?: string | null;
             /** @description 대상의 공개 ID. 1개 이상 200개 이하, 중복 없이. */
             targetIds: string[];
             /** @description 대상의 종류. 변경 종류와 맞아야 합니다. */
@@ -4506,9 +4632,9 @@ export interface components {
              */
             concurrency?: number | null;
             /** @description 유료 모델 허용 목록에 적용할 변경. 생략하면 그대로 둡니다. */
-            creditAllowedModels?: components["schemas"]["AdminBulkListChange"];
+            creditAllowedModels?: components["schemas"]["AdminBulkListChange"] | null;
             /** @description 유료 모델 차단 목록에 적용할 변경. 생략하면 그대로 둡니다. */
-            creditDeniedModels?: components["schemas"]["AdminBulkListChange"];
+            creditDeniedModels?: components["schemas"]["AdminBulkListChange"] | null;
             /** @description 금액 한도(USD 크레딧). 생략하면 그대로 둡니다. null은 허용하지 않고, 유료 모델을 닫으려면 0을 보냅니다. */
             creditLimit?: number;
             /** @description 금액 한도 리셋 창. 생략하면 그대로 두고, null이면 리셋 없는 총액 상한입니다. */
@@ -4518,8 +4644,8 @@ export interface components {
              * @description 일일 토큰 한도. 생략하면 그대로 두고, null이면 무제한이며 0이면 토큰 축을 닫습니다.
              */
             dailyTokens?: number | null;
-            /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 값은 images와 embeddings입니다. */
-            passthroughEndpoints?: components["schemas"]["AdminBulkListChange"];
+            /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 현재 변경 요청에는 chat, web_search, pdf_ocr, images, embeddings를 지정할 수 있습니다. 결과 목록의 web_search와 pdf_ocr는 chat과 함께 부여해야 합니다. */
+            passthroughEndpoints?: components["schemas"]["AdminBulkListChange"] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
@@ -5579,7 +5705,7 @@ export interface components {
              * @description 부여 일일 토큰 수. 비우면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 이 키에 부여할 기능 권한. 생략하면 신청자가 고른 목록(reqPassthroughEndpoints)으로 승인하고, 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat도 포함). 모델 목록과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 목록과 무관합니다. */
+            /** @description 이 키에 부여할 기능 권한. 생략하거나 null이면 신청자가 고른 목록(reqPassthroughEndpoints)으로 승인하고, 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat도 포함). 모델 목록과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 목록과 무관합니다. */
             grantedPassthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
@@ -10271,6 +10397,66 @@ export interface operations {
             };
         };
     };
+    listAdminBulkChangeOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangeOperationResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminBulkChangeOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangeOperationResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     previewAdminBulkChange: {
         parameters: {
             query?: never;
@@ -10285,6 +10471,37 @@ export interface operations {
         };
         responses: {
             /** @description 대상별 판정과 fingerprint */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangePreviewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminBulkChangePreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                previewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
