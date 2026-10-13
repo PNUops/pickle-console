@@ -48,6 +48,7 @@ test.each(['success', 'refusal'] as const)('isolates a late period %s after targ
   if (outcome === 'success') {
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['resources'] }))
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['admin', 'vms'] })
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['admin', 'resource-deadlines'] })
   } else expect(invalidate).not.toHaveBeenCalled()
 })
 

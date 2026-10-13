@@ -8,7 +8,7 @@ import { todayKstDate } from '../lib/format'
 import { useActiveResult } from '../lib/use-active-result'
 
 /**
- * VM period extension shared by the expiry list and administrator detail route.
+ * VM period extension used by the administrator detail route.
  * 연장은 운영 역할만 수행 가능 — 열람 역할은 조회만이고, 기관 계층은 자기가
  * 운영하는 기관의 VM 한정이다 (서버 강제).
  */

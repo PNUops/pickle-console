@@ -1,3 +1,4 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -702,6 +703,7 @@ function AdjustRenewalForm({
     onSuccess: async () => {
       onResult({ variant: 'info', text: '사용 기한을 옮겼습니다. 소유자에게 알렸습니다.' })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
@@ -872,6 +874,7 @@ function ReverifyButton({
     onSuccess: async (data) => {
       onResult({ variant: 'info', text: data.message })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
@@ -906,6 +909,7 @@ function ApplyRouteButton({
       onResult({ variant: 'info', text: data.message })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
@@ -942,6 +946,7 @@ function ForceReleaseModal({
       setError(null)
       onDone(data.message)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
     },
     onError: (err) => setError(toApiError(err, '도메인을 강제 해제하지 못했습니다.').message),
@@ -995,6 +1000,7 @@ function ResyncButton() {
       setMessage(data.message)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) => {
       setMessage(null)

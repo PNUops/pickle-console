@@ -40,7 +40,7 @@ export function canReadSupportMetadata(role: UserRole): boolean {
 
 /** Only existing student support routes use the global institution picker. */
 export function usesGlobalSupportScope(pathname: string): boolean {
-  return /^\/admin\/(users|workspaces|requests|vms|domains|gpus|resource-access)(\/|$)/.test(pathname)
+  return /^\/admin\/(users|workspaces|requests|vms|domains|gpus|resource-access|expiry)(\/|$)/.test(pathname)
     || /^\/admin\/llm\/keys(\/|$)/.test(pathname)
     || /^\/admin\/bulk\/(vms|llm-keys|domains)(\/|$)/.test(pathname)
 }

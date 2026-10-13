@@ -1,3 +1,4 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import type { AccessConfirmation } from './resource-access'
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -386,6 +387,7 @@ export function fetchVms(params: {
  */
 export function invalidateResourceLists(queryClient: QueryClient): Promise<unknown> {
   return Promise.all([
+    invalidateAdminDeadlines(queryClient),
     queryClient.invalidateQueries({ queryKey: ['vms'] }),
     queryClient.invalidateQueries({ queryKey: ['llm-keys'] }),
     queryClient.invalidateQueries({ queryKey: ['gpu-allocations'] }),
