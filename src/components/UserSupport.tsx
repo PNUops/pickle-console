@@ -33,7 +33,7 @@ function adminResourcePath(type: ResourceType, id: string, orgId?: string): stri
     case 'VM': return adminPaths.vmDetail(id, orgId)
     case 'LLM_API_KEY': return adminPaths.llmKeyDetail(id, orgId)
     case 'GPU': return gpuPreviewEnabled() ? adminPaths.gpuDetail(id, orgId) : undefined
-    case 'DOMAIN': return adminPaths.domains(orgId)
+    case 'DOMAIN': return adminPaths.domainDetail(id, orgId)
   }
 }
 
@@ -166,7 +166,7 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
           <TD>{request.applicant ? '신청자' : request.recipientId ? '대상자' : '워크스페이스 구성원'}{request.applicant && request.recipientId && ' / 대상자'}</TD>
           <TD>{REQUEST_STATUS_LABELS[request.status]}</TD>
           <TD>{request.recipientStatus ? requestRecipientStatusLabel(request.status, request.recipientStatus, true) : '대상자별 생성 상태 없음'}
-            {request.resourceId && <ResourceDetailLink resourceType={request.type} id={request.resourceId} orgId={request.orgId} label={request.type === 'DOMAIN' ? '도메인 목록' : '실제 자원 보기'} />}
+            {request.resourceId && <ResourceDetailLink resourceType={request.type} id={request.resourceId} orgId={request.orgId} label={request.type === 'DOMAIN' ? '도메인 상세' : '실제 자원 보기'} />}
             {request.reason && <p className="mt-1 text-xs text-neutral-500">{request.reason}</p>}
           </TD>
           <TD>{request.grantedEndDate ?? (request.status === 'APPROVED' ? '무기한' : '부여 전')}</TD>
@@ -208,8 +208,9 @@ function GrantReceiptCard({ receipt }: { receipt: GrantReceipt | null }) {
       <h2 className="font-semibold">최근 권한 회수 결과</h2>
       <p>{resourceName(receipt.type)} / {receipt.name}</p>
       <p className="break-all text-neutral-500">사용자 ID {receipt.userId} / 자원 ID {receipt.resourceId}</p>
-      {receipt.result.items.map((item) => <p key={item.targetId} role="status">{item.name ?? receipt.name}: {labelForBulkResult(item.result)}{item.reason && ` / ${labelForBulkReason(item.reason)}`}</p>)}
+      {receipt.result.items.map((item) => <p key={item.targetId} role="status">{item.name ?? item.targetId}: {labelForBulkResult(item.result)}{item.reason && ` / ${labelForBulkReason(item.reason)}`}</p>)}
       <p className="break-all text-neutral-500">처리 ID {receipt.result.batchId}</p>
+      <Link className="text-primary-700 underline" to={adminPaths.bulkReceipt(receipt.result.batchId)}>저장된 권한 회수 결과 다시 열기</Link>
     </section>
   </Card>
 }
@@ -234,6 +235,7 @@ function RevokeUserGrant({ resource, userId, onResult }: { resource: UserResourc
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<AdminBulkChangePreview | null>(null)
   const [result, setResult] = useState<AdminBulkChangeApply | null>(null)
+  const identity = useRef<{ previewId: string; operationId: string } | null>(null)
   const viewer = useAuth().user
   const user = useQuery({ queryKey: ['admin', 'users', 'detail', userId, requestReaderKey(viewer)], queryFn: () => fetchAdminUser(userId), enabled: open })
   const request: AdminBulkChangeRequest = {
@@ -241,18 +243,23 @@ function RevokeUserGrant({ resource, userId, onResult }: { resource: UserResourc
     targetIds: [resource.id], change: { kind: 'ACCESS', access: { action: 'REVOKE', userId } },
   }
   const read = useMutation({ mutationFn: (_version: number) => previewAdminBulkChange(request), onSuccess: (data, version) => {
-    if (active.current && surface.current === version) setPreview(data)
+    if (active.current && surface.current === version) { setPreview(data); identity.current = { previewId: data.previewId, operationId: crypto.randomUUID() } }
   } })
   const apply = useMutation({
-    mutationFn: ({ judged }: { judged: AdminBulkChangePreview; version: number }) => applyAdminBulkChange({ ...request, fingerprints: Object.fromEntries(judged.items.map((item) => [item.targetId, item.fingerprint])) }),
+    mutationFn: ({ judged }: { judged: AdminBulkChangePreview; version: number }) => {
+      if (!identity.current || identity.current.previewId !== judged.previewId || judged.consumedOperationId || !(Date.now() < Date.parse(judged.expiresAt))) throw new Error('미리보기를 다시 조회한 뒤 회수해 주세요.')
+      return applyAdminBulkChange({ ...request, ...identity.current, fingerprints: Object.fromEntries(judged.items.map((item) => [item.targetId, item.fingerprint])) })
+    },
     onSuccess: async (data, { version }) => {
       if (active.current && surface.current === version) {
         setResult(data); setPreview(null)
-        onResult?.({ userId, type: resource.type, resourceId: resource.id, name: data.items[0]?.name ?? resource.name, result: data })
+        onResult?.({ userId, type: resource.type, resourceId: resource.id, name: data.items.find((item) => item.targetId === resource.id)?.name ?? resource.id, result: data })
       }
       await Promise.all([
         client.invalidateQueries({ queryKey: ['admin', 'users'] }),
         client.invalidateQueries({ queryKey: ['admin', 'audit'] }),
+        client.invalidateQueries({ queryKey: ['admin-bulk-operation', data.batchId] }),
+        client.invalidateQueries({ queryKey: ['admin-bulk-recent'] }),
       ])
     },
   })
@@ -272,16 +279,18 @@ function RevokeUserGrant({ resource, userId, onResult }: { resource: UserResourc
     </>}>
       <div className="space-y-3 text-sm [overflow-wrap:anywhere]">
         <p className="break-all">대상 사용자: {user.data?.name ?? userId} / {userId}</p>
-        <p className="break-all">대상 자원: {preview?.items[0]?.name ?? resource.name} / {resourceName(resource.type)} / {resource.id}</p>
+        <p className="break-all">대상 자원: {result ? result.items.find((item) => item.targetId === resource.id)?.name ?? resource.id : preview?.items[0]?.name ?? resource.id} / {resourceName(resource.type)} / {resource.id}</p>
         <p>{resource.orgName} / {resource.workspaceName}</p>
         <p>이 사용자에게 직접 부여된 권한을 회수합니다. 워크스페이스 전체 권한은 유지됩니다.</p>
         {read.isPending && <Spinner label="현재 권한과 회수 조건 확인 중" />}
         {read.isError && <Alert variant="danger">{read.error.message}</Alert>}
         {preview && <p>{preview.items[0]?.applicable ? `회수할 등급: ${previousRoleLabel}` : preview.items[0]?.reason ? labelForBulkReason(preview.items[0].reason) : '이 대상의 회수 결과를 확인하지 못했습니다.'}</p>}
         {apply.isError && <Alert variant="danger">{apply.error.message}</Alert>}
+        {apply.variables && identity.current && <Link className="block break-all text-primary-700 underline" to={adminPaths.bulkReceipt(identity.current.operationId, resource.orgId)}>같은 적용 ID의 저장 결과 조회</Link>}
         {result && <section aria-label="권한 회수 결과" className="space-y-2">
-          {result.items.map((item) => <p key={item.targetId} role="status">{item.name ?? resource.name}: {labelForBulkResult(item.result)}{item.reason && ` / ${labelForBulkReason(item.reason)}`}</p>)}
+          {result.items.map((item) => <p key={item.targetId} role="status">{item.name ?? item.targetId}: {labelForBulkResult(item.result)}{item.reason && ` / ${labelForBulkReason(item.reason)}`}</p>)}
           <p className="break-all text-neutral-500">처리 ID {result.batchId}</p>
+          <Link className="text-primary-700 underline" to={adminPaths.bulkReceipt(result.batchId, resource.orgId)}>저장된 권한 회수 결과 다시 열기</Link>
           {result.items.some((item) => item.result === 'STALE') && <Button variant="secondary" onClick={() => { setResult(null); read.mutate(surface.current) }}>최신 권한 다시 비교</Button>}
         </section>}
       </div>
@@ -322,7 +331,7 @@ export function UserAccessDiagnostic({ userId }: { userId: string }) {
       <p className="break-all text-neutral-500">{resourceName(diagnostic.data.type)} / {diagnostic.data.id}</p>
       <p className="mt-1">{diagnostic.data.workspaceName} / {diagnostic.data.orgName}</p>
       <AccessSummary resource={diagnostic.data} userId={userId} />
-      <ResourceDetailLink resourceType={diagnostic.data.type} id={diagnostic.data.id} orgId={diagnostic.data.orgId} label={diagnostic.data.type === 'DOMAIN' ? '도메인 목록 열기' : '자원 상세 열기'} />
+      <ResourceDetailLink resourceType={diagnostic.data.type} id={diagnostic.data.id} orgId={diagnostic.data.orgId} label={diagnostic.data.type === 'DOMAIN' ? '도메인 상세 열기' : '자원 상세 열기'} />
     </section>}
   </Card>
 }

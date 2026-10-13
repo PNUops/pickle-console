@@ -1,3 +1,4 @@
+import { savedBulkPreview } from '../test/msw/handlers/bulk-changes'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -26,7 +27,7 @@ async function draftAccess(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText('등급'), 'EDITOR')
 }
 
-const preview = { items: [{ targetId: uuid(57), name: '합성 공유 VM', applicable: true, fields: [{ field: 'role', oldValue: 'MEMBER', newValue: 'EDITOR' }], fingerprint: 'old-scope-preview', actorAccessImpact: { fingerprint: 'old-scope-gain', increases: [{ resourceType: 'VM', targetId: uuid(57), workspaceId: uuid(12), beforeRole: 'MEMBER', afterRole: 'EDITOR' }], pendingResourceOwners: [] } }] }
+const preview = savedBulkPreview({ targetType: 'VM', targetIds: [uuid(57)], change: { kind: 'ACCESS', access: { action: 'CHANGE', userId: uuid(5), role: 'EDITOR' } } }, [{ targetId: uuid(57), name: '합성 공유 VM', applicable: true, fields: [{ field: 'role', oldValue: 'MEMBER', newValue: 'EDITOR' }], fingerprint: 'old-scope-preview', actorAccessImpact: { fingerprint: 'old-scope-gain', increases: [{ resourceType: 'VM', targetId: uuid(57), workspaceId: uuid(12), beforeRole: 'MEMBER', afterRole: 'EDITOR' }], pendingResourceOwners: [] } }])
 
 test('a late bulk preview cannot become the new institution filter preview or erase its draft', async () => {
   const user = userEvent.setup()

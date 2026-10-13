@@ -1,21 +1,22 @@
 import { requestReaderKey } from '../api/request-review'
 import { useActiveResult } from '../lib/use-active-result'
-import { AccessIncreaseDetails } from '../components/resource/AccessIncreaseReview'
+import { BulkChangePreviewTable, BulkChangeResultTable } from '../components/bulk/BulkChangeTables'
 import { useAccessIncreaseReview } from '../lib/use-access-increase-review'
 import type { AccessConfirmation } from '../api/resource-access'
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
+import { fetchAdminBulkOperation, fetchAdminBulkPreview, type AdminBulkOperation } from '../api/bulk-results'
+import { BulkChangeReentry, RecentBulkChanges } from '../components/bulk/BulkChangeReentry'
+import { BulkChangeReceipt } from '../components/bulk/BulkChangeReceipt'
 import {
   applyAdminBulkChange,
   previewAdminBulkChange,
   type AdminBulkChangeApply,
-  type AdminBulkChangeFieldDiff,
   type AdminBulkChangeKind,
   type AdminBulkChangePreview,
   type AdminBulkChangeRequest,
   type AdminBulkChangeSpec,
-  type AdminBulkChangeTargetType,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
@@ -34,18 +35,12 @@ import { fieldLabels, routeServerErrors, slotsFor } from '../components/request-
 import {
   Button,
   CardRadioGroup,
-  DataTable,
   ErrorSummary,
   FormField,
   Input,
   MessageBar,
   PageHeader,
   Stepper,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
 } from '../components/ui'
 import {
   BULK_FIELDS,
@@ -54,10 +49,8 @@ import {
   BULK_TARGET_TYPES,
   bulkKindsFor,
   buildChange,
-  diffFieldLabel,
   emptyDraft,
   formFieldErrors,
-  formatDiffValue,
   kindTakesValues,
   type BulkDraft,
   type BulkFamily,
@@ -65,9 +58,11 @@ import {
 } from '../lib/bulk-change'
 import { BULK_SELECTION_CAP, clearStoredSelection, type BulkTarget } from '../lib/bulk-selection'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { PAID_KEY_EXPIRY_NOTE, labelForBulkReason, labelForBulkResult } from '../lib/labels'
+import { PAID_KEY_EXPIRY_NOTE, labelForBulkResult } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { formatDateTime } from '../lib/format'
 
 const FAMILY_COPY: Record<BulkFamily, { title: string; back: string; pick: string }> = {
   'llm-keys': {
@@ -124,11 +119,56 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
   const location = useLocation()
   const { user } = useAuth()
   const scope = useAdminScope()
+  return <AdminBulkPageContext key={`${family}:${scope.activeOrgId ?? 'all'}:${scope.activeOrgRole ?? 'none'}:${targetsOf(location.state)?.map((target) => target.id).join(',') ?? 'stored'}:${requestReaderKey(user)}`} family={family} />
+}
+
+type SavedIds = { previewId?: string; operationId?: string }
+
+function sameSavedIds(left: SavedIds, right: SavedIds) {
+  return left.previewId === right.previewId && left.operationId === right.operationId
+}
+
+function AdminBulkPageContext({ family }: { family: BulkFamily }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const scope = useAdminScope()
   const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
   const copy = FAMILY_COPY[family]
   const listPath = listPathOf(family, scope.activeOrgId)
-  const targets = targetsOf(location.state)
+  const params = new URLSearchParams(location.search)
+  const previewId = params.get('previewId')?.toLowerCase() ?? undefined
+  const operationId = params.get('operationId')?.toLowerCase() ?? undefined
+  const savedIds: SavedIds = { previewId, operationId }
+  const [targets, setTargets] = useState(() => savedIds.previewId || savedIds.operationId ? null : targetsOf(location.state))
+  const ownership = useRef<{ destination: SavedIds | null; predecessors: SavedIds[] }>({ destination: {}, predecessors: [] })
+  const observedUrl = useRef(savedIds)
+  const [initialPreview, setInitialPreview] = useState<AdminBulkChangePreview | undefined>()
+  const matches = (ids: SavedIds) => sameSavedIds(ids, savedIds)
+  const owned = !!ownership.current.destination && matches(ownership.current.destination) || ownership.current.predecessors.some(matches)
   const kinds = user ? bulkKindsFor(family, role ?? 'USER', user.role) : []
+  const reader = requestReaderKey(user)
+  const remember = (ids: SavedIds) => {
+    // The Router can render its new URL before React state updates commit.
+    const previous = ownership.current
+    ownership.current = { destination: ids, predecessors: [...previous.predecessors, observedUrl.current, ...(previous.destination ? [previous.destination] : [])] }
+    const path = ids.operationId
+      ? adminPaths.bulkOperation(family, ids.operationId, scope.activeOrgId, ids.previewId)
+      : adminPaths.bulkPreview(family, ids.previewId!, scope.activeOrgId)
+    navigate(path, { replace: true, state: location.state })
+  }
+  useLayoutEffect(() => { observedUrl.current = { previewId, operationId } }, [previewId, operationId])
+  useEffect(() => {
+    const renderedIds = { previewId, operationId }
+    // A stale URL effect must not discard a newer navigation claim.
+    if (!sameSavedIds(observedUrl.current, renderedIds)) return
+    const current = ownership.current
+    if (current.destination && sameSavedIds(current.destination, renderedIds)) {
+      ownership.current = { ...current, predecessors: [] }
+    } else if (!current.predecessors.some((ids) => sameSavedIds(ids, renderedIds))) {
+      ownership.current = { destination: null, predecessors: [] }
+    }
+  }, [previewId, operationId])
 
   const header = (
     <>
@@ -139,6 +179,21 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
     </>
   )
 
+  if ((savedIds.previewId && !isUuid(savedIds.previewId)) || (savedIds.operationId && !isUuid(savedIds.operationId))) {
+    return <div className="space-y-5">{header}<MessageBar variant="danger">{INVALID_ID_MESSAGE}</MessageBar></div>
+  }
+  if (!user || kinds.length === 0) {
+    return <div className="space-y-5">{header}<MessageBar variant="danger">이 계정으로 할 수 있는 일괄 변경이 없습니다.</MessageBar></div>
+  }
+  if (!owned && (savedIds.previewId || savedIds.operationId)) {
+    return <div className="space-y-5">{header}<BulkChangeReentry key={`${savedIds.previewId ?? ''}:${savedIds.operationId ?? ''}`} family={family} {...savedIds} reader={reader} orgId={scope.activeOrgId}
+      canContinue={(preview) => !!preview.change && kinds.some((option) => option.kind === preview.change!.kind)}
+      onContinue={(preview) => {
+        setTargets(preview.items.map((item) => ({ id: item.targetId, name: item.name ?? item.targetId })))
+        setInitialPreview(preview)
+        ownership.current = { destination: { previewId: preview.previewId }, predecessors: [] }
+      }} /></div>
+  }
   if (!targets) {
     return (
       <div className="space-y-5">
@@ -152,18 +207,10 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
         >
           {copy.pick}
         </MessageBar>
+        <RecentBulkChanges family={family} reader={reader} orgId={scope.activeOrgId} />
       </div>
     )
   }
-  if (!user || kinds.length === 0) {
-    return (
-      <div className="space-y-5">
-        {header}
-        <MessageBar variant="danger">이 계정으로 할 수 있는 일괄 변경이 없습니다.</MessageBar>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-5">
       {header}
@@ -174,6 +221,9 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
         targets={targets}
         kinds={kinds}
         listPath={listPath}
+        initialPreview={initialPreview}
+        remember={remember}
+        orgId={scope.activeOrgId}
       />
     </div>
   )
@@ -185,32 +235,40 @@ function BulkChangeFlow({
   targets,
   kinds,
   listPath,
+  initialPreview,
+  remember,
+  orgId,
 }: {
   family: BulkFamily
   role: NonNullable<ReturnType<typeof useAuth>['user']>['role']
   targets: BulkTarget[]
   kinds: ReturnType<typeof bulkKindsFor>
   listPath: string
+  initialPreview?: AdminBulkChangePreview
+  remember: (ids: SavedIds) => void
+  orgId?: string
 }) {
   const queryClient = useQueryClient()
   const active = useActiveResult()
   const accessReview = useAccessIncreaseReview()
-  const [step, setStep] = useState<BulkStep>('kind')
+  const [step, setStep] = useState<BulkStep>(initialPreview ? 'preview' : 'kind')
   const [kind, setKind] = useState<AdminBulkChangeKind | null>(
-    kinds.length === 1 ? kinds[0].kind : null,
+    initialPreview?.change?.kind ?? (kinds.length === 1 ? kinds[0].kind : null),
   )
   const [draft, setDraft] = useState<BulkDraft>(emptyDraft)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [kindError, setKindError] = useState<string | undefined>(undefined)
-  const [sent, setSent] = useState<AdminBulkChangeSpec | null>(null)
-  const [preview, setPreview] = useState<AdminBulkChangePreview | null>(null)
+  const [sent, setSent] = useState<AdminBulkChangeSpec | null>(initialPreview?.change ?? null)
+  const [preview, setPreview] = useState<AdminBulkChangePreview | null>(initialPreview ?? null)
   const [result, setResult] = useState<AdminBulkChangeApply | null>(null)
+  const [operation, setOperation] = useState<AdminBulkOperation | null>(null)
+  const [uncertain, setUncertain] = useState(false)
+  const attempted = useRef<AdminBulkChangeRequest | null>(null)
   /** The typed target count that unlocks an irreversible apply. */
   const [confirmation, setConfirmation] = useState('')
   const copy = FAMILY_COPY[family]
-  const names = new Map(targets.map((target) => [target.id, target.name]))
-  const nameOf = (id: string, name?: string | null) => name ?? names.get(id) ?? id
+  const nameOf = (id: string, name?: string | null) => name ?? id
 
   const request = (change: AdminBulkChangeSpec): AdminBulkChangeRequest => ({
     targetType: BULK_TARGET_TYPES[family],
@@ -226,7 +284,7 @@ function BulkChangeFlow({
     setError(problem.message)
     if (problem.problem?.status === 422) {
       const routed = routeServerErrors(errors, BULK_FIELDS, BULK_STEPS)
-      if (routed) setStep(routed)
+      if (routed && !initialPreview && !attempted.current) setStep(routed)
     }
   }
 
@@ -236,6 +294,10 @@ function BulkChangeFlow({
       if (!active.current) return
       setSent(change)
       setPreview(data)
+      attempted.current = null
+      setOperation(null)
+      setUncertain(false)
+      remember({ previewId: data.previewId })
       setConfirmation('')
       setError(null)
       setFieldErrors({})
@@ -244,8 +306,74 @@ function BulkChangeFlow({
     onError: (failure) => { if (active.current) fail(failure, '일괄 변경 미리보기를 불러오지 못했습니다.') },
   })
 
+  const recoverMutation = useMutation({
+    mutationFn: () => fetchAdminBulkOperation(attempted.current!.operationId!),
+    onSuccess: (data) => {
+      if (!active.current) return
+      if (data.operationId !== attempted.current?.operationId || data.previewId !== attempted.current?.previewId || data.targetType !== BULK_TARGET_TYPES[family] || data.status !== 'COMMITTED') {
+        setError('현재 적용 ID에 해당하는 커밋 결과를 확인하지 못했습니다.')
+        return
+      }
+      setOperation(data)
+      setResult(data.result)
+      setUncertain(false)
+      setError(null)
+      setStep('result')
+    },
+    onError: () => { if (active.current) setError('같은 적용 ID의 저장 결과를 아직 확인하지 못했습니다. 잠시 후 다시 조회해 주세요.') },
+  })
+
+  const consumedMutation = useMutation({
+    mutationFn: async () => {
+      const expected = attempted.current
+      if (!expected?.previewId) return null
+      const saved = await fetchAdminBulkPreview(expected.previewId)
+      if (!active.current || saved.previewId !== expected.previewId || saved.targetType !== expected.targetType || !saved.consumedOperationId) return null
+      const receipt = await fetchAdminBulkOperation(saved.consumedOperationId)
+      return { expected, saved, receipt }
+    },
+    onSuccess: (found) => {
+      if (!active.current || !found || attempted.current !== found.expected) return
+      const { saved, receipt } = found
+      if (receipt.operationId !== saved.consumedOperationId || receipt.previewId !== saved.previewId || receipt.targetType !== saved.targetType || receipt.status !== 'COMMITTED') return
+      setOperation(receipt)
+      setResult(receipt.result)
+      setUncertain(false)
+      setError(null)
+      setStep('result')
+      remember({ previewId: saved.previewId, operationId: receipt.operationId })
+    },
+    onError: () => { if (active.current) setError('이 미리보기로 이미 저장된 결과를 아직 확인하지 못했습니다. 다시 조회해 주세요.') },
+  })
+
+  const applied = (data: AdminBulkChangeApply, change: AdminBulkChangeSpec) => {
+    const invalidations = FAMILY_QUERY_KEYS[family].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+    invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin-bulk-operation', data.batchId] }))
+    invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin-bulk-recent'] }))
+    if (change.kind === 'LLM_KEY_LIMITS') invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
+    void Promise.all(invalidations)
+    if (!active.current) return
+    if (data.batchId !== attempted.current?.operationId) { setUncertain(true); setError('현재 적용 ID와 응답의 ID가 다릅니다. 저장된 결과를 다시 조회해 주세요.'); return }
+    setResult(data)
+    setUncertain(false)
+    setError(null)
+    setStep('result')
+    recoverMutation.mutate()
+    if (data.items.every((item) => item.result === 'APPLIED' || item.result === 'UNCHANGED')) clearStoredSelection(family)
+  }
+
+  const applicationFailed = (failure: unknown) => {
+    if (!active.current) return
+    const problem = toApiError(failure, '일괄 변경을 적용하지 못했습니다.')
+    setUncertain(!!attempted.current)
+    fail(failure, '일괄 변경을 적용하지 못했습니다.')
+    if (attempted.current && problem.problem?.status === 409) consumedMutation.mutate()
+  }
+
   const applyMutation = useMutation({
     mutationFn: async ({ change, judged }: { change: AdminBulkChangeSpec; judged: AdminBulkChangePreview }) => {
+      if (attempted.current) throw new Error('기존 적용 ID의 결과를 먼저 조회하거나 같은 요청을 재확인해 주세요.')
+      if (judged.consumedOperationId || !(Date.now() < Date.parse(judged.expiresAt))) throw new Error('이미 사용됐거나 새 적용 가능 시간이 지난 미리보기입니다. 다시 조회해 주세요.')
       const accessConfirmations: Record<string, AccessConfirmation> = {}
       for (const item of judged.items) {
         if (!active.current) return null
@@ -254,31 +382,31 @@ function BulkChangeFlow({
         if (accessConfirmation === null || !active.current) return null
         if (accessConfirmation) accessConfirmations[item.targetId] = accessConfirmation
       }
-      return applyAdminBulkChange({
+      if (!active.current) return null
+      if (!(Date.now() < Date.parse(judged.expiresAt))) throw new Error('미리보기의 새 적용 가능 시간이 지났습니다. 새 미리보기를 만들어 주세요.')
+      const body: AdminBulkChangeRequest = {
         ...request(change),
+        previewId: judged.previewId,
+        operationId: crypto.randomUUID(),
         fingerprints: Object.fromEntries(judged.items.map((item) => [item.targetId, item.fingerprint])),
         ...(Object.keys(accessConfirmations).length > 0 ? { accessConfirmations } : {}),
-      })
-    },
-    onSuccess: async (data, { change }) => {
-      if (!data) return
-      const invalidations = FAMILY_QUERY_KEYS[family].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
-      if (change.kind === 'LLM_KEY_LIMITS') invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
-      void Promise.all(invalidations)
-      if (!active.current) return
-      setResult(data)
-      setError(null)
-      setStep('result')
-      // The selection is spent only when every target ended where it was
-      // asked to; anything skipped or stale may still need the same list.
-      if (data.items.every((item) => item.result === 'APPLIED' || item.result === 'UNCHANGED')) {
-        clearStoredSelection(family)
       }
+      attempted.current = body
+      remember({ previewId: body.previewId!, operationId: body.operationId! })
+      return applyAdminBulkChange(body)
     },
-    onError: (failure) => { if (active.current) fail(failure, '일괄 변경을 적용하지 못했습니다.') },
+    onSuccess: (data, { change }) => { if (data) applied(data, change) },
+    onError: applicationFailed,
+  })
+
+  const repeatMutation = useMutation({
+    mutationFn: () => active.current && attempted.current ? applyAdminBulkChange(attempted.current) : Promise.resolve(null),
+    onSuccess: (data) => { if (data && attempted.current) applied(data, attempted.current.change) },
+    onError: applicationFailed,
   })
 
   const runPreview = () => {
+    if (attempted.current) { setError('기존 적용 ID의 결과를 먼저 확인해 주세요.'); return }
     if (!kind) return
     setError(null)
     const built = buildChange(kind, draft)
@@ -300,6 +428,11 @@ function BulkChangeFlow({
   return (
     <>
       {accessReview.modal}
+      {uncertain && attempted.current && <MessageBar variant="warning" title="적용 응답을 확인하지 못했습니다" actions={<>
+        <Button variant="secondary" loading={recoverMutation.isPending} onClick={() => recoverMutation.mutate()}>같은 적용 결과 다시 조회</Button>
+        <Button variant="secondary" loading={consumedMutation.isPending} onClick={() => consumedMutation.mutate()}>이 미리보기의 저장 결과 확인</Button>
+        <Button variant="secondary" loading={repeatMutation.isPending} disabled={recoverMutation.isPending} onClick={() => repeatMutation.mutate()}>같은 ID로 동일 요청 재확인</Button>
+      </>}>적용 ID: <code className="break-all">{attempted.current.operationId}</code>. 새 적용을 만들기 전에 기존 요청의 결과를 확인해 주세요.</MessageBar>}
       <Stepper steps={BULK_STEPS.map((id) => BULK_STEP_TITLES[id])} current={BULK_STEPS.indexOf(step)} />
 
       <details className="text-sm text-foreground-secondary">
@@ -307,7 +440,7 @@ function BulkChangeFlow({
           대상 {targets.length}개
         </summary>
         <ul className="mt-2 list-disc space-y-0.5 pl-5">
-          {targets.map((target) => (
+          {(result ? result.items.map((item) => ({ id: item.targetId, name: item.name ?? item.targetId })) : preview ? preview.items.map((item) => ({ id: item.targetId, name: item.name ?? item.targetId })) : targets).map((target) => (
             <li key={target.id}>{target.name}</li>
           ))}
         </ul>
@@ -331,6 +464,7 @@ function BulkChangeFlow({
           <div className="flex justify-end">
             <Button
               loading={previewMutation.isPending}
+              disabled={!!attempted.current}
               onClick={() => {
                 if (!kind) {
                   setKindError('바꿀 항목을 골라 주세요.')
@@ -418,7 +552,7 @@ function BulkChangeFlow({
             <Button variant="secondary" onClick={() => setStep('kind')}>
               이전
             </Button>
-            <Button loading={previewMutation.isPending} onClick={runPreview}>
+            <Button loading={previewMutation.isPending} disabled={!!attempted.current} onClick={runPreview}>
               미리보기
             </Button>
           </div>
@@ -428,38 +562,14 @@ function BulkChangeFlow({
       {step === 'preview' && preview && sent && (
         <section className="space-y-4">
           {error && <MessageBar variant="danger">{error}</MessageBar>}
+          <p className="text-sm text-foreground-muted">저장: {formatDateTime(preview.createdAt)} · 새 적용 가능 기한: {formatDateTime(preview.expiresAt)}</p>
+          <Link className="text-sm text-brand-foreground underline" to={adminPaths.bulkPreview(family, preview.previewId, orgId)}>저장된 미리보기 링크</Link>
           {notApplicable > 0 && (
             <p className="text-sm text-foreground-secondary">
               적용되지 않는 대상 {notApplicable}개
             </p>
           )}
-          <DataTable caption="일괄 변경 미리보기">
-            <THead>
-              <TR>
-                <TH>대상</TH>
-                <TH>적용 여부</TH>
-                <TH>변경 내용</TH>
-                <TH>사유</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {preview.items.map((item) => (
-                <TR key={item.targetId}>
-                  <TD className="font-medium text-foreground-primary">
-                    {nameOf(item.targetId, item.name)}
-                  </TD>
-                  <TD className="whitespace-nowrap">
-                    {!item.applicable ? '적용 안 됨' : item.fields.length === 0 ? '변경 없음' : '적용'}
-                  </TD>
-                  <TD>
-                    <DiffList fields={item.fields} targetType={targetType} />
-                    {item.actorAccessImpact && <AccessIncreaseDetails impact={item.actorAccessImpact} />}
-                  </TD>
-                  <TD>{item.reason ? labelForBulkReason(item.reason) : '—'}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </DataTable>
+          <BulkChangePreviewTable items={preview.items} targetType={targetType} label={nameOf} />
           <IrreversibleNotice change={sent} />
           {needsConfirmation && changes.length > 0 && (
             <FormField
@@ -475,17 +585,17 @@ function BulkChangeFlow({
             </FormField>
           )}
           <div className="flex justify-between gap-2">
-            <Button
+            {initialPreview ? <Link className="text-brand-foreground underline" to={listPath}>목록에서 새로 선택</Link> : <Button
               variant="secondary"
-              disabled={applyMutation.isPending}
+              disabled={applyMutation.isPending || uncertain || repeatMutation.isPending}
               onClick={() => setStep(kindTakesValues(sent.kind) ? 'values' : 'kind')}
             >
               이전
-            </Button>
+            </Button>}
             {changes.length > 0 ? (
               <Button
                 variant={isDestructive(sent) ? 'danger' : 'primary'}
-                disabled={!confirmed}
+                disabled={!confirmed || !!attempted.current || uncertain || repeatMutation.isPending || !!preview.consumedOperationId || !(Date.now() < Date.parse(preview.expiresAt))}
                 loading={applyMutation.isPending}
                 onClick={() => {
                   setError(null)
@@ -513,36 +623,17 @@ function BulkChangeFlow({
               .map((entry) => `${labelForBulkResult(entry.code)} ${entry.count}개`)
               .join(', ')}
           </p>
-          <DataTable caption="일괄 변경 결과">
-            <THead>
-              <TR>
-                <TH>대상</TH>
-                <TH>결과</TH>
-                <TH>변경 내용</TH>
-                <TH>사유</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {result.items.map((item) => (
-                <TR key={item.targetId}>
-                  <TD className="font-medium text-foreground-primary">
-                    {nameOf(item.targetId, item.name)}
-                  </TD>
-                  <TD className="whitespace-nowrap">{labelForBulkResult(item.result)}</TD>
-                  <TD>
-                    <DiffList fields={item.fields} targetType={targetType} />
-                  </TD>
-                  <TD>{item.reason ? labelForBulkReason(item.reason) : '—'}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </DataTable>
+          {operation ? <BulkChangeReceipt operation={operation} /> : <BulkChangeResultTable items={result.items} targetType={targetType} />}
+          {(operation?.operationId || attempted.current?.operationId) && <Link className="block break-all text-brand-foreground underline" to={adminPaths.bulkOperation(family, operation?.operationId ?? attempted.current!.operationId!, orgId, operation?.previewId ?? attempted.current?.previewId ?? undefined)}>저장된 적용 결과 링크</Link>}
+          {attempted.current?.previewId && <Link className="block text-brand-foreground underline" to={adminPaths.bulkPreview(family, attempted.current.previewId, orgId)}>저장된 미리보기 링크</Link>}
           <div className="flex flex-wrap items-center justify-end gap-3">
             {sent && result.items.some((item) => item.result === 'STALE') && (
               <Button
                 variant="secondary"
                 loading={previewMutation.isPending}
+                disabled={!operation}
                 onClick={() => {
+                  if (!operation) return
                   setError(null)
                   previewMutation.mutate(sent)
                 }}
@@ -557,27 +648,6 @@ function BulkChangeFlow({
         </section>
       )}
     </>
-  )
-}
-
-function DiffList({
-  fields,
-  targetType,
-}: {
-  fields: AdminBulkChangeFieldDiff[]
-  targetType: AdminBulkChangeTargetType
-}) {
-  if (fields.length === 0) return <span className="text-foreground-muted">—</span>
-  return (
-    <ul className="space-y-0.5">
-      {fields.map((diff) => (
-        <li key={diff.field}>
-          <span className="text-foreground-muted">{diffFieldLabel(diff.field)}</span>{' '}
-          {formatDiffValue(diff.field, diff.oldValue, targetType)} →{' '}
-          {formatDiffValue(diff.field, diff.newValue, targetType)}
-        </li>
-      ))}
-    </ul>
   )
 }
 

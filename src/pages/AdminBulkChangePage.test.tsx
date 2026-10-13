@@ -358,9 +358,9 @@ describe('AdminBulkChangePage', () => {
   test('renders result and reason codes it does not know as themselves', async () => {
     const user = userEvent.setup()
     server.use(
-      http.post('*/api/v1/admin/bulk-changes', () =>
+      http.post('*/api/v1/admin/bulk-changes', async ({ request }) =>
         HttpResponse.json({
-          batchId: uuid(900),
+          batchId: (await request.json() as { operationId: string }).operationId,
           items: [
             {
               targetId: uuid(170),
@@ -609,8 +609,12 @@ describe('AdminBulkChangePage on domains', () => {
 
     const result = await screen.findByRole('table', { name: '일괄 변경 결과' })
     expect(bulkApplyBodies).toHaveLength(1)
-    expect(within(result).getByRole('row', { name: /demo\.example\.com/ })).toHaveTextContent('적용됨')
-    expect(within(result).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent('적용됨')
+    await screen.findByText('적용 결과가 저장됐습니다')
+    for (const id of bulkApplyBodies[0].targetIds) {
+      expect(within(result).getByRole('row', { name: new RegExp(id) })).toHaveTextContent('적용됨')
+    }
+    expect(within(result).queryByText('demo.example.com')).not.toBeInTheDocument()
+    expect(within(result).queryByText('myblog.pusan.dev')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: '공개 서비스 목록으로' }))
     await screen.findByRole('checkbox', { name: 'ai-team.pusan.dev 선택' })

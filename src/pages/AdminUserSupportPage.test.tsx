@@ -1,3 +1,5 @@
+import type { components } from '../api/schema'
+import { savedBulkPreview } from '../test/msw/handlers/bulk-changes'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -13,6 +15,7 @@ import { currentPath, renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 import { adminProfilePatches, adminUserStore } from '../test/msw/handlers/users'
 import { supportFixture } from '../test/msw/handlers/user-support'
+import { externalDomains } from '../test/msw/handlers/publishing'
 import { orgAdminUser, orgManagerUser, orgViewerUser, refreshSuccessHandler, sysAdminUser, sysManagerUser, sysViewerUser } from '../test/msw/handlers/auth'
 
 test.each([
@@ -53,6 +56,31 @@ test('workspace-filtered request paging and detail return keep the exact server 
   await screen.findByRole('table', { name: '관리자 신청 목록' })
   expect(currentPath()).toBe(source)
   expect(scopes.every((scope) => scope === uuid(12))).toBe(true)
+})
+
+test.each(['request result', 'access diagnostic'] as const)('opens the exact domain detail from the %s', async (surface) => {
+  const user = userEvent.setup()
+  const domain = externalDomains[0]
+  const support = supportFixture(uuid(42), uuid(1))
+  const resource: UserResourceAccess = { ...support.resources[0], type: 'DOMAIN', id: domain.id, name: domain.fqdn, status: domain.status, orgId: domain.orgId }
+  support.resources = [resource]
+  support.requests = [{ ...support.requests[0], type: 'DOMAIN', resourceId: domain.id, recipientStatus: 'CREATED', orgId: domain.orgId }]
+  const diagnostics: string[] = []
+  server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser),
+    http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json(support)),
+    http.get('*/api/v1/admin/users/:userId/support/access', ({ request }) => { diagnostics.push(new URL(request.url).searchParams.get('resourceId')!); return HttpResponse.json(resource) }),
+  )
+  renderApp(`/admin/users/${uuid(42)}?org=${domain.orgId}${surface === 'access diagnostic' ? `&resourceType=DOMAIN&resourceId=${domain.id}` : ''}`)
+  const source = surface === 'request result'
+    ? within(await screen.findByRole('table', { name: '사용자 관련 신청 결과' }))
+    : within(await screen.findByRole('region', { name: '자원 접근 조회 결과' }))
+  const link = source.getByRole('link', { name: surface === 'request result' ? '도메인 상세' : '도메인 상세 열기' })
+  expect(link).toHaveAttribute('href', `/admin/domains?domainId=${domain.id}&org=${domain.orgId}`)
+  if (surface === 'access diagnostic') expect(diagnostics).toEqual([domain.id])
+  await user.click(link)
+  const detail = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
+  expect(await detail.findByRole('heading', { name: domain.fqdn })).toBeInTheDocument()
+  expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('domainId')).toBe(domain.id)
 })
 
 test('the directory URL restores filters through support detail and explicit list return', async () => {
@@ -268,8 +296,8 @@ test('removing the last grant of a nonmember retains the receipt when the relati
   let removed = false
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
     http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json({ ...data, resources: removed ? [] : [resource] })),
-    http.post('*/api/v1/admin/bulk-changes/preview', () => HttpResponse.json({ items: [{ targetId: resource.id, name: '현재 자원 이름', applicable: true, reason: null, fields: [{ field: 'role', oldValue: 'OWNER', newValue: null }], fingerprint: 'newer-state' }] })),
-    http.post('*/api/v1/admin/bulk-changes', () => { removed = true; return HttpResponse.json({ batchId: uuid(902), items: [{ targetId: resource.id, name: '현재 자원 이름', result: 'APPLIED', reason: null, fields: [{ field: 'role', oldValue: 'OWNER', newValue: null }] }] }) }),
+    http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => HttpResponse.json(savedBulkPreview(await request.json() as components['schemas']['AdminBulkChangeRequest'], [{ targetId: resource.id, name: '현재 자원 이름', applicable: true, reason: null, fields: [{ field: 'role', oldValue: 'OWNER', newValue: null }], fingerprint: 'newer-state' }]))),
+    http.post('*/api/v1/admin/bulk-changes', async ({ request }) => { const body = await request.json() as components['schemas']['AdminBulkChangeRequest']; removed = true; return HttpResponse.json({ batchId: body.operationId, items: [{ targetId: resource.id, name: '현재 자원 이름', result: 'APPLIED', reason: null, fields: [{ field: 'role', oldValue: 'OWNER', newValue: null }] }] }) }),
   )
   renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
   await user.click(await screen.findByRole('button', { name: '사용자 지정 권한 회수' }))
@@ -279,7 +307,7 @@ test('removing the last grant of a nonmember retains the receipt when the relati
   await user.click(modal.getByRole('button', { name: '미리보기 확인 후 회수' }))
   await screen.findByText('현재 관리 범위에서 연결된 자원이 없습니다.')
   const receipt = screen.getByRole('region', { name: '최근 권한 회수 결과' })
-  expect(within(receipt).getByText(`처리 ID ${uuid(902)}`)).toBeInTheDocument()
+  expect(within(receipt).getByText(/^처리 ID [0-9a-f-]{36}$/)).toBeInTheDocument()
   expect(within(receipt).getByText('현재 자원 이름: 적용됨')).toBeInTheDocument()
   expect(within(receipt).getByText(new RegExp(account.id))).toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: '사용자 지정 권한 회수' })).not.toBeInTheDocument()
@@ -296,8 +324,8 @@ test('an inactive named grant uses exact existing bulk preview and conflict-awar
   let applyBody: unknown
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
     http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json({ ...data, resources: [{ ...resource, personalGrantRole: removed ? null : 'EDITOR', effectiveRole: 'MEMBER', canRevoke: !removed }] })),
-    http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => { previewBody = await request.json(); return HttpResponse.json({ items: [{ targetId: resource.id, name: resource.name, applicable: true, reason: null, fields: [{ field: 'role', oldValue: 'EDITOR', newValue: null }], fingerprint: 'current-state' }] }) }),
-    http.post('*/api/v1/admin/bulk-changes', async ({ request }) => { applyBody = await request.json(); removed = true; return HttpResponse.json({ batchId: uuid(901), items: [{ targetId: resource.id, name: resource.name, result: 'APPLIED', reason: null, fields: [{ field: 'role', oldValue: 'EDITOR', newValue: null }] }] }) }),
+    http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => { previewBody = await request.json(); return HttpResponse.json(savedBulkPreview(previewBody as components['schemas']['AdminBulkChangeRequest'], [{ targetId: resource.id, name: resource.name, applicable: true, reason: null, fields: [{ field: 'role', oldValue: 'EDITOR', newValue: null }], fingerprint: 'current-state' }])) }),
+    http.post('*/api/v1/admin/bulk-changes', async ({ request }) => { applyBody = await request.json(); removed = true; return HttpResponse.json({ batchId: (applyBody as components['schemas']['AdminBulkChangeRequest']).operationId, items: [{ targetId: resource.id, name: resource.name, result: 'APPLIED', reason: null, fields: [{ field: 'role', oldValue: 'EDITOR', newValue: null }] }] }) }),
   )
   renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
   await user.click(await screen.findByRole('button', { name: '사용자 지정 권한 회수' }))
@@ -309,7 +337,7 @@ test('an inactive named grant uses exact existing bulk preview and conflict-awar
   expect(removed).toBe(false)
   await user.click(modal.getByRole('button', { name: '미리보기 확인 후 회수' }))
   await modal.findByRole('region', { name: '권한 회수 결과' })
-  expect(applyBody).toEqual({ ...(previewBody as object), fingerprints: { [resource.id]: 'current-state' } })
+  expect(applyBody).toEqual({ ...(previewBody as object), previewId: expect.any(String), operationId: expect.any(String), fingerprints: { [resource.id]: 'current-state' } })
   expect(account.status).toBe('DISABLED')
   await user.click(modal.getByRole('button', { name: '결과 닫기' }))
   expect(screen.queryByRole('button', { name: '사용자 지정 권한 회수' })).not.toBeInTheDocument()
@@ -347,4 +375,65 @@ test('a delayed diagnostic from a prior institution cannot overwrite the selecte
   await screen.findByText('새 기관의 범위 밖입니다.')
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 200)) })
   expect(screen.queryByText('이전 기관의 늦은 자원')).not.toBeInTheDocument()
+})
+
+
+test('a masked repeated user grant receipt keeps the original operation identity and hides cached resource names', async () => {
+  const user = userEvent.setup()
+  const data = supportFixture(uuid(42), uuid(1))
+  const resource: UserResourceAccess = { ...data.resources[0], personalGrantRole: 'EDITOR', canRevoke: true, revokeReason: 'ALLOWED' }
+  const bodies: components['schemas']['AdminBulkChangeRequest'][] = []
+  let reads = 0
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+    http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json({ ...data, resources: [resource] })),
+    http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => {
+      reads++
+      return HttpResponse.json(savedBulkPreview(await request.json() as components['schemas']['AdminBulkChangeRequest'], [{ targetId: resource.id, name: resource.name, applicable: true, reason: null, fields: [{ field: 'role', oldValue: 'EDITOR', newValue: null }], fingerprint: 'captured-revoke' }]))
+    }),
+    http.post('*/api/v1/admin/bulk-changes', async ({ request }) => {
+      const body = await request.json() as components['schemas']['AdminBulkChangeRequest']
+      bodies.push(body)
+      if (bodies.length === 1) return HttpResponse.error()
+      return HttpResponse.json({ batchId: body.operationId, items: [{ targetId: resource.id, name: null, result: 'APPLIED', reason: null, fields: [] }] })
+    }),
+  )
+  renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
+  await user.click(await screen.findByRole('button', { name: '사용자 지정 권한 회수' }))
+  const modal = within(screen.getByRole('dialog', { name: '사용자 지정 권한 회수' }))
+  const apply = await modal.findByRole('button', { name: '미리보기 확인 후 회수' })
+  await waitFor(() => expect(apply).toBeEnabled())
+  await user.click(apply)
+  await modal.findByRole('link', { name: '같은 적용 ID의 저장 결과 조회' })
+  await waitFor(() => expect(apply).toBeEnabled())
+  await user.click(apply)
+  const result = within(await modal.findByRole('region', { name: '권한 회수 결과' }))
+  expect(bodies).toHaveLength(2)
+  expect(bodies[1]).toEqual(bodies[0])
+  expect(reads).toBe(1)
+  expect(result.getByText(`${resource.id}: 적용됨`)).toBeInTheDocument()
+  expect(modal.queryByText(new RegExp(resource.name))).not.toBeInTheDocument()
+  const receipt = within(screen.getByRole('region', { name: '최근 권한 회수 결과' }))
+  expect(receipt.queryByText(new RegExp(resource.name))).not.toBeInTheDocument()
+  expect(result.getByRole('link', { name: '저장된 권한 회수 결과 다시 열기' })).toHaveAttribute('href', `/admin/bulk/operations/${bodies[0].operationId}?org=${uuid(1)}`)
+})
+
+
+test('a masked grant preview never restores the cached resource name', async () => {
+  const user = userEvent.setup()
+  const data = supportFixture(uuid(42), uuid(1))
+  const resource: UserResourceAccess = { ...data.resources[0], name: 'cached-private-resource-name', personalGrantRole: 'EDITOR', canRevoke: true, revokeReason: 'ALLOWED' }
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+    http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json({ ...data, resources: [resource] })),
+    http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => HttpResponse.json(savedBulkPreview(
+      await request.json() as components['schemas']['AdminBulkChangeRequest'],
+      [{ targetId: resource.id, name: null, applicable: false, reason: 'NOT_FOUND', fields: [], fingerprint: 'masked-preview' }],
+    ))),
+  )
+  renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
+  await user.click(await screen.findByRole('button', { name: '사용자 지정 권한 회수' }))
+  const modal = within(screen.getByRole('dialog', { name: '사용자 지정 권한 회수' }))
+  await modal.findByText('찾을 수 없음')
+  expect(modal.queryByText(new RegExp(resource.name))).not.toBeInTheDocument()
+  expect(modal.getByText(new RegExp(`대상 자원: ${resource.id}`))).toBeInTheDocument()
+  expect(modal.getByRole('button', { name: '미리보기 확인 후 회수' })).toBeDisabled()
 })

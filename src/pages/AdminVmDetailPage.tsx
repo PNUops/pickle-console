@@ -396,6 +396,7 @@ function PeriodSection({
       </Button>
       {open && (
         <ExtendVmPeriodModal
+          key={vm.id}
           vm={vm}
           onClose={() => setOpen(false)}
           onDone={(text) => {

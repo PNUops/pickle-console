@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchAdminVms, type VmSummary } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { canOperateVm } from '../auth/permissions'
+import { requestReaderKey } from '../api/request-review'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { FilterBar } from '../components/FilterBar'
 import { useAdminScope } from '../lib/use-admin-scope'
@@ -41,6 +42,12 @@ function queryParamsOf(tab: ExpiryTab) {
 /** 만료 관리 — 만료 임박·만료된 VM을 모아 보고 사용 기간을 연장한다. */
 export function AdminExpiryPage() {
   const { user } = useAuth()
+  const { activeOrgId, activeOrgRole } = useAdminScope()
+  return <AdminExpiryContent key={`${activeOrgId ?? 'all'}:${activeOrgRole ?? 'none'}:${requestReaderKey(user)}`} />
+}
+
+function AdminExpiryContent() {
+  const { user } = useAuth()
   const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   // 기간 연장은 운영 역할만 — 열람 역할은 조회만이며, 기관 계층의 연장은 자기가
   // 운영하는 기관의 VM에 한한다 (서버 강제).
@@ -60,6 +67,7 @@ export function AdminExpiryPage() {
         expiringInDays: 'expiringInDays' in params ? params.expiringInDays : null,
         expired: 'expired' in params ? params.expired : null,
         orgId: activeOrgId ?? null,
+        reader: requestReaderKey(user),
         page,
         size: PAGE_SIZE,
       },
@@ -163,6 +171,7 @@ export function AdminExpiryPage() {
 
       {extendTarget && (
         <ExtendVmPeriodModal
+          key={extendTarget.id}
           vm={extendTarget}
           onClose={() => setExtendTarget(null)}
           onDone={(text) => {
