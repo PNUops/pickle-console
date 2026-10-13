@@ -1,3 +1,5 @@
+import { startTransition } from 'react'
+import { flushSync } from 'react-dom'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -15,24 +17,29 @@ import { orgManagerUser, refreshSuccessHandler, sysAdminUser, sysViewerUser } fr
 import { bulkApplyBodies, bulkSavedOperations, bulkSavedPreviews, failNextBulkResponse, holdNextBulkApply, savedBulkPreview } from '../test/msw/handlers/bulk-changes'
 import { vmStore } from '../test/msw/handlers/vms'
 
-async function periodPreview(ids = [uuid(56)], profile = sysAdminUser, token = 'access-sys-admin', heldNavigations?: Array<() => Promise<void>>) {
+async function periodPreview(ids = [uuid(56)], profile = sysAdminUser, token = 'access-sys-admin', heldNavigations?: Array<() => Promise<void>>, useTransitions?: boolean, syncNavigation = false) {
   const user = userEvent.setup()
   server.use(refreshSuccessHandler(token, profile))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const router = createMemoryRouter([{ path: '*', element: <QueryClientProvider client={client}><AuthProvider><ToastProvider><App /></ToastProvider></AuthProvider></QueryClientProvider> }], {
     initialEntries: [{ pathname: '/admin/bulk/vms', search: profile.role.startsWith('ORG_') ? `?org=${uuid(1)}` : '', state: { targets: ids.map((id) => ({ id, name: vmStore.find((vm) => vm.id === id)?.name ?? '선택 당시 숨길 이름' })) } }],
   })
-  if (heldNavigations) {
+  if (heldNavigations || syncNavigation) {
     const navigate = router.navigate.bind(router)
     router.navigate = ((to, options) => {
-      if (typeof to === 'string' && to.startsWith('/admin/bulk/vms?') || to !== null && typeof to === 'object' && to.pathname === '/admin/bulk/vms' && !!to.search) {
+      if (heldNavigations && (typeof to === 'string' && to.startsWith('/admin/bulk/vms?') || to !== null && typeof to === 'object' && to.pathname === '/admin/bulk/vms' && !!to.search)) {
         heldNavigations.push(async () => { await navigate(to, options) })
         return Promise.resolve()
+      }
+      if (syncNavigation) {
+        let result!: Promise<void>
+        flushSync(() => { result = navigate(to, options) })
+        return result
       }
       return navigate(to, options)
     }) as typeof router.navigate
   }
-  const view = render(<RouterProvider router={router} />)
+  const view = render(<RouterProvider router={router} useTransitions={useTransitions} />)
   await user.click(await screen.findByRole('radio', { name: '기간' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   fireEvent.change(screen.getByLabelText(/새 종료일/), { target: { value: '2030-01-01' } })
@@ -42,6 +49,70 @@ async function periodPreview(ids = [uuid(56)], profile = sysAdminUser, token = '
 }
 
 describe('durable bulk results', () => {
+test('keeps the live apply when its URL commits before transition-priority ownership updates', async () => {
+  const { user, router, client } = await periodPreview([uuid(56)], sysAdminUser, 'access-sys-admin', undefined, false, true)
+  const held = holdNextBulkApply()
+  const unsubscribe = client.getMutationCache().subscribe((event) => {
+    if (event.type !== 'added') return
+    const execute = event.mutation.options.mutationFn!
+    event.mutation.setOptions({ ...event.mutation.options, mutationFn: (variables, context) => {
+      let result!: ReturnType<typeof execute>
+      startTransition(() => { result = execute(variables, context) })
+      return result
+    } })
+  })
+  try {
+    await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+    await held.started
+    expect(new URLSearchParams(router.state.location.search).get('operationId')).toBe(bulkApplyBodies[0].operationId)
+    expect(bulkApplyBodies).toHaveLength(1)
+    expect(bulkSavedOperations.size).toBe(0)
+    expect(screen.getByRole('table', { name: '일괄 변경 미리보기' })).toBeInTheDocument()
+    expect(screen.queryByText(/저장된 결과를 확인하지 못했습니다/)).not.toBeInTheDocument()
+  } finally {
+    unsubscribe()
+    await act(async () => held.release())
+  }
+  await screen.findByText('적용 결과가 저장됐습니다')
+  expect(bulkApplyBodies).toHaveLength(1)
+  const operationId = bulkApplyBodies[0].operationId!
+  expect(bulkSavedOperations.has(operationId)).toBe(true)
+  await user.click(screen.getByRole('link', { name: '저장된 미리보기 링크' }))
+  await screen.findByText('이 미리보기는 이미 적용에 사용됐습니다.')
+  expect(screen.queryByRole('table', { name: '일괄 변경 결과' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('link', { name: '저장된 결과 열기' }))
+  await screen.findByText('적용 결과가 저장됐습니다')
+  expect(bulkApplyBodies).toHaveLength(1)
+  expect(new URLSearchParams(router.state.location.search).get('operationId')).toBe(operationId)
+})
+
+test.each([true, false])('keeps an in-flight apply when router transition mode is %s', async (useTransitions) => {
+  const { user, router } = await periodPreview([uuid(56)], sysAdminUser, 'access-sys-admin', undefined, useTransitions)
+  const held = holdNextBulkApply()
+  await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+  await held.started
+  expect(new URLSearchParams(router.state.location.search).get('operationId')).toBe(bulkApplyBodies[0].operationId)
+  expect(screen.getByRole('button', { name: /1개에 적용$/ })).toBeInTheDocument()
+  await act(async () => held.release())
+  await screen.findByText('적용 결과가 저장됐습니다')
+  expect(bulkApplyBodies).toHaveLength(1)
+})
+
+test('reads the saved operation after visiting an external URL with the same selection state', async () => {
+  const { user, router } = await periodPreview()
+  await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+  await screen.findByText('적용 결과가 저장됐습니다')
+  const savedPath = router.state.location.pathname + router.state.location.search
+  const selectionState = router.state.location.state
+  await act(async () => { await router.navigate(adminPaths.bulkOperation('vms', uuid(99500)), { state: selectionState }) })
+  await screen.findByText(/저장된 결과를 확인하지 못했습니다/)
+  expect(screen.queryByRole('table', { name: '일괄 변경 결과' })).not.toBeInTheDocument()
+  await act(async () => { await router.navigate(savedPath, { state: selectionState }) })
+  await screen.findByText('적용 결과가 저장됐습니다')
+  expect(screen.queryByRole('radio', { name: '기간' })).not.toBeInTheDocument()
+  expect(bulkApplyBodies).toHaveLength(1)
+})
+
 test('keeps the active apply when its preview URL commits before the later operation URL', async () => {
   const navigations: Array<() => Promise<void>> = []
   const { user, router } = await periodPreview([uuid(56)], sysAdminUser, 'access-sys-admin', navigations)

@@ -3,7 +3,7 @@ import { useActiveResult } from '../lib/use-active-result'
 import { BulkChangePreviewTable, BulkChangeResultTable } from '../components/bulk/BulkChangeTables'
 import { useAccessIncreaseReview } from '../lib/use-access-increase-review'
 import type { AccessConfirmation } from '../api/resource-access'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { fetchAdminBulkOperation, fetchAdminBulkPreview, type AdminBulkOperation } from '../api/bulk-results'
@@ -124,6 +124,10 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
 
 type SavedIds = { previewId?: string; operationId?: string }
 
+function sameSavedIds(left: SavedIds, right: SavedIds) {
+  return left.previewId === right.previewId && left.operationId === right.operationId
+}
+
 function AdminBulkPageContext({ family }: { family: BulkFamily }) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -133,26 +137,38 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
   const copy = FAMILY_COPY[family]
   const listPath = listPathOf(family, scope.activeOrgId)
   const params = new URLSearchParams(location.search)
-  const savedIds: SavedIds = { previewId: params.get('previewId')?.toLowerCase() ?? undefined, operationId: params.get('operationId')?.toLowerCase() ?? undefined }
+  const previewId = params.get('previewId')?.toLowerCase() ?? undefined
+  const operationId = params.get('operationId')?.toLowerCase() ?? undefined
+  const savedIds: SavedIds = { previewId, operationId }
   const [targets, setTargets] = useState(() => savedIds.previewId || savedIds.operationId ? null : targetsOf(location.state))
-  const [remembered, setRemembered] = useState<SavedIds>({})
-  const [transitioningFrom, setTransitioningFrom] = useState<SavedIds[]>([])
+  const ownership = useRef<{ destination: SavedIds | null; predecessors: SavedIds[] }>({ destination: {}, predecessors: [] })
+  const observedUrl = useRef(savedIds)
   const [initialPreview, setInitialPreview] = useState<AdminBulkChangePreview | undefined>()
-  const matches = (ids: SavedIds) => ids.previewId === savedIds.previewId && ids.operationId === savedIds.operationId
-  const owned = matches(remembered) || transitioningFrom.some(matches)
+  const matches = (ids: SavedIds) => sameSavedIds(ids, savedIds)
+  const owned = !!ownership.current.destination && matches(ownership.current.destination) || ownership.current.predecessors.some(matches)
   const kinds = user ? bulkKindsFor(family, role ?? 'USER', user.role) : []
   const reader = requestReaderKey(user)
   const remember = (ids: SavedIds) => {
-    setTransitioningFrom((previous) => [...previous, savedIds, remembered])
-    setRemembered(ids)
+    // The Router can render its new URL before React state updates commit.
+    const previous = ownership.current
+    ownership.current = { destination: ids, predecessors: [...previous.predecessors, observedUrl.current, ...(previous.destination ? [previous.destination] : [])] }
     const path = ids.operationId
       ? adminPaths.bulkOperation(family, ids.operationId, scope.activeOrgId, ids.previewId)
       : adminPaths.bulkPreview(family, ids.previewId!, scope.activeOrgId)
     navigate(path, { replace: true, state: location.state })
   }
+  useLayoutEffect(() => { observedUrl.current = { previewId, operationId } }, [previewId, operationId])
   useEffect(() => {
-    if (transitioningFrom.length > 0 && remembered.previewId === savedIds.previewId && remembered.operationId === savedIds.operationId) setTransitioningFrom([])
-  }, [transitioningFrom, remembered.previewId, remembered.operationId, savedIds.previewId, savedIds.operationId])
+    const renderedIds = { previewId, operationId }
+    // A stale URL effect must not discard a newer navigation claim.
+    if (!sameSavedIds(observedUrl.current, renderedIds)) return
+    const current = ownership.current
+    if (current.destination && sameSavedIds(current.destination, renderedIds)) {
+      ownership.current = { ...current, predecessors: [] }
+    } else if (!current.predecessors.some((ids) => sameSavedIds(ids, renderedIds))) {
+      ownership.current = { destination: null, predecessors: [] }
+    }
+  }, [previewId, operationId])
 
   const header = (
     <>
@@ -175,7 +191,7 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
       onContinue={(preview) => {
         setTargets(preview.items.map((item) => ({ id: item.targetId, name: item.name ?? item.targetId })))
         setInitialPreview(preview)
-        setRemembered({ previewId: preview.previewId })
+        ownership.current = { destination: { previewId: preview.previewId }, predecessors: [] }
       }} /></div>
   }
   if (!targets) {
