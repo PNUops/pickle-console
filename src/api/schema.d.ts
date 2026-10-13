@@ -1674,6 +1674,26 @@ export interface paths {
         patch: operations["updateAdminResourceAccessGrant"];
         trace?: never;
     };
+    "/admin/resource-deadlines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 통합 자원 기한 목록
+         * @description 전역 지원 메타데이터를 자원당 주 기한 하나로 조회합니다. 기관·워크스페이스는 선택 필터이며 없는 식별자는 빈 목록입니다. VM은 사용 종료일, LLM 키는 만료 시각, 외부 도메인은 갱신 또는 해제 뒤 예약 종료, GPU는 대기 중 승인 종료일 또는 할당·반납 중 실제 임대 종료입니다. 종료 상태와 주 기한 없는 자원은 제외합니다. expiringInDays는 1~365의 KST 달력 창으로 오늘부터 오늘+N일까지입니다. VM·대기 GPU는 종료일 양끝을 포함합니다. LLM 키는 관측 시각보다 미래이면서 오늘+N 다음 날 0시(KST)까지 포함하여 그날까지 사용 가능한 키를 담습니다. 도메인·GPU 임대의 정확한 시각은 관측 시각보다 미래이며 같은 다음 날 0시 미만입니다. expired=true는 날짜 종료가 오늘보다 이전이거나 정확한 기한이 관측 시각 이하인 자원입니다. 두 창을 함께 지정하면 교집합이므로 빈 목록입니다. 관측 시각과 count·페이지는 같은 DB snapshot이며 기한 경과를 외부 완료로 해석하지 않습니다. 실제 변경 권한은 기존 단건 경로의 기관 범위를 따릅니다.
+         */
+        get: operations["listAdminResourceDeadlines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/routes": {
         parameters: {
             query?: never;
@@ -5281,6 +5301,77 @@ export interface components {
             name: string;
             status: components["schemas"]["CatalogStatus"];
         };
+        /** @description 종류별 저장 날짜. 해당 종류에 없는 날짜와 저장되지 않은 날짜는 null입니다. 기한 경과는 외부 처리 완료를 증명하지 않습니다. */
+        AdminResourceDeadlineDates: {
+            /** Format: date-time */
+            allocatedAt?: string | null;
+            /** Format: date-time */
+            deleteRequestedAt?: string | null;
+            /** Format: date-time */
+            deleteScheduledFor?: string | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: date-time */
+            expiryStoppedAt?: string | null;
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: date */
+            grantedStartDate?: string | null;
+            /** Format: date-time */
+            leaseEndsAt?: string | null;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            renewDueAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
+            /** Format: date */
+            startDate?: string | null;
+        };
+        /**
+         * @description 기한 종류. VM 사용 종료, LLM 키 만료, 외부 도메인 갱신·예약, GPU 승인기간·실제 임대 종료를 구분합니다.
+         * @enum {string}
+         */
+        AdminResourceDeadlineKind: "VM_USAGE_END" | "LLM_KEY_EXPIRY" | "DOMAIN_RENEWAL" | "DOMAIN_RESERVATION" | "GPU_GRANT_END" | "GPU_LEASE_END";
+        AdminResourceDeadlineResponse: {
+            /** @description GPU의 저장 연결 상태. 다른 종류는 null입니다. */
+            connectionStatus?: string | null;
+            dates: components["schemas"]["AdminResourceDeadlineDates"];
+            /**
+             * Format: date-time
+             * @description 현재 주 기한. 날짜 종료는 다음 날 0시(KST)로 정규화합니다. 이 시각 경과는 정지·회수·삭제 완료를 뜻하지 않습니다.
+             */
+            deadlineAt: string;
+            deadlineKind: components["schemas"]["AdminResourceDeadlineKind"];
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description 그날까지 포함하는 종료일. VM·GPU 승인기간에 표시하며, LLM 키는 만료가 실제 KST 0시일 때만 전날을 표시합니다. 임의 시각의 기한에는 null입니다.
+             */
+            inclusiveEndDate?: string | null;
+            name: string;
+            /**
+             * Format: date-time
+             * @description 기한 판정과 함께 사용한 서버 시각. 마이크로초 정밀도입니다.
+             */
+            observedAt: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName?: string | null;
+            /** @description 서버 관측 시각에 주 기한이 경과했는지. 실제 후속 처리 상태와 별개입니다. */
+            overdue: boolean;
+            /** @description DB에 저장된 종류별 상태 */
+            sourceStatus: string;
+            /** @description 조회 시각의 종류별 상태. LLM 키는 정확한 만료 시각을 반영하며 다른 종류는 저장 상태입니다. */
+            status: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName?: string | null;
+        };
         AdminRouteView: {
             /** Format: date-time */
             appliedAt?: string | null;
@@ -8517,6 +8608,17 @@ export interface components {
         };
         PageResponseAdminPortMappingResponse: {
             content: components["schemas"]["AdminPortMappingResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminResourceDeadlineResponse: {
+            content: components["schemas"]["AdminResourceDeadlineResponse"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -13712,6 +13814,45 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminResourceDeadlines: {
+        parameters: {
+            query?: {
+                orgId?: string;
+                workspaceId?: string;
+                type?: components["schemas"]["ResourceType"];
+                deadlineKind?: components["schemas"]["AdminResourceDeadlineKind"];
+                expiringInDays?: number;
+                expired?: boolean;
+                sort?: "deadlineAt" | "-deadlineAt";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminResourceDeadlineResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

@@ -1,3 +1,4 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import { requestReaderKey } from '../api/request-review'
 import { useActiveResult } from '../lib/use-active-result'
 import { BulkChangePreviewTable, BulkChangeResultTable } from '../components/bulk/BulkChangeTables'
@@ -348,6 +349,7 @@ function BulkChangeFlow({
 
   const applied = (data: AdminBulkChangeApply, change: AdminBulkChangeSpec) => {
     const invalidations = FAMILY_QUERY_KEYS[family].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+    invalidations.push(invalidateAdminDeadlines(queryClient))
     invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin-bulk-operation', data.batchId] }))
     invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin-bulk-recent'] }))
     if (change.kind === 'LLM_KEY_LIMITS') invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))

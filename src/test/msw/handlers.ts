@@ -1,3 +1,4 @@
+import { resourceDeadlineHandlers } from './handlers/resource-deadlines'
 /**
  * 목 핸들러 목록.
  *
@@ -46,6 +47,7 @@ import { vmNetworkPolicyHandlers } from './handlers/vm-network-policy'
 
 /** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
+  ...resourceDeadlineHandlers,
   ...accessSupportHandlers,
   ...orgOperationHandlers,
   ...authHandlers,

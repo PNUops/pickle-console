@@ -1,3 +1,4 @@
+import { resetDeadlineFixtures } from './handlers/resource-deadlines'
 import { setupServer } from 'msw/node'
 import { resetAccessSupportFixtures } from './handlers/access-support'
 import { handlers } from './handlers'
@@ -33,6 +34,7 @@ export const server = setupServer(...handlers)
 
 /** Restore all stateful mock fixtures to their initial data (run between tests). */
 export function resetFixtures() {
+  resetDeadlineFixtures()
   resetAccessSupportFixtures()
   resetOrgOperationFixtures()
   resetUserFixtures()

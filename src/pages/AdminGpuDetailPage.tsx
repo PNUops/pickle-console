@@ -1,3 +1,4 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
@@ -73,7 +74,7 @@ function AdminGpuActionModal({ action, allocation, onClose, onDone }: { action: 
     if (action === 'reclaim') return reclaimGpu(allocation.id, reason.trim())
     if (hours == null) throw new Error('연장할 기간을 입력해 주세요.')
     return extendAdminGpu(allocation.id, hours, reason.trim())
-  }, onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: ['admin', 'gpu-allocations'] }), client.invalidateQueries({ queryKey: ['gpu-allocations'] }), client.invalidateQueries({ queryKey: ['resources'] })]); onDone() } })
+  }, onSuccess: async () => { await Promise.all([invalidateAdminDeadlines(client), client.invalidateQueries({ queryKey: ['admin', 'gpu-allocations'] }), client.invalidateQueries({ queryKey: ['gpu-allocations'] }), client.invalidateQueries({ queryKey: ['resources'] })]); onDone() } })
   return <Modal open title={TITLES[action]} onClose={save.isPending ? () => {} : onClose}><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); if (ready) save.mutate() }}>
     {save.isError && <Alert variant="danger">{save.error.message}</Alert>}
     {action === 'priority' && <FormField label="우선순위" required description="큰 값부터 할당하며 같은 값에서는 승인 순서를 따릅니다."><Input type="number" step={1} value={priority} onChange={(event) => setPriority(event.target.value)} /></FormField>}

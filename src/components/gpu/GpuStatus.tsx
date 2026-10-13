@@ -14,3 +14,5 @@ export function GpuStatusBadge({ status }: { status: string }) {
 export function GpuConnectionBadge({ status }: { status: string }) {
   return <Badge variant={status === 'ERROR' ? 'danger' : status === 'ATTACHED' ? 'success' : 'neutral'}>{CONNECTION_LABELS[status] ?? status}</Badge>
 }
+
+export { ALLOCATION_LABELS as GPU_ALLOCATION_LABELS, CONNECTION_LABELS as GPU_CONNECTION_LABELS }

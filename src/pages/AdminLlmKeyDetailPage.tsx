@@ -1,3 +1,4 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -180,6 +181,7 @@ function AdminLlmKeyDetailContent() {
         updated,
       )
     }
+    void invalidateAdminDeadlines(queryClient)
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] })
     // 한도 변경은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] })
