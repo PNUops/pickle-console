@@ -15,7 +15,8 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, canOperateVm, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import {
+  canAdminManageAccess, canManageVmDeletion, canOperateVm, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import {
@@ -92,9 +93,9 @@ function AdminVmsPageContent() {
   // SYS_ADMIN만, 강제 삭제는 SYS_ADMIN만(§3.11/§4).
   const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
   const canForceDelete = !!effectiveRole && isSysAdminOnly(effectiveRole)
-  // Every bulk kind on a VM needs at least an operating role.
-  const canSelect = canOperate
-  const selection = useBulkSelection('vms', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
+  // Selection also permits global access-list support.
+  const canSelect = canOperate || (!!user && canAdminManageAccess(user.role))
+  const selection = useBulkSelection('vms', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   // 교차 링크(사용자 상세의 워크스페이스 → VM 보기 등)를 위해 기관·워크스페이스 필터는 URL
   // 쿼리로 초기화한다. 읽기 전용 초기화만이며, 이후 필터 조작은 URL에
   // 되돌려 쓰지 않는다(의도된 절단).

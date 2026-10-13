@@ -72,6 +72,7 @@ export const userSupportHandlers: RequestHandler[] = [
     const studentNoWillChange = body.action === 'PROFILE' && candidate.studentNo !== user.studentNo
     const claimsPossible = candidateStatus === 'ACTIVE' && (body.action === 'ENABLE' || studentNoWillChange && !!candidate.studentNo)
     const impact: ProfileImpact = {
+      actorAccessImpact: { fingerprint: 'fixture-profile-impact', increases: [], pendingResourceOwners: [] },
       action: body.action, userId: user.id, observedAt: '2026-10-04T01:00:00Z', candidateStatus, claimsPossible, studentNoWillChange,
       invitations: claimsPossible && user.id === uuid(42) ? [{ id: uuid(501), workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'LAB', role: 'MEMBER', status: 'PENDING', matchedBy: 'STUDENT_NO', acceptedAt: null, alreadyMember: true, recipients: [{ requestId: uuid(201), orgId: uuid(1), type: 'VM', requestStatus: 'APPROVED', status: 'PENDING_JOIN', projectedStatus: 'QUEUED', grantedEndDate: '2026-12-31' }] }] : [],
     }

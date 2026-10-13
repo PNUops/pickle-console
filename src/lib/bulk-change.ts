@@ -78,8 +78,8 @@ const KIND_TITLES: Record<AdminBulkChangeKind, string> = {
 }
 
 /** The kinds this role may run on a family, in the order they are offered. */
-export function bulkKindsFor(family: BulkFamily, role: UserRole): BulkKindOption[] {
-  const access = canAdminManageAccess(role) ? (['ACCESS'] as const) : []
+export function bulkKindsFor(family: BulkFamily, role: UserRole, accessRole: UserRole = role): BulkKindOption[] {
+  const access = canAdminManageAccess(accessRole) ? (['ACCESS'] as const) : []
   let offered: AdminBulkChangeKind[]
   switch (family) {
     case 'llm-keys':

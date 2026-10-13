@@ -34,7 +34,7 @@ test('a foreign support filter does not load provider account inventory', async 
   renderApp(`/admin/llm/keys?org=${uuid(2)}`)
   await screen.findByRole('link', { name: 'other-org-key' })
   expect(reads).toBe(0)
-  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  expect(screen.getByRole('checkbox', { name: 'other-org-key 선택' })).toBeInTheDocument()
 })
 
 test('a late VM power result never appears on a different target in the same institution', async () => {

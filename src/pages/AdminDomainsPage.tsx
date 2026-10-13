@@ -1,3 +1,4 @@
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -24,6 +25,7 @@ import {
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import {
+  canAdminManageAccess,
   canInterveneDomain,
   canRunSysRoutine,
   isSysTier,
@@ -109,11 +111,10 @@ function AdminDomainsContent() {
   const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
-  // Every bulk kind on a domain needs the role the drawer's intervention
-  // section needs; access is a narrower subset of it.
+  // Direct interventions retain the institution role; access support is global.
   const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
-  const canSelect = !!effectiveRole && canInterveneDomain(effectiveRole)
-  const selection = useBulkSelection('domains', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
+  const canSelect = (!!effectiveRole && canInterveneDomain(effectiveRole)) || (!!user && canAdminManageAccess(user.role))
+  const selection = useBulkSelection('domains', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawWorkspaceId = searchParams.get('workspaceId')
   const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
@@ -305,6 +306,7 @@ function AdminDomainsContent() {
                       <TD>{domain.orgName}</TD>
                       <TD>
                         <DomainStatusBadge status={domain.status} />
+        {domain.kind === 'EXTERNAL' && <AdminResourceAccessLink type="DOMAIN" resourceId={domain.id} />}
                         {/* 예약 판별은 status가 아니라 releasedAt이다 — 해제된
                             행의 status는 ACTIVE로 남아, 이 배지가 없으면
                             "라우트 없는 ACTIVE"와 구분되지 않는다. */}

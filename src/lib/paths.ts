@@ -1,4 +1,5 @@
 import type { Scope } from './scope-context'
+import type { ResourceType } from '../api/queries'
 import { isUuid } from './validation'
 import { parseGuidePath } from './docs-paths'
 
@@ -39,6 +40,7 @@ export const consolePaths = {
   dnsDomainAccess: (domainId: string) => `/console/domains/${domainId}/access`,
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
+  resourceAccess: (type: ResourceType, resourceId: string, orgId?: string) => adminPath(`/admin/resource-access/${type}/${resourceId}`, orgId),
   workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,
   account: '/console/account',
   notifications: '/console/notifications',
@@ -64,6 +66,7 @@ export function adminNotificationPath(path: string, targetOrgId?: string): strin
 export const adminPaths = {
   dashboard: (orgId?: string) => adminPath('/admin', orgId),
   orgOperations: (orgId?: string) => adminPath('/admin/org-operations', orgId),
+  resourceAccess: (type: ResourceType, resourceId: string, orgId?: string) => adminPath(`/admin/resource-access/${type}/${resourceId}`, orgId),
   users: (orgId?: string, userId?: string) => adminPath(userId ? `/admin/users?selected=${userId}` : '/admin/users', orgId),
   userSupport: (userId: string, orgId?: string) => adminPath(`/admin/users/${userId}`, orgId),
   workspaceDetail: (workspaceId: string, orgId?: string, tab?: string) => adminPath(`/admin/workspaces?${new URLSearchParams({ workspaceId, inspect: '1', ...(tab ? { tab } : {}) })}`, orgId),

@@ -24,7 +24,7 @@ export const gpuAllocationStore: GpuAllocation[] = []
 export const gpuReviewStore: GpuReview[] = []
 const gpuGrantStore = new Map<string, Schemas['ResourceAccessGrantView'][]>()
 let nextGpuGrantId = 1000
-function grantsOf(row: GpuAllocation) {
+export function grantsOf(row: GpuAllocation) {
   let grants = gpuGrantStore.get(row.id)
   if (!grants) {
     grants = [{ id: uuid(909), granteeType: 'USER', role: 'OWNER', user: { userId: regularUser.id, name: regularUser.name, email: regularUser.email }, createdAt: row.createdAt }]
@@ -64,6 +64,7 @@ export const gpuHandlers = [
     return HttpResponse.json({
       resource: { id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName },
       grants: grantsOf(row),
+      canManageAccess: row.accessManageAllowed,
     } satisfies Schemas['ResourceAccessListResponse'])
   }),
   http.post('*/api/v1/gpu-allocations/:allocationId/access', async ({ params, request }) => {

@@ -29,6 +29,7 @@ import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AdminUserSupportPage } from './pages/AdminUserSupportPage'
 import { AdminWorkspacesPage } from './pages/AdminWorkspacesPage'
+import { AdminResourceAccessPage } from './pages/AdminResourceAccessPage'
 import { AdminOsImagesPage } from './pages/AdminOsImagesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
@@ -283,6 +284,7 @@ function App() {
         <Route path="users/:userId" element={<AdminUserSupportPage />} />
         <Route path="org-operations" element={<AdminOrgOperationsPage />} />
         <Route path="workspaces" element={<AdminWorkspacesPage />} />
+        <Route path="resource-access/:resourceType/:resourceId" element={<AdminResourceAccessPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         {/* 계정 설정은 사용자 콘솔과 같은 화면을 관리자 셸 안에서 띄운다 — 관리자는

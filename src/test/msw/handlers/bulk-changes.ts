@@ -1,3 +1,5 @@
+import { canAdminManageAccess } from '../../../auth/permissions'
+import { workspaceDetails } from './announcements'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { kstDateString } from '../../../lib/format'
@@ -93,8 +95,7 @@ function sameList(a: readonly string[], b: readonly string[]) {
 function reachKey(profile: Profile, key: AdminKey, change: Schemas['AdminBulkChangeSpec']): Reason | null {
   const role = activeAdminRole(profile, key.orgId)
   if (change.kind === 'ACCESS') {
-    if (!role) return 'NOT_FOUND'
-    return role === 'SYS_ADMIN' || role === 'ORG_ADMIN' ? null : 'FORBIDDEN'
+    return canAdminManageAccess(profile.role) ? null : 'FORBIDDEN'
   }
   if (!role || !OPERATE.includes(role)) return 'NOT_FOUND'
   if (change.kind === 'LLM_KEY_STATUS' && change.llmKeyStatus?.action === 'REVOKE') {
@@ -104,9 +105,10 @@ function reachKey(profile: Profile, key: AdminKey, change: Schemas['AdminBulkCha
 }
 
 function reachVm(profile: Profile, vm: Vm, change: Schemas['AdminBulkChangeSpec']): Reason | null {
+  if (change.kind === 'ACCESS') return canAdminManageAccess(profile.role) ? null : 'FORBIDDEN'
   const role = activeAdminRole(profile, vm.orgId)
   if (!role) return 'NOT_FOUND'
-  if (change.kind === 'ACCESS' || change.kind === 'VM_DELETION') {
+  if (change.kind === 'VM_DELETION') {
     return role === 'SYS_ADMIN' || role === 'ORG_ADMIN' ? null : 'FORBIDDEN'
   }
   return OPERATE.includes(role) ? null : 'NOT_FOUND'
@@ -120,8 +122,7 @@ function reachVm(profile: Profile, vm: Vm, change: Schemas['AdminBulkChangeSpec'
 function reachDomain(profile: Profile, domain: Domain, change: Schemas['AdminBulkChangeSpec']): Reason | null {
   const role = activeAdminRole(profile, domain.orgId)
   if (change.kind === 'ACCESS') {
-    if (!role) return 'NOT_FOUND'
-    return role === 'SYS_ADMIN' || role === 'ORG_ADMIN' ? null : 'FORBIDDEN'
+    return canAdminManageAccess(profile.role) ? null : 'FORBIDDEN'
   }
   return role && OPERATE.includes(role) ? null : 'NOT_FOUND'
 }
@@ -131,9 +132,10 @@ function judgeAccess(
   workspaceId: string | null | undefined,
   change: Schemas['AdminBulkAccessChange'],
 ): Judgement {
-  const user = adminUserStore.find((row) => row.id === change.userId && row.status === 'ACTIVE')
+  const user = adminUserStore.find((row) => row.id === change.userId && (change.action === 'REVOKE' || row.status === 'ACTIVE'))
   if (!user) return refused('INELIGIBLE')
-  if (!workspaceMembersOf(workspaceId).some((member) => member.userId === change.userId)) {
+  const members = workspaceId ? workspaceDetails[workspaceId]?.members ?? workspaceMembersOf(workspaceId) : []
+  if (change.action !== 'REVOKE' && !members.some((member) => member.userId === change.userId)) {
     return refused('NOT_MEMBER')
   }
   const key = `${targetId}:${change.userId}`

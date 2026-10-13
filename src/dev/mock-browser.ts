@@ -36,9 +36,10 @@ export async function startMockApi(): Promise<void> {
   const session = selected ? refreshSuccessHandler(selected[0], selected[1]) : refreshSuccessHandler('access-user')
   const worker = setupWorker(session, ...handlers)
   await worker.start({
-    onUnhandledRequest: gpuPreviewEnabled()
-      ? (request, print) => { if (new URL(request.url).pathname.startsWith('/api/')) print.error() }
-      : 'bypass',
+    // Synthetic previews never fall through to the configured API proxy.
+    onUnhandledRequest: (request, print) => {
+      if (new URL(request.url).pathname.startsWith('/api/')) print.error()
+    },
     quiet: true,
     serviceWorker: { url: `${import.meta.env.BASE_URL}mockServiceWorker.js` },
   })

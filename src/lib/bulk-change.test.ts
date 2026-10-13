@@ -120,6 +120,7 @@ describe('bulk change offers and labels', () => {
       'LLM_KEY_LIMITS',
       'LLM_KEY_STATUS',
       'LLM_KEY_EXPIRY',
+      'ACCESS',
     ])
     expect(bulkKindsFor('vms', 'SYS_MANAGER').map((k) => k.kind)).toEqual(['VM_PERIOD', 'VM_POWER'])
     expect(bulkKindsFor('vms', 'ORG_ADMIN').map((k) => k.kind)).toEqual([

@@ -1,6 +1,6 @@
+import { useAccessCandidates } from '../../lib/use-access-candidates'
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchAdminUsers, type AdminBulkListOp } from '../../api/queries'
+import { type AdminBulkListOp } from '../../api/queries'
 import type { UserRole } from '../../auth/auth-context'
 import {
   ACCESS_ACTION_LABELS,
@@ -459,24 +459,22 @@ export function DomainRenewalForm({
 
 export function AccessForm({
   family,
-  orgId,
+  targetIds,
   draft,
   onChange,
   errors,
 }: {
   family: BulkFamily
-  orgId: string | undefined
+  targetIds: readonly string[]
   draft: BulkDraft['access']
   onChange: (next: BulkDraft['access']) => void
   errors: Errors
 }) {
   const [queryInput, setQueryInput] = useState('')
   const q = useDebouncedValue(queryInput).trim()
-  const users = useQuery({
-    queryKey: ['admin', 'users', { q, orgId: orgId ?? null, for: 'bulk-access' }],
-    queryFn: () => fetchAdminUsers({ q, orgId, status: 'ACTIVE', size: 10 }),
-    enabled: q.length > 0 && draft.userId === '',
-  })
+  const source = useAccessCandidates(family === 'vms' ? 'VM' : family === 'llm-keys' ? 'LLM_API_KEY' : 'DOMAIN', targetIds, draft.action === 'REVOKE')
+  const users = source.candidates.filter((user) => `${user.name} ${user.email}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+
   const hints =
     family === 'llm-keys'
       ? LLM_KEY_RESOURCE_ROLE_HINTS
@@ -508,14 +506,14 @@ export function AccessForm({
               onChange={(event) => setQueryInput(event.target.value)}
             />
           </FormField>
-          {users.isFetching && <Spinner label="사용자 검색 중" />}
-          {users.isError && <MessageBar variant="danger">{users.error.message}</MessageBar>}
-          {users.isSuccess && users.data.content.length === 0 && (
+          {source.pending && <Spinner label="구성원과 기존 권한 확인 중" />}
+          {source.errors.length > 0 && <MessageBar variant="warning">일부 대상의 구성원 또는 기존 권한을 확인하지 못했습니다. {source.errors.join(' ')} 미리보기에서 자원별 적용 조건을 확인해 주세요.</MessageBar>}
+          {!source.pending && q.length > 0 && users.length === 0 && (
             <p className="text-sm text-foreground-muted">찾은 사용자가 없습니다.</p>
           )}
-          {users.isSuccess && users.data.content.length > 0 && (
+          {q.length > 0 && users.length > 0 && (
             <ul aria-label="검색된 사용자" className="divide-y divide-stroke-subtle rounded-control border border-stroke-subtle">
-              {users.data.content.map((user) => (
+              {users.map((user) => (
                 <li key={user.id}>
                   <button
                     type="button"
@@ -533,6 +531,7 @@ export function AccessForm({
           )}
         </div>
       )}
+      <p className="text-sm text-foreground-muted">선택 자원의 구성원에서 대상을 고릅니다. 회수는 비활성 계정이나 이전 구성원의 기존 개인 권한도 선택할 수 있습니다. 여러 워크스페이스의 자격은 자원별 미리보기에서 판정합니다.</p>
       <CardRadioGroup
         legend="접근 권한 변경"
         value={draft.action}

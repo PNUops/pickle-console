@@ -1,3 +1,4 @@
+import type { AccessConfirmation } from './resource-access'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { api } from './client'
@@ -583,7 +584,7 @@ export function fetchVmAccessGrants(vmId: string): Promise<VmAccessList> {
 /** 사용자 지정 부여 또는 워크스페이스 전체 부여. */
 export function addVmAccessGrant(
   vmId: string,
-  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole; confirmation?: AccessConfirmation },
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/vms/{vmId}/access', {
@@ -599,11 +600,12 @@ export function updateVmAccessGrant(
   vmId: string,
   grantId: string,
   role: ResourceRole,
+  confirmation?: AccessConfirmation,
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.PATCH('/vms/{vmId}/access/{grantId}', {
       params: { path: { vmId, grantId } },
-      body: { role },
+      body: { role, ...(confirmation ? { confirmation } : {}) },
     })
     if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
     return data
@@ -1289,7 +1291,7 @@ export function fetchLlmKeyAccessGrants(keyId: string): Promise<VmAccessList> {
 
 export function addLlmKeyAccessGrant(
   keyId: string,
-  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole; confirmation?: AccessConfirmation },
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/llm-keys/{keyId}/access', {
@@ -1305,11 +1307,12 @@ export function updateLlmKeyAccessGrant(
   keyId: string,
   grantId: string,
   role: ResourceRole,
+  confirmation?: AccessConfirmation,
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.PATCH('/llm-keys/{keyId}/access/{grantId}', {
       params: { path: { keyId, grantId } },
-      body: { role },
+      body: { role, ...(confirmation ? { confirmation } : {}) },
     })
     if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
     return data
@@ -1337,7 +1340,7 @@ export function fetchDnsDomainAccessGrants(domainId: string): Promise<VmAccessLi
 
 export function addDnsDomainAccessGrant(
   domainId: string,
-  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
+  body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole; confirmation?: AccessConfirmation },
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/dns-domains/{domainId}/access', {
@@ -1353,11 +1356,12 @@ export function updateDnsDomainAccessGrant(
   domainId: string,
   grantId: string,
   role: ResourceRole,
+  confirmation?: AccessConfirmation,
 ): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.PATCH('/dns-domains/{domainId}/access/{grantId}', {
       params: { path: { domainId, grantId } },
-      body: { role },
+      body: { role, ...(confirmation ? { confirmation } : {}) },
     })
     if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
     return data
