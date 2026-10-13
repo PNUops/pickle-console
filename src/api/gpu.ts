@@ -1,3 +1,4 @@
+import type { AccessConfirmation } from './resource-access'
 import { api } from './client'
 import { toApiError } from './problem'
 import { guardNetwork, fetchVms, type ResourceRole, type VmAccessGrant, type VmAccessList, type VmSummary } from './queries'
@@ -91,7 +92,7 @@ export function fetchGpuAccessGrants(allocationId: string): Promise<VmAccessList
   })
 }
 
-export function addGpuAccessGrant(allocationId: string, body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole }): Promise<VmAccessGrant> {
+export function addGpuAccessGrant(allocationId: string, body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole; confirmation?: AccessConfirmation }): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/gpu-allocations/{allocationId}/access', { params: { path: { allocationId } }, body })
     if (!data) throw toApiError(error, 'GPU 접근 권한을 부여하지 못했습니다.')
@@ -99,9 +100,9 @@ export function addGpuAccessGrant(allocationId: string, body: { granteeType: 'US
   })
 }
 
-export function updateGpuAccessGrant(allocationId: string, grantId: string, role: ResourceRole): Promise<VmAccessGrant> {
+export function updateGpuAccessGrant(allocationId: string, grantId: string, role: ResourceRole, confirmation?: AccessConfirmation): Promise<VmAccessGrant> {
   return guardNetwork(async () => {
-    const { data, error } = await api.PATCH('/gpu-allocations/{allocationId}/access/{grantId}', { params: { path: { allocationId, grantId } }, body: { role } })
+    const { data, error } = await api.PATCH('/gpu-allocations/{allocationId}/access/{grantId}', { params: { path: { allocationId, grantId } }, body: { role, ...(confirmation ? { confirmation } : {}) } })
     if (!data) throw toApiError(error, 'GPU 접근 권한을 변경하지 못했습니다.')
     return data
   })

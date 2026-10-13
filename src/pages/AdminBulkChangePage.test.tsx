@@ -242,10 +242,10 @@ describe('AdminBulkChangePage', () => {
     })
   })
 
-  test('offers revoke and access only to the administrator tier', async () => {
+  test('keeps key revocation restricted while offering access support to managers', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['active-admin-key'])
-    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
     await chooseKind(user, '상태')
     expect(screen.getByRole('radio', { name: '정지' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: '재개' })).toBeInTheDocument()
@@ -383,23 +383,15 @@ describe('AdminBulkChangePage', () => {
     expect(unknown).toHaveTextContent('QUOTA_HELD')
   })
 
-  test('refuses a grantee outside the workspace and reports a grant changed since the preview', async () => {
+  test('withholds unrelated profile directory users and reports a grant changed since preview', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key'])
     await chooseKind(user, '접근 권한')
-    await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '정외부')
-    await user.click(
-      within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
-    )
-    await user.click(screen.getByRole('button', { name: '미리보기' }))
-    expect(
-      within(await screen.findByRole('table', { name: '일괄 변경 미리보기' })).getByRole('row', {
-        name: /active-admin-key/,
-      }),
-    ).toHaveTextContent('워크스페이스 구성원 아님')
-
-    await user.click(screen.getByRole('button', { name: '이전' }))
-    await user.click(screen.getByRole('button', { name: '다시 고르기' }))
+    const search = screen.getByRole('searchbox', { name: /대상 사용자/ })
+    await user.type(search, '정외부')
+    expect(await screen.findByText('찾은 사용자가 없습니다.')).toBeInTheDocument()
+    expect(bulkPreviewBodies).toHaveLength(0)
+    await user.clear(search)
     await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '홍길동')
     await user.click(
       within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
@@ -414,12 +406,12 @@ describe('AdminBulkChangePage', () => {
     )
   })
 
-  test('sends a VM power change and offers no deletion or access to an org manager', async () => {
+  test('sends VM power while retaining deletion restrictions and offering access support', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['algo-judge'], 'vms')
     expect(screen.getByRole('radio', { name: '기간' })).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: '삭제 예약·취소' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
     await chooseKind(user, '전원')
     await user.click(screen.getByRole('radio', { name: '재부팅' }))
     await user.click(screen.getByRole('button', { name: '미리보기' }))
@@ -467,13 +459,13 @@ describe('AdminBulkChangePage', () => {
 })
 
 describe('AdminBulkChangePage on domains', () => {
-  test('offers the domain kinds to an org manager and access only to the administrator tier', async () => {
+  test('offers institution domain operations and global access support to a manager', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['myblog.pusan.dev'], 'domains')
     for (const title of ['사용 기한', '재검증', '강제 해제']) {
       expect(screen.getByRole('radio', { name: title })).toBeInTheDocument()
     }
-    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
   })
 
   test('sends a renewal as the end of the chosen KST day and marks other kinds ineligible', async () => {

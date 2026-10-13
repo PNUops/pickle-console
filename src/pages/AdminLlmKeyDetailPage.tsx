@@ -1,3 +1,4 @@
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router'
@@ -201,7 +202,7 @@ function AdminLlmKeyDetailContent() {
         eyebrow={`${key.orgName} · ${key.workspaceName}`}
         title={key.name}
         description={key.purpose ?? '용도가 기록되지 않았습니다.'}
-        actions={<LlmKeyStatusBadge status={status} />}
+        actions={<><LlmKeyStatusBadge status={status} /><AdminResourceAccessLink type="LLM_API_KEY" resourceId={key.id} /></>}
       />
 
       {hasActions && (

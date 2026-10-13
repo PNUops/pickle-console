@@ -31,7 +31,7 @@ import { useAdminScope } from '../lib/use-admin-scope'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { KeyCreditObservation } from '../components/OpenRouterCredits'
 import { useAuth } from '../auth/auth-context'
-import { canOperateLlmKey, isSysTier, managesOrg } from '../auth/permissions'
+import { canAdminManageAccess, canOperateLlmKey, isSysTier, managesOrg } from '../auth/permissions'
 import { useBulkSelection } from '../lib/bulk-selection'
 import {
   BulkSelectionBar,
@@ -64,10 +64,9 @@ function AdminLlmKeysPageContent() {
   const { activeOrgId } = scope
   const { user } = useAuth()
   const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  // Every bulk kind on a key needs at least an operating role, so viewers get
-  // no selection at all.
-  const canSelect = !!role && canOperateLlmKey(role)
-  const selection = useBulkSelection('llm-keys', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
+  // Direct operations use the institution role; access support uses its global role.
+  const canSelect = (!!role && canOperateLlmKey(role)) || (!!user && canAdminManageAccess(user.role))
+  const selection = useBulkSelection('llm-keys', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState<LlmApiKeyStatus | undefined>(undefined)
   const workspaceId = searchParams.get('workspaceId') ?? undefined

@@ -40,8 +40,9 @@ export function canReadSupportMetadata(role: UserRole): boolean {
 
 /** Only existing student support routes use the global institution picker. */
 export function usesGlobalSupportScope(pathname: string): boolean {
-  return /^\/admin\/(users|workspaces|requests|vms|domains|gpus)(\/|$)/.test(pathname)
+  return /^\/admin\/(users|workspaces|requests|vms|domains|gpus|resource-access)(\/|$)/.test(pathname)
     || /^\/admin\/llm\/keys(\/|$)/.test(pathname)
+    || /^\/admin\/bulk\/(vms|llm-keys|domains)(\/|$)/.test(pathname)
 }
 
 // ── per-organisation scope ──────────────────────────────────────────────────
@@ -154,11 +155,9 @@ export function canAdminRevokeLlmKey(role: UserRole): boolean {
   return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
 }
 
-/** An administrator's edit of a resource's access list (bulk change kind
- *  ACCESS). SYS_ADMIN everywhere, ORG_ADMIN in the organisations it
- *  administers — the same tier that schedules a VM's deletion. */
+/** Global workspace and individual access support writes. */
 export function canAdminManageAccess(role: UserRole): boolean {
-  return role === 'ORG_ADMIN' || role === 'SYS_ADMIN'
+  return role === 'ORG_ADMIN' || role === 'ORG_MANAGER' || role === 'SYS_ADMIN'
 }
 
 /** Domain force-release / reverification and route re-apply (§3.16). Same

@@ -1424,6 +1424,7 @@ export const llmKeyHandlers: RequestHandler[] = [
           workspaceName: key.workspaceName,
         },
         grants: llmKeyAccessStore[key.id] ?? [],
+        canManageAccess: key.accessManageAllowed,
       } satisfies Schemas['ResourceAccessListResponse'],
       { status: 200 },
     )

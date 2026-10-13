@@ -1,8 +1,9 @@
+import { AdminWorkspaceInviteControls, AdminWorkspaceMemberActions, AdminWorkspaceOverviewControls, AdminWorkspacePendingInvitations } from '../components/workspace/AdminWorkspaceControls'
 import { requestReaderKey } from '../api/request-review'
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { fetchAdminLlmKeys, fetchAdminDomains, fetchAdminVms, fetchAdminWorkspace, fetchAdminWorkspaces, fetchAdminWorkspaceInvitations } from '../api/queries'
+import { fetchAdminLlmKeys, fetchAdminDomains, fetchAdminVms, fetchAdminWorkspace, fetchAdminWorkspaces } from '../api/queries'
 import { fetchAdminGpuAllocations } from '../api/gpu'
 import { useAuth } from '../auth/auth-context'
 import { supportsInvitationRead } from '../api/admin-user-support'
@@ -44,8 +45,7 @@ import {
 } from '../lib/labels'
 
 /**
- * 관리자 워크스페이스 관리 — 조회 우선(구성원 감사·오너 부재 워크스페이스 파악).
- * 워크스페이스 변경(생성·역할 조정·삭제)은 다음 단계.
+ * Global workspace support uses server capabilities for each change.
  */
 export function AdminWorkspacesPage() {
   const { user } = useAuth()
@@ -90,7 +90,7 @@ function AdminWorkspacesPageContent() {
         <h1 className="text-2xl font-bold text-neutral-900">워크스페이스 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
           {activeOrg?.name ?? '플랫폼 전체'} 워크스페이스와 구성원을 조회합니다.
-          구성원 변경은 워크스페이스 소유자가 수행합니다.
+          허용된 역할에서는 정보와 구성원, 소유자와 접근 권한을 지원합니다.
         </p>
       </div>
 
@@ -187,12 +187,12 @@ function AdminWorkspacesPageContent() {
         {selectedId !== null && (
           !isUuid(selectedId) ? <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
             : state.inspect ? <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} tab={state.tab}
-                onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} />
+                onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
               : workspaces.isPending ? <Spinner label="관리 범위의 대상 확인 중" />
               : workspaces.isError ? <Alert variant="danger">{workspaces.error.message}</Alert>
                 : !selectedInScope ? <Alert variant="danger">현재 관리 범위의 목록에 이 워크스페이스가 없습니다.</Alert>
                   : <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} tab={state.tab}
-                    onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} />
+                    onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
         )}
       </Drawer>
     </div>
@@ -208,7 +208,7 @@ const USER_STATUS_VARIANT: Record<UserStatus, 'success' | 'warning' | 'danger' |
   WITHDRAWN: 'neutral',
 }
 
-function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string; tab: string; onTab: (tab: string) => void }) {
+function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspaceId: string; tab: string; onTab: (tab: string) => void; onDeleted: () => void }) {
   const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
   const location = useLocation()
@@ -234,7 +234,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
     <div className="space-y-6 [overflow-wrap:anywhere]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="min-w-0 text-lg font-semibold text-neutral-900">{workspace.name}</h3>
-        <div className="flex gap-2"><Badge>조회 전용</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
+        <div className="flex gap-2"><Badge>{workspace.canUpdateInfo || workspace.canManageMembers || workspace.canInviteMembers ? '지원 편집 가능' : '조회 전용'}</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
       </div>
       <p className="text-sm text-neutral-500">구성원은 전체 워크스페이스 기준이며 자원과 신청은 현재 관리 기관에서 조회합니다.</p>
       <Tabs aria-label="워크스페이스 상세 탭" idPrefix="workspace-detail-" value={tab} onChange={onTab}
@@ -257,19 +257,21 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
         </div>
         {workspace.description && <Field label="설명" value={workspace.description} />}
       </dl>
+      <AdminWorkspaceOverviewControls key={`${workspace.id}:${workspace.canUpdateInfo}:${workspace.canDelete}`} workspace={workspace} onDeleted={onDeleted} />
       </TabPanel>
 
       <TabPanel id="members" idPrefix="workspace-detail-" active={tab === 'members'} className="space-y-2">
         {workspace.members.length === 0 ? (
           <p className="text-sm text-neutral-500">구성원이 없습니다.</p>
         ) : (
-          <Table>
+          <Table className="min-w-[38rem] sm:min-w-0">
             <THead>
               <TR>
                 <TH>이름</TH>
                 <TH>역할</TH>
                 <TH>계정 상태</TH>
                 <TH>참여일</TH>
+                {(workspace.canManageMembers || workspace.canManageOwners) && <TH>관리</TH>}
               </TR>
             </THead>
             <TBody>
@@ -290,17 +292,19 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
                   <TD className="whitespace-nowrap text-xs text-neutral-500">
                     {formatDateTime(member.joinedAt)}
                   </TD>
+                  {(workspace.canManageMembers || workspace.canManageOwners) && <TD><AdminWorkspaceMemberActions key={`${member.userId}:${member.canChangeRole}:${member.canRemove}:${workspace.canManageOwners}:${workspace.canManageMembers}`} workspace={workspace} member={member} /></TD>}
                 </TR>
               ))}
             </TBody>
           </Table>
         )}
+        <AdminWorkspaceInviteControls key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} />
       </TabPanel>
       <TabPanel id="resources" idPrefix="workspace-detail-" active={tab === 'resources'}>
         <WorkspaceResources workspaceId={workspaceId} />
       </TabPanel>
       <TabPanel id="invitations" idPrefix="workspace-detail-" active={tab === 'invitations'}>
-        {canReadInvitations ? <WorkspaceInvitations workspaceId={workspaceId} /> : <Alert>이 역할에서는 대기 초대 정보를 조회할 수 없습니다.</Alert>}
+        {canReadInvitations ? <AdminWorkspacePendingInvitations key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} /> : <Alert>이 역할에서는 대기 초대 정보를 조회할 수 없습니다.</Alert>}
       </TabPanel>
     </div>
   )
@@ -334,20 +338,5 @@ function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
       {counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했습니다.</span> : <span>{counts[index].data}개</span>}
     </li>)}</ul>
     <Link to={adminPaths.requests(activeOrgId, workspaceId)} className="inline-flex text-primary-700 hover:underline">이 워크스페이스의 신청 보기</Link>
-  </div>
-}
-
-function WorkspaceInvitations({ workspaceId }: { workspaceId: string }) {
-  const { user } = useAuth()
-  const { activeOrgId } = useAdminScope()
-  const invitations = useQuery({ queryKey: ['admin', 'workspace-invitations', workspaceId, activeOrgId ?? null, requestReaderKey(user)], queryFn: () => fetchAdminWorkspaceInvitations(workspaceId) })
-  return <div className="space-y-3 text-sm [overflow-wrap:anywhere]">
-    {invitations.isPending ? <Spinner label="대기 초대 불러오는 중" /> : invitations.isError ? <Alert variant="danger">{invitations.error.message}</Alert>
-      : invitations.data.length === 0 ? <p className="text-neutral-500">대기 중인 초대가 없습니다.</p>
-        : <ul className="space-y-3">{invitations.data.map((invitation) => <li key={invitation.id} className="rounded border border-neutral-200 p-3">
-          <p>{invitation.email ?? invitation.studentNo ?? '초대 대상 정보 없음'}</p>
-          <p className="mt-1 text-neutral-500">{WORKSPACE_ROLE_LABELS[invitation.role]} / {formatDateTime(invitation.invitedAt)} 초대</p>
-          <p className="text-neutral-500">초대한 사람: {invitation.invitedBy.name}</p>
-        </li>)}</ul>}
   </div>
 }

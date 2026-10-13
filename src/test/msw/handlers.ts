@@ -6,6 +6,7 @@
  * 되면 미리 보기가 테스트와 다른 것을 보여 주므로 목록은 한 곳에만 둔다.
  */
 import type { RequestHandler } from 'msw'
+import { accessSupportHandlers } from './handlers/access-support'
 import { gpuHandlers } from './handlers/gpu'
 import { orgOperationHandlers } from './handlers/org-operations'
 import { bulkChangeHandlers } from './handlers/bulk-changes'
@@ -45,6 +46,7 @@ import { vmNetworkPolicyHandlers } from './handlers/vm-network-policy'
 
 /** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
+  ...accessSupportHandlers,
   ...orgOperationHandlers,
   ...authHandlers,
   ...gpuHandlers,

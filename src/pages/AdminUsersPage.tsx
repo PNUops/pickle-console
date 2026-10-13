@@ -1,3 +1,4 @@
+import { AccessIncreaseDetails } from '../components/resource/AccessIncreaseReview'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,6 +32,7 @@ import type { components } from '../api/schema'
 import { useAuth, type ManagedOrg } from '../auth/auth-context'
 import { administeredOrgs, isSysAdminOnly, isSysTier } from '../auth/permissions'
 import {
+  Checkbox,
   Alert,
   Badge,
   Button,
@@ -530,6 +532,8 @@ function UserProfileCorrectionModal({
   onSaved: (updated: UserAdminDetail, impact: ProfileImpact) => Promise<void> | void
 }) {
   const viewer = useAuth().user
+  const [accessPurpose, setAccessPurpose] = useState('')
+  const [confirmedAccess, setConfirmedAccess] = useState<string | null>(null)
   const [position, setPosition] = useState(user.position ?? '')
   const [studentNo, setStudentNo] = useState(user.studentNo ?? '')
   const [departmentCode, setDepartmentCode] = useState(user.departmentCode ?? '')
@@ -573,10 +577,13 @@ function UserProfileCorrectionModal({
     enabled: !unchanged && !departmentIncomplete,
   })
   const impactReady = impact.isSuccess && !impact.isFetching && profileText === debouncedProfile
+  const actorImpact = impactReady ? impact.data.actorAccessImpact : undefined
+  const needsAccessConfirmation = !!actorImpact && (actorImpact.increases.length > 0 || actorImpact.pendingResourceOwners.length > 0)
+  const accessConfirmed = !needsAccessConfirmation || (!!accessPurpose.trim() && confirmedAccess === actorImpact?.fingerprint)
   const impactFields = impact.isError ? fieldErrorsOf(toApiError(impact.error, '프로필 변경 영향을 확인하지 못했습니다.').problem) : {}
 
   const save = useMutation({
-    mutationFn: (submitted: { profile: AdminProfileUpdate; impact: ProfileImpact }) => updateUserProfile(user.id, submitted.profile),
+    mutationFn: (submitted: { profile: AdminProfileUpdate; impact: ProfileImpact }) => updateUserProfile(user.id, { ...submitted.profile, ...(needsAccessConfirmation && submitted.impact.actorAccessImpact ? { confirmation: { purpose: accessPurpose.trim(), fingerprint: submitted.impact.actorAccessImpact.fingerprint, confirmed: true } } : {}) }),
     onSuccess: async (updated, submitted) => {
       setError(null)
       setFieldErrors({})
@@ -586,6 +593,7 @@ function UserProfileCorrectionModal({
       const apiError = toApiError(err, '프로필을 정정하지 못했습니다.')
       const mapped = fieldErrorsOf(apiError.problem)
       setFieldErrors(mapped)
+      if (mapped.confirmation) { setConfirmedAccess(null); void impact.refetch() }
       setError(Object.keys(mapped).length > 0 ? null : apiError.message)
     },
   })
@@ -600,7 +608,7 @@ function UserProfileCorrectionModal({
             onClose()
             return
           }
-          if (impactReady) save.mutate({ profile, impact: impact.data })
+          if (impactReady && accessConfirmed) save.mutate({ profile, impact: impact.data })
         }}
         className="space-y-4"
         noValidate
@@ -674,11 +682,17 @@ function UserProfileCorrectionModal({
         {!unchanged && impact.isFetching && <Spinner label="프로필 변경 영향 확인 중" />}
         {!unchanged && impact.isError && Object.keys(impactFields).length === 0 && <Alert variant="danger">{impact.error.message}<Button variant="secondary" size="sm" onClick={() => void impact.refetch()}>변경 영향 다시 조회</Button></Alert>}
         {!unchanged && impactReady && <ProfileImpactView impact={impact.data} />}
+        {needsAccessConfirmation && actorImpact && <section aria-label="회원님의 권한 증가 확인" className="space-y-3">
+          <Alert variant="warning">이 정정으로 회원님의 권한이 늘어납니다. 정확한 대상과 얻는 권한을 확인해 주세요.</Alert>
+          <AccessIncreaseDetails impact={actorImpact} />
+          <FormField label="권한을 얻는 목적" required error={fieldErrors.confirmation}><Input value={accessPurpose} onChange={(event) => { setAccessPurpose(event.target.value); setConfirmedAccess(null) }} maxLength={200} /></FormField>
+          <Checkbox label="목적과 정확한 대상, 얻는 권한을 확인했습니다" checked={confirmedAccess === actorImpact.fingerprint} onChange={(event) => setConfirmedAccess(event.target.checked ? actorImpact.fingerprint : null)} />
+        </section>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button type="submit" loading={save.isPending} disabled={departmentIncomplete || (!unchanged && !impactReady)}>
+          <Button type="submit" loading={save.isPending} disabled={departmentIncomplete || (!unchanged && (!impactReady || !accessConfirmed))}>
             저장
           </Button>
         </div>

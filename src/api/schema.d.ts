@@ -1566,6 +1566,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/resource-access/{resourceType}/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminResourceAccess"];
+        put?: never;
+        post: operations["addAdminResourceAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/resource-access/{resourceType}/{resourceId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAdminResourceAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/resource-access/{resourceType}/{resourceId}/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeAdminResourceAccessGrant"];
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminResourceAccessGrant"];
+        trace?: never;
+    };
     "/admin/routes": {
         parameters: {
             query?: never;
@@ -2260,10 +2308,10 @@ export interface paths {
         get: operations["getAdminWorkspace"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["deleteAdminWorkspace"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["updateAdminWorkspace"];
         trace?: never;
     };
     "/admin/workspaces/{workspaceId}/invitations": {
@@ -2279,7 +2327,71 @@ export interface paths {
          */
         get: operations["listAdminWorkspaceInvitations"];
         put?: never;
+        post: operations["inviteAdminWorkspaceMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/invitations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAdminWorkspaceInvitations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         post?: never;
+        delete: operations["cancelAdminWorkspaceInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeAdminWorkspaceMember"];
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminWorkspaceMemberRole"];
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/members/{userId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAdminWorkspaceMemberRole"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2543,6 +2655,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dns-domains/{domainId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewDnsDomainAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dns-domains/{domainId}/access/{grantId}": {
         parameters: {
             query?: never;
@@ -2749,6 +2877,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/gpu-allocations/{allocationId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewGpuAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/gpu-allocations/{allocationId}/access/{grantId}": {
         parameters: {
             query?: never;
@@ -2940,6 +3084,22 @@ export interface paths {
          * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 키의 접근 권한을 부여합니다. 사용자는 이 키를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
          */
         post: operations["addLlmKeyAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewLlmKeyAccessChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3660,6 +3820,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewVmAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/access/{grantId}": {
         parameters: {
             query?: never;
@@ -4121,8 +4297,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccessConfirmation: {
+            /** @description 미리보기의 권한 증가를 명시적으로 확인했을 때만 true */
+            confirmed?: boolean;
+            /** @description 미리보기에서 받은 정확한 대상·변경·현재 권한의 지문 */
+            fingerprint?: string;
+            /** @description 권한을 얻는 목적. 증가한 권한과 함께 감사에 기록됩니다. */
+            purpose?: string;
+        };
         /** @enum {string} */
         AccessGranteeType: "USER" | "WORKSPACE";
+        AccessIncrease: {
+            afterRole: string;
+            beforeRole?: string | null;
+            resourceType?: components["schemas"]["ResourceType"] | null;
+            /** Format: uuid */
+            targetId: string;
+            /** Format: uuid */
+            workspaceId: string;
+        };
         /** @enum {string} */
         Action: "ACCEPT" | "DROP";
         ActivateMfaRequest: {
@@ -4142,7 +4335,13 @@ export interface components {
             targetId?: string | null;
             targetType?: string | null;
         };
+        ActorAccessImpact: {
+            fingerprint: string;
+            increases: components["schemas"]["AccessIncrease"][];
+            pendingResourceOwners: components["schemas"]["PendingResourceOwner"][];
+        };
         AddResourceAccessGrantRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description USER는 지정된 사용자 한 명, WORKSPACE은 소유 워크스페이스 전체 */
             granteeType: components["schemas"]["AccessGranteeType"];
             /** @description 부여할 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
@@ -4205,6 +4404,7 @@ export interface components {
         /** @enum {string} */
         AdminBulkChangeKind: "LLM_KEY_LIMITS" | "LLM_KEY_STATUS" | "LLM_KEY_EXPIRY" | "VM_PERIOD" | "VM_POWER" | "VM_DELETION" | "DOMAIN_RENEWAL" | "DOMAIN_FORCE_RELEASE" | "DOMAIN_VERIFY" | "ACCESS";
         AdminBulkChangePreviewItem: {
+            actorAccessImpact?: components["schemas"]["ActorAccessImpact"] | null;
             /** @description true면 적용할 수 있습니다. fields가 비어 있으면 이미 그 값이라 바뀌지 않습니다. */
             applicable: boolean;
             /** @description 바뀔 필드만 */
@@ -4227,6 +4427,9 @@ export interface components {
          */
         AdminBulkChangeReason: "NOT_FOUND" | "FORBIDDEN" | "INVALID_STATE" | "EXPIRED" | "PROTECTED" | "INELIGIBLE" | "NOT_MEMBER" | "NO_GRANT" | "ALREADY_GRANTED" | "VALIDATION";
         AdminBulkChangeRequest: {
+            accessConfirmations?: {
+                [key: string]: components["schemas"]["AccessConfirmation"];
+            } | null;
             change: components["schemas"]["AdminBulkChangeSpec"];
             /** @description 적용에서만 씁니다. 미리보기가 준 대상별 fingerprint를 전부 담습니다. 서버는 적용 시점의 값을 다시 계산해 다른 대상은 STALE로 답하고 쓰지 않습니다. */
             fingerprints?: {
@@ -5014,6 +5217,7 @@ export interface components {
             workspaceName?: string | null;
         };
         AdminUpdateProfileRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             departmentCode?: string | null;
             departmentOther?: string | null;
             position?: components["schemas"]["UserPosition"] | null;
@@ -5028,6 +5232,7 @@ export interface components {
         };
         AdminUserProfileImpactResponse: {
             action: components["schemas"]["AdminUserProfileImpactAction"];
+            actorAccessImpact: components["schemas"]["ActorAccessImpact"];
             candidateStatus: components["schemas"]["UserStatus"];
             claimsPossible: boolean;
             invitations: components["schemas"]["AdminUserProfileInvitationImpact"][];
@@ -5198,8 +5403,14 @@ export interface components {
             orgId: string;
         };
         AdminWorkspaceDetailResponse: {
+            canDelete: boolean;
+            canInviteMembers: boolean;
+            canManageMembers: boolean;
+            canManageOwners: boolean;
+            canUpdateInfo: boolean;
             /** Format: date-time */
             createdAt: string;
+            deleteBlockedReason?: string | null;
             description?: string | null;
             /** Format: uuid */
             id: string;
@@ -5212,6 +5423,8 @@ export interface components {
             vmCount: number;
         };
         AdminWorkspaceMemberResponse: {
+            canChangeRole: boolean;
+            canRemove: boolean;
             email: string;
             /** Format: date-time */
             joinedAt: string;
@@ -6122,6 +6335,7 @@ export interface components {
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
         InviteWorkspaceMembersRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description 초대할 사람 목록. 1명에서 200명까지이며, 한 항목에는 이메일과 학번 중 하나만 씁니다. */
             entries: components["schemas"]["WorkspaceInvitationEntry"][];
         };
@@ -8461,6 +8675,15 @@ export interface components {
         PasswordResetRequest: {
             email: string;
         };
+        PendingResourceOwner: {
+            projectedStatus: string;
+            /** Format: uuid */
+            requestId: string;
+            resourceType: components["schemas"]["ResourceType"];
+            role: string;
+            /** Format: uuid */
+            workspaceId: string;
+        };
         /** @enum {string} */
         PortForwardApplyState: "PENDING" | "ACTIVE" | "FAILED";
         PortForwardingView: {
@@ -8761,6 +8984,17 @@ export interface components {
             capacityVcpu?: number | null;
             guidance: string;
         };
+        /** @enum {string} */
+        ResourceAccessChangeAction: "ADD" | "UPDATE" | "REMOVE";
+        ResourceAccessChangePreviewRequest: {
+            action: components["schemas"]["ResourceAccessChangeAction"];
+            /** Format: uuid */
+            grantId?: string | null;
+            granteeType?: components["schemas"]["AccessGranteeType"] | null;
+            role?: components["schemas"]["ResourceRole"] | null;
+            /** Format: uuid */
+            userId?: string | null;
+        };
         /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 워크스페이스 전체입니다. */
         ResourceAccessGrantView: {
             /** Format: date-time */
@@ -8776,6 +9010,8 @@ export interface components {
         };
         /** @description 리소스 접근 권한 목록과, 그 목록이 어느 리소스의 것인지 알려 주는 최소 정보 */
         ResourceAccessListResponse: {
+            /** @description 현재 수행자가 이 목록을 변경할 수 있는지 */
+            canManageAccess: boolean;
             /** @description 접근 권한 항목 */
             grants: components["schemas"]["ResourceAccessGrantView"][];
             /** @description 이 목록이 속한 리소스 */
@@ -9185,6 +9421,7 @@ export interface components {
             status?: components["schemas"]["CatalogStatus"] | null;
         };
         UpdateResourceAccessGrantRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
         };
@@ -9219,6 +9456,7 @@ export interface components {
             rules: components["schemas"]["Rule"][];
         };
         UpdateWorkspaceMemberRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             role: components["schemas"]["WorkspaceMemberRole"];
         };
         UpdateWorkspaceRequest: {
@@ -9717,7 +9955,7 @@ export interface components {
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["WorkspaceMemberResponse"][];
-            myRole: components["schemas"]["WorkspaceMemberRole"];
+            myRole?: components["schemas"]["WorkspaceMemberRole"] | null;
             name: string;
         };
         WorkspaceInvitationEntry: {
@@ -13098,6 +13336,178 @@ export interface operations {
             };
         };
     };
+    getAdminResourceAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessListResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addAdminResourceAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminResourceAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeAdminResourceAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminResourceAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminRoutes: {
         parameters: {
             query?: {
@@ -14638,6 +15048,70 @@ export interface operations {
             };
         };
     };
+    deleteAdminWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminWorkspaceDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminWorkspaceInvitations: {
         parameters: {
             query?: never;
@@ -14656,6 +15130,208 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    inviteAdminWorkspaceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteWorkspaceMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InviteWorkspaceMembersResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteWorkspaceMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelAdminWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeAdminWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminWorkspaceMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminWorkspaceMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -15224,6 +15900,41 @@ export interface operations {
             };
         };
     };
+    previewDnsDomainAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     removeDnsDomainAccessGrant: {
         parameters: {
             query?: never;
@@ -15776,6 +16487,41 @@ export interface operations {
             };
         };
     };
+    previewGpuAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     removeGpuAllocationAccessGrant: {
         parameters: {
             query?: never;
@@ -16192,6 +16938,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewLlmKeyAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -17674,6 +18455,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewVmAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

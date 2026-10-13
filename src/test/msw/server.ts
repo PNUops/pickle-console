@@ -1,4 +1,5 @@
 import { setupServer } from 'msw/node'
+import { resetAccessSupportFixtures } from './handlers/access-support'
 import { handlers } from './handlers'
 import { resetAdminFixtures } from './handlers/admin'
 import { resetOrgOperationFixtures } from './handlers/org-operations'
@@ -32,6 +33,7 @@ export const server = setupServer(...handlers)
 
 /** Restore all stateful mock fixtures to their initial data (run between tests). */
 export function resetFixtures() {
+  resetAccessSupportFixtures()
   resetOrgOperationFixtures()
   resetUserFixtures()
   resetReferenceFixtures()

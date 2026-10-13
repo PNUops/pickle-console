@@ -1,7 +1,7 @@
 import { GuideFigure } from '../GuideFigure'
 import requestStatusesImage from '../../assets/docs/request-statuses.png'
 import workspaceMembersImage from '../../assets/docs/workspace-members.png'
-import resourceAccessImage from '../../assets/docs/resource-access.png'
+import resourceAccessImage from '../../assets/docs/resource-access.jpg'
 import { Link } from 'react-router'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
@@ -468,8 +468,8 @@ export const gettingStartedArticles: GuideArticle[] = [
     slug: 'workspaces/access',
     title: '리소스 접근 권한과 공유',
     group: '워크스페이스와 공유',
-    summary: '워크스페이스 구성원과 리소스 접근 권한의 차이, 부여와 회수 절차를 확인합니다.',
-    keywords: ['접근 권한', '공유', '소유자', '편집자', '참여자', '열람자', '부여', '회수', '권한 없음'],
+    summary: '구성원과 리소스 권한의 차이, 부여·등급 변경·회수와 본인 권한 증가 확인 절차를 읽습니다.',
+    keywords: ['접근 권한', '공유', '소유자', '편집자', '참여자', '열람자', '부여', '회수', '권한 없음', '권한 증가', '목적', '확인'],
     sections: [
       {
         id: 'membership-and-access',
@@ -527,6 +527,7 @@ export const gettingStartedArticles: GuideArticle[] = [
               <li>함께 사용할 사람을 리소스가 속한 워크스페이스의 구성원으로 추가합니다.</li>
               <li>리소스 소유자 또는 워크스페이스 소유자가 해당 리소스의 <strong>접근 권한</strong> 화면을 엽니다.</li>
               <li><strong>접근 권한 부여</strong>에서 대상과 등급을 선택하고 <strong>부여</strong>를 누릅니다.</li>
+              <li>본인의 권한이 늘어나는 변경이면 <strong>회원님의 권한 증가 확인</strong> 창에서 정확한 대상과 얻는 등급을 읽고 목적을 입력한 뒤 <strong>권한 증가 확인하고 계속</strong>을 누릅니다. 취소하면 변경하지 않습니다.</li>
               <li>접근 목록에 대상과 등급이 올바르게 반영됐는지 확인합니다.</li>
             </ol>
             <p>
@@ -538,13 +539,13 @@ export const gettingStartedArticles: GuideArticle[] = [
               한 사람을 제외하고 공유하려면 워크스페이스 전체 권한을 두지 않고 개인별로
               부여합니다. 전체 권한이 있는 상태에서 개인 등급만 낮추어도 전체 권한은 남습니다.
             </p>
-            <GuideFigure
+            <div className="max-w-md"><GuideFigure
               src={resourceAccessImage}
-              alt="리소스 상세의 접근 탭에 표시된 접근 목록과 등급 선택"
-              caption="리소스의 접근 탭에서 권한을 받을 대상과 부여할 등급을 확인합니다."
-              width={2208}
-              height={958}
-            />
+              alt="본인의 실효 권한이 늘어나는 변경의 정확한 대상과 얻는 등급, 목적 확인"
+              caption="본인의 권한이 늘어나면 정확한 대상과 얻는 등급을 확인하고 목적을 입력합니다. 이 예시는 워크스페이스 전체 공유로 본인이 참여자 권한을 얻는 경우입니다."
+              width={448}
+              height={555}
+            /></div>
           </>
         ),
       },
@@ -556,6 +557,11 @@ export const gettingStartedArticles: GuideArticle[] = [
             <p>
               접근 목록에서 등급을 변경하거나 회수를 선택합니다. 개인 권한을 회수해도
               워크스페이스 전체 권한이 남아 있으면 그 등급으로 계속 접근할 수 있으므로 함께 확인합니다.
+            </p>
+            <p>
+              등급 변경으로 본인의 실효 권한이 늘어나면 현재 등급과 얻는 등급, 정확한 대상을 확인하고
+              목적을 입력한 뒤 계속합니다. 이미 참여자인 상태에서 편집자나 소유자가 되는 변경도
+              같은 확인을 거칩니다. 확인을 취소하면 기존 등급이 유지됩니다.
             </p>
             <ul>
               <li>

@@ -1,3 +1,4 @@
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
@@ -44,7 +45,7 @@ function AdminGpuDetail({ data }: { data: GpuAllocation }) {
   const stable = data.connectionStatus === 'NONE' || data.connectionStatus === 'ATTACHED'
   return <div className="space-y-6">
     <Link to={adminPaths.gpus(scope.activeOrgId)} className="text-sm text-primary-700 hover:underline">← GPU</Link>
-    <PageHeader title={data.name} description={data.orgName} />
+    <PageHeader title={data.name} description={data.orgName} actions={<AdminResourceAccessLink type="GPU" resourceId={data.id} />} />
     {notice && <Alert variant="success">{notice}</Alert>}
     {data.error && <Alert variant="danger">{data.error}</Alert>}
     <GpuInfoCard allocation={data} />

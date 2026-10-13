@@ -38,6 +38,7 @@ function queuedSupport(status: 'SUBMITTED' | 'APPROVED'): UserSupport {
 
 function renderOutcome(data: UserSupport) {
   const impact: ProfileImpact = {
+    actorAccessImpact: { fingerprint: 'fixture-claim-impact', increases: [], pendingResourceOwners: [] },
     action: 'PROFILE', userId: data.userId, observedAt: data.observedAt,
     candidateStatus: 'ACTIVE', claimsPossible: true, studentNoWillChange: true,
     invitations: [{

@@ -1,3 +1,8 @@
+import { requestReaderKey } from '../api/request-review'
+import { useActiveResult } from '../lib/use-active-result'
+import { AccessIncreaseDetails } from '../components/resource/AccessIncreaseReview'
+import { useAccessIncreaseReview } from '../lib/use-access-increase-review'
+import type { AccessConfirmation } from '../api/resource-access'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation } from 'react-router'
@@ -123,7 +128,7 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
   const copy = FAMILY_COPY[family]
   const listPath = listPathOf(family, scope.activeOrgId)
   const targets = targetsOf(location.state)
-  const kinds = role ? bulkKindsFor(family, role) : []
+  const kinds = user ? bulkKindsFor(family, role ?? 'USER', user.role) : []
 
   const header = (
     <>
@@ -150,7 +155,7 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
       </div>
     )
   }
-  if (!role || kinds.length === 0) {
+  if (!user || kinds.length === 0) {
     return (
       <div className="space-y-5">
         {header}
@@ -163,12 +168,12 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
     <div className="space-y-5">
       {header}
       <BulkChangeFlow
+        key={`${family}:${scope.activeOrgId ?? 'all'}:${scope.activeOrgRole ?? 'none'}:${targets.map((target) => target.id).join(',')}:${requestReaderKey(user)}`}
         family={family}
-        role={role}
+        role={user.role}
         targets={targets}
         kinds={kinds}
         listPath={listPath}
-        orgId={scope.activeOrgId}
       />
     </div>
   )
@@ -180,16 +185,16 @@ function BulkChangeFlow({
   targets,
   kinds,
   listPath,
-  orgId,
 }: {
   family: BulkFamily
   role: NonNullable<ReturnType<typeof useAuth>['user']>['role']
   targets: BulkTarget[]
   kinds: ReturnType<typeof bulkKindsFor>
   listPath: string
-  orgId: string | undefined
 }) {
   const queryClient = useQueryClient()
+  const active = useActiveResult()
+  const accessReview = useAccessIncreaseReview()
   const [step, setStep] = useState<BulkStep>('kind')
   const [kind, setKind] = useState<AdminBulkChangeKind | null>(
     kinds.length === 1 ? kinds[0].kind : null,
@@ -228,6 +233,7 @@ function BulkChangeFlow({
   const previewMutation = useMutation({
     mutationFn: (change: AdminBulkChangeSpec) => previewAdminBulkChange(request(change)),
     onSuccess: (data, change) => {
+      if (!active.current) return
       setSent(change)
       setPreview(data)
       setConfirmation('')
@@ -235,18 +241,31 @@ function BulkChangeFlow({
       setFieldErrors({})
       setStep('preview')
     },
-    onError: (failure) => fail(failure, '일괄 변경 미리보기를 불러오지 못했습니다.'),
+    onError: (failure) => { if (active.current) fail(failure, '일괄 변경 미리보기를 불러오지 못했습니다.') },
   })
 
   const applyMutation = useMutation({
-    mutationFn: ({ change, judged }: { change: AdminBulkChangeSpec; judged: AdminBulkChangePreview }) =>
-      applyAdminBulkChange({
+    mutationFn: async ({ change, judged }: { change: AdminBulkChangeSpec; judged: AdminBulkChangePreview }) => {
+      const accessConfirmations: Record<string, AccessConfirmation> = {}
+      for (const item of judged.items) {
+        if (!active.current) return null
+        if (!item.applicable || !item.actorAccessImpact) continue
+        const accessConfirmation = await accessReview.confirm(item.actorAccessImpact, `${nameOf(item.targetId, item.name)} · ${item.targetId}`)
+        if (accessConfirmation === null || !active.current) return null
+        if (accessConfirmation) accessConfirmations[item.targetId] = accessConfirmation
+      }
+      return applyAdminBulkChange({
         ...request(change),
-        fingerprints: Object.fromEntries(
-          judged.items.map((item) => [item.targetId, item.fingerprint]),
-        ),
-      }),
+        fingerprints: Object.fromEntries(judged.items.map((item) => [item.targetId, item.fingerprint])),
+        ...(Object.keys(accessConfirmations).length > 0 ? { accessConfirmations } : {}),
+      })
+    },
     onSuccess: async (data, { change }) => {
+      if (!data) return
+      const invalidations = FAMILY_QUERY_KEYS[family].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+      if (change.kind === 'LLM_KEY_LIMITS') invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
+      void Promise.all(invalidations)
+      if (!active.current) return
       setResult(data)
       setError(null)
       setStep('result')
@@ -255,16 +274,8 @@ function BulkChangeFlow({
       if (data.items.every((item) => item.result === 'APPLIED' || item.result === 'UNCHANGED')) {
         clearStoredSelection(family)
       }
-      const invalidations = FAMILY_QUERY_KEYS[family].map((queryKey) =>
-        queryClient.invalidateQueries({ queryKey }),
-      )
-      // Limits move what a paid-model account has allocated.
-      if (change.kind === 'LLM_KEY_LIMITS') {
-        invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
-      }
-      await Promise.all(invalidations)
     },
-    onError: (failure) => fail(failure, '일괄 변경을 적용하지 못했습니다.'),
+    onError: (failure) => { if (active.current) fail(failure, '일괄 변경을 적용하지 못했습니다.') },
   })
 
   const runPreview = () => {
@@ -288,6 +299,7 @@ function BulkChangeFlow({
 
   return (
     <>
+      {accessReview.modal}
       <Stepper steps={BULK_STEPS.map((id) => BULK_STEP_TITLES[id])} current={BULK_STEPS.indexOf(step)} />
 
       <details className="text-sm text-foreground-secondary">
@@ -396,7 +408,7 @@ function BulkChangeFlow({
           {kind === 'ACCESS' && (
             <AccessForm
               family={family}
-              orgId={orgId}
+              targetIds={targets.map((target) => target.id)}
               draft={draft.access}
               onChange={(access) => setDraft({ ...draft, access })}
               errors={fieldErrors}
@@ -441,6 +453,7 @@ function BulkChangeFlow({
                   </TD>
                   <TD>
                     <DiffList fields={item.fields} targetType={targetType} />
+                    {item.actorAccessImpact && <AccessIncreaseDetails impact={item.actorAccessImpact} />}
                   </TD>
                   <TD>{item.reason ? labelForBulkReason(item.reason) : '—'}</TD>
                 </TR>

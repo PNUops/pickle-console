@@ -1,3 +1,4 @@
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
@@ -136,6 +137,7 @@ function AdminVmDetailPageContent() {
           <h1 className="text-2xl font-bold text-neutral-900">{vm.displayName || vm.name}</h1>
           {vm.sshGatewayBlocked && <Badge variant="danger">SSH·터미널 차단됨</Badge>}
           <VmStatusBadge status={vm.status} />
+          <AdminResourceAccessLink type="VM" resourceId={vm.id} />
         </div>
         {vm.statusDetail && <p className="mt-1 text-sm text-neutral-500">{vm.statusDetail}</p>}
       </div>
