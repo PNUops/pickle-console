@@ -286,6 +286,14 @@
       "denied": [],
       "name": "claude-opus-5-5",
       "expected": false
+    },
+    {
+      "allowed": [
+        "anthropic/claude-opus*"
+      ],
+      "denied": [],
+      "name": "claude-opus-5-5",
+      "expected": true
     }
   ],
   "validPatterns": [
