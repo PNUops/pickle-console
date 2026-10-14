@@ -26,7 +26,7 @@ export const LLM_DEFAULT_MODEL = 'pickle-general'
  * The paid model the Anthropic examples name. `/v1/messages` serves paid
  * models only, so the self-hosted name cannot stand in here.
  */
-export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-sonnet-4.5'
+export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
 
 /**
  * The routes a key reaches only with the matching feature granted, Chat
