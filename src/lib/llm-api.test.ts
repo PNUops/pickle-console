@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  LLM_ANTHROPIC_BASE_URL,
   LLM_API_BASE_URL,
   LLM_DEFAULT_LIMITS,
   LLM_DEFAULT_MODEL,
@@ -77,8 +78,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 36개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(36)
+  test('에러 표는 사용자에게 도달하는 37개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(37)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -87,6 +88,7 @@ describe('LLM API 사실 사본', () => {
       api_key_revoked: 401,
       account_suspended: 403,
       model_not_found: 404,
+      model_not_available_on_route: 400,
       model_not_allowed: 403,
       endpoint_not_allowed: 403,
       rate_limit_requests: 429,
@@ -152,6 +154,7 @@ describe('LLM API 사실 사본', () => {
   test('the OpenAI SDK image path is listed beside the vendor one', () => {
     expect(LLM_PASSTHROUGH_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual([
       'POST /v1/chat/completions',
+      'POST /v1/messages',
       'POST /v1/images',
       'POST /v1/images/generations',
       'GET /v1/images/models',
@@ -183,5 +186,15 @@ describe('LLM API 사실 사본', () => {
   test('base URL은 /v1까지 포함한다', () => {
     expect(LLM_API_BASE_URL).toBe('https://llm.pcl.kr/v1')
     expect(LLM_DEFAULT_MODEL).toBe('pickle-general')
+  })
+
+  test('the Anthropic base URL stops before /v1', () => {
+    // Anthropic clients append /v1/messages themselves.
+    expect(LLM_ANTHROPIC_BASE_URL).toBe('https://llm.pcl.kr')
+  })
+
+  test('the messages route sits under the chat grant', () => {
+    const messages = LLM_PASSTHROUGH_ROUTES.find((r) => r.path === '/v1/messages')
+    expect(messages?.capability).toBe('chat')
   })
 })

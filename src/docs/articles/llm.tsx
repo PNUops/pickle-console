@@ -8,11 +8,13 @@ import { CopyButton } from '../../components/CopyButton'
 import { Alert, Table, TBody, TD, TH, THead, TR } from '../../components/ui'
 import { CONTACT_URL, FEEDBACK_URL } from '../../lib/brand'
 import {
+  LLM_ANTHROPIC_BASE_URL,
   LLM_API_BASE_URL,
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
   LLM_FORWARDED_HEADER_MAX_BYTES,
   LLM_FORWARDED_REQUEST_HEADERS,
+  LLM_MESSAGES_EXAMPLE_MODEL,
   LLM_PAID_ONLY_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
   LLM_RELAYED_RESPONSE_HEADERS,
@@ -72,6 +74,26 @@ const OPENCODE_EXAMPLE = `{
   },
   "model": "pickle/${LLM_DEFAULT_MODEL}"
 }`
+
+const CLAUDE_CODE_EXAMPLE = `export ANTHROPIC_BASE_URL="${LLM_ANTHROPIC_BASE_URL}"
+export ANTHROPIC_AUTH_TOKEN="$PICKLE_API_KEY"
+export ANTHROPIC_MODEL="${LLM_MESSAGES_EXAMPLE_MODEL}"
+claude`
+
+const ANTHROPIC_PYTHON_EXAMPLE = `import os
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url="${LLM_ANTHROPIC_BASE_URL}",
+    api_key=os.environ["PICKLE_API_KEY"],
+)
+
+message = client.messages.create(
+    model="${LLM_MESSAGES_EXAMPLE_MODEL}",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "안녕하세요"}],
+)
+print(message.content[0].text)`
 
 export const llmArticles: GuideArticle[] = [
   {
@@ -156,8 +178,8 @@ export const llmArticles: GuideArticle[] = [
     slug: 'llm/connect',
     title: '첫 호출과 도구 연결',
     group: 'LLM API',
-    summary: '발급한 키로 첫 응답을 확인하고 Python과 opencode에 연결합니다.',
-    keywords: ['curl', 'Python', 'SDK', 'opencode', 'base URL', '인증', 'OpenAI', 'Codex'],
+    summary: '발급한 키로 첫 응답을 확인하고 Python, opencode, Claude Code에 연결합니다.',
+    keywords: ['curl', 'Python', 'SDK', 'opencode', 'base URL', '인증', 'OpenAI', 'Codex', 'Claude Code', 'Anthropic', 'Messages', 'x-api-key'],
     sections: [
       {
         id: 'prepare',
@@ -217,10 +239,29 @@ export const llmArticles: GuideArticle[] = [
         </>,
       },
       {
+        id: 'claude-code',
+        title: 'Claude Code와 Anthropic SDK 연결',
+        body: <>
+          <p>Claude Code와 Anthropic SDK는 Anthropic Messages API(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/messages</code>)로 연결합니다. 이 경로는 <strong>유료 모델만</strong> 지원하므로 금액 한도가 부여된 키가 필요합니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>을 지정하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_available_on_route</code>로 거절됩니다. 호출은 Chat 권한에 속합니다.</p>
+          <p>Anthropic 클라이언트는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages</code>를 스스로 붙이므로 base URL에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code>을 적지 않습니다. OpenAI 호환 base URL을 그대로 넣으면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/v1/messages</code>로 요청이 가서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unknown_endpoint</code>가 납니다.</p>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_ANTHROPIC_BASE_URL}</code>
+            <CopyButton value={LLM_ANTHROPIC_BASE_URL} label="Anthropic base URL 복사" />
+          </div>
+          <p>Claude Code는 실행 전에 아래 환경 변수를 설정합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ANTHROPIC_MODEL</code>은 반드시 지정합니다. 지정하지 않으면 Claude Code가 고른 모델 이름으로 모든 요청을 보내고, 그 이름이 키에서 쓸 수 있는 유료 모델이 아니면 거절됩니다.</p>
+          <CodeBlock label="macOS / Linux" code={CLAUDE_CODE_EXAMPLE} />
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ANTHROPIC_MODEL</code>에는 키 정보의 <strong>쓸 수 있는 유료 모델</strong>에 맞는 모델 이름을 넣습니다. 키는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Authorization: Bearer</code> 헤더와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">x-api-key</code> 헤더 중 어느 쪽으로 보내도 됩니다. Claude Code를 실행해 짧은 질문에 답변이 돌아오면 연결된 것입니다.</p>
+          <p>Anthropic Python SDK는 공식 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic</code> 패키지를 설치한 뒤 같은 base URL과 Pickle 키를 넣습니다.</p>
+          <CodeBlock label="패키지 설치" code="python -m pip install anthropic" />
+          <CodeBlock label="Python" code={ANTHROPIC_PYTHON_EXAMPLE} />
+          <p>토큰 수 계산(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages/count_tokens</code>)은 지원하지 않습니다. 오류는 Anthropic 형식(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{'{"type": "error", "error": {...}}'}</code>)으로 돌아오며, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>에 <GuideLink slug="llm/errors">오류 해결</GuideLink>의 표와 같은 코드가 들어 있습니다.</p>
+        </>,
+      },
+      {
         id: 'compatibility',
         title: '연결 범위와 다음 행동',
         body: <>
-          <p>Chat Completions를 지원하는 클라이언트를 사용합니다. Pickle은 Anthropic Messages API와 OpenAI Responses API를 제공하지 않으므로, 이 API를 요구하는 도구에는 직접 연결할 수 없습니다.</p>
+          <p>OpenAI 호환 클라이언트는 Chat Completions로, Anthropic 클라이언트는 Messages API로 연결합니다. Messages API는 유료 모델만 지원합니다. Pickle은 OpenAI Responses API를 제공하지 않으므로, 이 API만 요구하는 도구에는 직접 연결할 수 없습니다.</p>
           <p>첫 호출 이후에는 <GuideLink slug="llm/features" anchor="streaming">스트리밍과 도구 호출</GuideLink>을 적용하고, <GuideLink slug="llm/limits" anchor="usage">사용량 확인</GuideLink>으로 요청이 기록되는지 확인하세요.</p>
         </>,
       },
@@ -241,7 +282,7 @@ export const llmArticles: GuideArticle[] = [
           <p>아래 요청은 자체 서빙 모델 목록을 반환합니다. 유료 모델은 이 목록에 나오지 않습니다.</p>
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
           <p>유료 모델은 금액 한도가 부여된 키로 모델 이름을 그대로 보내 사용합니다. <strong>쓸 수 있는 유료 모델</strong>이 제한되어 있으면 목록에 맞는 모델만 선택합니다. 허용 목록이 비어 있으면 모델 허용 제한은 없지만 금액 한도와 <strong>쓸 수 없는 유료 모델</strong>은 적용됩니다. 차단 목록이 허용 목록보다 우선합니다.</p>
-          <p>키 정보의 <strong>기능 권한</strong>은 이 키에 부여된 기능입니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/chat/completions</code> 호출은 Chat 권한에 속합니다. 웹 검색(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">plugins</code>의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">web</code>, 모델 이름 끝의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">:online</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">openrouter:web_search</code> 도구)은 웹 검색 권한에, 유료 OCR 엔진 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">mistral-ocr</code>을 지정한 PDF 변환은 PDF OCR 권한에, 채팅 응답의 이미지 출력(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">modalities</code>의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">image</code>)은 이미지 생성 권한에 속합니다.</p>
+          <p>키 정보의 <strong>기능 권한</strong>은 이 키에 부여된 기능입니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/chat/completions</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages</code> 호출은 Chat 권한에 속합니다. 웹 검색(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">plugins</code>의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">web</code>, 모델 이름 끝의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">:online</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">openrouter:web_search</code> 도구)은 웹 검색 권한에, 유료 OCR 엔진 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">mistral-ocr</code>을 지정한 PDF 변환은 PDF OCR 권한에, 채팅 응답의 이미지 출력(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">modalities</code>의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">image</code>)은 이미지 생성 권한에 속합니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_allowed</code>는 모델 권한 문제이고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_unavailable</code>는 금액 한도가 없다는 뜻입니다. 자체 서빙 모델에는 유료 모델의 허용 목록과 차단 목록을 적용하지 않습니다.</p>
           <GuideFigure
             src={llmPermissionsImage}
@@ -296,7 +337,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'headers',
         title: '요청 헤더와 응답 헤더',
         body: <>
-          <p>유료 모델에 보내는 채팅 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. 자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다.</p>
+          <p>유료 모델에 보내는 채팅과 Messages 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. Messages 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-version</code>과 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-beta</code>도 넘깁니다. 자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다.</p>
           <Table>
             <THead><TR><TH>요청 헤더</TH><TH>쓰임</TH></TR></THead>
             <TBody>{LLM_FORWARDED_REQUEST_HEADERS.map((header) => <TR key={header.name}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{header.name}</code></TD><TD>{header.use}</TD></TR>)}</TBody>
@@ -461,9 +502,9 @@ export const llmArticles: GuideArticle[] = [
         id: 'diagnose',
         title: '먼저 확인할 내용',
         body: <>
-          <p>응답은 OpenAI와 같은 오류 형식을 사용합니다. 메시지 문구보다 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>로 원인을 구분합니다. 코드에서 오류를 처리할 때도 이 값을 사용합니다.</p>
+          <p>응답은 OpenAI와 같은 오류 형식을 사용합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages</code>는 Anthropic 형식으로 답하지만 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 같습니다. 메시지 문구보다 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>로 원인을 구분합니다. 코드에서 오류를 처리할 때도 이 값을 사용합니다.</p>
           <ol>
-            <li>base URL이 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_API_BASE_URL}</code>인지 확인합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code>을 빠뜨리거나 두 번 붙이지 않습니다.</li>
+            <li>base URL이 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_API_BASE_URL}</code>인지 확인합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code>을 빠뜨리거나 두 번 붙이지 않습니다. Anthropic 클라이언트는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_ANTHROPIC_BASE_URL}</code>처럼 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code> 없이 적습니다.</li>
             <li>콘솔에서 현재 키의 상태와 만료를 확인하고, 실행 환경이 발급한 최신 값을 사용하고 있는지 확인합니다.</li>
             <li>요청 모델과 경로가 키의 모델 권한과 기능 권한에 포함되는지 확인합니다.</li>
             <li>아래 표에서 오류 코드를 찾습니다. 여러 설정을 한꺼번에 바꾸기 전에 <GuideLink slug="llm/connect" anchor="first-call">최소 호출 예제</GuideLink>로 같은 문제가 나는지 확인합니다.</li>

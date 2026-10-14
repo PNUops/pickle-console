@@ -321,8 +321,8 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
   })
 
   test('정지된 VM에서는 재생성 행을 아예 두지 않는다', async () => {
-    // 종전에는 비활성 버튼이 서 있었고 왜 못 누르는지 화면에 없었다. 상태
-    // 부적합한 행동은 설명형 비활성이 아니라 생략이다 (사용자 콘솔 규약).
+    // A disabled button used to stand here with no reason on screen. An action
+    // the current state does not allow is left out, not shown disabled.
     server.use(vmDetailAs(uuid(56), 'OWNER', { status: 'STOPPED' }))
     renderVm(uuid(56))
 
