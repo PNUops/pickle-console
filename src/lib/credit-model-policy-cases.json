@@ -270,6 +270,22 @@
       ],
       "name": "  ~OPENAI/GPT-5-PRO:nitro  ",
       "expected": false
+    },
+    {
+      "allowed": [],
+      "denied": [
+        "anthropic/*"
+      ],
+      "name": "claude-opus-5-5",
+      "expected": false
+    },
+    {
+      "allowed": [
+        "openai/*"
+      ],
+      "denied": [],
+      "name": "claude-opus-5-5",
+      "expected": false
     }
   ],
   "validPatterns": [
