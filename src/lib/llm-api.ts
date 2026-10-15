@@ -12,8 +12,21 @@
 /** OpenAI 호환 API의 base URL. */
 export const LLM_API_BASE_URL = PICKLE_LLM_API_BASE_URL
 
+/**
+ * Base URL for Anthropic clients (Claude Code, the Anthropic SDKs). They
+ * append `/v1/messages` themselves, so this is the OpenAI base without `/v1`;
+ * giving them the OpenAI one sends `/v1/v1/messages` and gets 404.
+ */
+export const LLM_ANTHROPIC_BASE_URL = LLM_API_BASE_URL.replace(/\/v1$/, '')
+
 /** 자체 서빙 모델의 공개 이름. 실제 모델과 분리되어 있어 업스트림이 바뀌어도 유지된다. */
 export const LLM_DEFAULT_MODEL = 'pickle-general'
+
+/**
+ * The paid model the Anthropic examples name. `/v1/messages` serves paid
+ * models only, so the self-hosted name cannot stand in here.
+ */
+export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
 
 /**
  * The routes a key reaches only with the matching feature granted, Chat
@@ -30,9 +43,17 @@ export const LLM_DEFAULT_MODEL = 'pickle-general'
  * cannot give back (`response_format` other than `b64_json`, `style`,
  * top-level `moderation`); `/v1/images` forwards those fields unchanged.
  * The SDK's edit and variation paths stay 404.
+ *
+ * `/v1/messages` is the Anthropic Messages API, under the same Chat grant. It
+ * serves paid models only, answers errors in Anthropic's shape
+ * (`{"type":"error","error":{"type","message","code"},"request_id"}`, where
+ * `error.code` is the same code as in the table below), and accepts the key
+ * in `x-api-key` as well as `Authorization`. Its `count_tokens` and other
+ * sub-paths are 404.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
+  { capability: 'chat', method: 'POST', path: '/v1/messages', summary: 'Anthropic Messages' },
   { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
   {
     capability: 'images',
@@ -126,7 +147,8 @@ export const LLM_REQUEST_BODY_MIB = {
 
 /**
  * Client request headers the gateway forwards to the vendor, on a paid-model
- * chat request only. Self-hosted, image and embedding requests forward none.
+ * chat or messages request only. The messages route also forwards
+ * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
  * Of repeated lines only the first is forwarded, and a value longer than
  * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
  * headers (`HTTP-Referer`, `X-Title`, ...) and response-cache headers are not
@@ -178,12 +200,22 @@ export interface LlmErrorEntry {
 
 /** 사용자에게 도달하는 에러. 판정은 메시지가 아니라 `code`로 한다. */
 export const LLM_ERROR_CODES: LlmErrorEntry[] = [
-  { code: 'missing_api_key', status: 401, meaning: 'Authorization 헤더가 없습니다.' },
+  {
+    code: 'missing_api_key',
+    status: 401,
+    meaning: 'Authorization 헤더가 없습니다. /v1/messages는 x-api-key 헤더도 받습니다.',
+  },
   { code: 'invalid_api_key', status: 401, meaning: '콘솔에서 발급한 키가 아닙니다.' },
   { code: 'api_key_expired', status: 401, meaning: '키의 유효기간이 지났습니다.' },
   { code: 'api_key_revoked', status: 401, meaning: '폐기된 키입니다.' },
   { code: 'account_suspended', status: 403, meaning: '계정 이용이 정지된 상태입니다.' },
   { code: 'model_not_found', status: 404, meaning: '그런 이름의 모델이 없습니다.' },
+  {
+    code: 'model_not_available_on_route',
+    status: 400,
+    meaning:
+      '자체 서빙 모델은 아직 /v1/messages에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
+  },
   { code: 'model_not_allowed', status: 403, meaning: '이 키로는 쓸 수 없는 모델입니다.' },
   {
     code: 'endpoint_not_allowed',
@@ -231,7 +263,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     code: 'unknown_endpoint',
     status: 404,
     meaning:
-      '지원하지 않는 경로입니다. 메시지에 적힌 경로는 지원 범위이지 보낸 경로가 아니므로, base URL에 /v1이 붙어 있는지 먼저 확인합니다.',
+      '지원하지 않는 경로입니다. 메시지에 적힌 경로는 지원 범위이지 보낸 경로가 아니므로, base URL을 먼저 확인합니다. OpenAI 호환 클라이언트는 /v1까지, Anthropic 클라이언트는 /v1 없이 적습니다.',
   },
   { code: 'method_not_allowed', status: 405, meaning: '지원하지 않는 HTTP 메서드입니다.' },
   {

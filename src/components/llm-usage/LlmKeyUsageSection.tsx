@@ -543,9 +543,9 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
  * 이 문장은 소유자 쪽에만 참이다. 처음 이 주석을 쓸 때는 그 구역이 없었고, 생긴 뒤에
  * 고치지 않아 다음 편집자에게 거짓 면허를 줄 뻔했다.
  *
- * 합계 타일을 만들지 않는 것은 화면 규약의 결론이다. 「한도 창 사용」 게이지 옆에
- * 다른 창의 달러가 나란히 서면 둘의 차이를 설명하는 문단이 필요해지고, 그 문단이
- * 필요하다는 것 자체가 두 숫자를 한 자리에 둔 것이 틀렸다는 뜻이다.
+ * There is no total tile. A dollar figure over a different window beside the
+ * limit-window gauge would need a paragraph explaining how the two differ,
+ * and needing that paragraph means the two numbers do not belong together.
  *
  * 값이 없는 것과 0인 것을 가른다. 자체 서빙 모델에는 금액이라는 것이 아예 없어서
  * `$0.00`으로 적으면 「공짜로 썼다」는 없는 주장을 하게 된다. 열 전체가 비면 열을

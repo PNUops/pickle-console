@@ -89,8 +89,8 @@ const ORDER = Object.keys(CAPABILITIES) as PassthroughEndpoint[]
 /**
  * Names that can be granted today. The contract carries all twelve so stored
  * grants reach the gateway, but a name only becomes grantable when its route
- * opens; the api refuses the rest with 422. This list widens release by
- * release, in the plan's order.
+ * opens; the api refuses the rest with 422. A name joins this list in the
+ * release that opens its route.
  */
 const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
   'chat',
