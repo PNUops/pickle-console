@@ -1,16 +1,16 @@
-import { LLM_DEFAULT_MODEL } from '../../lib/llm-api'
-import { LLM_GATEWAY_HOST, SSH_GATEWAY_HOST } from '../../lib/hosts'
+import { LLM_API_BASE_URL, LLM_DEFAULT_MODEL } from '../../lib/llm-api'
+import { SSH_GATEWAY_HOST } from '../../lib/hosts'
 import { icons } from './landing-data'
 import { TransitionLink } from '../../components/TransitionLink'
 
-const sshExample = `ssh -i ~/.ssh/pickle-my-vm.pem \\
+const sshExample = SSH_GATEWAY_HOST ? `ssh -i ~/.ssh/pickle-my-vm.pem \\
   -o IdentitiesOnly=yes \\
-  my-vm@${SSH_GATEWAY_HOST}`
+  my-vm@${SSH_GATEWAY_HOST}` : null
 
-const llmExample = `curl https://${LLM_GATEWAY_HOST}/v1/chat/completions \\
+const llmExample = LLM_API_BASE_URL ? `curl ${LLM_API_BASE_URL}/chat/completions \\
   -H "Authorization: Bearer $PICKLE_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"model":"${LLM_DEFAULT_MODEL}","messages":[{"role":"user","content":"안녕하세요"}]}'`
+  -d '{"model":"${LLM_DEFAULT_MODEL}","messages":[{"role":"user","content":"안녕하세요"}]}'` : null
 
 const usageOptions = [
   {
@@ -68,7 +68,7 @@ export function AccessSection() {
               <p className="mt-4 text-sm leading-7 text-neutral-600">
                 {option.description}
               </p>
-              <div className="mt-5 flex flex-1 flex-col overflow-hidden rounded-2xl bg-neutral-950">
+              {option.code ? <div className="mt-5 flex flex-1 flex-col overflow-hidden rounded-2xl bg-neutral-950">
                 <div className="border-b border-white/10 px-5 py-3 text-xs font-semibold tracking-wide text-primary-200">
                   {option.codeLabel}
                 </div>
@@ -78,14 +78,14 @@ export function AccessSection() {
                 >
                   <code>{option.code}</code>
                 </pre>
-              </div>
-              <TransitionLink
+              </div> : <p className="mt-5 flex-1 rounded-2xl bg-neutral-100 px-5 py-6 text-sm text-neutral-600">개발 환경에서 비활성</p>}
+              {option.code && <TransitionLink
                 to={option.guide}
                 className="mt-5 flex w-fit items-center gap-2 rounded-sm text-sm font-semibold text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-600"
               >
                 {option.guideLabel}
                 <span aria-hidden="true">→</span>
-              </TransitionLink>
+              </TransitionLink>}
             </article>
           ))}
         </div>

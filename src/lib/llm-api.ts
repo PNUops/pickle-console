@@ -1,5 +1,3 @@
-import { LLM_GATEWAY_HOST } from './hosts'
-
 /**
  * 사용 안내 화면이 보여 주는 LLM API 사실들.
  *
@@ -12,22 +10,57 @@ import { LLM_GATEWAY_HOST } from './hosts'
  */
 
 /** OpenAI 호환 API의 base URL. */
-export const LLM_API_BASE_URL = `https://${LLM_GATEWAY_HOST}/v1`
+export const LLM_API_BASE_URL = PICKLE_LLM_API_BASE_URL
+
+/**
+ * Base URL for Anthropic clients (Claude Code, the Anthropic SDKs). They
+ * append `/v1/messages` themselves, so this is the OpenAI base without `/v1`;
+ * giving them the OpenAI one sends `/v1/v1/messages` and gets 404.
+ */
+export const LLM_ANTHROPIC_BASE_URL = LLM_API_BASE_URL.replace(/\/v1$/, '')
 
 /** 자체 서빙 모델의 공개 이름. 실제 모델과 분리되어 있어 업스트림이 바뀌어도 유지된다. */
 export const LLM_DEFAULT_MODEL = 'pickle-general'
 
 /**
- * 채팅 외에 이 게이트웨이가 중계하는 경로.
+ * The paid model the Anthropic examples name. `/v1/messages` serves paid
+ * models only, so the self-hosted name cannot stand in here.
+ */
+export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
+
+/**
+ * The routes a key reaches only with the matching feature granted, Chat
+ * included. A key without it gets 403 `endpoint_not_allowed`, never 404:
+ * a route that does not exist and a route this key may not use are different
+ * states. `GET /v1/models` costs nothing and needs no feature.
  *
- * 기능 단위로 부여되고, 부여받지 않은 키는 403 `endpoint_not_allowed`로 답한다. 경로가
- * 없는 것과 키에 허용되지 않은 것은 다른 상태이므로 404로 감추지 않는다.
+ * Web search and PDF OCR are Chat's children and have no route of their own;
+ * the gateway reads them from the Chat request body.
  *
- * `/v1/images`는 OpenAI의 `/v1/images/generations`가 아니다. 공급자가 정한 경로여서,
- * OpenAI 경로를 그대로 쓰면 404가 난다. 처음 묻는 사람이 실제로 그 경로부터 시도했다.
+ * `/v1/images/generations` is the OpenAI SDK's path for the same handler as
+ * `/v1/images`. Request and response pass through unchanged, so the SDK gets
+ * `b64_json` only. On that path alone the gateway refuses what the vendor
+ * cannot give back (`response_format` other than `b64_json`, `style`,
+ * top-level `moderation`); `/v1/images` forwards those fields unchanged.
+ * The SDK's edit and variation paths stay 404.
+ *
+ * `/v1/messages` is the Anthropic Messages API, under the same Chat grant. It
+ * serves paid models only, answers errors in Anthropic's shape
+ * (`{"type":"error","error":{"type","message","code"},"request_id"}`, where
+ * `error.code` is the same code as in the table below), and accepts the key
+ * in `x-api-key` as well as `Authorization`. Its `count_tokens` and other
+ * sub-paths are 404.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
+  { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
+  { capability: 'chat', method: 'POST', path: '/v1/messages', summary: 'Anthropic Messages' },
   { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
+  {
+    capability: 'images',
+    method: 'POST',
+    path: '/v1/images/generations',
+    summary: '이미지 생성(OpenAI SDK 경로)',
+  },
   { capability: 'images', method: 'GET', path: '/v1/images/models', summary: '이미지 모델 목록' },
   { capability: 'embeddings', method: 'POST', path: '/v1/embeddings', summary: '임베딩' },
 ] as const
@@ -100,21 +133,89 @@ export const LLM_DEFAULT_LIMITS = {
   concurrency: 8,
 } as const
 
+/**
+ * Chat request body bounds, in MiB. Both are the gateway's built-in values,
+ * which the deployed env does not override. A body above the large threshold
+ * needs one of a few shared slots and is refused with `large_request_busy`
+ * while they are all taken; above the maximum it is `request_too_large`.
+ * The image and embedding paths share the maximum but not the slots.
+ */
+export const LLM_REQUEST_BODY_MIB = {
+  max: 25,
+  largeAbove: 2,
+} as const
+
+/**
+ * Client request headers the gateway forwards to the vendor, on a paid-model
+ * chat or messages request only. The messages route also forwards
+ * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
+ * Of repeated lines only the first is forwarded, and a value longer than
+ * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
+ * headers (`HTTP-Referer`, `X-Title`, ...) and response-cache headers are not
+ * forwarded.
+ */
+export const LLM_FORWARDED_REQUEST_HEADERS = [
+  {
+    name: 'x-session-id',
+    use: '같은 값을 보낸 요청이 같은 공급자로 가도록 요청합니다. 한 대화에 같은 값을 쓰면 프롬프트 캐시가 맞을 가능성이 높아집니다.',
+  },
+  {
+    name: 'x-anthropic-beta',
+    use: 'Anthropic 모델의 베타 기능을 켭니다. 값은 Anthropic 문서의 기능 이름이고, 여러 개는 쉼표로 이어 한 줄에 적습니다.',
+  },
+  {
+    name: 'X-OpenRouter-Metadata',
+    use: '이 요청을 처리한 공급자와 시도 순서를 응답 본문에 함께 받습니다.',
+  },
+] as const
+
+export const LLM_FORWARDED_HEADER_MAX_BYTES = 1024
+
+/**
+ * Vendor response headers the gateway relays when the vendor sends them.
+ * `X-Generation-Id` comes on a successful paid-model answer, image and
+ * embedding answers included.
+ * `Retry-After` comes when the vendor answered 429 or 503 with a wait; after a
+ * fallback, it is the longest wait any upstream asked for.
+ */
+export const LLM_RELAYED_RESPONSE_HEADERS = [
+  {
+    name: 'X-Generation-Id',
+    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
+  },
+  {
+    name: 'Retry-After',
+    use: '유료 모델 공급자가 429나 503으로 답하며 대기 시간을 준 경우 붙습니다. 대체 경로까지 시도했다면 그중 가장 긴 시간입니다. 이 시간이 지난 뒤 재시도합니다.',
+  },
+] as const
+
 export interface LlmErrorEntry {
   /** 응답 본문의 `error.code`. 메시지 문구와 달리 바뀌지 않는 식별자다. */
   code: string
   status: number
+  /** A second HTTP status the same code arrives with (200 means inside a stream). */
+  alsoStatus?: number
   meaning: string
 }
 
 /** 사용자에게 도달하는 에러. 판정은 메시지가 아니라 `code`로 한다. */
 export const LLM_ERROR_CODES: LlmErrorEntry[] = [
-  { code: 'missing_api_key', status: 401, meaning: 'Authorization 헤더가 없습니다.' },
+  {
+    code: 'missing_api_key',
+    status: 401,
+    meaning: 'Authorization 헤더가 없습니다. /v1/messages는 x-api-key 헤더도 받습니다.',
+  },
   { code: 'invalid_api_key', status: 401, meaning: '콘솔에서 발급한 키가 아닙니다.' },
   { code: 'api_key_expired', status: 401, meaning: '키의 유효기간이 지났습니다.' },
   { code: 'api_key_revoked', status: 401, meaning: '폐기된 키입니다.' },
   { code: 'account_suspended', status: 403, meaning: '계정 이용이 정지된 상태입니다.' },
   { code: 'model_not_found', status: 404, meaning: '그런 이름의 모델이 없습니다.' },
+  {
+    code: 'model_not_available_on_route',
+    status: 400,
+    meaning:
+      '자체 서빙 모델은 아직 /v1/messages에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
+  },
   { code: 'model_not_allowed', status: 403, meaning: '이 키로는 쓸 수 없는 모델입니다.' },
   {
     code: 'endpoint_not_allowed',
@@ -136,14 +237,33 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'invalid_parameter_value', status: 400, meaning: '파라미터 값이 허용 범위 밖입니다.' },
   { code: 'missing_parameter', status: 400, meaning: '필수 파라미터가 빠졌습니다.' },
   { code: 'invalid_json', status: 400, meaning: '요청 본문이 올바른 JSON이 아닙니다.' },
-  { code: 'request_too_large', status: 400, meaning: '요청 본문이 허용 크기를 넘었습니다.' },
+  {
+    code: 'preset_not_supported',
+    status: 400,
+    meaning: 'preset은 지원하지 않습니다. 모델 이름을 직접 지정합니다.',
+  },
+  {
+    code: 'request_too_large',
+    status: 400,
+    meaning: `요청 본문이 ${LLM_REQUEST_BODY_MIB.max} MiB를 넘었습니다.`,
+  },
+  {
+    code: 'request_body_incomplete',
+    status: 400,
+    meaning: '채팅 요청 본문을 끝까지 받지 못했습니다. 같은 요청을 다시 보냅니다.',
+  },
+  {
+    code: 'large_request_busy',
+    status: 429,
+    meaning: `${LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 요청을 처리할 자리가 지금은 없습니다. Retry-After 뒤에 다시 보내거나, 파일과 이미지를 URL로 보내 요청을 줄입니다.`,
+  },
   { code: 'input_too_long', status: 400, meaning: '입력이 모델의 최대 입력 길이를 넘었습니다.' },
   { code: 'output_limit_exceeded', status: 400, meaning: '요청한 최대 출력 길이가 허용치를 넘었습니다.' },
   {
     code: 'unknown_endpoint',
     status: 404,
     meaning:
-      '지원하지 않는 경로입니다. 메시지에 적힌 경로는 지원 범위이지 보낸 경로가 아니므로, base URL에 /v1이 붙어 있는지 먼저 확인합니다.',
+      '지원하지 않는 경로입니다. 메시지에 적힌 경로는 지원 범위이지 보낸 경로가 아니므로, base URL을 먼저 확인합니다. OpenAI 호환 클라이언트는 /v1까지, Anthropic 클라이언트는 /v1 없이 적습니다.',
   },
   { code: 'method_not_allowed', status: 405, meaning: '지원하지 않는 HTTP 메서드입니다.' },
   {
@@ -154,11 +274,19 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'upstream_response_too_large',
     status: 502,
-    meaning: '응답이 중계 가능한 크기를 넘었습니다. 한 번에 만드는 개수(n)나 요청한 크기를 줄입니다.',
+    alsoStatus: 200,
+    meaning:
+      '응답이 중계 가능한 크기를 넘었습니다. 채팅은 stream으로 받거나 max_tokens를 줄이고, 이미지는 한 번에 만드는 개수(n)나 크기를 줄입니다. 채팅 스트림에서는 이벤트 하나가 너무 클 때 도중 오류로 옵니다.',
   },
   { code: 'service_disabled', status: 503, meaning: '서비스가 점검 중입니다.' },
   { code: 'server_busy', status: 503, meaning: '요청이 몰려 처리하지 못했습니다. 한도는 차감되지 않습니다.' },
-  { code: 'upstream_rejected', status: 400, meaning: '모델 서버가 요청을 거부했습니다.' },
+  {
+    code: 'upstream_rejected',
+    status: 400,
+    alsoStatus: 422,
+    meaning:
+      '모델 서버가 요청을 거부했습니다. 모델 서버가 이유를 보냈으면 메시지의 「모델 서버 메시지:」 뒤에 나옵니다.',
+  },
   { code: 'upstream_error', status: 502, meaning: '모델 서버 호출에 실패했습니다.' },
   { code: 'upstream_timeout', status: 504, meaning: '모델 서버 응답이 제한 시간을 넘었습니다.' },
   {

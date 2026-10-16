@@ -90,16 +90,34 @@ test('workspace selection outside its scoped source and malformed IDs do not fet
 })
 
 test.each([
-  ['access-org-admin', orgAdminUser], ['access-org-manager', orgManagerUser], ['access-org-viewer', orgViewerUser],
-  ['access-sys-admin', sysAdminUser], ['access-sys-manager', sysManagerUser], ['access-sys-viewer', sysViewerUser],
-] as const)('workspace inspection remains read-only for %s', async (token, profile) => {
+  ['access-org-admin', orgAdminUser, true], ['access-org-manager', orgManagerUser, true], ['access-org-viewer', orgViewerUser, false],
+  ['access-sys-admin', sysAdminUser, true], ['access-sys-manager', sysManagerUser, false], ['access-sys-viewer', sysViewerUser, false],
+] as const)('workspace inspection follows support edit capabilities for %s', async (token, profile, canEdit) => {
   const user = userEvent.setup()
   server.use(refreshSuccessHandler(token, profile))
   renderApp('/admin/workspaces')
   await user.click(await screen.findByRole('button', { name: '캡스톤 3조' }))
   const drawer = await screen.findByRole('dialog', { name: '워크스페이스 상세' })
-  await within(drawer).findByText('조회 전용')
-  expect(within(drawer).queryByRole('button', { name: /수정|저장|삭제|구성원 추가/ })).not.toBeInTheDocument()
+  await within(drawer).findByText(canEdit ? '지원 편집 가능' : '조회 전용')
+  if (canEdit) {
+    expect(within(drawer).queryByText('조회 전용')).not.toBeInTheDocument()
+    expect(within(drawer).getByRole('button', { name: '정보 수정' })).toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '워크스페이스 삭제' })).not.toBeInTheDocument()
+    expect(within(drawer).getByText('남은 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있습니다.')).toBeInTheDocument()
+  } else {
+    expect(within(drawer).queryByRole('button', { name: /수정|저장|삭제|구성원 추가/ })).not.toBeInTheDocument()
+  }
+  await user.click(within(drawer).getByRole('tab', { name: '구성원' }))
+  await within(drawer).findByRole('table')
+  if (canEdit) {
+    const role = within(drawer).getByRole('combobox', { name: '이시스템 역할 변경' })
+    expect(within(role).getByRole('option', { name: '소유자' })).toHaveValue('OWNER')
+    expect(within(drawer).getAllByRole('button', { name: '제거' })).not.toHaveLength(0)
+    expect(within(drawer).queryByRole('combobox', { name: '홍길동 역할 변경' })).not.toBeInTheDocument()
+  } else {
+    expect(within(drawer).queryByRole('combobox', { name: /역할 변경/ })).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('button', { name: '제거' })).not.toBeInTheDocument()
+  }
 })
 
 test('request filters and server page restore through detail and explicit return to a SYS global list', async () => {
@@ -147,7 +165,7 @@ test('upper-case institution and workspace UUIDs retain the requested target and
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
   const rows = workspaceFixture()
   rows[0].id = id
-  server.use(http.get('*/api/v1/admin/orgs', () => HttpResponse.json([{ id: org, name: '시험 기관', status: 'ACTIVE', hidden: false, createdAt: '2026-10-03T00:00:00Z' }])))
+  server.use(http.get('*/api/v1/admin/support-orgs', () => HttpResponse.json([{ id: org, name: '시험 기관', status: 'ACTIVE', hidden: false, createdAt: '2026-10-03T00:00:00Z' }])))
   renderApp(`/admin/workspaces?org=${org.toUpperCase()}&workspaceId=${id.toUpperCase()}`)
   const drawer = await screen.findByRole('dialog', { name: '워크스페이스 상세' })
   await within(drawer).findByRole('heading', { name: '수업01' })

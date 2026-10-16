@@ -214,7 +214,7 @@ export const dnsDomainHandlers: RequestHandler[] = [
 
 /* ─── Access list ─── */
 
-const dnsDomainAccessStore: Record<string, Schemas['ResourceAccessGrantView'][]> = {}
+export const dnsDomainAccessStore: Record<string, Schemas['ResourceAccessGrantView'][]> = {}
 
 export function resetDnsDomainAccess() {
   for (const key of Object.keys(dnsDomainAccessStore)) delete dnsDomainAccessStore[key]
@@ -258,6 +258,7 @@ export const dnsDomainAccessHandlers: RequestHandler[] = [
         workspaceName: row.domain.workspaceName,
       },
       grants: dnsDomainAccessStore[row.domain.id] ?? [],
+      canManageAccess: row.domain.accessManageAllowed,
     } satisfies Schemas['ResourceAccessListResponse'])
   }),
   http.post('*/api/v1/dns-domains/:domainId/access', async ({ params, request }) => {

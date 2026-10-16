@@ -4,6 +4,9 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   orgAdminUser,
+  orgAdminProfile,
+  sysManagerUser,
+  sysViewerUser,
   orgManagerUser,
   orgViewerUser,
   refreshSuccessHandler,
@@ -185,5 +188,51 @@ describe('관리자 VM 상세', () => {
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '기간 연장' })).not.toBeInTheDocument()
     expect(screen.queryByText('전원 제어 (관리자 개입)')).not.toBeInTheDocument()
+  })
+})
+
+
+describe('VM detail deletion capabilities', () => {
+  test.each([
+    ['access-org-admin', orgAdminUser, true, false],
+    ['access-org-manager', orgManagerUser, false, false],
+    ['access-org-viewer', orgViewerUser, false, false],
+    ['access-sys-admin', sysAdminUser, true, true],
+    ['access-sys-manager', sysManagerUser, false, false],
+    ['access-sys-viewer', sysViewerUser, false, false],
+  ] as const)('shows target-institution deletion actions for %s', async (token, profile, schedule, force) => {
+    server.use(refreshSuccessHandler(token, profile))
+    renderApp(`/admin/vms/${uuid(56)}`)
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(screen.queryByRole('button', { name: '삭제 예약' }) != null).toBe(schedule)
+    expect(screen.queryByRole('button', { name: '강제 삭제' }) != null).toBe(force)
+  })
+
+  test.each(['ORG_VIEWER', 'ORG_MANAGER'] as const)('does not inherit deletion rights from an administrator role in another institution: %s', async (role) => {
+    const foreignProfile = {
+      ...orgAdminProfile,
+      managedOrgs: [...orgAdminProfile.managedOrgs,
+        { orgId: uuid(2), orgName: '테스트 기관', role, requestMail: false }],
+    }
+    server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
+      http.get('*/api/v1/me', () => HttpResponse.json(foreignProfile)))
+    renderApp(`/admin/vms/${uuid(61)}`)
+    await screen.findByRole('heading', { name: 'ai-train' })
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기간 연장' }) != null).toBe(role === 'ORG_MANAGER')
+  })
+
+  test('drops deletion drafts and actions when the selected institution no longer matches', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin(`/admin/vms/${uuid(56)}?org=${uuid(1)}`)
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.type(screen.getByLabelText('삭제 사유'), '기존 범위의 입력')
+    await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
+    expect(await screen.findByText('선택한 관리 범위의 가상머신이 아닙니다')).toBeInTheDocument()
+    expect(screen.queryByLabelText('삭제 사유')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 })

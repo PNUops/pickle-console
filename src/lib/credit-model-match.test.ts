@@ -3,6 +3,7 @@ import {
   isCreditModelUsable,
   matchesCreditModel,
   suggestCreditModelPatterns,
+  vendorQualifiedName,
 } from './credit-model-match'
 
 /**
@@ -90,6 +91,22 @@ describe('isCreditModelUsable', () => {
     expect(isCreditModelUsable('openai/gpt-5-pro:batch', ['openai/*'], ['openai/*-pro'])).toBe(
       false,
     )
+  })
+  test('a bare claude name is judged under the anthropic prefix as well', () => {
+    expect(isCreditModelUsable('claude-opus-5-5', ['anthropic/claude-opus*'], [])).toBe(true)
+    expect(isCreditModelUsable('claude-opus-5-5', [], ['anthropic/*'])).toBe(false)
+    expect(isCreditModelUsable('claude-opus-5-5', ['anthropic/*'], ['anthropic/*-5-5'])).toBe(false)
+    // Other bare names are judged only as written.
+    expect(isCreditModelUsable('gpt-5', ['openai/*'], [])).toBe(false)
+  })
+})
+
+describe('vendorQualifiedName', () => {
+  test('qualifies only bare claude names', () => {
+    expect(vendorQualifiedName('Claude-Opus-5-5')).toBe('anthropic/claude-opus-5-5')
+    expect(vendorQualifiedName('anthropic/claude-opus-5.5')).toBeNull()
+    expect(vendorQualifiedName('gpt-5')).toBeNull()
+    expect(vendorQualifiedName('~anthropic/claude-x')).toBeNull()
   })
 })
 

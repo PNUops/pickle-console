@@ -1,4 +1,6 @@
 import type { Scope } from './scope-context'
+import type { ResourceType } from '../api/queries'
+import type { BulkFamily } from './bulk-change'
 import { isUuid } from './validation'
 import { parseGuidePath } from './docs-paths'
 
@@ -39,6 +41,7 @@ export const consolePaths = {
   dnsDomainAccess: (domainId: string) => `/console/domains/${domainId}/access`,
   requestDetail: (requestId: string) => `/console/requests/${requestId}`,
   workspaces: '/console/workspaces',
+  resourceAccess: (type: ResourceType, resourceId: string, orgId?: string) => adminPath(`/admin/resource-access/${type}/${resourceId}`, orgId),
   workspaceDetail: (workspaceId: string) => `/console/workspaces/${workspaceId}`,
   account: '/console/account',
   notifications: '/console/notifications',
@@ -64,7 +67,10 @@ export function adminNotificationPath(path: string, targetOrgId?: string): strin
 export const adminPaths = {
   dashboard: (orgId?: string) => adminPath('/admin', orgId),
   orgOperations: (orgId?: string) => adminPath('/admin/org-operations', orgId),
+  resourceAccess: (type: ResourceType, resourceId: string, orgId?: string) => adminPath(`/admin/resource-access/${type}/${resourceId}`, orgId),
   users: (orgId?: string, userId?: string) => adminPath(userId ? `/admin/users?selected=${userId}` : '/admin/users', orgId),
+  userSupport: (userId: string, orgId?: string) => adminPath(`/admin/users/${userId}`, orgId),
+  workspaceDetail: (workspaceId: string, orgId?: string, tab?: string) => adminPath(`/admin/workspaces?${new URLSearchParams({ workspaceId, inspect: '1', ...(tab ? { tab } : {}) })}`, orgId),
   orgAudit: (orgId: string) => adminPath(`/admin/audit?targetOrgId=${orgId}`, orgId),
   auditTarget: (targetType: string, targetId: string) => `/admin/audit?${new URLSearchParams({ targetType, targetId })}`,
   announcementDetail: (announcementId: string) => `/admin/announcements?${new URLSearchParams({ selected: announcementId })}`,
@@ -76,7 +82,8 @@ export const adminPaths = {
   },
   newNotice: (orgId?: string, returnTo?: string) => adminPath(`/admin/notices/new${returnTo ? `?${new URLSearchParams({ returnTo })}` : ''}`, orgId),
   editNotice: (noticeId: string, orgId?: string, returnTo?: string) => adminPath(`/admin/notices/${noticeId}/edit${returnTo ? `?${new URLSearchParams({ returnTo })}` : ''}`, orgId),
-  requests: (orgId?: string) => adminPath('/admin/requests', orgId),
+  requests: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/requests?${new URLSearchParams({ status: 'all', workspaceId })}` : '/admin/requests', orgId),
+  userRequests: (userId: string, orgId?: string) => adminPath(`/admin/requests?${new URLSearchParams({ status: 'all', relatedUserId: userId })}`, orgId),
   newRequest: (orgId?: string, kind?: string) =>
     adminPath(kind ? `/admin/requests/new?kind=${kind}` : '/admin/requests/new', orgId),
   requestDetail: (requestId: string, orgId?: string) =>
@@ -99,8 +106,12 @@ export const adminPaths = {
   bulkLlmKeys: (orgId?: string) => adminPath('/admin/bulk/llm-keys', orgId),
   bulkVms: (orgId?: string) => adminPath('/admin/bulk/vms', orgId),
   bulkDomains: (orgId?: string) => adminPath('/admin/bulk/domains', orgId),
-  domains: (orgId?: string) => adminPath('/admin/domains', orgId),
-  gpus: (orgId?: string) => adminPath('/admin/gpus', orgId),
+  bulkPreview: (family: BulkFamily, previewId: string, orgId?: string) => adminPath(`/admin/bulk/${family}?${new URLSearchParams({ previewId })}`, orgId),
+  bulkOperation: (family: BulkFamily, operationId: string, orgId?: string, previewId?: string) => adminPath(`/admin/bulk/${family}?${new URLSearchParams({ operationId, ...(previewId ? { previewId } : {}) })}`, orgId),
+  bulkReceipt: (operationId: string, orgId?: string) => adminPath(`/admin/bulk/operations/${operationId}`, orgId),
+  domains: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/domains?workspaceId=${workspaceId}` : '/admin/domains', orgId),
+  domainDetail: (id: string, orgId?: string) => adminPath(`/admin/domains?domainId=${id}`, orgId),
+  gpus: (orgId?: string, workspaceId?: string) => adminPath(workspaceId ? `/admin/gpus?workspaceId=${workspaceId}` : '/admin/gpus', orgId),
   gpuDetail: (allocationId: string, orgId?: string) => adminPath(`/admin/gpus/${allocationId}`, orgId),
   llmUsage: (orgId?: string, workspaceId?: string | null, days?: 7 | 30 | 90) => {
     const query = new URLSearchParams()

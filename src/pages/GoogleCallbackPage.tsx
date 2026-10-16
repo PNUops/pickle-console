@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { api, withSessionCookieOrder } from '../api/client'
-import { isProblem } from '../api/problem'
-import { getSessionGeneration, setAccessToken } from '../api/token'
+import { isProblem, toApiError } from '../api/problem'
+import { clearAccessToken, getSessionGeneration, onSessionExpired, setAccessToken } from '../api/token'
 import type { CredentialExchange, UserRole } from '../auth/auth-context'
 import { homePathFor, useAuth } from '../auth/auth-context'
 import { TransitionLink } from '../components/TransitionLink'
-import { Alert, Spinner, useToast } from '../components/ui'
+import { Alert, Spinner } from '../components/ui'
 import { AuthCard, AuthCardContent } from '../layouts/AuthLayout'
 import { takeReturnTo } from '../lib/google-oauth'
 import { safeInternalPath } from '../lib/redirect'
@@ -32,16 +32,24 @@ export function GoogleCallbackPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const { refreshProfile, beginCredentialExchange } = useAuth()
-  const toast = useToast()
   const [error, setError] = useState<string | null>(null)
   // StrictMode 의 이중 실행에서 코드를 두 번 쓰지 않게 한다. state 는 단회 소비라
   // 두 번째 호출은 410 을 받는다.
   const attempted = useRef(false)
   const mounted = useRef(false)
+  const pendingProfile = useRef<number | null>(null)
 
   useEffect(() => {
     mounted.current = true
-    return () => { mounted.current = false }
+    const unsubscribe = onSessionExpired((expiredGeneration) => {
+      if (mounted.current && pendingProfile.current === expiredGeneration) {
+        setError('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.')
+      }
+    })
+    return () => {
+      mounted.current = false
+      unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -61,6 +69,7 @@ export function GoogleCallbackPage() {
     }
 
     let generation = getSessionGeneration()
+    let receivedCredentials = false
     const lifecycle: { exchange?: CredentialExchange } = {}
     const isCurrent = () => mounted.current && generation === getSessionGeneration()
     void (async () => {
@@ -95,13 +104,22 @@ export function GoogleCallbackPage() {
           return
         }
         if (typeof outcome.mfaToken === 'string') {
-          navigate('/login', { replace: true, state: { mfaToken: outcome.mfaToken } })
+          navigate('/login', {
+            replace: true,
+            state: { mfaToken: outcome.mfaToken, from: safeInternalPath(takeReturnTo()) },
+          })
           return
         }
         if (typeof outcome.accessToken === 'string') {
           setAccessToken(outcome.accessToken)
+          receivedCredentials = true
           generation = getSessionGeneration()
-          await refreshProfile()
+          pendingProfile.current = generation
+          try {
+            await refreshProfile({ replaceSession: true })
+          } finally {
+            if (pendingProfile.current === generation) pendingProfile.current = null
+          }
           if (!isCurrent()) return
           // 다크 인증에서 라이트 콘솔로 넘어가는 1회 연출. 비밀번호 로그인만 이걸
           // 예약하면 구글 로그인에서만 화면이 툭 바뀐다.
@@ -111,35 +129,42 @@ export function GoogleCallbackPage() {
           return
         }
         setError('구글 로그인 응답을 이해하지 못했습니다.')
-      } catch {
-        if (isCurrent()) setError('구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      } catch (err) {
+        if (isCurrent()) {
+          setError(toApiError(err, '구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.').message)
+          if (receivedCredentials) {
+            clearAccessToken()
+            generation = getSessionGeneration()
+          }
+        }
       } finally {
         lifecycle.exchange?.settle(generation)
       }
     })()
-  }, [params, navigate, refreshProfile, beginCredentialExchange, toast])
+  }, [params, navigate, refreshProfile, beginCredentialExchange])
+
+  if (!error) {
+    return (
+      <div className="flex w-full flex-col items-center gap-6 text-center">
+        <Spinner size="lg" className="text-primary-300" label="로그인 처리 중" />
+        <h1 className="text-2xl font-bold text-white">로그인 중입니다</h1>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">
-      <h1 className="text-center text-2xl font-bold text-white">
-        {error ? '로그인하지 못했습니다' : '로그인 중입니다'}
-      </h1>
+      <h1 className="text-center text-2xl font-bold text-white">로그인하지 못했습니다</h1>
       <AuthCard className="mt-8">
         <AuthCardContent>
-          {error ? (
-            <div className="space-y-4">
-              <Alert variant="danger">{error}</Alert>
-              <p className="text-center text-sm">
-                <TransitionLink to="/login" className="font-medium text-primary-300 hover:underline">
-                  로그인 화면으로 돌아가기
-                </TransitionLink>
-              </p>
-            </div>
-          ) : (
-            <div className="flex justify-center py-6">
-              <Spinner />
-            </div>
-          )}
+          <div className="space-y-4">
+            <Alert variant="danger">{error}</Alert>
+            <p className="text-center text-sm">
+              <TransitionLink to="/login" className="font-medium text-primary-300 hover:underline">
+                로그인 화면으로 돌아가기
+              </TransitionLink>
+            </p>
+          </div>
         </AuthCardContent>
       </AuthCard>
     </div>

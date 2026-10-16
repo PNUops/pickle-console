@@ -142,9 +142,10 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
 
 describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
   test('여러 키의 금액을 합칠 때 카드는 가장 오래된 대사 시각을 쓴다', async () => {
-    // 키마다 대사가 따로 돌아 표에는 키 수만큼의 관측 시각이 있다. 한 자리에 하나만
-    // 쓰는 것이 규약이고, 그 하나는 오래된 쪽이라야 「여기 있는 금액은 적어도 이
-    // 시점까지」가 된다. 최근 쪽을 쓰면 열이 갖지 않은 신선도를 약속한다.
+    // Each key reconciles on its own, so the table holds one observation time
+    // per key. The card shows a single time, and it has to be the oldest one
+    // for "the amounts here are at least as fresh as this" to hold; the newest
+    // would promise a freshness the column does not have.
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp(`/admin/llm/usage?workspaceId=${uuid(12)}&org=${uuid(1)}`)
 
@@ -257,7 +258,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     await user.click(screen.getByRole('button', { name: '호출 종류별' }))
     const kinds = await screen.findByRole('table', { name: '호출 종류별 사용' })
     // 채팅은 스물한 건이지만 유료로 나간 것은 셋이고 그중 둘에 금액이 붙었다.
-    const chat = within(kinds).getByText('채팅').closest('tr')!
+    const chat = within(kinds).getByText('Chat').closest('tr')!
     expect(within(chat).getByText('21건')).toBeInTheDocument()
     expect(within(chat).getByText('$0.0623 (1건 미상)')).toBeInTheDocument()
     // 경로가 기록되기 전의 요청에는 유료 축이 없다.

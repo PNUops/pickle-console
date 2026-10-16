@@ -27,13 +27,16 @@ import { AdminRequestDetailPage } from './pages/AdminRequestDetailPage'
 import { AdminNewRequestPage } from './pages/AdminNewRequestPage'
 import { AdminRequestsPage } from './pages/AdminRequestsPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
+import { AdminUserSupportPage } from './pages/AdminUserSupportPage'
 import { AdminWorkspacesPage } from './pages/AdminWorkspacesPage'
+import { AdminResourceAccessPage } from './pages/AdminResourceAccessPage'
 import { AdminOsImagesPage } from './pages/AdminOsImagesPage'
 import { AdminVmDetailPage } from './pages/AdminVmDetailPage'
 import { AdminVmsPage } from './pages/AdminVmsPage'
 import { AdminLlmKeyDetailPage } from './pages/AdminLlmKeyDetailPage'
 import { AdminLlmKeysPage } from './pages/AdminLlmKeysPage'
 import { AdminBulkChangePage } from './pages/AdminBulkChangePage'
+import { AdminBulkReceiptPage } from './pages/AdminBulkReceiptPage'
 import { AdminLlmStatusPage } from './pages/AdminLlmStatusPage'
 import { AdminLlmUsagePage } from './pages/AdminLlmUsagePage'
 import { AdminOpenRouterAccountDetailPage } from './pages/AdminOpenRouterAccountDetailPage'
@@ -250,6 +253,7 @@ function App() {
         <Route path="llm/usage" element={<AdminLlmUsagePage />} />
         {/* Bulk changes need an operating role; which kinds each role gets is
             decided on the page. Reached from a list's selection, not the sidebar. */}
+        <Route path="bulk/operations/:operationId" element={<RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}><AdminBulkReceiptPage /></RequireRole>} />
         <Route
           path="bulk/llm-keys"
           element={
@@ -279,8 +283,10 @@ function App() {
         <Route path="llm/status" element={<AdminLlmStatusPage />} />
         <Route path="terminal-sessions" element={<AdminTerminalSessionsPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:userId" element={<AdminUserSupportPage />} />
         <Route path="org-operations" element={<AdminOrgOperationsPage />} />
         <Route path="workspaces" element={<AdminWorkspacesPage />} />
+        <Route path="resource-access/:resourceType/:resourceId" element={<AdminResourceAccessPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         {/* 계정 설정은 사용자 콘솔과 같은 화면을 관리자 셸 안에서 띄운다 — 관리자는

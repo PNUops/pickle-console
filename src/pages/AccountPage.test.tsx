@@ -223,3 +223,25 @@ describe('계정 설정 — 2단계 인증', () => {
     expect(await screen.findByText('2단계 인증을 해제했습니다.')).toBeInTheDocument()
   })
 })
+
+
+test('a sole workspace owner sees the server refusal without signing out', async () => {
+  const user = userEvent.setup()
+  let body: unknown
+  const detail = '워크스페이스의 마지막 소유자는 탈퇴할 수 없습니다. 다른 구성원을 소유자로 지정하거나 워크스페이스를 삭제해 주세요.'
+  server.use(http.post('*/api/v1/me/withdraw', async ({ request }) => {
+    body = await request.json()
+    return HttpResponse.json({ title: '마지막 소유자', status: 409, code: 'ACCOUNT_SOLE_OWNER_OF_ACTIVE_WORKSPACE', detail }, { status: 409 })
+  }))
+  renderAccount()
+  await openSection(user, '계정 삭제')
+  const dialog = within(screen.getByRole('dialog', { name: '회원 탈퇴' }))
+  await user.type(dialog.getByLabelText(/계속하려면 이메일/), regularUser.email)
+  await user.type(dialog.getByLabelText('비밀번호 확인'), USER_PASSWORD)
+  await user.click(dialog.getByRole('button', { name: '탈퇴하기' }))
+  expect(await dialog.findByText(detail)).toBeInTheDocument()
+  expect(body).toEqual({ password: USER_PASSWORD })
+  expect(currentPath()).toBe('/console/account')
+  expect(screen.getByRole('heading', { name: '계정 설정' })).toBeInTheDocument()
+  expect(screen.queryByText(/탈퇴가 완료되었습니다/)).not.toBeInTheDocument()
+})

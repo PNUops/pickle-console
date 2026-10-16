@@ -120,11 +120,12 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     expect(within(panel).queryByText(/물리 용량 경고/)).not.toBeInTheDocument()
     expect(within(panel).queryByText(/999 vCPU/)).not.toBeInTheDocument()
     expect(within(panel).queryByRole('meter')).not.toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: 'pending-admin-key 상세 보기' })).toHaveAttribute(
-      'href',
-      `/admin/llm/keys/${uuid(170)}?org=${uuid(1)}`,
-    )
-    expect(adminLlmListQueries.some((query) => query.includes(`requestId=${uuid(205)}`))).toBe(true)
+    const generated = await screen.findByRole('table', { name: '신청에서 등록된 자원 상태' })
+    const keyLink = new URL(within(generated).getByRole('link', { name: 'pending-admin-key' }).getAttribute('href')!, 'https://pickle.invalid')
+    expect(keyLink.pathname).toBe(`/admin/llm/keys/${uuid(170)}`)
+    expect(keyLink.searchParams.get('org')).toBe(uuid(1))
+    expect(new URL(keyLink.searchParams.get('returnTo')!, 'https://pickle.invalid').pathname).toBe(`/admin/requests/${uuid(205)}`)
+    expect(adminLlmListQueries.some((query) => query.includes(`requestId=${uuid(205)}`))).toBe(false)
     expect(adminLlmListQueries.some((query) => query.includes('size=100'))).toBe(false)
   })
 
@@ -188,7 +189,7 @@ describe('승인 폼', () => {
     // 본문에 오늘이 실리는 것은 아래 제출 본문 대조가 지킨다.
     expect(screen.queryByLabelText('사용 시작일')).not.toBeInTheDocument()
     expect(screen.getByLabelText('사용 종료일')).toHaveValue('2026-12-20')
-    expect(screen.getByLabelText('배치 노드 ID')).toHaveValue('')
+    expect(screen.getByLabelText('배치 노드')).toHaveValue('')
     // 프리필 락: 희망 호스트명이 그대로 채워져 있어야 승인 시 자동 생성으로
     // 조용히 무시되지 않는다.
     expect(screen.getByLabelText('호스트 이름 확정')).toHaveValue('capstone-api')
@@ -198,7 +199,7 @@ describe('승인 폼', () => {
 
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).getByText('자동 배치')).toBeInTheDocument()
+    expect(within(dialog).getByText('배치: 자동 배치')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     expect(

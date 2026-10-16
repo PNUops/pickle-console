@@ -33,18 +33,16 @@ describe('MSW 네거티브 스코핑 (ORG_ADMIN, 타 기관 orgId)', () => {
     })
   })
 
-  test('워크스페이스 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAdminWorkspaces({ orgId: uuid(2) })).rejects.toMatchObject({
-      problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
-    })
+  test('workspace support options accept a foreign institution filter', async () => {
+    await expect(fetchAdminWorkspaces({ orgId: uuid(2) })).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ name: 'AI 동아리' })]))
   })
 
-  test('워크스페이스 선택지: 지정 없는 조회는 보유 기관 것만 담는다', async () => {
+  test('unfiltered workspace support options include foreign institutions', async () => {
     const options = await fetchAdminWorkspaces({})
     expect(options).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: '캡스톤 3조' })]),
     )
-    expect(options).not.toEqual(
+    expect(options).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: 'AI 동아리' })]),
     )
   })
@@ -88,10 +86,8 @@ describe('MSW 네거티브 스코핑 (ORG_MANAGER, 타 기관 orgId)', () => {
     })
   })
 
-  test('워크스페이스 선택지: 다른 기관 orgId 필터는 404로 마스킹된다', async () => {
-    await expect(fetchAdminWorkspaces({ orgId: uuid(2) })).rejects.toMatchObject({
-      problem: { status: 404, code: 'RESOURCE_NOT_FOUND' },
-    })
+  test('workspace support options accept a foreign institution filter', async () => {
+    await expect(fetchAdminWorkspaces({ orgId: uuid(2) })).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ name: 'AI 동아리' })]))
   })
 
   test('사용자 상세: 타 기관 파생 소속 사용자도 조회된다 (전역 예외)', async () => {

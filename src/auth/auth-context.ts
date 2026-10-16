@@ -29,8 +29,8 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<LoginResult>
   /** Login stage-2: submit a TOTP code or recovery code for a pending MFA challenge. */
   completeMfa: (input: { mfaToken: string; code?: string; recoveryCode?: string }) => Promise<UserProfile>
-  /** Re-fetch /me and update the cached profile (after 2FA enrol/disable, consent). */
-  refreshProfile: () => Promise<void>
+  /** Re-fetch /me; replaceSession requires a fresh profile after new credentials. */
+  refreshProfile: (options?: { replaceSession?: boolean }) => Promise<void>
   /** Own a queued external credential exchange while preserving its Bearer. */
   beginCredentialExchange: () => CredentialExchange
   logout: () => Promise<void>

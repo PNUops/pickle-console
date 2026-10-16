@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
+import { displaySshGatewayHost } from '../lib/hosts'
 import { Link, useParams, useSearchParams } from 'react-router'
 import {
   keepPreviousData,
@@ -559,7 +560,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
   })
   const key = keyQuery.data?.key ?? null
   const keyFile = key?.fileName ?? `pickle-${vm.hostname}.pem`
-  const sshHost = vm.sshHost?.trim()
+  const sshHost = displaySshGatewayHost(vm.sshHost)
   // IdentitiesOnly belongs on the one-liner too, not only in the config block:
   // -i adds a key, it does not stop the agent's keys being offered first, and a
   // person with several VMs has several keys.
@@ -911,9 +912,10 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
             순간에는 편집자에게도 「편집자 이상만」이라고 말할 수 있어 틀린다. */}
         {!vm.passwordAvailable && <Alert variant="info">저장된 비밀번호가 없습니다.</Alert>}
 
-        {/* 실행 중이 아닌 VM에서는 이 행이 아예 없다. 종전에는 비활성 버튼이 서
-            있었고 왜 못 누르는지 화면에 없었다 — 사용자 콘솔 규약은 권한 부족만
-            설명형 비활성으로 두고 상태 부적합한 행동은 생략한다. */}
+        {/* The row is absent unless the VM is running. A disabled button used to
+            stand here with no reason on screen. Only a missing permission is shown
+            as a disabled control with its reason; an action the current state
+            does not allow is left out. */}
         {canRegenerate && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3">
             <p className="text-sm text-neutral-600">

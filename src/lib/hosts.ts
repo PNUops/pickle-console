@@ -9,7 +9,24 @@
  * 일부만 고쳐진 채 남으므로(실제로 랜딩 두 곳이 API를 아예 보지 않고 옛 호스트를
  * 그대로 표시하고 있었다) 한 곳에 모아 둔다.
  */
-export const SSH_GATEWAY_HOST = 'ssh.pcl.kr'
+export const SSH_GATEWAY_HOST = PICKLE_SSH_GATEWAY_HOST || null
 
-/** LLM 게이트웨이 공개 호스트 — OpenAI 호환 API의 base URL(`https://<host>/v1`)에 쓰인다. */
-export const LLM_GATEWAY_HOST = 'llm.pcl.kr'
+/** The development bundle has no external LLM endpoint until one is configured. */
+export const LLM_GATEWAY_HOST = PICKLE_LLM_API_BASE_URL
+  ? new URL(PICKLE_LLM_API_BASE_URL).host
+  : null
+
+/** Show a server-supplied SSH endpoint only when it matches this build's target. */
+export function displaySshGatewayHost(value?: string | null): string | null {
+  const host = value?.trim()
+  if (PICKLE_DEPLOY_TARGET === 'development') {
+    return SSH_GATEWAY_HOST && (!host || host === SSH_GATEWAY_HOST) ? SSH_GATEWAY_HOST : null
+  }
+  return host || null
+}
+
+/** Local previews may mount either target without weakening deployed-host checks. */
+export function canMountConsole(hostname: string): boolean {
+  return hostname === PICKLE_PUBLIC_HOST
+    || ['localhost', '127.0.0.1', '[::1]', '::1'].includes(hostname)
+}

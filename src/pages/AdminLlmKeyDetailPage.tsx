@@ -1,3 +1,5 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router'
@@ -22,8 +24,11 @@ import { LimitField } from '../components/llm-key/LimitField'
 import { useAuth } from '../auth/auth-context'
 import {
   canAdminRevokeLlmKey,
+  canReadSupportMetadata,
   canManageLlmCredit,
   canOperateLlmKey,
+  isSysTier,
+  managesOrg,
 } from '../auth/permissions'
 import {
   Button,
@@ -48,7 +53,12 @@ import {
   parseCreditModelRules,
 } from '../lib/credit-model-allowlist'
 import { fieldErrorsOf } from '../lib/field-errors'
-import { passthroughText, type PassthroughEndpoint } from '../lib/passthrough-endpoints'
+import {
+  grantPayload,
+  holdsChatChildren,
+  passthroughText,
+  type PassthroughEndpoint,
+} from '../lib/passthrough-endpoints'
 import { formatDateTime, todayKstDate } from '../lib/format'
 import { CREDIT_LIMIT_RESET_LABELS, PAID_KEY_EXPIRY_NOTE } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
@@ -57,6 +67,8 @@ import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { AllocationWarning, KeyCreditObservation } from '../components/OpenRouterCredits'
 import { evaluateAllocation } from '../lib/openrouter-credits'
+import { requestDetailReturn, withListReturn } from '../lib/list-url'
+import { requestReaderKey } from '../api/request-review'
 
 const EDITABLE_STATUSES = new Set<LlmApiKeyStatus>(['PENDING', 'ACTIVE', 'SUSPENDED'])
 const REVOKABLE_STATUSES = new Set<LlmApiKeyStatus>(['PENDING', 'ACTIVE', 'SUSPENDED'])
@@ -76,7 +88,9 @@ const KEY_DETAIL_TABS = [
 
 export function AdminLlmKeyDetailPage() {
   const { keyId } = useParams()
-  return <AdminLlmKeyDetailContent key={keyId} />
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminLlmKeyDetailContent key={`${keyId}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
 }
 
 function AdminLlmKeyDetailContent() {
@@ -90,7 +104,7 @@ function AdminLlmKeyDetailContent() {
   const idValid = isUuid(keyId)
   const { user } = useAuth()
   const scope = useAdminScope()
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
+  const reader = requestReaderKey(user)
   const queryClient = useQueryClient()
   const [limitsOpen, setLimitsOpen] = useState(false)
   const [suspendOpen, setSuspendOpen] = useState(false)
@@ -104,7 +118,7 @@ function AdminLlmKeyDetailContent() {
   const activeTab = searchParams.get('tab') === 'usage' ? 'usage' : 'overview'
 
   const detail = useQuery({
-    queryKey: ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null }],
+    queryKey: ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null, reader }],
     queryFn: () => fetchAdminLlmKey(keyId),
     enabled: idValid,
   })
@@ -112,17 +126,21 @@ function AdminLlmKeyDetailContent() {
   const revoke = useMutation({
     mutationFn: () => revokeLlmKey(keyId),
     onSuccess: async () => {
-      setRevokeOpen(false)
-      setError(null)
-      setNotice('LLM API 키를 폐기했습니다.')
+      if (mounted.current) {
+        setRevokeOpen(false)
+        setError(null)
+        setNotice('LLM API 키를 폐기했습니다.')
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }),
       ])
     },
     onError: (failure) => {
-      setRevokeOpen(false)
-      setError(toApiError(failure, 'LLM API 키를 폐기하지 못했습니다.').message)
+      if (mounted.current) {
+        setRevokeOpen(false)
+        setError(toApiError(failure, 'LLM API 키를 폐기하지 못했습니다.').message)
+      }
     },
   })
 
@@ -134,7 +152,16 @@ function AdminLlmKeyDetailContent() {
   }
 
   const key = detail.data
+  const actualOrgId = key.orgId && isUuid(key.orgId) ? key.orgId.toLowerCase() : undefined
+  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && canReadSupportMetadata(user.role))
+  const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
+  const returnedOrg = returnedUrl?.searchParams.get('org')
+  const exactRequest = actualOrgId && returnedUrl?.pathname === `/admin/requests/${key.requestId?.toLowerCase()}`
+  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && canReadSupportMetadata(user.role))
+    ? returnedOrg ? proposedReturn : withListReturn(adminPaths.requestDetail(key.requestId!, actualOrgId), returnedUrl!.searchParams.get('returnTo')!) : null
   const status = effectiveLlmKeyStatus(key.status, key.expiresAt)
+  const accountReadable = !!user && (isSysTier(user.role) || key.orgId != null && managesOrg(user.managedOrgs, key.orgId))
+  const role = user && isSysTier(user.role) ? user.role : user?.managedOrgs.find((org) => org.orgId === key.orgId)?.role
   const canOperate = !!role && canOperateLlmKey(role)
   const canEditLimits = canOperate && EDITABLE_STATUSES.has(status)
   const canEditCredit = !!role && canManageLlmCredit(role)
@@ -150,10 +177,11 @@ function AdminLlmKeyDetailContent() {
     // never repopulate the detail cache or messages from the abandoned editor.
     if (mounted.current) {
       queryClient.setQueryData(
-        ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null }],
+        ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null, reader }],
         updated,
       )
     }
+    void invalidateAdminDeadlines(queryClient)
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] })
     // 한도 변경은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
     void queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] })
@@ -165,6 +193,7 @@ function AdminLlmKeyDetailContent() {
 
   return (
     <div className="space-y-5">
+      {requestReturn && <Link to={requestReturn} className="block text-sm text-brand-foreground hover:underline">← 신청 상세</Link>}
       <Link
         to={adminPaths.llmKeys(scope.activeOrgId)}
         className="text-sm text-brand-foreground hover:underline"
@@ -175,7 +204,7 @@ function AdminLlmKeyDetailContent() {
         eyebrow={`${key.orgName} · ${key.workspaceName}`}
         title={key.name}
         description={key.purpose ?? '용도가 기록되지 않았습니다.'}
-        actions={<LlmKeyStatusBadge status={status} />}
+        actions={<><LlmKeyStatusBadge status={status} /><AdminResourceAccessLink type="LLM_API_KEY" resourceId={key.id} /></>}
       />
 
       {hasActions && (
@@ -251,13 +280,13 @@ function AdminLlmKeyDetailContent() {
           { term: '유료 모델 연결', description: key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
           {
             term: 'OpenRouter 사업 계정',
-            description: key.openrouterAccountId && key.openrouterAccountName ? (
+            description: key.openrouterAccountId && key.openrouterAccountName ? (accountReadable ?
               <Link
-                to={adminPaths.llmAccountDetail(key.openrouterAccountId, scope.activeOrgId)}
+                to={adminPaths.llmAccountDetail(key.openrouterAccountId, key.orgId ?? undefined)}
                 className="font-medium text-brand-foreground hover:underline"
               >
                 {key.openrouterAccountName}
-              </Link>
+              </Link> : <span>{key.openrouterAccountName}</span>
             ) : '미결합',
           },
         ]}
@@ -311,12 +340,12 @@ function AdminLlmKeyDetailContent() {
         />
       </section>
 
-      {key.requestId && (
+      {key.requestId && actualOrgId && (
         <MessageBar
           title="승인 신청"
           actions={
             <Link
-              to={adminPaths.requestDetail(key.requestId, scope.activeOrgId)}
+              to={adminPaths.requestDetail(key.requestId, actualOrgId)}
               className="font-semibold underline underline-offset-2"
             >
               정확한 신청 보기
@@ -551,12 +580,11 @@ function LimitsModal({
       // 일어나고, 테스트가 지키는 것은 그쪽이다. 정리하려거든 그 사실을 알고 해라.
       creditAllowedModels: canEditCredit ? parsedModels : llmKey.creditAllowedModels,
       creditDeniedModels: canEditCredit ? parsedDeniedModels : llmKey.creditDeniedModels,
-      // 서버가 이 목록을 금액과 같은 쪽 게이트에 두었다 — 시스템 운영자가 바꾸면
-      // 403이다. 그래서 두 모델 목록과 똑같이 현재 값을 그대로 되돌려 보낸다.
-      // 빠뜨리면 422이고, 빈 배열을 보내면 부여된 기능이 통째로 없어진다.
-      passthroughEndpoints: canEditCredit
-        ? [...passthroughEndpoints]
-        : llmKey.passthroughEndpoints,
+      // A role that cannot change money may still turn Chat on or off, since
+      // Chat works on both axes; the field below offers it Chat alone, so the
+      // rest of the list goes back as it came. Leaving the field out is 422,
+      // and an empty list would revoke every feature.
+      passthroughEndpoints: grantPayload(passthroughEndpoints),
       openrouterAccountId:
         llmKey.openrouterAccountId ??
         (canEditCredit && initialBindingAllowed && credit > 0
@@ -598,6 +626,22 @@ function LimitsModal({
             error={fieldErrors.concurrency}
           />
         </div>
+        {!canEditCredit && (
+          <PassthroughEndpointField
+            label="Chat 권한"
+            value={passthroughEndpoints}
+            onChange={setPassthroughEndpoints}
+            rows={['chat']}
+            // Unticking Chat would drop web search or PDF OCR with it, a change
+            // on the money side this role cannot make.
+            locked={holdsChatChildren(passthroughEndpoints) ? ['chat'] : []}
+            description={
+              holdsChatChildren(passthroughEndpoints)
+                ? 'Chat 아래 기능이 부여된 키라 Chat을 회수할 수 없습니다.'
+                : ''
+            }
+          />
+        )}
         {canEditCredit && (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

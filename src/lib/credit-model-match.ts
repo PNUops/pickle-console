@@ -120,14 +120,41 @@ export function matchesDeniedCreditModel(pattern: string, name: string): boolean
     matchesCreditModel(pattern, normalized.replace(/^~+/, ''))
 }
 
-/** Apply the paid-model fence to validated lists; invalid editors must suppress their preview. */
+/**
+ * Bare name prefixes the vendor resolves to one of its vendors. Only `claude-`
+ * is known to resolve; any other bare name is judged as written.
+ */
+const BARE_NAME_VENDORS: readonly { prefix: string; vendor: string }[] = [
+  { prefix: 'claude-', vendor: 'anthropic' },
+]
+
+/**
+ * A bare name under the vendor it resolves to, or null when it already has a
+ * vendor or none is known. The vendor resolves `claude-opus-5-5` to
+ * `anthropic/claude-opus-5.5` and bills it as that, so lists written in
+ * vendor/model patterns have to reach the bare spelling too.
+ */
+export function vendorQualifiedName(name: string): string | null {
+  const n = normalize(name)
+  if (n.includes('/')) return null
+  const match = BARE_NAME_VENDORS.find((entry) => n.startsWith(entry.prefix))
+  return match ? `${match.vendor}/${n}` : null
+}
+
+/**
+ * Apply the paid-model fence to validated lists; invalid editors must suppress their preview.
+ * A bare name with a known vendor is judged under both spellings: allowed when
+ * either is allowed, denied when either is denied, denial still winning.
+ */
 export function isCreditModelUsable(
   name: string,
   allowed: readonly string[],
   denied: readonly string[],
 ): boolean {
   if ((allowed.length > 0 || denied.length > 0) && isRouterModelName(name)) return false
-  if (denied.some((pattern) => matchesDeniedCreditModel(pattern, name))) return false
+  const alias = vendorQualifiedName(name)
+  const names = alias ? [name, alias] : [name]
+  if (names.some((n) => denied.some((pattern) => matchesDeniedCreditModel(pattern, n)))) return false
   if (allowed.length === 0) return true
-  return matchesAnyCreditModel(allowed, name)
+  return names.some((n) => matchesAnyCreditModel(allowed, n))
 }

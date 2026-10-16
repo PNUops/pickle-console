@@ -1,8 +1,11 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
+  ACCESS_TOKENS,
   orgAdminUser,
   orgViewerUser,
   problemResponse,
@@ -12,9 +15,36 @@ import {
   sysViewerUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
 import { toVmSummary, vmStore } from '../test/msw/handlers/vms'
+import App from '../App'
+import { AuthProvider } from '../auth/AuthProvider'
+import { useAuth } from '../auth/auth-context'
+import { ToastProvider } from '../components/ui'
+import { PathnameProbe } from '../test/PathnameProbe'
+
+function NavigationProbe() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { refreshProfile } = useAuth()
+  return <>
+    <button onClick={() => void navigate(-1)}>History back</button>
+    <button onClick={() => void refreshProfile()}>Refresh actor</button>
+    <button onClick={() => void navigate({ pathname: location.pathname, search: location.search }, {
+      replace: true, state: { vmList: { ...location.state?.vmList, path: '/admin/users' } },
+    })}>Corrupt return</button>
+  </>
+}
+
+function renderNavigation(route: string) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  return render(<MemoryRouter initialEntries={[route]}>
+    <QueryClientProvider client={client}><AuthProvider><ToastProvider>
+      <App /><NavigationProbe /><PathnameProbe />
+    </ToastProvider></AuthProvider></QueryClientProvider>
+  </MemoryRouter>)
+}
 
 function renderAsOrgAdmin() {
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
@@ -26,11 +56,13 @@ function renderAsSysAdmin() {
   renderApp('/admin/vms')
 }
 
-/** 목록에서 VM 행을 클릭해 상세 드로어를 연다. */
+/** Enter the exact VM route through its list row. */
 async function selectVm(user: ReturnType<typeof userEvent.setup>, name: string) {
-  const row = (await screen.findByText(name)).closest('tr')!
+  const row = (await screen.findByRole('link', { name })).closest('tr')!
   await user.click(row)
-  return screen.findByRole('dialog', { name: 'VM 상세' })
+  await screen.findByRole('heading', { name })
+  expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
+  return document.body
 }
 
 describe('관리자 VM 목록', () => {
@@ -56,7 +88,7 @@ describe('관리자 VM 목록', () => {
     expect(screen.getByText(/테스트 기관 가상머신을 조회하고/)).toBeInTheDocument()
   })
 
-  test('기관 scope 응답 대기 중 이전 기관 행과 drawer action을 숨긴다', async () => {
+  test('drops prior institution rows while the new scoped list is pending', async () => {
     const user = userEvent.setup()
     let releaseOrgResponse!: () => void
     const orgResponsePending = new Promise<void>((resolve) => {
@@ -78,8 +110,7 @@ describe('관리자 VM 목록', () => {
     )
     renderAsSysAdmin()
 
-    const drawer = await selectVm(user, 'algo-judge')
-    expect(within(drawer).getByRole('button', { name: '삭제 예약' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'algo-judge' })).toBeInTheDocument()
 
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
 
@@ -148,16 +179,15 @@ describe('관리자 VM 목록', () => {
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
   })
 
-  test('ORG_ADMIN에게는 기관 필터가 없고 강제 삭제는 보이지 않는다', async () => {
+  test('global VM metadata retains actual institution actions and hides system deletion', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
     await screen.findByRole('heading', { name: 'VM 관리' })
-    // 계약 v0.46.0: 조회는 역할을 보유한 기관 안이다. 보유 기관이 하나뿐이면
-    // 고를 것이 없으므로 기관 필터를 보이지 않고, 타 기관 VM도 목록에 없다.
+    // Foreign metadata does not grant operations on that foreign institution.
     expect(await screen.findByText('algo-judge')).toBeInTheDocument()
     expect(screen.queryByLabelText('기관 필터')).not.toBeInTheDocument()
-    expect(screen.queryByText('ai-train')).not.toBeInTheDocument()
+    expect(screen.getByText('ai-train')).toBeInTheDocument()
 
     await selectVm(user, 'algo-judge')
     expect(screen.getByRole('button', { name: '삭제 예약' })).toBeEnabled()
@@ -165,7 +195,7 @@ describe('관리자 VM 목록', () => {
     expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
   })
 
-  test('SYS_MANAGER에게도 드로어가 열리고 삭제 조작은 보이지 않는다', async () => {
+  test('opens SYS_MANAGER detail with power controls and no deletion actions', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-manager', sysManagerUser))
     renderApp('/admin/vms')
@@ -240,14 +270,14 @@ describe('교차 링크·URL 필터', () => {
     expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue(uuid(12))
   })
 
-  test('드로어의 워크스페이스 링크로 같은 워크스페이스 VM만 필터한다', async () => {
+  test('returns from detail to its scoped workspace VM list', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
     await selectVm(user, 'capstone-team3-api')
-    await user.click(screen.getByRole('button', { name: '이 워크스페이스의 VM 보기' }))
+    await user.click(screen.getByRole('link', { name: 'VM 보기' }))
 
-    // 드로어가 닫히고 워크스페이스 필터가 적용된다
+    // The detail link returns to the workspace-filtered list.
     expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue(uuid(12))
     await waitFor(() => expect(screen.queryByText('ai-train')).not.toBeInTheDocument())
@@ -255,7 +285,7 @@ describe('교차 링크·URL 필터', () => {
 })
 
 describe('SSH·웹 터미널 차단 토글', () => {
-  test('SYS_ADMIN이 드로어에서 차단하면 차단 배지와 해제 버튼으로 바뀐다', async () => {
+  test('blocks SSH and web terminal from the detail route', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
@@ -279,8 +309,8 @@ describe('SSH·웹 터미널 차단 토글', () => {
   })
 })
 
-describe('VM 드로어 기간 연장', () => {
-  test('드로어에서 기간을 연장하면 확인 메시지가 남는다', async () => {
+describe('VM detail period changes', () => {
+  test('retains the period update acknowledgement on the detail route', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
@@ -292,7 +322,7 @@ describe('VM 드로어 기간 연장', () => {
     })
     await user.click(within(dialog).getByRole('button', { name: '연장' }))
 
-    expect(await screen.findByText(/연장되었습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/새 종료일을 저장했습니다/)).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '기간 연장 — algo-judge' })).not.toBeInTheDocument()
   })
 })
@@ -302,25 +332,17 @@ describe('관리자 삭제 취소', () => {
     const user = userEvent.setup()
     const vm = vmStore.find((item) => item.id === uuid(56))!
     server.use(
-      http.get('*/api/v1/admin/vms', () =>
+      http.get('*/api/v1/admin/vms/:vmId', () =>
         HttpResponse.json({
-          content: [
-            {
-              ...toVmSummary(vm),
-              deletion: {
+          ...vm,
+          deletion: {
                 kind: 'FORCE',
                 scheduledFor: '2026-08-30T14:00:00+09:00',
                 requestedAt: '2026-08-30T14:00:00+09:00',
                 requestedById: sysAdminUser.id,
                 reason: '보안 사고 대응',
                 cancelable: false,
-              },
-            },
-          ],
-          page: 0,
-          size: 20,
-          totalElements: 1,
-          totalPages: 1,
+          },
         }),
       ),
     )
@@ -345,20 +367,18 @@ describe('관리자 삭제 취소', () => {
         '삭제가 취소되었습니다. VM은 중지됨 상태로 남으며, 시작은 사용자가 직접 수행합니다.',
       ),
     ).toBeInTheDocument()
-    // 목록 무효화로 상태 배지도 중지됨으로 갱신된다. (드로어에도 이름이 있어
-    // 행은 목록의 이름 버튼 기준으로 찾는다.)
+    // Exact detail metadata reflects the canceled deletion's stopped state.
     await waitFor(() => {
-      const row = screen.getByRole('button', { name: 'retiring-vm' }).closest('tr')!
-      expect(within(row).getByText('중지됨')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'retiring-vm' })).toBeInTheDocument()
+      expect(screen.getByText('중지됨')).toBeInTheDocument()
     })
   })
 
-  test('필터 탭에서 취소로 VM이 목록을 떠나도 결과 안내가 남는다', async () => {
+  test('retains cancellation feedback after entering detail from a deletion filter', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
 
-    // 삭제 중 탭에서 취소하면 VM이 중지됨으로 바뀌어 필터된 목록을 떠나고
-    // 드로어가 닫힌다 — 결과 안내는 페이지 알림으로 남아야 한다.
+    // The originating filter must not own the exact target's acknowledgement.
     await screen.findByRole('heading', { name: 'VM 관리' })
     await user.click(screen.getByRole('button', { name: '삭제 중' }))
     await selectVm(user, 'retiring-vm')
@@ -396,11 +416,12 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
         '강제 삭제를 접수했습니다. VM이 즉시 강제 종료되고 파기됩니다.',
       ),
     ).toBeInTheDocument()
-    // 목록 무효화로 상태가 삭제됨으로 갱신된다. (드로어에도 이름이 있어
-    // 행은 목록의 이름 버튼 기준으로 찾는다.)
+    // Completion remains visible with no pending-deletion label or write action.
     await waitFor(() => {
-      const row = screen.getByRole('button', { name: 'algo-judge' }).closest('tr')!
-      expect(within(row).getByText('삭제됨')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'algo-judge' })).toBeInTheDocument()
+      expect(screen.getAllByText('삭제됨').length).toBeGreaterThan(0)
+      expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
+      expect(screen.queryByText('삭제가 진행 중입니다')).not.toBeInTheDocument()
     })
   })
 
@@ -445,11 +466,11 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
     ).toBeInTheDocument()
   })
 
-  test('필터된 목록에서 VM이 사라져 패널이 언마운트돼도 접수 확인 메시지는 남는다', async () => {
+  test('retains force-deletion acknowledgement and completed detail state', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
 
-    // 실행 중 탭에서 강제 삭제 → DELETED가 되며 목록에서 빠져 패널이 사라진다.
+    // Entering from a RUNNING filter does not lose the detail's result after deletion.
     await screen.findByRole('heading', { name: 'VM 관리' })
     await user.click(screen.getByRole('button', { name: '실행 중' }))
     await selectVm(user, 'algo-judge')
@@ -468,11 +489,12 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
 })
 
 describe('AdminVmsPage row selection', () => {
-  test('selects without opening the drawer and keeps the selection across pages', async () => {
+  test('selects without navigating and keeps the selection across pages', async () => {
     const user = userEvent.setup()
     renderAsSysAdmin()
     await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(currentPath()).toBe('/admin/vms')
     expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
     await user.click(screen.getByRole('button', { name: '다음' }))
     await waitFor(() =>
@@ -493,5 +515,155 @@ describe('AdminVmsPage row selection', () => {
       expect(screen.queryByRole('button', { name: '일괄 변경' })).not.toBeInTheDocument()
       view.unmount()
     }
+  })
+})
+
+
+describe('VM list detail navigation', () => {
+  test('retains the originating search when returning from the exact VM detail', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderApp(`/admin/vms?org=${uuid(1)}`)
+    await screen.findByRole('link', { name: 'algo-judge' })
+    await user.type(screen.getByLabelText('VM 검색'), 'algo')
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'capstone-team3-api' })).not.toBeInTheDocument())
+    await user.click(await screen.findByRole('link', { name: 'algo-judge' }))
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('link', { name: '← VM 관리' }))
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(screen.getByLabelText('VM 검색')).toHaveValue('algo')
+  })
+
+  test('returns to the global list with its original bulk selection owner', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+    await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+    await user.click(await screen.findByRole('link', { name: 'algo-judge' }))
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('link', { name: '← VM 관리' }))
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(currentPath()).toBe('/admin/vms')
+    expect(screen.getByLabelText('관리 기관 선택')).toHaveValue('')
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+    expect(screen.getByRole('checkbox', { name: 'algo-judge 선택' })).toBeChecked()
+  })
+
+  test('restores workspace, status, search, sort and page after changing a detail tab', async () => {
+    const user = userEvent.setup()
+    const queries: URLSearchParams[] = []
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/admin/vms', ({ request }) => {
+        const params = new URL(request.url).searchParams
+        queries.push(params)
+        return HttpResponse.json({ content: [toVmSummary(vmStore.find((vm) => vm.id === uuid(56))!)],
+          page: Number(params.get('page') ?? '0'), size: 10, totalElements: 30, totalPages: 3 })
+      }))
+    renderApp(`/admin/vms?org=${uuid(1)}&workspaceId=${uuid(15)}`)
+    await screen.findByRole('link', { name: 'algo-judge' })
+    await user.click(screen.getByRole('button', { name: '실행 중' }))
+    await user.type(screen.getByLabelText('VM 검색'), 'algo')
+    await waitFor(() => expect(queries.at(-1)?.get('q')).toBe('algo'))
+    await user.click(screen.getByRole('button', { name: '이름' }))
+    await user.click(screen.getByRole('button', { name: '이름' }))
+    await user.click(screen.getByRole('button', { name: '2 페이지' }))
+    await waitFor(() => expect(queries.at(-1)?.get('page')).toBe('1'))
+    await user.click(screen.getByRole('checkbox', { name: 'algo-judge 선택' }))
+    await user.click(screen.getByRole('link', { name: 'algo-judge' }))
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('tab', { name: '이벤트' }))
+    await screen.findByText('승인 신청 90에 따라 자동 생성')
+    await user.click(screen.getByRole('link', { name: '← VM 관리' }))
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(screen.getByLabelText('VM 검색')).toHaveValue('algo')
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue(uuid(15))
+    expect(screen.getByRole('button', { name: '실행 중' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('columnheader', { name: '이름' })).toHaveAttribute('aria-sort', 'descending')
+    expect(screen.getByRole('button', { name: '2 페이지' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+    await waitFor(() => expect(Object.fromEntries(queries.at(-1)!)).toMatchObject({
+      orgId: uuid(1), workspaceId: uuid(15), status: 'RUNNING', q: 'algo', sort: '-name', page: '1',
+    }))
+  })
+
+  test('browser history restores a cleared workspace cross-filter and the same selection', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderNavigation(`/admin/vms?workspaceId=${uuid(15)}`)
+    await screen.findByRole('link', { name: 'algo-judge' })
+    await user.selectOptions(screen.getByLabelText('워크스페이스 필터'), '')
+    await user.type(screen.getByLabelText('VM 검색'), 'algo')
+    await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
+    await user.click(screen.getByRole('link', { name: 'algo-judge' }))
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('button', { name: 'History back' }))
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(currentPath()).toBe(`/admin/vms?workspaceId=${uuid(15)}`)
+    expect(screen.getByLabelText('워크스페이스 필터')).toHaveValue('')
+    expect(screen.getByLabelText('VM 검색')).toHaveValue('algo')
+    expect(screen.getByRole('toolbar', { name: '선택한 항목 동작' })).toHaveTextContent('1개 선택됨')
+  })
+
+  test.each(['account', 'role'] as const)('discards list context and selection after an %s change', async (change) => {
+    const user = userEvent.setup()
+    const original = ACCESS_TOKENS['access-sys-admin']
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    try {
+      renderNavigation('/admin/vms')
+      await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
+      await user.type(screen.getByLabelText('VM 검색'), 'algo')
+      await user.click(screen.getByRole('link', { name: 'algo-judge' }))
+      await screen.findByRole('heading', { name: 'algo-judge' })
+      ACCESS_TOKENS['access-sys-admin'] = change === 'account'
+        ? { ...original, id: uuid(6) }
+        : { ...original, role: 'SYS_VIEWER' }
+      await user.click(screen.getByRole('button', { name: 'Refresh actor' }))
+      await waitFor(() => expect(screen.getByRole('link', { name: '← VM 관리' })).toHaveAttribute('href', `/admin/vms?org=${uuid(1)}`))
+      await user.click(screen.getByRole('link', { name: '← VM 관리' }))
+      await screen.findByRole('heading', { name: 'VM 관리' })
+      expect(screen.getByLabelText('VM 검색')).toHaveValue('')
+      expect(screen.queryByRole('toolbar', { name: '선택한 항목 동작' })).not.toBeInTheDocument()
+      expect(sessionStorage.getItem('pickle.bulk-selection.vms')).toBeNull()
+    } finally { ACCESS_TOKENS['access-sys-admin'] = original }
+  })
+
+  test('rejects an unrelated return route and does not reuse its stored selection', async () => {
+    const user = userEvent.setup()
+    server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+    renderNavigation('/admin/vms')
+    await user.click(await screen.findByRole('checkbox', { name: 'algo-judge 선택' }))
+    await user.type(screen.getByLabelText('VM 검색'), 'algo')
+    await user.click(screen.getByRole('link', { name: 'algo-judge' }))
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    await user.click(screen.getByRole('button', { name: 'Corrupt return' }))
+    expect(screen.getByRole('link', { name: '← VM 관리' })).toHaveAttribute('href', `/admin/vms?org=${uuid(1)}`)
+    await user.click(screen.getByRole('link', { name: '← VM 관리' }))
+    await screen.findByRole('heading', { name: 'VM 관리' })
+    expect(screen.getByLabelText('VM 검색')).toHaveValue('')
+    expect(screen.queryByRole('toolbar', { name: '선택한 항목 동작' })).not.toBeInTheDocument()
+    expect(sessionStorage.getItem('pickle.bulk-selection.vms')).toBeNull()
+  })
+
+  test('exposes a real detail link and routes a row click to the actual institution', async () => {
+    const user = userEvent.setup()
+    renderAsSysAdmin()
+    const link = await screen.findByRole('link', { name: 'algo-judge' })
+    expect(link).toHaveAttribute('href', `/admin/vms/${uuid(56)}?org=${uuid(1)}`)
+    expect(screen.queryByRole('button', { name: 'algo-judge' })).not.toBeInTheDocument()
+    await user.click(link.closest('tr')!)
+    await screen.findByRole('heading', { name: 'algo-judge' })
+    expect(currentPath()).toBe(`/admin/vms/${uuid(56)}?org=${uuid(1)}`)
+    expect(screen.queryByRole('dialog', { name: 'VM 상세' })).not.toBeInTheDocument()
+  })
+
+  test('foreign support metadata does not grant direct deletion or power control', async () => {
+    const user = userEvent.setup()
+    renderAsOrgAdmin()
+    await selectVm(user, 'ai-train')
+    expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '기간 연장' })).not.toBeInTheDocument()
   })
 })

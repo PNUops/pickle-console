@@ -148,7 +148,7 @@ describe('관리자 사용자 목록', () => {
     expect(await drawer.findByText('정보컴퓨터공학부 실습지원센터')).toBeInTheDocument()
   })
 
-  test('offers no VM link for a workspace outside the current scope', async () => {
+  test('global support opens VM metadata for a foreign workspace', async () => {
     // Machines in another organisation. The link used to be drawn anyway and
     // landed on an empty list, which reads as "no virtual machines".
     const user = userEvent.setup()
@@ -160,7 +160,7 @@ describe('관리자 사용자 목록', () => {
 
     // The workspace is still named; only the link that cannot resolve is gone.
     expect(await drawer.findByText('졸업과제팀')).toBeInTheDocument()
-    expect(drawer.queryByRole('link', { name: 'VM 보기' })).not.toBeInTheDocument()
+    expect(drawer.getByRole('link', { name: 'VM 보기' })).toHaveAttribute('href', `/admin/vms?workspaceId=${uuid(41)}`)
   })
 
   test('an org-tier admin is answered 404 for a system-tier account', async () => {
@@ -203,6 +203,8 @@ describe('관리자 사용자 목록', () => {
     // 상세가 갱신돼 해제 버튼이 나타난다
     expect(await screen.findByRole('button', { name: '비활성화 해제' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '비활성화 해제' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '영향 확인 후 재활성화' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '영향 확인 후 재활성화' }))
     expect(await screen.findByRole('button', { name: '계정 비활성화' })).toBeInTheDocument()
   })
 
@@ -435,6 +437,7 @@ describe('관리자 사용자 목록', () => {
     await user.clear(screen.getByLabelText('학번'))
     await user.type(screen.getByLabelText('학번'), '202054321')
     await user.type(screen.getByLabelText('사유'), '본인 확인 후 정정')
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
@@ -444,19 +447,13 @@ describe('관리자 사용자 목록', () => {
     })
   })
 
-  test('기관 계층에는 프로필이 오지 않고 그 사실을 적는다', async () => {
+  test('an assigned institution administrator reads and corrects ordinary profiles', async () => {
     const user = userEvent.setup()
     renderAsOrgAdmin()
-
     await openDetail(user, '홍길동')
-    // 이 엔드포인트는 다른 기관 직원이 받는 ORG_VIEWER 까지 받고 기관 범위로 좁히지도
-    // 않으므로 서버가 비워서 보낸다. 화면은 값이 없는 것과 볼 권한이 없는 것을 구분해
-    // 적어야 한다 — 「입력하지 않음」으로 찍으면 거짓말이 된다.
-    expect(
-      await screen.findByText('직책·학번·소속은 시스템 계층에서만 조회할 수 있습니다.'),
-    ).toBeInTheDocument()
-    expect(screen.queryByText('202012345')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
+    expect(await screen.findByText('202012345')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '정정' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '계정 비활성화' })).not.toBeInTheDocument()
   })
 
   test('무변경 저장은 요청을 보내지 않는다', async () => {
@@ -468,6 +465,7 @@ describe('관리자 사용자 목록', () => {
     await openDetail(user, '홍길동')
     await user.click(screen.getByRole('button', { name: '정정' }))
     await screen.findByRole('heading', { name: '프로필 정정' })
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() =>
@@ -487,6 +485,7 @@ describe('관리자 사용자 목록', () => {
     await screen.findByRole('heading', { name: '프로필 정정' })
     await user.clear(screen.getByLabelText('학번'))
     await user.type(screen.getByLabelText('학번'), '202054321')
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminProfilePatches).toHaveLength(1))
@@ -509,7 +508,6 @@ describe('관리자 사용자 목록', () => {
     await user.click(screen.getByRole('button', { name: '정정' }))
     await screen.findByRole('heading', { name: '프로필 정정' })
     await user.clear(screen.getByLabelText('학번'))
-    await user.click(screen.getByRole('button', { name: '저장' }))
 
     expect(await screen.findByText('학번을 입력해 주세요.')).toBeInTheDocument()
   })
@@ -529,7 +527,7 @@ describe('관리자 사용자 목록', () => {
     expect(screen.getByText(/소속이 「기타」라는 값으로 굳습니다/)).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('소속 직접 입력'), '융합학부')
-    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()
+    await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
   })
 
   test('정정이 두 번이면 알림도 두 번이다', async () => {
@@ -544,7 +542,8 @@ describe('관리자 사용자 목록', () => {
       await screen.findByRole('heading', { name: '프로필 정정' })
       await user.clear(screen.getByLabelText('학번'))
       await user.type(screen.getByLabelText('학번'), value)
-      await user.click(screen.getByRole('button', { name: '저장' }))
+      await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
+    await user.click(screen.getByRole('button', { name: '저장' }))
       await waitFor(() =>
         expect(screen.queryByRole('heading', { name: '프로필 정정' })).not.toBeInTheDocument(),
       )
@@ -575,7 +574,6 @@ describe('관리자 사용자 목록', () => {
 
     // 소속의 두 모양은 대안이다. 목록에 없는 학과의 학생만 둘을 함께 쓴다.
     await user.type(screen.getByLabelText('소속 직접 입력'), '부설연구소')
-    await user.click(screen.getByRole('button', { name: '저장' }))
 
     expect(
       await screen.findByText(
@@ -586,14 +584,14 @@ describe('관리자 사용자 목록', () => {
 })
 
 describe('Organization assignment snapshot and late results', () => {
-  test('an unscoped user deep link survives automatic institution restoration', async () => {
+  test('an unscoped user deep link retains its global selection', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp(`/admin/users?selected=${uuid(42)}`)
-    await waitFor(() => expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('org')).toBe(uuid(1)))
+    await waitFor(() => expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('org')).toBeNull())
     expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.get('selected')).toBe(uuid(42))
     const drawer = await screen.findByRole('dialog', { name: '사용자 상세' })
     await within(drawer).findByText('워크스페이스 멤버십')
-    await waitFor(() => expect(currentPath()).toBe(`/admin/users?selected=${uuid(42)}&org=${uuid(1)}`))
+    await waitFor(() => expect(currentPath()).toBe(`/admin/users?selected=${uuid(42)}`))
     expect(screen.getByRole('dialog', { name: '사용자 상세' })).toBe(drawer)
   })
 

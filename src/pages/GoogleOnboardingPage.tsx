@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { api, withSessionCookieOrder } from '../api/client'
-import { isProblem } from '../api/problem'
+import { isProblem, toApiError } from '../api/problem'
 import { fetchCurrentTerms } from '../api/queries'
-import { getSessionGeneration, setAccessToken } from '../api/token'
+import { clearAccessToken, getSessionGeneration, onSessionExpired, setAccessToken } from '../api/token'
 import { homePathFor, useAuth, type CredentialExchange } from '../auth/auth-context'
 import { ConsentCheckboxes } from '../components/auth/ConsentCheckboxes'
 import { allConsented } from '../components/auth/consent-values'
@@ -51,9 +51,18 @@ export function GoogleOnboardingPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const mounted = useRef(false)
+  const pendingProfile = useRef<number | null>(null)
   useEffect(() => {
     mounted.current = true
-    return () => { mounted.current = false }
+    const unsubscribe = onSessionExpired((expiredGeneration) => {
+      if (mounted.current && pendingProfile.current === expiredGeneration) {
+        setFormError('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.')
+      }
+    })
+    return () => {
+      mounted.current = false
+      unsubscribe()
+    }
   }, [])
 
   // 새로고침이나 직접 진입이면 토큰이 없다. 이 화면만으로는 아무것도 할 수 없으므로
@@ -77,6 +86,7 @@ export function GoogleOnboardingPage() {
 
     setSubmitting(true)
     let generation = getSessionGeneration()
+    let receivedCredentials = false
     const lifecycle: { exchange?: CredentialExchange } = {}
     const isCurrent = () => mounted.current && generation === getSessionGeneration()
     try {
@@ -96,8 +106,14 @@ export function GoogleOnboardingPage() {
       const { data, error } = result
       if (data) {
         setAccessToken(data.accessToken)
+        receivedCredentials = true
         generation = getSessionGeneration()
-        await refreshProfile()
+        pendingProfile.current = generation
+        try {
+          await refreshProfile({ replaceSession: true })
+        } finally {
+          if (pendingProfile.current === generation) pendingProfile.current = null
+        }
         if (!isCurrent()) return
         schedulePostLoginOverlay()
         navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(data.user.role), { replace: true })
@@ -115,10 +131,16 @@ export function GoogleOnboardingPage() {
         (isProblem(error) ? (error.detail ?? error.title) : null) ??
           '가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.',
       )
-    } catch {
+    } catch (error) {
       // 네트워크가 끊기면 여기로 온다. catch 가 없으면 스피너만 멈추고 화면은 아무
       // 말도 하지 않아, 방금 쓴 가입 토큰이 살아 있는지 죽었는지 알 수 없게 된다.
-      if (isCurrent()) setFormError('가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      if (isCurrent()) {
+        setFormError(toApiError(error, '가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.').message)
+        if (receivedCredentials) {
+          clearAccessToken()
+          generation = getSessionGeneration()
+        }
+      }
     } finally {
       lifecycle.exchange?.settle(generation)
       if (mounted.current) setSubmitting(false)

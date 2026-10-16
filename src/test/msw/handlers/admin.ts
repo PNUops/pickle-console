@@ -1,8 +1,11 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './auth'
+import { adminLlmKeyStore } from './llm-keys'
+import { isSysTier, managesOrg } from '../../../auth/permissions'
 import { adminReadScope } from './org-scope'
-import { flavorStore, orgs, resetFlavorStore } from './reference'
+import { adminUserStore } from './users'
+import { flavorStore, orgs, osImages, resetFlavorStore } from './reference'
 import { uuid } from '../ids'
 import { kstDateString } from '../../../lib/format'
 import {
@@ -147,6 +150,7 @@ function initialAdminRequests(): RequestDetail[] {
         grantedCreditAllowedModels: [],
         grantedCreditDeniedModels: [],
         grantedPassthroughEndpoints: [],
+        reqPassthroughEndpoints: ['chat'],
       },
       purpose: '연구실 논문 요약 파이프라인',
       displayName: 'paper-summary-key',
@@ -172,6 +176,7 @@ function initialAdminRequests(): RequestDetail[] {
         grantedCreditAllowedModels: ['openai/*'],
         grantedCreditDeniedModels: [],
         grantedPassthroughEndpoints: [],
+        reqPassthroughEndpoints: ['chat'],
       },
       purpose: '캡스톤 챗봇 LLM API 호출',
       displayName: 'capstone-chatbot-admin',
@@ -192,7 +197,7 @@ function initialAdminRequests(): RequestDetail[] {
 }
 
 function initialContexts(): Record<string, ApprovalContext> {
-  return {
+  const contexts = {
     [uuid(201)]: {
       type: 'VM',
       applicant: {
@@ -426,11 +431,35 @@ function initialContexts(): Record<string, ApprovalContext> {
         ],
       },
     },
+  } as unknown as Record<string, ApprovalContext>
+  for (const [id, context] of Object.entries(contexts)) {
+    const request = initialAdminRequests().find((row) => row.id === id)!
+    context.orgId = request.orgId!
+    context.orgName = request.orgName
+    context.observedAt = '2026-10-04T01:00:00Z'
+    context.generatedResources = []
+    context.recipientUserReadFlags = {}
+    context.applicant.canReadDetail = true
+    context.workspace.canReadDetail = true
+    for (const member of context.workspace.members) { member.canReadDetail = true; member.userStatus = 'ACTIVE' }
+    for (const history of context.history) { history.orgId = request.orgId!; history.canReadDetail = true }
+    for (const resource of [...context.applicantResources.activeVms, ...context.workspace.activeVms,
+      ...(context.vm?.applicantResources.activeVms ?? []), ...(context.vm?.workspaceResources.activeVms ?? []),
+      ...(context.llmKey?.applicantKeys ?? []), ...(context.llmKey?.workspaceKeys ?? [])]) {
+      resource.orgId = request.orgId!; resource.canReadDetail = true
+    }
+    if (context.vm && request.vm) context.vm.requestedImage = { id: request.vm.imageId!, name: request.vm.imageName ?? '', version: 1, selectableNow: true }
   }
+  return contexts
 }
+
 
 export let adminRequestStore: RequestDetail[] = initialAdminRequests()
 let approvalContexts: Record<string, ApprovalContext> = initialContexts()
+
+export function approvalContextFixture(requestId: string): ApprovalContext {
+  return structuredClone(approvalContexts[requestId] ?? approvalContexts[uuid(201)])
+}
 let nextOrgId = 100
 
 /** Bodies received by decision endpoints, for payload-correctness assertions. */
@@ -673,6 +702,7 @@ export const requestPeriodHandlers: RequestHandler[] = [
 ]
 
 export const adminHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/support-orgs', () => HttpResponse.json([{ id: uuid(1), name: '정보컴퓨터공학부 실습지원센터', status: 'ACTIVE' }, { id: uuid(2), name: '테스트 기관', status: 'ACTIVE' }, { id: uuid(3), name: '비활성 기관', status: 'DISABLED' }])),
   ...requestPeriodHandlers,
   http.get('*/api/v1/admin/requests', ({ request }) => {
     const url = new URL(request.url)
@@ -680,6 +710,17 @@ export const adminHandlers: RequestHandler[] = [
     const status = url.searchParams.get('status')
     const type = url.searchParams.get('type')
     const orgId = url.searchParams.get('orgId')
+    const workspaceId = url.searchParams.get('workspaceId')
+    const q = url.searchParams.get('q')?.toLocaleLowerCase('ko-KR')
+    const requestedEndFrom = url.searchParams.get('requestedEndFrom')
+    const requestedEndTo = url.searchParams.get('requestedEndTo')
+    const indefinite = url.searchParams.get('reqIndefinite')
+    if (indefinite === 'true' && (requestedEndFrom || requestedEndTo)) return problemResponse({
+      type: 'about:blank', title: '입력값을 확인해 주세요', status: 422, code: 'VALIDATION_FAILED',
+      detail: '무기한 검색에는 종료일 범위를 함께 보내지 않습니다.',
+      errors: [{ field: 'reqIndefinite', message: '무기한 검색에는 종료일 범위를 함께 보내지 않습니다.' }],
+    })
+    const relatedUserId = url.searchParams.get('relatedUserId')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다 (밖은 404 마스킹).
@@ -690,6 +731,12 @@ export const adminHandlers: RequestHandler[] = [
       .filter((r) => (scope ? scope.matches(r.orgId) : !orgId || r.orgId === orgId))
       .filter((r) => !status || r.status === status)
       .filter((r) => !type || r.type === type)
+      .filter((r) => !workspaceId || r.workspaceId === workspaceId)
+      .filter((r) => !q || [r.displayName, r.purpose, r.requesterName, r.workspaceName, Object.values(ACCESS_TOKENS).find((account) => account.id === r.requesterId)?.email ?? ''].some((value) => value.toLocaleLowerCase('ko-KR').includes(q)))
+      .filter((r) => !requestedEndFrom || r.reqEndDate != null && r.reqEndDate >= requestedEndFrom)
+      .filter((r) => !requestedEndTo || r.reqEndDate != null && r.reqEndDate <= requestedEndTo)
+      .filter((r) => indefinite == null || (r.reqEndDate == null) === (indefinite === 'true'))
+      .filter((r) => !relatedUserId || r.requesterId === relatedUserId || r.recipients?.some((recipient) => recipient.userId === relatedUserId))
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
       content: filtered.slice(page * size, (page + 1) * size),
@@ -713,10 +760,47 @@ export const adminHandlers: RequestHandler[] = [
     return HttpResponse.json(found, { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/requests/:requestId/context', ({ params }) => {
-    const context = approvalContexts[String(params.requestId)]
-    if (!context) return notFound()
+  http.get('*/api/v1/admin/requests/:requestId/context', ({ params, request }) => {
+    const requestRow = adminRequestStore.find((row) => row.id === params.requestId)
+    if (!requestRow) return notFound()
+    const actor = actorProfileOf(request)
+    const scope = actor ? adminReadScope(actor, requestRow.orgId ?? null, request.url) : null
+    if (scope?.notFound || scope && !scope.matches(requestRow.orgId)) return notFound()
+    const context = structuredClone(approvalContexts[String(params.requestId)] ?? approvalContexts[uuid(requestRow.type === 'LLM_API_KEY' ? 205 : 201)])
+    context.orgId = requestRow.orgId!
+    context.orgName = requestRow.orgName
+    context.applicant.id = requestRow.requesterId!
+    context.applicant.name = requestRow.requesterName
+    context.workspace.id = requestRow.workspaceId!
+    context.workspace.name = requestRow.workspaceName
+    const allowed = (orgId: string) => !!actor && (actor.role.startsWith('SYS_') || actor.managedOrgs.some((org) => org.orgId === orgId))
+    const canReadUser = (userId: string | null | undefined) => {
+      if (!actor || !userId) return false
+      const role = adminUserStore.find((target) => target.id === userId)?.role ?? Object.values(ACCESS_TOKENS).find((target) => target.id === userId)?.role
+      return actor.role.startsWith('SYS_') || role != null && !role.startsWith('SYS_')
+    }
+    context.applicant.canReadDetail = canReadUser(context.applicant.id)
+    for (const member of context.workspace.members) {
+      member.canReadDetail = canReadUser(member.userId)
+      member.userStatus = adminUserStore.find((target) => target.id === member.userId)?.status ?? member.userStatus
+    }
+    for (const entry of context.history) entry.canReadDetail = allowed(entry.orgId)
+    for (const resource of [...(context.vm?.applicantResources.activeVms ?? []), ...(context.vm?.workspaceResources.activeVms ?? []), ...(context.llmKey?.applicantKeys ?? []), ...(context.llmKey?.workspaceKeys ?? [])]) resource.canReadDetail = allowed(resource.orgId)
+    context.recipientUserReadFlags = Object.fromEntries((requestRow.recipients ?? []).filter((recipient) => recipient.userId).map((recipient) => [recipient.userId!, canReadUser(recipient.userId)]))
+    context.generatedResources = []
+    if (requestRow.status === 'APPROVED' && requestRow.type === 'VM') context.generatedResources = vmStore.filter((vm) => vm.requestId === requestRow.id && vm.orgId === requestRow.orgId && vm.workspaceId != null).map((vm) => ({ id: vm.id, type: 'VM', name: vm.displayName ?? vm.name, state: vm.status, orgId: vm.orgId!, workspaceId: vm.workspaceId!, recipientId: requestRow.recipients?.find((recipient) => recipient.resourceId === vm.id)?.id ?? null, createdAt: vm.createdAt, recordUpdatedAt: vm.updatedAt, canReadDetail: true, releasedAt: null, renewDueAt: null, reservedUntil: null }))
+    if (requestRow.status === 'APPROVED' && requestRow.type === 'LLM_API_KEY' && (requestRow.recipients?.length ?? 0) === 0) context.generatedResources = adminLlmKeyStore.filter((key) => key.requestId === requestRow.id && key.orgId === requestRow.orgId).map((key) => ({ id: key.id, type: 'LLM_API_KEY', name: key.name, state: key.status, orgId: key.orgId!, workspaceId: key.workspaceId!, recipientId: null, createdAt: key.createdAt, recordUpdatedAt: key.createdAt, canReadDetail: true, releasedAt: null, renewDueAt: null, reservedUntil: null }))
     return HttpResponse.json(context, { status: 200 })
+  }),
+
+  http.post('*/api/v1/admin/vm-placement/preview', async ({ request }) => {
+    const actor = actorProfileOf(request)
+    const body = await request.json() as Schemas['AdminVmPlacementPreviewRequest']
+    if (!actor || !(actor.role === 'SYS_ADMIN' || actor.managedOrgs.some((org) => org.orgId === body.orgId && (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER')))) return problemResponse({ type: 'about:blank', title: '접근할 수 없습니다', status: 403, detail: '이 기관의 신청 승인 권한이 필요합니다.', code: 'ACCESS_DENIED' })
+    const image = osImages.find((row) => row.id === body.imageId)
+    if (!image) return notFound()
+    const fits = body.memoryMb <= 8192 && body.diskGb <= 100
+    return HttpResponse.json({ orgId: body.orgId, inputImageId: body.imageId, observedAt: '2026-10-04T01:00:00Z', image: { id: image.id, name: image.displayName, version: image.version, selectableNow: image.status === 'ACTIVE' }, candidates: [{ nodeId: uuid(1), nodeName: 'pve1', fitsOneNow: fits }], fitsAnyOneNow: fits })
   }),
 
   http.post('*/api/v1/admin/requests/:requestId/approve', async ({ params, request }) => {
@@ -948,6 +1032,7 @@ export const adminHandlers: RequestHandler[] = [
     if (body.vcpu != null) flavor.vcpu = body.vcpu
     if (body.memoryMb != null) flavor.memoryMb = body.memoryMb
     if (body.diskGb != null) flavor.diskGb = body.diskGb
+    if (body.displayOrder != null) flavor.displayOrder = body.displayOrder
     // 부분 수정 규칙은 다른 필드와 같다 — null/미지정은 "변경 없음"이고,
     // 빈 문자열이 비고를 지운다 (서버 Texts.blankToNull과 동일).
     if (body.notes != null) flavor.notes = body.notes.trim() === '' ? null : body.notes.trim()
@@ -1092,13 +1177,14 @@ export const adminHandlers: RequestHandler[] = [
 
   /* ─── VM 사용 기간 변경 — 만료 연장 ─── */
 
-  http.get('*/api/v1/admin/vms/:vmId', ({ params }) => {
+  http.get('*/api/v1/admin/vms/:vmId', ({ params, request }) => {
     const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
-    // 관리자 조회의 권한은 기관 스코프라 이 VM의 접근 목록과 무관하다 — 서버도
-    // myResourceRole을 null로 두고 능력 불리언을 모두 false로 내려준다.
+    const actor = actorProfileOf(request)
+    const contentVisible = !!actor && (isSysTier(actor.role) || vm.orgId != null && managesOrg(actor.managedOrgs, vm.orgId))
+    // Global support metadata excludes foreign institution verification proofs.
     return HttpResponse.json(
-      { ...vm, ...accessOf(null), passwordRevealAllowed: false },
+      { ...vm, ...accessOf(null), passwordRevealAllowed: false, publications: vm.publications.map((publication) => ({ ...publication, domain: publication.domain ? { ...publication.domain, verification: contentVisible ? publication.domain.verification : null } : publication.domain })) },
       { status: 200 },
     )
   }),

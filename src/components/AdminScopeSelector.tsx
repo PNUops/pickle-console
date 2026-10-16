@@ -24,7 +24,7 @@ export function AdminScopeSelector() {
         disabled={scope.resolving || scope.options.length === 0}
         onChange={(event) => scope.setActiveOrgId(event.target.value || undefined)}
       >
-        {scope.tier === 'system' && <option value="">전체 플랫폼</option>}
+        {(scope.tier === 'system' || scope.globalSupport) && <option value="">전체 플랫폼</option>}
         {scope.tier === 'org' && scope.requiresSelection && (
           <option value="" disabled>
             {scope.options.length === 0 ? '관리 기관이 없습니다' : '기관을 선택하세요'}

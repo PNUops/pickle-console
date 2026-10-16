@@ -1,17 +1,17 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
+import { EditWorkspaceModal, OwnershipTransferModal } from '../components/workspace/WorkspaceModals'
+import { InviteMembersForm, PendingInvitationsSection } from '../components/workspace/WorkspaceInvitations'
+import { WorkspaceMemberRoleSelect, RemoveWorkspaceMemberModal } from '../components/workspace/WorkspaceMemberControls'
+import { requestReaderKey } from '../api/request-review'
+import { useActiveResult } from '../lib/use-active-result'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
-import { toApiError, type Problem } from '../api/problem'
-import type { components } from '../api/schema'
+import { toApiError } from '../api/problem'
 import {
   fetchResources,
   fetchWorkspace,
-  fetchWorkspaceInvitations,
   type WorkspaceDetail,
-  type WorkspaceInvitation,
-  type WorkspaceInvitationEntry,
-  type WorkspaceInvitationResult,
   type WorkspaceMember,
   type WorkspaceMemberRole,
 } from '../api/queries'
@@ -19,19 +19,15 @@ import { useAuth } from '../auth/auth-context'
 import { resourceTypeEntry } from '../components/resource/registry'
 import {
   Alert,
-  Badge,
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   ConfirmNameModal,
-  FormField,
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
-  Input,
   Modal,
-  Select,
   SettingRow,
   Spinner,
   Table,
@@ -40,33 +36,24 @@ import {
   TH,
   THead,
   TR,
-  Textarea,
   useToast,
-  type BadgeVariant,
 } from '../components/ui'
-import {
-  CREATABLE_WORKSPACE_KINDS,
-  WORKSPACE_KIND_HINTS,
-  WORKSPACE_KIND_LABELS,
-  WORKSPACE_ROLE_LABELS,
-  type CreatableWorkspaceKind,
-} from '../lib/labels'
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
-import { parseRoster, type RosterRow } from '../lib/roster'
-import { RosterInput } from '../components/roster/RosterInput'
-
-type Schemas = components['schemas']
-
-const ASSIGNABLE_ROLES: WorkspaceMemberRole[] = ['OWNER', 'MEMBER']
 
 export function WorkspaceDetailPage() {
   const params = useParams()
+  const { user } = useAuth()
   const workspaceId = params.workspaceId ?? ''
+  return <WorkspaceDetailContent key={`${workspaceId}:${requestReaderKey(user)}`} workspaceId={workspaceId} />
+}
+
+function WorkspaceDetailContent({ workspaceId }: { workspaceId: string }) {
+  const { user } = useAuth()
   const idValid = isUuid(workspaceId)
   const workspace = useQuery({
-    queryKey: ['workspaces', workspaceId],
+    queryKey: ['workspaces', workspaceId, requestReaderKey(user)],
     queryFn: () => fetchWorkspace(workspaceId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
@@ -88,7 +75,7 @@ export function WorkspaceDetailPage() {
 
   const data = workspace.data
   // 계약 v0.3.x부터 서버가 내 역할을 직접 내려준다 (구성원 목록 스캔 불필요).
-  const myRole = data.myRole
+  const myRole = data.myRole ?? null
 
   return (
     <div className="space-y-6">
@@ -171,6 +158,7 @@ function WorkspaceResourcesSection({ workspaceId }: { workspaceId: string }) {
 /* ─── danger zone: workspace delete (contract: OWNER only, name-confirmed) ─── */
 
 function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
+  const active = useActiveResult()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -184,13 +172,15 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
       })
       if (!response.ok) throw toApiError(err, '워크스페이스를 삭제하지 못했습니다.')
     },
-    onSuccess: async () => {
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+      if (!active.current) return
       setOpen(false)
       toast.success('워크스페이스를 삭제했습니다.')
-      await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       navigate('/console/workspaces')
     },
     onError: (err) => {
+      if (!active.current) return
       setOpen(false)
       // 활성 VM 보유·PERSONAL 등 서버의 problem detail을 그대로 노출한다.
       setError(toApiError(err, '워크스페이스를 삭제하지 못했습니다.').message)
@@ -276,104 +266,6 @@ function WorkspaceInfoSection({
   )
 }
 
-function EditWorkspaceModal({
-  workspace,
-  onClose,
-}: {
-  workspace: WorkspaceDetail
-  onClose: () => void
-}) {
-  const queryClient = useQueryClient()
-  const [name, setName] = useState(workspace.name)
-  const [description, setDescription] = useState(workspace.description ?? '')
-  // A personal workspace cannot be reclassified: automatic creation, the
-  // undeletable rule and the closed member list all decide by that value.
-  const personal = workspace.kind === 'PERSONAL'
-  // A kind this build cannot offer (retired TEAM, or one the server shipped
-  // first) has no option to select. Starting on it would leave the select
-  // showing its first entry while the state held the old value, so saving
-  // would send nothing and the screen would claim a change it never made.
-  // Start unset instead and make the owner choose.
-  const creatable = CREATABLE_WORKSPACE_KINDS.includes(
-    workspace.kind as CreatableWorkspaceKind,
-  )
-  const [kind, setKind] = useState<CreatableWorkspaceKind | ''>(
-    personal || !creatable ? '' : (workspace.kind as CreatableWorkspaceKind),
-  )
-  const [error, setError] = useState<string | null>(null)
-
-  const update = useMutation({
-    mutationFn: async () => {
-      const { data, error: err } = await api.PATCH('/workspaces/{workspaceId}', {
-        params: { path: { workspaceId: workspace.id } },
-        body: {
-          name,
-          description: description || null,
-          ...(kind !== '' && kind !== workspace.kind ? { kind } : {}),
-        },
-      })
-      if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.')
-      return data
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
-      onClose()
-    },
-    onError: (err) => setError(toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.').message),
-  })
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setError(null)
-    if (!name.trim()) {
-      setError('워크스페이스 이름을 입력해 주세요.')
-      return
-    }
-    update.mutate()
-  }
-
-  return (
-    <Modal open onClose={onClose} title="워크스페이스 정보 수정">
-      <form onSubmit={submit} className="space-y-4" noValidate>
-        {error && <Alert variant="danger">{error}</Alert>}
-        <FormField label="워크스페이스 이름" required>
-          <Input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} />
-        </FormField>
-        {!personal && (
-          <FormField label="유형" required>
-            <Select
-              value={kind}
-              onChange={(event) => setKind(event.target.value as CreatableWorkspaceKind)}
-            >
-              {kind === '' && <option value="">선택해 주세요</option>}
-              {CREATABLE_WORKSPACE_KINDS.map((value) => (
-                <option key={value} value={value}>
-                  {WORKSPACE_KIND_LABELS[value]} ({WORKSPACE_KIND_HINTS[value]})
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        )}
-        <FormField label="설명">
-          <Textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            maxLength={500}
-          />
-        </FormField>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={update.isPending}>
-            취소
-          </Button>
-          <Button type="submit" loading={update.isPending}>
-            저장
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  )
-}
-
 /* ─── members ─── */
 
 function MembersSection({
@@ -387,6 +279,7 @@ function MembersSection({
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const toast = useToast()
+  const active = useActiveResult()
   const [actionError, setActionError] = useState<string | null>(null)
   const [transferTarget, setTransferTarget] = useState<WorkspaceMember | null>(null)
   const [removeTarget, setRemoveTarget] = useState<WorkspaceMember | null>(null)
@@ -406,15 +299,17 @@ function MembersSection({
       return data
     },
     onSuccess: async (_data, { member, role }) => {
+      await refresh()
+      if (!active.current) return
       setTransferTarget(null)
       toast.success(
         role === 'OWNER'
-          ? `${member.name} 님에게 소유권을 이전했습니다.`
+          ? `${member.name} 님을 소유자로 지정했습니다.`
           : `${member.name} 님의 역할을 변경했습니다.`,
       )
-      await refresh()
     },
     onError: (err) => {
+      if (!active.current) return
       setTransferTarget(null)
       setActionError(toApiError(err, '역할을 변경하지 못했습니다.').message)
     },
@@ -428,18 +323,19 @@ function MembersSection({
       if (!response.ok) throw toApiError(error, '구성원을 제거하지 못했습니다.')
       return member
     },
-    onSuccess: async (member) => {
+    onSuccess: (member) => {
+      void refresh()
+      if (!active.current) return
       setRemoveTarget(null)
       if (member.userId === user?.id) {
         toast.success('워크스페이스에서 나갔습니다.')
         navigate('/console/workspaces')
-        await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
         return
       }
       toast.success(`${member.name} 님을 워크스페이스에서 제거했습니다.`)
-      await refresh()
     },
     onError: (err) => {
+      if (!active.current) return
       setRemoveTarget(null)
       setActionError(toApiError(err, '구성원을 제거하지 못했습니다.').message)
     },
@@ -491,19 +387,9 @@ function MembersSection({
                   <TD>
                     {canManage && !isSelf ? (
                       <div className="w-36">
-                        <Select
-                          aria-label={`${member.name} 역할 변경`}
-                          value={member.role}
-                          onChange={(event) =>
-                            onRoleSelect(member, event.target.value as WorkspaceMemberRole)
-                          }
-                        >
-                          {ASSIGNABLE_ROLES.map((role) => (
-                            <option key={role} value={role}>
-                              {WORKSPACE_ROLE_LABELS[role]}
-                            </option>
-                          ))}
-                        </Select>
+                        <WorkspaceMemberRoleSelect name={member.name} role={member.role}
+                          disabled={changeRole.isPending}
+                          onChange={(role) => onRoleSelect(member, role)} />
                       </div>
                     ) : (
                       <WorkspaceRoleBadge role={member.role} />
@@ -546,29 +432,9 @@ function MembersSection({
         onConfirm={(member) => changeRole.mutate({ member, role: 'OWNER' })}
       />
 
-      <Modal
-        open={removeTarget !== null}
-        onClose={() => setRemoveTarget(null)}
-        title="구성원 제거"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setRemoveTarget(null)}>
-              취소
-            </Button>
-            <Button
-              variant="danger"
-              loading={removeMember.isPending}
-              onClick={() => removeTarget && removeMember.mutate(removeTarget)}
-            >
-              제거
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-neutral-600">
-          {removeTarget?.name}({removeTarget?.email}) 님을 이 워크스페이스에서 제거합니다.
-        </p>
-      </Modal>
+      <RemoveWorkspaceMemberModal target={removeTarget} pending={removeMember.isPending}
+        onCancel={() => setRemoveTarget(null)}
+        onConfirm={() => removeTarget && removeMember.mutate(removeTarget)} />
 
     </Card>
   )
@@ -589,6 +455,7 @@ function MembersSection({
  * (목록으로 나감) 다르다.
  */
 function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
+  const active = useActiveResult()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -606,13 +473,15 @@ function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
       )
       if (!response.ok) throw toApiError(problem, '워크스페이스에서 나가지 못했습니다.')
     },
-    onSuccess: async () => {
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+      if (!active.current) return
       setOpen(false)
       toast.success('워크스페이스에서 나갔습니다.')
       navigate('/console/workspaces')
-      await queryClient.invalidateQueries({ queryKey: ['workspaces'] })
     },
     onError: (err) => {
+      if (!active.current) return
       setOpen(false)
       setError(toApiError(err, '워크스페이스에서 나가지 못했습니다.').message)
     },
@@ -662,413 +531,5 @@ function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
         <p className="text-sm text-neutral-600">나간 후에는 다시 초대받아야 합니다.</p>
       </Modal>
     </Card>
-  )
-}
-
-/* ─── invite members (contract: OWNER of a non-personal workspace) ─── */
-
-/** The server takes at most this many entries per call; a longer list goes in consecutive calls. */
-const MAX_INVITE_ENTRIES = 200
-
-/**
- * Entries one owner may send in an hour. Every entry counts, an already
- * invited one included. The server refuses a whole call that would pass the
- * budget, so a longer list stops at the first refused call of
- * MAX_INVITE_ENTRIES and that call's lines and the ones after it stay in
- * the field.
- */
-const HOURLY_INVITE_ENTRIES = 500
-
-const INVITATION_OUTCOME_LABELS: Record<Schemas['WorkspaceInvitationOutcome'], string> = {
-  ADDED: '구성원으로 추가됨',
-  INVITED: '초대함, 가입하면 자동으로 구성원이 됩니다',
-  ALREADY_MEMBER: '이미 구성원',
-  ALREADY_INVITED: '이미 초대함',
-  DUPLICATE_IN_REQUEST: '같은 입력이 두 번 있음',
-}
-
-const INVITATION_OUTCOME_VARIANTS: Record<Schemas['WorkspaceInvitationOutcome'], BadgeVariant> = {
-  ADDED: 'success',
-  INVITED: 'info',
-  ALREADY_MEMBER: 'neutral',
-  ALREADY_INVITED: 'neutral',
-  DUPLICATE_IN_REQUEST: 'warning',
-}
-
-// An outcome newer than this build renders its raw value rather than a blank badge.
-function outcomeLabel(outcome: string): string {
-  return INVITATION_OUTCOME_LABELS[outcome as Schemas['WorkspaceInvitationOutcome']] ?? outcome
-}
-
-function outcomeVariant(outcome: string): BadgeVariant {
-  return INVITATION_OUTCOME_VARIANTS[outcome as Schemas['WorkspaceInvitationOutcome']] ?? 'neutral'
-}
-
-/** One pasted line that names a person, by email or by student number. */
-interface InviteLine {
-  /** 1-based line number in the textarea, counting blank lines. */
-  line: number
-  text: string
-  entry: WorkspaceInvitationEntry
-}
-
-function inviteLinesOf(rows: RosterRow[]): InviteLine[] {
-  return rows.map((row) => ({
-    line: row.line,
-    text: row.email ?? row.studentNo ?? row.raw,
-    entry: row.email != null ? { email: row.email } : { studentNo: row.studentNo },
-  }))
-}
-
-/**
- * The server names a bad entry by its index in the request (`entries[3]`,
- * `entries[3].email`). Blank lines are dropped before sending and a long list
- * goes in several calls, so the index is not the line number the owner sees;
- * this maps it back through the lines of the call that failed.
- */
-function lineErrorsOf(problem: Problem | null | undefined, lines: InviteLine[]): string[] {
-  const messages: string[] = []
-  for (const error of problem?.errors ?? []) {
-    const match = /^entries\[(\d+)\]/.exec(error.field)
-    const target = match ? lines[Number(match[1])] : undefined
-    if (target) messages.push(`${target.line}번째 줄 (${target.text}): ${error.message}`)
-  }
-  return messages
-}
-
-/** The text without the given 1-based lines, and where each kept line now sits. */
-function withoutLines(text: string, drop: Set<number>): { text: string; lineOf: Map<number, number> } {
-  const kept: string[] = []
-  const lineOf = new Map<number, number>()
-  text.split(/\r?\n/).forEach((source, index) => {
-    if (drop.has(index + 1)) return
-    kept.push(source)
-    lineOf.set(index + 1, kept.length)
-  })
-  return { text: kept.join('\n'), lineOf }
-}
-
-function InviteMembersForm({ workspaceId, onInvited }: { workspaceId: string; onInvited: () => void }) {
-  const [text, setText] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [lineErrors, setLineErrors] = useState<string[]>([])
-  const [results, setResults] = useState<WorkspaceInvitationResult[] | null>(null)
-
-  const invite = useMutation({
-    // Consecutive calls of at most MAX_INVITE_ENTRIES. The first failure (a 429
-    // among them) stops the run; what the earlier calls did has already happened.
-    mutationFn: async ({ lines }: { text: string; lines: InviteLine[] }) => {
-      const done: WorkspaceInvitationResult[] = []
-      for (let start = 0; start < lines.length; start += MAX_INVITE_ENTRIES) {
-        const chunk = lines.slice(start, start + MAX_INVITE_ENTRIES)
-        const fail = (err: unknown) => ({
-          results: done,
-          failure: { error: toApiError(err, '구성원을 초대하지 못했습니다.'), sent: start, lines: chunk },
-        })
-        try {
-          const { data, error: err } = await api.POST('/workspaces/{workspaceId}/invitations', {
-            params: { path: { workspaceId } },
-            body: { entries: chunk.map((line) => line.entry) },
-          })
-          if (!data) return fail(err)
-          done.push(...data.results)
-        } catch (err) {
-          return fail(err)
-        }
-      }
-      return { results: done, failure: null }
-    },
-    onSuccess: ({ results: done, failure }, { text: sentText, lines }) => {
-      if (done.length > 0) {
-        setResults(done)
-        onInvited()
-      }
-      // Text the owner changed while the run was out is theirs, and stays.
-      const edited = text !== sentText
-      if (!failure) {
-        if (!edited) setText('')
-        return
-      }
-      // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
-      setError(failure.error.message)
-      if (edited) {
-        setLineErrors(lineErrorsOf(failure.error.problem, failure.lines))
-        return
-      }
-      // The lines already sent leave the field, so sending again starts where
-      // this run stopped instead of spending the hourly budget twice.
-      const remaining = withoutLines(sentText, new Set(lines.slice(0, failure.sent).map((line) => line.line)))
-      setText(remaining.text)
-      setLineErrors(
-        lineErrorsOf(
-          failure.error.problem,
-          failure.lines.map((line) => ({ ...line, line: remaining.lineOf.get(line.line) ?? line.line })),
-        ),
-      )
-    },
-    onError: (err) => setError(toApiError(err, '구성원을 초대하지 못했습니다.').message),
-  })
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
-    setError(null)
-    setLineErrors([])
-    const rows = parseRoster(text, { allowEmail: true })
-    if (rows.length === 0) {
-      setError('초대할 사람의 이메일이나 학번을 입력해 주세요.')
-      return
-    }
-    const unreadable = rows.filter((row) => row.error)
-    if (unreadable.length > 0) {
-      setError('읽지 못한 줄이 있습니다.')
-      setLineErrors(
-        unreadable.map((row) => `${row.line}번째 줄 (${row.raw.replace(/\s+/g, ' ')}): ${row.error}`),
-      )
-      return
-    }
-    setResults(null)
-    invite.mutate({ text, lines: inviteLinesOf(rows) })
-  }
-
-  const overBudget =
-    parseRoster(text, { allowEmail: true }).filter((row) => !row.error).length > HOURLY_INVITE_ENTRIES
-
-  return (
-    <form onSubmit={submit} className="space-y-3 rounded-lg bg-neutral-50 p-4" noValidate>
-      <h3 className="text-sm font-semibold text-neutral-800">구성원 초대</h3>
-      {error && (
-        <Alert variant="danger">
-          {error}
-          {lineErrors.length > 0 && (
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              {lineErrors.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
-          )}
-        </Alert>
-      )}
-      <RosterInput
-        workspaceId={workspaceId}
-        value={text}
-        onChange={setText}
-        label="이메일 또는 학번"
-        required
-        allowEmail
-        placeholder={'cheolsu.kim@pusan.ac.kr\n202312345'}
-      />
-      {overBudget && (
-        <Alert variant="info">
-          한 시간에 {HOURLY_INVITE_ENTRIES}명까지 초대할 수 있습니다. 나머지는 한 시간 뒤에 보내 주세요.
-        </Alert>
-      )}
-      <p className="text-xs text-foreground-muted">
-        학번은 학생 직책 계정에만 등록되므로 교수, 연구원, 직원은 이메일로 초대해 주세요.
-      </p>
-      <div className="flex justify-end">
-        <Button type="submit" loading={invite.isPending}>
-          초대
-        </Button>
-      </div>
-      {results && (
-        <section aria-label="초대 결과" className="space-y-2">
-          <h4 className="text-sm font-semibold text-neutral-800">초대 결과</h4>
-          <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-surface-card">
-            {results.map((result, index) => (
-              <li
-                key={`${index}-${result.email ?? result.studentNo ?? ''}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
-              >
-                <span className="font-medium text-neutral-900">
-                  {result.email ?? result.studentNo}
-                </span>
-                <Badge variant={outcomeVariant(result.outcome)}>{outcomeLabel(result.outcome)}</Badge>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </form>
-  )
-}
-
-/* ─── pending invitations (contract: OWNER of a non-personal workspace) ─── */
-
-function invitationTarget(invitation: WorkspaceInvitation): string {
-  return invitation.email ?? invitation.studentNo ?? ''
-}
-
-function PendingInvitationsSection({ workspaceId, onChanged }: { workspaceId: string; onChanged: () => void }) {
-  const toast = useToast()
-  const [cancelTarget, setCancelTarget] = useState<WorkspaceInvitation | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const invitations = useQuery({
-    queryKey: ['workspaces', workspaceId, 'invitations'],
-    queryFn: () => fetchWorkspaceInvitations(workspaceId),
-  })
-
-  const cancel = useMutation({
-    mutationFn: async (invitation: WorkspaceInvitation) => {
-      const { error: err, response } = await api.DELETE(
-        '/workspaces/{workspaceId}/invitations/{invitationId}',
-        { params: { path: { workspaceId, invitationId: invitation.id } } },
-      )
-      if (!response.ok) throw toApiError(err, '초대를 취소하지 못했습니다.')
-      return invitation
-    },
-    onSuccess: (invitation) => {
-      setCancelTarget(null)
-      toast.success(`${invitationTarget(invitation)} 초대를 취소했습니다.`)
-      onChanged()
-    },
-    onError: (err) => {
-      setCancelTarget(null)
-      setError(toApiError(err, '초대를 취소하지 못했습니다.').message)
-    },
-  })
-
-  return (
-    <section aria-labelledby="pending-invitations-heading" className="space-y-3">
-      <h3 id="pending-invitations-heading" className="text-sm font-semibold text-neutral-800">
-        대기 중인 초대{invitations.data ? ` (${invitations.data.length}건)` : ''}
-      </h3>
-      {error && <Alert variant="danger">{error}</Alert>}
-      {invitations.isPending && (
-        <div className="flex justify-center py-4">
-          <Spinner label="대기 중인 초대 불러오는 중" />
-        </div>
-      )}
-      {invitations.isError && <Alert variant="danger">{invitations.error.message}</Alert>}
-      {invitations.data && invitations.data.length === 0 && (
-        <p className="text-sm text-foreground-muted">대기 중인 초대가 없습니다.</p>
-      )}
-      {invitations.data && invitations.data.length > 0 && (
-        <Table>
-          <THead>
-            <TR>
-              <TH>이메일 또는 학번</TH>
-              <TH>초대한 날</TH>
-              <TH>초대한 사람</TH>
-              <TH>관리</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {invitations.data.map((invitation) => (
-              <TR key={invitation.id}>
-                <TD className="font-medium text-neutral-900">{invitationTarget(invitation)}</TD>
-                <TD>{formatDateTime(invitation.invitedAt)}</TD>
-                <TD>{invitation.invitedBy.name}</TD>
-                <TD>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`${invitationTarget(invitation)} 초대 취소`}
-                    className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
-                    onClick={() => {
-                      setError(null)
-                      setCancelTarget(invitation)
-                    }}
-                  >
-                    취소
-                  </Button>
-                </TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      )}
-
-      <Modal
-        open={cancelTarget !== null}
-        onClose={() => setCancelTarget(null)}
-        title="초대 취소"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setCancelTarget(null)}>
-              닫기
-            </Button>
-            <Button
-              variant="danger"
-              loading={cancel.isPending}
-              onClick={() => cancelTarget && cancel.mutate(cancelTarget)}
-            >
-              초대 취소
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-neutral-600">
-          {cancelTarget ? invitationTarget(cancelTarget) : ''} 초대를 취소합니다.
-        </p>
-      </Modal>
-    </section>
-  )
-}
-
-/* ─── ownership transfer confirm (type-to-confirm) ─── */
-
-function OwnershipTransferModal({
-  target,
-  pending,
-  onCancel,
-  onConfirm,
-}: {
-  target: WorkspaceMember | null
-  pending: boolean
-  onCancel: () => void
-  onConfirm: (member: WorkspaceMember) => void
-}) {
-  const [confirmEmail, setConfirmEmail] = useState('')
-
-  const close = () => {
-    setConfirmEmail('')
-    onCancel()
-  }
-
-  return (
-    <Modal
-      open={target !== null}
-      onClose={close}
-      title="소유자 지정"
-      footer={
-        <>
-          <Button variant="secondary" onClick={close} disabled={pending}>
-            취소
-          </Button>
-          <Button
-            variant="danger"
-            loading={pending}
-            disabled={confirmEmail !== target?.email}
-            onClick={() => {
-              if (target) {
-                onConfirm(target)
-                setConfirmEmail('')
-              }
-            }}
-          >
-            소유자로 지정
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <p className="text-sm text-neutral-600">
-          {target?.name} 님을 소유자로 지정합니다. 소유자는 워크스페이스 정보와 구성원을 관리하고,
-          워크스페이스가 소유한 리소스를 조회·삭제하며 접근 권한을 관리할 수 있습니다. 회원님의
-          소유자 권한은 그대로 유지됩니다.
-        </p>
-        <FormField
-          label="확인 이메일"
-          required
-          description={`계속하려면 새 소유자의 이메일(${target?.email ?? ''})을 입력해 주세요.`}
-        >
-          <Input
-            value={confirmEmail}
-            onChange={(event) => setConfirmEmail(event.target.value)}
-            placeholder={target?.email ?? ''}
-          />
-        </FormField>
-      </div>
-    </Modal>
   )
 }

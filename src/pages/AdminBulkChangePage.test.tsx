@@ -31,7 +31,7 @@ async function openBulk(
   list: keyof typeof LISTS = 'llm-keys',
 ) {
   server.use(refreshSuccessHandler(token, profile))
-  renderApp(LISTS[list].path)
+  renderApp(`${LISTS[list].path}${profile.role.startsWith('ORG_') ? `?org=${uuid(1)}` : ''}`)
   for (const name of names) {
     await user.click(await screen.findByRole('checkbox', { name: `${name} 선택` }))
   }
@@ -175,20 +175,77 @@ describe('AdminBulkChangePage', () => {
     })
   })
 
+  test('warns when replacing the features leaves Chat out', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-org-admin', orgAdminUser, ['active-admin-key'])
+    await chooseKind(user, '한도·모델·기능 권한')
+    await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: '기능 권한 변경 방식' }), 'REPLACE')
+    await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
+    await user.click(screen.getByRole('checkbox', { name: /이미지 생성/ }))
+    expect(screen.queryByText('새 목록에 Chat이 없습니다')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
+    expect(screen.getByText('새 목록에 Chat이 없습니다')).toBeInTheDocument()
+  })
+
+  // A bulk add or remove lists names to apply to each key; the api checks the
+  // hierarchy on every key's result, so web search is not held behind Chat.
+  test('removes web search alone, and replacing brings the hierarchy back', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-org-admin', orgAdminUser, ['active-admin-key'])
+    await chooseKind(user, '한도·모델·기능 권한')
+    await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
+    const op = screen.getByRole('combobox', { name: '기능 권한 변경 방식' })
+    await user.selectOptions(op, 'REMOVE')
+    await user.click(screen.getByRole('checkbox', { name: /웹 검색/ }))
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).toBeChecked()
+    await user.selectOptions(op, 'REPLACE')
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /웹 검색/ })).toBeDisabled()
+    await user.selectOptions(op, 'REMOVE')
+    await user.click(screen.getByRole('checkbox', { name: /웹 검색/ }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies.at(-1)!.change.llmKeyLimits).toEqual({
+      passthroughEndpoints: { op: 'REMOVE', values: ['web_search'] },
+    })
+  })
+
   test('offers no money fields to SYS_MANAGER', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-manager', sysManagerUser, ['active-admin-key'])
     await chooseKind(user, '한도·모델·기능 권한')
     expect(screen.getByRole('checkbox', { name: 'RPM' })).toBeInTheDocument()
-    for (const name of ['금액 한도 (USD)', '금액 리셋 창', '유료 모델 허용·차단', '기능 권한']) {
+    for (const name of ['금액 한도 (USD)', '금액 리셋 창', '유료 모델 허용·차단']) {
       expect(screen.queryByRole('checkbox', { name })).not.toBeInTheDocument()
     }
   })
 
-  test('offers revoke and access only to the administrator tier', async () => {
+  // Chat works on both axes, so a role without money may add or remove it in
+  // bulk as it may on a single key; replacing the list is not offered.
+  test('offers SYS_MANAGER adding or removing Chat alone', async () => {
+    const user = userEvent.setup()
+    await openBulk(user, 'access-sys-manager', sysManagerUser, ['active-admin-key'])
+    await chooseKind(user, '한도·모델·기능 권한')
+    await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
+    const op = screen.getByRole('combobox', { name: '기능 권한 변경 방식' })
+    expect(within(op).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '추가',
+      '빼기',
+    ])
+    expect(screen.queryByRole('checkbox', { name: /이미지 생성/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
+    await user.click(screen.getByRole('button', { name: '미리보기' }))
+    await screen.findByRole('table', { name: '일괄 변경 미리보기' })
+    expect(bulkPreviewBodies.at(-1)!.change.llmKeyLimits).toEqual({
+      passthroughEndpoints: { op: 'ADD', values: ['chat'] },
+    })
+  })
+
+  test('keeps key revocation restricted while offering access support to managers', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['active-admin-key'])
-    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
     await chooseKind(user, '상태')
     expect(screen.getByRole('radio', { name: '정지' })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: '재개' })).toBeInTheDocument()
@@ -301,9 +358,9 @@ describe('AdminBulkChangePage', () => {
   test('renders result and reason codes it does not know as themselves', async () => {
     const user = userEvent.setup()
     server.use(
-      http.post('*/api/v1/admin/bulk-changes', () =>
+      http.post('*/api/v1/admin/bulk-changes', async ({ request }) =>
         HttpResponse.json({
-          batchId: uuid(900),
+          batchId: (await request.json() as { operationId: string }).operationId,
           items: [
             {
               targetId: uuid(170),
@@ -326,23 +383,15 @@ describe('AdminBulkChangePage', () => {
     expect(unknown).toHaveTextContent('QUOTA_HELD')
   })
 
-  test('refuses a grantee outside the workspace and reports a grant changed since the preview', async () => {
+  test('withholds unrelated profile directory users and reports a grant changed since preview', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key'])
     await chooseKind(user, '접근 권한')
-    await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '정외부')
-    await user.click(
-      within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
-    )
-    await user.click(screen.getByRole('button', { name: '미리보기' }))
-    expect(
-      within(await screen.findByRole('table', { name: '일괄 변경 미리보기' })).getByRole('row', {
-        name: /active-admin-key/,
-      }),
-    ).toHaveTextContent('워크스페이스 구성원 아님')
-
-    await user.click(screen.getByRole('button', { name: '이전' }))
-    await user.click(screen.getByRole('button', { name: '다시 고르기' }))
+    const search = screen.getByRole('searchbox', { name: /대상 사용자/ })
+    await user.type(search, '정외부')
+    expect(await screen.findByText('찾은 사용자가 없습니다.')).toBeInTheDocument()
+    expect(bulkPreviewBodies).toHaveLength(0)
+    await user.clear(search)
     await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '홍길동')
     await user.click(
       within(await screen.findByRole('list', { name: '검색된 사용자' })).getAllByRole('button')[0],
@@ -357,12 +406,12 @@ describe('AdminBulkChangePage', () => {
     )
   })
 
-  test('sends a VM power change and offers no deletion or access to an org manager', async () => {
+  test('sends VM power while retaining deletion restrictions and offering access support', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['algo-judge'], 'vms')
     expect(screen.getByRole('radio', { name: '기간' })).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: '삭제 예약·취소' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
     await chooseKind(user, '전원')
     await user.click(screen.getByRole('radio', { name: '재부팅' }))
     await user.click(screen.getByRole('button', { name: '미리보기' }))
@@ -410,13 +459,13 @@ describe('AdminBulkChangePage', () => {
 })
 
 describe('AdminBulkChangePage on domains', () => {
-  test('offers the domain kinds to an org manager and access only to the administrator tier', async () => {
+  test('offers institution domain operations and global access support to a manager', async () => {
     const user = userEvent.setup()
     await openBulk(user, 'access-org-manager', orgManagerUser, ['myblog.pusan.dev'], 'domains')
     for (const title of ['사용 기한', '재검증', '강제 해제']) {
       expect(screen.getByRole('radio', { name: title })).toBeInTheDocument()
     }
-    expect(screen.queryByRole('radio', { name: '접근 권한' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
   })
 
   test('sends a renewal as the end of the chosen KST day and marks other kinds ineligible', async () => {
@@ -560,8 +609,12 @@ describe('AdminBulkChangePage on domains', () => {
 
     const result = await screen.findByRole('table', { name: '일괄 변경 결과' })
     expect(bulkApplyBodies).toHaveLength(1)
-    expect(within(result).getByRole('row', { name: /demo\.example\.com/ })).toHaveTextContent('적용됨')
-    expect(within(result).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent('적용됨')
+    await screen.findByText('적용 결과가 저장됐습니다')
+    for (const id of bulkApplyBodies[0].targetIds) {
+      expect(within(result).getByRole('row', { name: new RegExp(id) })).toHaveTextContent('적용됨')
+    }
+    expect(within(result).queryByText('demo.example.com')).not.toBeInTheDocument()
+    expect(within(result).queryByText('myblog.pusan.dev')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: '공개 서비스 목록으로' }))
     await screen.findByRole('checkbox', { name: 'ai-team.pusan.dev 선택' })

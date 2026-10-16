@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
+import { useLocation } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addLlmKeyAccessGrant,
@@ -10,6 +11,7 @@ import {
   updateDnsDomainAccessGrant,
   fetchVmAccessGrants,
   fetchWorkspace,
+  fetchAdminWorkspace,
   removeLlmKeyAccessGrant,
   removeVmAccessGrant,
   updateLlmKeyAccessGrant,
@@ -41,6 +43,11 @@ import {
   RESOURCE_ROLE_LABELS,
 } from '../../lib/labels'
 import { formatDateTime } from '../../lib/format'
+import { useAuth } from '../../auth/auth-context'
+import { requestReaderKey } from '../../api/request-review'
+import { useActiveResult } from '../../lib/use-active-result'
+import { addAdminResourceAccess, fetchAdminResourceAccess, previewResourceAccess, removeAdminResourceAccess, updateAdminResourceAccess, type AccessConfirmation, type AccessChangePreview, type ActorAccessImpact } from '../../api/resource-access'
+import { useAccessIncreaseReview } from '../../lib/use-access-increase-review'
 
 const ASSIGNABLE: ResourceRole[] = ['OWNER', 'EDITOR', 'MEMBER', 'VIEWER']
 /** 워크스페이스 전체에는 리소스를 좌우하는 등급을 줄 수 없다 (서버도 같은 제한). */
@@ -61,12 +68,13 @@ interface AccessKind {
   fetchGrants: (resourceId: string) => Promise<VmAccessList>
   addGrant: (
     resourceId: string,
-    body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole },
+    body: { granteeType: 'USER' | 'WORKSPACE'; userId?: string; role: ResourceRole; confirmation?: AccessConfirmation },
   ) => Promise<VmAccessGrant>
   updateGrant: (
     resourceId: string,
     grantId: string,
     role: ResourceRole,
+    confirmation?: AccessConfirmation,
   ) => Promise<VmAccessGrant>
   removeGrant: (resourceId: string, grantId: string) => Promise<void>
   roleHints: Record<ResourceRole, string>
@@ -191,50 +199,85 @@ const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
 export function ResourceAccessSection({
   type,
   resourceId,
+  support = false,
 }: {
   type: AccessCapableType
   resourceId: string
+  support?: boolean
 }) {
-  const kind = ACCESS_KINDS[type]
+  const { user } = useAuth()
+  const location = useLocation()
+  const scope = support ? new URLSearchParams(location.search).get('org') ?? 'all' : 'ordinary'
+  return <ResourceAccessContent key={`${type}:${resourceId}:${support}:${scope}:${requestReaderKey(user)}`} type={type} resourceId={resourceId} support={support} />
+}
+
+function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapableType; resourceId: string; support: boolean }) {
+  const { user } = useAuth()
+  const active = useActiveResult()
+  const kind: AccessKind = support ? {
+    ...ACCESS_KINDS[type],
+    fetchGrants: (id) => fetchAdminResourceAccess(type, id),
+    addGrant: (id, body) => addAdminResourceAccess(type, id, body),
+    updateGrant: (id, grantId, role, confirmation) => updateAdminResourceAccess(type, id, grantId, { role, ...(confirmation ? { confirmation } : {}) }),
+    removeGrant: (id, grantId) => removeAdminResourceAccess(type, id, grantId),
+  } : ACCESS_KINDS[type]
+  const review = useAccessIncreaseReview()
+  const preview = (body: AccessChangePreview) => previewResourceAccess(type, resourceId, body, support)
   const queryClient = useQueryClient()
   const access = useQuery({
-    queryKey: [kind.queryKey, resourceId, 'access'],
+    queryKey: support ? ['admin-resource-access', type, resourceId, 'access', requestReaderKey(user)] : [kind.queryKey, resourceId, 'access', requestReaderKey(user)],
     queryFn: () => kind.fetchGrants(resourceId),
   })
   // 소유 워크스페이스는 응답이 알려 준다 — 리소스 상세를 못 여는 사람도 이 화면은
   // 열기 때문에 워크스페이스 id 를 상세에서 가져올 수 없다.
   const workspaceId = access.data?.resource.workspaceId
-  const workspace = useQuery({
-    queryKey: ['workspaces', workspaceId],
-    queryFn: () => fetchWorkspace(workspaceId!),
+  const workspace = useQuery<Awaited<ReturnType<typeof fetchAdminWorkspace>> | Awaited<ReturnType<typeof fetchWorkspace>>>({
+    queryKey: [support ? 'admin-workspaces' : 'workspaces', workspaceId, requestReaderKey(user)],
+    queryFn: () => support ? fetchAdminWorkspace(workspaceId!) : fetchWorkspace(workspaceId!),
     enabled: workspaceId != null,
   })
   const [error, setError] = useState<string | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<VmAccessGrant | null>(null)
+  const [receipt, setReceipt] = useState<string | null>(null)
+  const canManage = access.data?.canManageAccess === true
+  const resourceName = access.data?.resource.displayName || access.data?.resource.name || resourceId
 
   const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['admin-resource-access', type, resourceId] })
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'workspaces'] })
+    void queryClient.invalidateQueries({ queryKey: ['resources'] })
     void queryClient.invalidateQueries({ queryKey: [kind.queryKey, resourceId, 'access'] })
     void queryClient.invalidateQueries({ queryKey: [kind.queryKey, resourceId] })
   }
 
   const changeRole = useMutation({
-    mutationFn: ({ grantId, role }: { grantId: string; role: ResourceRole }) =>
-      kind.updateGrant(resourceId, grantId, role),
-    onSuccess: () => {
-      setError(null)
-      invalidate()
+    mutationFn: async ({ grant, role }: { grant: VmAccessGrant; role: ResourceRole }) => {
+      const impact = await preview({ action: 'UPDATE', grantId: grant.id, role })
+      if (!active.current) return null
+      const confirmation = await review.confirm(impact, `${grant.granteeType === 'WORKSPACE' ? '워크스페이스 전체' : `${grant.user?.name ?? '사용자'} (${grant.user?.email ?? grant.user?.userId})`} · ${resourceName} (${resourceId}) · ${RESOURCE_ROLE_LABELS[role]}`)
+      if (confirmation === null || !active.current) return null
+      return kind.updateGrant(resourceId, grant.id, role, confirmation)
     },
-    onError: (err) => setError(toApiError(err, '등급을 변경하지 못했습니다.').message),
+    onSuccess: (result) => {
+      if (!result) return
+      invalidate()
+      if (!active.current) return
+      setError(null)
+      setReceipt(`${result.id} · ${RESOURCE_ROLE_LABELS[result.role]} 등급으로 변경했습니다.`)
+    },
+    onError: (err) => { if (active.current) setError(toApiError(err, '등급을 변경하지 못했습니다.').message) },
   })
 
   const revoke = useMutation({
     mutationFn: (grantId: string) => kind.removeGrant(resourceId, grantId),
     onSuccess: () => {
+      invalidate()
+      if (!active.current) return
       setError(null)
       setRevokeTarget(null)
-      invalidate()
     },
     onError: (err) => {
+      if (!active.current) return
       setRevokeTarget(null)
       setError(toApiError(err, '접근 권한을 회수하지 못했습니다.').message)
     },
@@ -243,7 +286,7 @@ export function ResourceAccessSection({
   const rows = access.data?.grants ?? []
   const listed = new Set(rows.map((grant) => grant.user?.userId).filter(Boolean))
   const candidates = (workspace.data?.members ?? []).filter(
-    (member) => !listed.has(member.userId),
+    (member) => !listed.has(member.userId) && (!support || !('userStatus' in member) || member.userStatus === 'ACTIVE'),
   )
   const hasWorkspaceWide = rows.some((grant) => grant.granteeType === 'WORKSPACE')
 
@@ -257,8 +300,10 @@ export function ResourceAccessSection({
           <CardTitle>접근 권한</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {support && access.data && <p className="text-sm font-medium">{access.data.resource.displayName || access.data.resource.name} · {access.data.resource.workspaceName}<span className="block break-all text-xs text-foreground-muted">{access.data.resource.id}</span></p>}
           <p className="text-sm text-neutral-600">{kind.listIntro}</p>
           {error && <Alert variant="danger">{error}</Alert>}
+          {receipt && <Alert variant="info" title="이번 변경 결과">{receipt}</Alert>}
           {access.isPending ? (
             <Spinner />
           ) : access.isError ? (
@@ -284,13 +329,13 @@ export function ResourceAccessSection({
                     </p>
                   </div>
                   <ResourceRoleBadge role={grant.role} />
-                  <Select
+                  {canManage && <Select
                     className="w-32"
                     value={grant.role}
                     disabled={changeRole.isPending}
                     onChange={(event) =>
                       changeRole.mutate({
-                        grantId: grant.id,
+                        grant,
                         role: event.target.value as ResourceRole,
                       })
                     }
@@ -302,14 +347,14 @@ export function ResourceAccessSection({
                         </option>
                       ),
                     )}
-                  </Select>
-                  <Button
+                  </Select>}
+                  {canManage && <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => setRevokeTarget(grant)}
                   >
                     회수
-                  </Button>
+                  </Button>}
                 </li>
               ))}
               {rows.length === 0 && (
@@ -320,14 +365,20 @@ export function ResourceAccessSection({
         </CardContent>
       </Card>
 
-      <AddGrantForm
+      {canManage && workspace.isError && <Alert variant="danger">구성원 후보를 불러오지 못했습니다. {workspace.error.message}</Alert>}
+      {canManage && <AddGrantForm
         kind={kind}
         resourceId={resourceId}
+        resourceName={resourceName}
         candidates={candidates}
         hasWorkspaceWide={hasWorkspaceWide}
         onError={setError}
         onDone={invalidate}
-      />
+        preview={preview}
+        confirm={review.confirm}
+        onReceipt={setReceipt}
+      />}
+      {review.modal}
 
       {revokeTarget && (
         <RevokeModal
@@ -345,42 +396,57 @@ export function ResourceAccessSection({
 function AddGrantForm({
   kind,
   resourceId,
+  resourceName,
   candidates,
   hasWorkspaceWide,
   onError,
   onDone,
+  preview,
+  confirm,
+  onReceipt,
 }: {
   kind: AccessKind
   resourceId: string
+  resourceName: string
   candidates: { userId: string; name: string; email: string }[]
   hasWorkspaceWide: boolean
   onError: (message: string | null) => void
   onDone: () => void
+  preview: (body: AccessChangePreview) => Promise<ActorAccessImpact>
+  confirm: (impact: ActorAccessImpact, target: string) => Promise<AccessConfirmation | undefined | null>
+  onReceipt: (value: string) => void
 }) {
+  const active = useActiveResult()
   const [target, setTarget] = useState<string>('')
   const [role, setRole] = useState<ResourceRole>('MEMBER')
   const workspaceWide = target === 'WORKSPACE'
   const assignable = workspaceWide ? WORKSPACE_WIDE_ASSIGNABLE : ASSIGNABLE
 
   const add = useMutation({
-    mutationFn: () =>
-      kind.addGrant(resourceId, {
-        granteeType: workspaceWide ? 'WORKSPACE' : 'USER',
-        userId: workspaceWide ? undefined : target,
-        role,
-      }),
-    onSuccess: () => {
+    mutationFn: async () => {
+      const body = { granteeType: workspaceWide ? 'WORKSPACE' as const : 'USER' as const, userId: workspaceWide ? undefined : target, role }
+      const impact = await preview({ action: 'ADD', ...body })
+      if (!active.current) return null
+      const member = candidates.find((candidate) => candidate.userId === target)
+      const confirmation = await confirm(impact, `${workspaceWide ? '워크스페이스 전체' : `${member?.name ?? '사용자'} (${member?.email ?? target})`} · ${resourceName} (${resourceId}) · ${RESOURCE_ROLE_LABELS[role]}`)
+      if (confirmation === null || !active.current) return null
+      return kind.addGrant(resourceId, { ...body, ...(confirmation ? { confirmation } : {}) })
+    },
+    onSuccess: (result) => {
+      if (!result) return
+      onDone()
+      if (!active.current) return
       onError(null)
+      onReceipt(`${result.id} · ${RESOURCE_ROLE_LABELS[result.role]} 등급을 부여했습니다.`)
       setTarget('')
       setRole('MEMBER')
-      onDone()
     },
-    onError: (err) => onError(toApiError(err, '접근 권한을 부여하지 못했습니다.').message),
+    onError: (err) => { if (active.current) onError(toApiError(err, '접근 권한을 부여하지 못했습니다.').message) },
   })
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    if (!target) return
+    if (!target || !assignable.includes(role)) return
     add.mutate()
   }
 
@@ -392,7 +458,11 @@ function AddGrantForm({
       <CardContent>
         <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
           <FormField label="대상" className="w-full sm:w-64">
-            <Select value={target} onChange={(event) => setTarget(event.target.value)}>
+            <Select value={target} onChange={(event) => {
+              const next = event.target.value
+              setTarget(next)
+              if (next === 'WORKSPACE' && !WORKSPACE_WIDE_ASSIGNABLE.includes(role)) setRole('MEMBER')
+            }}>
               <option value="">선택</option>
               {!hasWorkspaceWide && <option value="WORKSPACE">워크스페이스 전체</option>}
               {candidates.map((member) => (

@@ -70,8 +70,8 @@ export function LoginPage() {
     },
   })
 
-  if (status === 'authenticated' && user) {
-    return <Navigate to={homePathFor(user.role)} replace />
+  if (status === 'authenticated' && user && !submitting) {
+    return <Navigate to={safeInternalPath(from) ?? homePathFor(user.role)} replace />
   }
 
   const goHome = (profile: UserProfile) => {

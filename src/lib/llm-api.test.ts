@@ -1,13 +1,20 @@
 import { describe, expect, test } from 'vitest'
 import {
+  LLM_ANTHROPIC_BASE_URL,
   LLM_API_BASE_URL,
   LLM_DEFAULT_LIMITS,
   LLM_DEFAULT_MODEL,
   LLM_ERROR_CODES,
+  LLM_FORWARDED_HEADER_MAX_BYTES,
+  LLM_FORWARDED_REQUEST_HEADERS,
   LLM_PAID_ONLY_PARAMS,
   LLM_PAID_PARAMS,
+  LLM_PASSTHROUGH_ROUTES,
+  LLM_RELAYED_RESPONSE_HEADERS,
+  LLM_REQUEST_BODY_MIB,
   LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
+import { PASSTHROUGH_ENDPOINTS } from './passthrough-endpoints'
 
 /**
  * 이 파일의 값은 게이트웨이 설정의 사본이고, 사본은 조용히 틀어진다. 화면에 그 값이
@@ -71,8 +78,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 33개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(33)
+  test('에러 표는 사용자에게 도달하는 37개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(37)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -81,6 +88,7 @@ describe('LLM API 사실 사본', () => {
       api_key_revoked: 401,
       account_suspended: 403,
       model_not_found: 404,
+      model_not_available_on_route: 400,
       model_not_allowed: 403,
       endpoint_not_allowed: 403,
       rate_limit_requests: 429,
@@ -94,7 +102,10 @@ describe('LLM API 사실 사본', () => {
       invalid_parameter_value: 400,
       missing_parameter: 400,
       invalid_json: 400,
+      preset_not_supported: 400,
       request_too_large: 400,
+      request_body_incomplete: 400,
+      large_request_busy: 429,
       input_too_long: 400,
       output_limit_exceeded: 400,
       unknown_endpoint: 404,
@@ -109,6 +120,54 @@ describe('LLM API 사실 사본', () => {
       request_deadline_exceeded: 200,
       upstream_stream_interrupted: 200,
     })
+  })
+
+  test('codes that arrive with two statuses carry the second one', () => {
+    // upstream_rejected keeps the upstream's 400 or 422; the response cap is
+    // 502 for a whole answer and an in-stream event (200) for a chat stream.
+    const also = Object.fromEntries(
+      LLM_ERROR_CODES.filter((e) => e.alsoStatus !== undefined).map((e) => [
+        e.code,
+        e.alsoStatus,
+      ]),
+    )
+    expect(also).toEqual({ upstream_rejected: 422, upstream_response_too_large: 200 })
+  })
+
+  test('request body bounds are the gateway values', () => {
+    expect(LLM_REQUEST_BODY_MIB).toEqual({ max: 25, largeAbove: 2 })
+  })
+
+  test('forwarded and relayed headers are the gateway allowlists', () => {
+    expect(LLM_FORWARDED_REQUEST_HEADERS.map((h) => h.name)).toEqual([
+      'x-session-id',
+      'x-anthropic-beta',
+      'X-OpenRouter-Metadata',
+    ])
+    expect(LLM_FORWARDED_HEADER_MAX_BYTES).toBe(1024)
+    expect(LLM_RELAYED_RESPONSE_HEADERS.map((h) => h.name)).toEqual([
+      'X-Generation-Id',
+      'Retry-After',
+    ])
+  })
+
+  test('the OpenAI SDK image path is listed beside the vendor one', () => {
+    expect(LLM_PASSTHROUGH_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'POST /v1/chat/completions',
+      'POST /v1/messages',
+      'POST /v1/images',
+      'POST /v1/images/generations',
+      'GET /v1/images/models',
+      'POST /v1/embeddings',
+    ])
+  })
+
+  // A route whose feature cannot be granted would tell a reader to ask for
+  // something no approver can give.
+  test('every listed route needs a feature that can be granted', () => {
+    for (const route of LLM_PASSTHROUGH_ROUTES) {
+      expect(PASSTHROUGH_ENDPOINTS).toContain(route.capability)
+    }
   })
 
   test('내부에서만 쓰는 sentinel은 표에 실리지 않는다', () => {
@@ -127,5 +186,15 @@ describe('LLM API 사실 사본', () => {
   test('base URL은 /v1까지 포함한다', () => {
     expect(LLM_API_BASE_URL).toBe('https://llm.pcl.kr/v1')
     expect(LLM_DEFAULT_MODEL).toBe('pickle-general')
+  })
+
+  test('the Anthropic base URL stops before /v1', () => {
+    // Anthropic clients append /v1/messages themselves.
+    expect(LLM_ANTHROPIC_BASE_URL).toBe('https://llm.pcl.kr')
+  })
+
+  test('the messages route sits under the chat grant', () => {
+    const messages = LLM_PASSTHROUGH_ROUTES.find((r) => r.path === '/v1/messages')
+    expect(messages?.capability).toBe('chat')
   })
 })

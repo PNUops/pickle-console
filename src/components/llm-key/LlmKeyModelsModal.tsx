@@ -7,6 +7,8 @@ import {
   type PaidModel,
   type SelfServedModel,
 } from '../../api/queries'
+import { hasPriceDetail, priceDetailSummary } from '../../lib/model-pricing'
+import { ModelPriceDetail } from '../ModelPriceDetail'
 import { ObservationMoment } from '../OpenRouterCredits'
 import { CopyButton } from '../CopyButton'
 import { Alert, Input, LoadingBlock, Modal } from '../ui'
@@ -248,18 +250,41 @@ function PatternLine({ label, patterns }: { label: string; patterns: string[] })
 }
 
 function PaidRow({ model }: { model: PaidModel }) {
+  const [pricesOpen, setPricesOpen] = useState(false)
+  const detail = priceDetailSummary(model.pricing)
   return (
-    <li className="flex items-center justify-between gap-3 px-3 py-2">
-      <span className="min-w-0">
-        <span className="block truncate font-mono text-sm">{model.id}</span>
-        {model.name && model.name !== model.id && (
-          <span className="block truncate text-xs text-neutral-500">{model.name}</span>
-        )}
-      </span>
-      <span className="flex shrink-0 items-center gap-3">
-        <Price prompt={model.promptPricePerMillion} completion={model.completionPricePerMillion} />
-        <CopyButton value={model.id} label="복사" />
-      </span>
+    <li className="py-2">
+      <div className="flex items-center justify-between gap-3 px-3">
+        <span className="min-w-0">
+          <span className="block truncate font-mono text-sm">{model.id}</span>
+          {model.name && model.name !== model.id && (
+            <span className="block truncate text-xs text-neutral-500">{model.name}</span>
+          )}
+        </span>
+        <span className="flex shrink-0 items-center gap-3">
+          <span className="text-right">
+            <Price prompt={model.promptPricePerMillion} completion={model.completionPricePerMillion} />
+            {detail && <span className="block text-xs text-neutral-500">{detail}</span>}
+          </span>
+          {hasPriceDetail(model.pricing) && (
+            <button
+              type="button"
+              aria-expanded={pricesOpen}
+              aria-label={`${model.id} 가격 상세`}
+              onClick={() => setPricesOpen((open) => !open)}
+              className="rounded border border-neutral-300 px-2 py-0.5 text-xs"
+            >
+              가격
+            </button>
+          )}
+          <CopyButton value={model.id} label="복사" />
+        </span>
+      </div>
+      {pricesOpen && model.pricing && (
+        <div className="px-1 pt-1">
+          <ModelPriceDetail modelId={model.id} pricing={model.pricing} />
+        </div>
+      )}
     </li>
   )
 }
@@ -275,7 +300,7 @@ function Price({
   if (prompt == null && completion == null) return null
   const fmt = (v: number | null | undefined) => (v == null ? '?' : `$${v}`)
   return (
-    <span className="whitespace-nowrap text-xs text-neutral-500">
+    <span className="block whitespace-nowrap text-xs text-neutral-500">
       100만 토큰당 입력 {fmt(prompt)} · 출력 {fmt(completion)}
     </span>
   )

@@ -1,7 +1,14 @@
+import { AdminWorkspaceInviteControls, AdminWorkspaceMemberActions, AdminWorkspaceOverviewControls, AdminWorkspacePendingInvitations } from '../components/workspace/AdminWorkspaceControls'
+import { requestReaderKey } from '../api/request-review'
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
-import { fetchAdminWorkspace, fetchAdminWorkspaces } from '../api/queries'
+import { Link, useLocation } from 'react-router'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { fetchAdminLlmKeys, fetchAdminDomains, fetchAdminVms, fetchAdminWorkspace, fetchAdminWorkspaces } from '../api/queries'
+import { fetchAdminGpuAllocations } from '../api/gpu'
+import { useAuth } from '../auth/auth-context'
+import { supportsInvitationRead } from '../api/admin-user-support'
+import { gpuPreviewEnabled } from '../lib/gpu-preview'
+import { withListReturn } from '../lib/list-url'
 import {
   Alert,
   Badge,
@@ -38,10 +45,16 @@ import {
 } from '../lib/labels'
 
 /**
- * 관리자 워크스페이스 관리 — 조회 우선(구성원 감사·오너 부재 워크스페이스 파악).
- * 워크스페이스 변경(생성·역할 조정·삭제)은 다음 단계.
+ * Global workspace support uses server capabilities for each change.
  */
 export function AdminWorkspacesPage() {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminWorkspacesPageContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminWorkspacesPageContent() {
+  const { user } = useAuth()
   const { activeOrgId, activeOrg } = useAdminScope()
   const [searchParams, change, normalize] = useListUrl()
   const state = workspaceListState(searchParams)
@@ -49,7 +62,7 @@ export function AdminWorkspacesPage() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchAdminWorkspaces(activeOrgId !== undefined ? { orgId: activeOrgId } : {}),
   })
   const filtered = filterWorkspaces(workspaces.data ?? [], state)
@@ -60,7 +73,7 @@ export function AdminWorkspacesPage() {
     normalize(canonical)
   }, [canonical, normalize])
   const close = () => {
-    change({ workspaceId: undefined, tab: undefined }, false, true)
+    change({ workspaceId: undefined, tab: undefined, inspect: undefined }, false, true)
     requestAnimationFrame(() => {
       if (!searchRef.current?.isConnected) return
       const trigger = selectedId && isUuid(selectedId)
@@ -72,12 +85,12 @@ export function AdminWorkspacesPage() {
   const selectedInScope = workspaces.data?.some((workspace) => workspace.id === selectedId) ?? false
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [overflow-wrap:anywhere]">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">워크스페이스 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
           {activeOrg?.name ?? '플랫폼 전체'} 워크스페이스와 구성원을 조회합니다.
-          구성원 변경은 워크스페이스 소유자가 수행합니다.
+          허용된 역할에서는 정보와 구성원, 소유자와 접근 권한을 지원합니다.
         </p>
       </div>
 
@@ -85,12 +98,12 @@ export function AdminWorkspacesPage() {
         <label className="min-w-48 flex-1 text-sm">
           이름 검색
           <Input ref={searchRef} aria-label="워크스페이스 이름 검색" type="search" maxLength={200} value={state.q}
-            onChange={(event) => change({ q: event.target.value, workspaceId: undefined, tab: undefined }, true, true)} />
+            onChange={(event) => change({ q: event.target.value, workspaceId: undefined, tab: undefined, inspect: undefined }, true, true)} />
         </label>
         <label className="text-sm">
           유형
           <Select aria-label="워크스페이스 유형 필터" value={state.kind ?? ''}
-            onChange={(event) => change({ kind: event.target.value, workspaceId: undefined, tab: undefined }, true)}>
+            onChange={(event) => change({ kind: event.target.value, workspaceId: undefined, tab: undefined, inspect: undefined }, true)}>
             <option value="">전체 유형</option>
             {Object.entries(WORKSPACE_KIND_LABELS).map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}
           </Select>
@@ -98,11 +111,11 @@ export function AdminWorkspacesPage() {
         <label className="text-sm">
           정렬
           <Select aria-label="워크스페이스 정렬" value={state.sort}
-            onChange={(event) => change({ sort: event.target.value, workspaceId: undefined, tab: undefined }, true)}>
+            onChange={(event) => change({ sort: event.target.value, workspaceId: undefined, tab: undefined, inspect: undefined }, true)}>
             {WORKSPACE_SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
         </label>
-        <Button variant="secondary" onClick={() => change({ q: undefined, kind: undefined, sort: undefined, workspaceId: undefined, tab: undefined }, true)}>
+        <Button variant="secondary" onClick={() => change({ q: undefined, kind: undefined, sort: undefined, workspaceId: undefined, tab: undefined, inspect: undefined }, true)}>
           조건 초기화
         </Button>
       </div>
@@ -138,7 +151,7 @@ export function AdminWorkspacesPage() {
                     'cursor-pointer',
                     workspace.id === selectedId && 'bg-primary-50 hover:bg-primary-50',
                   )}
-                  onClick={() => change({ workspaceId: workspace.id, tab: undefined })}
+                  onClick={() => change({ workspaceId: workspace.id, tab: undefined, inspect: undefined })}
                 >
                   <TD>
                     <button
@@ -146,7 +159,7 @@ export function AdminWorkspacesPage() {
                       data-workspace-id={workspace.id}
                       onClick={(event) => {
                         event.stopPropagation()
-                        change({ workspaceId: workspace.id, tab: undefined })
+                        change({ workspaceId: workspace.id, tab: undefined, inspect: undefined })
                       }}
                       className="cursor-pointer font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-primary-600"
                     >
@@ -173,11 +186,13 @@ export function AdminWorkspacesPage() {
       >
         {selectedId !== null && (
           !isUuid(selectedId) ? <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
-            : workspaces.isPending ? <Spinner label="관리 범위의 대상 확인 중" />
+            : state.inspect ? <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} tab={state.tab}
+                onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
+              : workspaces.isPending ? <Spinner label="관리 범위의 대상 확인 중" />
               : workspaces.isError ? <Alert variant="danger">{workspaces.error.message}</Alert>
                 : !selectedInScope ? <Alert variant="danger">현재 관리 범위의 목록에 이 워크스페이스가 없습니다.</Alert>
                   : <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} tab={state.tab}
-                    onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} />
+                    onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
         )}
       </Drawer>
     </div>
@@ -193,10 +208,13 @@ const USER_STATUS_VARIANT: Record<UserStatus, 'success' | 'warning' | 'danger' |
   WITHDRAWN: 'neutral',
 }
 
-function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string; tab: string; onTab: (tab: string) => void }) {
+function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspaceId: string; tab: string; onTab: (tab: string) => void; onDeleted: () => void }) {
   const { activeOrgId } = useAdminScope()
+  const { user } = useAuth()
+  const location = useLocation()
+  const canReadInvitations = supportsInvitationRead(user?.role)
   const detail = useQuery({
-    queryKey: ['admin', 'workspaces', 'detail', workspaceId],
+    queryKey: ['admin', 'workspaces', 'detail', workspaceId, activeOrgId ?? null, requestReaderKey(user)],
     queryFn: () => fetchAdminWorkspace(workspaceId),
   })
 
@@ -213,13 +231,14 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
 
   const workspace = detail.data
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-neutral-900">{workspace.name}</h3>
-        <div className="flex gap-2"><Badge>조회 전용</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
+    <div className="space-y-6 [overflow-wrap:anywhere]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="min-w-0 text-lg font-semibold text-neutral-900">{workspace.name}</h3>
+        <div className="flex gap-2"><Badge>{workspace.canUpdateInfo || workspace.canManageMembers || workspace.canInviteMembers ? '지원 편집 가능' : '조회 전용'}</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
       </div>
+      <p className="text-sm text-neutral-500">구성원은 전체 워크스페이스 기준이며 자원과 신청은 현재 관리 기관에서 조회합니다.</p>
       <Tabs aria-label="워크스페이스 상세 탭" idPrefix="workspace-detail-" value={tab} onChange={onTab}
-        tabs={[{ id: 'overview', label: '개요' }, { id: 'members', label: '구성원' }]} />
+        tabs={[{ id: 'overview', label: '개요' }, { id: 'members', label: '구성원' }, { id: 'resources', label: '자원과 신청' }, ...(canReadInvitations ? [{ id: 'invitations', label: '대기 초대' }] : [])]} />
       <TabPanel id="overview" idPrefix="workspace-detail-" active={tab === 'overview'}>
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="생성일" value={formatDateTime(workspace.createdAt)} />
@@ -238,26 +257,30 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
         </div>
         {workspace.description && <Field label="설명" value={workspace.description} />}
       </dl>
+      <AdminWorkspaceOverviewControls key={`${workspace.id}:${workspace.canUpdateInfo}:${workspace.canDelete}`} workspace={workspace} onDeleted={onDeleted} />
       </TabPanel>
 
       <TabPanel id="members" idPrefix="workspace-detail-" active={tab === 'members'} className="space-y-2">
         {workspace.members.length === 0 ? (
           <p className="text-sm text-neutral-500">구성원이 없습니다.</p>
         ) : (
-          <Table>
+          <Table className="min-w-[38rem] sm:min-w-0">
             <THead>
               <TR>
                 <TH>이름</TH>
                 <TH>역할</TH>
                 <TH>계정 상태</TH>
                 <TH>참여일</TH>
+                {(workspace.canManageMembers || workspace.canManageOwners) && <TH>관리</TH>}
               </TR>
             </THead>
             <TBody>
               {workspace.members.map((member) => (
                 <TR key={member.userId}>
                   <TD>
-                    {member.name}
+                    {member.supportDetailVisible
+                      ? <Link to={withListReturn(adminPaths.userSupport(member.userId, activeOrgId), `${location.pathname}${location.search}`)} className="text-primary-700 hover:underline">{member.name}</Link>
+                      : <span>{member.name}</span>}
                     <span className="block text-xs text-neutral-500">{member.email}</span>
                   </TD>
                   <TD>{WORKSPACE_ROLE_LABELS[member.workspaceRole]}</TD>
@@ -269,11 +292,19 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab }: { workspaceId: string;
                   <TD className="whitespace-nowrap text-xs text-neutral-500">
                     {formatDateTime(member.joinedAt)}
                   </TD>
+                  {(workspace.canManageMembers || workspace.canManageOwners) && <TD><AdminWorkspaceMemberActions key={`${member.userId}:${member.canChangeRole}:${member.canRemove}:${workspace.canManageOwners}:${workspace.canManageMembers}`} workspace={workspace} member={member} /></TD>}
                 </TR>
               ))}
             </TBody>
           </Table>
         )}
+        <AdminWorkspaceInviteControls key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} />
+      </TabPanel>
+      <TabPanel id="resources" idPrefix="workspace-detail-" active={tab === 'resources'}>
+        <WorkspaceResources workspaceId={workspaceId} />
+      </TabPanel>
+      <TabPanel id="invitations" idPrefix="workspace-detail-" active={tab === 'invitations'}>
+        {canReadInvitations ? <AdminWorkspacePendingInvitations key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} /> : <Alert>이 역할에서는 대기 초대 정보를 조회할 수 없습니다.</Alert>}
       </TabPanel>
     </div>
   )
@@ -286,4 +317,26 @@ function Field({ label, value }: { label: string; value: string }) {
       <dd className="font-medium text-neutral-900">{value}</dd>
     </div>
   )
+}
+
+
+function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  const kinds = [
+    { type: 'VM', label: '가상머신', to: adminPaths.vms(activeOrgId, workspaceId), read: async () => (await fetchAdminVms({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
+    { type: 'LLM_API_KEY', label: 'LLM API 키', to: adminPaths.llmKeys(activeOrgId, workspaceId), read: async () => (await fetchAdminLlmKeys({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
+    { type: 'DOMAIN', label: '도메인', to: adminPaths.domains(activeOrgId, workspaceId), read: async () => (await fetchAdminDomains({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
+    { type: 'GPU', label: 'GPU', to: gpuPreviewEnabled() ? adminPaths.gpus(activeOrgId, workspaceId) : undefined, read: async () => (await fetchAdminGpuAllocations({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
+  ]
+  const counts = useQueries({ queries: kinds.map((kind) => ({ queryKey: ['admin', 'workspace-resources', workspaceId, activeOrgId ?? null, kind.type, requestReaderKey(user)], queryFn: kind.read })) })
+  return <div className="space-y-3 text-sm">
+    <p className="text-neutral-500">자원과 신청은 현재 관리 기관의 범위에서 조회합니다.</p>
+    <p className="text-neutral-500">개수는 연결된 목록의 조회 조건을 따릅니다. 종료 이력을 포함한 개수와 다를 수 있습니다.</p>
+    <ul className="space-y-2">{kinds.map((kind, index) => <li key={kind.type} className="flex flex-wrap items-center gap-2">
+      {kind.to ? <Link to={kind.to} className="text-primary-700 hover:underline">{kind.label} 목록</Link> : <span>{kind.label}</span>}
+      {counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했습니다.</span> : <span>{counts[index].data}개</span>}
+    </li>)}</ul>
+    <Link to={adminPaths.requests(activeOrgId, workspaceId)} className="inline-flex text-primary-700 hover:underline">이 워크스페이스의 신청 보기</Link>
+  </div>
 }

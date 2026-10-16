@@ -55,8 +55,9 @@ describe('사용 가이드', () => {
     await screen.findByRole('heading', { name: '이미지와 임베딩' })
 
     // 경로 목록은 lib/llm-api.ts 가 갖는다. 여기서는 그것이 실제로 표에 그려지는지를
-    // 본다 — 셋 다 확인하는 것은 하나만 보면 map 이 깨져도 통과하기 때문이다.
+    // 본다 — 전부 확인하는 것은 하나만 보면 map 이 깨져도 통과하기 때문이다.
     expect(screen.getByText(/POST \/v1\/images$/)).toBeInTheDocument()
+    expect(screen.getByText(/POST \/v1\/images\/generations$/)).toBeInTheDocument()
     expect(screen.getByText(/GET \/v1\/images\/models/)).toBeInTheDocument()
     expect(screen.getByText(/POST \/v1\/embeddings/)).toBeInTheDocument()
 
@@ -64,9 +65,31 @@ describe('사용 가이드', () => {
     // 이 경로들은 키에 기능이 부여돼야 열린다. 그 말이 없으면 403 을 받은 사람이
     // 자기 코드를 의심한다.
     expect(body).toContain('endpoint_not_allowed')
-    // 처음 물어 온 사람이 OpenAI 경로부터 시도해 404 를 받았다. 같은 실수를 막는 문장이다.
-    expect(body).toContain('/v1/images/generations')
+    // The SDK path works only with b64_json; a reader who keeps reading .url gets
+    // an empty value without an error, so the page has to say which field to read.
+    expect(body).toContain('images.generate')
+    expect(body).toContain('b64_json')
+    // Editing is offered through the vendor path's body field while the SDK's
+    // images.edit is not; without the field name the two read as a contradiction.
+    expect(body).toContain('input_references')
     expect(body).toContain('streaming_not_supported')
+  })
+
+  test('scopes forwarded headers to paid-model chat', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: '요청 헤더와 응답 헤더' })
+
+    // The names come from lib/llm-api.ts; here the two tables must render them.
+    expect(screen.getByText('x-session-id')).toBeInTheDocument()
+    expect(screen.getByText('X-OpenRouter-Metadata')).toBeInTheDocument()
+    expect(screen.getByText('X-Generation-Id')).toBeInTheDocument()
+
+    // Without the scope a student sends the headers to the self-hosted model
+    // and reads the missing effect as a bug.
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다')
+    expect(body).toContain('1024바이트를 넘는 값은 넘기지 않습니다')
+    expect(body).toContain('HTTP-Referer')
   })
 
   test('places the version suffix next to the base URL', async () => {

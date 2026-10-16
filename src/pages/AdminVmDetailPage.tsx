@@ -1,5 +1,7 @@
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
+import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   adminForceStopVm,
@@ -15,7 +17,8 @@ import {
 import { VmGpuCard } from '../components/gpu/VmGpuCard'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canOperateVm, isSysAdminOnly, isSysTier, operatesOrg } from '../auth/permissions'
+import { canManageVmDeletion, canOperateVm, canReadSupportMetadata, isSysAdminOnly, isSysTier, managesOrg, operatesOrg } from '../auth/permissions'
+import { AdminVmDeletionSections } from '../components/admin-vm/AdminVmDeletionSections'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
 import { VmNetworkPolicyPanel } from '../components/network-policy/VmNetworkPolicyPanel'
@@ -44,6 +47,9 @@ import { VM_EVENT_LABELS, vmEventActorLabel, type VmEventType } from '../lib/sta
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { vmNetworkPolicyEnabled } from '../lib/vm-network-policy'
+import { requestDetailReturn, withListReturn } from '../lib/list-url'
+import { vmListReturn } from '../lib/vm-list-return'
+import { clearStoredSelection } from '../lib/bulk-selection'
 
 const TABS = [
   { id: 'overview', label: '개요' },
@@ -57,25 +63,36 @@ const TABS = [
  * 한정 — 서버 강제), 열람 역할은 조회만, 차단 토글은 SYS_ADMIN.
  */
 export function AdminVmDetailPage() {
+  const { vmId } = useParams()
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminVmDetailPageContent key={`${vmId ?? 'none'}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminVmDetailPageContent() {
   const { activeOrgId } = useAdminScope()
   const { vmId: vmIdParam } = useParams()
   const vmId = vmIdParam ?? ''
   const idValid = isUuid(vmId)
   const { user } = useAuth()
+  const location = useLocation()
+  const listReturn = vmListReturn(location.state?.vmList, requestReaderKey(user), activeOrgId, !!user && canReadSupportMetadata(user.role))
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
   const roleCanOperate = !!user && canOperateVm(user.role)
   const policyEnabled = vmNetworkPolicyEnabled()
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  const tabs = TABS.filter((tab) => tab.id !== 'network-policy' || policyEnabled)
-  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const [message, setMessage] = useState<string | null>(null)
 
   const detail = useQuery({
-    queryKey: ['admin', 'vms', 'detail', vmId, { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'vms', 'detail', vmId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchAdminVm(vmId),
     enabled: idValid,
   })
+
+  const canReadPolicy = !!user && (isSysTier(user.role) || detail.data?.orgId != null && managesOrg(user.managedOrgs, detail.data.orgId))
+  const tabs = TABS.filter((tab) => tab.id !== 'network-policy' || policyEnabled && canReadPolicy)
+  const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
 
   if (!idValid) {
     return <Alert variant="danger">잘못된 VM 주소입니다.</Alert>
@@ -107,16 +124,33 @@ export function AdminVmDetailPage() {
     roleCanOperate &&
     !!user &&
     (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
+  // Global support reads do not grant deletion rights in the target institution.
+  const deletionRole = user && isSysTier(user.role)
+    ? user.role
+    : user?.managedOrgs.find((org) => org.orgId === vm.orgId)?.role
+  const canDelete = !!deletionRole && canManageVmDeletion(deletionRole)
+  const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && canReadSupportMetadata(user.role))
+  const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
+  const actualOrgId = vm.orgId && isUuid(vm.orgId) ? vm.orgId.toLowerCase() : undefined
+  const returnedOrg = returnedUrl?.searchParams.get('org')
+  const exactRequest = actualOrgId && returnedUrl?.pathname === `/admin/requests/${vm.requestId?.toLowerCase()}`
+  const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && canReadSupportMetadata(user.role))
+    ? returnedOrg ? proposedReturn : withListReturn(adminPaths.requestDetail(vm.requestId!, actualOrgId), returnedUrl!.searchParams.get('returnTo')!) : null
   return (
     <div className="space-y-6">
       <div>
-        <Link to={adminPaths.vms(activeOrgId)} className="text-sm text-primary-700 hover:underline">
+        {requestReturn && <Link to={requestReturn} className="mb-2 block text-sm text-primary-700 hover:underline">← 신청 상세</Link>}
+        <Link to={listReturn?.path ?? adminPaths.vms(activeOrgId)}
+          state={listReturn ? { vmList: listReturn } : undefined}
+          onClick={() => { if (location.state?.vmList != null && !listReturn) clearStoredSelection('vms') }}
+          className="text-sm text-primary-700 hover:underline">
           ← VM 관리
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold text-neutral-900">{vm.displayName || vm.name}</h1>
           {vm.sshGatewayBlocked && <Badge variant="danger">SSH·터미널 차단됨</Badge>}
           <VmStatusBadge status={vm.status} />
+          <AdminResourceAccessLink type="VM" resourceId={vm.id} />
         </div>
         {vm.statusDetail && <p className="mt-1 text-sm text-neutral-500">{vm.statusDetail}</p>}
       </div>
@@ -131,7 +165,7 @@ export function AdminVmDetailPage() {
           const next = new URLSearchParams(searchParams)
           if (id === 'overview') next.delete('tab')
           else next.set('tab', id)
-          setSearchParams(next, { replace: true })
+          setSearchParams(next, { replace: true, state: location.state })
         }}
       />
 
@@ -161,7 +195,9 @@ export function AdminVmDetailPage() {
               value={`${vm.startDate ?? '—'} ~ ${vm.endDate ?? '—'}`}
             />
             <Field label="생성일" value={formatDateTime(vm.createdAt)} />
-            <Field label="신청 ID" value={String(vm.requestId)} />
+            <div><dt className="text-neutral-500">승인 신청</dt><dd className="font-medium text-neutral-900">
+              {vm.requestId && isUuid(vm.requestId) ? <Link className="text-primary-700 hover:underline" to={adminPaths.requestDetail(vm.requestId, vm.orgId ?? undefined)}>정확한 신청 보기</Link> : '연결된 신청 기록 없음'}
+            </dd></div>
           </dl>
         </Card>
 
@@ -174,9 +210,10 @@ export function AdminVmDetailPage() {
         {isSysAdmin && vm.status !== 'DELETED' && (
           <VmGatewayBlockSection vm={vm} canManage onDone={setMessage} />
         )}
+        <AdminVmDeletionSections vm={vm} canDelete={canDelete} canForceDelete={isSysAdmin} onDone={setMessage} />
       </TabPanel>
 
-      {policyEnabled && (
+      {policyEnabled && canReadPolicy && (
         <TabPanel id="network-policy" active={activeTab === 'network-policy'} className="space-y-4">
           <VmNetworkPolicyPanel vmId={vm.id} canEdit={canOperate} surface="admin" />
         </TabPanel>
@@ -373,6 +410,7 @@ function PeriodSection({
       </Button>
       {open && (
         <ExtendVmPeriodModal
+          key={vm.id}
           vm={vm}
           onClose={() => setOpen(false)}
           onDone={(text) => {

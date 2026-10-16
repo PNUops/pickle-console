@@ -1,52 +1,133 @@
 import type { AdminLlmKeyDetail } from '../api/queries'
 
 /**
- * 기능 권한 축의 표시명과 그 값을 부르는 말.
+ * Feature grants on an LLM API key: names, hierarchy and the words for them.
  *
- * 유료 모델 목록 둘과 나란히 서지만 읽는 방향이 반대다. 두 목록은 비우면 제한이
- * 풀리고, 이 목록은 비우면 아무것도 열리지 않는다. 세 줄이 같은 화면에 붙어 있어서
- * 빈 값을 부르는 말이 화면마다 다르면 승인자가 셋을 같은 것으로 읽는다. 그래서 문구를
- * 여기 한 곳에 두고 승인 폼·한도 창·키 상세 셋이 같은 말을 쓴다.
+ * The vocabulary is the contract's closed set, taken from the generated
+ * types; the Korean names and descriptions are the console's. Every screen
+ * that shows or edits a grant reads this module, so the request form, the
+ * approval form, the key editor and the bulk editor say the same thing.
  *
- * 어휘 자체는 여기 없다. 계약이 닫힌 집합을 실어 주므로 타입에서 받고, 계약이 늘면
- * 재생성만으로 따라간다. 계약이 나르는 것은 토큰뿐이라 한국어 표시명은 콘솔 것이다.
+ * An empty grant opens nothing. The two paid-model lists next to it read the
+ * other way (empty lifts the restriction), which is why the empty value has
+ * its own word here.
  */
 
-/** 계약이 정한 값. 이 축을 다루는 모든 상태가 이 타입으로 선다. */
+/** A name the contract allows. */
 export type PassthroughEndpoint = AdminLlmKeyDetail['passthroughEndpoints'][number]
 
-/**
- * 키가 계약 타입이라 이 표가 어휘의 유일한 사본이 된다. 계약에 값이 하나 늘면
- * 표시명이 빠졌다고 컴파일이 깨지고, 빠지면 남는 키가 있다고 깨진다.
- */
-const LABELS: Record<PassthroughEndpoint, string> = {
-  images: '이미지 생성',
-  embeddings: '임베딩',
+interface Capability {
+  label: string
+  description: string
+  /** Granting this needs one of these. Indented under the first on screen. */
+  parents?: readonly PassthroughEndpoint[]
 }
 
 /**
- * 이름이 실제로 여는 범위보다 좁게 읽히는 값에만 붙이는 한 줄.
- *
- * `images` 토큰 하나가 생성과 편집과 이미지 모델 목록 조회를 덮는다. 「이미지 생성」만
- * 읽고 부여한 승인자는 편집까지 준 줄 모르는데, 이 축이 있는 이유가 승인자가 준 것과
- * 실제로 열리는 것을 같게 두는 것이라 그 자리를 이 줄이 메운다. `embeddings` 는 경로가
- * 하나뿐이라 이름이 곧 범위여서 없다.
+ * Display name and one-line description per name, in display order.
+ * Keyed by the contract type so a new name fails to compile until it has
+ * words, and a removed one fails as a stray key.
  */
-const SCOPES: Partial<Record<PassthroughEndpoint, string>> = {
-  images: '편집과 이미지 모델 목록 조회가 함께 들어 있습니다.',
+const CAPABILITIES: Record<PassthroughEndpoint, Capability> = {
+  chat: {
+    label: 'Chat',
+    description:
+      '텍스트를 생성합니다. Chat, Messages, Responses, completions 경로와 Claude Code, Codex 같은 에이전트 연결이 포함됩니다',
+  },
+  web_search: {
+    label: '웹 검색',
+    description: '모델이 응답 전에 웹을 검색해서 결과를 참고합니다',
+    parents: ['chat'],
+  },
+  pdf_ocr: {
+    label: 'PDF OCR',
+    description: 'PDF를 직접 읽지 못하는 모델에 보낼 때 PDF를 유료 OCR로 변환합니다',
+    parents: ['chat'],
+  },
+  containers: {
+    label: '코드 실행',
+    description: '모델이 샌드박스 컨테이너에서 코드를 실행하고 결과 파일을 돌려줍니다',
+    parents: ['chat'],
+  },
+  images: {
+    label: '이미지 생성',
+    description: '텍스트 프롬프트로 이미지를 생성합니다',
+  },
+  embeddings: {
+    label: '임베딩',
+    description: '텍스트를 벡터로 변환합니다. 유사도 검색, RAG에 씁니다',
+  },
+  rerank: {
+    label: '리랭크',
+    description: '검색된 문서를 질의와의 관련도 순으로 재정렬합니다. RAG 정확도를 높일 때 씁니다',
+  },
+  speech: {
+    label: 'TTS',
+    description: '텍스트를 음성 파일로 변환합니다',
+  },
+  transcriptions: {
+    label: 'STT',
+    description: '음성 파일을 텍스트로 변환합니다',
+  },
+  videos: {
+    label: '동영상 생성',
+    description: '텍스트나 이미지로 짧은 영상을 생성합니다. 요청당 비용이 큽니다',
+  },
+  batches: {
+    label: '배치',
+    description: '여러 요청을 한 번에 제출하고 결과를 나중에 받습니다. 응답은 늦지만 비용이 낮습니다',
+  },
+  files: {
+    label: '파일 업로드',
+    description: '배치나 코드 실행에 쓸 파일을 미리 업로드합니다',
+    parents: ['batches', 'containers'],
+  },
 }
 
-/** 체크박스가 서는 순서. 표시명 표가 그대로 순서다. */
-export const PASSTHROUGH_ENDPOINTS = Object.keys(LABELS) as PassthroughEndpoint[]
+const ORDER = Object.keys(CAPABILITIES) as PassthroughEndpoint[]
 
-/** 이름이 곧 범위인 값에는 붙일 말이 없는 것이 맞다. */
-export function passthroughScope(value: PassthroughEndpoint): string | undefined {
-  return SCOPES[value]
+/**
+ * Names that can be granted today. The contract carries all twelve so stored
+ * grants reach the gateway, but a name only becomes grantable when its route
+ * opens; the api refuses the rest with 422. A name joins this list in the
+ * release that opens its route.
+ */
+const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
+  'chat',
+  'web_search',
+  'pdf_ocr',
+  'images',
+  'embeddings',
+])
+
+/**
+ * Granted alongside a parent, never chosen. `files` follows `batches` and
+ * `containers`: present while either is, gone when both are.
+ */
+const IMPLIED: ReadonlySet<PassthroughEndpoint> = new Set(['files'])
+
+/** The checkbox rows, in display order. */
+export const PASSTHROUGH_ENDPOINTS: readonly PassthroughEndpoint[] = ORDER.filter(
+  (name) => GRANTABLE.has(name) && !IMPLIED.has(name),
+)
+
+/** Names that work on the paid-model axis only. Chat works on both. */
+export function isCreditOnly(value: PassthroughEndpoint): boolean {
+  return value !== 'chat'
 }
 
-/** 값 하나의 표시명. 표에 없는 값은 원문 그대로 — 감추면 부여된 것이 안 보인다. */
+/** The parent a row is indented under, if any. */
+export function passthroughParent(value: PassthroughEndpoint): PassthroughEndpoint | undefined {
+  return CAPABILITIES[value].parents?.[0]
+}
+
+export function passthroughDescription(value: PassthroughEndpoint): string {
+  return CAPABILITIES[value].description
+}
+
+/** One name's label. An unknown name shows as itself: hiding it would hide a grant. */
 export function passthroughLabel(value: string): string {
-  return LABELS[value as PassthroughEndpoint] ?? value
+  return isKnown(value) ? CAPABILITIES[value].label : value
 }
 
 /**
@@ -60,26 +141,77 @@ export function passthroughText(endpoints: readonly string[]): string {
 }
 
 /**
- * 체크 하나를 켜고 끈다. 순서는 적은 순이 아니라 표시명 표의 순서다.
+ * The features a request asked for. Empty is a requester who ticked nothing,
+ * which is not the same as an approver granting nothing.
+ */
+export function requestedFeaturesText(endpoints: readonly string[]): string {
+  return endpoints.length === 0 ? '선택 안 함' : passthroughText(endpoints)
+}
+
+function isKnown(value: string): value is PassthroughEndpoint {
+  return Object.hasOwn(CAPABILITIES, value)
+}
+
+/** Does the grant hold one of this name's parents (or need none)? */
+export function parentGranted(
+  endpoints: readonly string[],
+  value: PassthroughEndpoint,
+): boolean {
+  const parents = CAPABILITIES[value].parents
+  return parents == null || parents.some((parent) => endpoints.includes(parent))
+}
+
+/**
+ * Turns one name on or off and returns the grant in display order.
  *
- * 표에 없는 값은 지우지 않고 뒤에 남긴다. 타입상으로는 그런 값이 올 수 없지만
- * 타입이 말하는 것은 이 빌드가 생성된 계약이지 지금 붙어 있는 서버가 아니다.
- * 한도 교체는 전체 교체라, 배포가 엇갈린 잠깐 사이에 체크박스 없는 값이 조용히
- * 빠지면 아무도 건드리지 않은 부여가 저장 한 번에 사라진다.
+ * Turning a parent off drops the children it was carrying, since the api
+ * refuses a child without its parent. `flat` skips that: a bulk add or
+ * remove lists names to apply to each key, not a grant, and the api checks
+ * the hierarchy on every key's result.
+ *
+ * `files` never comes out. The api derives it from its parents and refuses
+ * it when sent.
+ *
+ * A name this build does not know is kept, after the known ones. The types
+ * describe the contract this build was generated from, not the server it is
+ * talking to, and saving a key replaces the whole list: dropping a name with
+ * no checkbox would revoke a grant nobody touched.
  */
 export function togglePassthrough(
   endpoints: readonly PassthroughEndpoint[],
   value: PassthroughEndpoint,
   checked: boolean,
+  { flat = false }: { flat?: boolean } = {},
 ): PassthroughEndpoint[] {
-  const next = new Set<PassthroughEndpoint>(endpoints)
+  const next = new Set<string>(endpoints)
   if (checked) {
     next.add(value)
   } else {
     next.delete(value)
   }
-  return [
-    ...PASSTHROUGH_ENDPOINTS.filter((entry) => next.has(entry)),
-    ...endpoints.filter((entry) => next.has(entry) && !(entry in LABELS)),
+  const ordered = [
+    ...ORDER.filter((name) => next.has(name) && !IMPLIED.has(name)),
+    ...endpoints.filter((entry) => next.has(entry) && !isKnown(entry)),
   ]
+  return flat ? ordered : withHierarchy(ordered)
+}
+
+/** The grant without the children whose parent it lacks, which the api refuses. */
+export function withHierarchy(endpoints: readonly PassthroughEndpoint[]): PassthroughEndpoint[] {
+  return endpoints.filter((entry) => !isKnown(entry) || parentGranted(endpoints, entry))
+}
+
+/** A stored grant as a write sends it: without the names the api derives. */
+export function grantPayload(endpoints: readonly PassthroughEndpoint[]): PassthroughEndpoint[] {
+  return endpoints.filter((entry) => !IMPLIED.has(entry))
+}
+
+/** Does the grant hold a feature that lives under Chat? */
+export function holdsChatChildren(endpoints: readonly string[]): boolean {
+  return endpoints.some((entry) => isKnown(entry) && passthroughParent(entry) === 'chat')
+}
+
+/** The grant a request carries to an axis without a credit limit: Chat at most. */
+export function withoutCreditOnly(endpoints: readonly PassthroughEndpoint[]): PassthroughEndpoint[] {
+  return endpoints.filter((entry) => isKnown(entry) && !isCreditOnly(entry))
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useActiveResult } from '../../lib/use-active-result'
 import { api } from '../../api/client'
 import { toApiError } from '../../api/problem'
 import {
@@ -92,9 +93,14 @@ interface WorkspaceOption {
   myRole?: WorkspaceMemberRole
 }
 
-/** Server paths `recipients[3]` and `recipients[3].userId` belong to the one picker. */
+/**
+ * Server paths `recipients[3]` and `recipients[3].userId` belong to the one
+ * picker, and `llmKey.reqPassthroughEndpoints[2]` to the one checklist.
+ */
 function normalizeFieldKey(field: string): string {
-  return /^recipients(\[|\.|$)/.test(field) ? 'recipients' : field
+  if (/^recipients(\[|\.|$)/.test(field)) return 'recipients'
+  if (/^llmKey\.reqPassthroughEndpoints\[/.test(field)) return 'llmKey.reqPassthroughEndpoints'
+  return field
 }
 
 /** 직접 적는 종료일의 상한. 서버와 같은 값이다. */
@@ -112,6 +118,7 @@ export function RequestWizard({
    */
   admin?: { orgId?: string }
 }) {
+  const active = useActiveResult()
   const scope = useScope()
   const { user } = useAuth()
   const adminMode = admin != null
@@ -184,7 +191,7 @@ export function RequestWizard({
   const adminMembers = useQuery({
     queryKey: ['admin', 'workspaces', 'detail', state.workspaceId],
     queryFn: () => fetchAdminWorkspace(state.workspaceId!),
-    enabled: adminMode && recipientsOffered,
+    enabled: adminMode && state.workspaceId != null,
   })
   // People invited but not yet joined get their resource when they join, so
   // the approver has to be able to name them too.
@@ -415,10 +422,11 @@ export function RequestWizard({
       return data
     },
     onSuccess: (data) => {
-      setConfirmOpen(false)
-      if (!adminMode) clearDraft()
       void queryClient.invalidateQueries({ queryKey: ['requests'] })
       void queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] })
+      if (!active.current) return
+      setConfirmOpen(false)
+      if (!adminMode) clearDraft()
       // `step`만 뺀다. 통째로 비우면 `kind`가 함께 날아가고, 종류를 잃은 주소는
       // 위저드가 아니라 종류 고르기 화면이라 성공 화면이 마운트되지도 못한다.
       setSearchParams(
@@ -432,6 +440,7 @@ export function RequestWizard({
       setSubmitted(data)
     },
     onError: (err) => {
+      if (!active.current) return
       setConfirmOpen(false)
       const apiError = toApiError(err, '신청을 제출하지 못했습니다.')
       // The approval half answers under `approval.`; its form uses the same keys
@@ -559,6 +568,7 @@ export function RequestWizard({
             reqCreditLimit: payload.llmKey.reqCreditLimit ?? null,
             useCampusModels: payload.llmKey.useCampusModels ?? false,
             useCommercialModels: payload.llmKey.useCommercialModels ?? false,
+            reqPassthroughEndpoints: payload.llmKey.reqPassthroughEndpoints,
             grantedCreditAllowedModels: [],
             grantedCreditDeniedModels: [],
             grantedPassthroughEndpoints: [],
@@ -569,6 +579,9 @@ export function RequestWizard({
       // waits too unless an account already holds it.
       recipients: selectedRecipients.map((candidate) => ({
         id: candidate.key,
+        userId: candidate.key.startsWith('u:') ? candidate.key.slice(2) : null,
+        name: candidate.key.startsWith('u:') ? candidate.label : null,
+        invitee: candidate.key.startsWith('u:') ? null : candidate.label,
         status: candidate.key.startsWith('i:') || candidate.awaitsJoin ? 'PENDING_JOIN' : 'QUEUED',
       })),
     }
@@ -881,6 +894,9 @@ export function RequestWizard({
                 onCloseConfirm={() => setConfirmOpen(false)}
                 onConfirm={submitApproved}
                 pending={submit.isPending}
+                targetFacts={adminMembers.data?.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true }))}
+                targetFactsKnown={adminMembers.isSuccess}
+                workspaceReadable={adminMembers.isSuccess}
               />
             )}
 

@@ -97,7 +97,6 @@ function initialAccounts(): Account[] {
       // 기본 목록을 든 계정이 하나는 있어야 승인 폼의 프리필이 검증된다.
       defaultCreditAllowedModels: ['openai/*'],
       defaultCreditDeniedModels: [],
-      defaultPassthroughEndpoints: ['images'],
       activeCredential: activeCredential(),
       rotationCredential: null,
       credits: credits(),
@@ -124,7 +123,6 @@ function initialAccounts(): Account[] {
       eligibleForBinding: true,
       defaultCreditAllowedModels: [],
       defaultCreditDeniedModels: [],
-      defaultPassthroughEndpoints: [],
       activeCredential: activeCredential({ createdAt: '2026-08-30T21:00:00+09:00' }),
       rotationCredential: null,
       credits: credits({
@@ -171,7 +169,6 @@ function initialAccounts(): Account[] {
       eligibleForBinding: false,
       defaultCreditAllowedModels: [],
       defaultCreditDeniedModels: [],
-      defaultPassthroughEndpoints: [],
       activeCredential: null,
       rotationCredential: null,
       credits: credits({
@@ -299,6 +296,28 @@ const defaultCatalogue = (): Schemas['OpenRouterCatalogueResponse'] => ({
       promptPricePerMillion: 150,
       completionPricePerMillion: 600,
       contextLength: 200000,
+      pricing: {
+        axes: [
+          { axis: 'prompt', unit: 'PER_MILLION_TOKENS', price: 150 },
+          { axis: 'completion', unit: 'PER_MILLION_TOKENS', price: 600 },
+          { axis: 'input_cache_read', unit: 'PER_MILLION_TOKENS', price: 0 },
+          { axis: 'internal_reasoning', unit: 'PER_MILLION_TOKENS', price: 600 },
+          { axis: 'web_search', unit: 'PER_CALL', price: 0.0025 },
+        ],
+        tiers: [
+          {
+            minPromptTokens: 128000,
+            utcDays: [],
+            utcStartMinute: null,
+            utcEndMinute: null,
+            otherConditions: [],
+            axes: [
+              { axis: 'prompt', unit: 'PER_MILLION_TOKENS', price: 300 },
+              { axis: 'completion', unit: 'PER_MILLION_TOKENS', price: 1200 },
+            ],
+          },
+        ],
+      },
     },
   ],
   freshness: 'FRESH',
@@ -363,7 +382,6 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       eligibleForBinding: false,
       defaultCreditAllowedModels: [],
       defaultCreditDeniedModels: [],
-      defaultPassthroughEndpoints: [],
       activeCredential: null,
       rotationCredential: null,
       credits: credits({

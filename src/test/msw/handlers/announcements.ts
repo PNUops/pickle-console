@@ -1,4 +1,4 @@
-import { isOrgTier, isSysTier } from '../../../auth/permissions'
+import { canAdminManageAccess, isOrgTier, isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
@@ -7,6 +7,8 @@ import { uuid } from '../ids'
 import { adminUserStore } from './users'
 import { notificationStore } from './notifications'
 import { mailDeliveryStore } from './mail-deliveries'
+import { workspaceStore } from './workspaces'
+import { vmStore } from './vms'
 import { orgs } from './reference'
 
 type Schemas = components['schemas']
@@ -86,6 +88,8 @@ let nextAnnouncementId = 12
 export function resetAnnouncementFixtures() {
   announcementStore = initialAnnouncements()
   nextAnnouncementId = 12
+  for (const key of Object.keys(workspaceDetails)) delete workspaceDetails[key]
+  Object.assign(workspaceDetails, structuredClone(initialWorkspaceDetails))
 }
 
 function profileOf(request: Request) {
@@ -98,7 +102,7 @@ function toView({ senderOrgId: _senderOrgId, senderUserId: _senderUserId, body: 
 }
 
 /** 워크스페이스 상세 픽스처 (계약 v0.19.0 — 구성원은 계정 상태 무관 전원). */
-const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> = {
+export const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> = {
   [uuid(12)]: {
     id: uuid(12),
     kind: 'PROJECT',
@@ -107,6 +111,7 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
     createdAt: '2026-06-01T10:00:00+09:00',
     memberCount: 4,
     vmCount: 2,
+    canUpdateInfo: false, canInviteMembers: false, canManageMembers: false, canManageOwners: false, canDelete: false, deleteBlockedReason: 'FORBIDDEN',
     members: [
       {
         userId: uuid(42),
@@ -114,6 +119,8 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
         email: 'example@pusan.ac.kr',
         workspaceRole: 'OWNER',
         userStatus: 'ACTIVE',
+        supportDetailVisible: true,
+        canChangeRole: false, canRemove: false,
         joinedAt: '2026-06-01T10:00:00+09:00',
       },
       {
@@ -122,17 +129,33 @@ const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> 
         email: 'left.park@pusan.ac.kr',
         workspaceRole: 'MEMBER',
         userStatus: 'WITHDRAWN',
+        supportDetailVisible: true,
+        canChangeRole: false, canRemove: false,
         joinedAt: '2026-06-02T10:00:00+09:00',
+      },
+      {
+        userId: uuid(5), name: '이시스템', email: 'sysadmin.lee@pusan.ac.kr',
+        workspaceRole: 'MEMBER', userStatus: 'ACTIVE', supportDetailVisible: false, canChangeRole: false, canRemove: false,
+        joinedAt: '2026-10-01T10:00:00+09:00',
       },
     ],
   },
 }
 
+const initialWorkspaceDetails = structuredClone(workspaceDetails)
+
 export const announcementHandlers: RequestHandler[] = [
   // No pending invitations unless a test overrides this.
   http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', () => HttpResponse.json([])),
-  http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => {
-    const detail = workspaceDetails[String(params.workspaceId)]
+  http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params, request }) => {
+    const id = String(params.workspaceId)
+    const ordinary = workspaceStore.find((row) => row.detail.id === id)
+    const detail = workspaceDetails[id] ?? (ordinary ? {
+      id, name: ordinary.detail.name, description: ordinary.detail.description, kind: ordinary.detail.kind, createdAt: ordinary.detail.createdAt,
+      memberCount: ordinary.members.length, vmCount: vmStore.filter((row) => row.workspaceId === id && row.status !== 'DELETED').length,
+      members: ordinary.members.map((member) => ({ userId: member.userId, name: member.name, email: member.email, workspaceRole: member.role,
+        userStatus: adminUserStore.find((row) => row.id === member.userId)?.status ?? 'ACTIVE', supportDetailVisible: false, canChangeRole: false, canRemove: false, joinedAt: ordinary.detail.createdAt })),
+    } : null)
     if (!detail) {
       return problemResponse({
         type: 'about:blank',
@@ -142,7 +165,11 @@ export const announcementHandlers: RequestHandler[] = [
         code: 'RESOURCE_NOT_FOUND',
       })
     }
-    return HttpResponse.json(detail, { status: 200 })
+    const actor = profileOf(request)
+    const writer = !!actor && canAdminManageAccess(actor.role)
+    const structure = writer && detail.kind !== 'PERSONAL'
+    const owners = detail.members.filter((member) => member.workspaceRole === 'OWNER').length
+    return HttpResponse.json({ ...detail, canUpdateInfo: writer, canInviteMembers: structure, canManageMembers: structure, canManageOwners: structure, canDelete: structure && detail.vmCount === 0, deleteBlockedReason: !writer ? 'FORBIDDEN' : detail.kind === 'PERSONAL' ? 'PERSONAL' : detail.vmCount > 0 ? 'REMAINING_RESOURCES' : null, members: detail.members.map((member) => ({ ...member, canChangeRole: structure && (member.workspaceRole !== 'OWNER' || owners > 1), canRemove: structure && (member.workspaceRole !== 'OWNER' || owners > 1), supportDetailVisible: isSysTier(actor?.role ?? 'USER') || !isSysTier(adminUserStore.find((user) => user.id === member.userId)?.role ?? 'USER') })) }, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/workspaces', ({ request }) => {

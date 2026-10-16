@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
+import { http, HttpResponse } from 'msw'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { vmDetailAs } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
@@ -146,4 +147,23 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
     const card = await accessCard()
     expect(within(card).queryByText('김철수')).not.toBeInTheDocument()
   })
+})
+
+
+test('changing a named OWNER target to workspace scope sends only the permitted grade', async () => {
+  const user = userEvent.setup()
+  let body: unknown
+  server.use(http.post('*/api/v1/vms/:vmId/access', async ({ request }) => {
+    body = await request.json()
+    return HttpResponse.json({ id: uuid(9999), granteeType: 'WORKSPACE', user: null, role: 'MEMBER', createdAt: '2026-10-13T01:00:00Z' }, { status: 201 })
+  }))
+  renderAccessTab(uuid(57))
+  await screen.findByRole('option', { name: /김철수/ })
+  await user.selectOptions(screen.getByLabelText('대상'), uuid(57))
+  await user.selectOptions(screen.getByLabelText('등급'), 'OWNER')
+  await user.selectOptions(screen.getByLabelText('대상'), 'WORKSPACE')
+  expect(screen.getByLabelText('등급')).toHaveValue('MEMBER')
+  expect(within(screen.getByLabelText('등급')).queryByRole('option', { name: '소유자' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '부여' }))
+  await waitFor(() => expect(body).toEqual({ granteeType: 'WORKSPACE', role: 'MEMBER' }))
 })

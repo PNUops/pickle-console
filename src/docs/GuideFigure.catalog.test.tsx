@@ -7,7 +7,7 @@ const scenes = [
   ['introduction', 'resources', 'user-dashboard', 1152, 216],
   ['requests/status', 'result', 'request-statuses', 1102, 227],
   ['workspaces/manage', 'members', 'workspace-members', 2208, 460],
-  ['workspaces/access', 'grant', 'resource-access', 2208, 958],
+  ['workspaces/access', 'grant', 'resource-access', 448, 555],
   ['vm/request', 'configure', 'vm-request', 1600, 1812],
   ['vm/connect', 'ssh', 'vm-connection', 1104, 292],
   ['vm/manage', 'monitoring', 'vm-monitoring', 1104, 615],
@@ -35,7 +35,8 @@ test.each(scenes)('places the %s reference in its %s section', (slug, sectionId,
   expect(section).toBeDefined()
   const figures = figuresIn(section!.body)
   expect(figures).toHaveLength(1)
-  expect(figures[0].props.src.split('?')[0]).toMatch(new RegExp(`/${imageName}\\.png$`))
+  const extension = imageName === 'resource-access' ? 'jpg' : 'png'
+  expect(figures[0].props.src.split('?')[0]).toMatch(new RegExp(`/${imageName}\\.${extension}$`))
   expect(figures[0].props.alt.trim()).not.toBe('')
   expect(figures[0].props.caption.trim()).not.toBe('')
   expect(figures[0].props.width).toBe(width)

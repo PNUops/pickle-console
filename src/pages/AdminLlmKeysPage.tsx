@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../api/request-review'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router'
@@ -30,7 +31,7 @@ import { useAdminScope } from '../lib/use-admin-scope'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { KeyCreditObservation } from '../components/OpenRouterCredits'
 import { useAuth } from '../auth/auth-context'
-import { canOperateLlmKey } from '../auth/permissions'
+import { canAdminManageAccess, canOperateLlmKey, isSysTier, managesOrg } from '../auth/permissions'
 import { useBulkSelection } from '../lib/bulk-selection'
 import {
   BulkSelectionBar,
@@ -53,14 +54,19 @@ function limitText(value: number | null | undefined): string {
 }
 
 export function AdminLlmKeysPage() {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminLlmKeysPageContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminLlmKeysPageContent() {
   const scope = useAdminScope()
   const { activeOrgId } = scope
   const { user } = useAuth()
   const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  // Every bulk kind on a key needs at least an operating role, so viewers get
-  // no selection at all.
-  const canSelect = !!role && canOperateLlmKey(role)
-  const selection = useBulkSelection('llm-keys', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
+  // Direct operations use the institution role; access support uses its global role.
+  const canSelect = (!!role && canOperateLlmKey(role)) || (!!user && canAdminManageAccess(user.role))
+  const selection = useBulkSelection('llm-keys', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState<LlmApiKeyStatus | undefined>(undefined)
   const workspaceId = searchParams.get('workspaceId') ?? undefined
@@ -81,7 +87,7 @@ export function AdminLlmKeysPage() {
     queryKey: [
       'admin',
       'llm-keys',
-      { orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, openrouterAccountId: openrouterAccountId ?? null, status: status ?? null, query: query ?? null, page },
+      { orgId: activeOrgId ?? null, reader: requestReaderKey(user), workspaceId: workspaceId ?? null, openrouterAccountId: openrouterAccountId ?? null, status: status ?? null, query: query ?? null, page },
     ],
     queryFn: () =>
       fetchAdminLlmKeys({
@@ -96,14 +102,14 @@ export function AdminLlmKeysPage() {
     enabled: scope.ready,
   })
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, for: 'llm-key-filter' }],
+    queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, reader: requestReaderKey(user), for: 'llm-key-filter' }],
     queryFn: () =>
       fetchAdminWorkspaces(activeOrgId == null ? {} : { orgId: activeOrgId }),
   })
   const accounts = useQuery({
-    queryKey: ['admin', 'llm-accounts', { orgId: activeOrgId ?? null, for: 'llm-key-filter' }],
+    queryKey: ['admin', 'llm-accounts', { orgId: activeOrgId ?? null, reader: requestReaderKey(user), for: 'llm-key-filter' }],
     queryFn: () => fetchOpenRouterAccounts(activeOrgId),
-    enabled: scope.ready,
+    enabled: scope.ready && !!user && (isSysTier(user.role) || activeOrgId != null && managesOrg(user.managedOrgs, activeOrgId)),
   })
 
   const pageTargets = (keys.data?.content ?? []).map((key) => ({ id: key.id, name: key.name }))
@@ -232,7 +238,7 @@ export function AdminLlmKeysPage() {
                     )}
                     <TD>
                       <Link
-                        to={adminPaths.llmKeyDetail(key.id, activeOrgId)}
+                        to={adminPaths.llmKeyDetail(key.id, key.orgId ?? activeOrgId)}
                         className="font-medium text-brand-foreground hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring"
                       >
                         {key.name}
@@ -249,13 +255,13 @@ export function AdminLlmKeysPage() {
                     <TD>{key.workspaceName}</TD>
                     <TD>{key.orgName}</TD>
                     <TD>
-                      {key.openrouterAccountId && key.openrouterAccountName ? (
+                      {key.openrouterAccountId && key.openrouterAccountName ? (user && (isSysTier(user.role) || key.orgId != null && managesOrg(user.managedOrgs, key.orgId)) ?
                         <Link
-                          to={adminPaths.llmAccountDetail(key.openrouterAccountId, activeOrgId)}
+                          to={adminPaths.llmAccountDetail(key.openrouterAccountId, key.orgId ?? undefined)}
                           className="font-medium text-brand-foreground hover:underline"
                         >
                           {key.openrouterAccountName}
-                        </Link>
+                        </Link> : <span>{key.openrouterAccountName}</span>
                       ) : (
                         <span className="text-foreground-muted">미결합</span>
                       )}

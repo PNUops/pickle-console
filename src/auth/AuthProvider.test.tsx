@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { api, getCsrfToken, refreshSession, withSessionCookieOrder } from '../api/client'
-import { clearAccessToken, getAccessToken, notifySessionExpired, setAccessToken } from '../api/token'
+import { clearAccessToken, getAccessToken, getSessionGeneration, notifySessionExpired, setAccessToken } from '../api/token'
 import { regularProfile, regularProfileB } from '../test/msw/handlers/auth'
 import { AuthProvider } from './AuthProvider'
 import { useAuth, type AuthContextValue, type UserProfile } from './auth-context'
@@ -354,5 +354,68 @@ describe('AuthProvider session transitions', () => {
     expect(vi.mocked(api.POST).mock.lastCall?.[1]).toMatchObject({
       params: { header: { 'X-Pickle-Csrf': 'rotated-csrf' } },
     })
+  })
+})
+
+describe('External login profile replacement', () => {
+  test('clears the old identity and caches until the new profile is confirmed', async () => {
+    const { queryClient } = renderAuth()
+    await waitFor(() => expect(auth.status).toBe('unauthenticated'))
+    await authenticate()
+    queryClient.setQueryData(['previous-account'], 'private data')
+    const profile = deferred<never>()
+    vi.mocked(api.GET).mockImplementationOnce(() => profile.promise)
+    let exchange!: ReturnType<AuthContextValue['beginCredentialExchange']>
+    let replacement!: Promise<void>
+    act(() => {
+      exchange = auth.beginCredentialExchange()
+      setAccessToken('access-user-b')
+      replacement = auth.refreshProfile({ replaceSession: true })
+    })
+    expect(auth.status).toBe('loading')
+    expect(auth.user).toBeNull()
+    expect(queryClient.getQueryData(['previous-account'])).toBeUndefined()
+    await act(async () => {
+      profile.resolve({ data: regularProfileB } as never)
+      await replacement
+      exchange.settle(getSessionGeneration())
+    })
+    expect(auth.user).toEqual(regularProfileB)
+    expect(getAccessToken()).toBe('access-user-b')
+  })
+
+  test('does not let a background refresh cancel or conceal a failed replacement', async () => {
+    renderAuth()
+    await waitFor(() => expect(auth.status).toBe('unauthenticated'))
+    await authenticate()
+    const profile = deferred<never>()
+    vi.mocked(api.GET).mockImplementationOnce(() => profile.promise)
+    let exchange!: ReturnType<AuthContextValue['beginCredentialExchange']>
+    let replacement!: Promise<void>
+    act(() => {
+      exchange = auth.beginCredentialExchange()
+      setAccessToken('access-user-b')
+      replacement = auth.refreshProfile({ replaceSession: true })
+    })
+    const replacementOptions = vi.mocked(api.GET).mock.lastCall?.[1] as { signal?: AbortSignal } | undefined
+    const replacementSignal = replacementOptions?.signal
+    expect(replacementSignal).toBeDefined()
+    vi.mocked(api.GET).mockResolvedValueOnce({ data: regularProfileB } as never)
+    await act(async () => { await auth.refreshProfile() })
+    expect(replacementSignal?.aborted).toBe(false)
+    expect(auth.user).toEqual(regularProfileB)
+    await act(async () => {
+      const rejected = expect(replacement).rejects.toThrow('사용자 정보를 불러오지 못했습니다.')
+      profile.resolve({ error: {} } as never)
+      await rejected
+    })
+    expect(auth.status).toBe('loading')
+    expect(auth.user).toBeNull()
+    act(() => {
+      clearAccessToken()
+      exchange.settle(getSessionGeneration())
+    })
+    expect(auth.status).toBe('unauthenticated')
+    expect(getAccessToken()).toBeNull()
   })
 })

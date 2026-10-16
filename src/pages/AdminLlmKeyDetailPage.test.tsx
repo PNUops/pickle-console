@@ -1,6 +1,8 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router'
 import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
 import {
   orgAdminUser,
@@ -10,12 +12,17 @@ import {
   sysAdminUser,
   sysManagerUser,
   sysViewerUser,
+  ACCESS_TOKENS,
 } from '../test/msw/handlers/auth'
 import { adminLlmKeyStore, adminLlmLimitBodies } from '../test/msw/handlers/llm-keys'
 import { expiryBodies } from '../test/msw/handlers/bulk-changes'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
+import App from '../App'
+import { AuthContext, type AuthContextValue, type UserProfile } from '../auth/auth-context'
+import { ToastProvider } from '../components/ui'
+import { setAccessToken } from '../api/token'
 
 function renderDetail(
   token: string,
@@ -32,6 +39,92 @@ function expectNoActions() {
     expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
   }
 }
+
+test.each([
+  'https://evil.invalid', `/admin/requests/${uuid(999)}?org=${uuid(1)}`,
+  `/admin/requests/${uuid(206)}?org=${uuid(2)}`,
+  `/admin/requests/${uuid(206)}?org=${uuid(1)}#fragment`,
+])('an invalid or unrelated LLM request return path falls back to its actual key request (%s)', async (returnTo) => {
+  server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
+  renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(1)}&returnTo=${encodeURIComponent(returnTo)}`)
+  await screen.findByRole('heading', { name: 'active-admin-key' })
+  expect(screen.queryByRole('link', { name: '← 신청 상세' })).not.toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '정확한 신청 보기' })).toHaveAttribute('href', `/admin/requests/${uuid(206)}?org=${uuid(1)}`)
+})
+
+test('an exact SYS global return is normalized with the actual key organization while preserving its global list', async () => {
+  server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
+  const list = '/admin/requests?status=all&type=LLM_API_KEY&q=paper'
+  const origin = `/admin/requests/${uuid(206)}?returnTo=${encodeURIComponent(list)}`
+  renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(1)}&returnTo=${encodeURIComponent(origin)}`)
+  const link = await screen.findByRole('link', { name: '← 신청 상세' })
+  const returned = new URL(link.getAttribute('href')!, 'https://pickle.invalid')
+  expect(returned.pathname).toBe(`/admin/requests/${uuid(206)}`)
+  expect(returned.searchParams.get('org')).toBe(uuid(1))
+  expect(returned.searchParams.get('returnTo')).toBe(list)
+})
+
+test('a global support origin survives the actual key institution link', async () => {
+  server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
+  const origin = `/admin/requests/${uuid(206)}`
+  renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(1)}&returnTo=${encodeURIComponent(origin)}`)
+  await screen.findByRole('heading', { name: 'active-admin-key' })
+  expect(screen.getByRole('link', { name: '← 신청 상세' })).toHaveAttribute('href', expect.stringContaining(`/admin/requests/${uuid(206)}?org=${uuid(1)}`))
+})
+
+test('a late LLM limit save cannot replace another institution view or reopen the abandoned editor', async () => {
+  const user = userEvent.setup()
+  let completed = false
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.put('*/api/v1/admin/llm/keys/:keyId/limits', async () => {
+    await delay(250)
+    completed = true
+    const key = adminLlmKeyStore.find((row) => row.id === uuid(171))!
+    key.rpm = 75
+    return HttpResponse.json(key)
+  }))
+  renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(1)}`)
+  await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+  const modal = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+  await user.clear(modal.getByLabelText('RPM'))
+  await user.type(modal.getByLabelText('RPM'), '75')
+  await user.click(modal.getByRole('button', { name: '저장' }))
+  fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
+  await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.')
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)) })
+  expect(completed).toBe(true)
+  expect(currentPath()).toContain(`org=${uuid(2)}`)
+  expect(screen.queryByText('LLM API 키 한도를 변경했습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(1) } })
+  await screen.findByRole('heading', { name: 'active-admin-key' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+test.each(['actor', 'role'] as const)('the same organization never reuses another LLM reader response after a %s change', async (change) => {
+  setAccessToken('access-sys-admin')
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const initial = ACCESS_TOKENS['access-sys-admin']
+  const next: UserProfile = change === 'actor' ? ACCESS_TOKENS['access-sys-viewer'] : { ...initial, role: 'SYS_VIEWER' }
+  const renderReader = (profile: UserProfile) => {
+    const auth: AuthContextValue = {
+      status: 'authenticated', user: profile,
+      login: async () => { throw new Error('Unused credential exchange') },
+      completeMfa: async () => { throw new Error('Unused credential exchange') },
+      refreshProfile: async () => {}, logout: async () => {},
+      beginCredentialExchange: () => { throw new Error('Unused credential exchange') },
+    }
+    return <MemoryRouter initialEntries={[`/admin/llm/keys/${uuid(171)}?org=${uuid(1)}`]}><QueryClientProvider client={client}><AuthContext.Provider value={auth}><ToastProvider><App /></ToastProvider></AuthContext.Provider></QueryClientProvider></MemoryRouter>
+  }
+  const view = render(renderReader(initial))
+  await screen.findByRole('heading', { name: 'active-admin-key' })
+  server.use(http.get('*/api/v1/admin/llm/keys/:keyId', async () => { await delay(200); return HttpResponse.json({ type: 'about:blank', title: '리소스를 찾을 수 없습니다', status: 404, detail: '현재 조회자는 이 키를 찾을 수 없습니다.', code: 'RESOURCE_NOT_FOUND' }, { status: 404, headers: { 'Content-Type': 'application/problem+json' } }) }))
+  setAccessToken('access-sys-viewer')
+  view.rerender(renderReader(next))
+  await screen.findByText('LLM API 키 상세 불러오는 중')
+  expect(screen.queryByRole('heading', { name: 'active-admin-key' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: '정확한 신청 보기' })).not.toBeInTheDocument()
+  await screen.findByText('현재 조회자는 이 키를 찾을 수 없습니다.')
+})
 
 describe('관리자 LLM API 키 역할·상태 action', () => {
   test('ORG_VIEWER와 SYS_VIEWER는 상세를 읽지만 action은 DOM에 없다', async () => {
@@ -187,6 +280,42 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
     expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['images'])
+  })
+
+  // Chat works on both axes, so the server does not count a Chat-only change
+  // as a money change; the manager is offered that one box and nothing else.
+  test('a role that cannot change money can grant Chat alone', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-manager', sysManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.getAllByRole('checkbox')).toHaveLength(1)
+    await user.click(dialog.getByRole('checkbox', { name: /Chat/ }))
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+    expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['chat', 'images'])
+  })
+
+  // Unticking Chat would take web search with it, a money-side change this
+  // role cannot make, so the box is locked rather than left to end in 403.
+  test('a role that cannot change money cannot take Chat from a key with web search', async () => {
+    const key = adminLlmKeyStore.find((item) => item.id === uuid(171))!
+    key.passthroughEndpoints = ['chat', 'web_search']
+    const user = userEvent.setup()
+    renderDetail('access-sys-manager', sysManagerUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.getByRole('checkbox', { name: /Chat/ })).toBeDisabled()
+    expect(dialog.getByText('Chat 아래 기능이 부여된 키라 Chat을 회수할 수 없습니다.')).toBeInTheDocument()
+  })
+
+  test('web search waits for Chat on a key without it', async () => {
+    const user = userEvent.setup()
+    renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+    await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
+    expect(dialog.getByRole('checkbox', { name: /웹 검색/ })).toBeDisabled()
   })
 
   test('한도 창에서 기능 체크를 풀면 빈 목록으로 나간다', async () => {

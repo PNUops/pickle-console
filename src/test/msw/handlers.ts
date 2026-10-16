@@ -1,3 +1,4 @@
+import { resourceDeadlineHandlers } from './handlers/resource-deadlines'
 /**
  * 목 핸들러 목록.
  *
@@ -6,6 +7,7 @@
  * 되면 미리 보기가 테스트와 다른 것을 보여 주므로 목록은 한 곳에만 둔다.
  */
 import type { RequestHandler } from 'msw'
+import { accessSupportHandlers } from './handlers/access-support'
 import { gpuHandlers } from './handlers/gpu'
 import { orgOperationHandlers } from './handlers/org-operations'
 import { bulkChangeHandlers } from './handlers/bulk-changes'
@@ -21,6 +23,7 @@ import { googleOauthHandlers } from './handlers/google-oauth'
 import { profileOptionsHandlers } from './handlers/profile-options'
 import { mfaHandlers } from './handlers/mfa'
 import { userHandlers } from './handlers/users'
+import { userSupportHandlers } from './handlers/user-support'
 import { workspaceHandlers } from './handlers/workspaces'
 import { dnsDomainAccessHandlers, dnsDomainHandlers } from './handlers/dns-domains'
 import { llmKeyHandlers } from './handlers/llm-keys'
@@ -44,6 +47,8 @@ import { vmNetworkPolicyHandlers } from './handlers/vm-network-policy'
 
 /** Add feature API mock handlers here (or compose them from feature modules). */
 export const handlers: RequestHandler[] = [
+  ...resourceDeadlineHandlers,
+  ...accessSupportHandlers,
   ...orgOperationHandlers,
   ...authHandlers,
   ...gpuHandlers,
@@ -53,6 +58,7 @@ export const handlers: RequestHandler[] = [
   ...profileOptionsHandlers,
   ...googleOauthHandlers,
   ...userHandlers,
+  ...userSupportHandlers,
   ...referenceHandlers,
   ...workspaceHandlers,
   ...requestHandlers,

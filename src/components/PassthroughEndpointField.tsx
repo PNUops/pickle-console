@@ -1,57 +1,76 @@
 import { Checkbox } from './ui'
 import {
   PASSTHROUGH_ENDPOINTS,
+  parentGranted,
+  passthroughDescription,
   passthroughLabel,
-  passthroughScope,
+  passthroughParent,
   togglePassthrough,
   type PassthroughEndpoint,
 } from '../lib/passthrough-endpoints'
 
 /**
- * 부여할 기능 권한을 고르는 체크박스.
+ * Checkboxes for the features a key is granted.
  *
- * 값이 닫힌 집합이라 자유 입력이 아니라 체크로 받는다. 유료 모델 목록 둘은 벤더가
- * 계속 늘리는 이름이라 적어 넣을 수밖에 없지만, 이쪽은 고를 것이 정해져 있어서
- * 텍스트 칸으로 두면 오타 하나가 아무것도 열지 않는 승인이 된다.
+ * The values are a closed set, so they are ticked rather than typed: a typo
+ * in a text box would be an approval that opens nothing.
  *
- * 승인 폼과 관리자 한도 창이 같은 결정을 내리는 자리라 부여 문구를 여기 한 곳에 둔다.
- * 두 화면이 갈리면 같은 값을 다른 뜻으로 설명하게 된다. 사업 계정 화면은 부여가 아니라
- * 프리필이라 자기 문구를 넘긴다.
+ * A child row (web search under Chat) sits indented under its parent and is
+ * disabled while the parent is off, because the api refuses a child without
+ * its parent. Unticking the parent drops its children.
  *
- * `FormField` 대신 `fieldset` 을 쓴다. 그 컴포넌트의 라벨은 컨트롤 하나를 가리키는데
- * 여기에는 체크가 여럿이라 가리킬 자리가 없다.
+ * `rows` narrows the offered rows: the request form hides the paid-only rows
+ * while paid models are off, and a role that cannot change money is offered
+ * Chat alone. Values outside `rows` stay in the grant untouched.
+ *
+ * `flat` is for a bulk add or remove, where the ticks are names to apply to
+ * each key rather than a grant: no row waits for its parent. `locked` rows
+ * show their state but cannot be changed.
+ *
+ * A `fieldset` rather than `FormField`: that label points at one control and
+ * there are several here.
  */
 const GRANT_DESCRIPTION =
-  '체크한 기능만 열립니다. 비워 두면 하나도 열리지 않습니다. 비우면 제한이 풀리는 위 두 모델 목록과 읽는 방향이 반대입니다. 채팅과 모델 조회는 이 항목과 무관합니다.'
+  '체크한 기능만 열립니다. 비워 두면 하나도 열리지 않습니다. 비우면 제한이 풀리는 위 두 모델 목록과 읽는 방향이 반대입니다. Chat 밖의 기능은 유료 모델에서만 동작합니다.'
 
 export function PassthroughEndpointField({
   label,
   value,
   onChange,
   description = GRANT_DESCRIPTION,
+  rows = PASSTHROUGH_ENDPOINTS,
+  flat = false,
+  locked = [],
   error,
 }: {
   label: string
   value: readonly PassthroughEndpoint[]
   onChange: (next: PassthroughEndpoint[]) => void
   description?: string
+  rows?: readonly PassthroughEndpoint[]
+  flat?: boolean
+  locked?: readonly PassthroughEndpoint[]
   error?: string
 }) {
   return (
     <fieldset className="flex flex-col gap-1.5">
       <legend className="text-sm font-medium text-foreground-secondary">{label}</legend>
-      <p className="text-xs text-foreground-muted">{description}</p>
+      {description && <p className="text-xs text-foreground-muted">{description}</p>}
       <div className="space-y-2">
-        {PASSTHROUGH_ENDPOINTS.map((endpoint) => (
-          <Checkbox
-            key={endpoint}
-            checked={value.includes(endpoint)}
-            onChange={(event) =>
-              onChange(togglePassthrough(value, endpoint, event.target.checked))
-            }
-            label={passthroughLabel(endpoint)}
-            description={passthroughScope(endpoint)}
-          />
+        {rows.map((endpoint) => (
+          <div key={endpoint} className={passthroughParent(endpoint) ? 'ml-7' : undefined}>
+            <Checkbox
+              checked={value.includes(endpoint)}
+              disabled={
+                locked.includes(endpoint) || (!flat && !parentGranted(value, endpoint))
+              }
+              onChange={(event) =>
+                onChange(togglePassthrough(value, endpoint, event.target.checked, { flat }))
+              }
+              label={passthroughLabel(endpoint)}
+              description={passthroughDescription(endpoint)}
+            />
+          </div>
         ))}
       </div>
       {error && (

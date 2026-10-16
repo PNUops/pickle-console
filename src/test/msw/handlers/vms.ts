@@ -1382,6 +1382,7 @@ export const vmHandlers: RequestHandler[] = [
         workspaceName: vm.workspaceName,
       },
       grants: vmAccessStore[vm.id] ?? [],
+      canManageAccess: vm.accessManageAllowed,
     } satisfies Schemas['ResourceAccessListResponse'], { status: 200 })
   }),
 

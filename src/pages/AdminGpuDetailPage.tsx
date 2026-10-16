@@ -1,3 +1,6 @@
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
+import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -17,9 +20,10 @@ type AdminAction = 'priority' | 'extend' | 'reclaim' | 'reconcile'
 const TITLES: Record<AdminAction, string> = { priority: '대기 우선순위 변경', extend: 'GPU 임대 연장', reclaim: 'GPU 회수', reconcile: 'GPU 상태 다시 확인' }
 
 export function AdminGpuDetailPage() {
+  const { user } = useAuth()
   const allocationId = useParams().allocationId ?? ''
   const scope = useAdminScope()
-  const allocation = useQuery({ queryKey: ['admin', 'gpu-allocations', allocationId, { orgId: scope.activeOrgId }], queryFn: () => fetchAdminGpuAllocation(allocationId), enabled: isUuid(allocationId) && scope.ready,
+  const allocation = useQuery({ queryKey: ['admin', 'gpu-allocations', allocationId, { orgId: scope.activeOrgId, reader: requestReaderKey(user) }], queryFn: () => fetchAdminGpuAllocation(allocationId), enabled: isUuid(allocationId) && scope.ready,
     refetchInterval: (result) => gpuDetailPollInterval(result.state.data),
   })
   if (!isUuid(allocationId)) return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
@@ -27,7 +31,7 @@ export function AdminGpuDetailPage() {
   if (allocation.isError) return <Alert variant="danger">{allocation.error.message}</Alert>
   const data = allocation.data
   if (scope.activeOrgId && data.orgId !== scope.activeOrgId) return <Alert variant="danger">선택한 기관의 GPU 할당이 아닙니다.</Alert>
-  return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}`} data={data} />
+  return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}:${requestReaderKey(user)}`} data={data} />
 }
 
 /** A route or scope change discards all local mutation feedback for the previous target. */
@@ -42,7 +46,7 @@ function AdminGpuDetail({ data }: { data: GpuAllocation }) {
   const stable = data.connectionStatus === 'NONE' || data.connectionStatus === 'ATTACHED'
   return <div className="space-y-6">
     <Link to={adminPaths.gpus(scope.activeOrgId)} className="text-sm text-primary-700 hover:underline">← GPU</Link>
-    <PageHeader title={data.name} description={data.orgName} />
+    <PageHeader title={data.name} description={data.orgName} actions={<AdminResourceAccessLink type="GPU" resourceId={data.id} />} />
     {notice && <Alert variant="success">{notice}</Alert>}
     {data.error && <Alert variant="danger">{data.error}</Alert>}
     <GpuInfoCard allocation={data} />
@@ -70,7 +74,7 @@ function AdminGpuActionModal({ action, allocation, onClose, onDone }: { action: 
     if (action === 'reclaim') return reclaimGpu(allocation.id, reason.trim())
     if (hours == null) throw new Error('연장할 기간을 입력해 주세요.')
     return extendAdminGpu(allocation.id, hours, reason.trim())
-  }, onSuccess: async () => { await Promise.all([client.invalidateQueries({ queryKey: ['admin', 'gpu-allocations'] }), client.invalidateQueries({ queryKey: ['gpu-allocations'] }), client.invalidateQueries({ queryKey: ['resources'] })]); onDone() } })
+  }, onSuccess: async () => { await Promise.all([invalidateAdminDeadlines(client), client.invalidateQueries({ queryKey: ['admin', 'gpu-allocations'] }), client.invalidateQueries({ queryKey: ['gpu-allocations'] }), client.invalidateQueries({ queryKey: ['resources'] })]); onDone() } })
   return <Modal open title={TITLES[action]} onClose={save.isPending ? () => {} : onClose}><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); if (ready) save.mutate() }}>
     {save.isError && <Alert variant="danger">{save.error.message}</Alert>}
     {action === 'priority' && <FormField label="우선순위" required description="큰 값부터 할당하며 같은 값에서는 승인 순서를 따릅니다."><Input type="number" step={1} value={priority} onChange={(event) => setPriority(event.target.value)} /></FormField>}

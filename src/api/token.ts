@@ -38,7 +38,7 @@ export function setRefreshedAccessToken(token: string, generation: number): bool
   return true
 }
 
-type SessionExpiredListener = () => void
+type SessionExpiredListener = (expiredGeneration: number) => void
 
 /**
  * More than one part of the shell reacts to an expired session (AuthProvider
@@ -55,6 +55,6 @@ export function onSessionExpired(listener: SessionExpiredListener): () => void {
   }
 }
 
-export function notifySessionExpired(): void {
-  for (const listener of [...sessionExpiredListeners]) listener()
+export function notifySessionExpired(expiredGeneration = getSessionGeneration()): void {
+  for (const listener of [...sessionExpiredListeners]) listener(expiredGeneration)
 }

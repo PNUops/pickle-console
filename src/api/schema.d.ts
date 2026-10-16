@@ -87,9 +87,49 @@ export interface paths {
         put?: never;
         /**
          * 관리자 일괄 변경 적용
-         * @description 미리보기와 같은 본문에 fingerprint를 더해 적용합니다. 서버는 미리보기를 믿지 않고 적용 시점에 대상마다 다시 판정하며, 미리보기 뒤 바뀐 대상은 STALE로 답하고 쓰지 않습니다. 한 대상의 실패가 다른 대상을 되돌리지 않고, 되돌리기는 없습니다. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담습니다.
+         * @description 저장된 미리보기와 같은 변경·대상·fingerprint에 previewId와 클라이언트가 한 번 생성한 operationId를 더해 적용합니다. operationId는 결과의 batchId와 같습니다. 새 적용은 미리보기 저장 후 24시간까지만 허용합니다. 같은 수행자가 같은 식별자·본문으로 재시도하면 현재 접근 범위로 가린 저장 결과만 반환하며 변경이나 후속 작업을 다시 실행하지 않습니다. 이 재시도는 미리보기 만료 뒤에도 가능합니다. 같은 수행자의 식별자에 다른 본문을 결합하면 409, 타인의 기록은 404로 거절합니다. 새 적용은 대상마다 다시 판정하고 바뀐 확인값은 STALE, 업무상 거절은 SKIPPED로 저장합니다. 예기치 않은 트랜잭션 오류는 전체 변경과 결과를 롤백합니다. 커밋 후 callback 오류는 이미 커밋된 결과를 되돌리지 않으며 effects에서 관측합니다. APPLIED는 DB 커밋을 뜻하고 외부 완료를 보장하지 않습니다. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담습니다.
          */
         post: operations["applyAdminBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 본인의 최근 일괄 변경 결과 조회
+         * @description 본인의 최근 커밋 결과 최대 20개를 현재 접근 범위로 가려서 조회합니다. 대상과 후속 작업을 변경하지 않습니다.
+         */
+        get: operations["listAdminBulkChangeOperations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/operations/{operationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 저장된 일괄 변경 결과 조회
+         * @description 본인의 커밋된 적용 결과와 callback 접수 관측을 조회합니다. 재실행하지 않으며 DB 커밋, queue 접수와 외부 완료는 별개입니다.
+         */
+        get: operations["getAdminBulkChangeOperation"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -107,9 +147,29 @@ export interface paths {
         put?: never;
         /**
          * 관리자 일괄 변경 미리보기
-         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 답합니다. 아무것도 쓰지 않습니다. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 답합니다. 대상마다 fingerprint를 주며 적용 요청에 그대로 돌려보냅니다. 대상은 최대 200개입니다.
+         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 답합니다. 미리보기 기록만 저장하며 대상은 변경하지 않습니다. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 답합니다. 대상마다 fingerprint를 주며 적용 요청에 그대로 돌려보냅니다. 대상은 최대 200개입니다.
          */
         post: operations["previewAdminBulkChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/bulk-changes/previews/{previewId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 저장된 일괄 변경 미리보기 조회
+         * @description 본인의 미리보기를 현재 대상별 변경 권한으로 다시 조회합니다. 접근할 수 없는 대상의 이름, 값, 확인값과 변경 내용은 가립니다.
+         */
+        get: operations["getAdminBulkChangePreview"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -228,6 +288,26 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listAdminDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/domains/{domainId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 도메인 단건 열람
+         * @description 학생 지원 권한으로 정확한 도메인 ID의 현재 저장 metadata를 전역 조회합니다. 목록과 같은 기간·해제·DNS 상태를 반환하며 외부 조회나 변경을 실행하지 않습니다. 삭제된 도메인과 기관·워크스페이스의 필수 식별 정보를 확인할 수 없는 도메인은 404입니다.
+         */
+        get: operations["getAdminDomain"];
         put?: never;
         post?: never;
         delete?: never;
@@ -746,7 +826,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 목록
-         * @description 기관과 워크스페이스, 발급 신청, 상태, 검색어로 키를 조회합니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
+         * @description 학생 지원 권한으로 키 metadata를 전역 조회하며 기관과 워크스페이스, 발급 신청, 상태, 검색어는 필터입니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
          */
         get: operations["listAdminLlmKeys"];
         put?: never;
@@ -766,7 +846,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 상세
-         * @description 기관 범위 안의 키 운영 상태와 한도를 조회합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
+         * @description 학생 지원 권한으로 키 운영 상태와 한도 metadata를 전역 조회합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
          */
         get: operations["getAdminLlmKey"];
         put?: never;
@@ -826,7 +906,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키로 호출할 수 있는 모델
-         * @description 이 키로 부를 수 있는 모델입니다. 키 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
+         * @description 학생 지원 권한으로 전역 조회하는 이 키로 부를 수 있는 모델입니다. 키 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
          */
         get: operations["listAdminLlmKeyModels"];
         put?: never;
@@ -886,7 +966,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 사용량
-         * @description 이 키의 일별 사용량과, 키 소유자 화면에는 없는 분해 셋입니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         * @description 학생 지원 권한으로 전역 조회하는 이 키의 일별 사용량과, 키 소유자 화면에는 없는 분해 셋입니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
          */
         get: operations["getAdminLlmKeyUsage"];
         put?: never;
@@ -1546,6 +1626,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/resource-access/{resourceType}/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminResourceAccess"];
+        put?: never;
+        post: operations["addAdminResourceAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/resource-access/{resourceType}/{resourceId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAdminResourceAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/resource-access/{resourceType}/{resourceId}/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeAdminResourceAccessGrant"];
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminResourceAccessGrant"];
+        trace?: never;
+    };
+    "/admin/resource-deadlines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 통합 자원 기한 목록
+         * @description 전역 지원 메타데이터를 자원당 주 기한 하나로 조회합니다. 기관·워크스페이스는 선택 필터이며 없는 식별자는 빈 목록입니다. VM은 사용 종료일, LLM 키는 만료 시각, 외부 도메인은 갱신 또는 해제 뒤 예약 종료, GPU는 대기 중 승인 종료일 또는 할당·반납 중 실제 임대 종료입니다. 종료 상태와 주 기한 없는 자원은 제외합니다. expiringInDays는 1~365의 KST 달력 창으로 오늘부터 오늘+N일까지입니다. VM·대기 GPU는 종료일 양끝을 포함합니다. LLM 키는 관측 시각보다 미래이면서 오늘+N 다음 날 0시(KST)까지 포함하여 그날까지 사용 가능한 키를 담습니다. 도메인·GPU 임대의 정확한 시각은 관측 시각보다 미래이며 같은 다음 날 0시 미만입니다. expired=true는 날짜 종료가 오늘보다 이전이거나 정확한 기한이 관측 시각 이하인 자원입니다. 두 창을 함께 지정하면 교집합이므로 빈 목록입니다. 관측 시각과 count·페이지는 같은 DB snapshot이며 기한 경과를 외부 완료로 해석하지 않습니다. 실제 변경 권한은 기존 단건 경로의 기관 범위를 따릅니다.
+         */
+        get: operations["listAdminResourceDeadlines"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/routes": {
         parameters: {
             query?: never;
@@ -1652,6 +1800,26 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getAdminSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/support-orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 학생 지원 조회의 기관 필터 목록
+         * @description 비활성 기관을 포함한 기관 ID·이름·상태만 조회합니다. 기관 설정이나 자격증명, 배정·운영 권한을 제공하지 않습니다.
+         */
+        get: operations["listAdminSupportOrgs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1865,7 +2033,71 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * 사용자 프로필 정정
+         * @description 기관 운영자·관리자는 시스템 계층 계정을 제외한 사용자의 프로필을 전역 정정하며 시스템 관리자는 모든 계정을 정정합니다. 기존 프로필 변경 로직으로 초대 연결과 알림, 감사를 처리합니다. 계정 상태와 MFA, 기관 역할은 변경하지 않습니다.
+         */
         patch: operations["updateUserProfile"];
+        trace?: never;
+    };
+    "/admin/users/{userId}/profile-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 프로필 정정과 계정 활성화의 초대 영향 미리보기
+         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 프로필 정정은 기관 관리자·운영자와 시스템 관리자가, 계정 활성화 미리보기는 시스템 관리자만 수행합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
+         */
+        post: operations["previewAdminUserProfileImpact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/support": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 사용자의 관계와 실제 신청 결과 조회
+         * @description 학생 지원 권한으로 구성원·초대·신청·리소스 관계를 전역 조회합니다. 기관은 선택 필터입니다. 저장된 학번과 대기 초대의 연결, 생성 대기와 실제 리소스 상태를 구분합니다.
+         */
+        get: operations["getAdminUserSupport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/support/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 사용자와 리소스의 공통 접근 조건 조회
+         * @description 학생 지원 권한으로 지정 리소스의 구성원과 부여, 계정 및 리소스 상태를 설명합니다. 실제 사용자 인가와 연결 상태는 변경하지 않으며 종류별 작업 성공을 보장하지 않습니다.
+         */
+        get: operations["getAdminUserResourceAccess"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/vm-flavors": {
@@ -1898,6 +2130,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateAdminVmFlavor"];
+        trace?: never;
+    };
+    "/admin/vm-placement/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 제안 VM 사양의 현재 한 VM 배치 조건 조회
+         * @description 신청 저장 전과 승인 검토에서 같은 이미지 revision과 한 VM 사양을 조회합니다. 호환 ACTIVE replica와 ACTIVE 노드, 실제 배치 용량 계산을 재사용합니다. 용량을 예약하거나 승인 규칙을 바꾸지 않으며 다인 전체 생성이나 외부 적용 완료를 보장하지 않습니다.
+         */
+        post: operations["previewAdminVmPlacement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/vms": {
@@ -2136,10 +2388,10 @@ export interface paths {
         get: operations["getAdminWorkspace"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["deleteAdminWorkspace"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["updateAdminWorkspace"];
         trace?: never;
     };
     "/admin/workspaces/{workspaceId}/invitations": {
@@ -2151,11 +2403,75 @@ export interface paths {
         };
         /**
          * 워크스페이스의 대기 중인 초대 목록
-         * @description 신청을 승인할 수 있는 관리자가 아직 가입하지 않은 사람을 신청 대상자로 고를 때 씁니다. 대기 중인 초대만 오래된 순서로 돌려줍니다.
+         * @description 학생 지원 권한으로 아직 가입하지 않은 대상의 초대 정보를 조회합니다. 대기 중인 초대만 오래된 순서로 돌려줍니다.
          */
         get: operations["listAdminWorkspaceInvitations"];
         put?: never;
+        post: operations["inviteAdminWorkspaceMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/invitations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAdminWorkspaceInvitations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         post?: never;
+        delete: operations["cancelAdminWorkspaceInvitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeAdminWorkspaceMember"];
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminWorkspaceMemberRole"];
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/members/{userId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAdminWorkspaceMemberRole"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2419,6 +2735,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dns-domains/{domainId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewDnsDomainAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dns-domains/{domainId}/access/{grantId}": {
         parameters: {
             query?: never;
@@ -2625,6 +2957,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/gpu-allocations/{allocationId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewGpuAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/gpu-allocations/{allocationId}/access/{grantId}": {
         parameters: {
             query?: never;
@@ -2816,6 +3164,22 @@ export interface paths {
          * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 키의 접근 권한을 부여합니다. 사용자는 이 키를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
          */
         post: operations["addLlmKeyAccessGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/llm-keys/{keyId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewLlmKeyAccessChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3536,6 +3900,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vms/{vmId}/access/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewVmAccessChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vms/{vmId}/access/{grantId}": {
         parameters: {
             query?: never;
@@ -3997,8 +4377,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccessConfirmation: {
+            /** @description 미리보기의 권한 증가를 명시적으로 확인했을 때만 true */
+            confirmed?: boolean;
+            /** @description 미리보기에서 받은 정확한 대상·변경·현재 권한의 지문 */
+            fingerprint?: string;
+            /** @description 권한을 얻는 목적. 증가한 권한과 함께 감사에 기록됩니다. */
+            purpose?: string;
+        };
         /** @enum {string} */
         AccessGranteeType: "USER" | "WORKSPACE";
+        AccessIncrease: {
+            afterRole: string;
+            beforeRole?: string | null;
+            resourceType?: components["schemas"]["ResourceType"] | null;
+            /** Format: uuid */
+            targetId: string;
+            /** Format: uuid */
+            workspaceId: string;
+        };
         /** @enum {string} */
         Action: "ACCEPT" | "DROP";
         ActivateMfaRequest: {
@@ -4018,7 +4415,13 @@ export interface components {
             targetId?: string | null;
             targetType?: string | null;
         };
+        ActorAccessImpact: {
+            fingerprint: string;
+            increases: components["schemas"]["AccessIncrease"][];
+            pendingResourceOwners: components["schemas"]["PendingResourceOwner"][];
+        };
         AddResourceAccessGrantRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description USER는 지정된 사용자 한 명, WORKSPACE은 소유 워크스페이스 전체 */
             granteeType: components["schemas"]["AccessGranteeType"];
             /** @description 부여할 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
@@ -4029,10 +4432,19 @@ export interface components {
              */
             userId?: string | null;
         };
+        AdminApprovalImageReference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description 동일 revision의 호환 ACTIVE replica가 ACTIVE 노드에 있는지. 이 값은 개별 VM 용량이나 실제 생성 완료를 보장하지 않습니다. */
+            selectableNow: boolean;
+            /** Format: int32 */
+            version: number;
+        };
         /** @enum {string} */
         AdminBulkAccessAction: "GRANT" | "CHANGE" | "REVOKE";
         AdminBulkAccessChange: {
-            /** @description GRANT는 없는 권한을 만들고, CHANGE는 있는 권한의 등급을 바꾸며, REVOKE는 권한을 지웁니다. */
+            /** @description GRANT는 없는 권한을 만들고, CHANGE는 있는 권한의 등급을 바꿉니다. 둘은 활성 구성원에게만 허용됩니다. REVOKE는 기존 개인 권한을 지우며 비활성 계정과 구성원 해제 후에도 가능합니다. 회수할 개인 권한이 없으면 NO_GRANT로 거부합니다. 워크스페이스 전체 부여는 그대로 둡니다. */
             action: components["schemas"]["AdminBulkAccessAction"];
             /** @description 부여하거나 바꿀 등급. GRANT와 CHANGE에서 필수입니다. */
             role?: components["schemas"]["ResourceRole"] | null;
@@ -4061,6 +4473,34 @@ export interface components {
             batchId: string;
             items: components["schemas"]["AdminBulkChangeApplyItem"][];
         };
+        AdminBulkChangeCurrentObservation: {
+            /** Format: date-time */
+            observedAt: string;
+            refusal?: components["schemas"]["AdminBulkChangeReason"] | null;
+            /** Format: uuid */
+            targetId: string;
+            /** @description 현재 DB가 알고 있는 대상 값입니다. 요청과 값이 같아도 이 적용의 외부 완료를 증명하지 않습니다. */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        AdminBulkChangeEffect: {
+            externalReference?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            observedAt?: string | null;
+            outcome: string;
+            /** Format: date-time */
+            queueObservedAt?: string | null;
+            /** @description 현재 JobRunr 상태 관측. SUCCEEDED도 외부 자원의 물리적 완료를 뜻하지 않습니다. */
+            queueState?: string | null;
+            /** Format: date-time */
+            registeredAt: string;
+            /** Format: uuid */
+            targetId?: string | null;
+        };
         AdminBulkChangeFieldDiff: {
             /** @description 필드 이름 */
             field: string;
@@ -4071,7 +4511,23 @@ export interface components {
         };
         /** @enum {string} */
         AdminBulkChangeKind: "LLM_KEY_LIMITS" | "LLM_KEY_STATUS" | "LLM_KEY_EXPIRY" | "VM_PERIOD" | "VM_POWER" | "VM_DELETION" | "DOMAIN_RENEWAL" | "DOMAIN_FORCE_RELEASE" | "DOMAIN_VERIFY" | "ACCESS";
+        AdminBulkChangeOperationResponse: {
+            change?: components["schemas"]["AdminBulkChangeSpec"] | null;
+            /** Format: date-time */
+            committedAt: string;
+            effects: components["schemas"]["AdminBulkChangeEffect"][];
+            observations: components["schemas"]["AdminBulkChangeCurrentObservation"][];
+            /** Format: uuid */
+            operationId: string;
+            /** Format: uuid */
+            previewId: string;
+            result: components["schemas"]["AdminBulkChangeApplyResponse"];
+            /** @description COMMITTED는 DB 변경과 결과의 커밋입니다. 큐 접수나 외부 완료를 뜻하지 않습니다. */
+            status: string;
+            targetType: components["schemas"]["AdminBulkChangeTargetType"];
+        };
         AdminBulkChangePreviewItem: {
+            actorAccessImpact?: components["schemas"]["ActorAccessImpact"] | null;
             /** @description true면 적용할 수 있습니다. fields가 비어 있으면 이미 그 값이라 바뀌지 않습니다. */
             applicable: boolean;
             /** @description 바뀔 필드만 */
@@ -4086,7 +4542,20 @@ export interface components {
             targetId: string;
         };
         AdminBulkChangePreviewResponse: {
+            change?: components["schemas"]["AdminBulkChangeSpec"] | null;
+            /**
+             * Format: uuid
+             * @description 이 미리보기로 이미 커밋된 본인 적용의 ID. 새 적용을 만들지 않고 기존 결과를 여는 데 씁니다.
+             */
+            consumedOperationId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
             items: components["schemas"]["AdminBulkChangePreviewItem"][];
+            /** Format: uuid */
+            previewId: string;
+            targetType: components["schemas"]["AdminBulkChangeTargetType"];
         };
         /**
          * @description 대상 하나가 변경되지 않은 이유. NOT_FOUND: 대상이 없거나 이 계정의 범위 밖입니다. FORBIDDEN: 이 역할은 이 변경을 할 수 없습니다. INVALID_STATE: 현재 상태에서는 할 수 없는 변경입니다. EXPIRED: 사용 기간이 만료되어 먼저 기간을 연장해야 합니다. PROTECTED: 삭제 보호가 켜져 있습니다. INELIGIBLE: 대상이나 지정한 사용자가 이 변경의 대상이 될 수 없습니다. NOT_MEMBER: 지정한 사용자가 소유 워크스페이스의 구성원이 아닙니다. NO_GRANT: 지정한 사용자에게 바꾸거나 회수할 접근 권한이 없습니다. ALREADY_GRANTED: 지정한 사용자가 이미 다른 등급의 접근 권한을 갖고 있습니다. VALIDATION: 합쳐진 결과가 한도 규칙에 어긋납니다.
@@ -4094,11 +4563,24 @@ export interface components {
          */
         AdminBulkChangeReason: "NOT_FOUND" | "FORBIDDEN" | "INVALID_STATE" | "EXPIRED" | "PROTECTED" | "INELIGIBLE" | "NOT_MEMBER" | "NO_GRANT" | "ALREADY_GRANTED" | "VALIDATION";
         AdminBulkChangeRequest: {
+            accessConfirmations?: {
+                [key: string]: components["schemas"]["AccessConfirmation"];
+            } | null;
             change: components["schemas"]["AdminBulkChangeSpec"];
             /** @description 적용에서만 씁니다. 미리보기가 준 대상별 fingerprint를 전부 담습니다. 서버는 적용 시점의 값을 다시 계산해 다른 대상은 STALE로 답하고 쓰지 않습니다. */
             fingerprints?: {
                 [key: string]: string;
             } | null;
+            /**
+             * Format: uuid
+             * @description 적용에서 필수. 응답 유실 재시도에도 유지하는 클라이언트 생성 ID. batchId와 같습니다.
+             */
+            operationId?: string | null;
+            /**
+             * Format: uuid
+             * @description 적용에서 필수인 저장 미리보기 ID
+             */
+            previewId?: string | null;
             /** @description 대상의 공개 ID. 1개 이상 200개 이하, 중복 없이. */
             targetIds: string[];
             /** @description 대상의 종류. 변경 종류와 맞아야 합니다. */
@@ -4170,9 +4652,9 @@ export interface components {
              */
             concurrency?: number | null;
             /** @description 유료 모델 허용 목록에 적용할 변경. 생략하면 그대로 둡니다. */
-            creditAllowedModels?: components["schemas"]["AdminBulkListChange"];
+            creditAllowedModels?: components["schemas"]["AdminBulkListChange"] | null;
             /** @description 유료 모델 차단 목록에 적용할 변경. 생략하면 그대로 둡니다. */
-            creditDeniedModels?: components["schemas"]["AdminBulkListChange"];
+            creditDeniedModels?: components["schemas"]["AdminBulkListChange"] | null;
             /** @description 금액 한도(USD 크레딧). 생략하면 그대로 둡니다. null은 허용하지 않고, 유료 모델을 닫으려면 0을 보냅니다. */
             creditLimit?: number;
             /** @description 금액 한도 리셋 창. 생략하면 그대로 두고, null이면 리셋 없는 총액 상한입니다. */
@@ -4182,8 +4664,8 @@ export interface components {
              * @description 일일 토큰 한도. 생략하면 그대로 두고, null이면 무제한이며 0이면 토큰 축을 닫습니다.
              */
             dailyTokens?: number | null;
-            /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 값은 images와 embeddings입니다. */
-            passthroughEndpoints?: components["schemas"]["AdminBulkListChange"];
+            /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 현재 변경 요청에는 chat, web_search, pdf_ocr, images, embeddings를 지정할 수 있습니다. 결과 목록의 web_search와 pdf_ocr는 chat과 함께 부여해야 합니다. */
+            passthroughEndpoints?: components["schemas"]["AdminBulkListChange"] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
@@ -4422,8 +4904,8 @@ export interface components {
             /** Format: uuid */
             orgId?: string | null;
             orgName: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음. 모델 목록 둘과 반대로 채워야 열린다. */
-            passthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음(chat 포함). 모델 목록 둘과 반대로 채워야 열린다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             purpose?: string | null;
             quotaExhausted: boolean;
             /** Format: uuid */
@@ -4470,8 +4952,8 @@ export interface components {
              * @description 유료 모델을 결제할 사업 계정. 생략하거나 null이면 기존 연결을 유지합니다.
              */
             openrouterAccountId?: string | null;
-            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 값에 영향을 받지 않습니다. */
-            passthroughEndpoints: ("images" | "embeddings")[] | null;
+            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 값에 영향을 받지 않습니다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
@@ -4768,6 +5250,38 @@ export interface components {
             /** @description 동기화 토큰 발급 여부 (미발급이면 에이전트 인증이 항상 실패) */
             tokenIssued: boolean;
         };
+        AdminRequestGeneratedResourceResponse: {
+            /** @description 현재 종류별 관리자 상세 조회 가능 여부. 도메인의 REMOVED 이력은 목록 범위에서 관측하되 상세는 열리지 않습니다. */
+            canReadDetail: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            nodeId?: string | null;
+            nodeName?: string | null;
+            /** Format: uuid */
+            orgId: string;
+            /** Format: uuid */
+            recipientId?: string | null;
+            /**
+             * Format: date-time
+             * @description 서버 기록이 갱신된 시각. 외부 시스템 적용이나 연결 성공을 측정한 시각이 아닙니다.
+             */
+            recordUpdatedAt: string;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            renewDueAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
+            /** @description 종류별 서버 상태. VM은 CREATING/ERROR/RUNNING 등 VM 상태, LLM 키는 만료를 반영한 상태, GPU는 할당 상태, 도메인은 원래 행의 상태입니다. 서로 다른 상태를 완료 하나로 합치지 않습니다. */
+            state: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+        };
         AdminRequestPeriodResponse: {
             displayName: string;
             /**
@@ -4786,6 +5300,77 @@ export interface components {
             id: string;
             name: string;
             status: components["schemas"]["CatalogStatus"];
+        };
+        /** @description 종류별 저장 날짜. 해당 종류에 없는 날짜와 저장되지 않은 날짜는 null입니다. 기한 경과는 외부 처리 완료를 증명하지 않습니다. */
+        AdminResourceDeadlineDates: {
+            /** Format: date-time */
+            allocatedAt?: string | null;
+            /** Format: date-time */
+            deleteRequestedAt?: string | null;
+            /** Format: date-time */
+            deleteScheduledFor?: string | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: date-time */
+            expiryStoppedAt?: string | null;
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: date */
+            grantedStartDate?: string | null;
+            /** Format: date-time */
+            leaseEndsAt?: string | null;
+            /** Format: date-time */
+            releasedAt?: string | null;
+            /** Format: date-time */
+            renewDueAt?: string | null;
+            /** Format: date-time */
+            reservedUntil?: string | null;
+            /** Format: date */
+            startDate?: string | null;
+        };
+        /**
+         * @description 기한 종류. VM 사용 종료, LLM 키 만료, 외부 도메인 갱신·예약, GPU 승인기간·실제 임대 종료를 구분합니다.
+         * @enum {string}
+         */
+        AdminResourceDeadlineKind: "VM_USAGE_END" | "LLM_KEY_EXPIRY" | "DOMAIN_RENEWAL" | "DOMAIN_RESERVATION" | "GPU_GRANT_END" | "GPU_LEASE_END";
+        AdminResourceDeadlineResponse: {
+            /** @description GPU의 저장 연결 상태. 다른 종류는 null입니다. */
+            connectionStatus?: string | null;
+            dates: components["schemas"]["AdminResourceDeadlineDates"];
+            /**
+             * Format: date-time
+             * @description 현재 주 기한. 날짜 종료는 다음 날 0시(KST)로 정규화합니다. 이 시각 경과는 정지·회수·삭제 완료를 뜻하지 않습니다.
+             */
+            deadlineAt: string;
+            deadlineKind: components["schemas"]["AdminResourceDeadlineKind"];
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description 그날까지 포함하는 종료일. VM·GPU 승인기간에 표시하며, LLM 키는 만료가 실제 KST 0시일 때만 전날을 표시합니다. 임의 시각의 기한에는 null입니다.
+             */
+            inclusiveEndDate?: string | null;
+            name: string;
+            /**
+             * Format: date-time
+             * @description 기한 판정과 함께 사용한 서버 시각. 마이크로초 정밀도입니다.
+             */
+            observedAt: string;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName?: string | null;
+            /** @description 서버 관측 시각에 주 기한이 경과했는지. 실제 후속 처리 상태와 별개입니다. */
+            overdue: boolean;
+            /** @description DB에 저장된 종류별 상태 */
+            sourceStatus: string;
+            /** @description 조회 시각의 종류별 상태. LLM 키는 정확한 만료 시각을 반영하며 다른 종류는 저장 상태입니다. */
+            status: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName?: string | null;
         };
         AdminRouteView: {
             /** Format: date-time */
@@ -4815,6 +5400,12 @@ export interface components {
             workspaceId: string;
             workspaceName: string;
         };
+        AdminSupportOrgOptionResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            status: components["schemas"]["OrgStatus"];
+        };
         AdminTaskResponse: {
             /** Format: int32 */
             attempts: number;
@@ -4843,15 +5434,200 @@ export interface components {
             workspaceName?: string | null;
         };
         AdminUpdateProfileRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             departmentCode?: string | null;
             departmentOther?: string | null;
             position?: components["schemas"]["UserPosition"] | null;
             reason?: string | null;
             studentNo?: string | null;
         };
+        /** @enum {string} */
+        AdminUserProfileImpactAction: "PROFILE" | "ENABLE";
+        AdminUserProfileImpactRequest: {
+            action: components["schemas"]["AdminUserProfileImpactAction"];
+            profile?: components["schemas"]["AdminUpdateProfileRequest"] | null;
+        };
+        AdminUserProfileImpactResponse: {
+            action: components["schemas"]["AdminUserProfileImpactAction"];
+            actorAccessImpact: components["schemas"]["ActorAccessImpact"];
+            candidateStatus: components["schemas"]["UserStatus"];
+            claimsPossible: boolean;
+            invitations: components["schemas"]["AdminUserProfileInvitationImpact"][];
+            /** Format: date-time */
+            observedAt: string;
+            studentNoWillChange: boolean;
+            /** Format: uuid */
+            userId: string;
+        };
+        AdminUserProfileInvitationImpact: {
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            alreadyMember: boolean;
+            /** Format: uuid */
+            id: string;
+            matchedBy: string;
+            recipients: components["schemas"]["AdminUserProfileRecipientImpact"][];
+            role: components["schemas"]["WorkspaceMemberRole"];
+            status: components["schemas"]["WorkspaceInvitationStatus"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
+        AdminUserProfileRecipientImpact: {
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: uuid */
+            orgId: string;
+            projectedStatus: components["schemas"]["RequestRecipientStatus"];
+            /** Format: uuid */
+            requestId: string;
+            requestStatus: components["schemas"]["RequestStatus"];
+            status: components["schemas"]["RequestRecipientStatus"];
+            type: components["schemas"]["ResourceType"];
+        };
+        AdminUserResourceAccessResponse: {
+            /** @description 활성 계정, 소유 워크스페이스 구성원과 리소스 부여의 공통 조건만 충족했는지. 종류별 작업이나 실제 연결 성공을 보장하지 않습니다. */
+            baseConditionsSatisfied: boolean;
+            /** @description 현재 관리자가 기존 일괄 접근 변경으로 이 사용자의 개인 부여를 회수할 수 있는지 */
+            canRevoke: boolean;
+            effectiveRole?: components["schemas"]["ResourceRole"] | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            personalGrantRole?: components["schemas"]["ResourceRole"] | null;
+            /** @description 공통 진단 사유. ACCOUNT_INACTIVE, NOT_WORKSPACE_MEMBER, NO_RESOURCE_GRANT, RESOURCE_ENDED, RESOURCE_NOT_READY. 종류별 상세 조건은 별도 확인이 필요합니다. */
+            reasons: string[];
+            /** Format: uuid */
+            requestId?: string | null;
+            /** @description 회수 조건. ALLOWED, FORBIDDEN, RESOURCE_NOT_FOUND, NO_PERSONAL_GRANT. 기존 개인 부여의 회수는 계정 비활성이나 구성원 해제 이후에도 가능합니다. */
+            revokeReason: string;
+            standingRights: boolean;
+            status: string;
+            type: components["schemas"]["ResourceType"];
+            userStatus: components["schemas"]["UserStatus"];
+            workspaceGrantRole?: components["schemas"]["ResourceRole"] | null;
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+            workspaceRole?: components["schemas"]["WorkspaceMemberRole"] | null;
+        };
+        AdminUserSupportCapabilitiesResponse: {
+            /** @description 프로필 정정과 정정 영향 미리보기 가능 여부 */
+            canCorrectProfile: boolean;
+            /** @description 계정 활성화와 활성화 영향 미리보기 가능 여부 */
+            canEnableAccount: boolean;
+            /** @description 학생 지원 프로필 조회 가능 여부 */
+            profileVisible: boolean;
+        };
+        AdminUserSupportInvitation: {
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: uuid */
+            id: string;
+            matchedBy: string;
+            role: components["schemas"]["WorkspaceMemberRole"];
+            status: components["schemas"]["WorkspaceInvitationStatus"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
+        AdminUserSupportMembership: {
+            resourceCounts: components["schemas"]["AdminUserSupportResourceCount"][];
+            role: components["schemas"]["WorkspaceMemberRole"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceKind: components["schemas"]["WorkspaceKind"];
+            workspaceName: string;
+        };
+        AdminUserSupportRelatedRequest: {
+            applicant: boolean;
+            /** Format: date */
+            grantedEndDate?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            reason?: string | null;
+            /** Format: uuid */
+            recipientId?: string | null;
+            recipientStatus?: components["schemas"]["RequestRecipientStatus"] | null;
+            /** Format: uuid */
+            resourceId?: string | null;
+            status: components["schemas"]["RequestStatus"];
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+        };
+        AdminUserSupportResourceCount: {
+            /**
+             * Format: int64
+             * @description 기관 필터를 적용한 종류별 행 수. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
+             */
+            count: number;
+            type: components["schemas"]["ResourceType"];
+        };
+        AdminUserSupportResponse: {
+            invitations: components["schemas"]["AdminUserSupportInvitation"][];
+            invitationsVisible: boolean;
+            memberships: components["schemas"]["AdminUserSupportMembership"][];
+            /** Format: date-time */
+            observedAt: string;
+            requests: components["schemas"]["AdminUserSupportRelatedRequest"][];
+            /** @description 학생 지원 권한으로 전역 조회한 접근 목록형 리소스. 기관 선택은 필터입니다. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
+            resources: components["schemas"]["AdminUserResourceAccessResponse"][];
+            /** Format: uuid */
+            userId: string;
+        };
+        AdminVmPlacementCandidate: {
+            fitsOneNow: boolean;
+            /** Format: uuid */
+            nodeId: string;
+            nodeName: string;
+        };
+        AdminVmPlacementPreviewRequest: {
+            /** Format: int32 */
+            diskGb: number;
+            /** Format: uuid */
+            imageId: string;
+            /** Format: int32 */
+            memoryMb: number;
+            /** Format: uuid */
+            orgId: string;
+            /** Format: int32 */
+            vcpu: number;
+        };
+        AdminVmPlacementPreviewResponse: {
+            candidates: components["schemas"]["AdminVmPlacementCandidate"][];
+            /** @description 현재 한 VM의 제안 사양이 맞는 노드가 있는지. N명 전체 용량 예약이나 승인 성공을 보장하지 않습니다. */
+            fitsAnyOneNow: boolean;
+            /** @description 입력 이미지와 같은 논리 revision의 canonical 이미지 정보. 입력 식별자는 inputImageId로 확인합니다. */
+            image: components["schemas"]["AdminApprovalImageReference"];
+            /**
+             * Format: uuid
+             * @description 검증한 입력 이미지 식별자. 호환 replica를 입력하면 아래 image.id의 canonical 식별자와 다를 수 있습니다.
+             */
+            inputImageId: string;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: uuid */
+            orgId: string;
+        };
         AdminWorkspaceDetailResponse: {
+            canDelete: boolean;
+            canInviteMembers: boolean;
+            canManageMembers: boolean;
+            canManageOwners: boolean;
+            canUpdateInfo: boolean;
             /** Format: date-time */
             createdAt: string;
+            deleteBlockedReason?: string | null;
             description?: string | null;
             /** Format: uuid */
             id: string;
@@ -4864,10 +5640,14 @@ export interface components {
             vmCount: number;
         };
         AdminWorkspaceMemberResponse: {
+            canChangeRole: boolean;
+            canRemove: boolean;
             email: string;
             /** Format: date-time */
             joinedAt: string;
             name: string;
+            /** @description 현재 관리자에게 이 구성원의 사용자 관계·지원 상세를 열람할 권한이 있는지 여부 */
+            supportDetailVisible: boolean;
             /** Format: uuid */
             userId: string;
             userStatus: components["schemas"]["UserStatus"];
@@ -4948,6 +5728,7 @@ export interface components {
         Applicant: {
             /** Format: int64 */
             approvedCount: number;
+            canReadDetail: boolean;
             email: string;
             /** Format: uuid */
             id: string;
@@ -4962,13 +5743,24 @@ export interface components {
             /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
             domain?: components["schemas"]["DomainContext"] | null;
+            /** @description 이 신청의 실제 request_id로 연결된 자원의 기록과 상태. 자원 행 등록은 VM 프로비저닝 완료가 아닙니다. 신청 FK가 없는 과거 도메인 이름에서 현재 자원 ID를 추론하지 않습니다. */
+            generatedResources: components["schemas"]["AdminRequestGeneratedResourceResponse"][];
             gpu?: components["schemas"]["GpuContext"] | null;
             /** @deprecated */
             guidance: string;
             history: components["schemas"]["HistoryEntry"][];
             llmKey?: components["schemas"]["LlmKeyContext"] | null;
+            /** Format: date-time */
+            observedAt: string;
             /** @deprecated */
             orgHeadroom: components["schemas"]["OrgHeadroom"];
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            /** @description 저장된 실제 대상 계정별 관리자 사용자 상세 조회 허용 여부. 현재 디렉터리 권한과 교집합이며, 워크스페이스를 떠난 계정도 포함합니다. 가입 전 식별자로 계정을 추정하지 않습니다. */
+            recipientUserReadFlags: {
+                [key: string]: boolean;
+            };
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["VmContext"] | null;
             workspace: components["schemas"]["WorkspacePanel"];
@@ -5004,8 +5796,8 @@ export interface components {
              * @description 부여 일일 토큰 수. 비우면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 이 키에 부여할 기능 권한. 비우면 기능을 하나도 쓸 수 없습니다. 모델 목록과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            grantedPassthroughEndpoints?: ("images" | "embeddings")[] | null;
+            /** @description 이 키에 부여할 기능 권한. 생략하거나 null이면 신청자가 고른 목록(reqPassthroughEndpoints)으로 승인하고, 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat도 포함). 모델 목록과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 목록과 무관합니다. */
+            grantedPassthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비우면 서비스 기본값이 적용됩니다.
@@ -5242,6 +6034,8 @@ export interface components {
              * @description 희망 일일 토큰 수. 비우면 서비스 기본값을 받습니다.
              */
             reqDailyTokens?: number | null;
+            /** @description 신청자가 고른 기능 권한. 필수이며 빈 배열도 받습니다. 승인 화면의 초깃값이 되고, 무엇을 부여할지는 승인자가 정합니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고 나머지는 422로 거절합니다. web_search와 pdf_ocr은 chat과 함께 골라야 합니다. */
+            reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 희망 분당 요청 수. 비우면 서비스 기본값을 받습니다.
@@ -5266,8 +6060,6 @@ export interface components {
             defaultCreditAllowedModels?: string[] | null;
             /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 승인 화면 프리필에 쓸 기능 권한 기본값. 비우면 아무 기능도 부여되지 않은 상태가 기본이 됩니다. */
-            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
@@ -5743,8 +6535,11 @@ export interface components {
             userId: string;
         };
         HistoryEntry: {
+            canReadDetail: boolean;
             comment?: string | null;
             decision?: components["schemas"]["ReviewDecision"] | null;
+            /** Format: uuid */
+            orgId: string;
             /** Format: uuid */
             requestId: string;
             resourceName: string;
@@ -5757,6 +6552,7 @@ export interface components {
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
         InviteWorkspaceMembersRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description 초대할 사람 목록. 1명에서 200명까지이며, 한 항목에는 이메일과 학번 중 하나만 씁니다. */
             entries: components["schemas"]["WorkspaceInvitationEntry"][];
         };
@@ -6115,6 +6911,7 @@ export interface components {
             responseTruncated: boolean;
         };
         LlmKeyBrief: {
+            canReadDetail: boolean;
             /** Format: int32 */
             concurrency?: number | null;
             creditAxisConnected: boolean;
@@ -6127,6 +6924,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: uuid */
+            orgId: string;
             /** Format: int32 */
             rpm?: number | null;
             status: components["schemas"]["LlmApiKeyStatus"];
@@ -6209,8 +7008,8 @@ export interface components {
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             /** @description 키 이름 */
             name: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다. 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 채팅과 모델 조회는 이 목록과 무관합니다. */
-            passthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 모델 조회는 이 목록과 무관합니다. */
+            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /** @description 용도 */
             purpose?: string | null;
             /** @description 프롬프트·응답 본문 기록 여부 */
@@ -6362,8 +7161,8 @@ export interface components {
              * @description 부여 일일 토큰 수. 비어 있으면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
              */
             grantedDailyTokens?: number | null;
-            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. */
-            grantedPassthroughEndpoints: ("images" | "embeddings")[];
+            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. 검토 전 신청은 빈 배열입니다. */
+            grantedPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 부여 분당 요청 수. 비어 있으면 서비스 기본값입니다.
@@ -6381,6 +7180,8 @@ export interface components {
              * @description 희망 일일 토큰 수
              */
             reqDailyTokens?: number | null;
+            /** @description 신청자가 고른 기능 권한. 승인 화면의 초깃값입니다. 이 항목이 생기기 전의 신청은 ["chat"]으로 이관되었습니다. */
+            reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
              * @description 희망 분당 요청 수
@@ -6899,7 +7700,7 @@ export interface components {
             unpricedAvgLatencyMs: number;
         };
         LlmUsagePassthroughGrantResponse: {
-            /** @description 기능 권한 값. images 또는 embeddings입니다. */
+            /** @description 기능 권한 값. chat, images, embeddings 중 하나입니다. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행이 없습니다. */
             capability: string;
             /**
              * Format: int64
@@ -7087,10 +7888,12 @@ export interface components {
             role: components["schemas"]["UserRole"];
         };
         MemberBrief: {
+            canReadDetail: boolean;
             name: string;
             role: components["schemas"]["WorkspaceMemberRole"];
             /** Format: uuid */
             userId: string;
+            userStatus: components["schemas"]["UserStatus"];
         };
         Membership: {
             role: components["schemas"]["WorkspaceMemberRole"];
@@ -7117,6 +7920,60 @@ export interface components {
         MfaSetupResponse: {
             otpauthUri: string;
             secret: string;
+        };
+        /** @description 가격 축 하나. */
+        ModelPriceAxis: {
+            /**
+             * @description 벤더가 쓰는 축 이름.
+             * @example input_cache_read
+             */
+            axis: string;
+            /** @description 가격(USD). 단위는 unit을 따릅니다. */
+            price: number;
+            /** @description 가격 단위. */
+            unit: components["schemas"]["ModelPriceUnit"];
+        };
+        /** @description 구간 가격 하나. 값이 있는 조건이 모두 맞을 때 적용됩니다. */
+        ModelPriceTier: {
+            /** @description 이 구간에서 바뀌는 가격 축. */
+            axes: components["schemas"]["ModelPriceAxis"][];
+            /**
+             * Format: int32
+             * @description 입력 토큰이 이 값을 넘는 요청에 적용됩니다.
+             */
+            minPromptTokens?: number | null;
+            /** @description 해석하지 못한 조건의 벤더 이름. 비어 있지 않으면 위 조건만으로는 적용 범위를 다 알 수 없습니다. */
+            otherConditions: string[];
+            /**
+             * @description 적용 요일(UTC, 영어 소문자). 비어 있으면 요일 조건이 없습니다.
+             * @example [
+             *       "saturday",
+             *       "sunday"
+             *     ]
+             */
+            utcDays: string[];
+            /**
+             * Format: int32
+             * @description 적용 끝 시각(제외). UTC 자정부터 센 분이고 1440은 자정입니다.
+             */
+            utcEndMinute?: number | null;
+            /**
+             * Format: int32
+             * @description 적용 시작 시각. UTC 자정부터 센 분입니다.
+             */
+            utcStartMinute?: number | null;
+        };
+        /**
+         * @description 가격 단위. PER_MILLION_TOKENS는 100만 토큰당, PER_CALL은 그 축이 세는 호출 1회당 USD입니다(web_search는 검색 1회, request는 API 요청 1회). UNKNOWN은 단위를 알 수 없어 벤더 값을 그대로 담은 것입니다.
+         * @enum {string}
+         */
+        ModelPriceUnit: "PER_MILLION_TOKENS" | "PER_CALL" | "UNKNOWN";
+        /** @description 모델의 가격 축 전체. 벤더가 공시한 축을 모두 담으며 입력과 출력도 포함합니다. */
+        ModelPricing: {
+            /** @description 기본 가격 축. 0은 그 축이 무료라는 뜻입니다. */
+            axes: components["schemas"]["ModelPriceAxis"][];
+            /** @description 조건이 맞을 때 기본 가격 대신 적용되는 구간 가격. 없으면 비어 있습니다. */
+            tiers: components["schemas"]["ModelPriceTier"][];
         };
         NodeLiveResponse: {
             /** Format: date-time */
@@ -7477,8 +8334,6 @@ export interface components {
             defaultCreditAllowedModels: string[];
             /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels: string[];
-            /** @description 승인 화면이 프리필에 쓰는 기능 권한 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. */
-            defaultPassthroughEndpoints: ("images" | "embeddings")[];
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
             /**
@@ -7522,6 +8377,8 @@ export interface components {
             id: string;
             /** @description 벤더가 표시하는 이름. */
             name: string;
+            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다. */
+            pricing?: components["schemas"]["ModelPricing"] | null;
             /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
             promptPricePerMillion?: number | null;
         };
@@ -7751,6 +8608,17 @@ export interface components {
         };
         PageResponseAdminPortMappingResponse: {
             content: components["schemas"]["AdminPortMappingResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseAdminResourceDeadlineResponse: {
+            content: components["schemas"]["AdminResourceDeadlineResponse"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -8001,6 +8869,8 @@ export interface components {
             id: string;
             /** @description 표시 이름 */
             name: string;
+            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다 */
+            pricing?: components["schemas"]["ModelPricing"] | null;
             /** @description 입력 100만 토큰당 USD. 모르면 비어 있습니다 */
             promptPricePerMillion?: number | null;
         };
@@ -8032,6 +8902,15 @@ export interface components {
         };
         PasswordResetRequest: {
             email: string;
+        };
+        PendingResourceOwner: {
+            projectedStatus: string;
+            /** Format: uuid */
+            requestId: string;
+            resourceType: components["schemas"]["ResourceType"];
+            role: string;
+            /** Format: uuid */
+            workspaceId: string;
         };
         /** @enum {string} */
         PortForwardApplyState: "PENDING" | "ACTIVE" | "FAILED";
@@ -8252,7 +9131,7 @@ export interface components {
         RequestRecipientResponse: {
             /** Format: uuid */
             id: string;
-            /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 승인 권한이 있는 관리자에게만 보입니다. */
+            /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 학생 지원 권한이 있는 관리자에게만 보입니다. */
             invitee?: string | null;
             /** @description 대상 계정의 이름. 가입 전인 초대 대상자는 null입니다. */
             name?: string | null;
@@ -8333,6 +9212,17 @@ export interface components {
             capacityVcpu?: number | null;
             guidance: string;
         };
+        /** @enum {string} */
+        ResourceAccessChangeAction: "ADD" | "UPDATE" | "REMOVE";
+        ResourceAccessChangePreviewRequest: {
+            action: components["schemas"]["ResourceAccessChangeAction"];
+            /** Format: uuid */
+            grantId?: string | null;
+            granteeType?: components["schemas"]["AccessGranteeType"] | null;
+            role?: components["schemas"]["ResourceRole"] | null;
+            /** Format: uuid */
+            userId?: string | null;
+        };
         /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 워크스페이스 전체입니다. */
         ResourceAccessGrantView: {
             /** Format: date-time */
@@ -8348,6 +9238,8 @@ export interface components {
         };
         /** @description 리소스 접근 권한 목록과, 그 목록이 어느 리소스의 것인지 알려 주는 최소 정보 */
         ResourceAccessListResponse: {
+            /** @description 현재 수행자가 이 목록을 변경할 수 있는지 */
+            canManageAccess: boolean;
             /** @description 접근 권한 항목 */
             grants: components["schemas"]["ResourceAccessGrantView"][];
             /** @description 이 목록이 속한 리소스 */
@@ -8688,8 +9580,6 @@ export interface components {
             defaultCreditAllowedModels?: string[] | null;
             /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 새 기능 권한 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. */
-            defaultPassthroughEndpoints?: ("images" | "embeddings")[] | null;
             /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
             name?: string;
             /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */
@@ -8759,6 +9649,7 @@ export interface components {
             status?: components["schemas"]["CatalogStatus"] | null;
         };
         UpdateResourceAccessGrantRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
             role: components["schemas"]["ResourceRole"];
         };
@@ -8793,6 +9684,7 @@ export interface components {
             rules: components["schemas"]["Rule"][];
         };
         UpdateWorkspaceMemberRequest: {
+            confirmation?: components["schemas"]["AccessConfirmation"] | null;
             role: components["schemas"]["WorkspaceMemberRole"];
         };
         UpdateWorkspaceRequest: {
@@ -8824,6 +9716,7 @@ export interface components {
             status: components["schemas"]["UserStatus"];
             statusChanges: components["schemas"]["UserStatusChangeResponse"][];
             studentNo?: string | null;
+            supportCapabilities: components["schemas"]["AdminUserSupportCapabilitiesResponse"];
             /** Format: date-time */
             withdrawnAt?: string | null;
         };
@@ -8889,6 +9782,7 @@ export interface components {
         /** @enum {string} */
         VmActorKind: "SYSTEM" | "MEMBER" | "ADMIN" | "UNKNOWN";
         VmBriefResponse: {
+            canReadDetail: boolean;
             /** Format: int32 */
             diskGb: number;
             /** Format: date */
@@ -8898,6 +9792,8 @@ export interface components {
             /** Format: int32 */
             memoryMb: number;
             name: string;
+            /** Format: uuid */
+            orgId: string;
             status: components["schemas"]["VmStatus"];
             /** Format: int32 */
             vcpu: number;
@@ -8908,6 +9804,7 @@ export interface components {
             guidance: string;
             /** @deprecated */
             orgHeadroom: components["schemas"]["OrgHeadroom"];
+            requestedImage?: components["schemas"]["AdminApprovalImageReference"] | null;
             workspaceResources: components["schemas"]["Resources"];
         };
         /** @enum {string} */
@@ -9286,7 +10183,7 @@ export interface components {
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["WorkspaceMemberResponse"][];
-            myRole: components["schemas"]["WorkspaceMemberRole"];
+            myRole?: components["schemas"]["WorkspaceMemberRole"] | null;
             name: string;
         };
         WorkspaceInvitationEntry: {
@@ -9351,6 +10248,8 @@ export interface components {
             userId?: string | null;
         };
         /** @enum {string} */
+        WorkspaceInvitationStatus: "PENDING" | "ACCEPTED" | "CANCELED";
+        /** @enum {string} */
         WorkspaceKind: "PERSONAL" | "TEAM" | "PROJECT" | "COURSE" | "PROGRAM" | "LAB" | "CLUB" | "COMPETITION" | "STUDY";
         WorkspaceMemberResponse: {
             email: string;
@@ -9367,6 +10266,7 @@ export interface components {
              * @description 호환용 VM 목록. 새 클라이언트는 vm.workspaceResources.activeVms를 사용합니다.
              */
             activeVms: components["schemas"]["VmBriefResponse"][];
+            canReadDetail: boolean;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
@@ -9599,6 +10499,66 @@ export interface operations {
             };
         };
     };
+    listAdminBulkChangeOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangeOperationResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminBulkChangeOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangeOperationResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     previewAdminBulkChange: {
         parameters: {
             query?: never;
@@ -9613,6 +10573,37 @@ export interface operations {
         };
         responses: {
             /** @description 대상별 판정과 fingerprint */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminBulkChangePreviewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminBulkChangePreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                previewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -9836,6 +10827,7 @@ export interface operations {
         parameters: {
             query?: {
                 orgId?: string;
+                workspaceId?: string;
                 kind?: components["schemas"]["DomainKind"];
                 status?: components["schemas"]["DomainStatus"];
                 page?: number;
@@ -9854,6 +10846,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseAdminDomainView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminDomainView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -12402,6 +13425,12 @@ export interface operations {
                 status?: components["schemas"]["RequestStatus"];
                 type?: components["schemas"]["ResourceType"];
                 orgId?: string;
+                workspaceId?: string;
+                q?: string;
+                requestedEndFrom?: string;
+                requestedEndTo?: string;
+                reqIndefinite?: boolean;
+                relatedUserId?: string;
                 page?: number;
                 size?: number;
             };
@@ -12613,6 +13642,217 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RequestDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminResourceAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessListResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addAdminResourceAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminResourceAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeAdminResourceAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminResourceAccessGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceType: components["schemas"]["ResourceType"];
+                resourceId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceAccessGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminResourceDeadlines: {
+        parameters: {
+            query?: {
+                orgId?: string;
+                workspaceId?: string;
+                type?: components["schemas"]["ResourceType"];
+                deadlineKind?: components["schemas"]["AdminResourceDeadlineKind"];
+                expiringInDays?: number;
+                expired?: boolean;
+                sort?: "deadlineAt" | "-deadlineAt";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminResourceDeadlineResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -12868,6 +14108,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrgDashboardSummaryResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminSupportOrgs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminSupportOrgOptionResponse"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -13375,6 +14644,109 @@ export interface operations {
             };
         };
     };
+    previewAdminUserProfileImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUserProfileImpactRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUserProfileImpactResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminUserSupport: {
+        parameters: {
+            query?: {
+                orgId?: string;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUserSupportResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminUserResourceAccess: {
+        parameters: {
+            query: {
+                orgId?: string;
+                type: components["schemas"]["ResourceType"];
+                resourceId: string;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminUserResourceAccessResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminVmFlavors: {
         parameters: {
             query?: never;
@@ -13459,6 +14831,39 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VmFlavorResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminVmPlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminVmPlacementPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminVmPlacementPreviewResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -14001,6 +15406,70 @@ export interface operations {
             };
         };
     };
+    deleteAdminWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminWorkspaceDetailResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminWorkspaceInvitations: {
         parameters: {
             query?: never;
@@ -14019,6 +15488,208 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    inviteAdminWorkspaceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteWorkspaceMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InviteWorkspaceMembersResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteWorkspaceMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancelAdminWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeAdminWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateAdminWorkspaceMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceMemberResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminWorkspaceMemberRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkspaceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -14587,6 +16258,41 @@ export interface operations {
             };
         };
     };
+    previewDnsDomainAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     removeDnsDomainAccessGrant: {
         parameters: {
             query?: never;
@@ -15139,6 +16845,41 @@ export interface operations {
             };
         };
     };
+    previewGpuAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     removeGpuAllocationAccessGrant: {
         parameters: {
             query?: never;
@@ -15555,6 +17296,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewLlmKeyAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -17037,6 +18813,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewVmAccessChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vmId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceAccessChangePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

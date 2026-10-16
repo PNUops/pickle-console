@@ -219,13 +219,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [beginAuthentication, finishLogin],
   )
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async ({ replaceSession = false } = {}) => {
     profileRequest.current?.controller.abort()
     const request = createRequest()
-    profileRequest.current = request
+    // A background profile refresh must not cancel a new credential exchange.
+    if (!replaceSession) profileRequest.current = request
+    else {
+      resetMfaEnrollmentRequired()
+      queryClient.clear()
+      updateState({ status: 'loading', user: null })
+    }
     try {
-      const { data } = await api.GET('/me', { signal: request.controller.signal })
-      if (data && isCurrent(request)) {
+      const { data, error } = await api.GET('/me', { signal: request.controller.signal })
+      if (replaceSession) requireCurrent(request)
+      if (!isCurrent(request)) return
+      if (!data && replaceSession) {
+        throw toApiError(error, '사용자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')
+      }
+      if (data) {
         if (state.user?.id !== data.id) {
           resetMfaEnrollmentRequired()
           queryClient.clear()
@@ -233,7 +244,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateState({ status: 'authenticated', user: data })
       }
     } catch (err) {
-      if (isCurrent(request)) throw err
+      if (isCurrent(request)) {
+        if (replaceSession) updateState({ status: 'loading', user: null })
+        throw err
+      }
     } finally {
       pendingRequests.current.delete(request)
     }

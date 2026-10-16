@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
+import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -8,6 +10,7 @@ import {
   fetchAdminDomainRecords,
   fetchAdminDomainRoots,
   fetchAdminDomains,
+  fetchAdminDomain,
   fetchAdminRoutes,
   forceReleaseDomain,
   resyncRoutes,
@@ -23,9 +26,11 @@ import {
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import {
+  canAdminManageAccess,
   canInterveneDomain,
   canRunSysRoutine,
   isSysTier,
+  managesOrg,
   operatesOrg,
 } from '../auth/permissions'
 import {
@@ -66,8 +71,12 @@ import { cn } from '../lib/cn'
 import { formatDateTime, kstDateString, todayKstDate } from '../lib/format'
 import { DOMAIN_KIND_LABELS, DOMAIN_STATUS_LABELS } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { isUuid } from '../lib/validation'
 import { useBulkSelection } from '../lib/bulk-selection'
 import { adminPaths } from '../lib/paths'
+import { requestDetailReturn } from '../lib/list-url'
+import { requestReaderKey } from '../api/request-review'
+import { useActiveResult } from '../lib/use-active-result'
 
 const PAGE_SIZE = 20
 
@@ -94,45 +103,65 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM', 'EXTERNAL']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminDomainsContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminDomainsContent() {
+  const { user } = useAuth()
   const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
   // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
   const canResync = !!user && canRunSysRoutine(user.role)
-  // Every bulk kind on a domain needs the role the drawer's intervention
-  // section needs; access is a narrower subset of it.
+  // Direct interventions retain the institution role; access support is global.
   const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
-  const canSelect = !!effectiveRole && canInterveneDomain(effectiveRole)
-  const selection = useBulkSelection('domains', `${user?.id ?? ''}:${activeOrgId ?? ''}`)
+  const canSelect = (!!effectiveRole && canInterveneDomain(effectiveRole)) || (!!user && canAdminManageAccess(user.role))
+  const selection = useBulkSelection('domains', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
+  const rawWorkspaceId = searchParams.get('workspaceId')
+  const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
   const rawTab = searchParams.get('tab')
   const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [message, setMessage] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const rawSelectedId = searchParams.get('domainId')
+  const selectedId = rawSelectedId && isUuid(rawSelectedId) ? rawSelectedId.toLowerCase() : rawSelectedId
+  const selectedValid = !!selectedId && isUuid(selectedId)
+  const selectedRef = useRef(selectedId)
+  selectedRef.current = selectedId
+  const active = useActiveResult()
+  const requestReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  useEffect(() => { if (selectedId) setMessage(null) }, [selectedId])
 
-  const selectDomain = (id: string) => {
+  const selectDomain = (id: string | null) => {
     if (id !== selectedId) setMessage(null) // 다른 도메인의 결과가 남아 오독되지 않게
-    setSelectedId(id)
+    const next = new URLSearchParams(searchParams)
+    if (id) next.set('domainId', id)
+    else next.delete('domainId')
+    setSearchParams(next, { replace: true })
   }
 
   const domains = useQuery({
     queryKey: [
       'admin',
       'domains',
-      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, page },
+      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page, reader: requestReaderKey(user) },
     ],
     queryFn: () =>
-      fetchAdminDomains({ status, kind, orgId: activeOrgId, page, size: PAGE_SIZE }),
+      fetchAdminDomains({ status, kind, workspaceId, orgId: activeOrgId, page, size: PAGE_SIZE }),
   })
-  const selected = domains.data?.content.find((domain) => domain.id === selectedId) ?? null
+  const selectedQuery = useQuery({ queryKey: ['admin', 'domains', 'detail', selectedId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchAdminDomain(selectedId!), enabled: selectedValid })
+  const selectedInScope = selectedQuery.isSuccess && (!activeOrgId || selectedQuery.data.orgId === activeOrgId)
+  const selected = selectedInScope ? selectedQuery.data : null
   const pageTargets = (domains.data?.content ?? []).map((domain) => ({
     id: domain.id,
     name: domain.fqdn,
   }))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [overflow-wrap:anywhere]">
+      {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
@@ -278,6 +307,7 @@ export function AdminDomainsPage() {
                       <TD>{domain.orgName}</TD>
                       <TD>
                         <DomainStatusBadge status={domain.status} />
+        {domain.kind === 'EXTERNAL' && <AdminResourceAccessLink type="DOMAIN" resourceId={domain.id} />}
                         {/* 예약 판별은 status가 아니라 releasedAt이다 — 해제된
                             행의 status는 ACTIVE로 남아, 이 배지가 없으면
                             "라우트 없는 ACTIVE"와 구분되지 않는다. */}
@@ -328,17 +358,22 @@ export function AdminDomainsPage() {
         )}
 
         <Drawer
-          open={selected !== null}
-          onClose={() => setSelectedId(null)}
+          open={selectedId !== null}
+          onClose={() => selectDomain(null)}
           title="도메인 상세"
         >
+          {!selectedValid && <Alert variant="danger">도메인 ID를 확인해 주세요.</Alert>}
+          {selectedValid && selectedQuery.isPending && <Spinner label="도메인 상세 불러오는 중" />}
+          {selectedValid && selectedQuery.isError && <Alert variant="danger">{selectedQuery.error.message}</Alert>}
+          {selectedQuery.isSuccess && !selectedInScope && <Alert variant="danger">선택한 관리 범위의 도메인이 아닙니다.</Alert>}
           {selected && (
             <DomainDrawerContent
               key={selected.id}
               domain={selected}
               onDone={(text) => {
+                if (!active.current || selectedRef.current !== selected.id) return
+                selectDomain(null)
                 setMessage(text)
-                setSelectedId(null) // 강제 해제된 도메인의 드로어를 확정적으로 닫는다
               }}
             />
           )}
@@ -373,6 +408,7 @@ function DomainDrawerContent({
     !!user &&
     canInterveneDomain(user.role) &&
     (isSysTier(user.role) || operatesOrg(user.managedOrgs, domain.orgId))
+  const canReadContent = !!user && (isSysTier(user.role) || managesOrg(user.managedOrgs, domain.orgId))
   const [releaseOpen, setReleaseOpen] = useState(false)
   // 드로어 안에서 실행하는 액션(재검증·재적용)의 결과는 드로어 안에 보여야
   // 한다 — 페이지 레벨 알림은 열린 드로어의 배경에 가려 보이지 않는다.
@@ -381,17 +417,17 @@ function DomainDrawerContent({
   // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
   // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
   const routes = useQuery({
-    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: activeOrgId ?? null }],
-    queryFn: () => fetchAdminRoutes({ orgId: activeOrgId, page: 0, size: 100 }),
+    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: domain.orgId, reader: requestReaderKey(user) }],
+    queryFn: () => fetchAdminRoutes({ orgId: domain.orgId, page: 0, size: 100 }),
   })
   const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
   const routesTruncated =
     routes.isSuccess && routes.data.totalElements > routes.data.content.length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-mono text-lg font-semibold text-neutral-900">{domain.fqdn}</h3>
+    <div className="space-y-6 [overflow-wrap:anywhere]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="min-w-0 font-mono text-lg font-semibold text-neutral-900">{domain.fqdn}</h3>
         <DomainStatusBadge status={domain.status} />
       </div>
       {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}
@@ -451,6 +487,7 @@ function DomainDrawerContent({
         <ExternalDomainSections
           domain={domain}
           canIntervene={canIntervene}
+          canReadRecords={canReadContent}
           onResult={setNotice}
         />
       )}
@@ -496,15 +533,15 @@ function DomainDrawerContent({
             {route.status === 'FAILED' && route.lastError && (
               <Alert variant="danger">{route.lastError}</Alert>
             )}
-            <SourcePolicyPanel
-              queryKey={['admin', 'routes', route.id, 'source-policy']}
+            {canReadContent ? <SourcePolicyPanel
+              queryKey={['admin', 'routes', route.id, 'source-policy', requestReaderKey(user)]}
               target="DOMAIN"
               loadPolicy={() => fetchAdminRouteSourcePolicy(route.id)}
               savePolicy={(body) => updateAdminRouteSourcePolicy(route.id, body)}
               loadPreset={fetchCampusSourcePolicyPreset}
               canEdit={canIntervene}
               surface="admin"
-            />
+            /> : <p className="text-sm text-neutral-500">연결 정책 원문은 담당 기관의 역할로 조회합니다.</p>}
           </div>
         )}
       </section>
@@ -556,15 +593,19 @@ function DomainDrawerContent({
 function ExternalDomainSections({
   domain,
   canIntervene,
+  canReadRecords,
   onResult,
 }: {
   domain: AdminDomainView
   canIntervene: boolean
+  canReadRecords: boolean
   onResult: (notice: DrawerNotice) => void
 }) {
+  const { user } = useAuth()
   const records = useQuery({
-    queryKey: ['admin', 'domains', domain.id, 'records'],
+    queryKey: ['admin', 'domains', domain.id, 'records', requestReaderKey(user)],
     queryFn: () => fetchAdminDomainRecords(domain.id),
+    enabled: canReadRecords,
   })
 
   return (
@@ -582,7 +623,8 @@ function ExternalDomainSections({
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">레코드</h3>
-        {records.isPending && <Spinner label="레코드 불러오는 중" />}
+        {!canReadRecords && <p className="text-sm text-neutral-500">레코드 원문은 담당 기관의 역할로 조회합니다.</p>}
+        {canReadRecords && records.isPending && <Spinner label="레코드 불러오는 중" />}
         {records.isError && <Alert variant="danger">{records.error.message}</Alert>}
         {records.isSuccess && records.data.length === 0 && (
           <p className="text-sm text-neutral-500">넣은 레코드가 없습니다.</p>
@@ -661,6 +703,7 @@ function AdjustRenewalForm({
     onSuccess: async () => {
       onResult({ variant: 'info', text: '사용 기한을 옮겼습니다. 소유자에게 알렸습니다.' })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
@@ -831,6 +874,7 @@ function ReverifyButton({
     onSuccess: async (data) => {
       onResult({ variant: 'info', text: data.message })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
@@ -865,6 +909,7 @@ function ApplyRouteButton({
       onResult({ variant: 'info', text: data.message })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
@@ -901,6 +946,7 @@ function ForceReleaseModal({
       setError(null)
       onDone(data.message)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
     },
     onError: (err) => setError(toApiError(err, '도메인을 강제 해제하지 못했습니다.').message),
@@ -954,6 +1000,7 @@ function ResyncButton() {
       setMessage(data.message)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) => {
       setMessage(null)

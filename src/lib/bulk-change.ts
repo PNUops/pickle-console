@@ -78,8 +78,8 @@ const KIND_TITLES: Record<AdminBulkChangeKind, string> = {
 }
 
 /** The kinds this role may run on a family, in the order they are offered. */
-export function bulkKindsFor(family: BulkFamily, role: UserRole): BulkKindOption[] {
-  const access = canAdminManageAccess(role) ? (['ACCESS'] as const) : []
+export function bulkKindsFor(family: BulkFamily, role: UserRole, accessRole: UserRole = role): BulkKindOption[] {
+  const access = canAdminManageAccess(accessRole) ? (['ACCESS'] as const) : []
   let offered: AdminBulkChangeKind[]
   switch (family) {
     case 'llm-keys':
@@ -130,13 +130,25 @@ export const LIMIT_FIELDS = [
 
 export type LimitFieldKey = (typeof LIMIT_FIELDS)[number]
 
-/** Fields only a role that manages money may change (SYS_MANAGER may not). */
+/**
+ * Fields only a role that manages money may change (SYS_MANAGER may not).
+ * The feature list is not here: Chat works on both axes, so a role without
+ * money may add or remove Chat alone (see `chatOnlyFeatures`).
+ */
 const MONEY_LIMIT_FIELDS: ReadonlySet<LimitFieldKey> = new Set([
   'creditLimit',
   'creditLimitReset',
   'creditModels',
-  'passthroughEndpoints',
 ])
+
+/**
+ * Does this role edit features as Chat alone? It is then offered adding and
+ * removing Chat and nothing else: replacing the list could change the
+ * paid-only features the server counts as a money change.
+ */
+export function chatOnlyFeatures(role: UserRole): boolean {
+  return !canManageLlmCredit(role)
+}
 
 export const LIMIT_FIELD_LABELS: Record<LimitFieldKey, string> = {
   rpm: 'RPM',
@@ -414,6 +426,8 @@ export function clearingLists(draft: BulkDraft['limits']): {
   allowed: boolean
   denied: boolean
   passthrough: boolean
+  /** Replacing the features with a list that has no Chat in it. */
+  chat: boolean
 } {
   const chosen = new Set(draft.chosen)
   // Replacing sends both model lists, so each side the lines leave empty is
@@ -427,6 +441,10 @@ export function clearingLists(draft: BulkDraft['limits']): {
       chosen.has('passthroughEndpoints') &&
       draft.passthroughOp === 'REPLACE' &&
       draft.passthrough.length === 0,
+    chat:
+      chosen.has('passthroughEndpoints') &&
+      draft.passthroughOp === 'REPLACE' &&
+      !draft.passthrough.includes('chat'),
   }
 }
 
@@ -475,6 +493,7 @@ export const BULK_FIELDS: Record<string, FieldSlot<BulkStep>> = {
 
 const DIFF_FIELD_LABELS: Record<string, string> = {
   rpm: 'RPM',
+  startDate: '시작일',
   tpm: 'TPM',
   concurrency: '동시 요청',
   dailyTokens: '일일 토큰',
@@ -491,6 +510,14 @@ const DIFF_FIELD_LABELS: Record<string, string> = {
   deleteScheduledFor: '삭제 예정',
   role: '접근 권한',
   renewDueAt: '사용 기한',
+  deleteRequestedAt: '삭제 요청 시각',
+  kind: '종류',
+  dnsStatus: 'DNS 상태',
+  recordCount: 'DNS 레코드 수',
+  liveRouteStatus: '라우트 상태',
+  certificateCount: '인증서 수',
+  granteeRole: '현재 개인 접근 권한',
+  listed: '접근 목록 제공',
   releasedAt: '해제 시각',
   routeStatus: '라우트',
   verification: '소유권 검증',
@@ -499,7 +526,7 @@ const DIFF_FIELD_LABELS: Record<string, string> = {
 }
 
 /** Diff fields that are counts of things rather than values. */
-const COUNT_FIELDS: ReadonlySet<string> = new Set(['records', 'activeCertificates'])
+const COUNT_FIELDS: ReadonlySet<string> = new Set(['records', 'activeCertificates', 'recordCount', 'certificateCount'])
 
 export function diffFieldLabel(field: string): string {
   return DIFF_FIELD_LABELS[field] ?? field
@@ -542,8 +569,9 @@ export function formatDiffValue(
       case 'expiresAt':
         return '만료 없음'
       case 'endDate':
-        return '종료일 없음'
+        return '무기한'
       case 'role':
+      case 'granteeRole':
       case 'releasedAt':
         return '없음'
       case 'renewDueAt':
@@ -578,9 +606,11 @@ export function formatDiffValue(
       case 'deleteKind':
         return lookup(DELETE_KIND_LABELS, value)
       case 'role':
+      case 'granteeRole':
         return lookup(RESOURCE_ROLE_LABELS, value)
       case 'expiresAt':
       case 'deleteScheduledFor':
+      case 'deleteRequestedAt':
       case 'renewDueAt':
       case 'releasedAt':
         return Number.isNaN(Date.parse(value)) ? value : formatDateTime(value)

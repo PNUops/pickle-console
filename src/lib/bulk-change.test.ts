@@ -78,6 +78,17 @@ describe('bulk change body', () => {
     expect(clearingLists({ ...limits, modelsOp: 'ADD', modelRules: '' })).toMatchObject({ allowed: false, denied: false })
   })
 
+  test('warns when a replace leaves Chat out', () => {
+    const limits = {
+      ...emptyDraft().limits,
+      chosen: ['passthroughEndpoints' as const],
+      passthroughOp: 'REPLACE' as const,
+    }
+    expect(clearingLists({ ...limits, passthrough: ['images'] })).toMatchObject({ passthrough: false, chat: true })
+    expect(clearingLists({ ...limits, passthrough: ['chat'] })).toMatchObject({ chat: false })
+    expect(clearingLists({ ...limits, passthroughOp: 'REMOVE', passthrough: ['chat'] })).toMatchObject({ chat: false })
+  })
+
   test('revoking access sends no role', () => {
     const draft = emptyDraft()
     draft.access = { userId: 'u', userLabel: 'x', action: 'REVOKE', role: 'EDITOR' }
@@ -109,6 +120,7 @@ describe('bulk change offers and labels', () => {
       'LLM_KEY_LIMITS',
       'LLM_KEY_STATUS',
       'LLM_KEY_EXPIRY',
+      'ACCESS',
     ])
     expect(bulkKindsFor('vms', 'SYS_MANAGER').map((k) => k.kind)).toEqual(['VM_PERIOD', 'VM_POWER'])
     expect(bulkKindsFor('vms', 'ORG_ADMIN').map((k) => k.kind)).toEqual([
@@ -125,7 +137,14 @@ describe('bulk change offers and labels', () => {
     ])
     expect(bulkKindsFor('domains', 'SYS_ADMIN').map((k) => k.kind)).toContain('ACCESS')
     expect(bulkKindsFor('domains', 'SYS_VIEWER')).toEqual([])
-    expect(limitFieldsFor('SYS_MANAGER')).toEqual(['rpm', 'tpm', 'dailyTokens', 'concurrency'])
+    // The feature list stays, as Chat alone (chatOnlyFeatures).
+    expect(limitFieldsFor('SYS_MANAGER')).toEqual([
+      'rpm',
+      'tpm',
+      'dailyTokens',
+      'concurrency',
+      'passthroughEndpoints',
+    ])
   })
 
   test('unknown codes and values render as themselves', () => {

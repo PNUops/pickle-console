@@ -1,17 +1,17 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { approvesForOrg, isSysTier } from '../auth/permissions'
-import { requestListReturn } from '../lib/list-url'
+import { approvesForOrg, canReadSupportMetadata, isSysTier } from '../auth/permissions'
+import { requestListReturn, withListReturn } from '../lib/list-url'
 import { OperationResult } from '../components/OperationResult'
 import {
   fetchAdminRequest,
   fetchApprovalContext,
-  fetchAdminLlmKeys,
   fetchRequestMailSelection,
+  type ApproveRequest,
   type ApprovalContext,
   type LlmKeyBrief,
   type RequestDetail,
@@ -41,6 +41,12 @@ import {
 } from '../components/request-kind'
 import { Field } from '../components/request-kind/Field'
 import { RequestRecipientsCard } from '../components/request-kind/RecipientsCard'
+import { GeneratedResourcesCard } from '../components/request-kind/GeneratedResourcesCard'
+import { requestReaderKey } from '../api/request-review'
+import { generatedResourcesMoving } from '../components/request-kind/generated-resources'
+import { useConfirmedApproval } from '../components/request-kind/use-confirmed-approval'
+import { ApprovalConfirmation } from '../components/request-kind/ApprovalConfirmation'
+import { useActiveResult } from '../lib/use-active-result'
 import { recipientPollInterval } from '../components/request-kind/recipients'
 import { RESOURCE_TYPES } from '../components/resource/registry'
 import type { RequestKindView } from '../components/request-kind/types'
@@ -60,7 +66,9 @@ interface Notice {
 
 export function AdminRequestDetailPage() {
   const { requestId } = useParams()
-  return <AdminRequestDetailContent key={requestId} />
+  const { activeOrgId } = useAdminScope()
+  const { user } = useAuth()
+  return <AdminRequestDetailContent key={`${requestId}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
 }
 
 function AdminRequestDetailContent() {
@@ -70,16 +78,23 @@ function AdminRequestDetailContent() {
   const idValid = isUuid(requestId)
   const [notice, setNotice] = useState<Notice | null>(null)
   const { user } = useAuth()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
-  const returnPath = requestListReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  const returnPath = requestListReturn(searchParams.get('returnTo'), activeOrgId, !!user && canReadSupportMetadata(user.role))
 
   const request = useQuery({
-    queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'requests', requestId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchAdminRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
     refetchInterval: (query) => recipientPollInterval(query.state.data),
   })
+  const context = useQuery({ queryKey: ['admin', 'requests', requestId, 'context', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchApprovalContext(requestId), enabled: idValid })
+  const refetchContext = context.refetch
+  const registration = request.data?.recipients?.map((recipient) => `${recipient.id}:${recipient.userId}:${recipient.status}:${recipient.resourceId}`).join(',')
+  useEffect(() => {
+    if (request.data?.status === 'APPROVED' && registration) void refetchContext()
+  }, [registration, request.data?.status, refetchContext])
   // 결정 폼이 열릴 때 종류별 카탈로그가 이미 와 있도록 진입 즉시 당겨 둔다.
   useDecisionCatalogPrefetch()
 
@@ -113,10 +128,9 @@ function AdminRequestDetailContent() {
   // 조회만(§3.9 †15). 역할이 닿아도 이 신청의 기관에서 행위할 수 있어야 한다:
   // 열람 역할로만 보이는 기관의 신청에 승인을 시도하면 API가 404로 거부한다.
   const canDecide = approvesForOrg(user, data.orgId)
-  const bulk = (data.recipients?.length ?? 0) > 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [overflow-wrap:anywhere]">
       <nav className="text-sm">
         <Link to={returnPath} className="text-primary-700 hover:underline">
           ← 신청 목록
@@ -135,13 +149,8 @@ function AdminRequestDetailContent() {
       {notice && (notice.variant === 'success'
         ? <OperationResult stage="stored">{notice.message}</OperationResult>
         : <Alert variant={notice.variant}>{notice.message}</Alert>)}
-      {/* A request for several people made one key per person; the table below links each. */}
-      {data.type === 'LLM_API_KEY' && data.status === 'APPROVED' && !bulk && (
-        <ApprovedLlmKeyLink requestId={data.id} orgId={data.orgId ?? undefined} />
-      )}
-
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {data.review && <DecisionResultCard request={data} review={data.review} />}
 
           <Card>
@@ -155,9 +164,11 @@ function AdminRequestDetailContent() {
             </CardContent>
           </Card>
 
+          <GeneratedResourcesCard resources={context.data?.generatedResources ?? []} returnTo={withListReturn(adminPaths.requestDetail(data.id, data.orgId ?? undefined), returnPath)} unlinkedDomain={context.isSuccess && data.status === 'APPROVED' && data.type === 'DOMAIN'} />
           <RequestRecipientsCard
             request={data}
             admin
+            userReadable={(recipient) => context.isSuccess && !!recipient.userId && context.data?.recipientUserReadFlags?.[recipient.userId] === true}
             canRetry={canDecide}
             resourceHref={(recipient) =>
               recipient.resourceId == null
@@ -181,41 +192,22 @@ function AdminRequestDetailContent() {
           )}
         </div>
 
-        <ApprovalContextPanel requestId={requestId} canDecide={canDecide && data.status === 'SUBMITTED'} />
+        <ApprovalContextPanel request={data} returnTo={`${location.pathname}${location.search}`} canDecide={canDecide && data.status === 'SUBMITTED'} />
       </div>
     </div>
   )
 }
 
 function RequestMailSelectionCard({ requestId }: { requestId: string }) {
-  const selection = useQuery({ queryKey: ['admin', 'request-mail-selection', requestId], queryFn: () => fetchRequestMailSelection(requestId) })
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  const selection = useQuery({ queryKey: ['admin', 'request-mail-selection', requestId, activeOrgId ?? null, requestReaderKey(user)], queryFn: () => fetchRequestMailSelection(requestId) })
   return <Card className="space-y-3 p-5">
     {selection.isPending && <Spinner label="신청 알림 선정 기록 불러오는 중" />}
     {selection.isError && <Alert variant="danger">{selection.error.message}<Button variant="secondary" onClick={() => void selection.refetch()}>선정 기록 다시 조회</Button></Alert>}
     {selection.data?.selection && <RequestMailSelectionSnapshot selection={selection.data.selection} />}
     {selection.isSuccess && !selection.data.selection && <p className="text-sm text-neutral-500">이 신청의 접수 당시 기관 알림 선정 명단은 기록되지 않았습니다. 현재 명단으로 과거 수신자를 추정하지 않습니다.</p>}
   </Card>
-}
-
-function ApprovedLlmKeyLink({ requestId, orgId }: { requestId: string; orgId?: string }) {
-  const key = useQuery({
-    queryKey: ['admin', 'llm-keys', 'request', requestId, { orgId: orgId ?? null }],
-    queryFn: async () => {
-      const page = await fetchAdminLlmKeys({ orgId, requestId, page: 0, size: 1 })
-      return page.content[0] ?? null
-    },
-  })
-  if (!key.data) return null
-  return (
-    <Alert variant="success" title="승인된 LLM API 키">
-      <Link
-        to={adminPaths.llmKeyDetail(key.data.id, orgId)}
-        className="font-semibold underline underline-offset-2"
-      >
-        {key.data.name} 상세 보기
-      </Link>
-    </Alert>
-  )
 }
 
 function DecisionResultCard({
@@ -290,6 +282,15 @@ function DecisionSection({
 }) {
   const queryClient = useQueryClient()
   const form = kind.useApproveForm(request, decisionValue)
+  const active = useActiveResult()
+  const { activeOrgId } = useAdminScope()
+  const { user } = useAuth()
+  const context = useQuery({ queryKey: ['admin', 'requests', request.id, 'context', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchApprovalContext(request.id) })
+  const targetFacts = (context.data?.workspace.members ?? []).map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true }))
+  if (context.data && !targetFacts.some((target) => target.userId === request.requesterId)) targetFacts.push({ userId: request.requesterId ?? '', name: request.requesterName, userStatus: 'ACTIVE', member: false })
+  if (context.isSuccess) for (const recipient of request.recipients ?? []) {
+    if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', userStatus: 'ACTIVE', member: false })
+  }
   const [mode, setMode] = useState<'approve' | 'reject'>('approve')
 
   // 반려 폼
@@ -297,6 +298,7 @@ function DecisionSection({
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [confirm, setConfirm] = useState<'approve' | 'reject' | null>(null)
+  const confirmation = useConfirmedApproval(form, confirm === 'approve')
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] })
@@ -325,17 +327,16 @@ function DecisionSection({
   }
 
   const approve = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (approval: ApproveRequest) => {
       const { data, error } = await api.POST('/admin/requests/{requestId}/approve', {
         params: { path: { requestId: request.id } },
-        body: form.body(),
+        body: approval,
       })
       if (!data) throw toApiError(error, '신청을 승인하지 못했습니다.')
       return data
     },
     onSuccess: async () => {
-      setConfirm(null)
-      onNotice({ variant: 'success', message: form.successMessage })
+      if (active.current) { setConfirm(null); onNotice({ variant: 'success', message: form.successMessage }) }
       // 승인은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
       await Promise.all([
         refresh(),
@@ -345,7 +346,7 @@ function DecisionSection({
         queryClient.invalidateQueries({ queryKey: ['resources'] }),
       ])
     },
-    onError: (error) => handleError(error, '신청을 승인하지 못했습니다.'),
+    onError: (error) => { if (active.current) handleError(error, '신청을 승인하지 못했습니다.') },
   })
 
   const reject = useMutation({
@@ -409,6 +410,7 @@ function DecisionSection({
               key={tab.key}
               type="button"
               aria-pressed={mode === tab.key}
+              disabled={approve.isPending || reject.isPending}
               onClick={() => switchMode(tab.key)}
               className={cn(
                 'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600',
@@ -427,7 +429,7 @@ function DecisionSection({
       <CardContent>
         {mode === 'approve' ? (
           <form onSubmit={submitApprove} className="space-y-4" noValidate>
-            {form.fields(fieldErrors)}
+            <fieldset disabled={approve.isPending || reject.isPending} className="space-y-4">{form.fields(fieldErrors)}</fieldset>
             <div className="flex justify-end">
               <Button type="submit">승인하기</Button>
             </div>
@@ -457,24 +459,25 @@ function DecisionSection({
 
         <Modal
           open={confirm === 'approve'}
-          onClose={() => setConfirm(null)}
+          onClose={() => { if (!approve.isPending) setConfirm(null) }}
           title="신청 승인"
           footer={
             <>
-              <Button variant="secondary" onClick={() => setConfirm(null)}>
+              <Button variant="secondary" disabled={approve.isPending} onClick={() => setConfirm(null)}>
                 돌아가기
               </Button>
               <Button
                 loading={approve.isPending}
                 disabled={form.confirmReady === false}
-                onClick={() => approve.mutate()}
+                onClick={() => { const errors = form.validate(); if (Object.keys(errors).length > 0) { setFieldErrors(errors); setConfirm(null) } else { const approved = confirmation.confirmedBody(); if (approved) approve.mutate(approved) } }}
               >
                 승인 확정
               </Button>
             </>
           }
         >
-          {form.confirmBody}
+          {confirmation.changed && <Alert variant="warning">승인 내용이 갱신되었습니다. 변경된 내용을 확인한 뒤 확정해 주세요.</Alert>}
+          {confirm === 'approve' && confirmation.displayed && <ApprovalConfirmation request={request} approval={confirmation.displayed} comparisons={form.comparisons} targetFacts={targetFacts} targetFactsKnown={context.isSuccess} workspaceReadable={context.data?.workspace.canReadDetail} nodeName={form.nodeName}>{form.confirmBody}</ApprovalConfirmation>}
         </Modal>
 
         <Modal
@@ -507,11 +510,14 @@ function DecisionSection({
 
 /* ─── 승인 판단 참고 패널 ─── */
 
-function ApprovalContextPanel({ requestId, canDecide }: { requestId: string; canDecide: boolean }) {
+function ApprovalContextPanel({ request, canDecide }: { request: RequestDetail; canDecide: boolean; returnTo: string }) {
+  const requestId = request.id
+  const { user } = useAuth()
   const { activeOrgId } = useAdminScope()
   const context = useQuery({
-    queryKey: ['admin', 'requests', requestId, 'context', { orgId: activeOrgId ?? null }],
+    queryKey: ['admin', 'requests', requestId, 'context', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchApprovalContext(requestId),
+    refetchInterval: (query) => recipientPollInterval(request) || (generatedResourcesMoving(query.state.data?.generatedResources) ? 3000 : false),
   })
 
   if (context.isPending) {
@@ -536,7 +542,7 @@ function ApprovalContextPanel({ requestId, canDecide }: { requestId: string; can
   const gpu = data.type === 'GPU' ? data.gpu : null
   const domain = data.type === 'DOMAIN' ? data.domain : null
   return (
-    <aside aria-label="승인 판단 참고 정보" className="space-y-4">
+    <aside aria-label="승인 판단 참고 정보" className="min-w-0 space-y-4">
       {gpu && <Card><CardHeader><CardTitle>GPU 현황</CardTitle></CardHeader><CardContent><dl className="grid grid-cols-2 gap-3">
         <Field label="할당 가능한 GPU">{gpu.availableCards}장</Field>
         <Field label="대기 중인 할당">{gpu.queuedAllocations}건</Field>
@@ -547,7 +553,7 @@ function ApprovalContextPanel({ requestId, canDecide }: { requestId: string; can
           <CardTitle className="text-sm">신청자</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-neutral-700">
-          <p className="font-medium text-neutral-900">{data.applicant.name}</p>
+          <p className="font-medium text-neutral-900">{data.applicant.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.userSupport(data.applicant.id, data.orgId)}>{data.applicant.name}</Link> : data.applicant.name}</p>
           <p className="text-xs text-neutral-500">{data.applicant.email}</p>
           <p>가입일 {formatDateTime(data.applicant.signupAt)}</p>
           <p>
@@ -562,11 +568,11 @@ function ApprovalContextPanel({ requestId, canDecide }: { requestId: string; can
           <WorkspaceKindBadge kind={data.workspace.kind} />
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-neutral-700">
-          <p className="font-medium text-neutral-900">{data.workspace.name}</p>
+          <p className="font-medium text-neutral-900">{data.workspace.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.workspaceDetail(data.workspace.id, data.orgId)}>{data.workspace.name}</Link> : data.workspace.name}</p>
           <ul className="space-y-1">
             {data.workspace.members.map((member) => (
               <li key={member.userId} className="flex items-center justify-between gap-2">
-                <span>{member.name}</span>
+                <span>{member.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.userSupport(member.userId, data.orgId)}>{member.name}</Link> : member.name}</span>
                 <WorkspaceRoleBadge role={member.role} />
               </li>
             ))}
@@ -597,12 +603,12 @@ function ApprovalContextPanel({ requestId, canDecide }: { requestId: string; can
               {data.history.map((item) => (
                 <li key={item.requestId} className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <Link
-                      to={adminPaths.requestDetail(item.requestId, activeOrgId)}
+                    {item.canReadDetail ? <Link
+                      to={adminPaths.requestDetail(item.requestId, item.orgId)}
                       className="font-medium text-primary-700 hover:underline"
                     >
                       {item.resourceName}
-                    </Link>
+                    </Link> : <span>{item.resourceName}</span>}
                     {/* 셋 이상이 되면서 삼항이 거짓말을 시작했다 — GPU도
                         도메인도 「LLM API 키」로 적혔다. 이름은 등록표가 안다. */}
                     <Badge variant="neutral">{RESOURCE_TYPES[item.type].label}</Badge>
@@ -657,6 +663,16 @@ function DomainApprovalContext({ context }: { context: NonNullable<ApprovalConte
 function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
   return (
     <>
+      <Card>
+        <CardHeader><CardTitle className="text-sm">신청 OS 이미지의 현재 정보</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm [overflow-wrap:anywhere]">
+          {vm.requestedImage ? <>
+            <p>{vm.requestedImage.name} / revision {vm.requestedImage.version}</p>
+            <p>{vm.requestedImage.selectableNow ? '현재 신청 가능' : '현재 신청 불가'}</p>
+            <p className="text-xs text-foreground-muted">연결된 논리 이미지의 현재 상태입니다. 승인 부여 이미지는 아래에서 별도로 선택합니다.</p>
+          </> : <p className="text-foreground-muted">연결된 이미지 정보를 확인할 수 없습니다. 현재 신청 가능한 이미지를 선택해 주세요.</p>}
+        </CardContent>
+      </Card>
       <Alert variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}>
         {vm.guidance}
       </Alert>
@@ -736,7 +752,7 @@ function LlmKeyBriefCard({ title, keys }: { title: string; keys: LlmKeyBrief[] }
             {keys.map((key) => (
               <li key={key.id} className="rounded-lg border border-neutral-100 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-neutral-900">{key.name}</span>
+                  <span className="font-medium text-neutral-900">{key.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.llmKeyDetail(key.id, key.orgId)}>{key.name}</Link> : key.name}</span>
                   <LlmKeyStatusBadge status={effectiveLlmKeyStatus(key.status, key.expiresAt)} />
                 </div>
                 <p className="mt-1 text-xs text-neutral-500">
@@ -766,7 +782,7 @@ function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applica
       {vms.map((vm) => (
         <li key={vm.id} className="flex items-center justify-between gap-2">
           <span className="min-w-0">
-            <span className="block truncate font-medium text-neutral-900">{vm.name}</span>
+            <span className="block truncate font-medium text-neutral-900">{vm.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vm.id, vm.orgId)}>{vm.name}</Link> : vm.name}</span>
             <span className="block text-xs text-neutral-500">
               {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
               {vm.endDate ? ` · ~${vm.endDate}` : ''}

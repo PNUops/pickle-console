@@ -83,8 +83,9 @@ function withAuthHeader(request: Request): Request {
 }
 
 function expireSession(): void {
+  const expiredGeneration = getSessionGeneration()
   clearAccessToken()
-  notifySessionExpired()
+  notifySessionExpired(expiredGeneration)
 }
 
 function sendRequest(request: Request, generation: number): Promise<Response> {
