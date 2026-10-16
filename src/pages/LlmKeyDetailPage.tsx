@@ -22,6 +22,7 @@ import { consolePaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { LlmKeyBodiesSection } from '../components/llm-body/LlmKeyBodiesSection'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 
 // 사용량 차트는 uPlot을 끌어오므로 사용량 탭을 여는 사람에게만 내려받는다
 // (할당 추이·VM 모니터링과 같은 규칙).
@@ -61,6 +62,7 @@ export function LlmKeyDetailPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
+        {key.isSuccess && <WorkspaceSourceReturnLink workspaceId={key.data.workspaceId} />}
         <Link to={consolePaths.llmKeys(null)} className="text-primary-700 hover:underline">
           ← LLM API 키
         </Link>
@@ -108,7 +110,10 @@ function KeyDetail({ llmKey }: { llmKey: LlmKeyDetail }) {
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
     // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
-    setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
+    const next = new URLSearchParams(searchParams)
+    if (id === 'overview') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next, { replace: true })
   }
 
   return (

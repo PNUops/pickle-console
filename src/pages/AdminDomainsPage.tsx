@@ -75,6 +75,7 @@ import { isUuid } from '../lib/validation'
 import { useBulkSelection } from '../lib/bulk-selection'
 import { adminPaths } from '../lib/paths'
 import { requestDetailReturn } from '../lib/list-url'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 import { requestReaderKey } from '../api/request-review'
 import { useActiveResult } from '../lib/use-active-result'
 
@@ -161,6 +162,7 @@ function AdminDomainsContent() {
 
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
+      {selected && <WorkspaceSourceReturnLink workspaceId={selected.workspaceId} admin />}
       {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
@@ -25,9 +25,11 @@ import { approvesForOrg } from '../auth/permissions'
 import { consolePaths } from '../lib/paths'
 import { formatDateTime } from '../lib/format'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { workspaceSourceReturn } from '../lib/workspace-source-return'
 
 export function RequestDetailPage() {
   const params = useParams()
+  const [searchParams] = useSearchParams()
   const requestId = params.requestId ?? ''
   const idValid = isUuid(requestId)
   const [cancelError, setCancelError] = useState<string | null>(null)
@@ -54,10 +56,12 @@ export function RequestDetailPage() {
   }
 
   const data = request.data
+  const workspaceReturn = workspaceSourceReturn(searchParams.get('returnTo'), data.workspaceId, false)
 
   return (
     <div className="space-y-6">
-      <nav className="text-sm">
+      <nav className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {workspaceReturn && <Link to={workspaceReturn} className="text-primary-700 hover:underline">← 워크스페이스</Link>}
         <Link to="/console/requests" className="text-primary-700 hover:underline">
           ← 신청 내역
         </Link>

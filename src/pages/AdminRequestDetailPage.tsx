@@ -6,6 +6,7 @@ import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { approvesForOrg, canReadSupportMetadata, isSysTier } from '../auth/permissions'
 import { requestListReturn, withListReturn } from '../lib/list-url'
+import { workspaceSourceReturn } from '../lib/workspace-source-return'
 import { OperationResult } from '../components/OperationResult'
 import {
   fetchAdminRequest,
@@ -113,6 +114,7 @@ function AdminRequestDetailContent() {
   }
 
   const data = request.data
+  const workspaceReturn = workspaceSourceReturn(searchParams.get('returnTo'), data.workspaceId, true)
   if (activeOrgId != null && data.orgId !== activeOrgId) {
     return (
       <Alert variant="danger" title="선택한 관리 범위의 신청이 아닙니다">
@@ -131,7 +133,8 @@ function AdminRequestDetailContent() {
 
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
-      <nav className="text-sm">
+      <nav className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {workspaceReturn && <Link to={workspaceReturn} className="text-primary-700 hover:underline">← 워크스페이스</Link>}
         <Link to={returnPath} className="text-primary-700 hover:underline">
           ← 신청 목록
         </Link>

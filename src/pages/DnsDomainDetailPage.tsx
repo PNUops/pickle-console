@@ -31,6 +31,7 @@ import {
 import { formatDateTime } from '../lib/format'
 import { consolePaths } from '../lib/paths'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 
 const RECORD_TYPES: DnsRecordType[] = ['A', 'AAAA', 'CNAME', 'TXT']
 
@@ -63,6 +64,7 @@ export function DnsDomainDetailPage() {
   return (
     <div className="space-y-6">
       <nav className="text-sm">
+        {domain.isSuccess && <WorkspaceSourceReturnLink workspaceId={domain.data.workspaceId} />}
         <Link to={consolePaths.dnsDomains(null)} className="text-primary-700 hover:underline">
           ← 도메인
         </Link>
@@ -122,7 +124,12 @@ function DomainDetail({ domain }: { domain: DnsDomain }) {
       <Tabs
         tabs={tabs}
         value={activeTab}
-        onChange={(id) => setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })}
+        onChange={(id) => {
+          const next = new URLSearchParams(searchParams)
+          if (id === 'overview') next.delete('tab')
+          else next.set('tab', id)
+          setSearchParams(next, { replace: true })
+        }}
         aria-label="도메인 상세 영역"
       />
 

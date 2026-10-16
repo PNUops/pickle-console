@@ -101,24 +101,40 @@ describe('VM network policy panel', () => {
     const loadPolicy = vi.fn().mockResolvedValueOnce(base).mockImplementation(
       () => new Promise<VmNetworkPolicyView>((resolve) => { finishReload = resolve }),
     )
-    const savePolicy = vi.fn().mockRejectedValue({
+    const conflict = {
       status: 409, title: '충돌', detail: '최신 정책을 다시 불러오세요.',
       code: 'VM_NETWORK_POLICY_REVISION_CONFLICT',
-    })
+    }
+    let rejectSave: ((reason: unknown) => void) | undefined
+    const savePolicy = vi.fn(() => new Promise<VmNetworkPolicyView>((_resolve, reject) => { rejectSave = reject }))
     const user = userEvent.setup()
     mount({ loadPolicy, savePolicy, strictMode: true })
     const peer = await screen.findByLabelText('출발지 IP/CIDR')
     await user.clear(peer)
     await user.type(peer, '198.51.100.0/24')
-    await user.click(screen.getByRole('button', { name: '통신 정책 저장' }))
+    expect(peer).toHaveValue('198.51.100.0/24')
+    const initialLoads = loadPolicy.mock.calls.length
+    const submit = screen.getByRole('button', { name: '통신 정책 저장' })
+    await user.click(submit)
+    await waitFor(() => expect(savePolicy).toHaveBeenCalledWith(vmOne, {
+      expectedRevision: 3,
+      rules: [{ direction: 'IN', action: 'ACCEPT', protocol: 'TCP', peer: '198.51.100.0/24', portStart: 443, portEnd: 443 }],
+    }))
+    expect(savePolicy).toHaveBeenCalledTimes(1)
+    expect(peer).toHaveValue('198.51.100.0/24')
+    expect(screen.queryByText(/작성 중인 규칙은 보존했습니다/)).not.toBeInTheDocument()
+    expect(submit).toBeDisabled()
+    await act(async () => rejectSave?.(conflict))
     expect(await screen.findByText(/작성 중인 규칙은 보존했습니다/)).toBeInTheDocument()
     expect(peer).toHaveValue('198.51.100.0/24')
+    expect(loadPolicy).toHaveBeenCalledTimes(initialLoads)
     expect(screen.getByRole('button', { name: '통신 정책 저장' })).toBeDisabled()
     await user.clear(peer)
     await user.type(peer, '198.51.100.128/25')
     fireEvent.submit(screen.getByRole('form', { name: 'VM 통신 정책 규칙' }))
     expect(savePolicy).toHaveBeenCalledTimes(1)
     await user.click(screen.getByRole('button', { name: '최신 정책 불러오기' }))
+    expect(loadPolicy).toHaveBeenCalledTimes(initialLoads + 1)
     await waitFor(() => expect(finishReload).toBeTypeOf('function'))
     await act(async () => finishReload?.(latest))
     await waitFor(() => expect(screen.getByLabelText('출발지 IP/CIDR')).toHaveValue('203.0.113.0/24'))
