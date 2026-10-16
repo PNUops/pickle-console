@@ -17,7 +17,7 @@
 export type PromptMessage = {
   role: string
   text: string
-  /** 텍스트가 아니라 기록되지 않은 조각의 수 (이미지 등) */
+  /** Non-text parts omitted from this display projection, not from the stored request. */
   nonText: number
 }
 

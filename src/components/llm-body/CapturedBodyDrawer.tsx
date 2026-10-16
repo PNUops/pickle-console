@@ -100,7 +100,7 @@ function PromptSection({ view, truncated }: { view: PromptView | null; truncated
             <Block>{message.text}</Block>
             {message.nonText > 0 && (
               <p className="text-xs text-neutral-500">
-                텍스트가 아닌 항목 {message.nonText}개는 기록되지 않았습니다.
+                이 화면에서는 텍스트가 아닌 항목 {message.nonText}개를 표시하지 않습니다.
               </p>
             )}
           </div>

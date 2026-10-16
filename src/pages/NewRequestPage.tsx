@@ -24,7 +24,10 @@ export function NewRequestPage() {
   const guide = kind?.type === 'VM' ? 'vm/request' : kind?.type === 'LLM_API_KEY' ? 'llm/start' : 'requests/submit'
   return (
     <div className="space-y-4">
-      <div className="text-right text-sm"><GuideLink slug={guide}>신청 작성 가이드</GuideLink></div>
+      <div className="flex flex-wrap justify-end gap-x-4 gap-y-2 text-sm">
+        {kind?.supportsRecipients && <GuideLink slug="requests/bulk">여러 사람에게 신청하기</GuideLink>}
+        <GuideLink slug={guide}>신청 작성 가이드</GuideLink>
+      </div>
       {/* Changing the kind remounts its catalog hooks and specification state. */}
       {kind ? <RequestWizard key={kind.type} kind={kind} /> : <KindPicker />}
     </div>

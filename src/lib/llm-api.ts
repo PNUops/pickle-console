@@ -208,7 +208,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'invalid_api_key', status: 401, meaning: '콘솔에서 발급한 키가 아닙니다.' },
   { code: 'api_key_expired', status: 401, meaning: '키의 유효기간이 지났습니다.' },
   { code: 'api_key_revoked', status: 401, meaning: '폐기된 키입니다.' },
-  { code: 'account_suspended', status: 403, meaning: '계정 이용이 정지된 상태입니다.' },
+  { code: 'account_suspended', status: 403, meaning: '이 API 키가 정지된 상태입니다. 키 상세에서 상태를 확인하고 관리자에게 문의합니다.' },
   { code: 'model_not_found', status: 404, meaning: '그런 이름의 모델이 없습니다.' },
   {
     code: 'model_not_available_on_route',
@@ -220,7 +220,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'endpoint_not_allowed',
     status: 403,
-    meaning: '이 키에 그 기능이 부여되어 있지 않습니다. 콘솔에서 신청하면 승인 후 쓸 수 있습니다.',
+    meaning: '이 키에 필요한 기능이 없습니다. 키 정보의 기능 권한을 확인합니다. 아직 신청할 수 없는 서버 코드 실행 도구(shell, bash)는 요청에서 뺍니다.',
   },
   { code: 'rate_limit_requests', status: 429, meaning: '분당 요청 횟수를 초과했습니다.' },
   { code: 'rate_limit_tokens', status: 429, meaning: '분당 토큰 사용량을 초과했습니다.' },
@@ -276,7 +276,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     status: 502,
     alsoStatus: 200,
     meaning:
-      '응답이 중계 가능한 크기를 넘었습니다. 채팅은 stream으로 받거나 max_tokens를 줄이고, 이미지는 한 번에 만드는 개수(n)나 크기를 줄입니다. 채팅 스트림에서는 이벤트 하나가 너무 클 때 도중 오류로 옵니다.',
+      '응답이 중계 가능한 크기를 넘었거나 큰 응답을 처리할 자리가 없습니다. 출력 크기를 줄이고, 처리 자리 부족이면 간격을 늘려 재시도합니다. 유료 재시도는 추가 비용이 들 수 있습니다. 긴 텍스트는 stream으로 받고, 이미지 출력은 경로와 관계없이 개수나 해상도를 줄입니다. 큰 이미지 이벤트는 스트리밍으로도 해결되지 않을 수 있습니다.',
   },
   { code: 'service_disabled', status: 503, meaning: '서비스가 점검 중입니다.' },
   { code: 'server_busy', status: 503, meaning: '요청이 몰려 처리하지 못했습니다. 한도는 차감되지 않습니다.' },
