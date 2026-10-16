@@ -6,6 +6,8 @@ import { GuideFigure, type GuideFigureProps } from './GuideFigure'
 const scenes = [
   ['introduction', 'resources', 'user-dashboard', 1152, 216],
   ['requests/status', 'result', 'request-statuses', 1102, 227],
+  ['requests/bulk', 'roster', 'request-roster', 726, 539],
+  ['requests/bulk', 'status', 'request-recipients', 992, 306],
   ['workspaces/manage', 'members', 'workspace-members', 2208, 460],
   ['workspaces/access', 'grant', 'resource-access', 448, 555],
   ['vm/request', 'configure', 'vm-request', 1600, 1812],
@@ -14,7 +16,7 @@ const scenes = [
   ['network/publish', 'choose', 'vm-publish', 992, 757],
   ['network/domains', 'records', 'dns-records', 1104, 228],
   ['network/ports', 'campus-ip', 'campus-ip', 1104, 421],
-  ['llm/start', 'choose-models', 'llm-request', 1600, 1668],
+  ['llm/start', 'choose-models', 'llm-request', 726, 372],
   ['llm/connect', 'prepare', 'llm-connection', 1104, 364],
   ['llm/features', 'models', 'llm-permissions', 1104, 347],
   ['llm/limits', 'usage', 'llm-usage', 1104, 420],
@@ -35,7 +37,7 @@ test.each(scenes)('places the %s reference in its %s section', (slug, sectionId,
   expect(section).toBeDefined()
   const figures = figuresIn(section!.body)
   expect(figures).toHaveLength(1)
-  const extension = imageName === 'resource-access' ? 'jpg' : 'png'
+  const extension = ['resource-access', 'llm-request', 'request-roster', 'request-recipients'].includes(imageName) ? 'jpg' : 'png'
   expect(figures[0].props.src.split('?')[0]).toMatch(new RegExp(`/${imageName}\\.${extension}$`))
   expect(figures[0].props.alt.trim()).not.toBe('')
   expect(figures[0].props.caption.trim()).not.toBe('')

@@ -27,6 +27,7 @@ import { REQUEST_RECIPIENT_STATUS_LABELS } from '../../lib/status'
 import { requestRecipientStatusLabel } from '../../lib/request-recipient-status'
 import { useActiveResult } from '../../lib/use-active-result'
 import { adminPaths } from '../../lib/paths'
+import { GuideLink } from '../../docs/links'
 
 const RECIPIENT_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   PENDING_JOIN: 'neutral',
@@ -97,6 +98,7 @@ export function RequestRecipientsCard({
         <CardTitle>대상자</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <p className="text-right text-sm"><GuideLink slug="requests/bulk" anchor="status">대상자 상태 안내</GuideLink></p>
         {error && <Alert variant="danger">{error}</Alert>}
         {admin && <Alert variant="info" title="리소스 등록과 실제 완료">
           등록됨은 리소스와 권한 기록이 만들어진 상태입니다. VM 프로비저닝 완료를 뜻하지 않습니다.

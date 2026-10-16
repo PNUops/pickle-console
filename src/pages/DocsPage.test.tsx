@@ -138,7 +138,7 @@ describe('사용 가이드', () => {
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
     expect(document.body.textContent ?? '').toContain('quota_exhausted')
     expect(document.body.textContent ?? '').toContain('Retry-After')
-    expect(document.body.textContent ?? '').toContain('0원을 썼다는 뜻이 아닙니다')
+    expect(document.body.textContent ?? '').toContain('0달러를 썼다는 뜻이 아닙니다')
   })
 
   test('pairs stable error codes with HTTP status', async () => {
