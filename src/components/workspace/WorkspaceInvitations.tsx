@@ -12,6 +12,7 @@ import { Alert, Badge, Button, FormField, Modal, Spinner, Textarea, Table, TBody
 import { formatDateTime } from '../../lib/format'
 import { parseRoster, type RosterRow } from '../../lib/roster'
 import { RosterInput, ROSTER_PASTE_HINT } from '../roster/RosterInput'
+import { WorkspaceTerminationImpactButton } from './WorkspaceTerminationImpact'
 
 type Schemas = components['schemas']
 
@@ -339,6 +340,7 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
                 <TD>{formatDateTime(invitation.invitedAt)}</TD>
                 <TD>{invitation.invitedBy.name}</TD>
                 {canManage && <TD>
+                  <WorkspaceTerminationImpactButton workspaceId={workspaceId} invitationId={invitation.id} admin={support} targetLabel={invitationTarget(invitation)} />
                   <Button
                     variant="ghost"
                     size="sm"

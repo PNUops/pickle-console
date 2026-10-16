@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { EditWorkspaceModal, OwnershipTransferModal } from '../components/workspace/WorkspaceModals'
 import { InviteMembersForm, PendingInvitationsSection } from '../components/workspace/WorkspaceInvitations'
 import { WorkspaceMemberRoleSelect, RemoveWorkspaceMemberModal } from '../components/workspace/WorkspaceMemberControls'
+import { WorkspaceTerminationImpactButton } from '../components/workspace/WorkspaceTerminationImpact'
 import { requestReaderKey } from '../api/request-review'
 import { useActiveResult } from '../lib/use-active-result'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -194,6 +195,7 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
+        <WorkspaceTerminationImpactButton workspaceId={workspace.id} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-neutral-600">
             워크스페이스를 삭제하면 모든 목록에서 사라집니다. 남아 있는 리소스가 있으면 먼저

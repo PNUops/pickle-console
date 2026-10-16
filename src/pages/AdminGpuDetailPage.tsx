@@ -15,6 +15,7 @@ import { gpuDetailPollInterval } from '../lib/gpu-polling'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 
 type AdminAction = 'priority' | 'extend' | 'reclaim' | 'reconcile'
 const TITLES: Record<AdminAction, string> = { priority: '대기 우선순위 변경', extend: 'GPU 임대 연장', reclaim: 'GPU 회수', reconcile: 'GPU 상태 다시 확인' }
@@ -45,6 +46,7 @@ function AdminGpuDetail({ data }: { data: GpuAllocation }) {
   const canManage = sysManage || (!!user && data.orgId != null && administersOrg(user.managedOrgs, data.orgId))
   const stable = data.connectionStatus === 'NONE' || data.connectionStatus === 'ATTACHED'
   return <div className="space-y-6">
+    <WorkspaceSourceReturnLink workspaceId={data.workspaceId} admin />
     <Link to={adminPaths.gpus(scope.activeOrgId)} className="text-sm text-primary-700 hover:underline">← GPU</Link>
     <PageHeader title={data.name} description={data.orgName} actions={<AdminResourceAccessLink type="GPU" resourceId={data.id} />} />
     {notice && <Alert variant="success">{notice}</Alert>}

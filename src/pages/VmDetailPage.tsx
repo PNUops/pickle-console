@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
 import { displaySshGatewayHost } from '../lib/hosts'
 import { Link, useParams, useSearchParams } from 'react-router'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 import {
   keepPreviousData,
   useMutation,
@@ -202,12 +203,16 @@ export function VmDetailPage() {
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
     // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
-    setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
+    const next = new URLSearchParams(searchParams)
+    if (id === 'overview') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next, { replace: true })
   }
 
   return (
     <div className="space-y-6">
       <nav className="text-sm">
+        <WorkspaceSourceReturnLink workspaceId={data.workspaceId} />
         <Link to="/console/vms" className="text-primary-700 hover:underline">
           ← 가상머신
         </Link>

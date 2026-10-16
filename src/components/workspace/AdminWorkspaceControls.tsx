@@ -11,6 +11,7 @@ import { useAccessIncreaseReview } from '../../lib/use-access-increase-review'
 import { EditWorkspaceModal, OwnershipTransferModal } from './WorkspaceModals'
 import { RemoveWorkspaceMemberModal, WorkspaceMemberRoleSelect } from './WorkspaceMemberControls'
 import { InviteMembersForm, PendingInvitationsSection } from './WorkspaceInvitations'
+import { WorkspaceTerminationImpactButton } from './WorkspaceTerminationImpact'
 
 type Workspace = components['schemas']['AdminWorkspaceDetailResponse']
 type Member = components['schemas']['AdminWorkspaceMemberResponse']
@@ -43,6 +44,7 @@ export function AdminWorkspaceOverviewControls({ workspace, onDeleted }: { works
     {error && <Alert variant="danger">{error}</Alert>}
     <div className="flex flex-wrap gap-2">
       {workspace.canUpdateInfo && <Button variant="secondary" onClick={() => setEditing(true)}>정보 수정</Button>}
+      {workspace.canUpdateInfo && <WorkspaceTerminationImpactButton workspaceId={workspace.id} admin />}
       {workspace.canDelete && <Button variant="danger" onClick={() => { setError(null); setDeleting(true) }}>워크스페이스 삭제</Button>}
     </div>
     {workspace.deleteBlockedReason === 'PERSONAL' && <p className="text-sm text-foreground-muted">개인 워크스페이스의 구성원과 유형은 변경할 수 없으며 계정 탈퇴 시 함께 정리됩니다.</p>}

@@ -2446,6 +2446,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/workspaces/{workspaceId}/invitations/{invitationId}/termination-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 지원 초대 취소 영향 조회
+         * @description 기존 지원 쓰기 권한으로 정확한 초대에 연결된 신청 대상자의 종료 영향을 조회합니다. 복수 기관의 신청을 포함하며 FAILED는 자동 종료되지 않는 이력으로 구분합니다.
+         */
+        get: operations["getAdminWorkspaceInvitationTerminationImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/workspaces/{workspaceId}/members/{userId}": {
         parameters: {
             query?: never;
@@ -2472,6 +2492,26 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["previewAdminWorkspaceMemberRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/workspaces/{workspaceId}/termination-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 지원 워크스페이스 삭제 영향 조회
+         * @description 기존 지원 쓰기 권한으로 전체 워크스페이스의 신청 취소, 대상자 자동 종료와 남은 자원 차단 조건을 조회합니다. 기관 선택은 전체 영향 집합을 좁히지 않습니다. 조회는 가입, 생성 또는 취소를 실행하지 않습니다.
+         */
+        get: operations["getAdminWorkspaceTerminationImpact"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4337,6 +4377,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/invitations/{invitationId}/termination-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 초대 취소 영향 조회
+         * @description 현재 OWNER가 정확한 초대에 연결된 신청 대상자의 자동 종료 영향을 조회합니다. 신청 자체와 다른 초대는 취소하지 않으며, FAILED는 자동 종료되지 않는 이력으로 구분합니다.
+         */
+        get: operations["getWorkspaceInvitationTerminationImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/members/{userId}": {
         parameters: {
             query?: never;
@@ -4367,6 +4427,26 @@ export interface paths {
          * @description 신청 대상자로 지정할 학번 명단을 제출하기 전에 확인합니다. 학번마다 이미 구성원인지, 활성 계정이 있지만 구성원이 아닌지, 대기 중인 초대가 있는지, 계정도 초대도 없는지를 요청과 같은 순서로 돌려줍니다. 아무것도 기록하지 않으며, 구성원 추가와 초대는 학번 대상자로 신청을 제출할 때 일어납니다. 워크스페이스 소유자나, orgId로 지정한 기관의 신청을 승인할 수 있는 관리자만 호출할 수 있고 개인 워크스페이스에는 쓸 수 없습니다. 한 번에 500건까지, 1분에 10번까지, 한 시간에 2000건까지입니다.
          */
         post: operations["resolveWorkspaceRoster"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/termination-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 워크스페이스 삭제 영향 조회
+         * @description 현재 OWNER가 전체 워크스페이스의 신청 취소, 대상자 자동 종료와 남은 자원 차단 조건을 조회합니다. 조회는 상태를 바꾸지 않으며, 결과는 페이지와 무관한 전체 집합을 기준으로 계산합니다.
+         */
+        get: operations["getWorkspaceTerminationImpact"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8848,6 +8928,28 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
+        PageResponseWorkspaceTerminationResourceResponse: {
+            content: components["schemas"]["WorkspaceTerminationResourceResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        PageResponseWorkspaceTerminationTargetResponse: {
+            content: components["schemas"]["WorkspaceTerminationTargetResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
         /**
          * @description 유료 모델 사용 가능 여부. LISTED는 허용 목록과 차단 목록 중 어느 쪽으로든 좁혀진 상태이고, UNRESTRICTED는 두 목록이 모두 비어 금액만이 경계인 상태입니다.
          * @enum {string}
@@ -10287,6 +10389,108 @@ export interface components {
             memberCount: number;
             myRole: components["schemas"]["WorkspaceMemberRole"];
             name: string;
+        };
+        /** @enum {string} */
+        WorkspaceTerminationAction: "DELETE_WORKSPACE" | "CANCEL_INVITATION";
+        WorkspaceTerminationImpactResponse: {
+            action: components["schemas"]["WorkspaceTerminationAction"];
+            /** @description 현재 종료를 막는 조건입니다. PERSONAL 또는 REMAINING_RESOURCES이며, 차단이 없으면 null입니다. */
+            blockedReason?: string | null;
+            blockingResources: components["schemas"]["PageResponseWorkspaceTerminationResourceResponse"];
+            executable: boolean;
+            /** @description 수행자, 현재 권한, 전체 영향 대상과 자원 조건의 식별값입니다. 페이지와 조회 시각은 포함하지 않습니다. */
+            fingerprint: string;
+            /** Format: uuid */
+            invitationId?: string | null;
+            /**
+             * Format: date-time
+             * @description 조회 시각입니다. 실제 종료나 자원 생성 결과를 뜻하지 않습니다.
+             */
+            observedAt: string;
+            recipientCounts: components["schemas"]["WorkspaceTerminationRecipientCount"][];
+            resourceBlockers: components["schemas"]["WorkspaceTerminationResourceBlocker"][];
+            summary: components["schemas"]["WorkspaceTerminationSummary"];
+            targets: components["schemas"]["PageResponseWorkspaceTerminationTargetResponse"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
+        };
+        WorkspaceTerminationRecipientCount: {
+            /** Format: int64 */
+            count: number;
+            recipientStatus: components["schemas"]["RequestRecipientStatus"];
+            requestStatus: components["schemas"]["RequestStatus"];
+            willClose: boolean;
+        };
+        WorkspaceTerminationResourceBlocker: {
+            /** Format: int64 */
+            count: number;
+            type: components["schemas"]["ResourceType"];
+        };
+        WorkspaceTerminationResourceResponse: {
+            /** Format: uuid */
+            id: string;
+            /** @description 현재 조회 권한에 맞춘 이름입니다. VM 접근 권한이 없으면 SSH 슬러그 대신 표시 이름 또는 공개 ID가 들어갑니다. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description 현재 조회 권한으로 공개되는 실제 기관입니다. 제한된 행이나 연결 기관이 없는 경우 null입니다.
+             */
+            orgId?: string | null;
+            orgName?: string | null;
+            /** @description 현재 호출 경로에서 기존 종류별 단건 상세를 읽을 수 있는지입니다. 워크스페이스 OWNER 자체는 자원 상세 권한을 뜻하지 않습니다. */
+            resourceReadable: boolean;
+            status: string;
+            type: components["schemas"]["ResourceType"];
+        };
+        WorkspaceTerminationSummary: {
+            /** Format: int64 */
+            approvedRecipients: number;
+            /** Format: int64 */
+            closingRecipients: number;
+            /**
+             * Format: int64
+             * @description 자동 종료되지 않고 현재 실패 이력으로 남는 대상자 수입니다.
+             */
+            failedRecipients: number;
+            /** Format: int64 */
+            pendingJoinRecipients: number;
+            /** Format: int64 */
+            queuedRecipients: number;
+            /** Format: int64 */
+            submittedRequests: number;
+            /** Format: int64 */
+            undecidedRecipients: number;
+        };
+        /** @enum {string} */
+        WorkspaceTerminationTargetKind: "REQUEST" | "RECIPIENT";
+        WorkspaceTerminationTargetResponse: {
+            /** Format: uuid */
+            invitationId?: string | null;
+            /** @description 현재 OWNER 또는 지원 쓰기 권한 범위에서만 제공하는 초대 식별자입니다. */
+            invitee?: string | null;
+            kind: components["schemas"]["WorkspaceTerminationTargetKind"];
+            name?: string | null;
+            /** Format: uuid */
+            orgId: string;
+            orgName: string;
+            reason?: string | null;
+            /** Format: uuid */
+            recipientId?: string | null;
+            recipientStatus?: components["schemas"]["RequestRecipientStatus"] | null;
+            /** Format: uuid */
+            requestId: string;
+            requestName: string;
+            requestReadable: boolean;
+            requestStatus: components["schemas"]["RequestStatus"];
+            /** Format: uuid */
+            resourceId?: string | null;
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            userId?: string | null;
+            userReadable: boolean;
+            /** @description 현재 종료 경로가 실제로 취소할 대상입니다. FAILED 이력은 false입니다. */
+            willClose: boolean;
         };
     };
     responses: never;
@@ -15601,6 +15805,42 @@ export interface operations {
             };
         };
     };
+    getAdminWorkspaceInvitationTerminationImpact: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                resourcePage?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     removeAdminWorkspaceMember: {
         parameters: {
             query?: never;
@@ -15690,6 +15930,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ActorAccessImpact"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminWorkspaceTerminationImpact: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                resourcePage?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -20047,6 +20322,42 @@ export interface operations {
             };
         };
     };
+    getWorkspaceInvitationTerminationImpact: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                resourcePage?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+                invitationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     removeWorkspaceMember: {
         parameters: {
             query?: never;
@@ -20135,6 +20446,41 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ResolveRosterResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getWorkspaceTerminationImpact: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                resourcePage?: number;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

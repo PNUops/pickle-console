@@ -48,6 +48,7 @@ import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { vmNetworkPolicyEnabled } from '../lib/vm-network-policy'
 import { requestDetailReturn, withListReturn } from '../lib/list-url'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 import { vmListReturn } from '../lib/vm-list-return'
 import { clearStoredSelection } from '../lib/bulk-selection'
 
@@ -139,6 +140,7 @@ function AdminVmDetailPageContent() {
   return (
     <div className="space-y-6">
       <div>
+        <WorkspaceSourceReturnLink workspaceId={vm.workspaceId} admin />
         {requestReturn && <Link to={requestReturn} className="mb-2 block text-sm text-primary-700 hover:underline">← 신청 상세</Link>}
         <Link to={listReturn?.path ?? adminPaths.vms(activeOrgId)}
           state={listReturn ? { vmList: listReturn } : undefined}
