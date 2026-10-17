@@ -288,6 +288,7 @@ export const requestHandlers: RequestHandler[] = [
           ? (workspaceMembersOf(body.workspaceId).find((m) => m.userId === userId) ?? account)
           : undefined
         return {
+          cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null },
           id: uuid(5000 + nextRequestId * 10 + index),
           userId,
           name: member?.name ?? null,

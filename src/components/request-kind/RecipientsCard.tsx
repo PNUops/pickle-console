@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   retryRequestRecipient,
+  fetchRequest,
+  fetchAdminRequest,
   type RequestDetail,
   type RequestRecipient,
   type RequestStatus,
@@ -28,6 +30,10 @@ import { requestRecipientStatusLabel } from '../../lib/request-recipient-status'
 import { useActiveResult } from '../../lib/use-active-result'
 import { adminPaths } from '../../lib/paths'
 import { GuideLink } from '../../docs/links'
+import { useAuth } from '../../auth/auth-context'
+import { requestReaderKey } from '../../api/request-review'
+import type { RecipientCancellationReceipt } from '../../api/request-recipient-cancellation'
+import { RecipientCancellationDialog, RecipientCancellationResult } from './RecipientCancellationDialog'
 
 const RECIPIENT_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   PENDING_JOIN: 'neutral',
@@ -58,7 +64,14 @@ function recipientLabel(recipient: RequestRecipient): string {
  * The people a request was filed for and what became of each. Rendered only
  * for a request that names recipients; an ordinary request has none.
  */
-export function RequestRecipientsCard({
+export function RequestRecipientsCard(props: Parameters<typeof RequestRecipientsContent>[0]) {
+  const { user } = useAuth()
+  const location = useLocation()
+  const context = `${requestReaderKey(user)}:${location.pathname}:${new URLSearchParams(location.search).get('org') ?? 'all'}:${props.admin ? 'admin' : 'user'}:${props.request.id}:${props.request.workspaceId}`
+  return <RequestRecipientsContent key={context} {...props} />
+}
+
+function RequestRecipientsContent({
   request,
   resourceHref,
   canRetry,
@@ -73,7 +86,11 @@ export function RequestRecipientsCard({
   userReadable?: (recipient: RequestRecipient) => boolean
 }) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const reader = requestReaderKey(user)
   const [error, setError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [receipts, setReceipts] = useState<Record<string, RecipientCancellationReceipt>>({})
   const active = useActiveResult()
   const retry = useMutation({
     mutationFn: (recipientId: string) => retryRequestRecipient(request.id, recipientId),
@@ -91,6 +108,26 @@ export function RequestRecipientsCard({
   const recipients = request.recipients ?? []
   if (recipients.length === 0) return null
   const retryable = canRetry && request.status === 'APPROVED' && recipients.some((recipient) => recipient.status === 'FAILED')
+  const modeOf = (recipient: RequestRecipient) => admin && recipient.cancellationCapability?.supportAllowed ? 'support' : recipient.cancellationCapability?.ownerAllowed ? 'owner' : null
+  const hasActions = retryable || recipients.some((recipient) => modeOf(recipient) !== null && !recipient.cancellation && !receipts[recipient.id])
+  const selected = recipients.find((recipient) => recipient.id === selectedId)
+  const selectedMode = selected ? modeOf(selected) : null
+  const readback = async () => {
+    const next = await (admin ? fetchAdminRequest(request.id) : fetchRequest(request.id))
+    if (active.current && next.id === request.id && next.workspaceId === request.workspaceId) {
+      queryClient.setQueriesData<RequestDetail>({ predicate: (query) => admin
+        ? query.queryKey[0] === 'admin' && query.queryKey[1] === 'requests' && query.queryKey[2] === request.id && typeof query.queryKey[3] === 'object' && query.queryKey[3] !== null && 'reader' in query.queryKey[3] && query.queryKey[3].reader === reader
+        : query.queryKey[0] === 'requests' && query.queryKey[1] === request.id && query.queryKey[2] === reader }, () => next)
+    }
+    return next
+  }
+  const stored = (receipt: RecipientCancellationReceipt) => {
+    if (!active.current) return
+    setReceipts((previous) => ({ ...previous, [receipt.recipientId]: receipt }))
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] })
+    void queryClient.invalidateQueries({ queryKey: ['requests'] })
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+  }
 
   return (
     <Card>
@@ -111,7 +148,7 @@ export function RequestRecipientsCard({
               <TH>상태</TH>
               <TH>리소스</TH>
               <TH>사유</TH>
-              {retryable && (
+              {hasActions && (
                 <TH>
                   <span className="sr-only">작업</span>
                 </TH>
@@ -121,13 +158,15 @@ export function RequestRecipientsCard({
           <TBody>
             {recipients.map((recipient) => {
               const href = recipient.resourceId ? resourceHref(recipient) : null
+              const cancellation = recipient.cancellation ?? receipts[recipient.id]
+              const mode = modeOf(recipient)
               return (
                 <TR key={recipient.id}>
                   <TD>{admin && recipient.userId && userReadable?.(recipient)
                     ? <Link className="text-primary-700 hover:underline" to={adminPaths.userSupport(recipient.userId, request.orgId ?? undefined)}>{recipientLabel(recipient)}</Link>
                     : recipientLabel(recipient)}</TD>
                   <TD>
-                    <RecipientStatusBadge status={recipient.status} admin={admin} requestStatus={request.status} />
+                    <RecipientStatusBadge status={cancellation ? 'CANCELED' : recipient.status} admin={admin} requestStatus={request.status} />
                   </TD>
                   <TD>
                     {href ? (
@@ -138,10 +177,13 @@ export function RequestRecipientsCard({
                       '—'
                     )}
                   </TD>
-                  <TD>{recipient.reason ?? '—'}</TD>
-                  {retryable && (
+                  <TD>{cancellation ? <RecipientCancellationResult receipt={cancellation} /> : <div className="space-y-1 [overflow-wrap:anywhere]">
+                    <p>{recipient.reason ?? '—'}</p>
+                    {request.status === 'APPROVED' && recipient.cancellationCapability?.blockedReason && <p className="text-xs text-foreground-muted">{recipient.cancellationCapability.blockedReason}</p>}
+                  </div>}</TD>
+                  {hasActions && (
                     <TD>
-                      {recipient.status === 'FAILED' && (
+                      {retryable && recipient.status === 'FAILED' && !cancellation && (
                         <Button
                           size="sm"
                           variant="secondary"
@@ -152,6 +194,7 @@ export function RequestRecipientsCard({
                           다시 시도
                         </Button>
                       )}
+                      {mode && !cancellation && <Button size="sm" variant="danger" aria-label={`${recipientLabel(recipient)} 생성 대기 취소`} disabled={retry.isPending} onClick={() => setSelectedId(recipient.id)}>생성 대기 취소</Button>}
                     </TD>
                   )}
                 </TR>
@@ -159,6 +202,9 @@ export function RequestRecipientsCard({
             })}
           </TBody>
         </DataTable>
+        {selected && selectedMode && <RecipientCancellationDialog key={`${selected.id}:${selectedMode}:${selected.status}:${selected.resourceId}:${selected.reason}:${JSON.stringify(selected.cancellationCapability)}`}
+          request={request} recipient={selected} support={selectedMode === 'support'} resourceHref={selected.resourceId ? resourceHref(selected) : null}
+          onClose={() => setSelectedId(null)} onStored={stored} onReadback={readback} />}
       </CardContent>
     </Card>
   )

@@ -16,15 +16,15 @@ import { fetchAdminRequests } from '../api/queries'
 test('declared recipient totals distinguish current membership loss, closed targets and unknown observations', () => {
   const request = submittedAdminRequest(201)
   request.recipients = [
-    { id: uuid(600), userId: uuid(42), name: '활성 대상', status: 'QUEUED' },
-    { id: uuid(601), userId: uuid(57), name: '이탈한 대상', status: 'QUEUED' },
-    { id: uuid(602), status: 'PENDING_JOIN', invitee: 'future@example.test' },
-    { id: uuid(603), status: 'CANCELED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '활성 대상', status: 'QUEUED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(601), userId: uuid(57), name: '이탈한 대상', status: 'QUEUED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(602), status: 'PENDING_JOIN', invitee: 'future@example.test' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(603), status: 'CANCELED' },
   ]
   const facts = [{ userId: uuid(42), name: '활성 대상', member: true, userStatus: 'ACTIVE' }, { userId: uuid(57), name: '이탈한 대상', member: false, userStatus: 'ACTIVE' }]
   expect(approvalTargetCounts(request, facts, true)).toEqual({ total: 4, ready: 1, waiting: 1, excluded: 2, unknown: 0 })
   expect(approvalTargetCounts(request)).toEqual({ total: 4, ready: 0, waiting: 1, excluded: 1, unknown: 2 })
-  expect(approvalTargetCounts({ ...request, recipients: [{ id: uuid(610), status: 'QUEUED' }] }, facts, true)).toMatchObject({ ready: 0, unknown: 1 })
+  expect(approvalTargetCounts({ ...request, recipients: [{ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(610), status: 'QUEUED' }] }, facts, true)).toMatchObject({ ready: 0, unknown: 1 })
   const missing = commonApprovalComparisons({ ...request, reqEndDate: undefined }, { grantedEndDate: null })
   expect(missing.find((row) => row.label === '사용 종료일')).toMatchObject({ requested: '종료일 기록 없음', granted: '무기한' })
   const unlimited = commonApprovalComparisons({ ...request, reqEndDate: null }, { grantedEndDate: null })
@@ -35,10 +35,10 @@ test('the shared approval confirmation excludes a departed user and does not res
   const user = userEvent.setup()
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.recipients = [
-    { id: uuid(600), userId: uuid(42), name: '홍길동', status: 'QUEUED' },
-    { id: uuid(601), userId: uuid(57), name: '이탈한 대상', status: 'QUEUED' },
-    { id: uuid(602), status: 'PENDING_JOIN', invitee: 'future@example.test' },
-    { id: uuid(603), status: 'CANCELED', name: '취소된 대상' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '홍길동', status: 'QUEUED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(601), userId: uuid(57), name: '이탈한 대상', status: 'QUEUED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(602), status: 'PENDING_JOIN', invitee: 'future@example.test' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(603), status: 'CANCELED', name: '취소된 대상' },
   ]
   const context = approvalContextFixture(uuid(201))
   context.workspace.members = context.workspace.members.filter((member) => member.userId !== uuid(57))
@@ -61,8 +61,8 @@ test.each([
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
   request.recipients = [
-    { id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) },
-    { id: uuid(601), userId: uuid(57), name: '김철수', status: 'FAILED', reason: '등록할 공간이 없습니다.' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(601), userId: uuid(57), name: '김철수', status: 'FAILED', reason: '등록할 공간이 없습니다.' },
   ]
   const context = approvalContextFixture(uuid(201))
   context.recipientUserReadFlags = { [uuid(42)]: true, [uuid(57)]: true }
@@ -91,7 +91,7 @@ test('recipient retry records queue reception and then observes the actual regis
   const user = userEvent.setup()
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
-  request.recipients = [{ id: uuid(600), userId: uuid(42), name: '홍길동', status: 'FAILED', reason: '일시적 등록 오류' }]
+  request.recipients = [{ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '홍길동', status: 'FAILED', reason: '일시적 등록 오류' }]
   const context = approvalContextFixture(uuid(201))
   context.recipientUserReadFlags = { [uuid(42)]: true }
   let retried = false
@@ -116,7 +116,7 @@ test('recipient retry records queue reception and then observes the actual regis
 test('an entirely registered request keeps observing VM provisioning until its actual state settles', async () => {
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
-  request.recipients = [{ id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) }]
+  request.recipients = [{ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) }]
   const context = approvalContextFixture(uuid(201))
   let running = false
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser), http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json({ ...context, generatedResources: [{ id: uuid(56), type: 'VM', name: '관측 VM', state: running ? 'RUNNING' : 'CREATING', orgId: uuid(1), workspaceId: uuid(12), recipientId: uuid(600), createdAt: request.updatedAt, recordUpdatedAt: request.updatedAt, canReadDetail: true }] })))
@@ -252,7 +252,7 @@ test('placement reads are approver-scoped and names choose the exact node withou
 test('read flags fail closed for a current system account or a missing context result', async () => {
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
-  request.recipients = [{ id: uuid(600), userId: uuid(5), name: '시스템 계정', status: 'QUEUED' }]
+  request.recipients = [{ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(5), name: '시스템 계정', status: 'QUEUED' }]
   const context = approvalContextFixture(uuid(201))
   context.recipientUserReadFlags = { [uuid(5)]: false }
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser), http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)))
@@ -265,7 +265,7 @@ test('read flags fail closed for a current system account or a missing context r
 test('a missing context retains actual recipient names without inventing support permissions', async () => {
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
-  request.recipients = [{ id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) }]
+  request.recipients = [{ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) }]
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser), http.get('*/api/v1/admin/requests/:requestId/context', () => new HttpResponse(null, { status: 404 })))
   renderApp(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
   const recipients = await screen.findByRole('table', { name: '대상자' })
@@ -349,7 +349,7 @@ test.each([
 ] as const)('actual system-tier user references preserve directory scope for %s', async (token, profile, canReadSystemUsers) => {
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
-  request.recipients = [sysAdminUser, sysManagerUser, sysViewerUser].map((target, index) => ({ id: uuid(620 + index), userId: target.id, name: target.name, status: 'QUEUED' }))
+  request.recipients = [sysAdminUser, sysManagerUser, sysViewerUser].map((target, index) => ({ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(620 + index), userId: target.id, name: target.name, status: 'QUEUED' }))
   server.use(refreshSuccessHandler(token, profile))
   renderApp(`/admin/requests/${request.id}?org=${uuid(1)}`)
   const table = within(await screen.findByRole('table', { name: '대상자' }))
@@ -409,7 +409,7 @@ test('a registered VM preserves its exact request and the original filtered list
   const user = userEvent.setup()
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.status = 'APPROVED'
-  request.recipients = [{ id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) }]
+  request.recipients = [{ cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), name: '홍길동', status: 'CREATED', resourceId: uuid(56) }]
   vmStore.find((vm) => vm.id === uuid(56))!.requestId = request.id
   const context = approvalContextFixture(request.id)
   context.generatedResources = [{ id: uuid(56), type: 'VM', name: '정확한 VM 결과', state: 'RUNNING', orgId: uuid(1), workspaceId: uuid(12), recipientId: uuid(600), createdAt: request.updatedAt, recordUpdatedAt: request.updatedAt, canReadDetail: true }]

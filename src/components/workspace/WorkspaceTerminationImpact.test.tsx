@@ -12,6 +12,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import App from '../../App'
 import { AuthProvider } from '../../auth/AuthProvider'
 import { ToastProvider } from '../ui'
+import { workspaceDetails } from '../../test/msw/handlers/announcements'
 
 const ownerPath = '*/api/v1/workspaces/:workspaceId/termination-impact'
 const adminPath = '*/api/v1/admin/workspaces/:workspaceId/termination-impact'
@@ -338,4 +339,131 @@ test('a changed resource page invalidates both loaded lists before any refresh',
   await modal.findByText(/이전 페이지와 합칠 수 없습니다/)
   expect(modal.queryByRole('link', { name: '남은 정확한 VM' })).not.toBeInTheDocument()
   expect(modal.queryByRole('heading', { name: /신청과 대상자/ })).not.toBeInTheDocument()
+})
+
+function executableImpact(overrides: Partial<WorkspaceTerminationImpact> = {}): WorkspaceTerminationImpact {
+  return impactFixture({ executable: true, blockedReason: null, resourceBlockers: [],
+    summary: { submittedRequests: 0, closingRecipients: 0, failedRecipients: 0, pendingJoinRecipients: 0, queuedRecipients: 0, approvedRecipients: 0, undecidedRecipients: 0 },
+    recipientCounts: [], targets: { page: 0, size: 20, totalElements: 0, totalPages: 0, content: [] },
+    blockingResources: { page: 0, size: 20, totalElements: 0, totalPages: 0, content: [] }, ...overrides })
+}
+
+const impactAcknowledgement = '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다'
+
+test('an empty owner deletion requires both the exact name and explicit impact confirmation', async () => {
+  const user = userEvent.setup()
+  const writes: unknown[] = []
+  server.use(refreshSuccessHandler('access-user'), http.get(ownerPath, () => HttpResponse.json(executableImpact())),
+    http.delete('*/api/v1/workspaces/:workspaceId', async ({ request }) => { writes.push(await request.json()); return new HttpResponse(null, { status: 204 }) }))
+  renderApp(`/console/workspaces/${uuid(12)}`)
+  await user.click(await screen.findByRole('button', { name: '워크스페이스 삭제' }))
+  const modal = within(await screen.findByRole('dialog', { name: '워크스페이스 삭제' }))
+  await modal.findByText('현재 연결된 종료 대상이나 실패 이력이 없습니다.')
+  const submit = modal.getByRole('button', { name: '워크스페이스 삭제' })
+  await user.type(modal.getByRole('textbox'), '캡스톤 3조')
+  expect(submit).toBeDisabled()
+  expect(writes).toEqual([])
+  await user.click(modal.getByRole('checkbox', { name: impactAcknowledgement }))
+  expect(submit).toBeEnabled()
+  await user.click(submit)
+  await waitFor(() => expect(writes).toEqual([{ confirmation: { fingerprint: 'same-exact-targets', confirmed: true } }]))
+})
+
+test('support deletion retains its required name and posts the support observation fingerprint', async () => {
+  const user = userEvent.setup()
+  const writes: unknown[] = []
+  server.use(refreshSuccessHandler('access-org-manager', orgManagerUser),
+    http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], canDelete: true, deleteBlockedReason: null })),
+    http.get(adminPath, () => HttpResponse.json(executableImpact({ fingerprint: 'support-exact' }))),
+    http.delete('*/api/v1/admin/workspaces/:workspaceId', async ({ request }) => { writes.push(await request.json()); return new HttpResponse(null, { status: 204 }) }))
+  renderApp(`/admin/workspaces?workspaceId=${uuid(12)}&inspect=1&org=${uuid(2)}`)
+  await user.click(await screen.findByRole('button', { name: '워크스페이스 삭제' }))
+  const modal = within(await screen.findByRole('dialog', { name: '워크스페이스 삭제' }))
+  await user.click(await modal.findByRole('checkbox', { name: impactAcknowledgement }))
+  expect(modal.getByRole('button', { name: '워크스페이스 삭제' })).toBeDisabled()
+  await user.type(modal.getByRole('textbox'), '캡스톤 3조')
+  await user.click(modal.getByRole('button', { name: '워크스페이스 삭제' }))
+  await waitFor(() => expect(writes).toEqual([{ confirmation: { fingerprint: 'support-exact', confirmed: true } }]))
+})
+
+test('a stale deletion reads its new actual effects and requires explicit confirmation again', async () => {
+  const user = userEvent.setup()
+  let reads = 0
+  const writes: unknown[] = []
+  server.use(refreshSuccessHandler('access-user'), http.get(ownerPath, () => HttpResponse.json(executableImpact({ fingerprint: ++reads === 1 ? 'old-target' : 'replacement-target' }))),
+    http.delete('*/api/v1/workspaces/:workspaceId', async ({ request }) => { writes.push(await request.json()); return writes.length === 1
+      ? HttpResponse.json({ code: 'TERMINATION_CONFIRMATION_STALE', status: 409, detail: '영향이 변경되었습니다.' }, { status: 409 }) : new HttpResponse(null, { status: 204 }) }))
+  renderApp(`/console/workspaces/${uuid(12)}`)
+  await user.click(await screen.findByRole('button', { name: '워크스페이스 삭제' }))
+  const modal = within(await screen.findByRole('dialog', { name: '워크스페이스 삭제' }))
+  await user.type(modal.getByRole('textbox'), '캡스톤 3조')
+  await user.click(await modal.findByRole('checkbox', { name: impactAcknowledgement }))
+  await user.click(modal.getByRole('button', { name: '워크스페이스 삭제' }))
+  await waitFor(() => expect(reads).toBe(2))
+  await modal.findByText('현재 연결된 종료 대상이나 실패 이력이 없습니다.')
+  expect(modal.getByRole('checkbox')).not.toBeChecked()
+  expect(modal.getByRole('button', { name: '워크스페이스 삭제' })).toBeDisabled()
+  expect(writes).toHaveLength(1)
+  await user.click(modal.getByRole('checkbox'))
+  await user.click(modal.getByRole('button', { name: '워크스페이스 삭제' }))
+  await waitFor(() => expect(writes).toHaveLength(2))
+  expect(writes[1]).toEqual({ confirmation: { fingerprint: 'replacement-target', confirmed: true } })
+})
+
+test('same-fingerprint pages and observation refresh preserve confirmation while replaced targets reset it', async () => {
+  const user = userEvent.setup()
+  const original = impactFixture()
+  let replaced = false
+  server.use(refreshSuccessHandler('access-user'), http.get(ownerPath, ({ request }) => {
+    const page = Number(new URL(request.url).searchParams.get('page'))
+    return HttpResponse.json(executableImpact({ fingerprint: replaced ? 'replacement-same-count' : 'same-exact-targets', observedAt: page ? '2026-10-17T00:01:00Z' : '2026-10-17T00:00:00Z',
+      targets: { page, size: 20, totalElements: 4, totalPages: 2, content: original.targets.content.slice(page * 2, page * 2 + 2) } }))
+  }))
+  renderApp(`/console/workspaces/${uuid(12)}`)
+  await user.click(await screen.findByRole('button', { name: '워크스페이스 삭제' }))
+  const modal = within(await screen.findByRole('dialog', { name: '워크스페이스 삭제' }))
+  await user.click(await modal.findByRole('checkbox'))
+  await user.click(modal.getByRole('button', { name: '다음 대상 더 보기' }))
+  await modal.findByText(/실패 원본 · 실패/)
+  expect(modal.getByRole('checkbox')).toBeChecked()
+  await user.click(modal.getByRole('button', { name: '전체 영향 새로 조회' }))
+  await modal.findByRole('button', { name: '다음 대상 더 보기' })
+  expect(modal.getByRole('checkbox')).toBeChecked()
+  replaced = true
+  await user.click(modal.getByRole('button', { name: '다음 대상 더 보기' }))
+  await modal.findByText(/이전 페이지와 합칠 수 없습니다/)
+  expect(modal.getByRole('checkbox')).not.toBeChecked()
+  expect(modal.getByRole('checkbox')).toBeDisabled()
+})
+
+test.each([403, 503])('deletion remains unconfirmed after impact read failure %s', async (status) => {
+  const user = userEvent.setup()
+  let writes = 0
+  server.use(refreshSuccessHandler('access-user'), http.get(ownerPath, () => HttpResponse.json({ code: 'SERVICE_UNAVAILABLE', status, detail: '합성 확인 조회 실패' }, { status })),
+    http.delete('*/api/v1/workspaces/:workspaceId', () => { writes++; return new HttpResponse(null, { status: 204 }) }))
+  renderApp(`/console/workspaces/${uuid(12)}`)
+  await user.click(await screen.findByRole('button', { name: '워크스페이스 삭제' }))
+  const modal = within(await screen.findByRole('dialog', { name: '워크스페이스 삭제' }))
+  await modal.findByText('합성 확인 조회 실패')
+  await user.type(modal.getByRole('textbox'), '캡스톤 3조')
+  expect(modal.getByRole('checkbox')).toBeDisabled()
+  expect(modal.getByRole('button', { name: '워크스페이스 삭제' })).toBeDisabled()
+  expect(modal.queryByText('자동 종료될 대상자')).not.toBeInTheDocument()
+  expect(writes).toBe(0)
+})
+
+test('an invitation cancellation confirms the exact FK impact and sends its fingerprint once', async () => {
+  const user = userEvent.setup()
+  const writes: { id: string; body: unknown }[] = []
+  server.use(refreshSuccessHandler('access-user'), http.get(invitationPath, ({ params }) => HttpResponse.json(executableImpact({ action: 'CANCEL_INVITATION', invitationId: String(params.invitationId), fingerprint: 'exact-invitation-fk' }))),
+    http.delete('*/api/v1/workspaces/:workspaceId/invitations/:invitationId', async ({ params, request }) => { writes.push({ id: String(params.invitationId), body: await request.json() }); return new HttpResponse(null, { status: 204 }) }))
+  renderApp(`/console/workspaces/${uuid(12)}`)
+  await user.click(await screen.findByRole('button', { name: 'jiwoo.han@pusan.ac.kr 초대 취소' }))
+  const modal = within(await screen.findByRole('dialog', { name: '초대 취소' }))
+  await modal.findByText('이 초대 ID에 연결된 모든 신청 기준')
+  expect(modal.getByText('초대 ID:')).toHaveTextContent(uuid(3101))
+  expect(modal.getByRole('button', { name: '초대 취소' })).toBeDisabled()
+  await user.click(modal.getByRole('checkbox'))
+  await user.click(modal.getByRole('button', { name: '초대 취소' }))
+  await waitFor(() => expect(writes).toEqual([{ id: uuid(3101), body: { confirmation: { fingerprint: 'exact-invitation-fk', confirmed: true } } }]))
 })

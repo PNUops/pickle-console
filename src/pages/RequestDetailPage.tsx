@@ -26,6 +26,7 @@ import { consolePaths } from '../lib/paths'
 import { formatDateTime } from '../lib/format'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { workspaceSourceReturn } from '../lib/workspace-source-return'
+import { requestReaderKey } from '../api/request-review'
 
 export function RequestDetailPage() {
   const params = useParams()
@@ -35,7 +36,7 @@ export function RequestDetailPage() {
   const [cancelError, setCancelError] = useState<string | null>(null)
   const { user } = useAuth()
   const request = useQuery({
-    queryKey: ['requests', requestId],
+    queryKey: ['requests', requestId, requestReaderKey(user)],
     queryFn: () => fetchRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,

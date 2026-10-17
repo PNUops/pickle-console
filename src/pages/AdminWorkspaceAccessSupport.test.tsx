@@ -1,3 +1,4 @@
+import { emptyTerminationImpact } from '../test/fixtures/termination'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -254,6 +255,7 @@ test('a delete accepted by the earlier capability still renders a new remaining-
   const user = userEvent.setup()
   let calls = 0
   server.use(refreshSuccessHandler('access-org-manager', orgManagerUser),
+    http.get('*/api/v1/admin/workspaces/:workspaceId/termination-impact', () => HttpResponse.json(emptyTerminationImpact())),
     http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], canUpdateInfo: true, canManageOwners: true, canManageMembers: true, canInviteMembers: true, canDelete: true, deleteBlockedReason: null })),
     http.delete('*/api/v1/admin/workspaces/:workspaceId', () => { calls++; return HttpResponse.json({ title: '삭제할 수 없습니다', status: 409, code: 'WORKSPACE_HAS_ACTIVE_RESOURCES', detail: '남아 있는 리소스를 먼저 정리해 주세요.' }, { status: 409 }) }))
   renderApp(workspaceRoute('overview'))
@@ -262,10 +264,11 @@ test('a delete accepted by the earlier capability still renders a new remaining-
   expect(calls).toBe(0)
   expect(dialog.getByRole('button', { name: '워크스페이스 삭제' })).toBeDisabled()
   await user.type(dialog.getByRole('textbox'), '캡스톤 3조')
+  await user.click(await dialog.findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
   await user.click(dialog.getByRole('button', { name: '워크스페이스 삭제' }))
-  expect(await screen.findByText('남아 있는 리소스를 먼저 정리해 주세요.')).toBeInTheDocument()
+  expect(await screen.findByText(/남아 있는 리소스를 먼저 정리해 주세요\./)).toBeInTheDocument()
   expect(calls).toBe(1)
-  expect(screen.getByRole('heading', { name: '캡스톤 3조' })).toBeInTheDocument()
+  expect(screen.getAllByRole('heading', { name: '캡스톤 3조' }).length).toBeGreaterThan(0)
 })
 
 test('a late preview cannot reopen an access review after the support scope changes', async () => {

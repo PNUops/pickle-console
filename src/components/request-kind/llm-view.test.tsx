@@ -845,6 +845,7 @@ describe('초과 배정 경고', () => {
   test('a bulk request weighs the limit once per recipient still waiting for a key', async () => {
     const user = userEvent.setup()
     const recipient = (n: number, status: NonNullable<RequestDetail['recipients']>[number]['status']) => ({
+      cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null },
       id: uuid(n),
       userId: uuid(n + 100),
       name: `대상자 ${n}`,
