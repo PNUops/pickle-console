@@ -318,6 +318,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'workspace.invitation_cancel': '초대 취소',
   'request.create': '신청 제출',
   'request.cancel': '신청 취소',
+  'request.recipient_cancel': '대상자 생성 대기 취소',
   'request.approve': '신청 승인',
   'request.reject': '신청 반려',
   'org.create': '기관 생성',

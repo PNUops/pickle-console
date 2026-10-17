@@ -578,6 +578,7 @@ export function RequestWizard({
       // for its person to join, as the server does. A pasted student number
       // waits too unless an account already holds it.
       recipients: selectedRecipients.map((candidate) => ({
+        cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null },
         id: candidate.key,
         userId: candidate.key.startsWith('u:') ? candidate.key.slice(2) : null,
         name: candidate.key.startsWith('u:') ? candidate.label : null,

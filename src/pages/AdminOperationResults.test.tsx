@@ -110,7 +110,7 @@ test('revoked campus address is historical and its status is a manual record', a
 test('bulk registration links use the actual organization from a global request', async () => {
   const base = adminRequestStore.find((request) => request.id === uuid(202))!
   adminRequestStore.push({ ...base, id: uuid(299), orgId: uuid(2), orgName: '테스트 기관', recipients: [{
-    id: uuid(901), userId: uuid(57), name: '합성 대상자', invitee: null, status: 'CREATED',
+    cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(901), userId: uuid(57), name: '합성 대상자', invitee: null, status: 'CREATED',
     resourceId: uuid(8801), reason: null,
   }] })
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))

@@ -1590,6 +1590,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/requests/{requestId}/recipients/{recipientId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 지원 대상자 생성 대기 취소
+         * @description 정확한 현재 영향 확인과 사유로 한 대상자만 취소합니다. 승인, 다른 대상자, 구성원과 초대는 유지하며 등록된 자원은 회수하지 않습니다. 같은 수행자와 확인 지문 및 사유의 재요청은 현재 재인가 후 기존 결과를 반환합니다.
+         */
+        post: operations["cancelAdminRequestRecipient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/requests/{requestId}/recipients/{recipientId}/cancellation-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 지원 대상자 생성 대기 취소 영향 조회
+         * @description 현재 지원 쓰기 권한으로 승인된 VM 또는 LLM 명단의 한 대상자를 확인합니다. 조회는 상태를 변경하지 않습니다.
+         */
+        get: operations["getAdminRequestRecipientCancellationImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/requests/{requestId}/recipients/{recipientId}/retry": {
         parameters: {
             query?: never;
@@ -3835,6 +3875,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/{requestId}/recipients/{recipientId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 대상자 생성 대기 취소
+         * @description 정확한 현재 영향 확인과 사유로 한 대상자만 취소합니다. 승인, 다른 대상자, 구성원과 초대는 유지하며 등록된 자원은 회수하지 않습니다. 같은 수행자와 확인 지문 및 사유의 재요청은 현재 재인가 후 기존 결과를 반환합니다.
+         */
+        post: operations["cancelRequestRecipient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requests/{requestId}/recipients/{recipientId}/cancellation-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 대상자 생성 대기 취소 영향 조회
+         * @description 현재 실제 OWNER으로 승인된 VM 또는 LLM 명단의 한 대상자를 확인합니다. 조회는 상태를 변경하지 않습니다.
+         */
+        get: operations["getRequestRecipientCancellationImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resources": {
         parameters: {
             query?: never;
@@ -5990,6 +6070,11 @@ export interface components {
             /** Format: uuid */
             vmId: string;
         };
+        CancelRequestRecipientRequest: {
+            confirmation: components["schemas"]["TerminationConfirmation"];
+            /** @description 해당 대상자의 생성 대기를 취소하는 사유 */
+            reason: string;
+        };
         Capacity: {
             /** Format: int64 */
             cpuThreads: number;
@@ -6058,6 +6143,9 @@ export interface components {
         ConfirmOpenRouterAccountRequest: {
             /** @description Account 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
+        };
+        ConfirmTerminationRequest: {
+            confirmation: components["schemas"]["TerminationConfirmation"];
         };
         ConsentInput: {
             docType: components["schemas"]["TermsDocType"];
@@ -9230,14 +9318,61 @@ export interface components {
              */
             id: string;
         };
+        RequestRecipientCancellationCapability: {
+            /** @description 취소할 수 없는 이유. 등록 자원은 기존 상세와 삭제 또는 폐기 경로에서 처리합니다. */
+            blockedReason?: string | null;
+            /** @description 일반 신청 경로에서 현재 실제 OWNER로 취소할 수 있는지 */
+            ownerAllowed: boolean;
+            /** @description 관리자 지원 경로에서 기존 지원 쓰기 권한으로 취소할 수 있는지 */
+            supportAllowed: boolean;
+        };
+        /** @description 현재 한 대상자의 생성 대기 취소 영향. 조회는 가입, 큐 접수, 생성이나 취소를 실행하지 않습니다. */
+        RequestRecipientCancellationImpactResponse: {
+            allowed: boolean;
+            blockedReason?: string | null;
+            fingerprint: string;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: int32 */
+            previousAttempts: number;
+            previousReason?: string | null;
+            previousStatus: components["schemas"]["RequestRecipientStatus"];
+            /** Format: uuid */
+            recipientId: string;
+            /** Format: uuid */
+            requestId: string;
+            type: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+        };
+        /** @description 한 대상자의 생성 대기 취소 결과. 승인과 다른 대상자, 구성원 및 초대는 유지됩니다. */
+        RequestRecipientCancellationReceipt: {
+            /** Format: date-time */
+            canceledAt: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            previousAttempts: number;
+            previousReason?: string | null;
+            previousStatus: components["schemas"]["RequestRecipientStatus"];
+            reason: string;
+            /** Format: uuid */
+            recipientId: string;
+            /** Format: uuid */
+            requestId: string;
+            /** Format: uuid */
+            workspaceId: string;
+        };
         RequestRecipientResponse: {
+            cancellation?: components["schemas"]["RequestRecipientCancellationReceipt"] | null;
+            cancellationCapability: components["schemas"]["RequestRecipientCancellationCapability"];
             /** Format: uuid */
             id: string;
             /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 학생 지원 권한이 있는 관리자에게만 보입니다. */
             invitee?: string | null;
             /** @description 대상 계정의 이름. 가입 전인 초대 대상자는 null입니다. */
             name?: string | null;
-            /** @description 만들지 않았거나 실패한 이유. */
+            /** @description 기존 실패 또는 자동 종료 이유. 개별 생성 대기 취소 사유는 cancellation.reason으로 구분하며 이전 실패 이력은 보존합니다. */
             reason?: string | null;
             /**
              * Format: uuid
@@ -9251,7 +9386,10 @@ export interface components {
              */
             userId?: string | null;
         };
-        /** @enum {string} */
+        /**
+         * @description 신청 대상자의 생성 상태. CREATED는 자원 행 등록이며 외부 준비 완료와 다릅니다. CANCELED는 자동 종료 또는 승인 결정을 유지한 개별 생성 대기 취소를 포함합니다.
+         * @enum {string}
+         */
         RequestRecipientStatus: "PENDING_JOIN" | "QUEUED" | "CREATING" | "CREATED" | "SKIPPED_EXPIRED" | "SKIPPED_INELIGIBLE" | "FAILED" | "CANCELED";
         RequestReviewResponse: {
             comment?: string | null;
@@ -9598,6 +9736,12 @@ export interface components {
             subprotocol: string;
             ticket: string;
             wsPath: string;
+        };
+        TerminationConfirmation: {
+            /** @description 정확한 대상과 종료 영향을 확인했을 때만 true */
+            confirmed: boolean;
+            /** @description 현재 종료 영향 조회에서 받은 지문 */
+            fingerprint: string;
         };
         /** @enum {string} */
         TermsDocType: "TERMS_OF_SERVICE" | "PRIVACY_POLICY";
@@ -13792,6 +13936,74 @@ export interface operations {
             };
         };
     };
+    cancelAdminRequestRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                recipientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequestRecipientRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestRecipientCancellationReceipt"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminRequestRecipientCancellationImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                recipientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestRecipientCancellationImpactResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     retryRequestRecipient: {
         parameters: {
             query?: never;
@@ -15619,7 +15831,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmTerminationRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -15785,7 +16001,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmTerminationRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -18846,6 +19066,74 @@ export interface operations {
             };
         };
     };
+    cancelRequestRecipient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                recipientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequestRecipientRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestRecipientCancellationReceipt"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getRequestRecipientCancellationImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: string;
+                recipientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RequestRecipientCancellationImpactResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listResources: {
         parameters: {
             query?: {
@@ -20171,7 +20459,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmTerminationRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -20302,7 +20594,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmTerminationRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {

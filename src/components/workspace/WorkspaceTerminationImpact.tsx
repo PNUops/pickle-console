@@ -1,10 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import type { components } from '../../api/schema'
 import { requestReaderKey } from '../../api/request-review'
-import { fetchWorkspaceTerminationImpact } from '../../api/workspace-termination'
 import { useAuth } from '../../auth/auth-context'
-import { useActiveResult } from '../../lib/use-active-result'
 import { formatDateTime } from '../../lib/format'
 import { adminPaths, consolePaths } from '../../lib/paths'
 import { withListReturn } from '../../lib/list-url'
@@ -14,6 +12,7 @@ import { gpuPreviewEnabled } from '../../lib/gpu-preview'
 import { requestRecipientStatusLabel } from '../../lib/request-recipient-status'
 import { resourceTypeEntry } from '../resource/registry'
 import { Alert, Badge, Button, Modal, Spinner } from '../ui'
+import { useWorkspaceTerminationImpact } from './use-workspace-termination-impact'
 
 type Impact = components['schemas']['WorkspaceTerminationImpactResponse']
 type Target = components['schemas']['WorkspaceTerminationTargetResponse']
@@ -40,76 +39,23 @@ function TerminationImpactAction({ workspaceId, invitationId, admin, targetLabel
   targetLabel?: string
   source: string
 }) {
-  const active = useActiveResult()
-  const generation = useRef(0)
-  const loadingRef = useRef(false)
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [impact, setImpact] = useState<Impact | null>(null)
-  const [targets, setTargets] = useState<Target[]>([])
-  const [resources, setResources] = useState<BlockingResource[]>([])
-  const [page, setPage] = useState(0)
-  const [resourcePage, setResourcePage] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [stale, setStale] = useState(false)
-  const title = invitationId ? '초대 취소 영향' : '워크스페이스 삭제 영향'
-
-  const load = async (part: 'refresh' | 'targets' | 'resources' = 'refresh') => {
-    if (loadingRef.current) return
-    loadingRef.current = true
-    const issued = ++generation.current
-    const fresh = part === 'refresh'
-    const nextPage = fresh ? 0 : part === 'targets' ? page + 1 : page
-    const nextResourcePage = fresh ? 0 : part === 'resources' ? resourcePage + 1 : resourcePage
-    const expectedFingerprint = fresh ? undefined : impact?.fingerprint
-    setLoading(true)
-    setError(null)
-    if (fresh) { setImpact(null); setTargets([]); setResources([]); setStale(false); setPage(0); setResourcePage(0) }
-    try {
-      const next = await fetchWorkspaceTerminationImpact(workspaceId, { invitationId, admin, page: nextPage, resourcePage: nextResourcePage })
-      if (!active.current || generation.current !== issued) return
-      if (next.workspaceId !== workspaceId || (next.invitationId ?? undefined) !== invitationId || next.action !== (invitationId ? 'CANCEL_INVITATION' : 'DELETE_WORKSPACE') || next.targets.page !== nextPage || next.blockingResources.page !== nextResourcePage) {
-        setImpact(null)
-        setTargets([])
-        setResources([])
-        setError('요청한 대상이나 페이지와 조회 결과가 일치하지 않습니다. 전체 영향을 다시 조회해 주세요.')
-        return
-      }
-      if (expectedFingerprint && next.fingerprint !== expectedFingerprint) {
-        setImpact(null)
-        setTargets([])
-        setResources([])
-        setStale(true)
-        return
-      }
-      setImpact(next)
-      if (fresh || part === 'targets') setTargets((previous) => fresh ? next.targets.content : [...previous, ...next.targets.content])
-      if (fresh || part === 'resources') setResources((previous) => fresh ? next.blockingResources.content : [...previous, ...next.blockingResources.content])
-      setPage(nextPage)
-      setResourcePage(nextResourcePage)
-    } catch (failure) {
-      if (active.current && generation.current === issued) setError(failure instanceof Error ? failure.message : '종료 영향을 불러오지 못했습니다.')
-    } finally {
-      if (active.current && generation.current === issued) { loadingRef.current = false; setLoading(false) }
-    }
-  }
-
-  const close = () => {
-    ++generation.current
-    loadingRef.current = false
-    setLoading(false)
-    setOpen(false)
-    setImpact(null)
-    setTargets([])
-    setResources([])
-    setError(null)
-    setStale(false)
-  }
-
+  const read = useWorkspaceTerminationImpact({ workspaceId, invitationId, admin })
+  const close = () => { read.reset(); setOpen(false) }
   return <>
     <Button variant="secondary" size={invitationId ? 'sm' : 'md'} aria-label={targetLabel ? `${targetLabel} 종료 영향 보기` : '종료 영향 보기'}
-      onClick={() => { setOpen(true); void load() }}>종료 영향 보기</Button>
-    <Modal open={open} onClose={close} title={title} className="max-w-3xl" footer={<Button variant="secondary" onClick={close}>닫기</Button>}>
+      onClick={() => { setOpen(true); void read.load() }}>종료 영향 보기</Button>
+    <Modal open={open} onClose={close} title={invitationId ? '초대 취소 영향' : '워크스페이스 삭제 영향'} className="max-w-3xl" footer={<Button variant="secondary" onClick={close}>닫기</Button>}>
+      <WorkspaceTerminationImpactBody read={read} invitationId={invitationId} targetLabel={targetLabel} admin={admin} source={source} />
+    </Modal>
+  </>
+}
+
+export function WorkspaceTerminationImpactBody({ read, invitationId, targetLabel, admin = false, source }: {
+  read: ReturnType<typeof useWorkspaceTerminationImpact>; invitationId?: string; targetLabel?: string; admin?: boolean; source: string
+}) {
+  const { impact, targets, resources, page, resourcePage, loading, error, stale, load } = read
+  return (
       <div className="space-y-4 [overflow-wrap:anywhere]">
         <Alert variant="info">현재 종료 영향을 조회합니다. 이 조회로 신청이나 대상자가 취소되거나 리소스가 생성되지 않습니다. 실제 변경 시점의 상태는 달라질 수 있습니다.</Alert>
         {targetLabel && <p className="text-sm font-medium">대상 초대: {targetLabel}</p>}
@@ -142,8 +88,7 @@ function TerminationImpactAction({ workspaceId, invitationId, admin, targetLabel
           <Button variant="secondary" disabled={loading} onClick={() => void load()}>전체 영향 새로 조회</Button>
         </>}
       </div>
-    </Modal>
-  </>
+  )
 }
 
 function TerminationResource({ resource, admin, source }: { resource: BlockingResource; admin: boolean; source: string }) {
