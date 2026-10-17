@@ -141,7 +141,7 @@ function RequestRecipientsContent({
           등록됨은 리소스와 권한 기록이 만들어진 상태입니다. VM 프로비저닝 완료를 뜻하지 않습니다.
           실제 진행과 실패 사유는 각 리소스의 상세 보기에서 확인해 주세요.
         </Alert>}
-        <DataTable caption="대상자">
+        <DataTable caption="대상자" className="min-w-[36rem]">
           <THead>
             <TR>
               <TH>대상자</TH>
@@ -182,7 +182,7 @@ function RequestRecipientsContent({
                     {request.status === 'APPROVED' && recipient.cancellationCapability?.blockedReason && <p className="text-xs text-foreground-muted">{recipient.cancellationCapability.blockedReason}</p>}
                   </div>}</TD>
                   {hasActions && (
-                    <TD>
+                    <TD className="whitespace-nowrap">
                       {retryable && recipient.status === 'FAILED' && !cancellation && (
                         <Button
                           size="sm"
