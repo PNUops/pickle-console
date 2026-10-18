@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { Alert, Button } from '../ui'
 import { RosterInput } from '../roster/RosterInput'
 import { rosterCandidates, type RecipientCandidate } from './recipients'
+import type { ResourceType } from '../../api/queries'
 
 /**
  * A pasted roster turned into recipients: the people it names join the
@@ -11,11 +12,13 @@ import { rosterCandidates, type RecipientCandidate } from './recipients'
 export function RosterRecipients({
   workspaceId,
   orgId,
+  type,
   onAdd,
 }: {
   workspaceId: string
   /** The organisation an approver files for; absent for a workspace owner. */
   orgId: string | null
+  type?: ResourceType
   /** Returns why the roster was not added, or null once it was. */
   onAdd: (candidates: RecipientCandidate[]) => string | null
 }) {
@@ -42,6 +45,7 @@ export function RosterRecipients({
           <RosterInput
             workspaceId={workspaceId}
             orgId={orgId}
+            type={type}
             value={text}
             onChange={setText}
             label="명단"

@@ -62,9 +62,9 @@ test.each(['request result', 'access diagnostic'] as const)('opens the exact dom
   const user = userEvent.setup()
   const domain = externalDomains[0]
   const support = supportFixture(uuid(42), uuid(1))
-  const resource: UserResourceAccess = { ...support.resources[0], type: 'DOMAIN', id: domain.id, name: domain.fqdn, status: domain.status, orgId: domain.orgId }
+  const resource: UserResourceAccess = { ...support.resources[0], type: 'DOMAIN', id: domain.id, name: domain.fqdn, status: domain.status, orgId: domain.orgId! }
   support.resources = [resource]
-  support.requests = [{ ...support.requests[0], type: 'DOMAIN', resourceId: domain.id, recipientStatus: 'CREATED', orgId: domain.orgId }]
+  support.requests = [{ ...support.requests[0], type: 'DOMAIN', resourceId: domain.id, recipientStatus: 'CREATED', orgId: domain.orgId! }]
   const diagnostics: string[] = []
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser),
     http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json(support)),
@@ -161,7 +161,7 @@ test('a global account change observes an impacted request outside the selected 
   const actualRequest = await outcome.findByRole('link', { name: '테스트 기관 / 가상머신 신청' })
   expect(actualRequest).toHaveAttribute('href', `/admin/requests/${uuid(201)}?org=${uuid(2)}`)
   expect(outcome.getByText('생성 대기')).toBeInTheDocument()
-  expect(outcome.getByRole('link', { name: '플랫폼 전체에서 사용자 관계 다시 조회' })).toHaveAttribute('href', `/admin/users/${uuid(42)}`)
+  expect(outcome.getByRole('link', { name: '현재 업무 범위에서 사용자 관계 다시 조회' })).toHaveAttribute('href', `/admin/users/${uuid(42)}`)
   expect(screen.getByText('현재 관리 범위에서 연결된 신청이 없습니다.')).toBeInTheDocument()
 })
 

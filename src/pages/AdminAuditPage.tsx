@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAuditLogs, type AuditLogView } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { canViewAudit } from '../auth/permissions'
+import { hasAnyWork, hasWork, SYS_READERS } from '../auth/institution-authority'
 import { FilterBar } from '../components/FilterBar'
 import {
   Alert,
@@ -57,11 +57,10 @@ function isKnownRole(role: string): role is UserRole {
 /** 감사 로그 — 관리자가 행위자·동작·기간으로 활동 기록을 추적한다. */
 export function AdminAuditPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg, activeOrgRole, tier, options } = useAdminScope()
-  const canReadActive = !!user && canViewAudit(tier === 'org' ? (activeOrgRole ?? user.role) : user.role)
-  // 감사 로그의 범위는 조회 화면 중 가장 좁다: 역할을 보유한 기관이 아니라
-  // 행위할 수 있는(관리자나 운영자인) 기관만이다 — 로그인 IP는 운영 데이터가
-  // 아니라 증거다. 기관 선택기도 그 기관들만 담는다.
+  const { activeOrgId, activeOrg, tier, options } = useAdminScope()
+  const canReadActive = activeOrgId == null ? hasAnyWork(user, ['institution.audit.read'], SYS_READERS)
+    : hasWork(user, 'institution.audit.read', { orgId: activeOrgId }, SYS_READERS)
+  // Audit sources are evaluated against the verified immutable target institution.
   const [params, change] = useListUrl()
   const action = params.get('action') || undefined
   const actorEmail = params.get('actorEmail') ?? ''
@@ -73,7 +72,7 @@ export function AdminAuditPage() {
   const targetType = params.get('targetType') || undefined
   const targetId = params.get('targetId') || undefined
   const [selected, setSelected] = useState<AuditLogView | null>(null)
-  const targetAllowed = !targetOrgId || (isUuid(targetOrgId) && (tier === 'system' || targetOrgId === activeOrgId))
+  const targetAllowed = !targetOrgId || isUuid(targetOrgId) && hasWork(user, 'institution.audit.read', { orgId: targetOrgId }, SYS_READERS)
 
   // 입력은 즉시 에코하되 쿼리 키는 디바운스된 값으로만 바꿔 타이핑마다
   // 요청이 나가지 않게 한다.
@@ -111,7 +110,7 @@ export function AdminAuditPage() {
     return (
       <EmptyState
         title="이 기관의 감사 로그를 볼 수 없습니다"
-        description="기관 운영자 또는 기관 관리자 역할이 있는 관리 범위를 선택하세요."
+        description="감사 기록 조회 업무가 있는 기관 범위를 선택하세요."
       />
     )
   }
@@ -121,8 +120,7 @@ export function AdminAuditPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">감사 로그</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {activeOrg?.name ?? '플랫폼 전체'} 관리자와 사용자의 활동 기록입니다. 열람 역할만
-          보유한 기관의 기록은 여기 보이지 않습니다.
+          {activeOrg?.name ?? '허용된 기관'}의 활동 기록입니다. 현재 부여된 감사 조회 업무와 검증된 기록 대상 기관을 적용합니다.
         </p>
       </div>
 

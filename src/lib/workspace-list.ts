@@ -49,8 +49,8 @@ export function filterWorkspaces(rows: AdminWorkspaceOption[], state: ReturnType
   return rows.filter((row) => (!state.kind || row.kind === state.kind)
     && row.name.toLocaleLowerCase('ko-KR').includes(text)).sort((left, right) => {
     const names = left.name.localeCompare(right.name, 'ko-KR', { numeric: true })
-    const difference = state.sort === 'created-desc' ? right.createdAt.localeCompare(left.createdAt)
-      : state.sort === 'members-desc' ? right.memberCount - left.memberCount
+    const difference = state.sort === 'created-desc' ? left.createdAt == null ? right.createdAt == null ? 0 : 1 : right.createdAt == null ? -1 : right.createdAt.localeCompare(left.createdAt)
+      : state.sort === 'members-desc' ? left.memberCount == null ? right.memberCount == null ? 0 : 1 : right.memberCount == null ? -1 : right.memberCount - left.memberCount
       : state.sort === 'name-desc' ? -names : names
     return difference || left.id.localeCompare(right.id)
   })

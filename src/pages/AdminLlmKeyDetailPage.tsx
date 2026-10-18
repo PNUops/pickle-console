@@ -22,16 +22,11 @@ import { CreditModelRulesField } from '../components/CreditModelRulesField'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 import { LimitField } from '../components/llm-key/LimitField'
 import { useAuth } from '../auth/auth-context'
-import {
-  canAdminRevokeLlmKey,
-  canReadSupportMetadata,
-  canManageLlmCredit,
-  canOperateLlmKey,
-  isSysTier,
-  managesOrg,
-} from '../auth/permissions'
+import { canReadSupportMetadata } from '../auth/permissions'
+import { canUseRowWork, hasWork, projectionAvailable, SYS_ADMIN, SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
 import {
   Button,
+  Checkbox,
   CommandBar,
   ConfirmNameModal,
   DescriptionList,
@@ -55,7 +50,6 @@ import {
 import { fieldErrorsOf } from '../lib/field-errors'
 import {
   grantPayload,
-  holdsChatChildren,
   passthroughText,
   type PassthroughEndpoint,
 } from '../lib/passthrough-endpoints'
@@ -116,13 +110,27 @@ function AdminLlmKeyDetailContent() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = searchParams.get('tab') === 'usage' ? 'usage' : 'overview'
+  const requestedTab = searchParams.get('tab')
 
   const detail = useQuery({
     queryKey: ['admin', 'llm-keys', 'detail', { keyId, orgId: scope.activeOrgId ?? null, reader }],
     queryFn: () => fetchAdminLlmKey(keyId),
     enabled: idValid,
   })
+
+  const commandContext = detail.isError || !detail.data ? null : JSON.stringify([
+    detail.data.id, detail.data.orgId, detail.data.workspaceId, detail.data.allowedWorkIds,
+    effectiveLlmKeyStatus(detail.data.status, detail.data.expiresAt), detail.data.expiresAt,
+    detail.data.tokenReferenceVisible, detail.data.budgetReferenceVisible,
+  ])
+  useEffect(() => {
+    setLimitsOpen(false)
+    setExpiryOpen(false)
+    setSuspendOpen(false)
+    setResumeOpen(false)
+    setRevokeOpen(false)
+    setModelsOpen(false)
+  }, [commandContext])
 
   const revoke = useMutation({
     mutationFn: () => revokeLlmKey(keyId),
@@ -161,17 +169,20 @@ function AdminLlmKeyDetailContent() {
   const requestReturn = exactRequest && (returnedOrg === actualOrgId || !returnedOrg && !!user && canReadSupportMetadata(user.role))
     ? returnedOrg ? proposedReturn : withListReturn(adminPaths.requestDetail(key.requestId!, actualOrgId), returnedUrl!.searchParams.get('returnTo')!) : null
   const status = effectiveLlmKeyStatus(key.status, key.expiresAt)
-  const accountReadable = !!user && (isSysTier(user.role) || key.orgId != null && managesOrg(user.managedOrgs, key.orgId))
-  const role = user && isSysTier(user.role) ? user.role : user?.managedOrgs.find((org) => org.orgId === key.orgId)?.role
-  const canOperate = !!role && canOperateLlmKey(role)
-  const canEditLimits = canOperate && EDITABLE_STATUSES.has(status)
-  const canEditCredit = !!role && canManageLlmCredit(role)
-  const canSuspend = canOperate && status === 'ACTIVE'
-  const canResume = canOperate && status === 'SUSPENDED'
-  const canRevoke = !!role && canAdminRevokeLlmKey(role) && REVOKABLE_STATUSES.has(status)
+  const accountReadable = hasWork(user, 'institution.account.read', { orgId: key.orgId }, SYS_READERS)
+  const canEditToken = canUseRowWork(user, key, 'llm.token.operate', SYS_OPERATORS)
+  const canEditCredit = canUseRowWork(user, key, 'llm.key.budget', SYS_ADMIN)
+  const canEditLimits = (canEditToken || canEditCredit) && EDITABLE_STATUSES.has(status)
+  const canSuspend = canUseRowWork(user, key, 'llm.state.operate', SYS_OPERATORS) && status === 'ACTIVE'
+  const canResume = canUseRowWork(user, key, 'llm.state.operate', SYS_OPERATORS) && status === 'SUSPENDED'
+  const canRevoke = canUseRowWork(user, key, 'llm.revoke', SYS_ADMIN) && REVOKABLE_STATUSES.has(status)
   // An expired key takes a later date and comes back; a revoked one never does.
-  const canChangeExpiry = canOperate && status !== 'REVOKED'
+  const canChangeExpiry = canUseRowWork(user, key, 'llm.period', SYS_OPERATORS) && status !== 'REVOKED'
   const hasActions = canEditLimits || canChangeExpiry || canSuspend || canResume || canRevoke
+  const tokenVisible = projectionAvailable(key, 'metadataVisible') || projectionAvailable(key, 'observationVisible') || projectionAvailable(key, 'tokenReferenceVisible')
+  const budgetVisible = projectionAvailable(key, 'financeVisible') || projectionAvailable(key, 'budgetReferenceVisible')
+  const usageVisible = projectionAvailable(key, 'observationVisible') || projectionAvailable(key, 'financeVisible')
+  const activeTab = requestedTab === 'usage' && usageVisible ? 'usage' : 'overview'
 
   const updateCached = (updated: AdminLlmKeyDetail, message: string) => {
     // A completed save may outlive its target or account. Refresh lists, but
@@ -205,8 +216,8 @@ function AdminLlmKeyDetailContent() {
       <PageHeader
         eyebrow={`${key.orgName} · ${key.workspaceName}`}
         title={key.name}
-        description={key.purpose ?? '용도가 기록되지 않았습니다.'}
-        actions={<><LlmKeyStatusBadge status={status} /><AdminResourceAccessLink type="LLM_API_KEY" resourceId={key.id} /></>}
+        description={projectionAvailable(key, 'metadataVisible') ? key.purpose ?? '용도가 기록되지 않았습니다.' : '명령이나 조회에 필요한 대상 참조입니다.'}
+        actions={<><LlmKeyStatusBadge status={status} />{(canUseRowWork(user, key, 'llm.acl.support.read', SYS_READERS) || canUseRowWork(user, key, 'llm.acl.support.manage', SYS_ADMIN)) && <AdminResourceAccessLink type="LLM_API_KEY" resourceId={key.id} orgId={key.orgId} workspaceId={key.workspaceId} />}</>}
       />
 
       {hasActions && (
@@ -254,7 +265,7 @@ function AdminLlmKeyDetailContent() {
           가른 실질적인 이득이다. */}
       <Tabs
         aria-label="LLM API 키 화면"
-        tabs={KEY_DETAIL_TABS}
+        tabs={KEY_DETAIL_TABS.filter((tab) => tab.id !== 'usage' || usageVisible)}
         value={activeTab}
         onChange={(id) => {
           const next = new URLSearchParams(searchParams)
@@ -265,7 +276,7 @@ function AdminLlmKeyDetailContent() {
       />
 
       <TabPanel id="usage" active={activeTab === 'usage'}>
-        {activeTab === 'usage' && (
+        {activeTab === 'usage' && usageVisible && (
           <LlmKeyUsageSection keyId={keyId} status={status} audience="admin" />
         )}
       </TabPanel>
@@ -277,9 +288,9 @@ function AdminLlmKeyDetailContent() {
           { term: '기관', description: key.orgName },
           { term: '워크스페이스', description: key.workspaceName },
           { term: '생성일', description: formatDateTime(key.createdAt) },
-          { term: '마지막 사용', description: key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음' },
+          { term: '마지막 사용', description: !projectionAvailable(key, 'metadataVisible') && !projectionAvailable(key, 'observationVisible') ? '제공되지 않음' : key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음' },
           { term: '만료', description: key.expiresAt ? formatDateTime(key.expiresAt) : '만료 없음' },
-          { term: '유료 모델 연결', description: key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
+          { term: '유료 모델 연결', description: key.creditAxisConnected == null ? '제공되지 않음' : key.creditAxisConnected ? '연결됨' : '연결되지 않음' },
           {
             term: 'OpenRouter 사업 계정',
             description: key.openrouterAccountId && key.openrouterAccountName ? (accountReadable ?
@@ -289,12 +300,12 @@ function AdminLlmKeyDetailContent() {
               >
                 {key.openrouterAccountName}
               </Link> : <span>{key.openrouterAccountName}</span>
-            ) : '미결합',
+            ) : budgetVisible || projectionAvailable(key, 'metadataVisible') ? '미결합' : '제공되지 않음',
           },
         ]}
       />
 
-      <section className="space-y-3 rounded-panel border border-stroke-subtle bg-surface-card p-4">
+      {(tokenVisible || budgetVisible) && <section className="space-y-3 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="type-section-title">현재 한도</h2>
           {/* 위 두 목록이 실제로 무엇을 남기는지는 문자열만 봐서는 모른다. */}
@@ -305,33 +316,33 @@ function AdminLlmKeyDetailContent() {
         <DescriptionList
           columns={3}
           items={[
-            { term: 'RPM', description: limitText(key.rpm) },
-            { term: 'TPM', description: limitText(key.tpm) },
-            { term: '일일 토큰', description: limitText(key.dailyTokens) },
-            { term: '동시 요청', description: limitText(key.concurrency) },
-            { term: '금액 한도', description: creditText(key.creditLimit) },
+            { term: 'RPM', description: tokenVisible ? limitText(key.rpm) : '제공되지 않음' },
+            { term: 'TPM', description: tokenVisible ? limitText(key.tpm) : '제공되지 않음' },
+            { term: '일일 토큰', description: tokenVisible ? limitText(key.dailyTokens) : '제공되지 않음' },
+            { term: '동시 요청', description: tokenVisible ? limitText(key.concurrency) : '제공되지 않음' },
+            { term: '금액 한도', description: budgetVisible ? key.creditLimit == null ? '제공되지 않음' : creditText(key.creditLimit) : '제공되지 않음' },
             {
               term: '금액 리셋',
-              description: key.creditLimitReset
+              description: !budgetVisible ? '제공되지 않음' : key.creditLimitReset
                 ? CREDIT_LIMIT_RESET_LABELS[key.creditLimitReset]
                 : '리셋 없는 총액 상한',
             },
             {
               term: '허용 유료 모델',
               description:
-                key.creditAllowedModels.length === 0
+                key.creditAllowedModels == null ? '제공되지 않음' : key.creditAllowedModels.length === 0
                   ? '제한 없음 (금액 한도 안에서 전부)'
                   : key.creditAllowedModels.join(', '),
             },
             {
               term: '차단 유료 모델',
               description:
-                key.creditDeniedModels.length === 0
+                key.creditDeniedModels == null ? '제공되지 않음' : key.creditDeniedModels.length === 0
                   ? '없음'
                   : key.creditDeniedModels.join(', '),
             },
-            { term: '기능 권한', description: passthroughText(key.passthroughEndpoints) },
-            { term: '금액 관측', description: <KeyCreditObservation llmKey={key} /> },
+            { term: '기능 권한', description: key.passthroughEndpoints == null ? '제공되지 않음' : passthroughText(key.passthroughEndpoints) },
+            { term: '금액 관측', description: projectionAvailable(key, 'financeVisible') ? <KeyCreditObservation llmKey={key} /> : '제공되지 않음' },
           ]}
         />
         <LlmKeyModelsModal
@@ -340,7 +351,7 @@ function AdminLlmKeyDetailContent() {
           onClose={() => setModelsOpen(false)}
           variant="admin"
         />
-      </section>
+      </section>}
 
       {key.requestId && actualOrgId && (
         <MessageBar
@@ -357,9 +368,10 @@ function AdminLlmKeyDetailContent() {
       )}
       </TabPanel>
 
-      {limitsOpen && (
+      {limitsOpen && canEditLimits && (
         <LimitsModal
           llmKey={key}
+          canEditToken={canEditToken}
           canEditCredit={canEditCredit}
           onClose={() => setLimitsOpen(false)}
           onSaved={(updated) => {
@@ -368,7 +380,7 @@ function AdminLlmKeyDetailContent() {
           }}
         />
       )}
-      {expiryOpen && (
+      {expiryOpen && canChangeExpiry && (
         <ExpiryModal
           llmKey={key}
           onClose={() => setExpiryOpen(false)}
@@ -378,7 +390,7 @@ function AdminLlmKeyDetailContent() {
           }}
         />
       )}
-      {suspendOpen && (
+      {suspendOpen && canSuspend && (
         <SuspendModal
           open
           llmKey={key}
@@ -389,7 +401,7 @@ function AdminLlmKeyDetailContent() {
           }}
         />
       )}
-      {resumeOpen && (
+      {resumeOpen && canResume && (
         <ResumeModal
           open
           llmKey={key}
@@ -401,13 +413,13 @@ function AdminLlmKeyDetailContent() {
         />
       )}
       <ConfirmNameModal
-        open={revokeOpen}
+        open={revokeOpen && canRevoke}
         onClose={() => setRevokeOpen(false)}
         title="LLM API 키 폐기"
         expectedName={key.name}
         confirmLabel="폐기"
         loading={revoke.isPending}
-        onConfirm={() => revoke.mutate()}
+        onConfirm={() => { if (canRevoke) revoke.mutate() }}
       >
         <MessageBar variant="danger" title="되돌릴 수 없습니다">
           폐기 뒤에는 이 키로 보낸 모든 요청이 거부됩니다.
@@ -426,11 +438,13 @@ function valueOf(raw: string, allowZero = false): number | null {
 
 function LimitsModal({
   llmKey,
+  canEditToken,
   canEditCredit,
   onClose,
   onSaved,
 }: {
   llmKey: AdminLlmKeyDetail
+  canEditToken: boolean
   canEditCredit: boolean
   onClose: () => void
   onSaved: (updated: AdminLlmKeyDetail) => void
@@ -443,39 +457,41 @@ function LimitsModal({
   const [concurrency, setConcurrency] = useState(
     llmKey.concurrency == null ? '' : String(llmKey.concurrency),
   )
-  const [creditLimit, setCreditLimit] = useState(String(llmKey.creditLimit))
+  const [creditLimit, setCreditLimit] = useState(llmKey.creditLimit == null ? '' : String(llmKey.creditLimit))
   const [creditLimitReset, setCreditLimitReset] = useState(llmKey.creditLimitReset ?? '')
   const [creditModelRules, setCreditModelRules] = useState(
-    formatCreditModelRules(llmKey.creditAllowedModels, llmKey.creditDeniedModels),
+    formatCreditModelRules(llmKey.creditAllowedModels ?? [], llmKey.creditDeniedModels ?? []),
   )
   const [passthroughEndpoints, setPassthroughEndpoints] = useState<
     readonly PassthroughEndpoint[]
-  >(llmKey.passthroughEndpoints)
+  >(llmKey.passthroughEndpoints ?? [])
+  const [chatEnabled, setChatEnabled] = useState(llmKey.chatEnabled)
+  const { user } = useAuth()
+  const accountReadable = hasWork(user, 'institution.account.read', { orgId: llmKey.orgId }, SYS_READERS)
+  const accountFinanceReadable = hasWork(user, 'institution.account.finance.read', { orgId: llmKey.orgId }, SYS_READERS)
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
-  const initialBindingAllowed = llmKey.openrouterAccountId == null &&
-    llmKey.creditLimit <= 0 && !llmKey.creditAxisConnected
+  const initialBindingAllowed = llmKey.initialAccountBindingAllowed === true
   const accounts = useQuery({
     queryKey: ['admin', 'llm-accounts', { orgId: llmKey.orgId ?? null }],
     queryFn: () => fetchOpenRouterAccounts(llmKey.orgId ?? undefined),
-    enabled: canEditCredit && initialBindingAllowed && llmKey.orgId != null,
+    enabled: canEditCredit && accountReadable && initialBindingAllowed && llmKey.orgId != null,
   })
-  const eligibleAccounts = (accounts.data ?? []).filter((account) => account.eligibleForBinding)
+  const referencesKnown = llmKey.accountReferences != null || accounts.isSuccess
+  const referencesPending = llmKey.accountReferences == null && accounts.isFetching
+  const eligibleAccounts = (llmKey.accountReferences ?? accounts.data ?? []).filter((account) => account.eligibleForBinding)
 
   // 이미 연결된 키는 위 목록 조회가 꺼져 있다. 그래도 배정 판정에는 그 계정의
   // 배정 합계와 잔액이 필요하므로 단건으로 따로 읽는다.
   const boundAccount = useQuery({
     queryKey: ['admin', 'llm-account', llmKey.openrouterAccountId],
     queryFn: () => fetchOpenRouterAccount(llmKey.openrouterAccountId!),
-    enabled: canEditCredit && llmKey.openrouterAccountId != null,
+    enabled: canEditCredit && accountFinanceReadable && llmKey.openrouterAccountId != null,
   })
-  const judgementAccount =
-    boundAccount.data ??
-    (eligibleAccounts.length === 1
-      ? eligibleAccounts[0]
-      : eligibleAccounts.find((account) => account.id === openrouterAccountId) ?? null)
+  const selectedAccountId = eligibleAccounts.length === 1 ? eligibleAccounts[0].id : openrouterAccountId
+  const judgementAccount = boundAccount.data ?? accounts.data?.find((account) => account.id === selectedAccountId)
   const pendingCredit = Number(creditLimit)
   // 자기 키의 현재 한도는 **그 키가 판정 대상 계정에 이미 연결됐을 때만** 뺀다.
   // 처음 연결되는 키는 합계에 없으므로 빼면 없는 여유를 만들어 낸다.
@@ -484,12 +500,12 @@ function LimitsModal({
       ? llmKey.creditLimit
       : 0
   const judgement =
-    canEditCredit && judgementAccount && Number.isFinite(pendingCredit) && pendingCredit > 0
+    canEditCredit && judgementAccount?.allocation != null && judgementAccount.credits != null && Number.isFinite(pendingCredit) && pendingCredit > 0
       ? evaluateAllocation({
           allocation: judgementAccount.allocation,
           credits: judgementAccount.credits,
           pendingAmount: pendingCredit,
-          excludeAmount,
+          excludeAmount: excludeAmount ?? 0,
         })
       : null
 
@@ -534,11 +550,15 @@ function LimitsModal({
       errors.tpm = 'TPM은 RPM보다 작을 수 없습니다.'
     }
     const credit = Number(creditLimit)
+    if (canEditCredit && (llmKey.creditLimit == null || llmKey.creditAllowedModels == null || llmKey.creditDeniedModels == null || llmKey.passthroughEndpoints == null)) errors.creditLimit = '현재 예산 정책을 확인할 수 없습니다. 키 정보를 다시 조회해 주세요.'
     if (canEditCredit && (!Number.isFinite(credit) || credit < 0)) {
       errors.creditLimit = '금액 한도는 0 이상의 숫자여야 합니다.'
     }
     if (canEditCredit && !errors.creditLimit && creditLimitReset && !(credit > 0)) {
       errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
+    }
+    if (canEditCredit && credit > 0 && llmKey.openrouterAccountId == null && !initialBindingAllowed) {
+      errors.openrouterAccountId = '현재 키의 첫 사업 계정 결합이 허용되지 않았습니다. 키 정보를 다시 조회해 주세요.'
     }
     const parsedRules = parseCreditModelRules(creditModelRules)
     const parsedModels = parsedRules.allowed
@@ -551,9 +571,9 @@ function LimitsModal({
     }
     // Deny-only rules remain valid without a positive credit limit.
     if (canEditCredit && credit > 0 && initialBindingAllowed) {
-      if (accounts.isPending) {
+      if (referencesPending) {
         errors.openrouterAccountId = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
-      } else if (accounts.isError) {
+      } else if (!referencesKnown) {
         errors.openrouterAccountId = '사업 계정 목록을 불러오지 못해 유료 모델을 연결할 수 없습니다.'
       } else if (eligibleAccounts.length === 0) {
         errors.openrouterAccountId = '관리용 키까지 확인된 활성 사업 계정이 필요합니다.'
@@ -564,36 +584,15 @@ function LimitsModal({
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     save.mutate({
-      rpm: parsed.rpm,
-      tpm: parsed.tpm,
-      dailyTokens: parsed.dailyTokens,
-      concurrency: parsed.concurrency,
-      creditLimit: canEditCredit ? credit : llmKey.creditLimit,
-      creditLimitReset: canEditCredit
-        ? (creditLimitReset as AdminLlmKeyLimits['creditLimitReset']) || null
-        : llmKey.creditLimitReset ?? null,
-      // 전체 교체라 편집 권한이 없는 역할도 현재 값을 그대로 되돌려 보낸다.
-      // 두 목록 다 그래야 한다. 한쪽만 되돌려 보내면 금액을 못 만지는 역할이
-      // 다른 칸을 저장하는 순간 나머지 목록이 지워진다.
-      //
-      // 이 삼항은 방어선 두 겹째다. 그 역할에게는 입력란이 없어 state 가 키 값
-      // 그대로라, 삼항을 걷어내고 parsed 를 그냥 보내도 값은 같고 테스트도 초록으로
-      // 남는다. 실제 데이터 소멸은 빈 배열을 보내거나 필드를 아예 빠뜨릴 때
-      // 일어나고, 테스트가 지키는 것은 그쪽이다. 정리하려거든 그 사실을 알고 해라.
-      creditAllowedModels: canEditCredit ? parsedModels : llmKey.creditAllowedModels,
-      creditDeniedModels: canEditCredit ? parsedDeniedModels : llmKey.creditDeniedModels,
-      // A role that cannot change money may still turn Chat on or off, since
-      // Chat works on both axes; the field below offers it Chat alone, so the
-      // rest of the list goes back as it came. Leaving the field out is 422,
-      // and an empty list would revoke every feature.
-      passthroughEndpoints: grantPayload(passthroughEndpoints),
-      openrouterAccountId:
-        llmKey.openrouterAccountId ??
-        (canEditCredit && initialBindingAllowed && credit > 0
-          ? eligibleAccounts.length === 1
-            ? eligibleAccounts[0].id
-            : openrouterAccountId || null
-          : null),
+      ...(canEditToken ? { rpm: parsed.rpm, tpm: parsed.tpm, dailyTokens: parsed.dailyTokens, concurrency: parsed.concurrency,
+        ...(chatEnabled == null ? {} : { chatEnabled }) } : {}),
+      ...(canEditCredit ? {
+        creditLimit: credit, creditLimitReset: (creditLimitReset as AdminLlmKeyLimits['creditLimitReset']) || null,
+        creditAllowedModels: parsedModels, creditDeniedModels: parsedDeniedModels,
+        passthroughEndpoints: grantPayload(passthroughEndpoints),
+        ...(llmKey.openrouterAccountId == null && initialBindingAllowed && credit > 0
+          ? { openrouterAccountId: selectedAccountId || null } : {}),
+      } : {}),
     })
   }
 
@@ -610,7 +609,7 @@ function LimitsModal({
             </ul>
           </MessageBar>
         )}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {canEditToken && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LimitField label="RPM" min={1} value={rpm} onChange={setRpm} error={fieldErrors.rpm} />
           <LimitField label="TPM" min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
           <LimitField
@@ -627,23 +626,9 @@ function LimitsModal({
             onChange={setConcurrency}
             error={fieldErrors.concurrency}
           />
-        </div>
-        {!canEditCredit && (
-          <PassthroughEndpointField
-            label="Chat 권한"
-            value={passthroughEndpoints}
-            onChange={setPassthroughEndpoints}
-            rows={['chat']}
-            // Unticking Chat would drop web search or PDF OCR with it, a change
-            // on the money side this role cannot make.
-            locked={holdsChatChildren(passthroughEndpoints) ? ['chat'] : []}
-            description={
-              holdsChatChildren(passthroughEndpoints)
-                ? 'Chat 아래 기능이 부여된 키라 Chat을 회수할 수 없습니다.'
-                : ''
-            }
-          />
-        )}
+        </div>}
+        {canEditToken && !canEditCredit && <Checkbox label="Chat 권한" checked={chatEnabled === true} disabled={chatEnabled == null}
+          onChange={(event) => setChatEnabled(event.target.checked)} description="Chat만 변경합니다. 숨겨진 유료 기능 목록은 유지하며, 의존 기능이 있으면 서버가 회수를 거절할 수 있습니다." />}
         {canEditCredit && (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -679,14 +664,20 @@ function LimitsModal({
             <PassthroughEndpointField
               label="부여할 기능 권한"
               value={passthroughEndpoints}
-              onChange={setPassthroughEndpoints}
+              locked={!canEditToken ? ['chat'] : []}
+              onChange={(next) => {
+                if (!canEditToken && next.includes('chat') !== llmKey.chatEnabled) {
+                  setError('Chat 변경에는 토큰 한도 변경 업무가 별도로 필요합니다.'); return
+                }
+                setPassthroughEndpoints(next); setChatEnabled(next.includes('chat'))
+              }}
             />
             <OpenRouterBindingField
               llmKey={llmKey}
               initialBindingAllowed={initialBindingAllowed}
               accounts={eligibleAccounts}
-              loading={accounts.isPending}
-              failed={accounts.isError}
+              loading={referencesPending}
+              failed={!referencesKnown && !referencesPending}
               value={openrouterAccountId}
               onChange={setOpenrouterAccountId}
               error={fieldErrors.openrouterAccountId}
@@ -719,26 +710,29 @@ function OpenRouterBindingField({
 }: {
   llmKey: AdminLlmKeyDetail
   initialBindingAllowed: boolean
-  accounts: Awaited<ReturnType<typeof fetchOpenRouterAccounts>>
+  accounts: readonly { id: string; name: string }[]
   loading: boolean
   failed: boolean
   value: string
   onChange: (value: string) => void
   error?: string
 }) {
+  const { user } = useAuth()
+  const canReadAccount = hasWork(user, 'institution.account.read', { orgId: llmKey.orgId }, SYS_READERS)
   if (llmKey.openrouterAccountId && llmKey.openrouterAccountName) {
     return (
       <MessageBar title="연결된 사업 계정은 바꿀 수 없습니다">
-        <Link
+        {canReadAccount ? <Link
           to={adminPaths.llmAccountDetail(llmKey.openrouterAccountId, llmKey.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
         >
           {llmKey.openrouterAccountName}
-        </Link>
+        </Link> : <strong>{llmKey.openrouterAccountName}</strong>}
         으로 계속 결제됩니다. 다른 사업 계정으로 옮기려면 새 키를 발급해 전환해야 합니다.
       </MessageBar>
     )
   }
+  if (!('initialAccountBindingAllowed' in llmKey) || llmKey.initialAccountBindingAllowed == null) return <MessageBar>첫 사업 계정 결합의 현재 조건이 제공되지 않아 새 계정에 결합할 수 없습니다.</MessageBar>
   if (!initialBindingAllowed) {
     return (
       <MessageBar variant="warning" title="이 키는 이 화면에서 사업 계정에 연결할 수 없습니다">
@@ -764,9 +758,9 @@ function OpenRouterBindingField({
   if (accounts.length === 0) {
     return (
       <MessageBar variant="warning" title="연결할 수 있는 사업 계정이 없습니다">
-        <Link to={adminPaths.llmAccounts(llmKey.orgId ?? undefined)} className="font-semibold underline underline-offset-2">
+        {canReadAccount ? <Link to={adminPaths.llmAccounts(llmKey.orgId ?? undefined)} className="font-semibold underline underline-offset-2">
           OpenRouter 사업 계정 관리
-        </Link>
+        </Link> : <span>기관의 사업 계정 담당자</span>}
         에서 관리용 키를 먼저 등록하세요.
       </MessageBar>
     )

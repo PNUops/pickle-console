@@ -15,7 +15,8 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageNotice, isSysTier } from '../auth/permissions'
+import { isSysTier } from '../auth/permissions'
+import { hasWork, SYS_ADMIN } from '../auth/institution-authority'
 import { NoticeImage } from '../components/NoticeImage'
 import { NoticeContent } from '../components/NoticeContent'
 import { NoticePopupCard } from '../components/NoticePopupCard'
@@ -82,7 +83,7 @@ function fromDateTimeInput(value: string): string | null {
  */
 export function AdminNoticesPage() {
   const { user } = useAuth()
-  const canManage = !!user && canManageNotice(user.role)
+  const canManage = hasWork(user, 'notice.manage', {}, SYS_ADMIN)
   const scope = useAdminScope()
   const navigate = useNavigate()
   const [params, change, normalize] = useListUrl()
@@ -165,7 +166,7 @@ function NoticeAuthoringSurface({ noticeId, creating }: { noticeId: string | nul
   const location = useLocation()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const canManage = !!user && canManageNotice(user.role)
+  const canManage = hasWork(user, 'notice.manage', {}, SYS_ADMIN)
   const returnPath = noticeListReturn(params.get('returnTo'), scope.activeOrgId, !!user && isSysTier(user.role))
   const [creationReceipt] = useState<AdminNoticeView | null>(() => {
     const state = location.state as { createdNotice?: AdminNoticeView } | null
@@ -180,7 +181,7 @@ function NoticeAuthoringSurface({ noticeId, creating }: { noticeId: string | nul
   return <div className="space-y-6">
     <nav><Link className="text-sm font-medium text-primary-700 hover:underline" to={returnPath}>← 공지사항 목록</Link></nav>
     <div><h1 className="text-2xl font-bold">{creating ? '공지 등록' : '공지 수정'}</h1><p className="mt-1 text-sm text-neutral-500">평문 본문과 이미지, 게시 기간을 설정하고 저장 전 내용을 미리봅니다.</p></div>
-    {!canManage && <Alert variant="danger">이 역할은 공지를 등록하거나 수정할 수 없습니다.</Alert>}
+    {!canManage && <Alert variant="danger">공지 작성·변경 업무가 없습니다.</Alert>}
     {invalid && <Alert variant="danger">공지 ID가 올바르지 않습니다.</Alert>}
     {!creating && detail.isPending && !invalid && canManage && <Spinner label="공지 편집 정보 불러오는 중" />}
     {!creating && detail.isError && <Alert variant="danger">{detail.error.message}<Button variant="secondary" onClick={() => void detail.refetch()}>편집 정보 다시 조회</Button></Alert>}

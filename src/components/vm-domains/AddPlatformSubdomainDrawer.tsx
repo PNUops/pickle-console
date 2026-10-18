@@ -124,7 +124,7 @@ export function AddPlatformSubdomainDrawer({
   // 접수 후에는 폴링으로 갱신되는 서버 상태를 우선하고, 아직 반영 전이면
   // 접수 응답을 그대로 보여준다.
   const livePub = accepted
-    ? (vm.publications.find((p) => p.domain.id === accepted.domain.id) ?? accepted)
+    ? (vm.publications?.find((p) => p.domain.id === accepted.domain.id) ?? accepted)
     : null
 
   return (

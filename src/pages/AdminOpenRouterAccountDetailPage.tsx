@@ -15,7 +15,7 @@ import {
 import { CreditModelRulesField } from '../components/CreditModelRulesField'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageOpenRouterAccount } from '../auth/permissions'
+import { hasWork, projectionAvailable, SYS_ADMIN, SYS_READERS } from '../auth/institution-authority'
 import {
   Badge,
   Button,
@@ -99,7 +99,7 @@ function preserveObservedCredits(
   cached: OpenRouterAccount | undefined,
   mutationResult: OpenRouterAccount,
 ): OpenRouterAccount {
-  return cached ? { ...mutationResult, credits: cached.credits } : mutationResult
+  return cached && projectionAvailable(cached, 'financeVisible') && projectionAvailable(mutationResult, 'financeVisible') ? { ...mutationResult, credits: cached.credits } : mutationResult
 }
 
 export function AdminOpenRouterAccountDetailPage() {
@@ -108,8 +108,6 @@ export function AdminOpenRouterAccountDetailPage() {
   const idValid = isUuid(accountId)
   const { user } = useAuth()
   const scope = useAdminScope()
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  const canManage = !!role && canManageOpenRouterAccount(role)
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
   const [stageOpen, setStageOpen] = useState(false)
@@ -156,17 +154,19 @@ export function AdminOpenRouterAccountDetailPage() {
   }
 
   const account = detail.data
+  const canManage = hasWork(user, 'institution.account.manage', { orgId: account.orgId }, SYS_ADMIN)
+  const canManageCredential = hasWork(user, 'institution.account.credential.manage', { orgId: account.orgId }, SYS_ADMIN)
   const rotation = account.rotationCredential
-  const canStage = canManage && account.status === 'ACTIVE' && rotation == null
-  const canActivate = canManage && account.status === 'ACTIVE' && rotation?.status === 'STAGED'
-  const canCancel = canManage && rotation?.status === 'STAGED'
-  const canRollback = canManage && rotation?.status === 'RETIRING'
-  const canFinalize = canManage && rotation?.status === 'RETIRING' &&
+  const canStage = canManageCredential && account.status === 'ACTIVE' && rotation == null
+  const canActivate = canManageCredential && account.status === 'ACTIVE' && rotation?.status === 'STAGED'
+  const canCancel = canManageCredential && rotation?.status === 'STAGED'
+  const canRollback = canManageCredential && rotation?.status === 'RETIRING'
+  const canFinalize = canManageCredential && rotation?.status === 'RETIRING' &&
     reconciledAfterActivation(account.activeCredential)
   // OpenRouter에서 이미 폐기되어 최근 확인이 CREDENTIAL_ERROR인 키는
   // credentialAvailable=false가 정상이다. Safe delete는 그 암호문을 치우는 복구
   // 경로이므로 존재와 교체 상태만으로 열고, 서버가 실제 401/403을 확인한다.
-  const canDeleteActive = canManage && !!account.activeCredential && rotation == null &&
+  const canDeleteActive = canManageCredential && !!account.activeCredential && rotation == null &&
     account.boundKeyCount === 0
   const hasCredentialActions = canStage || canActivate || canCancel || canRollback || canFinalize || canDeleteActive
 
@@ -210,25 +210,25 @@ export function AdminOpenRouterAccountDetailPage() {
         columns={3}
         items={[
           { term: '기관', description: account.orgName },
-          { term: '사업', description: account.program ?? '입력하지 않음' },
-          { term: '담당자', description: account.contact ?? '입력하지 않음' },
+          { term: '사업', description: hasWork(user, 'institution.account.read', { orgId: account.orgId }, SYS_READERS) || hasWork(user, 'institution.account.manage', { orgId: account.orgId }, SYS_ADMIN) ? account.program ?? '입력하지 않음' : '제공되지 않음' },
+          { term: '담당자', description: hasWork(user, 'institution.account.read', { orgId: account.orgId }, SYS_READERS) || hasWork(user, 'institution.account.manage', { orgId: account.orgId }, SYS_ADMIN) ? account.contact ?? '입력하지 않음' : '제공되지 않음' },
           {
             term: '승인 기본 허용 목록',
             description:
-              account.defaultCreditAllowedModels.length === 0
+              !account.policyReferenceVisible || account.defaultCreditAllowedModels == null ? '제공되지 않음' : account.defaultCreditAllowedModels.length === 0
                 ? '없음. 승인 폼이 비어서 열립니다'
                 : account.defaultCreditAllowedModels.join(', '),
           },
           {
             term: '승인 기본 차단 목록',
             description:
-              account.defaultCreditDeniedModels.length === 0
+              !account.policyReferenceVisible || account.defaultCreditDeniedModels == null ? '제공되지 않음' : account.defaultCreditDeniedModels.length === 0
                 ? '없음. 승인 폼이 비어서 열립니다'
                 : account.defaultCreditDeniedModels.join(', '),
           },
-          { term: '연결된 키', description: `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
-          { term: '관리용 키', description: account.credentialAvailable ? '사용 가능' : '사용 불가' },
-          { term: '유료 모델 연결', description: account.eligibleForBinding ? '가능' : '불가' },
+          { term: '연결된 키', description: account.boundKeyCount == null ? '제공되지 않음' : `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
+          { term: '관리용 키', description: account.credentialAvailable == null ? '제공되지 않음' : account.credentialAvailable ? '사용 가능' : '사용 불가' },
+          { term: '유료 모델 연결', description: account.eligibleForBinding == null ? '제공되지 않음' : account.eligibleForBinding ? '가능' : '불가' },
           { term: '등록', description: time(account.createdAt) },
           { term: '마지막 변경', description: time(account.updatedAt) },
         ]}
@@ -238,11 +238,11 @@ export function AdminOpenRouterAccountDetailPage() {
           있나. 가운데 하나만 시간축을 갖고, 그것이 세 구역의 경계를 말이 아니라
           형태로 만든다. 탭으로 가르지 않는 것은 셋을 동시에 볼 수 없으면 볼 수
           없는 두 숫자가 자동으로 같은 것으로 가정되기 때문이다. */}
-      <AccountCreditsSection credits={account.credits} />
-      <AccountUsageSection accountId={accountId} />
-      <AccountAllocationSection allocation={account.allocation} credits={account.credits} />
+      {projectionAvailable(account, 'financeVisible') && account.credits != null && <AccountCreditsSection credits={account.credits} />}
+      {projectionAvailable(account, 'financeVisible') && <AccountUsageSection accountId={accountId} />}
+      {projectionAvailable(account, 'financeVisible') && account.allocation != null && account.credits != null && <AccountAllocationSection allocation={account.allocation} credits={account.credits} />}
 
-      <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
+      {('credentialVisible' in account && account.credentialVisible === true) && <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div>
           <h2 className="type-section-title">관리용 키</h2>
           <p className="mt-1 text-sm text-foreground-muted">
@@ -270,7 +270,7 @@ export function AdminOpenRouterAccountDetailPage() {
             새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있습니다.
           </MessageBar>
         )}
-      </section>
+      </section>}
 
       {editOpen && (
         <EditAccountModal
@@ -345,8 +345,9 @@ function EditAccountModal({
   const [program, setProgram] = useState(account.program ?? '')
   const [contact, setContact] = useState(account.contact ?? '')
   const [status, setStatus] = useState(account.status)
+  const policyKnown = account.policyReferenceVisible === true && account.defaultCreditAllowedModels != null && account.defaultCreditDeniedModels != null
   const [defaultRules, setDefaultRules] = useState(
-    formatCreditModelRules(account.defaultCreditAllowedModels, account.defaultCreditDeniedModels),
+    policyKnown ? formatCreditModelRules(account.defaultCreditAllowedModels!, account.defaultCreditDeniedModels!) : '',
   )
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -373,8 +374,7 @@ function EditAccountModal({
       program: program.trim() || null,
       contact: contact.trim() || null,
       status,
-      defaultCreditAllowedModels: parsedRules.allowed,
-      defaultCreditDeniedModels: parsedRules.denied,
+      ...(policyKnown ? { defaultCreditAllowedModels: parsedRules.allowed, defaultCreditDeniedModels: parsedRules.denied } : {}),
     })
   }
   return (
@@ -388,12 +388,12 @@ function EditAccountModal({
           <FormField label="사업명"><Input value={program} onChange={(event) => setProgram(event.target.value)} /></FormField>
           <FormField label="담당자"><Input value={contact} onChange={(event) => setContact(event.target.value)} /></FormField>
         </div>
-        <CreditModelRulesField
+        {policyKnown ? <CreditModelRulesField
           label="승인 화면 기본 모델 허용·차단"
           value={defaultRules}
           onChange={setDefaultRules}
           error={modelsError ?? undefined}
-        />
+        /> : <MessageBar>현재 기본 정책을 제공할 수 없어 이 변경에서 해당 정책을 보내지 않습니다.</MessageBar>}
         <p className="text-xs text-foreground-muted">
           이 계정으로 승인할 때 규칙을 미리 채웁니다. 승인자가 고칠 수 있으며,
           기본값을 바꿔도 이미 발급된 키에는 적용되지 않습니다.

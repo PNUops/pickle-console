@@ -3,8 +3,9 @@ import { toApiError } from './problem'
 import { guardNetwork } from './queries'
 import type { components } from './schema'
 
-export function requestReaderKey(user: { id: string; role: string; managedOrgs: readonly { orgId: string; role: string }[] } | null): string {
-  return user ? `${user.id}:${user.role}:${user.managedOrgs.map((org) => `${org.orgId}:${org.role}`).sort().join(',')}` : 'no-session'
+export function requestReaderKey(user: { id: string; role: string; managedOrgs: readonly { orgId: string; role: string }[]; institutionAuthority?: { state: string; catalogueRevision: string; authorityFingerprint: string | null } | null } | null): string {
+  const authority = user?.institutionAuthority
+  return user ? `${user.id}:${user.role}:${authority?.state ?? 'UNAVAILABLE'}:${authority?.catalogueRevision ?? ''}:${authority?.authorityFingerprint ?? ''}` : 'no-session'
 }
 
 export type VmPlacementPreview = components['schemas']['AdminVmPlacementPreviewResponse']

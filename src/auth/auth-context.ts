@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react'
 import type { components } from '../api/schema'
+import type { InstitutionAuthority } from './institution-authority'
 
-export type UserProfile = components['schemas']['UserProfileResponse']
+export type UserProfile = components['schemas']['UserProfileResponse'] & { institutionAuthority?: InstitutionAuthority | null }
 export type UserRole = components['schemas']['UserRole']
 /** 이 계정이 관리하는 기관 하나와 그 기관에서의 역할 (contract v0.46.0). */
 export type ManagedOrg = components['schemas']['ManagedOrgResponse']

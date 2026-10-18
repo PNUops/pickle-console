@@ -120,7 +120,7 @@ export function AdminBulkChangePage({ family }: { family: BulkFamily }) {
   const location = useLocation()
   const { user } = useAuth()
   const scope = useAdminScope()
-  return <AdminBulkPageContext key={`${family}:${scope.activeOrgId ?? 'all'}:${scope.activeOrgRole ?? 'none'}:${targetsOf(location.state)?.map((target) => target.id).join(',') ?? 'stored'}:${requestReaderKey(user)}`} family={family} />
+  return <AdminBulkPageContext key={`${family}:${scope.activeOrgId ?? 'all'}:${targetsOf(location.state)?.map((target) => target.id).join(',') ?? 'stored'}:${requestReaderKey(user)}`} family={family} />
 }
 
 type SavedIds = { previewId?: string; operationId?: string }
@@ -134,7 +134,6 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const scope = useAdminScope()
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
   const copy = FAMILY_COPY[family]
   const listPath = listPathOf(family, scope.activeOrgId)
   const params = new URLSearchParams(location.search)
@@ -147,7 +146,7 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
   const [initialPreview, setInitialPreview] = useState<AdminBulkChangePreview | undefined>()
   const matches = (ids: SavedIds) => sameSavedIds(ids, savedIds)
   const owned = !!ownership.current.destination && matches(ownership.current.destination) || ownership.current.predecessors.some(matches)
-  const kinds = user ? bulkKindsFor(family, role ?? 'USER', user.role) : []
+  const kinds = user ? bulkKindsFor(family, user) : []
   const reader = requestReaderKey(user)
   const remember = (ids: SavedIds) => {
     // The Router can render its new URL before React state updates commit.
@@ -216,9 +215,9 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
     <div className="space-y-5">
       {header}
       <BulkChangeFlow
-        key={`${family}:${scope.activeOrgId ?? 'all'}:${scope.activeOrgRole ?? 'none'}:${targets.map((target) => target.id).join(',')}:${requestReaderKey(user)}`}
+        key={`${family}:${scope.activeOrgId ?? 'all'}:${targets.map((target) => target.id).join(',')}:${requestReaderKey(user)}`}
         family={family}
-        role={user.role}
+        role={user}
         targets={targets}
         kinds={kinds}
         listPath={listPath}
@@ -241,7 +240,7 @@ function BulkChangeFlow({
   orgId,
 }: {
   family: BulkFamily
-  role: NonNullable<ReturnType<typeof useAuth>['user']>['role']
+  role: NonNullable<ReturnType<typeof useAuth>['user']>
   targets: BulkTarget[]
   kinds: ReturnType<typeof bulkKindsFor>
   listPath: string
@@ -251,6 +250,7 @@ function BulkChangeFlow({
 }) {
   const queryClient = useQueryClient()
   const active = useActiveResult()
+  const { refreshProfile } = useAuth()
   const accessReview = useAccessIncreaseReview()
   const [step, setStep] = useState<BulkStep>(initialPreview ? 'preview' : 'kind')
   const [kind, setKind] = useState<AdminBulkChangeKind | null>(
@@ -291,9 +291,10 @@ function BulkChangeFlow({
 
   const previewMutation = useMutation({
     mutationFn: (change: AdminBulkChangeSpec) => previewAdminBulkChange(request(change)),
-    onSuccess: (data, change) => {
+    onSuccess: (data) => {
       if (!active.current) return
-      setSent(change)
+      setSent(data.change ?? null)
+      if (!data.change) setDraft(emptyDraft())
       setPreview(data)
       attempted.current = null
       setOperation(null)
@@ -560,6 +561,16 @@ function BulkChangeFlow({
           </div>
         </section>
       )}
+
+      {step === 'preview' && preview && !sent && <section className="space-y-4">
+        {error && <MessageBar variant="danger">{error}</MessageBar>}
+        <MessageBar variant="warning">현재 권한으로 이 변경안을 제공할 수 없습니다. 업무 권한을 다시 확인한 뒤 목록에서 새로 선택해 주세요.</MessageBar>
+        <BulkChangePreviewTable items={preview.items} targetType={targetType} />
+        <div className="flex flex-wrap gap-3">
+          <Button variant="secondary" onClick={() => { void refreshProfile().catch(() => setError('현재 업무 권한을 확인하지 못했습니다. 다시 시도해 주세요.')) }}>업무 권한 다시 확인</Button>
+          <Link to={listPath} className="text-brand-foreground underline">목록에서 새로 선택</Link>
+        </div>
+      </section>}
 
       {step === 'preview' && preview && sent && (
         <section className="space-y-4">

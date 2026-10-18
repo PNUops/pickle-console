@@ -361,6 +361,7 @@ export function adminLlmUsageFixture({
     limitReview: {
       items: [
         {
+          financeVisible: true,
           keyId: uuid(501),
           keyName: 'capstone-chatbot',
           orgId: orgId ?? uuid(1),
@@ -389,6 +390,7 @@ export function adminLlmUsageFixture({
           ],
         },
         {
+          financeVisible: true,
           keyId: uuid(502),
           keyName: 'batch-summarizer',
           orgId: orgId ?? uuid(1),

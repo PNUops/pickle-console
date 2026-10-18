@@ -1,7 +1,6 @@
-import { canReadSupportMetadata } from '../auth/permissions'
 import { api } from './client'
 import { toApiError } from './problem'
-import { guardNetwork, type ResourceType, type UserRole } from './queries'
+import { guardNetwork, type ResourceType } from './queries'
 import type { components } from './schema'
 
 export type AdminProfileUpdate = components['schemas']['AdminUpdateProfileRequest']
@@ -32,8 +31,4 @@ export function previewUserProfileImpact(userId: string, action: 'PROFILE' | 'EN
     if (!data) throw toApiError(error, '변경 영향을 확인하지 못했습니다.')
     return data
   })
-}
-
-export function supportsInvitationRead(role?: UserRole): boolean {
-  return role != null && canReadSupportMetadata(role)
 }

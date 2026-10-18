@@ -31,7 +31,7 @@ import { useAdminScope } from '../lib/use-admin-scope'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { KeyCreditObservation } from '../components/OpenRouterCredits'
 import { useAuth } from '../auth/auth-context'
-import { canAdminManageAccess, canOperateLlmKey, isSysTier, managesOrg } from '../auth/permissions'
+import { canQueryWork, hasAnyWork, hasWork, projectionAvailable, SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
 import { useBulkSelection } from '../lib/bulk-selection'
 import {
   BulkSelectionBar,
@@ -63,9 +63,7 @@ function AdminLlmKeysPageContent() {
   const scope = useAdminScope()
   const { activeOrgId } = scope
   const { user } = useAuth()
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  // Direct operations use the institution role; access support uses its global role.
-  const canSelect = (!!role && canOperateLlmKey(role)) || (!!user && canAdminManageAccess(user.role))
+  const canSelect = hasAnyWork(user, ['llm.token.operate', 'llm.state.operate', 'llm.period', 'llm.key.budget', 'llm.revoke', 'llm.acl.support.manage'], SYS_OPERATORS)
   const selection = useBulkSelection('llm-keys', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState<LlmApiKeyStatus | undefined>(undefined)
@@ -105,11 +103,12 @@ function AdminLlmKeysPageContent() {
     queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, reader: requestReaderKey(user), for: 'llm-key-filter' }],
     queryFn: () =>
       fetchAdminWorkspaces(activeOrgId == null ? {} : { orgId: activeOrgId }),
+    enabled: hasAnyWork(user, ['workspace.support.read', 'workspace.info.update', 'workspace.members.manage', 'workspace.invitations.manage', 'workspace.owners.manage', 'workspace.terminate', 'workspace.recipient.cancel', 'vm.roster.issue', 'llm.roster.issue', 'vm.request.decide', 'llm.request.decide', 'domain.request.decide', 'gpu.request.decide', 'workspace.announcement.send'], SYS_READERS),
   })
   const accounts = useQuery({
     queryKey: ['admin', 'llm-accounts', { orgId: activeOrgId ?? null, reader: requestReaderKey(user), for: 'llm-key-filter' }],
     queryFn: () => fetchOpenRouterAccounts(activeOrgId),
-    enabled: scope.ready && !!user && (isSysTier(user.role) || activeOrgId != null && managesOrg(user.managedOrgs, activeOrgId)),
+    enabled: scope.ready && canQueryWork(user, ['institution.account.read', 'institution.account.finance.read', 'institution.account.manage', 'institution.account.credential.manage'], { orgId: activeOrgId }, SYS_READERS),
   })
 
   const pageTargets = (keys.data?.content ?? []).map((key) => ({ id: key.id, name: key.name }))
@@ -255,7 +254,7 @@ function AdminLlmKeysPageContent() {
                     <TD>{key.workspaceName}</TD>
                     <TD>{key.orgName}</TD>
                     <TD>
-                      {key.openrouterAccountId && key.openrouterAccountName ? (user && (isSysTier(user.role) || key.orgId != null && managesOrg(user.managedOrgs, key.orgId)) ?
+                      {key.openrouterAccountId && key.openrouterAccountName ? (hasWork(user, 'institution.account.read', { orgId: key.orgId }, SYS_READERS) ?
                         <Link
                           to={adminPaths.llmAccountDetail(key.openrouterAccountId, key.orgId ?? undefined)}
                           className="font-medium text-brand-foreground hover:underline"
@@ -263,18 +262,18 @@ function AdminLlmKeysPageContent() {
                           {key.openrouterAccountName}
                         </Link> : <span>{key.openrouterAccountName}</span>
                       ) : (
-                        <span className="text-foreground-muted">미결합</span>
+                        <span className="text-foreground-muted">{key.metadataVisible || key.financeVisible ? '미결합' : '제공되지 않음'}</span>
                       )}
                     </TD>
-                    <TD className="whitespace-nowrap text-xs">
+                    <TD className="whitespace-nowrap text-xs">{projectionAvailable(key, 'metadataVisible') || projectionAvailable(key, 'observationVisible') ? <>
                       RPM {limitText(key.rpm)} · TPM {limitText(key.tpm)}
                       <span className="block text-foreground-muted">
                         일일 {limitText(key.dailyTokens)} · 동시 {limitText(key.concurrency)}
-                      </span>
+                      </span></> : '제공되지 않음'}
                     </TD>
-                    <TD><KeyCreditObservation llmKey={key} /></TD>
+                    <TD>{projectionAvailable(key, 'financeVisible') ? <KeyCreditObservation llmKey={key} /> : '제공되지 않음'}</TD>
                     <TD className="whitespace-nowrap">
-                      {key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음'}
+                      {!key.metadataVisible && !key.observationVisible ? '제공되지 않음' : key.lastUsedAt ? formatDateTime(key.lastUsedAt) : '사용 기록 없음'}
                     </TD>
                   </TR>
                 )

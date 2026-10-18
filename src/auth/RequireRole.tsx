@@ -4,6 +4,8 @@ import { Spinner } from '../components/ui'
 import { homePathFor, useAuth, type UserRole } from './auth-context'
 import { ConsentGate } from './ConsentGate'
 import { ProfileGate } from './ProfileGate'
+import { canEnterAdministration } from './institution-authority'
+import { canVisitAdministration } from './admin-navigation'
 
 /**
  * Route guard: requires an authenticated user whose role is in `roles`.
@@ -25,7 +27,11 @@ export function RequireRole({ roles, children }: { roles: UserRole[]; children: 
     const from = location.pathname + location.search + location.hash
     return <Navigate to="/login" replace state={{ from }} />
   }
-  if (!roles.includes(user.role)) {
+  const administration = location.pathname === '/admin' || location.pathname.startsWith('/admin/')
+  if (administration && !canVisitAdministration(user, location.pathname)) {
+    return <Navigate to={canEnterAdministration(user) ? '/admin' : '/console'} replace />
+  }
+  if (!roles.includes(user.role) && !(administration && !user.role.startsWith('SYS_'))) {
     return <Navigate to={homePathFor(user.role)} replace />
   }
   // Lazy consent enforcement: a post-signup revision surfaces here (API not blocked).

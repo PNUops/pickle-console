@@ -12,6 +12,9 @@ import {
   POST_LOGIN_OVERLAY_KEY,
 } from '../lib/storage-keys'
 import { closeTerminalWindows } from '../terminal/openTerminalWindow'
+import { fetchInstitutionAuthority } from '../api/institution-authority'
+import { authorityKey } from './institution-authority'
+import { advanceAuthorityGeneration } from '../api/authority-generation'
 import { AuthContext, type AuthStatus, type CredentialExchange, type LoginResult, type UserProfile } from './auth-context'
 
 interface AuthState {
@@ -52,6 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutInFlight = useRef<Promise<unknown> | null>(null)
   const credentialExchange = useRef<object | null>(null)
 
+  const withAuthority = useCallback(async (profile: UserProfile, request: AuthRequest): Promise<UserProfile> => {
+    const authority = await fetchInstitutionAuthority(request.controller.signal)
+    requireCurrent(request)
+    return { ...profile, role: authority?.accountRole ?? profile.role, institutionAuthority: authority }
+  }, [])
+
   const createRequest = useCallback((): AuthRequest => {
     const request = { controller: new AbortController(), generation: getSessionGeneration() }
     pendingRequests.current.add(request)
@@ -59,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const invalidateRequests = useCallback(() => {
+    advanceAuthorityGeneration()
     for (const request of pendingRequests.current) request.controller.abort()
     pendingRequests.current.clear()
   }, [])
@@ -110,7 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await api.GET('/me', { signal: request.controller.signal })
         if (!isCurrent(request)) return
         if (data) {
-          updateState({ status: 'authenticated', user: data })
+          const user = await withAuthority(data, request)
+          if (isCurrent(request)) updateState({ status: 'authenticated', user })
         } else {
           clearAccessToken()
           updateState({ status: 'unauthenticated', user: null })
@@ -129,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       request.controller.abort()
     }
-  }, [createRequest, updateState])
+  }, [createRequest, updateState, withAuthority])
 
   // Fired by the API client when a 401 could not be recovered by a refresh.
   // 세션이 끊기면 캐시도 함께 비워 공용 PC에서 이전 사용자의 데이터가 남지 않게 한다.
@@ -161,9 +172,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 직전 세션(다른 계정)의 캐시가 새 세션 화면에 렌더링되지 않도록 비운다.
     resetMfaEnrollmentRequired()
     queryClient.clear()
-    updateState({ status: 'authenticated', user: me.data })
-    return me.data
-  }, [queryClient, updateState])
+    const user = await withAuthority(me.data, request)
+    requireCurrent(request)
+    updateState({ status: 'authenticated', user })
+    return user
+  }, [queryClient, updateState, withAuthority])
 
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     const request = beginAuthentication()
@@ -237,11 +250,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw toApiError(error, '사용자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')
       }
       if (data) {
+        const user = await withAuthority(data, request)
+        if (!isCurrent(request)) return
         if (state.user?.id !== data.id) {
           resetMfaEnrollmentRequired()
           queryClient.clear()
+        } else if (authorityKey(currentState.current.user) !== authorityKey(user)) {
+          advanceAuthorityGeneration()
+          updateState({ status: 'authenticated', user })
+          const cancelled = queryClient.cancelQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('admin') })
+          queryClient.removeQueries({ predicate: (query) => typeof query.queryKey[0] === 'string' && query.queryKey[0].startsWith('admin') })
+          await cancelled
+          if (!isCurrent(request)) return
         }
-        updateState({ status: 'authenticated', user: data })
+        updateState({ status: 'authenticated', user })
       }
     } catch (err) {
       if (isCurrent(request)) {
@@ -251,7 +273,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       pendingRequests.current.delete(request)
     }
-  }, [createRequest, queryClient, state.user?.id, updateState])
+  }, [createRequest, queryClient, state.user?.id, updateState, withAuthority])
+
+  useEffect(() => {
+    if (state.status !== 'authenticated') return
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void refreshProfile().catch(() => {})
+    }
+    window.addEventListener('focus', refresh)
+    const timer = window.setInterval(refresh, 30_000)
+    return () => { window.removeEventListener('focus', refresh); window.clearInterval(timer) }
+  }, [refreshProfile, state.status])
 
   const logout = useCallback(async () => {
     // Invalidate locally before waiting for cookie revocation. Its late response

@@ -45,7 +45,8 @@ async function authenticate(profile = regularProfile, token = 'access-user') {
   vi.mocked(api.POST).mockResolvedValueOnce({ data: { accessToken: token, user: profile } } as never)
   vi.mocked(api.GET).mockResolvedValueOnce({ data: profile } as never)
   await act(async () => { await auth.login(profile.email, 'password') })
-  expect(auth.user).toEqual(profile)
+  expect(auth.user).toMatchObject(profile)
+  expect(auth.user).toHaveProperty('institutionAuthority')
 }
 
 beforeEach(() => {
@@ -66,7 +67,7 @@ describe('AuthProvider session transitions', () => {
     await act(async () => { await auth.refreshProfile() })
 
     expect(auth.status).toBe('authenticated')
-    expect(auth.user).toEqual(updated)
+    expect(auth.user).toMatchObject(updated)
     expect(getAccessToken()).toBe('access-user')
   })
 
@@ -80,7 +81,7 @@ describe('AuthProvider session transitions', () => {
 
     await act(async () => { await auth.refreshProfile() })
 
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(queryClient.getQueryData(['previous-account'])).toBeUndefined()
     expect(getAccessToken()).toBe('access-user-b')
   })
@@ -154,7 +155,7 @@ describe('AuthProvider session transitions', () => {
       await refreshing
     })
 
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
   })
 
@@ -196,7 +197,7 @@ describe('AuthProvider session transitions', () => {
       expect(await loggingIn).toBeInstanceOf(Error)
     })
 
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
   })
 
@@ -209,7 +210,7 @@ describe('AuthProvider session transitions', () => {
     await authenticate(regularProfileB, 'access-user-b')
     await act(async () => { restore.resolve(false) })
 
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
     expect(api.GET).toHaveBeenCalledTimes(1)
   })
@@ -224,7 +225,7 @@ describe('AuthProvider session transitions', () => {
     await authenticate(regularProfileB, 'access-user-b')
     await act(async () => { profile.reject(new TypeError('Failed to fetch')) })
 
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
   })
 
@@ -278,7 +279,7 @@ describe('AuthProvider session transitions', () => {
     })
 
     expect(vi.mocked(api.POST).mock.calls[1]?.[0]).toBe(method === 'login' ? '/auth/login' : '/auth/mfa')
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
   })
 
@@ -302,7 +303,7 @@ describe('AuthProvider session transitions', () => {
       await loggingIn
     })
 
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
   })
 
@@ -329,7 +330,7 @@ describe('AuthProvider session transitions', () => {
 
     expect(api.POST).toHaveBeenCalledTimes(2)
     expect(vi.mocked(api.POST).mock.calls[1]?.[1]).toMatchObject({ body: { email: regularProfileB.email } })
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
   })
 
   test('waits for existing cookie rotation and reads CSRF only when logout is issued', async () => {
@@ -380,7 +381,7 @@ describe('External login profile replacement', () => {
       await replacement
       exchange.settle(getSessionGeneration())
     })
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     expect(getAccessToken()).toBe('access-user-b')
   })
 
@@ -403,7 +404,7 @@ describe('External login profile replacement', () => {
     vi.mocked(api.GET).mockResolvedValueOnce({ data: regularProfileB } as never)
     await act(async () => { await auth.refreshProfile() })
     expect(replacementSignal?.aborted).toBe(false)
-    expect(auth.user).toEqual(regularProfileB)
+    expect(auth.user).toMatchObject(regularProfileB)
     await act(async () => {
       const rejected = expect(replacement).rejects.toThrow('사용자 정보를 불러오지 못했습니다.')
       profile.resolve({ error: {} } as never)

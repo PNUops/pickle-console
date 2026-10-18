@@ -373,7 +373,7 @@ test('support deletion retains its required name and posts the support observati
   const user = userEvent.setup()
   const writes: unknown[] = []
   server.use(refreshSuccessHandler('access-org-manager', orgManagerUser),
-    http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], canDelete: true, deleteBlockedReason: null })),
+    http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], allowedWorkIds: ['workspace.terminate'], canDelete: true, deleteBlockedReason: null })),
     http.get(adminPath, () => HttpResponse.json(executableImpact({ fingerprint: 'support-exact' }))),
     http.delete('*/api/v1/admin/workspaces/:workspaceId', async ({ request }) => { writes.push(await request.json()); return new HttpResponse(null, { status: 204 }) }))
   renderApp(`/admin/workspaces?workspaceId=${uuid(12)}&inspect=1&org=${uuid(2)}`)

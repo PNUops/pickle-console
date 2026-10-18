@@ -39,6 +39,7 @@ import { AdminBulkChangePage } from './pages/AdminBulkChangePage'
 import { AdminBulkReceiptPage } from './pages/AdminBulkReceiptPage'
 import { AdminLlmStatusPage } from './pages/AdminLlmStatusPage'
 import { AdminLlmUsagePage } from './pages/AdminLlmUsagePage'
+import { AdminLlmModelCataloguePage } from './pages/AdminLlmModelCataloguePage'
 import { AdminOpenRouterAccountDetailPage } from './pages/AdminOpenRouterAccountDetailPage'
 import { AdminOpenRouterAccountsPage } from './pages/AdminOpenRouterAccountsPage'
 import { GpusPage } from './pages/GpusPage'
@@ -255,6 +256,7 @@ function App() {
         <Route path="llm/keys" element={<AdminLlmKeysPage />} />
         <Route path="llm/keys/:keyId" element={<AdminLlmKeyDetailPage />} />
         <Route path="llm/usage" element={<AdminLlmUsagePage />} />
+        <Route path="llm/models" element={<AdminLlmModelCataloguePage />} />
         {/* Bulk changes need an operating role; which kinds each role gets is
             decided on the page. Reached from a list's selection, not the sidebar. */}
         <Route path="bulk/operations/:operationId" element={<RequireRole roles={['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN']}><AdminBulkReceiptPage /></RequireRole>} />

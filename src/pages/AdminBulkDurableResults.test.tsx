@@ -345,3 +345,15 @@ test('rejects malformed identifiers and viewer receipt access without reading or
   expect(bulkApplyBodies).toHaveLength(0)
 })
 })
+
+test('a fresh masked change never reuses the locally submitted draft for continuation', async () => {
+  server.use(http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => {
+    const preview = savedBulkPreview(await request.json() as import('../api/queries').AdminBulkChangeRequest,
+      [{ targetId: uuid(56), name: null, applicable: false, reason: 'FORBIDDEN', fields: [], fingerprint: '' }])
+    return HttpResponse.json({ ...preview, change: null })
+  }))
+  await periodPreview()
+  expect(await screen.findByText('현재 권한으로 이 변경안을 제공할 수 없습니다. 업무 권한을 다시 확인한 뒤 목록에서 새로 선택해 주세요.')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '이전' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /개에 적용$/ })).not.toBeInTheDocument()
+})

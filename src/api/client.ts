@@ -1,7 +1,8 @@
 import createClient from 'openapi-fetch'
 import { notifyMaintenanceDetected } from './maintenance'
 import { notifyMfaEnrollmentRequired } from './mfa-enrollment'
-import { isProblem } from './problem'
+import { ApiError, isProblem } from './problem'
+import { getAuthorityGeneration } from './authority-generation'
 import type { components, paths } from './schema'
 import {
   clearAccessToken,
@@ -129,7 +130,11 @@ async function sendWithRefresh(input: Request): Promise<Response> {
 /** Auth-aware fetch: the 401-refresh retry, plus the maintenance and MFA signals. */
 async function fetchWithAuth(input: Request): Promise<Response> {
   const generation = getSessionGeneration()
+  const authorityGeneration = getAuthorityGeneration()
   const response = await sendWithRefresh(input)
+  if (new URL(input.url).pathname.startsWith('/api/v1/admin/') && authorityGeneration !== getAuthorityGeneration()) {
+    throw new ApiError(null, '관리 업무가 변경되었습니다. 현재 권한으로 다시 조회해 주세요.')
+  }
   if (!input.signal.aborted && generation === getSessionGeneration()) {
     signalMaintenance(response, generation, input.signal)
     signalMfaEnrollment(response, generation, input.signal)
@@ -189,6 +194,6 @@ export const api = createClient<paths>({ baseUrl: API_BASE, fetch: fetchWithAuth
  * 이미지는 자격이 있는 사람에게도 404가 된다. 바이트를 여기로 받아 와야 하는
  * 이유가 그것이다. 401 갱신과 재시도는 일반 호출과 같은 길을 탄다.
  */
-export function fetchAuthedBytes(path: string): Promise<Response> {
-  return fetchWithAuth(new Request(new URL(path, origin)))
+export function fetchAuthedBytes(path: string, signal?: AbortSignal): Promise<Response> {
+  return fetchWithAuth(new Request(new URL(path, origin), { signal }))
 }

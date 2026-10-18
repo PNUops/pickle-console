@@ -474,14 +474,14 @@ test.each([
   expect(currentPath()).toBe(`/admin/domains?org=${target.orgId}`)
 })
 
-test('a direct domain target outside the managed scope or malformed ID never opens intervention inputs', async () => {
+test('a foreign domain reference preserves actual row permissions while a malformed ID stays invalid', async () => {
   const target = externalDomains[0]
   target.orgId = uuid(2)
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
   const view = renderApp(`/admin/domains?org=${uuid(1)}&domainId=${target.id}`)
   const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
-  await drawer.findByText('선택한 관리 범위의 도메인이 아닙니다.')
-  expect(drawer.queryByRole('heading', { name: target.fqdn })).not.toBeInTheDocument()
+  await drawer.findByRole('heading', { name: target.fqdn })
+  expect(drawer.getByText('레코드 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
   expect(drawer.queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
   view.unmount()
   renderApp(`/admin/domains?org=${uuid(1)}&domainId=bad`)
@@ -501,7 +501,8 @@ test('a late domain intervention response cannot close or relabel a different in
   await user.type(confirmation.getByRole('textbox'), target.fqdn)
   await user.click(confirmation.getByRole('button', { name: '강제 해제' }))
   fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
-  await screen.findByText('선택한 관리 범위의 도메인이 아닙니다.')
+  await waitFor(() => expect(screen.getByLabelText('관리 기관 선택')).toHaveValue(uuid(2)))
+  await within(screen.getByRole('dialog', { name: '도메인 상세' })).findByRole('heading', { name: target.fqdn })
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)) })
   expect(responded).toBe(true)
   expect(currentPath()).toContain(`domainId=${target.id}`)
@@ -527,7 +528,7 @@ test('an immutable domain result opens its original ID and returns to the same f
   adminRequestStore.push(request)
   const context = approvalContextFixture(uuid(201))
   context.type = 'DOMAIN'; context.vm = null; context.domain = { fqdn: domain.fqdn, available: false, held: 1, cap: 3 }
-  context.generatedResources = [{ id: domain.id, type: 'DOMAIN', name: domain.fqdn, state: domain.status, orgId: domain.orgId, workspaceId: domain.workspaceId, recipientId: null, createdAt: domain.createdAt, recordUpdatedAt: domain.updatedAt!, canReadDetail: true, renewDueAt: domain.renewDueAt, releasedAt: null, reservedUntil: null }]
+  context.generatedResources = [{ id: domain.id, type: 'DOMAIN', name: domain.fqdn, state: domain.status, orgId: domain.orgId!, workspaceId: domain.workspaceId!, recipientId: null, createdAt: domain.createdAt!, recordUpdatedAt: domain.updatedAt!, canReadDetail: true, renewDueAt: domain.renewDueAt, releasedAt: null, reservedUntil: null }]
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser), http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)))
   const list = `/admin/requests?org=${uuid(1)}&status=all&type=DOMAIN`
   renderApp(`/admin/requests/${request.id}?org=${uuid(1)}&returnTo=${encodeURIComponent(list)}`)
@@ -549,7 +550,7 @@ test('a removed original domain displays its actual lifecycle records without op
   adminRequestStore.push(request)
   const context = approvalContextFixture(uuid(201))
   context.type = 'DOMAIN'; context.vm = null; context.domain = { fqdn: domain.fqdn, available: false, held: 1, cap: 3 }
-  context.generatedResources = [{ id: uuid(8888), type: 'DOMAIN', name: domain.fqdn, state: 'REMOVED', orgId: domain.orgId, workspaceId: domain.workspaceId, recipientId: null, createdAt: domain.createdAt, recordUpdatedAt: request.updatedAt, canReadDetail: false, renewDueAt: '2026-09-01T00:00:00+09:00', releasedAt: '2026-09-02T00:00:00+09:00', reservedUntil: null }]
+  context.generatedResources = [{ id: uuid(8888), type: 'DOMAIN', name: domain.fqdn, state: 'REMOVED', orgId: domain.orgId!, workspaceId: domain.workspaceId!, recipientId: null, createdAt: domain.createdAt!, recordUpdatedAt: request.updatedAt, canReadDetail: false, renewDueAt: '2026-09-01T00:00:00+09:00', releasedAt: '2026-09-02T00:00:00+09:00', reservedUntil: null }]
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser), http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)))
   renderApp(`/admin/requests/${request.id}?org=${uuid(1)}`)
   const results = await screen.findByRole('table', { name: '신청에서 등록된 자원 상태' })

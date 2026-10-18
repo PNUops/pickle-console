@@ -1,7 +1,9 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
+import type { StoredFacts } from '../facts'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { isSysTier } from '../../../auth/permissions'
+import { mockAuthorityActor, mockAllowedWorkIds } from '../institution-authority'
 import { isMyWorkspace, workspaceMembersOf } from './workspaces'
 import { uuid } from '../ids'
 import { openRouterAccountStore } from './openrouter-accounts'
@@ -10,7 +12,7 @@ type Schemas = components['schemas']
 type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
 type ResourceRole = Schemas['ResourceRole']
 type AccessGrant = Schemas['ResourceAccessGrantView']
-type AdminLlmKey = Schemas['AdminLlmKeyDetailResponse']
+type AdminLlmKey = StoredFacts<Schemas['AdminLlmKeyDetailResponse'], 'orgId' | 'workspaceId' | 'creditLimit' | 'creditAxisConnected' | 'creditAllowedModels' | 'creditDeniedModels' | 'passthroughEndpoints'>
 
 const RESOURCE_ROLE_RANK: Record<ResourceRole, number> = {
   VIEWER: 0,
@@ -274,6 +276,8 @@ export let llmKeyStore: LlmKeyDetail[] = initialLlmKeys()
 export let llmKeyAccessStore: Record<string, AccessGrant[]> = initialLlmKeyAccessGrants()
 function initialAdminLlmKeys(): AdminLlmKey[] {
   const base = {
+    allowedWorkIds: [] as string[], metadataVisible: true, observationVisible: true, financeVisible: true,
+    tokenReferenceVisible: true, budgetReferenceVisible: true, chatEnabled: false, initialAccountBindingAllowed: false,
     orgId: uuid(1),
     orgName: '정보컴퓨터공학부 실습지원센터',
     workspaceId: uuid(12),
@@ -290,7 +294,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     // active-admin-key 가 들고 있고 AdminLlmKeyDetailPage 테스트가 읽는다.
     creditAllowedModels: [] as string[],
     creditDeniedModels: [] as string[],
-    passthroughEndpoints: [] as Schemas['AdminLlmKeyDetailResponse']['passthroughEndpoints'],
+    passthroughEndpoints: [] as NonNullable<Schemas['AdminLlmKeyDetailResponse']['passthroughEndpoints']>,
     creditUsage: 2.5,
     creditLimitRemaining: 2.5,
     creditUsageAt: '2026-08-31T00:27:30+09:00',
@@ -361,7 +365,7 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
     {
       ...base,
       id: uuid(176),
-      name: 'initial-binding-key',
+      name: 'initial-binding-key', initialAccountBindingAllowed: true,
       status: 'PENDING',
       requestId: uuid(211),
       lastUsedAt: null,
@@ -866,12 +870,37 @@ export function activeAdminRole(
   return profile.managedOrgs.find((org) => org.orgId === orgId)?.role
 }
 
-function canReadAdminKey(profile: Schemas['UserProfileResponse'], key: AdminLlmKey): boolean {
-  return isSysTier(profile.role) || profile.managedOrgs.some((org) => org.orgId === key.orgId)
+function projectAdminKey(profile: Schemas['UserProfileResponse'], key: AdminLlmKey): Schemas['AdminLlmKeyDetailResponse'] {
+  const actor = mockAuthorityActor(profile)
+  const allowedWorkIds = mockAllowedWorkIds(actor, { orgId: key.orgId, workspaceId: key.workspaceId }, 'LLM')
+  const metadata = allowedWorkIds.includes('llm.metadata.read') || allowedWorkIds.includes('llm.metadata.support.read')
+  const observation = allowedWorkIds.includes('llm.observe') || allowedWorkIds.includes('llm.observe.support.read')
+  const finance = allowedWorkIds.includes('llm.key.cost.read')
+  const tokenReference = allowedWorkIds.includes('llm.token.operate')
+  const budgetReference = allowedWorkIds.includes('llm.key.budget')
+  const token = metadata || observation || tokenReference
+  const budget = finance || budgetReference
+  return { ...key, allowedWorkIds, metadataVisible: metadata, observationVisible: observation, financeVisible: finance,
+    tokenReferenceVisible: tokenReference, budgetReferenceVisible: budgetReference,
+    initialAccountBindingAllowed: budgetReference ? key.openrouterAccountId == null && key.initialAccountBindingAllowed === true && key.creditLimit <= 0 : null,
+    purpose: metadata ? key.purpose : null, lastUsedAt: metadata || observation ? key.lastUsedAt : null,
+    rpm: token ? key.rpm : null, tpm: token ? key.tpm : null, dailyTokens: token ? key.dailyTokens : null, concurrency: token ? key.concurrency : null,
+    creditLimit: budget ? key.creditLimit : null, creditLimitReset: budget ? key.creditLimitReset : null,
+    creditAllowedModels: budget ? key.creditAllowedModels : null, creditDeniedModels: budget ? key.creditDeniedModels : null,
+    passthroughEndpoints: budget ? key.passthroughEndpoints : null, chatEnabled: token || budget ? key.passthroughEndpoints.includes('chat') : null,
+    creditAxisConnected: finance ? key.creditAxisConnected : null, creditUsage: finance ? key.creditUsage : null,
+    creditUsageAt: finance ? key.creditUsageAt : null, creditLimitRemaining: finance ? key.creditLimitRemaining : null,
+    accountReferences: budgetReference ? openRouterAccountStore.filter((account) => account.orgId === key.orgId).map((account) => ({ id: account.id, name: account.name, eligibleForBinding: account.eligibleForBinding,
+      defaultCreditAllowedModels: account.defaultCreditAllowedModels, defaultCreditDeniedModels: account.defaultCreditDeniedModels })) : null,
+  }
 }
 
-function toAdminSummary(key: AdminLlmKey): Schemas['AdminLlmKeySummaryResponse'] {
-  return {
+function canReadAdminKey(profile: Schemas['UserProfileResponse'], key: AdminLlmKey): boolean {
+  return projectAdminKey(profile, key).allowedWorkIds.some((id) => !id.includes('.request.') && !id.includes('.roster.') && !id.includes('.recipient.'))
+}
+
+function toAdminSummary(key: Schemas['AdminLlmKeyDetailResponse']): Schemas['AdminLlmKeySummaryResponse'] {
+  return { allowedWorkIds: key.allowedWorkIds, metadataVisible: key.metadataVisible, observationVisible: key.observationVisible, financeVisible: key.financeVisible,
     id: key.id,
     name: key.name,
     purpose: key.purpose,
@@ -1033,7 +1062,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     const query = url.searchParams.get('query')?.toLocaleLowerCase('ko-KR')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
-    let filtered = profile.role === 'USER' ? [] : [...adminLlmKeyStore]
+    let filtered = adminLlmKeyStore.filter((key) => canReadAdminKey(profile, key))
     if (orgId) filtered = filtered.filter((key) => key.orgId === orgId)
     if (workspaceId) filtered = filtered.filter((key) => key.workspaceId === workspaceId)
     if (requestId) filtered = filtered.filter((key) => key.requestId === requestId)
@@ -1049,7 +1078,7 @@ export const llmKeyHandlers: RequestHandler[] = [
     filtered.sort((a, b) => b.id.localeCompare(a.id))
     return HttpResponse.json(
       {
-        content: filtered.slice(page * size, (page + 1) * size).map(toAdminSummary),
+        content: filtered.slice(page * size, (page + 1) * size).map((key) => toAdminSummary(projectAdminKey(profile, key))),
         page,
         size,
         totalElements: filtered.length,
@@ -1062,61 +1091,30 @@ export const llmKeyHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/llm/keys/:keyId', ({ params, request }) => {
     const profile = adminActor(request)
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
-    if (!profile || !key || profile.role === 'USER') return notFoundProblem()
-    return HttpResponse.json(key, { status: 200 })
+    if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
+    return HttpResponse.json(projectAdminKey(profile, key), { status: 200 })
   }),
 
   http.put('*/api/v1/admin/llm/keys/:keyId/limits', async ({ params, request }) => {
     const profile = adminActor(request)
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
     if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
-    const role = activeAdminRole(profile, key.orgId)
-    if (!role || !['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN'].includes(role)) {
-      return notFoundProblem()
-    }
     const body = (await request.json()) as Schemas['AdminLlmKeyLimitsRequest']
-    // 서버는 모델 허용 목록 변경도 금액 변경과 같은 권한으로 막는다 — 무엇에
-    // 돈을 쓸 수 있는지를 정하기 때문이다. 목이 이 축을 빠뜨리면 서버가 낼 수
-    // 없는 200을 내고, 그 위의 화면 테스트가 초록으로 거짓말한다.
-    const nextModels = body.creditAllowedModels ?? []
-    const nextDenied = body.creditDeniedModels ?? []
-    // Feature grants other than Chat sit behind the same gate. Leaving them
-    // out would make the mock looser than the server in the granting direction.
-    const nextPassthrough = body.passthroughEndpoints ?? []
-    // The server checks the grant's hierarchy before the money gate, so a
-    // feature of Chat without Chat is 422 for every role.
+    const present = (field: keyof Schemas['AdminLlmKeyLimitsRequest']) => Object.hasOwn(body, field)
+    const nextModels = present('creditAllowedModels') ? body.creditAllowedModels ?? [] : key.creditAllowedModels
+    const nextDenied = present('creditDeniedModels') ? body.creditDeniedModels ?? [] : key.creditDeniedModels
+    let nextPassthrough = present('passthroughEndpoints') ? body.passthroughEndpoints ?? [] : key.passthroughEndpoints
+    if (body.chatEnabled !== undefined) nextPassthrough = body.chatEnabled ? [...new Set<NonNullable<Schemas['AdminLlmKeyLimitsRequest']['passthroughEndpoints']>[number]>([...nextPassthrough, 'chat'])] : nextPassthrough.filter((feature) => feature !== 'chat')
     const orphan = orphanedChatFeature(nextPassthrough)
-    if (orphan) {
-      return validationProblem(
-        `/api/v1/admin/llm/keys/${key.id}/limits`,
-        'passthroughEndpoints',
-        `${orphan} 기능은 chat 기능과 함께 부여해야 합니다.`,
-      )
-    }
-    const listChanged = (next: string[], current: string[]) =>
-      next.length !== current.length || next.some((model, index) => model !== current[index])
-    // Chat works on both axes, so the server leaves a Chat-only change out of
-    // the money gate and compares the rest as sets.
-    const withoutChat = (entries: string[]) =>
-      [...new Set(entries.filter((entry) => entry !== 'chat'))].sort()
-    const modelsChanged =
-      listChanged(nextModels, key.creditAllowedModels) ||
-      listChanged(nextDenied, key.creditDeniedModels) ||
-      listChanged(withoutChat(nextPassthrough), withoutChat(key.passthroughEndpoints))
-    if (
-      role === 'SYS_MANAGER' &&
-      (body.creditLimit !== key.creditLimit ||
-        body.creditLimitReset !== key.creditLimitReset ||
-        modelsChanged)
-    ) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '권한이 없습니다',
-        status: 403,
-        detail: '시스템 운영자는 금액 한도와 모델 목록, 기능 권한을 변경할 수 없습니다.',
-        code: 'FORBIDDEN',
-      })
-    }
+    if (orphan) return validationProblem(`/api/v1/admin/llm/keys/${key.id}/limits`, 'passthroughEndpoints', `${orphan} 기능은 chat 기능과 함께 부여해야 합니다.`)
+    const changed = (next: string[], current: string[]) => JSON.stringify([...new Set(next)].sort()) !== JSON.stringify([...new Set(current)].sort())
+    const withoutChat = (entries: string[]) => entries.filter((entry) => entry !== 'chat')
+    const tokenChange = (['rpm', 'tpm', 'dailyTokens', 'concurrency'] as const).some((field) => present(field) && body[field] !== key[field])
+      || nextPassthrough.includes('chat') !== key.passthroughEndpoints.includes('chat')
+    const budgetChange = (['creditLimit', 'creditLimitReset', 'openrouterAccountId'] as const).some((field) => present(field) && body[field] !== key[field])
+      || changed(nextModels, key.creditAllowedModels) || changed(nextDenied, key.creditDeniedModels) || changed(withoutChat(nextPassthrough), withoutChat(key.passthroughEndpoints))
+    const projection = projectAdminKey(profile, key)
+    if (tokenChange && !projection.allowedWorkIds.includes('llm.token.operate') || budgetChange && !projection.allowedWorkIds.includes('llm.key.budget')) return problemResponse({ title: '권한이 없습니다', status: 403, code: 'ACCESS_DENIED', detail: '변경할 한도 축의 업무 권한이 필요합니다.' })
     adminLlmLimitBodies.push(body)
     Object.assign(key, body)
     // 서버는 null 을 저장하지 않는다 — 빈 목록으로 정규화한다. 목이 null 을
@@ -1129,33 +1127,27 @@ export const llmKeyHandlers: RequestHandler[] = [
         (account) => account.id === body.openrouterAccountId,
       )?.name ?? null
     }
-    return HttpResponse.json(key, { status: 200 })
+    return HttpResponse.json(projectAdminKey(profile, key), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/keys/:keyId/suspend', async ({ params, request }) => {
     const profile = adminActor(request)
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
     if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
-    const role = activeAdminRole(profile, key.orgId)
-    if (!role || !['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN'].includes(role)) {
-      return notFoundProblem()
-    }
+    if (!projectAdminKey(profile, key).allowedWorkIds.includes('llm.state.operate')) return notFoundProblem()
     const body = (await request.json()) as Schemas['SuspendAdminLlmKeyRequest']
     if (!body.reason.trim()) return validationProblem('/api/v1/admin/llm/keys', 'reason', '정지 사유를 입력해 주세요.')
     key.status = 'SUSPENDED'
-    return HttpResponse.json(key, { status: 200 })
+    return HttpResponse.json(projectAdminKey(profile, key), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/keys/:keyId/resume', ({ params, request }) => {
     const profile = adminActor(request)
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
     if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
-    const role = activeAdminRole(profile, key.orgId)
-    if (!role || !['ORG_MANAGER', 'ORG_ADMIN', 'SYS_MANAGER', 'SYS_ADMIN'].includes(role)) {
-      return notFoundProblem()
-    }
+    if (!projectAdminKey(profile, key).allowedWorkIds.includes('llm.state.operate')) return notFoundProblem()
     key.status = 'ACTIVE'
-    return HttpResponse.json(key, { status: 200 })
+    return HttpResponse.json(projectAdminKey(profile, key), { status: 200 })
   }),
 
   http.get('*/api/v1/llm-keys', ({ request }) => {

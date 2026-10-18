@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { fetchLlmRosterAccountReferences, type LlmAccountReference } from '../../api/llm-command-references'
+import { hasWork, hasSameSourceWorks, rowAllows, SYS_ADMIN, SYS_READERS } from '../../auth/institution-authority'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import {
@@ -109,7 +111,8 @@ function limitValue(raw: string): number | null {
 
 /** Reference failures remain independent from the approver's declared limits. */
 interface LlmAccountDecisionData {
-  accounts: OpenRouterAccount[]
+  accounts: (LlmAccountReference & Partial<Pick<OpenRouterAccount, 'allocation' | 'credits'>>)[]
+  paidAllowed: boolean
   loading: boolean
   failed: boolean
   retry: () => void
@@ -124,41 +127,45 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
   const { user } = useAuth()
   const { activeOrgId } = useAdminScope()
   const context = useQuery({ queryKey: ['admin', 'requests', request.id, 'context', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchApprovalContext(request.id), enabled: isUuid(request.id) })
-  const targetFacts = context.isSuccess ? context.data.workspace.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true })) : []
+  const targetFacts: ApprovalTargetFacts[] = context.isSuccess ? context.data.workspace.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true })) : []
   if (context.isSuccess) for (const recipient of request.recipients ?? []) {
-    if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', userStatus: 'ACTIVE', member: false })
+    if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', member: false })
   }
+  const stored = isUuid(request.id)
+  const command = stored ? 'llm.request.decide' : 'llm.roster.issue'
+  const paidAllowed = hasSameSourceWorks(user, [command, 'llm.key.budget'], { orgId: request.orgId, workspaceId: request.workspaceId }, SYS_ADMIN)
+    && (!stored || rowAllows(request, command) && rowAllows(request, 'llm.key.budget'))
+  const rosterReferences = useQuery({
+    queryKey: ['admin', 'llm-roster-references', request.orgId, request.workspaceId, requestReaderKey(user)],
+    queryFn: () => fetchLlmRosterAccountReferences(request.orgId!, request.workspaceId!),
+    enabled: !stored && paidAllowed && request.orgId != null && request.workspaceId != null,
+    retry: false,
+  })
+  const accountFinance = hasWork(user, 'institution.account.finance.read', { orgId: request.orgId }, SYS_READERS)
   const accounts = useQuery({
-    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null }],
+    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchOpenRouterAccounts(request.orgId ?? undefined),
-    enabled: request.orgId != null,
+    enabled: paidAllowed && accountFinance && request.orgId != null,
     retry: false,
   })
-  // 모델 카탈로그는 캐시를 읽을 뿐이고 편의 계층이다. 실패해도 자유 입력이 남아
-  // 있으므로 결정 카드는 물론 유료 모델 승인도 막지 않는다. 계정 조회와 달리
-  // 이것이 없다고 승인이 불가능해지는 경우는 없다.
   const catalogue = useQuery({
-    queryKey: ['admin', 'openrouter-catalogue'],
-    queryFn: fetchOpenRouterCatalogue,
-    retry: false,
-    staleTime: 5 * 60 * 1000,
+    queryKey: ['admin', 'openrouter-catalogue'], queryFn: fetchOpenRouterCatalogue,
+    enabled: hasWork(user, 'llm.model-catalogue.read', {}, SYS_READERS),
+    retry: false, staleTime: 5 * 60 * 1000,
   })
-  // 사업 계정 조회는 유료 모델만 막는다. 자체 서빙 모델만 주는 승인과 반려는 이
-  // 조회가 실패해도 살아 있어야 하므로 결정 카드 전체를 막지 않는다.
-  const eligibleAccounts = (accounts.data ?? []).filter((account) => account.eligibleForBinding)
-  return {
-    status: 'ready',
-    value: {
-      accounts: eligibleAccounts,
-      loading: accounts.isPending,
-      failed: accounts.isError || request.orgId == null,
-      retry: () => void accounts.refetch(),
-      catalogue: catalogue.data,
-      catalogueFailed: catalogue.isError,
-      targetFacts,
-      targetFactsKnown: context.isSuccess,
-    } satisfies LlmAccountDecisionData,
-  }
+  const references = stored ? context.data?.llmKey?.accountReferences : rosterReferences.data
+  const eligibleAccounts = (references ?? []).filter((account) => account.eligibleForBinding).map((reference) => {
+    const finance = accounts.data?.find((account) => account.id === reference.id)
+    return { ...reference, ...(finance ? { allocation: finance.allocation, credits: finance.credits } : {}) }
+  })
+  return { status: 'ready', value: {
+    accounts: eligibleAccounts, paidAllowed,
+    loading: paidAllowed && (stored ? context.isFetching : rosterReferences.isFetching),
+    failed: paidAllowed && (stored ? context.isError || context.isSuccess && references == null : rosterReferences.isError),
+    retry: () => { if (stored) void context.refetch(); else void rosterReferences.refetch() },
+    catalogue: catalogue.data, catalogueFailed: catalogue.isError,
+    targetFacts, targetFactsKnown: context.isSuccess,
+  } satisfies LlmAccountDecisionData }
 }
 
 /**
@@ -192,6 +199,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditLimit, setCreditLimit] = useState(
     request.llmKey?.reqCreditLimit != null ? String(request.llmKey.reqCreditLimit) : '',
   )
+  const [freeApprovalSelected, setFreeApprovalSelected] = useState(false)
   const [creditReset, setCreditReset] = useState('')
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   // 계정 기본값만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
@@ -241,7 +249,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     ? `${creditText(pendingCredit)} (${creditText(perKeyCredit)} × ${keyCount}명)`
     : creditText(pendingCredit)
   const judgement =
-    effectiveAccount && pendingCredit > 0
+    effectiveAccount?.allocation != null && effectiveAccount.credits != null && pendingCredit > 0
       ? evaluateAllocation({
           allocation: effectiveAccount.allocation,
           credits: effectiveAccount.credits,
@@ -306,6 +314,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           errors['llmKey.openrouterAccountId'] = '어느 사업 계정으로 결제할지 선택해 주세요.'
         }
       }
+      const budgetRequired = Number(creditLimit) > 0 || !!creditReset || parsedCreditModels.length > 0
+        || parsedDeniedModels.length > 0 || passthroughEndpoints.some((endpoint) => endpoint !== 'chat')
+      if (budgetRequired && !accountData.paidAllowed) {
+        errors['llmKey.grantedCreditLimit'] = '유료 정책에는 같은 기관·공간 범위의 승인 또는 명단 지급과 키 예산 업무가 같은 부여에 있어야 합니다.'
+      }
       const modelsError = creditModelRulesError(parsedRules)
       if (modelsError) {
         errors['llmKey.creditModelRules'] = modelsError
@@ -350,6 +363,22 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
     fields: (fieldErrors) => (
       <>
+        {!accountData.paidAllowed && <div className="space-y-3">
+          <Alert>유료 정책을 부여할 같은 원천의 예산 업무가 없습니다. 신청한 유료 조건을 자동으로 줄이지 않습니다. 반려하거나 유료 기능을 모두 닫는 부여안을 직접 선택해 주세요.</Alert>
+          <Checkbox checked={freeApprovalSelected} label="유료 기능 없이 승인" onChange={(event) => {
+            const free = event.target.checked
+            setFreeApprovalSelected(free)
+            setCreditLimit(free ? '0' : spec?.reqCreditLimit != null ? String(spec.reqCreditLimit) : '')
+            setCreditReset('')
+            setOpenrouterAccountId('')
+            setCreditModelRules('')
+            setAccountDefaultsTouched(true)
+            setPassthroughEndpoints(free ? (spec?.reqPassthroughEndpoints ?? []).filter((endpoint) => endpoint === 'chat') : spec?.reqPassthroughEndpoints ?? [])
+            setChatlessAcknowledged(null)
+          }} />
+          {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인합니다. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫습니다.</p>}
+          {!freeApprovalSelected && <p className="text-sm">현재 부여안 기능: {passthroughText(passthroughEndpoints)}</p>}
+        </div>}
         <p className="text-sm text-neutral-500">
           부여 한도를 정해 주세요. 비워 둔 항목은 서비스 기본 한도로 발급되며, 그것이
           보통의 승인입니다. 신청자의 희망값은 각 한도 아래에 적어 두었습니다.
@@ -412,6 +441,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             />
           </FormField>
         </div>
+        <fieldset disabled={!accountData.paidAllowed} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 금액 한도 (USD)"
@@ -472,8 +502,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           denied={parsedDeniedModels}
           invalid={parsedRules.errors.length > 0}
         />
+        </fieldset>
         <PassthroughEndpointField
           label="부여할 기능 권한"
+          rows={accountData.paidAllowed ? undefined : ['chat']}
+          locked={!accountData.paidAllowed && !freeApprovalSelected ? ['chat'] : []}
           value={passthroughEndpoints}
           onChange={(next) => {
             setPassthroughEndpoints(next)
@@ -627,6 +660,7 @@ function approvalAccountField({
   onChange: (value: string) => void
   error?: string
 }) {
+  if (!data.paidAllowed) return error ? <p role="alert" className="text-sm text-danger-700">{error}</p> : null
   if (data.loading) {
     return <div className="flex justify-center py-2"><Spinner label="OpenRouter 사업 계정 확인 중" /></div>
   }

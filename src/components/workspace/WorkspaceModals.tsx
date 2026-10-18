@@ -118,10 +118,10 @@ export function OwnershipTransferModal({
   onConfirm,
   children,
 }: {
-  target: WorkspaceMember | null
+  target: (Omit<WorkspaceMember, 'email'> & { email?: string | null }) | null
   pending: boolean
   onCancel: () => void
-  onConfirm: (member: WorkspaceMember) => void
+  onConfirm: (member: Omit<WorkspaceMember, 'email'> & { email?: string | null }) => void
   children?: ReactNode
 }) {
   const [confirmEmail, setConfirmEmail] = useState('')
@@ -144,7 +144,7 @@ export function OwnershipTransferModal({
           <Button
             variant="danger"
             loading={pending}
-            disabled={confirmEmail !== target?.email}
+            disabled={!target || confirmEmail !== (target.email ?? target.userId)}
             onClick={() => {
               if (target) {
                 onConfirm(target)
@@ -165,14 +165,14 @@ export function OwnershipTransferModal({
         </p>
         {children}
         <FormField
-          label="확인 이메일"
+          label={target?.email ? '확인 이메일' : '대상 사용자 ID 확인'}
           required
-          description={`계속하려면 새 소유자의 이메일(${target?.email ?? ''})을 입력해 주세요.`}
+          description={target?.email ? `계속하려면 새 소유자의 이메일(${target.email})을 입력해 주세요.` : `이메일을 제공할 수 없어 새 소유자의 사용자 ID(${target?.userId ?? ''})로 대상을 확인합니다.`}
         >
           <Input
             value={confirmEmail}
             onChange={(event) => setConfirmEmail(event.target.value)}
-            placeholder={target?.email ?? ''}
+            placeholder={target?.email ?? target?.userId ?? ''}
           />
         </FormField>
       </div>

@@ -27,6 +27,7 @@ import { resetVmFixtures } from './handlers/vms'
 import { resetTerminalFixtures } from './handlers/terminal'
 import { resetVmSshKeyFixtures } from './handlers/vm-ssh-key'
 import { resetVmNetworkPolicyFixtures } from './handlers/vm-network-policy'
+import { AUTHORITY_OVERRIDES } from './institution-authority'
 
 export { handlers }
 
@@ -34,6 +35,7 @@ export const server = setupServer(...handlers)
 
 /** Restore all stateful mock fixtures to their initial data (run between tests). */
 export function resetFixtures() {
+  for (const id of Object.keys(AUTHORITY_OVERRIDES)) delete AUTHORITY_OVERRIDES[id]
   resetDeadlineFixtures()
   resetAccessSupportFixtures()
   resetOrgOperationFixtures()

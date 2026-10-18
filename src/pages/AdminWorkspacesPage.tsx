@@ -6,7 +6,8 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { fetchAdminLlmKeys, fetchAdminDomains, fetchAdminVms, fetchAdminWorkspace, fetchAdminWorkspaces } from '../api/queries'
 import { fetchAdminGpuAllocations } from '../api/gpu'
 import { useAuth } from '../auth/auth-context'
-import { supportsInvitationRead } from '../api/admin-user-support'
+import { canQueryWork, hasWork, SYS_ADMIN, SYS_READERS } from '../auth/institution-authority'
+import { REQUEST_READ_WORK } from '../auth/admin-navigation'
 import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { withListReturn } from '../lib/list-url'
 import {
@@ -169,7 +170,7 @@ function AdminWorkspacesPageContent() {
                   <TD>
                     <WorkspaceKindBadge kind={workspace.kind} />
                   </TD>
-                  <TD>{workspace.memberCount}</TD>
+                  <TD>{workspace.memberCount == null ? '제공되지 않음' : workspace.memberCount}</TD>
                   <TD className="whitespace-nowrap">{formatDateTime(workspace.createdAt)}</TD>
                 </TR>
               ))}
@@ -212,7 +213,8 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
   const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
   const location = useLocation()
-  const canReadInvitations = supportsInvitationRead(user?.role)
+  const canReadInvitations = hasWork(user, 'workspace.support.read', { workspaceId }, SYS_READERS)
+    || hasWork(user, 'workspace.invitations.manage', { workspaceId }, SYS_ADMIN)
   const detail = useQuery({
     queryKey: ['admin', 'workspaces', 'detail', workspaceId, activeOrgId ?? null, requestReaderKey(user)],
     queryFn: () => fetchAdminWorkspace(workspaceId),
@@ -234,7 +236,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
     <div className="space-y-6 [overflow-wrap:anywhere]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="min-w-0 text-lg font-semibold text-neutral-900">{workspace.name}</h3>
-        <div className="flex gap-2"><Badge>{workspace.canUpdateInfo || workspace.canManageMembers || workspace.canInviteMembers ? '지원 편집 가능' : '조회 전용'}</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
+        <div className="flex gap-2"><Badge>{workspace.canUpdateInfo || workspace.canManageMembers || workspace.canManageOwners || workspace.canInviteMembers ? '지원 편집 가능' : '조회 전용'}</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
       </div>
       <p className="text-sm text-neutral-500">구성원은 전체 워크스페이스 기준이며 자원과 신청은 현재 관리 기관에서 조회합니다.</p>
       <Tabs aria-label="워크스페이스 상세 탭" idPrefix="workspace-detail-" value={tab} onChange={onTab}
@@ -242,17 +244,17 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
       <TabPanel id="overview" idPrefix="workspace-detail-" active={tab === 'overview'}>
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="생성일" value={formatDateTime(workspace.createdAt)} />
-        <Field label="활성 구성원" value={String(workspace.memberCount)} />
+        <Field label="활성 구성원" value={workspace.memberCount == null ? '제공되지 않음' : String(workspace.memberCount)} />
         <div>
           <dt className="text-neutral-500">워크스페이스 전체 VM</dt>
           <dd className="font-medium text-neutral-900">
-            {workspace.vmCount}대{' '}
-            <Link
+            {workspace.vmCount == null ? '제공되지 않음' : `${workspace.vmCount}대`}{' '}
+            {canQueryWork(user, ['vm.metadata.read', 'vm.metadata.support.read'], { workspaceId }, SYS_READERS) && <Link
               to={adminPaths.vms(activeOrgId, workspace.id)}
               className="text-sm font-normal text-primary-700 hover:underline"
             >
               {activeOrgId == null ? 'VM 보기' : '현재 관리 기관의 VM 보기'}
-            </Link>
+            </Link>}
           </dd>
         </div>
         {workspace.description && <Field label="설명" value={workspace.description} />}
@@ -261,7 +263,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
       </TabPanel>
 
       <TabPanel id="members" idPrefix="workspace-detail-" active={tab === 'members'} className="space-y-2">
-        {workspace.members.length === 0 ? (
+        {workspace.members == null ? <p className="text-sm text-neutral-500">구성원 관계는 현재 업무로 제공되지 않습니다.</p> : workspace.members.length === 0 ? (
           <p className="text-sm text-neutral-500">구성원이 없습니다.</p>
         ) : (
           <Table className="min-w-[38rem] sm:min-w-0">
@@ -329,14 +331,18 @@ function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
     { type: 'DOMAIN', label: '도메인', to: adminPaths.domains(activeOrgId, workspaceId), read: async () => (await fetchAdminDomains({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
     { type: 'GPU', label: 'GPU', to: gpuPreviewEnabled() ? adminPaths.gpus(activeOrgId, workspaceId) : undefined, read: async () => (await fetchAdminGpuAllocations({ workspaceId, orgId: activeOrgId, size: 1 })).totalElements },
   ]
-  const counts = useQueries({ queries: kinds.map((kind) => ({ queryKey: ['admin', 'workspace-resources', workspaceId, activeOrgId ?? null, kind.type, requestReaderKey(user)], queryFn: kind.read })) })
+  const readable = kinds.map((kind) => {
+    const prefix = kind.type === 'LLM_API_KEY' ? 'llm' : kind.type.toLowerCase()
+    return canQueryWork(user, [`${prefix}.metadata.read`, `${prefix}.metadata.support.read`], { orgId: activeOrgId, workspaceId }, SYS_READERS)
+  })
+  const counts = useQueries({ queries: kinds.map((kind, index) => ({ queryKey: ['admin', 'workspace-resources', workspaceId, activeOrgId ?? null, kind.type, requestReaderKey(user)], queryFn: kind.read, enabled: readable[index] })) })
   return <div className="space-y-3 text-sm">
     <p className="text-neutral-500">자원과 신청은 현재 관리 기관의 범위에서 조회합니다.</p>
     <p className="text-neutral-500">개수는 연결된 목록의 조회 조건을 따릅니다. 종료 이력을 포함한 개수와 다를 수 있습니다.</p>
     <ul className="space-y-2">{kinds.map((kind, index) => <li key={kind.type} className="flex flex-wrap items-center gap-2">
-      {kind.to ? <Link to={kind.to} className="text-primary-700 hover:underline">{kind.label} 목록</Link> : <span>{kind.label}</span>}
-      {counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했습니다.</span> : <span>{counts[index].data}개</span>}
+      {kind.to && readable[index] ? <Link to={kind.to} className="text-primary-700 hover:underline">{kind.label} 목록</Link> : <span>{kind.label}</span>}
+      {!readable[index] ? <span>제공되지 않음</span> : counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했습니다.</span> : <span>조회 범위 {counts[index].data}개</span>}
     </li>)}</ul>
-    <Link to={adminPaths.requests(activeOrgId, workspaceId)} className="inline-flex text-primary-700 hover:underline">이 워크스페이스의 신청 보기</Link>
+    {canQueryWork(user, REQUEST_READ_WORK, { orgId: activeOrgId, workspaceId }, SYS_READERS) && <Link to={adminPaths.requests(activeOrgId, workspaceId)} className="inline-flex text-primary-700 hover:underline">이 워크스페이스의 신청 보기</Link>}
   </div>
 }

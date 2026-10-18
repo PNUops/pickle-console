@@ -310,7 +310,7 @@ describe('관리자 LLM 사용량 신뢰도와 상태 처리', () => {
       .toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'LLM 서비스 상태 보기' })).toHaveAttribute(
       'href',
-      `/admin/llm/status?org=${uuid(1)}`,
+      '/admin/llm/status',
     )
     expect(screen.queryByRole('heading', { name: '사용량 전달 진단' })).not.toBeInTheDocument()
     expect(screen.queryByText('전송 대기 기록')).not.toBeInTheDocument()

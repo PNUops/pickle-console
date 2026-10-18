@@ -67,9 +67,9 @@ test('valid UUID target casing is canonical while malformed targets remain visib
 
 test('workspace filtering sorts the complete array without mutating its source', () => {
   const rows = [
-    { id: uuid(31), name: '수업10', kind: 'COURSE' as const, memberCount: 2, createdAt: '2026-09-02T00:00:00Z' },
-    { id: uuid(32), name: '수업2', kind: 'COURSE' as const, memberCount: 9, createdAt: '2026-09-01T00:00:00Z' },
-    { id: uuid(33), name: '팀', kind: 'PROJECT' as const, memberCount: 4, createdAt: '2026-09-03T00:00:00Z' },
+    { id: uuid(31), name: '수업10', metadataVisible: true, allowedWorkIds: [], kind: 'COURSE' as const, memberCount: 2, createdAt: '2026-09-02T00:00:00Z' },
+    { id: uuid(32), name: '수업2', metadataVisible: true, allowedWorkIds: [], kind: 'COURSE' as const, memberCount: 9, createdAt: '2026-09-01T00:00:00Z' },
+    { id: uuid(33), name: '팀', metadataVisible: true, allowedWorkIds: [], kind: 'PROJECT' as const, memberCount: 4, createdAt: '2026-09-03T00:00:00Z' },
   ]
   expect(filterWorkspaces(rows, workspaceListState(new URLSearchParams('q=수업&kind=COURSE'))).map((row) => row.name))
     .toEqual(['수업2', '수업10'])

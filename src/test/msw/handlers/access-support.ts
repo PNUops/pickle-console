@@ -1,6 +1,8 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { canAdminManageAccess, canReadSupportMetadata } from '../../../auth/permissions'
+import { hasWork, SYS_ADMIN, SYS_READERS } from '../../../auth/institution-authority'
+import { mockAuthorityActor } from '../institution-authority'
+import { resourceWorkPrefix } from '../../../auth/request-authority'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { vmAccessStore, vmStore } from './vms'
 import { adminLlmKeyStore, llmKeyAccessStore, llmKeyStore } from './llm-keys'
@@ -17,25 +19,31 @@ const grades: Role[] = ['OWNER', 'EDITOR', 'MEMBER', 'VIEWER']
 export const accessSupportCalls: { action: string; type: string; resourceId: string; body: unknown }[] = []
 const pendingInvitations = new Map<string, Schemas['WorkspaceInvitationResponse'][]>()
 export function resetAccessSupportFixtures() { accessSupportCalls.splice(0); pendingInvitations.clear() }
-function actorOf(request: Request) { return ACCESS_TOKENS[request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''] }
+function actorOf(request: Request) { const profile = ACCESS_TOKENS[request.headers.get('Authorization')?.replace('Bearer ', '') ?? '']; return profile ? mockAuthorityActor(profile) : null }
 function refused(status = 403) { return problemResponse({ title: '접근 권한이 없습니다', status, code: 'ACCESS_DENIED', detail: '이 지원 작업을 수행할 권한이 없습니다.' }) }
 function invalid(field: string, message: string) { return problemResponse({ title: '입력값을 확인해 주세요', status: 422, code: 'VALIDATION_FAILED', detail: message, errors: [{ field, message }] }) }
-function target(type: string, id: string): { resource: Schemas['ResourceBrief']; grants: Schemas['ResourceAccessGrantView'][] } | null {
+function target(type: string, id: string): { orgId?: string | null; resource: Schemas['ResourceBrief']; grants: Schemas['ResourceAccessGrantView'][] } | null {
   if (type === 'VM') {
     const row = vmStore.find((item) => item.id === id)
-    if (row?.workspaceId) return { resource: { id, type, name: row.name, displayName: row.displayName, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: vmAccessStore[id] ??= [] }
+    if (row?.workspaceId) return { orgId: row.orgId, resource: { id, type, name: row.name, displayName: row.displayName, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: vmAccessStore[id] ??= [] }
   } else if (type === 'LLM_API_KEY') {
     const row = llmKeyStore.find((item) => item.id === id) ?? adminLlmKeyStore.find((item) => item.id === id)
-    if (row?.workspaceId) return { resource: { id, type, name: row.name, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: llmKeyAccessStore[id] ??= [] }
+    if (row?.workspaceId) return { orgId: 'orgId' in row ? row.orgId : null, resource: { id, type, name: row.name, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: llmKeyAccessStore[id] ??= [] }
   } else if (type === 'DOMAIN') {
     const row = dnsDomainStore.rows.find((item) => item.domain.id === id)?.domain
-    if (row?.workspaceId) return { resource: { id, type, name: row.fqdn, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: dnsDomainAccessStore[id] ??= [] }
+    if (row?.workspaceId) return { orgId: null, resource: { id, type, name: row.fqdn, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: dnsDomainAccessStore[id] ??= [] }
   } else if (type === 'GPU') {
     const row = gpuAllocationStore.find((item) => item.id === id)
-    if (row) return { resource: { id, type, name: row.name, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: grantsOf(row) }
+    if (row?.workspaceName && grantsOf(row)) return { orgId: 'orgId' in row ? row.orgId : null, resource: { id, type, name: row.name, status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName }, grants: grantsOf(row)! }
   }
   return null
 }
+function resourceAllowed(actor: NonNullable<ReturnType<typeof actorOf>>, row: NonNullable<ReturnType<typeof target>>, write: boolean) {
+  const prefix = resourceWorkPrefix(row.resource.type)
+  const allowed = (work: string) => hasWork(actor, work, { orgId: row.orgId, workspaceId: row.resource.workspaceId }, work.endsWith('.manage') ? SYS_ADMIN : SYS_READERS)
+  return write ? allowed(`${prefix}.acl.support.manage`) : allowed(`${prefix}.acl.support.read`) || allowed(`${prefix}.acl.support.manage`)
+}
+
 function members(workspaceId: string) {
   return workspaceDetails[workspaceId]?.members.map((member) => ({ ...member, eligible: member.userStatus === 'ACTIVE' }))
     ?? workspaceMembersOf(workspaceId).map((member) => ({ ...member, eligible: true }))
@@ -58,7 +66,7 @@ function fixtureImpact(row: NonNullable<ReturnType<typeof target>>, actorId: str
 export const accessSupportHandlers: RequestHandler[] = [
   http.patch('*/api/v1/admin/workspaces/:workspaceId', async ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.info.update', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (!workspace) return refused(404)
     const body = await request.json() as Schemas['UpdateWorkspaceRequest']
     if (body.name) workspace.name = body.name
@@ -68,7 +76,7 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.post('*/api/v1/admin/workspaces/:workspaceId/members/:userId/preview', async ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.owners.manage', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (!workspace) return refused(404)
     const member = workspace.members.find((item) => item.userId === params.userId)
     const body = await request.json() as Schemas['UpdateWorkspaceMemberRequest']
@@ -77,7 +85,7 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.patch('*/api/v1/admin/workspaces/:workspaceId/members/:userId', async ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.owners.manage', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (!workspace || workspace.kind === 'PERSONAL') return refused(404)
     const member = workspace.members.find((item) => item.userId === params.userId)
     const body = await request.json() as Schemas['UpdateWorkspaceMemberRequest']
@@ -88,17 +96,19 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.delete('*/api/v1/admin/workspaces/:workspaceId/members/:userId', ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor) return refused()
     if (!workspace || workspace.kind === 'PERSONAL') return refused(404)
     const index = workspace.members.findIndex((item) => item.userId === params.userId)
     if (index < 0) return refused(404)
+    const work = workspace.members[index].workspaceRole === 'OWNER' ? 'workspace.owners.manage' : 'workspace.members.manage'
+    if (!hasWork(actor, work, { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (workspace.members[index].workspaceRole === 'OWNER' && workspace.members.filter((item) => item.workspaceRole === 'OWNER').length === 1) return invalid('userId', '마지막 소유자는 제거할 수 없습니다.')
     workspace.members.splice(index, 1)
     return new HttpResponse(null, { status: 204 })
   }),
   http.post('*/api/v1/admin/workspaces/:workspaceId/invitations/preview', async ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.invitations.manage', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (!workspace) return refused(404)
     const body = await request.json() as Schemas['InviteWorkspaceMembersRequest']
     const self = body.entries.some((entry) => entry.email?.toLowerCase() === actor.email.toLowerCase()) && !workspace.members.some((member) => member.userId === actor.id)
@@ -106,7 +116,7 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.post('*/api/v1/admin/workspaces/:workspaceId/invitations', async ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.invitations.manage', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (!workspace || workspace.kind === 'PERSONAL') return refused(404)
     const body = await request.json() as Schemas['InviteWorkspaceMembersRequest']
     const results: Schemas['WorkspaceInvitationResult'][] = body.entries.map((entry, index) => {
@@ -125,10 +135,10 @@ export const accessSupportHandlers: RequestHandler[] = [
     })
     return HttpResponse.json({ results } satisfies Schemas['InviteWorkspaceMembersResponse'])
   }),
-  http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', ({ params }) => HttpResponse.json(pendingInvitations.get(String(params.workspaceId)) ?? [])),
+  http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', ({ params, request }) => { const actor = actorOf(request); return actor && ['workspace.support.read', 'workspace.invitations.manage'].some((work) => hasWork(actor, work, { workspaceId: String(params.workspaceId) }, work.endsWith('.manage') ? SYS_ADMIN : SYS_READERS)) ? HttpResponse.json(pendingInvitations.get(String(params.workspaceId)) ?? []) : refused() }),
   http.delete('*/api/v1/admin/workspaces/:workspaceId/invitations/:invitationId', ({ params, request }) => {
     const actor = actorOf(request)
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.invitations.manage', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     const items = pendingInvitations.get(String(params.workspaceId)) ?? []
     const index = items.findIndex((item) => item.id === params.invitationId)
     if (index < 0) return refused(404)
@@ -137,7 +147,7 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.delete('*/api/v1/admin/workspaces/:workspaceId', ({ params, request }) => {
     const actor = actorOf(request), workspace = workspaceDetails[String(params.workspaceId)]
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor || !hasWork(actor, 'workspace.terminate', { workspaceId: String(params.workspaceId) }, SYS_ADMIN)) return refused()
     if (!workspace || workspace.kind === 'PERSONAL') return refused(404)
     if (workspace.vmCount > 0) return problemResponse({ title: '삭제할 수 없습니다', status: 409, code: 'WORKSPACE_HAS_ACTIVE_RESOURCES', detail: '남은 리소스를 먼저 정리해 주세요.' })
     delete workspaceDetails[workspace.id]
@@ -151,25 +161,27 @@ export const accessSupportHandlers: RequestHandler[] = [
   })),
   http.get('*/api/v1/admin/resource-access/:resourceType/:resourceId', ({ params, request }) => {
     const actor = actorOf(request)
-    if (!actor || !canReadSupportMetadata(actor.role)) return refused()
+    if (!actor) return refused()
     const row = target(String(params.resourceType), String(params.resourceId))
-    return row ? HttpResponse.json({ ...row, canManageAccess: canAdminManageAccess(actor.role) } satisfies Schemas['ResourceAccessListResponse']) : refused(404)
+    if (!row || !resourceAllowed(actor, row, false)) return refused(404)
+    const canManageAccess = resourceAllowed(actor, row, true)
+    return HttpResponse.json({ resource: row.resource, grants: row.grants, canManageAccess, eligibleMembers: canManageAccess ? members(row.resource.workspaceId).filter((member) => member.eligible).map((member) => ({ userId: member.userId, name: member.name, workspaceRole: member.workspaceRole, userStatus: member.userStatus ?? 'ACTIVE' })) : null } satisfies Schemas['ResourceAccessListResponse'])
   }),
   http.post('*/api/v1/admin/resource-access/:resourceType/:resourceId/preview', async ({ params, request }) => {
     const actor = actorOf(request)
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor) return refused()
     const type = String(params.resourceType), resourceId = String(params.resourceId)
     const row = target(type, resourceId)
-    if (!row) return refused(404)
+    if (!row || !resourceAllowed(actor, row, true)) return refused(404)
     const body = await request.json() as Schemas['ResourceAccessChangePreviewRequest']
     return HttpResponse.json(fixtureImpact(row, actor.id, body))
   }),
   http.post('*/api/v1/admin/resource-access/:resourceType/:resourceId', async ({ params, request }) => {
     const actor = actorOf(request)
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor) return refused()
     const type = String(params.resourceType), resourceId = String(params.resourceId)
     const row = target(type, resourceId)
-    if (!row) return refused(404)
+    if (!row || !resourceAllowed(actor, row, true)) return refused(404)
     const body = await request.json() as Schemas['AddResourceAccessGrantRequest']
     if (body.granteeType === 'WORKSPACE' && body.role !== 'MEMBER' && body.role !== 'VIEWER') return invalid('role', '워크스페이스 전체에는 참여자 또는 열람자만 부여할 수 있습니다.')
     const member = body.granteeType === 'USER' ? members(row.resource.workspaceId).find((item) => item.userId === body.userId && item.eligible) : null
@@ -181,9 +193,11 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.patch('*/api/v1/admin/resource-access/:resourceType/:resourceId/:grantId', async ({ params, request }) => {
     const actor = actorOf(request)
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor) return refused()
     const type = String(params.resourceType), resourceId = String(params.resourceId)
-    const grant = target(type, resourceId)?.grants.find((item) => item.id === params.grantId)
+    const row = target(type, resourceId)
+    if (!row || !resourceAllowed(actor, row, true)) return refused(404)
+    const grant = row.grants.find((item) => item.id === params.grantId)
     if (!grant) return refused(404)
     const body = await request.json() as Schemas['UpdateResourceAccessGrantRequest']
     grant.role = body.role
@@ -192,11 +206,11 @@ export const accessSupportHandlers: RequestHandler[] = [
   }),
   http.delete('*/api/v1/admin/resource-access/:resourceType/:resourceId/:grantId', ({ params, request }) => {
     const actor = actorOf(request)
-    if (!actor || !canAdminManageAccess(actor.role)) return refused()
+    if (!actor) return refused()
     const type = String(params.resourceType), resourceId = String(params.resourceId)
     const row = target(type, resourceId)
     const index = row?.grants.findIndex((item) => item.id === params.grantId) ?? -1
-    if (!row || index < 0) return refused(404)
+    if (!row || !resourceAllowed(actor, row, true) || index < 0) return refused(404)
     row.grants.splice(index, 1)
     accessSupportCalls.push({ action: 'REMOVE', type, resourceId, body: null })
     return new HttpResponse(null, { status: 204 })

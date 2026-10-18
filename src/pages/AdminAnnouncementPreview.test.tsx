@@ -50,7 +50,9 @@ describe('Announcement publishing and preview authority', () => {
       server.use(refreshSuccessHandler(token, orgAdminUser))
       renderApp(`/admin/announcements?org=${uuid(2)}`)
       await screen.findByRole('heading', { name: '알림 보내기' })
-      expect(screen.queryByRole('button', { name: '발송 대상 미리보기' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '발송 대상 미리보기' })).toBeInTheDocument()
+      expect(screen.getByLabelText('대상 기관')).toHaveValue(uuid(1))
+      expect(within(screen.getByLabelText('대상 기관')).queryByRole('option', { name: '테스트 기관' })).not.toBeInTheDocument()
     } finally { delete ACCESS_TOKENS[token] }
   })
 

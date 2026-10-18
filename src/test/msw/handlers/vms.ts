@@ -3,9 +3,10 @@ import type { components } from '../../../api/schema'
 import { problemResponse } from './auth'
 import { isMyWorkspace, workspaceMembersOf } from './workspaces'
 import { uuid } from '../ids'
+import type { StoredFacts } from '../facts'
 
 type Schemas = components['schemas']
-type VmDetail = Schemas['VmDetailResponse']
+type VmDetail = StoredFacts<Schemas['VmDetailResponse'], 'hostname' | 'vcpu' | 'memoryMb' | 'diskGb' | 'sshUsername' | 'createdAt' | 'publications' | 'workspaceName'>
 type VmEvent = Schemas['VmEventResponse']
 type ResourceRole = Schemas['ResourceRole']
 type VmAccessGrant = Schemas['ResourceAccessGrantView']
@@ -30,6 +31,8 @@ export function accessOf(
   | 'settingsEditAllowed'
   | 'accessManageAllowed'
   | 'deleteAllowed'
+  | 'allowedWorkIds'
+  | 'metadataVisible'
 > {
   // 상시권은 등급이 아니다. 워크스페이스 소유자라도 접근 목록에 없으면 등급이
   // 없고(`myResourceRole: null`), 그들이 갖는 것은 아래 `manages` 하나다 — 이 목이
@@ -42,6 +45,8 @@ export function accessOf(
   // 목록 관리·삭제는 리소스 소유자의 권한이거나 워크스페이스 소유자의 상시 권한이다.
   const manages = role === 'OWNER' || workspaceOwner
   return {
+    allowedWorkIds: [],
+    metadataVisible: true,
     myResourceRole: effective,
     accessAllowed: atLeastMember,
     powerControlAllowed: atLeastMember,
@@ -867,7 +872,7 @@ export function toVmSummary(vm: VmDetail): Schemas['VmSummaryResponse'] {
     id, name, hostname, status, vcpu, memoryMb, diskGb, workspaceId, workspaceName,
     orgId, orgName, requestId, statusDetail, sshGatewayBlocked, endDate, expiryStoppedAt,
     deletion, createdAt,
-    accessLimited: false, ownerNames: [], accessManageAllowed: vm.accessManageAllowed,
+    metadataVisible: true, allowedWorkIds: [], accessLimited: false, ownerNames: [], accessManageAllowed: vm.accessManageAllowed,
   }
 }
 
@@ -883,7 +888,7 @@ export function toRestrictedVmSummary(
     hostname: null, vcpu: null, memoryMb: null, diskGb: null, requestId: null,
     statusDetail: null, sshGatewayBlocked: null, endDate: null, expiryStoppedAt: null,
     orgId: null, orgName: null, deletion: null,
-    accessLimited: true, ownerNames, accessManageAllowed,
+    metadataVisible: false, allowedWorkIds: [], accessLimited: true, ownerNames, accessManageAllowed,
   }
 }
 

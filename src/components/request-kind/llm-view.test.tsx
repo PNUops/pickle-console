@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { todayKstDate } from '../../lib/format'
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
+import { approvalContextFixture } from '../../test/msw/handlers/admin'
 import { orgAdminUser, refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
@@ -18,6 +19,7 @@ const REQUEST_ID = uuid(301)
 function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): RequestDetail {
   return {
     id: REQUEST_ID,
+    allowedWorkIds: ['llm.request.read', 'llm.request.decide', 'llm.key.budget'],
     workspaceId: uuid(12),
     recipients: [],
     workspaceName: '캡스톤 3조',
@@ -62,6 +64,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
 function renderDetail(
   spec: Partial<NonNullable<RequestDetail['llmKey']>> = {},
   overrides: Partial<RequestDetail> = {},
+  referenceFailure = false,
 ) {
   const detail = { current: { ...llmKeyRequest(spec), ...overrides } }
   const approved: ApproveRequest[] = []
@@ -70,6 +73,15 @@ function renderDetail(
     http.get('*/api/v1/admin/requests/:requestId', () =>
       HttpResponse.json(detail.current, { status: 200 }),
     ),
+    http.get('*/api/v1/admin/requests/:requestId/context', () => {
+      if (referenceFailure) return HttpResponse.json({ title: '조회 실패', status: 503 }, { status: 503 })
+      const context = approvalContextFixture(uuid(201))
+      context.type = 'LLM_API_KEY'; context.vm = null
+      // These synthetic queued recipients are explicitly current active members.
+      for (const recipient of detail.current.recipients ?? []) if (recipient.status === 'QUEUED' && recipient.userId) context.workspace.members.push({ userId: recipient.userId, name: recipient.name ?? 'Synthetic member', role: 'MEMBER', userStatus: 'ACTIVE', canReadDetail: false })
+      context.llmKey = { applicantKeys: [], workspaceKeys: [], accountReferences: openRouterAccountStore.filter((account) => account.orgId === detail.current.orgId).map((account) => ({ id: account.id, name: account.name, eligibleForBinding: account.eligibleForBinding, defaultCreditAllowedModels: account.defaultCreditAllowedModels, defaultCreditDeniedModels: account.defaultCreditDeniedModels })) }
+      return HttpResponse.json(context)
+    }),
     http.post('*/api/v1/admin/requests/:requestId/approve', async ({ request }) => {
       const body = (await request.json()) as ApproveRequest
       approved.push(body)
@@ -421,9 +433,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
 
   test('연결할 계정이 없으면 유료 모델만 막고 계정 관리 deep link를 제공한다', async () => {
     const user = userEvent.setup()
-    server.use(
-      http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([])),
-    )
+    openRouterAccountStore.splice(0)
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
@@ -440,9 +450,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
   test('연결할 계정이 하나면 유료 모델 승인에서 자동 선택하고 불변임을 확인한다', async () => {
     const user = userEvent.setup()
     const only = openRouterAccountStore.find((account) => account.id === uuid(410))!
-    server.use(
-      http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([only])),
-    )
+    openRouterAccountStore.splice(0, openRouterAccountStore.length, only)
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
@@ -466,7 +474,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
         ),
       ),
     )
-    const approved = renderDetail({})
+    const approved = renderDetail({}, {}, true)
 
     expect(await screen.findByText('사업 계정 목록을 불러오지 못했습니다')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '반려' }))

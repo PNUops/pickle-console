@@ -49,7 +49,7 @@ export interface paths {
         };
         /**
          * 알림 발송건 상세 조회
-         * @description 저장된 내용과 대상, 발송 당시 선정 인원을 조회합니다. 기관 계층의 열람 범위는 발송 목록과 같은 작성자 현재 기관 역할 기준입니다.
+         * @description 저장된 내용과 대상, 발송 당시 선정 인원을 조회합니다. 기관 계층은 허용된 기관 업무와 작성자의 현재 기관 행 및 전체 발송건을 기준으로 조회합니다.
          */
         get: operations["getAnnouncement"];
         put?: never;
@@ -826,7 +826,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 목록
-         * @description 학생 지원 권한으로 키 metadata를 전역 조회하며 기관과 워크스페이스, 발급 신청, 상태, 검색어는 필터입니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
+         * @description 각 업무가 허가한 키의 metadata·관측·금융·명령 참조를 조회하며 기관과 워크스페이스, 발급 신청, 상태, 검색어는 필터입니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
          */
         get: operations["listAdminLlmKeys"];
         put?: never;
@@ -846,7 +846,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 상세
-         * @description 학생 지원 권한으로 키 운영 상태와 한도 metadata를 전역 조회합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
+         * @description 실제 키에 대한 업무별로 운영 상태와 현재 허용값을 투영하며, 금융 필드는 별도로 판정합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
          */
         get: operations["getAdminLlmKey"];
         put?: never;
@@ -887,7 +887,7 @@ export interface paths {
         get?: never;
         /**
          * 관리자 LLM API 키 한도 교체
-         * @description 아홉 한도 값을 한 번에 교체합니다. 시스템 운영자는 금액과 리셋 창, 모델 목록, 기능 권한을 바꿀 수 없습니다.
+         * @description 보낸 한도만 현재 업무 권한으로 변경하며 생략한 값은 유지합니다. 시스템 운영자는 금액과 리셋 창, 유료 모델 및 유료 기능 정책을 바꿀 수 없습니다.
          */
         put: operations["replaceAdminLlmKeyLimits"];
         post?: never;
@@ -906,7 +906,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키로 호출할 수 있는 모델
-         * @description 학생 지원 권한으로 전역 조회하는 이 키로 부를 수 있는 모델입니다. 키 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
+         * @description 실제 키를 위한 모델 후보입니다. 유료 정책 참조는 금융 읽기나 해당 키의 예산 명령 권한이 있을 때만 반환합니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
          */
         get: operations["listAdminLlmKeyModels"];
         put?: never;
@@ -966,7 +966,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 사용량
-         * @description 학생 지원 권한으로 전역 조회하는 이 키의 일별 사용량과, 키 소유자 화면에는 없는 분해 셋입니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         * @description 실제 키의 관측 읽기와 금융 읽기를 각각 판정하는 사용량 응답입니다. 미허용 투영은 null이며 0이나 빈 목록과 구분합니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
          */
         get: operations["getAdminLlmKeyUsage"];
         put?: never;
@@ -1009,6 +1009,26 @@ export interface paths {
          * @description 승인 화면에서 고를 수 있는 유료 모델 후보와 그 가격을 조회합니다. 캐시만 읽으므로 이 호출이 벤더를 부르지 않으며, 목록이 비어 있거나 오래됐어도 모델 이름을 직접 입력해 승인할 수 있습니다. 목록이 빈 이유는 신선도 하나로 갈리지 않습니다. 한 번도 못 가져온 것과 계속 실패하는 것이 둘 다 UNKNOWN이므로, lastError와 consecutiveFailures를 함께 읽어야 구분됩니다.
          */
         get: operations["listAdminOpenRouterModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/llm/roster-account-references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 새 LLM 명단 발급의 사업 계정 선택 참조
+         * @description 실제 기관과 살아 있는 워크스페이스에 대한 명단 발급과 키 예산 업무를 같은 권한 원천에서 확인합니다. 기존 신청이나 리소스, 개인 구성원 자격은 필요하지 않습니다. 계정 ID·이름·선택 가능 상태와 적용 가능한 기본 정책만 반환합니다.
+         */
+        get: operations["listAdminLlmRosterAccountReferences"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1310,6 +1330,40 @@ export interface paths {
         put?: never;
         /** 기관 명단과 수신 설정의 변경안 미리보기 */
         post: operations["previewAdminOrgOperations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orgs/{orgId}/operations/request-mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 권한 부여를 바꾸지 않고 기관 신청 메일 수신 설정 저장 */
+        put: operations["saveAdminOrgRequestMailSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orgs/{orgId}/operations/request-mail/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 기관 신청 메일 수신 설정 미리보기 */
+        post: operations["previewAdminOrgRequestMailSettings"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2075,7 +2129,7 @@ export interface paths {
         head?: never;
         /**
          * 사용자 프로필 정정
-         * @description 기관 운영자·관리자는 시스템 계층 계정을 제외한 사용자의 프로필을 전역 정정하며 시스템 관리자는 모든 계정을 정정합니다. 기존 프로필 변경 로직으로 초대 연결과 알림, 감사를 처리합니다. 계정 상태와 MFA, 기관 역할은 변경하지 않습니다.
+         * @description 프로필 정정 업무를 가진 기관 계정은 시스템 계층을 제외한 사용자를 전역 정정하며 시스템 관리자는 모든 계정을 정정합니다. 기존 프로필 변경 로직으로 초대 연결과 알림, 감사를 처리합니다. 계정 상태와 MFA, 기관 역할은 변경하지 않습니다.
          */
         patch: operations["updateUserProfile"];
         trace?: never;
@@ -2091,7 +2145,7 @@ export interface paths {
         put?: never;
         /**
          * 프로필 정정과 계정 활성화의 초대 영향 미리보기
-         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 프로필 정정은 기관 관리자·운영자와 시스템 관리자가, 계정 활성화 미리보기는 시스템 관리자만 수행합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
+         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 프로필 정정 업무를 가진 기관 계정과 시스템 관리자가 정정을 미리보며 계정 활성화 미리보기는 시스템 관리자만 수행합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
          */
         post: operations["previewAdminUserProfileImpact"];
         delete?: never;
@@ -2109,7 +2163,7 @@ export interface paths {
         };
         /**
          * 사용자의 관계와 실제 신청 결과 조회
-         * @description 학생 지원 권한으로 구성원·초대·신청·리소스 관계를 전역 조회합니다. 기관은 선택 필터입니다. 저장된 학번과 대기 초대의 연결, 생성 대기와 실제 리소스 상태를 구분합니다.
+         * @description 학생 지원과 관계별 조회 업무·대상 범위로 구성원·초대·신청·리소스 관계를 조회합니다. 기관은 선택 필터입니다. 저장된 학번과 대기 초대의 연결, 생성 대기와 실제 리소스 상태를 구분합니다.
          */
         get: operations["getAdminUserSupport"];
         put?: never;
@@ -2129,7 +2183,7 @@ export interface paths {
         };
         /**
          * 사용자와 리소스의 공통 접근 조건 조회
-         * @description 학생 지원 권한으로 지정 리소스의 구성원과 부여, 계정 및 리소스 상태를 설명합니다. 실제 사용자 인가와 연결 상태는 변경하지 않으며 종류별 작업 성공을 보장하지 않습니다.
+         * @description 접근 목록 읽기 업무와 대상 범위로 지정 리소스의 구성원·부여·공통 상태를 설명합니다. 학생 지원과 독립적인 진단은 연결된 계정의 최소 상태를 제공하며 실제 사용자 인가와 연결 상태는 변경하지 않습니다.
          */
         get: operations["getAdminUserResourceAccess"];
         put?: never;
@@ -3466,6 +3520,26 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["unlinkIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/institution-authority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 현재 계정의 기관 업무와 부여 출처 조회
+         * @description 표시 역할과 실제 기관 업무를 구분합니다. 권한 상태를 확인할 수 없으면 INVALID로 표시하며 개인 접근권한과 시스템 역할을 바꾸지 않습니다.
+         */
+        get: operations["getMyInstitutionAuthority"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4914,13 +4988,15 @@ export interface components {
             status: components["schemas"]["CertificateStatus"];
         };
         AdminDomainRootView: {
+            allowedWorkIds: string[];
             /** @description true면 이 루트 아래 이름 신청이 접수와 동시에 승인됩니다. false면 승인 큐를 탑니다. **지금 이 값이 다스리는 것은 외부 도메인 발급뿐이고 가상머신 서브도메인 공개는 아직 아닙니다.** */
             autoApprove: boolean;
             /**
              * Format: int64
              * @description 이 루트 아래 지금 서 있는 외부 도메인 수
              */
-            issuedNames: number;
+            issuedNames?: number | null;
+            metadataVisible: boolean;
             /**
              * Format: uuid
              * @description 이 루트 아래 이름이 속하는 기관
@@ -4934,20 +5010,22 @@ export interface components {
             rootDomain: string;
         };
         AdminDomainView: {
+            allowedWorkIds: string[];
             certificateStatus?: components["schemas"]["CertificateStatus"] | null;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             /** Format: date-time */
             dnsAppliedAt?: string | null;
             dnsLastError?: string | null;
-            dnsStatus: components["schemas"]["DomainDnsStatus"];
+            dnsStatus?: components["schemas"]["DomainDnsStatus"] | null;
             fqdn: string;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["DomainKind"];
+            metadataVisible: boolean;
             /** Format: uuid */
-            orgId: string;
-            orgName: string;
+            orgId?: string | null;
+            orgName?: string | null;
             /** Format: date-time */
             releasedAt?: string | null;
             /**
@@ -4972,8 +5050,8 @@ export interface components {
             /** @description 이 이름을 쓰는 가상머신의 이름. 외부 도메인은 null입니다. */
             vmName?: string | null;
             /** Format: uuid */
-            workspaceId: string;
-            workspaceName: string;
+            workspaceId?: string | null;
+            workspaceName?: string | null;
         };
         /** @enum {string} */
         AdminGlobalRole: "USER" | "SYS_VIEWER" | "SYS_MANAGER" | "SYS_ADMIN";
@@ -5028,17 +5106,22 @@ export interface components {
             to: string;
         };
         AdminLlmKeyDetailResponse: {
+            accountReferences?: components["schemas"]["InstitutionLlmAccountReference"][] | null;
+            allowedWorkIds: string[];
+            budgetReferenceVisible: boolean;
+            /** @description 자체 서빙을 포함한 chat 기능 허용 상태 */
+            chatEnabled?: boolean | null;
             /** Format: int32 */
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
             /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열은 제한 없음 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
-            creditAllowedModels: string[];
+            creditAllowedModels?: string[] | null;
             /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
-            creditAxisConnected: boolean;
+            creditAxisConnected?: boolean | null;
             /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열은 차단 없음. 허용 목록과 함께 걸리면 차단이 이긴다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
-            creditDeniedModels: string[];
-            creditLimit: number;
+            creditDeniedModels?: string[] | null;
+            creditLimit?: number | null;
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
@@ -5053,11 +5136,19 @@ export interface components {
             dailyTokens?: number | null;
             /** Format: date-time */
             expiresAt?: string | null;
+            /** @description 개별 키 금융 정보의 현재 열람 권한 */
+            financeVisible: boolean;
             /** Format: uuid */
             id: string;
+            /** @description 현재 예산 명령의 최초 사업 계정 결합 가능 여부. 예산 명령 참조가 없으면 null이며 사용액 관측값을 제공하지 않습니다. */
+            initialAccountBindingAllowed?: boolean | null;
             /** Format: date-time */
             lastUsedAt?: string | null;
+            /** @description 키 metadata의 현재 열람 권한 */
+            metadataVisible: boolean;
             name: string;
+            /** @description 키 사용 관측의 현재 열람 권한 */
+            observationVisible: boolean;
             /** Format: uuid */
             openrouterAccountId?: string | null;
             openrouterAccountName?: string | null;
@@ -5065,9 +5156,9 @@ export interface components {
             orgId?: string | null;
             orgName: string;
             /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음(chat 포함). 모델 목록 둘과 반대로 채워야 열린다. */
-            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
+            passthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             purpose?: string | null;
-            quotaExhausted: boolean;
+            quotaExhausted?: boolean | null;
             /** Format: uuid */
             requestId?: string | null;
             /** Format: date-time */
@@ -5075,6 +5166,7 @@ export interface components {
             /** Format: int32 */
             rpm?: number | null;
             status: components["schemas"]["LlmApiKeyStatus"];
+            tokenReferenceVisible: boolean;
             /** Format: int32 */
             tpm?: number | null;
             /** Format: uuid */
@@ -5089,50 +5181,53 @@ export interface components {
             endDate: string;
         };
         AdminLlmKeyLimitsRequest: {
+            /** @description chat 기능만 변경합니다. 생략하면 유지하고 null은 허용하지 않습니다. */
+            chatEnabled?: boolean;
             /**
              * Format: int32
              * @description 동시 요청 한도. null이면 서비스 기본값을 따릅니다.
              */
-            concurrency: number | null;
+            concurrency?: number | null;
             /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
-            creditAllowedModels: string[] | null;
+            creditAllowedModels?: string[] | null;
             /** @description 유료 모델 차단 목록. 빈 배열이나 null이면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
-            creditDeniedModels: string[] | null;
-            /** @description 금액 한도(USD 크레딧). 0이면 유료 모델을 닫습니다. */
-            creditLimit: number;
+            creditDeniedModels?: string[] | null;
+            /** @description 금액 한도(USD 크레딧). 생략하면 유지하고 null은 허용하지 않습니다. 0이면 유료 모델을 닫습니다. */
+            creditLimit?: number;
             /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. */
-            creditLimitReset: components["schemas"]["CreditLimitReset"] | null;
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
              * @description 일일 토큰 한도. null이면 무제한이고 0이면 토큰 축을 닫습니다.
              */
-            dailyTokens: number | null;
+            dailyTokens?: number | null;
             /**
              * Format: uuid
              * @description 유료 모델을 결제할 사업 계정. 생략하거나 null이면 기존 연결을 유지합니다.
              */
             openrouterAccountId?: string | null;
             /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 값에 영향을 받지 않습니다. */
-            passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
+            passthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
              * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
              */
-            rpm: number | null;
+            rpm?: number | null;
             /**
              * Format: int32
              * @description 분당 토큰 한도. null이면 서비스 기본값을 따릅니다.
              */
-            tpm: number | null;
+            tpm?: number | null;
         };
         AdminLlmKeySummaryResponse: {
+            allowedWorkIds: string[];
             /** Format: int32 */
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
             /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
-            creditAxisConnected: boolean;
-            creditLimit: number;
+            creditAxisConnected?: boolean | null;
+            creditLimit?: number | null;
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
@@ -5147,11 +5242,17 @@ export interface components {
             dailyTokens?: number | null;
             /** Format: date-time */
             expiresAt?: string | null;
+            /** @description 개별 키 금융 정보의 현재 열람 권한 */
+            financeVisible: boolean;
             /** Format: uuid */
             id: string;
             /** Format: date-time */
             lastUsedAt?: string | null;
+            /** @description 키 metadata의 현재 열람 권한 */
+            metadataVisible: boolean;
             name: string;
+            /** @description 키 사용 관측의 현재 열람 권한 */
+            observationVisible: boolean;
             /** Format: uuid */
             openrouterAccountId?: string | null;
             openrouterAccountName?: string | null;
@@ -5172,13 +5273,14 @@ export interface components {
         };
         AdminLlmKeyUsageResponse: {
             /** @description 일별 금액. 소유자 화면에는 없는 계열입니다 — 소유자는 모델별 금액만 봅니다. */
-            costPoints: components["schemas"]["LlmUsageCostPointResponse"][];
+            costPoints?: components["schemas"]["LlmUsageCostPointResponse"][] | null;
             /** @description 이 기간에 실제로 호출된 경로만, 요청이 많은 순 */
-            endpointKinds: components["schemas"]["LlmEndpointKindUsageResponse"][];
+            endpointKinds?: components["schemas"]["InstitutionAdminLlmEndpointUsageResponse"][] | null;
+            financeVisible: boolean;
             /** @description 공급자가 요청과 다른 모델로 응답한 사례. 없으면 빈 목록이고, 빈 것이 「대체가 없었다」를 증명하지는 않습니다. */
-            servedModels: components["schemas"]["LlmServedModelUsageResponse"][];
+            servedModels?: components["schemas"]["LlmServedModelUsageResponse"][] | null;
             /** @description 키 소유자가 보는 것과 같은 응답, 같은 계산 */
-            trend: components["schemas"]["LlmKeyUsageTrendResponse"];
+            trend: components["schemas"]["InstitutionAdminLlmTrendResponse"];
         };
         AdminLlmUsageResponse: {
             /** @description 같은 기간을 「무엇을」로 자른 셋. 모델별, 경로별, 그리고 기능 권한이 실제로 쓰이고 있는지입니다. */
@@ -5200,7 +5302,7 @@ export interface components {
         };
         AdminMembershipResponse: {
             role: components["schemas"]["WorkspaceMemberRole"];
-            vmOrgIds: string[];
+            vmOrgIds?: string[] | null;
             /** Format: uuid */
             workspaceId: string;
             workspaceKind: components["schemas"]["WorkspaceKind"];
@@ -5261,8 +5363,8 @@ export interface components {
             /** Format: int32 */
             activeApproverCount: number;
             /** Format: int32 */
-            currentMailRecipientCount: number;
-            legacyFallback: boolean;
+            currentMailRecipientCount?: number | null;
+            legacyFallback?: boolean | null;
             mailMode?: components["schemas"]["RequestMailMode"] | null;
             members: components["schemas"]["AdminOrgRoleMemberView"][];
             /** Format: date-time */
@@ -5272,14 +5374,17 @@ export interface components {
             requesterId?: string | null;
             /** Format: int64 */
             revision: number;
+            selectionContext?: components["schemas"]["RequestMailSelectionContext"] | null;
+            selectionTargets?: components["schemas"]["RequestMailSelectionTarget"][] | null;
         };
         AdminOrgRoleMemberView: {
-            currentMailRecipient: boolean;
+            currentMailRecipient?: boolean | null;
             email: string;
             exclusionReason?: string | null;
-            inAppRecipient: boolean;
+            inAppRecipient?: boolean | null;
             name: string;
-            requestMail: boolean;
+            permission?: components["schemas"]["InstitutionPermissionView"] | null;
+            requestMail?: boolean | null;
             /** @description 이 기관에서 보유한 역할. 계정의 최고 역할과 구분합니다. */
             role: components["schemas"]["UserRole"];
             selectionReason?: string | null;
@@ -5533,6 +5638,7 @@ export interface components {
             workspaceName?: string | null;
         };
         AdminRouteView: {
+            allowedWorkIds: string[];
             /** Format: date-time */
             appliedAt?: string | null;
             /** Format: int64 */
@@ -5544,13 +5650,14 @@ export interface components {
             /** Format: uuid */
             id: string;
             lastError?: string | null;
+            metadataVisible: boolean;
             /** Format: uuid */
             orgId: string;
             orgName: string;
-            protocol: string;
+            protocol?: string | null;
             status: components["schemas"]["RouteStatus"];
             /** Format: int32 */
-            targetPort: number;
+            targetPort?: number | null;
             /** Format: date-time */
             updatedAt?: string | null;
             /** Format: uuid */
@@ -5648,9 +5755,9 @@ export interface components {
         };
         AdminUserResourceAccessResponse: {
             /** @description 활성 계정, 소유 워크스페이스 구성원과 리소스 부여의 공통 조건만 충족했는지. 종류별 작업이나 실제 연결 성공을 보장하지 않습니다. */
-            baseConditionsSatisfied: boolean;
+            baseConditionsSatisfied?: boolean | null;
             /** @description 현재 관리자가 기존 일괄 접근 변경으로 이 사용자의 개인 부여를 회수할 수 있는지 */
-            canRevoke: boolean;
+            canRevoke?: boolean | null;
             effectiveRole?: components["schemas"]["ResourceRole"] | null;
             /** Format: uuid */
             id: string;
@@ -5660,12 +5767,12 @@ export interface components {
             orgName: string;
             personalGrantRole?: components["schemas"]["ResourceRole"] | null;
             /** @description 공통 진단 사유. ACCOUNT_INACTIVE, NOT_WORKSPACE_MEMBER, NO_RESOURCE_GRANT, RESOURCE_ENDED, RESOURCE_NOT_READY. 종류별 상세 조건은 별도 확인이 필요합니다. */
-            reasons: string[];
+            reasons?: string[] | null;
             /** Format: uuid */
             requestId?: string | null;
             /** @description 회수 조건. ALLOWED, FORBIDDEN, RESOURCE_NOT_FOUND, NO_PERSONAL_GRANT. 기존 개인 부여의 회수는 계정 비활성이나 구성원 해제 이후에도 가능합니다. */
-            revokeReason: string;
-            standingRights: boolean;
+            revokeReason?: string | null;
+            standingRights?: boolean | null;
             status: string;
             type: components["schemas"]["ResourceType"];
             userStatus: components["schemas"]["UserStatus"];
@@ -5728,20 +5835,22 @@ export interface components {
         AdminUserSupportResourceCount: {
             /**
              * Format: int64
-             * @description 기관 필터를 적용한 종류별 행 수. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
+             * @description 공간과 기관 필터 안의 종류 전체 행 수를 읽을 수 있을 때만 제공하며 그 외에는 null입니다. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
              */
-            count: number;
+            count?: number | null;
             type: components["schemas"]["ResourceType"];
         };
         AdminUserSupportResponse: {
-            invitations: components["schemas"]["AdminUserSupportInvitation"][];
+            invitations?: components["schemas"]["AdminUserSupportInvitation"][] | null;
             invitationsVisible: boolean;
-            memberships: components["schemas"]["AdminUserSupportMembership"][];
+            memberships?: components["schemas"]["AdminUserSupportMembership"][] | null;
             /** Format: date-time */
             observedAt: string;
-            requests: components["schemas"]["AdminUserSupportRelatedRequest"][];
-            /** @description 학생 지원 권한으로 전역 조회한 접근 목록형 리소스. 기관 선택은 필터입니다. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
-            resources: components["schemas"]["AdminUserResourceAccessResponse"][];
+            /** @description 관계 데이터가 업무나 대상 범위에 따라 일부만 제공되거나 제공되지 않았는지 */
+            relationshipsLimited: boolean;
+            requests?: components["schemas"]["AdminUserSupportRelatedRequest"][] | null;
+            /** @description 학생 지원과 종류별 업무·대상 범위를 적용한 리소스 관계. 제공할 수 없는 진단 필드는 null입니다. 기관 선택은 필터입니다. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
+            resources?: components["schemas"]["AdminUserResourceAccessResponse"][] | null;
             /** Format: uuid */
             userId: string;
         };
@@ -5762,6 +5871,11 @@ export interface components {
             orgId: string;
             /** Format: int32 */
             vcpu: number;
+            /**
+             * Format: uuid
+             * @description 명령 대상 워크스페이스. 지정 범위 권한으로 조회할 때 필요합니다.
+             */
+            workspaceId?: string | null;
         };
         AdminVmPlacementPreviewResponse: {
             candidates: components["schemas"]["AdminVmPlacementCandidate"][];
@@ -5780,31 +5894,34 @@ export interface components {
             orgId: string;
         };
         AdminWorkspaceDetailResponse: {
+            allowedWorkIds: string[];
             canDelete: boolean;
             canInviteMembers: boolean;
             canManageMembers: boolean;
             canManageOwners: boolean;
             canUpdateInfo: boolean;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             deleteBlockedReason?: string | null;
             description?: string | null;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
             /** Format: int64 */
-            memberCount: number;
-            members: components["schemas"]["AdminWorkspaceMemberResponse"][];
+            memberCount?: number | null;
+            members?: components["schemas"]["AdminWorkspaceMemberResponse"][] | null;
+            metadataVisible: boolean;
             name: string;
+            rosterCandidates?: components["schemas"]["RosterCandidate"][] | null;
             /** Format: int64 */
-            vmCount: number;
+            vmCount?: number | null;
         };
         AdminWorkspaceMemberResponse: {
             canChangeRole: boolean;
             canRemove: boolean;
-            email: string;
+            email?: string | null;
             /** Format: date-time */
-            joinedAt: string;
+            joinedAt?: string | null;
             name: string;
             /** @description 현재 관리자에게 이 구성원의 사용자 관계·지원 상세를 열람할 권한이 있는지 여부 */
             supportDetailVisible: boolean;
@@ -5814,13 +5931,15 @@ export interface components {
             workspaceRole: components["schemas"]["WorkspaceMemberRole"];
         };
         AdminWorkspaceOptionResponse: {
+            allowedWorkIds: string[];
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
             /** Format: int64 */
-            memberCount: number;
+            memberCount?: number | null;
+            metadataVisible: boolean;
             name: string;
         };
         /** @enum {string} */
@@ -5886,17 +6005,23 @@ export interface components {
             workspaceId?: string | null;
         };
         Applicant: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 현재 신청 열람 권한 범위에서 확인되는 승인 수
+             */
             approvedCount: number;
             canReadDetail: boolean;
             email: string;
             /** Format: uuid */
             id: string;
             name: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 현재 신청 열람 권한 범위에서 확인되는 반려 수
+             */
             rejectedCount: number;
             /** Format: date-time */
-            signupAt: string;
+            signupAt?: string | null;
         };
         ApprovalContextResponse: {
             applicant: components["schemas"]["Applicant"];
@@ -5907,13 +6032,12 @@ export interface components {
             generatedResources: components["schemas"]["AdminRequestGeneratedResourceResponse"][];
             gpu?: components["schemas"]["GpuContext"] | null;
             /** @deprecated */
-            guidance: string;
+            guidance?: string | null;
             history: components["schemas"]["HistoryEntry"][];
             llmKey?: components["schemas"]["LlmKeyContext"] | null;
             /** Format: date-time */
             observedAt: string;
-            /** @deprecated */
-            orgHeadroom: components["schemas"]["OrgHeadroom"];
+            orgHeadroom?: components["schemas"]["OrgHeadroom"] | null;
             /** Format: uuid */
             orgId: string;
             orgName: string;
@@ -5998,8 +6122,8 @@ export interface components {
             nodeId?: string | null;
         };
         Assignment: {
+            permission: components["schemas"]["InstitutionPermissionInput"];
             requestMail?: boolean;
-            role: components["schemas"]["UserRole"];
             /** Format: uuid */
             userId: string;
         };
@@ -6046,6 +6170,8 @@ export interface components {
         BeginMfaRequest: {
             password: string;
         };
+        /** @enum {string} */
+        Boundary: "RESOURCE" | "RESOURCE_SUPPORT" | "WORKSPACE_SUPPORT" | "QUALIFIED_WORKSPACE" | "INSTITUTION" | "GLOBAL";
         /** @enum {string} */
         CampusIpRequestStatus: "REQUESTED" | "APPROVED" | "GRANTED" | "REJECTED" | "REVOKED";
         CampusIpRequestView: {
@@ -6284,7 +6410,7 @@ export interface components {
             userId?: string | null;
         };
         CreateRequestRequest: {
-            /** @description 제출과 동시에 승인할 때의 승인 내용. 이 기관의 신청을 승인할 수 있는 관리자만 보낼 수 있습니다. 승인 화면에서 보내는 내용과 같습니다. */
+            /** @description 제출과 동시에 승인할 때의 내용. 일반 신청 승인 업무가 필요하며, 새 명단은 명단 발급 업무로 그 명령 안에서 승인할 수 있습니다. 승인 화면에서 보내는 내용과 같습니다. */
             approval?: components["schemas"]["ApproveRequestRequest"] | null;
             displayName: string;
             domain?: components["schemas"]["CreateDomainRequestSpec"] | null;
@@ -6299,7 +6425,7 @@ export interface components {
             /** Format: uuid */
             periodPresetId?: string | null;
             purpose: string;
-            /** @description 리소스를 받을 대상자. 비우면 신청자 본인이 받는 일반 신청입니다. VM과 LLM API 키에만 쓸 수 있고, 워크스페이스 소유자나 이 기관의 신청을 승인할 수 있는 관리자만 지정할 수 있습니다. 대상자마다 리소스를 하나씩 만들며, 가입 전인 초대 대상자는 가입할 때 만듭니다. */
+            /** @description 리소스를 받을 대상자. 비우면 신청자 본인이 받는 일반 신청입니다. VM과 LLM API 키에만 쓸 수 있고, 워크스페이스 소유자나 해당 명단 발급 업무가 있는 담당자가 지정할 수 있습니다. 대상자마다 리소스를 하나씩 만들며, 가입 전인 초대 대상자는 가입할 때 만듭니다. */
             recipients?: components["schemas"]["CreateRequestRecipient"][] | null;
             /** Format: date */
             reqEndDate?: string | null;
@@ -6541,6 +6667,13 @@ export interface components {
         };
         /** @enum {string} */
         DriftFindingStatus: "OPEN" | "RESOLVED";
+        EligibleMember: {
+            name: string;
+            /** Format: uuid */
+            userId: string;
+            userStatus: components["schemas"]["UserStatus"];
+            workspaceRole: components["schemas"]["WorkspaceMemberRole"];
+        };
         ExtendGpuLeaseRequest: {
             /**
              * Format: int32
@@ -6573,9 +6706,10 @@ export interface components {
             accessManageAllowed: boolean;
             /** Format: date-time */
             allocatedAt?: string | null;
-            connectionStatus: components["schemas"]["GpuConnectionStatus"];
+            allowedWorkIds: string[];
+            connectionStatus?: components["schemas"]["GpuConnectionStatus"] | null;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             error?: string | null;
             gpu?: components["schemas"]["GpuView"] | null;
             /** Format: int32 */
@@ -6584,12 +6718,13 @@ export interface components {
             id: string;
             /** Format: date-time */
             leaseEndsAt?: string | null;
+            metadataVisible: boolean;
             myRole?: components["schemas"]["ResourceRole"] | null;
             name: string;
             /** Format: uuid */
             orgId?: string | null;
             orgName?: string | null;
-            ownerNames: string[];
+            ownerNames?: string[] | null;
             /** Format: int32 */
             priority?: number | null;
             /** Format: int64 */
@@ -6609,7 +6744,7 @@ export interface components {
             vmName?: string | null;
             /** Format: uuid */
             workspaceId: string;
-            workspaceName: string;
+            workspaceName?: string | null;
         };
         GpuAttachmentOption: {
             /** Format: uuid */
@@ -6624,9 +6759,9 @@ export interface components {
         GpuConnectionStatus: "NONE" | "ATTACHING" | "ATTACHED" | "DETACHING" | "ERROR";
         GpuContext: {
             /** Format: int64 */
-            availableCards: number;
+            availableCards?: number | null;
             /** Format: int64 */
-            queuedAllocations: number;
+            queuedAllocations?: number | null;
             /** Format: int32 */
             requestedLeaseHours: number;
             vmName?: string | null;
@@ -6692,8 +6827,8 @@ export interface components {
         GrantOrgRoleRequest: {
             /** Format: int64 */
             expectedRevision: number;
-            /** @description 이 기관에서 부여할 역할 (ORG_ADMIN, ORG_MANAGER, ORG_VIEWER) */
-            role: components["schemas"]["UserRole"];
+            /** @description 명시 부여할 기관 업무와 범위. 표시 역할은 이 값에서 계산합니다. */
+            permission: components["schemas"]["InstitutionPermissionInput"];
         };
         /** @description 접근 권한을 가진 사용자 */
         Grantee: {
@@ -6719,6 +6854,236 @@ export interface components {
         };
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
+        InstitutionAdminLlmBudgetResponse: {
+            /**
+             * Format: date
+             * @description 최근 소비 속도로 금액 한도에 도달할 것으로 보이는 날짜. 이력이 부족하거나 최근에 쓴 적이 없으면 null입니다.
+             */
+            creditDepletionForecast?: string | null;
+            /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
+            creditLimit?: number | null;
+            /** @description 공급자가 보고한 현재 한도 창 사용액(USD). DAILY/WEEKLY/MONTHLY 리셋 뒤에는 감소할 수 있습니다. 아직 보고된 적이 없으면 null입니다. */
+            creditUsage?: number | null;
+            /**
+             * Format: date-time
+             * @description 그 한도 창 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             */
+            creditUsageAt?: string | null;
+            /**
+             * Format: int64
+             * @description 하루에 쓸 수 있는 토큰 수. null이면 한도가 없고, 0이면 자체 서빙 모델을 쓸 수 없습니다.
+             */
+            dailyTokens?: number | null;
+            /** @description 한도에 도달해 자체 서빙 모델 요청이 거절되고 있는 상태. */
+            quotaExhausted?: boolean | null;
+            /**
+             * Format: int64
+             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 유료 모델 사용은 금액 한도에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             */
+            todayTokens?: number | null;
+        };
+        InstitutionAdminLlmEndpointUsageResponse: {
+            /** @description 이 경로가 쓴 금액(USD). 가격이 붙은 요청이 없으면 null입니다. */
+            attributedCostUsd?: number | null;
+            /**
+             * Format: int64
+             * @description 이 경로 요청 중 유료 모델로 나간 요청 수. 한 경로에는 두 축이 섞이므로 금액이 빠진 건수를 세려면 전체 요청이 아니라 이 값에서 빼야 합니다. 자체 서빙 요청에는 금액이라는 것이 아예 없으므로, 전체 요청에서 빼면 자체 서빙까지 「금액을 모르는 요청」으로 세게 됩니다.
+             */
+            creditAxisRequests?: number | null;
+            /** @description 요청이 들어온 경로. 값은 게이트웨이가 정하는 열린 어휘이고, null은 「기타」가 아니라 이 축이 기록되기 전의 요청입니다. */
+            endpoint?: string | null;
+            /**
+             * Format: int64
+             * @description 한도 거부가 **아닌** 사유로 실패한 요청 수. 한도 거부를 여기 넣지 않는 것은 집계 표와 같은 가름이라야 같은 이름이 두 숫자를 뜻하지 않기 때문입니다.
+             */
+            failed: number;
+            /**
+             * Format: int64
+             * @description 이 경로가 돌려준 이미지 수
+             */
+            imageCount: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 이 경로 요청 중 공급자가 금액을 알려 준 요청 수
+             */
+            pricedRequests?: number | null;
+            /**
+             * Format: int64
+             * @description 한도에 걸려 거부된 요청 수. failed와 겹치지 않습니다 — 셋을 더하면 requests가 됩니다.
+             */
+            rateLimited: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            succeeded: number;
+        };
+        InstitutionAdminLlmModelUsageResponse: {
+            /** @description 이 기간에 이 모델 요청에 공급자가 알려 준 금액(USD)의 합. 한도나 잔액과 견주는 값이 아니며, 가격이 붙지 않은 요청은 들어 있지 않습니다 (pricedRequests 참조). 가격이 붙은 요청이 하나도 없으면 null입니다. */
+            attributedCostUsd?: number | null;
+            /**
+             * Format: int64
+             * @description 이 모델 요청의 평균 응답 시간(ms). 실패와 거부까지 포함한 평균이라 정상 응답만 재는 백분위와는 다른 값입니다.
+             */
+            avgLatencyMs: number;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: int64 */
+            failed: number;
+            /**
+             * Format: int64
+             * @description 이 모델이 돌려준 이미지 수
+             */
+            imageCount: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며, 화면에서는 '모델 미상'으로 묶입니다. */
+            modelName?: string | null;
+            /** Format: int64 */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 금액이 붙은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             */
+            pricedAvgLatencyMs?: number | null;
+            /**
+             * Format: int64
+             * @description 금액이 붙은 요청 가운데 실패한 수.
+             */
+            pricedFailed?: number | null;
+            /**
+             * Format: int64
+             * @description 금액이 붙은 요청이 쓴 입력 토큰 수. 금액이 붙지 않은 요청의 입력 토큰은 inputTokens에서 이 값을 뺀 것입니다.
+             */
+            pricedInputTokens?: number | null;
+            /**
+             * Format: int64
+             * @description 금액이 붙은 요청이 쓴 출력 토큰 수
+             */
+            pricedOutputTokens?: number | null;
+            /**
+             * Format: int64
+             * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수. requests보다 작으면 나머지는 금액을 모르는 것이지 공짜였던 것이 아닙니다.
+             */
+            pricedRequests?: number | null;
+            /** Format: int64 */
+            rateLimited: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            succeeded: number;
+            /**
+             * Format: int64
+             * @description 금액이 붙지 않은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             */
+            unpricedAvgLatencyMs?: number | null;
+        };
+        InstitutionAdminLlmModelsResponse: {
+            financeVisible: boolean;
+            paid?: components["schemas"]["PaidModels"] | null;
+            selfServed: components["schemas"]["SelfServedModel"][];
+        };
+        InstitutionAdminLlmTrendResponse: {
+            /** @description 기간이 아니라 현재 시점의 두 예산 축 상태 */
+            budget: components["schemas"]["InstitutionAdminLlmBudgetResponse"];
+            /** @description 이 기간의 실패를 종류별로, 많은 순 */
+            errorTypes?: components["schemas"]["LlmKeyErrorTypeResponse"][] | null;
+            /** Format: date */
+            from: string;
+            /** @description 요일 x 시각(KST) 요청 분포. 요청이 있는 칸만 담깁니다. */
+            hourly?: components["schemas"]["LlmKeyHourlyUsageResponse"][] | null;
+            /** @description 정상 응답 요청의 응답 시간 백분위. 정상 응답이 없으면 null입니다. */
+            latency?: components["schemas"]["LlmKeyLatencyResponse"] | null;
+            /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
+            models?: components["schemas"]["InstitutionAdminLlmModelUsageResponse"][] | null;
+            /** @description 하루 한 점, 오래된 날부터 */
+            points?: components["schemas"]["LlmKeyUsagePointResponse"][] | null;
+            /**
+             * Format: date-time
+             * @description 게이트웨이가 이 키의 사용량을 마지막으로 보고한 시각. 보고는 배치라 몇 분 늦을 수 있습니다. 보고가 한 번도 없었으면 null입니다.
+             */
+            reportedUntil?: string | null;
+            /** Format: date */
+            to: string;
+        };
+        InstitutionAuthorityResponse: {
+            accountRole: components["schemas"]["UserRole"];
+            assignments: components["schemas"]["InstitutionGrantView"][];
+            authorityFingerprint?: string | null;
+            catalogue: components["schemas"]["InstitutionWorkView"][];
+            catalogueRevision: string;
+            failure?: string | null;
+            /** @enum {string} */
+            state: "VALID_EMPTY" | "VALID_SOURCES" | "INVALID";
+        };
+        InstitutionGrantView: {
+            /** Format: uuid */
+            institutionId: string;
+            institutionName: string;
+            permission: components["schemas"]["InstitutionPermissionView"];
+        };
+        InstitutionLlmAccountReference: {
+            defaultCreditAllowedModels?: string[] | null;
+            defaultCreditDeniedModels?: string[] | null;
+            eligibleForBinding: boolean;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        InstitutionPermissionInput: {
+            /**
+             * Format: int64
+             * @description 기존 부여의 현재 버전. 새 부여는 0이며 회수 후 재부여한 버전은 재사용하지 않습니다.
+             */
+            expectedRevision: number;
+            mode: components["schemas"]["InstitutionPermissionMode"];
+            scopes: {
+                [key: string]: components["schemas"]["InstitutionWorkspaceScopeInput"];
+            };
+            work: string[];
+        };
+        /**
+         * @description 기관 권한 부여 방식
+         * @enum {string}
+         */
+        InstitutionPermissionMode: "FULL" | "SELECTED";
+        InstitutionPermissionScopeView: {
+            mode: components["schemas"]["InstitutionWorkspaceScopeMode"];
+            workspaceIds: string[];
+        };
+        InstitutionPermissionView: {
+            mode: components["schemas"]["InstitutionPermissionMode"];
+            /** Format: int64 */
+            revision: number;
+            scopes: {
+                [key: string]: components["schemas"]["InstitutionPermissionScopeView"];
+            };
+            work: string[];
+        };
+        /** @enum {string} */
+        InstitutionWorkGroup: "VM" | "LLM" | "DOMAIN" | "GPU" | "WORKSPACE";
+        InstitutionWorkView: {
+            boundary: components["schemas"]["Boundary"];
+            globalResourceReadInFull: boolean;
+            group?: components["schemas"]["InstitutionWorkGroup"] | null;
+            id: string;
+            includedInFull: boolean;
+            name: string;
+            selectable: boolean;
+            write: boolean;
+        };
+        InstitutionWorkspaceScopeInput: {
+            mode: components["schemas"]["InstitutionWorkspaceScopeMode"];
+            workspaceIds: string[];
+        };
+        /**
+         * @description 업무 그룹에서 허용하는 워크스페이스 범위
+         * @enum {string}
+         */
+        InstitutionWorkspaceScopeMode: "ALL" | "LISTED";
         InviteWorkspaceMembersRequest: {
             confirmation?: components["schemas"]["AccessConfirmation"] | null;
             /** @description 초대할 사람 목록. 1명에서 200명까지이며, 한 항목에는 이메일과 학번 중 하나만 씁니다. */
@@ -6876,45 +7241,6 @@ export interface components {
         };
         /** @enum {string} */
         LlmCatalogStatus: "MATCH" | "MISMATCH" | "NOT_APPLICABLE" | "UNKNOWN";
-        LlmEndpointKindUsageResponse: {
-            /** @description 이 경로가 쓴 금액(USD). 가격이 붙은 요청이 없으면 null입니다. */
-            attributedCostUsd?: number | null;
-            /**
-             * Format: int64
-             * @description 이 경로 요청 중 유료 모델로 나간 요청 수. 한 경로에는 두 축이 섞이므로 금액이 빠진 건수를 세려면 전체 요청이 아니라 이 값에서 빼야 합니다. 자체 서빙 요청에는 금액이라는 것이 아예 없으므로, 전체 요청에서 빼면 자체 서빙까지 「금액을 모르는 요청」으로 세게 됩니다.
-             */
-            creditAxisRequests: number;
-            /** @description 요청이 들어온 경로. 값은 게이트웨이가 정하는 열린 어휘이고, null은 「기타」가 아니라 이 축이 기록되기 전의 요청입니다. */
-            endpoint?: string | null;
-            /**
-             * Format: int64
-             * @description 한도 거부가 **아닌** 사유로 실패한 요청 수. 한도 거부를 여기 넣지 않는 것은 집계 표와 같은 가름이라야 같은 이름이 두 숫자를 뜻하지 않기 때문입니다.
-             */
-            failed: number;
-            /**
-             * Format: int64
-             * @description 이 경로가 돌려준 이미지 수
-             */
-            imageCount: number;
-            /** Format: int64 */
-            inputTokens: number;
-            /** Format: int64 */
-            outputTokens: number;
-            /**
-             * Format: int64
-             * @description 이 경로 요청 중 공급자가 금액을 알려 준 요청 수
-             */
-            pricedRequests: number;
-            /**
-             * Format: int64
-             * @description 한도에 걸려 거부된 요청 수. failed와 겹치지 않습니다 — 셋을 더하면 requests가 됩니다.
-             */
-            rateLimited: number;
-            /** Format: int64 */
-            requests: number;
-            /** Format: int64 */
-            succeeded: number;
-        };
         /** @enum {string} */
         LlmGatewayReportState: "NOT_REPORTED" | "FRESH" | "STALE";
         /** @description LLM gateway heartbeat와 usage 전송 상태. reportState, usageQueueReportState와 lastContactAt은 모든 관리자에게 보입니다. Queue 수치와 loss counter를 포함한 나머지 진단 필드는 SYS 계층에만 값이 있고 ORG 계층에서는 null입니다. */
@@ -7082,13 +7408,14 @@ export interface components {
             canReadDetail: boolean;
             /** Format: int32 */
             concurrency?: number | null;
-            creditAxisConnected: boolean;
-            creditLimit: number;
+            creditAxisConnected?: boolean | null;
+            creditLimit?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /** Format: int64 */
             dailyTokens?: number | null;
             /** Format: date-time */
             expiresAt?: string | null;
+            financeVisible: boolean;
             /** Format: uuid */
             id: string;
             name: string;
@@ -7132,6 +7459,7 @@ export interface components {
             todayTokens: number;
         };
         LlmKeyContext: {
+            accountReferences?: components["schemas"]["InstitutionLlmAccountReference"][] | null;
             applicantKeys: components["schemas"]["LlmKeyBrief"][];
             workspaceKeys: components["schemas"]["LlmKeyBrief"][];
         };
@@ -7512,8 +7840,8 @@ export interface components {
             truncated: boolean;
         };
         LlmLimitReviewResponse: {
-            creditAxisConnected: boolean;
-            creditLimit: number;
+            creditAxisConnected?: boolean | null;
+            creditLimit?: number | null;
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             creditUsage?: number | null;
@@ -7521,6 +7849,7 @@ export interface components {
             creditUsageAt?: string | null;
             /** Format: int64 */
             dailyTokens?: number | null;
+            financeVisible: boolean;
             /** Format: uuid */
             keyId: string;
             keyName: string;
@@ -7719,7 +8048,7 @@ export interface components {
         };
         LlmUsageBreakdownResponse: {
             /** @description 이 기간에 실제로 들어온 경로만, 요청이 많은 순 */
-            endpointKinds: components["schemas"]["LlmEndpointKindUsageResponse"][];
+            endpointKinds: components["schemas"]["InstitutionAdminLlmEndpointUsageResponse"][];
             /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
             models: components["schemas"]["LlmUsageModelBreakdownResponse"][];
             /** @description 기능 권한 값마다 한 줄. 부여만 되고 안 쓰이는 것이 보입니다. */
@@ -7734,7 +8063,7 @@ export interface components {
              * Format: int64
              * @description 이 소비처의 요청 중 유료 모델로 나간 요청 수. **한 행이 여러 모델을 묶는 표에서** 금액이 빠진 건수를 세려면 전체 요청이 아니라 이 값에서 빼야 합니다. 자체 서빙 요청에는 금액이라는 것이 아예 없으므로, 전체 요청에서 빼면 자체 서빙까지 「금액을 모르는 요청」으로 세게 됩니다. 모델별 표는 다릅니다 — 거기서는 한 모델을 두 행으로 나누고 그 둘이 모델의 요청을 남김없이 갈라야 하므로 가격 기준으로 자릅니다.
              */
-            creditAxisRequests: number;
+            creditAxisRequests?: number | null;
             /** Format: int64 */
             inputTokens: number;
             /** Format: uuid */
@@ -7756,7 +8085,7 @@ export interface components {
              * Format: int64
              * @description 이 소비처의 요청 중 공급자가 금액을 알려 준 요청 수
              */
-            pricedRequests: number;
+            pricedRequests?: number | null;
             /** Format: int64 */
             requests: number;
             /** Format: uuid */
@@ -7825,7 +8154,7 @@ export interface components {
              * Format: int64
              * @description 이 모델의 요청 중 유료 모델로 나간 요청 수. 모델 하나는 자체 서빙이거나 유료거나 하나이므로 이 값은 사실상 0 아니면 requests 이고, **화면은 이것을 「이 모델에 유료 트래픽이 있었나」로만 씁니다.** 금액이 빠진 건수를 여기서 빼지 않습니다 — 이 표는 한 모델을 두 행으로 나누고 그 둘이 모델의 요청을 남김없이 갈라야 해서, 가격 기준(requests - pricedRequests)으로 자릅니다.
              */
-            creditAxisRequests: number;
+            creditAxisRequests?: number | null;
             /** Format: int64 */
             failed: number;
             /** Format: int64 */
@@ -7838,34 +8167,34 @@ export interface components {
              * Format: int64
              * @description 금액이 붙은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
              */
-            pricedAvgLatencyMs: number;
+            pricedAvgLatencyMs?: number | null;
             /**
              * Format: int64
              * @description 금액이 붙은 요청 가운데 실패한 수. 게이트웨이가 응답을 정산할 때만 금액을 쓰므로 실제로는 언제나 0이지만, 그 불변식은 다른 레포의 동작이라 세어서 보냅니다. 화면이 이 모델을 두 행으로 나눌 때 각 행의 실패율을 가정이 아니라 자료에서 냅니다.
              */
-            pricedFailed: number;
+            pricedFailed?: number | null;
             /**
              * Format: int64
              * @description 금액이 붙은 요청이 쓴 입력 토큰 수. 화면이 이 모델을 「금액 확인」과 「금액 미상」 두 행으로 나누어 각 행의 토큰을 보여 주기 위한 값이고, 미상 쪽 토큰은 전체에서 이 값을 빼서 얻습니다. 알려진 단가로 모르는 쪽을 추정하려면 두 토큰 수가 갈려 있어야 합니다.
              */
-            pricedInputTokens: number;
+            pricedInputTokens?: number | null;
             /**
              * Format: int64
              * @description 금액이 붙은 요청이 쓴 출력 토큰 수
              */
-            pricedOutputTokens: number;
+            pricedOutputTokens?: number | null;
             /**
              * Format: int64
              * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수
              */
-            pricedRequests: number;
+            pricedRequests?: number | null;
             /** Format: int64 */
             requests: number;
             /**
              * Format: int64
              * @description 금액이 붙지 않은 요청만의 평균 응답 시간(ms). 화면이 이 모델을 두 행으로 나눌 때 각 행이 자기 요청의 값을 갖게 하려고 서버가 나눕니다 — 한 값을 두 행에 되풀이하면 행마다 다른 요청 수를 갖고도 같은 응답 시간을 말하게 됩니다. 그런 요청이 없으면 0입니다.
              */
-            unpricedAvgLatencyMs: number;
+            unpricedAvgLatencyMs?: number | null;
         };
         LlmUsagePassthroughGrantResponse: {
             /** @description 기능 권한 값. chat, images, embeddings 중 하나입니다. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행이 없습니다. */
@@ -7874,7 +8203,7 @@ export interface components {
              * Format: int64
              * @description 지금 이 기능을 부여받은 키 수
              */
-            grantedKeys: number;
+            grantedKeys?: number | null;
             /**
              * Format: int64
              * @description 이 기능이 여는 경로들로 들어온 요청 수
@@ -7892,12 +8221,12 @@ export interface components {
              * Format: int64
              * @description 양수 credit limit key 중 vendor meter 관측 이력이 있는 수
              */
-            creditMetersObserved: number;
+            creditMetersObserved?: number | null;
             /**
              * Format: int64
              * @description 양수 credit limit을 가진 key 수
              */
-            creditMetersTotal: number;
+            creditMetersTotal?: number | null;
             /**
              * Format: int64
              * @description 이 기간 요청 중 들어온 경로가 기록된 수. 경로 축은 2026-09-06에 생겼으므로 그 전 요청은 여기 들어가지 않고, 경로별 분해도 그만큼 덜 덮습니다.
@@ -7934,7 +8263,7 @@ export interface components {
              * Format: int64
              * @description 이 기간 요청 중 공급자가 금액을 알려 준 수. 자체 서빙 요청은 금액이라는 것이 없어 여기 들어가지 않으므로, 이 값이 작은 것 자체는 결함이 아닙니다. **totalRequests와 견주지 마십시오** — 그 비율은 「금액을 못 받은 비율」이 아니라 자체 서빙 비중을 함께 담습니다. 이 요약 층에는 유료 요청 수가 없고, 그것이 필요하면 소비처와 호출 종류 행의 creditAxisRequests를 씁니다.
              */
-            pricedRequests: number;
+            pricedRequests?: number | null;
             /** Format: int64 */
             queuedUsageBytes?: number | null;
             /** Format: int64 */
@@ -8481,12 +8810,12 @@ export interface components {
             /** @description 현재 ACTIVE credential의 secret-free 상태. 없으면 null */
             activeCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
             /** @description 이 account에 걸린 살아 있는 key의 금액 한도 합계 */
-            allocation: components["schemas"]["OpenRouterAccountAllocationResponse"];
+            allocation?: components["schemas"]["OpenRouterAccountAllocationResponse"] | null;
             /**
              * Format: int64
              * @description 이 사업 계정에 연결된 LLM API 키 수
              */
-            boundKeyCount: number;
+            boundKeyCount?: number | null;
             /** @description 이 account를 물어볼 담당자. 없으면 null */
             contact?: string | null;
             /**
@@ -8495,15 +8824,17 @@ export interface components {
              */
             createdAt: string;
             /** @description 프로비저닝과 대사에 사용할 management credential이 있는지 */
-            credentialAvailable: boolean;
+            credentialAvailable?: boolean | null;
+            credentialVisible: boolean;
             /** @description DB cache에서 읽은 account credits·예상·미관리 지출 관측 상태 */
-            credits: components["schemas"]["OpenRouterAccountCreditsResponse"];
+            credits?: components["schemas"]["OpenRouterAccountCreditsResponse"] | null;
             /** @description 승인 화면이 프리필에 쓰는 유료 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
-            defaultCreditAllowedModels: string[];
+            defaultCreditAllowedModels?: string[] | null;
             /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
-            defaultCreditDeniedModels: string[];
+            defaultCreditDeniedModels?: string[] | null;
             /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
             eligibleForBinding: boolean;
+            financeVisible: boolean;
             /**
              * Format: uuid
              * @description Account 공개 ID
@@ -8518,6 +8849,7 @@ export interface components {
             orgId: string;
             /** @description 소유 기관 이름 */
             orgName: string;
+            policyReferenceVisible: boolean;
             /** @description 이 account가 청구되는 사업. 없으면 null */
             program?: string | null;
             /** @description STAGED 또는 RETIRING credential의 secret-free 상태. 없으면 null */
@@ -8628,19 +8960,19 @@ export interface components {
         /** @enum {string} */
         OpenRouterUnmanagedSpendUnavailableReason: "NO_BASELINE" | "INCOMPLETE_PAIR" | "RESET_BOUNDARY";
         OrgDashboardSummaryResponse: {
-            attention: components["schemas"]["Attention"];
+            attention?: components["schemas"]["Attention"] | null;
             /** Format: int64 */
-            expiringVmCount30d: number;
+            expiringVmCount30d?: number | null;
             /** Format: int64 */
-            pendingRequestCount: number;
+            pendingRequestCount?: number | null;
             /** Format: int64 */
-            publishedServiceCount: number;
-            recentDecisions14d: components["schemas"]["RecentDecisions"];
-            resource: components["schemas"]["Resource"];
-            topWorkspacesByVmCount: components["schemas"]["TopWorkspace"][];
-            vmCountsByStatus: {
+            publishedServiceCount?: number | null;
+            recentDecisions14d?: components["schemas"]["RecentDecisions"] | null;
+            resource?: components["schemas"]["Resource"] | null;
+            topWorkspacesByVmCount?: components["schemas"]["TopWorkspace"][] | null;
+            vmCountsByStatus?: {
                 [key: string]: number;
-            };
+            } | null;
         };
         OrgDetailResponse: {
             /** Format: date-time */
@@ -9221,6 +9553,8 @@ export interface components {
             records: components["schemas"]["DesiredRecordSet"][];
         };
         RequestDetailResponse: {
+            /** @description 현재 신청에서 허용된 기관 업무. 개인 OWNER·ACL 권한과 구분하며, 유료 승인 예산은 같은 출처의 결정 업무와 함께 허용될 때만 포함합니다. */
+            allowedWorkIds?: string[] | null;
             /** Format: date-time */
             createdAt: string;
             displayName: string;
@@ -9277,10 +9611,21 @@ export interface components {
             /** Format: uuid */
             userId: string;
         };
+        RequestMailSelectionContext: {
+            requestType: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+        };
         RequestMailSelectionResponse: {
             /** Format: uuid */
             requestId: string;
             selection?: components["schemas"]["RequestMailSelectionView"] | null;
+        };
+        RequestMailSelectionTarget: {
+            requestType: components["schemas"]["ResourceType"];
+            /** Format: uuid */
+            workspaceId: string;
+            workspaceName: string;
         };
         RequestMailSelectionView: {
             mailMode: string;
@@ -9424,11 +9769,13 @@ export interface components {
         ResolveRosterRequest: {
             /**
              * Format: uuid
-             * @description 신청을 낼 기관. 워크스페이스 소유자가 아니라 이 기관의 신청을 승인할 수 있는 관리자로서 확인할 때 보냅니다.
+             * @description 신청을 낼 기관. 워크스페이스 소유자가 아니라 이 기관의 명단 발급 업무를 가진 담당자로서 확인할 때 보냅니다.
              */
             orgId?: string | null;
             /** @description 확인할 학번 목록. 1건에서 500건까지이며, 결과는 같은 순서로 옵니다. 한 시간에 확인할 수 있는 학번은 모두 합쳐 2000건입니다. */
             studentNos: string[];
+            /** @description 기관 권한으로 명단을 확인할 신청 종류. VM 또는 LLM_API_KEY만 지원합니다. 워크스페이스 소유자는 생략할 수 있습니다. */
+            type?: components["schemas"]["ResourceType"] | null;
         };
         ResolveRosterResponse: {
             /** @description 요청한 학번마다 한 건씩, 요청과 같은 순서입니다. */
@@ -9480,6 +9827,7 @@ export interface components {
         ResourceAccessListResponse: {
             /** @description 현재 수행자가 이 목록을 변경할 수 있는지 */
             canManageAccess: boolean;
+            eligibleMembers?: components["schemas"]["EligibleMember"][] | null;
             /** @description 접근 권한 항목 */
             grants: components["schemas"]["ResourceAccessGrantView"][];
             /** @description 이 목록이 속한 리소스 */
@@ -9528,11 +9876,18 @@ export interface components {
         /** @enum {string} */
         ResourceType: "VM" | "LLM_API_KEY" | "DOMAIN" | "GPU";
         Resources: {
-            activeVms: components["schemas"]["VmBriefResponse"][];
-            totals: components["schemas"]["ResourceTotalsResponse"];
+            activeVms?: components["schemas"]["VmBriefResponse"][] | null;
+            totals?: components["schemas"]["ResourceTotalsResponse"] | null;
         };
         /** @enum {string} */
         ReviewDecision: "APPROVE" | "REJECT";
+        RosterCandidate: {
+            name: string;
+            role: components["schemas"]["WorkspaceMemberRole"];
+            status: components["schemas"]["UserStatus"];
+            /** Format: uuid */
+            userId: string;
+        };
         RosterEntryResult: {
             /**
              * Format: uuid
@@ -9589,11 +9944,21 @@ export interface components {
             allowVacancy?: boolean;
             /** Format: uuid */
             confirmedOrgId?: string | null;
+            expectedPermissionRevisions: {
+                [key: string]: number;
+            };
             /** Format: int64 */
             expectedRevision: number;
             mailMode?: components["schemas"]["RequestMailMode"] | null;
             members: components["schemas"]["Assignment"][];
             reason?: string | null;
+        };
+        SaveOrgRequestMailSettingsRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            mailMode: components["schemas"]["RequestMailMode"];
+            reason?: string | null;
+            recipientIds: string[];
         };
         ScheduleVmDeletionRequest: {
             reason: string;
@@ -9840,7 +10205,7 @@ export interface components {
             status?: components["schemas"]["OrgStatus"];
         };
         UpdateOrgRequestMailRequest: {
-            /** @description 이 기관의 신청 접수 메일을 받을지. 신청을 승인할 수 있는 역할(ORG_ADMIN, ORG_MANAGER)만 켤 수 있다. 실제 수신자는 기관의 현재 수신 방식과 지정 명단을 따릅니다. */
+            /** @description 이 기관의 신청 접수 메일 수신 지정. 실제 신청 결정 업무가 있는 담당자만 켤 수 있습니다. 실제 수신자는 현재 수신 방식과 신청 종류, 실제 기관과 workspace 범위 및 계정 상태를 따릅니다. */
             enabled: boolean;
             /** Format: int64 */
             expectedRevision: number;
@@ -9941,9 +10306,9 @@ export interface components {
         };
         UserAdminDetailResponse: {
             /** Format: int32 */
-            activeVmCount: number;
+            activeVmCount?: number | null;
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             departmentCode?: string | null;
             departmentName?: string | null;
             departmentOther?: string | null;
@@ -9953,14 +10318,15 @@ export interface components {
             email: string;
             /** Format: uuid */
             id: string;
-            managedOrgs: components["schemas"]["ManagedOrgResponse"][];
-            memberships: components["schemas"]["AdminMembershipResponse"][];
-            mfaEnabled: boolean;
+            managedOrgs?: components["schemas"]["ManagedOrgResponse"][] | null;
+            memberships?: components["schemas"]["AdminMembershipResponse"][] | null;
+            mfaEnabled?: boolean | null;
             name: string;
             position?: components["schemas"]["UserPosition"] | null;
+            relationshipsLimited: boolean;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
-            statusChanges: components["schemas"]["UserStatusChangeResponse"][];
+            statusChanges?: components["schemas"]["UserStatusChangeResponse"][] | null;
             studentNo?: string | null;
             supportCapabilities: components["schemas"]["AdminUserSupportCapabilitiesResponse"];
             /** Format: date-time */
@@ -9968,13 +10334,14 @@ export interface components {
         };
         UserAdminViewResponse: {
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             email: string;
             /** Format: uuid */
             id: string;
-            managedOrgs: components["schemas"]["ManagedOrgResponse"][];
-            mfaEnabled: boolean;
+            managedOrgs?: components["schemas"]["ManagedOrgResponse"][] | null;
+            mfaEnabled?: boolean | null;
             name: string;
+            relationshipsLimited: boolean;
             role: components["schemas"]["UserRole"];
             status: components["schemas"]["UserStatus"];
         };
@@ -10030,26 +10397,25 @@ export interface components {
         VmBriefResponse: {
             canReadDetail: boolean;
             /** Format: int32 */
-            diskGb: number;
+            diskGb?: number | null;
             /** Format: date */
             endDate?: string | null;
             /** Format: uuid */
             id: string;
             /** Format: int32 */
-            memoryMb: number;
+            memoryMb?: number | null;
             name: string;
             /** Format: uuid */
-            orgId: string;
+            orgId?: string | null;
             status: components["schemas"]["VmStatus"];
             /** Format: int32 */
-            vcpu: number;
+            vcpu?: number | null;
         };
         VmContext: {
             /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
-            guidance: string;
-            /** @deprecated */
-            orgHeadroom: components["schemas"]["OrgHeadroom"];
+            guidance?: string | null;
+            orgHeadroom?: components["schemas"]["OrgHeadroom"] | null;
             requestedImage?: components["schemas"]["AdminApprovalImageReference"] | null;
             workspaceResources: components["schemas"]["Resources"];
         };
@@ -10071,54 +10437,56 @@ export interface components {
             accessAllowed: boolean;
             /** @description 접근 권한 목록을 관리할 수 있는지 */
             accessManageAllowed: boolean;
+            allowedWorkIds: string[];
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             /** @description 삭제를 접수할 수 있는지 */
             deleteAllowed: boolean;
             deletion?: components["schemas"]["VmDeletionResponse"] | null;
             /** Format: int32 */
-            diskGb: number;
+            diskGb?: number | null;
             displayName?: string | null;
             /** Format: date */
             endDate?: string | null;
             /** Format: date-time */
             expiryStoppedAt?: string | null;
             gpu?: components["schemas"]["GpuVmSummary"] | null;
-            hostname: string;
+            hostname?: string | null;
             /** Format: uuid */
             id: string;
             /**
              * Format: uuid
-             * @description 생성에 쓰인 OS 이미지. 행이 사라진 경우에만 null입니다.
+             * @description 생성에 쓰인 OS 이미지. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
              */
             imageId?: string | null;
             ipAddress?: string | null;
             /** Format: int32 */
-            memoryMb: number;
+            memoryMb?: number | null;
+            metadataVisible: boolean;
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             name: string;
             /**
              * Format: uuid
-             * @description 소속 기관. 행이 사라진 경우에만 null입니다.
+             * @description 소속 기관. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
              */
             orgId?: string | null;
             orgName?: string | null;
-            passwordAvailable: boolean;
+            passwordAvailable?: boolean | null;
             passwordRevealAllowed: boolean;
             /** @description 전원을 제어할 수 있는지 */
             powerControlAllowed: boolean;
             provisioning?: components["schemas"]["ProvisioningTaskResponse"] | null;
-            publications: components["schemas"]["PublicationView"][];
+            publications?: components["schemas"]["PublicationView"][] | null;
             /**
              * Format: uuid
-             * @description 이 VM을 만든 신청. 행이 사라진 경우에만 null입니다.
+             * @description 이 VM을 만든 신청. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
              */
             requestId?: string | null;
             /** @description VM 설정을 볼·바꿀 수 있는지 */
             settingsEditAllowed: boolean;
-            sshGatewayBlocked: boolean;
-            sshHost: string;
-            sshUsername: string;
+            sshGatewayBlocked?: boolean | null;
+            sshHost?: string | null;
+            sshUsername?: string | null;
             /** Format: date */
             startDate?: string | null;
             status: components["schemas"]["VmStatus"];
@@ -10126,13 +10494,13 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             /** Format: int32 */
-            vcpu: number;
+            vcpu?: number | null;
             /**
              * Format: uuid
-             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             * @description 소유 워크스페이스. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
              */
             workspaceId?: string | null;
-            workspaceName: string;
+            workspaceName?: string | null;
         };
         VmEventResponse: {
             /** Format: uuid */
@@ -10366,8 +10734,9 @@ export interface components {
             accessLimited: boolean;
             /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 워크스페이스 소유자가 참입니다. */
             accessManageAllowed: boolean;
+            allowedWorkIds: string[];
             /** Format: date-time */
-            createdAt: string;
+            createdAt?: string | null;
             /** @description 예약된 삭제. 예약이 없거나 접근 제한 행이면 null입니다. */
             deletion?: components["schemas"]["VmDeletionResponse"] | null;
             /**
@@ -10389,6 +10758,7 @@ export interface components {
              * @description 메모리(MiB). 접근 권한이 없으면 생략됩니다.
              */
             memoryMb?: number | null;
+            metadataVisible: boolean;
             /** @description SSH 슬러그. 접근 권한이 없으면 대신 표시 이름이 들어갑니다. */
             name: string;
             /**
@@ -10398,7 +10768,7 @@ export interface components {
             orgId?: string | null;
             orgName?: string | null;
             /** @description 이 VM의 소유자 이름. 접근을 요청할 상대입니다. */
-            ownerNames: string[];
+            ownerNames?: string[] | null;
             /** Format: uuid */
             requestId?: string | null;
             sshGatewayBlocked?: boolean | null;
@@ -10511,18 +10881,15 @@ export interface components {
              * @deprecated
              * @description 호환용 VM 목록. 새 클라이언트는 vm.workspaceResources.activeVms를 사용합니다.
              */
-            activeVms: components["schemas"]["VmBriefResponse"][];
+            activeVms?: components["schemas"]["VmBriefResponse"][] | null;
             canReadDetail: boolean;
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["MemberBrief"][];
             name: string;
-            /**
-             * @deprecated
-             * @description 호환용 VM 합계. 새 클라이언트는 vm.workspaceResources.totals를 사용합니다.
-             */
-            totals: components["schemas"]["ResourceTotalsResponse"];
+            /** @description 호환용 VM 합계. 새 클라이언트는 vm.workspaceResources.totals를 사용합니다. */
+            totals?: components["schemas"]["ResourceTotalsResponse"] | null;
         };
         WorkspaceSummaryResponse: {
             description?: string | null;
@@ -12372,7 +12739,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["LlmKeyModelsResponse"];
+                    "*/*": components["schemas"]["InstitutionAdminLlmModelsResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -12536,6 +12903,38 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OpenRouterCatalogueResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listAdminLlmRosterAccountReferences: {
+        parameters: {
+            query: {
+                orgId: string;
+                workspaceId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstitutionLlmAccountReference"][];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
@@ -13214,6 +13613,8 @@ export interface operations {
         parameters: {
             query?: {
                 requesterId?: string;
+                requestType?: components["schemas"]["ResourceType"];
+                workspaceId?: string;
             };
             header?: never;
             path: {
@@ -13290,6 +13691,79 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SaveOrgOperationsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrgOperationsPreviewResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveAdminOrgRequestMailSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOrgRequestMailSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminOrgOperationsResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewAdminOrgRequestMailSettings: {
+        parameters: {
+            query?: {
+                requestType?: components["schemas"]["ResourceType"];
+                workspaceId?: string;
+            };
+            header?: never;
+            path: {
+                orgId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOrgRequestMailSettingsRequest"];
             };
         };
         responses: {
@@ -14959,6 +15433,7 @@ export interface operations {
         parameters: {
             query: {
                 expectedRevision: number;
+                expectedPermissionRevision: number;
             };
             header?: never;
             path: {
@@ -18240,6 +18715,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getMyInstitutionAuthority: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstitutionAuthorityResponse"];
+                };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
             default: {

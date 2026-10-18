@@ -12,6 +12,8 @@ import {
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
+import { canReadSummary, canVisitAdministration, REQUEST_READ_WORK } from '../auth/admin-navigation'
+import { hasAnyWork, SYS_READERS } from '../auth/institution-authority'
 import {
   Alert,
   Card,
@@ -64,10 +66,14 @@ export function AdminDashboardPage() {
   const { user } = useAuth()
   const { activeOrgId, activeOrg, path } = useAdminScope()
   const isSysAdmin = !!user && isSysTier(user.role)
+  const summaryAllowed = canReadSummary(user)
+  const pendingAllowed = hasAnyWork(user, REQUEST_READ_WORK, SYS_READERS)
+  const trendAllowed = hasAnyWork(user, ['vm.observe'], SYS_READERS)
 
   const summary = useQuery({
     queryKey: ['admin', 'summary', { orgId: activeOrgId ?? null }],
     queryFn: () => fetchAdminSummary({ orgId: activeOrgId }),
+    enabled: summaryAllowed,
   })
   const system = useQuery({
     queryKey: ['admin', 'system-summary'],
@@ -82,6 +88,7 @@ export function AdminDashboardPage() {
     ],
     queryFn: () =>
       fetchAdminRequests({ status: 'SUBMITTED', orgId: activeOrgId, page: 0, size: 5 }),
+    enabled: pendingAllowed,
   })
 
   return (
@@ -92,7 +99,16 @@ export function AdminDashboardPage() {
         description={`${user?.name}님, 환영합니다. ${activeOrg?.name ?? '플랫폼 전체'} 운영 현황입니다.`}
       />
 
-      {summary.isPending && (
+      <nav aria-label="허용된 관리자 업무" className="flex flex-wrap gap-3">
+        {[
+          ['/admin/notices', '공지사항'], ['/admin/requests', '신청 검토'], ['/admin/requests/new', '명단 지급'],
+          ['/admin/users', '사용자 지원'], ['/admin/workspaces', '워크스페이스 지원'],
+          ['/admin/org-operations', '기관 운영'], ['/admin/announcements', '안내 발송'],
+          ['/admin/vms', '가상머신'], ['/admin/llm/keys', 'LLM API 키'], ['/admin/audit', '감사 기록'],
+        ].filter(([to]) => canVisitAdministration(user, to)).map(([to, label]) => <Link key={to} to={path(to)} className="rounded-md border border-neutral-200 px-4 py-3 text-sm font-medium text-primary-700 hover:bg-primary-50">{label}</Link>)}
+      </nav>
+      {!summaryAllowed && <Alert>현재 부여된 업무로 이용할 수 있는 메뉴를 선택해 주세요.</Alert>}
+      {summaryAllowed && summary.isPending && (
         <div className="flex justify-center py-8">
           <Spinner label="요약 불러오는 중" />
         </div>
@@ -102,7 +118,7 @@ export function AdminDashboardPage() {
         <>
           <OrgSummaryTiles summary={summary.data} orgId={activeOrgId} />
           <ResourceCard summary={summary.data} />
-          <ErrorBoundary label="할당 추이">
+          {trendAllowed && <ErrorBoundary label="할당 추이">
             <Suspense
               fallback={
                 <div className="flex justify-center py-8">
@@ -112,7 +128,7 @@ export function AdminDashboardPage() {
             >
               <OrgAllocationTrendCard orgId={activeOrgId} />
             </Suspense>
-          </ErrorBoundary>
+          </ErrorBoundary>}
         </>
       )}
 
@@ -173,7 +189,7 @@ export function AdminDashboardPage() {
         </section>
       )}
 
-      <Card>
+      {pendingAllowed && <Card>
         <CardHeader className="flex items-center justify-between gap-4">
           <CardTitle>승인 대기</CardTitle>
           <Link
@@ -226,14 +242,14 @@ export function AdminDashboardPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   )
 }
 
 function OrgSummaryTiles({ summary, orgId }: { summary: OrgDashboardSummary; orgId?: string }) {
   const counts = summary.vmCountsByStatus
-  const attentionCount =
+  const attentionCount = summary.attention == null ? null :
     summary.attention.failedTaskCount + summary.attention.needsAdminVmCount
   return (
     <div
@@ -241,33 +257,33 @@ function OrgSummaryTiles({ summary, orgId }: { summary: OrgDashboardSummary; org
       aria-label="기관 요약"
       className="grid grid-cols-2 gap-4 lg:grid-cols-4"
     >
-      <StatTile
+      {summary.pendingRequestCount != null && <StatTile
         label="승인 대기"
         value={`${summary.pendingRequestCount}건`}
-        hint={`최근 14일 승인 ${summary.recentDecisions14d.approvedCount} · 반려 ${summary.recentDecisions14d.rejectedCount}`}
+        hint={summary.recentDecisions14d == null ? undefined : `최근 14일 승인 ${summary.recentDecisions14d.approvedCount} · 반려 ${summary.recentDecisions14d.rejectedCount}`}
         to={adminPath('/admin/requests', orgId)}
-      />
-      <StatTile
+      />}
+      {counts != null && <StatTile
         label="VM 현황"
         value={`실행 ${countOf(counts, 'RUNNING')}대`}
         hint={`중지 ${countOf(counts, 'STOPPED')} · 오류·확인 필요 ${
           countOf(counts, 'ERROR') + countOf(counts, 'NEEDS_ADMIN')
         }`}
         to={adminPath('/admin/vms', orgId)}
-      />
-      <StatTile
+      />}
+      {summary.expiringVmCount30d != null && <StatTile
         label="만료 예정 (30일)"
         value={`${summary.expiringVmCount30d}대`}
-        hint={`만료됨 ${summary.attention.expiredVmCount}대`}
+        hint={summary.attention == null ? undefined : `만료됨 ${summary.attention.expiredVmCount}대`}
         to={adminPath('/admin/expiry', orgId)}
-      />
-      <StatTile
+      />}
+      {attentionCount != null && <StatTile
         label="확인 필요"
         value={`${attentionCount}건`}
         hint="실패 작업·관리자 확인 VM"
         to={adminPath('/admin/vms', orgId)}
         tone={attentionCount > 0 ? 'danger' : 'normal'}
-      />
+      />}
     </div>
   )
 }
@@ -422,6 +438,7 @@ function LiveUsageTile({
 
 function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
   const { resource } = summary
+  if (resource == null) return null
   return (
     <Card>
       <CardHeader>

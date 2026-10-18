@@ -17,7 +17,8 @@ import {
 import { VmGpuCard } from '../components/gpu/VmGpuCard'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageVmDeletion, canOperateVm, canReadSupportMetadata, isSysAdminOnly, isSysTier, managesOrg, operatesOrg } from '../auth/permissions'
+import { canReadSupportMetadata, isSysAdminOnly } from '../auth/permissions'
+import { canUseRowWork, projectionAvailable, SYS_ADMIN, SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
 import { AdminVmDeletionSections } from '../components/admin-vm/AdminVmDeletionSections'
 import { ExtendVmPeriodModal } from '../components/ExtendVmPeriodModal'
 import { VmGatewayBlockSection } from '../components/VmGatewayBlockSection'
@@ -79,7 +80,6 @@ function AdminVmDetailPageContent() {
   const location = useLocation()
   const listReturn = vmListReturn(location.state?.vmList, requestReaderKey(user), activeOrgId, !!user && canReadSupportMetadata(user.role))
   const isSysAdmin = !!user && isSysAdminOnly(user.role)
-  const roleCanOperate = !!user && canOperateVm(user.role)
   const policyEnabled = vmNetworkPolicyEnabled()
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
@@ -91,8 +91,11 @@ function AdminVmDetailPageContent() {
     enabled: idValid,
   })
 
-  const canReadPolicy = !!user && (isSysTier(user.role) || detail.data?.orgId != null && managesOrg(user.managedOrgs, detail.data.orgId))
-  const tabs = TABS.filter((tab) => tab.id !== 'network-policy' || policyEnabled && canReadPolicy)
+  const canReadPolicy = canUseRowWork(user, detail.data, 'vm.network-policy.read', SYS_READERS)
+    || canUseRowWork(user, detail.data, 'vm.network-policy.write', SYS_OPERATORS)
+  const tabs = TABS.filter((tab) => (tab.id !== 'network-policy' || policyEnabled && canReadPolicy)
+    && (tab.id !== 'events' || canUseRowWork(user, detail.data, 'vm.metadata.read', SYS_READERS)
+      || canUseRowWork(user, detail.data, 'vm.metadata.support.read', SYS_READERS)))
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
 
   if (!idValid) {
@@ -119,17 +122,10 @@ function AdminVmDetailPageContent() {
       </Alert>
     )
   }
-  // 역할이 닿아도 이 VM의 기관에서 행위할 수 있어야 한다: 열람 역할로만 보이는
-  // 기관의 VM에 전원이나 기간을 건드리면 API가 404로 거부한다.
-  const canOperate =
-    roleCanOperate &&
-    !!user &&
-    (isSysTier(user.role) || (vm.orgId != null && operatesOrg(user.managedOrgs, vm.orgId)))
-  // Global support reads do not grant deletion rights in the target institution.
-  const deletionRole = user && isSysTier(user.role)
-    ? user.role
-    : user?.managedOrgs.find((org) => org.orgId === vm.orgId)?.role
-  const canDelete = !!deletionRole && canManageVmDeletion(deletionRole)
+  const canPower = canUseRowWork(user, vm, 'vm.power', SYS_OPERATORS)
+  const canPeriod = canUseRowWork(user, vm, 'vm.period', SYS_OPERATORS)
+  const canDelete = canUseRowWork(user, vm, 'vm.deletion.schedule', SYS_ADMIN)
+  const metadataVisible = projectionAvailable(vm, 'metadataVisible')
   const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && canReadSupportMetadata(user.role))
   const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
   const actualOrgId = vm.orgId && isUuid(vm.orgId) ? vm.orgId.toLowerCase() : undefined
@@ -152,7 +148,7 @@ function AdminVmDetailPageContent() {
           <h1 className="text-2xl font-bold text-neutral-900">{vm.displayName || vm.name}</h1>
           {vm.sshGatewayBlocked && <Badge variant="danger">SSH·터미널 차단됨</Badge>}
           <VmStatusBadge status={vm.status} />
-          <AdminResourceAccessLink type="VM" resourceId={vm.id} />
+          {(canUseRowWork(user, vm, 'vm.acl.support.read', SYS_READERS) || canUseRowWork(user, vm, 'vm.acl.support.manage', SYS_ADMIN)) && <AdminResourceAccessLink type="VM" resourceId={vm.id} orgId={vm.orgId} workspaceId={vm.workspaceId} />}
         </div>
         {vm.statusDetail && <p className="mt-1 text-sm text-neutral-500">{vm.statusDetail}</p>}
       </div>
@@ -172,7 +168,8 @@ function AdminVmDetailPageContent() {
       />
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
-        <Card className="p-5">
+        {!metadataVisible && <Alert>이 업무에는 명령에 필요한 대상 정보만 제공됩니다. 전체 VM 정보는 별도 조회 업무가 필요합니다.</Alert>}
+        {metadataVisible && <Card className="p-5">
           <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
             <Field label="이름" value={vm.name} />
             <Field label="호스트네임" value={vm.hostname} />
@@ -201,11 +198,11 @@ function AdminVmDetailPageContent() {
               {vm.requestId && isUuid(vm.requestId) ? <Link className="text-primary-700 hover:underline" to={adminPaths.requestDetail(vm.requestId, vm.orgId ?? undefined)}>정확한 신청 보기</Link> : '연결된 신청 기록 없음'}
             </dd></div>
           </dl>
-        </Card>
+        </Card>}
 
-        <VmGpuCard gpu={vm.gpu} admin orgId={activeOrgId} />
-        {canOperate && <PowerSection vm={vm} onDone={setMessage} />}
-        {canOperate &&
+        {metadataVisible && <VmGpuCard gpu={vm.gpu} admin orgId={activeOrgId} />}
+        {canPower && <PowerSection vm={vm} onDone={setMessage} />}
+        {canPeriod &&
           vm.status !== 'DELETED' &&
           vm.status !== 'DELETING' &&
           vm.deletion == null && <PeriodSection vm={vm} onDone={setMessage} />}
@@ -217,7 +214,7 @@ function AdminVmDetailPageContent() {
 
       {policyEnabled && canReadPolicy && (
         <TabPanel id="network-policy" active={activeTab === 'network-policy'} className="space-y-4">
-          <VmNetworkPolicyPanel vmId={vm.id} canEdit={canOperate} surface="admin" />
+          <VmNetworkPolicyPanel vmId={vm.id} canEdit={canUseRowWork(user, vm, 'vm.network-policy.write', SYS_OPERATORS)} surface="admin" />
         </TabPanel>
       )}
 
@@ -228,11 +225,11 @@ function AdminVmDetailPageContent() {
   )
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
       <dt className="text-neutral-500">{label}</dt>
-      <dd className="font-medium text-neutral-900">{value}</dd>
+      <dd className="font-medium text-neutral-900">{value ?? '제공되지 않음'}</dd>
     </div>
   )
 }

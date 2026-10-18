@@ -92,7 +92,7 @@ describe('열람 역할과 감사 로그', () => {
     renderApp('/admin/audit')
 
     // 감사 로그는 기관에서 행위할 수 있는 역할만 — 열람 역할은 홈으로.
-    await waitFor(() => expect(currentPath()).toBe(`/admin?org=${uuid(1)}`))
+    await waitFor(() => expect(currentPath()).toBe('/admin'))
     expect(screen.queryByRole('link', { name: '감사 로그' })).not.toBeInTheDocument()
   })
 })

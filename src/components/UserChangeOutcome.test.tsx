@@ -31,7 +31,7 @@ afterEach(() => {
 
 function queuedSupport(status: 'SUBMITTED' | 'APPROVED'): UserSupport {
   const data = supportFixture(uuid(42))
-  return { ...data, resources: [], requests: data.requests.map((request) => ({
+  return { ...data, resources: [], requests: data.requests!.map((request) => ({
     ...request, status, recipientStatus: 'QUEUED', resourceId: null,
   })) }
 }
@@ -44,7 +44,7 @@ function renderOutcome(data: UserSupport) {
     invitations: [{
       id: uuid(501), workspaceId: uuid(11), workspaceName: '연구팀', workspaceKind: 'LAB',
       role: 'MEMBER', status: 'PENDING', matchedBy: 'EMAIL', acceptedAt: null, alreadyMember: false,
-      recipients: [{ requestId: uuid(201), orgId: uuid(1), type: 'VM', requestStatus: data.requests[0].status,
+      recipients: [{ requestId: uuid(201), orgId: uuid(1), type: 'VM', requestStatus: data.requests![0].status,
         status: 'PENDING_JOIN', projectedStatus: 'QUEUED', grantedEndDate: null }],
     }],
   }
@@ -94,7 +94,7 @@ test('creation polling stops at its time limit and manual refresh still works', 
 test('a completed recipient stops creation polling before the time limit', async () => {
   const data = queuedSupport('APPROVED')
   vi.mocked(fetchUserSupport).mockResolvedValueOnce(data).mockResolvedValue({
-    ...data, requests: data.requests.map((request) => ({ ...request, recipientStatus: 'CREATED' })),
+    ...data, requests: data.requests!.map((request) => ({ ...request, recipientStatus: 'CREATED' })),
   })
   renderOutcome(data)
   await advance(100)

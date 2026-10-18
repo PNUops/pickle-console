@@ -1,15 +1,19 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { canManageOpenRouterAccount, isSysTier } from '../../../auth/permissions'
+import type { StoredFacts } from '../facts'
+import { mockAuthorityActor } from '../institution-authority'
+import { hasSameSourceWorks, hasWork, SYS_ADMIN, SYS_READERS, type AuthorityActor } from '../../../auth/institution-authority'
 import { uuid } from '../ids'
 import { ACCESS_TOKENS, problemResponse } from './auth'
-import { adminReadScope } from './org-scope'
+import { workspaceDetails } from './announcements'
+import { workspaceStore } from './workspaces'
+import { orgs } from './reference'
 
 /** 계정 사용량 조회가 실제로 어떤 query 로 나갔는지. */
 export const accountUsageQueries: string[] = []
 
 type Schemas = components['schemas']
-type Account = Schemas['OpenRouterAccountResponse']
+type Account = StoredFacts<Schemas['OpenRouterAccountResponse'], 'boundKeyCount' | 'credentialAvailable' | 'eligibleForBinding' | 'allocation' | 'credits' | 'defaultCreditAllowedModels' | 'defaultCreditDeniedModels'>
 type Credential = Schemas['OpenRouterCredentialStateResponse']
 type Allocation = Schemas['OpenRouterAccountAllocationResponse']
 type Credits = Schemas['OpenRouterAccountCreditsResponse']
@@ -91,6 +95,7 @@ function initialAccounts(): Account[] {
       program: '대학혁신지원사업',
       contact: '2026-AI-A',
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 2,
       credentialAvailable: true,
       eligibleForBinding: true,
@@ -118,6 +123,7 @@ function initialAccounts(): Account[] {
       program: '산학협력단',
       contact: null,
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 0,
       credentialAvailable: true,
       eligibleForBinding: true,
@@ -164,6 +170,7 @@ function initialAccounts(): Account[] {
       program: null,
       contact: null,
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 0,
       credentialAvailable: false,
       eligibleForBinding: false,
@@ -216,17 +223,31 @@ export function resetOpenRouterAccountFixtures() {
 
 function profileOf(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-  return ACCESS_TOKENS[token] ?? null
+  const profile = ACCESS_TOKENS[token]
+  return profile ? mockAuthorityActor(profile) : null
 }
 
-function roleFor(profile: Schemas['UserProfileResponse'], orgId: string) {
-  if (isSysTier(profile.role)) return profile.role
-  return profile.managedOrgs.find((org) => org.orgId === orgId)?.role
+function canWrite(profile: AuthorityActor, orgId: string, work = 'institution.account.manage'): boolean {
+  return hasWork(profile, work, { orgId }, SYS_ADMIN)
 }
-
-function canWrite(profile: Schemas['UserProfileResponse'], orgId: string): boolean {
-  const role = roleFor(profile, orgId)
-  return role != null && canManageOpenRouterAccount(role)
+function canRead(profile: AuthorityActor, orgId: string) {
+  return ['institution.account.read', 'institution.account.finance.read', 'institution.account.manage', 'institution.account.credential.manage']
+    .some((work) => hasWork(profile, work, { orgId }, work.endsWith('.manage') ? SYS_ADMIN : SYS_READERS))
+}
+function projectAccount(profile: AuthorityActor, account: Account): Schemas['OpenRouterAccountResponse'] {
+  const target = { orgId: account.orgId }
+  const financeVisible = hasWork(profile, 'institution.account.finance.read', target, SYS_READERS)
+  const metadata = hasWork(profile, 'institution.account.read', target, SYS_READERS) || canWrite(profile, account.orgId)
+  const credentialVisible = hasWork(profile, 'institution.account.read', target, SYS_READERS) || canWrite(profile, account.orgId, 'institution.account.credential.manage')
+  const policyReferenceVisible = financeVisible || canWrite(profile, account.orgId)
+  return { ...account, ...{ policyReferenceVisible }, financeVisible, credentialVisible,
+    program: metadata ? account.program : null, contact: metadata ? account.contact : null,
+    boundKeyCount: metadata || financeVisible ? account.boundKeyCount : null,
+    credentialAvailable: credentialVisible ? account.credentialAvailable : null,
+    activeCredential: credentialVisible ? account.activeCredential : null, rotationCredential: credentialVisible ? account.rotationCredential : null,
+    defaultCreditAllowedModels: policyReferenceVisible ? account.defaultCreditAllowedModels : null,
+    defaultCreditDeniedModels: policyReferenceVisible ? account.defaultCreditDeniedModels : null,
+    allocation: financeVisible ? account.allocation : null, credits: financeVisible ? account.credits : null }
 }
 
 function notFound() {
@@ -253,8 +274,7 @@ function accountFor(request: Request, accountId: string): { profile: Schemas['Us
   const profile = profileOf(request)
   const account = openRouterAccountStore.find((item) => item.id === accountId)
   if (!profile || !account) return null
-  const scope = adminReadScope(profile, account.orgId, `/api/v1/admin/llm/accounts/${accountId}`)
-  if (scope.notFound || !scope.matches(account.orgId)) return null
+  if (!canRead(profile, account.orgId)) return null
   return { profile, account }
 }
 
@@ -343,9 +363,23 @@ export const openRouterCatalogueStore: {
 }
 
 export const openRouterAccountHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/llm/roster-account-references', ({ request }) => {
+    const actor = profileOf(request)
+    const query = new URL(request.url).searchParams
+    const orgId = query.get('orgId'), workspaceId = query.get('workspaceId')
+    if (!actor || !orgId || !workspaceId || !orgs.some((org) => org.id === orgId)
+      || !(workspaceDetails[workspaceId] || workspaceStore.some((workspace) => workspace.detail.id === workspaceId))
+      || !hasSameSourceWorks(actor, ['llm.roster.issue', 'llm.key.budget'], { orgId, workspaceId }, SYS_ADMIN)) return notFound()
+    return HttpResponse.json(openRouterAccountStore.filter((account) => account.orgId === orgId).sort((a, b) => a.name.localeCompare(b.name)).map((account) => ({
+      id: account.id, name: account.name, eligibleForBinding: account.eligibleForBinding,
+      defaultCreditAllowedModels: account.eligibleForBinding ? account.defaultCreditAllowedModels : null,
+      defaultCreditDeniedModels: account.eligibleForBinding ? account.defaultCreditDeniedModels : null,
+    })))
+  }),
+
   http.get('*/api/v1/admin/llm/openrouter-models', ({ request }) => {
     const profile = profileOf(request)
-    if (!profile) return notFound()
+    if (!profile || !hasWork(profile, 'llm.model-catalogue.read', {}, SYS_READERS)) return notFound()
     if (openRouterCatalogueStore.fail) {
       return HttpResponse.json({ title: '서버 오류', status: 500 }, { status: 500 })
     }
@@ -358,9 +392,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     openRouterAccountListQueries.push(url.searchParams.toString())
     const orgId = url.searchParams.get('orgId')
-    const scope = adminReadScope(profile, orgId, '/api/v1/admin/llm/accounts')
-    if (scope.notFound) return scope.notFound
-    return HttpResponse.json(openRouterAccountStore.filter((account) => scope.matches(account.orgId)), { status: 200 })
+    return HttpResponse.json(openRouterAccountStore.filter((account) => (!orgId || orgId === account.orgId) && canRead(profile, account.orgId)).map((account) => projectAccount(profile, account)), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts', async ({ request }) => {
@@ -377,6 +409,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       program: body.program ?? null,
       contact: body.contact ?? null,
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 0,
       credentialAvailable: false,
       eligibleForBinding: false,
@@ -412,12 +445,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       updatedAt: now,
     }
     openRouterAccountStore.push(account)
-    return HttpResponse.json(account, { status: 201 })
+    return HttpResponse.json(projectAccount(profile, account), { status: 201 })
   }),
 
   http.get('*/api/v1/admin/llm/accounts/:accountId', ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    return found ? HttpResponse.json(found.account, { status: 200 }) : notFound()
+    return found ? HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 }) : notFound()
   }),
 
   /**
@@ -433,7 +466,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     // 상세와 같은 문을 쓴다. 여기서 갈리면 「상세는 404인데 사용량은 열리는」
     // 서버에 없는 세계를 목이 만든다.
     const found = accountFor(request, String(params.accountId))
-    if (!found) return notFound()
+    if (!found || !hasWork(found.profile, 'institution.account.finance.read', { orgId: found.account.orgId }, SYS_READERS)) return notFound()
     const raw = new URL(request.url).searchParams.get('days')
     const days = raw == null ? 30 : Number(raw)
     const to = '2026-08-31'
@@ -495,12 +528,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
     const body = (await request.json()) as Schemas['UpdateOpenRouterAccountRequest']
     Object.assign(found.account, body, { updatedAt: now })
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     // 평문은 요청 검증에만 쓰고 어떤 fixture나 기록에도 보존하지 않는다.
     const body = (await request.json()) as Schemas['RegisterOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
@@ -522,12 +555,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     }
     found.account.credentialAvailable = true
     found.account.eligibleForBinding = true
-    return HttpResponse.json(found.account, { status: 201 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 201 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     // 평문은 요청 검증에만 쓰고 어떤 fixture나 기록에도 보존하지 않는다.
     const body = (await request.json()) as Schemas['StageOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
@@ -551,12 +584,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       verificationError: null,
       retiringOverdue: false,
     }
-    return HttpResponse.json(found.account, { status: 201 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 201 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged/activate', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['ConfirmOpenRouterAccountRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -568,23 +601,23 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     found.account.activeCredential = { ...staged, status: 'ACTIVE', activatedAt: now }
     found.account.credentialAvailable = true
     found.account.eligibleForBinding = true
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged/cancel', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['ConfirmOpenRouterAccountRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
     if (found.account.rotationCredential?.status !== 'STAGED') return invalidState('취소할 STAGED credential이 없습니다.')
     found.account.rotationCredential = null
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/retiring/rollback', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['ConfirmOpenRouterAccountRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -593,12 +626,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     if (retiring?.status !== 'RETIRING' || !active) return invalidState('되돌릴 RETIRING credential이 없습니다.')
     found.account.activeCredential = { ...retiring, status: 'ACTIVE', retiringAt: null, activatedAt: now }
     found.account.rotationCredential = { ...active, status: 'STAGED', activatedAt: null }
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/retiring/finalize', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['FinalizeOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -606,12 +639,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       return invalidState('Vendor 폐기 확인과 RETIRING credential이 필요합니다.')
     }
     found.account.rotationCredential = null
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/active/delete', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['FinalizeOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -621,6 +654,6 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     found.account.activeCredential = null
     found.account.credentialAvailable = false
     found.account.eligibleForBinding = false
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 ]
