@@ -164,7 +164,11 @@ function App() {
       <Route
         path="console"
         element={
-          <RequireRole roles={['USER']}>
+          <RequireRole roles={[
+            'USER',
+            'ORG_VIEWER', 'ORG_MANAGER', 'ORG_ADMIN',
+            'SYS_VIEWER', 'SYS_MANAGER', 'SYS_ADMIN',
+          ]}>
             <ScopeProvider>
               <ConsoleLayout />
             </ScopeProvider>
@@ -289,9 +293,7 @@ function App() {
         <Route path="resource-access/:resourceType/:resourceId" element={<AdminResourceAccessPage />} />
         <Route path="expiry" element={<AdminExpiryPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
-        {/* 계정 설정은 사용자 콘솔과 같은 화면을 관리자 셸 안에서 띄운다 — 관리자는
-            /console 에 닿지 못하므로(위 라우트가 USER 전용) 2FA 등록 등 계정 관리가
-            여기로만 열린다. 부모 라우트가 이미 관리자 역할로 게이트한다. */}
+        {/* Keep account settings and required MFA enrollment in the administrator shell too. */}
         <Route path="account" element={<AccountPage />} />
         {/* 감사 로그는 조직에서 행위할 수 있는 역할만 — ORG_VIEWER는 유일하게 제외 (§3.14). */}
         <Route
