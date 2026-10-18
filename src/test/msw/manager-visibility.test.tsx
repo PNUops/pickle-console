@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { orgManagerUser, refreshSuccessHandler, sysManagerUser } from './handlers/auth'
 import { server } from './server'
@@ -19,8 +19,8 @@ describe('운영자 계층 화면 접근', () => {
   test('ORG_MANAGER는 관리 화면을 보되 시스템 섹션·기관 관리는 숨긴다', async () => {
     renderAs('access-org-manager', orgManagerUser, '/admin')
     expect(await screen.findByRole('heading', { name: '관리자 대시보드' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '신청 검토' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '가상머신' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: '관리자 메뉴' })).getByRole('link', { name: '신청 검토' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: '관리자 메뉴' })).getByRole('link', { name: '가상머신' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '사용자' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '워크스페이스' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '기관 관리' })).not.toBeInTheDocument()

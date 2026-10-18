@@ -12,7 +12,7 @@ export function AdminBulkReceiptPage() {
   const { operationId } = useParams<{ operationId: string }>()
   const { user } = useAuth()
   const scope = useAdminScope()
-  return <BulkReceiptContent key={`${operationId}:${scope.activeOrgId ?? 'all'}:${scope.activeOrgRole ?? 'none'}:${requestReaderKey(user)}`} operationId={operationId?.toLowerCase()} />
+  return <BulkReceiptContent key={`${operationId}:${scope.activeOrgId ?? 'all'}:${requestReaderKey(user)}`} operationId={operationId?.toLowerCase()} />
 }
 
 function BulkReceiptContent({ operationId }: { operationId?: string }) {

@@ -9,7 +9,7 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { canManageOpenRouterAccount } from '../auth/permissions'
+import { hasAnyWork, hasWork, projectionAvailable, SYS_ADMIN, SYS_READERS } from '../auth/institution-authority'
 import {
   Badge,
   Button,
@@ -43,6 +43,7 @@ function accountStatus(account: OpenRouterAccount) {
 }
 
 function credentialSummary(account: OpenRouterAccount): string {
+  if (!('credentialVisible' in account) || account.credentialVisible !== true) return '제공되지 않음'
   if (account.rotationCredential?.status === 'STAGED') return '교체 대기 · 기존 credential 유지'
   if (account.rotationCredential?.status === 'RETIRING') return '교체 완료 · 이전 credential 정리 대기'
   if (account.activeCredential) return '활성 credential 있음'
@@ -52,8 +53,8 @@ function credentialSummary(account: OpenRouterAccount): string {
 export function AdminOpenRouterAccountsPage() {
   const { user } = useAuth()
   const scope = useAdminScope()
-  const role = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  const canManage = !!role && canManageOpenRouterAccount(role)
+  const canManage = scope.activeOrgId ? hasWork(user, 'institution.account.manage', { orgId: scope.activeOrgId }, SYS_ADMIN)
+    : hasAnyWork(user, ['institution.account.manage'], SYS_ADMIN)
   const [createOpen, setCreateOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const accounts = useQuery({
@@ -103,7 +104,7 @@ export function AdminOpenRouterAccountsPage() {
               <TR key={account.id}>
                 <TD>
                   <Link
-                    to={adminPaths.llmAccountDetail(account.id, scope.activeOrgId)}
+                    to={adminPaths.llmAccountDetail(account.id, scope.activeOrgId ?? (user?.role.startsWith('SYS_') ? undefined : account.orgId))}
                     className="font-medium text-brand-foreground hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring"
                   >
                     {account.name}
@@ -115,14 +116,14 @@ export function AdminOpenRouterAccountsPage() {
                 <TD>{account.orgName}</TD>
                 <TD>{accountStatus(account)}</TD>
                 <TD className="text-xs">
-                  <span className="block">사업 {account.program ?? '미입력'}</span>
+                  <span className="block">사업 {hasWork(user, 'institution.account.read', { orgId: account.orgId }, SYS_READERS) || hasWork(user, 'institution.account.manage', { orgId: account.orgId }, SYS_ADMIN) ? account.program ?? '미입력' : '제공되지 않음'}</span>
                   <span className="block text-foreground-muted">
-                    담당자 {account.contact ?? '미입력'}
+                    담당자 {hasWork(user, 'institution.account.read', { orgId: account.orgId }, SYS_READERS) || hasWork(user, 'institution.account.manage', { orgId: account.orgId }, SYS_ADMIN) ? account.contact ?? '미입력' : '제공되지 않음'}
                   </span>
                 </TD>
                 <TD>{credentialSummary(account)}</TD>
-                <TD>{account.boundKeyCount.toLocaleString('ko-KR')}개</TD>
-                <TD><AccountCreditsCompact credits={account.credits} /></TD>
+                <TD>{account.boundKeyCount == null ? '제공되지 않음' : `${account.boundKeyCount.toLocaleString('ko-KR')}개`}</TD>
+                <TD>{projectionAvailable(account, 'financeVisible') && account.credits != null ? <AccountCreditsCompact credits={account.credits} /> : '제공되지 않음'}</TD>
               </TR>
             ))}
           </TBody>
@@ -132,7 +133,7 @@ export function AdminOpenRouterAccountsPage() {
       {createOpen && (
         <CreateAccountModal
           fixedOrgId={scope.activeOrgId}
-          orgOptions={scope.options}
+          orgOptions={scope.options.filter((org) => hasWork(user, 'institution.account.manage', { orgId: org.id }, SYS_ADMIN))}
           onClose={() => setCreateOpen(false)}
           onCreated={(account) => {
             setCreateOpen(false)
@@ -156,7 +157,7 @@ function CreateAccountModal({
   onCreated: (account: OpenRouterAccount) => void
 }) {
   const queryClient = useQueryClient()
-  const [orgId, setOrgId] = useState(fixedOrgId ?? '')
+  const [orgId, setOrgId] = useState(fixedOrgId ?? (orgOptions.length === 1 ? orgOptions[0].id : ''))
   const [name, setName] = useState('')
   const [program, setProgram] = useState('')
   const [contact, setContact] = useState('')

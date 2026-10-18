@@ -415,7 +415,10 @@ function MembersSection({
         target={transferTarget}
         pending={changeRole.isPending}
         onCancel={() => setTransferTarget(null)}
-        onConfirm={(member) => changeRole.mutate({ member, role: 'OWNER' })}
+        onConfirm={(member) => {
+          const current = workspace.members.find((row) => row.userId === member.userId)
+          if (current) changeRole.mutate({ member: current, role: 'OWNER' })
+        }}
       />
 
       <RemoveWorkspaceMemberModal target={removeTarget} pending={removeMember.isPending}

@@ -97,7 +97,7 @@ export function VmsPage() {
                       {vm.accessLimited && (
                         <p className="mt-0.5 text-xs text-neutral-500">
                           접근 권한이 없습니다
-                          {vm.ownerNames.length > 0 &&
+                          {vm.ownerNames != null && vm.ownerNames.length > 0 &&
                             ` — ${vm.ownerNames.join(', ')} 님에게 요청하세요`}
                           {/* 워크스페이스 소유자는 이 VM 안을 볼 수 없어도 누가 접근할지는
                               정할 수 있다. 상세로 못 들어가므로 이 행이 그 유일한

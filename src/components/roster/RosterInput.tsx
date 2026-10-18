@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { toApiError } from '../../api/problem'
+import type { ResourceType } from '../../api/queries'
 import { parseRoster } from '../../lib/roster'
 import {
   Alert,
@@ -33,6 +34,7 @@ export const ROSTER_PASTE_HINT = '한 줄에 한 명씩, 엑셀에서 복사한 
 export function RosterInput({
   workspaceId,
   orgId,
+  type,
   value,
   onChange,
   label,
@@ -45,6 +47,7 @@ export function RosterInput({
   workspaceId: string
   /** The organisation an approver files for; absent for a workspace owner. */
   orgId?: string | null
+  type?: ResourceType
   value: string
   onChange: (next: string) => void
   label: string
@@ -60,7 +63,7 @@ export function RosterInput({
   const [failure, setFailure] = useState<{ text: string; message: string } | null>(null)
 
   const resolve = useMutation({
-    mutationFn: (text: string) => resolveRosterRows(workspaceId, parseRoster(text, { allowEmail }), orgId),
+    mutationFn: (text: string) => resolveRosterRows(workspaceId, parseRoster(text, { allowEmail }), orgId, type),
     onSuccess: (entries, text) => setPreview({ text, entries }),
     // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
     onError: (err, text) =>

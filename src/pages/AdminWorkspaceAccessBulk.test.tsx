@@ -10,7 +10,6 @@ import App from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
 import { ToastProvider } from '../components/ui'
 import { orgManagerUser, refreshSuccessHandler } from '../test/msw/handlers/auth'
-import { workspaceDetails } from '../test/msw/handlers/announcements'
 import { server } from '../test/msw/server'
 import { uuid } from '../test/msw/ids'
 
@@ -23,8 +22,7 @@ function renderBulk(targets = [{ id: uuid(57), name: '공유 VM' }]) {
 async function openAccessValues(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole('heading', { name: 'VM 일괄 변경' })
   expect(screen.getByRole('radio', { name: '접근 권한' })).toBeInTheDocument()
-  expect(screen.queryByRole('radio', { name: '사용 기간' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('radio', { name: '전원' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('radio', { name: '접근 권한' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 
@@ -39,7 +37,7 @@ test('a foreign support bulk picker offers active SYS member labels without load
   renderBulk()
   await openAccessValues(user)
   await user.type(screen.getByLabelText('대상 사용자'), '이시스템')
-  const pick = await screen.findByRole('button', { name: /이시스템 sysadmin.lee/ })
+  const pick = await screen.findByRole('button', { name: /이시스템/ })
   expect(screen.queryByRole('link', { name: '이시스템' })).not.toBeInTheDocument()
   await user.click(pick)
   await user.click(screen.getByRole('button', { name: '미리보기' }))
@@ -69,7 +67,7 @@ test('bulk REVOKE selects an existing inactive former grantee and preserves targ
   expect(screen.queryByRole('link', { name: '박탈퇴' })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '미리보기' }))
   await screen.findByRole('table', { name: '일괄 변경 미리보기' })
-  await user.click(screen.getByRole('button', { name: '1개에 적용' }))
+  await user.click(await screen.findByRole('button', { name: '1개에 적용' }))
   await waitFor(() => expect(body).toEqual({ previewId: expect.any(String), operationId: expect.any(String), targetType: 'VM', targetIds, change: { kind: 'ACCESS', access: { userId: uuid(77), action: 'REVOKE', role: null } }, fingerprints: { [uuid(57)]: 'existing-grant', [uuid(56)]: 'no-grant' } }))
   const result = await screen.findByRole('table', { name: '일괄 변경 결과' })
   expect(within(result).getByText('기존 개인 권한 VM')).toBeInTheDocument()
@@ -81,14 +79,14 @@ test('bulk actor gains require a per-target confirmation map before the apply re
   const user = userEvent.setup()
   const bodies: Record<string, unknown>[] = []
   server.use(refreshSuccessHandler('access-org-manager', orgManagerUser),
-    http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], members: [...workspaceDetails[uuid(12)].members, { userId: orgManagerUser.id, name: orgManagerUser.name, email: orgManagerUser.email, workspaceRole: 'MEMBER', userStatus: 'ACTIVE', joinedAt: '2026-10-13T00:00:00Z', supportDetailVisible: true, canChangeRole: true, canRemove: true }] })),
+    http.get('*/api/v1/admin/resource-access/:resourceType/:resourceId', () => HttpResponse.json({ resource: { id: uuid(57), type: 'VM', name: '공유 VM', status: 'RUNNING', workspaceId: uuid(12), workspaceName: '캡스톤 3조' }, grants: [], canManageAccess: true, eligibleMembers: [{ userId: orgManagerUser.id, name: orgManagerUser.name, workspaceRole: 'MEMBER', userStatus: 'ACTIVE' }] })),
     http.post('*/api/v1/admin/bulk-changes/preview', async ({ request }) => HttpResponse.json(savedBulkPreview(await request.json() as components['schemas']['AdminBulkChangeRequest'], [{ targetId: uuid(57), name: '공유 VM', applicable: true, fields: [{ field: 'role', oldValue: 'MEMBER', newValue: 'EDITOR' }], fingerprint: 'bulk-source-fingerprint', actorAccessImpact: { fingerprint: 'bulk-actor-increase', increases: [{ resourceType: 'VM', targetId: uuid(57), workspaceId: uuid(12), beforeRole: 'MEMBER', afterRole: 'EDITOR' }], pendingResourceOwners: [] } }]))),
     http.post('*/api/v1/admin/bulk-changes', async ({ request }) => { bodies.push(await request.json() as Record<string, unknown>); return HttpResponse.json({ batchId: bodies.at(-1)!.operationId, items: [{ targetId: uuid(57), name: '공유 VM', result: 'APPLIED', fields: [{ field: 'role', oldValue: 'MEMBER', newValue: 'EDITOR' }] }] }) }))
   renderBulk()
   await openAccessValues(user)
   await user.click(screen.getByRole('radio', { name: '변경' }))
   await user.type(screen.getByLabelText('대상 사용자'), orgManagerUser.name)
-  await user.click(await screen.findByRole('button', { name: /최운영 manager.choi/ }))
+  await user.click(within(await screen.findByRole('list', { name: '검색된 사용자' })).getByRole('button', { name: new RegExp(orgManagerUser.id) }))
   await user.selectOptions(screen.getByLabelText('등급'), 'EDITOR')
   await user.click(screen.getByRole('button', { name: '미리보기' }))
   await user.click(await screen.findByRole('button', { name: '1개에 적용' }))

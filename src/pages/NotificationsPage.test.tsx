@@ -65,7 +65,7 @@ describe('알림 종(bell)', () => {
     await user.click(await screen.findByRole('button', { name: '읽지 않은 알림 1개' }))
     expect(await screen.findByRole('link', { name: '알림함 전체 보기' })).toHaveAttribute(
       'href',
-      `/admin/notifications?org=${uuid(1)}`,
+      '/admin/notifications',
     )
   })
 
@@ -100,10 +100,10 @@ describe('알림함', () => {
     server.use(http.get('*/api/v1/admin/requests/:requestId', () => HttpResponse.json({
       type: 'about:blank', title: '찾을 수 없습니다', status: 404, code: 'RESOURCE_NOT_FOUND', detail: '알림 신청을 찾을 수 없습니다.',
     }, { status: 404 })))
-    renderApp(`/admin/notifications?org=${uuid(1)}`)
+    renderApp('/admin/notifications')
     await user.click(await screen.findByText('새 VM 신청'))
     await screen.findByText('알림 신청을 찾을 수 없습니다.')
-    expect(currentPath()).toBe(`/admin/notifications?org=${uuid(1)}`)
+    expect(currentPath()).toBe('/admin/notifications')
   })
   test('알림을 누르면 읽음 처리되어 종 배지 수가 줄어든다', async () => {
     const user = userEvent.setup()

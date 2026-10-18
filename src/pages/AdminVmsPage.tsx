@@ -9,7 +9,7 @@ import {
   type VmStatus,
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { canAdminManageAccess, canOperateVm } from '../auth/permissions'
+import { hasAnyWork, SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
 import {
   Alert,
   Badge,
@@ -73,13 +73,8 @@ function AdminVmsPageContent() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
-  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
-  const role = user?.role
-  const effectiveRole = tier === 'org' ? activeOrgRole : role
-  // List scope controls filtering; exact resource operations live on the detail route.
-  const canOperate = !!effectiveRole && canOperateVm(effectiveRole)
-  // Selection also permits global access-list support.
-  const canSelect = canOperate || (!!user && canAdminManageAccess(user.role))
+  const { activeOrgId, activeOrg } = useAdminScope()
+  const canSelect = hasAnyWork(user, ['vm.power', 'vm.period', 'vm.deletion.schedule', 'vm.acl.support.manage'], SYS_OPERATORS)
   const selection = useBulkSelection('vms', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
   // Cross-links initialize the workspace filter; detail round trips restore
   // local controls from this reader's history entry without changing URL filters.
@@ -139,6 +134,7 @@ function AdminVmsPageContent() {
     queryKey: ['admin', 'workspaces', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () =>
       fetchAdminWorkspaces(activeOrgId !== undefined ? { orgId: activeOrgId } : {}),
+    enabled: hasAnyWork(user, ['workspace.support.read', 'workspace.info.update', 'workspace.members.manage', 'workspace.invitations.manage', 'workspace.owners.manage', 'workspace.terminate', 'workspace.recipient.cancel', 'vm.roster.issue', 'llm.roster.issue', 'vm.request.decide', 'llm.request.decide', 'domain.request.decide', 'gpu.request.decide', 'workspace.announcement.send'], SYS_READERS),
   })
 
   const pageTargets = (vms.data?.content ?? []).map((vm) => ({

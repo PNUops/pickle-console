@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useAuth } from '../../auth/auth-context'
+import { canUseRowWork, SYS_ADMIN, type AuthorityActor } from '../../auth/institution-authority'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { components } from '../../api/schema'
 import { fetchAdminWorkspaceInvitations, type WorkspaceMemberRole } from '../../api/queries'
@@ -17,6 +19,17 @@ import { WorkspaceTerminationDialog } from './WorkspaceTerminationDialog'
 type Workspace = components['schemas']['AdminWorkspaceDetailResponse']
 type Member = components['schemas']['AdminWorkspaceMemberResponse']
 
+function currentWorkspace(actor: AuthorityActor | null, workspace: Workspace): Workspace {
+  const row = { ...workspace, workspaceId: workspace.id }
+  return { ...workspace,
+    canUpdateInfo: workspace.canUpdateInfo && canUseRowWork(actor, row, 'workspace.info.update', SYS_ADMIN),
+    canInviteMembers: workspace.canInviteMembers && canUseRowWork(actor, row, 'workspace.invitations.manage', SYS_ADMIN),
+    canManageMembers: workspace.canManageMembers && canUseRowWork(actor, row, 'workspace.members.manage', SYS_ADMIN),
+    canManageOwners: workspace.canManageOwners && canUseRowWork(actor, row, 'workspace.owners.manage', SYS_ADMIN),
+    canDelete: workspace.canDelete && canUseRowWork(actor, row, 'workspace.terminate', SYS_ADMIN),
+  }
+}
+
 function useRefreshWorkspace(workspaceId: string) {
   const client = useQueryClient()
   return () => {
@@ -29,7 +42,9 @@ function useRefreshWorkspace(workspaceId: string) {
   }
 }
 
-export function AdminWorkspaceOverviewControls({ workspace, onDeleted }: { workspace: Workspace; onDeleted: () => void }) {
+export function AdminWorkspaceOverviewControls({ workspace: source, onDeleted }: { workspace: Workspace; onDeleted: () => void }) {
+  const { user } = useAuth()
+  const workspace = currentWorkspace(user, source)
   const active = useActiveResult()
   const refresh = useRefreshWorkspace(workspace.id)
   const [editing, setEditing] = useState(false)
@@ -45,7 +60,7 @@ export function AdminWorkspaceOverviewControls({ workspace, onDeleted }: { works
     {error && <Alert variant="danger">{error}</Alert>}
     <div className="flex flex-wrap gap-2">
       {workspace.canUpdateInfo && <Button variant="secondary" onClick={() => setEditing(true)}>정보 수정</Button>}
-      {workspace.canUpdateInfo && <WorkspaceTerminationImpactButton workspaceId={workspace.id} admin />}
+      {canUseRowWork(user, { ...workspace, workspaceId: workspace.id }, 'workspace.terminate', SYS_ADMIN) && <WorkspaceTerminationImpactButton workspaceId={workspace.id} admin />}
       {workspace.canDelete && <Button variant="danger" onClick={() => { setError(null); setDeleting(true) }}>워크스페이스 삭제</Button>}
     </div>
     {workspace.deleteBlockedReason === 'PERSONAL' && <p className="text-sm text-foreground-muted">개인 워크스페이스의 구성원과 유형은 변경할 수 없으며 계정 탈퇴 시 함께 정리됩니다.</p>}
@@ -56,7 +71,9 @@ export function AdminWorkspaceOverviewControls({ workspace, onDeleted }: { works
   </div>
 }
 
-export function AdminWorkspaceMemberActions({ workspace, member }: { workspace: Workspace; member: Member }) {
+export function AdminWorkspaceMemberActions({ workspace: source, member }: { workspace: Workspace; member: Member }) {
+  const { user } = useAuth()
+  const workspace = currentWorkspace(user, source)
   const active = useActiveResult()
   const refresh = useRefreshWorkspace(workspace.id)
   const review = useAccessIncreaseReview()
@@ -64,11 +81,12 @@ export function AdminWorkspaceMemberActions({ workspace, member }: { workspace: 
   const [removeConfirm, setRemoveConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<string | null>(null)
+  const canRemove = member.canRemove && (member.workspaceRole === 'OWNER' ? workspace.canManageOwners : workspace.canManageMembers)
   const named = { userId: member.userId, name: member.name, email: member.email, role: member.workspaceRole }
   const change = useMutation({ mutationFn: async (role: WorkspaceMemberRole) => {
     const impact = await previewAdminWorkspaceMember(workspace.id, member.userId, { role })
     if (!active.current) return null
-    const confirmation = await review.confirm(impact, `${workspace.name} (${workspace.id}) · ${member.name} (${member.email}) · ${WORKSPACE_ROLE_LABELS[role]}`)
+    const confirmation = await review.confirm(impact, `${workspace.name} (${workspace.id}) · ${member.name} (${member.email ?? member.userId}) · ${WORKSPACE_ROLE_LABELS[role]}`)
     if (confirmation === null || !active.current) return null
     return updateAdminWorkspaceMember(workspace.id, member.userId, { role, ...(confirmation ? { confirmation } : {}) })
   }, onSuccess: (result) => {
@@ -90,15 +108,17 @@ export function AdminWorkspaceMemberActions({ workspace, member }: { workspace: 
     {receipt && <p role="status" className="break-all text-xs">이번 변경: {receipt}</p>}
     <div className="flex flex-wrap gap-2">
       {workspace.canManageOwners && member.canChangeRole && <WorkspaceMemberRoleSelect name={member.name} role={member.workspaceRole} disabled={change.isPending || remove.isPending} onChange={(role) => { setError(null); if (role === member.workspaceRole) return; if (role === 'OWNER') setOwnerConfirm(true); else change.mutate(role) }} />}
-      {workspace.canManageMembers && member.canRemove && <Button variant="secondary" size="sm" disabled={change.isPending || remove.isPending} onClick={() => { setError(null); setRemoveConfirm(true) }}>제거</Button>}
+      {canRemove && <Button variant="secondary" size="sm" disabled={change.isPending || remove.isPending} onClick={() => { setError(null); setRemoveConfirm(true) }}>제거</Button>}
     </div>
     <OwnershipTransferModal target={ownerConfirm ? named : null} pending={change.isPending} onCancel={() => setOwnerConfirm(false)} onConfirm={() => { setOwnerConfirm(false); change.mutate('OWNER') }} />
-    <RemoveWorkspaceMemberModal target={removeConfirm ? member : null} pending={remove.isPending} onCancel={() => setRemoveConfirm(false)} onConfirm={() => remove.mutate()} />
+    <RemoveWorkspaceMemberModal target={removeConfirm && canRemove ? member : null} pending={remove.isPending} onCancel={() => setRemoveConfirm(false)} onConfirm={() => { if (canRemove) remove.mutate() }} />
     {review.modal}
   </div>
 }
 
-export function AdminWorkspaceInviteControls({ workspace }: { workspace: Workspace }) {
+export function AdminWorkspaceInviteControls({ workspace: source }: { workspace: Workspace }) {
+  const { user } = useAuth()
+  const workspace = currentWorkspace(user, source)
   const active = useActiveResult()
   const refresh = useRefreshWorkspace(workspace.id)
   const review = useAccessIncreaseReview()
@@ -110,7 +130,9 @@ export function AdminWorkspaceInviteControls({ workspace }: { workspace: Workspa
   </>
 }
 
-export function AdminWorkspacePendingInvitations({ workspace }: { workspace: Workspace }) {
+export function AdminWorkspacePendingInvitations({ workspace: source }: { workspace: Workspace }) {
+  const { user } = useAuth()
+  const workspace = currentWorkspace(user, source)
   const refresh = useRefreshWorkspace(workspace.id)
   return <PendingInvitationsSection workspaceId={workspace.id} support canManage={workspace.canInviteMembers}
     onChanged={refresh} loadInvitations={() => fetchAdminWorkspaceInvitations(workspace.id)}

@@ -16,7 +16,7 @@ test.each(['VM', 'LLM_API_KEY', 'DOMAIN', 'GPU'] as const)('the %s support adapt
     http.get('*/api/v1/admin/resource-access/:resourceType/:resourceId', ({ params }) => {
       expect(params.resourceType).toBe(type)
       expect(params.resourceId).toBe(resourceId)
-      return HttpResponse.json({ resource: { id: resourceId, type, name: '합성 공유 자원', status: 'ACTIVE', workspaceId: uuid(12), workspaceName: '캡스톤 3조' }, grants, canManageAccess: true })
+      return HttpResponse.json({ resource: { id: resourceId, type, name: '합성 공유 자원', status: 'ACTIVE', workspaceId: uuid(12), workspaceName: '캡스톤 3조' }, grants, canManageAccess: true, eligibleMembers: [{ userId: uuid(5), name: '이시스템', workspaceRole: 'MEMBER', userStatus: 'ACTIVE' }] })
     }),
     http.post('*/api/v1/admin/resource-access/:resourceType/:resourceId/preview', () => HttpResponse.json({ fingerprint: 'other-user-no-increase', increases: [], pendingResourceOwners: [] })),
     http.post('*/api/v1/admin/resource-access/:resourceType/:resourceId', async ({ request, params }) => {

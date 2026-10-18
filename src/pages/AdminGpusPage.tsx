@@ -1,12 +1,12 @@
-import { requestReaderKey } from '../api/request-review'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router'
 import { decideGpuReview, fetchAdminGpuAllocations, fetchAdminGpus, fetchGpuReviews, updateAdminGpu, type Gpu, type GpuReview } from '../api/gpu'
 import { useAuth } from '../auth/auth-context'
-import { canRunSysRoutine } from '../auth/permissions'
+import { SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
+import { GPU_READ_COMMANDS, useInstitutionResourcePermissions } from '../lib/institution-resource-work'
 import { GpuReviewEvidence } from '../components/gpu/GpuReviewEvidence'
-import { GpuAllocationTable } from '../components/gpu/GpuAllocationTable'
+import { InstitutionAdminGpuTable } from '../components/gpu/InstitutionAdminGpuProjection'
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, FormField, Modal, PageHeader, Pagination, Select, Spinner, Table, TBody, TD, Textarea, TH, THead, TR } from '../components/ui'
 import { gpuListPollInterval } from '../lib/gpu-polling'
 import { formatDateTime } from '../lib/format'
@@ -20,7 +20,8 @@ const REVIEW_REASONS: Record<string, string> = { UNATTACHED: '장시간 미연�
 export function AdminGpusPage() {
   const { user } = useAuth()
   const scope = useAdminScope()
-  return <AdminGpusContent key={`${scope.activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+  const permissions = useInstitutionResourcePermissions()
+  return <AdminGpusContent key={`${user?.id ?? 'none'}:${scope.activeOrgId ?? 'all'}:${permissions.fingerprint}`} />
 }
 
 function AdminGpusContent() {
@@ -35,25 +36,29 @@ function AdminGpusContent() {
   const setPage = (next: number) => setPagination({ orgId: scope.activeOrgId, page: next, reviewPage })
   const setReviewPage = (next: number) => setPagination({ orgId: scope.activeOrgId, page, reviewPage: next })
   const [queuedOnly, setQueuedOnly] = useState(false)
-  const canManage = !!user && canRunSysRoutine(user.role)
+  const permissions = useInstitutionResourcePermissions()
+  const canRead = permissions.canAnyWork(GPU_READ_COMMANDS, SYS_READERS)
+  const canFilterQueue = permissions.canAnyWork(GPU_READ_COMMANDS.filter((work) => work !== 'gpu.observe' && work !== 'gpu.observe.support.read'), SYS_READERS)
+  const canManage = SYS_OPERATORS.includes(permissions.role)
   const [gpu, setGpu] = useState<Gpu | null>(null)
   const [review, setReview] = useState<GpuReview | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const allocations = useQuery({
-    queryKey: ['admin', 'gpu-allocations', { orgId: scope.activeOrgId, reader: requestReaderKey(user), workspaceId: workspaceId ?? null, page, queuedOnly }],
-    queryFn: () => fetchAdminGpuAllocations({ orgId: scope.activeOrgId, workspaceId, page, status: queuedOnly ? 'QUEUED' : undefined }), enabled: scope.ready,
+    queryKey: ['admin', 'gpu-allocations', { orgId: scope.activeOrgId, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}`, workspaceId: workspaceId ?? null, page, queuedOnly }],
+    queryFn: () => fetchAdminGpuAllocations({ orgId: scope.activeOrgId, workspaceId, page, status: queuedOnly ? 'QUEUED' : undefined }), enabled: scope.ready && canRead,
     refetchInterval: (result) => gpuListPollInterval(result.state.data?.content),
   })
-  const inventory = useQuery({ queryKey: ['admin', 'gpus'], queryFn: fetchAdminGpus, enabled: canManage })
-  const reviews = useQuery({ queryKey: ['admin', 'gpu-reviews', { orgId: scope.activeOrgId, page: reviewPage }], queryFn: () => fetchGpuReviews({ orgId: scope.activeOrgId, page: reviewPage }), enabled: canManage && scope.ready })
+  const inventory = useQuery({ queryKey: ['admin', 'gpus', permissions.fingerprint], queryFn: fetchAdminGpus, enabled: canManage })
+  const reviews = useQuery({ queryKey: ['admin', 'gpu-reviews', { orgId: scope.activeOrgId, page: reviewPage, reader: permissions.fingerprint }], queryFn: () => fetchGpuReviews({ orgId: scope.activeOrgId, page: reviewPage }), enabled: canManage && scope.ready })
+  if (!canRead) return <Alert variant="danger">GPU 할당을 조회할 권한이 없습니다.</Alert>
   return <div className="space-y-6">
     <PageHeader title="GPU" />
     {notice && <Alert variant="success">{notice}</Alert>}
-    <Select aria-label="GPU 할당 필터" className="max-w-48" value={queuedOnly ? 'queued' : 'all'} onChange={(event) => { setQueuedOnly(event.target.value === 'queued'); setPage(0) }}><option value="all">전체 할당</option><option value="queued">대기열</option></Select>
+    {canFilterQueue ? <Select aria-label="GPU 할당 필터" className="max-w-48" value={queuedOnly ? 'queued' : 'all'} onChange={(event) => { setQueuedOnly(event.target.value === 'queued'); setPage(0) }}><option value="all">전체 할당</option><option value="queued">대기열</option></Select> : <p className="text-sm text-neutral-500">연결된 GPU의 허용된 관측 정보만 표시합니다.</p>}
     {allocations.isPending && <Spinner label="GPU 할당 불러오는 중" />}
     {allocations.isError && <Alert variant="danger">{allocations.error.message}</Alert>}
     {allocations.data && (allocations.data.content.length === 0 ? <EmptyState title={queuedOnly ? '대기 중인 GPU 신청이 없습니다' : 'GPU 할당이 없습니다'} /> : <>
-      <GpuAllocationTable rows={allocations.data.content} admin orgId={scope.activeOrgId} />
+      <InstitutionAdminGpuTable rows={allocations.data.content} orgId={scope.activeOrgId} />
       <Pagination page={allocations.data.page} totalPages={allocations.data.totalPages} onPageChange={setPage} />
     </>)}
     {canManage && <>

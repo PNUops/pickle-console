@@ -24,7 +24,7 @@ export function GpuInfoCard({ allocation }: { allocation: GpuAllocation }) {
       <Field label="워크스페이스">{allocation.workspaceName}</Field>
       <Field label="GPU">{allocation.gpu?.model ?? '미할당'}</Field>
       <Field label="할당 상태"><GpuStatusBadge status={allocation.status} /></Field>
-      <Field label="VM 연결"><GpuConnectionBadge status={allocation.connectionStatus} /></Field>
+      <Field label="VM 연결">{allocation.connectionStatus != null ? <GpuConnectionBadge status={allocation.connectionStatus} /> : '정보 없음'}</Field>
       <Field label="연결된 VM">{allocation.vmName ?? '—'}</Field>
       <Field label="승인 임대 기간">{gpuDurationLabel(allocation.grantedLeaseHours)}</Field>
       <Field label="할당 시각">{allocation.allocatedAt ? formatDateTime(allocation.allocatedAt) : '—'}</Field>

@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { isOrgTier, isSysTier } from '../../../auth/permissions'
+import { hasWork, SYS_ADMIN, SYS_READERS } from '../../../auth/institution-authority'
+import { mockAuthorityActor } from '../institution-authority'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
 import { uuid } from '../ids'
 
@@ -140,7 +141,7 @@ function visibleOnBoard(notice: StoredNotice, profile: Profile | null): boolean 
  * 계정은 그 목록의 모든 행에 닿는다.
  */
 function manageableBy(profile: Profile | null): boolean {
-  return profile != null && (isSysTier(profile.role) || isOrgTier(profile.role))
+  return profile != null && (hasWork(mockAuthorityActor(profile), 'notice.read', {}, SYS_READERS) || hasWork(mockAuthorityActor(profile), 'notice.manage', {}, SYS_ADMIN))
 }
 
 function isActive(notice: StoredNotice, now = Date.now()): boolean {
@@ -288,7 +289,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/notices', async ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
+    if (!hasWork(mockAuthorityActor(profile), 'notice.manage', {}, SYS_ADMIN)) return noticeReadForbidden(request)
     const body = (await request.json()) as Schemas['NoticeCreateRequest']
     // 정할 것이 남지 않았다 — 공지는 어느 기관에도 속하지 않고, 노출은 popup 하나가
     // 정한다. 게이트를 통과한 사람이 보낸 것을 그대로 세운다.
@@ -310,7 +311,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.patch('*/api/v1/admin/notices/:noticeId', async ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
+    if (!hasWork(mockAuthorityActor(profile), 'notice.manage', {}, SYS_ADMIN)) return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
@@ -328,7 +329,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.delete('*/api/v1/admin/notices/:noticeId', ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
+    if (!hasWork(mockAuthorityActor(profile), 'notice.manage', {}, SYS_ADMIN)) return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}`)
@@ -339,7 +340,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.post('*/api/v1/admin/notices/:noticeId/images', async ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
+    if (!hasWork(mockAuthorityActor(profile), 'notice.manage', {}, SYS_ADMIN)) return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const existing = noticeStore.find((row) => row.id === noticeId)
     if (!existing) return notFound(`/api/v1/admin/notices/${noticeId}/images`)
@@ -406,7 +407,7 @@ export const noticeHandlers: RequestHandler[] = [
   http.delete('*/api/v1/admin/notices/:noticeId/images/:imageId', ({ params, request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return noticeReadForbidden(request)
+    if (!hasWork(mockAuthorityActor(profile), 'notice.manage', {}, SYS_ADMIN)) return noticeReadForbidden(request)
     const noticeId = String(params.noticeId)
     const imageId = String(params.imageId)
     const existing = noticeStore.find((row) => row.id === noticeId)

@@ -1,3 +1,7 @@
+import { Link } from 'react-router'
+import { SYS_READERS } from '../../auth/institution-authority'
+import { PUBLICATION_READ_COMMANDS, useInstitutionResourcePermissions } from '../../lib/institution-resource-work'
+import { adminPaths } from '../../lib/paths'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchDomains, type DomainSummary, type VmDetail } from '../../api/queries'
@@ -23,7 +27,25 @@ interface PlatformModalState {
  * 서빙 중 목록은 VM 상세(publications)에서, 예약 중 목록은 도메인 목록
  * 조회에서 온다 — 예약 행은 트래픽을 받지 않으므로 절을 분리해 보여준다.
  */
-export function VmDomainsSection({ vm }: { vm: VmDetail }) {
+export function VmDomainsSection({ vm, surface = 'personal' }: { vm: VmDetail; surface?: 'personal' | 'admin' }) {
+  return surface === 'admin' ? <InstitutionVmDomainsSection vm={vm} /> : <PersonalVmDomainsSection vm={vm} />
+}
+
+function InstitutionVmDomainsSection({ vm }: { vm: VmDetail }) {
+  const permissions = useInstitutionResourcePermissions()
+  if (!permissions.canAnyWork(PUBLICATION_READ_COMMANDS, SYS_READERS)) {
+    return <Card><CardContent><p className="text-sm text-neutral-500">게시 정보를 조회하거나 운영할 권한이 없습니다.</p></CardContent></Card>
+  }
+  return <Card><CardHeader><CardTitle>도메인</CardTitle></CardHeader><CardContent className="space-y-3">
+    <p className="text-sm text-neutral-600">공개 서비스에서 각 도메인의 실제 기관과 워크스페이스에 허용된 작업을 확인합니다.</p>
+    {vm.publications == null ? <p className="text-sm text-neutral-500">이 화면에는 게시 세부 정보가 제공되지 않았습니다.</p>
+      : vm.publications.length === 0 ? <p className="text-sm text-neutral-500">연결된 도메인이 없습니다.</p>
+        : <ul className="space-y-2">{vm.publications.map((pub) => <li key={pub.domain.id}><Link className="text-primary-700 underline" to={`${adminPaths.domains()}?domainId=${encodeURIComponent(pub.domain.id)}`}>{pub.fqdn} 관리</Link></li>)}</ul>}
+    <Link className="text-primary-700 underline" to={adminPaths.domains()}>공개 서비스에서 확인</Link>
+  </CardContent></Card>
+}
+
+function PersonalVmDomainsSection({ vm }: { vm: VmDetail }) {
   const canMutate = vm.settingsEditAllowed
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [platformModal, setPlatformModal] = useState<PlatformModalState | null>(null)
@@ -34,6 +56,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
   const domains = useQuery({
     queryKey: ['domains', { vmId: vm.id }],
     queryFn: () => fetchDomains({ vmId: vm.id }),
+    enabled: vm.publications != null,
   })
 
   const live = vm.publications
@@ -42,6 +65,7 @@ export function VmDomainsSection({ vm }: { vm: VmDetail }) {
   // publications에 오므로, 목록 조회에서 releasedAt이 찍힌 행이 예약 절이 된다.
   const reserved = (domains.data?.content ?? []).filter((d) => d.releasedAt != null)
 
+  if (live == null) return <Card><CardHeader><CardTitle>도메인</CardTitle></CardHeader><CardContent><Alert variant="info">게시 세부 정보가 제공되지 않았습니다. 개인 접근 권한을 확인해 주세요.</Alert></CardContent></Card>
   const connectable = CONNECTABLE_STATUSES.includes(vm.status)
   const empty = live.length === 0 && reserved.length === 0
 

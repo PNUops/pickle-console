@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { uuid } from '../ids'
+import { mockInstitutionAuthority } from '../institution-authority'
 
 type Schemas = components['schemas']
 
@@ -265,6 +266,11 @@ export const unauthorizedProblem: Schemas['Problem'] = {
 /* ─── default handlers ─── */
 
 export const authHandlers: RequestHandler[] = [
+  http.get('*/api/v1/me/institution-authority', ({ request }) => {
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+    const profile = ACCESS_TOKENS[token]
+    return profile ? HttpResponse.json(mockInstitutionAuthority(profile)) : problemResponse(unauthorizedProblem)
+  }),
   http.post('*/api/v1/auth/signup', async ({ request }) => {
     // 계정 열거 방지: 이미 가입된 주소든 아니든 서버 응답은 항상 같은 202.
     await request.json()

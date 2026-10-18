@@ -21,7 +21,8 @@ import { Field } from '../components/request-kind/Field'
 import { RequestRecipientsCard } from '../components/request-kind/RecipientsCard'
 import { recipientPollInterval } from '../components/request-kind/recipients'
 import { useAuth } from '../auth/auth-context'
-import { approvesForOrg } from '../auth/permissions'
+import { canUseRowWork, SYS_ADMIN } from '../auth/institution-authority'
+import { resourceWorkPrefix } from '../auth/request-authority'
 import { consolePaths } from '../lib/paths'
 import { formatDateTime } from '../lib/format'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
@@ -93,7 +94,7 @@ export function RequestDetailPage() {
 
       <RequestRecipientsCard
         request={data}
-        canRetry={approvesForOrg(user, data.orgId)}
+        canRetry={canUseRowWork(user, data, `${resourceWorkPrefix(data.type)}.recipient.retry`, SYS_ADMIN)}
         // Each resource belongs to its recipient; the requester opens only their own.
         resourceHref={(recipient) =>
           recipient.resourceId == null || recipient.userId == null || recipient.userId !== user?.id

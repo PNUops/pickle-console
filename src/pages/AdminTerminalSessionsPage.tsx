@@ -7,7 +7,8 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { isSysAdminOnly } from '../auth/permissions'
+import { SYS_READERS } from '../auth/institution-authority'
+import { useInstitutionPermissions } from '../auth/use-institution-permissions'
 import {
   Alert,
   Button,
@@ -29,13 +30,24 @@ const POLL_MS = import.meta.env.MODE === 'test' ? 250 : 30_000
 
 export function AdminTerminalSessionsPage() {
   const { user } = useAuth()
-  const canTerminate = !!user && isSysAdminOnly(user.role)
+  const permissions = useInstitutionPermissions()
+  return <InstitutionTerminalSessions key={`${user?.id ?? 'none'}:${permissions.fingerprint}`} />
+}
+
+function InstitutionTerminalSessions() {
+  const { user } = useAuth()
+  const permissions = useInstitutionPermissions()
+  const canRead = permissions.canAnyWork(['vm.terminal-session.read'], SYS_READERS)
+  const canTerminate = permissions.role === 'SYS_ADMIN'
 
   const sessions = useQuery({
-    queryKey: ['admin', 'terminal-sessions'],
+    queryKey: ['admin', 'terminal-sessions', user?.id, permissions.fingerprint],
     queryFn: fetchAdminTerminalSessions,
     refetchInterval: POLL_MS,
+    enabled: canRead,
   })
+
+  if (!canRead) return <Alert variant="danger">웹 터미널 세션을 조회할 권한이 없습니다.</Alert>
 
   return (
     <div className="space-y-6">

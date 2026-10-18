@@ -109,7 +109,7 @@ describe('관리 기관 scope selector', () => {
     await waitFor(() => expect(scopes).toEqual([null, uuid(2)]))
   })
 
-  test('active 기관의 실제 역할을 nav action 의미에 사용한다', async () => {
+  test('a query filter keeps independent audit sources while the selected institution remains denied', async () => {
     ACCESS_TOKENS['access-org-mixed'] = {
       ...orgAdminDualProfile,
       managedOrgs: [
@@ -123,7 +123,7 @@ describe('관리 기관 scope selector', () => {
 
       expect(await screen.findByRole('option', { name: /테스트 기관 · 기관 열람자/ })).toBeInTheDocument()
       const nav = screen.getByRole('navigation', { name: '관리자 메뉴' })
-      expect(within(nav).queryByRole('link', { name: '감사 로그' })).not.toBeInTheDocument()
+      expect(within(nav).getByRole('link', { name: '감사 로그' })).toHaveAttribute('href', `/admin/audit?org=${uuid(2)}`)
     } finally {
       delete ACCESS_TOKENS['access-org-mixed']
     }

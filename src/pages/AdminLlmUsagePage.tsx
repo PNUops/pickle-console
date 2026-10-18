@@ -46,6 +46,9 @@ import { formatUsd } from '../lib/openrouter-credits'
 import { passthroughLabel } from '../lib/passthrough-endpoints'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
+import { useAuth } from '../auth/auth-context'
+import { canQueryWork, SYS_READERS } from '../auth/institution-authority'
+import { requestReaderKey } from '../api/request-review'
 
 const AdminLlmUsageCharts = lazy(
   () => import('../components/llm-usage/AdminLlmUsageCharts'),
@@ -79,12 +82,12 @@ function parseDays(raw: string | null): AdminLlmUsageDays {
   return value === 30 || value === 90 ? value : 7
 }
 
-function count(value: number): string {
-  return value.toLocaleString('ko-KR')
+function count(value: number | null | undefined): string {
+  return value == null ? '제공되지 않음' : value.toLocaleString('ko-KR')
 }
 
-function tokens(value: number): string {
-  return `${count(value)} 토큰`
+function tokens(value: number | null | undefined): string {
+  return value == null ? '제공되지 않음' : `${count(value)} 토큰`
 }
 
 function percent(value: number): string {
@@ -248,9 +251,10 @@ function WindowSummary({ window, selected }: { window: LlmUsageWindow; selected:
  */
 function amountCell(
   amount: number | null | undefined,
-  creditAxisRequests: number,
-  priced: number,
+  creditAxisRequests: number | null | undefined,
+  priced: number | null | undefined,
 ): string {
+  if (creditAxisRequests == null || priced == null) return '제공되지 않음'
   const missing = creditAxisRequests - priced
   if (amount == null) return missing > 0 ? `— (${count(missing)}건 미상)` : '—'
   return missing > 0 ? `${formatUsd(amount)} (${count(missing)}건 미상)` : formatUsd(amount)
@@ -549,6 +553,11 @@ function ModelBreakdownTable({ rows }: { rows: AdminLlmUsage['breakdown']['model
  */
 function ModelRows({ row }: { row: AdminLlmUsage['breakdown']['models'][number] }) {
   const name = row.modelName ?? '모델 미상'
+  if (row.pricedRequests == null || row.pricedInputTokens == null || row.pricedOutputTokens == null
+    || row.pricedAvgLatencyMs == null || row.pricedFailed == null || row.unpricedAvgLatencyMs == null) return <TR>
+    <TD>{name}</TD><TD>{count(row.requests)}건</TD><TD>{tokens(row.inputTokens + row.outputTokens)}</TD>
+    <TD>제공되지 않음</TD><TD>{latency(row.avgLatencyMs)}</TD><TD>{row.requests === 0 ? '—' : percent(row.failed / row.requests)}</TD>
+  </TR>
   const unpriced = row.requests - row.pricedRequests
   // **이 표의 분모는 하나다: 금액이 붙었는가.** 두 행은 이 모델의 요청을 남김없이
   // 나눠야 하므로 축으로 자를 수 없다 — 축으로 자르면 자체 서빙과 축이 기록되기 전의
@@ -611,8 +620,8 @@ function ModelRows({ row }: { row: AdminLlmUsage['breakdown']['models'][number] 
   )
 }
 
-function latency(ms: number): string {
-  return `${Math.round(ms).toLocaleString('ko-KR')}ms`
+function latency(ms: number | null | undefined): string {
+  return ms == null ? '제공되지 않음' : `${Math.round(ms).toLocaleString('ko-KR')}ms`
 }
 
 function EndpointBreakdownTable({
@@ -754,7 +763,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                         일일 한도 {item.dailyTokens == null ? '없음' : tokens(item.dailyTokens)}
                       </span>
                     </TD>
-                    <TD className="min-w-48 text-xs">
+                    <TD className="min-w-48 text-xs">{item.financeVisible ? <>
                       <span className="block">한도 {formatUsd(item.creditLimit)}</span>
                       <span className="block">사용 {formatUsd(item.creditUsage)}</span>
                       <span className="block">잔여 {formatUsd(item.creditLimitRemaining)}</span>
@@ -770,6 +779,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                           {item.openrouterAccountName ?? 'OpenRouter 사업 계정'}
                         </Link>
                       )}
+                    </> : '제공되지 않음'}
                     </TD>
                     <TD>
                       {item.pressure.length === 0 ? '기록 없음' : (
@@ -894,14 +904,16 @@ function QualitySection({
 }
 
 export function AdminLlmUsagePage() {
+  const { user } = useAuth()
   const scope = useAdminScope()
   const [searchParams, setSearchParams] = useSearchParams()
   const days = parseDays(searchParams.get('days'))
   const workspaceId = searchParams.get('workspaceId') ?? undefined
   const scopeKey = scope.activeOrgId ?? null
   const workspaceKey = workspaceId ?? null
+  const usageAllowed = canQueryWork(user, ['llm.observe'], { orgId: scope.activeOrgId, workspaceId }, SYS_READERS)
   const usage = useQuery({
-    queryKey: ['admin', 'llm-usage', { orgId: scopeKey, workspaceId: workspaceKey, days, top: PAGE_TOP }],
+    queryKey: ['admin', 'llm-usage', { orgId: scopeKey, workspaceId: workspaceKey, days, top: PAGE_TOP, reader: requestReaderKey(user) }],
     queryFn: async () => ({
       scopeKey,
       workspaceKey,
@@ -913,7 +925,7 @@ export function AdminLlmUsagePage() {
         top: PAGE_TOP,
       }),
     }),
-    enabled: scope.ready,
+    enabled: scope.ready && usageAllowed,
     staleTime: 60_000,
   })
   // 고를 목록. 기관이 정해지지 않은 시스템 계층 전체 보기에서는 워크스페이스가
@@ -991,7 +1003,8 @@ export function AdminLlmUsagePage() {
         )}
       </div>
 
-      {usage.isPending && <LoadingBlock label="LLM 사용량 불러오는 중" />}
+      {!usageAllowed && <MessageBar>선택한 기관·공간 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
+      {usageAllowed && usage.isPending && <LoadingBlock label="LLM 사용량 불러오는 중" />}
       {usage.isError && !data && <MessageBar variant="danger">{usage.error.message}</MessageBar>}
       {data && (
         <>

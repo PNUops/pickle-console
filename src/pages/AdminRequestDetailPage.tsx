@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import { approvesForOrg, canReadSupportMetadata, isSysTier } from '../auth/permissions'
+import { canReadSupportMetadata, isSysTier } from '../auth/permissions'
+import { canUseRowWork, SYS_ADMIN } from '../auth/institution-authority'
+import { resourceWorkPrefix } from '../auth/request-authority'
 import { requestListReturn, withListReturn } from '../lib/list-url'
 import { workspaceSourceReturn } from '../lib/workspace-source-return'
 import { OperationResult } from '../components/OperationResult'
@@ -129,7 +131,8 @@ function AdminRequestDetailContent() {
   // 승인과 반려는 기관 운영 역할 + SYS_ADMIN만 — SYS_MANAGER와 열람 역할은
   // 조회만(§3.9 †15). 역할이 닿아도 이 신청의 기관에서 행위할 수 있어야 한다:
   // 열람 역할로만 보이는 기관의 신청에 승인을 시도하면 API가 404로 거부한다.
-  const canDecide = approvesForOrg(user, data.orgId)
+  const canDecide = canUseRowWork(user, data, `${resourceWorkPrefix(data.type)}.request.decide`, SYS_ADMIN)
+  const canRetry = canUseRowWork(user, data, `${resourceWorkPrefix(data.type)}.recipient.retry`, SYS_ADMIN)
 
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
@@ -172,7 +175,7 @@ function AdminRequestDetailContent() {
             request={data}
             admin
             userReadable={(recipient) => context.isSuccess && !!recipient.userId && context.data?.recipientUserReadFlags?.[recipient.userId] === true}
-            canRetry={canDecide}
+            canRetry={canRetry}
             resourceHref={(recipient) =>
               recipient.resourceId == null
                 ? null
@@ -676,9 +679,9 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
           </> : <p className="text-foreground-muted">연결된 이미지 정보를 확인할 수 없습니다. 현재 신청 가능한 이미지를 선택해 주세요.</p>}
         </CardContent>
       </Card>
-      <Alert variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}>
+      {vm.orgHeadroom != null && <Alert variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}>
         {vm.guidance}
-      </Alert>
+      </Alert>}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">신청자 보유 가상머신</CardTitle>
@@ -701,7 +704,7 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
         <CardHeader>
           <CardTitle className="text-sm">기관 가상머신 리소스 여유</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-neutral-700">
+        <CardContent className="space-y-3 text-sm text-neutral-700">{vm.orgHeadroom == null ? <p>기관 할당·용량 정보는 현재 업무로 제공되지 않습니다.</p> : <>
           {vm.orgHeadroom.warnings.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {vm.orgHeadroom.warnings.map((warning) => (
@@ -726,7 +729,7 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
             {Math.round(vm.orgHeadroom.memoryUsageRatio * 100)}% · 디스크 할당 합계{' '}
             {vm.orgHeadroom.allocated.diskGb} GiB
           </p>
-        </CardContent>
+        </>}</CardContent>
       </Card>
     </>
   )
@@ -761,7 +764,7 @@ function LlmKeyBriefCard({ title, keys }: { title: string; keys: LlmKeyBrief[] }
                 <p className="mt-1 text-xs text-neutral-500">
                   {key.workspaceName} · RPM {limitText(key.rpm)} · TPM {limitText(key.tpm)} · 일일{' '}
                   {limitText(key.dailyTokens)} · 동시 {limitText(key.concurrency)} · 금액{' '}
-                  {key.creditLimit === 0 ? '미부여' : `$${key.creditLimit.toLocaleString('ko-KR')}`}
+                  {key.creditLimit == null ? '제공되지 않음' : key.creditLimit === 0 ? '미부여' : `$${key.creditLimit.toLocaleString('ko-KR')}`}
                 </p>
               </li>
             ))}
@@ -777,6 +780,7 @@ function limitText(value: number | null | undefined): string {
 }
 
 function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applicantResources']['activeVms'] }) {
+  if (vms == null) return <p className="text-neutral-500">VM 관계는 현재 업무로 제공되지 않습니다.</p>
   if (vms.length === 0) {
     return <p className="text-neutral-500">보유 중인 VM이 없습니다.</p>
   }
@@ -785,7 +789,7 @@ function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applica
       {vms.map((vm) => (
         <li key={vm.id} className="flex items-center justify-between gap-2">
           <span className="min-w-0">
-            <span className="block truncate font-medium text-neutral-900">{vm.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vm.id, vm.orgId)}>{vm.name}</Link> : vm.name}</span>
+            <span className="block truncate font-medium text-neutral-900">{vm.canReadDetail ? <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vm.id, vm.orgId ?? undefined)}>{vm.name}</Link> : vm.name}</span>
             <span className="block text-xs text-neutral-500">
               {formatSpec(vm.vcpu, vm.memoryMb, vm.diskGb)}
               {vm.endDate ? ` · ~${vm.endDate}` : ''}
@@ -799,6 +803,7 @@ function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applica
 }
 
 function TotalsLine({ totals }: { totals: NonNullable<ApprovalContext['vm']>['applicantResources']['totals'] }) {
+  if (totals == null) return <p className="text-xs text-neutral-500">리소스 합계는 현재 업무로 제공되지 않습니다.</p>
   return (
     <p className="text-xs text-neutral-500">
       합계 {formatSpec(totals.vcpu, totals.memoryMb, totals.diskGb)}

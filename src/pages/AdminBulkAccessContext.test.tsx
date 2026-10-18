@@ -23,7 +23,7 @@ async function draftAccess(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('radio', { name: '접근 권한' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.type(screen.getByLabelText('대상 사용자'), '이시스템')
-  await user.click(await screen.findByRole('button', { name: /이시스템 sysadmin.lee/ }))
+  await user.click(await screen.findByRole('button', { name: /이시스템/ }))
   await user.selectOptions(screen.getByLabelText('등급'), 'EDITOR')
 }
 
@@ -41,7 +41,8 @@ test('a late bulk preview cannot become the new institution filter preview or er
     await user.click(screen.getByRole('button', { name: '미리보기' }))
     await waitFor(() => expect(started).toBe(true))
     await act(() => router.navigate({ pathname: '/admin/bulk/vms', search: `?org=${uuid(2)}` }, { state }))
-    await user.click(await screen.findByRole('button', { name: '다음' }))
+    await user.click(await screen.findByRole('radio', { name: '접근 권한' }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
     await user.type(screen.getByLabelText('대상 사용자'), '홍길동')
     await act(async () => { release(); await pending })
     expect(screen.getByLabelText('대상 사용자')).toHaveValue('홍길동')
@@ -63,6 +64,7 @@ test('an institution filter change discards a pending bulk access confirmation f
   await user.type(review.getByLabelText('권한을 얻는 목적'), '이전 기관의 확인')
   await act(() => router.navigate({ pathname: '/admin/bulk/vms', search: `?org=${uuid(2)}` }, { state }))
   await waitFor(() => expect(screen.queryByRole('dialog', { name: '회원님의 권한 증가 확인' })).not.toBeInTheDocument())
+  await user.click(await screen.findByRole('radio', { name: '접근 권한' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   expect(screen.getByLabelText('대상 사용자')).toHaveValue('')
   expect(writes).toBe(0)

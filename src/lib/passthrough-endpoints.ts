@@ -14,7 +14,7 @@ import type { AdminLlmKeyDetail } from '../api/queries'
  */
 
 /** A name the contract allows. */
-export type PassthroughEndpoint = AdminLlmKeyDetail['passthroughEndpoints'][number]
+export type PassthroughEndpoint = NonNullable<AdminLlmKeyDetail['passthroughEndpoints']>[number]
 
 interface Capability {
   label: string

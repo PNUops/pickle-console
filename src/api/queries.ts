@@ -265,11 +265,12 @@ export function resolveWorkspaceRoster(
   workspaceId: string,
   studentNos: string[],
   orgId?: string | null,
+  type?: ResourceType,
 ): Promise<RosterResolution[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/workspaces/{workspaceId}/roster/resolve', {
       params: { path: { workspaceId } },
-      body: { studentNos, orgId: orgId ?? null },
+      body: { studentNos, orgId: orgId ?? null, ...(type ? { type } : {}) },
     })
     if (!data) throw toApiError(error, '명단을 확인하지 못했습니다.')
     return data.results
@@ -1139,7 +1140,7 @@ export function fetchLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
  * 소유자 경로는 리소스 부여로, 이쪽은 기관 스코프로 연다. 부여를 우회하도록
  * 소유자 경로를 넓히지 않고 경로를 따로 둔 것이라, 화면도 둘을 섞지 않는다.
  */
-export function fetchAdminLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
+export function fetchAdminLlmKeyModels(keyId: string): Promise<Schemas['InstitutionAdminLlmModelsResponse']> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}/models', {
       params: { path: { keyId } },
@@ -1204,7 +1205,7 @@ export function fetchLlmKeyUsage(keyId: string, days: number): Promise<LlmKeyUsa
 export type AdminLlmKeyUsage = Schemas['AdminLlmKeyUsageResponse']
 export type AdminLlmAccountUsage = Schemas['AdminLlmAccountUsageResponse']
 export type LlmUsageCostPoint = Schemas['LlmUsageCostPointResponse']
-export type LlmEndpointKindUsage = Schemas['LlmEndpointKindUsageResponse']
+export type LlmEndpointKindUsage = Schemas['InstitutionAdminLlmEndpointUsageResponse']
 export type LlmServedModelUsage = Schemas['LlmServedModelUsageResponse']
 
 /**
@@ -2964,13 +2965,13 @@ export function updateUserProfile(
 export function grantOrgRole(
   userId: string,
   orgId: string,
-  role: UserRole,
+  permission: Schemas['InstitutionPermissionInput'],
   expectedRevision: number,
 ): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/admin/users/{userId}/org-roles/{orgId}', {
       params: { path: { userId, orgId } },
-      body: { role, expectedRevision },
+      body: { permission, expectedRevision },
     })
     if (!data) throw toApiError(error, '기관 역할을 부여하지 못했습니다.')
     return data
@@ -3002,10 +3003,10 @@ export function updateOrgRequestMail(
 }
 
 /** 한 기관에서의 역할 회수. 마지막 기관이었다면 계정은 일반 사용자가 된다. */
-export function revokeOrgRole(userId: string, orgId: string, expectedRevision: number): Promise<UserSummary> {
+export function revokeOrgRole(userId: string, orgId: string, expectedRevision: number, expectedPermissionRevision: number): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/admin/users/{userId}/org-roles/{orgId}', {
-      params: { path: { userId, orgId }, query: { expectedRevision } },
+      params: { path: { userId, orgId }, query: { expectedRevision, expectedPermissionRevision } },
     })
     if (!data) throw toApiError(error, '기관 역할을 회수하지 못했습니다.')
     return data

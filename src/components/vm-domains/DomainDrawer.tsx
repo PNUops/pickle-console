@@ -58,7 +58,7 @@ export function DomainDrawer({
   canMutate,
   onPortUsed,
 }: DomainDrawerProps) {
-  const pub = vm.publications.find((p) => p.domain.id === openId) ?? null
+  const pub = vm.publications?.find((p) => p.domain.id === openId) ?? null
   const reservedRow = pub ? null : (reserved.find((d) => d.id === openId) ?? null)
   const title = pub?.fqdn ?? reservedRow?.fqdn ?? '도메인 상세'
 
@@ -321,7 +321,7 @@ function ManageSection({
 
   const isCustom = pub.domain.kind === 'CUSTOM'
   // 이 VM의 마지막 서빙 도메인을 해제하면 HTTP 공개가 완전히 끊긴다 — 확인을 승격.
-  const isLast = vm.publications.length === 1
+  const isLast = vm.publications?.length === 1
 
   return (
     <section className="space-y-4 border-t border-neutral-100 pt-4">

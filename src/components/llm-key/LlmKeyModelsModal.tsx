@@ -12,6 +12,10 @@ import { ModelPriceDetail } from '../ModelPriceDetail'
 import { ObservationMoment } from '../OpenRouterCredits'
 import { CopyButton } from '../CopyButton'
 import { Alert, Input, LoadingBlock, Modal } from '../ui'
+import { useAuth } from '../../auth/auth-context'
+import { requestReaderKey } from '../../api/request-review'
+
+type ModelsRead = Omit<LlmKeyModels, 'paid'> & { paid?: LlmKeyModels['paid'] | null }
 
 /**
  * 이 키의 `model` 필드에 넣을 수 있는 이름.
@@ -37,8 +41,9 @@ export function LlmKeyModelsModal({
   variant?: 'owner' | 'admin'
 }) {
   const [term, setTerm] = useState('')
-  const models = useQuery({
-    queryKey: ['llm-key-models', variant, keyId],
+  const { user } = useAuth()
+  const models = useQuery<ModelsRead>({
+    queryKey: variant === 'admin' ? ['admin', 'llm-key-models', keyId, requestReaderKey(user)] : ['llm-key-models', variant, keyId],
     queryFn: () => (variant === 'admin' ? fetchAdminLlmKeyModels(keyId) : fetchLlmKeyModels(keyId)),
     // 모달이 닫혀 있는 동안은 물을 이유가 없다. 카탈로그가 수백 행이다.
     enabled: open,
@@ -62,7 +67,7 @@ function ModelsBody({
   term,
   onTermChange,
 }: {
-  data: LlmKeyModels
+  data: ModelsRead
   term: string
   onTermChange: (value: string) => void
 }) {
@@ -73,13 +78,13 @@ function ModelsBody({
   )
   const paid = useMemo(
     () =>
-      data.paid.models.filter(
+      data.paid?.models.filter(
         (m) =>
           !needle ||
           m.id.toLowerCase().includes(needle) ||
           (m.name ?? '').toLowerCase().includes(needle),
-      ),
-    [data.paid.models, needle],
+      ) ?? [],
+    [data.paid, needle],
   )
 
   return (
@@ -147,11 +152,12 @@ function PaidSection({
   rows,
   filtered,
 }: {
-  data: LlmKeyModels
+  data: ModelsRead
   rows: PaidModel[]
   filtered: boolean
 }) {
   const paid = data.paid
+  if (paid == null) return <Alert>이 키의 유료 모델 정책은 현재 업무로 제공되지 않습니다.</Alert>
   const narrowed = paid.allowedPatterns.length > 0 || paid.deniedPatterns.length > 0
 
   return (

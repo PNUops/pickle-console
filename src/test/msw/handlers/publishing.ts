@@ -1,3 +1,4 @@
+import { DOMAIN_READ_COMMANDS, PUBLICATION_READ_COMMANDS } from '../../../lib/institution-resource-work'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { orgs, requestOptions } from './reference'
@@ -86,6 +87,7 @@ function initialReservedDomains(): DomainDetail[] {
 function initialExternalDomains(): Schemas['AdminDomainView'][] {
   return [
     {
+      metadataVisible: true, allowedWorkIds: [...DOMAIN_READ_COMMANDS],
       id: uuid(9101),
       vmId: null,
       vmName: null,
@@ -129,6 +131,7 @@ function initialExternalRecords(): Record<string, Schemas['DnsRecordSetView'][]>
 function initialDomainRoots(): Schemas['AdminDomainRootView'][] {
   return [
     {
+      metadataVisible: true, allowedWorkIds: ['root-domain.catalogue.read', 'institution.root-policy.read', 'institution.root-policy.write'],
       rootDomain: 'pusan.dev',
       orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
@@ -138,6 +141,7 @@ function initialDomainRoots(): Schemas['AdminDomainRootView'][] {
     // 다른 기관의 루트. 기관 등급 관리자가 남의 정책을 못 바꾸는 것을 보려면
     // 목록에 둘이 있어야 한다.
     {
+      metadataVisible: true, allowedWorkIds: ['root-domain.catalogue.read', 'institution.root-policy.read', 'institution.root-policy.write'],
       rootDomain: 'test.pusan.dev',
       orgId: uuid(2),
       orgName: '테스트 기관',
@@ -167,7 +171,7 @@ function orgName(orgId: string | null | undefined): string {
 
 /* ─── 서빙 중 공개 순회 ─── */
 function livePublications(): { vm: VmDetail; pub: PublicationView }[] {
-  return vmStore.flatMap((vm) => vm.publications.map((pub) => ({ vm, pub })))
+  return vmStore.flatMap((vm) => publicationFacts(vm).map((pub) => ({ vm, pub })))
 }
 
 function findLive(domainId: string): { vm: VmDetail; pub: PublicationView } | null {
@@ -351,9 +355,16 @@ function buildPlatformPublication(
   }
 }
 
+/** Synthetic stored facts are complete; API projection nullability does not erase them. */
+function publicationFacts(vm: VmDetail): PublicationView[] {
+  if (vm.publications == null) throw new Error('Missing synthetic VM publication facts')
+  return vm.publications
+}
+
 function toAdminRoute(vm: VmDetail, pub: PublicationView): Schemas['AdminRouteView'] {
   const route = pub.route!
   return {
+    metadataVisible: true, allowedWorkIds: [...PUBLICATION_READ_COMMANDS],
     id: pub.domain.id,
     domainId: pub.domain.id,
     fqdn: pub.fqdn,
@@ -361,7 +372,7 @@ function toAdminRoute(vm: VmDetail, pub: PublicationView): Schemas['AdminRouteVi
     vmId: vm.id,
     vmName: vm.name,
     workspaceId: vm.workspaceId!,
-    workspaceName: vm.workspaceName,
+    workspaceName: vm.workspaceName ?? '테스트 워크스페이스',
     orgId: vm.orgId!,
     orgName: orgName(vm.orgId),
     targetPort: route.targetPort,
@@ -376,6 +387,7 @@ function toAdminRoute(vm: VmDetail, pub: PublicationView): Schemas['AdminRouteVi
 
 function toAdminDomain(vm: VmDetail, pub: PublicationView): Schemas['AdminDomainView'] {
   return {
+    metadataVisible: true, allowedWorkIds: [...PUBLICATION_READ_COMMANDS],
     id: pub.domain.id,
     vmId: vm.id,
     kind: pub.domain.kind,
@@ -389,7 +401,7 @@ function toAdminDomain(vm: VmDetail, pub: PublicationView): Schemas['AdminDomain
     createdAt: pub.domain.createdAt,
     vmName: vm.name,
     workspaceId: vm.workspaceId!,
-    workspaceName: vm.workspaceName,
+    workspaceName: vm.workspaceName ?? '테스트 워크스페이스',
     orgId: vm.orgId!,
     orgName: orgName(vm.orgId),
     routeStatus: pub.route?.status ?? null,
@@ -405,6 +417,7 @@ function toAdminDomain(vm: VmDetail, pub: PublicationView): Schemas['AdminDomain
 function reservedToAdminDomain(d: DomainDetail): Schemas['AdminDomainView'] {
   const vm = vmStore.find((v) => v.id === d.vmId)
   return {
+    metadataVisible: true, allowedWorkIds: [...PUBLICATION_READ_COMMANDS],
     id: d.id,
     vmId: d.vmId,
     kind: d.kind,
@@ -567,7 +580,7 @@ export function releaseAdminDomain(domainId: string): string | null {
   const found = findLive(domainId)
   if (!found) return null
   // A force release takes the name back at once: no grace, only a REMOVED row.
-  found.vm.publications = found.vm.publications.filter((p) => p.domain.id !== domainId)
+  found.vm.publications = publicationFacts(found.vm).filter((p) => p.domain.id !== domainId)
   retireDomain(found.pub.domain)
   return '도메인을 강제 해제했습니다. 이름이 즉시 회수되고 라우트 제거가 곧 적용됩니다.'
 }
@@ -621,7 +634,7 @@ export const publishingHandlers: RequestHandler[] = [
       // 같은 VM 몫으로 예약된 이름이면 예약을 걷어내고 다시 연결한다.
       const reserved = takeReserved(vm.id, fqdn)
       if (!reserved && isFqdnTaken(fqdn, vm.id)) return fqdnTaken(instance)
-      const platformCount = vm.publications.filter(
+      const platformCount = publicationFacts(vm).filter(
         (p) => p.domain.kind !== 'CUSTOM',
       ).length
       if (platformCount >= PLATFORM_DOMAIN_LIMIT) {
@@ -632,7 +645,7 @@ export const publishingHandlers: RequestHandler[] = [
       pub = buildPlatformPublication(vm, port, body.subdomain, rootDomain)
     }
 
-    vm.publications = [...vm.publications, pub]
+    vm.publications = [...publicationFacts(vm), pub]
     recordVmEvent(vm.id, {
       type: 'PUBLISH',
       actorId: uuid(42),
@@ -714,7 +727,7 @@ export const publishingHandlers: RequestHandler[] = [
     const found = findLive(domainId)
     if (!found) return notFound()
     const { vm, pub } = found
-    vm.publications = vm.publications.filter((p) => p.domain.id !== domainId)
+    vm.publications = publicationFacts(vm).filter((p) => p.domain.id !== domainId)
     vm.updatedAt = '2026-07-12T09:20:00+09:00'
     recordVmEvent(vm.id, {
       type: 'UNPUBLISH',

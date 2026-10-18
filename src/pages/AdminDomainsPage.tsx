@@ -11,7 +11,6 @@ import {
   fetchAdminDomainRoots,
   fetchAdminDomains,
   fetchAdminDomain,
-  fetchAdminRoutes,
   forceReleaseDomain,
   resyncRoutes,
   updateAdminDomainRenewal,
@@ -25,14 +24,9 @@ import {
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
-import {
-  canAdminManageAccess,
-  canInterveneDomain,
-  canRunSysRoutine,
-  isSysTier,
-  managesOrg,
-  operatesOrg,
-} from '../auth/permissions'
+import { SYS_ADMIN, SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
+import { CERTIFICATE_READS, DOMAIN_READ_COMMANDS, PUBLICATION_READ_COMMANDS, ROOT_READS, useInstitutionResourcePermissions } from '../lib/institution-resource-work'
+import { fetchInstitutionDomainRoute } from '../api/institution-publication'
 import {
   BulkSelectionBar,
   SelectPageHeader,
@@ -76,7 +70,6 @@ import { useBulkSelection } from '../lib/bulk-selection'
 import { adminPaths } from '../lib/paths'
 import { requestDetailReturn } from '../lib/list-url'
 import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
-import { requestReaderKey } from '../api/request-review'
 import { useActiveResult } from '../lib/use-active-result'
 
 const PAGE_SIZE = 20
@@ -104,24 +97,33 @@ const KINDS: DomainKind[] = ['AUTO', 'PLATFORM', 'CUSTOM', 'EXTERNAL']
  */
 export function AdminDomainsPage() {
   const { user } = useAuth()
+  const permissions = useInstitutionResourcePermissions()
   const { activeOrgId } = useAdminScope()
-  return <AdminDomainsContent key={`${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+  return <AdminDomainsContent key={`${activeOrgId ?? 'all'}:${user?.id ?? 'none'}:${permissions.fingerprint}`} />
 }
 
 function AdminDomainsContent() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg, activeOrgRole, tier } = useAdminScope()
-  // 전역 재동기화는 시스템 운영자 이상 — 시스템 열람자는 조회만.
-  const canResync = !!user && canRunSysRoutine(user.role)
-  // Direct interventions retain the institution role; access support is global.
-  const effectiveRole = tier === 'org' ? activeOrgRole : user?.role
-  const canSelect = (!!effectiveRole && canInterveneDomain(effectiveRole)) || (!!user && canAdminManageAccess(user.role))
-  const selection = useBulkSelection('domains', `${requestReaderKey(user)}:${activeOrgId ?? ''}`)
+  const permissions = useInstitutionResourcePermissions()
+  const { activeOrgId, activeOrg } = useAdminScope()
+  const canResync = SYS_OPERATORS.includes(permissions.role)
+  const canReadDomains = permissions.canAnyWork([...DOMAIN_READ_COMMANDS, ...PUBLICATION_READ_COMMANDS], SYS_READERS)
+  const canReadCertificates = permissions.canAnyWork(CERTIFICATE_READS, SYS_READERS)
+  const canReadRoots = permissions.canAnyWork(ROOT_READS, SYS_READERS)
+  const canSelect = permissions.canAnyWork(['domain.renewal', 'domain.release', 'domain.acl.support.manage', 'vm.publication.operate', 'vm.custom-domain.verify'], SYS_OPERATORS)
+  const canSelectDomain = (domain: AdminDomainView) => {
+    const commands = domain.kind === 'EXTERNAL' ? ['domain.renewal', 'domain.release']
+      : domain.kind === 'CUSTOM' ? ['vm.publication.operate', 'vm.custom-domain.verify'] : ['vm.publication.operate']
+    return commands.some((work) => permissions.forRow(domain, work, SYS_OPERATORS))
+      || domain.kind === 'EXTERNAL' && permissions.forRow(domain, 'domain.acl.support.manage', SYS_ADMIN)
+  }
+  const availableTabs = SCREEN_TABS.filter((tab) => tab.id === 'domains' ? canReadDomains : tab.id === 'certificates' ? canReadCertificates : canReadRoots)
+  const selection = useBulkSelection('domains', `${user?.id ?? 'none'}:${permissions.fingerprint}:${activeOrgId ?? ''}`)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawWorkspaceId = searchParams.get('workspaceId')
   const workspaceId = rawWorkspaceId && isUuid(rawWorkspaceId) ? rawWorkspaceId.toLowerCase() : undefined
   const rawTab = searchParams.get('tab')
-  const activeTab = SCREEN_TABS.some((tab) => tab.id === rawTab) ? rawTab! : 'domains'
+  const activeTab = availableTabs.some((tab) => tab.id === rawTab) ? rawTab! : availableTabs[0]?.id ?? 'domains'
   const [status, setStatus] = useState<DomainStatus | undefined>(undefined)
   const [kind, setKind] = useState<DomainKind | undefined>(undefined)
   const [page, setPage] = useState(0)
@@ -132,7 +134,7 @@ function AdminDomainsContent() {
   const selectedRef = useRef(selectedId)
   selectedRef.current = selectedId
   const active = useActiveResult()
-  const requestReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, !!user && isSysTier(user.role))
+  const requestReturn = requestDetailReturn(searchParams.get('returnTo'), activeOrgId, permissions.role.startsWith('SYS_'))
   useEffect(() => { if (selectedId) setMessage(null) }, [selectedId])
 
   const selectDomain = (id: string | null) => {
@@ -147,22 +149,24 @@ function AdminDomainsContent() {
     queryKey: [
       'admin',
       'domains',
-      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page, reader: requestReaderKey(user) },
+      { status: status ?? null, kind: kind ?? null, orgId: activeOrgId ?? null, workspaceId: workspaceId ?? null, page, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}` },
     ],
     queryFn: () =>
       fetchAdminDomains({ status, kind, workspaceId, orgId: activeOrgId, page, size: PAGE_SIZE }),
+    enabled: canReadDomains && activeTab === 'domains',
   })
-  const selectedQuery = useQuery({ queryKey: ['admin', 'domains', 'detail', selectedId, { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchAdminDomain(selectedId!), enabled: selectedValid })
-  const selectedInScope = selectedQuery.isSuccess && (!activeOrgId || selectedQuery.data.orgId === activeOrgId)
+  const selectedQuery = useQuery({ queryKey: ['admin', 'domains', 'detail', selectedId, { orgId: activeOrgId ?? null, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}` }], queryFn: () => fetchAdminDomain(selectedId!), enabled: selectedValid && canReadDomains && activeTab === 'domains' })
+  const selectedInScope = selectedQuery.isSuccess
   const selected = selectedInScope ? selectedQuery.data : null
-  const pageTargets = (domains.data?.content ?? []).map((domain) => ({
+  const pageTargets = (domains.data?.content ?? []).filter(canSelectDomain).map((domain) => ({
     id: domain.id,
     name: domain.fqdn,
   }))
 
+  if (availableTabs.length === 0) return <Alert variant="danger">공개 서비스를 조회할 권한이 없습니다.</Alert>
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
-      {selected && <WorkspaceSourceReturnLink workspaceId={selected.workspaceId} admin />}
+      {selected?.workspaceId && <WorkspaceSourceReturnLink workspaceId={selected.workspaceId} admin />}
       {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -177,7 +181,7 @@ function AdminDomainsContent() {
 
       <Tabs
         aria-label="공개 서비스 탭"
-        tabs={SCREEN_TABS}
+        tabs={availableTabs}
         value={activeTab}
         onChange={(id) => {
           const next = new URLSearchParams(searchParams)
@@ -276,14 +280,14 @@ function AdminDomainsContent() {
                       )}
                       onClick={() => selectDomain(domain.id)}
                     >
-                      {canSelect && (
+                      {canSelect && (canSelectDomain(domain) ?
                         <SelectRowCell
                           target={{ id: domain.id, name: domain.fqdn }}
                           checked={selection.selected.some((item) => item.id === domain.id)}
                           onToggle={(on) =>
                             selection.toggle({ id: domain.id, name: domain.fqdn }, on)
                           }
-                        />
+                        /> : <TD />
                       )}
                       <TD>
                         <button
@@ -303,13 +307,13 @@ function AdminDomainsContent() {
                       <TD>
                         {/* 외부 도메인은 가상머신에 매이지 않는다. 빈 칸으로 두면
                             이름을 못 읽은 것처럼 보이므로 없다고 적는다. */}
-                        {domain.vmName ?? <span className="text-xs text-neutral-400">—</span>}
+                        {domain.vmName ?? <span className="text-xs text-neutral-400">{domain.kind === 'EXTERNAL' || domain.metadataVisible ? '—' : '조회 권한 없음'}</span>}
                         <span className="block text-xs text-neutral-500">{domain.workspaceName}</span>
                       </TD>
                       <TD>{domain.orgName}</TD>
                       <TD>
                         <DomainStatusBadge status={domain.status} />
-        {domain.kind === 'EXTERNAL' && <AdminResourceAccessLink type="DOMAIN" resourceId={domain.id} />}
+                        {domain.kind === 'EXTERNAL' && (permissions.forRow(domain, 'domain.acl.support.read') || permissions.forRow(domain, 'domain.acl.support.manage', SYS_ADMIN)) && <AdminResourceAccessLink type="DOMAIN" resourceId={domain.id} orgId={domain.orgId} workspaceId={domain.workspaceId} />}
                         {/* 예약 판별은 status가 아니라 releasedAt이다 — 해제된
                             행의 status는 ACTIVE로 남아, 이 배지가 없으면
                             "라우트 없는 ACTIVE"와 구분되지 않는다. */}
@@ -323,28 +327,28 @@ function AdminDomainsContent() {
                         )}
                       </TD>
                       <TD>
-                        {domain.dnsStatus === 'NONE' ? (
+                        {!domain.metadataVisible ? <span className="text-xs text-neutral-500">조회 권한 없음</span> : domain.dnsStatus == null || domain.dnsStatus === 'NONE' ? (
                           <span className="text-xs text-neutral-400">—</span>
                         ) : (
                           <DomainDnsStatusBadge status={domain.dnsStatus} />
                         )}
                       </TD>
                       <TD>
-                        {domain.routeStatus ? (
+                        {!domain.metadataVisible && !permissions.forRow(domain, 'vm.publication.operate', SYS_OPERATORS) ? <span className="text-xs text-neutral-500">조회 권한 없음</span> : domain.routeStatus ? (
                           <RouteStatusBadge status={domain.routeStatus} />
                         ) : (
                           <span className="text-xs text-neutral-400">—</span>
                         )}
                       </TD>
                       <TD>
-                        {domain.certificateStatus ? (
+                        {!domain.metadataVisible ? <span className="text-xs text-neutral-500">조회 권한 없음</span> : domain.certificateStatus ? (
                           <CertificateStatusBadge status={domain.certificateStatus} />
                         ) : (
                           <span className="text-xs text-neutral-400">—</span>
                         )}
                       </TD>
                       <TD className="whitespace-nowrap text-xs text-neutral-500">
-                        {domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
+                        {domain.metadataVisible || permissions.forRow(domain, 'vm.custom-domain.verify', SYS_OPERATORS) ? domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—' : '조회 권한 없음'}
                       </TD>
                     </TR>
                   ))}
@@ -367,10 +371,10 @@ function AdminDomainsContent() {
           {!selectedValid && <Alert variant="danger">도메인 ID를 확인해 주세요.</Alert>}
           {selectedValid && selectedQuery.isPending && <Spinner label="도메인 상세 불러오는 중" />}
           {selectedValid && selectedQuery.isError && <Alert variant="danger">{selectedQuery.error.message}</Alert>}
-          {selectedQuery.isSuccess && !selectedInScope && <Alert variant="danger">선택한 관리 범위의 도메인이 아닙니다.</Alert>}
+
           {selected && (
             <DomainDrawerContent
-              key={selected.id}
+              key={`${selected.id}:${permissions.fingerprint}`}
               domain={selected}
               onDone={(text) => {
                 if (!active.current || selectedRef.current !== selected.id) return
@@ -404,27 +408,26 @@ function DomainDrawerContent({
 }) {
   const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
-  // 역할이 닿아도 이 도메인의 기관에서 행위할 수 있어야 한다: 열람 역할로만
-  // 보이는 기관의 도메인에 개입하면 API가 404로 거부한다.
-  const canIntervene =
-    !!user &&
-    canInterveneDomain(user.role) &&
-    (isSysTier(user.role) || operatesOrg(user.managedOrgs, domain.orgId))
-  const canReadContent = !!user && (isSysTier(user.role) || managesOrg(user.managedOrgs, domain.orgId))
+  const permissions = useInstitutionResourcePermissions()
+  const canRelease = permissions.forRow(domain, domain.kind === 'EXTERNAL' ? 'domain.release' : 'vm.publication.operate', SYS_OPERATORS)
+  const canVerify = domain.kind === 'CUSTOM' && permissions.forRow(domain, 'vm.custom-domain.verify', SYS_OPERATORS)
+  const canRenew = domain.kind === 'EXTERNAL' && permissions.forRow(domain, 'domain.renewal', SYS_OPERATORS)
+  const canReadContent = permissions.forRow(domain, domain.kind === 'EXTERNAL' ? 'domain.observe' : 'vm.publication.read')
+  const canLoadRoutes = domain.kind !== 'EXTERNAL' && ['vm.publication.read', 'vm.metadata.support.read', 'vm.publication.operate']
+    .some((work) => permissions.forRow(domain, work, work.endsWith('.operate') ? SYS_OPERATORS : SYS_READERS))
   const [releaseOpen, setReleaseOpen] = useState(false)
   // 드로어 안에서 실행하는 액션(재검증·재적용)의 결과는 드로어 안에 보여야
   // 한다 — 페이지 레벨 알림은 열린 드로어의 배경에 가려 보이지 않는다.
   const [notice, setNotice] = useState<{ variant: 'info' | 'danger'; text: string } | null>(null)
 
-  // 라우트 상세는 domainId 조인으로 찾는다. 라우트 수는 도메인 수와 같은
-  // 규모의 참조 목록이라 한 페이지로 충분하다 (초과 시 상세 API 후보).
   const routes = useQuery({
-    queryKey: ['admin', 'routes', { forDomainJoin: true, orgId: domain.orgId, reader: requestReaderKey(user) }],
-    queryFn: () => fetchAdminRoutes({ orgId: domain.orgId, page: 0, size: 100 }),
+    queryKey: ['admin', 'routes', 'domain-reference', domain.id, `${user?.id ?? 'none'}:${permissions.fingerprint}`],
+    queryFn: () => fetchInstitutionDomainRoute(domain.id),
+    enabled: canLoadRoutes,
   })
-  const route = routes.data?.content.find((r) => r.domainId === domain.id) ?? null
-  const routesTruncated =
-    routes.isSuccess && routes.data.totalElements > routes.data.content.length
+  const route = canLoadRoutes ? routes.data ?? null : null
+  const canApplyRoute = route != null && permissions.forRow(route, 'vm.publication.operate', SYS_OPERATORS)
+  const canReadRoutePolicy = canReadContent || canApplyRoute
 
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
@@ -433,9 +436,10 @@ function DomainDrawerContent({
         <DomainStatusBadge status={domain.status} />
       </div>
       {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}
+      {!domain.metadataVisible && <Alert variant="info">허용된 작업에 필요한 참조만 표시합니다. 나머지 세부 정보는 조회 권한이 필요합니다.</Alert>}
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="종류" value={DOMAIN_KIND_LABELS[domain.kind]} />
-        <Field label="루트 도메인" value={domain.rootDomain ?? '—'} />
+        <Field label="루트 도메인" value={domain.metadataVisible ? domain.rootDomain ?? '—' : '조회 권한 없음'} />
         {/* 외부 도메인에는 가상머신이 없다. 「VM —」을 남겨 두면 붙였어야 할
             것이 빠진 것처럼 읽히므로, 그 자리에는 워크스페이스만 선다. */}
         {domain.vmId != null ? (
@@ -453,14 +457,14 @@ function DomainDrawerContent({
             </dd>
           </div>
         ) : (
-          <Field label="워크스페이스" value={domain.workspaceName} />
+          <Field label="워크스페이스" value={domain.workspaceName ?? '워크스페이스 정보 없음'} />
         )}
         <Field label="기관" value={domain.orgName ?? '—'} />
         <Field
           label="검증일"
-          value={domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—'}
+          value={domain.metadataVisible || permissions.forRow(domain, 'vm.custom-domain.verify', SYS_OPERATORS) ? domain.verifiedAt ? formatDateTime(domain.verifiedAt) : '—' : '조회 권한 없음'}
         />
-        <Field label="등록일" value={formatDateTime(domain.createdAt)} />
+        <Field label="등록일" value={domain.metadataVisible ? domain.createdAt ? formatDateTime(domain.createdAt) : '정보 없음' : '조회 권한 없음'} />
         {domain.releasedAt && (
           <>
             <Field label="해제 시각" value={formatDateTime(domain.releasedAt)} />
@@ -488,7 +492,7 @@ function DomainDrawerContent({
       {domain.kind === 'EXTERNAL' && (
         <ExternalDomainSections
           domain={domain}
-          canIntervene={canIntervene}
+          canIntervene={canRenew}
           canReadRecords={canReadContent}
           onResult={setNotice}
         />
@@ -501,56 +505,51 @@ function DomainDrawerContent({
       <>
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">라우트</h3>
-        {routes.isPending && <Spinner label="라우트 불러오는 중" />}
+        {!canLoadRoutes && <p className="text-sm text-neutral-500">라우트를 조회할 권한이 없습니다.</p>}
+        {canLoadRoutes && routes.isPending && <Spinner label="라우트 불러오는 중" />}
         {routes.isError && <Alert variant="danger">{routes.error.message}</Alert>}
-        {routes.isSuccess && !route && !routesTruncated && (
+        {routes.isSuccess && !route && (
           <p className="text-sm text-neutral-500">살아 있는 라우트가 없습니다.</p>
-        )}
-        {routes.isSuccess && !route && routesTruncated && (
-          <Alert variant="warning">
-            라우트가 많아 일부만 조회했습니다. 이 도메인의 라우트는 표시하지 못했을 수
-            있습니다.
-          </Alert>
         )}
         {route && (
           <div className="space-y-4 rounded-lg border border-neutral-200 p-4">
             <div className="flex items-center justify-between">
               <RouteStatusBadge status={route.status} />
-              {canIntervene && (route.status === 'REMOVED' || domain.status === 'ACTIVE') && (
+              {canApplyRoute && (route.status === 'REMOVED' || domain.status === 'ACTIVE') && (
                 <ApplyRouteButton routeId={route.id} onResult={setNotice} />
               )}
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-              <Field label="대상 포트" value={String(route.targetPort)} />
+              <Field label="대상 포트" value={route.metadataVisible ? route.targetPort != null ? String(route.targetPort) : '정보 없음' : '조회 권한 없음'} />
               <Field
                 label="동기화"
                 value={
-                  route.appliedGeneration != null ? `gen ${route.appliedGeneration}` : '미적용'
+                  route.appliedGeneration != null ? `gen ${route.appliedGeneration}` : route.metadataVisible ? '미적용' : '조회 권한 없음'
                 }
               />
-              {route.appliedAt && (
+              {route.metadataVisible && route.appliedAt && (
                 <Field label="적용 시각" value={formatDateTime(route.appliedAt)} />
               )}
             </dl>
-            {route.status === 'FAILED' && route.lastError && (
+            {route.metadataVisible && route.status === 'FAILED' && route.lastError && (
               <Alert variant="danger">{route.lastError}</Alert>
             )}
-            {canReadContent ? <SourcePolicyPanel
-              queryKey={['admin', 'routes', route.id, 'source-policy', requestReaderKey(user)]}
+            {canReadRoutePolicy ? <SourcePolicyPanel
+              queryKey={['admin', 'routes', route.id, 'source-policy', `${user?.id ?? 'none'}:${permissions.fingerprint}`]}
               target="DOMAIN"
               loadPolicy={() => fetchAdminRouteSourcePolicy(route.id)}
               savePolicy={(body) => updateAdminRouteSourcePolicy(route.id, body)}
               loadPreset={fetchCampusSourcePolicyPreset}
-              canEdit={canIntervene}
+              canEdit={canApplyRoute}
               surface="admin"
-            /> : <p className="text-sm text-neutral-500">연결 정책 원문은 담당 기관의 역할로 조회합니다.</p>}
+            /> : <p className="text-sm text-neutral-500">연결 정책 원문을 조회할 권한이 없습니다.</p>}
           </div>
         )}
       </section>
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">인증서</h3>
-        {domain.certificateStatus ? (
+        {!domain.metadataVisible ? <p className="text-sm text-neutral-500">인증서를 조회할 권한이 없습니다.</p> : domain.certificateStatus ? (
           <CertificateStatusBadge status={domain.certificateStatus} />
         ) : (
           <p className="text-sm text-neutral-500">연결된 인증서가 없습니다.</p>
@@ -559,19 +558,19 @@ function DomainDrawerContent({
       </>
       )}
 
-      {canIntervene && (
+      {(canRelease || canVerify) && (
         <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
           <h3 className="text-sm font-semibold text-neutral-800">사후 개입</h3>
           <div className="flex flex-wrap gap-2">
-            {domain.kind === 'CUSTOM' && <ReverifyButton domain={domain} onResult={setNotice} />}
-            <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
+            {canVerify && <ReverifyButton domain={domain} onResult={setNotice} />}
+            {canRelease && <Button variant="danger" size="sm" onClick={() => setReleaseOpen(true)}>
               강제 해제
-            </Button>
+            </Button>}
           </div>
         </section>
       )}
 
-      {releaseOpen && (
+      {releaseOpen && canRelease && (
         <ForceReleaseModal
           domain={domain}
           onClose={() => setReleaseOpen(false)}
@@ -604,8 +603,9 @@ function ExternalDomainSections({
   onResult: (notice: DrawerNotice) => void
 }) {
   const { user } = useAuth()
+  const permissions = useInstitutionResourcePermissions()
   const records = useQuery({
-    queryKey: ['admin', 'domains', domain.id, 'records', requestReaderKey(user)],
+    queryKey: ['admin', 'domains', domain.id, 'records', `${user?.id ?? 'none'}:${permissions.fingerprint}`],
     queryFn: () => fetchAdminDomainRecords(domain.id),
     enabled: canReadRecords,
   })
@@ -614,10 +614,9 @@ function ExternalDomainSections({
     <>
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">사용 기한</h3>
-        <p className="text-sm text-neutral-600">
-          {domain.renewDueAt ? formatDateTime(domain.renewDueAt) : '—'}까지입니다. 소유자가
-          연장하지 않으면 그 시점에 레코드가 내려가고 이름은 예약 상태로 바뀝니다.
-        </p>
+        {domain.renewDueAt ? <p className="text-sm text-neutral-600">
+          {formatDateTime(domain.renewDueAt)}까지입니다. 소유자가 연장하지 않으면 그 시점에 레코드가 내려가고 이름은 예약 상태로 바뀝니다.
+        </p> : <p className="text-sm text-neutral-500">{domain.metadataVisible ? '사용 기한 정보가 없습니다.' : '사용 기한을 조회할 권한이 없습니다.'}</p>}
         {canIntervene && domain.releasedAt == null && (
           <AdjustRenewalForm domain={domain} onResult={onResult} />
         )}
@@ -625,13 +624,13 @@ function ExternalDomainSections({
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">레코드</h3>
-        {!canReadRecords && <p className="text-sm text-neutral-500">레코드 원문은 담당 기관의 역할로 조회합니다.</p>}
+        {!canReadRecords && <p className="text-sm text-neutral-500">레코드 원문을 조회할 권한이 없습니다.</p>}
         {canReadRecords && records.isPending && <Spinner label="레코드 불러오는 중" />}
-        {records.isError && <Alert variant="danger">{records.error.message}</Alert>}
-        {records.isSuccess && records.data.length === 0 && (
+        {canReadRecords && records.isError && <Alert variant="danger">{records.error.message}</Alert>}
+        {canReadRecords && records.isSuccess && records.data.length === 0 && (
           <p className="text-sm text-neutral-500">넣은 레코드가 없습니다.</p>
         )}
-        {records.isSuccess && records.data.length > 0 && (
+        {canReadRecords && records.isSuccess && records.data.length > 0 && (
           <Table>
             <THead>
               <TR>
@@ -759,7 +758,10 @@ function AdjustRenewalForm({
  */
 function DomainRootsSection() {
   const { user } = useAuth()
-  const roots = useQuery({ queryKey: ['admin', 'domain-roots'], queryFn: fetchAdminDomainRoots })
+  const permissions = useInstitutionResourcePermissions()
+  const canRead = permissions.canAnyWork(ROOT_READS, SYS_READERS)
+  const roots = useQuery({ queryKey: ['admin', 'domain-roots', user?.id, permissions.fingerprint], queryFn: fetchAdminDomainRoots, enabled: canRead })
+  if (!canRead) return <Alert variant="danger">루트 도메인을 조회할 권한이 없습니다.</Alert>
 
   return (
     <div className="space-y-4">
@@ -797,19 +799,14 @@ function DomainRootsSection() {
                 <TR key={root.rootDomain}>
                   <TD className="font-mono text-sm">{root.rootDomain}</TD>
                   <TD>{root.orgName}</TD>
-                  <TD>{root.issuedNames}개</TD>
+                  <TD>{root.metadataVisible && root.issuedNames != null ? `${root.issuedNames}개` : '조회 권한 없음'}</TD>
                   <TD>
                     <Badge variant={root.autoApprove ? 'success' : 'neutral'}>
                       {root.autoApprove ? '자동 승인' : '승인 필요'}
                     </Badge>
                   </TD>
                   <TD>
-                    {/* 역할이 닿아도 자기 기관의 루트만 바꿀 수 있다 — 서버가
-                        같은 판정을 하고, 못 바꿀 버튼을 그리면 눌러야만 아는
-                        거절이 된다. */}
-                    {!!user &&
-                      canInterveneDomain(user.role) &&
-                      (isSysTier(user.role) || operatesOrg(user.managedOrgs, root.orgId)) && (
+                    {permissions.forRow(root, 'institution.root-policy.write', SYS_OPERATORS) && (
                         <ToggleRootPolicyButton root={root} />
                       )}
                   </TD>

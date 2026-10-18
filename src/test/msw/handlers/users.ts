@@ -3,6 +3,8 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { uuid } from '../ids'
+import { mockAuthorityActor } from '../institution-authority'
+import { canQueryWork, hasAnyWork, hasWork, workSources, SYS_ADMIN, SYS_READERS, type AuthorityActor } from '../../../auth/institution-authority'
 import { advanceOrgRevision, orgRevisionConflict } from './org-operations'
 
 type Schemas = components['schemas']
@@ -13,7 +15,12 @@ type UserAdminDetail = Schemas['UserAdminDetailResponse']
  * {@code visibleToOrg} models derived membership so the ordinary {@code orgId}
  * filter can narrow to an org's administrators plus its derived members.
  */
-interface AdminUserRecord extends Omit<UserAdminDetail, 'statusChanges' | 'supportCapabilities'> {
+interface AdminUserRecord extends Omit<UserAdminDetail, 'statusChanges' | 'supportCapabilities' | 'managedOrgs' | 'memberships' | 'mfaEnabled' | 'activeVmCount' | 'createdAt'> {
+  managedOrgs: NonNullable<UserAdminDetail['managedOrgs']>
+  memberships: (Omit<NonNullable<UserAdminDetail['memberships']>[number], 'vmOrgIds'> & { vmOrgIds: string[] })[]
+  mfaEnabled: boolean
+  activeVmCount: number
+  createdAt: string
   visibleToOrg: string | null
   // Not on the contract; the mock needs it to withhold on the same ground the
   // server does. Dropped on the way out.
@@ -37,6 +44,7 @@ function initialUsers(): AdminUserRecord[] {
       memberships: [{ workspaceId: uuid(5), workspaceName: '이시스템', workspaceKind: 'PERSONAL', role: 'OWNER', vmOrgIds: [] }],
       activeVmCount: 0,
       statusChanges: [],
+      relationshipsLimited: false,
       visibleToOrg: null,
     },
     {
@@ -54,6 +62,7 @@ function initialUsers(): AdminUserRecord[] {
       memberships: [{ workspaceId: uuid(9), workspaceName: '김관리', workspaceKind: 'PERSONAL', role: 'OWNER', vmOrgIds: [] }],
       activeVmCount: 0,
       statusChanges: [],
+      relationshipsLimited: false,
       visibleToOrg: uuid(1),
     },
     {
@@ -80,6 +89,7 @@ function initialUsers(): AdminUserRecord[] {
       departmentCode: 'COMPUTER_SCIENCE',
       departmentName: '정보컴퓨터공학부',
       departmentOther: null,
+      relationshipsLimited: false,
       visibleToOrg: uuid(1),
     },
     {
@@ -97,6 +107,7 @@ function initialUsers(): AdminUserRecord[] {
       memberships: [],
       activeVmCount: 0,
       statusChanges: [],
+      relationshipsLimited: false,
       visibleToOrg: uuid(1),
     },
     {
@@ -117,6 +128,7 @@ function initialUsers(): AdminUserRecord[] {
       ],
       activeVmCount: 2,
       statusChanges: [],
+      relationshipsLimited: false,
       visibleToOrg: uuid(2),
     },
     {
@@ -135,6 +147,7 @@ function initialUsers(): AdminUserRecord[] {
       memberships: [],
       activeVmCount: 0,
       statusChanges: [],
+      relationshipsLimited: false,
       visibleToOrg: null,
     },
   ]
@@ -166,7 +179,8 @@ function departmentNameOf(code: string | null | undefined): string | null {
 
 function actorOf(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-  return ACCESS_TOKENS[token] ?? null
+  const profile = ACCESS_TOKENS[token]
+  return profile ? mockAuthorityActor(profile) : null
 }
 
 /**
@@ -188,22 +202,36 @@ function visibleToActor(row: AdminUserRecord, actorRole: Schemas['UserRole']): b
   return isSysTier(actorRole) || !isSysTier(row.role)
 }
 
-function toView(row: AdminUserRecord): Schemas['UserAdminViewResponse'] {
-  const { visibleToOrg: _drop, memberships: _m, activeVmCount: _v, statusChanges: _s, ...view } = row
-  return view
+function fullScope(actor: AuthorityActor, work: string, group: 'VM' | 'WORKSPACE') {
+  return isSysTier(actor.role) || workSources(actor, work).some((source) => source.permission.mode === 'FULL' || source.permission.scopes[group]?.mode === 'ALL')
 }
-
-/** Profile support metadata is visible to assigned support readers. */
-function toDetail(row: AdminUserRecord, readerRole: Schemas['UserRole']): UserAdminDetail {
+function supportOf(actor: AuthorityActor) { return hasWork(actor, 'student.support.read', {}, SYS_READERS) }
+function limited(actor: AuthorityActor) {
+  return !supportOf(actor) || !fullScope(actor, 'workspace.support.read', 'WORKSPACE') || !fullScope(actor, 'vm.metadata.support.read', 'VM')
+}
+function toView(row: AdminUserRecord, actor: AuthorityActor): Schemas['UserAdminViewResponse'] {
+  const support = supportOf(actor)
+  return { id: row.id, name: row.name, email: row.email, role: row.role, status: row.status,
+    managedOrgs: support ? row.managedOrgs : null, mfaEnabled: support ? row.mfaEnabled : null,
+    createdAt: support ? row.createdAt : null, relationshipsLimited: limited(actor) }
+}
+function toDetail(row: AdminUserRecord, actor: AuthorityActor): UserAdminDetail {
   const { visibleToOrg: _drop, statusChanges, ...rest } = row
-  // A system-tier actor's public id does not reach the org tier: it reopens an
-  // account withheld from it. The name and address do.
-  const visibleChanges = statusChanges.map(({ actorRole, ...change }) => ({
-    ...change,
-    actorId: !isSysTier(readerRole) && actorRole && isSysTier(actorRole) ? null : change.actorId,
-  }))
-  const detail = { ...rest, statusChanges: visibleChanges, supportCapabilities: { profileVisible: readerRole !== 'USER', canCorrectProfile: readerRole === 'SYS_ADMIN' || (readerRole === 'ORG_ADMIN' || readerRole === 'ORG_MANAGER') && !isSysTier(row.role), canEnableAccount: readerRole === 'SYS_ADMIN' } }
-  return detail
+  const support = supportOf(actor)
+  const correct = hasWork(actor, 'student.profile.correct', {}, SYS_ADMIN) && (isSysTier(actor.role) || !isSysTier(row.role))
+  const profile = support || correct
+  const workspace = support && hasAnyWork(actor, ['workspace.support.read'], SYS_READERS)
+  const visibleChanges = statusChanges.map(({ actorRole, ...change }) => ({ ...change,
+    actorId: !isSysTier(actor.role) && actorRole && isSysTier(actorRole) ? null : change.actorId }))
+  return { ...rest, managedOrgs: support ? row.managedOrgs : null, mfaEnabled: support ? row.mfaEnabled : null,
+    createdAt: support ? row.createdAt : null, withdrawnAt: support ? row.withdrawnAt : null,
+    disabledAt: support ? row.disabledAt : null, disabledReason: support ? row.disabledReason : null,
+    statusChanges: support ? visibleChanges : null, position: profile ? row.position : null,
+    departmentCode: profile ? row.departmentCode : null, departmentName: profile ? row.departmentName : null, departmentOther: profile ? row.departmentOther : null,
+    memberships: workspace ? row.memberships.filter((membership) => hasWork(actor, 'workspace.support.read', { workspaceId: membership.workspaceId }, SYS_READERS))
+      .map((membership) => ({ ...membership, vmOrgIds: canQueryWork(actor, ['vm.metadata.read', 'vm.metadata.support.read'], { workspaceId: membership.workspaceId }, SYS_READERS) ? membership.vmOrgIds.filter((orgId) => hasWork(actor, 'vm.metadata.read', { orgId, workspaceId: membership.workspaceId }, SYS_READERS) || hasWork(actor, 'vm.metadata.support.read', { workspaceId: membership.workspaceId }, SYS_READERS)) : null })) : null,
+    activeVmCount: support && fullScope(actor, 'vm.metadata.support.read', 'VM') ? row.activeVmCount : null,
+    supportCapabilities: { profileVisible: profile, canCorrectProfile: correct, canEnableAccount: actor.role === 'SYS_ADMIN' }, relationshipsLimited: limited(actor) }
 }
 
 const notFound = (userId: string) =>
@@ -260,7 +288,7 @@ const summaryOf = (row: AdminUserRecord): Schemas['UserSummaryResponse'] => ({
 export const userHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/users', ({ request }) => {
     const actor = actorOf(request)
-    if (!actor || actor.role === 'USER') return forbidden()
+    if (!actor || !hasAnyWork(actor, ['student.lookup', 'student.support.read', 'student.profile.correct'], SYS_READERS)) return forbidden()
     const url = new URL(request.url)
     const q = url.searchParams.get('q')?.toLowerCase()
     const status = url.searchParams.get('status')
@@ -280,7 +308,7 @@ export const userHandlers: RequestHandler[] = [
       .sort((a, b) => b.id.localeCompare(a.id))
 
     const body: Schemas['PageResponseUserAdminViewResponse'] = {
-      content: filtered.slice(page * size, (page + 1) * size).map(toView),
+      content: filtered.slice(page * size, (page + 1) * size).map((row) => toView(row, actor)),
       page,
       size,
       totalElements: filtered.length,
@@ -292,10 +320,10 @@ export const userHandlers: RequestHandler[] = [
 
   http.get('*/api/v1/admin/users/:userId', ({ request, params }) => {
     const actor = actorOf(request)
-    if (!actor || actor.role === 'USER') return forbidden()
+    if (!actor || !hasAnyWork(actor, ['student.lookup', 'student.support.read', 'student.profile.correct'], SYS_READERS)) return forbidden()
     const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row || !visibleToActor(row, actor.role)) return notFound(String(params.userId))
-    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor), { status: 200 })
   }),
 
   /**
@@ -308,7 +336,7 @@ export const userHandlers: RequestHandler[] = [
     const actor = actorOf(request)
     const row = adminUserStore.find((u) => u.id === String(params.userId))
     if (!row) return notFound(String(params.userId))
-    if (!(actor && (actor.role === 'SYS_ADMIN' || (actor.role === 'ORG_ADMIN' || actor.role === 'ORG_MANAGER') && !isSysTier(row.role)))) return forbidden()
+    if (!(actor && hasWork(actor, 'student.profile.correct', {}, SYS_ADMIN) && (isSysTier(actor.role) || !isSysTier(row.role)))) return forbidden()
     const body = (await request.json()) as Schemas['AdminUpdateProfileRequest']
     adminProfilePatches.push({ userId: String(params.userId), body })
 
@@ -353,7 +381,7 @@ export const userHandlers: RequestHandler[] = [
     }
     if (!isStudent) row.studentNo = null
     row.departmentName = departmentNameOf(row.departmentCode)
-    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor), { status: 200 })
   }),
 
   /**
@@ -505,7 +533,7 @@ export const userHandlers: RequestHandler[] = [
     row.status = 'DISABLED'
     row.disabledAt = new Date().toISOString()
     row.disabledReason = reason
-    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/users/:userId/enable', ({ request, params }) => {
@@ -531,6 +559,6 @@ export const userHandlers: RequestHandler[] = [
     row.status = restored
     row.disabledAt = null
     row.disabledReason = null
-    return HttpResponse.json(toDetail(row, actor.role), { status: 200 })
+    return HttpResponse.json(toDetail(row, actor), { status: 200 })
   }),
 ]

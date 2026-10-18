@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useAuth } from '../auth/auth-context'
+import { SYS_READERS } from '../auth/institution-authority'
+import { CERTIFICATE_READS, useInstitutionResourcePermissions } from '../lib/institution-resource-work'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminCertificates,
@@ -37,6 +40,9 @@ const STATUS_TABS: { label: string; status: CertificateStatus | undefined }[] = 
 
 /** 인증서 만료·발급 상태 — 공개 서비스 화면의 인증서 탭 (만료 임박 일괄 점검 축). */
 export function CertificatesSection({ orgId }: { orgId?: string }) {
+  const { user } = useAuth()
+  const permissions = useInstitutionResourcePermissions()
+  const canRead = permissions.canAnyWork(CERTIFICATE_READS, SYS_READERS)
   const [status, setStatus] = useState<CertificateStatus | undefined>(undefined)
   const [expiringSoon, setExpiringSoon] = useState(false)
   const [page, setPage] = useState(0)
@@ -47,10 +53,12 @@ export function CertificatesSection({ orgId }: { orgId?: string }) {
     queryKey: [
       'admin',
       'certificates',
-      { status: status ?? null, orgId: orgId ?? null, expiringInDays: expiringInDays ?? null, page },
+      { status: status ?? null, orgId: orgId ?? null, expiringInDays: expiringInDays ?? null, page, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}` },
     ],
     queryFn: () => fetchAdminCertificates({ status, orgId, expiringInDays, page, size: PAGE_SIZE }),
+    enabled: canRead,
   })
+  if (!canRead) return <Alert variant="danger">인증서를 조회할 권한이 없습니다.</Alert>
   return (
     <div className="space-y-6">
       <FilterBar

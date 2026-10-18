@@ -18,7 +18,7 @@ import {
   Wrench24Regular,
 } from '@fluentui/react-icons'
 import { useAuth } from '../auth/auth-context'
-import { canViewAudit, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { isSysAdminOnly, isSysTier } from '../auth/permissions'
 import { AdminScopeSelector } from '../components/AdminScopeSelector'
 import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
 import { Button, EmptyState, LoadingBlock } from '../components/ui'
@@ -26,6 +26,8 @@ import { useAdminScope } from '../lib/use-admin-scope'
 import { AppShell, type NavSection } from './AppShell'
 import { Outlet, useLocation } from 'react-router'
 import { parseGuidePath } from '../lib/docs-paths'
+import { canVisitAdministration } from '../auth/admin-navigation'
+import { authorityKey, hasAnyWork, SYS_READERS } from '../auth/institution-authority'
 
 const iconClass = 'size-4 shrink-0'
 
@@ -35,8 +37,7 @@ export function AdminLayout() {
   const scope = useAdminScope()
   const sysTier = !!user && isSysTier(user.role)
   const sysAdmin = !!user && isSysAdminOnly(user.role)
-  const effectiveRole = scope.tier === 'org' ? scope.activeOrgRole : user?.role
-  const auditAllowed = !!effectiveRole && canViewAudit(effectiveRole)
+  const auditAllowed = hasAnyWork(user, ['institution.audit.read'], SYS_READERS)
   const path = scope.path
 
   const sections: NavSection[] = [
@@ -74,6 +75,7 @@ export function AdminLayout() {
           label: 'LLM 사용량',
           icon: <DataUsage24Regular className={iconClass} />,
         },
+        { to: path('/admin/llm/models'), label: 'LLM 모델과 가격', icon: <Key24Regular className={iconClass} /> },
         {
           to: path('/admin/llm/accounts'),
           label: 'OpenRouter 사업 계정',
@@ -163,7 +165,8 @@ export function AdminLayout() {
           : []),
       ],
     },
-  ].filter((section) => section.items.length > 0)
+  ].map((section) => ({ ...section, items: section.items.filter((item) => canVisitAdministration(user, item.to)) }))
+    .filter((section) => section.items.length > 0)
 
   const scopeBlock = !scope.ready
     ? scope.error
@@ -184,7 +187,7 @@ export function AdminLayout() {
         )
     : undefined
 
-  const scopeKey = `${requestReaderKey(user)}:${scope.activeOrgId ?? new URLSearchParams(location.search).get('org')?.toLowerCase() ?? 'all'}:${effectiveRole}`
+  const scopeKey = `${requestReaderKey(user)}:${scope.activeOrgId ?? new URLSearchParams(location.search).get('org')?.toLowerCase() ?? 'all'}:${authorityKey(user)}`
   const content = parseGuidePath(location.pathname) || scope.ready
     ? <Outlet key={scopeKey} />
     : scopeBlock

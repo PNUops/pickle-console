@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
+import { canEnterAdministration } from '../auth/institution-authority'
 import { PopoverPanel, usePopover } from '../components/ui'
 import { USER_ROLE_LABELS } from '../lib/labels'
 import { adminPath } from '../lib/paths'
@@ -24,7 +25,7 @@ export function UserMenu() {
 
   const itemClass =
     'block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50'
-  const isAdministrator = user.role !== 'USER'
+  const isAdministrator = canEnterAdministration(user)
   const inAdminConsole = location.pathname === '/admin' || location.pathname.startsWith('/admin/')
 
   return (

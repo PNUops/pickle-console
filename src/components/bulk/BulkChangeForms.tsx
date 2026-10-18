@@ -2,6 +2,7 @@ import { useAccessCandidates } from '../../lib/use-access-candidates'
 import { useState } from 'react'
 import { type AdminBulkListOp } from '../../api/queries'
 import type { UserRole } from '../../auth/auth-context'
+import type { AuthorityActor } from '../../auth/institution-authority'
 import {
   ACCESS_ACTION_LABELS,
   ACCESS_ROLES,
@@ -11,6 +12,7 @@ import {
   POWER_ACTION_LABELS,
   STATUS_ACTION_LABELS,
   chatOnlyFeatures,
+  canBulkEditToken,
   clearingLists,
   limitFieldsFor,
   statusActionsFor,
@@ -26,7 +28,7 @@ import {
   RESOURCE_ROLE_HINTS,
   RESOURCE_ROLE_LABELS,
 } from '../../lib/labels'
-import { withHierarchy } from '../../lib/passthrough-endpoints'
+import { PASSTHROUGH_ENDPOINTS, withHierarchy } from '../../lib/passthrough-endpoints'
 import { useDebouncedValue } from '../../lib/use-debounced-value'
 import { CreditModelRulesField } from '../CreditModelRulesField'
 import { LimitField } from '../llm-key/LimitField'
@@ -91,13 +93,14 @@ export function LimitsForm({
   onChange,
   errors,
 }: {
-  role: UserRole
+  role: AuthorityActor | UserRole
   draft: BulkDraft['limits']
   onChange: (next: BulkDraft['limits']) => void
   errors: Errors
 }) {
   const fields = limitFieldsFor(role)
   const chatOnly = chatOnlyFeatures(role)
+  const tokenAllowed = canBulkEditToken(role)
   const chosen = new Set(draft.chosen)
   const set = <K extends keyof BulkDraft['limits']>(key: K, value: BulkDraft['limits'][K]) =>
     onChange({ ...draft, [key]: value })
@@ -214,10 +217,10 @@ export function LimitsForm({
                 passthrough: op === 'REPLACE' ? withHierarchy(draft.passthrough) : draft.passthrough,
               })
             }
-            ops={chatOnly ? ['ADD', 'REMOVE'] : undefined}
+            ops={chatOnly || !tokenAllowed ? ['ADD', 'REMOVE'] : undefined}
           />
           <PassthroughEndpointField
-            rows={chatOnly ? ['chat'] : undefined}
+            rows={chatOnly ? ['chat'] : !tokenAllowed ? PASSTHROUGH_ENDPOINTS.filter((endpoint) => endpoint !== 'chat') : undefined}
             flat={draft.passthroughOp !== 'REPLACE'}
             label={`${LIST_OP_LABELS[draft.passthroughOp]}할 기능 권한`}
             value={draft.passthrough}
@@ -246,7 +249,7 @@ export function StatusForm({
   onChange,
   errors,
 }: {
-  role: UserRole
+  role: AuthorityActor | UserRole
   draft: BulkDraft['status']
   onChange: (next: BulkDraft['status']) => void
   errors: Errors
@@ -473,7 +476,7 @@ export function AccessForm({
   const [queryInput, setQueryInput] = useState('')
   const q = useDebouncedValue(queryInput).trim()
   const source = useAccessCandidates(family === 'vms' ? 'VM' : family === 'llm-keys' ? 'LLM_API_KEY' : 'DOMAIN', targetIds, draft.action === 'REVOKE')
-  const users = source.candidates.filter((user) => `${user.name} ${user.email}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()))
+  const users = source.candidates.filter((user) => `${user.name} ${user.email ?? ''} ${user.id}`.toLocaleLowerCase().includes(q.toLocaleLowerCase()))
 
   const hints =
     family === 'llm-keys'
@@ -519,11 +522,11 @@ export function AccessForm({
                     type="button"
                     className="w-full cursor-pointer px-3 py-2 text-left text-sm hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-focus-ring"
                     onClick={() =>
-                      onChange({ ...draft, userId: user.id, userLabel: `${user.name} (${user.email})` })
+                      onChange({ ...draft, userId: user.id, userLabel: `${user.name} (${user.email ?? user.id})` })
                     }
                   >
                     <span className="font-medium text-foreground-primary">{user.name}</span>{' '}
-                    <span className="text-foreground-muted">{user.email}</span>
+                    <span className="text-foreground-muted">{user.email ?? user.id}</span>
                   </button>
                 </li>
               ))}

@@ -16,6 +16,8 @@ import {
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
+import { canQueryWork, SYS_READERS } from '../auth/institution-authority'
+import { requestReaderKey } from '../api/request-review'
 import {
   Badge,
   Card,
@@ -759,24 +761,25 @@ export function AdminLlmStatusPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') === 'metrics' ? 'metrics' : 'status'
   const scopeKey = activeOrgId ?? null
+  const permitted = canQueryWork(user, ['llm.observe'], { orgId: activeOrgId }, SYS_READERS)
 
   const status = useQuery({
-    queryKey: ['admin', 'llm-status', { orgId: scopeKey }],
+    queryKey: ['admin', 'llm-status', { orgId: scopeKey, reader: requestReaderKey(user) }],
     queryFn: async () => ({
       scopeKey,
       value: await fetchAdminLlmStatus(activeOrgId),
     }),
-    enabled: activeTab === 'status',
+    enabled: activeTab === 'status' && permitted,
     staleTime: 15_000,
     refetchInterval: 30_000,
   })
   const metrics = useQuery({
-    queryKey: ['admin', 'llm-metrics', { orgId: scopeKey, days: 7 }],
+    queryKey: ['admin', 'llm-metrics', { orgId: scopeKey, days: 7, reader: requestReaderKey(user) }],
     queryFn: async () => ({
       scopeKey,
       value: await fetchAdminLlmMetrics(activeOrgId, 7),
     }),
-    enabled: activeTab === 'metrics',
+    enabled: activeTab === 'metrics' && permitted,
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
   })
