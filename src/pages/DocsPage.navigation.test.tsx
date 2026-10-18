@@ -208,7 +208,7 @@ describe('guide content and navigation', () => {
     server.use(refreshSuccessHandler('access-sys-admin'), http.get('*/api/v1/admin/orgs', () => HttpResponse.json({}, { status: 503 })))
     renderApp(`/admin/docs/start?org=${uuid(1)}`)
     expect(await screen.findByRole('heading', { level: 1, name: '처음 시작하기' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '리소스 신청' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '리소스 신청' })).toHaveAttribute('href', '/console/requests/new')
   })
 
   test('returns to the original task after navigating between documents', async () => {

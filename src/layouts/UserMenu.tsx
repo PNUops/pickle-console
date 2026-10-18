@@ -24,6 +24,8 @@ export function UserMenu() {
 
   const itemClass =
     'block w-full cursor-pointer border-b border-neutral-100 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50'
+  const isAdministrator = user.role !== 'USER'
+  const inAdminConsole = location.pathname === '/admin' || location.pathname.startsWith('/admin/')
 
   return (
     <div ref={rootRef} className="relative">
@@ -48,7 +50,7 @@ export function UserMenu() {
           <p className="truncate">{user.email}</p>
           <p className="mt-0.5">{USER_ROLE_LABELS[user.role]}</p>
         </div>
-        {user.role === 'USER' ? (
+        {!inAdminConsole ? (
           <>
             <button
               type="button"
@@ -66,7 +68,6 @@ export function UserMenu() {
             </button>
           </>
         ) : (
-          // 관리자는 /console 에 닿지 못하므로 같은 화면을 관리자 셸 라우트로 연다.
           <button
             type="button"
             onClick={() =>
@@ -75,6 +76,15 @@ export function UserMenu() {
             className={itemClass}
           >
             계정 설정
+          </button>
+        )}
+        {isAdministrator && (
+          <button
+            type="button"
+            onClick={() => go(inAdminConsole ? '/console' : '/admin')}
+            className={itemClass}
+          >
+            {inAdminConsole ? '사용자 콘솔' : '관리자 콘솔'}
           </button>
         )}
         <button

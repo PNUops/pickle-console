@@ -33,12 +33,12 @@ describe('라우트 가드', () => {
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   })
 
-  test('기관 관리자가 /console에 접근하면 /admin으로 돌려보낸다', async () => {
+  test('an organization administrator can enter the personal console', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp('/console')
 
     expect(
-      await screen.findByRole('heading', { name: '관리자 대시보드' }),
+      await screen.findByRole('heading', { name: '대시보드' }),
     ).toBeInTheDocument()
   })
 
