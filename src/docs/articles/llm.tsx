@@ -507,7 +507,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'audio',
         title: 'TTS와 STT',
         body: <>
-          <p>텍스트를 음성으로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/speech</code>는 TTS 권한, 음성을 텍스트로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/transcriptions</code>는 STT 권한이 필요합니다. 둘 다 유료 모델만 지원합니다. TTS와 STT 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 요금은 키의 사용 금액에 반영되며 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
+          <p>텍스트를 음성으로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/speech</code>는 TTS 권한, 음성을 텍스트로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/transcriptions</code>는 STT 권한이 필요합니다. 둘 다 유료 모델만 지원합니다. TTS와 STT 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 키의 사용 금액에 반영되며 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
           <h3 className="font-medium">텍스트를 음성 파일로 만들기</h3>
           <p>OpenAI SDK는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>을 지정하지 않으면 보내지 않고, 이때는 헤더 없는 원시 PCM(24kHz, 16비트, 모노)이 돌아옵니다. 그대로 <code>.mp3</code>로 저장하면 재생되지 않으므로 아래처럼 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format="mp3"</code>를 지정합니다. 모델에 따라 <code>voice</code>가 없으면 거절되므로 항상 지정합니다.</p>
           <CodeBlock label="TTS Python" code={SPEECH_PYTHON_EXAMPLE} />

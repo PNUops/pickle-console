@@ -182,7 +182,8 @@ export const LLM_DEFAULT_LIMITS = {
  * which the deployed env does not override. A body above the large threshold
  * needs one of a few shared slots and is refused with `large_request_busy`
  * while they are all taken; above the maximum it is `request_too_large`.
- * The image and embedding paths share the maximum but not the slots.
+ * The image, embedding, rerank, speech and transcription paths share the
+ * maximum but not the slots.
  */
 export const LLM_REQUEST_BODY_MIB = {
   max: 25,
@@ -192,7 +193,8 @@ export const LLM_REQUEST_BODY_MIB = {
 /**
  * Client request headers the gateway forwards to the vendor, on a paid-model
  * chat, messages or responses request only. The messages route also forwards
- * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
+ * `anthropic-version` and `anthropic-beta`. Self-hosted, image, embedding,
+ * rerank, speech and transcription requests forward none.
  * Codex's own headers (`session-id`, `x-codex-*`, `originator`) are not forwarded.
  * Of repeated lines only the first is forwarded, and a value longer than
  * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
@@ -218,15 +220,16 @@ export const LLM_FORWARDED_HEADER_MAX_BYTES = 1024
 
 /**
  * Vendor response headers the gateway relays when the vendor sends them.
- * `X-Generation-Id` comes on a successful paid-model answer, image and
- * embedding answers included.
+ * `X-Generation-Id` comes on a successful paid-model answer, image,
+ * embedding, speech and transcription answers included. A rerank answer
+ * carries the id in its body instead.
  * `Retry-After` comes when the vendor answered 429 or 503 with a wait; after a
  * fallback, it is the longest wait any upstream asked for.
  */
 export const LLM_RELAYED_RESPONSE_HEADERS = [
   {
     name: 'X-Generation-Id',
-    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
+    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩, TTS, STT의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
   },
   {
     name: 'Retry-After',
@@ -334,7 +337,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'streaming_not_supported',
     status: 400,
-    meaning: '이미지, 임베딩, 리랭크, STT 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
+    meaning: '이미지, 임베딩, 리랭크, TTS, STT 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
   },
   {
     code: 'upstream_response_too_large',
