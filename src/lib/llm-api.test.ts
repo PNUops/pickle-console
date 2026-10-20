@@ -12,6 +12,7 @@ import {
   LLM_PASSTHROUGH_ROUTES,
   LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
+  LLM_RESPONSES_EXAMPLE_MODEL,
   LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
 import { PASSTHROUGH_ENDPOINTS } from './passthrough-endpoints'
@@ -155,6 +156,7 @@ describe('LLM API 사실 사본', () => {
     expect(LLM_PASSTHROUGH_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual([
       'POST /v1/chat/completions',
       'POST /v1/messages',
+      'POST /v1/responses',
       'POST /v1/images',
       'POST /v1/images/generations',
       'GET /v1/images/models',
@@ -196,5 +198,16 @@ describe('LLM API 사실 사본', () => {
   test('the messages route sits under the chat grant', () => {
     const messages = LLM_PASSTHROUGH_ROUTES.find((r) => r.path === '/v1/messages')
     expect(messages?.capability).toBe('chat')
+  })
+
+  test('the responses route sits under the chat grant', () => {
+    const responses = LLM_PASSTHROUGH_ROUTES.find((r) => r.path === '/v1/responses')
+    expect(responses?.capability).toBe('chat')
+  })
+
+  test('the Responses example model is a paid model, not the self-hosted name', () => {
+    // The route refuses the self-hosted model, so an example naming it fails.
+    expect(LLM_RESPONSES_EXAMPLE_MODEL).toContain('/')
+    expect(LLM_RESPONSES_EXAMPLE_MODEL).not.toBe(LLM_DEFAULT_MODEL)
   })
 })
