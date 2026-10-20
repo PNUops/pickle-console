@@ -594,8 +594,9 @@ function ModelRows({ row }: { row: AdminLlmUsage['breakdown']['models'][number] 
         <TD>{tokens(row.pricedInputTokens + row.pricedOutputTokens)}</TD>
         <TD>{row.attributedCostUsd == null ? '—' : formatUsd(row.attributedCostUsd)}</TD>
         <TD>{latency(row.pricedAvgLatencyMs)}</TD>
-        {/* 서버가 세어 준다. 「금액이 붙은 요청은 언제나 성공이다」는 게이트웨이의
-            불변식이지 이 화면이 보증할 수 있는 것이 아니라, 0을 적어 두지 않는다. */}
+        {/* Counted by the server, never assumed to be zero. A priced request
+            can fail: when the vendor answered 200 but the gateway could not
+            pass the answer on, the gateway looks the amount up afterwards. */}
         <TD>{percent(row.pricedFailed / row.pricedRequests)}</TD>
       </TR>
       <TR>

@@ -36,6 +36,13 @@ export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
 export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-6-luna'
 
 /**
+ * The rerank model the guide example names. A live call answered it with an
+ * amount, and rerank models are absent from the key's model list, so the
+ * example has to name a real one.
+ */
+export const LLM_RERANK_EXAMPLE_MODEL = 'cohere/rerank-v3.5'
+
+/**
  * The routes a key reaches only with the matching feature granted, Chat
  * included. A key without it gets 403 `endpoint_not_allowed`, never 404:
  * a route that does not exist and a route this key may not use are different
@@ -63,11 +70,19 @@ export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-6-luna'
  * upstream, so `store: true`, `previous_response_id`, `conversation` and
  * `background: true` are refused with `unsupported_parameter`, and its
  * sub-paths (retrieve, cancel, input items) are 404.
+ *
+ * `/v1/completions` is the legacy text completion API, under the Chat grant
+ * and paid models only. The vendor turns the prompt into a chat message, so
+ * a reasoning model can end with an empty `text`.
+ *
+ * `/v1/rerank` reorders documents against a query. Its models are missing
+ * from the key's model list, prices included.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
   { capability: 'chat', method: 'POST', path: '/v1/messages', summary: 'Anthropic Messages' },
   { capability: 'chat', method: 'POST', path: '/v1/responses', summary: 'OpenAI Responses' },
+  { capability: 'chat', method: 'POST', path: '/v1/completions', summary: '레거시 Completions' },
   { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
   {
     capability: 'images',
@@ -77,6 +92,7 @@ export const LLM_PASSTHROUGH_ROUTES = [
   },
   { capability: 'images', method: 'GET', path: '/v1/images/models', summary: '이미지 모델 목록' },
   { capability: 'embeddings', method: 'POST', path: '/v1/embeddings', summary: '임베딩' },
+  { capability: 'rerank', method: 'POST', path: '/v1/rerank', summary: '리랭크' },
 ] as const
 
 /**
@@ -229,9 +245,14 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     code: 'model_not_available_on_route',
     status: 400,
     meaning:
-      '자체 서빙 모델은 아직 /v1/messages와 /v1/responses에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
+      '자체 서빙 모델은 아직 /v1/messages, /v1/responses, /v1/completions에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
   },
-  { code: 'model_not_allowed', status: 403, meaning: '이 키로는 쓸 수 없는 모델입니다.' },
+  {
+    code: 'model_not_allowed',
+    status: 403,
+    meaning:
+      '이 키로는 쓸 수 없는 모델입니다. 대체 모델 목록(models, fallbacks), 도구(tools), 플러그인(plugins)에 자동 선택 모델을 넣은 요청도 여기에 해당합니다.',
+  },
   {
     code: 'endpoint_not_allowed',
     status: 403,
@@ -263,6 +284,11 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     meaning: 'preset은 지원하지 않습니다. 모델 이름을 직접 지정합니다.',
   },
   {
+    code: 'router_not_supported',
+    status: 400,
+    meaning: '자동 선택 모델은 지원하지 않습니다. 모델 이름을 직접 지정합니다.',
+  },
+  {
     code: 'request_too_large',
     status: 400,
     meaning: `요청 본문이 ${LLM_REQUEST_BODY_MIB.max} MiB를 넘었습니다.`,
@@ -289,7 +315,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'streaming_not_supported',
     status: 400,
-    meaning: '이미지와 임베딩 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
+    meaning: '이미지, 임베딩, 리랭크 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
   },
   {
     code: 'upstream_response_too_large',

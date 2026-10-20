@@ -98,6 +98,7 @@ const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
   'pdf_ocr',
   'images',
   'embeddings',
+  'rerank',
 ])
 
 /**

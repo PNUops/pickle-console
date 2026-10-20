@@ -513,6 +513,14 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             setChatlessAcknowledged(null)
           }}
         />
+        {/* Rerank models are missing from the catalogue above, so the picker
+            cannot show their names or prices. */}
+        {passthroughEndpoints.includes('rerank') ? (
+          <p className="text-sm text-neutral-500">
+            리랭크 모델은 위 모델 목록에 나오지 않아 가격을 여기서 볼 수 없지만 호출마다 요금이
+            붙습니다. 쓸 수 있는 유료 모델을 제한한다면 리랭크 모델 ID를 직접 적어야 합니다.
+          </p>
+        ) : null}
         {!accountDefaultsTouched && hasAccountDefaults ? (
           <p className="text-sm text-neutral-500">
             {effectiveAccount?.name} 계정의 기본값에서 채웠습니다. 이 승인에만 적용되며,
