@@ -463,7 +463,7 @@ export const llmArticles: GuideArticle[] = [
           <Alert variant="info" title="자체 서빙 모델은 목록에 없는 필드를 거부합니다">
             모르는 필드를 무시하고 전달하지 않고 요청 전체를 HTTP 400으로 되돌립니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>이며 메시지에 해당 필드가 나옵니다. 유료 모델은 공급자가 받는 요청을 그대로 보내므로 위 목록이 거부의 기준이 아닙니다.
           </Alert>
-          <p>유료 모델에도 키의 모델 권한과 기능 권한은 적용됩니다. 모델을 추가로 지정하는 도구나 폴백 목록도 허용된 모델로 구성합니다. 모델 서버가 실행하는 <code>shell</code>, <code>bash</code>, <code>local_shell</code>, <code>code_interpreter</code> 서버 도구는 현재 신청할 수 없습니다. 이 도구 때문에 거절되면 요청에서 제거합니다. 애플리케이션이 직접 실행하는 함수 도구와 Claude Code, Codex의 로컬 도구 호출은 별개입니다.</p>
+          <p>유료 모델에도 키의 모델 권한과 기능 권한은 적용됩니다. 모델을 추가로 지정하는 도구나 폴백 목록도 허용된 모델로 구성합니다. 모델 서버가 실행하는 <code>shell</code>, <code>bash</code>, <code>local_shell</code>, <code>code_interpreter</code> 서버 도구는 현재 신청할 수 없습니다. 이 도구 때문에 거절되면 요청에서 제거합니다. 애플리케이션이 직접 실행하는 함수 도구와 Claude Code, Codex의 로컬 도구 호출은 별개입니다. 일반적인 LLM API에 없는 공급자 전용 서버 도구는 일부만 지원합니다. 지원하지 않는 도구는 <code>unsupported_parameter</code>로 거절되고 메시지에 도구 이름이 나옵니다.</p>
         </>,
       },
       {
