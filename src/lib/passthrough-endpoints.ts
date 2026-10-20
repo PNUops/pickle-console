@@ -99,6 +99,8 @@ const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
   'images',
   'embeddings',
   'rerank',
+  'speech',
+  'transcriptions',
 ])
 
 /**

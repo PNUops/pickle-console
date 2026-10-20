@@ -378,17 +378,22 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(within(granted).getByText('Chat, 웹 검색, 이미지 생성')).toBeInTheDocument()
   })
 
-  // Rerank models are missing from the catalogue, so the approver cannot see
-  // their prices next to the model picker; the form has to say so.
-  test('says rerank prices are not shown once rerank is ticked', async () => {
-    const user = userEvent.setup()
-    renderDetail({ reqPassthroughEndpoints: ['chat'] })
+  // Rerank, speech and transcription models are missing from the catalogue,
+  // so the approver cannot see their prices next to the model picker; the
+  // form has to say so for each of them.
+  test.each([/리랭크/, /TTS/, /STT/])(
+    'says catalogue-missing prices are not shown once %s is ticked',
+    async (label) => {
+      const user = userEvent.setup()
+      renderDetail({ reqPassthroughEndpoints: ['chat'] })
 
-    await screen.findByRole('heading', { name: '신청 상세' })
-    expect(screen.queryByText(/리랭크 모델은 위 모델 목록에 나오지 않아/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('checkbox', { name: /리랭크/ }))
-    expect(screen.getByText(/리랭크 모델은 위 모델 목록에 나오지 않아/)).toBeInTheDocument()
-  })
+      await screen.findByRole('heading', { name: '신청 상세' })
+      const note = /리랭크, TTS, STT 모델은 위 모델 목록에 나오지 않아/
+      expect(screen.queryByText(note)).not.toBeInTheDocument()
+      await user.click(screen.getByRole('checkbox', { name: label }))
+      expect(screen.getByText(note)).toBeInTheDocument()
+    },
+  )
 
   test('turning Chat off drops web search and disables it', async () => {
     const user = userEvent.setup()
