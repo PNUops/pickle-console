@@ -63,6 +63,10 @@ describe('사용 가이드', () => {
     expect(screen.getByText(/GET \/v1\/images\/models/)).toBeInTheDocument()
     expect(screen.getByText(/POST \/v1\/embeddings/)).toBeInTheDocument()
     expect(screen.getByText(/POST \/v1\/rerank$/)).toBeInTheDocument()
+    // The audio section names these paths in prose too, so look in the table.
+    const routeTable = screen.getByText(/POST \/v1\/embeddings/).closest('table')!
+    expect(within(routeTable).getByText(/POST \/v1\/audio\/speech$/)).toBeInTheDocument()
+    expect(within(routeTable).getByText(/POST \/v1\/audio\/transcriptions$/)).toBeInTheDocument()
 
     const body = document.body.textContent ?? ''
     // 이 경로들은 키에 기능이 부여돼야 열린다. 그 말이 없으면 403 을 받은 사람이
@@ -76,6 +80,21 @@ describe('사용 가이드', () => {
     // images.edit is not; without the field name the two read as a contradiction.
     expect(body).toContain('input_references')
     expect(body).toContain('streaming_not_supported')
+  })
+
+  test('explains the audio routes and the pcm default', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: 'TTS와 STT' })
+
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('POST /v1/audio/speech')
+    expect(body).toContain('POST /v1/audio/transcriptions')
+    // The SDK omits the format and gets raw pcm; saved as .mp3 it does not play.
+    expect(body).toContain('response_format="mp3"')
+    expect(body).toContain('verbose_json')
+    expect(body).toContain('large_request_busy')
+    // Chat audio output needs the speech grant, the same as the speech route.
+    expect(body).toContain('음성 출력(modalities의 audio)은 TTS 권한')
   })
 
   test('explains the legacy completions route and its empty-text case', async () => {
@@ -114,7 +133,7 @@ describe('사용 가이드', () => {
     // Without the scope a student sends the headers to the self-hosted model
     // and reads the missing effect as a bug.
     const body = document.body.textContent ?? ''
-    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩, 리랭크 요청에서는 넘기지 않습니다')
+    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩, 리랭크, TTS, STT 요청에서는 넘기지 않습니다')
     expect(body).toContain('1024바이트를 넘는 값은 넘기지 않습니다')
     expect(body).toContain('HTTP-Referer')
   })
