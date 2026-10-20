@@ -161,8 +161,9 @@ export const LLM_REQUEST_BODY_MIB = {
 
 /**
  * Client request headers the gateway forwards to the vendor, on a paid-model
- * chat or messages request only. The messages route also forwards
+ * chat, messages or responses request only. The messages route also forwards
  * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
+ * Codex's own headers (`session-id`, `x-codex-*`, `originator`) are not forwarded.
  * Of repeated lines only the first is forwarded, and a value longer than
  * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
  * headers (`HTTP-Referer`, `X-Title`, ...) and response-cache headers are not
