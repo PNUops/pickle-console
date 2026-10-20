@@ -252,7 +252,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     code: 'unsupported_parameter',
     status: 400,
     meaning:
-      '지원하지 않는 필드나 서버 도구를 보냈습니다. /v1/responses의 store: true와 previous_response_id도 여기에 해당합니다.',
+      '지원하지 않는 필드나 서버 도구를 보냈습니다. /v1/responses의 store: true, previous_response_id, conversation, background: true도 여기에 해당합니다.',
   },
   { code: 'invalid_parameter_value', status: 400, meaning: '파라미터 값이 허용 범위 밖입니다.' },
   { code: 'missing_parameter', status: 400, meaning: '필수 파라미터가 빠졌습니다.' },
