@@ -266,7 +266,7 @@ LLM API, 계정과 문제 해결을 로그인 없이 읽을 수 있습니다. �
 
 여러 사람에게 리소스를 신청하는 문서는 명단 붙여넣기부터 가입 대기와 대상자별 생성
 결과까지 안내합니다. 신청 화면과 대상자 결과 표에서 해당 절로 이동할 수 있습니다.
-LLM 문서는 키에서 호출할 수 있는 모델 조회, 가격 확인, Chat Completions와 Messages 연결,
+LLM 문서는 키에서 호출할 수 있는 모델 조회, 가격 확인, Chat Completions, Messages, Responses 연결,
 이미지와 임베딩 예제, 경로별 본문 기록 범위 및 오류 대응을 설명합니다.
 
 본문은 `src/docs/articles/`에서 작성하고 `src/docs/catalog.ts`에 등록합니다.

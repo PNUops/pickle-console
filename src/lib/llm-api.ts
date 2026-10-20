@@ -29,6 +29,13 @@ export const LLM_DEFAULT_MODEL = 'pickle-general'
 export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
 
 /**
+ * The paid model the Codex and Responses examples name. `/v1/responses`
+ * serves paid models only, like `/v1/messages`. Name only a model a live call
+ * through this route has answered.
+ */
+export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-6-luna'
+
+/**
  * The routes a key reaches only with the matching feature granted, Chat
  * included. A key without it gets 403 `endpoint_not_allowed`, never 404:
  * a route that does not exist and a route this key may not use are different
@@ -50,10 +57,17 @@ export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
  * `error.code` is the same code as in the table below), and accepts the key
  * in `x-api-key` as well as `Authorization`. Its `count_tokens` and other
  * sub-paths are 404.
+ *
+ * `/v1/responses` is the OpenAI Responses API, also under the Chat grant and
+ * paid models only. It answers in the OpenAI error shape. Nothing is stored
+ * upstream, so `store: true`, `previous_response_id`, `conversation` and
+ * `background: true` are refused with `unsupported_parameter`, and its
+ * sub-paths (retrieve, cancel, input items) are 404.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
   { capability: 'chat', method: 'POST', path: '/v1/messages', summary: 'Anthropic Messages' },
+  { capability: 'chat', method: 'POST', path: '/v1/responses', summary: 'OpenAI Responses' },
   { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
   {
     capability: 'images',
@@ -147,8 +161,9 @@ export const LLM_REQUEST_BODY_MIB = {
 
 /**
  * Client request headers the gateway forwards to the vendor, on a paid-model
- * chat or messages request only. The messages route also forwards
+ * chat, messages or responses request only. The messages route also forwards
  * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
+ * Codex's own headers (`session-id`, `x-codex-*`, `originator`) are not forwarded.
  * Of repeated lines only the first is forwarded, and a value longer than
  * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
  * headers (`HTTP-Referer`, `X-Title`, ...) and response-cache headers are not
@@ -214,13 +229,13 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     code: 'model_not_available_on_route',
     status: 400,
     meaning:
-      '자체 서빙 모델은 아직 /v1/messages에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
+      '자체 서빙 모델은 아직 /v1/messages와 /v1/responses에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
   },
   { code: 'model_not_allowed', status: 403, meaning: '이 키로는 쓸 수 없는 모델입니다.' },
   {
     code: 'endpoint_not_allowed',
     status: 403,
-    meaning: '이 키에 필요한 기능이 없습니다. 키 정보의 기능 권한을 확인합니다. 아직 신청할 수 없는 서버 코드 실행 도구(shell, bash)는 요청에서 뺍니다.',
+    meaning: '이 키에 필요한 기능이 없습니다. 키 정보의 기능 권한을 확인합니다. 웹 검색 권한 없이 웹 검색 도구를 보냈다면 도구를 빼고, 아직 신청할 수 없는 서버 코드 실행 도구(shell, bash, local_shell, code_interpreter)도 요청에서 뺍니다.',
   },
   { code: 'rate_limit_requests', status: 429, meaning: '분당 요청 횟수를 초과했습니다.' },
   { code: 'rate_limit_tokens', status: 429, meaning: '분당 토큰 사용량을 초과했습니다.' },
@@ -233,7 +248,12 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     meaning: '승인된 금액 한도를 적용하는 중입니다. 잠시 후 다시 시도하면 됩니다.',
   },
   { code: 'credit_exhausted', status: 429, meaning: '유료 모델의 금액 한도를 모두 썼습니다.' },
-  { code: 'unsupported_parameter', status: 400, meaning: '지원 목록에 없는 필드를 보냈습니다.' },
+  {
+    code: 'unsupported_parameter',
+    status: 400,
+    meaning:
+      '지원하지 않는 필드나 서버 도구를 보냈습니다. /v1/responses의 store: true, previous_response_id, conversation, background: true도 여기에 해당합니다.',
+  },
   { code: 'invalid_parameter_value', status: 400, meaning: '파라미터 값이 허용 범위 밖입니다.' },
   { code: 'missing_parameter', status: 400, meaning: '필수 파라미터가 빠졌습니다.' },
   { code: 'invalid_json', status: 400, meaning: '요청 본문이 올바른 JSON이 아닙니다.' },

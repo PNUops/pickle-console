@@ -128,6 +128,25 @@ describe('사용 가이드', () => {
     expect(body).toContain('"baseURL": "https://llm.pcl.kr/v1"')
   })
 
+  test('connects Codex through the Responses route', async () => {
+    renderApp('/docs/llm/connect')
+    await screen.findByRole('heading', { name: 'Codex와 OpenAI SDK Responses 연결' })
+
+    const body = document.body.textContent ?? ''
+    // Codex appends /responses to the OpenAI base, so this one keeps /v1,
+    // unlike the Anthropic base on the same page.
+    expect(body).toContain('base_url = "https://llm.pcl.kr/v1"')
+    expect(body).toContain('wire_api = "responses"')
+    // Codex adds a web search tool by default; a key without the web search
+    // grant is refused on every request unless this line is there.
+    expect(body).toContain('web_search = "disabled"')
+    // A student who sends these believes the answer is stored and later fails
+    // on the id.
+    expect(body).toContain('previous_response_id')
+    expect(body).toContain('code_interpreter')
+    expect(body).toContain('local_shell')
+  })
+
   test('keeps actionable budget guidance without hidden defaults', async () => {
     renderApp('/docs/llm/limits')
     await screen.findByRole('heading', { name: '한도에 걸렸을 때' })
