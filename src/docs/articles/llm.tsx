@@ -19,6 +19,7 @@ import {
   LLM_PASSTHROUGH_ROUTES,
   LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
+  LLM_RERANK_EXAMPLE_MODEL,
   LLM_RESPONSES_EXAMPLE_MODEL,
   LLM_SELF_SERVED_PARAMS,
 } from '../../lib/llm-api'
@@ -93,6 +94,34 @@ response = client.embeddings.create(
 )
 for item in response.data:
     print(item.index, len(item.embedding))`
+
+const RERANK_EXAMPLE = `curl ${LLM_API_BASE_URL}/rerank \\
+  -H "Authorization: Bearer $PICKLE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "${LLM_RERANK_EXAMPLE_MODEL}",
+    "query": "부산대학교 도서관 운영 시간",
+    "documents": [
+      "도서관은 평일 오전 9시부터 오후 10시까지 운영합니다.",
+      "학생식당 메뉴는 매주 월요일에 공지합니다.",
+      "시험 기간에는 열람실을 24시간 개방합니다."
+    ],
+    "top_n": 2
+  }'`
+
+const COMPLETIONS_PYTHON_EXAMPLE = `import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="${LLM_API_BASE_URL}",
+    api_key=os.environ["PICKLE_API_KEY"],
+)
+response = client.completions.create(
+    model="콘솔에서 복사한 유료 모델 ID",
+    prompt="부산의 대표 음식 세 가지는",
+    max_tokens=100,
+)
+print(response.choices[0].text)`
 
 const WEB_SEARCH_EXAMPLE = `{
   "model": "콘솔에서 복사한 유료 모델 ID",
@@ -379,8 +408,8 @@ export const llmArticles: GuideArticle[] = [
     slug: 'llm/features',
     title: '모델과 지원 기능',
     group: 'LLM API',
-    summary: '모델과 가격을 찾고 이미지와 임베딩, 웹 검색과 PDF OCR의 호출 방법을 확인합니다.',
-    keywords: ['모델', '허용', '차단', '가격', '이미지', '임베딩', '웹 검색', 'PDF OCR', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
+    summary: '모델과 가격을 찾고 이미지, 임베딩, 리랭크, 레거시 Completions, 웹 검색과 PDF OCR의 호출 방법을 확인합니다.',
+    keywords: ['모델', '허용', '차단', '가격', '이미지', '임베딩', '리랭크', 'rerank', 'completions', '자동 선택', '웹 검색', 'PDF OCR', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
     sections: [
       {
         id: 'models',
@@ -396,9 +425,10 @@ export const llmArticles: GuideArticle[] = [
           <p>아래 요청은 자체 서빙 모델 목록을 반환합니다. 유료 모델은 이 목록에 나오지 않습니다.</p>
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
           <p>유료 모델은 금액 한도가 부여된 키로 모델 이름을 그대로 보내 사용합니다. <strong>쓸 수 있는 유료 모델</strong>이 제한되어 있으면 목록에 맞는 모델만 선택합니다. 허용 목록이 비어 있으면 모델 허용 제한은 없지만 금액 한도와 <strong>쓸 수 없는 유료 모델</strong>은 적용됩니다. 차단 목록이 허용 목록보다 우선합니다.</p>
-          <p>키 정보의 <strong>기능 권한</strong>은 이 키에 부여된 기능입니다. <code>/v1/chat/completions</code>, <code>/v1/messages</code>, <code>/v1/responses</code> 호출은 Chat 권한에 속합니다. 기능 권한이 <strong>부여 안 됨</strong>이면 호출할 기능이 없다는 뜻입니다. 유료 모델 허용 목록이 비었을 때와 의미가 다릅니다.</p>
+          <p>키 정보의 <strong>기능 권한</strong>은 이 키에 부여된 기능입니다. <code>/v1/chat/completions</code>, <code>/v1/messages</code>, <code>/v1/responses</code>, <code>/v1/completions</code> 호출은 Chat 권한에 속합니다. 기능 권한이 <strong>부여 안 됨</strong>이면 호출할 기능이 없다는 뜻입니다. 유료 모델 허용 목록이 비었을 때와 의미가 다릅니다.</p>
           <p>웹 검색은 웹 검색 권한, 유료 OCR 엔진 <code>mistral-ocr</code>을 지정한 PDF 변환은 PDF OCR 권한, 채팅 응답의 이미지 출력(<code>modalities</code>의 <code>image</code>)은 이미지 생성 권한이 필요합니다. 이 권한은 모델 이름의 허용 여부와 별도로 확인합니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_allowed</code>는 모델 권한 문제이고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_unavailable</code>는 금액 한도가 없다는 뜻입니다. 자체 서빙 모델에는 유료 모델의 허용 목록과 차단 목록을 적용하지 않습니다.</p>
+          <p>모델을 자동으로 골라 주는 이름(<code>openrouter/auto</code> 등)은 지원하지 않습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">router_not_supported</code>가 나오면 모델 ID를 직접 지정합니다.</p>
           <GuideFigure
             src={llmPermissionsImage}
             alt="LLM API 키 정보에 표시된 유료 모델 허용 목록과 차단 목록 및 기능 권한"
@@ -410,9 +440,9 @@ export const llmArticles: GuideArticle[] = [
       },
       {
         id: 'images-embeddings',
-        title: '이미지와 임베딩',
+        title: '이미지, 임베딩, 리랭크',
         body: <>
-          <p>먼저 키 정보의 <strong>기능 권한</strong>에 필요한 기능이 있는지 확인합니다. 이미지 생성과 임베딩은 기능별로 부여되며, 부여되지 않은 경로는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">endpoint_not_allowed</code>로 거절됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code> 본문의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_references</code>에 입력 이미지를 넣어 편집하는 요청과 이미지 모델 목록 조회도 이미지 기능에 포함됩니다.</p>
+          <p>먼저 키 정보의 <strong>기능 권한</strong>에 필요한 기능이 있는지 확인합니다. 이미지 생성, 임베딩, 리랭크는 기능별로 부여되며, 부여되지 않은 경로는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">endpoint_not_allowed</code>로 거절됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code> 본문의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_references</code>에 입력 이미지를 넣어 편집하는 요청과 이미지 모델 목록 조회도 이미지 기능에 포함됩니다.</p>
           <p>필요한 기능이 없다면 <GuideLink slug="llm/start" anchor="choose-models">신청서의 필요한 기능</GuideLink>에서 골라 승인을 받습니다. 이미 쓰는 키의 권한 변경이 필요하면 관리자에게 키 이름과 필요한 기능을 알려 주세요.</p>
           <Table>
             <THead><TR><TH>경로</TH><TH>기능</TH></TR></THead>
@@ -420,7 +450,7 @@ export const llmArticles: GuideArticle[] = [
           </Table>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>는 OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.generate</code>가 부르는 경로이고 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images</code>와 같은 요청을 처리합니다. 이미지 모델 목록을 조회한 뒤 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model</code>을 반드시 지정해 호출합니다.</p>
           <p>이미지는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>으로만 돌아옵니다. 응답에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">url</code>이 아니라 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>을 읽습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/images/generations</code>로 보낼 때 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>은 빼거나 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">b64_json</code>으로 두고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">style</code>과 최상위 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">moderation</code>은 보내지 않습니다. 보내면 이유를 담은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>로 거절됩니다. OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.edit</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">images.create_variation</code>은 지원하지 않습니다.</p>
-          <p>이미지와 임베딩 경로는 스트리밍을 지원하지 않습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code> 필드를 보내면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">streaming_not_supported</code>로 거절되므로 필드를 빼고 요청합니다.</p>
+          <p>이미지, 임베딩, 리랭크 경로는 스트리밍을 지원하지 않습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code> 필드를 보내면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">streaming_not_supported</code>로 거절되므로 필드를 빼고 요청합니다.</p>
           <p>이미지 응답은 base64라 원본보다 커집니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_response_too_large</code>가 나오면 한 번에 만드는 개수(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">n</code>)나 요청한 크기를 줄입니다. 정상 응답의 이미지 데이터 또는 임베딩 결과를 받았는지 확인한 후 애플리케이션에 연결하세요.</p>
           <h3 className="font-medium">이미지 한 장 생성하기</h3>
           <ol>
@@ -434,7 +464,20 @@ export const llmArticles: GuideArticle[] = [
           <p>임베딩 권한과 금액을 확인하고, 아래 <code>임베딩 모델 ID</code>에 키에서 허용한 임베딩 모델 이름을 넣습니다. <code>openai</code> 패키지를 설치한 같은 환경에서 실행합니다.</p>
           <CodeBlock label="임베딩 Python" code={EMBEDDING_PYTHON_EXAMPLE} />
           <p>입력 순서에 대응하는 <code>index</code>와 비어 있지 않은 벡터의 길이가 출력되는지 확인합니다. 문서 검색에 사용할 때는 문서와 검색어를 같은 임베딩 모델로 변환합니다.</p>
-          <p>이미지와 임베딩 요청 본문도 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. 스트리밍을 켜서 큰 이미지 응답을 해결할 수는 없습니다. 같은 크기의 요청이 간헐적으로 거절되면 <GuideLink slug="llm/errors" anchor="requests">큰 응답과 혼잡 대응</GuideLink>을 확인합니다.</p>
+          <h3 className="font-medium">검색한 문서를 리랭크하기</h3>
+          <p>리랭크 권한과 금액을 확인하고, 질의(<code>query</code>)와 후보 문서(<code>documents</code>)를 보냅니다. 응답의 <code>results</code>는 관련도(<code>relevance_score</code>)가 높은 순서이고, 각 항목의 <code>index</code>는 보낸 문서의 순서를 가리킵니다. OpenAI SDK에는 리랭크 함수가 없으므로 HTTP로 직접 호출합니다.</p>
+          <CodeBlock label="리랭크 curl" code={RERANK_EXAMPLE} />
+          <p>리랭크 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 모델에 따라 토큰이나 검색 단위로 매겨지고 키의 사용 금액에 반영됩니다.</p>
+          <p>이미지, 임베딩, 리랭크 요청 본문도 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. 스트리밍을 켜서 큰 이미지 응답을 해결할 수는 없습니다. 같은 크기의 요청이 간헐적으로 거절되면 <GuideLink slug="llm/errors" anchor="requests">큰 응답과 혼잡 대응</GuideLink>을 확인합니다.</p>
+        </>,
+      },
+      {
+        id: 'completions',
+        title: '레거시 Completions',
+        body: <>
+          <p>OpenAI SDK의 <code>completions.create</code>는 레거시 텍스트 완성 경로(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/completions</code>)로 보냅니다. 이 경로는 <strong>유료 모델만</strong> 지원하고 Chat 권한에 속합니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>을 지정하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_available_on_route</code>로 거절됩니다. 새로 만드는 코드라면 <GuideLink slug="llm/connect" anchor="first-call">Chat Completions</GuideLink>를 사용합니다.</p>
+          <CodeBlock label="Completions Python" code={COMPLETIONS_PYTHON_EXAMPLE} />
+          <p><code>prompt</code>는 그대로 이어 쓰이지 않고 채팅 메시지로 바뀌어 모델에 전달됩니다. 사고(추론) 모델은 생각한 내용만 남기고 <code>text</code>가 빈 채로 끝날 수 있으므로, 빈 응답이 나오면 사고하지 않는 모델로 바꾸거나 출력 상한을 늘립니다. 출력 상한은 <code>max_tokens</code>와 <code>max_completion_tokens</code> 중 작은 값이 적용됩니다.</p>
         </>,
       },
       {
@@ -482,7 +525,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'headers',
         title: '요청 헤더와 응답 헤더',
         body: <>
-          <p>유료 모델에 보내는 채팅, Messages, Responses 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. Messages 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-version</code>과 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-beta</code>도 넘깁니다. 자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다.</p>
+          <p>유료 모델에 보내는 채팅, Messages, Responses, 레거시 Completions 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. Messages 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-version</code>과 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-beta</code>도 넘깁니다. 자체 서빙 모델과 이미지, 임베딩, 리랭크 요청에서는 넘기지 않습니다.</p>
           <Table>
             <THead><TR><TH>요청 헤더</TH><TH>쓰임</TH></TR></THead>
             <TBody>{LLM_FORWARDED_REQUEST_HEADERS.map((header) => <TR key={header.name}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{header.name}</code></TD><TD>{header.use}</TD></TR>)}</TBody>
@@ -576,7 +619,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'recording',
         title: '본문 기록 켜기와 끄기',
         body: <>
-          <p>기본은 꺼짐입니다. 사용량 집계와 별도로, <strong>Chat Completions</strong>(<code>/v1/chat/completions</code>)로 보낸 프롬프트와 응답 텍스트를 확인해야 할 때만 켭니다. <strong>Messages, Responses, 이미지, 임베딩 경로의 본문은 기록하지 않습니다.</strong> Claude Code를 Messages로, Codex를 Responses로 연결했다면 이 설정을 켜도 해당 대화는 이 탭에 나타나지 않습니다.</p>
+          <p>기본은 꺼짐입니다. 사용량 집계와 별도로, <strong>Chat Completions</strong>(<code>/v1/chat/completions</code>)로 보낸 프롬프트와 응답 텍스트를 확인해야 할 때만 켭니다. <strong>Messages, Responses, 레거시 Completions, 이미지, 임베딩, 리랭크 경로의 본문은 기록하지 않습니다.</strong> Claude Code를 Messages로, Codex를 Responses로 연결했다면 이 설정을 켜도 해당 대화는 이 탭에 나타나지 않습니다.</p>
           <p>Chat Completions의 프롬프트에 포함된 이미지와 파일의 참조, 일부 인라인 데이터도 저장될 수 있습니다. 텍스트 전문 화면에서 표시되지 않는 항목도 저장에서 제외된다는 뜻은 아닙니다.</p>
           <Alert variant="warning" title="키에 접근하는 사람 모두가 읽습니다">
             기록된 프롬프트와 응답은 이 키의 접근 권한자 전원이 읽을 수 있고 30일 동안 보관됩니다. 본인만 읽는 개인 기록이 아닙니다. 개인정보가 담기는 요청에는 켜지 마세요.

@@ -27,7 +27,9 @@ describe('사용 가이드', () => {
     // 화면에 렌더되는지만 본다 — 산문에도 나오는 이름으로 확인하면 목록이 통째로
     // 사라져도 통과하므로, 목록에만 있는 이름을 고른다.
     expect(screen.getByText('parallel_tool_calls')).toBeInTheDocument()
-    expect(screen.getByText('max_completion_tokens')).toBeInTheDocument()
+    // The legacy completions section names this field in prose too.
+    const commonChips = screen.getByText('두 종류에 공통').parentElement!
+    expect(within(commonChips).getByText('max_completion_tokens')).toBeInTheDocument()
     expect(screen.getByText('presence_penalty')).toBeInTheDocument()
     // 축이 갈렸다는 것이 화면에도 보여야 한다. 목록 하나만 두면 유료 전용 필드를
     // 자체 서빙에 보내도 되는 것처럼 읽힌다.
@@ -52,7 +54,7 @@ describe('사용 가이드', () => {
 
   test('lists every non-chat route and its permission requirement', async () => {
     renderApp('/docs/llm/features')
-    await screen.findByRole('heading', { name: '이미지와 임베딩' })
+    await screen.findByRole('heading', { name: '이미지, 임베딩, 리랭크' })
 
     // 경로 목록은 lib/llm-api.ts 가 갖는다. 여기서는 그것이 실제로 표에 그려지는지를
     // 본다 — 전부 확인하는 것은 하나만 보면 map 이 깨져도 통과하기 때문이다.
@@ -60,6 +62,7 @@ describe('사용 가이드', () => {
     expect(screen.getByText(/POST \/v1\/images\/generations$/)).toBeInTheDocument()
     expect(screen.getByText(/GET \/v1\/images\/models/)).toBeInTheDocument()
     expect(screen.getByText(/POST \/v1\/embeddings/)).toBeInTheDocument()
+    expect(screen.getByText(/POST \/v1\/rerank$/)).toBeInTheDocument()
 
     const body = document.body.textContent ?? ''
     // 이 경로들은 키에 기능이 부여돼야 열린다. 그 말이 없으면 403 을 받은 사람이
@@ -75,6 +78,30 @@ describe('사용 가이드', () => {
     expect(body).toContain('streaming_not_supported')
   })
 
+  test('explains the legacy completions route and its empty-text case', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: '레거시 Completions' })
+
+    const body = document.body.textContent ?? ''
+    // Paid models only: without this the self-served name fails with no hint why.
+    expect(body).toContain('POST /v1/completions')
+    expect(body).toContain('model_not_available_on_route')
+    // A reasoning model can answer with an empty text; a reader who is not told
+    // so suspects the key or the gateway.
+    expect(body).toContain('text가 빈 채로 끝날 수 있으므로')
+  })
+
+  test('says how to call rerank and where its price is not shown', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: '검색한 문서를 리랭크하기' })
+
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('relevance_score')
+    // Rerank models are missing from the key's model list, prices included.
+    expect(body).toContain('호출할 수 있는 모델 보기에 나오지 않아')
+    expect(body).toContain('router_not_supported')
+  })
+
   test('scopes forwarded headers to paid-model chat', async () => {
     renderApp('/docs/llm/features')
     await screen.findByRole('heading', { name: '요청 헤더와 응답 헤더' })
@@ -87,7 +114,7 @@ describe('사용 가이드', () => {
     // Without the scope a student sends the headers to the self-hosted model
     // and reads the missing effect as a bug.
     const body = document.body.textContent ?? ''
-    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다')
+    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩, 리랭크 요청에서는 넘기지 않습니다')
     expect(body).toContain('1024바이트를 넘는 값은 넘기지 않습니다')
     expect(body).toContain('HTTP-Referer')
   })
