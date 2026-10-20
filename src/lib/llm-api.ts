@@ -251,7 +251,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     code: 'model_not_allowed',
     status: 403,
     meaning:
-      '이 키로는 쓸 수 없는 모델입니다. models, 대체 모델, 도구, 플러그인 필드에 자동 선택 모델을 넣은 요청도 여기에 해당합니다.',
+      '이 키로는 쓸 수 없는 모델입니다. 대체 모델 목록(models, fallbacks), 도구(tools), 플러그인(plugins)에 자동 선택 모델을 넣은 요청도 여기에 해당합니다.',
   },
   {
     code: 'endpoint_not_allowed',

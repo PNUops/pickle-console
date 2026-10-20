@@ -330,10 +330,13 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         imageCount: 0,
       },
     ],
+    // The api returns one row per grantable capability with a route, zeros included.
     passthroughGrants: [
+      { capability: 'chat', grantedKeys: 3, usedKeys: 2, requests: 6 },
       { capability: 'images', grantedKeys: 2, usedKeys: 1, requests: 3 },
       // 부여만 되고 아무도 안 쓰는 기능. 이 행이 없는 것이 아니라 0인 것이 답이다.
       { capability: 'embeddings', grantedKeys: 1, usedKeys: 0, requests: 0 },
+      { capability: 'rerank', grantedKeys: 0, usedKeys: 0, requests: 0 },
     ],
   }
 }

@@ -15,7 +15,7 @@ const LABELS: Record<string, string> = {
   chat: 'Chat',
   messages: 'Messages',
   responses: 'Responses',
-  completions: 'Completions',
+  completions: '레거시 Completions',
   images: '이미지 생성',
   images_models: '이미지 모델 목록',
   embeddings: '임베딩',

@@ -467,7 +467,7 @@ export const llmArticles: GuideArticle[] = [
           <h3 className="font-medium">검색한 문서를 리랭크하기</h3>
           <p>리랭크 권한과 금액을 확인하고, 질의(<code>query</code>)와 후보 문서(<code>documents</code>)를 보냅니다. 응답의 <code>results</code>는 관련도(<code>relevance_score</code>)가 높은 순서이고, 각 항목의 <code>index</code>는 보낸 문서의 순서를 가리킵니다. OpenAI SDK에는 리랭크 함수가 없으므로 HTTP로 직접 호출합니다.</p>
           <CodeBlock label="리랭크 curl" code={RERANK_EXAMPLE} />
-          <p>리랭크 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 모델에 따라 토큰이나 검색 단위로 매겨지고 키의 사용 금액에 반영됩니다.</p>
+          <p>리랭크 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 모델에 따라 토큰이나 검색 단위로 매겨지고 키의 사용 금액에 반영되며, 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
           <p>이미지, 임베딩, 리랭크 요청 본문도 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. 스트리밍을 켜서 큰 이미지 응답을 해결할 수는 없습니다. 같은 크기의 요청이 간헐적으로 거절되면 <GuideLink slug="llm/errors" anchor="requests">큰 응답과 혼잡 대응</GuideLink>을 확인합니다.</p>
         </>,
       },
