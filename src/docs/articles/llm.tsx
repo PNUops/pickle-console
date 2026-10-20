@@ -22,6 +22,8 @@ import {
   LLM_RERANK_EXAMPLE_MODEL,
   LLM_RESPONSES_EXAMPLE_MODEL,
   LLM_SELF_SERVED_PARAMS,
+  LLM_SPEECH_EXAMPLE_MODEL,
+  LLM_TRANSCRIPTION_EXAMPLE_MODEL,
 } from '../../lib/llm-api'
 import {
   PASSTHROUGH_ENDPOINTS,
@@ -108,6 +110,36 @@ const RERANK_EXAMPLE = `curl ${LLM_API_BASE_URL}/rerank \\
     ],
     "top_n": 2
   }'`
+
+const SPEECH_PYTHON_EXAMPLE = `import os
+from pathlib import Path
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="${LLM_API_BASE_URL}",
+    api_key=os.environ["PICKLE_API_KEY"],
+)
+response = client.audio.speech.create(
+    model="${LLM_SPEECH_EXAMPLE_MODEL}",
+    voice="alloy",
+    input="Hello from Pickle.",
+    response_format="mp3",
+)
+Path("speech.mp3").write_bytes(response.content)`
+
+const TRANSCRIPTION_PYTHON_EXAMPLE = `import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="${LLM_API_BASE_URL}",
+    api_key=os.environ["PICKLE_API_KEY"],
+)
+with open("speech.mp3", "rb") as audio:
+    result = client.audio.transcriptions.create(
+        model="${LLM_TRANSCRIPTION_EXAMPLE_MODEL}",
+        file=audio,
+    )
+print(result.text)`
 
 const COMPLETIONS_PYTHON_EXAMPLE = `import os
 from openai import OpenAI
@@ -408,8 +440,8 @@ export const llmArticles: GuideArticle[] = [
     slug: 'llm/features',
     title: '모델과 지원 기능',
     group: 'LLM API',
-    summary: '모델과 가격을 찾고 이미지, 임베딩, 리랭크, 레거시 Completions, 웹 검색과 PDF OCR의 호출 방법을 확인합니다.',
-    keywords: ['모델', '허용', '차단', '가격', '이미지', '임베딩', '리랭크', 'rerank', 'completions', '자동 선택', '웹 검색', 'PDF OCR', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
+    summary: '모델과 가격을 찾고 이미지, 임베딩, 리랭크, TTS와 STT, 레거시 Completions, 웹 검색과 PDF OCR의 호출 방법을 확인합니다.',
+    keywords: ['모델', '허용', '차단', '가격', '이미지', '임베딩', '리랭크', 'rerank', 'TTS', 'STT', '음성', 'audio.speech', 'transcriptions', 'completions', '자동 선택', '웹 검색', 'PDF OCR', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
     sections: [
       {
         id: 'models',
@@ -426,7 +458,7 @@ export const llmArticles: GuideArticle[] = [
           <CodeBlock label="curl" code={MODELS_EXAMPLE} />
           <p>유료 모델은 금액 한도가 부여된 키로 모델 이름을 그대로 보내 사용합니다. <strong>쓸 수 있는 유료 모델</strong>이 제한되어 있으면 목록에 맞는 모델만 선택합니다. 허용 목록이 비어 있으면 모델 허용 제한은 없지만 금액 한도와 <strong>쓸 수 없는 유료 모델</strong>은 적용됩니다. 차단 목록이 허용 목록보다 우선합니다.</p>
           <p>키 정보의 <strong>기능 권한</strong>은 이 키에 부여된 기능입니다. <code>/v1/chat/completions</code>, <code>/v1/messages</code>, <code>/v1/responses</code>, <code>/v1/completions</code> 호출은 Chat 권한에 속합니다. 기능 권한이 <strong>부여 안 됨</strong>이면 호출할 기능이 없다는 뜻입니다. 유료 모델 허용 목록이 비었을 때와 의미가 다릅니다.</p>
-          <p>웹 검색은 웹 검색 권한, 유료 OCR 엔진 <code>mistral-ocr</code>을 지정한 PDF 변환은 PDF OCR 권한, 채팅 응답의 이미지 출력(<code>modalities</code>의 <code>image</code>)은 이미지 생성 권한이 필요합니다. 이 권한은 모델 이름의 허용 여부와 별도로 확인합니다.</p>
+          <p>웹 검색은 웹 검색 권한, 유료 OCR 엔진 <code>mistral-ocr</code>을 지정한 PDF 변환은 PDF OCR 권한, 채팅 응답의 이미지 출력(<code>modalities</code>의 <code>image</code>)은 이미지 생성 권한, 음성 출력(<code>modalities</code>의 <code>audio</code>)은 TTS 권한이 필요합니다. Messages, Responses, 레거시 Completions 요청도 같습니다. 이 권한은 모델 이름의 허용 여부와 별도로 확인합니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_allowed</code>는 모델 권한 문제이고, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">credit_unavailable</code>는 금액 한도가 없다는 뜻입니다. 자체 서빙 모델에는 유료 모델의 허용 목록과 차단 목록을 적용하지 않습니다.</p>
           <p>모델을 자동으로 골라 주는 이름(<code>openrouter/auto</code> 등)은 지원하지 않습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">router_not_supported</code>가 나오면 모델 ID를 직접 지정합니다.</p>
           <GuideFigure
@@ -469,6 +501,22 @@ export const llmArticles: GuideArticle[] = [
           <CodeBlock label="리랭크 curl" code={RERANK_EXAMPLE} />
           <p>리랭크 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 모델에 따라 토큰이나 검색 단위로 매겨지고 키의 사용 금액에 반영되며, 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
           <p>이미지, 임베딩, 리랭크 요청 본문도 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. 스트리밍을 켜서 큰 이미지 응답을 해결할 수는 없습니다. 같은 크기의 요청이 간헐적으로 거절되면 <GuideLink slug="llm/errors" anchor="requests">큰 응답과 혼잡 대응</GuideLink>을 확인합니다.</p>
+        </>,
+      },
+      {
+        id: 'audio',
+        title: 'TTS와 STT',
+        body: <>
+          <p>텍스트를 음성으로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/speech</code>는 TTS 권한, 음성을 텍스트로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/transcriptions</code>는 STT 권한이 필요합니다. 둘 다 유료 모델만 지원합니다. TTS와 STT 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 키의 사용 금액에 반영되며 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
+          <h3 className="font-medium">텍스트를 음성 파일로 만들기</h3>
+          <p>OpenAI SDK는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>을 지정하지 않으면 보내지 않고, 이때는 헤더 없는 원시 PCM(24kHz, 16비트, 모노)이 돌아옵니다. 그대로 <code>.mp3</code>로 저장하면 재생되지 않으므로 아래처럼 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format="mp3"</code>를 지정합니다. 모델에 따라 <code>voice</code>가 없으면 거절되므로 항상 지정합니다.</p>
+          <CodeBlock label="TTS Python" code={SPEECH_PYTHON_EXAMPLE} />
+          <p><code>speech.mp3</code>가 재생되는지 확인합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>은 <code>mp3</code>와 <code>pcm</code>만 받습니다. <code>opus</code>, <code>aac</code>, <code>flac</code>, <code>wav</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream_format</code>의 <code>sse</code>, 참조 음성으로 목소리를 복제하는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_references</code>는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>로 거절됩니다.</p>
+          <h3 className="font-medium">음성 파일을 텍스트로 바꾸기</h3>
+          <p>OpenAI SDK의 <code>audio.transcriptions.create</code>는 파일을 multipart로 보냅니다. 위에서 만든 <code>speech.mp3</code>로 확인할 수 있습니다.</p>
+          <CodeBlock label="STT Python" code={TRANSCRIPTION_PYTHON_EXAMPLE} />
+          <p>JSON 본문의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_audio</code>에 base64 데이터를 넣어 보낼 수도 있습니다. 음성 주소(URL)를 넘기는 방식은 모델이 거절하는 경우가 많으므로 파일 내용을 직접 보냅니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>은 <code>json</code>과 <code>verbose_json</code>만 받고, 자막이 필요하면 <code>verbose_json</code>의 <code>segments</code>로 만듭니다. 스트리밍은 지원하지 않습니다.</p>
+          <p>요청 본문은 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. {LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 파일(128kbps mp3로 약 2분 이상)은 동시에 처리할 수 있는 수가 적어 붐빌 때 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>가 날 수 있습니다. 잠시 뒤 다시 보냅니다.</p>
         </>,
       },
       {
@@ -525,7 +573,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'headers',
         title: '요청 헤더와 응답 헤더',
         body: <>
-          <p>유료 모델에 보내는 채팅, Messages, Responses, 레거시 Completions 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. Messages 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-version</code>과 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-beta</code>도 넘깁니다. 자체 서빙 모델과 이미지, 임베딩, 리랭크 요청에서는 넘기지 않습니다.</p>
+          <p>유료 모델에 보내는 채팅, Messages, Responses, 레거시 Completions 요청에서는 아래 요청 헤더를 공급자에게 그대로 넘깁니다. Messages 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-version</code>과 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic-beta</code>도 넘깁니다. 자체 서빙 모델과 이미지, 임베딩, 리랭크, TTS, STT 요청에서는 넘기지 않습니다.</p>
           <Table>
             <THead><TR><TH>요청 헤더</TH><TH>쓰임</TH></TR></THead>
             <TBody>{LLM_FORWARDED_REQUEST_HEADERS.map((header) => <TR key={header.name}><TD><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{header.name}</code></TD><TD>{header.use}</TD></TR>)}</TBody>
@@ -619,7 +667,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'recording',
         title: '본문 기록 켜기와 끄기',
         body: <>
-          <p>기본은 꺼짐입니다. 사용량 집계와 별도로, <strong>Chat Completions</strong>(<code>/v1/chat/completions</code>)로 보낸 프롬프트와 응답 텍스트를 확인해야 할 때만 켭니다. <strong>Messages, Responses, 레거시 Completions, 이미지, 임베딩, 리랭크 경로의 본문은 기록하지 않습니다.</strong> Claude Code를 Messages로, Codex를 Responses로 연결했다면 이 설정을 켜도 해당 대화는 이 탭에 나타나지 않습니다.</p>
+          <p>기본은 꺼짐입니다. 사용량 집계와 별도로, <strong>Chat Completions</strong>(<code>/v1/chat/completions</code>)로 보낸 프롬프트와 응답 텍스트를 확인해야 할 때만 켭니다. <strong>Messages, Responses, 레거시 Completions, 이미지, 임베딩, 리랭크, TTS, STT 경로의 본문은 기록하지 않습니다.</strong> Claude Code를 Messages로, Codex를 Responses로 연결했다면 이 설정을 켜도 해당 대화는 이 탭에 나타나지 않습니다.</p>
           <p>Chat Completions의 프롬프트에 포함된 이미지와 파일의 참조, 일부 인라인 데이터도 저장될 수 있습니다. 텍스트 전문 화면에서 표시되지 않는 항목도 저장에서 제외된다는 뜻은 아닙니다.</p>
           <Alert variant="warning" title="키에 접근하는 사람 모두가 읽습니다">
             기록된 프롬프트와 응답은 이 키의 접근 권한자 전원이 읽을 수 있고 30일 동안 보관됩니다. 본인만 읽는 개인 기록이 아닙니다. 개인정보가 담기는 요청에는 켜지 마세요.

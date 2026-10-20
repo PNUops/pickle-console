@@ -96,7 +96,7 @@ export function LlmKeyBodiesSection({
     return recordBodies ? (
       <EmptyState
         title="아직 기록된 본문이 없습니다"
-        description="본문 기록은 켜져 있습니다. 설정을 켠 뒤 Chat Completions로 보낸 요청의 프롬프트와 응답 텍스트가 기록됩니다. Messages, 이미지, 임베딩 경로는 기록하지 않습니다. 방금 보낸 요청은 아직 반영되지 않았을 수 있습니다."
+        description="본문 기록은 켜져 있습니다. 설정을 켠 뒤 Chat Completions로 보낸 요청의 프롬프트와 응답 텍스트가 기록됩니다. Chat Completions 밖의 경로는 기록하지 않습니다. 방금 보낸 요청은 아직 반영되지 않았을 수 있습니다."
       />
     ) : (
       <div className="space-y-4">

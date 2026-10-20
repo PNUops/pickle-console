@@ -43,6 +43,13 @@ export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-6-luna'
 export const LLM_RERANK_EXAMPLE_MODEL = 'cohere/rerank-v3.5'
 
 /**
+ * The speech and transcription models the guide examples name. A live call
+ * answered each; the speech one needs an explicit voice.
+ */
+export const LLM_SPEECH_EXAMPLE_MODEL = 'hexgrad/kokoro-82m'
+export const LLM_TRANSCRIPTION_EXAMPLE_MODEL = 'openai/whisper-large-v3-turbo'
+
+/**
  * The routes a key reaches only with the matching feature granted, Chat
  * included. A key without it gets 403 `endpoint_not_allowed`, never 404:
  * a route that does not exist and a route this key may not use are different
@@ -77,6 +84,11 @@ export const LLM_RERANK_EXAMPLE_MODEL = 'cohere/rerank-v3.5'
  *
  * `/v1/rerank` reorders documents against a query. Its models are missing
  * from the key's model list, prices included.
+ *
+ * `/v1/audio/speech` answers with audio bytes, mp3 or raw pcm only, and pcm
+ * when the request names no format. `/v1/audio/transcriptions` takes JSON or
+ * the OpenAI SDK's multipart form. Speech and transcription models are also
+ * missing from the key's model list.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
@@ -93,6 +105,8 @@ export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'images', method: 'GET', path: '/v1/images/models', summary: '이미지 모델 목록' },
   { capability: 'embeddings', method: 'POST', path: '/v1/embeddings', summary: '임베딩' },
   { capability: 'rerank', method: 'POST', path: '/v1/rerank', summary: '리랭크' },
+  { capability: 'speech', method: 'POST', path: '/v1/audio/speech', summary: 'TTS' },
+  { capability: 'transcriptions', method: 'POST', path: '/v1/audio/transcriptions', summary: 'STT' },
 ] as const
 
 /**
@@ -168,7 +182,8 @@ export const LLM_DEFAULT_LIMITS = {
  * which the deployed env does not override. A body above the large threshold
  * needs one of a few shared slots and is refused with `large_request_busy`
  * while they are all taken; above the maximum it is `request_too_large`.
- * The image and embedding paths share the maximum but not the slots.
+ * The image, embedding, rerank, speech and transcription paths share the
+ * maximum but not the slots.
  */
 export const LLM_REQUEST_BODY_MIB = {
   max: 25,
@@ -178,7 +193,8 @@ export const LLM_REQUEST_BODY_MIB = {
 /**
  * Client request headers the gateway forwards to the vendor, on a paid-model
  * chat, messages or responses request only. The messages route also forwards
- * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
+ * `anthropic-version` and `anthropic-beta`. Self-hosted, image, embedding,
+ * rerank, speech and transcription requests forward none.
  * Codex's own headers (`session-id`, `x-codex-*`, `originator`) are not forwarded.
  * Of repeated lines only the first is forwarded, and a value longer than
  * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
@@ -204,15 +220,16 @@ export const LLM_FORWARDED_HEADER_MAX_BYTES = 1024
 
 /**
  * Vendor response headers the gateway relays when the vendor sends them.
- * `X-Generation-Id` comes on a successful paid-model answer, image and
- * embedding answers included.
+ * `X-Generation-Id` comes on a successful paid-model answer, image,
+ * embedding, speech and transcription answers included. A rerank answer
+ * carries the id in its body instead.
  * `Retry-After` comes when the vendor answered 429 or 503 with a wait; after a
  * fallback, it is the longest wait any upstream asked for.
  */
 export const LLM_RELAYED_RESPONSE_HEADERS = [
   {
     name: 'X-Generation-Id',
-    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
+    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩, TTS, STT의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
   },
   {
     name: 'Retry-After',
@@ -256,7 +273,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'endpoint_not_allowed',
     status: 403,
-    meaning: '이 키에 필요한 기능이 없습니다. 키 정보의 기능 권한을 확인합니다. 웹 검색 권한 없이 웹 검색 도구를 보냈다면 도구를 빼고, 아직 신청할 수 없는 서버 코드 실행 도구(shell, bash, local_shell, code_interpreter)도 요청에서 뺍니다.',
+    meaning: '이 키에 필요한 기능이 없습니다. 키 정보의 기능 권한을 확인합니다. 채팅 요청의 modalities에 audio를 넣으면 TTS 권한이 필요합니다. 웹 검색 권한 없이 웹 검색 도구를 보냈다면 도구를 빼고, 아직 신청할 수 없는 서버 코드 실행 도구(shell, bash, local_shell, code_interpreter)도 요청에서 뺍니다.',
   },
   { code: 'rate_limit_requests', status: 429, meaning: '분당 요청 횟수를 초과했습니다.' },
   { code: 'rate_limit_tokens', status: 429, meaning: '분당 토큰 사용량을 초과했습니다.' },
@@ -278,6 +295,11 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'invalid_parameter_value', status: 400, meaning: '파라미터 값이 허용 범위 밖입니다.' },
   { code: 'missing_parameter', status: 400, meaning: '필수 파라미터가 빠졌습니다.' },
   { code: 'invalid_json', status: 400, meaning: '요청 본문이 올바른 JSON이 아닙니다.' },
+  {
+    code: 'invalid_multipart_form',
+    status: 400,
+    meaning: 'STT multipart 본문을 읽을 수 없습니다. 음성 파일은 file 파트 하나로, 나머지 값은 이름이 있는 텍스트 파트로 보냅니다.',
+  },
   {
     code: 'preset_not_supported',
     status: 400,
@@ -315,7 +337,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'streaming_not_supported',
     status: 400,
-    meaning: '이미지, 임베딩, 리랭크 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
+    meaning: '이미지, 임베딩, 리랭크, TTS, STT 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
   },
   {
     code: 'upstream_response_too_large',

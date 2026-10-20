@@ -79,8 +79,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 38개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(38)
+  test('에러 표는 사용자에게 도달하는 39개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(39)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -103,6 +103,7 @@ describe('LLM API 사실 사본', () => {
       invalid_parameter_value: 400,
       missing_parameter: 400,
       invalid_json: 400,
+      invalid_multipart_form: 400,
       preset_not_supported: 400,
       router_not_supported: 400,
       request_too_large: 400,
@@ -164,6 +165,8 @@ describe('LLM API 사실 사본', () => {
       'GET /v1/images/models',
       'POST /v1/embeddings',
       'POST /v1/rerank',
+      'POST /v1/audio/speech',
+      'POST /v1/audio/transcriptions',
     ])
   })
 

@@ -337,6 +337,8 @@ function breakdown(): AdminLlmUsage['breakdown'] {
       // 부여만 되고 아무도 안 쓰는 기능. 이 행이 없는 것이 아니라 0인 것이 답이다.
       { capability: 'embeddings', grantedKeys: 1, usedKeys: 0, requests: 0 },
       { capability: 'rerank', grantedKeys: 0, usedKeys: 0, requests: 0 },
+      { capability: 'speech', grantedKeys: 0, usedKeys: 0, requests: 0 },
+      { capability: 'transcriptions', grantedKeys: 0, usedKeys: 0, requests: 0 },
     ],
   }
 }

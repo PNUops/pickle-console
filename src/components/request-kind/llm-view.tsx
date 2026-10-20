@@ -81,6 +81,9 @@ const MAX_CONCURRENCY = 100
 const MAX_INT32 = 2_147_483_647
 const MAX_SAFE = Number.MAX_SAFE_INTEGER
 
+/** Features whose models the paid-model catalogue does not carry, prices included. */
+const CATALOGUE_MISSING = ['rerank', 'speech', 'transcriptions'] as const
+
 /** 값이 없는 한도를 부르는 말 — 신청·부여 양쪽에서 같은 말을 쓴다. */
 function limitText(value: number | null | undefined): string {
   return value == null ? '서비스 기본값' : value.toLocaleString('ko-KR')
@@ -513,12 +516,12 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             setChatlessAcknowledged(null)
           }}
         />
-        {/* Rerank models are missing from the catalogue above, so the picker
-            cannot show their names or prices. */}
-        {passthroughEndpoints.includes('rerank') ? (
+        {/* Rerank, speech and transcription models are missing from the
+            catalogue above, so the picker cannot show their names or prices. */}
+        {CATALOGUE_MISSING.some((name) => passthroughEndpoints.includes(name)) ? (
           <p className="text-sm text-neutral-500">
-            리랭크 모델은 위 모델 목록에 나오지 않아 가격을 여기서 볼 수 없지만 호출마다 요금이
-            붙습니다. 쓸 수 있는 유료 모델을 제한한다면 리랭크 모델 ID를 직접 적어야 합니다.
+            리랭크, TTS, STT 모델은 위 모델 목록에 나오지 않아 가격을 여기서 볼 수 없지만 호출마다
+            요금이 붙습니다. 쓸 수 있는 유료 모델을 제한한다면 해당 모델 ID를 직접 적어야 합니다.
           </p>
         ) : null}
         {!accountDefaultsTouched && hasAccountDefaults ? (

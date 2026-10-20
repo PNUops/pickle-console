@@ -124,7 +124,7 @@ export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
             </Alert>
             <p className="text-sm text-neutral-600">
               켜면 이 키의 Chat Completions 프롬프트와 응답 텍스트를 30일 동안 보관합니다.
-              Messages, 이미지, 임베딩 경로는 기록하지 않습니다. 프롬프트에 포함한 이미지나
+              Chat Completions 밖의 경로는 기록하지 않습니다. 프롬프트에 포함한 이미지나
               파일의 참조와 일부 데이터도 저장될 수 있으며, 텍스트 화면에서 보이지 않는다고
               저장에서 제외되는 것은 아닙니다.
             </p>
