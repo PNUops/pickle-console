@@ -33,7 +33,7 @@ export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
  * serves paid models only, like `/v1/messages`. Name only a model a live call
  * through this route has answered.
  */
-export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-5.6-luna'
+export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-6-luna'
 
 /**
  * The routes a key reaches only with the matching feature granted, Chat
