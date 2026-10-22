@@ -38,8 +38,13 @@ describe('사용 가이드', () => {
     // 산문에도 같은 이름이 나오므로 칩 목록 안에서만 찾는다. 설명이 아니라 목록에
     // 들어 있는지가 이 시험이 지키려는 것이다.
     const paidChips = screen.getByText('유료 모델에만').parentElement!
-    expect(within(paidChips).getByText('reasoning_effort')).toBeInTheDocument()
     expect(within(paidChips).getByText('verbosity')).toBeInTheDocument()
+    // reasoning_effort is not a paid-only field any more: self-hosted models take it
+    // too, and the guide says so under its own heading with the accepted values.
+    expect(within(paidChips).queryByText('reasoning_effort')).not.toBeInTheDocument()
+    const reasoning = screen.getByText('추론 조절').parentElement!
+    expect(reasoning.textContent ?? '').toContain('reasoning_effort로 답하기 전에 추론하는 정도를 고릅니다. 자체 서빙 모델이 받는 값은')
+    expect(reasoning.textContent ?? '').toContain('none, minimal, low, medium, high, xhigh')
     // 거부는 자체 서빙 쪽 사실이다. 유료 축에는 허용 목록이 아예 없어 목록 밖 필드가
     // 그대로 전달되므로, 제목이 축을 말하지 않으면 화면이 두 축 모두에 거부를 약속한다.
     expect(

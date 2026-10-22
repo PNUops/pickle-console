@@ -137,10 +137,20 @@ export const LLM_SELF_SERVED_PARAMS = [
  * 유료 모델에서만 보낼 수 있는 필드.
  *
  * 유료 모델을 서빙하는 공급자가 정의하는 필드이고 에이전트 도구가 모델 정보를 보고 스스로 붙인다. 자체
- * 서빙 모델에 보내면 400으로 거부되는데, 그것은 누락이 아니라 사고 모드를 요청 단위로
- * 열지 않는다는 결정의 집행 지점이다.
+ * 서빙 모델에 보내면 400으로 거부된다.
  */
-export const LLM_PAID_ONLY_PARAMS = ['reasoning_effort', 'verbosity'] as const
+export const LLM_PAID_ONLY_PARAMS = ['verbosity'] as const
+
+/**
+ * Self-hosted models accept `reasoning_effort` when the gateway opens reasoning for
+ * the upstream serving them; when it is absent the serving model's own default
+ * applies. It is listed apart from LLM_SELF_SERVED_PARAMS because acceptance is a
+ * gateway setting per serving upstream, not part of the fixed allowlist.
+ */
+export const LLM_REASONING_PARAM = 'reasoning_effort'
+
+/** Values the gateway accepts for `reasoning_effort`; anything else is a 400. */
+export const LLM_REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const
 
 /**
  * 유료 모델을 부를 때 안내에 싣는 필드. **허용 목록이 아니다.**
@@ -151,6 +161,7 @@ export const LLM_PAID_ONLY_PARAMS = ['reasoning_effort', 'verbosity'] as const
  */
 export const LLM_PAID_PARAMS = [
   ...LLM_SELF_SERVED_PARAMS,
+  LLM_REASONING_PARAM,
   ...LLM_PAID_ONLY_PARAMS,
 ] as const
 
