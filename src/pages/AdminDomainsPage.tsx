@@ -1,4 +1,5 @@
 import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
+import { useDialogResultFocus } from '../lib/use-dialog-result-focus'
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -713,8 +714,10 @@ function AdjustRenewalForm({
       }),
   })
 
+  const { contentRef, actionRef } = useDialogResultFocus(adjust.isPending)
+
   return (
-    <div className="space-y-2 rounded-lg border border-neutral-200 p-4">
+    <div ref={contentRef} className="space-y-2 rounded-lg border border-neutral-200 p-4">
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm text-neutral-600">
           새 기한
@@ -736,6 +739,7 @@ function AdjustRenewalForm({
           />
         </label>
         <Button
+          ref={actionRef}
           variant="secondary"
           size="sm"
           disabled={!date}

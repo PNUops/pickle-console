@@ -10,6 +10,7 @@ import { permissionInput, permissionProblem, permissionSaveBody, permissionSumma
 import type { WorkGroup } from '../../auth/institution-authority'
 import { useActiveResult } from '../../lib/use-active-result'
 import { Alert, Button, Checkbox, FormField, Input, Modal, Pagination, Spinner, Textarea } from '../ui'
+import { useDialogResultFocus } from '../../lib/use-dialog-result-focus'
 import { PermissionAssignmentEditor } from './PermissionAssignmentEditor'
 
 export function OperationsEditor({ initial, onClose, onSaved }: { initial: OrgOperations; onClose: () => void; onSaved: (data: OrgOperations) => Promise<void> }) {
@@ -52,6 +53,7 @@ export function OperationsEditor({ initial, onClose, onSaved }: { initial: OrgOp
     setRetained(structuredClone(members)); setBaseline(data); setMembers(draftFrom(data)); setConflict(false); clearReview()
   }, onError: handleError })
   const busy = review.isPending || save.isPending || reload.isPending
+  const { contentRef, resultHeadingRef, errorRef, actionRef } = useDialogResultFocus(busy)
   const invalid = members.some((member) => permissionProblem(member.permission, catalogue))
   const changeMember = (id: string, permission: PermissionMember['permission']) => {
     clearReview()
@@ -60,10 +62,10 @@ export function OperationsEditor({ initial, onClose, onSaved }: { initial: OrgOp
   }
   const canSave = !!reviewed && !blocked && !conflict && !invalid && (!preview?.createsStaffVacancy || sysAdmin && allowVacancy && reason.trim().length > 0 && confirmedName === initial.org.name)
   return <Modal open title="기관 권한 편집" className="max-w-5xl" dismissible={!busy} onClose={onClose}>
-    <div className="min-w-0 space-y-5">
+    <div ref={contentRef} className="min-w-0 space-y-5">
       <p className="text-sm">{initial.org.name} · 설정 버전 {baseline.revision}. 각 담당자의 업무·공간 범위와 원천 버전을 함께 확인합니다. 메일 설정은 별도 화면에서 변경합니다.</p>
       {blocked && <Alert variant="danger">{changedAuthority ? '편집 중 본인의 권한 문맥이 변경됐습니다. 초안은 확인할 수 있지만 저장할 수 없습니다. 닫고 최신 권한으로 다시 시작하세요.' : '현재 기관 위임 권한이나 명시된 권한 정보를 확인할 수 없어 저장을 차단했습니다.'}</Alert>}
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && <div ref={errorRef} tabIndex={-1}><Alert variant="danger">{error}</Alert></div>}
       {conflict && <Alert variant="warning" title="기관 설정이 다른 화면에서 변경됐습니다">이전 전체 명단을 다시 보내지 않습니다. 최신값을 불러오면 초안을 비교용으로 보관하고 최신 명단에서 다시 작성합니다.<Button variant="secondary" disabled={busy || blocked} onClick={() => reload.mutate()}>최신 현재값으로 다시 검토</Button></Alert>}
       {retained && <details className="rounded-md border p-3"><summary>충돌 전에 작성한 초안 (비교용 · 자동 적용 안 함)</summary>{retained.map((member) => <p className="mt-2 break-words text-sm" key={member.userId}>{member.name}: {permissionSummary(member.permission, catalogue)}{Object.entries(member.permission.scopes).map(([group, scope]) => <span key={group} className="block break-all">{group}: {scope.mode === 'ALL' ? '모든 공간' : scope.workspaceIds.join(', ') || '빈 지정 목록'}</span>)}</p>)}</details>}
       {!sysAdmin && <p className="text-sm">본인의 기관 권한은 변경하거나 회수할 수 없습니다. 시스템 계정의 기관 권한도 변경할 수 없습니다.</p>}
@@ -82,10 +84,10 @@ export function OperationsEditor({ initial, onClose, onSaved }: { initial: OrgOp
         permission: { mode: 'SELECTED', work: [], scopes: {}, expectedRevision: 0 }, requestMail: false, currentMailRecipient: false, inAppRecipient: false,
       }]) }}>추가: {candidate.name}</Button></div>)}<Pagination page={searchPage} totalPages={candidates.data.totalPages} onPageChange={setSearchPage} /></div>}
       <FormField label="권한 변경 사유"><Textarea disabled={blocked || busy} value={reason} maxLength={2000} onChange={(event) => { clearReview(); setReason(event.target.value) }} /></FormField>
-      <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={onClose}>취소</Button><Button variant="secondary" loading={review.isPending} disabled={blocked || busy || conflict || invalid} onClick={() => {
+      <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={onClose}>취소</Button><Button ref={actionRef} variant="secondary" loading={review.isPending} disabled={blocked || busy || conflict || invalid} onClick={() => {
         try { review.mutate(permissionSaveBody(baseline, members, reason)) } catch (failure) { handleError(failure) }
       }}>권한 변경안 미리보기</Button></div>
-      {preview && <section className="min-w-0 space-y-3 rounded-md border p-4"><h3 className="font-semibold">저장 전 권한 변경 확인</h3>
+      {preview && <section className="min-w-0 space-y-3 rounded-md border p-4"><h3 ref={resultHeadingRef} tabIndex={-1} className="font-semibold">저장 전 권한 변경 확인</h3>
         <p className="text-sm">활성 FULL 담당자 {preview.before.activeAdminCount}명 → {preview.after.activeAdminCount}명 · 실제 신청 결정 담당자 {preview.before.activeApproverCount}명 → {preview.after.activeApproverCount}명</p>
         {preview.warnings.map((warning) => <Alert key={warning} variant="warning">{warning}</Alert>)}
         {[{ title: '현재 저장된 권한', value: preview.before }, { title: '저장할 권한', value: preview.after }].map(({ title, value }) => <details open key={title}><summary>{title}</summary>{value.members.map((member) => <div key={member.userId} className="break-words py-2 text-sm"><p>{member.name}: {permissionSummary(member.permission, catalogue)}</p>
