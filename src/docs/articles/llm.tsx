@@ -17,6 +17,8 @@ import {
   LLM_MESSAGES_EXAMPLE_MODEL,
   LLM_PAID_ONLY_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
+  LLM_REASONING_EFFORTS,
+  LLM_REASONING_PARAM,
   LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
   LLM_RERANK_EXAMPLE_MODEL,
@@ -388,7 +390,7 @@ export const llmArticles: GuideArticle[] = [
           <p>위 설정은 자체 서빙 모델용입니다. 유료 모델을 연결할 때는 <code>models</code> 안의 모델 ID와 마지막 <code>model</code> 값의 <code>pickle-general</code>을 사용할 유료 모델 ID로 바꾸고, <code>limit</code>도 해당 모델의 컨텍스트와 출력 범위에 맞춥니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">limit</code>을 생략하면 모델 정보에 컨텍스트가 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">0</code>으로 표시됩니다. 대화가 유지되지 않는다는 뜻은 아닙니다. 이전 대화는 매 요청에 함께 전송되지만, 도구가 창 크기를 몰라 남은 양과 대화를 줄일 시점을 판단하지 못합니다. 대화가 길어지면 경고 없이 한도를 넘어 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_rejected</code>로 실패할 수 있습니다.</p>
           <p>자체 서빙 모델의 입출력 합계 한도는 65,536토큰입니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">output</code>의 8,192는 도구가 답변을 위해 남겨 두는 예제 값이며 필요에 맞게 정합니다. 플랫폼이 모든 응답을 8,192토큰으로 제한한다는 뜻은 아닙니다.</p>
-          <p>opencode에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">pickle/{LLM_DEFAULT_MODEL}</code>을 선택하고 짧은 질문에 답변이 돌아오는지 확인합니다. 자체 서빙 모델에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">reasoning_effort</code>나 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 붙이는 설정은 꺼야 합니다.</p>
+          <p>opencode에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">pickle/{LLM_DEFAULT_MODEL}</code>을 선택하고 짧은 질문에 답변이 돌아오는지 확인합니다. 자체 서빙 모델에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 붙이는 설정은 꺼야 합니다.</p>
         </>,
       },
       {
@@ -550,7 +552,10 @@ export const llmArticles: GuideArticle[] = [
           <div className="space-y-2"><h3 className="font-medium">두 종류에 공통</h3><ul className="flex list-none flex-wrap gap-1.5 p-0">{LLM_SELF_SERVED_PARAMS.map((param) => <li key={param} className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-xs text-neutral-700">{param}</li>)}</ul></div>
           <div className="space-y-2"><h3 className="font-medium">유료 모델에만</h3><ul className="flex list-none flex-wrap gap-1.5 p-0">{LLM_PAID_ONLY_PARAMS.map((param) => <li key={param} className="rounded-md bg-neutral-100 px-2 py-1 font-mono text-xs text-neutral-700">{param}</li>)}</ul></div>
           <p>채팅 요청 본문은 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. {LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 요청은 동시에 처리하는 수가 정해져 있어, 몰리면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>(429)로 거절됩니다. base64로 넣는 파일과 이미지는 가능하면 URL로 보냅니다.</p>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">reasoning_effort</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 자체 서빙 모델에 보내면 거절됩니다. 사용하는 도구가 필드를 자동으로 붙인다면 자체 서빙 모델을 호출할 때 해당 설정을 끕니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 자체 서빙 모델에 보내면 거절됩니다. 사용하는 도구가 필드를 자동으로 붙인다면 자체 서빙 모델을 호출할 때 해당 설정을 끕니다.</p>
+          <h3 className="font-medium">추론 조절</h3>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_REASONING_PARAM}</code>로 답하기 전에 추론하는 정도를 고릅니다. 자체 서빙 모델이 받는 값은 {LLM_REASONING_EFFORTS.map((effort, i) => <span key={effort}>{i > 0 ? ', ' : ''}<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{effort}</code></span>)}이고 그 밖의 값은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">invalid_parameter_value</code>로 거절됩니다. 유료 모델에는 값을 그대로 전달합니다. 보내지 않으면 모델의 기본값을 따릅니다.</p>
+          <p>추론에 쓴 토큰은 출력 토큰에 포함되어 일일 토큰 한도에서 차감됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">max_completion_tokens</code>는 추론과 답을 합친 상한이라, 작게 주면 추론만 하다 빈 답으로 끝날 수 있습니다. 짧은 답만 필요하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">none</code>으로 추론을 끕니다. 추론이 긴 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code>을 켜서 받습니다.</p>
           <Alert variant="info" title="자체 서빙 모델은 목록에 없는 필드를 거부합니다">
             모르는 필드를 무시하고 전달하지 않고 요청 전체를 HTTP 400으로 되돌립니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>이며 메시지에 해당 필드가 나옵니다. 유료 모델은 공급자가 받는 요청을 그대로 보내므로 위 목록이 거부의 기준이 아닙니다.
           </Alert>
