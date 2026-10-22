@@ -10,6 +10,7 @@ import type { InstitutionAuthority, InstitutionPermission } from '../auth/instit
 import { hasWork } from '../auth/institution-authority'
 import { AdminScopeContext, type AdminScopeValue } from '../lib/admin-scope-context'
 import { AdminOrgOperationsPage } from './AdminOrgOperationsPage'
+import { Modal } from '../components/ui'
 import { ACCESS_TOKENS, refreshSuccessHandler, sysAdminUser } from '../test/msw/handlers/auth'
 import { adminUserStore } from '../test/msw/handlers/users'
 import { evaluateOrgOperations, orgMailPreviews, orgMailSaves, orgOperationPermissions, orgOperationPreviews, orgOperationRevisions, orgOperationSaves } from '../test/msw/handlers/org-operations'
@@ -448,5 +449,154 @@ describe('Explicit institution authority and independent mail settings', () => {
     expect(screen.queryByText('표시 결과 기준: 일반 자격 (종류·공간 미지정)')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '일반 자격 조회로 돌아가기' }))
     await screen.findByText('표시 결과 기준: 일반 자격 (종류·공간 미지정)')
+  })
+})
+
+const previewEditors = [
+  { name: 'permission', trigger: '기관 권한 편집', button: '권한 변경안 미리보기', heading: '저장 전 권한 변경 확인', path: '/operations/preview' },
+  { name: 'mail', trigger: '신청 메일 수신 설정', button: '수신 변경안 미리보기', heading: '저장 전 수신 설정 확인', path: '/operations/request-mail/preview' },
+] as const
+
+describe.each(previewEditors)('$name preview focus after asynchronous completion', (editor) => {
+  function deferredResponse(status = 200) {
+    let complete!: () => void
+    let calls = 0
+    const pending = new Promise<void>((resolve) => { complete = resolve })
+    const message = '미리보기 검토를 완료하지 못했습니다.'
+    server.use(http.post(`*/api/v1/admin/orgs/:orgId${editor.path}`, async () => {
+      calls += 1
+      await pending
+      const operations = evaluateOrgOperations(uuid(1))!
+      return status === 200
+        ? HttpResponse.json({ before: operations, after: operations, warnings: [], createsStaffVacancy: false })
+        : HttpResponse.json({ status, code: status === 409 ? 'CONFLICT' : 'UPSTREAM_ERROR', detail: message }, { status })
+    }))
+    return { complete, message, calls: () => calls }
+  }
+
+  async function openAndPreview(response: ReturnType<typeof deferredResponse>) {
+    setup()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: editor.trigger }))
+    const dialog = screen.getByRole('dialog', { name: editor.trigger })
+    if (editor.name === 'mail') await user.selectOptions(within(dialog).getByLabelText('신청 이메일 수신 방식'), 'ALL_APPROVERS')
+    const button = within(dialog).getByRole('button', { name: editor.button })
+    await waitFor(() => expect(button).toBeEnabled())
+    button.focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(response.calls()).toBe(1))
+    expect(button).toBeDisabled()
+    return { user, dialog, button }
+  }
+
+  function focusBody() {
+    // JSDOM keeps disabled buttons focused, so model the browser's blur explicitly.
+    const previous = document.body.getAttribute('tabindex')
+    document.body.tabIndex = -1
+    document.body.focus()
+    if (previous == null) document.body.removeAttribute('tabindex')
+    else document.body.setAttribute('tabindex', previous)
+    expect(document.body).toHaveFocus()
+  }
+
+  test.each(['body', 'outside'] as const)('restores escaped %s focus to the committed preview heading', async (destination) => {
+    const response = deferredResponse()
+    const { button, dialog } = await openAndPreview(response)
+    // Browsers can blur a focused button when the pending state disables it.
+    button.blur()
+    focusBody()
+    if (destination === 'outside') screen.getByRole('heading', { name: '기관 담당자 명단' }).setAttribute('tabindex', '-1')
+    const escaped = destination === 'body' ? document.body : screen.getByRole('heading', { name: '기관 담당자 명단' })
+    escaped.focus()
+    expect(escaped).toHaveFocus()
+    response.complete()
+    const heading = await within(dialog).findByRole('heading', { name: editor.heading })
+    await waitFor(() => expect(heading).toHaveFocus())
+    expect(heading).toHaveAttribute('tabindex', '-1')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(orgOperationSaves).toHaveLength(0)
+    expect(orgMailSaves).toHaveLength(0)
+  })
+
+  test('preserves valid focus inside the modal after the preview settles', async () => {
+    const response = deferredResponse()
+    const { dialog } = await openAndPreview(response)
+    dialog.focus()
+    expect(dialog).toHaveFocus()
+    response.complete()
+    await within(dialog).findByRole('heading', { name: editor.heading })
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: editor.button })).toBeEnabled())
+    expect(dialog).toHaveFocus()
+  })
+
+  test('does not take focus from another modal while its preview settles', async () => {
+    const response = deferredResponse()
+    const { dialog } = await openAndPreview(response)
+    render(<Modal open title="별도 확인" onClose={vi.fn()}><button>별도 확인 작업</button></Modal>)
+    const otherAction = within(screen.getByRole('dialog', { name: '별도 확인' })).getByRole('button', { name: '별도 확인 작업' })
+    otherAction.focus()
+    expect(otherAction).toHaveFocus()
+    response.complete()
+    await within(dialog).findByRole('heading', { name: editor.heading })
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: editor.button })).toBeEnabled())
+    expect(otherAction).toHaveFocus()
+  })
+
+  test('restores escaped focus after a conflicted save reloads the latest comparison baseline', async () => {
+    const response = deferredResponse()
+    const { user, dialog } = await openAndPreview(response)
+    response.complete()
+    await within(dialog).findByRole('heading', { name: editor.heading })
+    let completeSave!: () => void
+    let saveCalls = 0
+    const savePending = new Promise<void>((resolve) => { completeSave = resolve })
+    server.use(http.put(`*/api/v1/admin/orgs/:orgId${editor.path.replace('/preview', '')}`, async () => {
+      saveCalls += 1
+      await savePending
+      return HttpResponse.json({ status: 409, code: 'ORG_OPERATIONS_CONFLICT', detail: '기관 설정이 변경됐습니다.' }, { status: 409 })
+    }))
+    await user.click(within(dialog).getByRole('button', { name: /^검토한 .* 저장$/ }))
+    await waitFor(() => expect(saveCalls).toBe(1))
+    focusBody()
+    completeSave()
+    await within(dialog).findByText('기관 설정이 변경됐습니다.')
+    expect(within(dialog).getByRole('button', { name: editor.button })).toBeDisabled()
+    let completeReload!: () => void
+    let reloadCalls = 0
+    const reloadPending = new Promise<void>((resolve) => { completeReload = resolve })
+    server.use(http.get('*/api/v1/admin/orgs/:orgId/operations', async () => {
+      reloadCalls += 1
+      await reloadPending
+      return HttpResponse.json({ ...evaluateOrgOperations(uuid(1))!, revision: 1, mailMode: 'ALL_APPROVERS' })
+    }))
+    await user.click(within(dialog).getByRole('button', { name: /최신 (현재값으로 다시 검토|수신 설정 다시 조회)/ }))
+    await waitFor(() => expect(reloadCalls).toBeGreaterThan(0))
+    focusBody()
+    completeReload()
+    await within(dialog).findByText(/(충돌 전에 작성한 초안|이전에 선택한 수신자)/)
+    const previewButton = within(dialog).getByRole('button', { name: editor.button })
+    await waitFor(() => expect(previewButton).toHaveFocus())
+    expect(previewButton).toBeEnabled()
+    expect(within(dialog).queryByRole('heading', { name: editor.heading })).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: /^검토한 .* 저장$/ })).not.toBeInTheDocument()
+    expect(orgOperationSaves).toHaveLength(0)
+    expect(orgMailSaves).toHaveLength(0)
+    expect(saveCalls).toBe(1)
+  })
+
+  test.each([409, 503])('restores escaped focus to the error summary after status %s without saving', async (status) => {
+    const response = deferredResponse(status)
+    const { button, dialog } = await openAndPreview(response)
+    button.blur()
+    focusBody()
+    response.complete()
+    const message = await within(dialog).findByText(response.message)
+    await waitFor(() => expect(document.activeElement).toContainElement(message))
+    expect(document.activeElement).not.toBe(dialog)
+    expect(document.activeElement).toHaveAttribute('tabindex', '-1')
+    expect(within(dialog).queryByRole('heading', { name: editor.heading })).not.toBeInTheDocument()
+    expect(button).toHaveProperty('disabled', status === 409)
+    expect(orgOperationSaves).toHaveLength(0)
+    expect(orgMailSaves).toHaveLength(0)
   })
 })

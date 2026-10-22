@@ -388,3 +388,109 @@ describe('institution resource authority projections', () => {
     expect(screen.queryByText('아직 연결된 도메인이 없습니다')).not.toBeInTheDocument()
   })
 })
+
+
+describe('domain renewal asynchronous focus', () => {
+  test.each([
+    { status: 200, focus: 'body' }, { status: 503, focus: 'body' },
+    { status: 200, focus: 'inside' }, { status: 503, focus: 'inside' },
+  ])('settles status $status with $focus focus without changing command authority', async ({ status, focus }) => {
+    const row = domain()
+    domainHandlers(row)
+    let complete!: () => void
+    const pending = new Promise<void>((resolve) => { complete = resolve })
+    const sent: unknown[] = []
+    let records = 0
+    server.use(http.patch('*/api/v1/admin/domains/:domainId/renewal', async ({ request }) => {
+      sent.push(await request.json())
+      await pending
+      return status === 200 ? HttpResponse.json(row)
+        : HttpResponse.json({ status, code: 'UPSTREAM_ERROR', detail: '기한 조정을 완료하지 못했습니다.' }, { status })
+    }), http.get('*/api/v1/admin/domains/:domainId/records', () => { records++; return HttpResponse.json([]) }))
+    renderPage(selected(['domain.renewal']), `/admin/domains?domainId=${row.id}`)
+    const user = userEvent.setup()
+    const drawer = await screen.findByRole('dialog', { name: '도메인 상세' })
+    const action = await within(drawer).findByRole('button', { name: '기한 조정' })
+    action.focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(sent).toHaveLength(1))
+    expect(action).toBeDisabled()
+    const reason = within(drawer).getByLabelText('사유 (감사 기록에 남습니다)')
+    if (focus === 'body') {
+      // Model the browser blur that JSDOM does not apply to disabled buttons.
+      const previous = document.body.getAttribute('tabindex')
+      document.body.tabIndex = -1
+      document.body.focus()
+      if (previous == null) document.body.removeAttribute('tabindex')
+      else document.body.setAttribute('tabindex', previous)
+      expect(document.body).toHaveFocus()
+    } else {
+      reason.focus()
+      expect(reason).toHaveFocus()
+    }
+    complete()
+    await within(drawer).findByText(status === 200 ? /사용 기한을 옮겼습니다/ : '기한 조정을 완료하지 못했습니다.')
+    await waitFor(() => expect(action).toBeEnabled())
+    expect(focus === 'body' ? action : reason).toHaveFocus()
+    expect(sent).toEqual([{ renewDueAt: '2027-03-11T14:59:59.000Z' }])
+    expect(records).toBe(0)
+    expect(within(drawer).queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
+  })
+})
+
+
+describe('pending upper confirmation keeps renewal focus ownership', () => {
+  test.each([200, 503])('does not refocus the lower drawer when renewal status %s settles on BODY', async (status) => {
+    const row = domain({ allowedWorkIds: ['domain.renewal', 'domain.release'] })
+    domainHandlers(row)
+    let finishRenewal!: () => void
+    let finishRelease!: () => void
+    const renewalPending = new Promise<void>((resolve) => { finishRenewal = resolve })
+    const releasePending = new Promise<void>((resolve) => { finishRelease = resolve })
+    let renewals = 0, releases = 0
+    server.use(http.patch('*/api/v1/admin/domains/:domainId/renewal', async () => {
+      renewals++
+      await renewalPending
+      return status === 200 ? HttpResponse.json(row)
+        : HttpResponse.json({ status, code: 'UPSTREAM_ERROR', detail: '기한 조정을 완료하지 못했습니다.' }, { status })
+    }), http.post('*/api/v1/admin/domains/:domainId/force-release', async () => {
+      releases++
+      await releasePending
+      return HttpResponse.json({ status: 503, code: 'UPSTREAM_ERROR', detail: '시험 해제 요청을 완료하지 않았습니다.' }, { status: 503 })
+    }))
+    renderPage(selected(['domain.renewal', 'domain.release']), `/admin/domains?domainId=${row.id}`)
+    const user = userEvent.setup()
+    const drawer = await screen.findByRole('dialog', { name: '도메인 상세' })
+    const renewal = await within(drawer).findByRole('button', { name: '기한 조정' })
+    await user.click(renewal)
+    await waitFor(() => expect(renewals).toBe(1))
+    expect(renewal).toBeDisabled()
+    await user.click(within(drawer).getByRole('button', { name: '강제 해제' }))
+    const confirm = await screen.findByRole('dialog', { name: '도메인 강제 해제' })
+    await user.type(within(confirm).getByRole('textbox'), row.fqdn)
+    const release = within(confirm).getByRole('button', { name: '강제 해제' })
+    await user.click(release)
+    await waitFor(() => expect(releases).toBe(1))
+    expect(release).toBeDisabled()
+    expect(screen.getAllByRole('dialog').at(-1)).toBe(confirm)
+    // Model the pending upper control blurring to BODY in a real browser.
+    const previous = document.body.getAttribute('tabindex')
+    document.body.tabIndex = -1
+    document.body.focus()
+    if (previous == null) document.body.removeAttribute('tabindex')
+    else document.body.setAttribute('tabindex', previous)
+    expect(document.body).toHaveFocus()
+    try {
+      finishRenewal()
+      await within(drawer).findByText(status === 200 ? /사용 기한을 옮겼습니다/ : '기한 조정을 완료하지 못했습니다.')
+      await waitFor(() => expect(renewal).toBeEnabled())
+      expect(document.body).toHaveFocus()
+      expect(release).toBeDisabled()
+      expect(confirm).toHaveAttribute('aria-modal', 'true')
+      expect(releases).toBe(1)
+    } finally {
+      finishRelease()
+      await within(confirm).findByText('시험 해제 요청을 완료하지 않았습니다.')
+    }
+  })
+})

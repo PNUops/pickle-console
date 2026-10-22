@@ -7,6 +7,7 @@ import { SYS_ADMIN } from '../../auth/institution-authority'
 import { orgRecipientReason, requestMailTargetLabel } from '../../lib/org-operations'
 import { useActiveResult } from '../../lib/use-active-result'
 import { Alert, Button, Checkbox, FormField, Modal, Select, Textarea } from '../ui'
+import { useDialogResultFocus } from '../../lib/use-dialog-result-focus'
 import { RequestMailTargetPicker } from './RequestMailTargetPicker'
 
 export function RequestMailEditor({ initial, onClose, onSaved }: { initial: OrgOperations; onClose: () => void; onSaved: (value: OrgOperations) => Promise<void> }) {
@@ -42,12 +43,13 @@ export function RequestMailEditor({ initial, onClose, onSaved }: { initial: OrgO
     setRetained([...recipients]); setBaseline(value); setRecipients(value.members.filter((member) => member.requestMail === true).map((member) => member.userId)); setMode(value.mailMode ?? ''); setConflict(false); clearReview()
   }, onError: handleError })
   const busy = review.isPending || save.isPending || reload.isPending
+  const { contentRef, resultHeadingRef, errorRef, actionRef } = useDialogResultFocus(busy)
   const requiresFresh = baseline.requesterId != null
   return <Modal open title="신청 메일 수신 설정" className="max-w-2xl" dismissible={!busy} onClose={onClose}>
-    <div className="min-w-0 space-y-5">
+    <div ref={contentRef} className="min-w-0 space-y-5">
       <p className="text-sm">{initial.org.name} · 설정 버전 {baseline.revision}. 이 저장은 기관 권한·업무·공간 범위를 변경하지 않습니다.</p>
       {blocked && <Alert variant="danger">편집 중 권한 문맥이 바뀌었거나 수신 설정 권한이 없어졌습니다. 초안은 확인할 수 있지만 저장할 수 없습니다. 닫고 최신 권한으로 다시 시작하세요.</Alert>}
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && <div ref={errorRef} tabIndex={-1}><Alert variant="danger">{error}</Alert></div>}
       {(conflict || requiresFresh || revisionChanged) && <Alert variant="warning">최신 수신 설정을 다시 불러오고 새 기준에서 검토하세요. 이전 변경안은 자동으로 덮어쓰지 않습니다.<Button variant="secondary" disabled={busy || blocked} onClick={() => reload.mutate()}>최신 수신 설정 다시 조회</Button></Alert>}
       {retained && <details><summary>이전에 선택한 수신자 (비교용)</summary><p className="break-all text-sm">{retained.map((id) => initial.members.find((member) => member.userId === id)?.name ?? id).join(', ') || '지정 없음'}</p></details>}
       <FormField label="신청 이메일 수신 방식"><Select disabled={busy || blocked} value={mode} onChange={(event) => { clearReview(); setMode(event.target.value as 'ALL_APPROVERS' | 'DESIGNATED') }}><option value="" disabled>새 수신 방식을 선택하세요</option><option value="ALL_APPROVERS">실제 신청 결정 담당자 전체</option><option value="DESIGNATED">지정한 수신자만 (0명 허용)</option></Select></FormField>
@@ -64,8 +66,8 @@ export function RequestMailEditor({ initial, onClose, onSaved }: { initial: OrgO
         onChange={(event) => { clearReview(); setRecipients((rows) => event.target.checked ? [...rows, member.userId] : rows.filter((id) => id !== member.userId)) }} />)}</div>
       <p className="text-xs">지정 0명도 저장할 수 있으며 대체 수신자를 자동 선정하지 않습니다. 변경 후 접수되는 신청에 적용되고 이미 큐에 등록한 수신자·주소·본문은 바뀌지 않습니다.</p>
       <FormField label="수신 설정 변경 사유"><Textarea value={reason} disabled={busy || blocked} maxLength={2000} onChange={(event) => { clearReview(); setReason(event.target.value) }} /></FormField>
-      <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={onClose}>취소</Button><Button variant="secondary" loading={review.isPending} disabled={busy || blocked || conflict || requiresFresh || revisionChanged || !eligibility.data || eligibility.isError || !mode} onClick={() => mode && review.mutate({ body: { expectedRevision: baseline.revision, mailMode: mode, recipientIds: [...new Set(recipients)], reason: reason.trim() || null }, target })}>수신 변경안 미리보기</Button></div>
-      {preview && <section className="space-y-3 rounded-md border p-4"><h3 className="font-semibold">저장 전 수신 설정 확인</h3><p className="text-sm">현재 이메일 수신자 {preview.before.currentMailRecipientCount ?? '조회 불가'}명 → {preview.after.currentMailRecipientCount ?? '조회 불가'}명</p>
+      <div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={onClose}>취소</Button><Button ref={actionRef} variant="secondary" loading={review.isPending} disabled={busy || blocked || conflict || requiresFresh || revisionChanged || !eligibility.data || eligibility.isError || !mode} onClick={() => mode && review.mutate({ body: { expectedRevision: baseline.revision, mailMode: mode, recipientIds: [...new Set(recipients)], reason: reason.trim() || null }, target })}>수신 변경안 미리보기</Button></div>
+      {preview && <section className="space-y-3 rounded-md border p-4"><h3 ref={resultHeadingRef} tabIndex={-1} className="font-semibold">저장 전 수신 설정 확인</h3><p className="text-sm">현재 이메일 수신자 {preview.before.currentMailRecipientCount ?? '조회 불가'}명 → {preview.after.currentMailRecipientCount ?? '조회 불가'}명</p>
         <p className="break-all text-sm">미리보기 대상: {requestMailTargetLabel(preview.after.selectionContext)}</p>
         {preview.warnings.map((warning) => <Alert key={warning} variant="warning">{warning}</Alert>)}
         {preview.after.members.map((member) => <p className="text-sm" key={member.userId}>{member.name}: {member.currentMailRecipient === true ? '수신 가능' : '제외'} · {orgRecipientReason(member.currentMailRecipient ? member.selectionReason : member.exclusionReason)}</p>)}
