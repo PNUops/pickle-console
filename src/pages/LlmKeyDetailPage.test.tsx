@@ -30,21 +30,21 @@ describe('LLM API 키 상세', () => {
     expect(screen.queryByText(/분당/)).not.toBeInTheDocument()
     expect(screen.queryByText(/동시 요청/)).not.toBeInTheDocument()
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
-    expect(screen.getByText('500,000토큰')).toBeInTheDocument()
+    expect(screen.getByText('500K (50만 토큰)')).toBeInTheDocument()
   })
 
-  test('says a missing daily limit is none and a zero limit is zero', async () => {
+  test('distinguishes unlimited daily tokens from a blocked token axis', async () => {
     server.use(refreshSuccessHandler('access-user'))
     const pending = renderApp(`/console/llm-keys/${PENDING_KEY}`)
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
-    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^없음$/)
+    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^무제한$/)
     pending.unmount()
 
     // Zero is a value: the gauge on the usage tab says what it blocks.
     renderApp(`/console/llm-keys/${MEMBER_KEY}`)
     await screen.findByRole('heading', { name: 'study-shared-key' })
-    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^0토큰$/)
+    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^0 토큰 \(토큰 사용 불가\)$/)
   })
 
   // 울타리가 걸린 키를 "제한 없음"으로 보여 주면 소유자는 왜 거절당하는지

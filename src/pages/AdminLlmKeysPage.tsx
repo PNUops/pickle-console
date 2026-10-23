@@ -1,3 +1,4 @@
+import { TokenLimit } from '../components/TokenValue'
 import { requestReaderKey } from '../api/request-review'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -266,9 +267,9 @@ function AdminLlmKeysPageContent() {
                       )}
                     </TD>
                     <TD className="whitespace-nowrap text-xs">{projectionAvailable(key, 'metadataVisible') || projectionAvailable(key, 'observationVisible') ? <>
-                      RPM {limitText(key.rpm)} · TPM {limitText(key.tpm)}
+                      RPM {limitText(key.rpm)} · TPM <TokenLimit value={key.tpm} decision={false} />
                       <span className="block text-foreground-muted">
-                        일일 {limitText(key.dailyTokens)} · 동시 {limitText(key.concurrency)}
+                        일일 <TokenLimit value={key.dailyTokens} daily decision={false} /> · 동시 {limitText(key.concurrency)}
                       </span></> : '제공되지 않음'}
                     </TD>
                     <TD>{projectionAvailable(key, 'financeVisible') ? <KeyCreditObservation llmKey={key} /> : '제공되지 않음'}</TD>

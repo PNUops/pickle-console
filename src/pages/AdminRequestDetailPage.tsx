@@ -1,3 +1,4 @@
+import { TokenLimit } from '../components/TokenValue'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -435,7 +436,7 @@ function DecisionSection({
       <CardContent>
         {mode === 'approve' ? (
           <form onSubmit={submitApprove} className="space-y-4" noValidate>
-            <fieldset disabled={approve.isPending || reject.isPending} className="space-y-4">{form.fields(fieldErrors)}</fieldset>
+            <fieldset disabled={approve.isPending || reject.isPending} className="min-w-0 space-y-4">{form.fields(fieldErrors)}</fieldset>
             <div className="flex justify-end">
               <Button type="submit">승인하기</Button>
             </div>
@@ -762,8 +763,8 @@ function LlmKeyBriefCard({ title, keys }: { title: string; keys: LlmKeyBrief[] }
                   <LlmKeyStatusBadge status={effectiveLlmKeyStatus(key.status, key.expiresAt)} />
                 </div>
                 <p className="mt-1 text-xs text-neutral-500">
-                  {key.workspaceName} · RPM {limitText(key.rpm)} · TPM {limitText(key.tpm)} · 일일{' '}
-                  {limitText(key.dailyTokens)} · 동시 {limitText(key.concurrency)} · 금액{' '}
+                  {key.workspaceName} · RPM {key.rpm == null ? '제공되지 않음' : limitText(key.rpm)} · TPM <TokenLimit value={key.tpm ?? undefined} /> · 일일{' '}
+                  {<TokenLimit value={key.dailyTokens ?? undefined} daily />} · 동시 {key.concurrency == null ? '제공되지 않음' : limitText(key.concurrency)} · 금액{' '}
                   {key.creditLimit == null ? '제공되지 않음' : key.creditLimit === 0 ? '미부여' : `$${key.creditLimit.toLocaleString('ko-KR')}`}
                 </p>
               </li>

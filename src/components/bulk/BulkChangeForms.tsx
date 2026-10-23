@@ -138,6 +138,7 @@ export function LimitsForm({
               <LimitField
                 key={field}
                 label={LIMIT_FIELD_LABELS[field]}
+                tokens={field === 'tpm' || field === 'dailyTokens'}
                 min={field === 'dailyTokens' ? 0 : 1}
                 value={draft[field]}
                 onChange={(value) => set(field, value)}

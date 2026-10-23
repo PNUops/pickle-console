@@ -6,6 +6,7 @@ import { adminPaths } from '../../lib/paths'
 import { requestRecipientStatusLabel } from '../../lib/request-recipient-status'
 import { approvalTargetCounts, commonApprovalComparisons, type ApprovalComparison, type ApprovalTargetFacts } from './approval-confirmation'
 import { Alert, DataTable, TBody, TD, TH, THead, TR } from '../ui'
+import { TokenLimit, TokenValue } from '../TokenValue'
 
 export function ApprovalConfirmation({ request, approval, comparisons = [], targetFacts = [], targetFactsKnown = false, workspaceReadable = false, nodeName, children }: {
   request: RequestDetail
@@ -48,8 +49,8 @@ export function ApprovalConfirmation({ request, approval, comparisons = [], targ
       <THead className="hidden sm:table-header-group"><TR><TH>항목</TH><TH>신청 희망값</TH><TH>승인 부여값</TH></TR></THead>
       <TBody className="block sm:table-row-group">{rows.map((row) => <TR key={row.label} className="block sm:table-row">
         <TD className="block font-medium sm:table-cell">{row.label}</TD>
-        <TD className="block pt-0 sm:table-cell sm:pt-[var(--density-row-block-padding)]"><span className="mb-1 block text-xs text-foreground-muted sm:hidden">신청 희망값</span>{row.requested}</TD>
-        <TD className="block pt-0 sm:table-cell sm:pt-[var(--density-row-block-padding)]"><span className="mb-1 block text-xs text-foreground-muted sm:hidden">승인 부여값</span>{row.granted}</TD>
+        <TD className="block pt-0 sm:table-cell sm:pt-[var(--density-row-block-padding)]"><span className="mb-1 block text-xs text-foreground-muted sm:hidden">신청 희망값</span>{row.requestedTokens != null ? <TokenValue value={row.requestedTokens} decision /> : row.requested}</TD>
+        <TD className="block pt-0 sm:table-cell sm:pt-[var(--density-row-block-padding)]"><span className="mb-1 block text-xs text-foreground-muted sm:hidden">승인 부여값</span>{row.grantedTokens != null ? <TokenLimit value={row.grantedTokens} daily={row.dailyTokenLimit} /> : row.granted}</TD>
       </TR>)}</TBody>
     </DataTable>
     {request.periodName && <p className="text-xs text-foreground-muted">기간 이름: {request.periodName}. 신청 종료일은 제출 당시 저장된 값입니다.</p>}

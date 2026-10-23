@@ -1,3 +1,4 @@
+import { formatTokenDecision } from './token-presentation'
 import type {
   AdminBulkAccessAction,
   AdminBulkChangeKind,
@@ -251,7 +252,7 @@ type LimitsBody = NonNullable<AdminBulkChangeSpec['llmKeyLimits']>
 function integerOrDefault(raw: string, min: 0 | 1): number | null {
   if (raw.trim() === '') return null
   const value = Number(raw)
-  if (!Number.isInteger(value) || value < min) return Number.NaN
+  if (!Number.isSafeInteger(value) || value < min) return Number.NaN
   return value
 }
 
@@ -579,6 +580,7 @@ export function formatDiffValue(
     return value.length === 0 ? '없음' : value.map(String).join(', ')
   }
   if (typeof value === 'number') {
+    if (field === 'tpm' || field === 'dailyTokens') return formatTokenDecision(value)
     if (COUNT_FIELDS.has(field)) return `${value.toLocaleString('ko-KR')}개`
     return field === 'creditLimit' ? `$${value.toLocaleString('ko-KR')}` : value.toLocaleString('ko-KR')
   }

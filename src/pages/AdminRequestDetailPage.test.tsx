@@ -31,6 +31,23 @@ function renderDetailAsSysAdmin(requestId: string) {
   renderApp(`/admin/requests/${requestId}`)
 }
 
+test.each([null, 0, 5000001])('keeps approved daily tokens in the request body and returned decision (%s)', async (daily) => {
+  const user = userEvent.setup()
+  renderDetailAsSysAdmin(uuid(206))
+  await screen.findByRole('button', { name: '승인하기' })
+  await user.type(screen.getByLabelText('부여 분당 토큰 수'), '12500')
+  if (daily !== null) await user.type(screen.getByLabelText('부여 일일 토큰 수'), String(daily))
+  await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+  await user.click(screen.getByRole('button', { name: '승인하기' }))
+  const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+  await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+  await screen.findByRole('heading', { name: '검토 결과' })
+  expect(approveBodies.at(-1)?.body.llmKey).toMatchObject({ grantedDailyTokens: daily, grantedTpm: 12500 })
+  const field = screen.getByText('부여 일일 토큰 수').closest('div')!
+  expect(field).toHaveTextContent(daily === null ? '무제한' : daily === 0 ? '0 토큰 (토큰 사용 불가)' : '5M (5백만 1 토큰)')
+  expect(screen.getByText('부여 분당 토큰 수').closest('div')).toHaveTextContent('12.5K (1만 2500 토큰)')
+})
+
 describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
   test('신청 내용과 참고 패널 5종, 안내문을 함께 보여준다', async () => {
     renderDetail(uuid(201))
@@ -113,6 +130,10 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     expect(within(panel).getByText('김철수')).toBeInTheDocument()
     expect(within(panel).getByText('active-admin-key')).toBeInTheDocument()
     expect(within(panel).getByText('pending-admin-key')).toBeInTheDocument()
+    const pendingKey = within(panel).getByText('pending-admin-key').closest('li')!
+    expect(within(pendingKey).queryByText('무제한')).not.toBeInTheDocument()
+    expect(within(pendingKey).queryByText('서비스 기본값')).not.toBeInTheDocument()
+    expect(pendingKey).toHaveTextContent('제공되지 않음')
     expect(within(panel).getByRole('link', { name: 'previous-chatbot-key' })).toHaveAttribute(
       'href',
       `/admin/requests/${uuid(90)}?org=${uuid(1)}`,

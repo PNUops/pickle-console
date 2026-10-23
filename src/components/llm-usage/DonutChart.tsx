@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import { CHART_CATEGORICAL, CHART_RESIDUAL } from '../metrics/chart-colors'
 
 /**
@@ -24,6 +24,7 @@ export interface DonutChartProps {
   slices: DonutSlice[]
   /** 값의 표기(요청 수·토큰 수 등). */
   format: (value: number) => string
+  renderValue?: (value: number) => ReactNode
   size?: number
 }
 
@@ -31,7 +32,7 @@ export interface DonutChartProps {
 const GAP_DEGREES = 1.5
 const STROKE = 22
 
-export function DonutChart({ title, slices, format, size = 176 }: DonutChartProps) {
+export function DonutChart({ title, slices, format, renderValue, size = 176 }: DonutChartProps) {
   const titleId = useId()
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
   if (total <= 0) {
@@ -107,7 +108,7 @@ export function DonutChart({ title, slices, format, size = 176 }: DonutChartProp
               {arc.slice.label}
             </span>
             <span className="text-neutral-500">
-              {format(arc.slice.value)} · {Math.round(arc.share * 100)}%
+              {renderValue ? renderValue(arc.slice.value) : format(arc.slice.value)} · {Math.round(arc.share * 100)}%
             </span>
           </li>
         ))}

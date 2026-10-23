@@ -40,6 +40,20 @@ function expectNoActions() {
   }
 }
 
+test('refuses unsafe daily token input without sending a rounded update', async () => {
+  const user = userEvent.setup()
+  renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+  await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+  const dialog = await screen.findByRole('dialog')
+  const daily = within(dialog).getByLabelText('일일 토큰')
+  await user.clear(daily)
+  await user.type(daily, '9007199254740993')
+  await user.click(within(dialog).getByRole('button', { name: '저장' }))
+  expect(adminLlmLimitBodies).toHaveLength(0)
+  expect(within(dialog).getByText('정확값 확인 불가')).toBeInTheDocument()
+  expect(within(dialog).getAllByText(/올바른 정수/).length).toBeGreaterThan(0)
+})
+
 test.each([
   'https://evil.invalid', `/admin/requests/${uuid(999)}?org=${uuid(1)}`,
   `/admin/requests/${uuid(206)}?org=${uuid(2)}`,

@@ -133,6 +133,18 @@ describe('LLM API 키 신청 — 관리자 신청 내용', () => {
 })
 
 describe('LLM API 키 신청 — 승인 폼', () => {
+  test.each([0, 5000001, Number.MAX_SAFE_INTEGER])('preserves the exact granted daily token value %s', async (daily) => {
+    const user = userEvent.setup()
+    const approved = renderDetail({ reqDailyTokens: 5000000 })
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 일일 토큰 수'), String(daily))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    if (daily === 0) expect(within(dialog).getByText(/토큰 사용 불가/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey?.grantedDailyTokens).toBe(daily)
+  })
   test('희망값을 부여값으로 자동으로 채우지 않고, 참고로만 보여준다', async () => {
     renderDetail({ reqRpm: 1000, reqTpm: 50000, reqDailyTokens: 2000000 })
 
@@ -147,7 +159,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       screen.getByText('신청 희망값 1,000. 비우면 서비스 기본값이 적용됩니다.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('신청 희망값 50,000. 비우면 서비스 기본값이 적용됩니다.'),
+      screen.getByText('신청 희망값 50K (5만 토큰). 비우면 서비스 기본값이 적용됩니다.'),
     ).toBeInTheDocument()
     // 동시 요청 수만은 신청에 대응하는 항목이 없다는 사실을 화면이 말한다.
     expect(
@@ -169,7 +181,9 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       screen.getAllByText(
         '신청자가 희망값을 적지 않았습니다. 비우면 서비스 기본값이 적용됩니다.',
       ),
-    ).toHaveLength(3)
+    ).toHaveLength(1)
+    expect(screen.getByText('희망값 없음. 비우면 서비스 기본값이 적용됩니다.')).toBeInTheDocument()
+    expect(screen.getByText('희망값 없음. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.')).toBeInTheDocument()
   })
 
   test('전부 비운 채로 승인하면 기본 한도로 부여된다', async () => {

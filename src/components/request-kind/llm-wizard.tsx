@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { TokenInputHint, TokenValue } from '../TokenValue'
 import { Alert, Checkbox, FormField, Input } from '../ui'
 import { LLM_DEFAULT_MODEL } from '../../lib/llm-api'
 import { PassthroughEndpointField } from '../PassthroughEndpointField'
@@ -90,9 +91,9 @@ function limitValue(raw: string): number | null {
 }
 
 /** 요약·확인 화면에서 비워 둔 한도를 부르는 말. */
-function limitLabel(raw: string): string {
+function limitLabel(raw: string): ReactNode {
   const value = raw.trim()
-  return value ? Number(value).toLocaleString('ko-KR') : '서비스 기본값'
+  return value ? <TokenValue value={Number(value)} decision /> : '서비스 기본값'
 }
 
 function useLlmKeyWizard(draftSpec: unknown): KindWizard {
@@ -181,6 +182,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
                     placeholder="예: 200000"
                     className="w-56"
                   />
+                  <TokenInputHint value={spec.reqDailyTokens} />
                 </FormField>
               </div>
             )}
@@ -243,7 +245,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
         ...(spec.useCampus
           ? ([
               ['희망 일일 토큰 수', limitLabel(spec.reqDailyTokens)],
-            ] as [string, string][])
+            ] as [string, ReactNode][])
           : []),
         ...(spec.useCommercial
           ? ([
@@ -253,7 +255,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
                   ? `$${Number(spec.reqCreditLimit).toLocaleString('ko-KR')}`
                   : '관리자가 정함',
               ],
-            ] as [string, string][])
+            ] as [string, ReactNode][])
           : []),
         ['필요한 기능', requestedFeaturesText(requestedFeatures(spec))],
       ],
@@ -261,8 +263,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
     notice: (
       <Alert variant="info" title="한도 확정 안내">
-        실제 부여 한도는 관리자가 승인할 때 정합니다. 비워 둔 항목은 기본 한도로
-        발급됩니다.
+        실제 부여 한도는 관리자가 승인할 때 정합니다.
       </Alert>
     ),
 

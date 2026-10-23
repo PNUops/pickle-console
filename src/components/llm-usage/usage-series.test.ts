@@ -175,8 +175,8 @@ describe('추정 비율', () => {
 })
 
 describe('값 표기', () => {
-  test('천 단위를 끊어 읽기 쉽게 한다', () => {
+  test('abbreviates tokens while retaining request counts', () => {
     expect(formatRequests(1500)).toBe('1,500회')
-    expect(formatTokens(1_228_000)).toBe('1,228,000토큰')
+    expect(formatTokens(1_228_000)).toBe('1.23M')
   })
 })

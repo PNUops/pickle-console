@@ -1,3 +1,4 @@
+import { formatTokenCompact } from '../../lib/token-presentation'
 import type { LlmKeyUsagePoint } from '../../api/queries'
 import { toEpochSeconds } from '../metrics/timeframe'
 
@@ -96,7 +97,7 @@ export function formatRequests(value: number): string {
 }
 
 export function formatTokens(value: number): string {
-  return `${group(value)}토큰`
+  return formatTokenCompact(value)
 }
 
 /**

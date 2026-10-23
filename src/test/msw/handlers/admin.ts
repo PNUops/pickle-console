@@ -832,6 +832,20 @@ export const adminHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as Schemas['ApproveRequestRequest']
     approveBodies.push({ requestId, body })
+    if (found.type === 'LLM_API_KEY' && found.llmKey && body.llmKey) {
+      found.llmKey = {
+        ...found.llmKey,
+        grantedRpm: body.llmKey.grantedRpm ?? null,
+        grantedTpm: body.llmKey.grantedTpm ?? null,
+        grantedConcurrency: body.llmKey.grantedConcurrency ?? null,
+        grantedDailyTokens: body.llmKey.grantedDailyTokens ?? null,
+        grantedCreditLimit: body.llmKey.grantedCreditLimit ?? null,
+        grantedCreditLimitReset: body.llmKey.grantedCreditLimitReset ?? null,
+        grantedCreditAllowedModels: body.llmKey.grantedCreditAllowedModels ?? [],
+        grantedCreditDeniedModels: body.llmKey.grantedCreditDeniedModels ?? [],
+        grantedPassthroughEndpoints: body.llmKey.grantedPassthroughEndpoints ?? found.llmKey.reqPassthroughEndpoints,
+      }
+    }
     found.status = 'APPROVED'
     found.review = {
       reviewerId: orgAdminUser.id,

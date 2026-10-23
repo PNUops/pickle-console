@@ -1,3 +1,4 @@
+import { formatTokenExact } from './token-presentation'
 import type { ModelPriceAxis, ModelPriceTier, ModelPricing } from '../api/queries'
 
 /**
@@ -96,7 +97,7 @@ function clock(minute: number): string {
 export function tierCondition(tier: ModelPriceTier): string {
   const parts: string[] = []
   if (tier.minPromptTokens != null) {
-    parts.push(`입력 ${tier.minPromptTokens.toLocaleString('ko-KR')} 토큰 초과`)
+    parts.push(`입력 ${formatTokenExact(tier.minPromptTokens)} 초과`)
   }
   if (tier.utcDays.length > 0) {
     parts.push(tier.utcDays.map((day) => DAY_LABELS[day] ?? day).join('·'))
