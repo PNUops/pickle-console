@@ -25,8 +25,10 @@ export interface TimeSeriesChartProps {
   /** x축 값 (epoch 초, 오름차순). */
   times: number[]
   series: ChartSeries[]
-  /** y값 포맷터 — 축과 툴팁이 공유한다. */
+  /** Axis labels and, unless overridden, tooltip values. */
   format: (value: number) => string
+  /** Exact observations in the tooltip and a keyboard/touch value selector. */
+  formatDetail?: (value: number) => string
   /** x축·툴팁의 시각 라벨 포맷터. */
   formatTime: (seconds: number) => string
   /** y축 상한 고정 (백분율 차트 등). 없으면 자료에 맞춰 0부터 잡는다. */
@@ -89,6 +91,7 @@ export function TimeSeriesChart({
   times,
   series,
   format,
+  formatDetail,
   formatTime,
   yMax,
   splitBase,
@@ -104,6 +107,8 @@ export function TimeSeriesChart({
   const [hover, setHover] = useState<{ index: number; left: number; top: number } | null>(
     null,
   )
+  const [selected, setSelected] = useState('')
+  const selectedIndex = times.findIndex((time) => String(time) === selected)
 
   const colors = series.map(seriesColor)
   // 계열 구성이 바뀔 때만 플롯을 다시 만든다 — 폴링 갱신은 setData로 처리한다.
@@ -287,9 +292,9 @@ export function TimeSeriesChart({
         {hovered && (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute z-10 -translate-y-1/2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs whitespace-nowrap shadow-card"
+            className="pointer-events-none absolute z-10 max-w-[min(10rem,100%)] -translate-y-1/2 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs whitespace-normal shadow-card [overflow-wrap:anywhere]"
             style={{
-              left: Math.min(hovered.left + 12, Math.max((hostRef.current?.clientWidth ?? 0) - 140, 0)),
+              left: `clamp(0px, ${hovered.left + 12}px, max(0px, calc(100% - 10rem)))`,
               top: hovered.top,
             }}
           >
@@ -301,13 +306,24 @@ export function TimeSeriesChart({
                     className="inline-block h-0.5 w-3 rounded-full"
                     style={{ backgroundColor: colors[index] }}
                   />
-                  {item.label} {formatValue(item.data[hovered.index], format)}
+                  {item.label} {formatValue(item.data[hovered.index], formatDetail ?? format)}
                 </li>
               ))}
             </ul>
           </div>
         )}
       </div>
+
+      {formatDetail && times.length > 0 && <div className="text-xs text-foreground-muted">
+        <label className="flex flex-wrap items-center gap-2">{title} 정확값
+          <select className="max-w-full rounded border border-stroke-subtle bg-surface-card p-1" value={selectedIndex < 0 ? '' : selected}
+            onChange={(event) => setSelected(event.target.value)}>
+            <option value="">날짜 선택</option>
+            {times.map((time) => <option key={time} value={time}>{formatTime(time)}</option>)}
+          </select>
+        </label>
+        {selectedIndex >= 0 && <ul className="mt-1 [overflow-wrap:anywhere]">{series.map((item) => <li key={item.label}>{item.label} {formatValue(item.data[selectedIndex], formatDetail)}</li>)}</ul>}
+      </div>}
 
       {caption && <figcaption className="text-xs text-neutral-500">{caption}</figcaption>}
     </figure>

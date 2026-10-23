@@ -1,3 +1,4 @@
+import { TokenValue } from '../TokenValue'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import {
@@ -123,17 +124,14 @@ function ModelsBody({
 }
 
 function SelfServedRow({ model }: { model: SelfServedModel }) {
-  const caps = [
-    model.maxInputTokens ? `입력 ${model.maxInputTokens.toLocaleString()}` : null,
-    model.maxOutputTokens ? `출력 ${model.maxOutputTokens.toLocaleString()}` : null,
-  ].filter(Boolean)
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2">
       <span className="font-mono text-sm">{model.name}</span>
       <span className="flex items-center gap-3">
-        {caps.length > 0 && (
-          <span className="text-xs text-neutral-500">{caps.join(' · ')} 토큰</span>
-        )}
+        <span className="text-xs text-neutral-500">
+          {model.maxInputTokens != null && <span className="block">입력 <TokenValue value={model.maxInputTokens} decision /></span>}
+          {model.maxOutputTokens != null && <span className="block">출력 <TokenValue value={model.maxOutputTokens} decision /></span>}
+        </span>
         <CopyButton value={model.name} label="복사" />
       </span>
     </li>

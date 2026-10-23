@@ -4,7 +4,7 @@ import { STEP_TITLES, type WizardStepId } from './wizard-steps'
 
 export interface ReviewSection {
   step: WizardStepId
-  rows: [string, string][]
+  rows: [string, ReactNode][]
 }
 
 /**

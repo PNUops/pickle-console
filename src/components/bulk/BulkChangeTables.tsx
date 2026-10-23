@@ -1,3 +1,4 @@
+import { TokenLimit } from '../TokenValue'
 import type { AdminBulkChangeApplyItem, AdminBulkChangeFieldDiff, AdminBulkChangePreviewItem, AdminBulkChangeTargetType } from '../../api/queries'
 import { diffFieldLabel, formatDiffValue } from '../../lib/bulk-change'
 import { labelForBulkReason, labelForBulkResult } from '../../lib/labels'
@@ -46,7 +47,12 @@ export function BulkChangeDiffList({ fields, targetType }: {
   if (fields.length === 0) return <span className="text-foreground-muted">—</span>
   return <ul className="space-y-0.5">{fields.map((diff) => <li key={diff.field}>
     <span className="text-foreground-muted">{diffFieldLabel(diff.field)}</span>{' '}
-    {formatDiffValue(diff.field, diff.oldValue, targetType)} →{' '}
-    {formatDiffValue(diff.field, diff.newValue, targetType)}
+    {<BulkValue field={diff.field} value={diff.oldValue} targetType={targetType} />} →{' '}
+    {<BulkValue field={diff.field} value={diff.newValue} targetType={targetType} />}
   </li>)}</ul>
+}
+
+export function BulkValue({ field, value, targetType }: { field: string; value: unknown; targetType: AdminBulkChangeTargetType }) {
+  return (field === 'tpm' || field === 'dailyTokens') && typeof value === 'number'
+    ? <TokenLimit value={value} daily={field === 'dailyTokens'} /> : <>{formatDiffValue(field, value, targetType)}</>
 }

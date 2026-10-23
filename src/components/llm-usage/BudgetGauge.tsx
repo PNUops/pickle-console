@@ -26,6 +26,7 @@ export interface BudgetGaugeProps {
    * drop the machine-readable moment and leave two renderers for one fact.
    */
   freshness?: ReactNode
+  values?: ReactNode
 }
 
 export function BudgetGauge({
@@ -35,20 +36,22 @@ export function BudgetGauge({
   ratio,
   note,
   freshness,
+  values,
 }: BudgetGaugeProps) {
-  const percent = ratio != null ? Math.round(ratio * 100) : null
+  const percent = ratio != null ? ratio * 100 : null
+  const percentLabel = percent == null ? null : percent < 100 && Math.round(percent) >= 100 ? '<100' : String(Math.round(percent))
   // 비율은 있는 그대로 적고 막대만 잘라 그린다 — 120%를 100%로 줄여 쓰면
   // 넘어섰다는 사실이 그림에서 사라진다.
   const barPercent = percent != null ? Math.min(percent, 100) : null
   const valueLabel =
     usedLabel == null
       ? '아직 보고된 사용량이 없습니다'
-      : `${usedLabel}${limitLabel ? ` / ${limitLabel}` : ''}${percent != null ? ` (${percent}%)` : ''}`
+      : `${usedLabel}${limitLabel ? ` / ${limitLabel}` : ''}${percentLabel != null ? ` (${percentLabel}%)` : ''}`
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="font-medium text-neutral-700">{label}</span>
-        <span className="text-neutral-500">{valueLabel}</span>
+        <span className="text-neutral-500">{values ? <>{values}{percentLabel != null && ` (${percentLabel}%)`}</> : valueLabel}</span>
       </div>
       {barPercent != null && (
         <div

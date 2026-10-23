@@ -131,7 +131,7 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(await screen.findByText('1,000,000')).toBeInTheDocument()
+    expect(await screen.findByText('1M (1백만 토큰)')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
     await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
 

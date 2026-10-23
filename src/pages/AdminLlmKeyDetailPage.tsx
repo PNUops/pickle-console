@@ -1,3 +1,4 @@
+import { TokenLimit } from '../components/TokenValue'
 import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -317,8 +318,8 @@ function AdminLlmKeyDetailContent() {
           columns={3}
           items={[
             { term: 'RPM', description: tokenVisible ? limitText(key.rpm) : '제공되지 않음' },
-            { term: 'TPM', description: tokenVisible ? limitText(key.tpm) : '제공되지 않음' },
-            { term: '일일 토큰', description: tokenVisible ? limitText(key.dailyTokens) : '제공되지 않음' },
+            { term: 'TPM', description: tokenVisible ? <TokenLimit value={key.tpm} /> : '제공되지 않음' },
+            { term: '일일 토큰', description: tokenVisible ? <TokenLimit value={key.dailyTokens} daily /> : '제공되지 않음' },
             { term: '동시 요청', description: tokenVisible ? limitText(key.concurrency) : '제공되지 않음' },
             { term: '금액 한도', description: budgetVisible ? key.creditLimit == null ? '제공되지 않음' : creditText(key.creditLimit) : '제공되지 않음' },
             {
@@ -432,7 +433,7 @@ function AdminLlmKeyDetailContent() {
 function valueOf(raw: string, allowZero = false): number | null {
   if (raw.trim() === '') return null
   const value = Number(raw)
-  if (!Number.isInteger(value) || value < (allowZero ? 0 : 1)) return Number.NaN
+  if (!Number.isSafeInteger(value) || value < (allowZero ? 0 : 1)) return Number.NaN
   return value
 }
 
@@ -611,9 +612,10 @@ function LimitsModal({
         )}
         {canEditToken && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LimitField label="RPM" min={1} value={rpm} onChange={setRpm} error={fieldErrors.rpm} />
-          <LimitField label="TPM" min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
+          <LimitField label="TPM" tokens min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
           <LimitField
             label="일일 토큰"
+            tokens
             min={0}
             value={dailyTokens}
             onChange={setDailyTokens}

@@ -40,6 +40,14 @@ describe('bulk selection', () => {
 })
 
 describe('bulk change body', () => {
+  test('keeps raw token values and refuses unsafe integers', () => {
+    const draft = emptyDraft()
+    draft.limits.chosen = ['dailyTokens']
+    draft.limits.dailyTokens = '5000001'
+    expect(buildChange('LLM_KEY_LIMITS', draft).change?.llmKeyLimits?.dailyTokens).toBe(5000001)
+    draft.limits.dailyTokens = '9007199254740993'
+    expect(buildChange('LLM_KEY_LIMITS', draft).errors).toHaveProperty('change.llmKeyLimits.dailyTokens')
+  })
   test('only the chosen limits are sent, and an empty value means the default', () => {
     const draft = emptyDraft()
     draft.limits.chosen = ['rpm', 'dailyTokens']

@@ -1,3 +1,5 @@
+import { unpricedTokenCount } from '../lib/token-presentation'
+import { TokenValue } from '../components/TokenValue'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -86,12 +88,13 @@ function count(value: number | null | undefined): string {
   return value == null ? '제공되지 않음' : value.toLocaleString('ko-KR')
 }
 
-function tokens(value: number | null | undefined): string {
-  return value == null ? '제공되지 않음' : `${count(value)} 토큰`
+function tokens(value: number | null | undefined): ReactNode {
+  return value == null ? '제공되지 않음' : <TokenValue value={value} />
 }
 
 function percent(value: number): string {
   const scaled = value * 100
+  if (value < 1 && Number(scaled.toFixed(1)) >= 100) return '<100%'
   return `${scaled.toFixed(Number.isInteger(scaled) || scaled >= 100 ? 0 : 1)}%`
 }
 
@@ -196,7 +199,7 @@ function DemandSection({
         )}
         {quality.estimatedTokenRatio != null && quality.estimatedTokenRatio > 0 && (
           <MessageBar variant="warning" title="일부 토큰은 추정값입니다">
-            {tokens(quality.estimatedTokens ?? 0)} · 전체 토큰의 {percent(quality.estimatedTokenRatio)}
+            {tokens(quality.estimatedTokens)} · 전체 토큰의 {percent(quality.estimatedTokenRatio)}
           </MessageBar>
         )}
       </CardContent>
@@ -608,8 +611,7 @@ function ModelRows({ row }: { row: AdminLlmUsage['breakdown']['models'][number] 
         </TD>
         <TD>{count(unpriced)}건</TD>
         <TD>
-          {tokens(row.inputTokens + row.outputTokens
-            - row.pricedInputTokens - row.pricedOutputTokens)}
+          {tokens(unpricedTokenCount(row.inputTokens, row.outputTokens, row.pricedInputTokens, row.pricedOutputTokens))}
         </TD>
         {/* 「—」가 아니라 말로 적는다. 자체 서빙 행의 「—」는 금액이라는 것이 없다는
             뜻이고, 이 행은 있어야 하는데 모른다는 뜻이라 같은 부호를 쓰면 안 된다. */}

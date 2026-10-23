@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { TokenValue } from '../TokenValue'
+import { formatTokenExact, isExactTokenCount, unpricedTokenCount } from '../../lib/token-presentation'
+import { useState, type ReactNode } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   fetchAdminLlmKeyUsage,
@@ -177,11 +179,11 @@ export default function LlmKeyUsageSection({
                     tone={totals.rateLimited > 0 ? 'danger' : 'normal'}
                   />
                   <StatTile label="실패" value={formatRequests(totals.failed)} />
-                  <StatTile label="입력 토큰" value={formatTokens(totals.inputTokens)} />
-                  <StatTile label="출력 토큰" value={formatTokens(totals.outputTokens)} />
+                  <StatTile label="입력 토큰" value={<TokenValue value={totals.inputTokens} />} />
+                  <StatTile label="출력 토큰" value={<TokenValue value={totals.outputTokens} />} />
                   <StatTile
                     label="합계 토큰"
-                    value={formatTokens(totals.inputTokens + totals.outputTokens)}
+                    value={<TokenValue value={totals.inputTokens + totals.outputTokens} />}
                     hint={
                       totals.estimatedRequests > 0
                         ? `토큰 만든 요청의 ${formatShare(estimated)}가 추정`
@@ -266,6 +268,7 @@ export default function LlmKeyUsageSection({
                         },
                       ]}
                       format={formatTokens}
+                      formatDetail={formatTokenExact}
                       formatTime={formatKstDay}
                       splitBase="integer"
                     />
@@ -287,6 +290,7 @@ export default function LlmKeyUsageSection({
                           },
                         ]}
                         format={formatTokens}
+                        formatDetail={formatTokenExact}
                         formatTime={formatKstDay}
                         splitBase="integer"
                       />
@@ -310,6 +314,7 @@ export default function LlmKeyUsageSection({
                           (model) => model.inputTokens + model.outputTokens,
                         )}
                         format={formatTokens}
+                        renderValue={(value) => <TokenValue value={value} />}
                       />
                     </div>
                     <ModelTable models={data.models} />
@@ -419,7 +424,7 @@ function AdminOnlyBreakdowns({ extra }: { extra: AdminLlmKeyUsage }) {
                       {formatRequests(kind.requests)}
                     </td>
                     <td className="py-2 pr-3 text-right text-neutral-600">
-                      {formatTokens(kind.inputTokens + kind.outputTokens)}
+                      {<TokenValue value={kind.inputTokens + kind.outputTokens} />}
                     </td>
                     <td className="py-2 text-right text-neutral-600">
                       {kind.attributedCostUsd == null ? '—' : formatUsd(kind.attributedCostUsd)}
@@ -459,7 +464,7 @@ function StatTile({
   tone = 'normal',
 }: {
   label: string
-  value: string
+  value: ReactNode
   hint?: string
   tone?: 'normal' | 'danger'
 }) {
@@ -501,8 +506,9 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['tr
       {budget.todayTokens != null ? <BudgetGauge
         label="오늘 토큰 사용"
         usedLabel={formatTokens(budget.todayTokens)}
+        values={<><TokenValue value={budget.todayTokens} />{tokenLimit != null && tokenLimit > 0 && <> / <TokenValue value={tokenLimit} /></>}</>}
         limitLabel={tokenLimit != null && tokenLimit > 0 ? formatTokens(tokenLimit) : null}
-        ratio={tokenLimit != null && tokenLimit > 0 ? budget.todayTokens / tokenLimit : null}
+        ratio={tokenLimit != null && tokenLimit > 0 && isExactTokenCount(tokenLimit) && isExactTokenCount(budget.todayTokens) ? budget.todayTokens / tokenLimit : null}
         note={
           tokenLimit == null
             ? '일일 토큰 한도가 없습니다.'
@@ -601,8 +607,7 @@ function modelRows(model: UsageModel, showCost: boolean) {
       ...whole,
       key: `${whole.key}:unpriced`,
       requests: unpriced,
-      tokens: model.inputTokens + model.outputTokens
-        - model.pricedInputTokens - model.pricedOutputTokens,
+      tokens: unpricedTokenCount(model.inputTokens, model.outputTokens, model.pricedInputTokens, model.pricedOutputTokens),
       // 자체 서빙 행의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
       // 이쪽은 있어야 하는데 모른다.
       amount: '정보 없음',
@@ -655,7 +660,7 @@ function ModelTable({ models }: { models: UsageModel[] }) {
                 {formatRequests(row.requests)}
               </td>
               <td className="py-2 pr-3 text-right text-neutral-600">
-                {formatTokens(row.tokens)}
+                {<TokenValue value={row.tokens} />}
               </td>
               {showCost && (
                 <td className="py-2 pr-3 text-right text-neutral-600">{row.amount}</td>

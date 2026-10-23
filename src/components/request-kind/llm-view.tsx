@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { TokenInputHint, TokenLimit, TokenValue } from '../TokenValue'
+import { formatTokenCompact, formatTokenDecision } from '../../lib/token-presentation'
 import { fetchLlmRosterAccountReferences, type LlmAccountReference } from '../../api/llm-command-references'
 import { hasWork, hasSameSourceWorks, rowAllows, SYS_ADMIN, SYS_READERS } from '../../auth/institution-authority'
 import { useQuery } from '@tanstack/react-query'
@@ -97,12 +99,12 @@ function requestedNote(value: number | null | undefined): string {
 }
 
 /** 비워 둔 한도는 오류가 아니다 — 적어 넣은 값만 검사한다. */
-function limitError(raw: string, label: string, max: number): string | undefined {
+function limitError(raw: string, label: string, max: number, min = 1): string | undefined {
   const value = raw.trim()
   if (!value) return undefined
-  if (!/^\d+$/.test(value)) return `${label}는 0보다 큰 정수로 입력하거나 비워 두세요.`
+  if (!/^\d+$/.test(value)) return `${label}는 ${min} 이상의 정수로 입력하거나 비워 두세요.`
   const parsed = Number(value)
-  if (parsed < 1) return `${label}는 1 이상이어야 합니다.`
+  if (parsed < min) return `${label}는 ${min} 이상이어야 합니다.`
   if (parsed > max) return `${label}는 ${max.toLocaleString('ko-KR')} 이하로 입력해 주세요.`
   return undefined
 }
@@ -298,7 +300,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       if (tpmError) errors['llmKey.grantedTpm'] = tpmError
       const concurrencyError = limitError(concurrency, '동시 요청 수', MAX_CONCURRENCY)
       if (concurrencyError) errors['llmKey.grantedConcurrency'] = concurrencyError
-      const dailyError = limitError(dailyTokens, '일일 토큰 수', MAX_SAFE)
+      const dailyError = limitError(dailyTokens, '일일 토큰 수', MAX_SAFE, 0)
       if (dailyError) errors['llmKey.grantedDailyTokens'] = dailyError
       const creditLimitError = creditError(creditLimit)
       if (creditLimitError) errors['llmKey.grantedCreditLimit'] = creditLimitError
@@ -382,10 +384,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인합니다. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫습니다.</p>}
           {!freeApprovalSelected && <p className="text-sm">현재 부여안 기능: {passthroughText(passthroughEndpoints)}</p>}
         </div>}
-        <p className="text-sm text-neutral-500">
-          부여 한도를 정해 주세요. 비워 둔 항목은 서비스 기본 한도로 발급되며, 그것이
-          보통의 승인입니다. 신청자의 희망값은 각 한도 아래에 적어 두었습니다.
-        </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 분당 요청 수"
@@ -404,7 +402,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <FormField
             label="부여 분당 토큰 수"
             error={fieldErrors['llmKey.grantedTpm']}
-            description={requestedNote(spec?.reqTpm)}
+            description={spec?.reqTpm == null ? '희망값 없음. 비우면 서비스 기본값이 적용됩니다.' : `신청 희망값 ${formatTokenDecision(spec.reqTpm)}. 비우면 서비스 기본값이 적용됩니다.`}
           >
             <Input
               type="number"
@@ -413,19 +411,21 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               onChange={(event) => setTpm(event.target.value)}
               placeholder="서비스 기본값"
             />
+            <TokenInputHint value={tpm} />
           </FormField>
           <FormField
             label="부여 일일 토큰 수"
             error={fieldErrors['llmKey.grantedDailyTokens']}
-            description={requestedNote(spec?.reqDailyTokens)}
+            description={spec?.reqDailyTokens == null ? '희망값 없음. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.' : `신청 희망값 ${formatTokenDecision(spec.reqDailyTokens)}. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.`}
           >
             <Input
               type="number"
-              min={1}
+              min={0}
               value={dailyTokens}
               onChange={(event) => setDailyTokens(event.target.value)}
-              placeholder="서비스 기본값"
+              placeholder="무제한"
             />
+            <TokenInputHint value={dailyTokens} />
           </FormField>
           <FormField
             label="부여 동시 요청 수"
@@ -444,7 +444,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             />
           </FormField>
         </div>
-        <fieldset disabled={!accountData.paidAllowed} className="space-y-4">
+        <fieldset disabled={!accountData.paidAllowed} className="min-w-0 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 금액 한도 (USD)"
@@ -749,7 +749,7 @@ export const llmKeyRequestView: RequestKindView = {
         ? null
         : spec.reqDailyTokens == null
           ? '일일 토큰 기본값'
-          : `일일 토큰 ${spec.reqDailyTokens.toLocaleString('ko-KR')}`,
+          : `일일 토큰 ${formatTokenCompact(spec.reqDailyTokens)}`,
       !spec?.useCommercialModels
         ? null
         : spec.reqCreditLimit == null
@@ -791,8 +791,8 @@ export const llmKeyRequestView: RequestKindView = {
             : '—'}
       </Field>
       <Field label="희망 분당 요청 수">{limitText(data.llmKey?.reqRpm)}</Field>
-      <Field label="희망 분당 토큰 수">{limitText(data.llmKey?.reqTpm)}</Field>
-      <Field label="희망 일일 토큰 수">{limitText(data.llmKey?.reqDailyTokens)}</Field>
+      <Field label="희망 분당 토큰 수">{data.llmKey?.reqTpm == null ? '서비스 기본값' : <TokenValue value={data.llmKey.reqTpm} decision />}</Field>
+      <Field label="희망 일일 토큰 수">{data.llmKey?.reqDailyTokens == null ? '서비스 기본값' : <TokenValue value={data.llmKey.reqDailyTokens} decision />}</Field>
       <Field label="필요한 기능">
         {requestedFeaturesText(data.llmKey?.reqPassthroughEndpoints ?? [])}
       </Field>
@@ -807,8 +807,8 @@ export const llmKeyRequestView: RequestKindView = {
     return (
       <>
         <Field label="부여 분당 요청 수">{limitText(spec?.grantedRpm)}</Field>
-        <Field label="부여 분당 토큰 수">{limitText(spec?.grantedTpm)}</Field>
-        <Field label="부여 일일 토큰 수">{limitText(spec?.grantedDailyTokens)}</Field>
+        <Field label="부여 분당 토큰 수">{<TokenLimit value={spec?.grantedTpm} />}</Field>
+        <Field label="부여 일일 토큰 수">{<TokenLimit value={spec?.grantedDailyTokens} daily />}</Field>
         <Field label="부여 동시 요청 수">{limitText(spec?.grantedConcurrency)}</Field>
         <Field label="부여 금액 한도">{creditText(spec?.grantedCreditLimit)}</Field>
         {spec?.grantedCreditLimit ? (

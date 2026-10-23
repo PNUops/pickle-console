@@ -1,11 +1,15 @@
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
 import { formatMemory } from '../../lib/format'
 import { gpuDurationLabel } from '../../lib/gpu-duration'
+import { formatTokenDecision } from '../../lib/token-presentation'
 
 export interface ApprovalComparison {
   label: string
   requested: string
   granted: string
+  requestedTokens?: number
+  grantedTokens?: number
+  dailyTokenLimit?: boolean
 }
 
 export interface ApprovalTargetFacts {
@@ -58,7 +62,16 @@ export function commonApprovalComparisons(request: RequestDetail, approval: Appr
       ['일일 토큰 수 (키당)', request.llmKey?.reqDailyTokens, approval.llmKey?.grantedDailyTokens],
       ['동시 요청 수 (키당)', undefined, approval.llmKey?.grantedConcurrency],
     ] as const
-    for (const [label, requested, granted] of axes) rows.push({ label, requested: numberText(requested, '희망값 없음'), granted: numberText(granted, '서비스 기본값') })
+    for (const [label, requested, granted] of axes) {
+      const token = label === '분당 토큰 수 (키당)' || label === '일일 토큰 수 (키당)'
+      rows.push({ label,
+        requested: token && requested != null ? formatTokenDecision(requested) : numberText(requested, '희망값 없음'),
+        granted: token && granted != null ? formatTokenDecision(granted) : numberText(granted, label === '일일 토큰 수 (키당)' ? '무제한' : '서비스 기본값'),
+        ...(token && requested != null ? { requestedTokens: requested } : {}),
+        ...(token && granted != null ? { grantedTokens: granted } : {}),
+        ...(label === '일일 토큰 수 (키당)' ? { dailyTokenLimit: true } : {}),
+      })
+    }
     rows.push({ label: '금액 한도 (키당)', requested: request.llmKey?.reqCreditLimit == null ? '희망값 없음' : `$${request.llmKey.reqCreditLimit}`,
       granted: approval.llmKey?.grantedCreditLimit == null || Number(approval.llmKey.grantedCreditLimit) === 0 ? '미부여' : `$${approval.llmKey.grantedCreditLimit}` })
   } else if (request.type === 'GPU') {

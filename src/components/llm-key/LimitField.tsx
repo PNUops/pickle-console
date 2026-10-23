@@ -1,4 +1,5 @@
 import { FormField, Input } from '../ui'
+import { TokenInputHint } from '../TokenValue'
 
 /** One integer limit of an LLM key. Empty means the default the description names. */
 export function LimitField({
@@ -7,12 +8,14 @@ export function LimitField({
   value,
   onChange,
   error,
+  tokens = false,
 }: {
   label: string
   min: 0 | 1
   value: string
   onChange: (value: string) => void
   error?: string
+  tokens?: boolean
 }) {
   return (
     <FormField
@@ -27,6 +30,7 @@ export function LimitField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
+      {tokens && <TokenInputHint value={value} />}
     </FormField>
   )
 }

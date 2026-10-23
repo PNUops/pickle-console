@@ -1,3 +1,4 @@
+import { TokenValue } from '../TokenValue'
 import { useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchAdminLlmAccountUsage } from '../../api/queries'
@@ -20,10 +21,6 @@ const WINDOWS = [7, 30, 90] as const
 
 function count(value: number): string {
   return `${Math.round(value).toLocaleString('ko-KR')}`
-}
-
-function tokens(value: number): string {
-  return `${Math.round(value).toLocaleString('ko-KR')} 토큰`
 }
 
 /**
@@ -174,7 +171,7 @@ export function AccountUsageSection({ accountId }: { accountId: string }) {
                     <TR key={key.keyId}>
                       <TD>{key.keyName}</TD>
                       <TD>{count(key.requests)}건</TD>
-                      <TD>{tokens(key.inputTokens + key.outputTokens)}</TD>
+                      <TD>{<TokenValue value={key.inputTokens + key.outputTokens} />}</TD>
                       <TD>
                         {key.attributedCostUsd == null
                           ? '—'

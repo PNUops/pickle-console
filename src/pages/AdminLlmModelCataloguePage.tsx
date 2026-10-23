@@ -1,3 +1,4 @@
+import { TokenValue } from '../components/TokenValue'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchOpenRouterCatalogue } from '../api/queries'
@@ -22,7 +23,7 @@ export function AdminLlmModelCataloguePage() {
       {catalogue.data.freshness !== 'FRESH' && <Alert>이 목록은 최신 공급자 정보와 다를 수 있습니다. 가격을 확인한 뒤 정책을 선택해 주세요.</Alert>}
       <Card><Table><THead><TR><TH>모델</TH><TH>컨텍스트</TH><TH>가격</TH></TR></THead><TBody>{rows?.map((model) => <TR key={model.id}>
         <TD><strong>{model.name}</strong><span className="block break-all text-xs text-neutral-500">{model.id}</span></TD>
-        <TD>{model.contextLength == null ? '정보 없음' : model.contextLength.toLocaleString('ko-KR')}</TD>
+        <TD>{model.contextLength == null ? '정보 없음' : <TokenValue value={model.contextLength} />}</TD>
         <TD><p className="text-xs">백만 토큰당 입력 {model.promptPricePerMillion == null ? '미상' : `$${model.promptPricePerMillion}`} · 출력 {model.completionPricePerMillion == null ? '미상' : `$${model.completionPricePerMillion}`}</p>
           {model.pricing != null && <ModelPriceDetail modelId={model.id} pricing={model.pricing} />}</TD>
       </TR>)}</TBody></Table></Card></>}

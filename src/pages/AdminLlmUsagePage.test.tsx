@@ -84,8 +84,10 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     expect(within(tokenTable).getByRole('columnheader', { name: '입력 토큰' })).toBeInTheDocument()
     expect(within(tokenTable).getByRole('columnheader', { name: '출력 토큰' })).toBeInTheDocument()
     const tokenDay = within(tokenTable).getByRole('rowheader', { name: '2026-08-31' }).closest('tr')!
-    expect(within(tokenDay).getByRole('cell', { name: '1,200' })).toBeInTheDocument()
+    expect(within(tokenDay).getByRole('cell', { name: '1.2K' })).toBeInTheDocument()
     expect(within(tokenDay).getByRole('cell', { name: '400' })).toBeInTheDocument()
+    await user.click(within(tokenDay).getByRole('button', { name: '1.2K, 정확값 보기' }))
+    expect(within(tokenDay).getByText('정확값 1,200 토큰')).toBeVisible()
     // 정확한 개수를 유지한다 — 이 단언이 아니면 표가 하나 늘어난 것을 아무도 못 본다.
     // 다섯째는 「호출 분해」 카드의 기본 눈금(모델별)이다.
     expect(screen.getAllByRole('table')).toHaveLength(5)
@@ -106,10 +108,10 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     // 둘은 언제나 붙어 있다 — 사이에 다른 모델이 끼면 합계로 정렬한 순위가 깨진다.
     expect(known.nextElementSibling).toBe(unknown)
     expect(within(known).getByText('4건')).toBeInTheDocument()
-    expect(within(known).getByText('300 토큰')).toBeInTheDocument()
+    expect(within(known).getByText('300')).toBeInTheDocument()
     expect(within(known).getByText('$0.1245')).toBeInTheDocument()
     expect(within(unknown).getByText('2건')).toBeInTheDocument()
-    expect(within(unknown).getByText('150 토큰')).toBeInTheDocument()
+    expect(within(unknown).getByText('150')).toBeInTheDocument()
     // 자체 서빙의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
     // 이쪽은 있어야 하는데 모른다.
     expect(within(unknown).getByText('정보 없음')).toBeInTheDocument()
@@ -273,8 +275,8 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
 
     const actual = (await screen.findByRole('link', { name: 'capstone-chatbot' })).closest('tr')!
     expect(within(actual).getByText('실제 소진 확인')).toBeInTheDocument()
-    expect(within(actual).getByText('자체 서빙 90,000 토큰')).toBeInTheDocument()
-    expect(within(actual).getByText('종류 미상 1,000 토큰')).toBeInTheDocument()
+    expect(within(actual).getByRole('button', { name: '90K, 정확값 보기' })).toBeInTheDocument()
+    expect(within(actual).getByRole('button', { name: '1K, 정확값 보기' })).toBeInTheDocument()
     expect(within(actual).getByText('사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
     expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
@@ -292,7 +294,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(within(rateOnly).getByText('한도 압력')).toBeInTheDocument()
     expect(within(rateOnly).queryByText('실제 소진 확인')).not.toBeInTheDocument()
     expect(within(rateOnly).getByText('사용 확인 전')).toBeInTheDocument()
-    expect(within(rateOnly).getByText('종류 미상 0 토큰')).toBeInTheDocument()
+    expect(rateOnly).toHaveTextContent('종류 미상 0')
     expect(document.body).not.toHaveTextContent('server_busy')
     expect(document.body).not.toHaveTextContent('80%')
     expect(screen.getByText(/4개 중 상위 2개만 표시합니다/)).toBeInTheDocument()
