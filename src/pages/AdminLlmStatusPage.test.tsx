@@ -13,6 +13,22 @@ import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { currentPath, renderApp } from '../test/render'
 
+test('shows readable model connections without treating them as actual routes', async () => {
+  const upstream = statusUpstream('Synthetic primary', 'org-one')
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+    http.get('*/api/v1/admin/llm/status', () => HttpResponse.json({
+      ...llmStatusFixture, upstreams: [upstream], modelRoutes: [
+        { publicName: 'campus/example', primary: { state: 'VISIBLE', upstreamId: upstream.id, upstreamName: upstream.name }, fallback: { state: 'NOT_PROVIDED', upstreamId: null, upstreamName: null } },
+        { publicName: 'campus/other', primary: { state: 'VISIBLE', upstreamId: upstream.id, upstreamName: upstream.name }, fallback: { state: 'NOT_CONFIGURED', upstreamId: null, upstreamName: null } },
+      ],
+    })))
+  renderApp('/admin/llm/status')
+  const table = within(await screen.findByRole('table', { name: '모델과 공급원 구성 연결' }))
+  expect(table.getByRole('row', { name: /campus\/example.*Synthetic primary.*제공되지 않음/ })).toBeInTheDocument()
+  expect(table.getByRole('row', { name: /campus\/other.*Synthetic primary.*미설정/ })).toBeInTheDocument()
+  expect(screen.getByText(/전체 모델 목록이나 실제 요청 처리 경로가 아닙니다/)).toBeInTheDocument()
+})
+
 function statusUpstream(name: string, ref: string): LlmUpstreamStatus {
   const fixtureIds: Record<string, number> = {
     'org-one': 401,

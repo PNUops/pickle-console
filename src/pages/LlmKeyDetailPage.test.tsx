@@ -211,7 +211,7 @@ describe('연결 정보', () => {
     const main = within(screen.getByRole('main'))
     expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/console/docs/llm/features#parameters')
     // The model list opens from the same row as that model's copy button.
-    const row = main.getByRole('button', { name: '호출할 수 있는 모델 보기' }).parentElement!
+    const row = main.getByRole('button', { name: '모델 후보 보기' }).parentElement!
     expect(within(row).getByText('pickle-general')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: '복사' })).toBeInTheDocument()
   })

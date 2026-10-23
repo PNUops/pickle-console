@@ -47,7 +47,7 @@ export function LlmKeyConnectionCard({ keyId }: { keyId: string }) {
               <span className="font-mono text-sm">{LLM_DEFAULT_MODEL}</span>
               <CopyButton value={LLM_DEFAULT_MODEL} label="복사" />
               <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
-                호출할 수 있는 모델 보기
+                모델 후보 보기
               </Button>
             </div>
           </DescriptionField>

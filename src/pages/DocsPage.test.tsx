@@ -122,7 +122,7 @@ describe('사용 가이드', () => {
     const body = document.body.textContent ?? ''
     expect(body).toContain('relevance_score')
     // Rerank models are missing from the key's model list, prices included.
-    expect(body).toContain('호출할 수 있는 모델 보기에 나오지 않아')
+    expect(body).toContain('모델 후보 보기에 나오지 않아')
     expect(body).toContain('router_not_supported')
   })
 

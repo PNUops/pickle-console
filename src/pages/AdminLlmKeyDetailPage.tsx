@@ -19,7 +19,7 @@ import {
 import { toApiError } from '../api/problem'
 import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
 import LlmKeyUsageSection from '../components/llm-usage/LlmKeyUsageSection'
-import { CreditModelRulesField } from '../components/CreditModelRulesField'
+import { CreditModelPolicyEditor } from '../components/CreditModelPolicyEditor'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 import { LimitField } from '../components/llm-key/LimitField'
 import { useAuth } from '../auth/auth-context'
@@ -311,7 +311,7 @@ function AdminLlmKeyDetailContent() {
           <h2 className="type-section-title">현재 한도</h2>
           {/* 위 두 목록이 실제로 무엇을 남기는지는 문자열만 봐서는 모른다. */}
           <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
-            호출할 수 있는 모델 보기
+            모델 후보 보기
           </Button>
         </div>
         <DescriptionList
@@ -610,6 +610,7 @@ function LimitsModal({
             </ul>
           </MessageBar>
         )}
+        {canEditToken && <p className="text-xs text-foreground-muted">RPM·TPM·동시 요청을 비우면 서비스 기본값을 사용합니다. 실제 기본값은 서버에서 보고하지 않아 확인할 수 없습니다.</p>}
         {canEditToken && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LimitField label="RPM" min={1} value={rpm} onChange={setRpm} error={fieldErrors.rpm} />
           <LimitField label="TPM" tokens min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
@@ -658,8 +659,9 @@ function LimitsModal({
                 </Select>
               </FormField>
             </div>
-            <CreditModelRulesField
+            <CreditModelPolicyEditor
               value={creditModelRules}
+              baseline={llmKey.creditAllowedModels != null && llmKey.creditDeniedModels != null ? { allowed: llmKey.creditAllowedModels, denied: llmKey.creditDeniedModels } : undefined}
               onChange={setCreditModelRules}
               error={creditModelFieldErrors(fieldErrors, 'creditAllowedModels', 'creditDeniedModels')}
             />

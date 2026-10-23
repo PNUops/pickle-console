@@ -526,6 +526,19 @@ function StatusView({ data, systemView }: { data: AdminLlmStatus; systemView: bo
         </h2>
         <UpstreamStatusTable upstreams={data.upstreams} systemView={systemView} />
       </section>
+      <section aria-labelledby="llm-model-connections-heading" className="space-y-3">
+        <h2 id="llm-model-connections-heading" className="type-section-title">모델 구성 연결</h2>
+        <p className="text-sm text-foreground-muted">현재 읽을 수 있는 등록 공급원과 연결된 공개·활성 TOKEN 모델만 표시합니다. 전체 모델 목록이나 실제 요청 처리 경로가 아닙니다. 공급원의 관측 상태와 실제 호출 조건은 별도로 확인해 주세요.</p>
+        {data.modelRoutes?.length ? <DataTable caption="모델과 공급원 구성 연결" captionVisible>
+          <thead><tr><th scope="col">공개 모델명</th><th scope="col">주 공급원</th><th scope="col">대체 공급원</th></tr></thead>
+          <tbody>{data.modelRoutes.map((route) => <tr key={route.publicName}>
+            <td className="break-all font-mono">{route.publicName}</td>
+            {[route.primary, route.fallback].map((edge, index) => <td key={index}>
+              {edge.state === 'VISIBLE' ? edge.upstreamName ?? '표시 이름 미보고' : edge.state === 'NOT_CONFIGURED' ? '미설정' : '제공되지 않음'}
+            </td>)}
+          </tr>)}</tbody>
+        </DataTable> : <p className="text-sm">현재 범위에서 모델 연결을 확인할 수 없습니다. 모델이 없다는 뜻은 아닙니다.</p>}
+      </section>
       {systemView && <PipelineDiagnostics status={data.gateway} />}
     </div>
   )
