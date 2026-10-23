@@ -31,6 +31,8 @@ export interface TimeSeriesChartProps {
   formatDetail?: (value: number) => string
   /** x축·툴팁의 시각 라벨 포맷터. */
   formatTime: (seconds: number) => string
+  /** Compact axis labels without shortening tooltips or exact point times. */
+  formatAxisTime?: (seconds: number) => string
   /** y축 상한 고정 (백분율 차트 등). 없으면 자료에 맞춰 0부터 잡는다. */
   yMax?: number
   /** y축 눈금을 끊는 방식 — 바이트·정수 값은 지정해야 눈금이 깔끔하다. */
@@ -93,6 +95,7 @@ export function TimeSeriesChart({
   format,
   formatDetail,
   formatTime,
+  formatAxisTime,
   yMax,
   splitBase,
   height = 200,
@@ -125,11 +128,13 @@ export function TimeSeriesChart({
   // 자료도 마찬가지 — 생성 효과는 그 시점의 자료로 시작하고, 이후 갱신은 setData가 맡는다.
   const formatRef = useRef(format)
   const formatTimeRef = useRef(formatTime)
+  const formatAxisTimeRef = useRef(formatAxisTime ?? formatTime)
   const dataRef = useRef(data)
   /** 플롯에 이미 밀어 넣은 자료 — 값이 그대로면 다시 밀지 않는다. */
   const pushedRef = useRef<uPlot.AlignedData | null>(null)
   formatRef.current = format
   formatTimeRef.current = formatTime
+  formatAxisTimeRef.current = formatAxisTime ?? formatTime
   dataRef.current = data
 
   useEffect(() => {
@@ -158,7 +163,7 @@ export function TimeSeriesChart({
           grid: { stroke: CHART_GRID, width: 1 },
           ticks: { stroke: CHART_GRID, width: 1 },
           font: '11px system-ui, sans-serif',
-          values: (_u, splits) => splits.map((value) => formatTimeRef.current(value)),
+          values: (_u, splits) => splits.map((value) => formatAxisTimeRef.current(value)),
         },
         {
           stroke: CHART_AXIS_TEXT,

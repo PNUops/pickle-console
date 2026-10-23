@@ -23,7 +23,7 @@ import { CreditModelPolicyEditor } from '../components/CreditModelPolicyEditor'
 import { PassthroughEndpointField } from '../components/PassthroughEndpointField'
 import { LimitField } from '../components/llm-key/LimitField'
 import { useAuth } from '../auth/auth-context'
-import { canReadSupportMetadata } from '../auth/permissions'
+import { canReadSupportMetadata, isSysTier } from '../auth/permissions'
 import { canUseRowWork, hasWork, projectionAvailable, SYS_ADMIN, SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
 import {
   Button,
@@ -63,6 +63,7 @@ import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { AllocationWarning, KeyCreditObservation } from '../components/OpenRouterCredits'
 import { evaluateAllocation } from '../lib/openrouter-credits'
 import { requestDetailReturn, withListReturn } from '../lib/list-url'
+import { capacityReturn } from '../lib/llm-capacity'
 import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 import { requestReaderKey } from '../api/request-review'
 
@@ -162,6 +163,7 @@ function AdminLlmKeyDetailContent() {
   }
 
   const key = detail.data
+  const comparisonReturn = capacityReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && isSysTier(user.role))
   const actualOrgId = key.orgId && isUuid(key.orgId) ? key.orgId.toLowerCase() : undefined
   const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && canReadSupportMetadata(user.role))
   const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
@@ -207,6 +209,7 @@ function AdminLlmKeyDetailContent() {
   return (
     <div className="space-y-5">
       <WorkspaceSourceReturnLink workspaceId={key.workspaceId} admin />
+      {comparisonReturn && <Link to={comparisonReturn} className="block text-sm text-brand-foreground hover:underline">← 장비와 수요 비교</Link>}
       {requestReturn && <Link to={requestReturn} className="block text-sm text-brand-foreground hover:underline">← 신청 상세</Link>}
       <Link
         to={adminPaths.llmKeys(scope.activeOrgId)}

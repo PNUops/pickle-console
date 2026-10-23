@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import {
@@ -42,6 +43,8 @@ import {
 import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatBytes, formatDateTime, formatRelative } from '../lib/format'
 import { useAdminScope } from '../lib/use-admin-scope'
+
+const LlmCapacityView = lazy(() => import('../components/llm-capacity/LlmCapacityView'))
 
 const SCREEN_TABS = [
   { id: 'status', label: '상태' },
@@ -773,6 +776,7 @@ export function AdminLlmStatusPage() {
   const systemView = !!user && isSysTier(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') === 'metrics' ? 'metrics' : 'status'
+  const capacityView = activeTab === 'metrics' && searchParams.get('view') === 'capacity'
   const scopeKey = activeOrgId ?? null
   const permitted = canQueryWork(user, ['llm.observe'], { orgId: activeOrgId }, SYS_READERS)
 
@@ -792,7 +796,7 @@ export function AdminLlmStatusPage() {
       scopeKey,
       value: await fetchAdminLlmMetrics(activeOrgId, 7),
     }),
-    enabled: activeTab === 'metrics' && permitted,
+    enabled: activeTab === 'metrics' && !capacityView && permitted,
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
   })
@@ -828,8 +832,8 @@ export function AdminLlmStatusPage() {
         }}
       />
 
-      {activeQuery.isPending && <LoadingBlock label="LLM 서비스 정보 불러오는 중" />}
-      {activeQuery.isError && (
+      {!capacityView && permitted && activeQuery.isPending && <LoadingBlock label="LLM 서비스 정보 불러오는 중" />}
+      {!capacityView && activeQuery.isError && (
         <MessageBar variant="danger">{activeQuery.error.message}</MessageBar>
       )}
 
@@ -837,7 +841,16 @@ export function AdminLlmStatusPage() {
         {statusData && <StatusView data={statusData} systemView={systemView} />}
       </TabPanel>
       <TabPanel id="metrics" active={activeTab === 'metrics'}>
-        {metricsData && <MetricsView data={metricsData} systemView={systemView} />}
+        <Tabs aria-label="LLM 지표 보기" tabs={[{ id: 'summary', label: '최종 처리 요약' }, { id: 'capacity', label: '장비와 수요 비교' }]}
+          value={capacityView ? 'capacity' : 'summary'} onChange={(id) => {
+            const next = new URLSearchParams(searchParams)
+            if (id === 'capacity') next.set('view', id)
+            else next.delete('view')
+            setSearchParams(next, { replace: true })
+          }} />
+        {!permitted && <MessageBar>선택한 기관 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
+        {capacityView ? <Suspense fallback={<LoadingBlock label="수요 비교 화면 불러오는 중" />}><LlmCapacityView /></Suspense>
+          : metricsData && <MetricsView data={metricsData} systemView={systemView} />}
       </TabPanel>
     </div>
   )
