@@ -817,6 +817,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM 수요와 한도 판단 자료
+         * @description 같은 절대 기간의 보존된 raw event에서 수요·거절 사유·소비처를 조회합니다. 기관·워크스페이스와 관측 업무 범위를 집계 전에 적용합니다. 실제 장비 지표는 아직 제공하지 않으며 외부 호출이나 변경을 실행하지 않습니다.
+         */
+        get: operations["getAdminLlmCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/llm/keys": {
         parameters: {
             query?: never;
@@ -5105,6 +5125,26 @@ export interface components {
             /** Format: date */
             to: string;
         };
+        /** @description 요청 시각 기준의 관측된 수요. 최종 upstream 소비는 중간 재시도 부하나 개인별 GPU 점유율을 뜻하지 않습니다. */
+        AdminLlmCapacityResponse: {
+            /** Format: int32 */
+            bucketSeconds: number;
+            consumers: components["schemas"]["CapacityConsumers"];
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            generatedAt: string;
+            quality: components["schemas"]["CapacityQuality"];
+            reasons: components["schemas"]["CapacityReason"][];
+            selectors: components["schemas"]["CapacitySelectors"];
+            series: components["schemas"]["CapacitySeriesPoint"][];
+            summary: components["schemas"]["CapacityCounts"];
+            telemetry: components["schemas"]["CapacityTelemetry"];
+            telemetryVisible: boolean;
+            timezone: string;
+            /** Format: date-time */
+            to: string;
+        };
         AdminLlmKeyDetailResponse: {
             accountReferences?: components["schemas"]["InstitutionLlmAccountReference"][] | null;
             allowedWorkIds: string[];
@@ -6212,6 +6252,147 @@ export interface components {
             /** Format: int64 */
             memoryMb: number;
         };
+        CapacityConsumer: {
+            counts: components["schemas"]["CapacityCounts"];
+            currentLimits?: components["schemas"]["CapacityCurrentLimits"] | null;
+            /** Format: uuid */
+            keyId?: string | null;
+            keyName?: string | null;
+            /** Format: uuid */
+            orgId?: string | null;
+            orgName?: string | null;
+            /** Format: uuid */
+            workspaceId?: string | null;
+            workspaceName?: string | null;
+        };
+        CapacityConsumers: {
+            group: components["schemas"]["CapacityGroup"];
+            items: components["schemas"]["CapacityConsumer"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            totalElements: number;
+            /** Format: int32 */
+            totalPages: number;
+        };
+        /** @description 보존된 raw event의 관측 수. 요청 기간 전체가 삭제 경계 밖이면 수치는 null입니다. 부분 삭제 기간은 quality를 함께 확인해야 합니다. */
+        CapacityCounts: {
+            /** Format: int64 */
+            canceled?: number | null;
+            /** @description 공급자가 보고한 요청 금액의 합. TOKEN/CREDIT 축과 독립이며 사용자·플랫폼 부담이나 원가를 확정하지 않습니다. 권한 없음 또는 가격 표본 없음은 null입니다. */
+            costUsd?: number | null;
+            /** Format: int64 */
+            creditAxisRequests?: number | null;
+            /** Format: int64 */
+            estimatedRequests?: number | null;
+            /** Format: int64 */
+            failed?: number | null;
+            financeVisible: boolean;
+            /** Format: int64 */
+            inputTokens?: number | null;
+            /** Format: int64 */
+            outputTokens?: number | null;
+            /** Format: int64 */
+            pricedRequests?: number | null;
+            /** Format: int64 */
+            rateLimited?: number | null;
+            /** Format: int64 */
+            requests?: number | null;
+            /** Format: int64 */
+            succeeded?: number | null;
+            /** Format: int64 */
+            tokenAxisRequests?: number | null;
+            /** Format: int64 */
+            unknownAxisRequests?: number | null;
+            /**
+             * Format: int64
+             * @description 최종 upstream 미기록 요청 수. 모델 판정 전 거절과 과거 미귀속도 포함하며 특정 장비 수요로 귀속하지 않습니다.
+             */
+            unknownFinalUpstreamRequests?: number | null;
+            /** Format: int64 */
+            unknownKeyRequests?: number | null;
+            /** Format: int64 */
+            unknownModelRequests?: number | null;
+        };
+        /** @description 조회 시점에 저장된 키별 override. 과거 요청 당시 적용값이나 gateway 반영 완료가 아닙니다. null RPM/TPM/동시성의 실제 서비스 기본값은 보고되지 않았습니다. */
+        CapacityCurrentLimits: {
+            /** Format: int32 */
+            concurrency?: number | null;
+            /** Format: date-time */
+            configurationObservedAt: string;
+            /**
+             * Format: int64
+             * @description 저장된 일일 TOKEN 한도. null은 무제한, 0은 TOKEN 축 사용 불가입니다.
+             */
+            dailyTokens?: number | null;
+            quotaExhausted: boolean;
+            /** Format: int32 */
+            rpm?: number | null;
+            serviceDefaultsReported: boolean;
+            /** Format: int32 */
+            tpm?: number | null;
+        };
+        /** @enum {string} */
+        CapacityGroup: "ORG" | "WORKSPACE" | "KEY";
+        /** @description 보존과 전달 품질. latestUsageReceivedAt은 API 수신 시각이며 completeness watermark가 아닙니다. 집계가 비어도 미수집·전송 손실이 없다는 뜻은 아닙니다. */
+        CapacityQuality: {
+            completeness: string;
+            /** Format: int32 */
+            configuredRetentionDays: number;
+            gateway: components["schemas"]["LlmGatewayStatusResponse"];
+            /** Format: date-time */
+            latestUsageReceivedAt?: string | null;
+            rawHistoryState: components["schemas"]["CapacityRawHistoryState"];
+            /** Format: date-time */
+            rawRetainedFrom?: string | null;
+            /** Format: date-time */
+            rollupLastSuccessAt?: string | null;
+        };
+        /** @enum {string} */
+        CapacityRawHistoryState: "NOT_SWEPT" | "WITHIN_RETAINED_RANGE" | "PARTIALLY_SWEPT" | "FULLY_SWEPT";
+        /** @description 정상 응답을 제외한 원문 오류 유형과 분류의 조합. GLOBAL_ADMISSION은 실제 attempts=0 근거가 있을 때만 분류하며 과거 시도 횟수 미기록은 미분류로 보존합니다. PROVIDER는 공급 경로 결과이며 공급자 과실이나 중간 처리 경로를 확정하지 않습니다. */
+        CapacityReason: {
+            category: components["schemas"]["CapacityReasonCategory"];
+            errorType?: string | null;
+            /** Format: int64 */
+            knownKeys: number;
+            /** Format: int64 */
+            requests: number;
+        };
+        /** @enum {string} */
+        CapacityReasonCategory: "USER_QUOTA" | "ENDPOINT_POLICY" | "MODEL_POLICY" | "LARGE_REQUEST" | "GLOBAL_ADMISSION" | "PROVIDER" | "INPUT" | "AUTHENTICATION" | "SERVICE" | "CANCELED" | "UNCLASSIFIED";
+        CapacityReference: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        CapacityReferenceCollection: {
+            items: components["schemas"]["CapacityReference"][];
+            /** Format: int64 */
+            totalItems: number;
+            truncated: boolean;
+        };
+        /** @description 현재 관측 업무가 허용한 실제 키 관계와 보이는 등록 공급원의 최소 참조. 워크스페이스 관리나 전역 장비 권한이 아닙니다. */
+        CapacitySelectors: {
+            institutions: components["schemas"]["CapacityReferenceCollection"];
+            upstreams: components["schemas"]["CapacityReferenceCollection"];
+            workspaces: components["schemas"]["CapacityReferenceCollection"];
+        };
+        CapacitySeriesPoint: {
+            counts: components["schemas"]["CapacityCounts"];
+            /** Format: date-time */
+            from: string;
+            rawHistoryState: components["schemas"]["CapacityRawHistoryState"];
+            /** Format: date-time */
+            to: string;
+        };
+        CapacityTelemetry: {
+            status: components["schemas"]["CapacityTelemetryStatus"];
+        };
+        /** @enum {string} */
+        CapacityTelemetryStatus: "NOT_CONFIGURED" | "NOT_PROVIDED";
         CapacityTrendPointResponse: {
             /** Format: date */
             day: string;
@@ -12595,6 +12776,57 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminLlmAccountUsageResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminLlmCapacity: {
+        parameters: {
+            query: {
+                /** @description 포함하는 시작 시각(UTC Instant) */
+                from: string;
+                /** @description 제외하는 종료 시각(UTC Instant). 미래 불가, 최대 기간 90일 */
+                to: string;
+                orgId?: string;
+                workspaceId?: string;
+                /** @description 현재 범위에서 보이는 등록 공급원의 공개 ID. 최종 처리 경로를 필터합니다. */
+                upstreamId?: string;
+                /** @description 요청 당시 공개 모델 이름의 정확한 값 */
+                publicModelName?: string;
+                /** @description 정상 응답을 제외하고 기록된 errorType의 정확한 값 */
+                errorType?: string;
+                /** @description 정상 응답을 제외하고 errorType이 기록되지 않은 요청만 조회. errorType과 동시 지정할 수 없습니다. */
+                errorTypeMissing?: boolean;
+                /** @description 거절·오류 분류. 오류 유형 또는 미기록 필터와 함께 같은 사유 행의 소비처를 조회합니다. */
+                reasonCategory?: components["schemas"]["CapacityReasonCategory"];
+                group?: components["schemas"]["CapacityGroup"];
+                page?: number;
+                size?: number;
+                /** @description 버킷 초. 생략하면 기간에 맞추며 최대 1440개 버킷을 반환합니다. */
+                bucketSeconds?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmCapacityResponse"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

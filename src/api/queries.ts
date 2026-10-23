@@ -656,6 +656,8 @@ export type UpstreamAvailability = Schemas['LlmUpstreamAvailability']
 export type ActiveProbeStatus = Schemas['LlmActiveProbeStatus']
 export type LlmCatalogStatus = Schemas['LlmCatalogStatus']
 export type AdminLlmMetrics = Schemas['LlmMetricsResponse']
+export type AdminLlmCapacity = Schemas['AdminLlmCapacityResponse']
+export type LlmCapacityQuery = NonNullable<import('./schema').operations['getAdminLlmCapacity']['parameters']['query']>
 export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
 export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']
 export type AdminLlmUsage = Schemas['AdminLlmUsageResponse']
@@ -872,6 +874,14 @@ export function fetchAdminLlmMetrics(orgId?: string, days = 7): Promise<AdminLlm
       params: { query: { orgId, days } },
     })
     if (!data) throw toApiError(error, 'LLM 서비스 지표를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminLlmCapacity(params: LlmCapacityQuery): Promise<AdminLlmCapacity> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/capacity', { params: { query: params } })
+    if (!data) throw toApiError(error, 'LLM 수요 비교 자료를 불러오지 못했습니다.')
     return data
   })
 }

@@ -28,6 +28,7 @@ import { workspaceHandlers } from './handlers/workspaces'
 import { dnsDomainAccessHandlers, dnsDomainHandlers } from './handlers/dns-domains'
 import { llmKeyHandlers } from './handlers/llm-keys'
 import { llmObservabilityHandlers } from './handlers/llm-observability'
+import { llmCapacityHandlers } from './handlers/llm-capacity'
 import { llmAdminUsageHandlers } from './handlers/llm-admin-usage'
 import { openRouterAccountHandlers } from './handlers/openrouter-accounts'
 import { metricsHandlers } from './handlers/metrics'
@@ -69,6 +70,7 @@ export const handlers: RequestHandler[] = [
   ...bulkChangeHandlers,
   ...openRouterAccountHandlers,
   ...llmObservabilityHandlers,
+  ...llmCapacityHandlers,
   ...llmAdminUsageHandlers,
   ...resourceHandlers,
   ...terminalHandlers,
