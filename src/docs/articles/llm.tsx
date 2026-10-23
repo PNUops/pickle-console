@@ -362,7 +362,7 @@ export const llmArticles: GuideArticle[] = [
           <p>일일 토큰 한도가 0이 아닌 키로 실행합니다.</p>
           <CodeBlock label="curl" code={CURL_EXAMPLE} />
           <h3 className="font-medium">유료 모델을 쓰는 키</h3>
-          <p><strong>연결 정보 → 호출할 수 있는 모델 보기</strong>에서 유료 모델을 찾아 ID를 복사합니다. 아래의 <code>콘솔에서 복사한 유료 모델 ID</code>를 그 값으로 바꿉니다. 금액이 <strong>적용 중</strong>이면 반영이 끝난 뒤 실행합니다. 자체 서빙 한도가 0인 키도 부여된 금액과 권한으로 유료 모델을 호출할 수 있습니다.</p>
+          <p><strong>연결 정보 → 모델 후보 보기</strong>에서 유료 모델을 찾아 ID를 복사합니다. 아래의 <code>콘솔에서 복사한 유료 모델 ID</code>를 그 값으로 바꿉니다. 금액이 <strong>적용 중</strong>이면 반영이 끝난 뒤 실행합니다. 자체 서빙 한도가 0인 키도 부여된 금액과 권한으로 유료 모델을 호출할 수 있습니다.</p>
           <CodeBlock label="유료 모델 curl" code={PAID_CURL_EXAMPLE} />
           <p>성공하면 JSON의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">choices[0].message.content</code>에 답변이 들어 있습니다. 오류가 나오면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>를 읽고 <GuideLink slug="llm/errors">오류 해결</GuideLink>에서 확인합니다.</p>
           <p>다른 예제에서도 유료 모델을 쓰려면 <code>model</code>을 같은 ID로 바꿉니다. 모델별 가격과 목록 상태는 <GuideLink slug="llm/features" anchor="models">모델 목록과 권한</GuideLink>에서 확인하세요.</p>
@@ -451,7 +451,7 @@ export const llmArticles: GuideArticle[] = [
         body: <>
           <p><GuideAction action="llmKeys">LLM API 키 목록</GuideAction>에서 키를 열고 <strong>개요 → 키 정보</strong>를 확인합니다. 자체 서빙 모델 이름은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>입니다.</p>
           <ol>
-            <li><strong>개요 → 연결 정보 → 호출할 수 있는 모델 보기</strong>를 엽니다.</li>
+            <li><strong>개요 → 연결 정보 → 모델 후보 보기</strong>를 엽니다.</li>
             <li>모델 이름을 검색하고 사용할 모델의 ID 옆 <strong>복사</strong>를 누릅니다. 표시 이름 대신 복사한 ID를 요청의 <code>model</code>에 넣습니다.</li>
             <li>유료 모델의 입력과 출력 단가와 <strong>가격</strong> 상세를 확인합니다. 캐시 읽기와 쓰기, 추론, 이미지, 웹 검색, 요청당 요금이나 입력 길이 등에 따른 구간 가격이 있으면 함께 확인합니다. 상세에 표시된 단위와 UTC 시간 조건을 따릅니다.</li>
           </ol>
@@ -501,7 +501,7 @@ export const llmArticles: GuideArticle[] = [
           <h3 className="font-medium">검색한 문서를 리랭크하기</h3>
           <p>리랭크 권한과 금액을 확인하고, 질의(<code>query</code>)와 후보 문서(<code>documents</code>)를 보냅니다. 응답의 <code>results</code>는 관련도(<code>relevance_score</code>)가 높은 순서이고, 각 항목의 <code>index</code>는 보낸 문서의 순서를 가리킵니다. OpenAI SDK에는 리랭크 함수가 없으므로 HTTP로 직접 호출합니다.</p>
           <CodeBlock label="리랭크 curl" code={RERANK_EXAMPLE} />
-          <p>리랭크 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 모델에 따라 토큰이나 검색 단위로 매겨지고 키의 사용 금액에 반영되며, 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
+          <p>리랭크 모델은 <strong>모델 후보 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 모델에 따라 토큰이나 검색 단위로 매겨지고 키의 사용 금액에 반영되며, 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
           <p>이미지, 임베딩, 리랭크 요청 본문도 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. 스트리밍을 켜서 큰 이미지 응답을 해결할 수는 없습니다. 같은 크기의 요청이 간헐적으로 거절되면 <GuideLink slug="llm/errors" anchor="requests">큰 응답과 혼잡 대응</GuideLink>을 확인합니다.</p>
         </>,
       },
@@ -509,7 +509,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'audio',
         title: 'TTS와 STT',
         body: <>
-          <p>텍스트를 음성으로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/speech</code>는 TTS 권한, 음성을 텍스트로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/transcriptions</code>는 STT 권한이 필요합니다. 둘 다 유료 모델만 지원합니다. TTS와 STT 모델은 <strong>호출할 수 있는 모델 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 키의 사용 금액에 반영되며 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
+          <p>텍스트를 음성으로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/speech</code>는 TTS 권한, 음성을 텍스트로 바꾸는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/audio/transcriptions</code>는 STT 권한이 필요합니다. 둘 다 유료 모델만 지원합니다. TTS와 STT 모델은 <strong>모델 후보 보기</strong>에 나오지 않아 가격도 거기서 볼 수 없습니다. 모델 ID를 직접 지정하고, 키의 유료 모델 허용 목록이 제한되어 있으면 그 ID가 목록에 있어야 합니다. 요금은 키의 사용 금액에 반영되며 반영은 호출 뒤 몇 분 늦을 수 있습니다.</p>
           <h3 className="font-medium">텍스트를 음성 파일로 만들기</h3>
           <p>OpenAI SDK는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>을 지정하지 않으면 보내지 않고, 이때는 헤더 없는 원시 PCM(24kHz, 16비트, 모노)이 돌아옵니다. 그대로 <code>.mp3</code>로 저장하면 재생되지 않으므로 아래처럼 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format="mp3"</code>를 지정합니다. 모델에 따라 <code>voice</code>가 없으면 거절되므로 항상 지정합니다.</p>
           <CodeBlock label="TTS Python" code={SPEECH_PYTHON_EXAMPLE} />

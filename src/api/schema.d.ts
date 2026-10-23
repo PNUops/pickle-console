@@ -1046,7 +1046,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM 서비스 상태
-         * @description 게이트웨이 자기보고와 upstream별 passive·active·catalog 현재 상태를 조회합니다. 조회 과정에서 gateway나 upstream을 직접 호출하지 않으며 변경 작업도 제공하지 않습니다.
+         * @description 게이트웨이 자기보고와 upstream별 passive·active·catalog 현재 상태를 조회합니다. 현재 범위에서 읽을 수 있는 공급원에 연결된 공개 TOKEN 모델의 주·대체 구성 관계도 제공하며 전체 모델 목록이나 실제 처리 경로를 뜻하지 않습니다. 조회 과정에서 gateway나 upstream을 직접 호출하지 않으며 변경 작업도 제공하지 않습니다.
          */
         get: operations["getAdminLlmStatus"];
         put?: never;
@@ -7912,6 +7912,31 @@ export interface components {
             totalEvents: number;
             upstreams: components["schemas"]["LlmUpstreamMetricResponse"][];
         };
+        /** @description 같은 상태 응답에 포함된 등록 공급원의 공개 참조. VISIBLE일 때만 ID·이름을 반환하고 나머지 상태에서는 둘 다 null입니다. */
+        LlmModelRouteReference: {
+            state: components["schemas"]["LlmModelRouteState"];
+            /**
+             * Format: uuid
+             * @description 현재 응답에서 읽을 수 있는 등록 공급원 공개 ID
+             */
+            upstreamId?: string | null;
+            /** @description 현재 응답에서 읽을 수 있는 등록 공급원 표시 이름 */
+            upstreamName?: string | null;
+        };
+        /** @description 공개·활성 TOKEN 모델의 주·대체 공급원 구성 관계. 현재 응답에서 읽을 수 있는 공급원 연결이 하나 이상인 모델만 포함하며 전체 모델 목록이나 실제 처리 경로가 아닙니다. */
+        LlmModelRouteResponse: {
+            /** @description 대체 공급원 구성의 공개 참조 */
+            fallback: components["schemas"]["LlmModelRouteReference"];
+            /** @description 주 공급원 구성의 공개 참조 */
+            primary: components["schemas"]["LlmModelRouteReference"];
+            /** @description 요청의 model 필드에 사용하는 공개 모델명 */
+            publicName: string;
+        };
+        /**
+         * @description VISIBLE은 현재 응답에서 확인할 수 있는 등록 공급원입니다. NOT_CONFIGURED는 SYS 응답에서만 구성이 없음을 뜻합니다. NOT_PROVIDED는 참조를 제공하지 않는 상태이며 ORG에서는 미설정·범위 밖·미등록을 구별하지 않습니다.
+         * @enum {string}
+         */
+        LlmModelRouteState: "VISIBLE" | "NOT_CONFIGURED" | "NOT_PROVIDED";
         /** @description 실제 사용자 요청에서 얻은 passive 관측. lastAttemptAt은 표시용이며, 가용성 판정은 최근 15분 안의 lastSuccessAt·lastFailureAt만 사용합니다. */
         LlmPassiveObservationResponse: {
             /**
@@ -7953,6 +7978,8 @@ export interface components {
         };
         LlmStatusResponse: {
             gateway: components["schemas"]["LlmGatewayStatusResponse"];
+            /** @description 공개·활성 TOKEN 모델 중 현재 응답의 읽을 수 있는 공급원과 연결된 구성 관계. 전체 모델 목록이 아니며 빈 배열은 현재 범위에서 연결을 확인할 수 없음을 뜻합니다. 실제 처리·사용량·영향 키를 나타내지 않습니다. */
+            modelRoutes: components["schemas"]["LlmModelRouteResponse"][];
             /** Format: date-time */
             observedAt: string;
             upstreams: components["schemas"]["LlmUpstreamStatusResponse"][];

@@ -156,6 +156,7 @@ const upstreamMetrics: ScopedUpstream<LlmUpstreamMetric>[] = [
 
 export const llmStatusFixture: Omit<AdminLlmStatus, 'upstreams'> = {
   observedAt: observedNow,
+  modelRoutes: [],
   gateway: {
     reportState: 'FRESH',
     desiredGeneration: 42,

@@ -12,7 +12,7 @@ import {
   type OpenRouterCredentialState,
   type UpdateOpenRouterAccount,
 } from '../api/queries'
-import { CreditModelRulesField } from '../components/CreditModelRulesField'
+import { CreditModelPolicyEditor } from '../components/CreditModelPolicyEditor'
 import { toApiError } from '../api/problem'
 import { useAuth } from '../auth/auth-context'
 import { hasWork, projectionAvailable, SYS_ADMIN, SYS_READERS } from '../auth/institution-authority'
@@ -388,9 +388,11 @@ function EditAccountModal({
           <FormField label="사업명"><Input value={program} onChange={(event) => setProgram(event.target.value)} /></FormField>
           <FormField label="담당자"><Input value={contact} onChange={(event) => setContact(event.target.value)} /></FormField>
         </div>
-        {policyKnown ? <CreditModelRulesField
+        {policyKnown ? <CreditModelPolicyEditor
           label="승인 화면 기본 모델 허용·차단"
           value={defaultRules}
+          baseline={{ allowed: account.defaultCreditAllowedModels!, denied: account.defaultCreditDeniedModels! }}
+          baselineLabel="조회한 계정 기본값"
           onChange={setDefaultRules}
           error={modelsError ?? undefined}
         /> : <MessageBar>현재 기본 정책을 제공할 수 없어 이 변경에서 해당 정책을 보내지 않습니다.</MessageBar>}

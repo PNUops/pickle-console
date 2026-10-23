@@ -29,7 +29,7 @@ async function openModels(state: LlmKeyModelsState) {
     ),
   )
   renderApp(`/console/llm-keys/${OWNED_ACTIVE_KEY}`)
-  const open = await screen.findByRole('button', { name: '호출할 수 있는 모델 보기' })
+  const open = await screen.findByRole('button', { name: '모델 후보 보기' })
   await userEvent.click(open)
   return screen.findByRole('dialog')
 }
@@ -63,9 +63,9 @@ describe('호출할 수 있는 모델', () => {
     )
   })
 
-  test('한도를 적용하는 중이면 기다리면 된다고 말한다', async () => {
+  test('distinguishes a pending limit from confirmed application', async () => {
     await openModels('pending')
-    expect(await screen.findByText(/적용하는 중입니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/금액 한도의 적용이 아직 확인되지 않았습니다/)).toBeInTheDocument()
   })
 
   test('좁히는 규칙이 없으면 좁혀졌다고 말하지 않는다', async () => {
@@ -140,7 +140,7 @@ describe('호출할 수 있는 모델', () => {
 
   test('좁혀서 남은 것이 없는 것과 목록이 비어 있는 것을 구분한다', async () => {
     await openModels('narrowedToNothing')
-    expect(await screen.findByText(/이 키가 부를 수 있는 모델이 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/이 키의 패턴 조건을 통과하는 후보가 없습니다/)).toBeInTheDocument()
   })
 
   test('자체 서빙 구역이 비어도 고장으로 읽히지 않는다', async () => {

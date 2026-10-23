@@ -701,23 +701,23 @@ describe('유료 모델 선택기', () => {
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
 
     // 계정을 고르기 전에는 두 목록이 비어 있고, 그때는 카탈로그 전체가 대상이다.
-    expect(await screen.findByText(/제한이 없습니다. 지금 카탈로그 3개 전부/)).toBeInTheDocument()
-    expect(screen.getByText(/최고가는 openai\/o1-pro, 백만 토큰당 출력 \$600/)).toBeInTheDocument()
+    expect(await screen.findByText(/패턴 조건을 통과하는 후보 3개/)).toBeInTheDocument()
+    expect(screen.getByText(/기본 출력 단가가 알려진 후보 중 최대는 openai\/o1-pro, 백만 토큰당 출력 \$600/)).toBeInTheDocument()
 
     // 계정 기본값 openai/* 가 채워지면 별칭 하나가 빠진다.
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
     await waitFor(() =>
-      expect(screen.getByText(/쓸 수 있는 유료 모델 2개/)).toBeInTheDocument(),
+      expect(screen.getByText(/패턴 조건을 통과하는 후보 2개/)).toBeInTheDocument(),
     )
 
     // 차단이 최고가를 걷어내면 최고가 문장이 그다음 모델로 내려간다.
     await user.type(screen.getByLabelText('유료 모델 허용·차단'), '{enter}-openai/*-pro')
     await waitFor(() =>
-      expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument(),
+      expect(screen.getByText(/패턴 조건을 통과하는 후보 1개/)).toBeInTheDocument(),
     )
     expect(screen.getByText(/차단 목록이 걷어낸 모델 1개: openai\/o1-pro/)).toBeInTheDocument()
     expect(
-      screen.getByText(/최고가는 openai\/gpt-4o-mini, 백만 토큰당 출력 \$0.6/),
+      screen.getByText(/기본 출력 단가가 알려진 후보 중 최대는 openai\/gpt-4o-mini, 백만 토큰당 출력 \$0.6/),
     ).toBeInTheDocument()
   })
 
@@ -748,7 +748,7 @@ describe('유료 모델 선택기', () => {
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/모델 목록을 불러오지 못했습니다/)
+    await screen.findByText(/저장된 목록 조회 실패:/)
 
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
@@ -806,7 +806,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/아직 목록을 가져온 적이 없습니다/)
+    await screen.findByText(/아직 성공한 공급자 목록이 없습니다/)
   })
 })
 
@@ -1030,7 +1030,7 @@ describe('signed paid-model policy editor', () => {
     const rules = screen.getByLabelText('유료 모델 허용·차단')
     await user.click(rules)
     await user.paste('+*/*\n-openai/*-pro')
-    expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument()
+    expect(screen.getByText(/패턴 조건을 통과하는 후보 1개/)).toBeInTheDocument()
     expect(screen.getByText(/차단 목록이 걷어낸 모델 2개/)).toBeInTheDocument()
     const picker = within(screen.getByRole('list', { name: '카탈로그 유료 모델' }))
     await user.click(picker.getByRole('button', { name: 'openai/model-pro 패턴 제안' }))
@@ -1072,4 +1072,47 @@ test('binds indexed server errors from both granted lists to the approval field'
   await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
   const rules = screen.getByLabelText('유료 모델 허용·차단')
   await waitFor(() => expect(rules).toHaveAccessibleDescription(expect.stringContaining('허용 규칙 서버 오류 차단 규칙 서버 오류')))
+})
+
+
+test('resets both model rules to a known empty account default', async () => {
+  const user = userEvent.setup()
+  const account = openRouterAccountStore.find((row) => row.id === uuid(410))!
+  account.defaultCreditAllowedModels = []
+  account.defaultCreditDeniedModels = []
+  const approved = renderDetail({ reqCreditLimit: 5 })
+  await user.selectOptions(await screen.findByLabelText('OpenRouter 사업 계정'), uuid(410))
+  const rules = screen.getByLabelText('유료 모델 허용·차단')
+  await user.click(rules)
+  await user.paste('+openai/*\n-google/*')
+  await user.click(screen.getByRole('button', { name: /계정의 기본값으로 되돌리기/ }))
+  expect(rules).toHaveValue('')
+  await user.click(screen.getByRole('button', { name: '승인하기' }))
+  const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+  await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+  await waitFor(() => expect(approved).toHaveLength(1))
+  expect(approved[0].llmKey).toMatchObject({ grantedCreditAllowedModels: [], grantedCreditDeniedModels: [] })
+})
+
+test('keeps both collapsed axes in the confirmation and approval payload', async () => {
+  const user = userEvent.setup()
+  const approved = renderDetail({ reqCreditLimit: 5 })
+  await user.type(await screen.findByLabelText('부여 일일 토큰 수'), '12345')
+  await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+  const rules = screen.getByLabelText('유료 모델 허용·차단')
+  await user.clear(rules)
+  await user.paste('+google/*\n-openai/*-pro')
+  await user.click(screen.getByText('TOKEN 토큰 한도', { selector: 'summary' }))
+  await user.click(screen.getByText('CREDIT 유료 모델 정책', { selector: 'summary' }))
+  expect(screen.getByText('TOKEN 토큰 한도', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
+  expect(screen.getByText('CREDIT 유료 모델 정책', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
+  expect(rules).toHaveValue('+google/*\n-openai/*-pro')
+  expect(screen.getByLabelText('부여 일일 토큰 수')).toHaveValue(12345)
+  await user.click(screen.getByRole('button', { name: '승인하기' }))
+  const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+  expect(within(dialog).getByText(/google\/\*/)).toBeInTheDocument()
+  await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+  await waitFor(() => expect(approved).toHaveLength(1))
+  expect(approved[0].llmKey).toMatchObject({ grantedDailyTokens: 12345, grantedCreditLimit: 5,
+    grantedCreditAllowedModels: ['google/*'], grantedCreditDeniedModels: ['openai/*-pro'] })
 })

@@ -7,17 +7,13 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import {
   fetchOpenRouterAccounts,
-  fetchOpenRouterCatalogue,
   fetchApprovalContext,
   type ApproveRequest,
-  type OpenRouterCatalogue,
   type OpenRouterAccount,
   type RequestDetail,
 } from '../../api/queries'
 import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
-import { CreditModelPicker } from '../CreditModelPicker'
-import { CreditModelPreview } from '../CreditModelPreview'
-import { CreditModelRulesField } from '../CreditModelRulesField'
+import { CreditModelPolicyEditor } from '../CreditModelPolicyEditor'
 import { PassthroughEndpointField } from '../PassthroughEndpointField'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
@@ -28,12 +24,10 @@ import { useAdminScope } from '../../lib/use-admin-scope'
 import { isUuid } from '../../lib/validation'
 import { approvalTargetCounts, type ApprovalTargetFacts } from './approval-confirmation'
 import {
-  appendCreditModelRule,
   creditModelFieldErrors,
   creditModelRulesError,
   formatCreditModelRules,
   parseCreditModelRules,
-  type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
 import {
   grantPayload,
@@ -121,9 +115,6 @@ interface LlmAccountDecisionData {
   loading: boolean
   failed: boolean
   retry: () => void
-  // 카탈로그는 별도로 실패할 수 있고, 실패해도 승인은 진행된다.
-  catalogue: OpenRouterCatalogue | undefined
-  catalogueFailed: boolean
   targetFacts?: ApprovalTargetFacts[]
   targetFactsKnown?: boolean
 }
@@ -153,11 +144,6 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
     enabled: paidAllowed && accountFinance && request.orgId != null,
     retry: false,
   })
-  const catalogue = useQuery({
-    queryKey: ['admin', 'openrouter-catalogue'], queryFn: fetchOpenRouterCatalogue,
-    enabled: hasWork(user, 'llm.model-catalogue.read', {}, SYS_READERS),
-    retry: false, staleTime: 5 * 60 * 1000,
-  })
   const references = stored ? context.data?.llmKey?.accountReferences : rosterReferences.data
   const eligibleAccounts = (references ?? []).filter((account) => account.eligibleForBinding).map((reference) => {
     const finance = accounts.data?.find((account) => account.id === reference.id)
@@ -168,7 +154,6 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
     loading: paidAllowed && (stored ? context.isFetching : rosterReferences.isFetching),
     failed: paidAllowed && (stored ? context.isError || context.isSuccess && references == null : rosterReferences.isError),
     retry: () => { if (stored) void context.refetch(); else void rosterReferences.refetch() },
-    catalogue: catalogue.data, catalogueFailed: catalogue.isError,
     targetFacts, targetFactsKnown: context.isSuccess,
   } satisfies LlmAccountDecisionData }
 }
@@ -274,7 +259,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
   const accountDefault = effectiveAccount?.defaultCreditAllowedModels ?? []
   const accountDenyDefault = effectiveAccount?.defaultCreditDeniedModels ?? []
-  const hasAccountDefaults = accountDefault.length + accountDenyDefault.length > 0
+  const hasAccountDefaults = effectiveAccount?.defaultCreditAllowedModels != null && effectiveAccount.defaultCreditDeniedModels != null
   const prefillKey = effectiveAccount?.id ?? null
   if (!accountDefaultsTouched && prefillKey !== prefilledFrom) {
     setPrefilledFrom(prefillKey)
@@ -284,10 +269,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const parsedRules = parseCreditModelRules(creditModelRules)
   const parsedCreditModels = parsedRules.allowed
   const parsedDeniedModels = parsedRules.denied
-  const addModel = (pattern: string, list: CreditModelListKind) => {
-    setAccountDefaultsTouched(true)
-    setCreditModelRules((text) => appendCreditModelRule(text, pattern, list))
-  }
 
   return {
     validate: () => {
@@ -384,6 +365,9 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인합니다. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫습니다.</p>}
           {!freeApprovalSelected && <p className="text-sm">현재 부여안 기능: {passthroughText(passthroughEndpoints)}</p>}
         </div>}
+        <details open className="min-w-0 space-y-4 rounded border border-line p-3">
+          <summary className="cursor-pointer font-medium">TOKEN 토큰 한도</summary>
+          <p className="text-xs text-foreground-muted">접어도 입력값과 승인 내용은 유지됩니다. RPM·TPM·동시 요청의 실제 서비스 기본값은 서버에서 보고하지 않아 확인할 수 없습니다.</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 분당 요청 수"
@@ -444,6 +428,10 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             />
           </FormField>
         </div>
+        </details>
+        <details open className="min-w-0 space-y-4 rounded border border-line p-3">
+          <summary className="cursor-pointer font-medium">CREDIT 유료 모델 정책</summary>
+          <p className="text-xs text-foreground-muted">접어도 금액·계정·모델 규칙은 유지됩니다. 신청하지 않은 축도 권한이 있으면 직접 부여할 수 있습니다.</p>
         <fieldset disabled={!accountData.paidAllowed} className="min-w-0 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
@@ -482,8 +470,10 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           onChange: setOpenrouterAccountId,
           error: fieldErrors['llmKey.openrouterAccountId'],
         })}
-        <CreditModelRulesField
+        <CreditModelPolicyEditor
           value={creditModelRules}
+          baseline={hasAccountDefaults ? { allowed: accountDefault, denied: accountDenyDefault } : undefined}
+          baselineLabel="선택 계정의 승인 초기값"
           error={creditModelFieldErrors(fieldErrors,
             'llmKey.grantedCreditAllowedModels', 'llmKey.grantedCreditDeniedModels')}
           onChange={(text) => {
@@ -491,21 +481,8 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             setCreditModelRules(text)
           }}
         />
-        <CreditModelPicker
-          catalogue={accountData.catalogue}
-          failed={accountData.catalogueFailed}
-          allowed={parsedCreditModels}
-          denied={parsedDeniedModels}
-          onAdd={addModel}
-        />
-        <CreditModelPreview
-          catalogue={accountData.catalogue}
-          failed={accountData.catalogueFailed}
-          allowed={parsedCreditModels}
-          denied={parsedDeniedModels}
-          invalid={parsedRules.errors.length > 0}
-        />
         </fieldset>
+        </details>
         <PassthroughEndpointField
           label="부여할 기능 권한"
           rows={accountData.paidAllowed ? undefined : ['chat']}
