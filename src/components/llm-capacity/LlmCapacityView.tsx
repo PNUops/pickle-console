@@ -35,6 +35,7 @@ const CATEGORIES: Record<string, string> = {
   USER_QUOTA: '사용자 한도', ENDPOINT_POLICY: '기능 정책', MODEL_POLICY: '모델 정책', LARGE_REQUEST: '큰 요청',
   GLOBAL_ADMISSION: '전역 중계', PROVIDER: '공급 경로 결과', INPUT: '입력', AUTHENTICATION: '인증', SERVICE: '서비스', CANCELED: '취소', UNCLASSIFIED: '미분류',
 }
+const FILTER_KEYS = ['workspaceId', 'upstreamId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'bucketSeconds', 'page'] as const
 
 function count(value: number | null | undefined): string { return value == null ? '미확인' : value.toLocaleString('ko-KR') }
 function requests(value: number | null | undefined): string { return value == null ? '미확인' : `${count(value)}건` }
@@ -158,6 +159,13 @@ export default function LlmCapacityView() {
       <Button size="sm" variant="secondary" onClick={() => { void capacity.refetch() }} disabled={!scope.ready || !permitted || !!parsed.error || capacity.isFetching}>다시 조회</Button>
     </div>
     <WindowEditor key={`${query.from}:${query.to}`} from={query.from} to={query.to} onApply={(from, to) => update({ from, to, bucketSeconds: undefined })} />
+    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+      {scope.ready && permitted && <ModelFilter key={JSON.stringify([reader, scope.activeOrgId, query.publicModelName])} value={query.publicModelName ?? ''} onApply={(value) => update({ publicModelName: value })} />}
+      {FILTER_KEYS.some((key) => params.has(key)) && <div className="space-y-1">
+        <Button variant="secondary" disabled={!scope.ready} onClick={() => update(Object.fromEntries(FILTER_KEYS.map((key) => [key, undefined])))}>조회 필터 초기화</Button>
+        <p className="text-xs text-foreground-muted">기관과 기간은 유지합니다.</p>
+      </div>}
+    </div>
     {parsed.error && <MessageBar variant="danger">{parsed.error}</MessageBar>}
     {query.upstreamId && <MessageBar title="최종 처리 경로로 좁힌 결과입니다">
       <p>이 공급원에 귀속된 기록만 표시합니다. 경로 판정 전 거절과 공급원 미귀속 기록은 제외되므로, 표시된 0을 해당 장비의 거절 수요가 없다는 뜻으로 해석하지 마세요.</p>
@@ -214,11 +222,10 @@ export default function LlmCapacityView() {
           format={formatTokenCompact} formatDetail={formatTokenExact} formatTime={(value) => at(new Date(value * 1000).toISOString())} formatAxisTime={(value) => axisAt(value, axisWindowMillis)} splitBase="integer" caption="각 구간의 합계입니다. 초당 처리량이나 순간 최댓값이 아닙니다." />
       </div>
       {current && sameWindow && <>
-        <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {scope.tier === 'system' && <label className="min-w-0 flex-1 text-sm">수요 기관<Select aria-label="수요 기관" value={scope.activeOrgId ?? ''} onChange={(event) => update({ org: event.target.value, workspaceId: undefined })}><option value="">플랫폼 전체 읽기 범위</option>{data.selectors.institutions.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>}
           <label className="min-w-0 flex-1 text-sm">워크스페이스<Select aria-label="수요 워크스페이스" value={query.workspaceId ?? ''} onChange={(event) => update({ workspaceId: event.target.value, group: 'KEY' })}><option value="">현재 기관 범위 전체</option>{query.workspaceId && !data.selectors.workspaces.items.some((item) => item.id === query.workspaceId) && <option value={query.workspaceId}>선택 목록 밖의 현재 필터</option>}{data.selectors.workspaces.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
           <label className="min-w-0 flex-1 text-sm">최종 처리 공급원<Select aria-label="최종 처리 공급원" value={query.upstreamId ?? ''} onChange={(event) => update({ upstreamId: event.target.value })}><option value="">공급원 전체·미귀속 포함</option>{query.upstreamId && !data.selectors.upstreams.items.some((item) => item.id === query.upstreamId) && <option value={query.upstreamId}>선택 목록 밖의 현재 필터</option>}{data.selectors.upstreams.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
-          <ModelFilter key={query.publicModelName ?? ''} value={query.publicModelName ?? ''} onApply={(value) => update({ publicModelName: value })} />
           <label className="min-w-0 flex-1 text-sm">소비처 구분<Select aria-label="소비처 구분" value={query.group} onChange={(event) => update({ group: event.target.value })}>{scope.tier === 'system' && <option value="ORG">기관</option>}<option value="WORKSPACE">워크스페이스</option><option value="KEY">키</option></Select></label>
         </div>
         {referenceWarning && <MessageBar>선택 목록은 일부만 표시됩니다. 현재 조건과 권한에서 읽을 수 있는 대상만 조회합니다.</MessageBar>}
