@@ -94,10 +94,19 @@ export const llmCapacityHandlers: RequestHandler[] = [http.get('*/api/v1/admin/l
   const orgId = params.get('orgId') ?? undefined
   const workspaceId = params.get('workspaceId') ?? undefined
   if (!canQueryWork(mockAuthorityActor(profile), ['llm.observe'], { orgId, workspaceId }, SYS_READERS)) return problemResponse({ status: 403, code: 'ACCESS_DENIED', title: '기관 LLM 관측 업무가 필요합니다.' })
+  // Represent ASCII-blank and UTF-16 length failures in the synthetic browser.
+  for (const field of ['publicModelName', 'errorType']) {
+    const value = params.get(field)
+    if (value != null && (/^ *$/.test(value) || value.length > 256)) return problemResponse({
+      status: 422, code: 'VALIDATION_FAILED', title: '입력값이 올바르지 않습니다', detail: '요청 값을 확인해 주세요.',
+      errors: [{ field, message: '필터는 1~256자의 정확한 값이어야 합니다.' }],
+    })
+  }
   return HttpResponse.json(llmCapacityFixture({
     from: params.get('from')!, to: params.get('to')!, orgId, workspaceId,
     group: params.get('group') === 'KEY' ? 'KEY' : params.get('group') === 'ORG' ? 'ORG' : 'WORKSPACE',
     page: Number(params.get('page') ?? 0), errorType: params.get('errorType') ?? undefined,
+    publicModelName: params.get('publicModelName') ?? undefined,
     errorTypeMissing: params.get('errorTypeMissing') === 'true',
     reasonCategory: params.get('reasonCategory') as LlmCapacityQuery['reasonCategory'] ?? undefined,
     upstreamId: params.get('upstreamId') ?? undefined,
