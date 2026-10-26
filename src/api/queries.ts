@@ -657,6 +657,7 @@ export type ActiveProbeStatus = Schemas['LlmActiveProbeStatus']
 export type LlmCatalogStatus = Schemas['LlmCatalogStatus']
 export type AdminLlmMetrics = Schemas['LlmMetricsResponse']
 export type AdminLlmCapacity = Schemas['AdminLlmCapacityResponse']
+export type InferenceDevice = NonNullable<AdminLlmCapacity['telemetry']['device']>
 export type LlmCapacityQuery = NonNullable<import('./schema').operations['getAdminLlmCapacity']['parameters']['query']>
 export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
 export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']

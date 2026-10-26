@@ -7,6 +7,8 @@ import { ACCESS_TOKENS, problemResponse } from './auth'
 import { llmStatusFixture } from './llm-observability'
 import { adminLlmKeyStore } from './llm-keys'
 import { uuid } from '../ids'
+import { inferenceTelemetryFixture } from './inference-observations'
+import { isUuid } from '../../../lib/validation'
 
 type ReasonCase = AdminLlmCapacity['reasons'][number] & { keyNumber: number; finalUpstream: string | null; outcome: 'rateLimited' | 'failed' | 'canceled' }
 
@@ -75,7 +77,7 @@ export function llmCapacityFixture(query: Partial<LlmCapacityQuery> = {}, system
     selectors: { institutions: references([{ id: orgId, name: '정보컴퓨터공학부 실습지원센터' }]),
       workspaces: references([{ id: workspaceId, name: '캡스톤 3조' }]),
       upstreams: references([{ id: uuid(301), name: '합성 자체 서빙' }, { id: uuid(302), name: '합성 외부 공급원' }]) },
-    quality: { rawHistoryState: 'NOT_SWEPT', rawRetainedFrom: null, configuredRetentionDays: 90,
+    quality: { rawHistoryState: 'NOT_SWEPT', rawRetainedFrom: null, configuredRetentionDays: 0,
       latestUsageReceivedAt: '2026-10-21T00:00:00Z', rollupLastSuccessAt: '2026-10-21T00:01:00Z', completeness: 'UNKNOWN',
       gateway: { ...llmStatusFixture.gateway, inFlight: systemTier ? 0 : null, maxInFlight: systemTier ? 32 : null,
         queuedUsageEvents: systemTier ? 0 : null, queuedUsageBytes: systemTier ? 0 : null,
@@ -102,7 +104,18 @@ export const llmCapacityHandlers: RequestHandler[] = [http.get('*/api/v1/admin/l
       errors: [{ field, message: '필터는 1~256자의 정확한 값이어야 합니다.' }],
     })
   }
-  return HttpResponse.json(llmCapacityFixture({
+  const sourceId = params.get('telemetrySourceId') || undefined
+  if (sourceId && !isUuid(sourceId)) return problemResponse({ status: 422, code: 'VALIDATION_FAILED', title: '입력값이 올바르지 않습니다',
+    errors: [{ field: 'telemetrySourceId', message: '관측 원천 식별자가 올바르지 않습니다.' }] })
+  const rawBucket = params.get('bucketSeconds')
+  const bucketSeconds = rawBucket ? Number(rawBucket) : undefined
+  const span = (Date.parse(params.get('to') ?? '') - Date.parse(params.get('from') ?? '')) / 1000
+  if (rawBucket && (!/^\d+$/.test(rawBucket) || !Number.isSafeInteger(bucketSeconds) || !bucketSeconds || bucketSeconds < 60 || bucketSeconds > 86400
+    || !Number.isFinite(span) || span <= 0 || Math.ceil(span / bucketSeconds) > 1440)) {
+    return problemResponse({ status: 422, code: 'VALIDATION_FAILED', title: '입력값이 올바르지 않습니다',
+      detail: '집계 간격과 조회 구간 수를 확인해 주세요.', errors: [{ field: 'bucketSeconds', message: '버킷은 60~86400초이며 조회 구간의 버킷 수는 1440개 이하여야 합니다.' }] })
+  }
+  const query: Partial<LlmCapacityQuery> = {
     from: params.get('from')!, to: params.get('to')!, orgId, workspaceId,
     group: params.get('group') === 'KEY' ? 'KEY' : params.get('group') === 'ORG' ? 'ORG' : 'WORKSPACE',
     page: Number(params.get('page') ?? 0), errorType: params.get('errorType') ?? undefined,
@@ -110,5 +123,11 @@ export const llmCapacityHandlers: RequestHandler[] = [http.get('*/api/v1/admin/l
     errorTypeMissing: params.get('errorTypeMissing') === 'true',
     reasonCategory: params.get('reasonCategory') as LlmCapacityQuery['reasonCategory'] ?? undefined,
     upstreamId: params.get('upstreamId') ?? undefined,
-  }, isSysTier(profile.role)))
+    telemetrySourceId: sourceId, bucketSeconds,
+  }
+  const systemTier = isSysTier(profile.role)
+  const fixture = llmCapacityFixture(query, systemTier)
+  const scenario = typeof window === 'undefined' ? 'reported' : new URLSearchParams(window.location.search).get('observationFixture') ?? 'reported'
+  fixture.telemetry = systemTier ? inferenceTelemetryFixture(query, scenario) : { status: 'NOT_PROVIDED', device: null }
+  return HttpResponse.json(fixture)
 })]

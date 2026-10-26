@@ -35,8 +35,8 @@ export function capacityState(params: URLSearchParams, fallback: ReturnType<type
   if (!from || !to || Date.parse(to) <= Date.parse(from) || Date.parse(to) - Date.parse(from) > 90 * 86400_000) {
     error = '조회 시작·종료 시각을 확인해 주세요. 기간은 0보다 크고 90일 이하여야 합니다.'
   }
-  const ids: { workspaceId?: string; upstreamId?: string } = {}
-  for (const field of ['workspaceId', 'upstreamId'] as const) {
+  const ids: { workspaceId?: string; upstreamId?: string; telemetrySourceId?: string } = {}
+  for (const field of ['workspaceId', 'upstreamId', 'telemetrySourceId'] as const) {
     const value = params.get(field)
     if (value && !isUuid(value)) error = '조회 대상의 식별자가 올바르지 않습니다.'
     else if (value) ids[field] = value.toLowerCase()
@@ -76,7 +76,7 @@ export function capacityReturn(value: string | null, activeOrgId: string | undef
     || !systemTier && org !== activeOrgId || capacityState(url.searchParams, capacityWindow(86400)).error) return null
   if (!url.searchParams.has('from') || !url.searchParams.has('to')) return null
   const next = new URLSearchParams()
-  for (const key of ['org', 'tab', 'view', 'from', 'to', 'workspaceId', 'upstreamId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'page', 'bucketSeconds']) {
+  for (const key of ['org', 'tab', 'view', 'from', 'to', 'workspaceId', 'upstreamId', 'telemetrySourceId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'page', 'bucketSeconds']) {
     const item = url.searchParams.get(key)
     if (item) next.set(key, item)
   }

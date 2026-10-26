@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatTokenCompact, formatTokenDecision, formatTokenExact, formatTokenScale, unpricedTokenCount, UNKNOWN_TOKEN_VALUE } from './token-presentation'
+import { formatTokenCompact, formatTokenDecision, formatTokenExact, formatTokenScale, formatTokenStatisticCompact, unpricedTokenCount, UNKNOWN_TOKEN_VALUE } from './token-presentation'
 
 describe('token presentation', () => {
   it.each([
@@ -32,5 +32,28 @@ describe('token presentation', () => {
   it('does not claim exactness after an overflowing intermediate is subtracted', () => {
     expect(unpricedTokenCount(Number.MAX_SAFE_INTEGER, 2, Number.MAX_SAFE_INTEGER, 0)).toBeNaN()
     expect(unpricedTokenCount(5000000, 1, 3000000, 1)).toBe(2000000)
+  })
+})
+
+describe('token statistics presentation', () => {
+  it.each([
+    [0, '0'], [0.125, '0.125'], [999.49, '999'], [999.5, '1K'],
+    [999.95, '1K'], [1000.01, '1K'], [2500.5, '2.5K'], [12500.5, '12.5K'],
+    [999499.5, '999K'], [999500.5, '1M'], [1000000.5, '1M'],
+    [999500000.5, '1B'], [1000000000.5, '1B'], [1e-7, '1e-7'],
+    [Number.MIN_VALUE, '5e-324'],
+  ])('abbreviates finite fractional statistic %s as %s', (value, label) => {
+    expect(formatTokenStatisticCompact(value)).toBe(label)
+  })
+  it.each([-1, -Number.MIN_VALUE, NaN, Infinity, -Infinity])('rejects invalid statistic %s', (value) => {
+    expect(formatTokenStatisticCompact(value)).toBe(UNKNOWN_TOKEN_VALUE)
+  })
+  it('accepts finite statistical magnitude without weakening exact-count admission', () => {
+    const value = Number.MAX_SAFE_INTEGER + 1
+    expect(formatTokenStatisticCompact(value)).not.toBe(UNKNOWN_TOKEN_VALUE)
+    expect(formatTokenCompact(value)).toBe(UNKNOWN_TOKEN_VALUE)
+    expect(formatTokenCompact(2500.5)).toBe(UNKNOWN_TOKEN_VALUE)
+    expect(formatTokenExact(2500.5)).toBe(UNKNOWN_TOKEN_VALUE)
+    expect(formatTokenStatisticCompact(Number.MAX_VALUE)).not.toMatch(/Infinity|NaN/)
   })
 })

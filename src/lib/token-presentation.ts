@@ -20,6 +20,20 @@ export function formatTokenCompact(value: number): string {
   return `${rounded.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: 2 })}${UNITS[step]}`
 }
 
+/** Fractional statistics are display-only doubles, never exact token counts. */
+export function formatTokenStatisticCompact(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return UNKNOWN_TOKEN_VALUE
+  if (isExactTokenCount(value)) return formatTokenCompact(value)
+  let step = 0
+  while (value >= 1000 ** (step + 1) && step < UNITS.length - 1) step += 1
+  let rounded = Number((value / 1000 ** step).toPrecision(3))
+  if (rounded >= 1000 && step < UNITS.length - 1) {
+    step += 1
+    rounded = Number((value / 1000 ** step).toPrecision(3))
+  }
+  return `${String(rounded)}${UNITS[step]}`
+}
+
 function largeGroup(value: number): string {
   if (value % 100 !== 0) return String(value)
   const thousands = Math.floor(value / 1000)
