@@ -13,6 +13,7 @@ import { adminPaths } from '../../lib/paths'
 import { formatDateTimeSeconds } from '../../lib/format'
 import { TokenValue } from '../TokenValue'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
+import { InferenceTelemetryView } from './InferenceTelemetryView'
 import { formatTokenCompact, formatTokenExact } from '../../lib/token-presentation'
 import { Button, Card, CardContent, CardHeader, CardTitle, DataTable, DescriptionList, EmptyState, Input, LoadingBlock, MessageBar, Pagination, Select, TBody, TD, TH, THead, TR } from '../ui'
 
@@ -35,7 +36,7 @@ const CATEGORIES: Record<string, string> = {
   USER_QUOTA: '사용자 한도', ENDPOINT_POLICY: '기능 정책', MODEL_POLICY: '모델 정책', LARGE_REQUEST: '큰 요청',
   GLOBAL_ADMISSION: '전역 중계', PROVIDER: '공급 경로 결과', INPUT: '입력', AUTHENTICATION: '인증', SERVICE: '서비스', CANCELED: '취소', UNCLASSIFIED: '미분류',
 }
-const FILTER_KEYS = ['workspaceId', 'upstreamId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'bucketSeconds', 'page'] as const
+const FILTER_KEYS = ['workspaceId', 'upstreamId', 'telemetrySourceId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'bucketSeconds', 'page'] as const
 
 function count(value: number | null | undefined): string { return value == null ? '미확인' : value.toLocaleString('ko-KR') }
 function requests(value: number | null | undefined): string { return value == null ? '미확인' : `${count(value)}건` }
@@ -193,10 +194,7 @@ export default function LlmCapacityView() {
           {data.summary.financeVisible && <p className="text-sm text-foreground-muted">금액은 공급자가 보고한 요청 금액입니다. 사용자·플랫폼 부담과 원가는 확인되지 않았습니다.</p>}
         </CardContent>
       </Card>
-      {isSysTier(user?.role ?? 'USER') && data.telemetryVisible && <Card>
-        <CardHeader><CardTitle>장비 전체와 추론 관측</CardTitle></CardHeader>
-        <CardContent><MessageBar>{data.telemetry.status === 'NOT_CONFIGURED' ? '장비·추론 수집이 구성되지 않았습니다. 수요 기록만으로 장비 여유나 한도 증감 효과를 판단할 수 없습니다.' : '장비·추론 관측이 제공되지 않습니다.'}</MessageBar></CardContent>
-      </Card>}
+      {isSysTier(user?.role ?? 'USER') && data.telemetryVisible && <InferenceTelemetryView telemetry={data.telemetry} from={data.from} to={data.to} previousWindow={windowChanged} requestedSourceId={query.telemetrySourceId} />}
       <Card>
         <CardHeader><CardTitle>기록의 보존과 전달</CardTitle></CardHeader>
         <CardContent className="space-y-3">

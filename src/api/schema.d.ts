@@ -826,7 +826,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM 수요와 한도 판단 자료
-         * @description 같은 절대 기간의 보존된 raw event에서 수요·거절 사유·소비처를 조회합니다. 기관·워크스페이스와 관측 업무 범위를 집계 전에 적용합니다. 실제 장비 지표는 아직 제공하지 않으며 외부 호출이나 변경을 실행하지 않습니다.
+         * @description 같은 절대 기간의 보존된 raw event에서 수요·거절 사유·소비처를 조회합니다. 기관·워크스페이스와 관측 업무 범위를 수요 집계 전에 적용합니다. 기존 SYS 전역 읽기에서는 설정된 고정 원천의 같은 기간 장비 표본과 품질을 독립 제공합니다. 설치 완료·완전 수집·개인별 장비 귀속을 보장하지 않으며 외부 호출이나 변경을 실행하지 않습니다.
          */
         get: operations["getAdminLlmCapacity"];
         put?: never;
@@ -6388,11 +6388,13 @@ export interface components {
             /** Format: date-time */
             to: string;
         };
+        /** @description SYS 전역 장비 관측과 기관 수요는 서로 다른 모집단입니다. 기관에는 상태 외 전역 source·장비·엔진 값을 제공하지 않습니다. */
         CapacityTelemetry: {
+            device?: components["schemas"]["InferenceObservationView"] | null;
             status: components["schemas"]["CapacityTelemetryStatus"];
         };
         /** @enum {string} */
-        CapacityTelemetryStatus: "NOT_CONFIGURED" | "NOT_PROVIDED";
+        CapacityTelemetryStatus: "NOT_CONFIGURED" | "NOT_PROVIDED" | "NOT_REPORTED" | "REPORTED";
         CapacityTrendPointResponse: {
             /** Format: date */
             day: string;
@@ -7035,6 +7037,116 @@ export interface components {
         };
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
+        /** @description 원래 물리 모델·엔진과 수집 epoch·프로세스·구성 identity를 유지합니다. identity 누락·변화·reset·gap에서는 연속 비율을 계산하지 않습니다. */
+        InferenceObservationEngine: {
+            /** Format: int64 */
+            baselineIntervals: number;
+            bootId?: string | null;
+            configId?: string | null;
+            engineId: string;
+            /** Format: uuid */
+            epoch: string;
+            /** Format: int64 */
+            gapIntervals: number;
+            gauges: {
+                [key: string]: components["schemas"]["InferenceObservationMetric"];
+            };
+            histogramMeans: {
+                [key: string]: components["schemas"]["InferenceObservationMetric"];
+            };
+            intervalState: components["schemas"]["InferenceObservationIntervalState"];
+            modelName: string;
+            processId?: string | null;
+            rates: {
+                [key: string]: components["schemas"]["InferenceObservationMetric"];
+            };
+            /** Format: int64 */
+            resetIntervals: number;
+            /** Format: int64 */
+            validIntervals: number;
+        };
+        /** @description 최신 원천 보고 시각과 요청 기간의 표본 품질을 구분합니다. OUTSIDE의 기간 수치는 null이며 PARTIAL은 보존된 부분만 셉니다. truncated이면 읽은 표본 수는 하한입니다. 설치·무손실·기간 전체 수집 완료를 보장하지 않습니다. */
+        InferenceObservationEvidence: {
+            /** Format: int64 */
+            baselineIntervals?: number | null;
+            /** Format: int64 */
+            expectedSamples?: number | null;
+            /** Format: int64 */
+            failedSamples?: number | null;
+            freshness: components["schemas"]["InferenceObservationFreshness"];
+            /** Format: int64 */
+            gapIntervals?: number | null;
+            /** Format: date-time */
+            latestObservedAt?: string | null;
+            /** Format: date-time */
+            latestReceivedAt?: string | null;
+            /** Format: int64 */
+            resetIntervals?: number | null;
+            /** Format: date-time */
+            retainedFrom: string;
+            retentionState: components["schemas"]["InferenceObservationRetentionState"];
+            /** Format: int64 */
+            samplesInWindow?: number | null;
+            truncated: boolean;
+        };
+        /** @enum {string} */
+        InferenceObservationFreshness: "NOT_REPORTED" | "FRESH" | "STALE";
+        /** @enum {string} */
+        InferenceObservationIntervalState: "VALID" | "PARTIAL" | "BASELINE" | "UNAVAILABLE";
+        /** @description gauge mean은 실제 측정 시각의 표본 평균입니다. 명시 sampleAt이 요청 기간·보존 범위 밖이면 UNKNOWN/null이며 현재 시각으로 옮기지 않습니다. rate mean은 누적 차분 합/실제 시간 합, histogram mean은 sum 차분 합/count 차분 합입니다. 양끝이 요청 기간과 보존 범위 안인 완전 구간만 종료 시각의 버킷에 귀속하며 부분 구간을 분할 추정하지 않습니다. min/max는 gauge 표본값 또는 완전 구간 평균의 범위이며 분위수가 아닙니다. intervalSeconds는 해당 버킷에서 끝나는 완전 관측 구간의 실제 초 합으로 버킷 길이를 넘을 수 있고 gauge는 0입니다. 버킷 안의 정확한 요청 시각 분포나 연속 센싱·시간 점유율을 뜻하지 않습니다. null과 실제 0은 다릅니다. */
+        InferenceObservationMetric: {
+            /** Format: double */
+            intervalSeconds: number;
+            /** Format: double */
+            max?: number | null;
+            /** Format: double */
+            mean?: number | null;
+            /** Format: double */
+            min?: number | null;
+            /** Format: int64 */
+            observedSamples: number;
+            state: components["schemas"]["InferenceObservationValueState"];
+        };
+        /** @description 요청한 시작 포함·종료 제외 버킷입니다. samples는 원천 observedAt에 따른 snapshot 행수이며 gauge의 명시 측정 시각이나 완전 구간 종료 시각과 다를 수 있습니다. samples가 0이어도 개별 metric의 실제 측정값은 유효할 수 있습니다. 보존 범위 밖 수치와 계산할 수 없는 비율은 null이며 장비 측정값 0으로 채우지 않습니다. */
+        InferenceObservationPoint: {
+            engines: components["schemas"]["InferenceObservationEngine"][];
+            /** Format: int64 */
+            failedSamples?: number | null;
+            /** Format: date-time */
+            from: string;
+            host: {
+                [key: string]: components["schemas"]["InferenceObservationMetric"];
+            };
+            retentionState: components["schemas"]["InferenceObservationRetentionState"];
+            /** Format: int64 */
+            samples?: number | null;
+            /** Format: date-time */
+            to: string;
+        };
+        /** @enum {string} */
+        InferenceObservationRetentionState: "WITHIN" | "PARTIAL" | "OUTSIDE";
+        /** @enum {string} */
+        InferenceObservationValueState: "OBSERVED" | "UNKNOWN" | "NOT_REPORTED" | "UNSUPPORTED" | "SOURCE_FAILED";
+        /** @description 고정된 보고 원천의 장비 전역 표본입니다. 기관·워크스페이스·원인·공개 모델 수요 필터의 개인별 장비 점유율이 아닙니다. */
+        InferenceObservationView: {
+            /** Format: int32 */
+            bucketSeconds: number;
+            evidence: components["schemas"]["InferenceObservationEvidence"];
+            /** Format: date-time */
+            from: string;
+            /** Format: int32 */
+            retentionDays: number;
+            /** Format: int32 */
+            sampleIntervalSeconds: number;
+            series: components["schemas"]["InferenceObservationPoint"][];
+            /** Format: uuid */
+            sourceId: string;
+            /** Format: date-time */
+            to: string;
+            /** Format: uuid */
+            upstreamId: string;
+            upstreamName?: string | null;
+        };
         InstitutionAdminLlmBudgetResponse: {
             /**
              * Format: date
@@ -12813,6 +12925,8 @@ export interface operations {
                 size?: number;
                 /** @description 버킷 초. 생략하면 기간에 맞추며 최대 1440개 버킷을 반환합니다. */
                 bucketSeconds?: number;
+                /** @description SYS 전역 장비 표본의 고정 원천 공개 ID. 기관·공간·원인·공개 모델 수요 필터와 독립이며 현재 설정된 단일 원천만 지원합니다. */
+                telemetrySourceId?: string;
             };
             header?: never;
             path?: never;

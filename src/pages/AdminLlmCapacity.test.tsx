@@ -18,7 +18,7 @@ import App from '../App'
 const route = '/admin/llm/status?tab=metrics&view=capacity&from=2026-10-20T00:00:00Z&to=2026-10-21T00:00:00Z'
 
 test('opens demand comparison inside service metrics without implying installed telemetry', async () => {
-  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(llmCapacityFixture())))
   renderApp(route)
   expect(await screen.findByRole('tab', { name: '장비와 수요 비교' })).toBeInTheDocument()
   expect(await screen.findByRole('heading', { name: '같은 시간창의 수요' })).toBeInTheDocument()
