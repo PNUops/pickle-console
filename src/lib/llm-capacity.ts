@@ -2,6 +2,7 @@ import { isUuid } from './validation'
 import { safeInternalPath } from './redirect'
 import { listPage } from './list-url'
 import type { LlmCapacityQuery } from '../api/queries'
+import { CONSUMER_SORTS, explorationPageSize } from './llm-exploration'
 
 const REASON_CATEGORIES = ['USER_QUOTA', 'ENDPOINT_POLICY', 'MODEL_POLICY', 'LARGE_REQUEST', 'GLOBAL_ADMISSION', 'PROVIDER', 'INPUT', 'AUTHENTICATION', 'SERVICE', 'CANCELED', 'UNCLASSIFIED'] as const
 
@@ -35,8 +36,8 @@ export function capacityState(params: URLSearchParams, fallback: ReturnType<type
   if (!from || !to || Date.parse(to) <= Date.parse(from) || Date.parse(to) - Date.parse(from) > 90 * 86400_000) {
     error = '조회 시작·종료 시각을 확인해 주세요. 기간은 0보다 크고 90일 이하여야 합니다.'
   }
-  const ids: { workspaceId?: string; upstreamId?: string; telemetrySourceId?: string } = {}
-  for (const field of ['workspaceId', 'upstreamId', 'telemetrySourceId'] as const) {
+  const ids: Pick<LlmCapacityQuery, 'workspaceId' | 'upstreamId' | 'telemetrySourceId' | 'openrouterAccountId'> = {}
+  for (const field of ['workspaceId', 'upstreamId', 'telemetrySourceId', 'openrouterAccountId'] as const) {
     const value = params.get(field)
     if (value && !isUuid(value)) error = '조회 대상의 식별자가 올바르지 않습니다.'
     else if (value) ids[field] = value.toLowerCase()
@@ -53,6 +54,10 @@ export function capacityState(params: URLSearchParams, fallback: ReturnType<type
   const rawCategory = params.get('reasonCategory')
   const reasonCategory = REASON_CATEGORIES.find((category) => category === rawCategory)
   if (rawCategory && !reasonCategory) error = '원인 분류 필터가 올바르지 않습니다.'
+  const sort = CONSUMER_SORTS.find((value) => value === params.get('sort')) ?? 'REQUESTS_DESC'
+  const size = explorationPageSize(params.get('size'))
+  if (size == null) error = '페이지 크기는 1~100이어야 합니다.'
+  if (params.has('sort') && !CONSUMER_SORTS.includes(params.get('sort') as typeof sort)) error = '소비처 정렬 조건이 올바르지 않습니다.'
   return {
     error,
     query: {
@@ -61,7 +66,7 @@ export function capacityState(params: URLSearchParams, fallback: ReturnType<type
       errorType: params.get('errorType') || undefined,
       errorTypeMissing: params.get('errorTypeMissing') === 'true' ? true : undefined,
       reasonCategory,
-      group, page: listPage(params.get('page')), size: 20, bucketSeconds,
+      group, page: listPage(params.get('page')), size: size ?? 20, bucketSeconds, sort,
     },
   }
 }
@@ -76,7 +81,7 @@ export function capacityReturn(value: string | null, activeOrgId: string | undef
     || !systemTier && org !== activeOrgId || capacityState(url.searchParams, capacityWindow(86400)).error) return null
   if (!url.searchParams.has('from') || !url.searchParams.has('to')) return null
   const next = new URLSearchParams()
-  for (const key of ['org', 'tab', 'view', 'from', 'to', 'workspaceId', 'upstreamId', 'telemetrySourceId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'page', 'bucketSeconds']) {
+  for (const key of ['org', 'tab', 'view', 'from', 'to', 'workspaceId', 'upstreamId', 'telemetrySourceId', 'openrouterAccountId', 'sort', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'page', 'size', 'bucketSeconds']) {
     const item = url.searchParams.get(key)
     if (item) next.set(key, item)
   }

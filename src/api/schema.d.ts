@@ -4796,6 +4796,7 @@ export interface components {
             targetId: string;
         };
         AdminBulkChangePreviewResponse: {
+            accountImpact?: components["schemas"]["LlmAccountImpactProjection"] | null;
             change?: components["schemas"]["AdminBulkChangeSpec"] | null;
             /**
              * Format: uuid
@@ -5098,18 +5099,22 @@ export interface components {
             attributedCostUsd?: number | null;
             /** Format: date */
             from: string;
-            /** @description 이 기간에 실제로 호출된 키만, 금액이 큰 순 */
+            /** Format: date-time */
+            generatedAt: string;
+            /** @description 이 기간에 실제로 호출된 키의 현재 페이지. 요청한 정렬을 따르며 기본은 공급자가 보고한 요청 금액순입니다. keysUsed는 현재 페이지 수가 아닌 전체 해당 키 수입니다. */
             keys: components["schemas"]["AdminLlmAccountKeyUsageResponse"][];
             /**
              * Format: int32
-             * @description 이 계정에 연결된 키 수. keysUsed와 견주면 놀고 있는 키가 보입니다.
+             * @description 현재 이 계정에 연결된 모든 상태의 키 수. 기간 소비와 현재 열람 가능한 키 부분집합과 다른 모집단입니다.
              */
             keysLinked: number;
             /**
              * Format: int32
-             * @description 이 기간에 실제로 호출된 키 수
+             * @description 선택 KST 일자별 rollup과 현재 계정 결합에 따른 전체 소비 키 수. 현재 페이지나 보존 원문 capacity의 키 수가 아닙니다.
              */
             keysUsed: number;
+            /** Format: int32 */
+            page: number;
             /** @description 하루 한 점, 오래된 날부터. 호출이 없던 날도 채워집니다. */
             points: components["schemas"]["LlmUsageCostPointResponse"][];
             /**
@@ -5122,8 +5127,17 @@ export interface components {
              * @description 이 기간에 이 계정의 키들이 보낸 요청 수
              */
             requests: number;
+            /** Format: int32 */
+            size: number;
+            sort: components["schemas"]["LlmConsumerSort"];
+            source: string;
+            timezone: string;
             /** Format: date */
             to: string;
+            /** Format: int64 */
+            totalKeyElements: number;
+            /** Format: int32 */
+            totalKeyPages: number;
         };
         /** @description 요청 시각 기준의 관측된 수요. 최종 upstream 소비는 중간 재시도 부하나 개인별 GPU 점유율을 뜻하지 않습니다. */
         AdminLlmCapacityResponse: {
@@ -5134,6 +5148,8 @@ export interface components {
             from: string;
             /** Format: date-time */
             generatedAt: string;
+            /** Format: uuid */
+            openrouterAccountId?: string | null;
             quality: components["schemas"]["CapacityQuality"];
             reasons: components["schemas"]["CapacityReason"][];
             selectors: components["schemas"]["CapacitySelectors"];
@@ -5184,6 +5200,7 @@ export interface components {
             initialAccountBindingAllowed?: boolean | null;
             /** Format: date-time */
             lastUsedAt?: string | null;
+            limitsProjection?: components["schemas"]["LlmKeyLimitsProjection"] | null;
             /** @description 키 metadata의 현재 열람 권한 */
             metadataVisible: boolean;
             name: string;
@@ -5305,6 +5322,7 @@ export interface components {
             /** Format: int32 */
             rpm?: number | null;
             status: components["schemas"]["LlmApiKeyStatus"];
+            tokenObservation?: components["schemas"]["LlmTokenObservation"] | null;
             /** Format: int32 */
             tpm?: number | null;
             /** Format: uuid */
@@ -6272,6 +6290,7 @@ export interface components {
             page: number;
             /** Format: int32 */
             size: number;
+            sort: components["schemas"]["LlmConsumerSort"];
             /** Format: int64 */
             totalElements: number;
             /** Format: int32 */
@@ -7462,6 +7481,88 @@ export interface components {
              */
             storageMeasuredNodeCount: number;
         };
+        /** @description 현재 서버 cache의 계정 배정과 같은 기준으로 평가한 변경 후 값입니다. 실제 다음 리셋·vendor 적용·계정 전체 실측이나 보장된 상한을 뜻하지 않습니다. */
+        LlmAccountImpact: {
+            /** Format: uuid */
+            accountId: string;
+            accountName: string;
+            after: components["schemas"]["LlmAccountImpactAmounts"];
+            balance?: number | null;
+            balanceError?: string | null;
+            /** Format: date-time */
+            balanceObservedAt?: string | null;
+            before: components["schemas"]["LlmAccountImpactAmounts"];
+            /** Format: int32 */
+            changedKeys: number;
+            overAllocated?: boolean | null;
+            quality: components["schemas"]["LlmAccountImpactQuality"];
+        };
+        /** @description 현재 live 키의 명목 한도와 server-cached 남은 배정입니다. 미보고 usage에는 해당 키의 full cap을 보수적으로 대입하지만 계정 전체 실측·상한이라고 부르지 않습니다. 새 리셋 창에 옛 usage를 쓸 수 없으면 변경 후 remainingCommitment는 null입니다. */
+        LlmAccountImpactAmounts: {
+            /** Format: int64 */
+            awaitingProvisionKeyCount: number;
+            committedCreditLimit: number;
+            committedDaily: number;
+            /** Format: int64 */
+            committedKeyCount: number;
+            committedMonthly: number;
+            committedTotalCap: number;
+            committedWeekly: number;
+            remainingCommitment?: number | null;
+            /** Format: int64 */
+            usageUnreportedKeyCount: number;
+        };
+        /** @description 전체 제안의 계정별 정보 스냅샷입니다. 계정 금융과 대상 키 관측·금융의 완전한 source가 없으면 미제공하며, 이를 이유로 기존 허용 명령을 차단하지 않습니다. 새 금융 CAS나 잔액 예약이 아닙니다. */
+        LlmAccountImpactProjection: {
+            accounts?: components["schemas"]["LlmAccountImpact"][] | null;
+            basisFingerprint?: string | null;
+            /** Format: date-time */
+            observedAt: string;
+            state: components["schemas"]["LlmAccountImpactState"];
+        };
+        /** @description 서버 cache의 출처·시각과 독립적인 품질입니다. reset 변경, 변경하지 않은 미보고 키, stale이 함께 존재할 수 있습니다. 창이 있는 vendor 사용액의 자연 리셋 정렬은 확인되지 않았으며 다음 대사 전에는 남은 배정을 과소 표시할 수도 있습니다. */
+        LlmAccountImpactQuality: {
+            /** Format: int64 */
+            afterAwaitingProvisionKeys: number;
+            /** Format: int64 */
+            afterUsageUnreportedKeys: number;
+            balanceUnreported: boolean;
+            /** Format: int64 */
+            beforeAwaitingProvisionKeys: number;
+            /** Format: int64 */
+            beforeUsageUnreportedKeys: number;
+            /** Format: int64 */
+            changedPeriodKeys: number;
+            creditsFreshness: components["schemas"]["OpenRouterCreditsFreshness"];
+            /** Format: date-time */
+            creditsLastAttemptAt?: string | null;
+            /** Format: date-time */
+            creditsLastSuccessAt?: string | null;
+            keyMetersError?: string | null;
+            keyMetersFreshness: components["schemas"]["OpenRouterCreditsFreshness"];
+            /** Format: date-time */
+            keyMetersLastAttemptAt?: string | null;
+            /** Format: date-time */
+            keyMetersLastSuccessAt?: string | null;
+            /** Format: date-time */
+            observedAt: string;
+            periodBasisMismatch: boolean;
+            source: string;
+            vendorWindowAlignmentUnconfirmed: boolean;
+            windowedCommitmentsPresent: boolean;
+        };
+        /** @enum {string} */
+        LlmAccountImpactState: "NOT_APPLICABLE" | "NOT_PROVIDED" | "AVAILABLE";
+        /** @description 현재 읽을 수 있는 키 행의 탐색 수입니다. 전체 계정의 금융 합계, 승인 후 키 생성 대기 계획, 기간별 소비 키와는 다른 모집단입니다. */
+        LlmAccountKeyNavigation: {
+            awaitingProvision: components["schemas"]["LlmNavigationCount"];
+            committed: components["schemas"]["LlmNavigationCount"];
+            linked: components["schemas"]["LlmNavigationCount"];
+            /** Format: date-time */
+            observedAt: string;
+            population: string;
+            usageUnreported: components["schemas"]["LlmNavigationCount"];
+        };
         /** @description gateway의 out-of-band /models probe 최신 결과. routing과 cooldown을 바꾸지 않으며 마지막 시도가 intervalSeconds의 3배보다 오래되면 availability에는 UNKNOWN으로 반영됩니다. */
         LlmActiveObservationResponse: {
             /**
@@ -7534,6 +7635,8 @@ export interface components {
         };
         /** @enum {string} */
         LlmCatalogStatus: "MATCH" | "MISMATCH" | "NOT_APPLICABLE" | "UNKNOWN";
+        /** @enum {string} */
+        LlmConsumerSort: "REQUESTS_DESC" | "TOKENS_DESC" | "REPORTED_COST_DESC";
         /** @enum {string} */
         LlmGatewayReportState: "NOT_REPORTED" | "FRESH" | "STALE";
         /** @description LLM gateway heartbeat와 usage 전송 상태. reportState, usageQueueReportState와 lastContactAt은 모든 관리자에게 보입니다. Queue 수치와 loss counter를 포함한 나머지 진단 필드는 SYS 계층에만 값이 있고 ORG 계층에서는 null입니다. */
@@ -7751,6 +7854,8 @@ export interface components {
              */
             todayTokens: number;
         };
+        /** @enum {string} */
+        LlmKeyCohort: "ALL" | "COMMITTED" | "AWAITING_PROVISION" | "USAGE_UNREPORTED";
         LlmKeyContext: {
             accountReferences?: components["schemas"]["InstitutionLlmAccountReference"][] | null;
             applicantKeys: components["schemas"]["LlmKeyBrief"][];
@@ -7863,6 +7968,22 @@ export interface components {
              * @description 백분위를 낸 요청 수. 표본이 적을수록 p99는 흔들립니다.
              */
             samples: number;
+        };
+        /** @description 서버가 평가한 읽을 수 있는 금액 제안과 presence입니다. resetSet=false는 제안 없음, true이면서 reset=null은 명시한 총액 한도입니다. 화면의 현재 제안과 일치할 때만 결과를 표시합니다. */
+        LlmKeyLimitsDraft: {
+            creditLimit?: number | null;
+            creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
+            creditLimitResetSet: boolean;
+            creditLimitSet: boolean;
+            /** Format: uuid */
+            openrouterAccountId?: string | null;
+        };
+        /** @description 현재 키의 허용된 제안을 DB cache로 계산한 정보입니다. 읽기이며 저장·계정 결합·세대 변경·외부 호출을 하지 않습니다. accountImpact 미제공은 기존 허용 명령을 막는 새 권한 조건이 아닙니다. */
+        LlmKeyLimitsProjection: {
+            accountImpact: components["schemas"]["LlmAccountImpactProjection"];
+            /** Format: date-time */
+            configurationObservedAt: string;
+            draft: components["schemas"]["LlmKeyLimitsDraft"];
         };
         LlmKeyModelUsageResponse: {
             /** @description 이 기간에 이 모델 요청에 공급자가 알려 준 금액(USD)의 합. 한도나 잔액과 견주는 값이 아니며, 가격이 붙지 않은 요청은 들어 있지 않습니다 (pricedRequests 참조). 가격이 붙은 요청이 하나도 없으면 null입니다. */
@@ -7986,6 +8107,8 @@ export interface components {
             /** @description 신청자가 유료 모델을 쓰겠다고 했는지. */
             useCommercialModels: boolean;
         };
+        /** @enum {string} */
+        LlmKeySort: "NEWEST" | "NAME_ASC" | "TOKEN_USAGE_DESC" | "CREDIT_LIMIT_DESC" | "CREDIT_REMAINING_ASC";
         LlmKeySummaryResponse: {
             /** @description true면 이 키의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
             accessLimited: boolean;
@@ -8127,9 +8250,22 @@ export interface components {
             requests: number;
         };
         LlmLimitReviewCollectionResponse: {
+            /** Format: date-time */
+            configurationObservedAt: string;
             items: components["schemas"]["LlmLimitReviewResponse"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: date */
+            pressureFrom: string;
+            /** Format: date */
+            pressureTo: string;
+            /** Format: int32 */
+            size: number;
             /** Format: int64 */
             totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+            /** @description 현재 items가 같은 한도 검토 모집단 전체를 담지 않았는지. 다음 페이지 여부는 page/totalPages로 확인합니다. */
             truncated: boolean;
         };
         LlmLimitReviewResponse: {
@@ -8230,6 +8366,14 @@ export interface components {
          * @enum {string}
          */
         LlmModelRouteState: "VISIBLE" | "NOT_CONFIGURED" | "NOT_PROVIDED";
+        /** @description 현재 허용된 키 집합의 정확한 탐색 수. 미제공은 null이며 실제 0과 다릅니다. */
+        LlmNavigationCount: {
+            state: components["schemas"]["LlmNavigationState"];
+            /** Format: int64 */
+            totalElements?: number | null;
+        };
+        /** @enum {string} */
+        LlmNavigationState: "AVAILABLE" | "NOT_PROVIDED";
         /** @description 실제 사용자 요청에서 얻은 passive 관측. lastAttemptAt은 표시용이며, 가용성 판정은 최근 15분 안의 lastSuccessAt·lastFailureAt만 사용합니다. */
         LlmPassiveObservationResponse: {
             /**
@@ -8276,6 +8420,18 @@ export interface components {
             /** Format: date-time */
             observedAt: string;
             upstreams: components["schemas"]["LlmUpstreamStatusResponse"][];
+        };
+        /** @description 보존된 TOKEN 이벤트로 읽은 오늘 KST 사용량입니다. 배치 전송 지연이 있고 gateway의 실시간 RPM·TPM·동시성 잔여가 아닙니다. remainingTokens null은 일일 한도 없음이며 이 객체의 null은 관측 읽기 미제공입니다. */
+        LlmTokenObservation: {
+            /** Format: date */
+            day: string;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: int64 */
+            remainingTokens?: number | null;
+            source: string;
+            /** Format: int64 */
+            todayTokens: number;
         };
         /** @enum {string} */
         LlmUpstreamAvailability: "UNKNOWN" | "HEALTHY" | "DEGRADED" | "UNAVAILABLE";
@@ -8413,10 +8569,23 @@ export interface components {
             workspaceName?: string | null;
         };
         LlmUsageConsumersResponse: {
+            /** Format: date */
+            from: string;
             items: components["schemas"]["LlmUsageConsumerResponse"][];
             level: components["schemas"]["LlmUsageConsumerLevel"];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            sort: components["schemas"]["LlmConsumerSort"];
+            source: string;
+            /** Format: date */
+            to: string;
             /** Format: int64 */
             totalItems: number;
+            /** Format: int32 */
+            totalPages: number;
+            /** @description 이 응답의 items가 같은 조건의 전체 모집단을 모두 담지 않았는지. 다음 페이지 존재 여부와 다르며 page/totalPages로 탐색합니다. */
             truncated: boolean;
         };
         LlmUsageCostPointResponse: {
@@ -9133,7 +9302,7 @@ export interface components {
             allocation?: components["schemas"]["OpenRouterAccountAllocationResponse"] | null;
             /**
              * Format: int64
-             * @description 이 사업 계정에 연결된 LLM API 키 수
+             * @description 이 사업 계정에 현재 연결된 모든 상태의 LLM API 키 수. live 약속량과 현재 읽을 수 있는 keyNavigation 부분집합, 기간별 소비 키 수와 다릅니다.
              */
             boundKeyCount?: number | null;
             /** @description 이 account를 물어볼 담당자. 없으면 null */
@@ -9160,6 +9329,7 @@ export interface components {
              * @description Account 공개 ID
              */
             id: string;
+            keyNavigation?: components["schemas"]["LlmAccountKeyNavigation"] | null;
             /** @description 사업 계정 이름 */
             name: string;
             /**
@@ -12872,6 +13042,9 @@ export interface operations {
             query?: {
                 /** @description 오늘을 포함해 거슬러 올라갈 일수 */
                 days?: number;
+                page?: number;
+                size?: number;
+                sort?: components["schemas"]["LlmConsumerSort"];
             };
             header?: never;
             path: {
@@ -12927,6 +13100,9 @@ export interface operations {
                 bucketSeconds?: number;
                 /** @description SYS 전역 장비 표본의 고정 원천 공개 ID. 기관·공간·원인·공개 모델 수요 필터와 독립이며 현재 설정된 단일 원천만 지원합니다. */
                 telemetrySourceId?: string;
+                /** @description 현재 보이는 키의 사업 계정 결합으로 보존 원문을 좁히는 공개 ID. 실제 지불 주체나 과거 계정 이력의 증거가 아닙니다. */
+                openrouterAccountId?: string;
+                sort?: components["schemas"]["LlmConsumerSort"];
             };
             header?: never;
             path?: never;
@@ -12967,6 +13143,13 @@ export interface operations {
                 query?: string;
                 page?: number;
                 size?: number;
+                /** @description 현재 키 행의 모집단. 승인 후 키 생성 전 계획은 포함하지 않습니다. */
+                cohort?: components["schemas"]["LlmKeyCohort"];
+                /** @description 안정된 서버 정렬. 요청 집합 전체의 해당 관측·금융 source를 읽을 수 있어야 해당 값으로 정렬합니다. */
+                sort?: components["schemas"]["LlmKeySort"];
+                /** @description 저장 정책과 기능 권한이 허용하는 공개 모델명. 예산·발급·라우팅·실제 처리 성공을 보장하지 않습니다. */
+                policyModel?: string;
+                policyFeature?: string;
             };
             header?: never;
             path?: never;
@@ -12996,7 +13179,18 @@ export interface operations {
     };
     getAdminLlmKey: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description true이면 현재 허용된 금액 제안의 읽기 projection을 포함합니다. false이면 제안 파라미터를 보내지 않습니다. 저장·계정 결합·외부 호출을 하지 않습니다. */
+                projectLimits?: boolean;
+                /** @description 제안 금액(USD). 생략은 현재 값 유지, 빈 값·null은 허용하지 않습니다. 0 이상, 정수 10자리·소수 2자리까지이며 0은 유료 모델을 닫습니다. */
+                proposedCreditLimit?: number;
+                /** @description false는 리셋 제안 없음, true이면서 proposedCreditLimitReset 생략은 명시한 총액 한도입니다. */
+                proposedCreditLimitResetSet?: boolean;
+                /** @description resetSet=true일 때 제안하는 DAILY/WEEKLY/MONTHLY 창. resetSet=true이면서 이 값을 생략하면 명시한 총액 한도(null), resetSet=false는 리셋 변경 없음입니다. */
+                proposedCreditLimitReset?: components["schemas"]["CreditLimitReset"];
+                /** @description 기존 최초 계정 연결 규칙으로 평가할 공개 ID. 계정 전환이나 재결합이 아닙니다. */
+                proposedOpenrouterAccountId?: string;
+            };
             header?: never;
             path: {
                 keyId: string;
@@ -13364,6 +13558,11 @@ export interface operations {
                 days?: number;
                 /** @description 소비처와 한도 검토가 각각 반환할 최대 행 수 */
                 top?: number;
+                consumerPage?: number;
+                consumerSize?: number;
+                consumerSort?: components["schemas"]["LlmConsumerSort"];
+                reviewPage?: number;
+                reviewSize?: number;
             };
             header?: never;
             path?: never;

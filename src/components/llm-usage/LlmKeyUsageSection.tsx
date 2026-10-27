@@ -1,7 +1,7 @@
 import { TokenValue } from '../TokenValue'
 import { formatTokenExact, isExactTokenCount, unpricedTokenCount } from '../../lib/token-presentation'
 import { useState, type ReactNode } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminLlmKeyUsage,
   fetchLlmKeyUsage,
@@ -50,6 +50,9 @@ export default function LlmKeyUsageSection({
   keyId,
   status,
   audience = 'owner',
+  selectedDays,
+  onDaysChange,
+  reader,
 }: {
   keyId: string
   status: LlmApiKeyStatus
@@ -58,10 +61,15 @@ export default function LlmKeyUsageSection({
    * `key-usage-copy.ts`가 갖는다.
    */
   audience?: UsageAudience
+  selectedDays?: number
+  onDaysChange?: (days: number) => void
+  reader?: string
 }) {
-  const [days, setDays] = useState(DEFAULT_USAGE_DAYS)
+  const [localDays, setDays] = useState(DEFAULT_USAGE_DAYS)
+  const days = selectedDays ?? localDays
   const copy = KEY_USAGE_COPY[audience]
   const admin = audience === 'admin'
+  const visibility = JSON.stringify([keyId, admin, reader ?? null])
   // 발급 전 키로는 어떤 요청도 인증되지 않았으므로 물어볼 것이 없다. 0으로 눕는
   // 선 세 개보다 왜 비었는지 말하는 편이 정확하다.
   const unissued = status === 'PENDING'
@@ -69,22 +77,25 @@ export default function LlmKeyUsageSection({
   // 그 반대도 생긴다.
   const usage = useQuery({
     queryKey: admin
-      ? ['admin', 'llm-keys', keyId, 'usage', { days }]
+      ? ['admin', 'llm-keys', keyId, 'usage', { days, reader }]
       : ['llm-keys', keyId, 'usage', { days }],
     queryFn: async (): Promise<{
       trend: LlmKeyUsageTrend | AdminLlmKeyUsage['trend']
       extra: AdminLlmKeyUsage | null
+      visibility: string
+      fetchedAt: string
     }> => {
-      if (!admin) return { trend: await fetchLlmKeyUsage(keyId, days), extra: null }
+      if (!admin) return { trend: await fetchLlmKeyUsage(keyId, days), extra: null, visibility, fetchedAt: new Date().toISOString() }
       const response = await fetchAdminLlmKeyUsage(keyId, days)
-      return { trend: response.trend, extra: response }
+      return { trend: response.trend, extra: response, visibility, fetchedAt: new Date().toISOString() }
     },
-    placeholderData: keepPreviousData,
+    placeholderData: (previous) => previous?.visibility === visibility ? previous : undefined,
     enabled: !unissued,
   })
 
-  const data = usage.data?.trend
-  const extra = usage.data?.extra ?? null
+  const owned = usage.data?.visibility === visibility ? usage.data : undefined
+  const data = owned?.trend
+  const extra = owned?.extra ?? null
   const points = data?.points ?? []
   const times = usageTimes(points)
   const totals = usageTotals(points)
@@ -116,7 +127,7 @@ export default function LlmKeyUsageSection({
                     key={option}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => setDays(option)}
+                    onClick={() => onDaysChange ? onDaysChange(option) : setDays(option)}
                     className={
                       'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600 ' +
                       (selected
@@ -167,6 +178,7 @@ export default function LlmKeyUsageSection({
                 <p className="text-xs text-neutral-500">
                   {data.from} ~ {data.to}
                 </p>
+                {admin && owned?.fetchedAt && <p className="text-xs text-neutral-500">콘솔 마지막 GET 성공 <ObservationMoment value={owned.fetchedAt} /></p>}
 
                 {/* 합계는 타일이, 가장 많이 쓴 날은 위 문장이 말한다. 추정 비율은
                     합계 카드에 붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}

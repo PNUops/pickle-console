@@ -167,14 +167,21 @@ test('a row permission cannot borrow a different workspace from the current sour
 test('a command-only list row distinguishes withheld finance and activity from known absence', async () => {
   const key = { ...prepare('llm.key.budget'), allowedWorkIds: ['llm.key.budget'], metadataVisible: false, observationVisible: false,
     financeVisible: false, purpose: null, rpm: null, tpm: null, dailyTokens: null, concurrency: null,
-    creditLimit: null, creditUsage: null, creditUsageAt: null, creditLimitRemaining: null, openrouterAccountId: null, openrouterAccountName: null, lastUsedAt: null }
+    creditLimit: null, creditUsage: null, creditUsageAt: null, creditLimitRemaining: null, openrouterAccountId: null, openrouterAccountName: null, lastUsedAt: null,
+    tokenObservation: { source: 'RETAINED_TOKEN_EVENTS', day: '2091-02-03', observedAt: '2091-02-03T01:02:03Z', todayTokens: 765432, remainingTokens: 456789 } }
   server.use(http.get('*/api/v1/admin/llm/keys', () => HttpResponse.json({ content: [key], page: 0, size: 20, totalElements: 1, totalPages: 1 })))
   renderApp('/admin/llm/keys')
   const row = (await screen.findByRole('link', { name: key.name })).closest('tr')!
   expect(within(row).queryByText('미결합')).not.toBeInTheDocument()
   expect(within(row).queryByText('금액 관측 전')).not.toBeInTheDocument()
   expect(within(row).queryByText('사용 기록 없음')).not.toBeInTheDocument()
-  expect(within(row).getAllByText('제공되지 않음')).toHaveLength(4)
+  const headers = within(screen.getByRole('table')).getAllByRole('columnheader')
+  const cells = within(row).getAllByRole('cell')
+  for (const name of ['사업 계정', '저장 한도', '보존된 오늘 TOKEN 기록', '금액 관측', '마지막 사용']) {
+    const index = headers.findIndex((header) => header.textContent === name)
+    expect(index).toBeGreaterThanOrEqual(0)
+    expect(cells[index]).toHaveTextContent(/^제공되지 않음$/)
+  }
 })
 
 test('an ACL write capability cannot outrun the current read-only source', async () => {

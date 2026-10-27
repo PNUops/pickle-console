@@ -3,6 +3,7 @@ import { refreshSuccessHandler, orgAdminUser, orgManagerUser, orgViewerUser, sys
 import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { seedGpuPreviewFixtures } from '../test/msw/handlers/gpu'
 import { handlers } from '../test/msw/handlers'
+import { seedAllocationFixture } from '../test/msw/allocation-fixtures'
 
 /**
  * 브라우저에서 도는 목 API.
@@ -16,6 +17,7 @@ import { handlers } from '../test/msw/handlers'
  * 이 모듈은 개발 빌드에서만 동적으로 불린다.
  */
 export async function startMockApi(): Promise<void> {
+  seedAllocationFixture(new URLSearchParams(window.location.search).get('allocationFixture'))
   // 로그인된 채로 띄운다. 미리 보기의 목적은 화면을 보는 것이고, 목에는 진짜 리프레시
   // 쿠키가 없어 주소를 직접 치면 세션이 끊긴다.
   //

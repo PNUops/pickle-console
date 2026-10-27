@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { fetchAdminLlmCapacity, type AdminLlmCapacity, type LlmCapacityQuery } from '../../api/queries'
+import { fetchAdminLlmCapacity, fetchOpenRouterAccounts, type AdminLlmCapacity, type LlmCapacityQuery } from '../../api/queries'
 import { requestReaderKey } from '../../api/request-review'
 import { useAuth } from '../../auth/auth-context'
 import { canQueryWork, SYS_READERS } from '../../auth/institution-authority'
@@ -15,6 +15,9 @@ import { TokenValue } from '../TokenValue'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
 import { InferenceTelemetryView } from './InferenceTelemetryView'
 import { formatTokenCompact, formatTokenExact } from '../../lib/token-presentation'
+import { isExactTokenCount, UNKNOWN_TOKEN_VALUE } from '../../lib/token-presentation'
+import { formatUsd } from '../../lib/openrouter-credits'
+import { CONSUMER_SORTS, CONSUMER_SORT_LABELS } from '../../lib/llm-exploration'
 import { Button, Card, CardContent, CardHeader, CardTitle, DataTable, DescriptionList, EmptyState, Input, LoadingBlock, MessageBar, Pagination, Select, TBody, TD, TH, THead, TR } from '../ui'
 
 type Counts = AdminLlmCapacity['summary']
@@ -36,9 +39,9 @@ const CATEGORIES: Record<string, string> = {
   USER_QUOTA: '사용자 한도', ENDPOINT_POLICY: '기능 정책', MODEL_POLICY: '모델 정책', LARGE_REQUEST: '큰 요청',
   GLOBAL_ADMISSION: '전역 중계', PROVIDER: '공급 경로 결과', INPUT: '입력', AUTHENTICATION: '인증', SERVICE: '서비스', CANCELED: '취소', UNCLASSIFIED: '미분류',
 }
-const FILTER_KEYS = ['workspaceId', 'upstreamId', 'telemetrySourceId', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'bucketSeconds', 'page'] as const
+const FILTER_KEYS = ['workspaceId', 'upstreamId', 'telemetrySourceId', 'openrouterAccountId', 'sort', 'publicModelName', 'errorType', 'errorTypeMissing', 'reasonCategory', 'group', 'bucketSeconds', 'page', 'size'] as const
 
-function count(value: number | null | undefined): string { return value == null ? '미확인' : value.toLocaleString('ko-KR') }
+function count(value: number | null | undefined): string { return value == null ? '미확인' : isExactTokenCount(value) ? value.toLocaleString('ko-KR') : UNKNOWN_TOKEN_VALUE }
 function requests(value: number | null | undefined): string { return value == null ? '미확인' : `${count(value)}건` }
 function at(value: string | null | undefined): string {
   if (!value) return '관측 기록 없음'
@@ -53,7 +56,7 @@ function amount(counts: Counts): string {
   if (!counts.financeVisible) return '제공되지 않음'
   if (counts.pricedRequests == null) return '미확인'
   if (counts.costUsd == null) return counts.pricedRequests === 0 ? '금액 표본 없음' : '미확인'
-  return counts.costUsd.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 8 })
+  return formatUsd(counts.costUsd)
 }
 function reasonLabel(errorType: string | null | undefined, category: string | undefined): string {
   if (errorType == null) return '원인 미기록'
@@ -132,6 +135,11 @@ export default function LlmCapacityView() {
     staleTime: 60_000,
     placeholderData: (previous) => previous?.visibility === visibility ? previous : undefined,
   })
+  const accounts = useQuery({
+    queryKey: ['admin', 'llm-accounts', { reader, orgId: scope.activeOrgId ?? null, for: 'capacity-filter' }],
+    queryFn: () => fetchOpenRouterAccounts(scope.activeOrgId),
+    enabled: scope.ready && canQueryWork(user, ['institution.account.read', 'institution.account.finance.read'], { orgId: scope.activeOrgId }, SYS_READERS),
+  })
   useEffect(() => {
     if (capacity.data && !capacity.isPlaceholderData) lastSuccess.current = capacity.data
   }, [capacity.data, capacity.isPlaceholderData])
@@ -144,7 +152,9 @@ export default function LlmCapacityView() {
   }, [params, setParams, fallback])
   const result = capacity.data?.visibility === visibility ? capacity.data
     : lastSuccess.current?.visibility === visibility ? lastSuccess.current : undefined
-  const data = scope.ready && permitted && !parsed.error ? result?.value : undefined
+  const responseMatches = !result || (result.value.openrouterAccountId ?? null) === (query.openrouterAccountId ?? null) && result.value.consumers.sort === query.sort
+    && result.value.consumers.page === query.page && result.value.consumers.size === query.size && result.value.consumers.group === query.group
+  const data = scope.ready && permitted && !parsed.error && responseMatches ? result?.value : undefined
   const current = result?.identity === identity && !capacity.isPlaceholderData
   const update = (changes: Record<string, string | number | undefined>, reset = true) => setParams(updateListParams(params, changes, reset))
   const sameWindow = data && Date.parse(data.from) === Date.parse(query.from) && Date.parse(data.to) === Date.parse(query.to)
@@ -168,6 +178,7 @@ export default function LlmCapacityView() {
       </div>}
     </div>
     {parsed.error && <MessageBar variant="danger">{parsed.error}</MessageBar>}
+    {!responseMatches && <MessageBar variant="danger">응답의 사업 계정 또는 정렬 조건이 현재 조회와 다릅니다. 이 값을 현재 결과로 표시하지 않습니다.</MessageBar>}
     {query.upstreamId && <MessageBar title="최종 처리 경로로 좁힌 결과입니다">
       <p>이 공급원에 귀속된 기록만 표시합니다. 경로 판정 전 거절과 공급원 미귀속 기록은 제외되므로, 표시된 0을 해당 장비의 거절 수요가 없다는 뜻으로 해석하지 마세요.</p>
       <Button variant="secondary" size="sm" onClick={() => update({ upstreamId: undefined })}>경로 제한 없이 보기</Button>
@@ -221,11 +232,21 @@ export default function LlmCapacityView() {
       </div>
       {current && sameWindow && <>
         <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {scope.tier === 'system' && <label className="min-w-0 flex-1 text-sm">수요 기관<Select aria-label="수요 기관" value={scope.activeOrgId ?? ''} onChange={(event) => update({ org: event.target.value, workspaceId: undefined })}><option value="">플랫폼 전체 읽기 범위</option>{data.selectors.institutions.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>}
+          {scope.tier === 'system' && <label className="min-w-0 flex-1 text-sm">수요 기관<Select aria-label="수요 기관" value={scope.activeOrgId ?? ''} onChange={(event) => update({ org: event.target.value, workspaceId: undefined, openrouterAccountId: undefined })}><option value="">플랫폼 전체 읽기 범위</option>{data.selectors.institutions.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>}
           <label className="min-w-0 flex-1 text-sm">워크스페이스<Select aria-label="수요 워크스페이스" value={query.workspaceId ?? ''} onChange={(event) => update({ workspaceId: event.target.value, group: 'KEY' })}><option value="">현재 기관 범위 전체</option>{query.workspaceId && !data.selectors.workspaces.items.some((item) => item.id === query.workspaceId) && <option value={query.workspaceId}>선택 목록 밖의 현재 필터</option>}{data.selectors.workspaces.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
           <label className="min-w-0 flex-1 text-sm">최종 처리 공급원<Select aria-label="최종 처리 공급원" value={query.upstreamId ?? ''} onChange={(event) => update({ upstreamId: event.target.value })}><option value="">공급원 전체·미귀속 포함</option>{query.upstreamId && !data.selectors.upstreams.items.some((item) => item.id === query.upstreamId) && <option value={query.upstreamId}>선택 목록 밖의 현재 필터</option>}{data.selectors.upstreams.items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
           <label className="min-w-0 flex-1 text-sm">소비처 구분<Select aria-label="소비처 구분" value={query.group} onChange={(event) => update({ group: event.target.value })}>{scope.tier === 'system' && <option value="ORG">기관</option>}<option value="WORKSPACE">워크스페이스</option><option value="KEY">키</option></Select></label>
+          <label className="min-w-0 text-sm">현재 연결 사업 계정<Select aria-label="보존 원문 사업 계정 필터" value={query.openrouterAccountId ?? ''} disabled={!accounts.isEnabled || accounts.isFetching} onChange={(event) => update({ openrouterAccountId: event.target.value || undefined })}>
+            <option value="">계정 제한 없음</option>{query.openrouterAccountId && !accounts.data?.some((item) => item.id === query.openrouterAccountId) && <option value={query.openrouterAccountId}>선택한 계정 (현재 목록에 없음)</option>}
+            {accounts.data?.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </Select></label>
+          <label className="min-w-0 text-sm">보존 원문 소비처 정렬<Select aria-label="보존 원문 소비처 정렬" value={query.sort} onChange={(event) => update({ sort: event.target.value })}>
+            {CONSUMER_SORTS.map((value) => <option key={value} value={value} disabled={value === 'REPORTED_COST_DESC' && !data.summary.financeVisible}>{CONSUMER_SORT_LABELS[value]}</option>)}
+          </Select></label>
         </div>
+        <p className="text-xs text-foreground-muted">사업 계정은 현재 키 결합으로 보존 원문만 좁힙니다. 계정의 일별 귀속·키 대사 집계, 과거 결합 이력 또는 실제 지불 주체와는 별도입니다.</p>
+        {accounts.isError && <MessageBar variant="warning">계정 선택 목록을 불러오지 못했습니다. 현재 필터는 유지합니다.</MessageBar>}
+        {!accounts.isEnabled && <MessageBar>계정 선택 목록은 현재 업무에서 조회하지 않습니다.</MessageBar>}
         {referenceWarning && <MessageBar>선택 목록은 일부만 표시됩니다. 현재 조건과 권한에서 읽을 수 있는 대상만 조회합니다.</MessageBar>}
         <Card><CardHeader><CardTitle>거절·오류 원인</CardTitle></CardHeader><CardContent className="space-y-3">
           {(query.errorType || query.errorTypeMissing || query.reasonCategory) && <div className="flex flex-wrap items-center gap-2"><p className="break-all text-sm">선택한 원인: {query.errorTypeMissing ? '원인 미기록' : query.errorType ? reasonLabel(query.errorType, query.reasonCategory) : '모든 원인'} · {query.reasonCategory ? CATEGORIES[query.reasonCategory] ?? '미분류' : '모든 분류'}</p><Button variant="secondary" size="sm" onClick={() => update({ errorType: undefined, errorTypeMissing: undefined, reasonCategory: undefined })}>원인 전체로</Button></div>}

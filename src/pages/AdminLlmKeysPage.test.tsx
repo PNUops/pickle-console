@@ -11,7 +11,7 @@ import {
 } from '../test/msw/handlers/auth'
 import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
-import { renderApp } from '../test/render'
+import { currentPath, renderApp } from '../test/render'
 import { adminLlmKeyStore, adminLlmListQueries } from '../test/msw/handlers/llm-keys'
 
 describe('관리자 LLM API 키 목록', () => {
@@ -20,10 +20,10 @@ describe('관리자 LLM API 키 목록', () => {
     renderApp('/admin/llm/keys')
 
     expect(await screen.findByRole('heading', { name: 'LLM API 키', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: 'active-admin-key' })).toHaveAttribute(
-      'href',
-      `/admin/llm/keys/${uuid(171)}?org=${uuid(1)}`,
-    )
+    const destination = new URL((await screen.findByRole('link', { name: 'active-admin-key' })).getAttribute('href')!, 'https://pickle.invalid')
+    expect(destination.pathname).toBe(`/admin/llm/keys/${uuid(171)}`)
+    expect(destination.searchParams.get('org')).toBe(uuid(1))
+    expect(destination.searchParams.get('returnTo')).toBe(currentPath())
     expect(screen.getByText('suspended-admin-key')).toBeInTheDocument()
     expect(screen.getByText('other-org-key')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: '40K, 정확값 보기' }).length).toBeGreaterThan(0)

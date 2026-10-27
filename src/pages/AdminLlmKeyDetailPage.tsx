@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router'
 import {
   fetchAdminLlmKey,
-  fetchOpenRouterAccount,
   fetchOpenRouterAccounts,
   replaceAdminLlmKeyLimits,
   resumeAdminLlmKey,
@@ -15,6 +14,7 @@ import {
   updateAdminLlmKeyExpiry,
   type AdminLlmKeyDetail,
   type AdminLlmKeyLimits,
+  type AdminLlmKeyProjectionQuery,
 } from '../api/queries'
 import { toApiError } from '../api/problem'
 import { LlmKeyModelsModal } from '../components/llm-key/LlmKeyModelsModal'
@@ -60,8 +60,9 @@ import { adminPaths } from '../lib/paths'
 import { effectiveLlmKeyStatus, type LlmApiKeyStatus } from '../lib/status'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
-import { AllocationWarning, KeyCreditObservation } from '../components/OpenRouterCredits'
-import { evaluateAllocation } from '../lib/openrouter-credits'
+import { KeyCreditObservation } from '../components/OpenRouterCredits'
+import { AccountImpactView } from '../components/llm-usage/AccountImpactView'
+import { llmExplorationReturn, usageDays } from '../lib/llm-exploration'
 import { requestDetailReturn, withListReturn } from '../lib/list-url'
 import { capacityReturn } from '../lib/llm-capacity'
 import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
@@ -164,6 +165,7 @@ function AdminLlmKeyDetailContent() {
 
   const key = detail.data
   const comparisonReturn = capacityReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && isSysTier(user.role))
+  const explorationReturn = llmExplorationReturn(searchParams.get('returnTo'), scope.activeOrgId, scope.tier === 'system' || scope.globalSupport)
   const actualOrgId = key.orgId && isUuid(key.orgId) ? key.orgId.toLowerCase() : undefined
   const proposedReturn = requestDetailReturn(searchParams.get('returnTo'), scope.activeOrgId, !!user && canReadSupportMetadata(user.role))
   const returnedUrl = proposedReturn ? new URL(proposedReturn, 'https://pickle.invalid') : null
@@ -210,6 +212,7 @@ function AdminLlmKeyDetailContent() {
     <div className="space-y-5">
       <WorkspaceSourceReturnLink workspaceId={key.workspaceId} admin />
       {comparisonReturn && <Link to={comparisonReturn} className="block text-sm text-brand-foreground hover:underline">← 장비와 수요 비교</Link>}
+      {explorationReturn && <Link to={explorationReturn} className="block text-sm text-brand-foreground hover:underline">← 이전 LLM 조회</Link>}
       {requestReturn && <Link to={requestReturn} className="block text-sm text-brand-foreground hover:underline">← 신청 상세</Link>}
       <Link
         to={adminPaths.llmKeys(scope.activeOrgId)}
@@ -281,7 +284,9 @@ function AdminLlmKeyDetailContent() {
 
       <TabPanel id="usage" active={activeTab === 'usage'}>
         {activeTab === 'usage' && usageVisible && (
-          <LlmKeyUsageSection keyId={keyId} status={status} audience="admin" />
+          <LlmKeyUsageSection keyId={keyId} status={status} audience="admin" reader={reader}
+            selectedDays={searchParams.has('days') ? usageDays(searchParams.get('days')) : undefined}
+            onDaysChange={(days) => { const next = new URLSearchParams(searchParams); next.set('days', String(days)); setSearchParams(next) }} />
         )}
       </TabPanel>
 
@@ -472,7 +477,6 @@ function LimitsModal({
   const [chatEnabled, setChatEnabled] = useState(llmKey.chatEnabled)
   const { user } = useAuth()
   const accountReadable = hasWork(user, 'institution.account.read', { orgId: llmKey.orgId }, SYS_READERS)
-  const accountFinanceReadable = hasWork(user, 'institution.account.finance.read', { orgId: llmKey.orgId }, SYS_READERS)
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -487,31 +491,34 @@ function LimitsModal({
   const referencesPending = llmKey.accountReferences == null && accounts.isFetching
   const eligibleAccounts = (llmKey.accountReferences ?? accounts.data ?? []).filter((account) => account.eligibleForBinding)
 
-  // 이미 연결된 키는 위 목록 조회가 꺼져 있다. 그래도 배정 판정에는 그 계정의
-  // 배정 합계와 잔액이 필요하므로 단건으로 따로 읽는다.
-  const boundAccount = useQuery({
-    queryKey: ['admin', 'llm-account', llmKey.openrouterAccountId],
-    queryFn: () => fetchOpenRouterAccount(llmKey.openrouterAccountId!),
-    enabled: canEditCredit && accountFinanceReadable && llmKey.openrouterAccountId != null,
-  })
   const selectedAccountId = eligibleAccounts.length === 1 ? eligibleAccounts[0].id : openrouterAccountId
-  const judgementAccount = boundAccount.data ?? accounts.data?.find((account) => account.id === selectedAccountId)
   const pendingCredit = Number(creditLimit)
-  // 자기 키의 현재 한도는 **그 키가 판정 대상 계정에 이미 연결됐을 때만** 뺀다.
-  // 처음 연결되는 키는 합계에 없으므로 빼면 없는 여유를 만들어 낸다.
-  const excludeAmount =
-    judgementAccount && llmKey.openrouterAccountId === judgementAccount.id
-      ? llmKey.creditLimit
-      : 0
-  const judgement =
-    canEditCredit && judgementAccount?.allocation != null && judgementAccount.credits != null && Number.isFinite(pendingCredit) && pendingCredit > 0
-      ? evaluateAllocation({
-          allocation: judgementAccount.allocation,
-          credits: judgementAccount.credits,
-          pendingAmount: pendingCredit,
-          excludeAmount: excludeAmount ?? 0,
-        })
-      : null
+  const creditChanged = pendingCredit !== llmKey.creditLimit
+  const resetChanged = creditLimitReset !== (llmKey.creditLimitReset ?? '')
+  const proposedAccount = llmKey.openrouterAccountId == null && initialBindingAllowed && pendingCredit > 0 ? selectedAccountId || undefined : undefined
+  const projectionQuery: AdminLlmKeyProjectionQuery = { projectLimits: true, proposedCreditLimit: creditChanged ? pendingCredit : undefined,
+    proposedCreditLimitResetSet: resetChanged, proposedCreditLimitReset: (resetChanged ? creditLimitReset || undefined : undefined) as AdminLlmKeyProjectionQuery['proposedCreditLimitReset'],
+    proposedOpenrouterAccountId: proposedAccount }
+  const projectionIdentity = JSON.stringify([requestReaderKey(user), llmKey.id, llmKey.orgId, llmKey.workspaceId,
+    llmKey.financeVisible, llmKey.observationVisible, llmKey.budgetReferenceVisible, llmKey.tokenReferenceVisible,
+    [...llmKey.allowedWorkIds].sort(), llmKey.creditLimit, llmKey.creditLimitReset, llmKey.openrouterAccountId, projectionQuery])
+  const projectionEnabled = canEditCredit && creditLimit.trim() !== '' && Number.isFinite(pendingCredit) && pendingCredit >= 0
+  const projection = useQuery({
+    queryKey: ['admin', 'llm-keys', 'limits-projection', projectionIdentity],
+    queryFn: async () => ({ identity: projectionIdentity, value: await fetchAdminLlmKey(llmKey.id, projectionQuery) }),
+    enabled: projectionEnabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  })
+  const projected = projectionEnabled && !projection.isFetching && !projection.isError && projection.data?.identity === projectionIdentity && projection.data.value.id === llmKey.id
+    && projection.data.value.orgId === llmKey.orgId && projection.data.value.workspaceId === llmKey.workspaceId
+    && projection.data.value.creditLimit === llmKey.creditLimit && projection.data.value.creditLimitReset === llmKey.creditLimitReset
+    && projection.data.value.openrouterAccountId === llmKey.openrouterAccountId ? projection.data.value.limitsProjection : null
+  const draftMatches = projected?.draft.creditLimitSet === creditChanged && (projected.draft.creditLimit ?? null) === (creditChanged ? pendingCredit : null)
+    && projected.draft.creditLimitResetSet === resetChanged && (projected.draft.creditLimitReset ?? null) === (resetChanged ? creditLimitReset || null : null)
+    && (projected.draft.openrouterAccountId ?? null) === (proposedAccount ?? null)
+  const impactVisible = llmKey.financeVisible && llmKey.observationVisible
+    && projection.data?.value.financeVisible === true && projection.data.value.observationVisible === true
 
   useEffect(() => {
     if (Object.keys(fieldErrors).length === 0) return
@@ -689,7 +696,10 @@ function LimitsModal({
               onChange={setOpenrouterAccountId}
               error={fieldErrors.openrouterAccountId}
             />
-            {judgement ? <AllocationWarning judgement={judgement} /> : null}
+            {projection.isFetching && <MessageBar>현재 금액·리셋 제안의 계정 영향을 확인하고 있습니다.</MessageBar>}
+            {projection.isError && <MessageBar variant="warning">계정 영향을 조회하지 못했습니다. {projection.error.message}</MessageBar>}
+            {projected && draftMatches ? <><p className="text-xs text-foreground-muted">구성 조회 {formatDateTime(projected.configurationObservedAt)}</p><AccountImpactView projection={impactVisible ? projected.accountImpact : null} /></>
+              : !projection.isFetching && <MessageBar>현재 제안과 일치하는 계정 영향이 제공되지 않았습니다. 저장 권한과 입력 검증은 별도로 적용됩니다.</MessageBar>}
           </>
         )}
         <div className="flex justify-end gap-2">

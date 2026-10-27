@@ -15,6 +15,10 @@ import {
 import { adminUserStore } from './users'
 import { vmStore } from './vms'
 import { workspaceMembersOf } from './workspaces'
+import { openRouterAccountStore } from './openrouter-accounts'
+import { hasWork, hasSameSourceWorks, SYS_READERS } from '../../../auth/institution-authority'
+import { mockAuthorityActor, mockHasAggregateMoneySource } from '../institution-authority'
+import { bulkAccountImpactFixtures, bulkImpactFixtureKey, capturedProjectionSupported } from '../projection-fixtures'
 
 type Schemas = components['schemas']
 type Request_ = Schemas['AdminBulkChangeRequest']
@@ -56,6 +60,7 @@ export function resetBulkChangeFixtures() {
   grants = {}
   bulkSavedPreviews.clear()
   bulkSavedOperations.clear()
+  bulkAccountImpactFixtures.clear()
   applyFailure = null
   applyHold = null
 }
@@ -562,6 +567,17 @@ function bulkNotFound() {
   return problemResponse({ type: 'about:blank', title: '리소스를 찾을 수 없습니다', status: 404, detail: '현재 계정으로 조회할 수 있는 일괄 변경 기록이 없습니다.', code: 'RESOURCE_NOT_FOUND' })
 }
 
+function projectedAccountImpact(profile: Profile, impact: Schemas['LlmAccountImpactProjection'] | null | undefined) {
+  if (!impact || impact.state !== 'AVAILABLE') return impact
+  const actor = mockAuthorityActor(profile)
+  const readable = mockHasAggregateMoneySource(actor) && (impact.accounts ?? []).every((row) => {
+    const account = openRouterAccountStore.find((item) => item.id === row.accountId)
+    return !!account && hasWork(actor, 'institution.account.finance.read', { orgId: account.orgId }, SYS_READERS)
+      && adminLlmKeyStore.filter((key) => key.openrouterAccountId === row.accountId).every((key) => hasSameSourceWorks(actor, ['llm.observe', 'llm.key.cost.read'], { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+  })
+  return readable ? structuredClone(impact) : { state: 'NOT_PROVIDED' as const, observedAt: impact.observedAt, accounts: null, basisFingerprint: null }
+}
+
 function currentOperation(profile: Profile, saved: { request: Request_; response: Schemas['AdminBulkChangeOperationResponse'] }): Schemas['AdminBulkChangeOperationResponse'] {
   const resolved = resolve(profile, saved.request)
   const denied = new Map(resolved.filter((entry) => entry.reach).map((entry) => [entry.targetId, entry.reach!]))
@@ -608,6 +624,11 @@ export const bulkChangeHandlers: RequestHandler[] = [
       }
     })
     const response = savedBulkPreview(body, items)
+    if (body.targetType === 'LLM_KEY' && body.change.kind === 'LLM_KEY_LIMITS') {
+      const captured = bulkAccountImpactFixtures.get(bulkImpactFixtureKey(body))
+      response.accountImpact = captured && capturedProjectionSupported(captured, adminLlmKeyStore)
+        ? projectedAccountImpact(profile, captured) : { state: 'NOT_PROVIDED', observedAt: response.createdAt, accounts: null, basisFingerprint: null }
+    }
     bulkSavedPreviews.set(response.previewId, { actorId: profile.id, request: structuredClone(body), response })
     return HttpResponse.json(response)
   }),
@@ -676,7 +697,7 @@ export const bulkChangeHandlers: RequestHandler[] = [
     if (!saved || saved.actorId !== profile.id) return bulkNotFound()
     const resolved = resolve(profile, saved.request)
     const denied = new Map(resolved.filter((entry) => entry.reach).map((entry) => [entry.targetId, entry.reach!]))
-    return HttpResponse.json({ ...saved.response, change: denied.size ? null : saved.response.change, items: saved.response.items.map((item) => denied.has(item.targetId) ? { ...item, name: null, applicable: false, reason: denied.get(item.targetId), fields: [], fingerprint: '', actorAccessImpact: null } : item) })
+    return HttpResponse.json({ ...saved.response, accountImpact: projectedAccountImpact(profile, saved.response.accountImpact), change: denied.size ? null : saved.response.change, items: saved.response.items.map((item) => denied.has(item.targetId) ? { ...item, name: null, applicable: false, reason: denied.get(item.targetId), fields: [], fingerprint: '', actorAccessImpact: null } : item) })
   }),
   http.get('*/api/v1/admin/bulk-changes/operations/:operationId', ({ request, params }) => {
     const profile = adminActor(request)

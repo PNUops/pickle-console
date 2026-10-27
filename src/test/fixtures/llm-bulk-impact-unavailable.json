@@ -1,0 +1,41 @@
+{
+  "previewId" : "cd7c92c2-2321-4735-9a3c-9dae5a72c384",
+  "createdAt" : "2026-10-27T00:45:36.271939Z",
+  "expiresAt" : "2026-10-28T00:45:36.271939Z",
+  "targetType" : "LLM_KEY",
+  "change" : {
+    "kind" : "LLM_KEY_LIMITS",
+    "llmKeyLimits" : {
+      "creditLimit" : 20
+    },
+    "llmKeyStatus" : null,
+    "llmKeyExpiry" : null,
+    "vmPeriod" : null,
+    "vmPower" : null,
+    "vmDeletion" : null,
+    "domainRenewal" : null,
+    "domainForceRelease" : null,
+    "domainVerify" : null,
+    "access" : null
+  },
+  "items" : [ {
+    "targetId" : "fc6afc42-4498-4783-b1e2-0f6a1763089b",
+    "name" : "still writable without account finance",
+    "applicable" : true,
+    "reason" : null,
+    "fields" : [ {
+      "field" : "creditLimit",
+      "oldValue" : "10",
+      "newValue" : "20"
+    } ],
+    "fingerprint" : "f2f2ee4cc601d250",
+    "actorAccessImpact" : null
+  } ],
+  "consumedOperationId" : null,
+  "accountImpact" : {
+    "state" : "NOT_PROVIDED",
+    "observedAt" : "2026-10-27T00:45:36.271939Z",
+    "basisFingerprint" : null,
+    "accounts" : null
+  }
+}

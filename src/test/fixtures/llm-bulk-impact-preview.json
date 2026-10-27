@@ -1,0 +1,91 @@
+{
+  "previewId" : "2bea868e-f5a6-429a-962b-c097a1928184",
+  "createdAt" : "2026-10-27T00:21:44.335161Z",
+  "expiresAt" : "2026-10-28T00:21:44.335161Z",
+  "targetType" : "LLM_KEY",
+  "change" : {
+    "kind" : "LLM_KEY_LIMITS",
+    "llmKeyLimits" : {
+      "creditLimit" : 20
+    },
+    "llmKeyStatus" : null,
+    "llmKeyExpiry" : null,
+    "vmPeriod" : null,
+    "vmPower" : null,
+    "vmDeletion" : null,
+    "domainRenewal" : null,
+    "domainForceRelease" : null,
+    "domainVerify" : null,
+    "access" : null
+  },
+  "items" : [ {
+    "targetId" : "431669a8-db46-4ccb-a562-a7b1a9cb2f26",
+    "name" : "single and bulk proposal",
+    "applicable" : true,
+    "reason" : null,
+    "fields" : [ {
+      "field" : "creditLimit",
+      "oldValue" : "10",
+      "newValue" : "20"
+    } ],
+    "fingerprint" : "9bf9bef6ac6e1df0",
+    "actorAccessImpact" : null
+  } ],
+  "consumedOperationId" : null,
+  "accountImpact" : {
+    "state" : "AVAILABLE",
+    "observedAt" : "2026-10-27T00:21:44.335161Z",
+    "basisFingerprint" : "39b9a507a23ef4fa",
+    "accounts" : [ {
+      "accountId" : "d81dbdc3-8b63-4476-b553-d03f9311aa2f",
+      "accountName" : "same server projection",
+      "changedKeys" : 1,
+      "before" : {
+        "committedCreditLimit" : 10.0,
+        "committedTotalCap" : 10.0,
+        "committedDaily" : 0,
+        "committedWeekly" : 0,
+        "committedMonthly" : 0,
+        "committedKeyCount" : 1,
+        "remainingCommitment" : 5.0,
+        "awaitingProvisionKeyCount" : 0,
+        "usageUnreportedKeyCount" : 0
+      },
+      "after" : {
+        "committedCreditLimit" : 20.0,
+        "committedTotalCap" : 20.0,
+        "committedDaily" : 0,
+        "committedWeekly" : 0,
+        "committedMonthly" : 0,
+        "committedKeyCount" : 1,
+        "remainingCommitment" : 15.0,
+        "awaitingProvisionKeyCount" : 0,
+        "usageUnreportedKeyCount" : 0
+      },
+      "balance" : 17.0,
+      "balanceObservedAt" : "2026-10-27T00:21:44.406723Z",
+      "balanceError" : null,
+      "overAllocated" : false,
+      "quality" : {
+        "source" : "SERVER_CACHED_ALLOCATION",
+        "observedAt" : "2026-10-27T00:21:44.335161Z",
+        "creditsFreshness" : "FRESH",
+        "keyMetersFreshness" : "FRESH",
+        "creditsLastSuccessAt" : "2026-10-27T00:21:44.406723Z",
+        "creditsLastAttemptAt" : null,
+        "keyMetersLastSuccessAt" : "2026-10-27T00:21:44.406723Z",
+        "keyMetersLastAttemptAt" : null,
+        "keyMetersError" : null,
+        "balanceUnreported" : false,
+        "beforeUsageUnreportedKeys" : 0,
+        "afterUsageUnreportedKeys" : 0,
+        "beforeAwaitingProvisionKeys" : 0,
+        "afterAwaitingProvisionKeys" : 0,
+        "changedPeriodKeys" : 0,
+        "periodBasisMismatch" : false,
+        "windowedCommitmentsPresent" : false,
+        "vendorWindowAlignmentUnconfirmed" : false
+      }
+    } ]
+  }
+}
