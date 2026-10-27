@@ -670,6 +670,12 @@ export type LlmLimitReview = Schemas['LlmLimitReviewResponse']
 export type LlmLimitPressure = Schemas['LlmLimitPressureResponse']
 export type LlmUsageQuality = Schemas['LlmUsageQualityResponse']
 export type AdminLlmUsageDays = 7 | 30 | 90
+export type AdminLlmKeysQuery = NonNullable<import('./schema').operations['listAdminLlmKeys']['parameters']['query']>
+export type AdminLlmUsageQuery = NonNullable<import('./schema').operations['getAdminLlmUsage']['parameters']['query']>
+export type AdminLlmAccountUsageQuery = NonNullable<import('./schema').operations['getAdminLlmAccountUsage']['parameters']['query']>
+export type AdminLlmKeyProjectionQuery = NonNullable<import('./schema').operations['getAdminLlmKey']['parameters']['query']>
+export type LlmAccountImpactProjection = Schemas['LlmAccountImpactProjection']
+export type LlmKeyLimitsProjection = Schemas['LlmKeyLimitsProjection']
 export type OpenRouterAccount = Schemas['OpenRouterAccountResponse']
 export type OpenRouterAccountStatus = Schemas['OpenRouterAccountStatus']
 export type OpenRouterCredentialState = Schemas['OpenRouterCredentialStateResponse']
@@ -842,16 +848,7 @@ export function revokeOpenRouterCredential(
   })
 }
 
-export function fetchAdminLlmKeys(params: {
-  orgId?: string
-  workspaceId?: string
-  requestId?: string
-  openrouterAccountId?: string
-  status?: LlmApiKeyStatus
-  query?: string
-  page?: number
-  size?: number
-}): Promise<AdminLlmKeyPage> {
+export function fetchAdminLlmKeys(params: AdminLlmKeysQuery): Promise<AdminLlmKeyPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys', { params: { query: params } })
     if (!data) throw toApiError(error, '관리자 LLM API 키 목록을 불러오지 못했습니다.')
@@ -887,12 +884,7 @@ export function fetchAdminLlmCapacity(params: LlmCapacityQuery): Promise<AdminLl
   })
 }
 
-export function fetchAdminLlmUsage(params: {
-  orgId?: string
-  workspaceId?: string
-  days: AdminLlmUsageDays
-  top?: number
-}): Promise<AdminLlmUsage> {
+export function fetchAdminLlmUsage(params: AdminLlmUsageQuery): Promise<AdminLlmUsage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/usage', {
       params: { query: params },
@@ -902,10 +894,10 @@ export function fetchAdminLlmUsage(params: {
   })
 }
 
-export function fetchAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
+export function fetchAdminLlmKey(keyId: string, query?: AdminLlmKeyProjectionQuery): Promise<AdminLlmKeyDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}', {
-      params: { path: { keyId } },
+      params: { path: { keyId }, query },
     })
     if (!data) throw toApiError(error, '관리자 LLM API 키 정보를 불러오지 못했습니다.')
     return data
@@ -1245,10 +1237,11 @@ export function fetchAdminLlmKeyUsage(keyId: string, days: number): Promise<Admi
 export function fetchAdminLlmAccountUsage(
   accountId: string,
   days: number,
+  query?: Omit<AdminLlmAccountUsageQuery, 'days'>,
 ): Promise<AdminLlmAccountUsage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/accounts/{accountId}/usage', {
-      params: { path: { accountId }, query: { days } },
+      params: { path: { accountId }, query: { days, ...query } },
     })
     if (!data) throw toApiError(error, '계정 사용량을 불러오지 못했습니다.')
     return data

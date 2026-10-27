@@ -84,6 +84,12 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       // 이전 페이지의 기관 종속 필터를 새 scope에 가져가지 않는다.
       next.delete('orgId')
       next.delete('workspaceId')
+      if (location.pathname.startsWith('/admin/llm/')) {
+        next.delete('openrouterAccountId')
+        next.delete('requestId')
+        next.delete('consumerPage')
+        next.delete('reviewPage')
+      }
       if (!(preserveGlobalSelection && location.pathname === '/admin/users')) next.delete('page')
       if (preserveNoticeReturn && next.has('returnTo')) next.set('returnTo', location.pathname.startsWith('/admin/users/')
         ? userSupportReturn(next.get('returnTo'), orgId)

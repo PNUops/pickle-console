@@ -35,14 +35,16 @@ export const VENDOR_ERROR_LABELS = {
   VENDOR_REJECTED: 'OpenRouter가 요청 거부',
 } as const
 
-/** USD meter는 1센트 미만 정밀도를 보존하고 음수도 0으로 보정하지 않는다. */
+/** Display USD to eight decimals; retain subprecision nonzero values without rounding inputs. */
 export function formatUsd(value: number | null | undefined): string {
-  if (value == null) return '확인 전'
+  if (value == null || !Number.isFinite(value)) return '확인 전'
   const sign = value < 0 ? '-' : ''
-  return `${sign}$${Math.abs(value).toLocaleString('en-US', {
+  const amount = Math.abs(value)
+  const formatted = amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  })}`
+    maximumFractionDigits: 8,
+  })
+  return `${sign}$${amount > 0 && Number(formatted.replaceAll(',', '')) === 0 ? String(amount) : formatted}`
 }
 
 /**

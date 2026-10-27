@@ -1,7 +1,7 @@
-import { unpricedTokenCount } from '../lib/token-presentation'
+import { unpricedTokenCount, isExactTokenCount, UNKNOWN_TOKEN_VALUE } from '../lib/token-presentation'
 import { TokenValue } from '../components/TokenValue'
-import { Suspense, lazy, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminLlmUsage,
@@ -18,6 +18,7 @@ import {
 } from '../api/queries'
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -30,6 +31,7 @@ import {
   LoadingBlock,
   MessageBar,
   PageHeader,
+  Pagination,
   Select,
   Spinner,
   TBody,
@@ -41,7 +43,11 @@ import {
   type DescriptionItem,
 } from '../components/ui'
 import { ObservationMoment } from '../components/OpenRouterCredits'
-import { formatBytes } from '../lib/format'
+import { formatBytes, formatDateTimeSeconds } from '../lib/format'
+import { CONSUMER_SORTS, CONSUMER_SORT_LABELS, explorationPageSize } from '../lib/llm-exploration'
+import { listPage, withListReturn } from '../lib/list-url'
+import { useListUrl } from '../lib/use-list-url'
+import { isUuid } from '../lib/validation'
 import { labelForWorkspaceKind, type WorkspaceKind } from '../lib/labels'
 import { endpointKindLabel } from '../lib/llm-endpoint-kinds'
 import { formatUsd } from '../lib/openrouter-credits'
@@ -49,7 +55,7 @@ import { passthroughLabel } from '../lib/passthrough-endpoints'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { useAuth } from '../auth/auth-context'
-import { canQueryWork, SYS_READERS } from '../auth/institution-authority'
+import { canQueryWork, hasAnyWork, SYS_READERS } from '../auth/institution-authority'
 import { requestReaderKey } from '../api/request-review'
 
 const AdminLlmUsageCharts = lazy(
@@ -85,7 +91,7 @@ function parseDays(raw: string | null): AdminLlmUsageDays {
 }
 
 function count(value: number | null | undefined): string {
-  return value == null ? '제공되지 않음' : value.toLocaleString('ko-KR')
+  return value == null ? '제공되지 않음' : isExactTokenCount(value) ? value.toLocaleString('ko-KR') : UNKNOWN_TOKEN_VALUE
 }
 
 function tokens(value: number | null | undefined): ReactNode {
@@ -295,10 +301,16 @@ function ConsumersSection({
   data,
   activeOrgId,
   workspaceKinds,
+  onPage,
+  onSort,
+  selectedSort,
 }: {
   data: AdminLlmUsage
   activeOrgId?: string
   workspaceKinds: Map<string, WorkspaceKind>
+  onPage: (page: number) => void
+  onSort: (sort: AdminLlmUsage['consumers']['sort']) => void
+  selectedSort: AdminLlmUsage['consumers']['sort']
 }) {
   const { consumers } = data
   return (
@@ -324,6 +336,11 @@ function ConsumersSection({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-sm text-foreground-muted">{consumers.from} ~ {consumers.to} KST · 일별 기록과 키 금액 대사 기준 · 전체 {count(consumers.totalItems)}개 · 응답 {count(consumers.page + 1)}페이지 / {CONSUMER_SORT_LABELS[consumers.sort]}</p>
+        <Select aria-label="소비처 정렬" value={selectedSort} onChange={(event) => onSort(event.target.value as typeof consumers.sort)}>
+          {CONSUMER_SORTS.map((value) => <option key={value} value={value}>{CONSUMER_SORT_LABELS[value]}</option>)}
+        </Select>
+        <p className="text-xs text-foreground-muted">금액 정렬은 요청별 보고 금액을 기준으로 합니다. 기간 키 미터는 공급자 관측값의 별도 차분입니다. 현재 조회 집합의 금융 정보를 읽을 수 없으면 서버가 정렬 요청을 거절하며 조건은 유지됩니다.</p>
         {consumers.items.length === 0 ? (
           <EmptyState
             title="표시할 소비처가 없습니다"
@@ -342,7 +359,8 @@ function ConsumersSection({
                 <TH>요청</TH>
                 <TH>입력 토큰</TH>
                 <TH>출력 토큰</TH>
-                <TH>금액</TH>
+                <TH>기간 키 미터</TH>
+                <TH>요청별 보고 금액</TH>
               </TR>
             </THead>
             <TBody>
@@ -359,13 +377,7 @@ function ConsumersSection({
             </TBody>
           </DataTable>
         )}
-        {consumers.truncated && (
-          <MessageBar>
-            상위 {consumers.items.length.toLocaleString('ko-KR')}개만 표시합니다. 전체{' '}
-            {CONSUMER_LEVEL_LABELS[consumers.level]} 수는{' '}
-            {consumers.totalItems.toLocaleString('ko-KR')}개입니다.
-          </MessageBar>
-        )}
+        <Pagination page={consumers.page} totalPages={consumers.totalPages} onPageChange={onPage} />
       </CardContent>
     </Card>
   )
@@ -385,6 +397,7 @@ function ConsumerRow({
   /** 워크스페이스 유형. 목록 조회가 이미 실어 오므로 서버에 더 묻지 않는다. */
   workspaceKinds: Map<string, WorkspaceKind>
 }) {
+  const location = useLocation()
   const name = consumerName(item, level)
   const kind = item.workspaceId ? workspaceKinds.get(item.workspaceId) : undefined
   const primary = level === 'ORG' && item.orgId
@@ -392,7 +405,7 @@ function ConsumerRow({
     : level === 'WORKSPACE' && item.workspaceId
       ? adminPaths.llmUsage(activeOrgId, item.workspaceId, days)
       : level === 'KEY' && item.keyId
-        ? adminPaths.llmKeyDetail(item.keyId, activeOrgId)
+        ? withListReturn(`${adminPaths.llmKeyDetail(item.keyId, item.orgId ?? activeOrgId)}${(item.orgId ?? activeOrgId) ? '&' : '?'}tab=usage&days=${days}`, `${location.pathname}${location.search}`)
         : null
   return (
     <TR>
@@ -420,6 +433,7 @@ function ConsumerRow({
           nothing on paid models has no dollar figure, and `$0.00` would be a
           claim the server never made. */}
       <TD>{item.meteredCostUsd == null ? '—' : formatUsd(item.meteredCostUsd)}</TD>
+      <TD>{item.attributedCostUsd == null ? '—' : formatUsd(item.attributedCostUsd)}</TD>
     </TR>
   )
 }
@@ -707,13 +721,15 @@ function actualExhaustion(item: LlmLimitReview): boolean {
   )
 }
 
-function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; activeOrgId?: string }) {
+function LimitReviewSection({ data, activeOrgId, onPage }: { data: AdminLlmUsage; activeOrgId?: string; onPage: (page: number) => void }) {
+  const location = useLocation()
   return (
     <Card>
       <CardHeader>
         <CardTitle>한도 검토</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-sm text-foreground-muted">압력 기간 {data.limitReview.pressureFrom} ~ {data.limitReview.pressureTo} KST · 설정 조회 {data.limitReview.configurationObservedAt ? formatDateTimeSeconds(data.limitReview.configurationObservedAt) : '미보고'}. 오늘 토큰과 현재 금액 창은 선택한 소비 기간과 별도입니다.</p>
         {data.limitReview.items.length === 0 ? (
           <EmptyState
             title="검토할 한도가 없습니다"
@@ -738,7 +754,7 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
                   <TR key={item.keyId}>
                     <TD>
                       <Link
-                        to={adminPaths.llmKeyDetail(item.keyId, activeOrgId)}
+                        to={withListReturn(adminPaths.llmKeyDetail(item.keyId, item.orgId ?? activeOrgId), `${location.pathname}${location.search}`)}
                         className="font-medium text-brand-foreground hover:underline"
                       >
                         {item.keyName}
@@ -801,12 +817,8 @@ function LimitReviewSection({ data, activeOrgId }: { data: AdminLlmUsage; active
             </TBody>
           </DataTable>
         )}
-        {data.limitReview.truncated && (
-          <MessageBar>
-            {data.limitReview.totalItems.toLocaleString('ko-KR')}개 중 상위{' '}
-            {data.limitReview.items.length.toLocaleString('ko-KR')}개만 표시합니다.
-          </MessageBar>
-        )}
+        <p className="text-sm text-foreground-muted">전체 {count(data.limitReview.totalItems)}개</p>
+        <Pagination page={data.limitReview.page} totalPages={data.limitReview.totalPages} onPageChange={onPage} />
       </CardContent>
     </Card>
   )
@@ -909,34 +921,39 @@ function QualitySection({
 export function AdminLlmUsagePage() {
   const { user } = useAuth()
   const scope = useAdminScope()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams, change] = useListUrl()
   const days = parseDays(searchParams.get('days'))
   const workspaceId = searchParams.get('workspaceId') ?? undefined
   const scopeKey = scope.activeOrgId ?? null
   const workspaceKey = workspaceId ?? null
+  const consumerPage = listPage(searchParams.get('consumerPage'))
+  const reviewPage = listPage(searchParams.get('reviewPage'))
+  const consumerSize = explorationPageSize(searchParams.get('consumerSize'))
+  const reviewSize = explorationPageSize(searchParams.get('reviewSize'))
+  const consumerSort = CONSUMER_SORTS.find((value) => value === searchParams.get('consumerSort')) ?? 'REQUESTS_DESC'
+  const queryError = workspaceId && !isUuid(workspaceId) || searchParams.has('consumerSort') && !CONSUMER_SORTS.includes(searchParams.get('consumerSort') as typeof consumerSort) || consumerSize == null || reviewSize == null
+  const reader = requestReaderKey(user)
+  const request = { orgId: scope.activeOrgId, workspaceId, days, top: PAGE_TOP, consumerPage, consumerSize: consumerSize ?? 20, consumerSort, reviewPage, reviewSize: reviewSize ?? 20 }
+  const visibility = JSON.stringify([reader, scopeKey, workspaceKey])
+  const identity = JSON.stringify([reader, request])
+  type Result = { visibility: string; identity: string; value: AdminLlmUsage; fetchedAt: string }
+  const lastSuccess = useRef<Result | null>(null)
   const usageAllowed = canQueryWork(user, ['llm.observe'], { orgId: scope.activeOrgId, workspaceId }, SYS_READERS)
   const usage = useQuery({
-    queryKey: ['admin', 'llm-usage', { orgId: scopeKey, workspaceId: workspaceKey, days, top: PAGE_TOP, reader: requestReaderKey(user) }],
+    queryKey: ['admin', 'llm-usage', identity],
     queryFn: async () => ({
-      scopeKey,
-      workspaceKey,
-      days,
-      value: await fetchAdminLlmUsage({
-        orgId: scope.activeOrgId,
-        workspaceId,
-        days,
-        top: PAGE_TOP,
-      }),
+      visibility, identity, value: await fetchAdminLlmUsage(request), fetchedAt: new Date().toISOString(),
     }),
-    enabled: scope.ready && usageAllowed,
+    enabled: scope.ready && usageAllowed && !queryError,
+    placeholderData: (previous) => previous?.visibility === visibility ? previous : undefined,
     staleTime: 60_000,
   })
   // 고를 목록. 기관이 정해지지 않은 시스템 계층 전체 보기에서는 워크스페이스가
   // 수백 개가 될 수 있어 고를 자리로 쓸 수 없으므로, 기관이 정해졌을 때만 묻는다.
   const workspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { orgId: scopeKey, for: 'llm-usage-filter' }],
+    queryKey: ['admin', 'workspaces', { orgId: scopeKey, reader, for: 'llm-usage-filter' }],
     queryFn: () => fetchAdminWorkspaces(scope.activeOrgId == null ? {} : { orgId: scope.activeOrgId }),
-    enabled: scope.ready && scope.activeOrgId != null,
+    enabled: scope.ready && hasAnyWork(user, ['workspace.support.read', 'workspace.info.update', 'workspace.members.manage', 'workspace.invitations.manage', 'workspace.owners.manage', 'workspace.terminate', 'workspace.recipient.cancel', 'vm.roster.issue', 'llm.roster.issue', 'vm.request.decide', 'llm.request.decide', 'domain.request.decide', 'gpu.request.decide', 'workspace.announcement.send'], SYS_READERS),
     staleTime: 60_000,
   })
 
@@ -947,23 +964,17 @@ export function AdminLlmUsagePage() {
     (workspaces.data ?? []).map((workspace) => [workspace.id, workspace.kind]),
   )
 
-  const data = usage.data?.scopeKey === scopeKey
-      && usage.data.workspaceKey === workspaceKey
-      && usage.data.days === days
-    ? usage.data.value
-    : undefined
+  useEffect(() => { if (usage.data?.visibility === visibility && !usage.isPlaceholderData) lastSuccess.current = usage.data }, [usage.data, usage.isPlaceholderData, visibility])
+  const result = usage.data?.visibility === visibility ? usage.data : lastSuccess.current?.visibility === visibility ? lastSuccess.current : undefined
+  const data = scope.ready && usageAllowed && !queryError ? result?.value : undefined
+  const previousResponse = result?.identity !== identity || usage.isPlaceholderData
 
   const selectDays = (nextDays: AdminLlmUsageDays) => {
-    const next = new URLSearchParams(searchParams)
-    next.set('days', String(nextDays))
-    setSearchParams(next, { replace: true })
+    change({ days: nextDays, consumerPage: undefined, reviewPage: undefined })
   }
 
   const selectWorkspace = (nextWorkspaceId: string) => {
-    const next = new URLSearchParams(searchParams)
-    if (nextWorkspaceId) next.set('workspaceId', nextWorkspaceId)
-    else next.delete('workspaceId')
-    setSearchParams(next, { replace: true })
+    change({ workspaceId: nextWorkspaceId || undefined, consumerPage: undefined, reviewPage: undefined })
   }
 
   return (
@@ -988,7 +999,8 @@ export function AdminLlmUsagePage() {
           value={workspaceId ?? ''}
           onChange={(event) => selectWorkspace(event.target.value)}
         >
-          <option value="">기관 전체</option>
+          <option value="">{scope.activeOrgId ? '기관 전체' : scope.tier === 'system' ? '플랫폼 전체 읽기 범위' : '허용된 기관 범위'}</option>
+          {workspaceId && !workspaces.data?.some((row) => row.id === workspaceId) && <option value={workspaceId}>선택한 공간 (현재 목록에 없음)</option>}
           {workspaces.data?.map((workspace) => (
             <option key={workspace.id} value={workspace.id}>
               {workspace.name}
@@ -1005,20 +1017,37 @@ export function AdminLlmUsagePage() {
           </button>
         )}
       </div>
+      {workspaces.isFetching && <MessageBar>워크스페이스 선택 목록을 불러오는 중입니다.</MessageBar>}
+      {workspaces.isError && <MessageBar variant="warning">워크스페이스 목록을 불러오지 못했습니다. 현재 조회 조건은 유지합니다.</MessageBar>}
+      {!workspaces.isEnabled && <MessageBar>워크스페이스 선택 목록은 현재 업무에서 조회하지 않습니다.</MessageBar>}
+      {queryError && <MessageBar variant="danger">조회 대상이나 정렬 조건이 올바르지 않습니다.</MessageBar>}
+      <Button variant="secondary" onClick={() => change({ consumerSort: undefined, consumerPage: undefined, reviewPage: undefined, consumerSize: undefined, reviewSize: undefined })}>소비처 정렬·페이지 초기화</Button>
+      <Button variant="secondary" disabled={usage.isFetching || !usageAllowed || !scope.ready || !!queryError} onClick={() => { void usage.refetch() }}>다시 조회</Button>
 
       {!usageAllowed && <MessageBar>선택한 기관·공간 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
       {usageAllowed && usage.isPending && <LoadingBlock label="LLM 사용량 불러오는 중" />}
-      {usage.isError && !data && <MessageBar variant="danger">{usage.error.message}</MessageBar>}
+      {usage.isFetching && data && <MessageBar>새 조회 중입니다. 마지막 성공 응답의 기간과 조건을 표시합니다.</MessageBar>}
+      {usage.isError && <MessageBar variant="danger">{usage.error.message} {data ? '마지막 성공 응답은 아래에 보존합니다.' : ''}</MessageBar>}
       {data && (
         <>
+          {previousResponse && <MessageBar variant="warning">이전 조회 결과입니다. 새 기간·페이지·정렬의 결과로 해석하지 마세요.</MessageBar>}
+          <DescriptionList columns={2} items={[
+            { term: '실제 응답 기간', description: `${data.from} ~ ${data.to} KST` },
+            { term: '요청한 기간', description: `${days}일` },
+            { term: '응답 생성', description: formatDateTimeSeconds(data.generatedAt) },
+            { term: '콘솔 마지막 GET 성공', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '미보고' },
+          ]} />
           <DemandSection data={data} onDays={selectDays} />
           <ConsumersSection
             data={data}
             activeOrgId={scope.activeOrgId}
             workspaceKinds={workspaceKinds}
+            onPage={(value) => change({ consumerPage: value })}
+            onSort={(value) => change({ consumerSort: value, consumerPage: undefined })}
+            selectedSort={consumerSort}
           />
           <BreakdownSection data={data} />
-          <LimitReviewSection data={data} activeOrgId={scope.activeOrgId} />
+          <LimitReviewSection data={data} activeOrgId={scope.activeOrgId} onPage={(value) => change({ reviewPage: value })} />
           <QualitySection quality={data.quality} activeOrgId={scope.activeOrgId} />
         </>
       )}

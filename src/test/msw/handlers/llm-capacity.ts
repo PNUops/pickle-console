@@ -1,8 +1,8 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { AdminLlmCapacity, LlmCapacityQuery } from '../../../api/queries'
-import { canQueryWork, SYS_READERS } from '../../../auth/institution-authority'
+import { canQueryWork, hasWork, hasSameSourceWorks, SYS_READERS } from '../../../auth/institution-authority'
 import { isSysTier } from '../../../auth/permissions'
-import { mockAuthorityActor } from '../institution-authority'
+import { mockAuthorityActor, mockHasAggregateMoneySource } from '../institution-authority'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { llmStatusFixture } from './llm-observability'
 import { adminLlmKeyStore } from './llm-keys'
@@ -39,14 +39,16 @@ function caseCounts(rows: ReasonCase[], successes: number, financeVisible: boole
 }
 
 /** Synthetic response for the shared browser fixture and consumer tests. */
-export function llmCapacityFixture(query: Partial<LlmCapacityQuery> = {}, systemTier = true): AdminLlmCapacity {
+export function llmCapacityFixture(query: Partial<LlmCapacityQuery> = {}, systemTier = true, financeVisible = systemTier): AdminLlmCapacity {
   const from = query.from ?? '2026-10-20T00:00:00.000Z'
   const to = query.to ?? '2026-10-21T00:00:00.000Z'
   const rows = reasonCases.filter((item) => (!query.errorType || item.errorType === query.errorType)
     && (!query.errorTypeMissing || item.errorType == null) && (!query.reasonCategory || item.category === query.reasonCategory)
-    && (!query.upstreamId || item.finalUpstream === query.upstreamId))
-  const successes = !query.errorType && !query.errorTypeMissing && !query.reasonCategory && (!query.upstreamId || query.upstreamId === uuid(301)) ? 4 : 0
-  const counts = caseCounts(rows, successes, systemTier)
+    && (!query.upstreamId || item.finalUpstream === query.upstreamId)
+    && (!query.openrouterAccountId || adminLlmKeyStore.find((key) => key.id === uuid(item.keyNumber))?.openrouterAccountId === query.openrouterAccountId))
+  const successes = !query.errorType && !query.errorTypeMissing && !query.reasonCategory && (!query.upstreamId || query.upstreamId === uuid(301))
+    && (!query.openrouterAccountId || adminLlmKeyStore.find((key) => key.id === uuid(171))?.openrouterAccountId === query.openrouterAccountId) ? 4 : 0
+  const counts = caseCounts(rows, successes, financeVisible)
   const group = query.group ?? 'WORKSPACE'
   const orgId = query.orgId ?? uuid(1)
   const workspaceId = query.workspaceId ?? uuid(12)
@@ -54,7 +56,7 @@ export function llmCapacityFixture(query: Partial<LlmCapacityQuery> = {}, system
   const consumers = group === 'KEY' ? matchingKeys.map((keyNumber) => {
     const key = adminLlmKeyStore.find((item) => item.id === uuid(keyNumber))!
     return { orgId, orgName: '정보컴퓨터공학부 실습지원센터', workspaceId, workspaceName: '캡스톤 3조', keyId: key.id, keyName: key.name,
-      counts: caseCounts(rows.filter((item) => item.keyNumber === keyNumber), keyNumber === 171 ? successes : 0, systemTier),
+      counts: caseCounts(rows.filter((item) => item.keyNumber === keyNumber), keyNumber === 171 ? successes : 0, financeVisible),
       currentLimits: { configurationObservedAt: new Date().toISOString(), dailyTokens: key.dailyTokens, quotaExhausted: key.quotaExhausted === true,
         rpm: key.rpm, tpm: key.tpm, concurrency: key.concurrency, serviceDefaultsReported: false } }
   }) : counts.requests ? [{ orgId, orgName: '정보컴퓨터공학부 실습지원센터', workspaceId: group === 'ORG' ? null : workspaceId,
@@ -62,18 +64,24 @@ export function llmCapacityFixture(query: Partial<LlmCapacityQuery> = {}, system
   const span = (Date.parse(to) - Date.parse(from)) / 1000
   const bucketSeconds = query.bucketSeconds ?? [60, 300, 3600, 21600, 86400].find((step) => Math.ceil(span / step) <= 1440) ?? 86400
   const bucketCount = Math.ceil(span / bucketSeconds)
+  const size = query.size ?? 20
   const references = (items: { id: string; name: string }[]) => ({ items, totalItems: items.length, truncated: false })
+  consumers.sort((a, b) => {
+    const metric = (row: typeof a) => query.sort === 'TOKENS_DESC' ? (row.counts.inputTokens ?? 0) + (row.counts.outputTokens ?? 0) : query.sort === 'REPORTED_COST_DESC' ? row.counts.costUsd : row.counts.requests
+    const av = metric(a), bv = metric(b)
+    return av == null ? bv == null ? 0 : 1 : bv == null ? -1 : bv - av || (b.keyId ?? b.workspaceId ?? b.orgId ?? '').localeCompare(a.keyId ?? a.workspaceId ?? a.orgId ?? '')
+  })
   return {
-    generatedAt: new Date().toISOString(), timezone: 'Asia/Seoul', from, to,
+    generatedAt: new Date().toISOString(), timezone: 'Asia/Seoul', from, to, openrouterAccountId: query.openrouterAccountId ?? null,
     bucketSeconds,
     summary: counts,
     series: Array.from({ length: bucketCount }, (_, index) => {
       const active = index === bucketCount - 1
       return { from: new Date(Date.parse(from) + bucketSeconds * 1000 * index).toISOString(), to: new Date(Math.min(Date.parse(to), Date.parse(from) + bucketSeconds * 1000 * (index + 1))).toISOString(), rawHistoryState: 'NOT_SWEPT',
-        counts: active ? counts : { ...counts, requests: 0, succeeded: 0, rateLimited: 0, failed: 0, canceled: 0, inputTokens: 0, outputTokens: 0, estimatedRequests: 0, tokenAxisRequests: 0, creditAxisRequests: 0, unknownAxisRequests: 0, unknownKeyRequests: 0, unknownModelRequests: 0, unknownFinalUpstreamRequests: 0, costUsd: null, pricedRequests: systemTier ? 0 : null } }
+        counts: active ? counts : { ...counts, requests: 0, succeeded: 0, rateLimited: 0, failed: 0, canceled: 0, inputTokens: 0, outputTokens: 0, estimatedRequests: 0, tokenAxisRequests: 0, creditAxisRequests: 0, unknownAxisRequests: 0, unknownKeyRequests: 0, unknownModelRequests: 0, unknownFinalUpstreamRequests: 0, costUsd: null, pricedRequests: financeVisible ? 0 : null } }
     }),
     reasons: rows.map(({ errorType, category, requests, knownKeys }) => ({ errorType, category, requests, knownKeys })),
-    consumers: { group, page: query.page ?? 0, size: 20, totalElements: consumers.length, totalPages: Math.ceil(consumers.length / 20), items: consumers.slice((query.page ?? 0) * 20, ((query.page ?? 0) + 1) * 20) },
+    consumers: { group, sort: query.sort ?? 'REQUESTS_DESC', page: query.page ?? 0, size, totalElements: consumers.length, totalPages: Math.ceil(consumers.length / size), items: consumers.slice((query.page ?? 0) * size, ((query.page ?? 0) + 1) * size) },
     selectors: { institutions: references([{ id: orgId, name: '정보컴퓨터공학부 실습지원센터' }]),
       workspaces: references([{ id: workspaceId, name: '캡스톤 3조' }]),
       upstreams: references([{ id: uuid(301), name: '합성 자체 서빙' }, { id: uuid(302), name: '합성 외부 공급원' }]) },
@@ -105,6 +113,11 @@ export const llmCapacityHandlers: RequestHandler[] = [http.get('*/api/v1/admin/l
     })
   }
   const sourceId = params.get('telemetrySourceId') || undefined
+  const accountId = params.get('openrouterAccountId') || undefined
+  const sort = (params.get('sort') ?? 'REQUESTS_DESC') as LlmCapacityQuery['sort']
+  const size = Number(params.get('size') ?? 20)
+  if (!Number.isSafeInteger(size) || size < 1 || size > 100) return problemResponse({ status: 422, code: 'VALIDATION_FAILED', title: '페이지 크기는 1~100이어야 합니다.' })
+  if (accountId && !isUuid(accountId) || !['REQUESTS_DESC', 'TOKENS_DESC', 'REPORTED_COST_DESC'].includes(sort!)) return problemResponse({ status: 422, code: 'VALIDATION_FAILED', title: '조회 대상이나 정렬을 확인해 주세요.' })
   if (sourceId && !isUuid(sourceId)) return problemResponse({ status: 422, code: 'VALIDATION_FAILED', title: '입력값이 올바르지 않습니다',
     errors: [{ field: 'telemetrySourceId', message: '관측 원천 식별자가 올바르지 않습니다.' }] })
   const rawBucket = params.get('bucketSeconds')
@@ -118,15 +131,20 @@ export const llmCapacityHandlers: RequestHandler[] = [http.get('*/api/v1/admin/l
   const query: Partial<LlmCapacityQuery> = {
     from: params.get('from')!, to: params.get('to')!, orgId, workspaceId,
     group: params.get('group') === 'KEY' ? 'KEY' : params.get('group') === 'ORG' ? 'ORG' : 'WORKSPACE',
-    page: Number(params.get('page') ?? 0), errorType: params.get('errorType') ?? undefined,
+    page: Number(params.get('page') ?? 0), size, errorType: params.get('errorType') ?? undefined,
     publicModelName: params.get('publicModelName') ?? undefined,
     errorTypeMissing: params.get('errorTypeMissing') === 'true',
     reasonCategory: params.get('reasonCategory') as LlmCapacityQuery['reasonCategory'] ?? undefined,
     upstreamId: params.get('upstreamId') ?? undefined,
-    telemetrySourceId: sourceId, bucketSeconds,
+    telemetrySourceId: sourceId, bucketSeconds, openrouterAccountId: accountId, sort,
   }
   const systemTier = isSysTier(profile.role)
-  const fixture = llmCapacityFixture(query, systemTier)
+  const actor = mockAuthorityActor(profile)
+  const baseKeys = adminLlmKeyStore.filter((key) => (!orgId || key.orgId === orgId) && (!workspaceId || key.workspaceId === workspaceId)
+    && (!accountId || key.openrouterAccountId === accountId) && hasWork(actor, 'llm.observe', { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+  const financeVisible = mockHasAggregateMoneySource(actor) && baseKeys.every((key) => hasSameSourceWorks(actor, ['llm.observe', 'llm.key.cost.read'], { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+  if (sort === 'REPORTED_COST_DESC' && !financeVisible) return problemResponse({ status: 403, code: 'ACCESS_DENIED', title: '현재 조회 집합의 금액 정렬을 제공하지 않습니다.' })
+  const fixture = llmCapacityFixture(query, systemTier, financeVisible)
   const scenario = typeof window === 'undefined' ? 'reported' : new URLSearchParams(window.location.search).get('observationFixture') ?? 'reported'
   fixture.telemetry = systemTier ? inferenceTelemetryFixture(query, scenario) : { status: 'NOT_PROVIDED', device: null }
   return HttpResponse.json(fixture)

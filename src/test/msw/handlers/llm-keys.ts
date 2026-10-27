@@ -3,10 +3,15 @@ import type { components } from '../../../api/schema'
 import type { StoredFacts } from '../facts'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { isSysTier } from '../../../auth/permissions'
-import { mockAuthorityActor, mockAllowedWorkIds } from '../institution-authority'
+import { mockAuthorityActor, mockAllowedWorkIds, mockHasAggregateMoneySource } from '../institution-authority'
 import { isMyWorkspace, workspaceMembersOf } from './workspaces'
 import { uuid } from '../ids'
-import { openRouterAccountStore } from './openrouter-accounts'
+import { openRouterAccountStore, openRouterCatalogueStore } from './openrouter-accounts'
+import { hasSameSourceWorks, hasWork, SYS_READERS } from '../../../auth/institution-authority'
+import { isCreditModelUsable, matchesCreditModel, matchesDeniedCreditModel } from '../../../lib/credit-model-match'
+import { PASSTHROUGH_ENDPOINTS } from '../../../lib/passthrough-endpoints'
+import { adminLlmProjectionFixtures, limitsProjectionFixtureKey, capturedProjectionSupported, capturedAccountStates, bulkAccountImpactFixtures } from '../projection-fixtures'
+export { adminLlmProjectionFixtures, limitsProjectionFixtureKey } from '../projection-fixtures'
 
 type Schemas = components['schemas']
 type LlmKeyDetail = Schemas['LlmKeyDetailResponse']
@@ -397,6 +402,8 @@ function initialAdminLlmKeys(): AdminLlmKey[] {
 export let adminLlmKeyStore: AdminLlmKey[] = initialAdminLlmKeys()
 export let adminLlmLimitBodies: Schemas['AdminLlmKeyLimitsRequest'][] = []
 export let adminLlmListQueries: string[] = []
+export let adminLlmProjectionQueries: string[] = []
+export const adminTokenUsageStore = new Map<string, number | null>([[uuid(171), 1200], [uuid(172), 0]])
 let nextGrantId = 380
 let nextTokenSuffix = 0
 
@@ -406,6 +413,13 @@ export function resetLlmKeyFixtures() {
   adminLlmKeyStore = initialAdminLlmKeys()
   adminLlmLimitBodies = []
   adminLlmListQueries = []
+  adminLlmProjectionQueries = []
+  adminLlmProjectionFixtures.clear()
+  capturedAccountStates.clear()
+  bulkAccountImpactFixtures.clear()
+  adminTokenUsageStore.clear()
+  adminTokenUsageStore.set(uuid(171), 1200)
+  adminTokenUsageStore.set(uuid(172), 0)
   nextGrantId = 380
   nextTokenSuffix = 0
   seedBodies()
@@ -1062,6 +1076,11 @@ export const llmKeyHandlers: RequestHandler[] = [
     const query = url.searchParams.get('query')?.toLocaleLowerCase('ko-KR')
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
+    const cohort = url.searchParams.get('cohort') ?? 'ALL'
+    const sort = url.searchParams.get('sort') ?? 'NEWEST'
+    if (!Number.isSafeInteger(page) || page < 0 || page > 2_147_483_647 || !Number.isSafeInteger(size) || size < 1 || size > 100
+      || !['ALL', 'COMMITTED', 'AWAITING_PROVISION', 'USAGE_UNREPORTED'].includes(cohort)
+      || !['NEWEST', 'NAME_ASC', 'TOKEN_USAGE_DESC', 'CREDIT_LIMIT_DESC', 'CREDIT_REMAINING_ASC'].includes(sort)) return validationProblem(url.pathname, 'page', '조회 구분·정렬·페이지를 확인해 주세요.')
     let filtered = adminLlmKeyStore.filter((key) => canReadAdminKey(profile, key))
     if (orgId) filtered = filtered.filter((key) => key.orgId === orgId)
     if (workspaceId) filtered = filtered.filter((key) => key.workspaceId === workspaceId)
@@ -1072,13 +1091,45 @@ export const llmKeyHandlers: RequestHandler[] = [
     if (status) filtered = filtered.filter((key) => key.status === status)
     if (query) {
       filtered = filtered.filter((key) =>
-        `${key.name} ${key.purpose ?? ''}`.toLocaleLowerCase('ko-KR').includes(query),
+        `${key.name} ${projectAdminKey(profile, key).metadataVisible ? key.purpose ?? '' : ''}`.toLocaleLowerCase('ko-KR').includes(query),
       )
     }
-    filtered.sort((a, b) => b.id.localeCompare(a.id))
+    const actor = mockAuthorityActor(profile)
+    if ((cohort !== 'ALL' || sort.startsWith('CREDIT_')) && (!mockHasAggregateMoneySource(actor) || filtered.some((key) => !hasSameSourceWorks(actor, ['llm.observe', 'llm.key.cost.read'], { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS)
+      || !hasWork(actor, 'institution.account.finance.read', { orgId: key.orgId }, SYS_READERS)))) return problemResponse({ status: 403, title: '현재 조회 집합의 금융 탐색을 제공하지 않습니다.', code: 'ACCESS_DENIED' })
+    if (sort === 'TOKEN_USAGE_DESC' && filtered.some((key) => !projectAdminKey(profile, key).observationVisible)) return problemResponse({ status: 403, title: '현재 조회 집합의 관측 정렬을 제공하지 않습니다.', code: 'ACCESS_DENIED' })
+    if (cohort !== 'ALL') {
+      filtered = filtered.filter((key) => key.creditLimit > 0 && ['PENDING', 'ACTIVE', 'SUSPENDED'].includes(key.status) && (!key.expiresAt || Date.parse(key.expiresAt) > Date.now())
+        && (cohort !== 'AWAITING_PROVISION' || !key.creditAxisConnected)
+        && (cohort !== 'USAGE_UNREPORTED' || key.creditAxisConnected && key.creditUsage == null))
+    }
+    const policyModel = url.searchParams.get('policyModel')?.trim()
+    if (url.searchParams.has('policyModel')) {
+      const feature = (url.searchParams.get('policyFeature') ?? 'chat').trim().toLowerCase()
+      const tokenModel = SELF_SERVED.some((model) => model.name === policyModel)
+      if (!policyModel || policyModel.length > 256 || Array.from(policyModel).some((char) => { const code = char.codePointAt(0)!; return code < 32 || code >= 127 && code <= 159 })
+        || !['chat', 'files', ...PASSTHROUGH_ENDPOINTS].includes(feature)
+        || !tokenModel && !openRouterCatalogueStore.response.models.some((model) => model.id.toLowerCase() === policyModel.toLowerCase())) return validationProblem(url.pathname, 'policyModel', '현재 캐시에서 확인되는 공개 모델과 기능을 선택해 주세요.')
+      if (filtered.some((key) => { const row = projectAdminKey(profile, key); return tokenModel && feature === 'chat' ? !row.metadataVisible && !row.observationVisible && !row.tokenReferenceVisible : !row.financeVisible && !row.budgetReferenceVisible })) return problemResponse({ status: 403, title: '현재 조회 집합의 정책 참조를 제공하지 않습니다.', code: 'ACCESS_DENIED' })
+      filtered = filtered.filter((key) => key.passthroughEndpoints.includes(feature as typeof key.passthroughEndpoints[number]) && (tokenModel || isCreditModelUsable(policyModel, key.creditAllowedModels, key.creditDeniedModels)))
+    }
+    filtered.sort((a, b) => {
+      const tie = b.id.localeCompare(a.id)
+      if (sort === 'NAME_ASC') return a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || tie
+      const av = sort === 'TOKEN_USAGE_DESC' ? adminTokenUsageStore.get(a.id) : sort === 'CREDIT_LIMIT_DESC' ? a.creditLimit : a.creditLimitRemaining
+      const bv = sort === 'TOKEN_USAGE_DESC' ? adminTokenUsageStore.get(b.id) : sort === 'CREDIT_LIMIT_DESC' ? b.creditLimit : b.creditLimitRemaining
+      return sort === 'NEWEST' ? tie : av == null ? bv == null ? tie : 1 : bv == null ? -1 : (sort === 'CREDIT_REMAINING_ASC' ? av - bv : bv - av) || tie
+    })
     return HttpResponse.json(
       {
-        content: filtered.slice(page * size, (page + 1) * size).map((key) => toAdminSummary(projectAdminKey(profile, key))),
+        content: filtered.slice(page * size, (page + 1) * size).map((key) => {
+          const row = projectAdminKey(profile, key)
+          const todayTokens = adminTokenUsageStore.get(key.id)
+          return { ...toAdminSummary(row), tokenObservation: row.observationVisible && todayTokens != null ? {
+            source: 'RETAINED_TOKEN_EVENTS', day: new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10), observedAt: new Date().toISOString(), todayTokens,
+            remainingTokens: key.dailyTokens == null ? null : Math.max(key.dailyTokens - todayTokens, 0),
+          } : null }
+        }),
         page,
         size,
         totalElements: filtered.length,
@@ -1092,7 +1143,30 @@ export const llmKeyHandlers: RequestHandler[] = [
     const profile = adminActor(request)
     const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
     if (!profile || !key || !canReadAdminKey(profile, key)) return notFoundProblem()
-    return HttpResponse.json(projectAdminKey(profile, key), { status: 200 })
+    const row = projectAdminKey(profile, key)
+    const query = new URL(request.url).searchParams
+    if (query.get('projectLimits') === 'true' && row.budgetReferenceVisible) {
+      adminLlmProjectionQueries.push(query.toString())
+      const amount = query.has('proposedCreditLimit') ? Number(query.get('proposedCreditLimit')) : null
+      if (query.has('proposedCreditLimit') && (query.get('proposedCreditLimit') === '' || amount == null || !Number.isFinite(amount) || amount < 0)) return validationProblem(new URL(request.url).pathname, 'proposedCreditLimit', '금액 제안을 확인해 주세요.')
+      const resetSet = query.get('proposedCreditLimitResetSet') === 'true'
+      const reset = resetSet ? query.get('proposedCreditLimitReset') : null
+      if (reset != null && !['DAILY', 'WEEKLY', 'MONTHLY'].includes(reset)) return validationProblem(new URL(request.url).pathname, 'proposedCreditLimitReset', '리셋 제안을 확인해 주세요.')
+      const candidate = adminLlmProjectionFixtures.get(limitsProjectionFixtureKey(key.id, query))
+      const fixture = candidate && capturedProjectionSupported(candidate.accountImpact, adminLlmKeyStore) ? candidate : undefined
+      const unavailable: Schemas['LlmAccountImpactProjection'] = { state: 'NOT_PROVIDED', observedAt: new Date().toISOString(), accounts: null, basisFingerprint: null }
+      const canReadImpact = row.financeVisible && row.observationVisible && mockHasAggregateMoneySource(mockAuthorityActor(profile))
+        && (fixture?.accountImpact.accounts ?? []).every((account) => {
+          const actualAccount = openRouterAccountStore.find((item) => item.id === account.accountId)
+          return !!actualAccount && hasWork(mockAuthorityActor(profile), 'institution.account.finance.read', { orgId: actualAccount.orgId }, SYS_READERS)
+            && adminLlmKeyStore.filter((item) => item.openrouterAccountId === account.accountId).every((item) => hasSameSourceWorks(mockAuthorityActor(profile), ['llm.observe', 'llm.key.cost.read'], { orgId: item.orgId, workspaceId: item.workspaceId }, SYS_READERS))
+        })
+      row.limitsProjection = fixture ? { ...structuredClone(fixture), accountImpact: canReadImpact ? structuredClone(fixture.accountImpact) : unavailable }
+        : { configurationObservedAt: new Date().toISOString(), draft: { creditLimitSet: query.has('proposedCreditLimit'), creditLimit: amount,
+          creditLimitResetSet: resetSet, creditLimitReset: reset as Schemas['CreditLimitReset'] | null,
+          openrouterAccountId: query.get('proposedOpenrouterAccountId') }, accountImpact: unavailable }
+    }
+    return HttpResponse.json(row, { status: 200 })
   }),
 
   http.put('*/api/v1/admin/llm/keys/:keyId/limits', async ({ params, request }) => {
@@ -1186,11 +1260,22 @@ export const llmKeyHandlers: RequestHandler[] = [
     return HttpResponse.json(modelsFor(), { status: 200 })
   }),
 
-  http.get('*/api/v1/admin/llm/keys/:keyId/models', ({ params }) => {
-    const key = llmKeyStore.find((k) => k.id === String(params.keyId))
-    if (!key) return notFoundProblem()
-    // 관리자 경로는 리소스 부여를 보지 않는다. 기관 스코프가 이 자리의 규칙이다.
-    return HttpResponse.json(modelsFor(), { status: 200 })
+  http.get('*/api/v1/admin/llm/keys/:keyId/models', ({ params, request }) => {
+    const profile = adminActor(request)
+    const key = adminLlmKeyStore.find((item) => item.id === String(params.keyId))
+    if (!profile || !key) return notFoundProblem()
+    const row = projectAdminKey(profile, key)
+    if (!row.metadataVisible && !row.observationVisible && !row.financeVisible && !row.tokenReferenceVisible && !row.budgetReferenceVisible) return notFoundProblem()
+    const paidVisible = row.financeVisible || row.budgetReferenceVisible
+    const cache = openRouterCatalogueStore.response
+    return HttpResponse.json({ selfServed: SELF_SERVED, financeVisible: paidVisible, paid: paidVisible ? {
+      access: key.creditLimit <= 0 ? 'NONE' : !key.creditAxisConnected ? 'PENDING' : key.creditAllowedModels.length || key.creditDeniedModels.length ? 'LISTED' : 'UNRESTRICTED',
+      allowedPatterns: key.creditAllowedModels, deniedPatterns: key.creditDeniedModels,
+      models: cache.models.filter((model) => isCreditModelUsable(model.id, key.creditAllowedModels, key.creditDeniedModels)),
+      unmatchedAllowedPatterns: key.creditAllowedModels.filter((pattern) => !cache.models.some((model) => matchesCreditModel(pattern, model.id))),
+      unmatchedDeniedPatterns: key.creditDeniedModels.filter((pattern) => !cache.models.some((model) => matchesDeniedCreditModel(pattern, model.id))),
+      catalogFreshness: cache.freshness, catalogObservedAt: cache.lastSuccessAt,
+    } : null } satisfies Schemas['InstitutionAdminLlmModelsResponse'])
   }),
 
   /**

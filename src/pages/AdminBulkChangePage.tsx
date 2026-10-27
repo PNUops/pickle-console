@@ -61,6 +61,9 @@ import { BULK_SELECTION_CAP, clearStoredSelection, type BulkTarget } from '../li
 import { fieldErrorsOf } from '../lib/field-errors'
 import { PAID_KEY_EXPIRY_NOTE, labelForBulkResult } from '../lib/labels'
 import { adminPaths } from '../lib/paths'
+import { llmExplorationReturn } from '../lib/llm-exploration'
+import { withListReturn } from '../lib/list-url'
+import { AccountImpactView } from '../components/llm-usage/AccountImpactView'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { formatDateTime } from '../lib/format'
@@ -135,8 +138,9 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
   const { user } = useAuth()
   const scope = useAdminScope()
   const copy = FAMILY_COPY[family]
-  const listPath = listPathOf(family, scope.activeOrgId)
   const params = new URLSearchParams(location.search)
+  const restored = family === 'llm-keys' ? llmExplorationReturn(params.get('returnTo'), scope.activeOrgId, scope.tier === 'system' || scope.globalSupport) : null
+  const listPath = restored?.startsWith('/admin/llm/keys') ? restored : listPathOf(family, scope.activeOrgId)
   const previewId = params.get('previewId')?.toLowerCase() ?? undefined
   const operationId = params.get('operationId')?.toLowerCase() ?? undefined
   const savedIds: SavedIds = { previewId, operationId }
@@ -155,7 +159,7 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
     const path = ids.operationId
       ? adminPaths.bulkOperation(family, ids.operationId, scope.activeOrgId, ids.previewId)
       : adminPaths.bulkPreview(family, ids.previewId!, scope.activeOrgId)
-    navigate(path, { replace: true, state: location.state })
+    navigate(family === 'llm-keys' ? withListReturn(path, listPath) : path, { replace: true, state: location.state })
   }
   useLayoutEffect(() => { observedUrl.current = { previewId, operationId } }, [previewId, operationId])
   useEffect(() => {
@@ -186,7 +190,7 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
     return <div className="space-y-5">{header}<MessageBar variant="danger">이 계정으로 할 수 있는 일괄 변경이 없습니다.</MessageBar></div>
   }
   if (!owned && (savedIds.previewId || savedIds.operationId)) {
-    return <div className="space-y-5">{header}<BulkChangeReentry key={`${savedIds.previewId ?? ''}:${savedIds.operationId ?? ''}`} family={family} {...savedIds} reader={reader} orgId={scope.activeOrgId}
+    return <div className="space-y-5">{header}<BulkChangeReentry key={`${savedIds.previewId ?? ''}:${savedIds.operationId ?? ''}`} family={family} {...savedIds} reader={reader} orgId={scope.activeOrgId} returnTo={family === 'llm-keys' ? listPath : undefined}
       canContinue={(preview) => !!preview.change && kinds.some((option) => option.kind === preview.change!.kind)}
       onContinue={(preview) => {
         setTargets(preview.items.map((item) => ({ id: item.targetId, name: item.name ?? item.targetId })))
@@ -207,7 +211,7 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
         >
           {copy.pick}
         </MessageBar>
-        <RecentBulkChanges family={family} reader={reader} orgId={scope.activeOrgId} />
+        <RecentBulkChanges family={family} reader={reader} orgId={scope.activeOrgId} returnTo={family === 'llm-keys' ? listPath : undefined} />
       </div>
     )
   }
@@ -576,13 +580,14 @@ function BulkChangeFlow({
         <section className="space-y-4">
           {error && <MessageBar variant="danger">{error}</MessageBar>}
           <p className="text-sm text-foreground-muted">저장: {formatDateTime(preview.createdAt)} · 새 적용 가능 기한: {formatDateTime(preview.expiresAt)}</p>
-          <Link className="text-sm text-brand-foreground underline" to={adminPaths.bulkPreview(family, preview.previewId, orgId)}>저장된 미리보기 링크</Link>
+          <Link className="text-sm text-brand-foreground underline" to={family === 'llm-keys' ? withListReturn(adminPaths.bulkPreview(family, preview.previewId, orgId), listPath) : adminPaths.bulkPreview(family, preview.previewId, orgId)}>저장된 미리보기 링크</Link>
           {notApplicable > 0 && (
             <p className="text-sm text-foreground-secondary">
               적용되지 않는 대상 {notApplicable}개
             </p>
           )}
           <BulkChangePreviewTable items={preview.items} targetType={targetType} label={nameOf} />
+          {family === 'llm-keys' && sent.kind === 'LLM_KEY_LIMITS' && <AccountImpactView projection={preview.accountImpact} />}
           <IrreversibleNotice change={sent} />
           {needsConfirmation && changes.length > 0 && (
             <FormField

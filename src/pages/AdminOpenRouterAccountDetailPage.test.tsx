@@ -188,9 +188,9 @@ describe('사업 계정 상세의 쓰임새', () => {
 
     expect(await screen.findByText('쓰임새')).toBeInTheDocument()
     const table = await screen.findByRole('table', { name: '키별 쓰임새' })
-    const unpriced = within(table).getByText('lab-embeddings').closest('tr')!
+    const unpriced = within(table).getByText('suspended-admin-key').closest('tr')!
     expect(within(unpriced).getByText('—')).toBeInTheDocument()
-    const priced = within(table).getByText('capstone-chatbot').closest('tr')!
+    const priced = within(table).getByText('active-admin-key').closest('tr')!
     expect(within(priced).getByText('$0.50')).toBeInTheDocument()
   })
 

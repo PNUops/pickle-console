@@ -76,6 +76,7 @@ function bulkActor(value: BulkActor): AuthorityActor { return typeof value === '
 /** Navigation offers existing works; target authorization is decided by each preview row. */
 export function bulkKindsFor(family: BulkFamily, value: BulkActor, _legacyAccessRole?: UserRole): BulkKindOption[] {
   const actor = bulkActor(value)
+  if (family === 'llm-keys' && actor.role === 'ORG_VIEWER') return []
   const allowed = (work: string, sys = SYS_OPERATORS) => hasAnyWork(actor, [work], sys)
   const prefix = family === 'llm-keys' ? 'llm' : family === 'vms' ? 'vm' : 'domain'
   const offered: AdminBulkChangeKind[] = []

@@ -14,6 +14,7 @@ import {
 } from '../api/queries'
 import { CreditModelPolicyEditor } from '../components/CreditModelPolicyEditor'
 import { toApiError } from '../api/problem'
+import { requestReaderKey } from '../api/request-review'
 import { useAuth } from '../auth/auth-context'
 import { hasWork, projectionAvailable, SYS_ADMIN, SYS_READERS } from '../auth/institution-authority'
 import {
@@ -42,6 +43,7 @@ import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 import { AccountUsageSection } from '../components/llm-usage/AccountUsageSection'
+import { AccountKeyNavigation } from '../components/llm-usage/AccountKeyNavigation'
 import { AccountAllocationSection, AccountCreditsSection } from '../components/OpenRouterCredits'
 
 const ACCOUNT_CACHE_REFETCH_MS = 2 * 60 * 1000
@@ -103,6 +105,13 @@ function preserveObservedCredits(
 }
 
 export function AdminOpenRouterAccountDetailPage() {
+  const { accountId } = useParams()
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
+  return <AdminOpenRouterAccountDetailContent key={`${accountId}:${activeOrgId ?? 'all'}:${requestReaderKey(user)}`} />
+}
+
+function AdminOpenRouterAccountDetailContent() {
   const { accountId: accountIdParam } = useParams()
   const accountId = accountIdParam ?? ''
   const idValid = isUuid(accountId)
@@ -115,7 +124,7 @@ export function AdminOpenRouterAccountDetailPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const detailKey = ['admin', 'llm-accounts', 'detail', { accountId, orgId: scope.activeOrgId ?? null }]
+  const detailKey = ['admin', 'llm-accounts', 'detail', { accountId, orgId: scope.activeOrgId ?? null, reader: requestReaderKey(user) }]
   const detail = useQuery({
     queryKey: detailKey,
     queryFn: () => fetchOpenRouterAccount(accountId),
@@ -226,7 +235,7 @@ export function AdminOpenRouterAccountDetailPage() {
                 ? '없음. 승인 폼이 비어서 열립니다'
                 : account.defaultCreditDeniedModels.join(', '),
           },
-          { term: '연결된 키', description: account.boundKeyCount == null ? '제공되지 않음' : `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
+          { term: '계정 전체 연결 키', description: account.boundKeyCount == null ? '제공되지 않음' : `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
           { term: '관리용 키', description: account.credentialAvailable == null ? '제공되지 않음' : account.credentialAvailable ? '사용 가능' : '사용 불가' },
           { term: '유료 모델 연결', description: account.eligibleForBinding == null ? '제공되지 않음' : account.eligibleForBinding ? '가능' : '불가' },
           { term: '등록', description: time(account.createdAt) },
@@ -234,12 +243,14 @@ export function AdminOpenRouterAccountDetailPage() {
         ]}
       />
 
+      <AccountKeyNavigation account={account} />
+
       {/* 읽는 순서: 지금 얼마 남았나 → 무엇에 나갔나 → 앞으로 얼마가 더 나갈 수
           있나. 가운데 하나만 시간축을 갖고, 그것이 세 구역의 경계를 말이 아니라
           형태로 만든다. 탭으로 가르지 않는 것은 셋을 동시에 볼 수 없으면 볼 수
           없는 두 숫자가 자동으로 같은 것으로 가정되기 때문이다. */}
       {projectionAvailable(account, 'financeVisible') && account.credits != null && <AccountCreditsSection credits={account.credits} />}
-      {projectionAvailable(account, 'financeVisible') && <AccountUsageSection accountId={accountId} />}
+      {projectionAvailable(account, 'financeVisible') && <AccountUsageSection accountId={accountId} orgId={account.orgId} />}
       {projectionAvailable(account, 'financeVisible') && account.allocation != null && account.credits != null && <AccountAllocationSection allocation={account.allocation} credits={account.credits} />}
 
       {('credentialVisible' in account && account.credentialVisible === true) && <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">

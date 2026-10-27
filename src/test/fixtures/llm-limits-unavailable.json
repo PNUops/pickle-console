@@ -1,0 +1,62 @@
+{
+  "id" : "1361b0a7-1182-41a3-951a-93c6bd0b0ea4",
+  "name" : "unbound proposal",
+  "purpose" : null,
+  "status" : "ACTIVE",
+  "expiresAt" : null,
+  "lastUsedAt" : null,
+  "rpm" : null,
+  "tpm" : null,
+  "concurrency" : null,
+  "dailyTokens" : null,
+  "quotaExhausted" : null,
+  "creditLimit" : 0.0,
+  "creditLimitReset" : null,
+  "creditAxisConnected" : null,
+  "creditUsage" : null,
+  "creditUsageAt" : null,
+  "creditLimitRemaining" : null,
+  "openrouterAccountId" : null,
+  "openrouterAccountName" : null,
+  "workspaceId" : "b0617511-1774-49f2-8d63-57f5abcec013",
+  "workspaceName" : "Exploration workspace 4b568522-c509-4bec-af2c-85dc4015301b",
+  "orgId" : "5a7e2367-d5d7-447e-8d1d-f512ed37b3cb",
+  "orgName" : "Exploration institution 4b568522-c509-4bec-af2c-85dc4015301b",
+  "requestId" : "12c09ac6-0abc-464e-863f-6afb6827fee9",
+  "createdAt" : "2026-10-27T00:45:36.688062Z",
+  "revokedAt" : null,
+  "creditAllowedModels" : [ ],
+  "creditDeniedModels" : [ ],
+  "passthroughEndpoints" : [ ],
+  "chatEnabled" : false,
+  "financeVisible" : false,
+  "metadataVisible" : false,
+  "observationVisible" : false,
+  "accountReferences" : [ {
+    "id" : "9c4a442d-5314-43ac-bcce-416492ecb80a",
+    "name" : "pure first binding proposal",
+    "eligibleForBinding" : true,
+    "defaultCreditAllowedModels" : [ ],
+    "defaultCreditDeniedModels" : [ ]
+  } ],
+  "tokenReferenceVisible" : false,
+  "budgetReferenceVisible" : true,
+  "allowedWorkIds" : [ "llm.key.budget" ],
+  "initialAccountBindingAllowed" : true,
+  "limitsProjection" : {
+    "configurationObservedAt" : "2026-10-27T00:45:36.656837Z",
+    "draft" : {
+      "creditLimitSet" : true,
+      "creditLimit" : 5,
+      "creditLimitResetSet" : false,
+      "creditLimitReset" : null,
+      "openrouterAccountId" : "9c4a442d-5314-43ac-bcce-416492ecb80a"
+    },
+    "accountImpact" : {
+      "state" : "NOT_PROVIDED",
+      "observedAt" : "2026-10-27T00:45:36.656837Z",
+      "basisFingerprint" : null,
+      "accounts" : null
+    }
+  }
+}

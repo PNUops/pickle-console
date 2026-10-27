@@ -1,5 +1,5 @@
 import type { UserProfile } from '../../auth/auth-context'
-import { hasWork, SYS_ADMIN, SYS_OPERATORS, SYS_READERS, type InstitutionAuthority, type InstitutionWorkView, type WorkTarget, type WorkGroup } from '../../auth/institution-authority'
+import { hasWork, hasSameSourceWorks, SYS_ADMIN, SYS_OPERATORS, SYS_READERS, type AuthorityActor, type InstitutionAuthority, type InstitutionWorkView, type WorkTarget, type WorkGroup } from '../../auth/institution-authority'
 
 /** Fixed synthetic fixture data. Production authority always comes from the authenticated endpoint. */
 export const MOCK_WORK_CATALOGUE: InstitutionWorkView[] = [
@@ -995,6 +995,20 @@ export const AUTHORITY_OVERRIDES: Record<string, InstitutionAuthority> = {}
 export function mockAuthorityActor(profile: UserProfile): UserProfile {
   const institutionAuthority = mockInstitutionAuthority(profile)
   return { ...profile, role: institutionAuthority.accountRole, institutionAuthority }
+}
+
+/** Query-source admission is independent of matching rows and never combines assignments. */
+export function mockHasAggregateMoneySource(actor: AuthorityActor): boolean {
+  if (actor.role.startsWith('SYS_')) return SYS_READERS.includes(actor.role)
+  const context = actor.institutionAuthority
+  if (context?.state !== 'VALID_SOURCES') return false
+  return context.assignments.some((grant) => {
+    const scope = grant.permission.mode === 'FULL' ? undefined : grant.permission.scopes.LLM
+    if (grant.permission.mode !== 'FULL' && (!scope || scope.mode === 'LISTED' && scope.workspaceIds.length === 0)) return false
+    const one = { ...actor, institutionAuthority: { ...context, assignments: [grant] } }
+    return hasSameSourceWorks(one, ['llm.observe', 'llm.key.cost.read'], { orgId: grant.institutionId,
+      workspaceId: scope?.mode === 'LISTED' ? scope.workspaceIds[0] : undefined })
+  })
 }
 
 const SYSTEM_ROUTINE_WORK = new Set([

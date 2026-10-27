@@ -1,8 +1,10 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import type { StoredFacts } from '../facts'
-import { mockAuthorityActor } from '../institution-authority'
-import { hasSameSourceWorks, hasWork, SYS_ADMIN, SYS_READERS, type AuthorityActor } from '../../../auth/institution-authority'
+import { mockAuthorityActor, mockHasAggregateMoneySource } from '../institution-authority'
+import { hasSameSourceWorks, hasWork, SYS_ADMIN, SYS_OPERATORS, SYS_READERS, type AuthorityActor } from '../../../auth/institution-authority'
+import { adminLlmKeyStore } from './llm-keys'
+import { capturedAllocation } from '../projection-fixtures'
 import { uuid } from '../ids'
 import { ACCESS_TOKENS, problemResponse } from './auth'
 import { workspaceDetails } from './announcements'
@@ -11,6 +13,16 @@ import { orgs } from './reference'
 
 /** 계정 사용량 조회가 실제로 어떤 query 로 나갔는지. */
 export const accountUsageQueries: string[] = []
+type UsageRecord = Schemas['AdminLlmAccountKeyUsageResponse'] & { day: string }
+function initialUsageRecords(): UsageRecord[] {
+  return [
+    { day: '2026-08-31', keyId: uuid(171), keyName: '', requests: 18, inputTokens: 2400, outputTokens: 800, attributedCostUsd: 0.1245, pricedRequests: 4 },
+    { day: '2026-08-10', keyId: uuid(171), keyName: '', requests: 9, inputTokens: 600, outputTokens: 200, attributedCostUsd: 0.3755, pricedRequests: 3 },
+    { day: '2026-08-31', keyId: uuid(172), keyName: '', requests: 4, inputTokens: 300, outputTokens: 0, attributedCostUsd: null, pricedRequests: 0 },
+  ]
+}
+/** Daily rollup facts are joined to the key's current account at read time. */
+export const accountUsageRecordStore: UsageRecord[] = initialUsageRecords()
 
 type Schemas = components['schemas']
 type Account = StoredFacts<Schemas['OpenRouterAccountResponse'], 'boundKeyCount' | 'credentialAvailable' | 'eligibleForBinding' | 'allocation' | 'credits' | 'defaultCreditAllowedModels' | 'defaultCreditDeniedModels'>
@@ -215,6 +227,7 @@ let nextAccountId = 430
 export const openRouterAccountListQueries: string[] = []
 
 export function resetOpenRouterAccountFixtures() {
+  accountUsageRecordStore.splice(0, accountUsageRecordStore.length, ...initialUsageRecords())
   openRouterAccountStore = initialAccounts()
   nextAccountId = 430
   openRouterAccountListQueries.length = 0
@@ -240,14 +253,28 @@ function projectAccount(profile: AuthorityActor, account: Account): Schemas['Ope
   const metadata = hasWork(profile, 'institution.account.read', target, SYS_READERS) || canWrite(profile, account.orgId)
   const credentialVisible = hasWork(profile, 'institution.account.read', target, SYS_READERS) || canWrite(profile, account.orgId, 'institution.account.credential.manage')
   const policyReferenceVisible = financeVisible || canWrite(profile, account.orgId)
+  const captured = capturedAllocation(account.id, adminLlmKeyStore)
+  const visibleAllocation = captured === undefined ? account.allocation : captured?.remainingCommitment == null ? null
+    : { ...account.allocation, ...captured, remainingCommitment: captured.remainingCommitment }
+  const rows = adminLlmKeyStore.filter((key) => key.openrouterAccountId === account.id && (
+    ['llm.metadata.read', 'llm.metadata.support.read', 'llm.observe', 'llm.observe.support.read', 'llm.key.cost.read', 'llm.acl.support.read'].some((work) => hasWork(profile, work, { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+    || ['llm.token.operate', 'llm.state.operate', 'llm.period'].some((work) => hasWork(profile, work, { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_OPERATORS))
+    || ['llm.key.budget', 'llm.revoke', 'llm.acl.support.manage'].some((work) => hasWork(profile, work, { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_ADMIN))))
+  const money = financeVisible && mockHasAggregateMoneySource(profile) && rows.every((key) => hasSameSourceWorks(profile, ['llm.observe', 'llm.key.cost.read'], { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+  const live = rows.filter((key) => ['PENDING', 'ACTIVE', 'SUSPENDED'].includes(key.status) && (!key.expiresAt || Date.parse(key.expiresAt) > Date.now()) && key.creditLimit > 0)
+  const navigationCount = (total: number, available = true): Schemas['LlmNavigationCount'] => ({ state: available ? 'AVAILABLE' : 'NOT_PROVIDED', totalElements: available ? total : null })
   return { ...account, ...{ policyReferenceVisible }, financeVisible, credentialVisible,
+    keyNavigation: { observedAt: new Date().toISOString(), population: 'CURRENT_READABLE_KEYS',
+      linked: navigationCount(rows.length), committed: navigationCount(live.length, money),
+      awaitingProvision: navigationCount(live.filter((key) => !key.creditAxisConnected).length, money),
+      usageUnreported: navigationCount(live.filter((key) => key.creditAxisConnected && key.creditUsage == null).length, money) },
     program: metadata ? account.program : null, contact: metadata ? account.contact : null,
     boundKeyCount: metadata || financeVisible ? account.boundKeyCount : null,
     credentialAvailable: credentialVisible ? account.credentialAvailable : null,
     activeCredential: credentialVisible ? account.activeCredential : null, rotationCredential: credentialVisible ? account.rotationCredential : null,
     defaultCreditAllowedModels: policyReferenceVisible ? account.defaultCreditAllowedModels : null,
     defaultCreditDeniedModels: policyReferenceVisible ? account.defaultCreditDeniedModels : null,
-    allocation: financeVisible ? account.allocation : null, credits: financeVisible ? account.credits : null }
+    allocation: financeVisible ? visibleAllocation : null, credits: financeVisible ? account.credits : null }
 }
 
 function notFound() {
@@ -458,7 +485,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
    * handler 가 지켜야 하는 서버 불변식이다. 목이 0을 주면 화면이 자체 서빙만 쓴
    * 날을 「공짜」로 그려도 시험이 통과한다.
    */
-  http.get('*/api/v1/admin/llm/accounts/:accountId/usage', ({ params, request }) => {
+  http.get('*/api/v1/admin/llm/accounts/:accountId/usage', async ({ params, request }) => {
     // 어떤 기간으로 물었는지를 남긴다. 이것이 없으면 「기간을 바꾸면 그 기간으로
     // 다시 묻는다」를 단언할 방법 자체가 없고, 실제로 그 시험은 aria-pressed 만
     // 보고 있었다.
@@ -467,60 +494,48 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     // 서버에 없는 세계를 목이 만든다.
     const found = accountFor(request, String(params.accountId))
     if (!found || !hasWork(found.profile, 'institution.account.finance.read', { orgId: found.account.orgId }, SYS_READERS)) return notFound()
-    const raw = new URL(request.url).searchParams.get('days')
+    const query = new URL(request.url).searchParams
+    const raw = query.get('days')
     const days = raw == null ? 30 : Number(raw)
+    const page = Number(query.get('page') ?? 0)
+    const size = Number(query.get('size') ?? 20)
+    const sort = (query.get('sort') ?? 'REPORTED_COST_DESC') as Schemas['LlmConsumerSort']
+    if (!Number.isSafeInteger(days) || days < 1 || days > 90 || !Number.isSafeInteger(page) || page < 0 || page > 2_147_483_647
+      || !Number.isSafeInteger(size) || size < 1 || size > 100 || !['REQUESTS_DESC', 'TOKENS_DESC', 'REPORTED_COST_DESC'].includes(sort)) {
+      return problemResponse({ status: 422, title: '조회 기간·페이지·정렬을 확인해 주세요.', code: 'VALIDATION_FAILED' })
+    }
+    // This explicit browser-only scenario never changes a production query or falls through to a real API.
+    const scenario = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('accountFixture')
+    if (scenario === 'window-failure' && days === 7) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      return problemResponse({ status: 503, title: '합성 계정 조회 실패', detail: '선택한 7일 기간을 조회하지 못했습니다.', code: 'SERVICE_UNAVAILABLE' })
+    }
     const to = '2026-08-31'
+    const from = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+    const linked = adminLlmKeyStore.filter((key) => key.openrouterAccountId === found.account.id)
+    const records = accountUsageRecordStore.filter((row) => row.day >= from && row.day <= to && linked.some((key) => key.id === row.keyId))
+    const sum = (rows: UsageRecord[], field: 'requests' | 'pricedRequests' | 'inputTokens' | 'outputTokens') => rows.reduce((value, row) => value + row[field], 0)
+    const cost = (rows: UsageRecord[]) => sum(rows, 'pricedRequests') > 0 ? rows.reduce((value, row) => value + (row.attributedCostUsd ?? 0), 0) : null
     const points = Array.from({ length: days }, (_, index) => {
-      const day = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1 - index) * 86_400_000)
-        .toISOString()
-        .slice(0, 10)
-      // 마지막 이틀만 금액이 붙었다. 나머지는 0이 아니라 없음이다.
-      const priced = index >= days - 2
-      return {
-        day,
-        attributedCostUsd: priced ? 0.25 : null,
-        pricedRequests: priced ? 2 : 0,
-        requests: priced ? 5 : index % 3 === 0 ? 1 : 0,
-      }
+      const day = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1 - index) * 86_400_000).toISOString().slice(0, 10)
+      const rows = records.filter((row) => row.day === day)
+      return { day, attributedCostUsd: cost(rows), pricedRequests: sum(rows, 'pricedRequests'), requests: sum(rows, 'requests') }
     })
-    const requests = points.reduce((sum, point) => sum + point.requests, 0)
-    const pricedRequests = points.reduce((sum, point) => sum + point.pricedRequests, 0)
-    return HttpResponse.json(
-      {
-        from: points[0].day,
-        to: points[points.length - 1].day,
-        attributedCostUsd: 0.5,
-        requests,
-        pricedRequests,
-        keysUsed: 2,
-        // 같은 계정의 상세가 boundKeyCount 2 를 말한다. 목이 3 을 주면 한 계정을
-        // 두 응답이 다르게 말하는, 서버에 없는 상태가 된다.
-        keysLinked: 2,
-        points,
-        keys: [
-          {
-            keyId: uuid(501),
-            keyName: 'capstone-chatbot',
-            requests: requests - 3,
-            inputTokens: 2_400,
-            outputTokens: 800,
-            attributedCostUsd: 0.5,
-            pricedRequests,
-          },
-          {
-            keyId: uuid(502),
-            keyName: 'lab-embeddings',
-            requests: 3,
-            inputTokens: 300,
-            outputTokens: 0,
-            // 자체 서빙만 쓴 키. 금액은 0이 아니라 없음이다.
-            attributedCostUsd: null,
-            pricedRequests: 0,
-          },
-        ],
-      },
-      { status: 200 },
-    )
+    const keys = linked.map((key) => {
+      const rows = records.filter((row) => row.keyId === key.id)
+      return { keyId: key.id, keyName: key.name, requests: sum(rows, 'requests'), inputTokens: sum(rows, 'inputTokens'),
+        outputTokens: sum(rows, 'outputTokens'), attributedCostUsd: cost(rows), pricedRequests: sum(rows, 'pricedRequests') }
+    }).filter((key) => key.requests > 0)
+    keys.sort((a, b) => {
+      const av = sort === 'REQUESTS_DESC' ? a.requests : sort === 'TOKENS_DESC' ? a.inputTokens + a.outputTokens : a.attributedCostUsd
+      const bv = sort === 'REQUESTS_DESC' ? b.requests : sort === 'TOKENS_DESC' ? b.inputTokens + b.outputTokens : b.attributedCostUsd
+      return av == null ? bv == null ? 0 : 1 : bv == null ? -1 : bv - av || b.keyId.localeCompare(a.keyId)
+    })
+    return HttpResponse.json({ from, to, generatedAt: `${to}T12:05:00+09:00`, timezone: 'Asia/Seoul', source: 'DAILY_ROLLUP_ATTRIBUTION_CURRENT_ACCOUNT_BINDING',
+      page, size, sort, totalKeyElements: keys.length, totalKeyPages: Math.ceil(keys.length / size),
+      attributedCostUsd: cost(records), requests: sum(records, 'requests'), pricedRequests: sum(records, 'pricedRequests'),
+      keysUsed: keys.length, keysLinked: linked.length, points, keys: keys.slice(page * size, (page + 1) * size),
+    } satisfies Schemas['AdminLlmAccountUsageResponse'])
   }),
 
   http.patch('*/api/v1/admin/llm/accounts/:accountId', async ({ params, request }) => {
