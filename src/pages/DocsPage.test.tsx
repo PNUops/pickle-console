@@ -19,6 +19,27 @@ describe('사용 가이드', () => {
     expect(body).toContain('Authorization: Bearer')
   })
 
+  test.each([
+    ['/docs/llm/start', 'LLM API 키 발급 안내 영상', 'llm-key-issue'],
+    ['/docs/llm/manage', 'LLM API 키 재발급 안내 영상', 'llm-key-reissue'],
+  ])('keeps the %s video user-controlled with optional Korean captions', async (path, title, asset) => {
+    renderApp(path)
+    const video = await screen.findByLabelText(title)
+
+    expect(video).toHaveAttribute('controls')
+    expect(video).toHaveAttribute('playsinline')
+    expect(video).toHaveAttribute('preload', 'metadata')
+    expect(video).not.toHaveAttribute('autoplay')
+    expect(video).toHaveAccessibleDescription(/예시 계정과 예시 키/)
+    expect(video.getAttribute('poster')).toContain(`${asset}.jpg`)
+    expect(video.querySelector('source')?.getAttribute('src')).toContain(`${asset}.mp4`)
+    const captions = video.querySelector('track')
+    expect(captions).toHaveAttribute('kind', 'captions')
+    expect(captions).toHaveAttribute('srclang', 'ko')
+    expect(captions?.getAttribute('src')).toContain(`${asset}.ko.vtt`)
+    expect(captions).not.toHaveAttribute('default')
+  })
+
   test('distinguishes self-served validation from paid passthrough', async () => {
     renderApp('/docs/llm/features')
     await screen.findByRole('heading', { name: '지원 파라미터' })
@@ -177,6 +198,30 @@ describe('사용 가이드', () => {
     const body = document.body.textContent ?? ''
     expect(body).toContain('@ai-sdk/openai-compatible')
     expect(body).toContain('"baseURL": "https://llm.pcl.kr/v1"')
+  })
+
+  test('separates Windows command-prompt startup from macOS and retains both OpenCode formats', async () => {
+    renderApp('/docs/llm/connect')
+    await screen.findByRole('heading', { name: '코딩 에이전트 연결' })
+
+    const codeBlocks = [...document.querySelectorAll('pre code')].map((code) => code.textContent ?? '')
+    expect(codeBlocks).toContain('set "PICKLE_API_KEY=발급받은 키"\nopencode --standalone')
+    expect(codeBlocks).toContain('export PICKLE_API_KEY="발급받은 키"\nopencode --standalone')
+    expect(codeBlocks).toContain('mkdir "%USERPROFILE%\\pickle-practice"\ncd /d "%USERPROFILE%\\pickle-practice"')
+
+    const configurations = codeBlocks.flatMap((code) => {
+      if (!code.startsWith('{')) return []
+      try { return [JSON.parse(code)] } catch { return [] }
+    })
+    const paid = configurations.find((config) => config.providers?.pickle?.models?.['openai/gpt-6-luna'])
+    expect(paid.providers.pickle.env).toEqual(['PICKLE_API_KEY'])
+    expect(paid.providers.pickle.package).toBe('@opencode/ai/providers/openai-compatible')
+    expect(paid.providers.pickle.settings.baseURL).toBe('https://llm.pcl.kr/v1')
+    expect(paid.providers.pickle.models['openai/gpt-6-luna'].body.reasoning_effort).toBe('none')
+    expect(paid.model).toBe('pickle/openai/gpt-6-luna')
+    const legacy = configurations.find((config) => config.provider?.pickle)
+    expect(legacy.provider.pickle.npm).toBe('@ai-sdk/openai-compatible')
+    expect(legacy.provider.pickle.options.apiKey).toBe('{env:PICKLE_API_KEY}')
   })
 
   test('connects Codex through the Responses route', async () => {
