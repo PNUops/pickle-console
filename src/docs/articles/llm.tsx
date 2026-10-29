@@ -1,8 +1,15 @@
 import { GuideFigure } from '../GuideFigure'
+import { GuideVideo } from '../GuideVideo'
 import llmRequestImage from '../../assets/docs/llm-request.jpg'
 import llmConnectionImage from '../../assets/docs/llm-connection.png'
 import llmPermissionsImage from '../../assets/docs/llm-permissions.png'
 import llmUsageImage from '../../assets/docs/llm-usage.png'
+import llmKeyIssueVideo from '../../assets/docs/llm-key-issue.mp4'
+import llmKeyIssuePoster from '../../assets/docs/llm-key-issue.jpg'
+import llmKeyIssueCaptions from '../../assets/docs/llm-key-issue.ko.vtt?url&no-inline'
+import llmKeyReissueVideo from '../../assets/docs/llm-key-reissue.mp4'
+import llmKeyReissuePoster from '../../assets/docs/llm-key-reissue.jpg'
+import llmKeyReissueCaptions from '../../assets/docs/llm-key-reissue.ko.vtt?url&no-inline'
 import { CodeBlock } from '../../components/CodeBlock'
 import { CopyButton } from '../../components/CopyButton'
 import { Alert, Table, TBody, TD, TH, THead, TR } from '../../components/ui'
@@ -199,6 +206,50 @@ const OPENCODE_EXAMPLE = `{
   "model": "pickle/${LLM_DEFAULT_MODEL}"
 }`
 
+const OPENCODE_V2_PAID_EXAMPLE = `{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "pickle": {
+      "name": "Pickle",
+      "env": ["PICKLE_API_KEY"],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "${LLM_API_BASE_URL}"
+      },
+      "models": {
+        "${LLM_RESPONSES_EXAMPLE_MODEL}": {
+          "name": "GPT-6 Luna",
+          "limit": { "context": 1050000, "output": 8192 },
+          "body": { "reasoning_effort": "none" }
+        }
+      }
+    }
+  },
+  "model": "pickle/${LLM_RESPONSES_EXAMPLE_MODEL}"
+}`
+
+const OPENCODE_V2_SELF_SERVED_EXAMPLE = `{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "pickle": {
+      "name": "Pickle",
+      "env": ["PICKLE_API_KEY"],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "${LLM_API_BASE_URL}"
+      },
+      "models": {
+        "${LLM_DEFAULT_MODEL}": {
+          "name": "Pickle General",
+          "capabilities": { "input": ["text"], "output": ["text"], "tools": true },
+          "limit": { "context": 65536, "output": 8192 }
+        }
+      }
+    }
+  },
+  "model": "pickle/${LLM_DEFAULT_MODEL}"
+}`
+
 const CLAUDE_CODE_EXAMPLE = `export ANTHROPIC_BASE_URL="${LLM_ANTHROPIC_BASE_URL}"
 export ANTHROPIC_AUTH_TOKEN="$PICKLE_API_KEY"
 export ANTHROPIC_MODEL="${LLM_MESSAGES_EXAMPLE_MODEL}"
@@ -310,6 +361,15 @@ export const llmArticles: GuideArticle[] = [
             이 키의 접근 목록에서 소유자 등급을 받은 사람만 발급할 수 있습니다. 워크스페이스 소유자라는 이유만으로 키 발급 권한이 생기지는 않습니다.
           </Alert>
           <p>키 값은 소스 코드나 공유 문서에 적지 말고 실행 환경의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code> 환경 변수에 넣습니다. 브라우저에 배포하는 JavaScript에도 넣지 마세요.</p>
+          <GuideVideo
+            src={llmKeyIssueVideo}
+            poster={llmKeyIssuePoster}
+            captionsSrc={llmKeyIssueCaptions}
+            title="LLM API 키 발급 안내 영상"
+            caption="예시 계정과 예시 키로 키를 발급하는 절차를 보여 줍니다."
+            width={1920}
+            height={1200}
+          />
         </>,
       },
       {
@@ -327,7 +387,7 @@ export const llmArticles: GuideArticle[] = [
     title: '첫 호출과 도구 연결',
     group: 'LLM API',
     summary: '발급한 키로 첫 응답을 확인하고 Python, opencode, Claude Code, Codex에 연결합니다.',
-    keywords: ['curl', 'Python', 'SDK', 'opencode', 'base URL', '인증', 'OpenAI', 'Codex', 'Claude Code', 'Anthropic', 'Messages', 'x-api-key', 'Responses', 'config.toml'],
+    keywords: ['curl', 'Python', 'SDK', 'opencode', 'Windows', '명령 프롬프트', 'cmd', 'macOS', '터미널', 'base URL', '인증', 'OpenAI', 'Codex', 'Claude Code', 'Anthropic', 'Messages', 'x-api-key', 'Responses', 'config.toml'],
     sections: [
       {
         id: 'prepare',
@@ -335,9 +395,10 @@ export const llmArticles: GuideArticle[] = [
         body: <>
           <p><GuideLink slug="llm/start" anchor="issue">키 발급</GuideLink>을 마친 뒤 실행할 터미널이나 애플리케이션 환경에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code>를 설정합니다. 아래 예제의 키는 환경 변수에서 읽습니다.</p>
           <p>아래의 <code>발급받은 키</code>를 복사한 실제 값으로 바꿉니다. 설정은 현재 터미널에 적용되며 새 터미널에서는 다시 설정해야 합니다. 키를 코드나 공유 설정 파일에 저장하지 마세요.</p>
+          <CodeBlock label="Windows 명령 프롬프트" code={'set "PICKLE_API_KEY=발급받은 키"'} />
           <CodeBlock label="macOS / Linux" code={'export PICKLE_API_KEY="발급받은 키"'} />
           <CodeBlock label="Windows PowerShell" code={'$env:PICKLE_API_KEY = "발급받은 키"'} />
-          <p>아래 curl 예제는 macOS와 Linux 셸 기준입니다. Windows PowerShell에서는 환경 변수를 설정한 뒤 같은 문서의 Python 예제로 호출할 수 있습니다.</p>
+          <p>운영체제와 현재 터미널에 맞는 명령 하나만 실행합니다. 아래 curl 예제는 macOS와 Linux 셸 기준입니다. Windows에서는 같은 문서의 <GuideLink slug="llm/connect" anchor="opencode">코딩 에이전트 연결</GuideLink>이나 Python 예제로 첫 응답을 확인할 수 있습니다.</p>
           <p>Pickle은 OpenAI 호환 Chat Completions API를 제공합니다. SDK에는 아래 base URL과 Pickle에서 발급한 키를 넣습니다. OpenAI 계정의 API 키를 넣는 자리가 아닙니다.</p>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_API_BASE_URL}</code>
@@ -384,13 +445,52 @@ export const llmArticles: GuideArticle[] = [
         id: 'opencode',
         title: '코딩 에이전트 연결',
         body: <>
-          <p>opencode에 연결하려면 프로젝트 폴더에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">opencode.json</code>으로 아래 설정을 저장하고, opencode를 실행하는 환경에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code>를 설정합니다. 기존 설정 파일이 있다면 필요한 항목을 합쳐 넣습니다.</p>
-          <CodeBlock label="opencode.json" code={OPENCODE_EXAMPLE} />
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">npm</code> 항목은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">@ai-sdk/openai-compatible</code>을 사용합니다. 이 예제는 해당 프로바이더로 검증된 설정이며 다른 패키지의 호환성은 확인되지 않았습니다.</p>
-          <p>위 설정은 자체 서빙 모델용입니다. 유료 모델을 연결할 때는 <code>models</code> 안의 모델 ID와 마지막 <code>model</code> 값의 <code>pickle-general</code>을 사용할 유료 모델 ID로 바꾸고, <code>limit</code>도 해당 모델의 컨텍스트와 출력 범위에 맞춥니다.</p>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">limit</code>을 생략하면 모델 정보에 컨텍스트가 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">0</code>으로 표시됩니다. 대화가 유지되지 않는다는 뜻은 아닙니다. 이전 대화는 매 요청에 함께 전송되지만, 도구가 창 크기를 몰라 남은 양과 대화를 줄일 시점을 판단하지 못합니다. 대화가 길어지면 경고 없이 한도를 넘어 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">upstream_rejected</code>로 실패할 수 있습니다.</p>
-          <p>자체 서빙 모델의 입출력 합계 한도는 65,536토큰입니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">output</code>의 8,192는 도구가 답변을 위해 남겨 두는 예제 값이며 필요에 맞게 정합니다. 플랫폼이 모든 응답을 8,192토큰으로 제한한다는 뜻은 아닙니다.</p>
-          <p>opencode에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">pickle/{LLM_DEFAULT_MODEL}</code>을 선택하고 짧은 질문에 답변이 돌아오는지 확인합니다. 자체 서빙 모델에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 붙이는 설정은 꺼야 합니다.</p>
+          <p>OpenCode를 설치한 뒤 프로젝트 폴더에 연결 설정을 저장하고, 같은 터미널에서 Pickle 키를 설정해 실행합니다. 아래 절차는 OpenCode 2 기준입니다. 기존 OpenCode 1 사용자는 마지막의 <strong>기존 OpenCode 1 설정</strong>을 확인합니다.</p>
+          <h3 className="font-medium">1. 버전 확인과 설치</h3>
+          <p>Windows는 시작 메뉴에서 <strong>명령 프롬프트</strong>를, macOS는 <strong>터미널</strong>을 실행합니다. 먼저 설치 여부를 확인합니다.</p>
+          <CodeBlock label="설치 버전 확인" code="opencode --version" />
+          <p><code>2.x</code> 버전이 나오면 다음 단계로 진행합니다. <code>1.x</code>가 나오면 기존 설정을 보관하고 아래의 OpenCode 1 안내를 확인합니다. 두 버전은 같은 <code>opencode</code> 명령을 사용하므로 기본 설치 위치에 함께 설치하지 않습니다.</p>
+          <p>명령을 찾을 수 없으면 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://opencode.ai/v2/docs">OpenCode 공식 설치 페이지</a>에서 운영체제에 맞는 CLI를 설치합니다.</p>
+          <ul>
+            <li><strong>Windows:</strong> Windows 설정의 시스템 정보에서 시스템 종류를 확인하고 x64 또는 ARM64 CLI ZIP을 받습니다. 압축을 풀어 <code>opencode.exe</code>를 <code>%USERPROFILE%\Tools\opencode</code> 폴더에 둡니다. 명령 프롬프트에서 아래 PATH 설정을 실행한 뒤 버전을 다시 확인합니다.</li>
+            <li><strong>macOS:</strong> 공식 페이지의 macOS 설치 명령을 실행한 뒤 터미널을 새로 열고 버전을 다시 확인합니다.</li>
+          </ul>
+          <CodeBlock label="Windows 명령 프롬프트" code={'set "PATH=%USERPROFILE%\\Tools\\opencode;%PATH%"\nopencode --version'} />
+          <p>Windows PATH 설정은 현재 명령 프롬프트 창에만 적용됩니다. 새 창에서 명령을 찾지 못하면 같은 PATH 설정을 다시 실행합니다.</p>
+          <h3 className="font-medium">2. 프로젝트 폴더 준비</h3>
+          <p>처음 연습할 때는 아래 명령으로 사용자 폴더 안에 <code>pickle-practice</code>를 만들고 이동합니다. 기존 프로젝트를 사용할 때는 그 프로젝트 폴더로 이동합니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트" code={'mkdir "%USERPROFILE%\\pickle-practice"\ncd /d "%USERPROFILE%\\pickle-practice"'} />
+          <CodeBlock label="macOS 터미널" code={'mkdir -p "$HOME/pickle-practice"\ncd "$HOME/pickle-practice"'} />
+          <h3 className="font-medium">3. 연결 설정 저장</h3>
+          <p>현재 프로젝트 폴더에 <code>opencode.json</code> 파일을 만듭니다. Windows 메모장에서 저장할 때 파일 형식을 <strong>모든 파일</strong>로 선택해 <code>opencode.json.txt</code>가 되지 않도록 합니다. 기존 파일이 있으면 필요한 항목을 합쳐 넣습니다. 이 파일에는 실제 키 값을 적지 않습니다.</p>
+          <p>유료 모델 금액과 Chat 권한이 있고 <strong>모델 후보 보기</strong>에 <code>{LLM_RESPONSES_EXAMPLE_MODEL}</code>이 있으면 아래 예제를 사용합니다. 유료 모델 호출은 부여된 금액을 사용합니다.</p>
+          <CodeBlock label="OpenCode 2: 유료 모델 opencode.json" code={OPENCODE_V2_PAID_EXAMPLE} />
+          <p>이 예제는 GPT-6 Luna를 Chat Completions로 연결합니다. 도구 호출을 위해 <code>reasoning_effort</code>를 <code>none</code>으로 설정했습니다. 다른 모델을 사용하려면 <code>models</code> 안의 ID와 마지막 <code>model</code>을 함께 변경하고 해당 모델에 맞는 <code>limit</code>과 요청 옵션을 사용합니다.</p>
+          <details>
+            <summary className="cursor-pointer font-medium">자체 서빙 모델을 사용하는 OpenCode 2 설정</summary>
+            <p>일일 토큰 한도가 0이 아니고 Chat 권한이 있는 키는 이 예제를 사용할 수 있습니다.</p>
+            <CodeBlock label="OpenCode 2: 자체 서빙 opencode.json" code={OPENCODE_V2_SELF_SERVED_EXAMPLE} />
+          </details>
+          <p><code>limit.context</code>는 모델의 대화 창 크기이고 일일 토큰 한도가 아닙니다. 자체 서빙 모델은 입출력 합계 65,536토큰입니다. <code>output</code>의 8,192는 답변에 남겨 두는 예제 값이며, 플랫폼의 모든 응답에 적용되는 한도가 아닙니다.</p>
+          <h3 className="font-medium">4. 키 설정과 실행</h3>
+          <p>아래의 <code>발급받은 키</code>를 실제 값으로 바꿉니다. 프로젝트 폴더로 이동한 같은 터미널에서 운영체제에 맞는 명령만 실행합니다. 키가 표시된 화면은 공유하거나 촬영하지 않습니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트" code={'set "PICKLE_API_KEY=발급받은 키"\nopencode --standalone'} />
+          <CodeBlock label="macOS 터미널" code={'export PICKLE_API_KEY="발급받은 키"\nopencode --standalone'} />
+          <p><code>--standalone</code>은 현재 터미널의 키 설정을 사용하는 별도 실행입니다. 새 터미널에서는 키를 다시 설정합니다. 입력창에 <code>/models</code>를 입력하면 모델을 고를 수 있습니다. 설정에 적은 <code>pickle/</code>로 시작하는 모델을 선택합니다. Pickle 연결에 OpenCode 유료 구독이나 별도의 공급자 API 키를 추가할 필요는 없습니다.</p>
+          <h3 className="font-medium">5. 첫 응답과 파일 읽기 확인</h3>
+          <ol>
+            <li><code>안녕하세요. 한 문장으로 답해 주세요.</code>를 입력합니다. 답변이 돌아오면 키와 모델 연결이 된 것입니다.</li>
+            <li>프로젝트 폴더에 <code>hello.txt</code> 파일을 만들고 <code>Pickle 연결 연습</code>을 저장합니다.</li>
+            <li><code>hello.txt를 읽고 내용을 알려 주세요. 파일은 수정하지 마세요.</code>를 입력합니다. 파일 읽기 도구와 실제 파일 내용이 표시되는지 확인합니다.</li>
+          </ol>
+          <p>권한 확인이 나오면 대상 파일과 작업을 확인한 뒤 허용합니다. 오류가 나면 키 상세의 상태, 유료 모델 잔액과 모델 허용 여부를 확인하고 <GuideLink slug="llm/errors">오류 해결</GuideLink>에서 표시된 코드를 찾습니다. 종료한 뒤에는 <GuideLink slug="llm/limits" anchor="usage">사용량</GuideLink>에서 기록을 확인할 수 있습니다.</p>
+          <details>
+            <summary className="cursor-pointer font-medium">기존 OpenCode 1 설정</summary>
+            <p>OpenCode 1을 계속 사용하는 경우 아래의 기존 자체 서빙 예제를 유지합니다. 키는 같은 운영체제별 환경 변수 명령으로 설정하고 <code>opencode</code>로 실행합니다. 유료 모델을 사용하려면 <code>models</code> 안의 모델 ID와 마지막 <code>model</code> 값을 함께 바꿉니다.</p>
+            <CodeBlock label="OpenCode 1: 기존 opencode.json" code={OPENCODE_EXAMPLE} />
+            <p>OpenCode 1의 <code>npm</code> 항목은 <code>@ai-sdk/openai-compatible</code>입니다. <code>limit</code>을 생략해 대화 창 크기를 알 수 없으면 길어진 대화에서 공급자 오류가 날 수 있습니다. 자체 서빙 모델에 <code>verbosity</code>를 붙이는 설정은 꺼야 합니다.</p>
+            <p>OpenCode 2는 지원되는 OpenCode 1 설정도 읽습니다. V2 전용 설정으로 변경한 파일을 OpenCode 1에서 다시 사용하지 않습니다. 버전을 변경하기 전에는 기존 설정을 복사해 보관하고 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://opencode.ai/v2/docs/migrate-v1/">공식 전환 안내</a>를 확인합니다.</p>
+          </details>
         </>,
       },
       {
@@ -709,6 +809,15 @@ export const llmArticles: GuideArticle[] = [
           <Alert variant="warning" title="이전 키 값은 즉시 무효화됩니다">
             재발급 직후부터 이전 값을 쓰는 프로그램의 요청은 실패합니다. 새 값을 복사하기 전에 완료 창을 닫지 마세요.
           </Alert>
+          <GuideVideo
+            src={llmKeyReissueVideo}
+            poster={llmKeyReissuePoster}
+            captionsSrc={llmKeyReissueCaptions}
+            title="LLM API 키 재발급 안내 영상"
+            caption="예시 계정과 예시 키로 기존 값을 재발급하는 절차를 보여 줍니다."
+            width={1920}
+            height={1200}
+          />
         </>,
       },
       {
