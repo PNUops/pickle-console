@@ -206,7 +206,7 @@ describe('사용 가이드', () => {
 
     const codeBlocks = [...document.querySelectorAll('pre code')].map((code) => code.textContent ?? '')
     expect(codeBlocks).toContain('set "PICKLE_API_KEY=발급받은 키"\nopencode --standalone')
-    expect(codeBlocks).toContain('export PICKLE_API_KEY="발급받은 키"\nopencode --standalone')
+    expect(codeBlocks).toContain('read -s "PICKLE_API_KEY?Pickle API 키를 붙여넣고 Enter: "\nprint\nexport PICKLE_API_KEY\nopencode --standalone')
     expect(codeBlocks).toContain('mkdir "%USERPROFILE%\\pickle-practice"\ncd /d "%USERPROFILE%\\pickle-practice"')
 
     const configurations = codeBlocks.flatMap((code) => {

@@ -10,6 +10,9 @@ import llmKeyIssueCaptions from '../../assets/docs/llm-key-issue.ko.vtt?url&no-i
 import llmKeyReissueVideo from '../../assets/docs/llm-key-reissue.mp4'
 import llmKeyReissuePoster from '../../assets/docs/llm-key-reissue.jpg'
 import llmKeyReissueCaptions from '../../assets/docs/llm-key-reissue.ko.vtt?url&no-inline'
+import llmMacFirstPageVideo from '../../assets/docs/llm-mac-first-page.mp4'
+import llmMacFirstPagePoster from '../../assets/docs/llm-mac-first-page.jpg'
+import llmMacFirstPageCaptions from '../../assets/docs/llm-mac-first-page.ko.vtt?url&no-inline'
 import { CodeBlock } from '../../components/CodeBlock'
 import { CopyButton } from '../../components/CopyButton'
 import { Alert, Table, TBody, TD, TH, THead, TR } from '../../components/ui'
@@ -394,10 +397,13 @@ export const llmArticles: GuideArticle[] = [
         title: '연결 준비',
         body: <>
           <p><GuideLink slug="llm/start" anchor="issue">키 발급</GuideLink>을 마친 뒤 실행할 터미널이나 애플리케이션 환경에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code>를 설정합니다. 아래 예제의 키는 환경 변수에서 읽습니다.</p>
-          <p>아래의 <code>발급받은 키</code>를 복사한 실제 값으로 바꿉니다. 설정은 현재 터미널에 적용되며 새 터미널에서는 다시 설정해야 합니다. 키를 코드나 공유 설정 파일에 저장하지 마세요.</p>
+          <p>Windows 명령의 <code>발급받은 키</code>는 복사한 실제 값으로 바꿉니다. macOS 기본 셸인 zsh에서는 입력 안내가 나오면 키를 붙여넣고 Enter를 누릅니다. 입력 중 문자가 보이지 않아도 정상입니다. 설정은 현재 터미널에 적용되며 새 터미널에서는 다시 설정합니다. 키를 코드나 공유 설정 파일에 저장하지 마세요.</p>
           <CodeBlock label="Windows 명령 프롬프트" code={'set "PICKLE_API_KEY=발급받은 키"'} />
-          <CodeBlock label="macOS / Linux" code={'export PICKLE_API_KEY="발급받은 키"'} />
-          <CodeBlock label="Windows PowerShell" code={'$env:PICKLE_API_KEY = "발급받은 키"'} />
+          <CodeBlock label="macOS 터미널" code={'read -s "PICKLE_API_KEY?Pickle API 키를 붙여넣고 Enter: "\nprint\nexport PICKLE_API_KEY'} />
+          <details>
+            <summary className="cursor-pointer font-medium">Linux 셸에서 설정하기</summary>
+            <CodeBlock label="Linux" code={'export PICKLE_API_KEY="발급받은 키"'} />
+          </details>
           <p>운영체제와 현재 터미널에 맞는 명령 하나만 실행합니다. 아래 curl 예제는 macOS와 Linux 셸 기준입니다. Windows에서는 같은 문서의 <GuideLink slug="llm/connect" anchor="opencode">코딩 에이전트 연결</GuideLink>이나 Python 예제로 첫 응답을 확인할 수 있습니다.</p>
           <p>Pickle은 OpenAI 호환 Chat Completions API를 제공합니다. SDK에는 아래 base URL과 Pickle에서 발급한 키를 넣습니다. OpenAI 계정의 API 키를 넣는 자리가 아닙니다.</p>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -446,6 +452,16 @@ export const llmArticles: GuideArticle[] = [
         title: '코딩 에이전트 연결',
         body: <>
           <p>OpenCode를 설치한 뒤 프로젝트 폴더에 연결 설정을 저장하고, 같은 터미널에서 Pickle 키를 설정해 실행합니다. 아래 절차는 OpenCode 2 기준입니다. 기존 OpenCode 1 사용자는 마지막의 <strong>기존 OpenCode 1 설정</strong>을 확인합니다.</p>
+          <GuideVideo
+            src={llmMacFirstPageVideo}
+            poster={llmMacFirstPagePoster}
+            captionsSrc={llmMacFirstPageCaptions}
+            title="macOS에서 API 연결부터 웹페이지 생성과 수정까지"
+            caption="macOS에서 실제 Pickle API로 연결해 HTML을 생성하고 수정합니다. 실제 터미널 출력을 재생하고 브라우저 결과를 함께 보여 줍니다. 검수용 계정과 예시 프로젝트를 사용했으며 대기 구간은 편집했습니다."
+            width={1920}
+            height={1200}
+          />
+          <p>영상은 공식 배포 파일을 임시 폴더에 설치합니다. 일반 설치와 연결 설정은 아래 절차를 따릅니다. 영상은 로컬 HTTP 미리보기로 결과를 확인하며, 아래에서는 HTML 파일을 직접 엽니다.</p>
           <h3 className="font-medium">1. 버전 확인과 설치</h3>
           <p>Windows는 시작 메뉴에서 <strong>명령 프롬프트</strong>를, macOS는 <strong>터미널</strong>을 실행합니다. 먼저 설치 여부를 확인합니다.</p>
           <CodeBlock label="설치 버전 확인" code="opencode --version" />
@@ -463,6 +479,8 @@ export const llmArticles: GuideArticle[] = [
           <CodeBlock label="macOS 터미널" code={'mkdir -p "$HOME/pickle-practice"\ncd "$HOME/pickle-practice"'} />
           <h3 className="font-medium">3. 연결 설정 저장</h3>
           <p>현재 프로젝트 폴더에 <code>opencode.json</code> 파일을 만듭니다. Windows 메모장에서 저장할 때 파일 형식을 <strong>모든 파일</strong>로 선택해 <code>opencode.json.txt</code>가 되지 않도록 합니다. 기존 파일이 있으면 필요한 항목을 합쳐 넣습니다. 이 파일에는 실제 키 값을 적지 않습니다.</p>
+          <p>macOS는 아래 명령으로 텍스트 편집기를 열고 예제를 붙여넣습니다. <kbd>Ctrl+O</kbd>, Enter로 저장한 뒤 <kbd>Ctrl+X</kbd>로 나옵니다.</p>
+          <CodeBlock label="macOS 터미널" code="nano opencode.json" />
           <p>유료 모델 금액과 Chat 권한이 있고 <strong>모델 후보 보기</strong>에 <code>{LLM_RESPONSES_EXAMPLE_MODEL}</code>이 있으면 아래 예제를 사용합니다. 유료 모델 호출은 부여된 금액을 사용합니다.</p>
           <CodeBlock label="OpenCode 2: 유료 모델 opencode.json" code={OPENCODE_V2_PAID_EXAMPLE} />
           <p>이 예제는 GPT-6 Luna를 Chat Completions로 연결합니다. 도구 호출을 위해 <code>reasoning_effort</code>를 <code>none</code>으로 설정했습니다. 다른 모델을 사용하려면 <code>models</code> 안의 ID와 마지막 <code>model</code>을 함께 변경하고 해당 모델에 맞는 <code>limit</code>과 요청 옵션을 사용합니다.</p>
@@ -473,17 +491,27 @@ export const llmArticles: GuideArticle[] = [
           </details>
           <p><code>limit.context</code>는 모델의 대화 창 크기이고 일일 토큰 한도가 아닙니다. 자체 서빙 모델은 입출력 합계 65,536토큰입니다. <code>output</code>의 8,192는 답변에 남겨 두는 예제 값이며, 플랫폼의 모든 응답에 적용되는 한도가 아닙니다.</p>
           <h3 className="font-medium">4. 키 설정과 실행</h3>
-          <p>아래의 <code>발급받은 키</code>를 실제 값으로 바꿉니다. 프로젝트 폴더로 이동한 같은 터미널에서 운영체제에 맞는 명령만 실행합니다. 키가 표시된 화면은 공유하거나 촬영하지 않습니다.</p>
+          <p>프로젝트 폴더로 이동한 같은 터미널에서 운영체제에 맞는 명령만 실행합니다. Windows는 <code>발급받은 키</code>를 실제 값으로 바꿉니다. macOS 기본 zsh는 안내가 나오면 키를 붙여넣고 Enter를 누릅니다. 입력 중 키 문자가 보이지 않아도 정상입니다. 키가 표시된 화면은 공유하거나 촬영하지 않습니다.</p>
           <CodeBlock label="Windows 명령 프롬프트" code={'set "PICKLE_API_KEY=발급받은 키"\nopencode --standalone'} />
-          <CodeBlock label="macOS 터미널" code={'export PICKLE_API_KEY="발급받은 키"\nopencode --standalone'} />
-          <p><code>--standalone</code>은 현재 터미널의 키 설정을 사용하는 별도 실행입니다. 새 터미널에서는 키를 다시 설정합니다. 입력창에 <code>/models</code>를 입력하면 모델을 고를 수 있습니다. 설정에 적은 <code>pickle/</code>로 시작하는 모델을 선택합니다. Pickle 연결에 OpenCode 유료 구독이나 별도의 공급자 API 키를 추가할 필요는 없습니다.</p>
-          <h3 className="font-medium">5. 첫 응답과 파일 읽기 확인</h3>
-          <ol>
-            <li><code>안녕하세요. 한 문장으로 답해 주세요.</code>를 입력합니다. 답변이 돌아오면 키와 모델 연결이 된 것입니다.</li>
-            <li>프로젝트 폴더에 <code>hello.txt</code> 파일을 만들고 <code>Pickle 연결 연습</code>을 저장합니다.</li>
-            <li><code>hello.txt를 읽고 내용을 알려 주세요. 파일은 수정하지 마세요.</code>를 입력합니다. 파일 읽기 도구와 실제 파일 내용이 표시되는지 확인합니다.</li>
-          </ol>
-          <p>권한 확인이 나오면 대상 파일과 작업을 확인한 뒤 허용합니다. 오류가 나면 키 상세의 상태, 유료 모델 잔액과 모델 허용 여부를 확인하고 <GuideLink slug="llm/errors">오류 해결</GuideLink>에서 표시된 코드를 찾습니다. 종료한 뒤에는 <GuideLink slug="llm/limits" anchor="usage">사용량</GuideLink>에서 기록을 확인할 수 있습니다.</p>
+          <CodeBlock label="macOS 터미널" code={'read -s "PICKLE_API_KEY?Pickle API 키를 붙여넣고 Enter: "\nprint\nexport PICKLE_API_KEY\nopencode --standalone'} />
+          <p><code>--standalone</code>은 현재 터미널의 키 설정을 사용하는 별도 실행입니다. 새 터미널에서는 키를 다시 설정합니다. 입력창에 <code>/models</code>를 입력하고 Enter를 누릅니다. <strong>Pickle</strong> 항목에서 설정한 모델을 선택합니다. 위 유료 모델 예제는 <strong>GPT-6 Luna</strong>를 고르고 다음 선택창에서 <strong>Default</strong>를 선택합니다. Pickle 연결에 OpenCode 유료 구독이나 별도의 공급자 API 키를 추가할 필요는 없습니다.</p>
+          <h3 className="font-medium">5. 첫 HTML 파일 생성</h3>
+          <p>처음에는 새 연습 폴더에서 간단한 파일 하나를 만듭니다. OpenCode 입력창에 아래 요청을 입력합니다.</p>
+          <CodeBlock label="생성 요청" code={"현재 폴더에 index.html 하나를 만들어 주세요.\n외부 라이브러리 없이 HTML과 CSS만 사용하세요.\n흰 카드에 제목 'Pickle 첫 웹페이지', 설명, 파란 버튼 '시작하기'를 넣어 주세요.\n배경은 연한 파란색으로 하고 모바일에서도 보기 좋게 해주세요.\n다른 파일은 건드리지 말고, 완료하면 변경 내용을 짧게 알려주세요."} />
+          <p>권한 확인이 나오면 대상 파일과 작업을 확인한 뒤 허용합니다. <code>index.html</code> 생성 내용과 완료 답변이 표시되는지 확인합니다.</p>
+          <h3 className="font-medium">6. 브라우저에서 결과 확인</h3>
+          <p>OpenCode를 실행한 창을 그대로 두고 새 터미널을 엽니다. 아래 명령으로 연습 폴더의 HTML 파일을 브라우저에서 엽니다. 제목과 설명, 버튼이 보이는지 확인합니다. 기존 프로젝트를 사용했다면 폴더 경로를 맞게 바꿉니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트" code={'cd /d "%USERPROFILE%\\pickle-practice"\nstart "" index.html'} />
+          <CodeBlock label="macOS 터미널" code={'cd "$HOME/pickle-practice"\nopen index.html'} />
+          <h3 className="font-medium">7. 같은 파일 수정</h3>
+          <p>OpenCode 창으로 돌아가 같은 대화에서 아래 요청을 입력합니다.</p>
+          <CodeBlock label="수정 요청" code={"index.html만 수정해 주세요.\n큰 제목을 'Pickle에서 수정한 페이지'로, 버튼을 '수정 완료'로 바꿔 주세요.\n'OpenCode로 생성하고 수정했습니다.'라는 설명을 추가하고 배경은 연한 민트색으로 바꿔 주세요.\n기존 카드 레이아웃은 유지하고 다른 파일은 건드리지 마세요."} />
+          <p>수정된 줄과 완료 답변을 확인한 뒤 브라우저를 새로고침합니다. 제목, 버튼, 추가 설명과 배경이 요청대로 바뀌었는지 직접 확인합니다. 답변 내용과 생성된 코드는 실행마다 달라질 수 있습니다.</p>
+          <details>
+            <summary className="cursor-pointer font-medium">파일 읽기 연습</summary>
+            <p>프로젝트 폴더에 <code>hello.txt</code> 파일을 만들고 <code>Pickle 연결 연습</code>을 저장합니다. OpenCode에 <code>hello.txt를 읽고 내용을 알려 주세요. 파일은 수정하지 마세요.</code>를 입력하고 실제 파일 내용이 표시되는지 확인합니다.</p>
+          </details>
+          <p>오류가 나면 키 상세의 상태, 유료 모델 잔액과 모델 허용 여부를 확인하고 <GuideLink slug="llm/errors">오류 해결</GuideLink>에서 표시된 코드를 찾습니다. 종료한 뒤에는 <GuideLink slug="llm/limits" anchor="usage">사용량</GuideLink>에서 기록을 확인할 수 있습니다.</p>
           <details>
             <summary className="cursor-pointer font-medium">기존 OpenCode 1 설정</summary>
             <p>OpenCode 1을 계속 사용하는 경우 아래의 기존 자체 서빙 예제를 유지합니다. 키는 같은 운영체제별 환경 변수 명령으로 설정하고 <code>opencode</code>로 실행합니다. 유료 모델을 사용하려면 <code>models</code> 안의 모델 ID와 마지막 <code>model</code> 값을 함께 바꿉니다.</p>
