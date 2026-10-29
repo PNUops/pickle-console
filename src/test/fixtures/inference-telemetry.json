@@ -1,0 +1,354 @@
+{
+  "status" : "REPORTED",
+  "device" : {
+    "sourceId" : "00000000-0000-4000-8000-000000000101",
+    "upstreamId" : "00000000-0000-4000-8000-000000007002",
+    "upstreamName" : "Synthetic observation source",
+    "from" : "2026-10-26T00:00:00.125Z",
+    "to" : "2026-10-26T00:02:00Z",
+    "bucketSeconds" : 60,
+    "sampleIntervalSeconds" : 60,
+    "retentionDays" : 90,
+    "evidence" : {
+      "retainedFrom" : "2026-07-28T00:02:00Z",
+      "retentionState" : "WITHIN",
+      "latestObservedAt" : "2026-10-26T00:01:00.125Z",
+      "latestReceivedAt" : "2026-10-26T00:02:00Z",
+      "freshness" : "FRESH",
+      "samplesInWindow" : 2,
+      "expectedSamples" : 2,
+      "failedSamples" : 0,
+      "baselineIntervals" : 1,
+      "resetIntervals" : 0,
+      "gapIntervals" : 0,
+      "truncated" : false
+    },
+    "series" : [ {
+      "from" : "2026-10-26T00:00:00.125Z",
+      "to" : "2026-10-26T00:01:00.125Z",
+      "retentionState" : "WITHIN",
+      "samples" : 1,
+      "failedSamples" : 0,
+      "host" : {
+        "cpu_load1" : {
+          "state" : "OBSERVED",
+          "mean" : 0.125,
+          "min" : 0.125,
+          "max" : 0.125,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_power_watts" : {
+          "state" : "UNSUPPORTED",
+          "mean" : null,
+          "min" : null,
+          "max" : null,
+          "observedSamples" : 0,
+          "intervalSeconds" : 0.0
+        },
+        "swap_used_bytes" : {
+          "state" : "OBSERVED",
+          "mean" : 0.0,
+          "min" : 0.0,
+          "max" : 0.0,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "memory_total_bytes" : {
+          "state" : "OBSERVED",
+          "mean" : 1.37438953472E11,
+          "min" : 1.37438953472E11,
+          "max" : 1.37438953472E11,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_power_limit_watts" : {
+          "state" : "UNSUPPORTED",
+          "mean" : null,
+          "min" : null,
+          "max" : null,
+          "observedSamples" : 0,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_memory_total_bytes" : {
+          "state" : "UNSUPPORTED",
+          "mean" : null,
+          "min" : null,
+          "max" : null,
+          "observedSamples" : 0,
+          "intervalSeconds" : 0.0
+        },
+        "memory_available_bytes" : {
+          "state" : "OBSERVED",
+          "mean" : 1.03079215104E11,
+          "min" : 1.03079215104E11,
+          "max" : 1.03079215104E11,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_temperature_celsius" : {
+          "state" : "OBSERVED",
+          "mean" : 40.0,
+          "min" : 40.0,
+          "max" : 40.0,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_utilization_percent" : {
+          "state" : "OBSERVED",
+          "mean" : 0.0,
+          "min" : 0.0,
+          "max" : 0.0,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        }
+      },
+      "engines" : [ {
+        "modelName" : "demo-model",
+        "engineId" : "0",
+        "epoch" : "00000000-0000-4000-8000-000000000202",
+        "bootId" : "00000000-0000-4000-8000-000000000303",
+        "processId" : "00000000-0000-4000-8000-000000000404",
+        "configId" : "synthetic-configuration-1",
+        "intervalState" : "BASELINE",
+        "validIntervals" : 0,
+        "baselineIntervals" : 1,
+        "resetIntervals" : 0,
+        "gapIntervals" : 0,
+        "gauges" : {
+          "vllm:kv_cache_usage_perc" : {
+            "state" : "OBSERVED",
+            "mean" : 0.125,
+            "min" : 0.125,
+            "max" : 0.125,
+            "observedSamples" : 1,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:num_requests_running" : {
+            "state" : "OBSERVED",
+            "mean" : 0.0,
+            "min" : 0.0,
+            "max" : 0.0,
+            "observedSamples" : 1,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:num_requests_waiting" : {
+            "state" : "OBSERVED",
+            "mean" : 0.0,
+            "min" : 0.0,
+            "max" : 0.0,
+            "observedSamples" : 1,
+            "intervalSeconds" : 0.0
+          }
+        },
+        "rates" : {
+          "vllm:generation_tokens_total" : {
+            "state" : "NOT_REPORTED",
+            "mean" : null,
+            "min" : null,
+            "max" : null,
+            "observedSamples" : 0,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:prompt_tokens_cached_total" : {
+            "state" : "NOT_REPORTED",
+            "mean" : null,
+            "min" : null,
+            "max" : null,
+            "observedSamples" : 0,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:prompt_tokens_total" : {
+            "state" : "NOT_REPORTED",
+            "mean" : null,
+            "min" : null,
+            "max" : null,
+            "observedSamples" : 0,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:request_success_total{finished_reason=\"stop\"}" : {
+            "state" : "NOT_REPORTED",
+            "mean" : null,
+            "min" : null,
+            "max" : null,
+            "observedSamples" : 0,
+            "intervalSeconds" : 0.0
+          }
+        },
+        "histogramMeans" : {
+          "vllm:time_to_first_token_seconds" : {
+            "state" : "NOT_REPORTED",
+            "mean" : null,
+            "min" : null,
+            "max" : null,
+            "observedSamples" : 0,
+            "intervalSeconds" : 0.0
+          }
+        }
+      } ]
+    }, {
+      "from" : "2026-10-26T00:01:00.125Z",
+      "to" : "2026-10-26T00:02:00Z",
+      "retentionState" : "WITHIN",
+      "samples" : 1,
+      "failedSamples" : 0,
+      "host" : {
+        "cpu_load1" : {
+          "state" : "OBSERVED",
+          "mean" : 0.75,
+          "min" : 0.75,
+          "max" : 0.75,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_power_watts" : {
+          "state" : "UNSUPPORTED",
+          "mean" : null,
+          "min" : null,
+          "max" : null,
+          "observedSamples" : 0,
+          "intervalSeconds" : 0.0
+        },
+        "swap_used_bytes" : {
+          "state" : "OBSERVED",
+          "mean" : 0.0,
+          "min" : 0.0,
+          "max" : 0.0,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "memory_total_bytes" : {
+          "state" : "OBSERVED",
+          "mean" : 1.37438953472E11,
+          "min" : 1.37438953472E11,
+          "max" : 1.37438953472E11,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_power_limit_watts" : {
+          "state" : "UNSUPPORTED",
+          "mean" : null,
+          "min" : null,
+          "max" : null,
+          "observedSamples" : 0,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_memory_total_bytes" : {
+          "state" : "UNSUPPORTED",
+          "mean" : null,
+          "min" : null,
+          "max" : null,
+          "observedSamples" : 0,
+          "intervalSeconds" : 0.0
+        },
+        "memory_available_bytes" : {
+          "state" : "OBSERVED",
+          "mean" : 9.663676416E10,
+          "min" : 9.663676416E10,
+          "max" : 9.663676416E10,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_temperature_celsius" : {
+          "state" : "OBSERVED",
+          "mean" : 43.0,
+          "min" : 43.0,
+          "max" : 43.0,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        },
+        "gpu_utilization_percent" : {
+          "state" : "OBSERVED",
+          "mean" : 35.5,
+          "min" : 35.5,
+          "max" : 35.5,
+          "observedSamples" : 1,
+          "intervalSeconds" : 0.0
+        }
+      },
+      "engines" : [ {
+        "modelName" : "demo-model",
+        "engineId" : "0",
+        "epoch" : "00000000-0000-4000-8000-000000000202",
+        "bootId" : "00000000-0000-4000-8000-000000000303",
+        "processId" : "00000000-0000-4000-8000-000000000404",
+        "configId" : "synthetic-configuration-1",
+        "intervalState" : "VALID",
+        "validIntervals" : 1,
+        "baselineIntervals" : 0,
+        "resetIntervals" : 0,
+        "gapIntervals" : 0,
+        "gauges" : {
+          "vllm:kv_cache_usage_perc" : {
+            "state" : "OBSERVED",
+            "mean" : 0.25,
+            "min" : 0.25,
+            "max" : 0.25,
+            "observedSamples" : 1,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:num_requests_running" : {
+            "state" : "OBSERVED",
+            "mean" : 2.0,
+            "min" : 2.0,
+            "max" : 2.0,
+            "observedSamples" : 1,
+            "intervalSeconds" : 0.0
+          },
+          "vllm:num_requests_waiting" : {
+            "state" : "OBSERVED",
+            "mean" : 1.0,
+            "min" : 1.0,
+            "max" : 1.0,
+            "observedSamples" : 1,
+            "intervalSeconds" : 0.0
+          }
+        },
+        "rates" : {
+          "vllm:generation_tokens_total" : {
+            "state" : "OBSERVED",
+            "mean" : 0.5,
+            "min" : 0.5,
+            "max" : 0.5,
+            "observedSamples" : 1,
+            "intervalSeconds" : 60.0
+          },
+          "vllm:prompt_tokens_cached_total" : {
+            "state" : "OBSERVED",
+            "mean" : 0.2,
+            "min" : 0.2,
+            "max" : 0.2,
+            "observedSamples" : 1,
+            "intervalSeconds" : 60.0
+          },
+          "vllm:prompt_tokens_total" : {
+            "state" : "OBSERVED",
+            "mean" : 1.0,
+            "min" : 1.0,
+            "max" : 1.0,
+            "observedSamples" : 1,
+            "intervalSeconds" : 60.0
+          },
+          "vllm:request_success_total{finished_reason=\"stop\"}" : {
+            "state" : "OBSERVED",
+            "mean" : 0.05,
+            "min" : 0.05,
+            "max" : 0.05,
+            "observedSamples" : 1,
+            "intervalSeconds" : 60.0
+          }
+        },
+        "histogramMeans" : {
+          "vllm:time_to_first_token_seconds" : {
+            "state" : "OBSERVED",
+            "mean" : 0.15,
+            "min" : 0.15,
+            "max" : 0.15,
+            "observedSamples" : 1,
+            "intervalSeconds" : 60.0
+          }
+        }
+      } ]
+    } ]
+  }
+}

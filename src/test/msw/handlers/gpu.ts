@@ -5,11 +5,14 @@ import { uuid } from '../ids'
 import { workspaceMembersOf } from './workspaces'
 import { vmStore } from './vms'
 import { regularUser, problemResponse } from './auth'
+import { workspaceStore } from './workspaces'
+import { GPU_READ_COMMANDS } from '../../../lib/institution-resource-work'
 
 type Schemas = components['schemas']
 export const gpuFixture: Gpu = { id: uuid(900), nodeId: uuid(9), model: '테스트 GPU', vramMb: 32768, status: 'ACTIVE', available: false }
 export function gpuAllocationFixture(patch: Partial<GpuAllocation> = {}): GpuAllocation {
   return {
+    metadataVisible: true, allowedWorkIds: [...GPU_READ_COMMANDS],
     id: uuid(901), name: '학습 GPU', status: 'ALLOCATED', connectionStatus: 'NONE', utilizationPercent: null, sampleObservedAt: null,
     workspaceId: uuid(12), workspaceName: '캡스톤 3조', orgId: uuid(1), orgName: '정보컴퓨터공학부 실습지원센터',
     accessLimited: false, ownerNames: [regularUser.name], accessManageAllowed: true, myRole: 'OWNER',
@@ -27,7 +30,7 @@ let nextGpuGrantId = 1000
 export function grantsOf(row: GpuAllocation) {
   let grants = gpuGrantStore.get(row.id)
   if (!grants) {
-    grants = [{ id: uuid(909), granteeType: 'USER', role: 'OWNER', user: { userId: regularUser.id, name: regularUser.name, email: regularUser.email }, createdAt: row.createdAt }]
+    grants = [{ id: uuid(909), granteeType: 'USER', role: 'OWNER', user: { userId: regularUser.id, name: regularUser.name, email: regularUser.email }, createdAt: '2026-09-12T00:00:00Z' }]
     gpuGrantStore.set(row.id, grants)
   }
   return grants
@@ -62,7 +65,7 @@ export const gpuHandlers = [
     const row = find(params.allocationId)
     if (!row) return notFound()
     return HttpResponse.json({
-      resource: { id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName },
+      resource: { id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: workspaceStore.find((workspace) => workspace.detail.id === row.workspaceId)?.detail.name ?? '테스트 워크스페이스' },
       grants: grantsOf(row),
       canManageAccess: row.accessManageAllowed,
     } satisfies Schemas['ResourceAccessListResponse'])

@@ -1,4 +1,5 @@
 import { gettingStartedArticles } from './articles/getting-started'
+import { bulkRequestArticles } from './articles/bulk'
 import { accountArticles } from './articles/account'
 import { vmArticles } from './articles/vm'
 import { networkArticles } from './articles/network'
@@ -18,7 +19,7 @@ const displayedLlmArticles = LLM_API_BASE_URL ? llmArticles : llmArticles.map((a
 
 export const guideArticles = [
   ...introductionArticles,
-  ...gettingStartedArticles,
+  ...gettingStartedArticles.flatMap((article) => article.slug === 'requests/status' ? [article, ...bulkRequestArticles] : [article]),
   ...vmArticles,
   ...networkArticles,
   ...displayedLlmArticles,

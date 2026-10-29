@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -13,8 +13,10 @@ import {
   sysAdminUser,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
+import { AUTHORITY_OVERRIDES, mockInstitutionAuthority } from '../test/msw/institution-authority'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { vmStore } from '../test/msw/handlers/vms'
 
 function renderAsSysAdmin(path: string) {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
@@ -22,6 +24,58 @@ function renderAsSysAdmin(path: string) {
 }
 
 afterEach(() => vi.unstubAllEnvs())
+
+describe('explicit VM network policy authority', () => {
+  function writeOnly(differentWorkspace = false) {
+    vi.stubEnv('VITE_VM_NETWORK_POLICY_ENABLED', '1')
+    const vm = { ...vmStore.find((row) => row.id === uuid(56))!, metadataVisible: false,
+      allowedWorkIds: ['vm.network-policy.write'] }
+    const workspaceId = vm.workspaceId
+    if (!workspaceId) throw new Error('The network policy fixture must identify its actual workspace')
+    const context = mockInstitutionAuthority(orgAdminProfile)
+    context.accountRole = 'ORG_MANAGER'
+    context.authorityFingerprint = `synthetic-policy-write:${differentWorkspace}`
+    context.assignments[0].permission = { mode: 'SELECTED', revision: 19, work: ['vm.network-policy.write'],
+      scopes: { VM: { mode: 'LISTED', workspaceIds: [differentWorkspace ? uuid(9999) : workspaceId] } } }
+    AUTHORITY_OVERRIDES[orgAdminProfile.id] = context
+    server.use(refreshSuccessHandler('access-org-admin'),
+      http.get('*/api/v1/admin/vms/:vmId', () => HttpResponse.json(vm)))
+    return vm
+  }
+
+  test('a matching write-only source loads the current policy and saves through the admin API', async () => {
+    const vm = writeOnly()
+    const policy = { revision: 8, rules: [{ direction: 'IN', action: 'ACCEPT', protocol: 'TCP', peer: '192.0.2.0/24', portStart: 443, portEnd: 443 }],
+      systemRules: [], applyState: 'APPLIED', desiredGeneration: 8, appliedGeneration: 8, lastError: null, updatedAt: null }
+    let reads = 0, personalRequests = 0
+    const writes: unknown[] = []
+    server.use(http.get('*/api/v1/admin/vms/:vmId/network-policy', () => { reads++; return HttpResponse.json(policy) }),
+      http.put('*/api/v1/admin/vms/:vmId/network-policy', async ({ request }) => {
+        writes.push(await request.json()); return HttpResponse.json({ ...policy, revision: 9 })
+      }),
+      http.get('*/api/v1/vms/:vmId/network-policy', () => { personalRequests++; return new HttpResponse(null, { status: 403 }) }))
+    renderApp(`/admin/vms/${vm.id}?tab=network-policy`)
+    await screen.findByRole('heading', { name: vm.displayName || vm.name })
+    const save = await screen.findByRole('button', { name: '통신 정책 저장' })
+    expect(screen.getByRole('tab', { name: '통신 정책' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('textbox', { name: '출발지 IP/CIDR' })).toHaveValue('192.0.2.0/24')
+    await userEvent.click(save)
+    await waitFor(() => expect(writes).toEqual([{ expectedRevision: 8, rules: policy.rules }]))
+    expect(reads).toBe(1)
+    expect(personalRequests).toBe(0)
+  })
+
+  test('a write row cannot borrow an unrelated workspace source to load the policy', async () => {
+    const vm = writeOnly(true)
+    let reads = 0
+    server.use(http.get('*/api/v1/admin/vms/:vmId/network-policy', () => { reads++; return HttpResponse.json({}) }))
+    renderApp(`/admin/vms/${vm.id}?tab=network-policy`)
+    await screen.findByRole('heading', { name: vm.displayName || vm.name })
+    expect(screen.queryByRole('tab', { name: '통신 정책' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '통신 정책 저장' })).not.toBeInTheDocument()
+    expect(reads).toBe(0)
+  })
+})
 
 describe('관리자 VM 상세', () => {
   test('allows scoped ORG_MANAGER edits and keeps ORG_VIEWER read-only', async () => {
@@ -214,6 +268,7 @@ describe('VM detail deletion capabilities', () => {
       managedOrgs: [...orgAdminProfile.managedOrgs,
         { orgId: uuid(2), orgName: '테스트 기관', role, requestMail: false }],
     }
+    AUTHORITY_OVERRIDES[foreignProfile.id] = mockInstitutionAuthority(foreignProfile)
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
       http.get('*/api/v1/me', () => HttpResponse.json(foreignProfile)))
     renderApp(`/admin/vms/${uuid(61)}`)

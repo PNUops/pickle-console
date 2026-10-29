@@ -1,3 +1,4 @@
+import { requestReaderKey } from '../../api/request-review'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -20,7 +21,8 @@ import {
   type WorkspaceSummary,
 } from '../../api/queries'
 import { useAuth } from '../../auth/auth-context'
-import { approvesForOrg } from '../../auth/permissions'
+import { canIssueRoster } from '../../auth/request-authority'
+import { hasWork, rowAllows, SYS_ADMIN, SYS_READERS } from '../../auth/institution-authority'
 import {
   Alert,
   Button,
@@ -141,7 +143,7 @@ export function RequestWizard({
     adminMode
       ? {
           ...INITIAL_COMMON,
-          orgId: approvesForOrg(user, admin.orgId) ? (admin.orgId ?? null) : null,
+          orgId: canIssueRoster(user, kind.type, admin.orgId) ? (admin.orgId ?? null) : null,
         }
       : {
           ...INITIAL_COMMON,
@@ -158,18 +160,18 @@ export function RequestWizard({
   // Every live workspace, personal ones included: an approver may file into
   // any of them for the organisation it decides for.
   const adminWorkspaces = useQuery({
-    queryKey: ['admin', 'workspaces', { all: true }],
-    queryFn: () => fetchAdminWorkspaces({ all: true }),
+    queryKey: ['admin', 'workspaces', { all: true, orgId: state.orgId, reader: requestReaderKey(user) }],
+    queryFn: () => fetchAdminWorkspaces({ all: true, orgId: state.orgId ?? undefined }),
     enabled: adminMode && state.orgId != null,
   })
   const eligibleWorkspaces: WorkspaceOption[] = adminMode
-    ? (adminWorkspaces.data ?? [])
+    ? (adminWorkspaces.data ?? []).filter((workspace) => rowAllows(workspace, `${kind.type === 'VM' ? 'vm' : 'llm'}.roster.issue`) && canIssueRoster(user, kind.type, state.orgId, workspace.id))
     : (workspaces.data ?? [])
   const selectedWorkspace = eligibleWorkspaces.find((w) => w.id === state.workspaceId)
 
   // Who the request may name. A workspace owner and an approver for the chosen
   // organisation may file for others; anyone else files for themselves.
-  const approver = approvesForOrg(user, state.orgId)
+  const approver = canIssueRoster(user, kind.type, state.orgId, state.workspaceId)
   const ownsWorkspace = selectedWorkspace?.myRole === 'OWNER'
   const recipientsOffered =
     !!kind.supportsRecipients &&
@@ -191,20 +193,21 @@ export function RequestWizard({
   const adminMembers = useQuery({
     queryKey: ['admin', 'workspaces', 'detail', state.workspaceId],
     queryFn: () => fetchAdminWorkspace(state.workspaceId!),
-    enabled: adminMode && state.workspaceId != null,
+    enabled: adminMode && state.workspaceId != null && (approver || hasWork(user, 'workspace.support.read', { workspaceId: state.workspaceId }, SYS_READERS)),
   })
   // People invited but not yet joined get their resource when they join, so
   // the approver has to be able to name them too.
   const adminInvitations = useQuery({
     queryKey: ['admin', 'workspaces', 'detail', state.workspaceId, 'invitations'],
     queryFn: () => fetchAdminWorkspaceInvitations(state.workspaceId!),
-    enabled: adminMode && recipientsOffered,
+    enabled: adminMode && recipientsOffered && (hasWork(user, 'workspace.support.read', { workspaceId: state.workspaceId }, SYS_READERS)
+      || hasWork(user, 'workspace.invitations.manage', { workspaceId: state.workspaceId }, SYS_ADMIN)),
   })
   const listed: RecipientCandidate[] = adminMode
     ? [
-        ...(adminMembers.data?.members ?? [])
+        ...(adminMembers.data?.members ?? adminMembers.data?.rosterCandidates?.map((candidate) => ({ ...candidate, userStatus: candidate.status })) ?? [])
           .filter((member) => member.userStatus === 'ACTIVE')
-          .map((member) => ({ key: `u:${member.userId}`, label: member.name, description: member.email })),
+          .map((member) => ({ key: `u:${member.userId}`, label: member.name, description: 'email' in member && typeof member.email === 'string' ? member.email : '명단 지급 대상' })),
         ...(adminInvitations.data ?? []).map((invitation) => ({
           key: `i:${invitation.id}`,
           label: invitation.email ?? invitation.studentNo ?? '—',
@@ -255,7 +258,7 @@ export function RequestWizard({
     return null
   }
   const candidatesLoading = adminMode
-    ? adminMembers.isPending || adminInvitations.isPending
+    ? adminMembers.isFetching || adminInvitations.isFetching
     : members.isPending || (ownsWorkspace && invitations.isPending)
   const candidatesError =
     (adminMode
@@ -303,7 +306,7 @@ export function RequestWizard({
 
   // An approver files only into organisations they decide for.
   const offeredOrgs = adminMode
-    ? (orgs.data ?? []).filter((org) => approvesForOrg(user, org.id))
+    ? (orgs.data ?? []).filter((org) => canIssueRoster(user, kind.type, org.id))
     : (orgs.data ?? [])
   const selectedOrg = offeredOrgs.find((o) => o.id === state.orgId)
   const offeredPeriods = periods.data ?? []
@@ -578,6 +581,7 @@ export function RequestWizard({
       // for its person to join, as the server does. A pasted student number
       // waits too unless an account already holds it.
       recipients: selectedRecipients.map((candidate) => ({
+        cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null },
         id: candidate.key,
         userId: candidate.key.startsWith('u:') ? candidate.key.slice(2) : null,
         name: candidate.key.startsWith('u:') ? candidate.label : null,
@@ -792,7 +796,7 @@ export function RequestWizard({
                     selected={state.recipients}
                     onChange={(next) => update({ recipients: next })}
                     required={adminMode}
-                    description={adminMode ? undefined : '고르지 않으면 본인에게 신청합니다.'}
+                    description={adminMode ? adminMembers.isEnabled ? undefined : '구성원 전체 목록은 별도 조회 업무가 필요합니다. 학번 명단으로 지급 대상자를 지정할 수 있습니다.' : '고르지 않으면 본인에게 신청합니다.'}
                     fieldError={shown.recipients}
                   />
                 )}
@@ -802,6 +806,7 @@ export function RequestWizard({
                     key={selectedWorkspace.id}
                     workspaceId={selectedWorkspace.id}
                     orgId={approver ? state.orgId : null}
+                    type={kind.type}
                     onAdd={(added) => addRoster(selectedWorkspace.id, added)}
                   />
                 )}
@@ -894,9 +899,9 @@ export function RequestWizard({
                 onCloseConfirm={() => setConfirmOpen(false)}
                 onConfirm={submitApproved}
                 pending={submit.isPending}
-                targetFacts={adminMembers.data?.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true }))}
-                targetFactsKnown={adminMembers.isSuccess}
-                workspaceReadable={adminMembers.isSuccess}
+                targetFacts={adminMembers.data?.members?.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true })) ?? adminMembers.data?.rosterCandidates?.map((candidate) => ({ userId: candidate.userId, name: candidate.name, userStatus: candidate.status, member: true }))}
+                targetFactsKnown={adminMembers.isSuccess && (adminMembers.data.members != null || adminMembers.data.rosterCandidates != null)}
+                workspaceReadable={hasWork(user, 'workspace.support.read', { workspaceId: state.workspaceId }, SYS_READERS)}
               />
             )}
 

@@ -10,21 +10,7 @@ import {
 /** 접었을 때 보여 주는 개수. 비싼 쪽부터 보여 주므로 앞의 몇 개가 판단에 쓰인다. */
 const HEAD = 5
 
-/**
- * 지금 적어 둔 두 목록으로 실제로 쓸 수 있는 모델이 무엇인지 보여 준다.
- *
- * 승인자가 목록을 적을 때 아는 것은 자기가 친 문자열뿐이고, 그 문자열이 카탈로그
- * 400개 중 무엇을 여는지는 저장하고 나서도 알 수 없었다. 특히 **최고가**가 예산이
- * 얼마나 빨리 녹을 수 있는지를 한 숫자로 말해 준다.
- *
- * 여기 숫자를 내는 판정은 **게이트웨이 규칙의 세 번째 손 사본**이지 공유 함수가
- * 아니다. 사본이 맞는 동안에만 이 수와 실제로 통과하는 요청이 같고, 그것을 지키는
- * 것은 credit-model-match.ts 의 케이스 표뿐이다. 그리고 이 화면이 답하는 것은 아직
- * 저장되지 않은 조합이다. 저장된 키가 무엇을 부를 수 있는지는 서버가 답한다.
- *
- * 카탈로그는 캐시라서 낡을 수 있다. 그래서 모든 문장이 "지금 목록 기준"이고, 목록에
- * 없는 이름을 적었다고 해서 틀렸다고 말하지 않는다.
- */
+/** Draft pattern matches against a cached catalogue, never a callability decision. */
 export function CreditModelPreview({
   catalogue,
   failed,
@@ -67,7 +53,7 @@ export function CreditModelPreview({
     }
   }, [catalogue, allowed, denied])
 
-  if (failed || !catalogue) return null
+  if (!catalogue) return null
 
   if (invalid) {
     return (
@@ -78,6 +64,10 @@ export function CreditModelPreview({
     )
   }
 
+  if (catalogue.models.length === 0 && catalogue.lastSuccessAt == null) {
+    return <p className="text-sm text-foreground-muted">공급자 목록의 성공 기록이 없어 패턴 후보를 확인할 수 없습니다. 올바른 모델 패턴은 직접 입력할 수 있습니다.</p>
+  }
+
   const total = catalogue.models.length
   const unrestricted = allowed.length === 0 && denied.length === 0
   const shown = open ? usable : usable.slice(0, HEAD)
@@ -85,17 +75,18 @@ export function CreditModelPreview({
   return (
     <div className="space-y-1 rounded border border-neutral-200 bg-neutral-50 p-3 text-sm">
       <p className="font-medium text-neutral-800">
-        {unrestricted
-          ? `허용 목록과 차단 목록이 모두 비어 있어 제한이 없습니다. 지금 카탈로그 ${total}개 전부를 쓸 수 있습니다.`
-          : `이 설정으로 쓸 수 있는 유료 모델 ${usable.length}개. 지금 카탈로그 ${total}개 기준입니다.`}
+        패턴 조건을 통과하는 후보 {usable.length}개. 저장된 카탈로그 {total}개 기준입니다.
       </p>
+      {unrestricted && <p>허용 목록과 차단 목록이 모두 비어 있어 모델 패턴으로 제한하지 않습니다.</p>}
+      {failed && <p className="text-amber-700">새 조회가 실패해 마지막으로 조회한 목록으로 비교합니다.</p>}
       <p className="text-neutral-600">
         {dearest
-          ? `최고가는 ${dearest.id}, 백만 토큰당 출력 $${dearest.completionPricePerMillion?.toLocaleString('ko-KR')}입니다.`
+          ? `기본 출력 단가가 알려진 후보 중 최대는 ${dearest.id}, 백만 토큰당 출력 $${dearest.completionPricePerMillion?.toLocaleString('ko-KR')}입니다.`
           : usable.length > 0
-            ? '가격을 아는 모델이 없어 최고가를 말할 수 없습니다.'
-            : '지금 카탈로그에는 이 설정으로 쓸 수 있는 모델이 없습니다. 목록에 적은 이름이 카탈로그에 아직 없을 수도 있습니다.'}
+            ? '기본 출력 단가를 아는 후보가 없어 단가 최댓값을 확인할 수 없습니다.'
+            : '현재 카탈로그에는 패턴 조건을 통과하는 후보가 없습니다. 직접 입력한 모델이 목록에 아직 없을 수도 있습니다.'}
       </p>
+      <p className="text-xs text-foreground-muted">기능 권한, 예산과 자격증명 연결, 키 상태와 공급자 지원 등은 별도 호출 조건입니다. 이 후보 수는 호출 허가나 성공을 보장하지 않습니다. 다른 가격 축과 조건별 단가는 가격 상세에서 확인해 주세요.</p>
       {denied.length > 0 ? (
         <p className="text-neutral-600">
           {blocked.length > 0
@@ -109,7 +100,7 @@ export function CreditModelPreview({
       {usable.length > 0 ? (
         <>
           <ul
-            aria-label="쓸 수 있는 유료 모델"
+            aria-label="패턴 조건을 통과하는 유료 모델 후보"
             className={`space-y-0.5 pt-1 text-neutral-700${
               open ? ' max-h-56 overflow-y-auto' : ''
             }`}

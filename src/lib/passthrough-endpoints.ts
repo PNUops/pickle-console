@@ -14,7 +14,7 @@ import type { AdminLlmKeyDetail } from '../api/queries'
  */
 
 /** A name the contract allows. */
-export type PassthroughEndpoint = AdminLlmKeyDetail['passthroughEndpoints'][number]
+export type PassthroughEndpoint = NonNullable<AdminLlmKeyDetail['passthroughEndpoints']>[number]
 
 interface Capability {
   label: string
@@ -32,7 +32,7 @@ const CAPABILITIES: Record<PassthroughEndpoint, Capability> = {
   chat: {
     label: 'Chat',
     description:
-      '텍스트를 생성합니다. Chat, Messages, Responses, completions 경로와 Claude Code, Codex 같은 에이전트 연결이 포함됩니다',
+      '텍스트를 생성합니다. Chat Completions와 Messages 경로, opencode와 Claude Code 연결이 포함됩니다',
   },
   web_search: {
     label: '웹 검색',
@@ -98,6 +98,9 @@ const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
   'pdf_ocr',
   'images',
   'embeddings',
+  'rerank',
+  'speech',
+  'transcriptions',
 ])
 
 /**

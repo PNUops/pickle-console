@@ -162,9 +162,9 @@ describe('신청 상세', () => {
     expect(screen.getByText('검토 결과')).toBeInTheDocument()
     const rpm = screen.getByText('부여 분당 요청 수').closest('div')!
     expect(within(rpm).getByText('300')).toBeInTheDocument()
-    // 승인자가 정하지 않은 축은 서비스 기본값으로 나간다.
+    // A granted daily null is unlimited, unlike the per-minute defaults.
     const daily = screen.getByText('부여 일일 토큰 수').closest('div')!
-    expect(within(daily).getByText('서비스 기본값')).toBeInTheDocument()
+    expect(within(daily).getByText('무제한')).toBeInTheDocument()
     // 신청에 대응 항목이 없는 축도 부여값으로는 남는다.
     const concurrency = screen.getByText('부여 동시 요청 수').closest('div')!
     expect(within(concurrency).getByText('4')).toBeInTheDocument()

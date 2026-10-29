@@ -1,9 +1,11 @@
-import { canAdminManageAccess, isOrgTier, isSysTier } from '../../../auth/permissions'
+import { isOrgTier, isSysTier } from '../../../auth/permissions'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
-import { adminReadScope } from './org-scope'
 import { uuid } from '../ids'
+import { mockAuthorityActor, mockAllowedWorkIds } from '../institution-authority'
+import { hasAnyWork, hasWork, workSources, SYS_ADMIN, SYS_READERS } from '../../../auth/institution-authority'
+import type { StoredFacts } from '../facts'
 import { adminUserStore } from './users'
 import { notificationStore } from './notifications'
 import { mailDeliveryStore } from './mail-deliveries'
@@ -13,7 +15,7 @@ import { orgs } from './reference'
 
 type Schemas = components['schemas']
 type AnnouncementView = Schemas['AnnouncementView']
-type AdminWorkspaceOption = Schemas['AdminWorkspaceOptionResponse']
+type AdminWorkspaceOption = StoredFacts<Schemas['AdminWorkspaceOptionResponse'], 'memberCount' | 'createdAt'>
 
 /* ─── fixtures ─── */
 
@@ -23,6 +25,7 @@ const workspaceOptionsByOrg: Record<string, AdminWorkspaceOption[]> = {
     {
       id: uuid(12),
       name: '캡스톤 3조',
+      metadataVisible: true, allowedWorkIds: [],
       memberCount: 4,
       kind: 'PROJECT',
       createdAt: '2026-06-01T10:00:00+09:00',
@@ -30,6 +33,7 @@ const workspaceOptionsByOrg: Record<string, AdminWorkspaceOption[]> = {
     {
       id: uuid(15),
       name: '알고리즘 스터디',
+      metadataVisible: true, allowedWorkIds: [],
       memberCount: 6,
       kind: 'STUDY',
       createdAt: '2026-06-10T10:00:00+09:00',
@@ -39,6 +43,7 @@ const workspaceOptionsByOrg: Record<string, AdminWorkspaceOption[]> = {
     {
       id: uuid(21),
       name: 'AI 동아리',
+      metadataVisible: true, allowedWorkIds: [],
       memberCount: 5,
       kind: 'CLUB',
       createdAt: '2026-06-15T10:00:00+09:00',
@@ -94,7 +99,8 @@ export function resetAnnouncementFixtures() {
 
 function profileOf(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-  return ACCESS_TOKENS[token] ?? null
+  const profile = ACCESS_TOKENS[token]
+  return profile ? mockAuthorityActor(profile) : null
 }
 
 function toView({ senderOrgId: _senderOrgId, senderUserId: _senderUserId, body: _body, ...view }: StoredAnnouncement): AnnouncementView {
@@ -102,7 +108,8 @@ function toView({ senderOrgId: _senderOrgId, senderUserId: _senderUserId, body: 
 }
 
 /** 워크스페이스 상세 픽스처 (계약 v0.19.0 — 구성원은 계정 상태 무관 전원). */
-export const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailResponse']> = {
+type WorkspaceFacts = Omit<StoredFacts<Schemas['AdminWorkspaceDetailResponse'], 'memberCount' | 'vmCount' | 'createdAt'>, 'members'> & { members: StoredFacts<Schemas['AdminWorkspaceMemberResponse'], 'email' | 'joinedAt'>[] }
+export const workspaceDetails: Record<string, WorkspaceFacts> = {
   [uuid(12)]: {
     id: uuid(12),
     kind: 'PROJECT',
@@ -111,6 +118,7 @@ export const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailRespo
     createdAt: '2026-06-01T10:00:00+09:00',
     memberCount: 4,
     vmCount: 2,
+    metadataVisible: true, allowedWorkIds: [],
     canUpdateInfo: false, canInviteMembers: false, canManageMembers: false, canManageOwners: false, canDelete: false, deleteBlockedReason: 'FORBIDDEN',
     members: [
       {
@@ -144,14 +152,26 @@ export const workspaceDetails: Record<string, Schemas['AdminWorkspaceDetailRespo
 
 const initialWorkspaceDetails = structuredClone(workspaceDetails)
 
+function workspaceWork(profile: NonNullable<ReturnType<typeof profileOf>>, id: string): string[] {
+  const linked = Object.entries(workspaceOptionsByOrg).filter(([, rows]) => rows.some((row) => row.id === id)).map(([institution]) => institution)
+  const ordinary = mockAllowedWorkIds(profile, { workspaceId: id, qualifiedInstitutionIds: linked }, 'WORKSPACE')
+  for (const work of ['vm.roster.issue', 'llm.roster.issue', 'vm.request.decide', 'llm.request.decide', 'domain.request.decide', 'gpu.request.decide']) {
+    if (profile.role === 'SYS_ADMIN' || workSources(profile, work).some((source) => hasWork(profile, work, { orgId: source.institutionId, workspaceId: id }))) ordinary.push(work)
+  }
+  return [...new Set(ordinary)]
+}
+
 export const announcementHandlers: RequestHandler[] = [
-  // No pending invitations unless a test overrides this.
-  http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', () => HttpResponse.json([])),
+  http.get('*/api/v1/admin/workspaces/:workspaceId/invitations', ({ request, params }) => {
+    const actor = profileOf(request)
+    return actor && ['workspace.support.read', 'workspace.invitations.manage'].some((work) => hasWork(actor, work, { workspaceId: String(params.workspaceId) }, work.endsWith('.manage') ? SYS_ADMIN : SYS_READERS)) ? HttpResponse.json([]) : forbidden()
+  }),
   http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params, request }) => {
     const id = String(params.workspaceId)
     const ordinary = workspaceStore.find((row) => row.detail.id === id)
     const detail = workspaceDetails[id] ?? (ordinary ? {
       id, name: ordinary.detail.name, description: ordinary.detail.description, kind: ordinary.detail.kind, createdAt: ordinary.detail.createdAt,
+      metadataVisible: true, allowedWorkIds: [],
       memberCount: ordinary.members.length, vmCount: vmStore.filter((row) => row.workspaceId === id && row.status !== 'DELETED').length,
       members: ordinary.members.map((member) => ({ userId: member.userId, name: member.name, email: member.email, workspaceRole: member.role,
         userStatus: adminUserStore.find((row) => row.id === member.userId)?.status ?? 'ACTIVE', supportDetailVisible: false, canChangeRole: false, canRemove: false, joinedAt: ordinary.detail.createdAt })),
@@ -166,45 +186,53 @@ export const announcementHandlers: RequestHandler[] = [
       })
     }
     const actor = profileOf(request)
-    const writer = !!actor && canAdminManageAccess(actor.role)
-    const structure = writer && detail.kind !== 'PERSONAL'
-    const owners = detail.members.filter((member) => member.workspaceRole === 'OWNER').length
-    return HttpResponse.json({ ...detail, canUpdateInfo: writer, canInviteMembers: structure, canManageMembers: structure, canManageOwners: structure, canDelete: structure && detail.vmCount === 0, deleteBlockedReason: !writer ? 'FORBIDDEN' : detail.kind === 'PERSONAL' ? 'PERSONAL' : detail.vmCount > 0 ? 'REMAINING_RESOURCES' : null, members: detail.members.map((member) => ({ ...member, canChangeRole: structure && (member.workspaceRole !== 'OWNER' || owners > 1), canRemove: structure && (member.workspaceRole !== 'OWNER' || owners > 1), supportDetailVisible: isSysTier(actor?.role ?? 'USER') || !isSysTier(adminUserStore.find((user) => user.id === member.userId)?.role ?? 'USER') })) }, { status: 200 })
+    if (!actor) return problemResponse(unauthorizedProblem)
+    const allowedWorkIds = workspaceWork(actor, id)
+    if (allowedWorkIds.length === 0) return forbidden()
+    const allowed = (work: string) => allowedWorkIds.includes(work)
+    const metadataVisible = allowed('workspace.support.read')
+    const info = allowed('workspace.info.update')
+    const owner = allowed('workspace.owners.manage') && detail.kind !== 'PERSONAL'
+    const member = allowed('workspace.members.manage') && detail.kind !== 'PERSONAL'
+    const invite = allowed('workspace.invitations.manage') && detail.kind !== 'PERSONAL'
+    const terminate = allowed('workspace.terminate') && detail.kind !== 'PERSONAL'
+    const owners = detail.members.filter((row) => row.workspaceRole === 'OWNER').length
+    const readMembers = metadataVisible || owner || member
+    return HttpResponse.json({ ...detail, metadataVisible, allowedWorkIds,
+      createdAt: metadataVisible ? detail.createdAt : null, memberCount: metadataVisible ? detail.memberCount : null,
+      vmCount: metadataVisible && hasWork(actor, 'vm.metadata.support.read', { workspaceId: id }, SYS_READERS) ? detail.vmCount : null, description: metadataVisible || info ? detail.description : null,
+      canUpdateInfo: info, canInviteMembers: invite, canManageMembers: member, canManageOwners: owner,
+      canDelete: terminate && detail.vmCount === 0, deleteBlockedReason: !terminate ? detail.kind === 'PERSONAL' ? 'PERSONAL' : 'FORBIDDEN' : detail.vmCount > 0 ? 'REMAINING_RESOURCES' : null,
+      rosterCandidates: allowed('vm.roster.issue') || allowed('llm.roster.issue') ? detail.members.filter((row) => row.userStatus === 'ACTIVE').map((row) => ({ userId: row.userId, name: row.name, role: row.workspaceRole, status: row.userStatus })) : null,
+      members: readMembers ? detail.members.map((row) => ({ ...row, email: metadataVisible ? row.email : null, joinedAt: metadataVisible ? row.joinedAt : null,
+        canChangeRole: owner && (row.workspaceRole !== 'OWNER' || owners > 1),
+        canRemove: row.workspaceRole === 'OWNER' ? owner && owners > 1 : member,
+        supportDetailVisible: hasWork(actor, 'student.support.read', {}, SYS_READERS) && (isSysTier(actor.role) || !isSysTier(adminUserStore.find((user) => user.id === row.userId)?.role ?? 'USER')) })) : null,
+    }, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/workspaces', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
-    // all=true: every workspace to any admin role (the admin request screen).
-    if (url.searchParams.get('all') === 'true') {
-      return HttpResponse.json(Object.values(workspaceOptionsByOrg).flat(), { status: 200 })
-    }
     const orgId = url.searchParams.get('orgId')
-    // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다. 보유하지 않은
-    // 기관이나 없는 기관을 지정하면 404 (존재 비공개).
-    const scope = adminReadScope(profile, orgId, '/api/v1/admin/workspaces')
-    if (scope.notFound) return scope.notFound
-    if (orgId && !(orgId in workspaceOptionsByOrg)) {
-      return problemResponse({
-        type: 'about:blank',
-        title: '리소스를 찾을 수 없습니다',
-        status: 404,
-        detail: '요청한 리소스가 존재하지 않습니다.',
-        instance: '/api/v1/admin/workspaces',
-        code: 'RESOURCE_NOT_FOUND',
-      })
-    }
-    const options = Object.entries(workspaceOptionsByOrg)
-      .filter(([optionOrgId]) => scope.matches(optionOrgId))
-      .flatMap(([, list]) => list)
-    return HttpResponse.json(options, { status: 200 })
+    const all = url.searchParams.get('all') === 'true'
+    const fixed = Object.entries(workspaceOptionsByOrg).filter(([institution]) => all || !orgId || institution === orgId).flatMap(([, rows]) => rows)
+    const rows = [...fixed, ...workspaceStore.map((row) => ({ id: row.detail.id, name: row.detail.name, kind: row.detail.kind,
+      memberCount: row.members.length, createdAt: row.detail.createdAt, metadataVisible: true, allowedWorkIds: [] }))]
+    const unique = [...new Map(rows.map((row) => [row.id, row])).values()]
+    return HttpResponse.json(unique.flatMap((row) => {
+      const allowedWorkIds = workspaceWork(profile, row.id)
+      if (allowedWorkIds.length === 0) return []
+      const metadataVisible = allowedWorkIds.includes('workspace.support.read')
+      return [{ ...row, allowedWorkIds, metadataVisible, memberCount: metadataVisible ? row.memberCount : null, createdAt: metadataVisible ? row.createdAt : null }]
+    }), { status: 200 })
   }),
 
   http.get('*/api/v1/admin/announcements', ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role === 'USER') return forbidden()
+    if (!hasAnyWork(profile, ['institution.announcement.read'], SYS_READERS)) return forbidden()
     const url = new URL(request.url)
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
@@ -214,7 +242,7 @@ export const announcementHandlers: RequestHandler[] = [
   http.get('*/api/v1/admin/announcements/:announcementId', ({ request, params }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role === 'USER') return forbidden()
+    if (!hasAnyWork(profile, ['institution.announcement.read'], SYS_READERS)) return forbidden()
     const row = announcementStore.find((item) => item.id === String(params.announcementId) && visibleAnnouncement(item, profile))
     if (!row) return problemResponse({ type: 'about:blank', status: 404, code: 'RESOURCE_NOT_FOUND', title: '발송건을 찾을 수 없습니다' })
     return HttpResponse.json({ ...toView(row), body: row.body })
@@ -222,11 +250,11 @@ export const announcementHandlers: RequestHandler[] = [
   ...(['preview', 'create'] as const).map((operation) => http.post(`*/api/v1/admin/announcements${operation === 'preview' ? '/preview' : ''}`, async ({ request }) => {
     const profile = profileOf(request)
     if (!profile) return problemResponse(unauthorizedProblem)
-    if (profile.role !== 'SYS_ADMIN' && profile.role !== 'ORG_ADMIN') return forbidden()
+    if (!hasAnyWork(profile, ['institution.announcement.send', 'workspace.announcement.send'], SYS_ADMIN)) return forbidden()
     const body = await request.json() as Schemas['AnnouncementCreateRequest']
     const resolved = resolveTarget(body, profile)
     if ('error' in resolved) return resolved.error
-    const recipients = adminUserStore.filter((row) => row.status === 'ACTIVE' && (body.scope === 'ALL' || (body.scope === 'WORKSPACE' ? row.memberships.some((membership) => membership.workspaceId === resolved.workspaceId) : row.memberships.some((membership) => membership.vmOrgIds.includes(resolved.orgId!)) || row.managedOrgs.some((held) => held.orgId === resolved.orgId && (held.role === 'ORG_ADMIN' || held.role === 'ORG_MANAGER')))))
+    const recipients = adminUserStore.filter((row) => row.status === 'ACTIVE' && (body.scope === 'ALL' || (body.scope === 'WORKSPACE' ? row.memberships.some((membership) => membership.workspaceId === resolved.workspaceId) : row.memberships.some((membership) => membership.vmOrgIds?.includes(resolved.orgId!)) || row.managedOrgs.some((held) => held.orgId === resolved.orgId && (held.role === 'ORG_ADMIN' || held.role === 'ORG_MANAGER')))))
     const sample = recipients.filter((row) => isSysTier(profile.role) || !isSysTier(row.role)).slice(0, 20).map((row) => ({ userId: row.id, name: row.name, email: row.email }))
     const warnings = recipients.length === 0 ? ['발송 대상자가 0명입니다. 알림과 메일이 생성되지 않습니다.'] : []
     if (isOrgTier(profile.role) && recipients.some((row) => isSysTier(row.role))) warnings.push('일부 발송 대상자는 계정 열람 권한 때문에 예시에 표시되지 않습니다.')
@@ -243,25 +271,30 @@ export const announcementHandlers: RequestHandler[] = [
 ]
 
 function forbidden() { return problemResponse({ type: 'about:blank', status: 403, code: 'ACCESS_DENIED', title: '발송 권한이 없습니다' }) }
-function visibleAnnouncement(row: StoredAnnouncement, profile: Schemas['UserProfileResponse']) {
-  if (isSysTier(profile.role) || row.scope === 'ALL') return true
+function visibleAnnouncement(row: StoredAnnouncement, profile: NonNullable<ReturnType<typeof profileOf>>) {
+  if (isSysTier(profile.role)) return true
+  const sources = workSources(profile, 'institution.announcement.read')
+  if (sources.length === 0) return false
+  if (row.scope === 'ALL') return true
   const author = adminUserStore.find((candidate) => candidate.id === row.senderUserId)
-  return !!author?.managedOrgs.some((held) => profile.managedOrgs.some((readable) => readable.orgId === held.orgId))
+  return author?.managedOrgs.some((held) => sources.some((source) => source.institutionId === held.orgId)) === true
 }
-function resolveTarget(body: Schemas['AnnouncementCreateRequest'], profile: Schemas['UserProfileResponse']): { orgId: string | null; workspaceId: string | null } | { error: Response } {
+function resolveTarget(body: Schemas['AnnouncementCreateRequest'], profile: NonNullable<ReturnType<typeof profileOf>>): { orgId: string | null; workspaceId: string | null } | { error: Response } {
   if (body.scope === 'ALL' && profile.role !== 'SYS_ADMIN') return { error: forbidden() }
   const errors: { field: string; message: string }[] = []
   if (body.scope === 'ALL' && body.orgId != null) errors.push({ field: 'orgId', message: '전체 공지에는 기관을 지정할 수 없습니다.' })
   if (body.scope !== 'WORKSPACE' && body.workspaceId != null) errors.push({ field: 'workspaceId', message: body.scope === 'ALL' ? '전체 공지에는 워크스페이스를 지정할 수 없습니다.' : '기관 공지에는 워크스페이스를 지정할 수 없습니다.' })
   if (body.scope === 'WORKSPACE' && body.orgId != null) errors.push({ field: 'orgId', message: '워크스페이스 공지에는 기관을 지정할 수 없습니다.' })
-  const administered = profile.managedOrgs.filter((held) => held.role === 'ORG_ADMIN')
-  const orgId = body.scope === 'ORG' ? body.orgId ?? (isOrgTier(profile.role) && administered.length === 1 ? administered[0].orgId : null) : null
-  if (body.scope === 'ORG' && isOrgTier(profile.role) && administered.length === 0) return { error: forbidden() }
-  if (body.scope === 'ORG' && isOrgTier(profile.role) && body.orgId != null && (!orgs.some((org) => org.id === orgId) || !administered.some((held) => held.orgId === orgId))) errors.push({ field: 'orgId', message: '자기 기관에만 기관 공지를 발송할 수 있습니다.' })
+  const sources = workSources(profile, 'institution.announcement.send')
+  const orgId = body.scope === 'ORG' ? body.orgId ?? (sources.length === 1 ? sources[0].institutionId : null) : null
+  if (body.scope === 'ORG' && profile.role !== 'SYS_ADMIN') {
+    if (sources.length === 0) return { error: forbidden() }
+    if (orgId && !hasWork(profile, 'institution.announcement.send', { orgId }, SYS_ADMIN)) errors.push({ field: 'orgId', message: '자기 기관에만 기관 공지를 발송할 수 있습니다.' })
+  }
   if (body.scope === 'ORG' && !orgId) errors.push({ field: 'orgId', message: '기관 공지에는 대상 기관이 필요합니다.' })
   if (body.scope === 'WORKSPACE' && !body.workspaceId) errors.push({ field: 'workspaceId', message: '워크스페이스 공지에는 대상 워크스페이스가 필요합니다.' })
   if (errors.length) return { error: problemResponse({ type: 'about:blank', status: 422, code: 'VALIDATION_FAILED', title: '입력값이 올바르지 않습니다', errors }) }
   if (body.scope === 'ORG' && !orgs.some((org) => org.id === orgId)) return { error: problemResponse({ type: 'about:blank', status: 404, code: 'RESOURCE_NOT_FOUND', title: '해당 기관이 존재하지 않습니다.' }) }
-  if (body.scope === 'WORKSPACE' && !Object.entries(workspaceOptionsByOrg).some(([heldOrgId, rows]) => (isSysTier(profile.role) || administered.some((held) => held.orgId === heldOrgId)) && rows.some((workspace) => workspace.id === body.workspaceId))) return { error: problemResponse({ type: 'about:blank', status: 404, code: 'RESOURCE_NOT_FOUND', title: '대상 워크스페이스를 찾을 수 없습니다' }) }
+  if (body.scope === 'WORKSPACE' && !workspaceWork(profile, body.workspaceId!).includes('workspace.announcement.send')) return { error: problemResponse({ type: 'about:blank', status: 404, code: 'RESOURCE_NOT_FOUND', title: '대상 워크스페이스를 찾을 수 없습니다' }) }
   return { orgId, workspaceId: body.scope === 'WORKSPACE' ? body.workspaceId ?? null : null }
 }

@@ -438,7 +438,7 @@ describe('bulk request from the administration area', () => {
 })
 
 function recipient(overrides: Partial<Recipient> & Pick<Recipient, 'id' | 'status'>): Recipient {
-  return { userId: null, name: null, invitee: null, resourceId: null, reason: null, ...overrides }
+  return { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, userId: null, name: null, invitee: null, resourceId: null, reason: null, ...overrides }
 }
 
 function bulkRequest(base: RequestDetail, overrides: Partial<RequestDetail>): RequestDetail {

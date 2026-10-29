@@ -4,7 +4,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { requestReaderKey } from '../api/request-review'
 import { fetchAdminOrgs, fetchSupportOrgs } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
-import { canReadSupportMetadata, isOrgTier, isSysTier, usesGlobalSupportScope } from '../auth/permissions'
+import { isOrgTier, isSysTier, usesGlobalSupportScope } from '../auth/permissions'
+import { canEnterAdministration, hasWork, SYS_READERS } from '../auth/institution-authority'
 import { adminPath } from './paths'
 import { parseGuidePath } from './docs-paths'
 import { ADMIN_ORG_SCOPE_KEY } from './storage-keys'
@@ -38,24 +39,25 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
   const requestedOrgId = rawOrgId && isUuid(rawOrgId) ? rawOrgId.toLowerCase() : rawOrgId
   const orgTier = !!user && isOrgTier(user.role)
   const systemTier = !!user && isSysTier(user.role)
-  const globalSupport = !!user && canReadSupportMetadata(user.role) && usesGlobalSupportScope(location.pathname)
-  const globalRead = systemTier || globalSupport
+  const globalSupport = usesGlobalSupportScope(location.pathname)
+  const supportCatalogue = globalSupport && hasWork(user, 'student.support.read', {}, SYS_READERS)
+  const globalRead = canEnterAdministration(user)
   const orgs = useQuery({
-    queryKey: globalSupport ? ['admin', 'support-orgs', requestReaderKey(user)] : ['admin', 'orgs'],
-    queryFn: globalSupport ? fetchSupportOrgs : fetchAdminOrgs,
-    enabled: globalRead,
+    queryKey: supportCatalogue ? ['admin', 'support-orgs', requestReaderKey(user)] : ['admin', 'orgs'],
+    queryFn: supportCatalogue ? fetchSupportOrgs : fetchAdminOrgs,
+    enabled: systemTier || supportCatalogue,
   })
 
   const options = useMemo<AdminOrgOption[]>(() => {
-    if (orgTier && !globalSupport) {
-      return (user?.managedOrgs ?? []).map((org) => ({
-        id: org.orgId,
-        name: org.orgName,
-        role: org.role,
+    if (!systemTier && !supportCatalogue) {
+      return (user?.institutionAuthority?.assignments ?? []).map((grant) => ({
+        id: grant.institutionId,
+        name: grant.institutionName,
+        role: user?.managedOrgs.find((org) => org.orgId === grant.institutionId)?.role,
       }))
     }
     return (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name, status: org.status, role: user?.managedOrgs.find((held) => held.orgId === org.id)?.role }))
-  }, [globalSupport, orgTier, orgs.data, user?.managedOrgs])
+  }, [supportCatalogue, systemTier, orgs.data, user?.managedOrgs, user?.institutionAuthority])
 
   const activeOrg = useMemo(() => {
     if (globalRead) return options.find((org) => org.id === requestedOrgId)
@@ -67,13 +69,12 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
   }, [options, requestedOrgId, globalRead])
 
   const invalidSystemScope =
-    globalRead && requestedOrgId != null && orgs.isSuccess && activeOrg == null
-  const resolving = globalRead && requestedOrgId != null && orgs.isPending
-  const scopeError = globalRead && orgs.isError
-  const requiresSelection = orgTier && !globalSupport && activeOrg == null
-  const ready = globalRead
-    ? requestedOrgId == null || (orgs.isSuccess && activeOrg != null)
-    : orgTier && activeOrg != null
+    systemTier && requestedOrgId != null && orgs.isSuccess && activeOrg == null
+  const resolving = systemTier && requestedOrgId != null && orgs.isPending
+  const scopeError = (systemTier || supportCatalogue) && orgs.isError
+  const requiresSelection = false
+  const ready = globalRead && (requestedOrgId == null || isUuid(requestedOrgId)) && !resolving
+    && (!systemTier || requestedOrgId == null || orgs.isSuccess && activeOrg != null)
 
   const replaceScope = useCallback(
     (orgId: string | undefined, preserveGlobalSelection = false, preserveNoticeReturn = false) => {
@@ -83,6 +84,12 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
       // 이전 페이지의 기관 종속 필터를 새 scope에 가져가지 않는다.
       next.delete('orgId')
       next.delete('workspaceId')
+      if (location.pathname.startsWith('/admin/llm/')) {
+        next.delete('openrouterAccountId')
+        next.delete('requestId')
+        next.delete('consumerPage')
+        next.delete('reviewPage')
+      }
       if (!(preserveGlobalSelection && location.pathname === '/admin/users')) next.delete('page')
       if (preserveNoticeReturn && next.has('returnTo')) next.set('returnTo', location.pathname.startsWith('/admin/users/')
         ? userSupportReturn(next.get('returnTo'), orgId)
@@ -139,20 +146,20 @@ export function AdminScopeProvider({ children }: { children: ReactNode }) {
     () => ({
       tier: orgTier ? 'org' : 'system',
       globalSupport,
-      activeOrgId: activeOrg?.id,
+      activeOrgId: activeOrg?.id ?? requestedOrgId,
       activeOrg,
       activeOrgRole: activeOrg?.role,
       options,
       requiresSelection,
       resolving,
-      catalogPending: globalRead && orgs.isPending,
+      catalogPending: (systemTier || supportCatalogue) && orgs.isPending,
       error: scopeError,
       ready,
       retry,
       setActiveOrgId,
       path: (path) => adminPath(path, activeOrg?.id ?? (globalRead ? requestedOrgId : undefined)),
     }),
-    [activeOrg, options, orgTier, globalSupport, globalRead, orgs.isPending, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId, requestedOrgId],
+    [activeOrg, options, orgTier, globalSupport, globalRead, supportCatalogue, systemTier, orgs.isPending, ready, requiresSelection, resolving, retry, scopeError, setActiveOrgId, requestedOrgId],
   )
 
   return <AdminScopeContext.Provider value={value}>{children}</AdminScopeContext.Provider>

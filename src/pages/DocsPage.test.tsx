@@ -27,7 +27,9 @@ describe('사용 가이드', () => {
     // 화면에 렌더되는지만 본다 — 산문에도 나오는 이름으로 확인하면 목록이 통째로
     // 사라져도 통과하므로, 목록에만 있는 이름을 고른다.
     expect(screen.getByText('parallel_tool_calls')).toBeInTheDocument()
-    expect(screen.getByText('max_completion_tokens')).toBeInTheDocument()
+    // The legacy completions section names this field in prose too.
+    const commonChips = screen.getByText('두 종류에 공통').parentElement!
+    expect(within(commonChips).getByText('max_completion_tokens')).toBeInTheDocument()
     expect(screen.getByText('presence_penalty')).toBeInTheDocument()
     // 축이 갈렸다는 것이 화면에도 보여야 한다. 목록 하나만 두면 유료 전용 필드를
     // 자체 서빙에 보내도 되는 것처럼 읽힌다.
@@ -36,8 +38,13 @@ describe('사용 가이드', () => {
     // 산문에도 같은 이름이 나오므로 칩 목록 안에서만 찾는다. 설명이 아니라 목록에
     // 들어 있는지가 이 시험이 지키려는 것이다.
     const paidChips = screen.getByText('유료 모델에만').parentElement!
-    expect(within(paidChips).getByText('reasoning_effort')).toBeInTheDocument()
     expect(within(paidChips).getByText('verbosity')).toBeInTheDocument()
+    // reasoning_effort is not a paid-only field any more: self-hosted models take it
+    // too, and the guide says so under its own heading with the accepted values.
+    expect(within(paidChips).queryByText('reasoning_effort')).not.toBeInTheDocument()
+    const reasoning = screen.getByText('추론 조절').parentElement!
+    expect(reasoning.textContent ?? '').toContain('reasoning_effort로 답하기 전에 추론하는 정도를 고릅니다. 자체 서빙 모델이 받는 값은')
+    expect(reasoning.textContent ?? '').toContain('none, minimal, low, medium, high, xhigh')
     // 거부는 자체 서빙 쪽 사실이다. 유료 축에는 허용 목록이 아예 없어 목록 밖 필드가
     // 그대로 전달되므로, 제목이 축을 말하지 않으면 화면이 두 축 모두에 거부를 약속한다.
     expect(
@@ -52,7 +59,7 @@ describe('사용 가이드', () => {
 
   test('lists every non-chat route and its permission requirement', async () => {
     renderApp('/docs/llm/features')
-    await screen.findByRole('heading', { name: '이미지와 임베딩' })
+    await screen.findByRole('heading', { name: '이미지, 임베딩, 리랭크' })
 
     // 경로 목록은 lib/llm-api.ts 가 갖는다. 여기서는 그것이 실제로 표에 그려지는지를
     // 본다 — 전부 확인하는 것은 하나만 보면 map 이 깨져도 통과하기 때문이다.
@@ -60,6 +67,11 @@ describe('사용 가이드', () => {
     expect(screen.getByText(/POST \/v1\/images\/generations$/)).toBeInTheDocument()
     expect(screen.getByText(/GET \/v1\/images\/models/)).toBeInTheDocument()
     expect(screen.getByText(/POST \/v1\/embeddings/)).toBeInTheDocument()
+    expect(screen.getByText(/POST \/v1\/rerank$/)).toBeInTheDocument()
+    // The audio section names these paths in prose too, so look in the table.
+    const routeTable = screen.getByText(/POST \/v1\/embeddings/).closest('table')!
+    expect(within(routeTable).getByText(/POST \/v1\/audio\/speech$/)).toBeInTheDocument()
+    expect(within(routeTable).getByText(/POST \/v1\/audio\/transcriptions$/)).toBeInTheDocument()
 
     const body = document.body.textContent ?? ''
     // 이 경로들은 키에 기능이 부여돼야 열린다. 그 말이 없으면 403 을 받은 사람이
@@ -75,6 +87,45 @@ describe('사용 가이드', () => {
     expect(body).toContain('streaming_not_supported')
   })
 
+  test('explains the audio routes and the pcm default', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: 'TTS와 STT' })
+
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('POST /v1/audio/speech')
+    expect(body).toContain('POST /v1/audio/transcriptions')
+    // The SDK omits the format and gets raw pcm; saved as .mp3 it does not play.
+    expect(body).toContain('response_format="mp3"')
+    expect(body).toContain('verbose_json')
+    expect(body).toContain('large_request_busy')
+    // Chat audio output needs the speech grant, the same as the speech route.
+    expect(body).toContain('음성 출력(modalities의 audio)은 TTS 권한')
+  })
+
+  test('explains the legacy completions route and its empty-text case', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: '레거시 Completions' })
+
+    const body = document.body.textContent ?? ''
+    // Paid models only: without this the self-served name fails with no hint why.
+    expect(body).toContain('POST /v1/completions')
+    expect(body).toContain('model_not_available_on_route')
+    // A reasoning model can answer with an empty text; a reader who is not told
+    // so suspects the key or the gateway.
+    expect(body).toContain('text가 빈 채로 끝날 수 있으므로')
+  })
+
+  test('says how to call rerank and where its price is not shown', async () => {
+    renderApp('/docs/llm/features')
+    await screen.findByRole('heading', { name: '검색한 문서를 리랭크하기' })
+
+    const body = document.body.textContent ?? ''
+    expect(body).toContain('relevance_score')
+    // Rerank models are missing from the key's model list, prices included.
+    expect(body).toContain('모델 후보 보기에 나오지 않아')
+    expect(body).toContain('router_not_supported')
+  })
+
   test('scopes forwarded headers to paid-model chat', async () => {
     renderApp('/docs/llm/features')
     await screen.findByRole('heading', { name: '요청 헤더와 응답 헤더' })
@@ -87,7 +138,7 @@ describe('사용 가이드', () => {
     // Without the scope a student sends the headers to the self-hosted model
     // and reads the missing effect as a bug.
     const body = document.body.textContent ?? ''
-    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩 요청에서는 넘기지 않습니다')
+    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩, 리랭크, TTS, STT 요청에서는 넘기지 않습니다')
     expect(body).toContain('1024바이트를 넘는 값은 넘기지 않습니다')
     expect(body).toContain('HTTP-Referer')
   })
@@ -128,6 +179,25 @@ describe('사용 가이드', () => {
     expect(body).toContain('"baseURL": "https://llm.pcl.kr/v1"')
   })
 
+  test('connects Codex through the Responses route', async () => {
+    renderApp('/docs/llm/connect')
+    await screen.findByRole('heading', { name: 'Codex와 OpenAI SDK Responses 연결' })
+
+    const body = document.body.textContent ?? ''
+    // Codex appends /responses to the OpenAI base, so this one keeps /v1,
+    // unlike the Anthropic base on the same page.
+    expect(body).toContain('base_url = "https://llm.pcl.kr/v1"')
+    expect(body).toContain('wire_api = "responses"')
+    // Codex adds a web search tool by default; a key without the web search
+    // grant is refused on every request unless this line is there.
+    expect(body).toContain('web_search = "disabled"')
+    // A student who sends these believes the answer is stored and later fails
+    // on the id.
+    expect(body).toContain('previous_response_id')
+    expect(body).toContain('code_interpreter')
+    expect(body).toContain('local_shell')
+  })
+
   test('keeps actionable budget guidance without hidden defaults', async () => {
     renderApp('/docs/llm/limits')
     await screen.findByRole('heading', { name: '한도에 걸렸을 때' })
@@ -138,7 +208,7 @@ describe('사용 가이드', () => {
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
     expect(document.body.textContent ?? '').toContain('quota_exhausted')
     expect(document.body.textContent ?? '').toContain('Retry-After')
-    expect(document.body.textContent ?? '').toContain('0원을 썼다는 뜻이 아닙니다')
+    expect(document.body.textContent ?? '').toContain('0달러를 썼다는 뜻이 아닙니다')
   })
 
   test('pairs stable error codes with HTTP status', async () => {

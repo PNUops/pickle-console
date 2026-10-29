@@ -1,0 +1,62 @@
+{
+  "from" : "2026-10-21",
+  "to" : "2026-10-27",
+  "attributedCostUsd" : 1.25,
+  "requests" : 10,
+  "pricedRequests" : 7,
+  "keysUsed" : 2,
+  "keysLinked" : 3,
+  "points" : [ {
+    "day" : "2026-10-21",
+    "attributedCostUsd" : null,
+    "pricedRequests" : 0,
+    "requests" : 0
+  }, {
+    "day" : "2026-10-22",
+    "attributedCostUsd" : null,
+    "pricedRequests" : 0,
+    "requests" : 0
+  }, {
+    "day" : "2026-10-23",
+    "attributedCostUsd" : null,
+    "pricedRequests" : 0,
+    "requests" : 0
+  }, {
+    "day" : "2026-10-24",
+    "attributedCostUsd" : null,
+    "pricedRequests" : 0,
+    "requests" : 0
+  }, {
+    "day" : "2026-10-25",
+    "attributedCostUsd" : null,
+    "pricedRequests" : 0,
+    "requests" : 0
+  }, {
+    "day" : "2026-10-26",
+    "attributedCostUsd" : null,
+    "pricedRequests" : 0,
+    "requests" : 0
+  }, {
+    "day" : "2026-10-27",
+    "attributedCostUsd" : 1.25,
+    "pricedRequests" : 7,
+    "requests" : 10
+  } ],
+  "keys" : [ {
+    "keyId" : "b20f744c-3f80-4242-94f2-71fec735d7b0",
+    "keyName" : "higher requests",
+    "requests" : 7,
+    "inputTokens" : 70,
+    "outputTokens" : 0,
+    "attributedCostUsd" : 1.25,
+    "pricedRequests" : 7
+  } ],
+  "generatedAt" : "2026-10-27T00:45:36.032505Z",
+  "timezone" : "Asia/Seoul",
+  "source" : "DAILY_ROLLUP_ATTRIBUTION_CURRENT_ACCOUNT_BINDING",
+  "page" : 0,
+  "size" : 1,
+  "totalKeyElements" : 2,
+  "totalKeyPages" : 2,
+  "sort" : "REQUESTS_DESC"
+}

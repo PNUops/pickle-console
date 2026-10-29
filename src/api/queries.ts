@@ -265,11 +265,12 @@ export function resolveWorkspaceRoster(
   workspaceId: string,
   studentNos: string[],
   orgId?: string | null,
+  type?: ResourceType,
 ): Promise<RosterResolution[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/workspaces/{workspaceId}/roster/resolve', {
       params: { path: { workspaceId } },
-      body: { studentNos, orgId: orgId ?? null },
+      body: { studentNos, orgId: orgId ?? null, ...(type ? { type } : {}) },
     })
     if (!data) throw toApiError(error, '명단을 확인하지 못했습니다.')
     return data.results
@@ -655,6 +656,9 @@ export type UpstreamAvailability = Schemas['LlmUpstreamAvailability']
 export type ActiveProbeStatus = Schemas['LlmActiveProbeStatus']
 export type LlmCatalogStatus = Schemas['LlmCatalogStatus']
 export type AdminLlmMetrics = Schemas['LlmMetricsResponse']
+export type AdminLlmCapacity = Schemas['AdminLlmCapacityResponse']
+export type InferenceDevice = NonNullable<AdminLlmCapacity['telemetry']['device']>
+export type LlmCapacityQuery = NonNullable<import('./schema').operations['getAdminLlmCapacity']['parameters']['query']>
 export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
 export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']
 export type AdminLlmUsage = Schemas['AdminLlmUsageResponse']
@@ -666,6 +670,12 @@ export type LlmLimitReview = Schemas['LlmLimitReviewResponse']
 export type LlmLimitPressure = Schemas['LlmLimitPressureResponse']
 export type LlmUsageQuality = Schemas['LlmUsageQualityResponse']
 export type AdminLlmUsageDays = 7 | 30 | 90
+export type AdminLlmKeysQuery = NonNullable<import('./schema').operations['listAdminLlmKeys']['parameters']['query']>
+export type AdminLlmUsageQuery = NonNullable<import('./schema').operations['getAdminLlmUsage']['parameters']['query']>
+export type AdminLlmAccountUsageQuery = NonNullable<import('./schema').operations['getAdminLlmAccountUsage']['parameters']['query']>
+export type AdminLlmKeyProjectionQuery = NonNullable<import('./schema').operations['getAdminLlmKey']['parameters']['query']>
+export type LlmAccountImpactProjection = Schemas['LlmAccountImpactProjection']
+export type LlmKeyLimitsProjection = Schemas['LlmKeyLimitsProjection']
 export type OpenRouterAccount = Schemas['OpenRouterAccountResponse']
 export type OpenRouterAccountStatus = Schemas['OpenRouterAccountStatus']
 export type OpenRouterCredentialState = Schemas['OpenRouterCredentialStateResponse']
@@ -838,16 +848,7 @@ export function revokeOpenRouterCredential(
   })
 }
 
-export function fetchAdminLlmKeys(params: {
-  orgId?: string
-  workspaceId?: string
-  requestId?: string
-  openrouterAccountId?: string
-  status?: LlmApiKeyStatus
-  query?: string
-  page?: number
-  size?: number
-}): Promise<AdminLlmKeyPage> {
+export function fetchAdminLlmKeys(params: AdminLlmKeysQuery): Promise<AdminLlmKeyPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys', { params: { query: params } })
     if (!data) throw toApiError(error, '관리자 LLM API 키 목록을 불러오지 못했습니다.')
@@ -875,12 +876,15 @@ export function fetchAdminLlmMetrics(orgId?: string, days = 7): Promise<AdminLlm
   })
 }
 
-export function fetchAdminLlmUsage(params: {
-  orgId?: string
-  workspaceId?: string
-  days: AdminLlmUsageDays
-  top?: number
-}): Promise<AdminLlmUsage> {
+export function fetchAdminLlmCapacity(params: LlmCapacityQuery): Promise<AdminLlmCapacity> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/capacity', { params: { query: params } })
+    if (!data) throw toApiError(error, 'LLM 수요 비교 자료를 불러오지 못했습니다.')
+    return data
+  })
+}
+
+export function fetchAdminLlmUsage(params: AdminLlmUsageQuery): Promise<AdminLlmUsage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/usage', {
       params: { query: params },
@@ -890,10 +894,10 @@ export function fetchAdminLlmUsage(params: {
   })
 }
 
-export function fetchAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
+export function fetchAdminLlmKey(keyId: string, query?: AdminLlmKeyProjectionQuery): Promise<AdminLlmKeyDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}', {
-      params: { path: { keyId } },
+      params: { path: { keyId }, query },
     })
     if (!data) throw toApiError(error, '관리자 LLM API 키 정보를 불러오지 못했습니다.')
     return data
@@ -1139,7 +1143,7 @@ export function fetchLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
  * 소유자 경로는 리소스 부여로, 이쪽은 기관 스코프로 연다. 부여를 우회하도록
  * 소유자 경로를 넓히지 않고 경로를 따로 둔 것이라, 화면도 둘을 섞지 않는다.
  */
-export function fetchAdminLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
+export function fetchAdminLlmKeyModels(keyId: string): Promise<Schemas['InstitutionAdminLlmModelsResponse']> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}/models', {
       params: { path: { keyId } },
@@ -1204,7 +1208,7 @@ export function fetchLlmKeyUsage(keyId: string, days: number): Promise<LlmKeyUsa
 export type AdminLlmKeyUsage = Schemas['AdminLlmKeyUsageResponse']
 export type AdminLlmAccountUsage = Schemas['AdminLlmAccountUsageResponse']
 export type LlmUsageCostPoint = Schemas['LlmUsageCostPointResponse']
-export type LlmEndpointKindUsage = Schemas['LlmEndpointKindUsageResponse']
+export type LlmEndpointKindUsage = Schemas['InstitutionAdminLlmEndpointUsageResponse']
 export type LlmServedModelUsage = Schemas['LlmServedModelUsageResponse']
 
 /**
@@ -1233,10 +1237,11 @@ export function fetchAdminLlmKeyUsage(keyId: string, days: number): Promise<Admi
 export function fetchAdminLlmAccountUsage(
   accountId: string,
   days: number,
+  query?: Omit<AdminLlmAccountUsageQuery, 'days'>,
 ): Promise<AdminLlmAccountUsage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/accounts/{accountId}/usage', {
-      params: { path: { accountId }, query: { days } },
+      params: { path: { accountId }, query: { days, ...query } },
     })
     if (!data) throw toApiError(error, '계정 사용량을 불러오지 못했습니다.')
     return data
@@ -2964,13 +2969,13 @@ export function updateUserProfile(
 export function grantOrgRole(
   userId: string,
   orgId: string,
-  role: UserRole,
+  permission: Schemas['InstitutionPermissionInput'],
   expectedRevision: number,
 ): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/admin/users/{userId}/org-roles/{orgId}', {
       params: { path: { userId, orgId } },
-      body: { role, expectedRevision },
+      body: { permission, expectedRevision },
     })
     if (!data) throw toApiError(error, '기관 역할을 부여하지 못했습니다.')
     return data
@@ -3002,10 +3007,10 @@ export function updateOrgRequestMail(
 }
 
 /** 한 기관에서의 역할 회수. 마지막 기관이었다면 계정은 일반 사용자가 된다. */
-export function revokeOrgRole(userId: string, orgId: string, expectedRevision: number): Promise<UserSummary> {
+export function revokeOrgRole(userId: string, orgId: string, expectedRevision: number, expectedPermissionRevision: number): Promise<UserSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.DELETE('/admin/users/{userId}/org-roles/{orgId}', {
-      params: { path: { userId, orgId }, query: { expectedRevision } },
+      params: { path: { userId, orgId }, query: { expectedRevision, expectedPermissionRevision } },
     })
     if (!data) throw toApiError(error, '기관 역할을 회수하지 못했습니다.')
     return data

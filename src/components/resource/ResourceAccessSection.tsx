@@ -1,3 +1,4 @@
+import { hasWork, SYS_ADMIN } from '../../auth/institution-authority'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -11,7 +12,6 @@ import {
   updateDnsDomainAccessGrant,
   fetchVmAccessGrants,
   fetchWorkspace,
-  fetchAdminWorkspace,
   removeLlmKeyAccessGrant,
   removeVmAccessGrant,
   updateLlmKeyAccessGrant,
@@ -231,15 +231,16 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
   // 소유 워크스페이스는 응답이 알려 준다 — 리소스 상세를 못 여는 사람도 이 화면은
   // 열기 때문에 워크스페이스 id 를 상세에서 가져올 수 없다.
   const workspaceId = access.data?.resource.workspaceId
-  const workspace = useQuery<Awaited<ReturnType<typeof fetchAdminWorkspace>> | Awaited<ReturnType<typeof fetchWorkspace>>>({
+  const workspace = useQuery({
     queryKey: [support ? 'admin-workspaces' : 'workspaces', workspaceId, requestReaderKey(user)],
-    queryFn: () => support ? fetchAdminWorkspace(workspaceId!) : fetchWorkspace(workspaceId!),
-    enabled: workspaceId != null,
+    queryFn: () => fetchWorkspace(workspaceId!),
+    enabled: !support && workspaceId != null,
   })
   const [error, setError] = useState<string | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<VmAccessGrant | null>(null)
   const [receipt, setReceipt] = useState<string | null>(null)
-  const canManage = access.data?.canManageAccess === true
+  const prefix = type === 'LLM_API_KEY' ? 'llm' : type.toLowerCase()
+  const canManage = access.data?.canManageAccess === true && (!support || hasWork(user, `${prefix}.acl.support.manage`, { workspaceId }, SYS_ADMIN))
   const resourceName = access.data?.resource.displayName || access.data?.resource.name || resourceId
 
   const invalidate = () => {
@@ -285,7 +286,7 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
 
   const rows = access.data?.grants ?? []
   const listed = new Set(rows.map((grant) => grant.user?.userId).filter(Boolean))
-  const candidates = (workspace.data?.members ?? []).filter(
+  const candidates = (support ? access.data?.eligibleMembers ?? [] : workspace.data?.members ?? []).filter(
     (member) => !listed.has(member.userId) && (!support || !('userStatus' in member) || member.userStatus === 'ACTIVE'),
   )
   const hasWorkspaceWide = rows.some((grant) => grant.granteeType === 'WORKSPACE')
@@ -366,7 +367,8 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
       </Card>
 
       {canManage && workspace.isError && <Alert variant="danger">구성원 후보를 불러오지 못했습니다. {workspace.error.message}</Alert>}
-      {canManage && <AddGrantForm
+      {canManage && support && access.data?.eligibleMembers == null && <Alert>현재 권한으로 새 부여 대상자 참조를 제공할 수 없습니다. 기존 부여의 변경과 회수는 별도로 확인합니다.</Alert>}
+      {canManage && (!support || access.data?.eligibleMembers != null) && <AddGrantForm
         kind={kind}
         resourceId={resourceId}
         resourceName={resourceName}
@@ -408,7 +410,7 @@ function AddGrantForm({
   kind: AccessKind
   resourceId: string
   resourceName: string
-  candidates: { userId: string; name: string; email: string }[]
+  candidates: { userId: string; name: string; email?: string | null }[]
   hasWorkspaceWide: boolean
   onError: (message: string | null) => void
   onDone: () => void
@@ -467,7 +469,7 @@ function AddGrantForm({
               {!hasWorkspaceWide && <option value="WORKSPACE">워크스페이스 전체</option>}
               {candidates.map((member) => (
                 <option key={member.userId} value={String(member.userId)}>
-                  {member.name} ({member.email})
+                  {member.name}{member.email ? ` (${member.email})` : ''}
                 </option>
               ))}
             </Select>

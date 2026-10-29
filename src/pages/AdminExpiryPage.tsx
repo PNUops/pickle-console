@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { fetchAdminResourceDeadlines, type AdminResourceDeadline } from '../api/resource-deadlines'
-import { requestReaderKey } from '../api/request-review'
 import { useAuth } from '../auth/auth-context'
-import { canReadSupportMetadata } from '../auth/permissions'
+import { SYS_READERS } from '../auth/institution-authority'
+import { useInstitutionPermissions } from '../auth/use-institution-permissions'
+import { DEADLINE_READS } from '../lib/institution-resource-work'
 import { FilterBar } from '../components/FilterBar'
 import { resourceTypesInDisplayOrder, RESOURCE_TYPES } from '../components/resource/registry'
 import { ADMIN_DEADLINE_QUERY_KEY } from '../lib/admin-deadline-cache'
@@ -27,7 +28,8 @@ const CONTEXT_DATES: Record<AdminResourceDeadline['type'], Array<{ field: keyof 
 export function AdminExpiryPage() {
   const { user } = useAuth()
   const scope = useAdminScope()
-  return <AdminExpiryContent key={`${scope.activeOrgId ?? 'all'}:${scope.activeOrgRole ?? 'none'}:${requestReaderKey(user)}`} />
+  const permissions = useInstitutionPermissions()
+  return <AdminExpiryContent key={`${user?.id ?? 'none'}:${scope.activeOrgId ?? 'all'}:${permissions.fingerprint}`} />
 }
 
 function AdminExpiryContent() {
@@ -46,10 +48,14 @@ function AdminExpiryContent() {
     else next.delete('page')
     normalize(next.toString())
   }, [params, state.page, normalize])
+  const permissions = useInstitutionPermissions()
+  const resourcePrefix = state.type === 'LLM_API_KEY' ? 'llm' : state.type?.toLowerCase()
+  const canRead = permissions.canAnyWork(resourcePrefix ? [`${resourcePrefix}.metadata.read`, `${resourcePrefix}.metadata.support.read`] : DEADLINE_READS, SYS_READERS)
   const query = deadlineQuery(state, scope.activeOrgId)
-  const rows = useQuery({ queryKey: [...ADMIN_DEADLINE_QUERY_KEY, { ...query, reader: requestReaderKey(user) }],
-    queryFn: () => fetchAdminResourceDeadlines(query), enabled: !state.invalid && scope.ready && !!user && canReadSupportMetadata(user.role) })
+  const rows = useQuery({ queryKey: [...ADMIN_DEADLINE_QUERY_KEY, { ...query, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}` }],
+    queryFn: () => fetchAdminResourceDeadlines(query), enabled: !state.invalid && scope.ready && canRead })
   const outsidePage = rows.isSuccess && rows.data.page > 0 && rows.data.page >= rows.data.totalPages
+  if (!canRead) return <Alert variant="danger">선택한 종류의 자원 기한을 조회할 권한이 없습니다.</Alert>
   return <div className="space-y-6">
     <div>
       <h1 className="text-2xl font-bold text-neutral-900">만료 관리</h1>
@@ -78,7 +84,7 @@ function AdminExpiryContent() {
     {state.invalid ? <Alert variant="danger">조회 조건을 확인해 주세요. <Button variant="secondary" size="sm" onClick={() => change({ type: undefined, deadlineKind: undefined, workspaceId: undefined, window: undefined, sort: undefined }, true)}>필터 초기화</Button></Alert> : <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-neutral-600">{rows.isSuccess ? `총 ${rows.data.totalElements}개 자원` : '자원 기한 조회'}</p>
-        <Button variant="secondary" loading={rows.isFetching} onClick={() => void rows.refetch()}>현재 기한 다시 조회</Button>
+        <Button variant="secondary" disabled={!scope.ready} loading={rows.isFetching} onClick={() => { if (scope.ready) void rows.refetch() }}>현재 기한 다시 조회</Button>
       </div>
       {rows.isPending && <Spinner label="자원 기한 불러오는 중" />}
       {rows.isError && <Alert variant="danger">{rows.error.message}</Alert>}

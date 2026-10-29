@@ -40,6 +40,31 @@ function renderDetailAsSysAdmin(accountId: string) {
   renderApp(`/admin/llm/accounts/${accountId}`)
 }
 
+test('omits unavailable account model defaults from the update body', async () => {
+  const user = userEvent.setup()
+  const account = { ...openRouterAccountStore.find((row) => row.id === uuid(410))!,
+    policyReferenceVisible: false, defaultCreditAllowedModels: null, defaultCreditDeniedModels: null }
+  const bodies: Record<string, unknown>[] = []
+  server.use(
+    http.get('*/api/v1/admin/llm/accounts/:accountId', () => HttpResponse.json(account)),
+    http.patch('*/api/v1/admin/llm/accounts/:accountId', async ({ request }) => {
+      bodies.push(await request.json() as Record<string, unknown>)
+      return HttpResponse.json(account)
+    }),
+  )
+  renderDetailAsSysAdmin(uuid(410))
+  await user.click(await screen.findByRole('button', { name: '정보 변경' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }))
+  expect(dialog.queryByLabelText('승인 화면 기본 모델 허용·차단')).not.toBeInTheDocument()
+  await user.clear(dialog.getByLabelText('사업 계정 이름'))
+  await user.type(dialog.getByLabelText('사업 계정 이름'), 'Synthetic renamed account')
+  await user.click(dialog.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(bodies).toHaveLength(1))
+  expect(bodies[0]).toHaveProperty('name', 'Synthetic renamed account')
+  expect(bodies[0]).not.toHaveProperty('defaultCreditAllowedModels')
+  expect(bodies[0]).not.toHaveProperty('defaultCreditDeniedModels')
+})
+
 describe('사업 계정 상세의 배정 현황', () => {
   /**
    * 착수 근거가 된 사고. 잔액보다 많이 배정된 계정은 그 사실이 화면에 있어야
@@ -150,7 +175,7 @@ describe('사업 계정의 승인 기본 목록', () => {
     const dialog = within(
       screen.getByRole('dialog', { name: 'OpenRouter 사업 계정 정보 변경' }),
     )
-    expect(dialog.queryByText(/기능 권한/)).not.toBeInTheDocument()
+    expect(dialog.queryByLabelText(/기능 권한/)).not.toBeInTheDocument()
     expect(dialog.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 })
@@ -163,9 +188,9 @@ describe('사업 계정 상세의 쓰임새', () => {
 
     expect(await screen.findByText('쓰임새')).toBeInTheDocument()
     const table = await screen.findByRole('table', { name: '키별 쓰임새' })
-    const unpriced = within(table).getByText('lab-embeddings').closest('tr')!
+    const unpriced = within(table).getByText('suspended-admin-key').closest('tr')!
     expect(within(unpriced).getByText('—')).toBeInTheDocument()
-    const priced = within(table).getByText('capstone-chatbot').closest('tr')!
+    const priced = within(table).getByText('active-admin-key').closest('tr')!
     expect(within(priced).getByText('$0.50')).toBeInTheDocument()
   })
 

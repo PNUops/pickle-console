@@ -1,9 +1,12 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
-import type { AdminLlmUsage, AdminLlmUsageDays } from '../../../api/queries'
+import type { AdminLlmUsage, AdminLlmUsageDays, AdminLlmUsageQuery } from '../../../api/queries'
+import { canQueryWork, hasSameSourceWorks, SYS_READERS } from '../../../auth/institution-authority'
+import { mockAuthorityActor, mockHasAggregateMoneySource } from '../institution-authority'
 import { isSysTier } from '../../../auth/permissions'
 import { uuid } from '../ids'
-import { ACCESS_TOKENS } from './auth'
+import { ACCESS_TOKENS, problemResponse } from './auth'
 import { adminReadScope } from './org-scope'
+import { adminLlmKeyStore } from './llm-keys'
 
 const TO = '2026-08-31'
 
@@ -85,8 +88,10 @@ function windows(): AdminLlmUsage['demand']['windows'] {
 }
 
 function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUsage['consumers'] {
+  const metadata = { from: dayBefore(6), to: TO, source: 'DAILY_ROLLUP_AND_VENDOR_METER_SNAPSHOTS', page: 0, size: 20, totalPages: 1, sort: 'REQUESTS_DESC' as const }
   if (workspaceId) {
     return {
+      ...metadata,
       level: 'KEY',
       items: [
         {
@@ -94,8 +99,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           orgName: '정보컴퓨터공학부 실습지원센터',
           workspaceId,
           workspaceName: '캡스톤 3조',
-          keyId: uuid(501),
-          keyName: 'capstone-chatbot',
+          keyId: uuid(171),
+          keyName: adminLlmKeyStore.find((key) => key.id === uuid(171))!.name,
           requests: 18,
           inputTokens: 2_400,
           outputTokens: 800,
@@ -113,8 +118,8 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
           orgName: '정보컴퓨터공학부 실습지원센터',
           workspaceId,
           workspaceName: '캡스톤 3조',
-          keyId: uuid(502),
-          keyName: 'capstone-batch',
+          keyId: uuid(172),
+          keyName: adminLlmKeyStore.find((key) => key.id === uuid(172))!.name,
           requests: 4,
           inputTokens: 600,
           outputTokens: 120,
@@ -133,6 +138,7 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
   }
   if (orgId) {
     return {
+      ...metadata,
       level: 'WORKSPACE',
       items: [
         {
@@ -157,6 +163,7 @@ function consumers(orgId: string | null, workspaceId: string | null): AdminLlmUs
     }
   }
   return {
+    ...metadata,
     level: 'ORG',
     items: [
       {
@@ -330,10 +337,15 @@ function breakdown(): AdminLlmUsage['breakdown'] {
         imageCount: 0,
       },
     ],
+    // The api returns one row per grantable capability with a route, zeros included.
     passthroughGrants: [
+      { capability: 'chat', grantedKeys: 3, usedKeys: 2, requests: 6 },
       { capability: 'images', grantedKeys: 2, usedKeys: 1, requests: 3 },
       // 부여만 되고 아무도 안 쓰는 기능. 이 행이 없는 것이 아니라 0인 것이 답이다.
       { capability: 'embeddings', grantedKeys: 1, usedKeys: 0, requests: 0 },
+      { capability: 'rerank', grantedKeys: 0, usedKeys: 0, requests: 0 },
+      { capability: 'speech', grantedKeys: 0, usedKeys: 0, requests: 0 },
+      { capability: 'transcriptions', grantedKeys: 0, usedKeys: 0, requests: 0 },
     ],
   }
 }
@@ -349,20 +361,23 @@ export function adminLlmUsageFixture({
   workspaceId?: string | null
   systemTier?: boolean
 } = {}): AdminLlmUsage {
-  return {
+  const body: AdminLlmUsage = {
     generatedAt: '2026-08-31T12:05:00+09:00',
     timezone: 'Asia/Seoul',
     from: dayBefore(days - 1),
     to: TO,
     days,
     demand: { windows: windows(), daily: daily(days) },
-    consumers: consumers(orgId, workspaceId),
+    consumers: { ...consumers(orgId, workspaceId), from: dayBefore(days - 1) },
     breakdown: breakdown(),
     limitReview: {
+      configurationObservedAt: '2026-08-31T12:05:00+09:00', pressureFrom: dayBefore(6), pressureTo: TO,
+      page: 0, size: 20, totalPages: 1,
       items: [
         {
-          keyId: uuid(501),
-          keyName: 'capstone-chatbot',
+          financeVisible: true,
+          keyId: uuid(171),
+          keyName: adminLlmKeyStore.find((key) => key.id === uuid(171))!.name,
           orgId: orgId ?? uuid(1),
           orgName: '정보컴퓨터공학부 실습지원센터',
           workspaceId: workspaceId ?? uuid(12),
@@ -389,8 +404,9 @@ export function adminLlmUsageFixture({
           ],
         },
         {
-          keyId: uuid(502),
-          keyName: 'batch-summarizer',
+          financeVisible: true,
+          keyId: uuid(172),
+          keyName: adminLlmKeyStore.find((key) => key.id === uuid(172))!.name,
           orgId: orgId ?? uuid(1),
           orgName: '정보컴퓨터공학부 실습지원센터',
           workspaceId: workspaceId ?? uuid(12),
@@ -416,6 +432,13 @@ export function adminLlmUsageFixture({
     },
     quality: quality(systemTier, orgId == null && workspaceId == null),
   }
+  body.consumers.totalItems = body.consumers.items.length
+  body.consumers.totalPages = body.consumers.items.length > 0 ? 1 : 0
+  body.consumers.truncated = false
+  body.limitReview.totalItems = body.limitReview.items.length
+  body.limitReview.totalPages = body.limitReview.items.length > 0 ? 1 : 0
+  body.limitReview.truncated = false
+  return body
 }
 
 export const llmAdminUsageHandlers: RequestHandler[] = [
@@ -429,11 +452,36 @@ export const llmAdminUsageHandlers: RequestHandler[] = [
     const profile = profileOf(request)
     const scope = profile ? adminReadScope(profile, orgId, '/api/v1/admin/llm/usage') : null
     if (scope?.notFound) return scope.notFound
-    return HttpResponse.json(adminLlmUsageFixture({
+    const actor = profile ? mockAuthorityActor(profile) : null
+    if (!actor || !canQueryWork(actor, ['llm.observe'], { orgId, workspaceId }, SYS_READERS)) return problemResponse({ status: 403, title: '조회 권한이 없습니다.', code: 'ACCESS_DENIED' })
+    const numbers = { consumerPage: 0, consumerSize: Number(url.searchParams.get('top') ?? 20), reviewPage: 0, reviewSize: Number(url.searchParams.get('top') ?? 20) }
+    for (const field of Object.keys(numbers) as (keyof typeof numbers)[]) {
+      if (url.searchParams.has(field)) numbers[field] = Number(url.searchParams.get(field))
+      if (!Number.isSafeInteger(numbers[field]) || numbers[field] < (field.endsWith('Size') ? 1 : 0) || numbers[field] > (field.endsWith('Size') ? 100 : 2_147_483_647)) return problemResponse({ status: 422, title: '페이지 조건을 확인해 주세요.', code: 'VALIDATION_FAILED' })
+    }
+    const sort = (url.searchParams.get('consumerSort') ?? 'REQUESTS_DESC') as NonNullable<AdminLlmUsageQuery['consumerSort']>
+    if (!['REQUESTS_DESC', 'TOKENS_DESC', 'REPORTED_COST_DESC'].includes(sort)) return problemResponse({ status: 422, title: '정렬 조건을 확인해 주세요.', code: 'VALIDATION_FAILED' })
+    const body = adminLlmUsageFixture({
       days,
       orgId,
       workspaceId,
       systemTier: profile ? isSysTier(profile.role) : false,
-    }))
+    })
+    const money = (row: AdminLlmUsage['consumers']['items'][number]) => hasSameSourceWorks(actor, ['llm.observe', 'llm.key.cost.read'], { orgId: row.orgId ?? orgId, workspaceId: row.workspaceId ?? workspaceId }, SYS_READERS)
+    if (sort === 'REPORTED_COST_DESC' && (!mockHasAggregateMoneySource(actor) || body.consumers.items.some((row) => !money(row)))) return problemResponse({ status: 403, title: '현재 조회 집합의 금액 정렬을 제공하지 않습니다.', code: 'ACCESS_DENIED' })
+    const all = body.consumers.items.map((row) => money(row) ? row : { ...row, attributedCostUsd: null, pricedRequests: null, creditAxisRequests: null, meteredCostUsd: null, meteredObservedAt: null })
+    all.sort((a, b) => {
+      const av = sort === 'REQUESTS_DESC' ? a.requests : sort === 'TOKENS_DESC' ? a.inputTokens + a.outputTokens : a.attributedCostUsd
+      const bv = sort === 'REQUESTS_DESC' ? b.requests : sort === 'TOKENS_DESC' ? b.inputTokens + b.outputTokens : b.attributedCostUsd
+      return av == null ? bv == null ? 0 : 1 : bv == null ? -1 : bv - av || (b.keyId ?? b.workspaceId ?? b.orgId ?? '').localeCompare(a.keyId ?? a.workspaceId ?? a.orgId ?? '')
+    })
+    body.consumers = { ...body.consumers, page: numbers.consumerPage, size: numbers.consumerSize, sort,
+      totalItems: all.length, totalPages: Math.ceil(all.length / numbers.consumerSize), truncated: all.length > numbers.consumerSize,
+      items: all.slice(numbers.consumerPage * numbers.consumerSize, (numbers.consumerPage + 1) * numbers.consumerSize) }
+    const reviews = body.limitReview.items.map((row) => hasSameSourceWorks(actor, ['llm.observe', 'llm.key.cost.read'], { orgId: row.orgId, workspaceId: row.workspaceId }, SYS_READERS) ? row : { ...row, financeVisible: false, creditAxisConnected: null, creditLimit: null, creditLimitReset: null, creditUsage: null, creditLimitRemaining: null, creditUsageAt: null, openrouterAccountId: null, openrouterAccountName: null, pressure: row.pressure.filter((item) => item.reason !== 'credit_exhausted') })
+    body.limitReview = { ...body.limitReview, page: numbers.reviewPage, size: numbers.reviewSize,
+      totalItems: reviews.length, totalPages: Math.ceil(reviews.length / numbers.reviewSize), truncated: reviews.length > numbers.reviewSize,
+      items: reviews.slice(numbers.reviewPage * numbers.reviewSize, (numbers.reviewPage + 1) * numbers.reviewSize) }
+    return HttpResponse.json(body)
   }),
 ]

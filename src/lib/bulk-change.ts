@@ -1,3 +1,4 @@
+import { formatTokenDecision } from './token-presentation'
 import type {
   AdminBulkAccessAction,
   AdminBulkChangeKind,
@@ -8,15 +9,7 @@ import type {
   VmPowerAction,
 } from '../api/queries'
 import type { UserRole } from '../auth/auth-context'
-import {
-  canAdminManageAccess,
-  canAdminRevokeLlmKey,
-  canInterveneDomain,
-  canManageLlmCredit,
-  canManageVmDeletion,
-  canOperateLlmKey,
-  canOperateVm,
-} from '../auth/permissions'
+import { hasAnyWork, SYS_ADMIN, SYS_OPERATORS, type AuthorityActor } from '../auth/institution-authority'
 import type { FieldSlot } from '../components/request-kind/wizard-steps'
 import { creditModelRulesError, parseCreditModelRules } from './credit-model-allowlist'
 import { formatDateTime } from './format'
@@ -77,36 +70,29 @@ const KIND_TITLES: Record<AdminBulkChangeKind, string> = {
   ACCESS: '접근 권한',
 }
 
-/** The kinds this role may run on a family, in the order they are offered. */
-export function bulkKindsFor(family: BulkFamily, role: UserRole, accessRole: UserRole = role): BulkKindOption[] {
-  const access = canAdminManageAccess(accessRole) ? (['ACCESS'] as const) : []
-  let offered: AdminBulkChangeKind[]
-  switch (family) {
-    case 'llm-keys':
-      offered = [
-        ...(canOperateLlmKey(role)
-          ? (['LLM_KEY_LIMITS', 'LLM_KEY_STATUS', 'LLM_KEY_EXPIRY'] as const)
-          : []),
-        ...access,
-      ]
-      break
-    case 'vms':
-      offered = [
-        ...(canOperateVm(role) ? (['VM_PERIOD', 'VM_POWER'] as const) : []),
-        ...(canManageVmDeletion(role) ? (['VM_DELETION'] as const) : []),
-        ...access,
-      ]
-      break
-    case 'domains':
-      // The same gate as the domain drawer's intervention section.
-      offered = [
-        ...(canInterveneDomain(role)
-          ? (['DOMAIN_RENEWAL', 'DOMAIN_VERIFY', 'DOMAIN_FORCE_RELEASE'] as const)
-          : []),
-        ...access,
-      ]
-      break
+type BulkActor = AuthorityActor | UserRole
+function bulkActor(value: BulkActor): AuthorityActor { return typeof value === 'string' ? { role: value } : value }
+
+/** Navigation offers existing works; target authorization is decided by each preview row. */
+export function bulkKindsFor(family: BulkFamily, value: BulkActor, _legacyAccessRole?: UserRole): BulkKindOption[] {
+  const actor = bulkActor(value)
+  if (family === 'llm-keys' && actor.role === 'ORG_VIEWER') return []
+  const allowed = (work: string, sys = SYS_OPERATORS) => hasAnyWork(actor, [work], sys)
+  const prefix = family === 'llm-keys' ? 'llm' : family === 'vms' ? 'vm' : 'domain'
+  const offered: AdminBulkChangeKind[] = []
+  if (family === 'llm-keys') {
+    if (allowed('llm.token.operate') || allowed('llm.key.budget', SYS_ADMIN)) offered.push('LLM_KEY_LIMITS')
+    if (allowed('llm.state.operate') || allowed('llm.revoke', SYS_ADMIN)) offered.push('LLM_KEY_STATUS')
+    if (allowed('llm.period')) offered.push('LLM_KEY_EXPIRY')
+  } else if (family === 'vms') {
+    if (allowed('vm.period')) offered.push('VM_PERIOD')
+    if (allowed('vm.power')) offered.push('VM_POWER')
+    if (allowed('vm.deletion.schedule', SYS_ADMIN)) offered.push('VM_DELETION')
+  } else {
+    if (allowed('domain.renewal')) offered.push('DOMAIN_RENEWAL', 'DOMAIN_VERIFY')
+    if (allowed('domain.release')) offered.push('DOMAIN_FORCE_RELEASE')
   }
+  if (allowed(`${prefix}.acl.support.manage`, SYS_ADMIN)) offered.push('ACCESS')
   return offered.map((kind) => ({ kind, title: KIND_TITLES[kind] }))
 }
 
@@ -146,8 +132,12 @@ const MONEY_LIMIT_FIELDS: ReadonlySet<LimitFieldKey> = new Set([
  * removing Chat and nothing else: replacing the list could change the
  * paid-only features the server counts as a money change.
  */
-export function chatOnlyFeatures(role: UserRole): boolean {
-  return !canManageLlmCredit(role)
+export function chatOnlyFeatures(value: BulkActor): boolean {
+  return !hasAnyWork(bulkActor(value), ['llm.key.budget'], SYS_ADMIN)
+}
+
+export function canBulkEditToken(value: BulkActor): boolean {
+  return hasAnyWork(bulkActor(value), ['llm.token.operate'], SYS_OPERATORS)
 }
 
 export const LIMIT_FIELD_LABELS: Record<LimitFieldKey, string> = {
@@ -162,13 +152,17 @@ export const LIMIT_FIELD_LABELS: Record<LimitFieldKey, string> = {
 }
 
 /** The limit fields this role is offered. */
-export function limitFieldsFor(role: UserRole): LimitFieldKey[] {
-  return LIMIT_FIELDS.filter((field) => !MONEY_LIMIT_FIELDS.has(field) || canManageLlmCredit(role))
+export function limitFieldsFor(value: BulkActor): LimitFieldKey[] {
+  const token = canBulkEditToken(value)
+  const budget = !chatOnlyFeatures(value)
+  return LIMIT_FIELDS.filter((field) => field === 'passthroughEndpoints' ? token || budget : MONEY_LIMIT_FIELDS.has(field) ? budget : token)
 }
 
 /** Status actions this role is offered. Revoking is the administrator tier's. */
-export function statusActionsFor(role: UserRole): AdminBulkLlmKeyStatusAction[] {
-  return canAdminRevokeLlmKey(role) ? ['SUSPEND', 'RESUME', 'REVOKE'] : ['SUSPEND', 'RESUME']
+export function statusActionsFor(value: BulkActor): AdminBulkLlmKeyStatusAction[] {
+  const actor = bulkActor(value)
+  return [...(hasAnyWork(actor, ['llm.state.operate'], SYS_OPERATORS) ? ['SUSPEND', 'RESUME'] as const : []),
+    ...(hasAnyWork(actor, ['llm.revoke'], SYS_ADMIN) ? ['REVOKE'] as const : [])]
 }
 
 export const LIST_OP_LABELS: Record<AdminBulkListOp, string> = {
@@ -259,7 +253,7 @@ type LimitsBody = NonNullable<AdminBulkChangeSpec['llmKeyLimits']>
 function integerOrDefault(raw: string, min: 0 | 1): number | null {
   if (raw.trim() === '') return null
   const value = Number(raw)
-  if (!Number.isInteger(value) || value < min) return Number.NaN
+  if (!Number.isSafeInteger(value) || value < min) return Number.NaN
   return value
 }
 
@@ -502,6 +496,7 @@ const DIFF_FIELD_LABELS: Record<string, string> = {
   creditAllowedModels: '허용 유료 모델',
   creditDeniedModels: '차단 유료 모델',
   passthroughEndpoints: '기능 권한',
+  chatEnabled: 'Chat 기능',
   status: '상태',
   expiresAt: '만료',
   endDate: '종료일',
@@ -556,6 +551,7 @@ export function formatDiffValue(
   value: unknown,
   targetType?: AdminBulkChangeTargetType,
 ): string {
+  if (field === 'chatEnabled') return value === true ? '허용' : value === false ? '차단' : value == null ? '제공되지 않음' : String(value)
   if (value == null) {
     switch (field) {
       case 'rpm':
@@ -585,6 +581,7 @@ export function formatDiffValue(
     return value.length === 0 ? '없음' : value.map(String).join(', ')
   }
   if (typeof value === 'number') {
+    if (field === 'tpm' || field === 'dailyTokens') return formatTokenDecision(value)
     if (COUNT_FIELDS.has(field)) return `${value.toLocaleString('ko-KR')}개`
     return field === 'creditLimit' ? `$${value.toLocaleString('ko-KR')}` : value.toLocaleString('ko-KR')
   }

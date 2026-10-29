@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'vitest'
+import { ACCESS_TOKENS } from '../test/msw/handlers/auth'
+import { mockAuthorityActor } from '../test/msw/institution-authority'
 import {
   bulkKindsFor,
   buildChange,
@@ -38,6 +40,14 @@ describe('bulk selection', () => {
 })
 
 describe('bulk change body', () => {
+  test('keeps raw token values and refuses unsafe integers', () => {
+    const draft = emptyDraft()
+    draft.limits.chosen = ['dailyTokens']
+    draft.limits.dailyTokens = '5000001'
+    expect(buildChange('LLM_KEY_LIMITS', draft).change?.llmKeyLimits?.dailyTokens).toBe(5000001)
+    draft.limits.dailyTokens = '9007199254740993'
+    expect(buildChange('LLM_KEY_LIMITS', draft).errors).toHaveProperty('change.llmKeyLimits.dailyTokens')
+  })
   test('only the chosen limits are sent, and an empty value means the default', () => {
     const draft = emptyDraft()
     draft.limits.chosen = ['rpm', 'dailyTokens']
@@ -116,14 +126,14 @@ describe('bulk change body', () => {
 
 describe('bulk change offers and labels', () => {
   test('roles are offered the kinds and fields the server lets them run', () => {
-    expect(bulkKindsFor('llm-keys', 'ORG_MANAGER').map((k) => k.kind)).toEqual([
+    expect(bulkKindsFor('llm-keys', mockAuthorityActor(ACCESS_TOKENS['access-org-manager'])).map((k) => k.kind)).toEqual([
       'LLM_KEY_LIMITS',
       'LLM_KEY_STATUS',
       'LLM_KEY_EXPIRY',
       'ACCESS',
     ])
     expect(bulkKindsFor('vms', 'SYS_MANAGER').map((k) => k.kind)).toEqual(['VM_PERIOD', 'VM_POWER'])
-    expect(bulkKindsFor('vms', 'ORG_ADMIN').map((k) => k.kind)).toEqual([
+    expect(bulkKindsFor('vms', mockAuthorityActor(ACCESS_TOKENS['access-org-admin'])).map((k) => k.kind)).toEqual([
       'VM_PERIOD',
       'VM_POWER',
       'VM_DELETION',
@@ -201,4 +211,12 @@ describe('bulk change on domains', () => {
     expect(formatDiffValue('verification', 'REQUESTED', 'DOMAIN')).toBe('재검증 접수')
     expect(formatDiffValue('verification', 'QUEUED', 'DOMAIN')).toBe('QUEUED')
   })
+})
+
+test('the token-only Chat diff reveals a boolean instead of the full feature grant', () => {
+  expect(diffFieldLabel('chatEnabled')).toBe('Chat 기능')
+  expect(formatDiffValue('chatEnabled', true)).toBe('허용')
+  expect(formatDiffValue('chatEnabled', false)).toBe('차단')
+  expect(formatDiffValue('chatEnabled', null)).toBe('제공되지 않음')
+  expect(formatDiffValue('passthroughEndpoints', ['chat', 'images'])).toContain('이미지')
 })

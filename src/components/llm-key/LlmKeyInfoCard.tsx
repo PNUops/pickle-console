@@ -1,3 +1,4 @@
+import { TokenLimit } from '../TokenValue'
 import type { LlmKeyDetail } from '../../api/queries'
 import { Card, CardContent, CardHeader, CardTitle, DescriptionField } from '../ui'
 import { formatDateTime, formatRelative } from '../../lib/format'
@@ -44,9 +45,7 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           <DescriptionField label="일일 토큰 한도">
             {/* 0 is a value, not an absence: the usage gauge already says
                 that a zero limit blocks the self-served models. */}
-            {llmKey.dailyTokens == null
-              ? '없음'
-              : `${llmKey.dailyTokens.toLocaleString('ko-KR')}토큰`}
+            {<TokenLimit value={llmKey.dailyTokens} daily />}
           </DescriptionField>
           <DescriptionField label="유료 모델">{creditAxisLabel(llmKey)}</DescriptionField>
           {llmKey.creditLimit ? (

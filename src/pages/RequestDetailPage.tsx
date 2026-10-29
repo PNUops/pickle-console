@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { toApiError } from '../api/problem'
@@ -21,19 +21,23 @@ import { Field } from '../components/request-kind/Field'
 import { RequestRecipientsCard } from '../components/request-kind/RecipientsCard'
 import { recipientPollInterval } from '../components/request-kind/recipients'
 import { useAuth } from '../auth/auth-context'
-import { approvesForOrg } from '../auth/permissions'
+import { canUseRowWork, SYS_ADMIN } from '../auth/institution-authority'
+import { resourceWorkPrefix } from '../auth/request-authority'
 import { consolePaths } from '../lib/paths'
 import { formatDateTime } from '../lib/format'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { workspaceSourceReturn } from '../lib/workspace-source-return'
+import { requestReaderKey } from '../api/request-review'
 
 export function RequestDetailPage() {
   const params = useParams()
+  const [searchParams] = useSearchParams()
   const requestId = params.requestId ?? ''
   const idValid = isUuid(requestId)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const { user } = useAuth()
   const request = useQuery({
-    queryKey: ['requests', requestId],
+    queryKey: ['requests', requestId, requestReaderKey(user)],
     queryFn: () => fetchRequest(requestId),
     // 형식부터 틀린 주소는 서버에 물어볼 것이 없다.
     enabled: idValid,
@@ -54,10 +58,12 @@ export function RequestDetailPage() {
   }
 
   const data = request.data
+  const workspaceReturn = workspaceSourceReturn(searchParams.get('returnTo'), data.workspaceId, false)
 
   return (
     <div className="space-y-6">
-      <nav className="text-sm">
+      <nav className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {workspaceReturn && <Link to={workspaceReturn} className="text-primary-700 hover:underline">← 워크스페이스</Link>}
         <Link to="/console/requests" className="text-primary-700 hover:underline">
           ← 신청 내역
         </Link>
@@ -88,7 +94,7 @@ export function RequestDetailPage() {
 
       <RequestRecipientsCard
         request={data}
-        canRetry={approvesForOrg(user, data.orgId)}
+        canRetry={canUseRowWork(user, data, `${resourceWorkPrefix(data.type)}.recipient.retry`, SYS_ADMIN)}
         // Each resource belongs to its recipient; the requester opens only their own.
         resourceHref={(recipient) =>
           recipient.resourceId == null || recipient.userId == null || recipient.userId !== user?.id

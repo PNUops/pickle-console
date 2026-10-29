@@ -1,19 +1,14 @@
 import { AccessIncreaseDetails } from '../components/resource/AccessIncreaseReview'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   disableUser,
   enableUser,
   fetchAdminUser,
   fetchAdminUsers,
-  fetchAdminOrgs,
-  fetchOrgOperations,
   fetchProfileOptions,
-  grantOrgRole,
   resetUserMfa,
-  revokeOrgRole,
-  updateOrgRequestMail,
   updateUserProfile,
   updateUserRole,
   type AdminGlobalRole,
@@ -29,8 +24,9 @@ import { previewUserProfileImpact, type ProfileImpact, type AdminProfileUpdate }
 import { ProfileImpactView, UserChangeOutcome } from '../components/UserSupport'
 import { OTHER_DEPARTMENT } from '../components/profile/profile-values'
 import type { components } from '../api/schema'
-import { useAuth, type ManagedOrg } from '../auth/auth-context'
-import { administeredOrgs, isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { useAuth } from '../auth/auth-context'
+import { isSysAdminOnly, isSysTier } from '../auth/permissions'
+import { hasWork, workSources, SYS_ADMIN, SYS_READERS } from '../auth/institution-authority'
 import {
   Checkbox,
   Alert,
@@ -105,8 +101,8 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
 }
 
 /** Would the VM list have anything to show for this workspace under this scope? */
-function vmsReachable(vmOrgIds: string[], activeOrgId: string | undefined): boolean {
-  return activeOrgId === undefined ? vmOrgIds.length > 0 : vmOrgIds.includes(activeOrgId)
+function vmsReachable(vmOrgIds: string[] | null | undefined, activeOrgId: string | undefined): boolean {
+  return vmOrgIds != null && (activeOrgId === undefined ? vmOrgIds.length > 0 : vmOrgIds.includes(activeOrgId))
 }
 
 export function AdminUsersPage() {
@@ -355,7 +351,7 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
   }
 
   const user = detail.data
-  const canCorrectProfile = user.supportCapabilities?.canCorrectProfile === true
+  const canCorrectProfile = user.supportCapabilities?.canCorrectProfile === true && hasWork(viewer, 'student.profile.correct', {}, SYS_ADMIN)
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -366,8 +362,8 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
         <Field label="이메일" value={user.email} />
         <Field label="역할" value={USER_ROLE_LABELS[user.role]} />
         <Field label="가입일" value={formatDateTime(user.createdAt)} />
-        <Field label="활성 VM 수" value={String(user.activeVmCount)} />
-        <Field label="2단계 인증" value={user.mfaEnabled ? '사용' : '미사용'} />
+        <Field label="활성 VM 수" value={user.activeVmCount == null ? '제공되지 않음' : String(user.activeVmCount)} />
+        <Field label="2단계 인증" value={user.mfaEnabled == null ? '제공되지 않음' : user.mfaEnabled ? '사용' : '미사용'} />
         {user.disabledReason && <Field label="비활성화 사유" value={user.disabledReason} />}
       </dl>
 
@@ -378,7 +374,7 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
 
       {!children && <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">워크스페이스 멤버십</h3>
-        {user.memberships.length === 0 ? (
+        {user.memberships == null ? <p className="text-sm text-neutral-500">워크스페이스 관계는 현재 업무로 제공되지 않습니다.</p> : user.memberships.length === 0 ? (
           <p className="text-sm text-neutral-500">소속된 워크스페이스가 없습니다.</p>
         ) : (
           <ul className="space-y-1 text-sm text-neutral-700">
@@ -409,7 +405,7 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">상태 변경 이력</h3>
-        {user.statusChanges.length === 0 ? (
+        {user.statusChanges == null ? <p className="text-sm text-neutral-500">상태 이력은 현재 업무로 제공되지 않습니다.</p> : user.statusChanges.length === 0 ? (
           <p className="text-sm text-neutral-500">변경 이력이 없습니다.</p>
         ) : (
           <ul className="space-y-1 text-sm text-neutral-600">
@@ -431,10 +427,11 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
         )}
       </section>
 
+      {user.relationshipsLimited && <Alert>현재 업무와 대상 범위에서 제공된 관계입니다. 제공되지 않은 항목은 관계가 없다는 뜻이 아닙니다.</Alert>}
       <UserPermissionsSection user={user} canManageGlobal={canManage} />
 
       {canManage && (
-        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled} canEnable={user.supportCapabilities?.canEnableAccount === true} onEnabled={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
+        <UserStatusActions userId={userId} status={user.status} mfaEnabled={user.mfaEnabled === true} canEnable={user.supportCapabilities?.canEnableAccount === true} onEnabled={(updated, impact) => setChangeResult({ impact, status: updated.status })} />
       )}
     </div>
   )
@@ -726,268 +723,22 @@ function UserPermissionsSection({
   )
 }
 
-/* 기관 역할 (계약 v0.46.0 — 기관마다 하나씩 주고 뺀다). */
-
-/**
- * 한 계정이 여러 기관의 관리자를 겸할 수 있으므로, 기관 역할은 전역 역할 변경과
- * 분리해 기관 단위로 붙이고 뗀다. 기관 관리자는 자기가 관리자로
- * 있는 기관의 행만 건드릴 수 있고, 그 밖의 기관은 API가 404로 답한다.
- *
- * 열람 역할(ORG_VIEWER)도 여기서 부여한다 — 기관이 다른 기관의 직원에게 자기
- * 기관을 보게 하되 손대지 못하게 하는 통로다.
- */
+/** Institution changes use the complete explicit-assignment editor. */
 function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
-  const { user: viewer } = useAuth()
-  const queryClient = useQueryClient()
-  const toast = useToast()
-  const active = useActiveResult()
-  const [error, setError] = useState<string | null>(null)
-  const [addOrgId, setAddOrgId] = useState('')
-  const [addRevision, setAddRevision] = useState<number | null>(null)
-  const [addRole, setAddRole] = useState<UserRole>('ORG_MANAGER')
-  const [confirmRevoke, setConfirmRevoke] = useState<ManagedOrg | null>(null)
-  const [revokeRevision, setRevokeRevision] = useState<number | null>(null)
-  const revokeSurface = useRef(0)
-  const closeRevoke = () => { revokeSurface.current += 1; setConfirmRevoke(null) }
-
-  const isSysAdmin = viewer?.role === 'SYS_ADMIN'
-  const administered = administeredOrgs(viewer?.managedOrgs ?? [])
-  const canStaff = isSysAdmin || administered.length > 0
-  const orgs = useQuery({ queryKey: ['admin', 'orgs'], queryFn: fetchAdminOrgs, enabled: isSysAdmin })
-  // 시스템 관리자는 전 기관에, 기관 관리자는 자기가 관리자로 있는 기관 전부에 부여한다 —
-  // 서버도 `administers()`로 판정하므로 활성 관리 범위는 여기에 걸리지 않는다. 회수 버튼도
-  // 이 집합을 쓰므로, 방금 부여한 행을 그 자리에서 되거둘 수 있다.
-  const grantable = isSysAdmin
-    ? (orgs.data ?? []).map((org) => ({ id: org.id, name: org.name }))
-    : administered.map((org) => ({
-      id: org.orgId,
-      name: org.orgName,
-    }))
-  const readOrgIds = [...new Set([
-    ...user.managedOrgs.filter((org) => grantable.some((option) => option.id === org.orgId)).map((org) => org.orgId),
-    ...(addOrgId ? [addOrgId] : []),
-  ])]
-  const revisionReads = useQueries({ queries: readOrgIds.map((orgId) => ({
-    queryKey: ['admin', 'org-operations', orgId, null],
-    queryFn: () => fetchOrgOperations(orgId),
-  })) })
-  const operationsFor = (orgId: string) => revisionReads[readOrgIds.indexOf(orgId)]?.data
-  const revisionFor = (orgId: string) => operationsFor(orgId)?.revision
-  // The displayed assignment and write version come from one response.
-  const displayedRoles: ManagedOrg[] = user.managedOrgs.filter((org) => !operationsFor(org.orgId))
-  for (const read of revisionReads) {
-    const snapshot = read.data
-    const member = snapshot?.members.find((row) => row.userId === user.id)
-    if (snapshot && member) displayedRoles.push({ orgId: snapshot.org.id, orgName: snapshot.org.name, role: member.role, requestMail: member.requestMail })
-  }
-  const requireRevision = (orgId: string) => {
-    const revision = revisionFor(orgId)
-    if (revision == null) throw new Error('기관의 현재 명단을 조회한 뒤 다시 시도해 주세요.')
-    return revision
-  }
-  // 자기 자신과 시스템 계층 계정은 API가 403으로 거부하므로 변경 액션을
-  // 렌더하지 않는다.
-  const isSelf = viewer?.id === user.id
-  const targetIsSysTier = isSysTier(user.role)
-  const blockedReason = isSelf
-    ? '자신의 기관 역할은 변경할 수 없습니다.'
-    : targetIsSysTier
-      ? '시스템 관리자 계정의 기관 역할은 변경할 수 없습니다.'
-      : null
-
-  const invalidate = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
-    queryClient.invalidateQueries({ queryKey: ['admin', 'org-operations'] }),
-    queryClient.invalidateQueries({ queryKey: ['admin', 'audit'] }),
-  ])
-
-  const grant = useMutation({
-    mutationFn: () => grantOrgRole(user.id, addOrgId, addRole, addRevision ?? requireRevision(addOrgId)),
-    onSuccess: async (updated) => {
-      await invalidate()
-      if (active.current) { setError(null); setAddOrgId(''); toast.success(`${updated.name}님에게 기관 역할을 부여했습니다.`) }
-    },
-    onError: (err) => { if (active.current) setError(toApiError(err, '기관 역할을 부여하지 못했습니다.').message) },
-  })
-
-  const requestMail = useMutation({
-    mutationFn: ({ orgId, enabled, expectedRevision }: { orgId: string; enabled: boolean; expectedRevision: number }) =>
-      updateOrgRequestMail(user.id, orgId, enabled, expectedRevision),
-    onSuccess: async (updated) => {
-      await invalidate()
-      if (!active.current) return
-      setError(null)
-      toast.success(
-        updated.requestMail
-          ? `${user.name}님의 ${updated.orgName} 메일 수신자 지정을 저장했습니다.`
-          : `${user.name}님의 ${updated.orgName} 메일 수신자 지정을 해제했습니다.`,
-      )
-    },
-    onError: (err) =>
-      { if (active.current) setError(toApiError(err, '신청 접수 메일 설정을 바꾸지 못했습니다.').message) },
-  })
-
-  const revoke = useMutation({
-    mutationFn: ({ orgId, revision }: { orgId: string; revision: number; surface: number }) => revokeOrgRole(user.id, orgId, revision),
-    onSuccess: async (updated, variables) => {
-      await invalidate()
-      if (!active.current || variables.surface !== revokeSurface.current) return
-      setError(null)
-      setConfirmRevoke(null)
-      toast.success(
-        updated.role === 'USER'
-          ? `${updated.name}님의 마지막 관리 기관을 회수했습니다. 이제 일반 사용자입니다.`
-          : `${updated.name}님의 기관 역할을 회수했습니다.`,
-      )
-    },
-    onError: (err, variables) => {
-      if (!active.current || variables.surface !== revokeSurface.current) return
-      setConfirmRevoke(null)
-      setError(toApiError(err, '기관 역할을 회수하지 못했습니다.').message)
-    },
-  })
-
-  const alreadyHeld = new Set(displayedRoles.map((org) => org.orgId))
-  const addable = grantable.filter((org) => !alreadyHeld.has(org.id))
-  // Request mail changes what reaches a mailbox, not what anyone may do, so an
-  // admin sets it on itself too: the self and sys-tier blocks on role changes
-  // do not apply here.
-  const canSetRequestMail = (org: ManagedOrg) =>
-    canStaff &&
-    grantable.some((option) => option.id === org.orgId) &&
-    (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER')
-  const showsRequestMail = displayedRoles.some(canSetRequestMail)
-
-  return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-neutral-800">기관별 역할</h4>
-      {error && <Alert variant="danger">{error}<Button size="sm" variant="secondary" onClick={() => void invalidate()}>기관 명단 다시 조회</Button></Alert>}
-
-      {displayedRoles.length === 0 ? (
-        <p className="text-sm text-neutral-500">관리하는 기관이 없습니다.</p>
-      ) : (
-        <ul className="space-y-2">
-          {displayedRoles.map((org) => {
-            const mine = grantable.some((option) => option.id === org.orgId)
-            return (
-              <li
-                key={org.orgId}
-                className="flex items-center justify-between gap-3 rounded-md bg-neutral-50 px-3 py-2 text-sm"
-              >
-                <span>
-                  <span className="font-medium text-neutral-900">{org.orgName}</span>{' '}
-                  <Badge variant="neutral">{USER_ROLE_LABELS[org.role]}</Badge>
-                  {viewer && (isSysTier(viewer.role) || viewer.managedOrgs.some((held) => held.orgId === org.orgId)) && <>{' '}<Link className="text-primary-700 hover:underline" to={adminPaths.orgOperations(org.orgId)}>기관 운영</Link></>}
-                  {org.requestMail && !canSetRequestMail(org) && (
-                    <>
-                      {' '}
-                      <Badge variant="info">신청 접수 메일</Badge>
-                    </>
-                  )}
-                </span>
-                <span className="flex items-center gap-3">
-                  {canSetRequestMail(org) && (
-                    <label className="flex cursor-pointer items-center gap-1.5 text-sm text-neutral-700">
-                      <input
-                        type="checkbox"
-                        className="size-4 cursor-pointer accent-brand-fill"
-                        checked={org.requestMail}
-                        disabled={requestMail.isPending || revisionFor(org.orgId) == null}
-                        onChange={(event) =>
-                          requestMail.mutate({ orgId: org.orgId, enabled: event.target.checked, expectedRevision: requireRevision(org.orgId) })
-                        }
-                      />
-                      신청 접수 메일 받기
-                    </label>
-                  )}
-                  {canStaff && mine && blockedReason == null && (
-                    <Button size="sm" variant="secondary" disabled={revisionFor(org.orgId) == null} onClick={() => { revokeSurface.current += 1; setRevokeRevision(requireRevision(org.orgId)); setConfirmRevoke(org) }}>
-                      회수
-                    </Button>
-                  )}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-      {showsRequestMail && (
-        <p className="text-xs text-neutral-500">
-          지정 설정과 실제 수신자는 기관의 수신 방식에 따라 다릅니다. 기관 운영에서 현재 수신자와 제외 사유를 확인할 수 있습니다.
-        </p>
-      )}
-
-      {canStaff && blockedReason == null && (
-        <div className="flex flex-wrap items-end gap-3">
-          <FormField label="부여할 기관">
-            <Select
-              className="w-56"
-              value={addOrgId}
-              disabled={addable.length === 0 || grant.isPending}
-              onChange={(event) => { setAddOrgId(event.target.value); setAddRevision(revisionFor(event.target.value) ?? null) }}
-            >
-              <option value="">기관 선택</option>
-              {addable.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="부여할 역할">
-            <Select
-              className="w-40"
-              value={addRole}
-              disabled={grant.isPending}
-              onChange={(event) => setAddRole(event.target.value as UserRole)}
-            >
-              <option value="ORG_VIEWER">{USER_ROLE_LABELS.ORG_VIEWER}</option>
-              <option value="ORG_MANAGER">{USER_ROLE_LABELS.ORG_MANAGER}</option>
-              <option value="ORG_ADMIN">{USER_ROLE_LABELS.ORG_ADMIN}</option>
-            </Select>
-          </FormField>
-          <Button
-            disabled={!addOrgId || alreadyHeld.has(addOrgId) || revisionFor(addOrgId) == null}
-            loading={grant.isPending}
-            onClick={() => grant.mutate()}
-          >
-            부여
-          </Button>
-        </div>
-      )}
-
-      <Modal
-        open={confirmRevoke != null}
-        onClose={closeRevoke}
-        title="기관 역할 회수"
-      >
-        <p className="text-sm text-neutral-600">
-          {confirmRevoke?.orgName} 기관에서 {user.name}님의 역할을 회수합니다.
-          {user.managedOrgs.length === 1 && (
-            <>
-              {' '}
-              <strong className="text-neutral-900">
-                마지막 관리 기관이므로 이 계정은 일반 사용자가 되고 기존 로그인 세션이
-                무효화됩니다.
-              </strong>
-            </>
-          )}
-        </p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="secondary" onClick={closeRevoke}>
-            취소
-          </Button>
-          <Button
-            variant="danger"
-            loading={revoke.isPending}
-            onClick={() => confirmRevoke && revoke.mutate({ orgId: confirmRevoke.orgId, revision: revokeRevision ?? requireRevision(confirmRevoke.orgId), surface: revokeSurface.current })}
-          >
-            회수
-          </Button>
-        </div>
-      </Modal>
-    </div>
-  )
+  const viewer = useAuth().user
+  const scope = useAdminScope()
+  const editable = viewer?.role === 'SYS_ADMIN' ? scope.options : workSources(viewer, 'institution.delegate').map((source) => ({ id: source.institutionId, name: source.institutionName }))
+  if (user.managedOrgs == null) return <p className="text-sm text-neutral-500">기관 담당 정보는 현재 업무로 제공되지 않습니다.</p>
+  return <div className="space-y-3"><h4 className="text-sm font-semibold">기관 담당 정보</h4>
+    {user.managedOrgs.length === 0 ? <p className="text-sm text-neutral-500">배정된 기관 업무가 없습니다.</p>
+      : <ul className="space-y-2">{user.managedOrgs.map((org) => <li key={org.orgId} className="rounded-md bg-neutral-50 p-3 text-sm">
+        {org.orgName} · {USER_ROLE_LABELS[org.role]}{' '}
+        {['institution.staff.read', 'institution.delegate', 'institution.request-mail.read', 'institution.request-mail.configure'].some((work) => hasWork(viewer, work, { orgId: org.orgId }, SYS_READERS))
+          && <Link to={adminPaths.orgOperations(org.orgId)} className="text-primary-700 hover:underline">업무와 수신 설정 확인</Link>}
+      </li>)}</ul>}
+    {editable.length > 0 && <nav aria-label="기관 업무 편집" className="flex flex-wrap gap-3 text-sm">{editable.map((institution) => <Link key={institution.id} to={adminPaths.orgOperations(institution.id)} className="text-primary-700 hover:underline">{institution.name} 업무 편집</Link>)}</nav>}
+    <p className="text-xs text-neutral-500">표시 역할을 선택해 권한을 부여하지 않습니다. 기관 운영에서 FULL 또는 SELECTED 업무와 범위를 확인한 뒤 변경합니다.</p>
+  </div>
 }
 
 /* 전역 역할 관리 (SYS_ADMIN 전용). */
@@ -1028,6 +779,7 @@ function UserGlobalRoleSection({ user }: { user: UserAdminDetail }) {
     update.mutate()
   }
 
+  if (user.managedOrgs == null) return <Alert>기관 업무를 확인할 수 없어 전역 역할을 변경할 수 없습니다.</Alert>
   if (user.managedOrgs.length > 0) {
     return (
       <div className="space-y-2">

@@ -40,6 +40,20 @@ function expectNoActions() {
   }
 }
 
+test('refuses unsafe daily token input without sending a rounded update', async () => {
+  const user = userEvent.setup()
+  renderDetail('access-sys-admin', sysAdminUser, uuid(171))
+  await user.click(await screen.findByRole('button', { name: '한도 변경' }))
+  const dialog = await screen.findByRole('dialog')
+  const daily = within(dialog).getByLabelText('일일 토큰')
+  await user.clear(daily)
+  await user.type(daily, '9007199254740993')
+  await user.click(within(dialog).getByRole('button', { name: '저장' }))
+  expect(adminLlmLimitBodies).toHaveLength(0)
+  expect(within(dialog).getByText('정확값 확인 불가')).toBeInTheDocument()
+  expect(within(dialog).getAllByText(/올바른 정수/).length).toBeGreaterThan(0)
+})
+
 test.each([
   'https://evil.invalid', `/admin/requests/${uuid(999)}?org=${uuid(1)}`,
   `/admin/requests/${uuid(206)}?org=${uuid(2)}`,
@@ -170,7 +184,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     expect(screen.queryByRole('button', { name: '키 정지' })).not.toBeInTheDocument()
   })
 
-  test('SYS_MANAGER는 비금액 4축만 편집하고 기존 금액값을 그대로 PUT한다', async () => {
+  test('token-only edits omit monetary fields and preserve their stored values', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
@@ -182,11 +196,10 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0]).toMatchObject({
-      rpm: 80,
-      creditLimit: 5,
-      creditLimitReset: 'MONTHLY',
-    })
+    expect(adminLlmLimitBodies[0]).toMatchObject({ rpm: 80 })
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('creditLimit')
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('creditLimitReset')
+    expect(adminLlmKeyStore.find((key) => key.id === uuid(171))).toMatchObject({ creditLimit: 5, creditLimitReset: 'MONTHLY' })
   })
 
   // 관리자가 입력한 목록이 요청 본문에 실리는지. 이 단언이 없으면 창이 값을
@@ -249,9 +262,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     })
   })
 
-  // 금액 축을 못 만지는 역할에게는 두 칸이 다 없다. 창이 현재 값을 그대로
-  // 되돌려 보내지 않으면, 그 역할이 RPM 하나를 고치는 순간 차단 목록이 사라진다.
-  // 목이 서버처럼 403을 내므로 이 단언이 실제로 그 자리를 지킨다.
+  // Token edits omit hidden monetary policy; the server retains stored rules.
   test('금액을 못 만지는 역할이 저장해도 차단 목록이 남는다', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
@@ -263,7 +274,8 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0].creditDeniedModels).toEqual(['openai/*-pro'])
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('creditDeniedModels')
+    expect(adminLlmKeyStore.find((key) => key.id === uuid(171))!.creditDeniedModels).toEqual(['openai/*-pro'])
   })
 
   // 기능 권한은 세 목록 중 유일하게 부여하는 쪽이라 지워지는 방향이 더 나쁘다.
@@ -279,7 +291,8 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['images'])
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('passthroughEndpoints')
+    expect(adminLlmKeyStore.find((key) => key.id === uuid(171))!.passthroughEndpoints).toEqual(['images'])
   })
 
   // Chat works on both axes, so the server does not count a Chat-only change
@@ -294,20 +307,23 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0].passthroughEndpoints).toEqual(['chat', 'images'])
+    expect(adminLlmLimitBodies[0]).toMatchObject({ chatEnabled: true })
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('passthroughEndpoints')
+    expect(new Set(adminLlmKeyStore.find((key) => key.id === uuid(171))!.passthroughEndpoints)).toEqual(new Set(['chat', 'images']))
   })
 
-  // Unticking Chat would take web search with it, a money-side change this
-  // role cannot make, so the box is locked rather than left to end in 403.
-  test('a role that cannot change money cannot take Chat from a key with web search', async () => {
+  test('a token-only Chat removal retains hidden child grants and receives the server refusal', async () => {
     const key = adminLlmKeyStore.find((item) => item.id === uuid(171))!
     key.passthroughEndpoints = ['chat', 'web_search']
     const user = userEvent.setup()
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.getByRole('checkbox', { name: /Chat/ })).toBeDisabled()
-    expect(dialog.getByText('Chat 아래 기능이 부여된 키라 Chat을 회수할 수 없습니다.')).toBeInTheDocument()
+    await user.click(dialog.getByRole('checkbox', { name: /Chat/ }))
+    await user.click(dialog.getByRole('button', { name: '저장' }))
+    expect(await dialog.findAllByText(/기능은 chat 기능과 함께 부여해야 합니다/)).not.toHaveLength(0)
+    expect(adminLlmLimitBodies).toHaveLength(0)
+    expect(key.passthroughEndpoints).toEqual(['chat', 'web_search'])
   })
 
   test('web search waits for Chat on a key without it', async () => {
@@ -348,20 +364,20 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
     expect(screen.getByText('부여 안 됨')).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER가 모델 허용 목록을 바꾸면 서버가 거절한다', async () => {
+  test('token-only editing never submits the paid-model allow list', async () => {
     const user = userEvent.setup()
     renderDetail('access-sys-manager', sysManagerUser, uuid(171))
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    // 금액 축을 못 만지는 역할이라 목록 칸도 없다 — 창은 기존 값을 그대로
-    // 되돌려 보내고, 그래서 403이 나지 않는다.
+    // Hidden policy is omitted rather than copied back into the write.
     expect(dialog.queryByLabelText('유료 모델 허용·차단')).not.toBeInTheDocument()
     await user.clear(dialog.getByLabelText('RPM'))
     await user.type(dialog.getByLabelText('RPM'), '80')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0].creditAllowedModels).toEqual(['openai/*'])
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('creditAllowedModels')
+    expect(adminLlmKeyStore.find((key) => key.id === uuid(171))!.creditAllowedModels).toEqual(['openai/*'])
   })
 
   test('6축 form은 오류 summary를 표시하고 첫 오류 입력으로 focus를 옮긴다', async () => {
@@ -417,7 +433,8 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     expect(dialog.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0].openrouterAccountId).toBe(uuid(410))
+    expect(adminLlmLimitBodies[0]).not.toHaveProperty('openrouterAccountId')
+    expect(adminLlmKeyStore.find((key) => key.id === uuid(171))!.openrouterAccountId).toBe(uuid(410))
   })
 
   test('key 금액의 null과 실제 0을 구분한다', async () => {
@@ -469,8 +486,13 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
       `/admin/requests?org=${uuid(1)}`,
     )
     await user.click(dialog.getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
-    expect(adminLlmLimitBodies[0].openrouterAccountId).toBeNull()
+    if (keyId === uuid(170)) {
+      expect(dialog.getByText('현재 키의 첫 사업 계정 결합이 허용되지 않았습니다. 키 정보를 다시 조회해 주세요.')).toBeInTheDocument()
+      expect(adminLlmLimitBodies).toHaveLength(0)
+    } else {
+      await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
+      expect(adminLlmLimitBodies[0]).not.toHaveProperty('openrouterAccountId')
+    }
     expect(accountCalls).toBe(0)
     expect(await screen.findByRole('heading', { name })).toBeInTheDocument()
   })

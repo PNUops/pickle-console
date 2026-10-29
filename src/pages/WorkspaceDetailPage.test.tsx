@@ -1,3 +1,4 @@
+import { emptyTerminationImpact } from '../test/fixtures/termination'
 import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import userEvent from '@testing-library/user-event'
@@ -655,7 +656,8 @@ describe('workspace detail: invitations', () => {
     expect(within(results).getByText('SOMETHING_NEW')).toBeInTheDocument()
   })
 
-  test('pending invitations show who invited and when, and cancel after a confirm', async () => {
+  test('pending invitations show exact effects and cancel after explicit confirmation', async () => {
+    server.use(http.get('*/api/v1/workspaces/:workspaceId/invitations/:invitationId/termination-impact', ({ params }) => HttpResponse.json(emptyTerminationImpact({ action: 'CANCEL_INVITATION', invitationId: String(params.invitationId) }))))
     const user = userEvent.setup()
     renderWorkspace(uuid(12))
     await screen.findByRole('heading', { name: '대기 중인 초대 (1건)' })
@@ -666,7 +668,8 @@ describe('workspace detail: invitations', () => {
 
     await user.click(within(row).getByRole('button', { name: 'jiwoo.han@pusan.ac.kr 초대 취소' }))
     const dialog = await screen.findByRole('dialog', { name: '초대 취소' })
-    expect(within(dialog).getByText('jiwoo.han@pusan.ac.kr 초대를 취소합니다.')).toBeInTheDocument()
+    expect(within(dialog).getByText('대상 초대: jiwoo.han@pusan.ac.kr')).toBeInTheDocument()
+    await user.click(await within(dialog).findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
     await user.click(within(dialog).getByRole('button', { name: '초대 취소' }))
 
     expect(await screen.findByText('대기 중인 초대가 없습니다.')).toBeInTheDocument()
@@ -693,7 +696,8 @@ describe('워크스페이스 상세 — 워크스페이스 삭제', () => {
     expect(screen.queryByRole('heading', { name: '워크스페이스 삭제' })).not.toBeInTheDocument()
   })
 
-  test('이름을 정확히 입력해야 삭제되고, 이후 워크스페이스 목록으로 이동한다', async () => {
+  test('the exact name and explicit effects confirmation precede deletion and list return', async () => {
+    server.use(http.get('*/api/v1/workspaces/:workspaceId/termination-impact', () => HttpResponse.json(emptyTerminationImpact())))
     const user = userEvent.setup()
     renderWorkspace(uuid(12))
     await screen.findByRole('heading', { name: '캡스톤 3조' })
@@ -704,6 +708,8 @@ describe('워크스페이스 상세 — 워크스페이스 삭제', () => {
     expect(confirm).toBeDisabled()
 
     await user.type(within(dialog).getByRole('textbox'), '캡스톤 3조')
+    expect(confirm).toBeDisabled()
+    await user.click(await within(dialog).findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
     expect(confirm).toBeEnabled()
     await user.click(confirm)
 

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import {
@@ -16,6 +17,8 @@ import {
 } from '../api/queries'
 import { useAuth } from '../auth/auth-context'
 import { isSysTier } from '../auth/permissions'
+import { canQueryWork, SYS_READERS } from '../auth/institution-authority'
+import { requestReaderKey } from '../api/request-review'
 import {
   Badge,
   Card,
@@ -40,6 +43,8 @@ import {
 import { ObservationMoment } from '../components/OpenRouterCredits'
 import { formatBytes, formatDateTime, formatRelative } from '../lib/format'
 import { useAdminScope } from '../lib/use-admin-scope'
+
+const LlmCapacityView = lazy(() => import('../components/llm-capacity/LlmCapacityView'))
 
 const SCREEN_TABS = [
   { id: 'status', label: '상태' },
@@ -524,6 +529,19 @@ function StatusView({ data, systemView }: { data: AdminLlmStatus; systemView: bo
         </h2>
         <UpstreamStatusTable upstreams={data.upstreams} systemView={systemView} />
       </section>
+      <section aria-labelledby="llm-model-connections-heading" className="space-y-3">
+        <h2 id="llm-model-connections-heading" className="type-section-title">모델 구성 연결</h2>
+        <p className="text-sm text-foreground-muted">현재 읽을 수 있는 등록 공급원과 연결된 공개·활성 TOKEN 모델만 표시합니다. 전체 모델 목록이나 실제 요청 처리 경로가 아닙니다. 공급원의 관측 상태와 실제 호출 조건은 별도로 확인해 주세요.</p>
+        {data.modelRoutes?.length ? <DataTable caption="모델과 공급원 구성 연결" captionVisible>
+          <thead><tr><th scope="col">공개 모델명</th><th scope="col">주 공급원</th><th scope="col">대체 공급원</th></tr></thead>
+          <tbody>{data.modelRoutes.map((route) => <tr key={route.publicName}>
+            <td className="break-all font-mono">{route.publicName}</td>
+            {[route.primary, route.fallback].map((edge, index) => <td key={index}>
+              {edge.state === 'VISIBLE' ? edge.upstreamName ?? '표시 이름 미보고' : edge.state === 'NOT_CONFIGURED' ? '미설정' : '제공되지 않음'}
+            </td>)}
+          </tr>)}</tbody>
+        </DataTable> : <p className="text-sm">현재 범위에서 모델 연결을 확인할 수 없습니다. 모델이 없다는 뜻은 아닙니다.</p>}
+      </section>
       {systemView && <PipelineDiagnostics status={data.gateway} />}
     </div>
   )
@@ -758,25 +776,27 @@ export function AdminLlmStatusPage() {
   const systemView = !!user && isSysTier(user.role)
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') === 'metrics' ? 'metrics' : 'status'
+  const capacityView = activeTab === 'metrics' && searchParams.get('view') === 'capacity'
   const scopeKey = activeOrgId ?? null
+  const permitted = canQueryWork(user, ['llm.observe'], { orgId: activeOrgId }, SYS_READERS)
 
   const status = useQuery({
-    queryKey: ['admin', 'llm-status', { orgId: scopeKey }],
+    queryKey: ['admin', 'llm-status', { orgId: scopeKey, reader: requestReaderKey(user) }],
     queryFn: async () => ({
       scopeKey,
       value: await fetchAdminLlmStatus(activeOrgId),
     }),
-    enabled: activeTab === 'status',
+    enabled: activeTab === 'status' && permitted,
     staleTime: 15_000,
     refetchInterval: 30_000,
   })
   const metrics = useQuery({
-    queryKey: ['admin', 'llm-metrics', { orgId: scopeKey, days: 7 }],
+    queryKey: ['admin', 'llm-metrics', { orgId: scopeKey, days: 7, reader: requestReaderKey(user) }],
     queryFn: async () => ({
       scopeKey,
       value: await fetchAdminLlmMetrics(activeOrgId, 7),
     }),
-    enabled: activeTab === 'metrics',
+    enabled: activeTab === 'metrics' && !capacityView && permitted,
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
   })
@@ -812,8 +832,8 @@ export function AdminLlmStatusPage() {
         }}
       />
 
-      {activeQuery.isPending && <LoadingBlock label="LLM 서비스 정보 불러오는 중" />}
-      {activeQuery.isError && (
+      {!capacityView && permitted && activeQuery.isPending && <LoadingBlock label="LLM 서비스 정보 불러오는 중" />}
+      {!capacityView && activeQuery.isError && (
         <MessageBar variant="danger">{activeQuery.error.message}</MessageBar>
       )}
 
@@ -821,7 +841,16 @@ export function AdminLlmStatusPage() {
         {statusData && <StatusView data={statusData} systemView={systemView} />}
       </TabPanel>
       <TabPanel id="metrics" active={activeTab === 'metrics'}>
-        {metricsData && <MetricsView data={metricsData} systemView={systemView} />}
+        <Tabs aria-label="LLM 지표 보기" tabs={[{ id: 'summary', label: '최종 처리 요약' }, { id: 'capacity', label: '장비와 수요 비교' }]}
+          value={capacityView ? 'capacity' : 'summary'} onChange={(id) => {
+            const next = new URLSearchParams(searchParams)
+            if (id === 'capacity') next.set('view', id)
+            else next.delete('view')
+            setSearchParams(next, { replace: true })
+          }} />
+        {!permitted && <MessageBar>선택한 기관 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
+        {capacityView ? <Suspense fallback={<LoadingBlock label="수요 비교 화면 불러오는 중" />}><LlmCapacityView /></Suspense>
+          : metricsData && <MetricsView data={metricsData} systemView={systemView} />}
       </TabPanel>
     </div>
   )

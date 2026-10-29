@@ -72,7 +72,7 @@ export function LlmKeyBodiesSection({
     return (
       <Alert variant="info" title="아직 발급되지 않은 키입니다">
         발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없습니다. 개요 탭에서 키를
-        발급하면 그때부터 쌓입니다.
+        발급한 뒤 본문 기록을 켜고 Chat Completions로 호출해야 기록됩니다.
       </Alert>
     )
   }
@@ -96,7 +96,7 @@ export function LlmKeyBodiesSection({
     return recordBodies ? (
       <EmptyState
         title="아직 기록된 본문이 없습니다"
-        description="본문 기록은 켜져 있습니다. 이 키로 요청을 보내면 잠시 뒤에 여기에 나타납니다. 게이트웨이가 모아서 보내므로 방금 보낸 요청은 아직 보이지 않을 수 있습니다."
+        description="본문 기록은 켜져 있습니다. 설정을 켠 뒤 Chat Completions로 보낸 요청의 프롬프트와 응답 텍스트가 기록됩니다. Chat Completions 밖의 경로는 기록하지 않습니다. 방금 보낸 요청은 아직 반영되지 않았을 수 있습니다."
       />
     ) : (
       <div className="space-y-4">

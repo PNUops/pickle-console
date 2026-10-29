@@ -84,8 +84,10 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     expect(within(tokenTable).getByRole('columnheader', { name: '입력 토큰' })).toBeInTheDocument()
     expect(within(tokenTable).getByRole('columnheader', { name: '출력 토큰' })).toBeInTheDocument()
     const tokenDay = within(tokenTable).getByRole('rowheader', { name: '2026-08-31' }).closest('tr')!
-    expect(within(tokenDay).getByRole('cell', { name: '1,200' })).toBeInTheDocument()
+    expect(within(tokenDay).getByRole('cell', { name: '1.2K' })).toBeInTheDocument()
     expect(within(tokenDay).getByRole('cell', { name: '400' })).toBeInTheDocument()
+    await user.click(within(tokenDay).getByRole('button', { name: '1.2K, 정확값 보기' }))
+    expect(within(tokenDay).getByText('정확값 1,200 토큰')).toBeVisible()
     // 정확한 개수를 유지한다 — 이 단언이 아니면 표가 하나 늘어난 것을 아무도 못 본다.
     // 다섯째는 「호출 분해」 카드의 기본 눈금(모델별)이다.
     expect(screen.getAllByRole('table')).toHaveLength(5)
@@ -106,10 +108,10 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     // 둘은 언제나 붙어 있다 — 사이에 다른 모델이 끼면 합계로 정렬한 순위가 깨진다.
     expect(known.nextElementSibling).toBe(unknown)
     expect(within(known).getByText('4건')).toBeInTheDocument()
-    expect(within(known).getByText('300 토큰')).toBeInTheDocument()
+    expect(within(known).getByText('300')).toBeInTheDocument()
     expect(within(known).getByText('$0.1245')).toBeInTheDocument()
     expect(within(unknown).getByText('2건')).toBeInTheDocument()
-    expect(within(unknown).getByText('150 토큰')).toBeInTheDocument()
+    expect(within(unknown).getByText('150')).toBeInTheDocument()
     // 자체 서빙의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
     // 이쪽은 있어야 하는데 모른다.
     expect(within(unknown).getByText('정보 없음')).toBeInTheDocument()
@@ -167,7 +169,8 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(org).toHaveAttribute('href', `/admin/llm/usage?days=30&org=${uuid(1)}`)
     const consumers = screen.getByRole('heading', { name: '주요 소비처' }).closest('div')!
       .parentElement as HTMLElement
-    expect(within(consumers).getByText(/상위 2개만 표시합니다/)).toBeInTheDocument()
+    expect(within(consumers).queryByText(/상위 2개만 표시합니다/)).not.toBeInTheDocument()
+    expect(within(consumers).getByRole('combobox', { name: '소비처 정렬' })).toBeInTheDocument()
     await user.click(org)
 
     const workspace = await screen.findByRole('link', { name: '캡스톤 3조' })
@@ -185,10 +188,10 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
 
     const keyConsumers = (await screen.findByRole('heading', { name: '주요 소비처' })).closest('div')!
       .parentElement as HTMLElement
-    expect(within(keyConsumers).getByRole('link', { name: 'capstone-chatbot' })).toHaveAttribute(
-      'href',
-      `/admin/llm/keys/${uuid(501)}?org=${uuid(1)}`,
-    )
+    const destination = new URL(within(keyConsumers).getByRole('link', { name: 'active-admin-key' }).getAttribute('href')!, 'https://pickle.invalid')
+    expect(destination.pathname).toBe(`/admin/llm/keys/${uuid(171)}`)
+    expect(destination.searchParams.get('org')).toBe(uuid(1))
+    expect(destination.searchParams.get('returnTo')).toBe(currentPath())
     // 좁힌 뒤 돌아오는 길이 있어야 한다는 것이 이 단언이 지키던 것이다. 그 길이
     // 헤더의 링크에서 선택기 옆 버튼으로 바뀌었으므로 불변식을 그쪽에 다시 세운다.
     expect(screen.getByRole('combobox', { name: 'LLM 사용량 워크스페이스 필터' }))
@@ -225,10 +228,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(await screen.findByRole('heading', { name: '호출 분해' })).toBeInTheDocument()
   })
 
-  test('소비처 금액은 공급자 미터를 그리고 빠진 건수를 세지 않는다', async () => {
-    // 소비처 단위에서 읽는 사람이 원하는 것은 금액이고, 값을 매기지 못한 건수는
-    // 그 자리에서 할 수 있는 일이 없다. 그래서 이 표만 공급자 미터를 쓴다 —
-    // 요청별 금액이 기록되기 전의 지출까지 담기므로 귀속 합계보다 크다.
+  test('consumer meter differences and reported request costs remain separate without inventing missing charges', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/llm/usage')
@@ -236,13 +236,12 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     const consumers = await screen.findByRole('table', { name: 'LLM 주요 소비처' })
     const paidOrg = within(consumers).getByText('테스트 기관').closest('tr')!
     expect(within(paidOrg).getByText('$0.3102')).toBeInTheDocument()
-    // 귀속 합계도 「N건 미상」도 이 표에 남아 있지 않다.
-    expect(within(paidOrg).queryByText(/0\.1245/)).not.toBeInTheDocument()
+    expect(within(paidOrg).getByText('$0.1245')).toBeInTheDocument()
     expect(within(consumers).queryByText(/미상/)).not.toBeInTheDocument()
     // 자체 서빙만 쓴 기관은 공급자 미터에도 잡힐 것이 없다. $0.00이 아니라 —.
     const selfHostedOrg = within(consumers)
       .getByText('정보컴퓨터공학부 실습지원센터').closest('tr')!
-    expect(within(selfHostedOrg).getByText('—')).toBeInTheDocument()
+    expect(within(selfHostedOrg).getAllByText('—')).toHaveLength(2)
     // 카드는 금액이 어느 시점의 것인지 한 번 말한다. 시각과 「관측」이 서로 다른
     // 텍스트 노드라 문자열로는 못 찾으므로 `time` 요소로 찾는다.
     const cardMoment = () => {
@@ -271,10 +270,10 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/llm/usage')
 
-    const actual = (await screen.findByRole('link', { name: 'capstone-chatbot' })).closest('tr')!
+    const actual = (await screen.findByRole('link', { name: 'active-admin-key' })).closest('tr')!
     expect(within(actual).getByText('실제 소진 확인')).toBeInTheDocument()
-    expect(within(actual).getByText('자체 서빙 90,000 토큰')).toBeInTheDocument()
-    expect(within(actual).getByText('종류 미상 1,000 토큰')).toBeInTheDocument()
+    expect(within(actual).getByRole('button', { name: '90K, 정확값 보기' })).toBeInTheDocument()
+    expect(within(actual).getByRole('button', { name: '1K, 정확값 보기' })).toBeInTheDocument()
     expect(within(actual).getByText('사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
     expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
@@ -288,14 +287,17 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
       `/admin/llm/accounts/${uuid(410)}`,
     )
 
-    const rateOnly = screen.getByRole('link', { name: 'batch-summarizer' }).closest('tr')!
+    const rateOnly = screen.getByRole('link', { name: 'suspended-admin-key' }).closest('tr')!
     expect(within(rateOnly).getByText('한도 압력')).toBeInTheDocument()
     expect(within(rateOnly).queryByText('실제 소진 확인')).not.toBeInTheDocument()
     expect(within(rateOnly).getByText('사용 확인 전')).toBeInTheDocument()
-    expect(within(rateOnly).getByText('종류 미상 0 토큰')).toBeInTheDocument()
+    expect(rateOnly).toHaveTextContent('종류 미상 0')
     expect(document.body).not.toHaveTextContent('server_busy')
     expect(document.body).not.toHaveTextContent('80%')
-    expect(screen.getByText(/4개 중 상위 2개만 표시합니다/)).toBeInTheDocument()
+    const review = screen.getByRole('heading', { name: '한도 검토' }).closest('div')!.parentElement!
+    expect(within(review).getByText('전체 2개')).toBeInTheDocument()
+    expect(within(review).getByText(/압력 기간 2026-08-25 ~ 2026-08-31/)).toBeInTheDocument()
+    expect(within(review).queryByText(/상위 2개만 표시합니다/)).not.toBeInTheDocument()
   })
 })
 
@@ -310,7 +312,7 @@ describe('관리자 LLM 사용량 신뢰도와 상태 처리', () => {
       .toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'LLM 서비스 상태 보기' })).toHaveAttribute(
       'href',
-      `/admin/llm/status?org=${uuid(1)}`,
+      '/admin/llm/status',
     )
     expect(screen.queryByRole('heading', { name: '사용량 전달 진단' })).not.toBeInTheDocument()
     expect(screen.queryByText('전송 대기 기록')).not.toBeInTheDocument()
@@ -387,8 +389,8 @@ describe('관리자 LLM 사용량 신뢰도와 상태 처리', () => {
           unknownAxisRequests: 0,
           axisCoverage: null,
         }))
-        body.consumers = { level: 'ORG', items: [], totalItems: 0, truncated: false }
-        body.limitReview = { items: [], totalItems: 0, truncated: false }
+        body.consumers = { ...body.consumers, level: 'ORG', items: [], totalItems: 0, totalPages: 0, truncated: false }
+        body.limitReview = { ...body.limitReview, items: [], totalItems: 0, totalPages: 0, truncated: false }
         body.quality = { ...body.quality, totalRequests: 0, totalTokens: 0, estimatedRequests: 0,
           estimatedRequestRatio: null, estimatedTokens: 0, estimatedTokenRatio: null }
         return HttpResponse.json(body)

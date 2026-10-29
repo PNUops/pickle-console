@@ -8,10 +8,12 @@ import type { AccessConfirmation } from '../../api/resource-access'
 import { useAuth } from '../../auth/auth-context'
 import { requestReaderKey } from '../../api/request-review'
 import { useActiveResult } from '../../lib/use-active-result'
-import { Alert, Badge, Button, FormField, Modal, Spinner, Textarea, Table, TBody, TD, TH, THead, TR, useToast, type BadgeVariant } from '../ui'
+import { Alert, Badge, Button, FormField, Spinner, Textarea, Table, TBody, TD, TH, THead, TR, useToast, type BadgeVariant } from '../ui'
 import { formatDateTime } from '../../lib/format'
 import { parseRoster, type RosterRow } from '../../lib/roster'
 import { RosterInput, ROSTER_PASTE_HINT } from '../roster/RosterInput'
+import { WorkspaceTerminationImpactButton } from './WorkspaceTerminationImpact'
+import { WorkspaceTerminationDialog } from './WorkspaceTerminationDialog'
 
 type Schemas = components['schemas']
 
@@ -270,7 +272,7 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
   workspaceId: string
   onChanged: () => void
   loadInvitations?: () => Promise<WorkspaceInvitation[]>
-  cancelInvitation?: (invitationId: string) => Promise<void>
+  cancelInvitation?: (invitationId: string, fingerprint: string) => Promise<void>
   canManage?: boolean
   support?: boolean
 }) {
@@ -285,11 +287,11 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
   })
 
   const cancel = useMutation({
-    mutationFn: async (invitation: WorkspaceInvitation) => {
-      if (cancelInvitation) { await cancelInvitation(invitation.id); return invitation }
+    mutationFn: async ({ invitation, fingerprint }: { invitation: WorkspaceInvitation; fingerprint: string }) => {
+      if (cancelInvitation) { await cancelInvitation(invitation.id, fingerprint); return invitation }
       const { error: err, response } = await api.DELETE(
         '/workspaces/{workspaceId}/invitations/{invitationId}',
-        { params: { path: { workspaceId, invitationId: invitation.id } } },
+        { params: { path: { workspaceId, invitationId: invitation.id } }, body: { confirmation: { fingerprint, confirmed: true } } },
       )
       if (!response.ok) throw toApiError(err, '초대를 취소하지 못했습니다.')
       return invitation
@@ -300,11 +302,7 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
       setCancelTarget(null)
       toast.success(`${invitationTarget(invitation)} 초대를 취소했습니다.`)
     },
-    onError: (err) => {
-      if (!active.current) return
-      setCancelTarget(null)
-      setError(toApiError(err, '초대를 취소하지 못했습니다.').message)
-    },
+
   })
 
   return (
@@ -339,6 +337,7 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
                 <TD>{formatDateTime(invitation.invitedAt)}</TD>
                 <TD>{invitation.invitedBy.name}</TD>
                 {canManage && <TD>
+                  <WorkspaceTerminationImpactButton workspaceId={workspaceId} invitationId={invitation.id} admin={support} targetLabel={invitationTarget(invitation)} />
                   <Button
                     variant="ghost"
                     size="sm"
@@ -358,29 +357,9 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
         </Table>
       )}
 
-      <Modal
-        open={cancelTarget !== null}
-        onClose={() => setCancelTarget(null)}
-        title="초대 취소"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setCancelTarget(null)}>
-              닫기
-            </Button>
-            <Button
-              variant="danger"
-              loading={cancel.isPending}
-              onClick={() => cancelTarget && cancel.mutate(cancelTarget)}
-            >
-              초대 취소
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-neutral-600">
-          {cancelTarget ? invitationTarget(cancelTarget) : ''} 초대를 취소합니다.
-        </p>
-      </Modal>
+      {cancelTarget && <WorkspaceTerminationDialog workspaceId={workspaceId} invitationId={cancelTarget.id} targetLabel={invitationTarget(cancelTarget)} admin={support}
+        onClose={() => setCancelTarget(null)} onConfirm={async (fingerprint) => { await cancel.mutateAsync({ invitation: cancelTarget, fingerprint }) }} />}
+
     </section>
   )
 }

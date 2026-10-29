@@ -50,7 +50,8 @@ describe('guide content and navigation', () => {
     expect(introduction).not.toHaveTextContent('공식 명칭')
     expect(introduction).not.toHaveTextContent('PNU Cloud라는 이름')
     expect(introduction).not.toHaveTextContent('시스템 구성과 공개 코드')
-    expect(introduction).toHaveTextContent('테스트 계정과 이용 데이터가 삭제됩니다')
+    expect(introduction).not.toHaveTextContent('테스트 계정과 이용 데이터가 삭제됩니다')
+    expect(introduction).toHaveTextContent('별도로 백업')
   })
 
   test.each(guideArticles.map((article) => [article.slug, article.title]))('renders %s and resolves every guide link', async (slug, title) => {
@@ -69,6 +70,7 @@ describe('guide content and navigation', () => {
     }
     const visibleText = (screen.getByRole('article', { name: title }).textContent ?? '')
       .replaceAll('도메인·포트', '')
+      .replaceAll('캐시·사고 토큰', '')
     expect(visibleText).not.toContain('·')
     await waitFor(() => expect(document.title).toBe(`${title} | 사용 가이드 | Pickle`))
   })
@@ -206,7 +208,7 @@ describe('guide content and navigation', () => {
     server.use(refreshSuccessHandler('access-sys-admin'), http.get('*/api/v1/admin/orgs', () => HttpResponse.json({}, { status: 503 })))
     renderApp(`/admin/docs/start?org=${uuid(1)}`)
     expect(await screen.findByRole('heading', { level: 1, name: '처음 시작하기' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: '리소스 신청' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '리소스 신청' })).toHaveAttribute('href', '/console/requests/new')
   })
 
   test('returns to the original task after navigating between documents', async () => {

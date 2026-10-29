@@ -31,14 +31,13 @@ export function GuideLink({ slug, anchor, children, className, onClick }: {
 
 type GuideActionName = 'newRequest' | 'requests' | 'workspaces' | 'account' | 'notices' | 'notifications' | 'vms' | 'llmKeys' | 'dnsDomains'
 
-/** Administrators can read the manual without links to inaccessible user actions. */
+/** Personal actions stay reachable; shared account actions retain the administrator shell. */
 export function GuideAction({ action, children }: { action: GuideActionName; children: ReactNode }) {
   const location = useLocation()
   const { user } = useAuth()
-  if (user && user.role !== 'USER') {
-    if (action !== 'account' && action !== 'notices' && action !== 'notifications') {
-      return <span className="font-medium">{children}</span>
-    }
+  const inAdminConsole = location.pathname === '/admin' || location.pathname.startsWith('/admin/')
+  if (user && user.role !== 'USER' && inAdminConsole &&
+    (action === 'account' || action === 'notices' || action === 'notifications')) {
     const org = new URLSearchParams(location.search).get('org') ?? undefined
     return <Link className={linkClass} to={adminPath(`/admin/${action}`, org)}>{children}</Link>
   }

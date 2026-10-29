@@ -2,8 +2,11 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './auth'
 import { adminLlmKeyStore } from './llm-keys'
-import { isSysTier, managesOrg } from '../../../auth/permissions'
 import { adminReadScope } from './org-scope'
+import { mockAuthorityActor, mockAllowedWorkIds } from '../institution-authority'
+import { hasSameSourceWorks, hasWork, SYS_ADMIN, SYS_READERS } from '../../../auth/institution-authority'
+import { resourceWorkPrefix } from '../../../auth/request-authority'
+import { openRouterAccountStore } from './openrouter-accounts'
 import { adminUserStore } from './users'
 import { flavorStore, orgs, osImages, resetFlavorStore } from './reference'
 import { uuid } from '../ids'
@@ -443,7 +446,7 @@ function initialContexts(): Record<string, ApprovalContext> {
     context.workspace.canReadDetail = true
     for (const member of context.workspace.members) { member.canReadDetail = true; member.userStatus = 'ACTIVE' }
     for (const history of context.history) { history.orgId = request.orgId!; history.canReadDetail = true }
-    for (const resource of [...context.applicantResources.activeVms, ...context.workspace.activeVms,
+    for (const resource of [...(context.applicantResources.activeVms ?? []), ...(context.workspace.activeVms ?? []),
       ...(context.vm?.applicantResources.activeVms ?? []), ...(context.vm?.workspaceResources.activeVms ?? []),
       ...(context.llmKey?.applicantKeys ?? []), ...(context.llmKey?.workspaceKeys ?? [])]) {
       resource.orgId = request.orgId!; resource.canReadDetail = true
@@ -623,7 +626,26 @@ function adminVmComparator(sort: string | null) {
 /** 목 스코프용 행위자 조회 — 토큰이 없거나 모르는 값이면 null (스코프 미적용). */
 function actorProfileOf(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-  return ACCESS_TOKENS[token] ?? null
+  const profile = ACCESS_TOKENS[token]
+  return profile ? mockAuthorityActor(profile) : null
+}
+
+function requestProjection(actor: NonNullable<ReturnType<typeof actorProfileOf>>, row: RequestDetail): RequestDetail {
+  const prefix = resourceWorkPrefix(row.type)
+  const allowedWorkIds = mockAllowedWorkIds(actor, { orgId: row.orgId, workspaceId: row.workspaceId }).filter((id) => id.startsWith(prefix + '.request.') || id === prefix + '.recipient.retry')
+  if (row.type === 'LLM_API_KEY' && hasSameSourceWorks(actor, ['llm.request.decide', 'llm.key.budget'], { orgId: row.orgId, workspaceId: row.workspaceId }, SYS_ADMIN)) allowedWorkIds.push('llm.key.budget')
+  return { ...row, allowedWorkIds }
+}
+
+function vmProjection(actor: NonNullable<ReturnType<typeof actorProfileOf>>, vm: typeof vmStore[number]) {
+  const allowedWorkIds = mockAllowedWorkIds(actor, { orgId: vm.orgId, workspaceId: vm.workspaceId }, 'VM')
+  const metadataVisible = allowedWorkIds.includes('vm.metadata.read') || allowedWorkIds.includes('vm.metadata.support.read')
+  return { ...vm, ...accessOf(null), allowedWorkIds, metadataVisible, passwordRevealAllowed: false,
+    hostname: metadataVisible ? vm.hostname : null, vcpu: metadataVisible ? vm.vcpu : null,
+    memoryMb: metadataVisible ? vm.memoryMb : null, diskGb: metadataVisible ? vm.diskGb : null,
+    sshUsername: metadataVisible ? vm.sshUsername : null, createdAt: metadataVisible ? vm.createdAt : null,
+    publications: allowedWorkIds.includes('vm.publication.read') || allowedWorkIds.includes('vm.publication.operate') ? vm.publications : allowedWorkIds.includes('vm.metadata.support.read') ? vm.publications.map((publication) => ({ ...publication, domain: publication.domain ? { ...publication.domain, verification: null } : publication.domain })) : null,
+  }
 }
 
 /* ─── 사용 기간 카탈로그 ─── */
@@ -725,10 +747,9 @@ export const adminHandlers: RequestHandler[] = [
     const size = Number(url.searchParams.get('size') ?? '20')
     // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다 (밖은 404 마스킹).
     const profile = actorProfileOf(request)
-    const scope = profile ? adminReadScope(profile, orgId, '/api/v1/admin/requests') : null
-    if (scope?.notFound) return scope.notFound
+
     const filtered = adminRequestStore
-      .filter((r) => (scope ? scope.matches(r.orgId) : !orgId || r.orgId === orgId))
+      .filter((r) => (!orgId || r.orgId === orgId) && profile != null && (requestProjection(profile, r).allowedWorkIds?.length ?? 0) > 0)
       .filter((r) => !status || r.status === status)
       .filter((r) => !type || r.type === type)
       .filter((r) => !workspaceId || r.workspaceId === workspaceId)
@@ -739,7 +760,7 @@ export const adminHandlers: RequestHandler[] = [
       .filter((r) => !relatedUserId || r.requesterId === relatedUserId || r.recipients?.some((recipient) => recipient.userId === relatedUserId))
       .sort((a, b) => b.id.localeCompare(a.id))
     const body: Schemas['PageResponseRequestDetailResponse'] = {
-      content: filtered.slice(page * size, (page + 1) * size),
+      content: filtered.slice(page * size, (page + 1) * size).map((row) => requestProjection(profile!, row)),
       page,
       size,
       totalElements: filtered.length,
@@ -753,11 +774,8 @@ export const adminHandlers: RequestHandler[] = [
     if (!found) return notFound()
     // 계약 v0.46.0: 보유 기관 밖의 신청은 존재를 감추는 404다.
     const profile = actorProfileOf(request)
-    const scope = profile
-      ? adminReadScope(profile, null, `/api/v1/admin/requests/${String(params.requestId)}`)
-      : null
-    if (scope && !scope.matches(found.orgId)) return notFound()
-    return HttpResponse.json(found, { status: 200 })
+    if (!profile || (requestProjection(profile, found).allowedWorkIds?.length ?? 0) === 0) return notFound()
+    return HttpResponse.json(requestProjection(profile, found), { status: 200 })
   }),
 
   http.get('*/api/v1/admin/requests/:requestId/context', ({ params, request }) => {
@@ -773,7 +791,7 @@ export const adminHandlers: RequestHandler[] = [
     context.applicant.name = requestRow.requesterName
     context.workspace.id = requestRow.workspaceId!
     context.workspace.name = requestRow.workspaceName
-    const allowed = (orgId: string) => !!actor && (actor.role.startsWith('SYS_') || actor.managedOrgs.some((org) => org.orgId === orgId))
+    const allowed = (orgId: string | undefined) => !!actor && (actor.role.startsWith('SYS_') || actor.managedOrgs.some((org) => org.orgId === orgId))
     const canReadUser = (userId: string | null | undefined) => {
       if (!actor || !userId) return false
       const role = adminUserStore.find((target) => target.id === userId)?.role ?? Object.values(ACCESS_TOKENS).find((target) => target.id === userId)?.role
@@ -785,8 +803,10 @@ export const adminHandlers: RequestHandler[] = [
       member.userStatus = adminUserStore.find((target) => target.id === member.userId)?.status ?? member.userStatus
     }
     for (const entry of context.history) entry.canReadDetail = allowed(entry.orgId)
-    for (const resource of [...(context.vm?.applicantResources.activeVms ?? []), ...(context.vm?.workspaceResources.activeVms ?? []), ...(context.llmKey?.applicantKeys ?? []), ...(context.llmKey?.workspaceKeys ?? [])]) resource.canReadDetail = allowed(resource.orgId)
+    for (const resource of [...(context.vm?.applicantResources.activeVms ?? []), ...(context.vm?.workspaceResources.activeVms ?? []), ...(context.llmKey?.applicantKeys ?? []), ...(context.llmKey?.workspaceKeys ?? [])]) resource.canReadDetail = allowed(resource.orgId ?? undefined)
     context.recipientUserReadFlags = Object.fromEntries((requestRow.recipients ?? []).filter((recipient) => recipient.userId).map((recipient) => [recipient.userId!, canReadUser(recipient.userId)]))
+    if (context.llmKey) context.llmKey.accountReferences = requestProjection(actor!, requestRow).allowedWorkIds?.includes('llm.key.budget')
+      ? openRouterAccountStore.filter((account) => account.orgId === requestRow.orgId).map((account) => ({ id: account.id, name: account.name, eligibleForBinding: account.eligibleForBinding, defaultCreditAllowedModels: account.eligibleForBinding ? account.defaultCreditAllowedModels : null, defaultCreditDeniedModels: account.eligibleForBinding ? account.defaultCreditDeniedModels : null })) : null
     context.generatedResources = []
     if (requestRow.status === 'APPROVED' && requestRow.type === 'VM') context.generatedResources = vmStore.filter((vm) => vm.requestId === requestRow.id && vm.orgId === requestRow.orgId && vm.workspaceId != null).map((vm) => ({ id: vm.id, type: 'VM', name: vm.displayName ?? vm.name, state: vm.status, orgId: vm.orgId!, workspaceId: vm.workspaceId!, recipientId: requestRow.recipients?.find((recipient) => recipient.resourceId === vm.id)?.id ?? null, createdAt: vm.createdAt, recordUpdatedAt: vm.updatedAt, canReadDetail: true, releasedAt: null, renewDueAt: null, reservedUntil: null }))
     if (requestRow.status === 'APPROVED' && requestRow.type === 'LLM_API_KEY' && (requestRow.recipients?.length ?? 0) === 0) context.generatedResources = adminLlmKeyStore.filter((key) => key.requestId === requestRow.id && key.orgId === requestRow.orgId).map((key) => ({ id: key.id, type: 'LLM_API_KEY', name: key.name, state: key.status, orgId: key.orgId!, workspaceId: key.workspaceId!, recipientId: null, createdAt: key.createdAt, recordUpdatedAt: key.createdAt, canReadDetail: true, releasedAt: null, renewDueAt: null, reservedUntil: null }))
@@ -812,6 +832,20 @@ export const adminHandlers: RequestHandler[] = [
     }
     const body = (await request.json()) as Schemas['ApproveRequestRequest']
     approveBodies.push({ requestId, body })
+    if (found.type === 'LLM_API_KEY' && found.llmKey && body.llmKey) {
+      found.llmKey = {
+        ...found.llmKey,
+        grantedRpm: body.llmKey.grantedRpm ?? null,
+        grantedTpm: body.llmKey.grantedTpm ?? null,
+        grantedConcurrency: body.llmKey.grantedConcurrency ?? null,
+        grantedDailyTokens: body.llmKey.grantedDailyTokens ?? null,
+        grantedCreditLimit: body.llmKey.grantedCreditLimit ?? null,
+        grantedCreditLimitReset: body.llmKey.grantedCreditLimitReset ?? null,
+        grantedCreditAllowedModels: body.llmKey.grantedCreditAllowedModels ?? [],
+        grantedCreditDeniedModels: body.llmKey.grantedCreditDeniedModels ?? [],
+        grantedPassthroughEndpoints: body.llmKey.grantedPassthroughEndpoints ?? found.llmKey.reqPassthroughEndpoints,
+      }
+    }
     found.status = 'APPROVED'
     found.review = {
       reviewerId: orgAdminUser.id,
@@ -1051,12 +1085,10 @@ export const adminHandlers: RequestHandler[] = [
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const today = localDateStr(0)
-    // 계약 v0.46.0: 기관 계층은 역할을 보유한 기관 안만 본다 (밖은 404 마스킹).
     const profile = actorProfileOf(request)
-    const scope = profile ? adminReadScope(profile, orgId, '/api/v1/admin/vms') : null
-    if (scope?.notFound) return scope.notFound
+    if (!profile) return notFound()
     const filtered = vmStore
-      .filter((vm) => (scope ? scope.matches(vm.orgId) : !orgId || vm.orgId === orgId))
+      .filter((vm) => (!orgId || vm.orgId === orgId) && vmProjection(profile, vm).allowedWorkIds.some((work) => !work.includes('.request.') && !work.includes('.roster.') && !work.includes('.recipient.')))
       .filter((vm) => !workspaceId || vm.workspaceId === workspaceId)
       .filter((vm) => !status || vm.status === status)
       // 계약 v0.6.1: q = 이름/호스트네임 부분일치 (대소문자 무시)
@@ -1064,7 +1096,7 @@ export const adminHandlers: RequestHandler[] = [
         (vm) =>
           !q ||
           vm.name.toLowerCase().includes(q) ||
-          vm.hostname.toLowerCase().includes(q),
+          vmProjection(profile, vm).metadataVisible && vm.hostname.toLowerCase().includes(q),
       )
       // 계약: expiringInDays = 오늘 ≤ endDate ≤ 오늘+N (만료·삭제 상태 제외)
       .filter(
@@ -1087,7 +1119,7 @@ export const adminHandlers: RequestHandler[] = [
       )
       .sort(adminVmComparator(url.searchParams.get('sort')))
     const body: Schemas['PageResponseVmSummaryResponse'] = {
-      content: filtered.slice(page * size, (page + 1) * size).map(toVmSummary),
+      content: filtered.slice(page * size, (page + 1) * size).map((vm) => { const projected = vmProjection(profile, vm); return { ...toVmSummary(vm), allowedWorkIds: projected.allowedWorkIds, metadataVisible: projected.metadataVisible, hostname: projected.hostname, vcpu: projected.vcpu, memoryMb: projected.memoryMb, diskGb: projected.diskGb, createdAt: projected.createdAt } }),
       page,
       size,
       totalElements: filtered.length,
@@ -1181,12 +1213,10 @@ export const adminHandlers: RequestHandler[] = [
     const vm = vmStore.find((v) => v.id === String(params.vmId))
     if (!vm) return notFound()
     const actor = actorProfileOf(request)
-    const contentVisible = !!actor && (isSysTier(actor.role) || vm.orgId != null && managesOrg(actor.managedOrgs, vm.orgId))
-    // Global support metadata excludes foreign institution verification proofs.
-    return HttpResponse.json(
-      { ...vm, ...accessOf(null), passwordRevealAllowed: false, publications: vm.publications.map((publication) => ({ ...publication, domain: publication.domain ? { ...publication.domain, verification: contentVisible ? publication.domain.verification : null } : publication.domain })) },
-      { status: 200 },
-    )
+    if (!actor) return notFound()
+    const projected = vmProjection(actor, vm)
+    if (!projected.allowedWorkIds.some((work) => !work.includes('.request.') && !work.includes('.roster.') && !work.includes('.recipient.'))) return notFound()
+    return HttpResponse.json(projected, { status: 200 })
   }),
 
   http.get('*/api/v1/admin/vms/:vmId/events', ({ params, request }) => {
@@ -1200,15 +1230,7 @@ export const adminHandlers: RequestHandler[] = [
     // 시스템 계층은 언제나다. 목이 이 규칙을 모르면 그 분기를 지나는 테스트를
     // 쓸 수 없다.
     const profile = actorProfileOf(request)
-    const auditVisible =
-      profile == null ||
-      profile.role === 'SYS_ADMIN' ||
-      profile.role === 'SYS_MANAGER' ||
-      profile.role === 'SYS_VIEWER' ||
-      profile.managedOrgs.some(
-        (org) =>
-          org.orgId === vm.orgId && (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER'),
-      )
+    const auditVisible = hasWork(profile, 'institution.audit.read', { orgId: vm.orgId }, SYS_READERS)
     const stored = (vmEventStore[vm.id] ?? []).map((event) =>
       !auditVisible && (event.actorKind === 'ADMIN' || event.actorKind === 'UNKNOWN')
         ? { ...event, actorId: null, actorName: null }

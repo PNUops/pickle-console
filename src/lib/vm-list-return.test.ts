@@ -1,9 +1,11 @@
 import { expect, test } from 'vitest'
+import { orgAdminProfile } from '../test/msw/handlers/auth'
+import { mockAuthorityActor } from '../test/msw/institution-authority'
 import { requestReaderKey } from '../api/request-review'
 import { uuid } from '../test/msw/ids'
 import { vmListReturn, type VmListReturn } from './vm-list-return'
 
-const actor = { id: uuid(5), role: 'SYS_ADMIN', managedOrgs: [{ orgId: uuid(1), role: 'ORG_ADMIN' }] }
+const actor = mockAuthorityActor(orgAdminProfile)
 const reader = requestReaderKey(actor)
 const context: VmListReturn = {
   reader,
@@ -24,11 +26,11 @@ test('restores a global list only when the reader can return to a global scope',
   expect(vmListReturn({ ...context, path: `/admin/vms?org=${uuid(2)}` }, reader, uuid(1), true)).toBeNull()
 })
 
-test('discards prior account, global role and actual institution role fingerprints', () => {
+test('discards prior accounts, actual roles and authority fingerprints', () => {
   for (const changed of [
     { ...actor, id: uuid(6) },
     { ...actor, role: 'SYS_VIEWER' },
-    { ...actor, managedOrgs: [{ orgId: uuid(1), role: 'ORG_VIEWER' }] },
+    { ...actor, institutionAuthority: { ...actor.institutionAuthority!, authorityFingerprint: 'changed-current-authority' } },
   ]) expect(vmListReturn(context, requestReaderKey(changed), uuid(1), true)).toBeNull()
 })
 
@@ -47,4 +49,8 @@ test('rejects malformed snapshots before their filters can reach list queries', 
       .map((filters) => ({ ...context, filters: { ...context.filters, ...filters } }))]) {
     expect(vmListReturn(value, reader, uuid(1), true)).toBeNull()
   }
+})
+
+test('display affiliation hints do not replace the authority fingerprint', () => {
+  expect(vmListReturn(context, requestReaderKey({ ...actor, managedOrgs: [] }), uuid(1), true)).toEqual(context)
 })

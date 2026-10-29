@@ -1,4 +1,4 @@
-import { resolveWorkspaceRoster, type RosterResolution } from '../../api/queries'
+import { resolveWorkspaceRoster, type RosterResolution, type ResourceType } from '../../api/queries'
 import type { BadgeVariant } from '../ui'
 import type { RosterRow } from '../../lib/roster'
 
@@ -62,6 +62,7 @@ export async function resolveRosterRows(
   workspaceId: string,
   rows: RosterRow[],
   orgId?: string | null,
+  type?: ResourceType,
 ): Promise<RosterEntry[]> {
   const seen = new Set<string>()
   const asked: { index: number; studentNo: string }[] = []
@@ -83,6 +84,7 @@ export async function resolveRosterRows(
       workspaceId,
       chunk.map((item) => item.studentNo),
       orgId,
+      type,
     )
     chunk.forEach((item, offset) => {
       const resolution = results[offset]

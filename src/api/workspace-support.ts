@@ -53,16 +53,16 @@ export function inviteAdminWorkspaceMembers(workspaceId: string, entries: Worksp
   })
 }
 
-export function cancelAdminWorkspaceInvitation(workspaceId: string, invitationId: string) {
+export function cancelAdminWorkspaceInvitation(workspaceId: string, invitationId: string, confirmation: Schemas['TerminationConfirmation']) {
   return guardNetwork(async () => {
-    const { error, response } = await api.DELETE('/admin/workspaces/{workspaceId}/invitations/{invitationId}', { params: { path: { workspaceId, invitationId } } })
+    const { error, response } = await api.DELETE('/admin/workspaces/{workspaceId}/invitations/{invitationId}', { params: { path: { workspaceId, invitationId } }, body: { confirmation } })
     if (!response.ok) throw toApiError(error, '초대를 취소하지 못했습니다.')
   })
 }
 
-export function deleteAdminWorkspace(workspaceId: string) {
+export function deleteAdminWorkspace(workspaceId: string, confirmation: Schemas['TerminationConfirmation']) {
   return guardNetwork(async () => {
-    const { error, response } = await api.DELETE('/admin/workspaces/{workspaceId}', { params: { path: { workspaceId } } })
+    const { error, response } = await api.DELETE('/admin/workspaces/{workspaceId}', { params: { path: { workspaceId } }, body: { confirmation } })
     if (!response.ok) throw toApiError(error, '워크스페이스를 삭제하지 못했습니다.')
   })
 }

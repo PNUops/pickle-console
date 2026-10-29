@@ -1,0 +1,181 @@
+{
+  "previewId" : "694aa22e-9d48-4e75-b390-c167c6154e79",
+  "createdAt" : "2026-10-27T00:45:37.083527Z",
+  "expiresAt" : "2026-10-28T00:45:37.083527Z",
+  "targetType" : "LLM_KEY",
+  "change" : {
+    "kind" : "LLM_KEY_LIMITS",
+    "llmKeyLimits" : {
+      "creditLimit" : 5
+    },
+    "llmKeyStatus" : null,
+    "llmKeyExpiry" : null,
+    "vmPeriod" : null,
+    "vmPower" : null,
+    "vmDeletion" : null,
+    "domainRenewal" : null,
+    "domainForceRelease" : null,
+    "domainVerify" : null,
+    "access" : null
+  },
+  "items" : [ {
+    "targetId" : "66ea7ae7-490f-4e2f-8b9f-4f8802d65091",
+    "name" : "nearly spent first",
+    "applicable" : true,
+    "reason" : null,
+    "fields" : [ {
+      "field" : "creditLimit",
+      "oldValue" : "10",
+      "newValue" : "5"
+    } ],
+    "fingerprint" : "ad9628b0a7fc174a",
+    "actorAccessImpact" : null
+  }, {
+    "targetId" : "0de90712-5f17-407d-90a4-b4df6475a49f",
+    "name" : "other first promise",
+    "applicable" : true,
+    "reason" : null,
+    "fields" : [ {
+      "field" : "creditLimit",
+      "oldValue" : "3",
+      "newValue" : "5"
+    } ],
+    "fingerprint" : "57cf60213b2a3e57",
+    "actorAccessImpact" : null
+  }, {
+    "targetId" : "bf54ce56-1ff4-4561-80df-dfef7811126f",
+    "name" : "second changed",
+    "applicable" : true,
+    "reason" : null,
+    "fields" : [ {
+      "field" : "creditLimit",
+      "oldValue" : "2",
+      "newValue" : "5"
+    } ],
+    "fingerprint" : "8acff0b5118a65bb",
+    "actorAccessImpact" : null
+  }, {
+    "targetId" : "5c25206b-7b17-44e6-95af-32da3dcd996b",
+    "name" : "second unchanged",
+    "applicable" : true,
+    "reason" : null,
+    "fields" : [ ],
+    "fingerprint" : "0ed370ad8cf573b2",
+    "actorAccessImpact" : null
+  }, {
+    "targetId" : "e1834c95-08b5-473a-b64e-8f6d5479fea9",
+    "name" : "revoked target",
+    "applicable" : false,
+    "reason" : "INVALID_STATE",
+    "fields" : [ ],
+    "fingerprint" : "8b9dca746646109e",
+    "actorAccessImpact" : null
+  } ],
+  "consumedOperationId" : null,
+  "accountImpact" : {
+    "state" : "AVAILABLE",
+    "observedAt" : "2026-10-27T00:45:37.083527Z",
+    "basisFingerprint" : "75886e09e11c67ef",
+    "accounts" : [ {
+      "accountId" : "d618cc8c-4e00-4658-af20-c0340179c333",
+      "accountName" : "whole change first",
+      "changedKeys" : 2,
+      "before" : {
+        "committedCreditLimit" : 13.0,
+        "committedTotalCap" : 13.0,
+        "committedDaily" : 0,
+        "committedWeekly" : 0,
+        "committedMonthly" : 0,
+        "committedKeyCount" : 2,
+        "remainingCommitment" : 4.0,
+        "awaitingProvisionKeyCount" : 0,
+        "usageUnreportedKeyCount" : 0
+      },
+      "after" : {
+        "committedCreditLimit" : 10.0,
+        "committedTotalCap" : 10.0,
+        "committedDaily" : 0,
+        "committedWeekly" : 0,
+        "committedMonthly" : 0,
+        "committedKeyCount" : 2,
+        "remainingCommitment" : 5.0,
+        "awaitingProvisionKeyCount" : 0,
+        "usageUnreportedKeyCount" : 0
+      },
+      "balance" : 4.0,
+      "balanceObservedAt" : "2026-10-27T00:45:37.171613Z",
+      "balanceError" : null,
+      "overAllocated" : true,
+      "quality" : {
+        "source" : "SERVER_CACHED_ALLOCATION",
+        "observedAt" : "2026-10-27T00:45:37.083527Z",
+        "creditsFreshness" : "FRESH",
+        "keyMetersFreshness" : "UNKNOWN",
+        "creditsLastSuccessAt" : "2026-10-27T00:45:37.171613Z",
+        "creditsLastAttemptAt" : null,
+        "keyMetersLastSuccessAt" : null,
+        "keyMetersLastAttemptAt" : null,
+        "keyMetersError" : null,
+        "balanceUnreported" : false,
+        "beforeUsageUnreportedKeys" : 0,
+        "afterUsageUnreportedKeys" : 0,
+        "beforeAwaitingProvisionKeys" : 0,
+        "afterAwaitingProvisionKeys" : 0,
+        "changedPeriodKeys" : 0,
+        "periodBasisMismatch" : false,
+        "windowedCommitmentsPresent" : false,
+        "vendorWindowAlignmentUnconfirmed" : false
+      }
+    }, {
+      "accountId" : "aeb7b9b6-63c5-4b7c-b56e-2d69bc1682de",
+      "accountName" : "whole change second",
+      "changedKeys" : 1,
+      "before" : {
+        "committedCreditLimit" : 14.0,
+        "committedTotalCap" : 14.0,
+        "committedDaily" : 0,
+        "committedWeekly" : 0,
+        "committedMonthly" : 0,
+        "committedKeyCount" : 3,
+        "remainingCommitment" : 13.0,
+        "awaitingProvisionKeyCount" : 0,
+        "usageUnreportedKeyCount" : 1
+      },
+      "after" : {
+        "committedCreditLimit" : 17.0,
+        "committedTotalCap" : 17.0,
+        "committedDaily" : 0,
+        "committedWeekly" : 0,
+        "committedMonthly" : 0,
+        "committedKeyCount" : 3,
+        "remainingCommitment" : 16.0,
+        "awaitingProvisionKeyCount" : 0,
+        "usageUnreportedKeyCount" : 1
+      },
+      "balance" : 15.0,
+      "balanceObservedAt" : "2026-10-27T00:45:37.174373Z",
+      "balanceError" : null,
+      "overAllocated" : true,
+      "quality" : {
+        "source" : "SERVER_CACHED_ALLOCATION",
+        "observedAt" : "2026-10-27T00:45:37.083527Z",
+        "creditsFreshness" : "FRESH",
+        "keyMetersFreshness" : "UNKNOWN",
+        "creditsLastSuccessAt" : "2026-10-27T00:45:37.174373Z",
+        "creditsLastAttemptAt" : null,
+        "keyMetersLastSuccessAt" : null,
+        "keyMetersLastAttemptAt" : null,
+        "keyMetersError" : null,
+        "balanceUnreported" : false,
+        "beforeUsageUnreportedKeys" : 1,
+        "afterUsageUnreportedKeys" : 1,
+        "beforeAwaitingProvisionKeys" : 0,
+        "afterAwaitingProvisionKeys" : 0,
+        "changedPeriodKeys" : 0,
+        "periodBasisMismatch" : false,
+        "windowedCommitmentsPresent" : false,
+        "vendorWindowAlignmentUnconfirmed" : false
+      }
+    } ]
+  }
+}

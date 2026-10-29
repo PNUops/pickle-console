@@ -3,6 +3,7 @@ import { refreshSuccessHandler, orgAdminUser, orgManagerUser, orgViewerUser, sys
 import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { seedGpuPreviewFixtures } from '../test/msw/handlers/gpu'
 import { handlers } from '../test/msw/handlers'
+import { seedAllocationFixture } from '../test/msw/allocation-fixtures'
 
 /**
  * 브라우저에서 도는 목 API.
@@ -16,13 +17,12 @@ import { handlers } from '../test/msw/handlers'
  * 이 모듈은 개발 빌드에서만 동적으로 불린다.
  */
 export async function startMockApi(): Promise<void> {
+  seedAllocationFixture(new URLSearchParams(window.location.search).get('allocationFixture'))
   // 로그인된 채로 띄운다. 미리 보기의 목적은 화면을 보는 것이고, 목에는 진짜 리프레시
   // 쿠키가 없어 주소를 직접 치면 세션이 끊긴다.
   //
-  // 기본은 일반 사용자다. 관리자는 로그인하면 관리자 화면으로 가므로 신청 화면을 볼 수
-  // 없다. 관리자 화면을 보려면 `VITE_MOCK_USER=admin`으로 띄운다.
-  // 시스템 계층으로 연다. 사양과 사용 기간 카탈로그가 그 계층의 화면이라, 기관
-  // 관리자로는 그 화면에 닿지 못한다.
+  // The default preview uses a regular account. Select a profile to exercise
+  // administrator pages and the same account's personal console.
   if (gpuPreviewEnabled()) seedGpuPreviewFixtures()
   const profiles = {
     admin: ['access-sys-admin', sysAdminUser],

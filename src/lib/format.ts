@@ -23,7 +23,8 @@ const kstDateTimeFormat = new Intl.DateTimeFormat('en-CA', {
 })
 
 /** '2026-07-08T05:03:00Z' → '2026-07-08 14:03' (KST 고정). */
-export function formatDateTime(iso: string): string {
+export function formatDateTime(iso: string | null | undefined): string {
+  if (iso == null) return '제공되지 않음'
   return kstDateTimeFormat.format(new Date(iso)).replace(',', '')
 }
 

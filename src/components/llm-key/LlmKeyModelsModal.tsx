@@ -1,3 +1,4 @@
+import { TokenValue } from '../TokenValue'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import {
@@ -12,18 +13,12 @@ import { ModelPriceDetail } from '../ModelPriceDetail'
 import { ObservationMoment } from '../OpenRouterCredits'
 import { CopyButton } from '../CopyButton'
 import { Alert, Input, LoadingBlock, Modal } from '../ui'
+import { useAuth } from '../../auth/auth-context'
+import { requestReaderKey } from '../../api/request-review'
 
-/**
- * 이 키의 `model` 필드에 넣을 수 있는 이름.
- *
- * **부여가 아니라 후보 목록이다.** 서버가 아는 키 단위 사실은 이미 다 적용돼서
- * 오지만, 서버가 알 수 없는 것이 하나 남는다 — 이 키 뒤의 계정에 공급자가 그
- * 모델을 실제로 서빙하는지. 그래서 문구는 「쓸 수 있다」가 아니라 「이 이름을
- * 넣을 수 있다」이고, 최종 판정은 호출 시점의 게이트웨이가 한다.
- *
- * 소유자와 승인자가 같은 답을 보되 여는 규칙이 다르다. 경로가 둘이므로 호출도
- * 둘이고, 화면에서 섞지 않는다.
- */
+type ModelsRead = Omit<LlmKeyModels, 'paid'> & { paid?: LlmKeyModels['paid'] | null }
+
+/** Show pattern candidates, keeping grants and runtime call conditions separate. */
 export function LlmKeyModelsModal({
   keyId,
   open,
@@ -37,15 +32,16 @@ export function LlmKeyModelsModal({
   variant?: 'owner' | 'admin'
 }) {
   const [term, setTerm] = useState('')
-  const models = useQuery({
-    queryKey: ['llm-key-models', variant, keyId],
+  const { user } = useAuth()
+  const models = useQuery<ModelsRead>({
+    queryKey: variant === 'admin' ? ['admin', 'llm-key-models', keyId, requestReaderKey(user)] : ['llm-key-models', variant, keyId],
     queryFn: () => (variant === 'admin' ? fetchAdminLlmKeyModels(keyId) : fetchLlmKeyModels(keyId)),
     // 모달이 닫혀 있는 동안은 물을 이유가 없다. 카탈로그가 수백 행이다.
     enabled: open,
   })
 
   return (
-    <Modal open={open} onClose={onClose} title="호출할 수 있는 모델" className="max-w-3xl">
+    <Modal open={open} onClose={onClose} title="모델 이름과 패턴 후보" className="max-w-3xl">
       {models.isPending && <LoadingBlock label="모델 목록을 불러오는 중" />}
       {models.isError && (
         <Alert variant="danger">{(models.error as Error).message}</Alert>
@@ -62,7 +58,7 @@ function ModelsBody({
   term,
   onTermChange,
 }: {
-  data: LlmKeyModels
+  data: ModelsRead
   term: string
   onTermChange: (value: string) => void
 }) {
@@ -73,22 +69,21 @@ function ModelsBody({
   )
   const paid = useMemo(
     () =>
-      data.paid.models.filter(
+      data.paid?.models.filter(
         (m) =>
           !needle ||
           m.id.toLowerCase().includes(needle) ||
           (m.name ?? '').toLowerCase().includes(needle),
-      ),
-    [data.paid.models, needle],
+      ) ?? [],
+    [data.paid, needle],
   )
 
   return (
     <div className="space-y-6">
-      {/* 지시문 하나만 남긴다. 뒤에 붙어 있던 「최종 판정은 호출 시점에」는 읽는
-          사람이 할 수 있는 것이 없는 한정이고, 왜 그런지는 이 파일 위 주석이 갖는다. */}
       <p className="text-sm text-neutral-600">
         요청 본문의 <code className="font-mono">model</code> 필드에 아래 이름을 그대로 넣습니다.
       </p>
+      <p className="text-xs text-neutral-500">이 목록은 저장된 모델 정책의 후보입니다. 부여된 기능 권한과 키 상태·기한·한도, 자격증명 및 공급자 지원은 별도 호출 조건이며, 이름이 있어도 호출 성공을 보장하지 않습니다.</p>
 
       <Input
         value={term}
@@ -118,17 +113,14 @@ function ModelsBody({
 }
 
 function SelfServedRow({ model }: { model: SelfServedModel }) {
-  const caps = [
-    model.maxInputTokens ? `입력 ${model.maxInputTokens.toLocaleString()}` : null,
-    model.maxOutputTokens ? `출력 ${model.maxOutputTokens.toLocaleString()}` : null,
-  ].filter(Boolean)
   return (
     <li className="flex items-center justify-between gap-3 px-3 py-2">
       <span className="font-mono text-sm">{model.name}</span>
       <span className="flex items-center gap-3">
-        {caps.length > 0 && (
-          <span className="text-xs text-neutral-500">{caps.join(' · ')} 토큰</span>
-        )}
+        <span className="text-xs text-neutral-500">
+          {model.maxInputTokens != null && <span className="block">입력 <TokenValue value={model.maxInputTokens} decision /></span>}
+          {model.maxOutputTokens != null && <span className="block">출력 <TokenValue value={model.maxOutputTokens} decision /></span>}
+        </span>
         <CopyButton value={model.name} label="복사" />
       </span>
     </li>
@@ -147,11 +139,12 @@ function PaidSection({
   rows,
   filtered,
 }: {
-  data: LlmKeyModels
+  data: ModelsRead
   rows: PaidModel[]
   filtered: boolean
 }) {
   const paid = data.paid
+  if (paid == null) return <Alert>이 키의 유료 모델 정책은 현재 업무로 제공되지 않습니다.</Alert>
   const narrowed = paid.allowedPatterns.length > 0 || paid.deniedPatterns.length > 0
 
   return (
@@ -165,7 +158,7 @@ function PaidSection({
       )}
       {paid.access === 'PENDING' && (
         <Alert variant="info">
-          부여된 금액 한도를 적용하는 중입니다. 잠시 뒤에 호출할 수 있습니다.
+          금액 한도의 적용이 아직 확인되지 않았습니다. 적용과 다른 호출 조건을 확인해 주세요.
         </Alert>
       )}
       {paid.catalogFreshness === 'STALE' && (
@@ -180,12 +173,12 @@ function PaidSection({
       {paid.catalogFreshness === 'UNKNOWN' ? (
         <p className="text-sm text-neutral-600">
           공급자 목록을 아직 한 번도 가져오지 못했습니다. 목록이 비어 있는 것과는 다르며,
-          이름을 알고 있다면 그대로 넣어 호출할 수 있습니다.
+          이름을 알고 있다면 모델 정책과 별도 호출 조건을 확인해 주세요.
         </p>
       ) : paid.models.length === 0 ? (
         <p className="text-sm text-neutral-600">
           {narrowed
-            ? '지금 목록에서 이 키가 부를 수 있는 모델이 없습니다.'
+            ? '저장된 목록에서 이 키의 패턴 조건을 통과하는 후보가 없습니다.'
             : '공급자 목록이 비어 있습니다.'}
         </p>
       ) : rows.length === 0 && filtered ? (

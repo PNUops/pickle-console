@@ -91,7 +91,7 @@ export interface KindWizard {
    * 늘어놓았는데, 확인 단계가 단계별 구획과 「수정」 링크를 갖게 되면서 어느
    * 구획에 넣을지를 종류가 말해야 한다.
    */
-  reviewRows(): Partial<Record<WizardStepId, [string, string][]>>
+  reviewRows(): Partial<Record<WizardStepId, [string, ReactNode][]>>
   /** 확인 단계에 붙는 종류별 고지 (VM은 백업 책임 안내). */
   notice?: ReactNode
   /**

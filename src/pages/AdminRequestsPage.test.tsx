@@ -34,7 +34,7 @@ describe('관리자 대시보드 요약', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '전체 보기 →' })).toHaveAttribute(
       'href',
-      `/admin/requests?org=${uuid(1)}`,
+      '/admin/requests',
     )
   })
 })

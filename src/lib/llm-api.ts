@@ -29,6 +29,27 @@ export const LLM_DEFAULT_MODEL = 'pickle-general'
 export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
 
 /**
+ * The paid model the Codex and Responses examples name. `/v1/responses`
+ * serves paid models only, like `/v1/messages`. Name only a model a live call
+ * through this route has answered.
+ */
+export const LLM_RESPONSES_EXAMPLE_MODEL = 'openai/gpt-6-luna'
+
+/**
+ * The rerank model the guide example names. A live call answered it with an
+ * amount, and rerank models are absent from the key's model list, so the
+ * example has to name a real one.
+ */
+export const LLM_RERANK_EXAMPLE_MODEL = 'cohere/rerank-v3.5'
+
+/**
+ * The speech and transcription models the guide examples name. A live call
+ * answered each; the speech one needs an explicit voice.
+ */
+export const LLM_SPEECH_EXAMPLE_MODEL = 'hexgrad/kokoro-82m'
+export const LLM_TRANSCRIPTION_EXAMPLE_MODEL = 'openai/whisper-large-v3-turbo'
+
+/**
  * The routes a key reaches only with the matching feature granted, Chat
  * included. A key without it gets 403 `endpoint_not_allowed`, never 404:
  * a route that does not exist and a route this key may not use are different
@@ -50,10 +71,30 @@ export const LLM_MESSAGES_EXAMPLE_MODEL = 'anthropic/claude-haiku-5.5'
  * `error.code` is the same code as in the table below), and accepts the key
  * in `x-api-key` as well as `Authorization`. Its `count_tokens` and other
  * sub-paths are 404.
+ *
+ * `/v1/responses` is the OpenAI Responses API, also under the Chat grant and
+ * paid models only. It answers in the OpenAI error shape. Nothing is stored
+ * upstream, so `store: true`, `previous_response_id`, `conversation` and
+ * `background: true` are refused with `unsupported_parameter`, and its
+ * sub-paths (retrieve, cancel, input items) are 404.
+ *
+ * `/v1/completions` is the legacy text completion API, under the Chat grant
+ * and paid models only. The vendor turns the prompt into a chat message, so
+ * a reasoning model can end with an empty `text`.
+ *
+ * `/v1/rerank` reorders documents against a query. Its models are missing
+ * from the key's model list, prices included.
+ *
+ * `/v1/audio/speech` answers with audio bytes, mp3 or raw pcm only, and pcm
+ * when the request names no format. `/v1/audio/transcriptions` takes JSON or
+ * the OpenAI SDK's multipart form. Speech and transcription models are also
+ * missing from the key's model list.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
   { capability: 'chat', method: 'POST', path: '/v1/messages', summary: 'Anthropic Messages' },
+  { capability: 'chat', method: 'POST', path: '/v1/responses', summary: 'OpenAI Responses' },
+  { capability: 'chat', method: 'POST', path: '/v1/completions', summary: '레거시 Completions' },
   { capability: 'images', method: 'POST', path: '/v1/images', summary: '이미지 생성' },
   {
     capability: 'images',
@@ -63,6 +104,9 @@ export const LLM_PASSTHROUGH_ROUTES = [
   },
   { capability: 'images', method: 'GET', path: '/v1/images/models', summary: '이미지 모델 목록' },
   { capability: 'embeddings', method: 'POST', path: '/v1/embeddings', summary: '임베딩' },
+  { capability: 'rerank', method: 'POST', path: '/v1/rerank', summary: '리랭크' },
+  { capability: 'speech', method: 'POST', path: '/v1/audio/speech', summary: 'TTS' },
+  { capability: 'transcriptions', method: 'POST', path: '/v1/audio/transcriptions', summary: 'STT' },
 ] as const
 
 /**
@@ -93,10 +137,20 @@ export const LLM_SELF_SERVED_PARAMS = [
  * 유료 모델에서만 보낼 수 있는 필드.
  *
  * 유료 모델을 서빙하는 공급자가 정의하는 필드이고 에이전트 도구가 모델 정보를 보고 스스로 붙인다. 자체
- * 서빙 모델에 보내면 400으로 거부되는데, 그것은 누락이 아니라 사고 모드를 요청 단위로
- * 열지 않는다는 결정의 집행 지점이다.
+ * 서빙 모델에 보내면 400으로 거부된다.
  */
-export const LLM_PAID_ONLY_PARAMS = ['reasoning_effort', 'verbosity'] as const
+export const LLM_PAID_ONLY_PARAMS = ['verbosity'] as const
+
+/**
+ * Self-hosted models accept `reasoning_effort` when the gateway opens reasoning for
+ * the upstream serving them; when it is absent the serving model's own default
+ * applies. It is listed apart from LLM_SELF_SERVED_PARAMS because acceptance is a
+ * gateway setting per serving upstream, not part of the fixed allowlist.
+ */
+export const LLM_REASONING_PARAM = 'reasoning_effort'
+
+/** Values the gateway accepts for `reasoning_effort`; anything else is a 400. */
+export const LLM_REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const
 
 /**
  * 유료 모델을 부를 때 안내에 싣는 필드. **허용 목록이 아니다.**
@@ -107,6 +161,7 @@ export const LLM_PAID_ONLY_PARAMS = ['reasoning_effort', 'verbosity'] as const
  */
 export const LLM_PAID_PARAMS = [
   ...LLM_SELF_SERVED_PARAMS,
+  LLM_REASONING_PARAM,
   ...LLM_PAID_ONLY_PARAMS,
 ] as const
 
@@ -138,7 +193,8 @@ export const LLM_DEFAULT_LIMITS = {
  * which the deployed env does not override. A body above the large threshold
  * needs one of a few shared slots and is refused with `large_request_busy`
  * while they are all taken; above the maximum it is `request_too_large`.
- * The image and embedding paths share the maximum but not the slots.
+ * The image, embedding, rerank, speech and transcription paths share the
+ * maximum but not the slots.
  */
 export const LLM_REQUEST_BODY_MIB = {
   max: 25,
@@ -147,8 +203,10 @@ export const LLM_REQUEST_BODY_MIB = {
 
 /**
  * Client request headers the gateway forwards to the vendor, on a paid-model
- * chat or messages request only. The messages route also forwards
- * `anthropic-version` and `anthropic-beta`. Self-hosted, image and embedding requests forward none.
+ * chat, messages or responses request only. The messages route also forwards
+ * `anthropic-version` and `anthropic-beta`. Self-hosted, image, embedding,
+ * rerank, speech and transcription requests forward none.
+ * Codex's own headers (`session-id`, `x-codex-*`, `originator`) are not forwarded.
  * Of repeated lines only the first is forwarded, and a value longer than
  * `LLM_FORWARDED_HEADER_MAX_BYTES` is dropped rather than cut. App attribution
  * headers (`HTTP-Referer`, `X-Title`, ...) and response-cache headers are not
@@ -173,15 +231,16 @@ export const LLM_FORWARDED_HEADER_MAX_BYTES = 1024
 
 /**
  * Vendor response headers the gateway relays when the vendor sends them.
- * `X-Generation-Id` comes on a successful paid-model answer, image and
- * embedding answers included.
+ * `X-Generation-Id` comes on a successful paid-model answer, image,
+ * embedding, speech and transcription answers included. A rerank answer
+ * carries the id in its body instead.
  * `Retry-After` comes when the vendor answered 429 or 503 with a wait; after a
  * fallback, it is the longest wait any upstream asked for.
  */
 export const LLM_RELAYED_RESPONSE_HEADERS = [
   {
     name: 'X-Generation-Id',
-    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
+    use: '요청 하나에 대한 공급자의 생성 id입니다. 채팅, 이미지, 임베딩, TTS, STT의 정상 응답에서 돌려줍니다. 결과나 금액을 문의할 때 함께 알려 주세요.',
   },
   {
     name: 'Retry-After',
@@ -208,19 +267,24 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   { code: 'invalid_api_key', status: 401, meaning: '콘솔에서 발급한 키가 아닙니다.' },
   { code: 'api_key_expired', status: 401, meaning: '키의 유효기간이 지났습니다.' },
   { code: 'api_key_revoked', status: 401, meaning: '폐기된 키입니다.' },
-  { code: 'account_suspended', status: 403, meaning: '계정 이용이 정지된 상태입니다.' },
+  { code: 'account_suspended', status: 403, meaning: '이 API 키가 정지된 상태입니다. 키 상세에서 상태를 확인하고 관리자에게 문의합니다.' },
   { code: 'model_not_found', status: 404, meaning: '그런 이름의 모델이 없습니다.' },
   {
     code: 'model_not_available_on_route',
     status: 400,
     meaning:
-      '자체 서빙 모델은 아직 /v1/messages에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
+      '자체 서빙 모델은 아직 /v1/messages, /v1/responses, /v1/completions에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
   },
-  { code: 'model_not_allowed', status: 403, meaning: '이 키로는 쓸 수 없는 모델입니다.' },
+  {
+    code: 'model_not_allowed',
+    status: 403,
+    meaning:
+      '이 키로는 쓸 수 없는 모델입니다. 대체 모델 목록(models, fallbacks), 도구(tools), 플러그인(plugins)에 자동 선택 모델을 넣은 요청도 여기에 해당합니다.',
+  },
   {
     code: 'endpoint_not_allowed',
     status: 403,
-    meaning: '이 키에 그 기능이 부여되어 있지 않습니다. 콘솔에서 신청하면 승인 후 쓸 수 있습니다.',
+    meaning: '이 키에 필요한 기능이 없습니다. 키 정보의 기능 권한을 확인합니다. 채팅 요청의 modalities에 audio를 넣으면 TTS 권한이 필요합니다. 웹 검색 권한 없이 웹 검색 도구를 보냈다면 도구를 빼고, 아직 신청할 수 없는 서버 코드 실행 도구(shell, bash, local_shell, code_interpreter)도 요청에서 뺍니다.',
   },
   { code: 'rate_limit_requests', status: 429, meaning: '분당 요청 횟수를 초과했습니다.' },
   { code: 'rate_limit_tokens', status: 429, meaning: '분당 토큰 사용량을 초과했습니다.' },
@@ -233,14 +297,29 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     meaning: '승인된 금액 한도를 적용하는 중입니다. 잠시 후 다시 시도하면 됩니다.',
   },
   { code: 'credit_exhausted', status: 429, meaning: '유료 모델의 금액 한도를 모두 썼습니다.' },
-  { code: 'unsupported_parameter', status: 400, meaning: '지원 목록에 없는 필드를 보냈습니다.' },
+  {
+    code: 'unsupported_parameter',
+    status: 400,
+    meaning:
+      '지원하지 않는 필드나 서버 도구를 보냈습니다. /v1/responses의 store: true, previous_response_id, conversation, background: true도 여기에 해당합니다.',
+  },
   { code: 'invalid_parameter_value', status: 400, meaning: '파라미터 값이 허용 범위 밖입니다.' },
   { code: 'missing_parameter', status: 400, meaning: '필수 파라미터가 빠졌습니다.' },
   { code: 'invalid_json', status: 400, meaning: '요청 본문이 올바른 JSON이 아닙니다.' },
   {
+    code: 'invalid_multipart_form',
+    status: 400,
+    meaning: 'STT multipart 본문을 읽을 수 없습니다. 음성 파일은 file 파트 하나로, 나머지 값은 이름이 있는 텍스트 파트로 보냅니다.',
+  },
+  {
     code: 'preset_not_supported',
     status: 400,
     meaning: 'preset은 지원하지 않습니다. 모델 이름을 직접 지정합니다.',
+  },
+  {
+    code: 'router_not_supported',
+    status: 400,
+    meaning: '자동 선택 모델은 지원하지 않습니다. 모델 이름을 직접 지정합니다.',
   },
   {
     code: 'request_too_large',
@@ -269,14 +348,14 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
   {
     code: 'streaming_not_supported',
     status: 400,
-    meaning: '이미지와 임베딩 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
+    meaning: '이미지, 임베딩, 리랭크, TTS, STT 경로는 스트리밍을 지원하지 않습니다. stream을 빼고 보냅니다.',
   },
   {
     code: 'upstream_response_too_large',
     status: 502,
     alsoStatus: 200,
     meaning:
-      '응답이 중계 가능한 크기를 넘었습니다. 채팅은 stream으로 받거나 max_tokens를 줄이고, 이미지는 한 번에 만드는 개수(n)나 크기를 줄입니다. 채팅 스트림에서는 이벤트 하나가 너무 클 때 도중 오류로 옵니다.',
+      '응답이 중계 가능한 크기를 넘었거나 큰 응답을 처리할 자리가 없습니다. 출력 크기를 줄이고, 처리 자리 부족이면 간격을 늘려 재시도합니다. 유료 재시도는 추가 비용이 들 수 있습니다. 긴 텍스트는 stream으로 받고, 이미지 출력은 경로와 관계없이 개수나 해상도를 줄입니다. 큰 이미지 이벤트는 스트리밍으로도 해결되지 않을 수 있습니다.',
   },
   { code: 'service_disabled', status: 503, meaning: '서비스가 점검 중입니다.' },
   { code: 'server_busy', status: 503, meaning: '요청이 몰려 처리하지 못했습니다. 한도는 차감되지 않습니다.' },

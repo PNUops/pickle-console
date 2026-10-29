@@ -22,7 +22,10 @@ type Schemas = components['schemas']
  */
 const contributors = (): Schemas['ResourceSummaryResponse'][] => [
   ...vmStore.map(toResourceSummary),
-  ...gpuAllocationStore.map((row): Schemas['ResourceSummaryResponse'] => ({ id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName, accessLimited: row.accessLimited, accessManageAllowed: row.accessManageAllowed, ownerNames: row.ownerNames, createdAt: row.createdAt })),
+  ...gpuAllocationStore.map((row): Schemas['ResourceSummaryResponse'] => {
+    if (row.workspaceName == null || row.ownerNames == null || row.createdAt == null) throw new Error('Synthetic GPU inventory requires complete stored facts before reader projection')
+    return { id: row.id, name: row.name, type: 'GPU', status: row.status, workspaceId: row.workspaceId, workspaceName: row.workspaceName, accessLimited: row.accessLimited, accessManageAllowed: row.accessManageAllowed, ownerNames: row.ownerNames, createdAt: row.createdAt }
+  }),
   ...llmKeyStore.map(toLlmKeyResourceSummary),
   ...dnsDomainStore.rows.map(({ domain }): Schemas['ResourceSummaryResponse'] => ({ id: domain.id, name: domain.fqdn, displayName: null, type: 'DOMAIN', status: domain.status, workspaceId: domain.workspaceId, workspaceName: domain.workspaceName, accessLimited: domain.accessLimited, accessManageAllowed: domain.accessManageAllowed, ownerNames: domain.ownerNames, createdAt: domain.createdAt })),
 ]

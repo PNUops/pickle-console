@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router'
 import { useAuth } from '../auth/auth-context'
-import { approvesAnywhere } from '../auth/permissions'
+import { hasRosterWork } from '../auth/request-authority'
 import { Alert } from '../components/ui'
 import { requestKind, REQUEST_KINDS } from '../components/request-kind'
 import { KindPicker } from '../components/request-kind/KindPicker'
@@ -21,14 +21,14 @@ export function AdminNewRequestPage() {
   const { user } = useAuth()
   const { activeOrgId } = useAdminScope()
   const [searchParams] = useSearchParams()
-  if (!approvesAnywhere(user)) {
-    return <Alert variant="danger">신청을 승인할 수 있는 기관이 없습니다.</Alert>
+  if (!hasRosterWork(user)) {
+    return <Alert variant="danger">명단을 지급할 업무가 없습니다.</Alert>
   }
   const found = requestKind(searchParams.get('kind') ?? '')
-  const kind = found?.supportsRecipients ? found : undefined
+  const kind = found?.supportsRecipients && hasRosterWork(user, found.type) ? found : undefined
   return kind ? (
     <RequestWizard key={kind.type} kind={kind} admin={{ orgId: activeOrgId }} />
   ) : (
-    <KindPicker kinds={ADMIN_KINDS} pathFor={(type) => adminPaths.newRequest(activeOrgId, type)} />
+    <KindPicker kinds={ADMIN_KINDS.filter((candidate) => hasRosterWork(user, candidate.type))} pathFor={(type) => adminPaths.newRequest(activeOrgId, type)} />
   )
 }

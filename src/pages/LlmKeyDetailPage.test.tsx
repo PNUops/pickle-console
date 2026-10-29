@@ -30,21 +30,21 @@ describe('LLM API 키 상세', () => {
     expect(screen.queryByText(/분당/)).not.toBeInTheDocument()
     expect(screen.queryByText(/동시 요청/)).not.toBeInTheDocument()
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
-    expect(screen.getByText('500,000토큰')).toBeInTheDocument()
+    expect(screen.getByText('500K (50만 토큰)')).toBeInTheDocument()
   })
 
-  test('says a missing daily limit is none and a zero limit is zero', async () => {
+  test('distinguishes unlimited daily tokens from a blocked token axis', async () => {
     server.use(refreshSuccessHandler('access-user'))
     const pending = renderApp(`/console/llm-keys/${PENDING_KEY}`)
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
-    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^없음$/)
+    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^무제한$/)
     pending.unmount()
 
     // Zero is a value: the gauge on the usage tab says what it blocks.
     renderApp(`/console/llm-keys/${MEMBER_KEY}`)
     await screen.findByRole('heading', { name: 'study-shared-key' })
-    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^0토큰$/)
+    expect(screen.getByText('일일 토큰 한도').nextElementSibling).toHaveTextContent(/^0 토큰 \(토큰 사용 불가\)$/)
   })
 
   // 울타리가 걸린 키를 "제한 없음"으로 보여 주면 소유자는 왜 거절당하는지
@@ -211,7 +211,7 @@ describe('연결 정보', () => {
     const main = within(screen.getByRole('main'))
     expect(main.getByRole('link', { name: '사용 가이드' })).toHaveAttribute('href', '/console/docs/llm/features#parameters')
     // The model list opens from the same row as that model's copy button.
-    const row = main.getByRole('button', { name: '호출할 수 있는 모델 보기' }).parentElement!
+    const row = main.getByRole('button', { name: '모델 후보 보기' }).parentElement!
     expect(within(row).getByText('pickle-general')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: '복사' })).toBeInTheDocument()
   })

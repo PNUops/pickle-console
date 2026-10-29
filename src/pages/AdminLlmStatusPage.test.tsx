@@ -13,6 +13,22 @@ import { uuid } from '../test/msw/ids'
 import { server } from '../test/msw/server'
 import { currentPath, renderApp } from '../test/render'
 
+test('shows readable model connections without treating them as actual routes', async () => {
+  const upstream = statusUpstream('Synthetic primary', 'org-one')
+  server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
+    http.get('*/api/v1/admin/llm/status', () => HttpResponse.json({
+      ...llmStatusFixture, upstreams: [upstream], modelRoutes: [
+        { publicName: 'campus/example', primary: { state: 'VISIBLE', upstreamId: upstream.id, upstreamName: upstream.name }, fallback: { state: 'NOT_PROVIDED', upstreamId: null, upstreamName: null } },
+        { publicName: 'campus/other', primary: { state: 'VISIBLE', upstreamId: upstream.id, upstreamName: upstream.name }, fallback: { state: 'NOT_CONFIGURED', upstreamId: null, upstreamName: null } },
+      ],
+    })))
+  renderApp('/admin/llm/status')
+  const table = within(await screen.findByRole('table', { name: '모델과 공급원 구성 연결' }))
+  expect(table.getByRole('row', { name: /campus\/example.*Synthetic primary.*제공되지 않음/ })).toBeInTheDocument()
+  expect(table.getByRole('row', { name: /campus\/other.*Synthetic primary.*미설정/ })).toBeInTheDocument()
+  expect(screen.getByText(/전체 모델 목록이나 실제 요청 처리 경로가 아닙니다/)).toBeInTheDocument()
+})
+
 function statusUpstream(name: string, ref: string): LlmUpstreamStatus {
   const fixtureIds: Record<string, number> = {
     'org-one': 401,
@@ -96,7 +112,7 @@ describe('관리자 LLM 서비스 상태', () => {
     const nav = screen.getByRole('navigation', { name: '관리자 메뉴' })
     expect(within(nav).getByRole('link', { name: 'LLM 서비스' })).toHaveAttribute(
       'href',
-      `/admin/llm/status?org=${uuid(1)}`,
+      '/admin/llm/status',
     )
   })
 
@@ -141,7 +157,7 @@ describe('관리자 LLM 서비스 상태', () => {
         return HttpResponse.json(body)
       }),
     )
-    renderApp(`/admin/llm/status?org=${uuid(1)}`)
+    renderApp('/admin/llm/status')
 
     expect(await screen.findByText('첫 번째 기관 서비스')).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
@@ -381,7 +397,7 @@ describe('관리자 LLM 서비스 지표', () => {
   test('탭 query가 기관 scope를 보존하고 최종 처리 기준을 정확히 설명한다', async () => {
     const user = userEvent.setup()
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
-    renderApp(`/admin/llm/status?org=${uuid(1)}`)
+    renderApp('/admin/llm/status')
 
     const tabs = await screen.findByRole('tablist', { name: 'LLM 서비스 화면' })
     const statusTab = within(tabs).getByRole('tab', { name: '상태' })
@@ -390,7 +406,7 @@ describe('관리자 LLM 서비스 지표', () => {
     expect(statusTab).toHaveAttribute('aria-controls', 'tabpanel-status')
 
     await user.click(metricsTab)
-    await waitFor(() => expect(currentPath()).toBe(`/admin/llm/status?org=${uuid(1)}&tab=metrics`))
+    await waitFor(() => expect(currentPath()).toBe('/admin/llm/status?tab=metrics'))
     expect(await screen.findByText('Upstream 귀속 범위')).toBeInTheDocument()
     expect(screen.getByText('최종 결과 timeout·upstream error')).toBeInTheDocument()
     expect(screen.getByText('성공 요청 end-to-end 지연')).toBeInTheDocument()
@@ -400,7 +416,7 @@ describe('관리자 LLM 서비스 지표', () => {
     expect(screen.queryByText(/ttft/i)).not.toBeInTheDocument()
 
     await user.click(statusTab)
-    await waitFor(() => expect(currentPath()).toBe(`/admin/llm/status?org=${uuid(1)}`))
+    await waitFor(() => expect(currentPath()).toBe('/admin/llm/status'))
   })
 
   test('기관 계층 지표는 raw code와 ref 없이 같은 기관 요청만 설명한다', async () => {

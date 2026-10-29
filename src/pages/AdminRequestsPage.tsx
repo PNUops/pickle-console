@@ -34,7 +34,8 @@ import { REQUEST_STATUS_LABELS } from '../lib/status'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { useAuth } from '../auth/auth-context'
-import { approvesAnywhere } from '../auth/permissions'
+import { hasAnyWork, hasWork, SYS_READERS } from '../auth/institution-authority'
+import { hasRosterWork } from '../auth/request-authority'
 import { requestListParams, requestListState, withListReturn } from '../lib/list-url'
 import { useDebouncedValue } from '../lib/use-debounced-value'
 import { requestRecipientStatusLabel } from '../lib/request-recipient-status'
@@ -67,8 +68,8 @@ function AdminRequestsPageContent() {
   const { status, type, page, workspaceId, relatedUserId, requestedEndFrom, requestedEndTo, reqIndefinite } = state
   const q = useDebouncedValue(state.q).trim() || undefined
   const dateConflict = !!requestedEndFrom && !!requestedEndTo && requestedEndFrom > requestedEndTo
-  const relatedUser = useQuery({ queryKey: ['admin', 'users', 'detail', relatedUserId, requestReaderKey(user)], queryFn: () => fetchAdminUser(relatedUserId!), enabled: relatedUserId != null })
-  const workspace = useQuery({ queryKey: ['admin', 'workspaces', 'detail', workspaceId, requestReaderKey(user)], queryFn: () => fetchAdminWorkspace(workspaceId!), enabled: workspaceId != null })
+  const relatedUser = useQuery({ queryKey: ['admin', 'users', 'detail', relatedUserId, requestReaderKey(user)], queryFn: () => fetchAdminUser(relatedUserId!), enabled: relatedUserId != null && hasAnyWork(user, ['student.lookup', 'student.support.read', 'student.profile.correct'], SYS_READERS) })
+  const workspace = useQuery({ queryKey: ['admin', 'workspaces', 'detail', workspaceId, requestReaderKey(user)], queryFn: () => fetchAdminWorkspace(workspaceId!), enabled: workspaceId != null && hasWork(user, 'workspace.support.read', { workspaceId }, SYS_READERS) })
   const canonical = requestListParams(state, activeOrgId).toString()
   useEffect(() => {
     normalize(canonical)
@@ -100,7 +101,7 @@ function AdminRequestsPageContent() {
             제출된 리소스 신청을 검토하고 승인 또는 반려합니다.
           </p>
         </div>
-        {approvesAnywhere(user) && (
+        {hasRosterWork(user) && (
           <LinkButton to={adminPaths.newRequest(activeOrgId)}>새 신청</LinkButton>
         )}
       </div>

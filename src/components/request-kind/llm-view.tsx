@@ -1,19 +1,19 @@
 import { useState } from 'react'
+import { TokenInputHint, TokenLimit, TokenValue } from '../TokenValue'
+import { formatTokenCompact, formatTokenDecision } from '../../lib/token-presentation'
+import { fetchLlmRosterAccountReferences, type LlmAccountReference } from '../../api/llm-command-references'
+import { hasWork, hasSameSourceWorks, rowAllows, SYS_ADMIN, SYS_READERS } from '../../auth/institution-authority'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import {
   fetchOpenRouterAccounts,
-  fetchOpenRouterCatalogue,
   fetchApprovalContext,
   type ApproveRequest,
-  type OpenRouterCatalogue,
   type OpenRouterAccount,
   type RequestDetail,
 } from '../../api/queries'
 import { Alert, Button, Checkbox, FormField, Input, MessageBar, Select, Spinner, Textarea } from '../ui'
-import { CreditModelPicker } from '../CreditModelPicker'
-import { CreditModelPreview } from '../CreditModelPreview'
-import { CreditModelRulesField } from '../CreditModelRulesField'
+import { CreditModelPolicyEditor } from '../CreditModelPolicyEditor'
 import { PassthroughEndpointField } from '../PassthroughEndpointField'
 import { AllocationWarning } from '../OpenRouterCredits'
 import { evaluateAllocation } from '../../lib/openrouter-credits'
@@ -24,12 +24,10 @@ import { useAdminScope } from '../../lib/use-admin-scope'
 import { isUuid } from '../../lib/validation'
 import { approvalTargetCounts, type ApprovalTargetFacts } from './approval-confirmation'
 import {
-  appendCreditModelRule,
   creditModelFieldErrors,
   creditModelRulesError,
   formatCreditModelRules,
   parseCreditModelRules,
-  type CreditModelListKind,
 } from '../../lib/credit-model-allowlist'
 import {
   grantPayload,
@@ -79,6 +77,9 @@ const MAX_CONCURRENCY = 100
 const MAX_INT32 = 2_147_483_647
 const MAX_SAFE = Number.MAX_SAFE_INTEGER
 
+/** Features whose models the paid-model catalogue does not carry, prices included. */
+const CATALOGUE_MISSING = ['rerank', 'speech', 'transcriptions'] as const
+
 /** 값이 없는 한도를 부르는 말 — 신청·부여 양쪽에서 같은 말을 쓴다. */
 function limitText(value: number | null | undefined): string {
   return value == null ? '서비스 기본값' : value.toLocaleString('ko-KR')
@@ -92,12 +93,12 @@ function requestedNote(value: number | null | undefined): string {
 }
 
 /** 비워 둔 한도는 오류가 아니다 — 적어 넣은 값만 검사한다. */
-function limitError(raw: string, label: string, max: number): string | undefined {
+function limitError(raw: string, label: string, max: number, min = 1): string | undefined {
   const value = raw.trim()
   if (!value) return undefined
-  if (!/^\d+$/.test(value)) return `${label}는 0보다 큰 정수로 입력하거나 비워 두세요.`
+  if (!/^\d+$/.test(value)) return `${label}는 ${min} 이상의 정수로 입력하거나 비워 두세요.`
   const parsed = Number(value)
-  if (parsed < 1) return `${label}는 1 이상이어야 합니다.`
+  if (parsed < min) return `${label}는 ${min} 이상이어야 합니다.`
   if (parsed > max) return `${label}는 ${max.toLocaleString('ko-KR')} 이하로 입력해 주세요.`
   return undefined
 }
@@ -109,13 +110,11 @@ function limitValue(raw: string): number | null {
 
 /** Reference failures remain independent from the approver's declared limits. */
 interface LlmAccountDecisionData {
-  accounts: OpenRouterAccount[]
+  accounts: (LlmAccountReference & Partial<Pick<OpenRouterAccount, 'allocation' | 'credits'>>)[]
+  paidAllowed: boolean
   loading: boolean
   failed: boolean
   retry: () => void
-  // 카탈로그는 별도로 실패할 수 있고, 실패해도 승인은 진행된다.
-  catalogue: OpenRouterCatalogue | undefined
-  catalogueFailed: boolean
   targetFacts?: ApprovalTargetFacts[]
   targetFactsKnown?: boolean
 }
@@ -124,41 +123,39 @@ function useLlmKeyDecisionData(request: RequestDetail): DecisionData {
   const { user } = useAuth()
   const { activeOrgId } = useAdminScope()
   const context = useQuery({ queryKey: ['admin', 'requests', request.id, 'context', { orgId: activeOrgId ?? null, reader: requestReaderKey(user) }], queryFn: () => fetchApprovalContext(request.id), enabled: isUuid(request.id) })
-  const targetFacts = context.isSuccess ? context.data.workspace.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true })) : []
+  const targetFacts: ApprovalTargetFacts[] = context.isSuccess ? context.data.workspace.members.map((member) => ({ userId: member.userId, name: member.name, userStatus: member.userStatus, member: true })) : []
   if (context.isSuccess) for (const recipient of request.recipients ?? []) {
-    if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', userStatus: 'ACTIVE', member: false })
+    if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', member: false })
   }
+  const stored = isUuid(request.id)
+  const command = stored ? 'llm.request.decide' : 'llm.roster.issue'
+  const paidAllowed = hasSameSourceWorks(user, [command, 'llm.key.budget'], { orgId: request.orgId, workspaceId: request.workspaceId }, SYS_ADMIN)
+    && (!stored || rowAllows(request, command) && rowAllows(request, 'llm.key.budget'))
+  const rosterReferences = useQuery({
+    queryKey: ['admin', 'llm-roster-references', request.orgId, request.workspaceId, requestReaderKey(user)],
+    queryFn: () => fetchLlmRosterAccountReferences(request.orgId!, request.workspaceId!),
+    enabled: !stored && paidAllowed && request.orgId != null && request.workspaceId != null,
+    retry: false,
+  })
+  const accountFinance = hasWork(user, 'institution.account.finance.read', { orgId: request.orgId }, SYS_READERS)
   const accounts = useQuery({
-    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null }],
+    queryKey: ['admin', 'llm-accounts', { orgId: request.orgId ?? null, reader: requestReaderKey(user) }],
     queryFn: () => fetchOpenRouterAccounts(request.orgId ?? undefined),
-    enabled: request.orgId != null,
+    enabled: paidAllowed && accountFinance && request.orgId != null,
     retry: false,
   })
-  // 모델 카탈로그는 캐시를 읽을 뿐이고 편의 계층이다. 실패해도 자유 입력이 남아
-  // 있으므로 결정 카드는 물론 유료 모델 승인도 막지 않는다. 계정 조회와 달리
-  // 이것이 없다고 승인이 불가능해지는 경우는 없다.
-  const catalogue = useQuery({
-    queryKey: ['admin', 'openrouter-catalogue'],
-    queryFn: fetchOpenRouterCatalogue,
-    retry: false,
-    staleTime: 5 * 60 * 1000,
+  const references = stored ? context.data?.llmKey?.accountReferences : rosterReferences.data
+  const eligibleAccounts = (references ?? []).filter((account) => account.eligibleForBinding).map((reference) => {
+    const finance = accounts.data?.find((account) => account.id === reference.id)
+    return { ...reference, ...(finance ? { allocation: finance.allocation, credits: finance.credits } : {}) }
   })
-  // 사업 계정 조회는 유료 모델만 막는다. 자체 서빙 모델만 주는 승인과 반려는 이
-  // 조회가 실패해도 살아 있어야 하므로 결정 카드 전체를 막지 않는다.
-  const eligibleAccounts = (accounts.data ?? []).filter((account) => account.eligibleForBinding)
-  return {
-    status: 'ready',
-    value: {
-      accounts: eligibleAccounts,
-      loading: accounts.isPending,
-      failed: accounts.isError || request.orgId == null,
-      retry: () => void accounts.refetch(),
-      catalogue: catalogue.data,
-      catalogueFailed: catalogue.isError,
-      targetFacts,
-      targetFactsKnown: context.isSuccess,
-    } satisfies LlmAccountDecisionData,
-  }
+  return { status: 'ready', value: {
+    accounts: eligibleAccounts, paidAllowed,
+    loading: paidAllowed && (stored ? context.isFetching : rosterReferences.isFetching),
+    failed: paidAllowed && (stored ? context.isError || context.isSuccess && references == null : rosterReferences.isError),
+    retry: () => { if (stored) void context.refetch(); else void rosterReferences.refetch() },
+    targetFacts, targetFactsKnown: context.isSuccess,
+  } satisfies LlmAccountDecisionData }
 }
 
 /**
@@ -192,6 +189,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const [creditLimit, setCreditLimit] = useState(
     request.llmKey?.reqCreditLimit != null ? String(request.llmKey.reqCreditLimit) : '',
   )
+  const [freeApprovalSelected, setFreeApprovalSelected] = useState(false)
   const [creditReset, setCreditReset] = useState('')
   const [openrouterAccountId, setOpenrouterAccountId] = useState('')
   // 계정 기본값만 예외적으로 미리 채운다. 다른 칸과 달리 채우는 값이 신청자의
@@ -241,7 +239,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     ? `${creditText(pendingCredit)} (${creditText(perKeyCredit)} × ${keyCount}명)`
     : creditText(pendingCredit)
   const judgement =
-    effectiveAccount && pendingCredit > 0
+    effectiveAccount?.allocation != null && effectiveAccount.credits != null && pendingCredit > 0
       ? evaluateAllocation({
           allocation: effectiveAccount.allocation,
           credits: effectiveAccount.credits,
@@ -261,7 +259,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
   const accountDefault = effectiveAccount?.defaultCreditAllowedModels ?? []
   const accountDenyDefault = effectiveAccount?.defaultCreditDeniedModels ?? []
-  const hasAccountDefaults = accountDefault.length + accountDenyDefault.length > 0
+  const hasAccountDefaults = effectiveAccount?.defaultCreditAllowedModels != null && effectiveAccount.defaultCreditDeniedModels != null
   const prefillKey = effectiveAccount?.id ?? null
   if (!accountDefaultsTouched && prefillKey !== prefilledFrom) {
     setPrefilledFrom(prefillKey)
@@ -271,10 +269,6 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
   const parsedRules = parseCreditModelRules(creditModelRules)
   const parsedCreditModels = parsedRules.allowed
   const parsedDeniedModels = parsedRules.denied
-  const addModel = (pattern: string, list: CreditModelListKind) => {
-    setAccountDefaultsTouched(true)
-    setCreditModelRules((text) => appendCreditModelRule(text, pattern, list))
-  }
 
   return {
     validate: () => {
@@ -287,7 +281,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       if (tpmError) errors['llmKey.grantedTpm'] = tpmError
       const concurrencyError = limitError(concurrency, '동시 요청 수', MAX_CONCURRENCY)
       if (concurrencyError) errors['llmKey.grantedConcurrency'] = concurrencyError
-      const dailyError = limitError(dailyTokens, '일일 토큰 수', MAX_SAFE)
+      const dailyError = limitError(dailyTokens, '일일 토큰 수', MAX_SAFE, 0)
       if (dailyError) errors['llmKey.grantedDailyTokens'] = dailyError
       const creditLimitError = creditError(creditLimit)
       if (creditLimitError) errors['llmKey.grantedCreditLimit'] = creditLimitError
@@ -305,6 +299,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         } else if (!effectiveAccount) {
           errors['llmKey.openrouterAccountId'] = '어느 사업 계정으로 결제할지 선택해 주세요.'
         }
+      }
+      const budgetRequired = Number(creditLimit) > 0 || !!creditReset || parsedCreditModels.length > 0
+        || parsedDeniedModels.length > 0 || passthroughEndpoints.some((endpoint) => endpoint !== 'chat')
+      if (budgetRequired && !accountData.paidAllowed) {
+        errors['llmKey.grantedCreditLimit'] = '유료 정책에는 같은 기관·공간 범위의 승인 또는 명단 지급과 키 예산 업무가 같은 부여에 있어야 합니다.'
       }
       const modelsError = creditModelRulesError(parsedRules)
       if (modelsError) {
@@ -350,10 +349,25 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
 
     fields: (fieldErrors) => (
       <>
-        <p className="text-sm text-neutral-500">
-          부여 한도를 정해 주세요. 비워 둔 항목은 서비스 기본 한도로 발급되며, 그것이
-          보통의 승인입니다. 신청자의 희망값은 각 한도 아래에 적어 두었습니다.
-        </p>
+        {!accountData.paidAllowed && <div className="space-y-3">
+          <Alert>유료 정책을 부여할 같은 원천의 예산 업무가 없습니다. 신청한 유료 조건을 자동으로 줄이지 않습니다. 반려하거나 유료 기능을 모두 닫는 부여안을 직접 선택해 주세요.</Alert>
+          <Checkbox checked={freeApprovalSelected} label="유료 기능 없이 승인" onChange={(event) => {
+            const free = event.target.checked
+            setFreeApprovalSelected(free)
+            setCreditLimit(free ? '0' : spec?.reqCreditLimit != null ? String(spec.reqCreditLimit) : '')
+            setCreditReset('')
+            setOpenrouterAccountId('')
+            setCreditModelRules('')
+            setAccountDefaultsTouched(true)
+            setPassthroughEndpoints(free ? (spec?.reqPassthroughEndpoints ?? []).filter((endpoint) => endpoint === 'chat') : spec?.reqPassthroughEndpoints ?? [])
+            setChatlessAcknowledged(null)
+          }} />
+          {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인합니다. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫습니다.</p>}
+          {!freeApprovalSelected && <p className="text-sm">현재 부여안 기능: {passthroughText(passthroughEndpoints)}</p>}
+        </div>}
+        <details open className="min-w-0 space-y-4 rounded border border-line p-3">
+          <summary className="cursor-pointer font-medium">TOKEN 토큰 한도</summary>
+          <p className="text-xs text-foreground-muted">접어도 입력값과 승인 내용은 유지됩니다. RPM·TPM·동시 요청의 실제 서비스 기본값은 서버에서 보고하지 않아 확인할 수 없습니다.</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 분당 요청 수"
@@ -372,7 +386,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <FormField
             label="부여 분당 토큰 수"
             error={fieldErrors['llmKey.grantedTpm']}
-            description={requestedNote(spec?.reqTpm)}
+            description={spec?.reqTpm == null ? '희망값 없음. 비우면 서비스 기본값이 적용됩니다.' : `신청 희망값 ${formatTokenDecision(spec.reqTpm)}. 비우면 서비스 기본값이 적용됩니다.`}
           >
             <Input
               type="number"
@@ -381,19 +395,21 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
               onChange={(event) => setTpm(event.target.value)}
               placeholder="서비스 기본값"
             />
+            <TokenInputHint value={tpm} />
           </FormField>
           <FormField
             label="부여 일일 토큰 수"
             error={fieldErrors['llmKey.grantedDailyTokens']}
-            description={requestedNote(spec?.reqDailyTokens)}
+            description={spec?.reqDailyTokens == null ? '희망값 없음. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.' : `신청 희망값 ${formatTokenDecision(spec.reqDailyTokens)}. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.`}
           >
             <Input
               type="number"
-              min={1}
+              min={0}
               value={dailyTokens}
               onChange={(event) => setDailyTokens(event.target.value)}
-              placeholder="서비스 기본값"
+              placeholder="무제한"
             />
+            <TokenInputHint value={dailyTokens} />
           </FormField>
           <FormField
             label="부여 동시 요청 수"
@@ -412,6 +428,11 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             />
           </FormField>
         </div>
+        </details>
+        <details open className="min-w-0 space-y-4 rounded border border-line p-3">
+          <summary className="cursor-pointer font-medium">CREDIT 유료 모델 정책</summary>
+          <p className="text-xs text-foreground-muted">접어도 금액·계정·모델 규칙은 유지됩니다. 신청하지 않은 축도 권한이 있으면 직접 부여할 수 있습니다.</p>
+        <fieldset disabled={!accountData.paidAllowed} className="min-w-0 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 금액 한도 (USD)"
@@ -449,8 +470,10 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           onChange: setOpenrouterAccountId,
           error: fieldErrors['llmKey.openrouterAccountId'],
         })}
-        <CreditModelRulesField
+        <CreditModelPolicyEditor
           value={creditModelRules}
+          baseline={hasAccountDefaults ? { allowed: accountDefault, denied: accountDenyDefault } : undefined}
+          baselineLabel="선택 계정의 승인 초기값"
           error={creditModelFieldErrors(fieldErrors,
             'llmKey.grantedCreditAllowedModels', 'llmKey.grantedCreditDeniedModels')}
           onChange={(text) => {
@@ -458,28 +481,26 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             setCreditModelRules(text)
           }}
         />
-        <CreditModelPicker
-          catalogue={accountData.catalogue}
-          failed={accountData.catalogueFailed}
-          allowed={parsedCreditModels}
-          denied={parsedDeniedModels}
-          onAdd={addModel}
-        />
-        <CreditModelPreview
-          catalogue={accountData.catalogue}
-          failed={accountData.catalogueFailed}
-          allowed={parsedCreditModels}
-          denied={parsedDeniedModels}
-          invalid={parsedRules.errors.length > 0}
-        />
+        </fieldset>
+        </details>
         <PassthroughEndpointField
           label="부여할 기능 권한"
+          rows={accountData.paidAllowed ? undefined : ['chat']}
+          locked={!accountData.paidAllowed && !freeApprovalSelected ? ['chat'] : []}
           value={passthroughEndpoints}
           onChange={(next) => {
             setPassthroughEndpoints(next)
             setChatlessAcknowledged(null)
           }}
         />
+        {/* Rerank, speech and transcription models are missing from the
+            catalogue above, so the picker cannot show their names or prices. */}
+        {CATALOGUE_MISSING.some((name) => passthroughEndpoints.includes(name)) ? (
+          <p className="text-sm text-neutral-500">
+            리랭크, TTS, STT 모델은 위 모델 목록에 나오지 않아 가격을 여기서 볼 수 없지만 호출마다
+            요금이 붙습니다. 쓸 수 있는 유료 모델을 제한한다면 해당 모델 ID를 직접 적어야 합니다.
+          </p>
+        ) : null}
         {!accountDefaultsTouched && hasAccountDefaults ? (
           <p className="text-sm text-neutral-500">
             {effectiveAccount?.name} 계정의 기본값에서 채웠습니다. 이 승인에만 적용되며,
@@ -627,6 +648,7 @@ function approvalAccountField({
   onChange: (value: string) => void
   error?: string
 }) {
+  if (!data.paidAllowed) return error ? <p role="alert" className="text-sm text-danger-700">{error}</p> : null
   if (data.loading) {
     return <div className="flex justify-center py-2"><Spinner label="OpenRouter 사업 계정 확인 중" /></div>
   }
@@ -704,7 +726,7 @@ export const llmKeyRequestView: RequestKindView = {
         ? null
         : spec.reqDailyTokens == null
           ? '일일 토큰 기본값'
-          : `일일 토큰 ${spec.reqDailyTokens.toLocaleString('ko-KR')}`,
+          : `일일 토큰 ${formatTokenCompact(spec.reqDailyTokens)}`,
       !spec?.useCommercialModels
         ? null
         : spec.reqCreditLimit == null
@@ -746,8 +768,8 @@ export const llmKeyRequestView: RequestKindView = {
             : '—'}
       </Field>
       <Field label="희망 분당 요청 수">{limitText(data.llmKey?.reqRpm)}</Field>
-      <Field label="희망 분당 토큰 수">{limitText(data.llmKey?.reqTpm)}</Field>
-      <Field label="희망 일일 토큰 수">{limitText(data.llmKey?.reqDailyTokens)}</Field>
+      <Field label="희망 분당 토큰 수">{data.llmKey?.reqTpm == null ? '서비스 기본값' : <TokenValue value={data.llmKey.reqTpm} decision />}</Field>
+      <Field label="희망 일일 토큰 수">{data.llmKey?.reqDailyTokens == null ? '서비스 기본값' : <TokenValue value={data.llmKey.reqDailyTokens} decision />}</Field>
       <Field label="필요한 기능">
         {requestedFeaturesText(data.llmKey?.reqPassthroughEndpoints ?? [])}
       </Field>
@@ -762,8 +784,8 @@ export const llmKeyRequestView: RequestKindView = {
     return (
       <>
         <Field label="부여 분당 요청 수">{limitText(spec?.grantedRpm)}</Field>
-        <Field label="부여 분당 토큰 수">{limitText(spec?.grantedTpm)}</Field>
-        <Field label="부여 일일 토큰 수">{limitText(spec?.grantedDailyTokens)}</Field>
+        <Field label="부여 분당 토큰 수">{<TokenLimit value={spec?.grantedTpm} />}</Field>
+        <Field label="부여 일일 토큰 수">{<TokenLimit value={spec?.grantedDailyTokens} daily />}</Field>
         <Field label="부여 동시 요청 수">{limitText(spec?.grantedConcurrency)}</Field>
         <Field label="부여 금액 한도">{creditText(spec?.grantedCreditLimit)}</Field>
         {spec?.grantedCreditLimit ? (

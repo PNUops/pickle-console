@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { EditWorkspaceModal, OwnershipTransferModal } from '../components/workspace/WorkspaceModals'
 import { InviteMembersForm, PendingInvitationsSection } from '../components/workspace/WorkspaceInvitations'
 import { WorkspaceMemberRoleSelect, RemoveWorkspaceMemberModal } from '../components/workspace/WorkspaceMemberControls'
+import { WorkspaceTerminationImpactButton } from '../components/workspace/WorkspaceTerminationImpact'
+import { WorkspaceTerminationDialog } from '../components/workspace/WorkspaceTerminationDialog'
 import { requestReaderKey } from '../api/request-review'
 import { useActiveResult } from '../lib/use-active-result'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -24,7 +26,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  ConfirmNameModal,
   WorkspaceKindBadge,
   WorkspaceRoleBadge,
   Modal,
@@ -166,9 +167,10 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
   const [error, setError] = useState<string | null>(null)
 
   const remove = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (fingerprint: string) => {
       const { error: err, response } = await api.DELETE('/workspaces/{workspaceId}', {
         params: { path: { workspaceId: workspace.id } },
+        body: { confirmation: { fingerprint, confirmed: true } },
       })
       if (!response.ok) throw toApiError(err, '워크스페이스를 삭제하지 못했습니다.')
     },
@@ -179,12 +181,7 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
       toast.success('워크스페이스를 삭제했습니다.')
       navigate('/console/workspaces')
     },
-    onError: (err) => {
-      if (!active.current) return
-      setOpen(false)
-      // 활성 VM 보유·PERSONAL 등 서버의 problem detail을 그대로 노출한다.
-      setError(toApiError(err, '워크스페이스를 삭제하지 못했습니다.').message)
-    },
+
   })
 
   return (
@@ -194,6 +191,7 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
+        <WorkspaceTerminationImpactButton workspaceId={workspace.id} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-neutral-600">
             워크스페이스를 삭제하면 모든 목록에서 사라집니다. 남아 있는 리소스가 있으면 먼저
@@ -210,20 +208,8 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
           </Button>
         </div>
       </CardContent>
-      <ConfirmNameModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="워크스페이스 삭제"
-        expectedName={workspace.name}
-        confirmLabel="워크스페이스 삭제"
-        loading={remove.isPending}
-        onConfirm={() => remove.mutate()}
-      >
-        <Alert variant="danger">
-          이 작업은 되돌릴 수 없습니다. 같은 이름으로 새 워크스페이스를 다시 만들 수는 있지만,
-          기존 워크스페이스의 구성원 구성은 복구되지 않습니다.
-        </Alert>
-      </ConfirmNameModal>
+      {open && <WorkspaceTerminationDialog workspaceId={workspace.id} expectedName={workspace.name} onClose={() => setOpen(false)} onConfirm={(fingerprint) => remove.mutateAsync(fingerprint)} />}
+
     </Card>
   )
 }
@@ -429,7 +415,10 @@ function MembersSection({
         target={transferTarget}
         pending={changeRole.isPending}
         onCancel={() => setTransferTarget(null)}
-        onConfirm={(member) => changeRole.mutate({ member, role: 'OWNER' })}
+        onConfirm={(member) => {
+          const current = workspace.members.find((row) => row.userId === member.userId)
+          if (current) changeRole.mutate({ member: current, role: 'OWNER' })
+        }}
       />
 
       <RemoveWorkspaceMemberModal target={removeTarget} pending={removeMember.isPending}

@@ -1,6 +1,8 @@
 import type { LlmUsageDailyPoint } from '../../api/queries'
 import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
 import { formatKstDay } from '../metrics/timeframe'
+import { formatTokenCompact, formatTokenExact } from '../../lib/token-presentation'
+import { TokenValue } from '../TokenValue'
 
 function dayEpochSeconds(day: string): number {
   return Math.round(new Date(`${day}T00:00:00+09:00`).getTime() / 1000)
@@ -59,7 +61,7 @@ function DailyValuesTable({
                 </th>
                 {columns.map((column) => (
                   <td key={column.label} className="px-3 py-2 text-right text-foreground-secondary">
-                    {count(column.value(point))}{column.suffix}
+                    {column.suffix === '' ? <TokenValue value={column.value(point)} /> : <>{count(column.value(point))}{column.suffix}</>}
                   </td>
                 ))}
               </tr>
@@ -103,7 +105,8 @@ export default function AdminLlmUsageCharts({
             { label: '입력', data: points.map((point) => point.inputTokens) },
             { label: '출력', data: points.map((point) => point.outputTokens) },
           ]}
-          format={(value) => `${count(value)} 토큰`}
+          format={formatTokenCompact}
+          formatDetail={formatTokenExact}
           formatTime={formatKstDay}
           splitBase="integer"
         />

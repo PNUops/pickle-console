@@ -1,9 +1,9 @@
 import type { AdminBulkOperation } from '../../api/bulk-results'
-import { diffFieldLabel, formatDiffValue } from '../../lib/bulk-change'
+import { diffFieldLabel } from '../../lib/bulk-change'
 import { formatDateTime } from '../../lib/format'
 import { labelForBulkReason } from '../../lib/labels'
 import { DataTable, MessageBar, TBody, TD, TH, THead, TR } from '../ui'
-import { BulkChangeResultTable } from './BulkChangeTables'
+import { BulkChangeResultTable, BulkValue } from './BulkChangeTables'
 
 const EFFECT_KIND: Record<string, string> = { AUDIT: '감사 기록', QUEUE: '작업 큐', EXTERNAL_CALLBACK: '공급자 후속 처리', CALLBACK: '후속 처리' }
 const EFFECT_OUTCOME: Record<string, string> = { REGISTERED: '후속 처리 등록됨', ACCEPTED: '작업 접수 확인', COMPLETED: '후속 처리 완료', FAILED: '후속 처리 실패', UNKNOWN: '접수·완료 확인 없음' }
@@ -27,7 +27,7 @@ export function BulkChangeReceipt({ operation }: { operation: AdminBulkOperation
       <TBody>{operation.observations.map((item) => <TR key={item.targetId}>
         <TD className="break-all">{name(item.targetId)}</TD>
         <TD>{formatDateTime(item.observedAt)}</TD>
-        <TD>{item.refusal ? <span>현재 조회 불가: {labelForBulkReason(item.refusal)}</span> : <dl className="space-y-1">{Object.entries(item.values).map(([field, value]) => <div key={field}><dt className="inline text-foreground-muted">{diffFieldLabel(field)}: </dt><dd className="inline">{formatDiffValue(field, value, operation.targetType)}</dd></div>)}</dl>}</TD>
+        <TD>{item.refusal ? <span>현재 조회 불가: {labelForBulkReason(item.refusal)}</span> : <dl className="space-y-1">{Object.entries(item.values).map(([field, value]) => <div key={field}><dt className="inline text-foreground-muted">{diffFieldLabel(field)}: </dt><dd className="inline">{<BulkValue field={field} value={value} targetType={operation.targetType} />}</dd></div>)}</dl>}</TD>
       </TR>)}</TBody>
     </DataTable>
     <DataTable caption="후속 작업 접수와 관측" className="min-w-[48rem]">

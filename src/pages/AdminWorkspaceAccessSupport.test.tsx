@@ -1,3 +1,4 @@
+import { emptyTerminationImpact } from '../test/fixtures/termination'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,7 +9,8 @@ import App from '../App'
 import { AuthProvider } from '../auth/AuthProvider'
 import { useAuth } from '../auth/auth-context'
 import { ToastProvider } from '../components/ui'
-import { ACCESS_TOKENS, orgAdminUser, orgManagerUser, orgViewerUser, refreshSuccessHandler, sysAdminUser, sysManagerUser, sysViewerUser } from '../test/msw/handlers/auth'
+import { ACCESS_TOKENS, orgAdminProfile, orgAdminUser, orgManagerUser, orgViewerUser, refreshSuccessHandler, sysAdminUser, sysManagerUser, sysViewerUser } from '../test/msw/handlers/auth'
+import { AUTHORITY_OVERRIDES, mockInstitutionAuthority } from '../test/msw/institution-authority'
 import { workspaceDetails } from '../test/msw/handlers/announcements'
 import { vmAccessStore, vmStore } from '../test/msw/handlers/vms'
 import { server } from '../test/msw/server'
@@ -31,6 +33,64 @@ function renderContext(route: string) {
 }
 function accessRoute(org = 2, id = 57) { return `/admin/resource-access/VM/${uuid(id)}?org=${uuid(org)}` }
 function workspaceRoute(tab = 'members', org = 2) { return `/admin/workspaces?workspaceId=${uuid(12)}&inspect=1&tab=${tab}&org=${uuid(org)}` }
+
+function onlyWorkspaceWork(work: string) {
+  const context = mockInstitutionAuthority(orgAdminProfile)
+  context.accountRole = 'ORG_MANAGER'
+  context.authorityFingerprint = `synthetic-workspace:${work}`
+  context.assignments[0].permission = { mode: 'SELECTED', revision: 23, work: [work], scopes: {
+    WORKSPACE: { mode: 'LISTED', workspaceIds: [uuid(12)] },
+  } }
+  AUTHORITY_OVERRIDES[orgAdminProfile.id] = context
+  server.use(refreshSuccessHandler('access-org-admin'))
+}
+
+test('owner-only administration designates an existing member using minimal references and exact identity confirmation', async () => {
+  onlyWorkspaceWork('workspace.owners.manage')
+  renderApp(`/admin/workspaces?workspaceId=${uuid(12)}&inspect=1&tab=members`)
+  const user = userEvent.setup()
+  await user.selectOptions(await screen.findByLabelText('이시스템 역할 변경'), 'OWNER')
+  const dialog = within(await screen.findByRole('dialog', { name: '소유자 지정' }))
+  expect(dialog.getByRole('button', { name: '소유자로 지정' })).toBeDisabled()
+  await user.type(dialog.getByLabelText('대상 사용자 ID 확인'), uuid(5))
+  await user.click(dialog.getByRole('button', { name: '소유자로 지정' }))
+  await waitFor(() => expect(workspaceDetails[uuid(12)].members.find((member) => member.userId === uuid(5))?.workspaceRole).toBe('OWNER'))
+  const memberRow = (await screen.findByText('이시스템')).closest('tr')!
+  await within(memberRow).findByRole('cell', { name: '소유자' })
+  expect(screen.queryByRole('dialog', { name: '소유자 지정' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: '이시스템' })).not.toBeInTheDocument()
+  expect(screen.queryByText('sysadmin.lee@pusan.ac.kr')).not.toBeInTheDocument()
+})
+
+test('owner-only administration removes an owner while a different owner remains', async () => {
+  onlyWorkspaceWork('workspace.owners.manage')
+  workspaceDetails[uuid(12)].members.find((member) => member.userId === uuid(5))!.workspaceRole = 'OWNER'
+  renderApp(`/admin/workspaces?workspaceId=${uuid(12)}&inspect=1&tab=members`)
+  const row = (await screen.findByText('홍길동')).closest('tr')!
+  const user = userEvent.setup()
+  await user.click(within(row).getByRole('button', { name: '제거' }))
+  const dialog = within(await screen.findByRole('dialog', { name: '구성원 제거' }))
+  await user.click(dialog.getByRole('button', { name: '제거' }))
+  await waitFor(() => expect(workspaceDetails[uuid(12)].members.some((member) => member.userId === uuid(42))).toBe(false))
+  expect(workspaceDetails[uuid(12)].members.some((member) => member.workspaceRole === 'OWNER')).toBe(true)
+})
+
+test('member-only administration cannot remove an owner even if a row flag claims otherwise', async () => {
+  onlyWorkspaceWork('workspace.members.manage')
+  server.use(http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({
+    ...workspaceDetails[uuid(12)], metadataVisible: false, allowedWorkIds: ['workspace.members.manage'],
+    canManageMembers: true, canManageOwners: false, canUpdateInfo: false, canInviteMembers: false, canDelete: false,
+    memberCount: null, vmCount: null, createdAt: null, description: null,
+    members: workspaceDetails[uuid(12)].members.map((member) => ({ ...member, email: null, joinedAt: null,
+      supportDetailVisible: false, canChangeRole: true, canRemove: true })),
+  })))
+  renderApp(`/admin/workspaces?workspaceId=${uuid(12)}&inspect=1&tab=members`)
+  const owner = (await screen.findByText('홍길동')).closest('tr')!
+  expect(within(owner).queryByRole('button', { name: '제거' })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('이시스템 역할 변경')).not.toBeInTheDocument()
+  const member = screen.getByText('이시스템').closest('tr')!
+  expect(within(member).getByRole('button', { name: '제거' })).toBeInTheDocument()
+})
 
 
 test.each([
@@ -57,7 +117,7 @@ test.each([
   await user.type(dialog.getByLabelText('확인 이메일'), 'sysadmin.lee@pusan.ac.kr')
   await user.click(dialog.getByRole('button', { name: '소유자로 지정' }))
   await waitFor(() => expect(bodies).toEqual([{ role: 'OWNER' }]))
-  expect(within(screen.getByText('홍길동').closest('tr')!).getByText('소유자')).toBeInTheDocument()
+  expect(within(within(screen.getByRole('dialog', { name: '워크스페이스 상세' })).getByText('홍길동').closest('tr')!).getByText('소유자')).toBeInTheDocument()
   if (token.startsWith('access-org')) expect(screen.queryByRole('link', { name: '이시스템' })).not.toBeInTheDocument()
 })
 
@@ -170,7 +230,7 @@ test('a delayed grant result invalidates its source cache while a new target kee
   let started = false
   server.use(refreshSuccessHandler('access-org-manager', orgManagerUser), http.post(previewPath, () => HttpResponse.json(noGain)),
     http.post(grantPath, async () => { started = true; await pending; return HttpResponse.json({ id: uuid(9891), granteeType: 'USER', role: 'MEMBER', user: { userId: uuid(5), name: '이전 대상의 늦은 부여', email: 'synthetic@example.invalid' }, createdAt: '2026-10-13T00:00:00Z' }) }))
-  server.use(http.get('*/api/v1/admin/workspaces/:workspaceId', ({ params }) => HttpResponse.json({ ...workspaceDetails[uuid(12)], id: params.workspaceId })))
+  server.use(http.get(grantPath, ({ params }) => HttpResponse.json({ resource: { id: params.resourceId, type: 'VM', name: 'Synthetic resource', status: 'RUNNING', workspaceId: uuid(12), workspaceName: 'Synthetic workspace' }, grants: [], canManageAccess: true, eligibleMembers: [{ userId: uuid(5), name: '이시스템', workspaceRole: 'MEMBER', userStatus: 'ACTIVE' }] })))
   const { client, router } = renderContext(accessRoute())
   const invalidations = vi.spyOn(client, 'invalidateQueries')
   try {
@@ -221,9 +281,9 @@ test('PERSONAL and final OWNER capabilities retain their server protections', as
   server.resetHandlers()
   server.use(refreshSuccessHandler('access-org-manager', orgManagerUser))
   renderApp(workspaceRoute())
-  await screen.findByText('홍길동')
+  await within(await screen.findByRole('dialog', { name: '워크스페이스 상세' })).findByText('홍길동')
   expect(screen.queryByLabelText('홍길동 역할 변경')).not.toBeInTheDocument()
-  const row = screen.getByText('홍길동').closest('tr')!
+  const row = within(screen.getByRole('dialog', { name: '워크스페이스 상세' })).getByText('홍길동').closest('tr')!
   expect(within(row).queryByRole('button', { name: '제거' })).not.toBeInTheDocument()
 })
 
@@ -254,7 +314,8 @@ test('a delete accepted by the earlier capability still renders a new remaining-
   const user = userEvent.setup()
   let calls = 0
   server.use(refreshSuccessHandler('access-org-manager', orgManagerUser),
-    http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], canUpdateInfo: true, canManageOwners: true, canManageMembers: true, canInviteMembers: true, canDelete: true, deleteBlockedReason: null })),
+    http.get('*/api/v1/admin/workspaces/:workspaceId/termination-impact', () => HttpResponse.json(emptyTerminationImpact())),
+    http.get('*/api/v1/admin/workspaces/:workspaceId', () => HttpResponse.json({ ...workspaceDetails[uuid(12)], allowedWorkIds: ['workspace.support.read', 'workspace.info.update', 'workspace.members.manage', 'workspace.owners.manage', 'workspace.invitations.manage', 'workspace.terminate'], canUpdateInfo: true, canManageOwners: true, canManageMembers: true, canInviteMembers: true, canDelete: true, deleteBlockedReason: null })),
     http.delete('*/api/v1/admin/workspaces/:workspaceId', () => { calls++; return HttpResponse.json({ title: '삭제할 수 없습니다', status: 409, code: 'WORKSPACE_HAS_ACTIVE_RESOURCES', detail: '남아 있는 리소스를 먼저 정리해 주세요.' }, { status: 409 }) }))
   renderApp(workspaceRoute('overview'))
   await user.click(await screen.findByRole('button', { name: '워크스페이스 삭제' }))
@@ -262,10 +323,11 @@ test('a delete accepted by the earlier capability still renders a new remaining-
   expect(calls).toBe(0)
   expect(dialog.getByRole('button', { name: '워크스페이스 삭제' })).toBeDisabled()
   await user.type(dialog.getByRole('textbox'), '캡스톤 3조')
+  await user.click(await dialog.findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
   await user.click(dialog.getByRole('button', { name: '워크스페이스 삭제' }))
-  expect(await screen.findByText('남아 있는 리소스를 먼저 정리해 주세요.')).toBeInTheDocument()
+  expect(await screen.findByText(/남아 있는 리소스를 먼저 정리해 주세요\./)).toBeInTheDocument()
   expect(calls).toBe(1)
-  expect(screen.getByRole('heading', { name: '캡스톤 3조' })).toBeInTheDocument()
+  expect(screen.getAllByRole('heading', { name: '캡스톤 3조' }).length).toBeGreaterThan(0)
 })
 
 test('a late preview cannot reopen an access review after the support scope changes', async () => {

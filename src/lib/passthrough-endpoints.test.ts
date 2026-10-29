@@ -11,7 +11,16 @@ import {
 
 describe('feature grants', () => {
   test('offers only the grantable names, files never', () => {
-    expect(PASSTHROUGH_ENDPOINTS).toEqual(['chat', 'web_search', 'pdf_ocr', 'images', 'embeddings'])
+    expect(PASSTHROUGH_ENDPOINTS).toEqual([
+      'chat',
+      'web_search',
+      'pdf_ocr',
+      'images',
+      'embeddings',
+      'rerank',
+      'speech',
+      'transcriptions',
+    ])
   })
 
   test('keeps the order of the table, not of the clicks', () => {

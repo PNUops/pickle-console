@@ -83,7 +83,7 @@ test('foreign domain metadata does not fetch DNS record content', async () => {
     http.get('*/api/v1/admin/domains/:domainId/records', () => { rawReads += 1; return HttpResponse.json([]) }))
   renderApp(`/admin/domains?org=${uuid(2)}&domainId=${domain.id}`)
   await screen.findByRole('heading', { name: domain.fqdn })
-  expect(await screen.findByText('레코드 원문은 담당 기관의 역할로 조회합니다.')).toBeInTheDocument()
+  expect(await screen.findByText('레코드 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
   expect(rawReads).toBe(0)
   expect(screen.queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
 })
@@ -100,8 +100,8 @@ test('foreign VM metadata never loads network policy even when its feature is en
     expect(screen.queryByRole('tab', { name: '연결 정책' })).not.toBeInTheDocument()
     expect(rawReads).toBe(0)
     const metadata = await fetchAdminVm(vm.id)
-    expect(metadata.publications.length).toBeGreaterThan(0)
-    expect(metadata.publications.every((publication) => publication.domain?.verification == null)).toBe(true)
+    expect(metadata.publications!.length).toBeGreaterThan(0)
+    expect(metadata.publications!.every((publication) => publication.domain?.verification == null)).toBe(true)
     expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
   } finally { vi.unstubAllEnvs() }
 })
@@ -117,7 +117,7 @@ test('foreign served-domain support reads safe routes while withholding source C
   try {
     renderApp(`/admin/domains?org=${uuid(2)}&domainId=${uuid(36)}`)
     await screen.findByRole('heading', { name: 'api.example.org' })
-    expect(await screen.findByText('연결 정책 원문은 담당 기관의 역할로 조회합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('연결 정책 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
     expect(routeReads).toBeGreaterThan(0)
     expect(policyReads).toBe(0)
     expect(screen.queryByRole('button', { name: '재검증' })).not.toBeInTheDocument()

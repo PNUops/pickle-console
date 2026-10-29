@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
 import { displaySshGatewayHost } from '../lib/hosts'
 import { Link, useParams, useSearchParams } from 'react-router'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 import {
   keepPreviousData,
   useMutation,
@@ -150,7 +151,7 @@ export function VmDetailPage() {
       // 라우트 적용·도메인 검증·인증서 발급도 비동기이므로 진행 중이면 폴링한다.
       // 어느 도메인이든 시스템이 곧 수렴시키는 전이(라우트 적용 대기, 인증서
       // 발급·갱신)가 있으면 빠르게, 사용자 DNS 조치 대기만 남았으면 완만하게.
-      const domainRate = domainPollRate(data.publications)
+      const domainRate = data.publications == null ? undefined : domainPollRate(data.publications)
       if (
         POLLING_VM_STATUSES.includes(data.status) ||
         activeTask ||
@@ -202,12 +203,16 @@ export function VmDetailPage() {
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
   const selectTab = (id: string) => {
     // 탭 전환(키보드 화살표 포함)마다 히스토리가 쌓이지 않게 replace.
-    setSearchParams(id === 'overview' ? {} : { tab: id }, { replace: true })
+    const next = new URLSearchParams(searchParams)
+    if (id === 'overview') next.delete('tab')
+    else next.set('tab', id)
+    setSearchParams(next, { replace: true })
   }
 
   return (
     <div className="space-y-6">
       <nav className="text-sm">
+        <WorkspaceSourceReturnLink workspaceId={data.workspaceId} />
         <Link to="/console/vms" className="text-primary-700 hover:underline">
           ← 가상머신
         </Link>
@@ -734,7 +739,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
             </div>
           )}
 
-          {sshHost && (
+          {sshHost && vm.hostname != null && (
             <details className="workspace">
               <summary className="cursor-pointer text-sm font-medium text-primary-700 hover:underline">
                 접속 방법 보기

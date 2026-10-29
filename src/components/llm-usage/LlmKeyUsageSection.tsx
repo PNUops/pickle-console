@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { TokenValue } from '../TokenValue'
+import { formatTokenExact, isExactTokenCount, unpricedTokenCount } from '../../lib/token-presentation'
+import { useState, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAdminLlmKeyUsage,
   fetchLlmKeyUsage,
@@ -48,6 +50,9 @@ export default function LlmKeyUsageSection({
   keyId,
   status,
   audience = 'owner',
+  selectedDays,
+  onDaysChange,
+  reader,
 }: {
   keyId: string
   status: LlmApiKeyStatus
@@ -56,10 +61,15 @@ export default function LlmKeyUsageSection({
    * `key-usage-copy.ts`가 갖는다.
    */
   audience?: UsageAudience
+  selectedDays?: number
+  onDaysChange?: (days: number) => void
+  reader?: string
 }) {
-  const [days, setDays] = useState(DEFAULT_USAGE_DAYS)
+  const [localDays, setDays] = useState(DEFAULT_USAGE_DAYS)
+  const days = selectedDays ?? localDays
   const copy = KEY_USAGE_COPY[audience]
   const admin = audience === 'admin'
+  const visibility = JSON.stringify([keyId, admin, reader ?? null])
   // 발급 전 키로는 어떤 요청도 인증되지 않았으므로 물어볼 것이 없다. 0으로 눕는
   // 선 세 개보다 왜 비었는지 말하는 편이 정확하다.
   const unissued = status === 'PENDING'
@@ -67,22 +77,25 @@ export default function LlmKeyUsageSection({
   // 그 반대도 생긴다.
   const usage = useQuery({
     queryKey: admin
-      ? ['admin', 'llm-keys', keyId, 'usage', { days }]
+      ? ['admin', 'llm-keys', keyId, 'usage', { days, reader }]
       : ['llm-keys', keyId, 'usage', { days }],
     queryFn: async (): Promise<{
-      trend: LlmKeyUsageTrend
+      trend: LlmKeyUsageTrend | AdminLlmKeyUsage['trend']
       extra: AdminLlmKeyUsage | null
+      visibility: string
+      fetchedAt: string
     }> => {
-      if (!admin) return { trend: await fetchLlmKeyUsage(keyId, days), extra: null }
+      if (!admin) return { trend: await fetchLlmKeyUsage(keyId, days), extra: null, visibility, fetchedAt: new Date().toISOString() }
       const response = await fetchAdminLlmKeyUsage(keyId, days)
-      return { trend: response.trend, extra: response }
+      return { trend: response.trend, extra: response, visibility, fetchedAt: new Date().toISOString() }
     },
-    placeholderData: keepPreviousData,
+    placeholderData: (previous) => previous?.visibility === visibility ? previous : undefined,
     enabled: !unissued,
   })
 
-  const data = usage.data?.trend
-  const extra = usage.data?.extra ?? null
+  const owned = usage.data?.visibility === visibility ? usage.data : undefined
+  const data = owned?.trend
+  const extra = owned?.extra ?? null
   const points = data?.points ?? []
   const times = usageTimes(points)
   const totals = usageTotals(points)
@@ -114,7 +127,7 @@ export default function LlmKeyUsageSection({
                     key={option}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => setDays(option)}
+                    onClick={() => onDaysChange ? onDaysChange(option) : setDays(option)}
                     className={
                       'cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary-600 ' +
                       (selected
@@ -160,10 +173,12 @@ export default function LlmKeyUsageSection({
 
             {data && (
               <>
+                {data.points != null ? <>
                 <p className="text-sm text-neutral-600">{usageSummary(points)}</p>
                 <p className="text-xs text-neutral-500">
                   {data.from} ~ {data.to}
                 </p>
+                {admin && owned?.fetchedAt && <p className="text-xs text-neutral-500">콘솔 마지막 GET 성공 <ObservationMoment value={owned.fetchedAt} /></p>}
 
                 {/* 합계는 타일이, 가장 많이 쓴 날은 위 문장이 말한다. 추정 비율은
                     합계 카드에 붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}
@@ -176,11 +191,11 @@ export default function LlmKeyUsageSection({
                     tone={totals.rateLimited > 0 ? 'danger' : 'normal'}
                   />
                   <StatTile label="실패" value={formatRequests(totals.failed)} />
-                  <StatTile label="입력 토큰" value={formatTokens(totals.inputTokens)} />
-                  <StatTile label="출력 토큰" value={formatTokens(totals.outputTokens)} />
+                  <StatTile label="입력 토큰" value={<TokenValue value={totals.inputTokens} />} />
+                  <StatTile label="출력 토큰" value={<TokenValue value={totals.outputTokens} />} />
                   <StatTile
                     label="합계 토큰"
-                    value={formatTokens(totals.inputTokens + totals.outputTokens)}
+                    value={<TokenValue value={totals.inputTokens + totals.outputTokens} />}
                     hint={
                       totals.estimatedRequests > 0
                         ? `토큰 만든 요청의 ${formatShare(estimated)}가 추정`
@@ -199,7 +214,6 @@ export default function LlmKeyUsageSection({
                   )}
                 </div>
 
-                <BudgetSection budget={data.budget} />
 
                 {/* 한도에 걸린 요청만은 사용자가 할 수 있는 일이 있는 실패다 —
                     다른 실패와 같은 자리에 묻지 않고 먼저 꺼내 말한다. */}
@@ -266,6 +280,7 @@ export default function LlmKeyUsageSection({
                         },
                       ]}
                       format={formatTokens}
+                      formatDetail={formatTokenExact}
                       formatTime={formatKstDay}
                       splitBase="integer"
                     />
@@ -287,6 +302,7 @@ export default function LlmKeyUsageSection({
                           },
                         ]}
                         format={formatTokens}
+                        formatDetail={formatTokenExact}
                         formatTime={formatKstDay}
                         splitBase="integer"
                       />
@@ -294,7 +310,7 @@ export default function LlmKeyUsageSection({
                   </div>
                 )}
 
-                {data.models.length > 0 && (
+                {data.models != null && data.models.length > 0 && (
                   <section className="space-y-4" aria-label="모델별 사용">
                     <h3 className="text-sm font-semibold text-neutral-700">모델별 사용</h3>
                     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -310,13 +326,14 @@ export default function LlmKeyUsageSection({
                           (model) => model.inputTokens + model.outputTokens,
                         )}
                         format={formatTokens}
+                        renderValue={(value) => <TokenValue value={value} />}
                       />
                     </div>
                     <ModelTable models={data.models} />
                   </section>
                 )}
 
-                {data.errorTypes.length > 0 && (
+                {data.errorTypes != null && data.errorTypes.length > 0 && (
                   <section className="space-y-2" aria-label="오류 종류">
                     <h3 className="text-sm font-semibold text-neutral-700">실패한 요청</h3>
                     <ul className="space-y-1 text-sm text-neutral-700">
@@ -332,7 +349,7 @@ export default function LlmKeyUsageSection({
                   </section>
                 )}
 
-                {data.hourly.length > 0 && (
+                {data.hourly != null && data.hourly.length > 0 && (
                   <section className="space-y-2" aria-label="시간대별 사용">
                     <h3 className="text-sm font-semibold text-neutral-700">
                       언제 많이 쓰는가 (KST)
@@ -341,6 +358,8 @@ export default function LlmKeyUsageSection({
                   </section>
                 )}
 
+                </> : <Alert>토큰·모델·오류·지연 관측은 현재 업무로 제공되지 않습니다.</Alert>}
+                <BudgetSection budget={data.budget} />
                 {/* 여기부터는 관리자만 본다. 키 소유자는 모델별 금액까지만 보고
                     일별 금액도 경로별 분해도 보지 않는다 — 그 경계가 응답 모양에
                     이미 들어 있어서, 이 블록들이 `trend` 밖에 있다. */}
@@ -364,12 +383,12 @@ export default function LlmKeyUsageSection({
 function AdminOnlyBreakdowns({ extra }: { extra: AdminLlmKeyUsage }) {
   // 「그릴 값이 있는가」를 값에게 직접 묻는다. 건수를 물으면 가격 붙은 요청은 있는데
   // 금액이 전부 null 인 응답에서 빈 캔버스가 선다.
-  const priced = extra.costPoints.some((point) => point.attributedCostUsd != null)
+  const priced = extra.costPoints?.some((point) => point.attributedCostUsd != null)
   return (
     <>
       {/* 제목을 밖에 한 번 더 쓰지 않는다 — 차트가 자기 제목을 이미 갖는다.
           위의 다른 차트들도 같은 이유로 감싸는 제목이 없다. */}
-      {priced && (
+      {extra.costPoints != null && priced && (
         // 축을 이 계열 자신의 날짜에서 만든다. 종전에는 `trend.points` 에서 온 축에
         // `costPoints` 의 값을 얹었는데, 둘이 같은 창을 같은 순서로 채운다는 것은
         // 서버 사정이지 화면이 아는 사실이 아니다. 어긋나면 값이 엉뚱한 날짜에 찍히고
@@ -394,7 +413,7 @@ function AdminOnlyBreakdowns({ extra }: { extra: AdminLlmKeyUsage }) {
         </section>
       )}
 
-      {extra.endpointKinds.length > 0 && (
+      {extra.endpointKinds != null && extra.endpointKinds.length > 0 && (
         <section className="space-y-2" aria-label="호출 종류별 사용">
           <h3 className="text-sm font-semibold text-neutral-700">호출 종류별</h3>
           <div className="overflow-x-auto">
@@ -417,7 +436,7 @@ function AdminOnlyBreakdowns({ extra }: { extra: AdminLlmKeyUsage }) {
                       {formatRequests(kind.requests)}
                     </td>
                     <td className="py-2 pr-3 text-right text-neutral-600">
-                      {formatTokens(kind.inputTokens + kind.outputTokens)}
+                      {<TokenValue value={kind.inputTokens + kind.outputTokens} />}
                     </td>
                     <td className="py-2 text-right text-neutral-600">
                       {kind.attributedCostUsd == null ? '—' : formatUsd(kind.attributedCostUsd)}
@@ -432,7 +451,7 @@ function AdminOnlyBreakdowns({ extra }: { extra: AdminLlmKeyUsage }) {
 
       {/* 빈 목록을 「대체가 없었다」로 쓰지 않는다. 응답 최상위 `model`만 다시 쓰는
           구조라 라우터가 더 깊은 자리에 진짜 모델을 넣으면 여기 안 잡힌다. */}
-      {extra.servedModels.length > 0 && (
+      {extra.servedModels != null && extra.servedModels.length > 0 && (
         <section className="space-y-2" aria-label="다른 모델로 응답한 사례">
           <h3 className="text-sm font-semibold text-neutral-700">요청과 다른 모델로 응답</h3>
           <ul className="space-y-1 text-sm text-neutral-700">
@@ -457,7 +476,7 @@ function StatTile({
   tone = 'normal',
 }: {
   label: string
-  value: string
+  value: ReactNode
   hint?: string
   tone?: 'normal' | 'danger'
 }) {
@@ -490,17 +509,18 @@ function StatTile({
  * cannot act on the name and it is not theirs to know. The comment keeps the
  * fact that the code needs and the screen does not.
  */
-function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
+function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['trend']['budget'] }) {
   const tokenLimit = budget.dailyTokens
-  const creditLimit = Number(budget.creditLimit)
+  const creditLimit = budget.creditLimit == null ? null : Number(budget.creditLimit)
   const creditUsage = budget.creditUsage == null ? null : Number(budget.creditUsage)
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-label="예산 소진율">
-      <BudgetGauge
+      {budget.todayTokens != null ? <BudgetGauge
         label="오늘 토큰 사용"
         usedLabel={formatTokens(budget.todayTokens)}
+        values={<><TokenValue value={budget.todayTokens} />{tokenLimit != null && tokenLimit > 0 && <> / <TokenValue value={tokenLimit} /></>}</>}
         limitLabel={tokenLimit != null && tokenLimit > 0 ? formatTokens(tokenLimit) : null}
-        ratio={tokenLimit != null && tokenLimit > 0 ? budget.todayTokens / tokenLimit : null}
+        ratio={tokenLimit != null && tokenLimit > 0 && isExactTokenCount(tokenLimit) && isExactTokenCount(budget.todayTokens) ? budget.todayTokens / tokenLimit : null}
         note={
           tokenLimit == null
             ? '일일 토큰 한도가 없습니다.'
@@ -510,8 +530,8 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
                 ? '오늘 한도에 도달해 자체 서빙 모델 요청이 거절되고 있습니다. 자정(KST)에 초기화됩니다.'
                 : undefined
         }
-      />
-      <BudgetGauge
+      /> : <p className="text-sm text-neutral-500">토큰 예산 정보를 제공할 수 없습니다.</p>}
+      {creditLimit != null ? <BudgetGauge
         label="금액 사용"
         usedLabel={creditUsage == null ? null : formatUsd(creditUsage)}
         limitLabel={creditLimit > 0 ? formatUsd(creditLimit) : null}
@@ -530,7 +550,7 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
             </>
           ) : undefined
         }
-      />
+      /> : <p className="text-sm text-neutral-500">금액 정보를 제공할 수 없습니다.</p>}
     </section>
   )
 }
@@ -564,9 +584,11 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget }) {
  * 대가는 아래 행이 순수한 유료 트래픽이 아니라는 것이고, 그래서 그 행은 「금액이 붙지
  * 않았다」까지만 주장한다.
  */
-function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
+type UsageModel = LlmKeyModelUsage | NonNullable<AdminLlmKeyUsage['trend']['models']>[number]
+
+function modelRows(model: UsageModel, showCost: boolean) {
   const name = modelLabel(model.modelName)
-  const unpriced = model.requests - model.pricedRequests
+  const unpriced = model.pricedRequests == null ? null : model.requests - model.pricedRequests
   const whole = {
     key: model.modelName ?? 'unknown',
     name,
@@ -581,7 +603,9 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
   }
   // 금액 열을 안 세우는 화면에서는 나눌 이유가 없다. 나머지 열은 같은 값을 두 줄로
   // 쪼개기만 하므로, 읽는 사람에게 아무것도 더 말하지 않고 표만 길어진다.
-  if (!showCost || model.pricedRequests === 0 || unpriced <= 0) return [whole]
+  if (!showCost || model.pricedRequests == null || model.pricedRequests === 0 || unpriced == null || unpriced <= 0
+    || model.pricedInputTokens == null || model.pricedOutputTokens == null || model.pricedAvgLatencyMs == null
+    || model.pricedFailed == null || model.unpricedAvgLatencyMs == null) return [whole]
   return [
     {
       ...whole,
@@ -595,8 +619,7 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
       ...whole,
       key: `${whole.key}:unpriced`,
       requests: unpriced,
-      tokens: model.inputTokens + model.outputTokens
-        - model.pricedInputTokens - model.pricedOutputTokens,
+      tokens: unpricedTokenCount(model.inputTokens, model.outputTokens, model.pricedInputTokens, model.pricedOutputTokens),
       // 자체 서빙 행의 「—」와 다른 말이라야 한다. 저쪽은 금액이라는 것이 없고
       // 이쪽은 있어야 하는데 모른다.
       amount: '정보 없음',
@@ -607,7 +630,7 @@ function modelRows(model: LlmKeyModelUsage, showCost: boolean) {
   ]
 }
 
-function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
+function ModelTable({ models }: { models: UsageModel[] }) {
   const showCost = models.some((model) => model.attributedCostUsd != null)
   return (
     <div className="overflow-x-auto">
@@ -649,7 +672,7 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
                 {formatRequests(row.requests)}
               </td>
               <td className="py-2 pr-3 text-right text-neutral-600">
-                {formatTokens(row.tokens)}
+                {<TokenValue value={row.tokens} />}
               </td>
               {showCost && (
                 <td className="py-2 pr-3 text-right text-neutral-600">{row.amount}</td>
@@ -677,8 +700,8 @@ function ModelTable({ models }: { models: LlmKeyModelUsage[] }) {
  * 같은 색 둘이 생기고, 그러면 비중을 잘못 읽는다.
  */
 function topSlices(
-  models: LlmKeyModelUsage[],
-  pick: (model: LlmKeyModelUsage) => number,
+  models: UsageModel[],
+  pick: (model: UsageModel) => number,
 ): DonutSlice[] {
   const sorted = models
     .map((model) => ({ label: modelLabel(model.modelName), value: pick(model) }))

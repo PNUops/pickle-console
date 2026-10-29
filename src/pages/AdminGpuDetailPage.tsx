@@ -1,13 +1,13 @@
 import { invalidateAdminDeadlines } from '../lib/admin-deadline-cache'
 import { AdminResourceAccessLink } from '../components/resource/AdminResourceAccessLink'
-import { requestReaderKey } from '../api/request-review'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { extendAdminGpu, fetchAdminGpuAllocation, prioritizeGpu, reclaimGpu, reconcileGpu, type GpuAllocation } from '../api/gpu'
 import { useAuth } from '../auth/auth-context'
-import { administersOrg, canRunSysRoutine } from '../auth/permissions'
-import { GpuInfoCard } from './GpuDetailPage'
+import { SYS_OPERATORS, SYS_READERS } from '../auth/institution-authority'
+import { GPU_READ_COMMANDS, useInstitutionResourcePermissions } from '../lib/institution-resource-work'
+import { InstitutionAdminGpuInfo } from '../components/gpu/InstitutionAdminGpuProjection'
 import { GpuDurationField } from '../components/gpu/GpuDurationField'
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, FormField, Input, Modal, PageHeader, Spinner, Textarea } from '../components/ui'
 import { gpuDurationHours, type GpuDurationUnit } from '../lib/gpu-duration'
@@ -15,6 +15,7 @@ import { gpuDetailPollInterval } from '../lib/gpu-polling'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
+import { WorkspaceSourceReturnLink } from '../components/workspace/WorkspaceSourceReturnLink'
 
 type AdminAction = 'priority' | 'extend' | 'reclaim' | 'reconcile'
 const TITLES: Record<AdminAction, string> = { priority: '대기 우선순위 변경', extend: 'GPU 임대 연장', reclaim: 'GPU 회수', reconcile: 'GPU 상태 다시 확인' }
@@ -23,38 +24,46 @@ export function AdminGpuDetailPage() {
   const { user } = useAuth()
   const allocationId = useParams().allocationId ?? ''
   const scope = useAdminScope()
-  const allocation = useQuery({ queryKey: ['admin', 'gpu-allocations', allocationId, { orgId: scope.activeOrgId, reader: requestReaderKey(user) }], queryFn: () => fetchAdminGpuAllocation(allocationId), enabled: isUuid(allocationId) && scope.ready,
+  const permissions = useInstitutionResourcePermissions()
+  const canRead = permissions.canAnyWork(GPU_READ_COMMANDS, SYS_READERS)
+  const allocation = useQuery({ queryKey: ['admin', 'gpu-allocations', allocationId, { orgId: scope.activeOrgId, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}` }], queryFn: () => fetchAdminGpuAllocation(allocationId), enabled: isUuid(allocationId) && scope.ready && canRead,
     refetchInterval: (result) => gpuDetailPollInterval(result.state.data),
   })
   if (!isUuid(allocationId)) return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
+  if (!canRead) return <Alert variant="danger">GPU 할당을 조회할 권한이 없습니다.</Alert>
   if (allocation.isPending) return <Spinner label="GPU 할당 불러오는 중" />
   if (allocation.isError) return <Alert variant="danger">{allocation.error.message}</Alert>
   const data = allocation.data
   if (scope.activeOrgId && data.orgId !== scope.activeOrgId) return <Alert variant="danger">선택한 기관의 GPU 할당이 아닙니다.</Alert>
-  return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}:${requestReaderKey(user)}`} data={data} />
+  return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}:${user?.id ?? 'none'}:${permissions.fingerprint}`} data={data} />
 }
 
 /** A route or scope change discards all local mutation feedback for the previous target. */
 function AdminGpuDetail({ data }: { data: GpuAllocation }) {
   const allocationId = data.id
-  const { user } = useAuth()
   const scope = useAdminScope()
+  const permissions = useInstitutionResourcePermissions()
   const [action, setAction] = useState<AdminAction | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const sysManage = !!user && canRunSysRoutine(user.role)
-  const canManage = sysManage || (!!user && data.orgId != null && administersOrg(user.managedOrgs, data.orgId))
-  const stable = data.connectionStatus === 'NONE' || data.connectionStatus === 'ATTACHED'
+  const sysManage = SYS_OPERATORS.includes(permissions.role)
+  const canExtend = permissions.forRow(data, 'gpu.period', SYS_OPERATORS)
+  const canRecall = permissions.forRow(data, 'gpu.recall', SYS_OPERATORS)
+  const canAccess = permissions.forRow(data, 'gpu.acl.support.read') || permissions.forRow(data, 'gpu.acl.support.manage', ['SYS_ADMIN'])
+  const stable = data.connectionStatus == null || data.connectionStatus === 'NONE' || data.connectionStatus === 'ATTACHED'
+  const actionAllowed = action === 'extend' ? canExtend : action === 'reclaim' ? canRecall : sysManage
+  useEffect(() => { if (action && !actionAllowed) setAction(null) }, [action, actionAllowed])
   return <div className="space-y-6">
+    <WorkspaceSourceReturnLink workspaceId={data.workspaceId} admin />
     <Link to={adminPaths.gpus(scope.activeOrgId)} className="text-sm text-primary-700 hover:underline">← GPU</Link>
-    <PageHeader title={data.name} description={data.orgName} actions={<AdminResourceAccessLink type="GPU" resourceId={data.id} />} />
+    <PageHeader title={data.name} description={data.orgName} actions={canAccess ? <AdminResourceAccessLink type="GPU" resourceId={data.id} orgId={data.orgId} workspaceId={data.workspaceId} /> : undefined} />
     {notice && <Alert variant="success">{notice}</Alert>}
-    {data.error && <Alert variant="danger">{data.error}</Alert>}
-    <GpuInfoCard allocation={data} />
+    {data.metadataVisible && data.error && <Alert variant="danger">{data.error}</Alert>}
+    <InstitutionAdminGpuInfo allocation={data} />
     {sysManage && data.connectionStatus === 'ERROR' && <Card><CardHeader><CardTitle>GPU 상태 확인</CardTitle></CardHeader><CardContent><Button variant="secondary" onClick={() => setAction('reconcile')}>상태 다시 확인</Button></CardContent></Card>}
     {sysManage && data.status === 'QUEUED' && <Card><CardHeader><CardTitle>대기 순서</CardTitle></CardHeader><CardContent><Button variant="secondary" onClick={() => setAction('priority')}>우선순위 변경</Button></CardContent></Card>}
-    {canManage && data.status === 'ALLOCATED' && stable && <Card><CardHeader><CardTitle>임대 연장</CardTitle></CardHeader><CardContent><Button variant="secondary" onClick={() => setAction('extend')}>임대 연장</Button></CardContent></Card>}
-    {canManage && stable && (data.status === 'ALLOCATED' || data.status === 'QUEUED') && <Card><CardHeader><CardTitle>GPU 회수</CardTitle></CardHeader><CardContent><Button variant="danger" onClick={() => setAction('reclaim')}>회수</Button></CardContent></Card>}
-    {action && <AdminGpuActionModal key={`${allocationId}-${action}`} action={action} allocation={data} onClose={() => setAction(null)} onDone={() => { setAction(null); setNotice(`${TITLES[action]} 요청을 접수했습니다.`) }} />}
+    {canExtend && data.status === 'ALLOCATED' && stable && <Card><CardHeader><CardTitle>임대 연장</CardTitle></CardHeader><CardContent><Button variant="secondary" onClick={() => setAction('extend')}>임대 연장</Button></CardContent></Card>}
+    {canRecall && stable && (data.status === 'ALLOCATED' || data.status === 'QUEUED') && <Card><CardHeader><CardTitle>GPU 회수</CardTitle></CardHeader><CardContent><Button variant="danger" onClick={() => setAction('reclaim')}>회수</Button></CardContent></Card>}
+    {action && actionAllowed && <AdminGpuActionModal key={`${allocationId}-${action}`} action={action} allocation={data} onClose={() => setAction(null)} onDone={() => { setAction(null); setNotice(`${TITLES[action]} 요청을 접수했습니다.`) }} />}
   </div>
 }
 

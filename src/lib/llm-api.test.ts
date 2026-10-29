@@ -10,8 +10,10 @@ import {
   LLM_PAID_ONLY_PARAMS,
   LLM_PAID_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
+  LLM_REASONING_PARAM,
   LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
+  LLM_RESPONSES_EXAMPLE_MODEL,
   LLM_SELF_SERVED_PARAMS,
 } from './llm-api'
 import { PASSTHROUGH_ENDPOINTS } from './passthrough-endpoints'
@@ -51,17 +53,17 @@ describe('LLM API 사실 사본', () => {
     // 이 단언은 「유료 ⊇ 자체 서빙」이 참인 동안만 유효하다. 자체 서빙에만 있고 유료에
     // 없는 필드가 생기면 여기가 먼저 깨지는데, 그때는 단언을 고치기 전에 그 설계가
     // 맞는지부터 본다.
-    expect([...LLM_PAID_ONLY_PARAMS]).toEqual(['reasoning_effort', 'verbosity'])
+    expect([...LLM_PAID_ONLY_PARAMS]).toEqual(['verbosity'])
     // 「유료가 자체 서빙을 전부 포함한다」는 단언하지 않는다. 유료 목록이 두 목록의
     // 합집합으로 파생되므로 그 방향은 구조가 보장하고, 시험으로 적으면 절대 깨지지
     // 않는 문장이 하나 늘 뿐이다. 아래 둘만 실제로 무언가를 본다.
     const extra = LLM_PAID_PARAMS.filter(
       (param) => !LLM_SELF_SERVED_PARAMS.includes(param as never),
     )
-    expect(extra).toEqual([...LLM_PAID_ONLY_PARAMS])
-    // 자체 서빙 목록은 유료 전용 필드를 갖지 않는다. 이 방향이 깨지면 사고 모드를
-    // 요청 단위로 열지 않는다는 결정이 조용히 뒤집힌 것이다.
-    for (const param of LLM_PAID_ONLY_PARAMS) {
+    expect(extra).toEqual([LLM_REASONING_PARAM, ...LLM_PAID_ONLY_PARAMS])
+    // The fixed self-hosted list holds neither: reasoning_effort is opened per serving
+    // upstream by the gateway, and verbosity is refused there.
+    for (const param of [LLM_REASONING_PARAM, ...LLM_PAID_ONLY_PARAMS]) {
       expect(LLM_SELF_SERVED_PARAMS).not.toContain(param as never)
     }
   })
@@ -78,8 +80,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 37개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(37)
+  test('에러 표는 사용자에게 도달하는 39개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(39)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -102,7 +104,9 @@ describe('LLM API 사실 사본', () => {
       invalid_parameter_value: 400,
       missing_parameter: 400,
       invalid_json: 400,
+      invalid_multipart_form: 400,
       preset_not_supported: 400,
+      router_not_supported: 400,
       request_too_large: 400,
       request_body_incomplete: 400,
       large_request_busy: 429,
@@ -155,10 +159,15 @@ describe('LLM API 사실 사본', () => {
     expect(LLM_PASSTHROUGH_ROUTES.map((r) => `${r.method} ${r.path}`)).toEqual([
       'POST /v1/chat/completions',
       'POST /v1/messages',
+      'POST /v1/responses',
+      'POST /v1/completions',
       'POST /v1/images',
       'POST /v1/images/generations',
       'GET /v1/images/models',
       'POST /v1/embeddings',
+      'POST /v1/rerank',
+      'POST /v1/audio/speech',
+      'POST /v1/audio/transcriptions',
     ])
   })
 
@@ -196,5 +205,16 @@ describe('LLM API 사실 사본', () => {
   test('the messages route sits under the chat grant', () => {
     const messages = LLM_PASSTHROUGH_ROUTES.find((r) => r.path === '/v1/messages')
     expect(messages?.capability).toBe('chat')
+  })
+
+  test('the responses route sits under the chat grant', () => {
+    const responses = LLM_PASSTHROUGH_ROUTES.find((r) => r.path === '/v1/responses')
+    expect(responses?.capability).toBe('chat')
+  })
+
+  test('the Responses example model is a paid model, not the self-hosted name', () => {
+    // The route refuses the self-hosted model, so an example naming it fails.
+    expect(LLM_RESPONSES_EXAMPLE_MODEL).toContain('/')
+    expect(LLM_RESPONSES_EXAMPLE_MODEL).not.toBe(LLM_DEFAULT_MODEL)
   })
 })

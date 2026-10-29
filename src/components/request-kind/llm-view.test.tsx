@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { todayKstDate } from '../../lib/format'
 import type { ApproveRequest, RequestDetail } from '../../api/queries'
+import { approvalContextFixture } from '../../test/msw/handlers/admin'
 import { orgAdminUser, refreshSuccessHandler } from '../../test/msw/handlers/auth'
 import { server } from '../../test/msw/server'
 import { renderApp } from '../../test/render'
@@ -18,6 +19,7 @@ const REQUEST_ID = uuid(301)
 function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): RequestDetail {
   return {
     id: REQUEST_ID,
+    allowedWorkIds: ['llm.request.read', 'llm.request.decide', 'llm.key.budget'],
     workspaceId: uuid(12),
     recipients: [],
     workspaceName: '캡스톤 3조',
@@ -62,6 +64,7 @@ function llmKeyRequest(spec: Partial<NonNullable<RequestDetail['llmKey']>>): Req
 function renderDetail(
   spec: Partial<NonNullable<RequestDetail['llmKey']>> = {},
   overrides: Partial<RequestDetail> = {},
+  referenceFailure = false,
 ) {
   const detail = { current: { ...llmKeyRequest(spec), ...overrides } }
   const approved: ApproveRequest[] = []
@@ -70,6 +73,15 @@ function renderDetail(
     http.get('*/api/v1/admin/requests/:requestId', () =>
       HttpResponse.json(detail.current, { status: 200 }),
     ),
+    http.get('*/api/v1/admin/requests/:requestId/context', () => {
+      if (referenceFailure) return HttpResponse.json({ title: '조회 실패', status: 503 }, { status: 503 })
+      const context = approvalContextFixture(uuid(201))
+      context.type = 'LLM_API_KEY'; context.vm = null
+      // These synthetic queued recipients are explicitly current active members.
+      for (const recipient of detail.current.recipients ?? []) if (recipient.status === 'QUEUED' && recipient.userId) context.workspace.members.push({ userId: recipient.userId, name: recipient.name ?? 'Synthetic member', role: 'MEMBER', userStatus: 'ACTIVE', canReadDetail: false })
+      context.llmKey = { applicantKeys: [], workspaceKeys: [], accountReferences: openRouterAccountStore.filter((account) => account.orgId === detail.current.orgId).map((account) => ({ id: account.id, name: account.name, eligibleForBinding: account.eligibleForBinding, defaultCreditAllowedModels: account.defaultCreditAllowedModels, defaultCreditDeniedModels: account.defaultCreditDeniedModels })) }
+      return HttpResponse.json(context)
+    }),
     http.post('*/api/v1/admin/requests/:requestId/approve', async ({ request }) => {
       const body = (await request.json()) as ApproveRequest
       approved.push(body)
@@ -121,6 +133,18 @@ describe('LLM API 키 신청 — 관리자 신청 내용', () => {
 })
 
 describe('LLM API 키 신청 — 승인 폼', () => {
+  test.each([0, 5000001, Number.MAX_SAFE_INTEGER])('preserves the exact granted daily token value %s', async (daily) => {
+    const user = userEvent.setup()
+    const approved = renderDetail({ reqDailyTokens: 5000000 })
+    await screen.findByRole('heading', { name: '신청 상세' })
+    await user.type(screen.getByLabelText('부여 일일 토큰 수'), String(daily))
+    await user.click(screen.getByRole('button', { name: '승인하기' }))
+    const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+    if (daily === 0) expect(within(dialog).getByText(/토큰 사용 불가/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+    await screen.findByText('검토 결과')
+    expect(approved[0].llmKey?.grantedDailyTokens).toBe(daily)
+  })
   test('희망값을 부여값으로 자동으로 채우지 않고, 참고로만 보여준다', async () => {
     renderDetail({ reqRpm: 1000, reqTpm: 50000, reqDailyTokens: 2000000 })
 
@@ -135,7 +159,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       screen.getByText('신청 희망값 1,000. 비우면 서비스 기본값이 적용됩니다.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('신청 희망값 50,000. 비우면 서비스 기본값이 적용됩니다.'),
+      screen.getByText('신청 희망값 50K (5만 토큰). 비우면 서비스 기본값이 적용됩니다.'),
     ).toBeInTheDocument()
     // 동시 요청 수만은 신청에 대응하는 항목이 없다는 사실을 화면이 말한다.
     expect(
@@ -157,7 +181,9 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       screen.getAllByText(
         '신청자가 희망값을 적지 않았습니다. 비우면 서비스 기본값이 적용됩니다.',
       ),
-    ).toHaveLength(3)
+    ).toHaveLength(1)
+    expect(screen.getByText('희망값 없음. 비우면 서비스 기본값이 적용됩니다.')).toBeInTheDocument()
+    expect(screen.getByText('희망값 없음. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.')).toBeInTheDocument()
   })
 
   test('전부 비운 채로 승인하면 기본 한도로 부여된다', async () => {
@@ -366,6 +392,23 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(within(granted).getByText('Chat, 웹 검색, 이미지 생성')).toBeInTheDocument()
   })
 
+  // Rerank, speech and transcription models are missing from the catalogue,
+  // so the approver cannot see their prices next to the model picker; the
+  // form has to say so for each of them.
+  test.each([/리랭크/, /TTS/, /STT/])(
+    'says catalogue-missing prices are not shown once %s is ticked',
+    async (label) => {
+      const user = userEvent.setup()
+      renderDetail({ reqPassthroughEndpoints: ['chat'] })
+
+      await screen.findByRole('heading', { name: '신청 상세' })
+      const note = /리랭크, TTS, STT 모델은 위 모델 목록에 나오지 않아/
+      expect(screen.queryByText(note)).not.toBeInTheDocument()
+      await user.click(screen.getByRole('checkbox', { name: label }))
+      expect(screen.getByText(note)).toBeInTheDocument()
+    },
+  )
+
   test('turning Chat off drops web search and disables it', async () => {
     const user = userEvent.setup()
     renderDetail({ reqPassthroughEndpoints: ['chat', 'web_search'] })
@@ -421,9 +464,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
 
   test('연결할 계정이 없으면 유료 모델만 막고 계정 관리 deep link를 제공한다', async () => {
     const user = userEvent.setup()
-    server.use(
-      http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([])),
-    )
+    openRouterAccountStore.splice(0)
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
@@ -440,9 +481,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
   test('연결할 계정이 하나면 유료 모델 승인에서 자동 선택하고 불변임을 확인한다', async () => {
     const user = userEvent.setup()
     const only = openRouterAccountStore.find((account) => account.id === uuid(410))!
-    server.use(
-      http.get('*/api/v1/admin/llm/accounts', () => HttpResponse.json([only])),
-    )
+    openRouterAccountStore.splice(0, openRouterAccountStore.length, only)
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
@@ -466,7 +505,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
         ),
       ),
     )
-    const approved = renderDetail({})
+    const approved = renderDetail({}, {}, true)
 
     expect(await screen.findByText('사업 계정 목록을 불러오지 못했습니다')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '반려' }))
@@ -662,23 +701,23 @@ describe('유료 모델 선택기', () => {
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
 
     // 계정을 고르기 전에는 두 목록이 비어 있고, 그때는 카탈로그 전체가 대상이다.
-    expect(await screen.findByText(/제한이 없습니다. 지금 카탈로그 3개 전부/)).toBeInTheDocument()
-    expect(screen.getByText(/최고가는 openai\/o1-pro, 백만 토큰당 출력 \$600/)).toBeInTheDocument()
+    expect(await screen.findByText(/패턴 조건을 통과하는 후보 3개/)).toBeInTheDocument()
+    expect(screen.getByText(/기본 출력 단가가 알려진 후보 중 최대는 openai\/o1-pro, 백만 토큰당 출력 \$600/)).toBeInTheDocument()
 
     // 계정 기본값 openai/* 가 채워지면 별칭 하나가 빠진다.
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
     await waitFor(() =>
-      expect(screen.getByText(/쓸 수 있는 유료 모델 2개/)).toBeInTheDocument(),
+      expect(screen.getByText(/패턴 조건을 통과하는 후보 2개/)).toBeInTheDocument(),
     )
 
     // 차단이 최고가를 걷어내면 최고가 문장이 그다음 모델로 내려간다.
     await user.type(screen.getByLabelText('유료 모델 허용·차단'), '{enter}-openai/*-pro')
     await waitFor(() =>
-      expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument(),
+      expect(screen.getByText(/패턴 조건을 통과하는 후보 1개/)).toBeInTheDocument(),
     )
     expect(screen.getByText(/차단 목록이 걷어낸 모델 1개: openai\/o1-pro/)).toBeInTheDocument()
     expect(
-      screen.getByText(/최고가는 openai\/gpt-4o-mini, 백만 토큰당 출력 \$0.6/),
+      screen.getByText(/기본 출력 단가가 알려진 후보 중 최대는 openai\/gpt-4o-mini, 백만 토큰당 출력 \$0.6/),
     ).toBeInTheDocument()
   })
 
@@ -709,7 +748,7 @@ describe('유료 모델 선택기', () => {
     const approved = renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/모델 목록을 불러오지 못했습니다/)
+    await screen.findByText(/저장된 목록 조회 실패:/)
 
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
@@ -767,7 +806,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/아직 목록을 가져온 적이 없습니다/)
+    await screen.findByText(/아직 성공한 공급자 목록이 없습니다/)
   })
 })
 
@@ -845,6 +884,7 @@ describe('초과 배정 경고', () => {
   test('a bulk request weighs the limit once per recipient still waiting for a key', async () => {
     const user = userEvent.setup()
     const recipient = (n: number, status: NonNullable<RequestDetail['recipients']>[number]['status']) => ({
+      cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null },
       id: uuid(n),
       userId: uuid(n + 100),
       name: `대상자 ${n}`,
@@ -990,7 +1030,7 @@ describe('signed paid-model policy editor', () => {
     const rules = screen.getByLabelText('유료 모델 허용·차단')
     await user.click(rules)
     await user.paste('+*/*\n-openai/*-pro')
-    expect(screen.getByText(/쓸 수 있는 유료 모델 1개/)).toBeInTheDocument()
+    expect(screen.getByText(/패턴 조건을 통과하는 후보 1개/)).toBeInTheDocument()
     expect(screen.getByText(/차단 목록이 걷어낸 모델 2개/)).toBeInTheDocument()
     const picker = within(screen.getByRole('list', { name: '카탈로그 유료 모델' }))
     await user.click(picker.getByRole('button', { name: 'openai/model-pro 패턴 제안' }))
@@ -1032,4 +1072,47 @@ test('binds indexed server errors from both granted lists to the approval field'
   await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
   const rules = screen.getByLabelText('유료 모델 허용·차단')
   await waitFor(() => expect(rules).toHaveAccessibleDescription(expect.stringContaining('허용 규칙 서버 오류 차단 규칙 서버 오류')))
+})
+
+
+test('resets both model rules to a known empty account default', async () => {
+  const user = userEvent.setup()
+  const account = openRouterAccountStore.find((row) => row.id === uuid(410))!
+  account.defaultCreditAllowedModels = []
+  account.defaultCreditDeniedModels = []
+  const approved = renderDetail({ reqCreditLimit: 5 })
+  await user.selectOptions(await screen.findByLabelText('OpenRouter 사업 계정'), uuid(410))
+  const rules = screen.getByLabelText('유료 모델 허용·차단')
+  await user.click(rules)
+  await user.paste('+openai/*\n-google/*')
+  await user.click(screen.getByRole('button', { name: /계정의 기본값으로 되돌리기/ }))
+  expect(rules).toHaveValue('')
+  await user.click(screen.getByRole('button', { name: '승인하기' }))
+  const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+  await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+  await waitFor(() => expect(approved).toHaveLength(1))
+  expect(approved[0].llmKey).toMatchObject({ grantedCreditAllowedModels: [], grantedCreditDeniedModels: [] })
+})
+
+test('keeps both collapsed axes in the confirmation and approval payload', async () => {
+  const user = userEvent.setup()
+  const approved = renderDetail({ reqCreditLimit: 5 })
+  await user.type(await screen.findByLabelText('부여 일일 토큰 수'), '12345')
+  await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
+  const rules = screen.getByLabelText('유료 모델 허용·차단')
+  await user.clear(rules)
+  await user.paste('+google/*\n-openai/*-pro')
+  await user.click(screen.getByText('TOKEN 토큰 한도', { selector: 'summary' }))
+  await user.click(screen.getByText('CREDIT 유료 모델 정책', { selector: 'summary' }))
+  expect(screen.getByText('TOKEN 토큰 한도', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
+  expect(screen.getByText('CREDIT 유료 모델 정책', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
+  expect(rules).toHaveValue('+google/*\n-openai/*-pro')
+  expect(screen.getByLabelText('부여 일일 토큰 수')).toHaveValue(12345)
+  await user.click(screen.getByRole('button', { name: '승인하기' }))
+  const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
+  expect(within(dialog).getByText(/google\/\*/)).toBeInTheDocument()
+  await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
+  await waitFor(() => expect(approved).toHaveLength(1))
+  expect(approved[0].llmKey).toMatchObject({ grantedDailyTokens: 12345, grantedCreditLimit: 5,
+    grantedCreditAllowedModels: ['google/*'], grantedCreditDeniedModels: ['openai/*-pro'] })
 })

@@ -14,6 +14,9 @@ export interface ConfirmNameModalProps {
   confirmLabel: string
   /** 확인 버튼의 로딩 상태. */
   loading?: boolean
+  /** Additional requirements checked again by the submit handler. */
+  disabled?: boolean
+  className?: string
   /**
    * 확인 시 사용자가 실제로 타이핑한 이름을 전달한다. 호출부는 이 값을
    * 그대로 서버 confirmName으로 전송해야 한다 — 이미 아는 expectedName을
@@ -35,6 +38,8 @@ export function ConfirmNameModal({
   expectedName,
   confirmLabel,
   loading = false,
+  disabled = false,
+  className,
   onConfirm,
   children,
 }: ConfirmNameModalProps) {
@@ -52,6 +57,7 @@ export function ConfirmNameModal({
       open={open}
       onClose={onClose}
       title={title}
+      className={className}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -59,9 +65,9 @@ export function ConfirmNameModal({
           </Button>
           <Button
             variant="danger"
-            disabled={!matches}
+            disabled={!matches || disabled}
             loading={loading}
-            onClick={() => onConfirm(name)}
+            onClick={() => { if (matches && !disabled && !loading) onConfirm(name) }}
           >
             {confirmLabel}
           </Button>

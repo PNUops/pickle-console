@@ -1,5 +1,6 @@
 import { navIcons } from '../components/nav-icons'
 import { WorkspaceScopeSelector } from '../components/WorkspaceScopeSelector'
+import { MfaNudgeBanner } from '../components/MfaNudgeBanner'
 import { consolePaths } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
 import { AppShell, type NavSection } from './AppShell'
@@ -76,6 +77,7 @@ export function ConsoleLayout() {
       sidebarTop={<WorkspaceScopeSelector />}
       notificationsTo={consolePaths.notifications}
       docsTo={consolePaths.docs(scope)}
+      banner={<MfaNudgeBanner />}
     />
   )
 }

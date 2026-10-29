@@ -1,15 +1,31 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
-import { canManageOpenRouterAccount, isSysTier } from '../../../auth/permissions'
+import type { StoredFacts } from '../facts'
+import { mockAuthorityActor, mockHasAggregateMoneySource } from '../institution-authority'
+import { hasSameSourceWorks, hasWork, SYS_ADMIN, SYS_OPERATORS, SYS_READERS, type AuthorityActor } from '../../../auth/institution-authority'
+import { adminLlmKeyStore } from './llm-keys'
+import { capturedAllocation } from '../projection-fixtures'
 import { uuid } from '../ids'
 import { ACCESS_TOKENS, problemResponse } from './auth'
-import { adminReadScope } from './org-scope'
+import { workspaceDetails } from './announcements'
+import { workspaceStore } from './workspaces'
+import { orgs } from './reference'
 
 /** 계정 사용량 조회가 실제로 어떤 query 로 나갔는지. */
 export const accountUsageQueries: string[] = []
+type UsageRecord = Schemas['AdminLlmAccountKeyUsageResponse'] & { day: string }
+function initialUsageRecords(): UsageRecord[] {
+  return [
+    { day: '2026-08-31', keyId: uuid(171), keyName: '', requests: 18, inputTokens: 2400, outputTokens: 800, attributedCostUsd: 0.1245, pricedRequests: 4 },
+    { day: '2026-08-10', keyId: uuid(171), keyName: '', requests: 9, inputTokens: 600, outputTokens: 200, attributedCostUsd: 0.3755, pricedRequests: 3 },
+    { day: '2026-08-31', keyId: uuid(172), keyName: '', requests: 4, inputTokens: 300, outputTokens: 0, attributedCostUsd: null, pricedRequests: 0 },
+  ]
+}
+/** Daily rollup facts are joined to the key's current account at read time. */
+export const accountUsageRecordStore: UsageRecord[] = initialUsageRecords()
 
 type Schemas = components['schemas']
-type Account = Schemas['OpenRouterAccountResponse']
+type Account = StoredFacts<Schemas['OpenRouterAccountResponse'], 'boundKeyCount' | 'credentialAvailable' | 'eligibleForBinding' | 'allocation' | 'credits' | 'defaultCreditAllowedModels' | 'defaultCreditDeniedModels'>
 type Credential = Schemas['OpenRouterCredentialStateResponse']
 type Allocation = Schemas['OpenRouterAccountAllocationResponse']
 type Credits = Schemas['OpenRouterAccountCreditsResponse']
@@ -91,6 +107,7 @@ function initialAccounts(): Account[] {
       program: '대학혁신지원사업',
       contact: '2026-AI-A',
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 2,
       credentialAvailable: true,
       eligibleForBinding: true,
@@ -118,6 +135,7 @@ function initialAccounts(): Account[] {
       program: '산학협력단',
       contact: null,
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 0,
       credentialAvailable: true,
       eligibleForBinding: true,
@@ -164,6 +182,7 @@ function initialAccounts(): Account[] {
       program: null,
       contact: null,
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 0,
       credentialAvailable: false,
       eligibleForBinding: false,
@@ -208,6 +227,7 @@ let nextAccountId = 430
 export const openRouterAccountListQueries: string[] = []
 
 export function resetOpenRouterAccountFixtures() {
+  accountUsageRecordStore.splice(0, accountUsageRecordStore.length, ...initialUsageRecords())
   openRouterAccountStore = initialAccounts()
   nextAccountId = 430
   openRouterAccountListQueries.length = 0
@@ -216,17 +236,45 @@ export function resetOpenRouterAccountFixtures() {
 
 function profileOf(request: Request) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
-  return ACCESS_TOKENS[token] ?? null
+  const profile = ACCESS_TOKENS[token]
+  return profile ? mockAuthorityActor(profile) : null
 }
 
-function roleFor(profile: Schemas['UserProfileResponse'], orgId: string) {
-  if (isSysTier(profile.role)) return profile.role
-  return profile.managedOrgs.find((org) => org.orgId === orgId)?.role
+function canWrite(profile: AuthorityActor, orgId: string, work = 'institution.account.manage'): boolean {
+  return hasWork(profile, work, { orgId }, SYS_ADMIN)
 }
-
-function canWrite(profile: Schemas['UserProfileResponse'], orgId: string): boolean {
-  const role = roleFor(profile, orgId)
-  return role != null && canManageOpenRouterAccount(role)
+function canRead(profile: AuthorityActor, orgId: string) {
+  return ['institution.account.read', 'institution.account.finance.read', 'institution.account.manage', 'institution.account.credential.manage']
+    .some((work) => hasWork(profile, work, { orgId }, work.endsWith('.manage') ? SYS_ADMIN : SYS_READERS))
+}
+function projectAccount(profile: AuthorityActor, account: Account): Schemas['OpenRouterAccountResponse'] {
+  const target = { orgId: account.orgId }
+  const financeVisible = hasWork(profile, 'institution.account.finance.read', target, SYS_READERS)
+  const metadata = hasWork(profile, 'institution.account.read', target, SYS_READERS) || canWrite(profile, account.orgId)
+  const credentialVisible = hasWork(profile, 'institution.account.read', target, SYS_READERS) || canWrite(profile, account.orgId, 'institution.account.credential.manage')
+  const policyReferenceVisible = financeVisible || canWrite(profile, account.orgId)
+  const captured = capturedAllocation(account.id, adminLlmKeyStore)
+  const visibleAllocation = captured === undefined ? account.allocation : captured?.remainingCommitment == null ? null
+    : { ...account.allocation, ...captured, remainingCommitment: captured.remainingCommitment }
+  const rows = adminLlmKeyStore.filter((key) => key.openrouterAccountId === account.id && (
+    ['llm.metadata.read', 'llm.metadata.support.read', 'llm.observe', 'llm.observe.support.read', 'llm.key.cost.read', 'llm.acl.support.read'].some((work) => hasWork(profile, work, { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+    || ['llm.token.operate', 'llm.state.operate', 'llm.period'].some((work) => hasWork(profile, work, { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_OPERATORS))
+    || ['llm.key.budget', 'llm.revoke', 'llm.acl.support.manage'].some((work) => hasWork(profile, work, { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_ADMIN))))
+  const money = financeVisible && mockHasAggregateMoneySource(profile) && rows.every((key) => hasSameSourceWorks(profile, ['llm.observe', 'llm.key.cost.read'], { orgId: key.orgId, workspaceId: key.workspaceId }, SYS_READERS))
+  const live = rows.filter((key) => ['PENDING', 'ACTIVE', 'SUSPENDED'].includes(key.status) && (!key.expiresAt || Date.parse(key.expiresAt) > Date.now()) && key.creditLimit > 0)
+  const navigationCount = (total: number, available = true): Schemas['LlmNavigationCount'] => ({ state: available ? 'AVAILABLE' : 'NOT_PROVIDED', totalElements: available ? total : null })
+  return { ...account, ...{ policyReferenceVisible }, financeVisible, credentialVisible,
+    keyNavigation: { observedAt: new Date().toISOString(), population: 'CURRENT_READABLE_KEYS',
+      linked: navigationCount(rows.length), committed: navigationCount(live.length, money),
+      awaitingProvision: navigationCount(live.filter((key) => !key.creditAxisConnected).length, money),
+      usageUnreported: navigationCount(live.filter((key) => key.creditAxisConnected && key.creditUsage == null).length, money) },
+    program: metadata ? account.program : null, contact: metadata ? account.contact : null,
+    boundKeyCount: metadata || financeVisible ? account.boundKeyCount : null,
+    credentialAvailable: credentialVisible ? account.credentialAvailable : null,
+    activeCredential: credentialVisible ? account.activeCredential : null, rotationCredential: credentialVisible ? account.rotationCredential : null,
+    defaultCreditAllowedModels: policyReferenceVisible ? account.defaultCreditAllowedModels : null,
+    defaultCreditDeniedModels: policyReferenceVisible ? account.defaultCreditDeniedModels : null,
+    allocation: financeVisible ? visibleAllocation : null, credits: financeVisible ? account.credits : null }
 }
 
 function notFound() {
@@ -253,8 +301,7 @@ function accountFor(request: Request, accountId: string): { profile: Schemas['Us
   const profile = profileOf(request)
   const account = openRouterAccountStore.find((item) => item.id === accountId)
   if (!profile || !account) return null
-  const scope = adminReadScope(profile, account.orgId, `/api/v1/admin/llm/accounts/${accountId}`)
-  if (scope.notFound || !scope.matches(account.orgId)) return null
+  if (!canRead(profile, account.orgId)) return null
   return { profile, account }
 }
 
@@ -343,9 +390,23 @@ export const openRouterCatalogueStore: {
 }
 
 export const openRouterAccountHandlers: RequestHandler[] = [
+  http.get('*/api/v1/admin/llm/roster-account-references', ({ request }) => {
+    const actor = profileOf(request)
+    const query = new URL(request.url).searchParams
+    const orgId = query.get('orgId'), workspaceId = query.get('workspaceId')
+    if (!actor || !orgId || !workspaceId || !orgs.some((org) => org.id === orgId)
+      || !(workspaceDetails[workspaceId] || workspaceStore.some((workspace) => workspace.detail.id === workspaceId))
+      || !hasSameSourceWorks(actor, ['llm.roster.issue', 'llm.key.budget'], { orgId, workspaceId }, SYS_ADMIN)) return notFound()
+    return HttpResponse.json(openRouterAccountStore.filter((account) => account.orgId === orgId).sort((a, b) => a.name.localeCompare(b.name)).map((account) => ({
+      id: account.id, name: account.name, eligibleForBinding: account.eligibleForBinding,
+      defaultCreditAllowedModels: account.eligibleForBinding ? account.defaultCreditAllowedModels : null,
+      defaultCreditDeniedModels: account.eligibleForBinding ? account.defaultCreditDeniedModels : null,
+    })))
+  }),
+
   http.get('*/api/v1/admin/llm/openrouter-models', ({ request }) => {
     const profile = profileOf(request)
-    if (!profile) return notFound()
+    if (!profile || !hasWork(profile, 'llm.model-catalogue.read', {}, SYS_READERS)) return notFound()
     if (openRouterCatalogueStore.fail) {
       return HttpResponse.json({ title: '서버 오류', status: 500 }, { status: 500 })
     }
@@ -358,9 +419,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     const url = new URL(request.url)
     openRouterAccountListQueries.push(url.searchParams.toString())
     const orgId = url.searchParams.get('orgId')
-    const scope = adminReadScope(profile, orgId, '/api/v1/admin/llm/accounts')
-    if (scope.notFound) return scope.notFound
-    return HttpResponse.json(openRouterAccountStore.filter((account) => scope.matches(account.orgId)), { status: 200 })
+    return HttpResponse.json(openRouterAccountStore.filter((account) => (!orgId || orgId === account.orgId) && canRead(profile, account.orgId)).map((account) => projectAccount(profile, account)), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts', async ({ request }) => {
@@ -377,6 +436,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       program: body.program ?? null,
       contact: body.contact ?? null,
       status: 'ACTIVE',
+      financeVisible: true, credentialVisible: true, policyReferenceVisible: true,
       boundKeyCount: 0,
       credentialAvailable: false,
       eligibleForBinding: false,
@@ -412,12 +472,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       updatedAt: now,
     }
     openRouterAccountStore.push(account)
-    return HttpResponse.json(account, { status: 201 })
+    return HttpResponse.json(projectAccount(profile, account), { status: 201 })
   }),
 
   http.get('*/api/v1/admin/llm/accounts/:accountId', ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    return found ? HttpResponse.json(found.account, { status: 200 }) : notFound()
+    return found ? HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 }) : notFound()
   }),
 
   /**
@@ -425,7 +485,7 @@ export const openRouterAccountHandlers: RequestHandler[] = [
    * handler 가 지켜야 하는 서버 불변식이다. 목이 0을 주면 화면이 자체 서빙만 쓴
    * 날을 「공짜」로 그려도 시험이 통과한다.
    */
-  http.get('*/api/v1/admin/llm/accounts/:accountId/usage', ({ params, request }) => {
+  http.get('*/api/v1/admin/llm/accounts/:accountId/usage', async ({ params, request }) => {
     // 어떤 기간으로 물었는지를 남긴다. 이것이 없으면 「기간을 바꾸면 그 기간으로
     // 다시 묻는다」를 단언할 방법 자체가 없고, 실제로 그 시험은 aria-pressed 만
     // 보고 있었다.
@@ -433,61 +493,49 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     // 상세와 같은 문을 쓴다. 여기서 갈리면 「상세는 404인데 사용량은 열리는」
     // 서버에 없는 세계를 목이 만든다.
     const found = accountFor(request, String(params.accountId))
-    if (!found) return notFound()
-    const raw = new URL(request.url).searchParams.get('days')
+    if (!found || !hasWork(found.profile, 'institution.account.finance.read', { orgId: found.account.orgId }, SYS_READERS)) return notFound()
+    const query = new URL(request.url).searchParams
+    const raw = query.get('days')
     const days = raw == null ? 30 : Number(raw)
+    const page = Number(query.get('page') ?? 0)
+    const size = Number(query.get('size') ?? 20)
+    const sort = (query.get('sort') ?? 'REPORTED_COST_DESC') as Schemas['LlmConsumerSort']
+    if (!Number.isSafeInteger(days) || days < 1 || days > 90 || !Number.isSafeInteger(page) || page < 0 || page > 2_147_483_647
+      || !Number.isSafeInteger(size) || size < 1 || size > 100 || !['REQUESTS_DESC', 'TOKENS_DESC', 'REPORTED_COST_DESC'].includes(sort)) {
+      return problemResponse({ status: 422, title: '조회 기간·페이지·정렬을 확인해 주세요.', code: 'VALIDATION_FAILED' })
+    }
+    // This explicit browser-only scenario never changes a production query or falls through to a real API.
+    const scenario = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('accountFixture')
+    if (scenario === 'window-failure' && days === 7) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      return problemResponse({ status: 503, title: '합성 계정 조회 실패', detail: '선택한 7일 기간을 조회하지 못했습니다.', code: 'SERVICE_UNAVAILABLE' })
+    }
     const to = '2026-08-31'
+    const from = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+    const linked = adminLlmKeyStore.filter((key) => key.openrouterAccountId === found.account.id)
+    const records = accountUsageRecordStore.filter((row) => row.day >= from && row.day <= to && linked.some((key) => key.id === row.keyId))
+    const sum = (rows: UsageRecord[], field: 'requests' | 'pricedRequests' | 'inputTokens' | 'outputTokens') => rows.reduce((value, row) => value + row[field], 0)
+    const cost = (rows: UsageRecord[]) => sum(rows, 'pricedRequests') > 0 ? rows.reduce((value, row) => value + (row.attributedCostUsd ?? 0), 0) : null
     const points = Array.from({ length: days }, (_, index) => {
-      const day = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1 - index) * 86_400_000)
-        .toISOString()
-        .slice(0, 10)
-      // 마지막 이틀만 금액이 붙었다. 나머지는 0이 아니라 없음이다.
-      const priced = index >= days - 2
-      return {
-        day,
-        attributedCostUsd: priced ? 0.25 : null,
-        pricedRequests: priced ? 2 : 0,
-        requests: priced ? 5 : index % 3 === 0 ? 1 : 0,
-      }
+      const day = new Date(Date.parse(`${to}T00:00:00Z`) - (days - 1 - index) * 86_400_000).toISOString().slice(0, 10)
+      const rows = records.filter((row) => row.day === day)
+      return { day, attributedCostUsd: cost(rows), pricedRequests: sum(rows, 'pricedRequests'), requests: sum(rows, 'requests') }
     })
-    const requests = points.reduce((sum, point) => sum + point.requests, 0)
-    const pricedRequests = points.reduce((sum, point) => sum + point.pricedRequests, 0)
-    return HttpResponse.json(
-      {
-        from: points[0].day,
-        to: points[points.length - 1].day,
-        attributedCostUsd: 0.5,
-        requests,
-        pricedRequests,
-        keysUsed: 2,
-        // 같은 계정의 상세가 boundKeyCount 2 를 말한다. 목이 3 을 주면 한 계정을
-        // 두 응답이 다르게 말하는, 서버에 없는 상태가 된다.
-        keysLinked: 2,
-        points,
-        keys: [
-          {
-            keyId: uuid(501),
-            keyName: 'capstone-chatbot',
-            requests: requests - 3,
-            inputTokens: 2_400,
-            outputTokens: 800,
-            attributedCostUsd: 0.5,
-            pricedRequests,
-          },
-          {
-            keyId: uuid(502),
-            keyName: 'lab-embeddings',
-            requests: 3,
-            inputTokens: 300,
-            outputTokens: 0,
-            // 자체 서빙만 쓴 키. 금액은 0이 아니라 없음이다.
-            attributedCostUsd: null,
-            pricedRequests: 0,
-          },
-        ],
-      },
-      { status: 200 },
-    )
+    const keys = linked.map((key) => {
+      const rows = records.filter((row) => row.keyId === key.id)
+      return { keyId: key.id, keyName: key.name, requests: sum(rows, 'requests'), inputTokens: sum(rows, 'inputTokens'),
+        outputTokens: sum(rows, 'outputTokens'), attributedCostUsd: cost(rows), pricedRequests: sum(rows, 'pricedRequests') }
+    }).filter((key) => key.requests > 0)
+    keys.sort((a, b) => {
+      const av = sort === 'REQUESTS_DESC' ? a.requests : sort === 'TOKENS_DESC' ? a.inputTokens + a.outputTokens : a.attributedCostUsd
+      const bv = sort === 'REQUESTS_DESC' ? b.requests : sort === 'TOKENS_DESC' ? b.inputTokens + b.outputTokens : b.attributedCostUsd
+      return av == null ? bv == null ? 0 : 1 : bv == null ? -1 : bv - av || b.keyId.localeCompare(a.keyId)
+    })
+    return HttpResponse.json({ from, to, generatedAt: `${to}T12:05:00+09:00`, timezone: 'Asia/Seoul', source: 'DAILY_ROLLUP_ATTRIBUTION_CURRENT_ACCOUNT_BINDING',
+      page, size, sort, totalKeyElements: keys.length, totalKeyPages: Math.ceil(keys.length / size),
+      attributedCostUsd: cost(records), requests: sum(records, 'requests'), pricedRequests: sum(records, 'pricedRequests'),
+      keysUsed: keys.length, keysLinked: linked.length, points, keys: keys.slice(page * size, (page + 1) * size),
+    } satisfies Schemas['AdminLlmAccountUsageResponse'])
   }),
 
   http.patch('*/api/v1/admin/llm/accounts/:accountId', async ({ params, request }) => {
@@ -495,12 +543,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
     const body = (await request.json()) as Schemas['UpdateOpenRouterAccountRequest']
     Object.assign(found.account, body, { updatedAt: now })
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     // 평문은 요청 검증에만 쓰고 어떤 fixture나 기록에도 보존하지 않는다.
     const body = (await request.json()) as Schemas['RegisterOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
@@ -522,12 +570,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     }
     found.account.credentialAvailable = true
     found.account.eligibleForBinding = true
-    return HttpResponse.json(found.account, { status: 201 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 201 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     // 평문은 요청 검증에만 쓰고 어떤 fixture나 기록에도 보존하지 않는다.
     const body = (await request.json()) as Schemas['StageOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
@@ -551,12 +599,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       verificationError: null,
       retiringOverdue: false,
     }
-    return HttpResponse.json(found.account, { status: 201 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 201 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged/activate', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['ConfirmOpenRouterAccountRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -568,23 +616,23 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     found.account.activeCredential = { ...staged, status: 'ACTIVE', activatedAt: now }
     found.account.credentialAvailable = true
     found.account.eligibleForBinding = true
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/staged/cancel', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['ConfirmOpenRouterAccountRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
     if (found.account.rotationCredential?.status !== 'STAGED') return invalidState('취소할 STAGED credential이 없습니다.')
     found.account.rotationCredential = null
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/retiring/rollback', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['ConfirmOpenRouterAccountRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -593,12 +641,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     if (retiring?.status !== 'RETIRING' || !active) return invalidState('되돌릴 RETIRING credential이 없습니다.')
     found.account.activeCredential = { ...retiring, status: 'ACTIVE', retiringAt: null, activatedAt: now }
     found.account.rotationCredential = { ...active, status: 'STAGED', activatedAt: null }
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/retiring/finalize', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['FinalizeOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -606,12 +654,12 @@ export const openRouterAccountHandlers: RequestHandler[] = [
       return invalidState('Vendor 폐기 확인과 RETIRING credential이 필요합니다.')
     }
     found.account.rotationCredential = null
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 
   http.post('*/api/v1/admin/llm/accounts/:accountId/credentials/active/delete', async ({ params, request }) => {
     const found = accountFor(request, String(params.accountId))
-    if (!found || !canWrite(found.profile, found.account.orgId)) return notFound()
+    if (!found || !canWrite(found.profile, found.account.orgId, 'institution.account.credential.manage')) return notFound()
     const body = (await request.json()) as Schemas['FinalizeOpenRouterCredentialRequest']
     const mismatch = confirm(found.account, body.confirmName)
     if (mismatch) return mismatch
@@ -621,6 +669,6 @@ export const openRouterAccountHandlers: RequestHandler[] = [
     found.account.activeCredential = null
     found.account.credentialAvailable = false
     found.account.eligibleForBinding = false
-    return HttpResponse.json(found.account, { status: 200 })
+    return HttpResponse.json(projectAccount(found.profile, found.account), { status: 200 })
   }),
 ]

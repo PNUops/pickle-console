@@ -25,11 +25,6 @@ const LIMIT = 40
  * 선택기는 그 위에 얹힌다.
  */
 
-const FRESHNESS_NOTE: Partial<Record<OpenRouterCatalogue['freshness'], string>> = {
-  STALE: '목록이 오래됐습니다. 최근에 나온 모델이 빠져 있을 수 있으니 이름을 직접 적어도 됩니다.',
-  UNKNOWN: '아직 목록을 가져온 적이 없습니다. 모델 이름을 직접 적어 주세요.',
-}
-
 function priceText(value: number | null | undefined): string {
   if (value == null) return '가격 미상'
   if (value === 0) return '무료'
@@ -178,15 +173,14 @@ export function CreditModelPicker({
     return { shown: pool.slice(0, LIMIT), matched: pool.length }
   }, [catalogue, query])
 
-  if (failed) {
+  if (failed && !catalogue) {
     return (
       <p className="text-sm text-neutral-500">
-        모델 목록을 불러오지 못했습니다. 모델 이름을 직접 적으면 승인은 그대로 진행됩니다.
+        모델 목록을 불러오지 못했습니다. 허용된 정책은 모델 이름을 직접 적어 작성할 수 있습니다.
       </p>
     )
   }
 
-  const note = catalogue ? FRESHNESS_NOTE[catalogue.freshness] : undefined
   const models = catalogue?.models ?? []
   const total = models.length
   // 서버가 싼 순으로 준다. 그러니 잘라낸 뒤에 남는 것은 싼 쪽이고, 승인자가
@@ -204,7 +198,6 @@ export function CreditModelPicker({
         className="w-full rounded border border-neutral-300 px-2 py-1 text-sm"
         aria-label="유료 모델 검색"
       />
-      {note ? <p className="text-sm text-amber-700">{note}</p> : null}
       {total > 0 ? (
         <ul
           aria-label="카탈로그 유료 모델"
