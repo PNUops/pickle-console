@@ -308,6 +308,9 @@ LLM 문서는 키에서 호출할 수 있는 모델 조회, 가격 확인, Chat 
 키 설정, HTML 파일 생성과 수정 및 브라우저 결과 확인까지 안내합니다. Windows 명령 프롬프트와
 macOS 터미널의 명령을 구분하고, macOS에서 실제 API로 실행한 한국어 음성·자막 영상도 제공합니다.
 기존 OpenCode 1 설정과 버전 전환 시 주의사항을 함께 제공합니다.
+첫 curl 호출과 Python 가상 환경, 파일 저장과 실행, Claude Haiku 설정, Codex 설정 파일 편집도
+Windows 명령 프롬프트와 macOS 기준으로 안내합니다. 관리자 계정의 사용자 콘솔 전환과
+Antigravity 연결 범위, 학교와 개인 학생 혜택의 확인 경로도 제공합니다.
 
 본문은 `src/docs/articles/`에서 작성하고 `src/docs/catalog.ts`에 등록합니다.
 각 문서는 `GuideArticle`의 제목과 검색 키워드, 고정 slug, 절별 id와 본문을 갖습니다.
