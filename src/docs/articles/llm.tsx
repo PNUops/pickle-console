@@ -78,6 +78,10 @@ const PAID_CURL_EXAMPLE = `curl ${LLM_API_BASE_URL}/chat/completions \\
     "messages": [{"role": "user", "content": "안녕하세요"}]
   }'`
 
+const CURL_CMD_EXAMPLE = `curl.exe ${LLM_API_BASE_URL}/chat/completions -H "Authorization: Bearer %PICKLE_API_KEY%" -H "Content-Type: application/json" -d "{\\"model\\":\\"${LLM_DEFAULT_MODEL}\\",\\"messages\\":[{\\"role\\":\\"user\\",\\"content\\":\\"Say hello in Korean.\\"}]}"`
+
+const PAID_CURL_CMD_EXAMPLE = CURL_CMD_EXAMPLE.replace(LLM_DEFAULT_MODEL, '콘솔에서 복사한 유료 모델 ID')
+
 const IMAGE_PYTHON_EXAMPLE = `import base64
 import os
 from pathlib import Path
@@ -255,7 +259,18 @@ const OPENCODE_V2_SELF_SERVED_EXAMPLE = `{
 
 const CLAUDE_CODE_EXAMPLE = `export ANTHROPIC_BASE_URL="${LLM_ANTHROPIC_BASE_URL}"
 export ANTHROPIC_AUTH_TOKEN="$PICKLE_API_KEY"
+unset ANTHROPIC_API_KEY
+unset CLAUDE_CODE_OAUTH_TOKEN
 export ANTHROPIC_MODEL="${LLM_MESSAGES_EXAMPLE_MODEL}"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="${LLM_MESSAGES_EXAMPLE_MODEL}"
+claude`
+
+const CLAUDE_CODE_CMD_EXAMPLE = `set "ANTHROPIC_BASE_URL=${LLM_ANTHROPIC_BASE_URL}"
+set "ANTHROPIC_AUTH_TOKEN=%PICKLE_API_KEY%"
+set "ANTHROPIC_API_KEY="
+set "CLAUDE_CODE_OAUTH_TOKEN="
+set "ANTHROPIC_MODEL=${LLM_MESSAGES_EXAMPLE_MODEL}"
+set "ANTHROPIC_DEFAULT_HAIKU_MODEL=${LLM_MESSAGES_EXAMPLE_MODEL}"
 claude`
 
 const ANTHROPIC_PYTHON_EXAMPLE = `import os
@@ -281,6 +296,7 @@ web_search = "disabled"
 name = "Pickle"
 base_url = "${LLM_API_BASE_URL}"
 env_key = "PICKLE_API_KEY"
+requires_openai_auth = false
 wire_api = "responses"`
 
 const RESPONSES_PYTHON_EXAMPLE = `import os
@@ -354,6 +370,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'issue',
         title: '승인 후 키 발급',
         body: <>
+          <p>관리자 계정은 우측 상단 계정 메뉴의 <strong>사용자 콘솔</strong>로 전환한 뒤 본인 키를 발급합니다.</p>
           <ol>
             <li><GuideAction action="requests">신청 내역 확인</GuideAction>에서 승인 상태와 부여 내용을 확인합니다. 대기, 반려, 취소에 대한 설명은 <GuideLink slug="requests/status">신청 상태</GuideLink>를 참고하세요.</li>
             <li><GuideAction action="llmKeys">LLM API 키 목록</GuideAction>에서 승인된 키를 엽니다. <strong>발급 전</strong>이면 아직 API를 호출할 키 값이 없습니다.</li>
@@ -398,13 +415,14 @@ export const llmArticles: GuideArticle[] = [
         body: <>
           <p><GuideLink slug="llm/start" anchor="issue">키 발급</GuideLink>을 마친 뒤 실행할 터미널이나 애플리케이션 환경에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code>를 설정합니다. 아래 예제의 키는 환경 변수에서 읽습니다.</p>
           <p>Windows 명령의 <code>발급받은 키</code>는 복사한 실제 값으로 바꿉니다. macOS 기본 셸인 zsh에서는 입력 안내가 나오면 키를 붙여넣고 Enter를 누릅니다. 입력 중 문자가 보이지 않아도 정상입니다. 설정은 현재 터미널에 적용되며 새 터미널에서는 다시 설정합니다. 키를 코드나 공유 설정 파일에 저장하지 마세요.</p>
-          <CodeBlock label="Windows 명령 프롬프트" code={'set "PICKLE_API_KEY=발급받은 키"'} />
+          <CodeBlock label="Windows 명령 프롬프트" code={'chcp 65001 >nul\nset "PICKLE_API_KEY=발급받은 키"'} />
+          <p>Windows의 <code>chcp 65001</code>은 현재 창에서 한국어 응답을 UTF-8로 표시하기 위한 설정입니다.</p>
           <CodeBlock label="macOS 터미널" code={'read -s "PICKLE_API_KEY?Pickle API 키를 붙여넣고 Enter: "\nprint\nexport PICKLE_API_KEY'} />
           <details>
             <summary className="cursor-pointer font-medium">Linux 셸에서 설정하기</summary>
             <CodeBlock label="Linux" code={'export PICKLE_API_KEY="발급받은 키"'} />
           </details>
-          <p>운영체제와 현재 터미널에 맞는 명령 하나만 실행합니다. 아래 curl 예제는 macOS와 Linux 셸 기준입니다. Windows에서는 같은 문서의 <GuideLink slug="llm/connect" anchor="opencode">코딩 에이전트 연결</GuideLink>이나 Python 예제로 첫 응답을 확인할 수 있습니다.</p>
+          <p>첫 호출은 아래의 운영체제별 예제를 사용합니다. 모델 조회와 기능별 문서에서 운영체제가 따로 표시되지 않은 curl 예제는 macOS와 Linux 셸 기준입니다.</p>
           <p>Pickle은 OpenAI 호환 Chat Completions API를 제공합니다. SDK에는 아래 base URL과 Pickle에서 발급한 키를 넣습니다. OpenAI 계정의 API 키를 넣는 자리가 아닙니다.</p>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_API_BASE_URL}</code>
@@ -427,10 +445,12 @@ export const llmArticles: GuideArticle[] = [
           <p>먼저 키 상세의 <strong>개요 → 키 정보</strong>에서 일일 토큰 한도와 유료 모델 금액, Chat 권한을 확인합니다. 사용할 수 있는 쪽의 예제를 고릅니다.</p>
           <h3 className="font-medium">자체 서빙 모델을 쓰는 키</h3>
           <p>일일 토큰 한도가 0이 아닌 키로 실행합니다.</p>
-          <CodeBlock label="curl" code={CURL_EXAMPLE} />
+          <CodeBlock label="Windows 명령 프롬프트" code={CURL_CMD_EXAMPLE} />
+          <CodeBlock label="macOS / Linux" code={CURL_EXAMPLE} />
           <h3 className="font-medium">유료 모델을 쓰는 키</h3>
           <p><strong>연결 정보 → 모델 후보 보기</strong>에서 유료 모델을 찾아 ID를 복사합니다. 아래의 <code>콘솔에서 복사한 유료 모델 ID</code>를 그 값으로 바꿉니다. 금액이 <strong>적용 중</strong>이면 반영이 끝난 뒤 실행합니다. 자체 서빙 한도가 0인 키도 부여된 금액과 권한으로 유료 모델을 호출할 수 있습니다.</p>
-          <CodeBlock label="유료 모델 curl" code={PAID_CURL_EXAMPLE} />
+          <CodeBlock label="Windows 명령 프롬프트: 유료 모델" code={PAID_CURL_CMD_EXAMPLE} />
+          <CodeBlock label="macOS / Linux: 유료 모델" code={PAID_CURL_EXAMPLE} />
           <p>성공하면 JSON의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">choices[0].message.content</code>에 답변이 들어 있습니다. 오류가 나오면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>를 읽고 <GuideLink slug="llm/errors">오류 해결</GuideLink>에서 확인합니다.</p>
           <p>다른 예제에서도 유료 모델을 쓰려면 <code>model</code>을 같은 ID로 바꿉니다. 모델별 가격과 목록 상태는 <GuideLink slug="llm/features" anchor="models">모델 목록과 권한</GuideLink>에서 확인하세요.</p>
         </>,
@@ -439,10 +459,14 @@ export const llmArticles: GuideArticle[] = [
         id: 'python',
         title: 'Python SDK 연결',
         body: <>
-          <p>Python 실행 환경에 공식 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">openai</code> 패키지를 설치하고, 같은 환경에서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code>를 읽을 수 있게 합니다.</p>
-          <CodeBlock label="패키지 설치" code="python -m pip install openai" />
-          <CodeBlock label="Python" code={PYTHON_EXAMPLE} />
+          <p>Python 3이 설치된 상태에서 프로젝트 폴더를 열고 가상 환경을 만듭니다. <code>py</code> 또는 <code>python3</code>를 찾지 못하면 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://www.python.org/downloads/">Python 공식 설치 안내</a>를 먼저 확인합니다. 아래 명령은 현재 폴더에 <code>.venv</code>를 만들고 공식 <code>openai</code> 패키지를 설치합니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트: 준비와 파일 열기" code={'py -3 -m venv .venv\n.venv\\Scripts\\activate.bat\npython -m pip install openai\nnotepad first_call.py'} />
+          <CodeBlock label="macOS 터미널: 준비와 파일 열기" code={'python3 -m venv .venv\nsource .venv/bin/activate\npython -m pip install openai\nnano first_call.py'} />
+          <p>아래 코드를 <code>first_call.py</code>로 저장합니다. Windows 메모장은 파일 형식을 <strong>모든 파일</strong>, 인코딩을 UTF-8로 선택해 <code>.txt</code>가 붙지 않게 합니다. macOS nano는 Ctrl+O, Enter로 저장하고 Ctrl+X로 닫습니다.</p>
+          <CodeBlock label="first_call.py" code={PYTHON_EXAMPLE} />
           <p>위 예제는 자체 서빙 모델용입니다. 유료 모델만 부여된 키는 <code>model</code>을 콘솔에서 복사한 유료 모델 ID로 바꿉니다.</p>
+          <p>같은 터미널에서 <GuideLink slug="llm/connect" anchor="prepare">연결 준비</GuideLink>의 운영체제별 명령으로 키를 설정한 뒤 실행합니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트 / macOS 터미널" code="python first_call.py" />
           <p>실행 결과로 답변 문장이 출력되면 연결된 것입니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">KeyError: PICKLE_API_KEY</code>가 나면 Python을 실행한 환경에 키 변수가 설정되어 있는지 확인합니다.</p>
           <p>SDK 사용법은 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://developers.openai.com/api/reference/python">OpenAI 공식 Python 문서</a>를 참고하되, Pickle에 보낼 필드는 <GuideLink slug="llm/features" anchor="parameters">지원 파라미터</GuideLink>를 따릅니다.</p>
         </>,
@@ -531,8 +555,13 @@ export const llmArticles: GuideArticle[] = [
             <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_ANTHROPIC_BASE_URL}</code>
             <CopyButton value={LLM_ANTHROPIC_BASE_URL} label="Anthropic base URL 복사" />
           </div>
-          <p>Claude Code는 실행 전에 아래 환경 변수를 설정합니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ANTHROPIC_MODEL</code>은 반드시 지정합니다. 지정하지 않으면 Claude Code가 고른 모델 이름으로 모든 요청을 보내고, 그 이름이 키에서 쓸 수 있는 유료 모델이 아니면 거절됩니다.</p>
+          <p>먼저 <code>claude --version</code>으로 설치를 확인합니다. 명령을 찾지 못하면 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://code.claude.com/docs/en/setup">Claude Code 공식 설치 안내</a>에서 운영체제에 맞게 설치하고 터미널을 새로 엽니다.</p>
+          <p>프로젝트 폴더를 열고 <GuideLink slug="llm/connect" anchor="prepare">연결 준비</GuideLink>의 명령으로 <code>PICKLE_API_KEY</code>를 설정한 뒤 같은 터미널에서 아래 명령을 실행합니다. 예제는 Claude Haiku 5.5이며 키의 허용 모델에 포함돼 있어야 합니다. 주 모델과 제목 생성 등의 보조 모델을 함께 지정합니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트" code={CLAUDE_CODE_CMD_EXAMPLE} />
           <CodeBlock label="macOS / Linux" code={CLAUDE_CODE_EXAMPLE} />
+          <p>기존 <code>ANTHROPIC_API_KEY</code>와 <code>CLAUDE_CODE_OAUTH_TOKEN</code>은 현재 터미널에서 비워 인증 방식의 중복을 정리합니다. 저장된 로그인이나 다른 프로젝트 설정은 삭제하지 않습니다. 실행 후 <code>/status</code>에서 모델과 API 연결 정보를 확인하고 <code>한 문장으로 인사해 주세요.</code>를 입력해 첫 답변을 확인합니다.</p>
+          <p>저장된 로그인과의 인증 충돌 경고가 계속되면 Pickle 인증을 사용할 때만 <code>/logout</code>으로 기존 로그인을 해제한 뒤 같은 터미널에서 <code>claude</code>를 다시 실행합니다. 이 경우 기존 계정으로 돌아가려면 나중에 다시 로그인해야 합니다.</p>
+          <p>예전 주소나 모델로 연결되면 사용자 또는 프로젝트의 <code>.claude/settings.json</code>에 있는 <code>env</code> 설정도 확인합니다. 설정 파일의 값이 셸 설정을 덮어쓸 수 있습니다. 오류가 계속되면 <code>error.code</code>와 요청 시각을 확인해 <GuideLink slug="llm/errors">오류 해결</GuideLink>을 참고합니다. 문의 화면에 키 원문을 포함하지 마세요.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ANTHROPIC_MODEL</code>에는 키 정보의 <strong>쓸 수 있는 유료 모델</strong>에 맞는 모델 이름을 넣습니다. 키는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Authorization: Bearer</code> 헤더와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">x-api-key</code> 헤더 중 어느 쪽으로 보내도 됩니다. Claude Code를 실행해 짧은 질문에 답변이 돌아오면 연결된 것입니다.</p>
           <p>Anthropic Python SDK는 공식 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic</code> 패키지를 설치한 뒤 같은 base URL과 Pickle 키를 넣습니다.</p>
           <CodeBlock label="패키지 설치" code="python -m pip install anthropic" />
@@ -546,14 +575,30 @@ export const llmArticles: GuideArticle[] = [
         body: <>
           <p>Codex와 OpenAI SDK의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">responses.create</code>는 OpenAI Responses API(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/responses</code>)로 연결합니다. 이 경로는 <strong>유료 모델만</strong> 지원하므로 금액 한도가 부여된 키가 필요합니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>을 지정하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_available_on_route</code>로 거절됩니다. 호출은 Chat 권한에 속합니다.</p>
           <p>base URL은 OpenAI 호환 클라이언트와 같은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_API_BASE_URL}</code>입니다. Anthropic 클라이언트와 달리 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code>까지 적습니다.</p>
-          <p>Codex는 설정 파일 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">~/.codex/config.toml</code>에 아래 항목을 넣고, Codex를 실행하는 환경에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">PICKLE_API_KEY</code>를 설정합니다. 기존 설정 파일이 있다면 필요한 항목을 합쳐 넣습니다.</p>
-          <CodeBlock label="~/.codex/config.toml" code={CODEX_CONFIG_EXAMPLE} />
+          <p>먼저 <code>codex --version</code>으로 설치를 확인합니다. 명령을 찾지 못하면 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://developers.openai.com/codex/cli/">Codex 공식 설치 안내</a>를 확인합니다. 프로젝트 폴더를 열고 설정 파일을 편집합니다. 기존 파일이 있으면 아래 항목을 합쳐 넣고 같은 이름의 항목을 중복 작성하지 않습니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트: 설정 파일 열기" code={'if not exist "%USERPROFILE%\\.codex" mkdir "%USERPROFILE%\\.codex"\nnotepad "%USERPROFILE%\\.codex\\config.toml"'} />
+          <CodeBlock label="macOS 터미널: 설정 파일 열기" code={'mkdir -p ~/.codex\nnano ~/.codex/config.toml'} />
+          <CodeBlock label="config.toml" code={CODEX_CONFIG_EXAMPLE} />
+          <p><code>model</code>, <code>model_provider</code>, <code>web_search</code>는 파일 상단의 첫 <code>[...]</code> 항목보다 앞에 둡니다. <code>[model_providers.pickle]</code>은 별도 항목으로 작성합니다. 기존 설정 파일 끝에 예제 전체를 그대로 덧붙이면 중복되거나 다른 항목 안에 들어갈 수 있습니다.</p>
+          <p>Windows 메모장은 파일 형식을 <strong>모든 파일</strong>로 저장합니다. macOS nano는 Ctrl+O, Enter로 저장하고 Ctrl+X로 닫습니다. <code>CODEX_HOME</code>을 별도로 지정한 환경은 해당 폴더의 <code>config.toml</code>을 편집합니다.</p>
+          <p>같은 터미널에서 <GuideLink slug="llm/connect" anchor="prepare">연결 준비</GuideLink>의 운영체제별 명령으로 키를 설정하고 실행합니다.</p>
+          <CodeBlock label="Windows 명령 프롬프트 / macOS 터미널" code="codex" />
+          <p><code>/status</code>에서 모델과 공급자를 확인한 뒤 <code>한 문장으로 인사해 주세요.</code>를 입력해 첫 답변을 확인합니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model</code>에는 키 정보의 <strong>쓸 수 있는 유료 모델</strong>에 맞는 모델 이름을 넣습니다. Codex를 실행해 짧은 질문에 답변이 돌아오면 연결된 것입니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">web_search = "disabled"</code>는 필수입니다. Codex는 요청마다 웹 검색 도구를 기본으로 넣으므로, 웹 검색 권한이 없는 키는 이 줄이 없으면 모든 요청이 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">endpoint_not_allowed</code>로 거절됩니다. 이때 Codex는 재연결을 다섯 번 시도한 뒤 답변 없이 작업을 끝냅니다. 재연결 메시지가 반복되면 이 줄이 있는지 먼저 확인합니다. 웹 검색 권한을 받은 키만 이 줄을 빼고 쓸 수 있으며, 검색은 금액을 소비합니다.</p>
           <p>OpenAI Python SDK는 <GuideLink slug="llm/connect" anchor="python">Python SDK 연결</GuideLink>과 같은 base URL과 키로 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">responses.create</code>를 호출합니다.</p>
           <CodeBlock label="Python" code={RESPONSES_PYTHON_EXAMPLE} />
           <p>Pickle은 응답을 서버에 저장하지 않습니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">store: true</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">previous_response_id</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">conversation</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">background: true</code>는 쓸 수 없고 보내면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>(400)로 거절됩니다. 이전 대화는 매 요청의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input</code>에 함께 보냅니다. Codex는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">store</code>를 false로 보내고 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">previous_response_id</code>를 쓰지 않으므로 그대로 연결됩니다. 응답 조회와 취소 같은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{'/v1/responses/{id}'}</code> 하위 경로도 지원하지 않습니다.</p>
           <p>모델 서버에서 코드를 실행하는 도구 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">code_interpreter</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">local_shell</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">shell</code>은 현재 신청할 수 없어 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">endpoint_not_allowed</code>로 거절됩니다. Codex가 내 컴퓨터에서 명령을 실행하는 도구 호출은 별개이므로 영향이 없습니다. 오류는 OpenAI 형식으로 돌아오며 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 <GuideLink slug="llm/errors">오류 해결</GuideLink>의 표와 같습니다.</p>
+        </>,
+      },
+      {
+        id: 'antigravity',
+        title: 'Antigravity와 학생 혜택',
+        body: <>
+          <p>Antigravity App과 단독 IDE의 기본 에이전트에 Pickle API 주소와 키를 직접 등록하는 공식 방법은 현재 안내돼 있지 않습니다. Pickle 키는 위의 OpenCode, Claude Code, Codex 연결 절차로 사용합니다. Antigravity CLI의 Gemini API 키 지원은 별도 방식이며 Pickle 연결 지원을 뜻하지 않습니다. <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://antigravity.google/docs/install?tab=cli">Antigravity 공식 안내</a></p>
+          <p>부산대학교는 학교 Google 계정에 Google AI Pro for Education을 2027년 6월 24일까지 제공합니다. 학교 계정의 Antigravity 이용 가능 여부와 추가 한도는 학교 관리자에게 확인이 필요합니다. <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://www.pusan.ac.kr/kor/CMS/Board/Board.do?board_seq=1511385&mgr_seq=3&mode=view">부산대 공식 안내</a></p>
+          <p>별도로 개인 Google 계정 대상 한국 학생 혜택은 Google AI Plus 12개월 무료이며 신청 기한은 2026년 12월 31일입니다. 이 혜택으로 Antigravity의 Pro 추가 한도가 제공된다고 보장할 수는 없습니다. <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://gemini.google/kr/students/">Google 학생 혜택 안내</a></p>
         </>,
       },
       {
