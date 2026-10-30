@@ -481,11 +481,10 @@ export const llmArticles: GuideArticle[] = [
             poster={llmMacFirstPagePoster}
             captionsSrc={llmMacFirstPageCaptions}
             title="macOS에서 API 연결부터 웹페이지 생성과 수정까지"
-            caption="macOS에서 실제 Pickle API로 연결해 HTML을 생성하고 수정합니다. 실제 터미널 출력을 재생하고 브라우저 결과를 함께 보여 줍니다. 검수용 계정과 예시 프로젝트를 사용했으며 대기 구간은 편집했습니다."
+            caption="Mac에서 OpenCode로 첫 웹페이지 만들기"
             width={1920}
-            height={1200}
+            height={1120}
           />
-          <p>영상은 공식 배포 파일을 임시 폴더에 설치합니다. 일반 설치와 연결 설정은 아래 절차를 따릅니다. 영상은 로컬 HTTP 미리보기로 결과를 확인하며, 아래에서는 HTML 파일을 직접 엽니다.</p>
           <h3 className="font-medium">1. 버전 확인과 설치</h3>
           <p>Windows는 시작 메뉴에서 <strong>명령 프롬프트</strong>를, macOS는 <strong>터미널</strong>을 실행합니다. 먼저 설치 여부를 확인합니다.</p>
           <CodeBlock label="설치 버전 확인" code="opencode --version" />
